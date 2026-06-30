@@ -1,6 +1,6 @@
 {% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %} — KinJo{% endblock %}
+{% block title %}{{ _t('Incident Reports') }} — KinJo{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-6">
@@ -13,16 +13,16 @@
       </div>
       <div>
         <h1 class="font-display-md text-display-md text-on-surface font-bold tracking-tight">
-          {% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}
+          {{ _t('Incident Reports') }}
         </h1>
         <p class="text-on-surface-variant font-body-md text-sm mt-1">
-          {% if ui_lang == 'en' %}Generate and view safety incident reports across all facilities.{% else %}إنشاء وعرض تقارير حوادث السلامة عبر جميع المنشآت.{% endif %}
+          {{ _t('Generate and view safety incident reports across all facilities.') }}
         </p>
       </div>
     </div>
     <button onclick="showModal('generateReportModal')" class="btn btn-primary d-flex align-items-center gap-2">
       <span class="material-symbols-outlined" style="font-size:1.1rem;">add_circle</span>
-      {% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
+      {{ _t('Create New Report') }}
     </button>
   </div>
 
@@ -32,35 +32,35 @@
     
     <div class="flex items-center gap-2 mb-4">
       <span class="material-symbols-outlined text-on-surface-variant text-sm">filter_alt</span>
-      <h5 class="font-title-md text-on-surface">{% if ui_lang == 'en' %}Filter Reports{% else %}تصفية التقارير{% endif %}</h5>
+      <h5 class="font-title-md text-on-surface">{{ _t('Filter Reports') }}</h5>
     </div>
     
     <form id="filterForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-            <label for="scopeFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Scope{% else %}النطاق{% endif %}</label>
+            <label for="scopeFilter" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Scope') }}</label>
             <select id="scopeFilter" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none">
-                <option value="">{% if ui_lang == 'en' %}All Scopes{% else %}جميع النطاقات{% endif %}</option>
-                <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة محددة{% endif %}</option>
-                <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
-                <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                <option value="">{{ _t('All Scopes') }}</option>
+                <option value="KINDERGARTEN">{{ _t('Specific Kindergarten') }}</option>
+                <option value="GOVERNORATE">{{ _t('Governorate') }}</option>
+                <option value="ALL">{{ _t('All Kindergartens') }}</option>
             </select>
         </div>
         <div>
-            <label for="kindergartenFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+            <label for="kindergartenFilter" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Kindergarten') }}</label>
             <select id="kindergartenFilter" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none disabled:opacity-50" disabled>
-                <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
+                <option value="">{{ _t('Select Kindergarten') }}</option>
             </select>
         </div>
         <div>
-            <label for="governorateFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+            <label for="governorateFilter" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Governorate') }}</label>
             <select id="governorateFilter" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none disabled:opacity-50" disabled>
-                <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
+                <option value="">{{ _t('Select Governorate') }}</option>
             </select>
         </div>
         <div class="flex items-end gap-2">
             <button type="button" class="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors" onclick="loadReports()">
                 <span class="material-symbols-outlined text-sm">search</span>
-                {% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
+                {{ _t('Search') }}
             </button>
             <button type="button" class="flex items-center justify-center px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface-variant hover:bg-white/10 transition-colors" onclick="resetFilters()">
                 <span class="material-symbols-outlined text-sm">close</span>
@@ -72,7 +72,7 @@
   <!-- Reports List -->
   <div class="glass-panel border border-white/10 rounded-2xl p-0 overflow-hidden">
       <div class="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-          <h5 class="font-title-md text-on-surface m-0">{% if ui_lang == 'en' %}Reports List{% else %}قائمة التقارير{% endif %}</h5>
+          <h5 class="font-title-md text-on-surface m-0">{{ _t('Reports List') }}</h5>
           <div id="loadingSpinner" class="hidden">
               <span class="material-symbols-outlined animate-spin text-primary">progress_activity</span>
           </div>
@@ -83,8 +83,8 @@
           </div>
           <div id="emptyState" class="text-center py-12 hidden">
               <span class="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4">description</span>
-              <h5 class="font-title-md text-on-surface mb-1">{% if ui_lang == 'en' %}No reports found{% else %}لا توجد تقارير{% endif %}</h5>
-              <p class="text-on-surface-variant font-body-sm">{% if ui_lang == 'en' %}Try adjusting your filter criteria.{% else %}حاول تعديل معايير البحث الخاصة بك.{% endif %}</p>
+              <h5 class="font-title-md text-on-surface mb-1">{{ _t('No reports found') }}</h5>
+              <p class="text-on-surface-variant font-body-sm">{{ _t('Try adjusting your filter criteria.') }}</p>
           </div>
       </div>
   </div>
@@ -94,7 +94,7 @@
 <div id="generateReportModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
     <div class="glass-panel w-full max-w-xl p-0 border border-white/10 rounded-2xl transform scale-95 transition-transform duration-300 shadow-2xl overflow-hidden">
         <div class="px-6 py-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
-            <h5 class="font-title-md text-on-surface">{% if ui_lang == 'en' %}Generate New Incident Report{% else %}إنشاء تقرير حوادث جديد{% endif %}</h5>
+            <h5 class="font-title-md text-on-surface">{{ _t('Generate New Incident Report') }}</h5>
             <button onclick="hideModal('generateReportModal')" class="text-on-surface-variant hover:text-on-surface transition-colors">
                 <span class="material-symbols-outlined">close</span>
             </button>
@@ -102,49 +102,49 @@
         <div class="p-6">
             <form id="generateReportForm" class="space-y-4">
                 <div>
-                    <label for="reportScope" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
+                    <label for="reportScope" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Report Scope') }}</label>
                     <select id="reportScope" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 appearance-none" required>
-                        <option value="">{% if ui_lang == 'en' %}Select Scope{% else %}اختر النطاق{% endif %}</option>
-                        <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة محددة{% endif %}</option>
-                        <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
-                        <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                        <option value="">{{ _t('Select Scope') }}</option>
+                        <option value="KINDERGARTEN">{{ _t('Specific Kindergarten') }}</option>
+                        <option value="GOVERNORATE">{{ _t('Governorate') }}</option>
+                        <option value="ALL">{{ _t('All Kindergartens') }}</option>
                     </select>
                 </div>
                 <div id="kindergartenSelectDiv" class="hidden">
-                    <label for="reportKindergarten" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                    <label for="reportKindergarten" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Kindergarten') }}</label>
                     <select id="reportKindergarten" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 appearance-none">
-                        <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
+                        <option value="">{{ _t('Select Kindergarten') }}</option>
                     </select>
                 </div>
                 <div id="governorateSelectDiv" class="hidden">
-                    <label for="reportGovernorate" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                    <label for="reportGovernorate" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Governorate') }}</label>
                     <select id="reportGovernorate" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 appearance-none">
-                        <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
+                        <option value="">{{ _t('Select Governorate') }}</option>
                     </select>
                 </div>
                 <div>
-                    <label for="reportPeriod" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
+                    <label for="reportPeriod" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Time Period') }}</label>
                     <select id="reportPeriod" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 appearance-none" required>
-                        <option value="">{% if ui_lang == 'en' %}Select Period{% else %}اختر الفترة{% endif %}</option>
-                        <option value="week">{% if ui_lang == 'en' %}Current Week{% else %}الأسبوع الحالي{% endif %}</option>
-                        <option value="month">{% if ui_lang == 'en' %}Current Month{% else %}الشهر الحالي{% endif %}</option>
-                        <option value="3years">{% if ui_lang == 'en' %}Last 3 Years{% else %}آخر 3 سنوات{% endif %}</option>
-                        <option value="annual">{% if ui_lang == 'en' %}Current Year{% else %}السنة الحالية{% endif %}</option>
+                        <option value="">{{ _t('Select Period') }}</option>
+                        <option value="week">{{ _t('Current Week') }}</option>
+                        <option value="month">{{ _t('Current Month') }}</option>
+                        <option value="3years">{{ _t('Last 3 Years') }}</option>
+                        <option value="annual">{{ _t('Current Year') }}</option>
                     </select>
                 </div>
                 <div id="yearSelectDiv" class="hidden">
-                    <label for="reportYear" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Year{% else %}السنة{% endif %}</label>
+                    <label for="reportYear" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Year') }}</label>
                     <select id="reportYear" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 appearance-none">
-                        <option value="">{% if ui_lang == 'en' %}Select Year{% else %}اختر السنة{% endif %}</option>
+                        <option value="">{{ _t('Select Year') }}</option>
                     </select>
                 </div>
             </form>
         </div>
         <div class="px-6 py-4 border-t border-white/10 bg-white/5 flex justify-end gap-3">
-            <button type="button" class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface hover:bg-white/10 transition-colors" onclick="hideModal('generateReportModal')">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+            <button type="button" class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface hover:bg-white/10 transition-colors" onclick="hideModal('generateReportModal')">{{ _t('Cancel') }}</button>
             <button type="button" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors" onclick="generateReport()">
                 <span class="material-symbols-outlined text-sm">check_circle</span>
-                {% if ui_lang == 'en' %}Generate Report{% else %}إنشاء التقرير{% endif %}
+                {{ _t('Generate Report') }}
             </button>
         </div>
     </div>
@@ -154,7 +154,7 @@
 <div id="reportDetailModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
     <div class="glass-panel w-full max-w-4xl p-0 border border-white/10 rounded-2xl transform scale-95 transition-transform duration-300 shadow-2xl overflow-hidden">
         <div class="px-6 py-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
-            <h5 class="font-title-md text-on-surface" id="reportDetailTitle">{% if ui_lang == 'en' %}Report Details{% else %}تفاصيل التقرير{% endif %}</h5>
+            <h5 class="font-title-md text-on-surface" id="reportDetailTitle">{{ _t('Report Details') }}</h5>
             <button onclick="hideModal('reportDetailModal')" class="text-on-surface-variant hover:text-on-surface transition-colors">
                 <span class="material-symbols-outlined">close</span>
             </button>
@@ -165,10 +165,10 @@
             </div>
         </div>
         <div class="px-6 py-4 border-t border-white/10 bg-white/5 flex justify-end gap-3">
-            <button type="button" class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface hover:bg-white/10 transition-colors" onclick="hideModal('reportDetailModal')">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+            <button type="button" class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface hover:bg-white/10 transition-colors" onclick="hideModal('reportDetailModal')">{{ _t('Close') }}</button>
             <button type="button" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors" onclick="exportReport()">
                 <span class="material-symbols-outlined text-sm">download</span>
-                {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
+                {{ _t('Export CSV') }}
             </button>
         </div>
     </div>

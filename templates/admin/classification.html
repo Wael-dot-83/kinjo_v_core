@@ -1,6 +1,6 @@
 {% extends 'admin_base.html' %}
 
-{% block title %}{% if ui_lang == 'en' %}Classification & Benchmarks{% else %}التصنيف والمقارنات{% endif %}{% endblock %}
+{% block title %}{{ _t('Classification & Benchmarks') }}{% endblock %}
 
 
 
@@ -8,87 +8,87 @@
 <!-- Page Header -->
 <div class="row pt-2 pb-2 mb-3 border-bottom align-items-center">
     <div>
-        <h1 class="h3 fw-bold mb-1">{% if ui_lang == 'en' %}Classification & Benchmarks{% else %}التصنيف والمقارنات المعيارية{% endif %}</h1>
-        <p class="text-on-surface-variant small mb-0">{% if ui_lang == 'en' %}Fair comparison between kindergartens, managers, and supervisors within the same segment and geographic scope.{% else %}مقارنة عادلة بين الروضات والمديرين والمشرفين ضمن نفس الشريحة والنطاق الجغرافي.{% endif %}
+        <h1 class="h3 fw-bold mb-1">{{ _t('Classification & Benchmarks') }}</h1>
+        <p class="text-on-surface-variant small mb-0">{{ _t('Fair comparison between kindergartens, managers, and supervisors within the same segment and geographic scope.') }}
         </p>
     </div>
     <div class="col-md-4 text-md-end mt-2 mt-md-0 d-flex justify-content-md-end align-items-center gap-2">
         <button id="exportClassificationBtn" class="btn btn-sm cyberlume-btn cyberlume-btn-outline"
-            aria-label="{% if ui_lang == 'en' %}Export data as CSV{% else %}تصدير البيانات كملف CSV{% endif %}"
+            aria-label="{{ _t('Export data as CSV') }}"
             data-bs-toggle="tooltip"
-            title="{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}">
+            title="{{ _t('Export CSV') }}">
             <span class="material-symbols-outlined text-sm">download</span>
         </button>
         <div class="form-check form-check-inline">
             <input class="form-check-input" type="checkbox" id="autoRefreshCheck">
             <label class="form-check-label small" for="autoRefreshCheck">
                 <i class="bi bi-arrow-repeat"></i>
-                {% if ui_lang == 'en' %}Auto{% else %}تلقائي{% endif %}
+                {{ _t('Auto') }}
             </label>
         </div>
         <button id="refreshClassificationBtn" class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10 transition-colors">
             <i class="bi bi-arrow-clockwise ms-1"></i>
-            {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+            {{ _t('Refresh') }}
         </button>
     </div>
 </div>
 
 <div id="classificationRoot" class="classification-page mb-4">
-    <div class="cyberlume-card  border-0 mb-3">
+    <div class="k-card  border-0 mb-3">
         <div class="relative z-10">
             <div class="row g-3 align-items-end" role="search">
                 <div class="col-lg-2 col-md-4">
-                    <label for="periodStart" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}</label>
+                    <label for="periodStart" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Period Start') }}</label>
                     <input id="periodStart" type="date" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none">
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="periodEnd" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}</label>
+                    <label for="periodEnd" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Period End') }}</label>
                     <input id="periodEnd" type="date" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none">
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="levelSelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Comparison Level{% else %}مستوى المقارنة{% endif %}</label>
+                    <label for="levelSelect" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Comparison Level') }}</label>
                     <select id="levelSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none"></select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="sizeModeSelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Segment Type{% else %}نوع الشريحة{% endif %}</label>
-                    <select id="sizeModeSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}Segment Type{% else %}نوع الشريحة{% endif %}"></select>
+                    <label for="sizeModeSelect" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Segment Type') }}</label>
+                    <select id="sizeModeSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{{ _t('Segment Type') }}"></select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="sizeBandSelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Segment Size{% else %}حجم الشريحة{% endif %}</label>
-                    <select id="sizeBandSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}Segment Size{% else %}حجم الشريحة{% endif %}"></select>
+                    <label for="sizeBandSelect" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Segment Size') }}</label>
+                    <select id="sizeBandSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{{ _t('Segment Size') }}"></select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="countrySelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Country{% else %}الدولة{% endif %}</label>
-                    <select id="countrySelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}Country{% else %}الدولة{% endif %}">
-                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    <label for="countrySelect" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Country') }}</label>
+                    <select id="countrySelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{{ _t('Country') }}">
+                        <option value="">{{ _t('All') }}</option>
                     </select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="governorateSelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-                    <select id="governorateSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}">
-                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    <label for="governorateSelect" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Governorate') }}</label>
+                    <select id="governorateSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{{ _t('Governorate') }}">
+                        <option value="">{{ _t('All') }}</option>
                     </select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="citySelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</label>
-                    <select id="citySelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}">
-                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    <label for="citySelect" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('District') }}</label>
+                    <select id="citySelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{{ _t('District') }}">
+                        <option value="">{{ _t('All') }}</option>
                     </select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="areaSelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</label>
-                    <select id="areaSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}">
-                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    <label for="areaSelect" class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Area') }}</label>
+                    <select id="areaSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{{ _t('Area') }}">
+                        <option value="">{{ _t('All') }}</option>
                     </select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Min Sample Days{% else %}الحد الأدنى للعينة{% endif %}</label>
+                    <label class="block font-label-sm text-on-surface-variant mb-1">{{ _t('Min Sample Days') }}</label>
                     <input id="minSampleDays" type="number" min="1" max="365" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" value="30">
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <button id="applyClassificationFiltersBtn" class="btn cyberlume-btn cyberlume-btn-primary w-100" aria-label="{% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}">
+                    <button id="applyClassificationFiltersBtn" class="btn cyberlume-btn cyberlume-btn-primary w-100" aria-label="{{ _t('Apply Filters') }}">
                         <i class="bi bi-funnel ms-1"></i>
-                        {% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}
+                        {{ _t('Apply Filters') }}
                         <span id="activeFilterCount" class="badge bg-light text-cyber-light ms-1 d-none">0</span>
                     </button>
                 </div>
@@ -96,25 +96,21 @@
                     <button type="button" class="btn btn-sm btn-link text-on-surface-variant p-1"
                         data-bs-toggle="tooltip"
                         data-bs-placement="top"
-                        title="{% if ui_lang == 'en' %}Shortcuts: Ctrl+Enter = Apply, R = Refresh{% else %}اختصارات: Ctrl+Enter = تطبيق، R = تحديث{% endif %}">
+                        title="{{ _t('Shortcuts: Ctrl+Enter = Apply, R = Refresh') }}">
                         <i class="bi bi-question-circle"></i>
                     </button>
                 </div>
             </div>
             <div id="classificationOffline" class="d-none alert alert-warning mt-2 mb-0 py-1 small">
                 <i class="bi bi-wifi-off"></i>
-                {% if ui_lang == 'en' %}You appear to be offline. Data may not refresh.{% else %}يبدو أنك غير متصل بالإنترنت. قد لا يتم تحديث البيانات.{% endif %}
+                {{ _t('You appear to be offline. Data may not refresh.') }}
             </div>
             <div class="alert alert-info mt-3 mb-0 py-2 small">
-                {% if ui_lang == 'en' %}Color legend: Green (80-100) strong performance, Amber (60-79.99) needs follow-up, Red (0-59.99) needs intervention.
+                {{ _t('Color legend: Green (80-100) strong performance, Amber (60-79.99) needs follow-up, Red (0-59.99) needs intervention.
                 <br>
                 The arrow shows change compared to the previous period of the same duration.
                 <br>
-                Data coverage represents indicator reliability: higher means more accurate comparison.{% else %}دلالة الألوان: أخضر (80-100) أداء قوي، كهرماني (60-79.99) يحتاج متابعة، أحمر (0-59.99) يحتاج تدخل.
-                <br>
-                السهم يوضح التغير مقارنة بالفترة السابقة بنفس المدة الزمنية.
-                <br>
-                تغطية البيانات تمثل موثوقية المؤشر: كلما ارتفعت زادت دقة المقارنة.{% endif %}
+                Data coverage represents indicator reliability: higher means more accurate comparison.') }}
             </div>
         </div>
     </div>
@@ -124,7 +120,7 @@
             <div class="classification-kpi">
                 <div class="classification-kpi-icon bg-success-subtle text-success"><i class="bi bi-trophy"></i></div>
                 <div>
-                    <div class="classification-kpi-label">{% if ui_lang == 'en' %}Ranked Entities{% else %}الكيانات المصنفة{% endif %}</div>
+                    <div class="classification-kpi-label">{{ _t('Ranked Entities') }}</div>
                     <div class="classification-kpi-value" id="classificationRankedCount">--</div>
                     <div class="classification-kpi-note" id="classificationTotalCount">--</div>
                 </div>
@@ -134,9 +130,9 @@
             <div class="classification-kpi">
                 <div class="classification-kpi-icon bg-primary-subtle text-primary"><i class="bi bi-speedometer2"></i></div>
                 <div>
-                    <div class="classification-kpi-label">{% if ui_lang == 'en' %}Average Score{% else %}متوسط الدرجة{% endif %}</div>
+                    <div class="classification-kpi-label">{{ _t('Average Score') }}</div>
                     <div class="classification-kpi-value" id="classificationAverageScore">--</div>
-                    <div class="classification-kpi-note">{% if ui_lang == 'en' %}Across ranked results{% else %}ضمن النتائج المصنفة{% endif %}</div>
+                    <div class="classification-kpi-note">{{ _t('Across ranked results') }}</div>
                 </div>
             </div>
         </div>
@@ -144,9 +140,9 @@
             <div class="classification-kpi">
                 <div class="classification-kpi-icon bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle"></i></div>
                 <div>
-                    <div class="classification-kpi-label">{% if ui_lang == 'en' %}Intervention Needed{% else %}تحتاج تدخلا{% endif %}</div>
+                    <div class="classification-kpi-label">{{ _t('Intervention Needed') }}</div>
                     <div class="classification-kpi-value" id="classificationRedCount">--</div>
-                    <div class="classification-kpi-note">{% if ui_lang == 'en' %}Red band entities{% else %}ضمن النطاق الأحمر{% endif %}</div>
+                    <div class="classification-kpi-note">{{ _t('Red band entities') }}</div>
                 </div>
             </div>
         </div>
@@ -154,19 +150,19 @@
             <div class="classification-kpi">
                 <div class="classification-kpi-icon bg-warning-subtle text-warning"><i class="bi bi-database-check"></i></div>
                 <div>
-                    <div class="classification-kpi-label">{% if ui_lang == 'en' %}Data Coverage{% else %}تغطية البيانات{% endif %}</div>
+                    <div class="classification-kpi-label">{{ _t('Data Coverage') }}</div>
                     <div class="classification-kpi-value" id="classificationAverageCoverage">--</div>
-                    <div class="classification-kpi-note">{% if ui_lang == 'en' %}Reliability average{% else %}متوسط الموثوقية{% endif %}</div>
+                    <div class="classification-kpi-note">{{ _t('Reliability average') }}</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-3 mb-3" role="region" aria-label="{% if ui_lang == 'en' %}Charts{% else %}الرسوم البيانية{% endif %}">
+    <div class="row g-3 mb-3" role="region" aria-label="{{ _t('Charts') }}">
         <div class="col-xl-4">
             <section class="classification-chart-panel">
                 <div class="classification-chart-header">
-                    <h2>{% if ui_lang == 'en' %}Band Distribution{% else %}توزيع التصنيفات{% endif %}</h2>
+                    <h2>{{ _t('Band Distribution') }}</h2>
                     <span id="classificationBandChartNote" data-i18n="classification.chart.band_note">--</span>
                 </div>
                 <div class="classification-chart-box">
@@ -177,7 +173,7 @@
         <div class="col-xl-4">
             <section class="classification-chart-panel">
                 <div class="classification-chart-header">
-                    <h2>{% if ui_lang == 'en' %}Top Performers{% else %}الأعلى أداء{% endif %}</h2>
+                    <h2>{{ _t('Top Performers') }}</h2>
                     <span id="classificationScoreChartNote" data-i18n="classification.chart.score_note">--</span>
                 </div>
                 <div class="classification-chart-box">
@@ -188,7 +184,7 @@
         <div class="col-xl-4">
             <section class="classification-chart-panel">
                 <div class="classification-chart-header">
-                    <h2>{% if ui_lang == 'en' %}Indicator Mix{% else %}مزيج المؤشرات{% endif %}</h2>
+                    <h2>{{ _t('Indicator Mix') }}</h2>
                     <span id="classificationAspectChartNote" data-i18n="classification.chart.aspect_note">--</span>
                 </div>
                 <div class="classification-chart-box">
@@ -198,17 +194,17 @@
         </div>
     </div>
 
-    <div class="cyberlume-card  border-0">
+    <div class="k-card  border-0">
         <div class="card-header bg-white">
             <ul class="nav nav-tabs card-header-tabs" id="classificationTabs">
                 <li class="nav-item">
-                    <button class="nav-link active" data-entity-type="KINDERGARTEN">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</button>
+                    <button class="nav-link active" data-entity-type="KINDERGARTEN">{{ _t('Kindergartens') }}</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link" data-entity-type="MANAGER">{% if ui_lang == 'en' %}Managers{% else %}المديرون{% endif %}</button>
+                    <button class="nav-link" data-entity-type="MANAGER">{{ _t('Managers') }}</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link" data-entity-type="SUPERVISOR">{% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}</button>
+                    <button class="nav-link" data-entity-type="SUPERVISOR">{{ _t('Supervisors') }}</button>
                 </li>
             </ul>
         </div>
@@ -216,27 +212,26 @@
             <div id="classificationLoading" class="d-none text-on-surface-variant py-2" role="status" aria-live="polite" aria-atomic="true" data-i18n-container="classification.loading">
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <div class="spinner-border spinner-border-sm" role="status">
-                        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جار التحميل...{% endif %}</span>
+                        <span class="visually-hidden">{{ _t('Loading...') }}</span>
                     </div>
-                    <span id="classificationLoadingText" data-i18n="classification.loading.text">{% if ui_lang == 'en' %}Loading classification data...{% else %}جار تحميل بيانات التصنيف...{% endif %}</span>
+                    <span id="classificationLoadingText" data-i18n="classification.loading.text">{{ _t('Loading classification data...') }}</span>
                 </div>
             </div>
             <div id="classificationError" class="d-none alert alert-danger py-2" role="alert" aria-live="polite" aria-atomic="true" data-i18n-container="classification.error"></div>
-            <div id="classificationEmpty" class="d-none alert alert-warning py-2" role="status" aria-live="polite" aria-atomic="true" data-i18n-container="classification.empty">{% if ui_lang == 'en' %}Not enough data within the current filters.{% else %}لا توجد بيانات كافية ضمن الفلاتر
-                الحالية.{% endif %}</div>
+            <div id="classificationEmpty" class="d-none alert alert-warning py-2" role="status" aria-live="polite" aria-atomic="true" data-i18n-container="classification.empty">{{ _t('Not enough data within the current filters.') }}</div>
 
             <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-                <table class="table table-dark table-hover cyberlume-table align-middle table-striped table-hover align-middle" id="classificationTable" role="table" aria-label="{% if ui_lang == 'en' %}Classification results{% else %}نتائج التصنيف{% endif %}">
+                <table class="table table-dark table-hover k-table align-middle table-striped table-hover align-middle" id="classificationTable" role="table" aria-label="{{ _t('Classification results') }}">
                     <thead>
                         <tr>
-                            <th scope="col" aria-sort="ascending" data-label="{% if ui_lang == 'en' %}Rank{% else %}الترتيب{% endif %}" data-i18n="classification.table.rank">{% if ui_lang == 'en' %}Rank{% else %}الترتيب{% endif %}</th>
-                            <th scope="col" data-label="{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}" data-i18n="classification.table.name">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
-                            <th scope="col" aria-sort="none" data-label="{% if ui_lang == 'en' %}Final Score{% else %}الدرجة النهائية{% endif %}" data-i18n="classification.table.final_score">{% if ui_lang == 'en' %}Final Score{% else %}الدرجة النهائية{% endif %}</th>
-                            <th scope="col" aria-sort="none" data-label="{% if ui_lang == 'en' %}Percentile{% else %}النسبة المئوية{% endif %}" data-i18n="classification.table.percentile">{% if ui_lang == 'en' %}Percentile{% else %}النسبة المئوية{% endif %}</th>
-                            <th scope="col" data-label="{% if ui_lang == 'en' %}Classification{% else %}التصنيف{% endif %}" data-i18n="classification.table.classification">{% if ui_lang == 'en' %}Classification{% else %}التصنيف{% endif %}</th>
-                            <th scope="col" data-label="{% if ui_lang == 'en' %}Trend{% else %}الاتجاه{% endif %}" data-i18n="classification.table.trend">{% if ui_lang == 'en' %}Trend{% else %}الاتجاه{% endif %}</th>
-                            <th scope="col" data-label="{% if ui_lang == 'en' %}Data Coverage{% else %}تغطية البيانات{% endif %}" data-i18n="classification.table.data_coverage">{% if ui_lang == 'en' %}Data Coverage{% else %}تغطية البيانات{% endif %}</th>
-                            <th scope="col" data-label="{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}" data-i18n="classification.table.actions">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</th>
+                            <th scope="col" aria-sort="ascending" data-label="{{ _t('Rank') }}" data-i18n="classification.table.rank">{{ _t('Rank') }}</th>
+                            <th scope="col" data-label="{{ _t('Name') }}" data-i18n="classification.table.name">{{ _t('Name') }}</th>
+                            <th scope="col" aria-sort="none" data-label="{{ _t('Final Score') }}" data-i18n="classification.table.final_score">{{ _t('Final Score') }}</th>
+                            <th scope="col" aria-sort="none" data-label="{{ _t('Percentile') }}" data-i18n="classification.table.percentile">{{ _t('Percentile') }}</th>
+                            <th scope="col" data-label="{{ _t('Classification') }}" data-i18n="classification.table.classification">{{ _t('Classification') }}</th>
+                            <th scope="col" data-label="{{ _t('Trend') }}" data-i18n="classification.table.trend">{{ _t('Trend') }}</th>
+                            <th scope="col" data-label="{{ _t('Data Coverage') }}" data-i18n="classification.table.data_coverage">{{ _t('Data Coverage') }}</th>
+                            <th scope="col" data-label="{{ _t('Actions') }}" data-i18n="classification.table.actions">{{ _t('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody id="classificationTableBody"></tbody>
@@ -250,40 +245,39 @@
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="classificationDetailModalLabel">{% if ui_lang == 'en' %}Indicator Details{% else %}تفاصيل المؤشر{% endif %}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+                    <h5 class="modal-title" id="classificationDetailModalLabel">{{ _t('Indicator Details') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _t('Close') }}"></button>
                 </div>
                 <div class="modal-body">
                     <div id="classificationDetailSummary" class="mb-3"></div>
                     <div class="row g-3">
                         <div class="col-lg-6">
-                            <div class="cyberlume-card h-100">
+                            <div class="k-card h-100">
                                 <div class="relative z-10">
-                                    <h6 class="fw-bold">{% if ui_lang == 'en' %}Aspect Distribution{% else %}توزيع الجوانب{% endif %}</h6>
+                                    <h6 class="fw-bold">{{ _t('Aspect Distribution') }}</h6>
                                     <ul class="list-group list-group-flush" id="classificationAspectsList"></ul>
                                 </div>
                             </div>
                         </div>
                         <div class="col-lg-6">
-                            <div class="cyberlume-card h-100">
+                            <div class="k-card h-100">
                                 <div class="relative z-10">
-                                    <h6 class="fw-bold">{% if ui_lang == 'en' %}Suggested Actions{% else %}إجراءات مقترحة{% endif %}</h6>
+                                    <h6 class="fw-bold">{{ _t('Suggested Actions') }}</h6>
                                     <ul id="classificationActionsList" class="mb-0"></ul>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="cyberlume-card mt-3">
+                    <div class="k-card mt-3">
                         <div class="relative z-10">
-                            <h6 class="fw-bold">{% if ui_lang == 'en' %}Score Trend Across Periods{% else %}اتجاه الدرجة عبر الفترات{% endif %}</h6>
+                            <h6 class="fw-bold">{{ _t('Score Trend Across Periods') }}</h6>
                             <canvas id="classificationTrendChart" height="100"></canvas>
-                            <p class="text-on-surface-variant small mt-2 mb-0">{% if ui_lang == 'en' %}The chart shows the final score evolution across consecutive periods of the same duration.{% else %}يوضح الرسم تطور الدرجة النهائية خلال فترات متتالية
-                                بنفس الطول الزمني.{% endif %}</p>
+                            <p class="text-on-surface-variant small mt-2 mb-0">{{ _t('The chart shows the final score evolution across consecutive periods of the same duration.') }}</p>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                    <button class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{{ _t('Close') }}</button>
                 </div>
             </div>
         </div>

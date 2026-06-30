@@ -1,6 +1,6 @@
 {% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}System Settings{% else %}إعدادات النظام{% endif %} — KinJo{% endblock %}
+{% block title %}{{ _t('System Settings') }} — KinJo{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-6">
@@ -13,10 +13,10 @@
       </div>
       <div>
         <h1 class="font-display-md text-display-md text-on-surface font-bold tracking-tight">
-          {% if ui_lang == 'en' %}System Settings{% else %}إعدادات النظام{% endif %}
+          {{ _t('System Settings') }}
         </h1>
         <p class="text-on-surface-variant font-body-md text-sm mt-1">
-          {% if ui_lang == 'en' %}Manage global configuration and platform environment variables.{% else %}إدارة التكوين العام ومتغيرات بيئة المنصة.{% endif %}
+          {{ _t('Manage global configuration and platform environment variables.') }}
         </p>
       </div>
     </div>
@@ -33,7 +33,7 @@
       <div class="flex items-center gap-3 mb-6">
         <span class="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg">history_toggle_off</span>
         <h2 class="font-title-lg text-title-lg text-on-surface">
-          {% if ui_lang == 'en' %}Session Management{% else %}إدارة الجلسة{% endif %}
+          {{ _t('Session Management') }}
         </h2>
       </div>
       
@@ -41,14 +41,14 @@
         <div class="flex items-center justify-between bg-white/5 border border-white/10 p-4 rounded-xl">
           <div>
             <div class="font-label-md text-on-surface-variant mb-1">
-              {% if ui_lang == 'en' %}Session Timeout{% else %}مهلة انتهاء الجلسة{% endif %}
+              {{ _t('Session Timeout') }}
             </div>
             <div class="text-xs text-on-surface-variant/70">
-              {% if ui_lang == 'en' %}User will be logged out after inactivity.{% else %}سيتم تسجيل خروج المستخدم بعد فترة من عدم النشاط.{% endif %}
+              {{ _t('User will be logged out after inactivity.') }}
             </div>
           </div>
           <div class="font-display-sm text-primary font-bold bg-primary/10 px-4 py-2 rounded-lg border border-primary/20">
-            {{ session_timeout_minutes | default(30) }} {% if ui_lang == 'en' %}min{% else %}دقيقة{% endif %}
+            {{ session_timeout_minutes | default(30) }} {{ _t('min') }}
           </div>
         </div>
       </div>
@@ -62,7 +62,7 @@
       <div class="flex items-center gap-3 mb-6">
         <span class="material-symbols-outlined text-secondary bg-secondary/10 p-2 rounded-lg">memory</span>
         <h2 class="font-title-lg text-title-lg text-on-surface">
-          {% if ui_lang == 'en' %}Environment Context{% else %}سياق البيئة{% endif %}
+          {{ _t('Environment Context') }}
         </h2>
       </div>
       
@@ -70,15 +70,9 @@
         <div class="flex items-start gap-4">
           <span class="material-symbols-outlined text-warning text-2xl mt-1">info</span>
           <p class="text-on-surface-variant font-body-sm text-sm leading-relaxed">
-            {% if ui_lang == 'en' %}
-              Server-level configuration is securely managed via environment variables and the 
+            {{ _t('Server-level configuration is securely managed via environment variables and the 
               <code class="px-2 py-0.5 bg-black/30 border border-white/10 rounded font-mono text-primary text-xs mx-1">.env</code> 
-              file. Please contact your system administrator to modify backend secrets, API keys, or database URLs.
-            {% else %}
-              يتم إدارة التكوين على مستوى الخادم بشكل آمن عبر متغيرات البيئة وملف 
-              <code class="px-2 py-0.5 bg-black/30 border border-white/10 rounded font-mono text-primary text-xs mx-1">.env</code>. 
-              يرجى التواصل مع مسؤول النظام لتعديل أسرار الواجهة الخلفية أو مفاتيح API أو عناوين قواعد البيانات.
-            {% endif %}
+              file. Please contact your system administrator to modify backend secrets, API keys, or database URLs.') }}
           </p>
         </div>
       </div>

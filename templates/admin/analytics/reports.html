@@ -1,7 +1,7 @@
 {% extends "admin_base.html" %}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 
-{% block title %}{% if ui_lang == 'en' %}Reports Center{% else %}مركز التقارير{% endif %} — KinJo{% endblock %}
+{% block title %}{{ _t('Reports Center') }} — KinJo{% endblock %}
 
 
 
@@ -10,11 +10,11 @@
   <div class="reports-page-titleblock">
     <h1 class="admin-page-title mb-0"style="font: var(--type-page-title)">
       <i class="bi bi-file-earmark-text me-2"></i>
-      {% if ui_lang == 'en' %}Reports Center{% else %}مركز التقارير{% endif %}
+      {{ _t('Reports Center') }}
     </h1>
     <small class="text-on-surface-variant mt-1"id="reportsLastUpdated">
       <i class="bi bi-clock"></i>
-      <span>{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+      <span>{{ _t('Loading...') }}</span>
     </small>
   </div>
   <div class="reports-page-actions">
@@ -36,34 +36,34 @@
   <div class="col-md-6 col-xl-3">
     <div class="card h-100 glass-panel hover-elevate border-start border-4 border-primary shadow-sm"role="region">
       <div class="card-body p-card">
-        <h6 class="text-on-surface-variant mb-0 fw-semibold"style="font: var(--type-label)">{% if ui_lang == 'en' %}Reports Generated{% else %}التقارير المنشأة{% endif %}</h6>
+        <h6 class="text-on-surface-variant mb-0 fw-semibold"style="font: var(--type-label)">{{ _t('Reports Generated') }}</h6>
         <h3 class="mb-0 fw-bold text-primary"id="statReportsGenerated">--</h1></div>
-        <small class="text-on-surface-variant">{% if ui_lang == 'en' %}This month{% else %}هذا الشهر{% endif %}</small>
+        <small class="text-on-surface-variant">{{ _t('This month') }}</small>
       </div>
     </div>
   </div>
   <div class="col-md-6 col-xl-3">
     <div class="card h-100 glass-panel hover-elevate border-start border-4 border-success shadow-sm"role="region">
       <div class="card-body p-card">
-        <h6 class="text-on-surface-variant mb-0 fw-semibold"style="font: var(--type-label)">{% if ui_lang == 'en' %}Scheduled Reports{% else %}تقارير مجدولة{% endif %}</h6>
+        <h6 class="text-on-surface-variant mb-0 fw-semibold"style="font: var(--type-label)">{{ _t('Scheduled Reports') }}</h6>
         <h3 class="mb-0 fw-bold text-success"id="statScheduledReports">--</h1></div>
-        <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Active schedules{% else %}جدولات نشطة{% endif %}</small>
+        <small class="text-on-surface-variant">{{ _t('Active schedules') }}</small>
       </div>
     </div>
   </div>
   <div class="col-md-6 col-xl-3">
     <div class="card h-100 glass-panel hover-elevate border-start border-4 border-warning shadow-sm"role="region">
       <div class="card-body p-card">
-        <h6 class="text-on-surface-variant mb-0 fw-semibold"style="font: var(--type-label)">{% if ui_lang == 'en' %}Failed Exports{% else %}تصديرات فاشلة{% endif %}</h6>
+        <h6 class="text-on-surface-variant mb-0 fw-semibold"style="font: var(--type-label)">{{ _t('Failed Exports') }}</h6>
         <h3 class="mb-0 fw-bold text-warning"id="statFailedExports">--</h1></div>
-        <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Requires attention{% else %}تتطلب انتباه{% endif %}</small>
+        <small class="text-on-surface-variant">{{ _t('Requires attention') }}</small>
       </div>
     </div>
   </div>
   <div class="col-md-6 col-xl-3">
     <div class="card h-100 glass-panel hover-elevate border-start border-4 border-info shadow-sm"role="region">
       <div class="card-body p-card">
-        <h6 class="text-on-surface-variant mb-0 fw-semibold"style="font: var(--type-label)">{% if ui_lang == 'en' %}Last Generated{% else %}آخر تقرير{% endif %}</h6>
+        <h6 class="text-on-surface-variant mb-0 fw-semibold"style="font: var(--type-label)">{{ _t('Last Generated') }}</h6>
         <h3 class="mb-0 fw-bold text-info"id="statLastGenerated">--</h1></div>
         <small class="text-on-surface-variant"id="statLastGeneratedTime">--</small>
       </div>
@@ -75,58 +75,58 @@
 <div class="reports-tabs mb-4">
   <ul class="nav nav-pills"id="reportCategoryTabs"role="tablist">
     <li class="nav-item"role="presentation">
-      <button class="nav-link active"id="tab-attendance"data-bs-toggle="pill"data-bs-target="#pane-attendance"type="button"role="tab" title="{% if ui_lang == 'en' %}Track kindergarten attendance rates, absences, and governorate-level breakdowns.{% else %}تتبع نسب حضور رياض الأطفال، الغياب، وتفاصيل المحافظات.{% endif %}">
-        <i class="bi bi-calendar-check me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور والغياب{% endif %}
+      <button class="nav-link active"id="tab-attendance"data-bs-toggle="pill"data-bs-target="#pane-attendance"type="button"role="tab" title="{{ _t('Track kindergarten attendance rates, absences, and governorate-level breakdowns.') }}">
+        <i class="bi bi-calendar-check me-1"></i>{{ _t('Attendance') }}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-incidents"data-bs-toggle="pill"data-bs-target="#pane-incidents"type="button"role="tab" title="{% if ui_lang == 'en' %}Monitor child safety incidents, open cases, and critical severity levels.{% else %}مراقبة حوادث سلامة الأطفال، القضايا المفتوحة، والمستويات الحرجة.{% endif %}">
-        <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
+      <button class="nav-link"id="tab-incidents"data-bs-toggle="pill"data-bs-target="#pane-incidents"type="button"role="tab" title="{{ _t('Monitor child safety incidents, open cases, and critical severity levels.') }}">
+        <i class="bi bi-exclamation-triangle me-1"></i>{{ _t('Incidents') }}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-compliance"data-bs-toggle="pill"data-bs-target="#pane-compliance"type="button"role="tab" title="{% if ui_lang == 'en' %}Assess nursery compliance scores and governance level distributions.{% else %}تقييم درجات امتثال رياض الأطفال وتوزيعات مستويات الحوكمة.{% endif %}">
-        <i class="bi bi-shield-check me-1"></i>{% if ui_lang == 'en' %}Governance{% else %}الحوكمة والامتثال{% endif %}
+      <button class="nav-link"id="tab-compliance"data-bs-toggle="pill"data-bs-target="#pane-compliance"type="button"role="tab" title="{{ _t('Assess nursery compliance scores and governance level distributions.') }}">
+        <i class="bi bi-shield-check me-1"></i>{{ _t('Governance') }}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-enrollment"data-bs-toggle="pill"data-bs-target="#pane-enrollment"type="button"role="tab" title="{% if ui_lang == 'en' %}Analyze registration applications, funnel status, and intake sources.{% else %}تحليل طلبات التسجيل، حالة قمع التحويل، ومصادر الاستيعاب.{% endif %}">
-        <i class="bi bi-folder2-open me-1"></i>{% if ui_lang == 'en' %}Enrollment{% else %}التسجيل{% endif %}
+      <button class="nav-link"id="tab-enrollment"data-bs-toggle="pill"data-bs-target="#pane-enrollment"type="button"role="tab" title="{{ _t('Analyze registration applications, funnel status, and intake sources.') }}">
+        <i class="bi bi-folder2-open me-1"></i>{{ _t('Enrollment') }}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-audit"data-bs-toggle="pill"data-bs-target="#pane-audit"type="button"role="tab" title="{% if ui_lang == 'en' %}Review system operations, actor roles, and security sensitivity levels.{% else %}مراجعة العمليات البرمجية، أدوار المستخدمين، ومستويات الأمان الحساسة.{% endif %}">
-        <i class="bi bi-list-check me-1"></i>{% if ui_lang == 'en' %}Audit Log{% else %}سجل التدقيق{% endif %}
+      <button class="nav-link"id="tab-audit"data-bs-toggle="pill"data-bs-target="#pane-audit"type="button"role="tab" title="{{ _t('Review system operations, actor roles, and security sensitivity levels.') }}">
+        <i class="bi bi-list-check me-1"></i>{{ _t('Audit Log') }}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-staff"data-bs-toggle="pill"data-bs-target="#pane-staff"type="button"role="tab" title="{% if ui_lang == 'en' %}Staff training completion, ratio compliance, and HR metrics.{% else %}إتمام تدريب الموظفين، الامتثال للنسب، ومقاييس الموارد البشرية.{% endif %}">
-        <i class="bi bi-people me-1"></i>{% if ui_lang == 'en' %}Staff & Training{% else %}الموظفون والتدريب{% endif %}
+      <button class="nav-link"id="tab-staff"data-bs-toggle="pill"data-bs-target="#pane-staff"type="button"role="tab" title="{{ _t('Staff training completion, ratio compliance, and HR metrics.') }}">
+        <i class="bi bi-people me-1"></i>{{ _t('Staff & Training') }}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-welfare"data-bs-toggle="pill"data-bs-target="#pane-welfare"type="button"role="tab" title="{% if ui_lang == 'en' %}Child welfare: safeguarding cases, incident resolution, and parent engagement.{% else %}رفاهية الطفل: قضايا الحماية، حل الحوادث، ومشاركة الوالدين.{% endif %}">
-        <i class="bi bi-shield-heart me-1"></i>{% if ui_lang == 'en' %}Child Welfare{% else %}رفاهية الطفل{% endif %}
+      <button class="nav-link"id="tab-welfare"data-bs-toggle="pill"data-bs-target="#pane-welfare"type="button"role="tab" title="{{ _t('Child welfare: safeguarding cases, incident resolution, and parent engagement.') }}">
+        <i class="bi bi-shield-heart me-1"></i>{{ _t('Child Welfare') }}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-trends"data-bs-toggle="pill"data-bs-target="#pane-trends"type="button"role="tab" title="{% if ui_lang == 'en' %}Multi-metric period-over-period trends and comparative analysis.{% else %}اتجاهات متعددة المقاييس للفترات وتحليل مقارن.{% endif %}">
-        <i class="bi bi-graph-up me-1"></i>{% if ui_lang == 'en' %}Trends{% else %}الاتجاهات{% endif %}
+      <button class="nav-link"id="tab-trends"data-bs-toggle="pill"data-bs-target="#pane-trends"type="button"role="tab" title="{{ _t('Multi-metric period-over-period trends and comparative analysis.') }}">
+        <i class="bi bi-graph-up me-1"></i>{{ _t('Trends') }}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-capacity"data-bs-toggle="pill"data-bs-target="#pane-capacity"type="button"role="tab" title="{% if ui_lang == 'en' %}Capacity utilization, enrollment waitlists, and available slots by governorate.{% else %}استخدام السعة، قوائم الانتظار، والمقاعد المتاحة حسب المحافظة.{% endif %}">
-        <i class="bi bi-building me-1"></i>{% if ui_lang == 'en' %}Capacity{% else %}الطاقة الاستيعابية{% endif %}
+      <button class="nav-link"id="tab-capacity"data-bs-toggle="pill"data-bs-target="#pane-capacity"type="button"role="tab" title="{{ _t('Capacity utilization, enrollment waitlists, and available slots by governorate.') }}">
+        <i class="bi bi-building me-1"></i>{{ _t('Capacity') }}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-parent"data-bs-toggle="pill"data-bs-target="#pane-parent"type="button"role="tab" title="{% if ui_lang == 'en' %}Parent report view rates, notification receipt, and engagement metrics.{% else %}معدل مشاهدة الوالدين للتقارير، استلام الإخطارات، ومقاييس التفاعل.{% endif %}">
-        <i class="bi bi-chat-heart me-1"></i>{% if ui_lang == 'en' %}Parent Engagement{% else %}مشاركة الوالدين{% endif %}
+      <button class="nav-link"id="tab-parent"data-bs-toggle="pill"data-bs-target="#pane-parent"type="button"role="tab" title="{{ _t('Parent report view rates, notification receipt, and engagement metrics.') }}">
+        <i class="bi bi-chat-heart me-1"></i>{{ _t('Parent Engagement') }}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-dataquality"data-bs-toggle="pill"data-bs-target="#pane-dataquality"type="button"role="tab" title="{% if ui_lang == 'en' %}Report submission completeness, missing data, and zero-attendance anomalies.{% else %}اكتمال تقديم التقارير، البيانات المفقودة، وشذوذات الحضور الصفري.{% endif %}">
-        <i class="bi bi-clipboard-data me-1"></i>{% if ui_lang == 'en' %}Data Quality{% else %}جودة البيانات{% endif %}
+      <button class="nav-link"id="tab-dataquality"data-bs-toggle="pill"data-bs-target="#pane-dataquality"type="button"role="tab" title="{{ _t('Report submission completeness, missing data, and zero-attendance anomalies.') }}">
+        <i class="bi bi-clipboard-data me-1"></i>{{ _t('Data Quality') }}
       </button>
     </li>
   </ul>
@@ -138,64 +138,64 @@
     <div class="card h-100 glass-panel shadow-sm border-0 sticky-top"style="top: 80px; z-index: 10;">
       <div class="card-header bg-transparent border-bottom">
         <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
-          <i class="bi bi-sliders me-2 text-primary"></i>{% if ui_lang == 'en' %}Report Builder{% else %}إعداد التقرير{% endif %}
+          <i class="bi bi-sliders me-2 text-primary"></i>{{ _t('Report Builder') }}
         </h5>
       </div>
       <div class="card-body p-card">
         <form id="reportBuilderForm"novalidate>
-          <input type="hidden" aria-label="{% if ui_lang == 'en' %}Report Type{% else %}نوع التقرير{% endif %}" id="reportType" value="attendance">
+          <input type="hidden" aria-label="{{ _t('Report Type') }}" id="reportType" value="attendance">
 
           <!-- Dynamic Filters -->
           <div class="mb-3" id="filterGovContainer">
-            <label class="form-label fw-bold" for="governorateFilter">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-            <p class="small text-muted">{% if ui_lang == 'en' %}Select from the filter above{% else %}اختر من الفلتر أعلاه{% endif %}</p>
+            <label class="form-label fw-bold" for="governorateFilter">{{ _t('Governorate') }}</label>
+            <p class="small text-muted">{{ _t('Select from the filter above') }}</p>
           </div>
 
           <div class="mb-3" id="filterKgContainer">
-            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+            <label class="form-label fw-bold">{{ _t('Kindergarten') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="kindergartenFilter" multiple size="3">
-              <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}كل الروضات{% endif %}</option>
+              <option value="">{{ _t('All Kindergartens') }}</option>
             </select>
           </div>
 
           <div class="mb-3" id="filterStatusContainer">
-            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+            <label class="form-label fw-bold">{{ _t('Status') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="statusFilter" multiple size="3">
-              <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
+              <option value="">{{ _t('All Statuses') }}</option>
             </select>
           </div>
 
           <div class="mb-3" id="filterSeverityContainer">
-            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</label>
+            <label class="form-label fw-bold">{{ _t('Severity') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="severityFilter" multiple size="3">
-              <option value="">{% if ui_lang == 'en' %}All Severities{% else %}كل الدرجات{% endif %}</option>
-              <option value="LOW">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</option>
-              <option value="MEDIUM">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</option>
-              <option value="HIGH">{% if ui_lang == 'en' %}High{% else %}مرتفع{% endif %}</option>
-              <option value="CRITICAL">{% if ui_lang == 'en' %}Critical{% else %}حرج{% endif %}</option>
+              <option value="">{{ _t('All Severities') }}</option>
+              <option value="LOW">{{ _t('Low') }}</option>
+              <option value="MEDIUM">{{ _t('Medium') }}</option>
+              <option value="HIGH">{{ _t('High') }}</option>
+              <option value="CRITICAL">{{ _t('Critical') }}</option>
             </select>
           </div>
 
           <div class="mb-3" id="filterSourceContainer">
-            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</label>
+            <label class="form-label fw-bold">{{ _t('Source') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="sourceFilter" multiple size="3">
-              <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
+              <option value="">{{ _t('All Sources') }}</option>
               <option value="WEB">Web</option>
-              <option value="MOBILE">{% if ui_lang == 'en' %}Mobile{% else %}موبايل{% endif %}</option>
-              <option value="OFFICE">{% if ui_lang == 'en' %}Office{% else %}مكتب{% endif %}</option>
+              <option value="MOBILE">{{ _t('Mobile') }}</option>
+              <option value="OFFICE">{{ _t('Office') }}</option>
             </select>
           </div>
 
           <div class="mb-3" id="filterReviewerContainer">
-            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Reviewer{% else %}المراجع{% endif %}</label>
+            <label class="form-label fw-bold">{{ _t('Reviewer') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="reviewerFilter" multiple size="3">
-              <option value="">{% if ui_lang == 'en' %}All Reviewers{% else %}كل المُراجعين{% endif %}</option>
+              <option value="">{{ _t('All Reviewers') }}</option>
             </select>
           </div>
 
           <div class="row g-2 mb-3">
             <div class="col-6">
-              <label class="form-label fw-bold" for="exportFormat">{% if ui_lang == 'en' %}Format{% else %}الصيغة{% endif %}</label>
+              <label class="form-label fw-bold" for="exportFormat">{{ _t('Format') }}</label>
               <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none"id="exportFormat">
                 <option value="CSV">CSV</option>
                 <option value="EXCEL">Excel</option>
@@ -204,7 +204,7 @@
               </select>
             </div>
             <div class="col-6">
-              <label class="form-label fw-bold" for="reportLang">{% if ui_lang == 'en' %}Language{% else %}اللغة{% endif %}</label>
+              <label class="form-label fw-bold" for="reportLang">{{ _t('Language') }}</label>
               <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none"id="reportLang">
                 <option value="ar">العربية</option>
                 <option value="en">English</option>
@@ -214,115 +214,115 @@
 
           <!-- New: Absence Reason (attendance tab) -->
           <div class="mb-3 d-none" id="filterAbsenceReasonContainer">
-            <label class="form-label fw-bold" for="absenceReasonFilter">{% if ui_lang == 'en' %}Absence Reason{% else %}سبب الغياب{% endif %}</label>
+            <label class="form-label fw-bold" for="absenceReasonFilter">{{ _t('Absence Reason') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="absenceReasonFilter" multiple size="3">
-              <option value="">{% if ui_lang == 'en' %}All Reasons{% else %}كل الأسباب{% endif %}</option>
-              <option value="SICK">{% if ui_lang == 'en' %}Sick{% else %}مرضي{% endif %}</option>
-              <option value="EXCUSED">{% if ui_lang == 'en' %}Excused{% else %}إجازة مبررة{% endif %}</option>
-              <option value="UNEXCUSED">{% if ui_lang == 'en' %}Unexcused{% else %}إجازة غير مبررة{% endif %}</option>
-              <option value="HOLIDAY">{% if ui_lang == 'en' %}Holiday{% else %}عطلة رسمية{% endif %}</option>
+              <option value="">{{ _t('All Reasons') }}</option>
+              <option value="SICK">{{ _t('Sick') }}</option>
+              <option value="EXCUSED">{{ _t('Excused') }}</option>
+              <option value="UNEXCUSED">{{ _t('Unexcused') }}</option>
+              <option value="HOLIDAY">{{ _t('Holiday') }}</option>
             </select>
           </div>
 
           <!-- New: Incident Type (incidents tab) -->
           <div class="mb-3 d-none" id="filterIncidentTypeContainer">
-            <label class="form-label fw-bold" for="incidentTypeFilter">{% if ui_lang == 'en' %}Incident Type{% else %}نوع الحادثة{% endif %}</label>
+            <label class="form-label fw-bold" for="incidentTypeFilter">{{ _t('Incident Type') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="incidentTypeFilter" multiple size="3">
-              <option value="">{% if ui_lang == 'en' %}All Types{% else %}كل الأنواع{% endif %}</option>
-              <option value="INJURY">{% if ui_lang == 'en' %}Injury{% else %}إصابة{% endif %}</option>
-              <option value="BEHAVIOR">{% if ui_lang == 'en' %}Behavior{% else %}سلوك{% endif %}</option>
-              <option value="ILLNESS">{% if ui_lang == 'en' %}Illness{% else %}مرض{% endif %}</option>
-              <option value="ACCIDENT">{% if ui_lang == 'en' %}Accident{% else %}حادث{% endif %}</option>
-              <option value="SAFEGUARDING">{% if ui_lang == 'en' %}Safeguarding{% else %}حماية الطفل{% endif %}</option>
+              <option value="">{{ _t('All Types') }}</option>
+              <option value="INJURY">{{ _t('Injury') }}</option>
+              <option value="BEHAVIOR">{{ _t('Behavior') }}</option>
+              <option value="ILLNESS">{{ _t('Illness') }}</option>
+              <option value="ACCIDENT">{{ _t('Accident') }}</option>
+              <option value="SAFEGUARDING">{{ _t('Safeguarding') }}</option>
             </select>
           </div>
 
           <!-- New: SLA Status (incidents + welfare tabs) -->
           <div class="mb-3 d-none" id="filterSlaContainer">
-            <label class="form-label fw-bold" for="slaFilter">{% if ui_lang == 'en' %}SLA Status{% else %}حالة SLA{% endif %}</label>
+            <label class="form-label fw-bold" for="slaFilter">{{ _t('SLA Status') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="slaFilter">
-              <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
-              <option value="overdue">{% if ui_lang == 'en' %}Overdue{% else %}متأخرة{% endif %}</option>
-              <option value="on_track">{% if ui_lang == 'en' %}On Track{% else %}في الموعد{% endif %}</option>
+              <option value="">{{ _t('All') }}</option>
+              <option value="overdue">{{ _t('Overdue') }}</option>
+              <option value="on_track">{{ _t('On Track') }}</option>
             </select>
           </div>
 
           <!-- New: Parent Informed (incidents + welfare tabs) -->
           <div class="mb-3 d-none" id="filterParentInformedContainer">
-            <label class="form-label fw-bold" for="parentInformedFilter">{% if ui_lang == 'en' %}Parent Informed{% else %}إخطار الوالدين{% endif %}</label>
+            <label class="form-label fw-bold" for="parentInformedFilter">{{ _t('Parent Informed') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="parentInformedFilter">
-              <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
-              <option value="yes">{% if ui_lang == 'en' %}Informed{% else %}تم الإخطار{% endif %}</option>
-              <option value="no">{% if ui_lang == 'en' %}Not Informed{% else %}لم يتم الإخطار{% endif %}</option>
+              <option value="">{{ _t('All') }}</option>
+              <option value="yes">{{ _t('Informed') }}</option>
+              <option value="no">{{ _t('Not Informed') }}</option>
             </select>
           </div>
 
           <!-- New: District (enrollment + capacity tabs) -->
           <div class="mb-3 d-none" id="filterDistrictContainer">
-            <label class="form-label fw-bold" for="districtFilter">{% if ui_lang == 'en' %}District{% else %}المنطقة{% endif %}</label>
+            <label class="form-label fw-bold" for="districtFilter">{{ _t('District') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="districtFilter">
-              <option value="">{% if ui_lang == 'en' %}All Districts{% else %}كل المناطق{% endif %}</option>
+              <option value="">{{ _t('All Districts') }}</option>
             </select>
           </div>
 
           <!-- New: Sensitivity Level (audit tab) -->
           <div class="mb-3 d-none" id="filterSensitivityContainer">
-            <label class="form-label fw-bold" for="sensitivityFilter">{% if ui_lang == 'en' %}Sensitivity Level{% else %}مستوى الحساسية{% endif %}</label>
+            <label class="form-label fw-bold" for="sensitivityFilter">{{ _t('Sensitivity Level') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="sensitivityFilter">
-              <option value="">{% if ui_lang == 'en' %}All Levels{% else %}كل المستويات{% endif %}</option>
-              <option value="1">1 — {% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</option>
-              <option value="2">2 — {% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</option>
-              <option value="3">3 — {% if ui_lang == 'en' %}High{% else %}مرتفع{% endif %}</option>
-              <option value="4">4 — {% if ui_lang == 'en' %}Critical{% else %}حرج{% endif %}</option>
-              <option value="5">5 — {% if ui_lang == 'en' %}Top Secret{% else %}سري للغاية{% endif %}</option>
+              <option value="">{{ _t('All Levels') }}</option>
+              <option value="1">1 — {{ _t('Low') }}</option>
+              <option value="2">2 — {{ _t('Medium') }}</option>
+              <option value="3">3 — {{ _t('High') }}</option>
+              <option value="4">4 — {{ _t('Critical') }}</option>
+              <option value="5">5 — {{ _t('Top Secret') }}</option>
             </select>
           </div>
 
           <!-- New: Actor Role (audit tab) -->
           <div class="mb-3 d-none" id="filterActorRoleContainer">
-            <label class="form-label fw-bold" for="actorRoleFilter">{% if ui_lang == 'en' %}Actor Role{% else %}دور المستخدم{% endif %}</label>
+            <label class="form-label fw-bold" for="actorRoleFilter">{{ _t('Actor Role') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="actorRoleFilter">
-              <option value="">{% if ui_lang == 'en' %}All Roles{% else %}كل الأدوار{% endif %}</option>
+              <option value="">{{ _t('All Roles') }}</option>
               <option value="ADMIN">Admin</option>
-              <option value="SUPERVISOR">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
-              <option value="PARENT">{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</option>
+              <option value="SUPERVISOR">{{ _t('Supervisor') }}</option>
+              <option value="PARENT">{{ _t('Parent') }}</option>
             </select>
           </div>
 
           <!-- New: Training Status (staff tab) -->
           <div class="mb-3 d-none" id="filterTrainingStatusContainer">
-            <label class="form-label fw-bold" for="trainingStatusFilter">{% if ui_lang == 'en' %}Training Status{% else %}حالة التدريب{% endif %}</label>
+            <label class="form-label fw-bold" for="trainingStatusFilter">{{ _t('Training Status') }}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="trainingStatusFilter">
-              <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
-              <option value="passed">{% if ui_lang == 'en' %}Passed{% else %}اجتاز{% endif %}</option>
-              <option value="failed">{% if ui_lang == 'en' %}Failed{% else %}لم يجتز{% endif %}</option>
+              <option value="">{{ _t('All') }}</option>
+              <option value="passed">{{ _t('Passed') }}</option>
+              <option value="failed">{{ _t('Failed') }}</option>
             </select>
           </div>
 
           <div class="form-check form-switch mb-3">
             <input class="form-check-input"type="checkbox"id="includeCharts"checked>
-            <label class="form-check-label"for="includeCharts">{% if ui_lang == 'en' %}Include charts{% else %}تضمين الرسوم البيانية{% endif %}</label>
+            <label class="form-check-label"for="includeCharts">{{ _t('Include charts') }}</label>
           </div>
           <div class="form-check form-switch mb-3">
             <input class="form-check-input"type="checkbox"id="includeSummary"checked>
-            <label class="form-check-label"for="includeSummary">{% if ui_lang == 'en' %}Include summary{% else %}تضمين الملخص{% endif %}</label>
+            <label class="form-check-label"for="includeSummary">{{ _t('Include summary') }}</label>
           </div>
 
           <div class="d-grid gap-2">
             <button type="button"class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10 transition-colors"id="previewReportBtn">
-              <i class="bi bi-eye me-2"></i>{% if ui_lang == 'en' %}Preview{% else %}معاينة{% endif %}
+              <i class="bi bi-eye me-2"></i>{{ _t('Preview') }}
             </button>
             <button type="button"class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]"id="exportReportBtn">
-              <i class="bi bi-download me-2"></i>{% if ui_lang == 'en' %}Export Report{% else %}تصدير التقرير{% endif %}
+              <i class="bi bi-download me-2"></i>{{ _t('Export Report') }}
             </button>
             <button type="button"class="btn btn-outline-secondary"id="saveTemplateBtn">
-              <i class="bi bi-bookmark me-2"></i>{% if ui_lang == 'en' %}Save as Template{% else %}حفظ كقالب{% endif %}
+              <i class="bi bi-bookmark me-2"></i>{{ _t('Save as Template') }}
             </button>
             <button type="button"class="btn btn-outline-info"id="scheduleReportBtn">
-              <i class="bi bi-calendar3 me-2"></i>{% if ui_lang == 'en' %}Schedule{% else %}جدولة{% endif %}
+              <i class="bi bi-calendar3 me-2"></i>{{ _t('Schedule') }}
             </button>
             <button type="reset"class="btn btn-outline-secondary"id="resetFiltersBtn">
-              <i class="bi bi-arrow-counterclockwise me-2"></i>{% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
+              <i class="bi bi-arrow-counterclockwise me-2"></i>{{ _t('Reset') }}
             </button>
           </div>
           <div id="reportValidationErrors"class="text-danger small mt-2 d-none"></div>
@@ -337,7 +337,7 @@
     <div id="dataQualityBanner"class="alert alert-light border d-none mb-3">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <strong>{% if ui_lang == 'en' %}Data Quality{% else %}جودة البيانات{% endif %}:</strong>
+          <strong>{{ _t('Data Quality') }}:</strong>
           <span id="dataQualityScore">--</span>%
         </div>
         <div id="dataQualityWarnings"></div>
@@ -348,16 +348,16 @@
     <div class="card glass-panel shadow-sm border-0 mb-4 hover-elevate"id="previewCard">
       <div class="card-header bg-transparent border-bottom border-light d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
-          <i class="bi bi-eye me-2 text-primary"></i>{% if ui_lang == 'en' %}Report Preview{% else %}معاينة التقرير{% endif %}
+          <i class="bi bi-eye me-2 text-primary"></i>{{ _t('Report Preview') }}
         </h5>
-        <span class="badge bg-primary text-white shadow-sm"id="previewRecordCount">0 {% if ui_lang == 'en' %}records{% else %}سجل{% endif %}</span>
+        <span class="badge bg-primary text-white shadow-sm"id="previewRecordCount">0 {{ _t('records') }}</span>
       </div>
       <div class="card-body p-card">
         <!-- KPI Summary Row -->
         <div class="row g-3 mb-3"id="previewKpis">
           <div class="col-12 text-center text-on-surface-variant py-4">
             <i class="bi bi-inbox fs-1"></i>
-            <div class="small mt-2">{% if ui_lang == 'en' %}Click Preview to load report summary{% else %}اضغط معاينة لتحميل ملخص التقرير{% endif %}</div>
+            <div class="small mt-2">{{ _t('Click Preview to load report summary') }}</div>
           </div>
         </div>
 
@@ -365,7 +365,7 @@
         <div class="row g-3 mb-3"id="previewCharts">
           <div class="col-12 text-center text-on-surface-variant py-4">
             <i class="bi bi-bar-chart fs-1"></i>
-            <div class="small mt-2">{% if ui_lang == 'en' %}Charts will appear here{% else %}ستظهر الرسوم البيانية هنا{% endif %}</div>
+            <div class="small mt-2">{{ _t('Charts will appear here') }}</div>
           </div>
         </div>
 
@@ -374,23 +374,23 @@
           <table class="table table-hover align-middle mb-0"id="previewTable">
             <thead class="table-light">
               <tr id="previewTableHead">
-                <th colspan="5"class="text-center text-on-surface-variant">{% if ui_lang == 'en' %}No preview data{% else %}لا توجد بيانات معاينة{% endif %}</th>
+                <th colspan="5"class="text-center text-on-surface-variant">{{ _t('No preview data') }}</th>
               </tr>
             </thead>
             <tbody id="previewTableBody">
               <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td colspan="5"class="text-center py-4 text-on-surface-variant">{% if ui_lang == 'en' %}No data{% else %}لا توجد بيانات{% endif %}</td></tr>
+<td colspan="5"class="text-center py-4 text-on-surface-variant">{{ _t('No data') }}</td></tr>
             </tbody>
           </table>
         </div>
 
         <!-- Insights & Warnings -->
         <div id="previewInsights"class="mt-3 d-none">
-          <h6 class="fw-bold text-success"><i class="bi bi-lightbulb me-1"></i>{% if ui_lang == 'en' %}Key Insights{% else %}أهم النتائج{% endif %}</h6>
+          <h6 class="fw-bold text-success"><i class="bi bi-lightbulb me-1"></i>{{ _t('Key Insights') }}</h6>
           <ul class="list-group list-group-flush"id="insightsList"></ul>
         </div>
         <div id="previewWarnings"class="mt-3 d-none">
-          <h6 class="fw-bold text-warning"><i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Warnings{% else %}تحذيرات{% endif %}</h6>
+          <h6 class="fw-bold text-warning"><i class="bi bi-exclamation-triangle me-1"></i>{{ _t('Warnings') }}</h6>
           <ul class="list-group list-group-flush"id="warningsList"></ul>
         </div>
       </div>
@@ -400,7 +400,7 @@
     <div class="card glass-panel shadow-sm border-0 hover-elevate">
       <div class="card-header bg-transparent border-bottom border-light d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
-          <i class="bi bi-clock-history me-2 text-info"></i>{% if ui_lang == 'en' %}Recent Reports{% else %}التقارير الأخيرة{% endif %}
+          <i class="bi bi-clock-history me-2 text-info"></i>{{ _t('Recent Reports') }}
         </h5>
         <button type="button"class="btn btn-sm btn-outline-primary"id="refreshHistoryBtn">
           <i class="bi bi-arrow-clockwise"></i>
@@ -411,16 +411,16 @@
           <table class="table table-hover align-middle mb-0"id="reportsHistoryTable">
             <thead class="table-light">
               <tr>
-                <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Report{% else %}التقرير{% endif %}</th>
-                <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Format{% else %}الصيغة{% endif %}</th>
-                <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Generated{% else %}تاريخ الإنشاء{% endif %}</th>
-                <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                <th class="text-center">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</th>
+                <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Report') }}</th>
+                <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Format') }}</th>
+                <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Generated') }}</th>
+                <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Status') }}</th>
+                <th class="text-center">{{ _t('Actions') }}</th>
               </tr>
             </thead>
             <tbody id="reportsHistoryBody">
               <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td colspan="5"class="text-center py-4 text-on-surface-variant">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr>
+<td colspan="5"class="text-center py-4 text-on-surface-variant">{{ _t('Loading...') }}</td></tr>
             </tbody>
           </table>
         </div>
@@ -434,18 +434,18 @@
   <div class="modal-dialog">
     <div class="modal-content glass-panel border-0 shadow">
       <div class="modal-header">
-        <h5 class="modal-title">{% if ui_lang == 'en' %}Save as Template{% else %}حفظ كقالب{% endif %}</h5>
-        <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+        <h5 class="modal-title">{{ _t('Save as Template') }}</h5>
+        <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{{ _t('Close') }}"></button>
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <label class="form-label fw-bold" for="templateName">{% if ui_lang == 'en' %}Template Name{% else %}اسم القالب{% endif %}</label>
-          <input type="text"class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none"id="templateName"placeholder="{% if ui_lang == 'en' %}e.g., Monthly Attendance{% else %}مثال: ملخص الحضور الشهري{% endif %}">
+          <label class="form-label fw-bold" for="templateName">{{ _t('Template Name') }}</label>
+          <input type="text"class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none"id="templateName"placeholder="{{ _t('e.g., Monthly Attendance') }}">
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button"class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors"data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-        <button type="button"class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]"id="confirmSaveTemplate">{% if ui_lang == 'en' %}Save{% else %}حفظ{% endif %}</button>
+        <button type="button"class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors"data-bs-dismiss="modal">{{ _t('Cancel') }}</button>
+        <button type="button"class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]"id="confirmSaveTemplate">{{ _t('Save') }}</button>
       </div>
     </div>
   </div>
@@ -456,32 +456,32 @@
   <div class="modal-dialog">
     <div class="modal-content glass-panel border-0 shadow">
       <div class="modal-header">
-        <h5 class="modal-title">{% if ui_lang == 'en' %}Schedule Report{% else %}جدولة التقرير{% endif %}</h5>
-        <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+        <h5 class="modal-title">{{ _t('Schedule Report') }}</h5>
+        <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{{ _t('Close') }}"></button>
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <label class="form-label fw-bold" for="scheduleName">{% if ui_lang == 'en' %}Schedule Name{% else %}اسم الجدولة{% endif %}</label>
-          <input type="text"class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none"id="scheduleName"placeholder="{% if ui_lang == 'en' %}e.g., Weekly Incident Summary{% else %}مثال: ملخص الحوادث الأسبوعي{% endif %}">
+          <label class="form-label fw-bold" for="scheduleName">{{ _t('Schedule Name') }}</label>
+          <input type="text"class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none"id="scheduleName"placeholder="{{ _t('e.g., Weekly Incident Summary') }}">
         </div>
         <div class="mb-3">
-          <label class="form-label fw-bold" for="scheduleFrequency">{% if ui_lang == 'en' %}Frequency{% else %}التكرار{% endif %}</label>
+          <label class="form-label fw-bold" for="scheduleFrequency">{{ _t('Frequency') }}</label>
           <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none"id="scheduleFrequency">
-            <option value="daily">{% if ui_lang == 'en' %}Daily{% else %}يومي{% endif %}</option>
-            <option value="weekly">{% if ui_lang == 'en' %}Weekly{% else %}أسبوعي{% endif %}</option>
-            <option value="monthly"selected>{% if ui_lang == 'en' %}Monthly{% else %}شهري{% endif %}</option>
-            <option value="quarterly">{% if ui_lang == 'en' %}Quarterly{% else %}ربع سنوي{% endif %}</option>
-            <option value="once">{% if ui_lang == 'en' %}Run Once{% else %}تشغيل مرة واحدة{% endif %}</option>
+            <option value="daily">{{ _t('Daily') }}</option>
+            <option value="weekly">{{ _t('Weekly') }}</option>
+            <option value="monthly"selected>{{ _t('Monthly') }}</option>
+            <option value="quarterly">{{ _t('Quarterly') }}</option>
+            <option value="once">{{ _t('Run Once') }}</option>
           </select>
         </div>
         <div class="mb-3">
-          <label class="form-label fw-bold" for="scheduleRecipients">{% if ui_lang == 'en' %}Recipients (comma-separated user IDs or emails){% else %}المستلمون (معرّفات المستخدمين أو البريد مفصولة بفاصلة){% endif %}</label>
+          <label class="form-label fw-bold" for="scheduleRecipients">{{ _t('Recipients (comma-separated user IDs or emails)') }}</label>
           <input type="text"class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none"id="scheduleRecipients"placeholder="1, 2, admin@example.com">
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button"class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors"data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-        <button type="button"class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]"id="confirmSchedule">{% if ui_lang == 'en' %}Schedule{% else %}جدولة{% endif %}</button>
+        <button type="button"class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors"data-bs-dismiss="modal">{{ _t('Cancel') }}</button>
+        <button type="button"class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]"id="confirmSchedule">{{ _t('Schedule') }}</button>
       </div>
     </div>
   </div>
@@ -491,7 +491,7 @@
   <div id="actionToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="d-flex">
       <div class="toast-body" id="toastMessage"></div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="{{ _t('Close') }}"></button>
     </div>
   </div>
 </div>

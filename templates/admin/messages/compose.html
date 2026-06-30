@@ -1,20 +1,20 @@
 ﻿{% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %} — KinJo{% endblock %}
+{% block title %}{{ _t('Compose New Message') }} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house" aria-hidden="true"></i></a>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{{ _t('Dashboard') }}"><i class="bi bi-house" aria-hidden="true"></i></a>
 <span class="breadcrumb-separator">/</span>
-<a href="/admin/messages" class="breadcrumb-item">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</a>
+<a href="/admin/messages" class="breadcrumb-item">{{ _t('Messages') }}</a>
 <span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Compose{% else %}إنشاء رسالة{% endif %}</span>
+<span class="breadcrumb-item active">{{ _t('Compose') }}</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-header mb-4">
   <h1 class="page-title">
     <i class="bi bi-envelope-plus me-2" aria-hidden="true"></i>
-    {% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %}
+    {{ _t('Compose New Message') }}
   </h1>
 </div>
 
@@ -23,7 +23,7 @@
     <div class="col-12 col-lg-8">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Message Details{% else %}تفاصيل الرسالة{% endif %}</h5>
+                <h5 class="card-title mb-0">{{ _t('Message Details') }}</h5>
             </div>
             <div class="card-body">
                 <form id="composeForm">
@@ -31,26 +31,26 @@
                         aria-live="polite"></div>
                     <!-- Subject -->
                     <div class="mb-3">
-                        <label for="subject" class="form-label">{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %} <span class="text-danger">*</span></label>
+                        <label for="subject" class="form-label">{{ _t('Subject') }} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="subject" name="subject" required
-                            placeholder="{% if ui_lang == 'en' %}Enter message subject{% else %}أدخل عنوان الرسالة{% endif %}">
+                            placeholder="{{ _t('Enter message subject') }}">
                     </div>
 
                     <!-- Message Body -->
                     <div class="mb-3">
-                        <label for="messageBody" class="form-label">{% if ui_lang == 'en' %}Message Body{% else %}نص الرسالة{% endif %} <span
+                        <label for="messageBody" class="form-label">{{ _t('Message Body') }} <span
                                 class="text-danger">*</span></label>
                         <textarea class="form-control" id="messageBody" name="messageBody" rows="10" required
-                            placeholder="{% if ui_lang == 'en' %}Write message content here...{% else %}اكتب محتوى الرسالة هنا...{% endif %}"></textarea>
+                            placeholder="{{ _t('Write message content here...') }}"></textarea>
                     </div>
 
                     <!-- Allow Replies -->
                     <div class="mb-3">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="allowReplies" checked>
-                            <label class="form-check-label" for="allowReplies">{% if ui_lang == 'en' %}Allow Replies{% else %}السماح بالردود{% endif %}</label>
+                            <label class="form-check-label" for="allowReplies">{{ _t('Allow Replies') }}</label>
                         </div>
-                        <div class="form-text">{% if ui_lang == 'en' %}When enabled, recipients can reply to this message.{% else %}عند التفعيل، سيتمكن المستلمون من الرد على هذه الرسالة.{% endif %}</div>
+                        <div class="form-text">{{ _t('When enabled, recipients can reply to this message.') }}</div>
                     </div>
                 </form>
             </div>
@@ -61,19 +61,19 @@
     <div class="col-12 col-lg-4">
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Select Recipients{% else %}تحديد المستلمين{% endif %}</h5>
+                <h5 class="card-title mb-0">{{ _t('Select Recipients') }}</h5>
             </div>
             <div class="card-body">
                 <!-- Target Mode -->
                 <div class="mb-3">
-                    <label for="targetMode" class="form-label">{% if ui_lang == 'en' %}Send To{% else %}توجيه إلى{% endif %} <span class="text-danger">*</span></label>
+                    <label for="targetMode" class="form-label">{{ _t('Send To') }} <span class="text-danger">*</span></label>
                     <select class="form-select" id="targetMode" onchange="handleTargetModeChange()">
-                        <option value="ALL_USERS">{% if ui_lang == 'en' %}All Users{% else %}جميع المستخدمين{% endif %}</option>
-                        <option value="ALL_MANAGERS">{% if ui_lang == 'en' %}All Managers{% else %}جميع المدراء{% endif %}</option>
-                        <option value="ALL_SUPERVISORS">{% if ui_lang == 'en' %}All Supervisors{% else %}جميع المشرفين{% endif %}</option>
-                        <option value="ALL_PARENTS">{% if ui_lang == 'en' %}All Parents{% else %}جميع أولياء الأمور{% endif %}</option>
-                        <option value="GOVERNORATE">{% if ui_lang == 'en' %}By Governorate{% else %}حسب المحافظة (محافظة واحدة أو أكثر){% endif %}</option>
-                        <option value="KINDERGARTENS">{% if ui_lang == 'en' %}By Kindergarten{% else %}حسب الروضة{% endif %}</option>
+                        <option value="ALL_USERS">{{ _t('All Users') }}</option>
+                        <option value="ALL_MANAGERS">{{ _t('All Managers') }}</option>
+                        <option value="ALL_SUPERVISORS">{{ _t('All Supervisors') }}</option>
+                        <option value="ALL_PARENTS">{{ _t('All Parents') }}</option>
+                        <option value="GOVERNORATE">{{ _t('By Governorate') }}</option>
+                        <option value="KINDERGARTENS">{{ _t('By Kindergarten') }}</option>
                     </select>
                 </div>
 
@@ -81,7 +81,7 @@
                 <div id="filtersContainer" class="d-none border-top pt-3 mt-3">
                     <!-- Governorate Filter -->
                     <div id="governorateFilter" class="mb-3 d-none">
-                        <label class="form-label">{% if ui_lang == 'en' %}Governorates{% else %}المحافظات{% endif %}</label>
+                        <label class="form-label">{{ _t('Governorates') }}</label>
                         <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
                             {% for gov in governorates %}
                             <div class="form-check">
@@ -91,58 +91,58 @@
                             {% endfor %}
                         </div>
                         <div class="mt-1">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=true)">{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=false)">{% if ui_lang == 'en' %}Deselect All{% else %}إلغاء الكل{% endif %}</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=true)">{{ _t('Select All') }}</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=false)">{{ _t('Deselect All') }}</button>
                         </div>
                     </div>
 
                     <!-- Kindergarten Filter -->
                     <div id="kindergartenFilter" class="mb-3 d-none">
-                        <label for="kindergartenSelect" class="form-label">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</label>
+                        <label for="kindergartenSelect" class="form-label">{{ _t('Kindergartens') }}</label>
                         <div class="input-group input-group-icon mb-2">
                             <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
                             <input type="text" class="form-control form-control-sm" id="kgSearch"
-                                placeholder="{% if ui_lang == 'en' %}Search kindergarten...{% else %}بحث عن روضة...{% endif %}" onkeyup="filterKgList()">
+                                placeholder="{{ _t('Search kindergarten...') }}" onkeyup="filterKgList()">
                         </div>
                         <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;"
                             id="kgListContainer">
-                            <div class="text-center text-muted small py-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
+                            <div class="text-center text-muted small py-2">{{ _t('Loading...') }}</div>
                         </div>
                     </div>
 
                     <!-- Additional Roles Filter (Optional) -->
                     <div id="rolesFilter" class="mb-3">
-                        <label class="form-label d-block">{% if ui_lang == 'en' %}Target Roles{% else %}الأدوار المستهدفة{% endif %}</label>
+                        <label class="form-label d-block">{{ _t('Target Roles') }}</label>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="checkbox" id="roleManager" value="MANAGER" checked
                                 disabled>
-                            <label class="form-check-label" for="roleManager">{% if ui_lang == 'en' %}Managers{% else %}مدراء{% endif %}</label>
+                            <label class="form-check-label" for="roleManager">{{ _t('Managers') }}</label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="checkbox" id="roleSupervisor" value="SUPERVISOR"
                                 checked disabled>
-                            <label class="form-check-label" for="roleSupervisor">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفين{% endif %}</label>
+                            <label class="form-check-label" for="roleSupervisor">{{ _t('Supervisors') }}</label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="checkbox" id="roleParent" value="PARENT" checked
                                 disabled>
-                            <label class="form-check-label" for="roleParent">{% if ui_lang == 'en' %}Parents{% else %}أولياء أمور{% endif %}</label>
+                            <label class="form-check-label" for="roleParent">{{ _t('Parents') }}</label>
                         </div>
                     </div>
 
                     <!-- Search Filter -->
                     <div class="mb-3">
-                        <label for="userSearch" class="form-label">{% if ui_lang == 'en' %}Additional Search (optional){% else %}بحث إضافي (اختياري){% endif %}</label>
+                        <label for="userSearch" class="form-label">{{ _t('Additional Search (optional)') }}</label>
                         <input type="text" class="form-control form-control-sm" id="userSearch"
-                            placeholder="{% if ui_lang == 'en' %}Name or email...{% else %}الاسم أو البريد الإلكتروني...{% endif %}">
-                        <div class="form-text small">{% if ui_lang == 'en' %}To filter results more precisely.{% else %}لتصفية النتائج بشكل أدق.{% endif %}</div>
+                            placeholder="{{ _t('Name or email...') }}">
+                        <div class="form-text small">{{ _t('To filter results more precisely.') }}</div>
                     </div>
                 </div>
 
                 <!-- Preview Actions -->
                 <div class="d-grid gap-2">
                     <button type="button" class="btn btn-outline-primary" onclick="previewRecipients()">
-                        <i class="bi bi-eye me-2"></i> {% if ui_lang == 'en' %}Preview Recipients{% else %}معاينة المستلمين{% endif %}
+                        <i class="bi bi-eye me-2"></i> {{ _t('Preview Recipients') }}
                     </button>
                 </div>
             </div>
@@ -151,12 +151,12 @@
         <!-- Preview Results -->
         <div class="card d-none" id="previewCard">
             <div class="card-header bg-light">
-                <h6 class="card-title mb-0 small text-uppercase text-muted">{% if ui_lang == 'en' %}Preview Results{% else %}نتيجة المعاينة{% endif %}</h6>
+                <h6 class="card-title mb-0 small text-uppercase text-muted">{{ _t('Preview Results') }}</h6>
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
                     <h2 class="display-6 fw-bold mb-0 text-primary" id="recipientCount">0</h2>
-                    <p class="text-muted small">{% if ui_lang == 'en' %}expected recipients{% else %}مستلم متوقع{% endif %}</p>
+                    <p class="text-muted small">{{ _t('expected recipients') }}</p>
                 </div>
 
                 <div id="previewBreakdown" class="small mb-3">
@@ -164,7 +164,7 @@
                 </div>
 
                 <hr>
-                <h6 class="small fw-bold mb-2">{% if ui_lang == 'en' %}Sample Recipients:{% else %}عينة من المستلمين:{% endif %}</h6>
+                <h6 class="small fw-bold mb-2">{{ _t('Sample Recipients:') }}</h6>
                 <ul class="list-unstyled small mb-0" id="sampleRecipientsList">
                     <!-- Sample list injected via JS -->
                 </ul>
@@ -176,9 +176,9 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body d-flex justify-content-end gap-2">
-                <a href="/admin/messages" class="btn btn-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
+                <a href="/admin/messages" class="btn btn-secondary">{{ _t('Cancel') }}</a>
                 <button type="button" class="btn btn-primary px-4" onclick="sendMessage()" id="sendBtn">
-                    <i class="bi bi-send me-2"></i> {% if ui_lang == 'en' %}Send Message{% else %}إرسال الرسالة{% endif %}
+                    <i class="bi bi-send me-2"></i> {{ _t('Send Message') }}
                 </button>
             </div>
         </div>

@@ -1,6 +1,6 @@
 ﻿{% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %} — KinJo{% endblock %}
+{% block title %}{{ _t('My Profile') }} — KinJo{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -285,12 +285,12 @@
 {% endblock extra_head %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{{ _t('Dashboard') }}">
   <i class="bi bi-house" aria-hidden="true"></i>
 </a>
 <span class="breadcrumb-separator">/</span>
 <span class="breadcrumb-item active">
-  {% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %}
+  {{ _t('My Profile') }}
 </span>
 {% endblock %}
 
@@ -301,7 +301,7 @@
   <div class="profile-hero-avatar" aria-hidden="true">
     <img
       src="/static/img/admin_avatar.png"
-      alt="{% if ui_lang == 'en' %}Profile photo{% else %}صورة الملف الشخصي{% endif %}"
+      alt="{{ _t('Profile photo') }}"
       onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
     />
     <span class="avatar-fallback" style="display:none;">
@@ -314,11 +314,11 @@
       {{ current_user.full_name or current_user.username }}
     </div>
     <div class="profile-hero-dept">
-      {% if ui_lang == 'en' %}Family &amp; Childhood Directorate{% else %}مديرية الأسرة والطفولة{% endif %}
+      {{ _t('Family &amp; Childhood Directorate') }}
     </div>
     <div>
       <span class="profile-hero-badge">
-        {% if ui_lang == 'en' %}Administrator{% else %}مدير النظام{% endif %}
+        {{ _t('Administrator') }}
       </span>
       {% if current_user.mfa_enabled %}
       <span class="profile-hero-badge" style="background:rgba(34,197,94,.25);border-color:rgba(34,197,94,.5);">
@@ -335,7 +335,7 @@
       {% if current_user.created_at %}
       <span>
         <i class="bi bi-calendar3" aria-hidden="true"></i>
-        {% if ui_lang == 'en' %}Since{% else %}منذ{% endif %}
+        {{ _t('Since') }}
         {{ current_user.created_at.strftime('%Y-%m-%d') }}
       </span>
       {% endif %}
@@ -351,7 +351,7 @@
       <div>
         <div class="profile-stat-value">{{ total_actions }}</div>
         <div class="profile-stat-label">
-          {% if ui_lang == 'en' %}Total Actions{% else %}مجموع الإجراءات{% endif %}
+          {{ _t('Total Actions') }}
         </div>
       </div>
     </div>
@@ -362,7 +362,7 @@
       <div>
         <div class="profile-stat-value">{{ days_active }}</div>
         <div class="profile-stat-label">
-          {% if ui_lang == 'en' %}Days Active{% else %}أيام النشاط{% endif %}
+          {{ _t('Days Active') }}
         </div>
       </div>
     </div>
@@ -377,7 +377,7 @@
           {% else %}—{% endif %}
         </div>
         <div class="profile-stat-label">
-          {% if ui_lang == 'en' %}Last Login{% else %}آخر دخول{% endif %}
+          {{ _t('Last Login') }}
         </div>
       </div>
     </div>
@@ -393,13 +393,13 @@
         <div class="profile-stat-value"
              style="font-size:.9rem;color:{% if current_user.mfa_enabled %}#15803d{% else %}#dc2626{% endif %};">
           {% if current_user.mfa_enabled %}
-            {% if ui_lang == 'en' %}Enabled{% else %}مفعّلة{% endif %}
+            {{ _t('Enabled') }}
           {% else %}
-            {% if ui_lang == 'en' %}Disabled{% else %}غير مفعّلة{% endif %}
+            {{ _t('Disabled') }}
           {% endif %}
         </div>
         <div class="profile-stat-label">
-          {% if ui_lang == 'en' %}Two-Factor Auth{% else %}المصادقة الثنائية{% endif %}
+          {{ _t('Two-Factor Auth') }}
         </div>
       </div>
     </div>
@@ -416,7 +416,7 @@
     <div class="profile-section-card">
       <div class="profile-section-header">
         <div class="section-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></div>
-        <h2>{% if ui_lang == 'en' %}Edit Profile{% else %}تعديل الملف الشخصي{% endif %}</h2>
+        <h2>{{ _t('Edit Profile') }}</h2>
       </div>
       <div class="profile-section-body">
         <form id="profile-form" novalidate>
@@ -425,7 +425,7 @@
             <!-- Username readonly -->
             <div class="col-12">
               <label class="profile-field-label" for="field-username">
-                {% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}
+                {{ _t('Username') }}
               </label>
               <input
                 type="text" id="field-username"
@@ -438,48 +438,48 @@
             <!-- Full Name -->
             <div class="col-12">
               <label class="profile-field-label" for="field-full-name">
-                {% if ui_lang == 'en' %}Full Name{% else %}الاسم الكامل{% endif %}
+                {{ _t('Full Name') }}
               </label>
               <input
                 type="text" id="field-full-name" name="full_name"
                 class="profile-form-control"
                 value="{{ current_user.full_name or '' }}"
                 maxlength="255"
-                placeholder="{% if ui_lang == 'en' %}Enter full name{% else %}أدخل الاسم الكامل{% endif %}"
+                placeholder="{{ _t('Enter full name') }}"
               />
             </div>
 
             <!-- Email -->
             <div class="col-12">
               <label class="profile-field-label" for="field-email">
-                {% if ui_lang == 'en' %}Email Address{% else %}البريد الإلكتروني{% endif %}
+                {{ _t('Email Address') }}
               </label>
               <input
                 type="email" id="field-email" name="email"
                 class="profile-form-control"
                 value="{{ current_user.email or '' }}"
                 maxlength="255"
-                placeholder="{% if ui_lang == 'en' %}Enter email{% else %}أدخل البريد الإلكتروني{% endif %}"
+                placeholder="{{ _t('Enter email') }}"
               />
             </div>
 
             <!-- Phone -->
             <div class="col-12">
               <label class="profile-field-label" for="field-phone">
-                {% if ui_lang == 'en' %}Phone Number{% else %}رقم الهاتف{% endif %}
+                {{ _t('Phone Number') }}
               </label>
               <input
                 type="tel" id="field-phone" name="phone_number"
                 class="profile-form-control"
                 value="{{ current_user.phone_number or '' }}"
                 maxlength="20"
-                placeholder="{% if ui_lang == 'en' %}e.g. +962 79 000 0000{% else %}مثال: 07900000000{% endif %}"
+                placeholder="{{ _t('e.g. +962 79 000 0000') }}"
               />
             </div>
 
             <!-- Role + Status -->
             <div class="col-6">
-              <label class="profile-field-label">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</label>
+              <label class="profile-field-label">{{ _t('Role') }}</label>
               <div>
                 <span class="badge" style="background:var(--color-primary);font-size:.78rem;">
                   {{ current_user.role.value if current_user.role else '—' }}
@@ -487,7 +487,7 @@
               </div>
             </div>
             <div class="col-6">
-              <label class="profile-field-label">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+              <label class="profile-field-label">{{ _t('Status') }}</label>
               <div>
                 <span class="badge bg-success" style="font-size:.78rem;">
                   {{ current_user.status.value if current_user.status else '—' }}
@@ -499,11 +499,11 @@
             <div class="col-12 d-flex gap-2 flex-wrap">
               <button type="submit" class="btn-profile-primary" id="save-profile-btn">
                 <i class="bi bi-check2" aria-hidden="true"></i>
-                {% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}
+                {{ _t('Save Changes') }}
               </button>
               <button type="reset" class="btn-profile-secondary">
                 <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-                {% if ui_lang == 'en' %}Reset{% else %}إعادة ضبط{% endif %}
+                {{ _t('Reset') }}
               </button>
             </div>
 
@@ -516,20 +516,16 @@
     <div class="profile-section-card">
       <div class="profile-section-header">
         <div class="section-icon"><i class="bi bi-key" aria-hidden="true"></i></div>
-        <h2>{% if ui_lang == 'en' %}Permissions{% else %}الصلاحيات{% endif %}</h2>
+        <h2>{{ _t('Permissions') }}</h2>
       </div>
       <div class="profile-section-body">
         <p class="text-muted mb-3" style="font-size:.82rem;">
-          {% if ui_lang == 'en' %}
-            This account holds full system administrator privileges.
-          {% else %}
-            يتمتع هذا الحساب بكامل صلاحيات مدير النظام.
-          {% endif %}
+          {{ _t('This account holds full system administrator privileges.') }}
         </p>
-        <span class="perm-badge"><i class="bi bi-shield-fill-check" aria-hidden="true"></i>{% if ui_lang == 'en' %}System Administrator{% else %}مدير النظام{% endif %}</span>
-        <span class="perm-badge"><i class="bi bi-database-fill" aria-hidden="true"></i>{% if ui_lang == 'en' %}Full Data Access{% else %}وصول كامل للبيانات{% endif %}</span>
-        <span class="perm-badge"><i class="bi bi-journal-text" aria-hidden="true"></i>{% if ui_lang == 'en' %}Audit Log Access{% else %}الوصول لسجل التدقيق{% endif %}</span>
-        <span class="perm-badge"><i class="bi bi-people" aria-hidden="true"></i>{% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}</span>
+        <span class="perm-badge"><i class="bi bi-shield-fill-check" aria-hidden="true"></i>{{ _t('System Administrator') }}</span>
+        <span class="perm-badge"><i class="bi bi-database-fill" aria-hidden="true"></i>{{ _t('Full Data Access') }}</span>
+        <span class="perm-badge"><i class="bi bi-journal-text" aria-hidden="true"></i>{{ _t('Audit Log Access') }}</span>
+        <span class="perm-badge"><i class="bi bi-people" aria-hidden="true"></i>{{ _t('User Management') }}</span>
       </div>
     </div>
 
@@ -542,7 +538,7 @@
     <div class="profile-section-card">
       <div class="profile-section-header">
         <div class="section-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></div>
-        <h2>{% if ui_lang == 'en' %}Change Password{% else %}تغيير كلمة المرور{% endif %}</h2>
+        <h2>{{ _t('Change Password') }}</h2>
       </div>
       <div class="profile-section-body">
         <form id="password-form" novalidate>
@@ -551,7 +547,7 @@
             <!-- Current password -->
             <div class="col-12">
               <label class="profile-field-label" for="field-current-pw">
-                {% if ui_lang == 'en' %}Current Password{% else %}كلمة المرور الحالية{% endif %}
+                {{ _t('Current Password') }}
               </label>
               <div style="position:relative;">
                 <input
@@ -561,7 +557,7 @@
                   style="padding-inline-end:2.25rem;"
                 />
                 <button type="button" class="pw-toggle" data-target="field-current-pw"
-                        aria-label="{% if ui_lang == 'en' %}Show/hide password{% else %}إظهار/إخفاء{% endif %}"
+                        aria-label="{{ _t('Show/hide password') }}"
                         style="position:absolute;top:50%;right:.6rem;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;padding:.2rem;">
                   <i class="bi bi-eye" aria-hidden="true"></i>
                 </button>
@@ -571,7 +567,7 @@
             <!-- New password -->
             <div class="col-12">
               <label class="profile-field-label" for="field-new-pw">
-                {% if ui_lang == 'en' %}New Password{% else %}كلمة المرور الجديدة{% endif %}
+                {{ _t('New Password') }}
               </label>
               <div style="position:relative;">
                 <input
@@ -582,13 +578,13 @@
                   style="padding-inline-end:2.25rem;"
                 />
                 <button type="button" class="pw-toggle" data-target="field-new-pw"
-                        aria-label="{% if ui_lang == 'en' %}Show/hide password{% else %}إظهار/إخفاء{% endif %}"
+                        aria-label="{{ _t('Show/hide password') }}"
                         style="position:absolute;top:50%;right:.6rem;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;padding:.2rem;">
                   <i class="bi bi-eye" aria-hidden="true"></i>
                 </button>
               </div>
               <div id="pw-hint" style="font-size:.74rem;color:#6b7280;margin-top:.25rem;">
-                {% if ui_lang == 'en' %}Minimum 8 characters{% else %}8 أحرف على الأقل{% endif %}
+                {{ _t('Minimum 8 characters') }}
               </div>
               <div id="pw-strength-bar" style="height:4px;border-radius:4px;background:#e5e7eb;margin-top:.35rem;">
                 <div id="pw-strength-fill" style="height:100%;width:0;border-radius:4px;transition:width .25s,background .25s;"></div>
@@ -598,7 +594,7 @@
             <!-- Confirm password -->
             <div class="col-12">
               <label class="profile-field-label" for="field-confirm-pw">
-                {% if ui_lang == 'en' %}Confirm New Password{% else %}تأكيد كلمة المرور الجديدة{% endif %}
+                {{ _t('Confirm New Password') }}
               </label>
               <div style="position:relative;">
                 <input
@@ -608,7 +604,7 @@
                   style="padding-inline-end:2.25rem;"
                 />
                 <button type="button" class="pw-toggle" data-target="field-confirm-pw"
-                        aria-label="{% if ui_lang == 'en' %}Show/hide password{% else %}إظهار/إخفاء{% endif %}"
+                        aria-label="{{ _t('Show/hide password') }}"
                         style="position:absolute;top:50%;right:.6rem;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;padding:.2rem;">
                   <i class="bi bi-eye" aria-hidden="true"></i>
                 </button>
@@ -619,7 +615,7 @@
             <div class="col-12">
               <button type="submit" class="btn-profile-primary" id="save-pw-btn">
                 <i class="bi bi-lock" aria-hidden="true"></i>
-                {% if ui_lang == 'en' %}Change Password{% else %}تغيير كلمة المرور{% endif %}
+                {{ _t('Change Password') }}
               </button>
             </div>
 
@@ -632,17 +628,17 @@
     <div class="profile-section-card">
       <div class="profile-section-header">
         <div class="section-icon"><i class="bi bi-sliders" aria-hidden="true"></i></div>
-        <h2>{% if ui_lang == 'en' %}Quick Settings{% else %}الإعدادات السريعة{% endif %}</h2>
+        <h2>{{ _t('Quick Settings') }}</h2>
       </div>
       <div class="profile-section-body">
         <div class="d-flex flex-column gap-3">
 
           <div class="d-flex align-items-center justify-content-between gap-3">
             <div>
-              <div style="font-size:.88rem;font-weight:600;">{% if ui_lang == 'en' %}Bilingual Mode{% else %}الوضع الثنائي اللغة{% endif %}</div>
-              <div style="font-size:.75rem;color:#6b7280;">{% if ui_lang == 'en' %}Show Arabic and English side by side{% else %}عرض العربية والإنجليزية جنباً إلى جنب{% endif %}</div>
+              <div style="font-size:.88rem;font-weight:600;">{{ _t('Bilingual Mode') }}</div>
+              <div style="font-size:.75rem;color:#6b7280;">{{ _t('Show Arabic and English side by side') }}</div>
             </div>
-            <label class="toggle-switch" aria-label="{% if ui_lang == 'en' %}Bilingual mode{% else %}الوضع الثنائي{% endif %}">
+            <label class="toggle-switch" aria-label="{{ _t('Bilingual mode') }}">
               <input type="checkbox" id="qs-bilingual">
               <span class="toggle-slider"></span>
             </label>
@@ -652,10 +648,10 @@
 
           <div class="d-flex align-items-center justify-content-between gap-3">
             <div>
-              <div style="font-size:.88rem;font-weight:600;">{% if ui_lang == 'en' %}Verbose Audit Log{% else %}سجل التدقيق التفصيلي{% endif %}</div>
-              <div style="font-size:.75rem;color:#6b7280;">{% if ui_lang == 'en' %}Include low-sensitivity events{% else %}تضمين الأحداث ذات الحساسية المنخفضة{% endif %}</div>
+              <div style="font-size:.88rem;font-weight:600;">{{ _t('Verbose Audit Log') }}</div>
+              <div style="font-size:.75rem;color:#6b7280;">{{ _t('Include low-sensitivity events') }}</div>
             </div>
-            <label class="toggle-switch" aria-label="{% if ui_lang == 'en' %}Verbose audit{% else %}سجل تفصيلي{% endif %}">
+            <label class="toggle-switch" aria-label="{{ _t('Verbose audit') }}">
               <input type="checkbox" id="qs-verbose-audit" checked>
               <span class="toggle-slider"></span>
             </label>
@@ -665,10 +661,10 @@
 
           <div class="d-flex align-items-center justify-content-between gap-3">
             <div>
-              <div style="font-size:.88rem;font-weight:600;">{% if ui_lang == 'en' %}Allow Impersonation{% else %}السماح بانتحال الهوية{% endif %}</div>
-              <div style="font-size:.75rem;color:#6b7280;">{% if ui_lang == 'en' %}Allow support staff to access this account{% else %}السماح لطاقم الدعم بالوصول لهذا الحساب{% endif %}</div>
+              <div style="font-size:.88rem;font-weight:600;">{{ _t('Allow Impersonation') }}</div>
+              <div style="font-size:.75rem;color:#6b7280;">{{ _t('Allow support staff to access this account') }}</div>
             </div>
-            <label class="toggle-switch" aria-label="{% if ui_lang == 'en' %}Allow impersonation{% else %}السماح بانتحال الهوية{% endif %}">
+            <label class="toggle-switch" aria-label="{{ _t('Allow impersonation') }}">
               <input type="checkbox" id="qs-impersonation">
               <span class="toggle-slider"></span>
             </label>
@@ -682,26 +678,26 @@
     <div class="profile-section-card">
       <div class="profile-section-header">
         <div class="section-icon"><i class="bi bi-info-circle" aria-hidden="true"></i></div>
-        <h2>{% if ui_lang == 'en' %}Account Security{% else %}أمان الحساب{% endif %}</h2>
+        <h2>{{ _t('Account Security') }}</h2>
       </div>
       <div class="profile-section-body">
         <dl class="row g-2 mb-0" style="font-size:.85rem;">
           <dt class="col-6 text-muted fw-normal">
-            {% if ui_lang == 'en' %}Password Changed{% else %}آخر تغيير للكلمة{% endif %}
+            {{ _t('Password Changed') }}
           </dt>
           <dd class="col-6 fw-semibold">
             {% if current_user.password_changed_at %}{{ current_user.password_changed_at.strftime('%Y-%m-%d') }}{% else %}—{% endif %}
           </dd>
 
           <dt class="col-6 text-muted fw-normal">
-            {% if ui_lang == 'en' %}Last Login{% else %}آخر تسجيل دخول{% endif %}
+            {{ _t('Last Login') }}
           </dt>
           <dd class="col-6 fw-semibold">
             {% if current_user.last_login_at %}{{ current_user.last_login_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}
           </dd>
 
           <dt class="col-6 text-muted fw-normal">
-            {% if ui_lang == 'en' %}Failed Logins{% else %}محاولات فاشلة{% endif %}
+            {{ _t('Failed Logins') }}
           </dt>
           <dd class="col-6 fw-semibold">
             <span class="{% if current_user.failed_login_count > 0 %}text-danger{% else %}text-success{% endif %}">
@@ -710,18 +706,18 @@
           </dd>
 
           <dt class="col-6 text-muted fw-normal">
-            {% if ui_lang == 'en' %}Two-Factor Auth{% else %}المصادقة الثنائية{% endif %}
+            {{ _t('Two-Factor Auth') }}
           </dt>
           <dd class="col-6 fw-semibold">
             {% if current_user.mfa_enabled %}
-              <span class="text-success"><i class="bi bi-shield-check" aria-hidden="true"></i> {% if ui_lang == 'en' %}Enabled{% else %}مفعّلة{% endif %}</span>
+              <span class="text-success"><i class="bi bi-shield-check" aria-hidden="true"></i> {{ _t('Enabled') }}</span>
             {% else %}
-              <span class="text-danger"><i class="bi bi-shield-x" aria-hidden="true"></i> {% if ui_lang == 'en' %}Disabled{% else %}غير مفعّلة{% endif %}</span>
+              <span class="text-danger"><i class="bi bi-shield-x" aria-hidden="true"></i> {{ _t('Disabled') }}</span>
             {% endif %}
           </dd>
 
           {% if current_user.locked_until %}
-          <dt class="col-6 text-muted fw-normal">{% if ui_lang == 'en' %}Locked Until{% else %}مقفل حتى{% endif %}</dt>
+          <dt class="col-6 text-muted fw-normal">{{ _t('Locked Until') }}</dt>
           <dd class="col-6 fw-semibold text-danger">{{ current_user.locked_until.strftime('%Y-%m-%d %H:%M') }}</dd>
           {% endif %}
         </dl>
@@ -737,27 +733,27 @@
     <div class="d-flex align-items-center gap-2">
       <div class="section-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></div>
       <div>
-        <h2 class="mb-0">{% if ui_lang == 'en' %}Recent Activity{% else %}النشاط الأخير{% endif %}</h2>
+        <h2 class="mb-0">{{ _t('Recent Activity') }}</h2>
         <div style="font-size:.74rem;color:#6b7280;">
-          {% if ui_lang == 'en' %}Last 10 admin actions{% else %}آخر 10 إجراءات مسجّلة{% endif %}
+          {{ _t('Last 10 admin actions') }}
         </div>
       </div>
     </div>
     <a href="/admin/audit-logs" class="btn-profile-secondary" style="font-size:.8rem;padding:.35rem .9rem;">
       <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
-      {% if ui_lang == 'en' %}Full Log{% else %}السجل الكامل{% endif %}
+      {{ _t('Full Log') }}
     </a>
   </div>
   <div class="p-0">
     {% if recent_events %}
     <div class="table-responsive">
-      <table class="table table-hover mb-0" aria-label="{% if ui_lang == 'en' %}Recent activity{% else %}النشاط الأخير{% endif %}">
+      <table class="table table-hover mb-0" aria-label="{{ _t('Recent activity') }}">
         <thead>
           <tr style="font-size:.76rem;color:#6b7280;background:#f9fafb;">
-            <th class="ps-3 py-2 fw-semibold">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</th>
-            <th class="py-2 fw-semibold">{% if ui_lang == 'en' %}Entity{% else %}الكيان{% endif %}</th>
-            <th class="py-2 fw-semibold">{% if ui_lang == 'en' %}IP Address{% else %}عنوان IP{% endif %}</th>
-            <th class="pe-3 py-2 fw-semibold">{% if ui_lang == 'en' %}Time{% else %}الوقت{% endif %}</th>
+            <th class="ps-3 py-2 fw-semibold">{{ _t('Action') }}</th>
+            <th class="py-2 fw-semibold">{{ _t('Entity') }}</th>
+            <th class="py-2 fw-semibold">{{ _t('IP Address') }}</th>
+            <th class="pe-3 py-2 fw-semibold">{{ _t('Time') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -782,7 +778,7 @@
     <div class="text-center py-5 text-muted">
       <i class="bi bi-clock" style="font-size:2rem;opacity:.3;" aria-hidden="true"></i>
       <p class="mt-2 mb-0" style="font-size:.88rem;">
-        {% if ui_lang == 'en' %}No activity recorded yet{% else %}لا يوجد نشاط مسجّل بعد{% endif %}
+        {{ _t('No activity recorded yet') }}
       </p>
     </div>
     {% endif %}

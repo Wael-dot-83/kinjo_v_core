@@ -1,16 +1,16 @@
 {% extends "admin_base.html" %}
 
 {% block title %}
-  {% if ui_lang == 'en' %}Satellite Heatmap — KinJo{% else %}الخريطة الحرارية بالقمر الاصطناعي — كينجو{% endif %}
+  {{ _t('Satellite Heatmap — KinJo') }}
 {% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{{ _t('Dashboard') }}">
   <i class="bi bi-house" aria-hidden="true"></i>
 </a>
 <span class="breadcrumb-separator">/</span>
 <span class="breadcrumb-item active">
-  {% if ui_lang == 'en' %}Geographic Heatmap{% else %}الخريطة الجغرافية الحرارية{% endif %}
+  {{ _t('Geographic Heatmap') }}
 </span>
 {% endblock %}
 

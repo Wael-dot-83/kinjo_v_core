@@ -1,13 +1,13 @@
 ﻿{% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{% endif %} — KinJo{% endblock %}
+{% block title %}{{ _t('Charts Explorer') }} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house" aria-hidden="true"></i></a>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{{ _t('Dashboard') }}"><i class="bi bi-house" aria-hidden="true"></i></a>
 <span class="breadcrumb-separator">/</span>
-<a href="/admin/analytics" class="breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
+<a href="/admin/analytics" class="breadcrumb-item">{{ _t('Analytics') }}</a>
 <span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Charts{% else %}الرسوم البيانية{% endif %}</span>
+<span class="breadcrumb-item active">{{ _t('Charts') }}</span>
 {% endblock %}
 
 {% block extra_head %}
@@ -37,14 +37,10 @@
   <div>
     <h1 class="page-title mb-0">
       <i class="bi bi-graph-up-arrow me-2"></i>
-      {% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{% endif %}
+      {{ _t('Charts Explorer') }}
     </h1>
     <p class="text-muted small mt-1 mb-0">
-      {% if ui_lang == 'en' %}
-        Adaptive chart generation with automatic chart-type selection.
-      {% else %}
-        توليد رسوم بيانية تكيفية مع اختيار تلقائي لنوع الرسم.
-      {% endif %}
+      {{ _t('Adaptive chart generation with automatic chart-type selection.') }}
     </p>
   </div>
 </div>
@@ -56,16 +52,16 @@
 
     <div class="charts-panel mb-3">
       <h6 class="fw-semibold mb-3 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
-        {% if ui_lang == 'en' %}Data Source{% else %}مصدر البيانات{% endif %}
+        {{ _t('Data Source') }}
       </h6>
-      <select id="sourceSelect" class="form-select form-select-sm mb-3" aria-label="{% if ui_lang == 'en' %}Data Source{% else %}مصدر البيانات{% endif %}">
+      <select id="sourceSelect" class="form-select form-select-sm mb-3" aria-label="{{ _t('Data Source') }}">
         {% for src in sources %}
         <option value="{{ src }}">{{ src | replace('_', ' ') | title }}</option>
         {% endfor %}
       </select>
 
       <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
-        {% if ui_lang == 'en' %}Date Range{% else %}نطاق التاريخ{% endif %}
+        {{ _t('Date Range') }}
       </h6>
       <div class="d-flex gap-2 mb-3 flex-column">
         <input type="date" id="dateFrom" class="form-control form-control-sm" placeholder="From">
@@ -73,28 +69,28 @@
       </div>
 
       <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
-        {% if ui_lang == 'en' %}Chart Type{% else %}نوع الرسم{% endif %}
+        {{ _t('Chart Type') }}
       </h6>
-      <select id="chartTypeSelect" class="form-select form-select-sm mb-3" aria-label="{% if ui_lang == 'en' %}Chart Type{% else %}نوع الرسم{% endif %}">
-        <option value="">{% if ui_lang == 'en' %}Auto (Recommended){% else %}تلقائي (موصى به){% endif %}</option>
+      <select id="chartTypeSelect" class="form-select form-select-sm mb-3" aria-label="{{ _t('Chart Type') }}">
+        <option value="">{{ _t('Auto (Recommended)') }}</option>
         {% for ct in chart_types %}
         <option value="{{ ct }}">{{ ct | title }}</option>
         {% endfor %}
       </select>
 
       <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
-        {% if ui_lang == 'en' %}Top N{% else %}أعلى N{% endif %}
+        {{ _t('Top N') }}
       </h6>
       <input type="number" id="topN" class="form-control form-control-sm mb-3" min="1" max="50" placeholder="All">
 
       <div class="d-grid gap-2">
         <button class="btn btn-primary btn-sm" id="renderBtn" onclick="renderChart()">
           <i class="bi bi-play-fill me-1"></i>
-          {% if ui_lang == 'en' %}Render Chart{% else %}رسم المخطط{% endif %}
+          {{ _t('Render Chart') }}
         </button>
         <button class="btn btn-outline-secondary btn-sm" id="suggestBtn" onclick="getSuggestions()">
           <i class="bi bi-lightbulb me-1"></i>
-          {% if ui_lang == 'en' %}Get Suggestions{% else %}اقتراحات ذكية{% endif %}
+          {{ _t('Get Suggestions') }}
         </button>
       </div>
     </div>
@@ -103,7 +99,7 @@
     <div class="charts-panel" id="suggestionsPanel" style="display:none;">
       <h6 class="fw-semibold mb-3 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
         <i class="bi bi-magic me-1"></i>
-        {% if ui_lang == 'en' %}AI Suggestions{% else %}اقتراحات ذكية{% endif %}
+        {{ _t('AI Suggestions') }}
       </h6>
       <div id="suggestionsList"></div>
     </div>
@@ -117,16 +113,16 @@
       <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
           <span id="chartTitle" class="fw-semibold fs-6">
-            {% if ui_lang == 'en' %}Select a source and click Render{% else %}اختر المصدر واضغط رسم{% endif %}
+            {{ _t('Select a source and click Render') }}
           </span>
           <span id="rowCountBadge" class="badge ms-2" style="background:var(--admin-primary,#1F5E47);display:none;"></span>
           <span id="cachedBadge" class="badge bg-secondary ms-1" style="display:none;">
-            {% if ui_lang == 'en' %}cached{% else %}مخزن{% endif %}
+            {{ _t('cached') }}
           </span>
         </div>
         <button class="btn btn-outline-secondary btn-sm" id="exportBtn" style="display:none;" onclick="exportChart()">
           <i class="bi bi-download me-1"></i>
-          {% if ui_lang == 'en' %}Export PNG{% else %}تصدير PNG{% endif %}
+          {{ _t('Export PNG') }}
         </button>
       </div>
 
@@ -135,7 +131,7 @@
           <div class="spinner-border text-success mb-3" role="status">
             <span class="visually-hidden">Loading...</span>
           </div>
-          <div class="small">{% if ui_lang == 'en' %}Generating chart...{% else %}جاري إنشاء الرسم...{% endif %}</div>
+          <div class="small">{{ _t('Generating chart...') }}</div>
         </div>
       </div>
 
@@ -145,7 +141,7 @@
         <div class="alert alert-info py-2 mb-0">
           <i class="bi bi-hourglass-split me-1"></i>
           <span id="taskStatusText">
-            {% if ui_lang == 'en' %}Large dataset — processing in background...{% else %}مجموعة بيانات كبيرة — المعالجة في الخلفية...{% endif %}
+            {{ _t('Large dataset — processing in background...') }}
           </span>
           <span id="taskProgress" class="badge bg-info ms-2">0%</span>
         </div>

@@ -1,32 +1,32 @@
 {% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Compliance Reminders — KinJo{% else %}تذكيرات الامتثال — KinJo{% endif %}{% endblock %}
+{% block title %}{{ _t('Compliance Reminders — KinJo') }}{% endblock %}
 
 {% block breadcrumb %}
 <a href="/admin/dashboard" class="breadcrumb-item">
-  <i class="bi bi-house"></i> {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
+  <i class="bi bi-house"></i> {{ _t('Dashboard') }}
 </a>
 <span class="breadcrumb-separator">/</span>
 <a href="/admin/governance-reports" class="breadcrumb-item">
-  {% if ui_lang == 'en' %}Governance &amp; Compliance{% else %}الحوكمة والامتثال{% endif %}
+  {{ _t('Governance &amp; Compliance') }}
 </a>
 <span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Reminders{% else %}التذكيرات{% endif %}</span>
+<span class="breadcrumb-item active">{{ _t('Reminders') }}</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
   <div>
     <h1 class="page-title">
-      <i class="bi bi-bell me-2"></i>{% if ui_lang == 'en' %}Compliance Reminders{% else %}تذكيرات الامتثال{% endif %}
+      <i class="bi bi-bell me-2"></i>{{ _t('Compliance Reminders') }}
     </h1>
     <p class="page-subtitle text-muted">
-      {% if ui_lang == 'en' %}Send and track daily-report reminders to non-compliant supervisors{% else %}إرسال ومتابعة تذكيرات التقارير اليومية للمشرفين غير الملتزمين{% endif %}
+      {{ _t('Send and track daily-report reminders to non-compliant supervisors') }}
     </p>
   </div>
   <button class="btn btn-ghost" id="refreshBtn">
     <i class="bi bi-arrow-clockwise me-1"></i>
-    {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+    {{ _t('Refresh') }}
   </button>
 </div>
 
@@ -40,7 +40,7 @@
         </div>
         <div>
           <div class="fs-4 fw-bold" id="statPending">—</div>
-          <div class="small text-muted">{% if ui_lang == 'en' %}Pending{% else %}معلّقة{% endif %}</div>
+          <div class="small text-muted">{{ _t('Pending') }}</div>
         </div>
       </div>
     </div>
@@ -53,7 +53,7 @@
         </div>
         <div>
           <div class="fs-4 fw-bold" id="statSent">—</div>
-          <div class="small text-muted">{% if ui_lang == 'en' %}Sent Today{% else %}مُرسَلة اليوم{% endif %}</div>
+          <div class="small text-muted">{{ _t('Sent Today') }}</div>
         </div>
       </div>
     </div>
@@ -66,7 +66,7 @@
         </div>
         <div>
           <div class="fs-4 fw-bold" id="statNonCompliant">—</div>
-          <div class="small text-muted">{% if ui_lang == 'en' %}Non-Compliant{% else %}غير ملتزمة{% endif %}</div>
+          <div class="small text-muted">{{ _t('Non-Compliant') }}</div>
         </div>
       </div>
     </div>
@@ -79,7 +79,7 @@
         </div>
         <div>
           <div class="fs-4 fw-bold" id="statTotal">—</div>
-          <div class="small text-muted">{% if ui_lang == 'en' %}Total Sent{% else %}إجمالي المُرسَل{% endif %}</div>
+          <div class="small text-muted">{{ _t('Total Sent') }}</div>
         </div>
       </div>
     </div>
@@ -89,27 +89,27 @@
 <!-- Reminder Log -->
 <div class="card">
   <div class="card-header">
-    <h2 class="card-title mb-0">{% if ui_lang == 'en' %}Reminder Log{% else %}سجل التذكيرات{% endif %}</h2>
+    <h2 class="card-title mb-0">{{ _t('Reminder Log') }}</h2>
   </div>
   <div class="card-body p-0">
     <div class="text-center py-5 text-muted" id="logsLoading">
       <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-      {% if ui_lang == 'en' %}Loading reminder history…{% else %}جاري تحميل سجل التذكيرات…{% endif %}
+      {{ _t('Loading reminder history…') }}
     </div>
     <div class="text-center py-5 text-muted" id="logsEmpty" style="display:none;">
       <i class="bi bi-inbox fs-1 mb-3 d-block opacity-50"></i>
-      {% if ui_lang == 'en' %}No reminders sent yet.{% else %}لم يتم إرسال أي تذكيرات بعد.{% endif %}
+      {{ _t('No reminders sent yet.') }}
     </div>
     <div class="table-responsive" id="logsTableWrap" style="display:none;">
       <table class="table table-hover mb-0">
         <thead class="table-light">
           <tr>
-            <th class="ps-4">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
-            <th>{% if ui_lang == 'en' %}Sent To{% else %}أُرسِل إلى{% endif %}</th>
-            <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-            <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
-            <th>{% if ui_lang == 'en' %}Missing Reports{% else %}التقارير المفقودة{% endif %}</th>
-            <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+            <th class="ps-4">{{ _t('Date') }}</th>
+            <th>{{ _t('Sent To') }}</th>
+            <th>{{ _t('Governorate') }}</th>
+            <th>{{ _t('Kindergarten') }}</th>
+            <th>{{ _t('Missing Reports') }}</th>
+            <th>{{ _t('Status') }}</th>
           </tr>
         </thead>
         <tbody id="logsTableBody"></tbody>

@@ -1,21 +1,21 @@
 {% extends "admin_base.html" %}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 
-{% block title %}{% if ui_lang == 'en' %}Detailed Analysis: {{ dimension_id }}{% else %}تحليل تفصيلي: {{ dimension_id }}{% endif %} — KinJo{% endblock %}
+{% block title %}{{ _t('Detailed Analysis: {{ dimension_id }}') }} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house" aria-hidden="true"></i></a>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{{ _t('Dashboard') }}"><i class="bi bi-house" aria-hidden="true"></i></a>
 <span class="breadcrumb-separator">/</span>
-<a href="/admin/analytics" class="breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
+<a href="/admin/analytics" class="breadcrumb-item">{{ _t('Analytics') }}</a>
 <span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active" id="breadcrumbDimension">{% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}</span>
+<span class="breadcrumb-item active" id="breadcrumbDimension">{{ _t('Detailed Analysis') }}</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
   <h1 class="page-title mb-0" id="drilldownTitle">
     <i class="bi bi-graph-up me-2"></i>
-    {% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}
+    {{ _t('Detailed Analysis') }}
   </h1>
   <div>
     {{ date_range_filter(
@@ -30,9 +30,9 @@
 </div>
 <div id="loading" class="text-center py-5">
     <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+        <span class="visually-hidden">{{ _t('Loading...') }}</span>
     </div>
-    <p class="mt-2">{% if ui_lang == 'en' %}Loading detailed data...{% else %}جاري تحميل البيانات التفصيلية...{% endif %}</p>
+    <p class="mt-2">{{ _t('Loading detailed data...') }}</p>
 </div>
 
 <div id="content" class="d-none">

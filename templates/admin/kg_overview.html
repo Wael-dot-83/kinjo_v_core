@@ -1,14 +1,14 @@
 ﻿{% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %} — KinJo{% endblock %}
+{% block title %}{{ _t('Kindergarten Overview') }} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{{ _t('Dashboard') }}">
   <i class="bi bi-house" aria-hidden="true"></i>
 </a>
 <span class="breadcrumb-separator">/</span>
 <span class="breadcrumb-item active">
-  {% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}
+  {{ _t('Kindergarten Overview') }}
 </span>
 {% endblock %}
 
@@ -21,7 +21,7 @@
 
   <!-- ══ TOP CONTROL BAR ══════════════════════════════════ -->
   <div class="ko-control-bar" id="ko-control-bar" role="toolbar"
-       aria-label="{% if ui_lang == 'en' %}Dashboard controls{% else %}أدوات لوحة التحكم{% endif %}">
+       aria-label="{{ _t('Dashboard controls') }}">
     <!-- populated by JS -->
     <div style="height:36px;display:flex;gap:.75rem;width:100%">
       <div class="ko-skeleton" style="width:260px;height:36px"></div>
@@ -38,11 +38,11 @@
         <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:rgba(37,99,235,.1);color:#2563eb;">
           <i class="bi bi-buildings-fill"></i>
         </span>
-        {% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}
+        {{ _t('Kindergarten Overview') }}
       </h1>
       <p style="font-size:.8rem;color:var(--ko-text-muted);margin:.25rem 0 0;display:flex;align-items:center;gap:.5rem;">
         <span class="ko-rt-dot"></span>
-        <span id="ko-last-updated">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+        <span id="ko-last-updated">{{ _t('Loading...') }}</span>
       </p>
     </div>
     <small style="color:var(--ko-text-muted);font-size:.78rem;">
@@ -57,7 +57,7 @@
   <!-- ══ QUICK ACTIONS ════════════════════════════════════ -->
   <div class="ko-actions-bar" id="ko-quick-actions"
        role="navigation"
-       aria-label="{% if ui_lang == 'en' %}Quick actions{% else %}إجراءات سريعة{% endif %}">
+       aria-label="{{ _t('Quick actions') }}">
     <!-- populated by JS -->
     <div class="ko-skeleton" style="width:130px;height:38px;border-radius:8px"></div>
     <div class="ko-skeleton" style="width:150px;height:38px;border-radius:8px"></div>
@@ -68,7 +68,7 @@
   <div class="ko-divider"></div>
 
   <!-- ══ KPI CARDS ════════════════════════════════════════ -->
-  <section aria-label="{% if ui_lang == 'en' %}Key performance indicators{% else %}مؤشرات الأداء{% endif %}">
+  <section aria-label="{{ _t('Key performance indicators') }}">
     <div class="ko-kpi-grid" id="ko-kpi-grid">
       <!-- Skeleton placeholders -->
       {% for _ in range(4) %}
@@ -92,11 +92,11 @@
   <div class="ko-divider"></div>
 
   <!-- ══ SMART ALERTS ══════════════════════════════════════ -->
-  <section class="ko-alerts-wrap" aria-label="{% if ui_lang == 'en' %}Smart alerts{% else %}التنبيهات الذكية{% endif %}">
+  <section class="ko-alerts-wrap" aria-label="{{ _t('Smart alerts') }}">
     <div class="ko-section-header">
       <h2 class="ko-section-title">
         <i class="bi bi-bell-fill"></i>
-        {% if ui_lang == 'en' %}Smart Alerts{% else %}التنبيهات الذكية{% endif %}
+        {{ _t('Smart Alerts') }}
       </h2>
     </div>
     <div id="ko-alerts-section">
@@ -109,12 +109,12 @@
   <!-- ══ SIDE PANEL OVERLAY ════════════════════════════════ -->
   <div class="ko-overlay" id="ko-overlay" aria-hidden="true"></div>
   <aside class="ko-side-panel" id="ko-side-panel" role="complementary"
-         aria-label="{% if ui_lang == 'en' %}Detail panel{% else %}لوحة التفاصيل{% endif %}">
+         aria-label="{{ _t('Detail panel') }}">
     <div class="ko-panel-header">
       <i class="bi bi-info-circle text-primary fs-5"></i>
       <span class="ko-panel-title" id="ko-panel-title">التفاصيل</span>
       <button class="ko-panel-close" id="ko-panel-close"
-              aria-label="{% if ui_lang == 'en' %}Close panel{% else %}إغلاق اللوحة{% endif %}">
+              aria-label="{{ _t('Close panel') }}">
         <i class="bi bi-x-lg"></i>
       </button>
     </div>

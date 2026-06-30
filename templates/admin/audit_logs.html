@@ -2,98 +2,98 @@
 {% from 'components/filter-row.html' import filter_row_labeled %}
 {% from 'components/data-table.html' import loading_state, pagination %}
 
-{% block title %}{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %} — KinJo{% endblock %}
+{% block title %}{{ _t('Audit Logs') }} — KinJo{% endblock %}
 
 
 
 {% block content %}
 <div class="page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
-  <h1 class="page-title mb-0" cyberlume-glow-text>
+  <h1 class="page-title mb-0" k-text-glow>
     <i class="bi bi-clock-history me-2"></i>
-    {% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}
+    {{ _t('Audit Logs') }}
   </h1>
   <div class="d-flex gap-2">
     <button class="btn btn-ghost" onclick="exportAuditLogs()">
-      <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
+      <i class="bi bi-download me-1"></i>{{ _t('Export') }}
     </button>
     <button class="btn btn-ghost" onclick="refreshAuditLogs()">
-      <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+      <i class="bi bi-arrow-clockwise me-1"></i>{{ _t('Refresh') }}
     </button>
   </div>
 </div>
 
-<div class="cyberlume-card  mb-4">
+<div class="k-card  mb-4">
     <div class="relative z-10">
         <!-- Filters -->
         <div class="row g-3 mb-4">
             <div class="col-sm-6 col-lg-3">
-                <label for="actionFilter" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</label>
+                <label for="actionFilter" class="form-label small fw-semibold mb-1">{{ _t('Action') }}</label>
                 <select class="form-select form-select-sm" id="actionFilter">
-                    <option value="">{% if ui_lang == 'en' %}All Actions{% else %}جميع الإجراءات{% endif %}</option>
-                    <option value="USER_CREATED">{% if ui_lang == 'en' %}User Created{% else %}إنشاء مستخدم{% endif %}</option>
-                    <option value="USER_UPDATED">{% if ui_lang == 'en' %}User Updated{% else %}تحديث مستخدم{% endif %}</option>
-                    <option value="USER_DELETED">{% if ui_lang == 'en' %}User Deleted{% else %}حذف مستخدم{% endif %}</option>
-                    <option value="LOGIN_SUCCESS">{% if ui_lang == 'en' %}Login{% else %}تسجيل دخول{% endif %}</option>
-                    <option value="LOGIN_FAILED">{% if ui_lang == 'en' %}Login Failed{% else %}فشل الدخول{% endif %}</option>
-                    <option value="LOGOUT">{% if ui_lang == 'en' %}Logout{% else %}تسجيل خروج{% endif %}</option>
-                    <option value="IMPERSONATION_START">{% if ui_lang == 'en' %}Impersonation Start{% else %}بدء انتحال الهوية{% endif %}</option>
-                    <option value="IMPERSONATION_END">{% if ui_lang == 'en' %}Impersonation End{% else %}إنهاء انتحال الهوية{% endif %}</option>
-                    <option value="ADMIN_DASHBOARD_VIEWED">{% if ui_lang == 'en' %}Dashboard Viewed{% else %}عرض لوحة التحكم{% endif %}</option>
+                    <option value="">{{ _t('All Actions') }}</option>
+                    <option value="USER_CREATED">{{ _t('User Created') }}</option>
+                    <option value="USER_UPDATED">{{ _t('User Updated') }}</option>
+                    <option value="USER_DELETED">{{ _t('User Deleted') }}</option>
+                    <option value="LOGIN_SUCCESS">{{ _t('Login') }}</option>
+                    <option value="LOGIN_FAILED">{{ _t('Login Failed') }}</option>
+                    <option value="LOGOUT">{{ _t('Logout') }}</option>
+                    <option value="IMPERSONATION_START">{{ _t('Impersonation Start') }}</option>
+                    <option value="IMPERSONATION_END">{{ _t('Impersonation End') }}</option>
+                    <option value="ADMIN_DASHBOARD_VIEWED">{{ _t('Dashboard Viewed') }}</option>
                 </select>
             </div>
             <div class="col-sm-6 col-lg-3">
-                <label for="entityFilter" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Entity Type{% else %}نوع الكيان{% endif %}</label>
+                <label for="entityFilter" class="form-label small fw-semibold mb-1">{{ _t('Entity Type') }}</label>
                 <select class="form-select form-select-sm" id="entityFilter">
-                    <option value="">{% if ui_lang == 'en' %}All Types{% else %}جميع الأنواع{% endif %}</option>
-                    <option value="User">{% if ui_lang == 'en' %}User{% else %}مستخدم{% endif %}</option>
-                    <option value="Child">{% if ui_lang == 'en' %}Child{% else %}طفل{% endif %}</option>
-                    <option value="Kindergarten">{% if ui_lang == 'en' %}Kindergarten{% else %}روضة{% endif %}</option>
-                    <option value="Enrollment">{% if ui_lang == 'en' %}Enrollment{% else %}تسجيل{% endif %}</option>
-                    <option value="Attendance">{% if ui_lang == 'en' %}Attendance{% else %}حضور{% endif %}</option>
-                    <option value="Report">{% if ui_lang == 'en' %}Report{% else %}تقرير{% endif %}</option>
+                    <option value="">{{ _t('All Types') }}</option>
+                    <option value="User">{{ _t('User') }}</option>
+                    <option value="Child">{{ _t('Child') }}</option>
+                    <option value="Kindergarten">{{ _t('Kindergarten') }}</option>
+                    <option value="Enrollment">{{ _t('Enrollment') }}</option>
+                    <option value="Attendance">{{ _t('Attendance') }}</option>
+                    <option value="Report">{{ _t('Report') }}</option>
                 </select>
             </div>
             <div class="col-sm-6 col-lg-3">
-                <label for="userFilter" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}User{% else %}المستخدم{% endif %}</label>
-                <input type="text" class="form-control form-control-sm" id="userFilter" placeholder="{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}">
+                <label for="userFilter" class="form-label small fw-semibold mb-1">{{ _t('User') }}</label>
+                <input type="text" class="form-control form-control-sm" id="userFilter" placeholder="{{ _t('Username') }}">
             </div>
             <div class="col-sm-6 col-lg-3">
-                <label for="dateFilter" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</label>
+                <label for="dateFilter" class="form-label small fw-semibold mb-1">{{ _t('Date') }}</label>
                 <input type="date" class="form-control form-control-sm" id="dateFilter">
             </div>
         </div>
 
         <!-- Apply Filters Button -->
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <button class="btn btn-primary d-flex align-items-center gap-2" onclick="applyFilters()" aria-label="{% if ui_lang == 'en' %}Apply selected filters{% else %}تطبيق الفلاتر المحددة{% endif %}">
+            <button class="btn btn-primary d-flex align-items-center gap-2" onclick="applyFilters()" aria-label="{{ _t('Apply selected filters') }}">
                 <i class="bi bi-funnel"></i>
-                {% if ui_lang == 'en' %}Apply Filter{% else %}تطبيق التصفية{% endif %}
+                {{ _t('Apply Filter') }}
             </button>
-            <div class="text-on-surface-variant" id="resultsCount" aria-live="polite" aria-atomic="true">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
+            <div class="text-on-surface-variant" id="resultsCount" aria-live="polite" aria-atomic="true">{{ _t('Loading...') }}</div>
         </div>
 </div>
 
 <!-- Audit Logs Table -->
-<div class="cyberlume-card ">
+<div class="k-card ">
     <div class="relative z-10">
         <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-            <table class="table table-dark table-hover cyberlume-table align-middle table-hover" id="auditLogsTable" aria-label="{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}">
+            <table class="table table-dark table-hover k-table align-middle table-hover" id="auditLogsTable" aria-label="{{ _t('Audit Logs') }}">
                 <thead class="table-light">
                     <tr>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Date & Time{% else %}التاريخ والوقت{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}User{% else %}المستخدم{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Entity Type{% else %}نوع الكيان{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Entity ID{% else %}معرف الكيان{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Details{% else %}التفاصيل{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}IP Address{% else %}عنوان بروتوكول الإنترنت (IP){% endif %}</th>
+                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Date & Time') }}</th>
+                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('User') }}</th>
+                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Action') }}</th>
+                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Entity Type') }}</th>
+                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Entity ID') }}</th>
+                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Details') }}</th>
+                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('IP Address') }}</th>
                     </tr>
                 </thead>
                 <tbody id="auditLogsBody">
                     <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
 <td colspan="7" class="text-center py-4">
                             <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                                <span class="visually-hidden">{{ _t('Loading...') }}</span>
                             </div>
                         </td>
                     </tr>
@@ -102,7 +102,7 @@
         </div>
 
         <!-- Pagination (JS-managed) -->
-        <nav aria-label="{% if ui_lang == 'en' %}Audit log pagination{% else %}ترقيم صفحات سجل التدقيق{% endif %}" class="mt-4">
+        <nav aria-label="{{ _t('Audit log pagination') }}" class="mt-4">
             <ul class="pagination justify-content-center" id="pagination"></ul>
         </nav>
     </div>
@@ -113,32 +113,32 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{% if ui_lang == 'en' %}Export Audit Logs{% else %}تصدير سجلات التدقيق{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+                <h5 class="modal-title">{{ _t('Export Audit Logs') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _t('Close') }}"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="block font-label-sm text-on-surface-variant mb-1" for="exportFormat">{% if ui_lang == 'en' %}File Format{% else %}تنسيق الملف{% endif %}</label>
+                    <label class="block font-label-sm text-on-surface-variant mb-1" for="exportFormat">{{ _t('File Format') }}</label>
                     <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="exportFormat">
-                        <option value="csv">{% if ui_lang == 'en' %}CSV (Spreadsheet){% else %}CSV (ملف جدولي){% endif %}</option>
-                        <option value="json">{% if ui_lang == 'en' %}JSON (Data format){% else %}JSON (صيغة بيانات){% endif %}</option>
-                        <option value="pdf">{% if ui_lang == 'en' %}PDF (Document){% else %}PDF (ملف){% endif %}</option>
+                        <option value="csv">{{ _t('CSV (Spreadsheet)') }}</option>
+                        <option value="json">{{ _t('JSON (Data format)') }}</option>
+                        <option value="pdf">{{ _t('PDF (Document)') }}</option>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="block font-label-sm text-on-surface-variant mb-1" for="exportPeriod">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
+                    <label class="block font-label-sm text-on-surface-variant mb-1" for="exportPeriod">{{ _t('Time Period') }}</label>
                     <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="exportPeriod">
-                        <option value="7">{% if ui_lang == 'en' %}Last 7 days{% else %}آخر 7 أيام{% endif %}</option>
-                        <option value="30">{% if ui_lang == 'en' %}Last 30 days{% else %}آخر 30 يوم{% endif %}</option>
-                        <option value="90">{% if ui_lang == 'en' %}Last 3 months{% else %}آخر 3 أشهر{% endif %}</option>
-                        <option value="365">{% if ui_lang == 'en' %}Last year{% else %}آخر سنة{% endif %}</option>
-                        <option value="all">{% if ui_lang == 'en' %}All records{% else %}جميع السجلات{% endif %}</option>
+                        <option value="7">{{ _t('Last 7 days') }}</option>
+                        <option value="30">{{ _t('Last 30 days') }}</option>
+                        <option value="90">{{ _t('Last 3 months') }}</option>
+                        <option value="365">{{ _t('Last year') }}</option>
+                        <option value="all">{{ _t('All records') }}</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]" onclick="doExport()">{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}</button>
+                <button type="button" class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{{ _t('Cancel') }}</button>
+                <button type="button" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]" onclick="doExport()">{{ _t('Export') }}</button>
             </div>
         </div>
 </div>

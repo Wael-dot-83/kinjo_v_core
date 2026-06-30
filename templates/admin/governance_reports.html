@@ -1,6 +1,6 @@
 {% extends 'admin_base.html' %}
 
-{% block title %}{% if ui_lang == 'en' %}Daily Reports Governance{% else %}حوكمة التقارير اليومية{% endif %}{% endblock %}
+{% block title %}{{ _t('Daily Reports Governance') }}{% endblock %}
 
 
 
@@ -8,16 +8,16 @@
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="mb-1"><i class="bi bi-clipboard2-data me-2"></i>{% if ui_lang == 'en' %}Daily Reports Governance{% else %}حوكمة التقارير اليومية{% endif %}</h4>
+        <h4 class="mb-1"><i class="bi bi-clipboard2-data me-2"></i>{{ _t('Daily Reports Governance') }}</h4>
     </div>
     <div class="d-flex gap-2 align-items-center">
-        <label for="startDate" class="visually-hidden">{% if ui_lang == 'en' %}Start Date{% else %}تاريخ البدء{% endif %}</label>
+        <label for="startDate" class="visually-hidden">{{ _t('Start Date') }}</label>
         <input type="date" id="startDate" class="form-control form-control-sm w-auto">
         <span class="text-on-surface-variant" aria-hidden="true">-</span>
-        <label for="endDate" class="visually-hidden">{% if ui_lang == 'en' %}End Date{% else %}تاريخ الانتهاء{% endif %}</label>
+        <label for="endDate" class="visually-hidden">{{ _t('End Date') }}</label>
         <input type="date" id="endDate" class="form-control form-control-sm w-auto">
         <button id="refreshBtn" class="btn cyberlume-btn cyberlume-btn-primary btn-sm" onclick="loadGovernanceData()">
-            <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+            <i class="bi bi-arrow-clockwise me-1"></i>{{ _t('Refresh') }}
         </button>
     </div>
 </div>
@@ -25,37 +25,37 @@
 <!-- KPI Cards Row -->
 <div class="row g-3 mb-4" id="kpiCards">
     <div>
-        <div class="cyberlume-card kpi-cyberlume-card border-0 ">
+        <div class="k-card kpi-k-card border-0 ">
             <div class="card-body text-center">
                 <div class="kpi-value text-primary" id="kpiSubmissionRate">--</div>
-                <div class="kpi-label">{% if ui_lang == 'en' %}Submission Rate{% else %}نسبة التقديم{% endif %}</div>
+                <div class="kpi-label">{{ _t('Submission Rate') }}</div>
                 <small class="text-on-surface-variant"><span id="kpiSubmitted">0</span> / <span id="kpiRequired">0</span></small>
             </div>
         </div>
     </div>
     <div>
-        <div class="cyberlume-card kpi-cyberlume-card border-0 ">
+        <div class="k-card kpi-k-card border-0 ">
             <div class="card-body text-center">
                 <div class="kpi-value text-success" id="kpiDeliveryRate">--</div>
-                <div class="kpi-label">{% if ui_lang == 'en' %}Delivery Rate{% else %}نسبة التسليم{% endif %}</div>
-                <small class="text-on-surface-variant"><span id="kpiDelivered">0</span> {% if ui_lang == 'en' %}delivered{% else %}تم تسليمه{% endif %}</small>
+                <div class="kpi-label">{{ _t('Delivery Rate') }}</div>
+                <small class="text-on-surface-variant"><span id="kpiDelivered">0</span> {{ _t('delivered') }}</small>
             </div>
         </div>
     </div>
     <div>
-        <div class="cyberlume-card kpi-cyberlume-card border-0 ">
+        <div class="k-card kpi-k-card border-0 ">
             <div class="card-body text-center">
                 <div class="kpi-value text-info" id="kpiViewRate">--</div>
-                <div class="kpi-label">{% if ui_lang == 'en' %}View Rate{% else %}نسبة المشاهدة{% endif %}</div>
-                <small class="text-on-surface-variant"><span id="kpiViewed">0</span> {% if ui_lang == 'en' %}viewed{% else %}شوهد{% endif %}</small>
+                <div class="kpi-label">{{ _t('View Rate') }}</div>
+                <small class="text-on-surface-variant"><span id="kpiViewed">0</span> {{ _t('viewed') }}</small>
             </div>
         </div>
     </div>
     <div>
-        <div class="cyberlume-card kpi-cyberlume-card border-0 ">
+        <div class="k-card kpi-k-card border-0 ">
             <div class="card-body text-center">
                 <div class="kpi-value text-warning" id="kpiQualityRate">--</div>
-                <div class="kpi-label">{% if ui_lang == 'en' %}First-Time Acceptance Rate{% else %}معدل القبول من أول مرة{% endif %}</div>
+                <div class="kpi-label">{{ _t('First-Time Acceptance Rate') }}</div>
                 <small class="text-on-surface-variant" id="kpiRejectionInfo">--</small>
             </div>
         </div>
@@ -63,58 +63,58 @@
 </div>
 
 <!-- GQI Section -->
-<div class="cyberlume-card border-0 mb-4">
+<div class="k-card border-0 mb-4">
     <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
         <h6 class="mb-0">
             <i class="bi bi-shield-check me-2 text-success"></i>
-            {% if ui_lang == 'en' %}Governance Quality Index (GQI){% else %}مؤشر جودة الحوكمة{% endif %}
+            {{ _t('Governance Quality Index (GQI)') }}
             <span class="badge bg-success ms-2 fs-6" id="gqiScore">--</span>
         </h6>
-        <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Composite of 5 sub-indicators (0–100){% else %}مركّب من 5 مؤشرات فرعية (0–100){% endif %}</small>
+        <small class="text-on-surface-variant">{{ _t('Composite of 5 sub-indicators (0–100)') }}</small>
     </div>
     <div class="card-body">
         <div class="row g-3" id="gqiSubIndicators">
             <div class="col-6 col-md-4 col-lg">
                 <div class="border rounded p-3 text-center">
                     <div class="fs-4 fw-bold text-primary" id="gqiReportSubmission">--</div>
-                    <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Report Submission{% else %}تقديم التقارير{% endif %}</div>
+                    <div class="small text-on-surface-variant">{{ _t('Report Submission') }}</div>
                 </div>
             </div>
             <div class="col-6 col-md-4 col-lg">
                 <div class="border rounded p-3 text-center">
                     <div class="fs-4 fw-bold text-info" id="gqiRatioCompliance">--</div>
-                    <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Ratio Compliance{% else %}الامتثال للنسب{% endif %}</div>
+                    <div class="small text-on-surface-variant">{{ _t('Ratio Compliance') }}</div>
                 </div>
             </div>
             <div class="col-6 col-md-4 col-lg">
                 <div class="border rounded p-3 text-center">
                     <div class="fs-4 fw-bold text-warning" id="gqiLicenseValidity">--</div>
-                    <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}License Validity{% else %}صلاحية الترخيص{% endif %}</div>
+                    <div class="small text-on-surface-variant">{{ _t('License Validity') }}</div>
                 </div>
             </div>
             <div class="col-6 col-md-4 col-lg">
                 <div class="border rounded p-3 text-center">
                     <div class="fs-4 fw-bold text-success" id="gqiTrainingCoverage">--</div>
-                    <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Training Coverage{% else %}تغطية التدريب{% endif %}</div>
+                    <div class="small text-on-surface-variant">{{ _t('Training Coverage') }}</div>
                 </div>
             </div>
             <div class="col-6 col-md-4 col-lg">
                 <div class="border rounded p-3 text-center">
                     <div class="fs-4 fw-bold text-danger" id="gqiIncidentSla">--</div>
-                    <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Incident SLA{% else %}SLA الحوادث{% endif %}</div>
+                    <div class="small text-on-surface-variant">{{ _t('Incident SLA') }}</div>
                 </div>
             </div>
         </div>
         <div class="row g-3 mt-1">
             <div class="col-md-6">
                 <div class="border rounded p-3 d-flex justify-content-between align-items-center">
-                    <span class="text-on-surface-variant small">{% if ui_lang == 'en' %}Rejection Rate (30d){% else %}معدل الرفض (30 يوم){% endif %}</span>
+                    <span class="text-on-surface-variant small">{{ _t('Rejection Rate (30d)') }}</span>
                     <span class="fw-bold" id="kpiRejectionRate">--</span>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="border rounded p-3 d-flex justify-content-between align-items-center">
-                    <span class="text-on-surface-variant small">{% if ui_lang == 'en' %}Morning Submission Rate{% else %}معدل التقديم الصباحي{% endif %}</span>
+                    <span class="text-on-surface-variant small">{{ _t('Morning Submission Rate') }}</span>
                     <span class="fw-bold" id="kpiMorningRate">--</span>
                 </div>
             </div>
@@ -125,9 +125,9 @@
 <!-- Funnel Chart + Consistency -->
 <div class="row g-3 mb-4">
     <div>
-        <div class="cyberlume-card border-0 ">
+        <div class="k-card border-0 ">
             <div class="card-header bg-transparent border-0">
-                <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>{% if ui_lang == 'en' %}Daily Reports Funnel{% else %}قمع التقارير اليومية{% endif %}</h6>
+                <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>{{ _t('Daily Reports Funnel') }}</h6>
             </div>
             <div class="relative z-10">
                 <canvas id="funnelChart" height="250"></canvas>
@@ -135,22 +135,22 @@
         </div>
     </div>
     <div>
-        <div class="cyberlume-card border-0  h-100">
+        <div class="k-card border-0  h-100">
             <div class="card-header bg-transparent border-0">
-                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>{% if ui_lang == 'en' %}Time Metrics{% else %}مقاييس الوقت{% endif %}</h6>
+                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _t('Time Metrics') }}</h6>
             </div>
             <div class="relative z-10">
                 <div class="mb-3">
-                    <span class="text-on-surface-variant small">{% if ui_lang == 'en' %}Median Submission Time{% else %}متوسط وقت التقديم{% endif %}</span>
+                    <span class="text-on-surface-variant small">{{ _t('Median Submission Time') }}</span>
                     <div class="fs-4 fw-bold" id="medianTimeliness">--</div>
                 </div>
                 <div class="mb-3">
-                    <span class="text-on-surface-variant small">{% if ui_lang == 'en' %}P90 Submission Time{% else %}P90 وقت التقديم{% endif %}</span>
+                    <span class="text-on-surface-variant small">{{ _t('P90 Submission Time') }}</span>
                     <div class="fs-4 fw-bold" id="p90Timeliness">--</div>
                 </div>
                 <hr>
                 <div>
-                    <span class="text-on-surface-variant small">{% if ui_lang == 'en' %}Average Consistency Index{% else %}متوسط مؤشر الاتساق{% endif %}</span>
+                    <span class="text-on-surface-variant small">{{ _t('Average Consistency Index') }}</span>
                     <div class="fs-4 fw-bold" id="avgConsistency">--</div>
                 </div>
             </div>
@@ -159,9 +159,9 @@
 </div>
 
 <!-- 30-Day Submission Trend -->
-<div class="cyberlume-card border-0 mb-4">
+<div class="k-card border-0 mb-4">
     <div class="card-header bg-transparent border-0">
-        <h6 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>{% if ui_lang == 'en' %}30-Day Submission Rate Trend{% else %}اتجاه نسبة التقديم (30 يوم){% endif %}</h6>
+        <h6 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>{{ _t('30-Day Submission Rate Trend') }}</h6>
     </div>
     <div class="card-body">
         <canvas id="trendChart" height="120"></canvas>
@@ -170,11 +170,11 @@
 
 <!-- Safeguarding Overlap Panel -->
 <div id="safeguardingSection" class="mb-4 d-none">
-    <div class="cyberlume-card border-danger border-0">
+    <div class="k-card border-danger border-0">
         <div class="card-header bg-danger bg-opacity-10 border-0 d-flex justify-content-between align-items-center">
             <h6 class="mb-0 text-danger">
                 <i class="bi bi-shield-exclamation me-2"></i>
-                {% if ui_lang == 'en' %}Safeguarding Risk — Low Compliance + Open Incidents{% else %}خطر الحماية — امتثال منخفض + حوادث مفتوحة{% endif %}
+                {{ _t('Safeguarding Risk — Low Compliance + Open Incidents') }}
             </h6>
             <span class="badge bg-danger" id="safeguardingCount">0</span>
         </div>
@@ -186,9 +186,9 @@
 
 <!-- Low Performers Alert -->
 <div id="lowPerformersSection" class="mb-4 d-none">
-    <div class="cyberlume-card border-warning border-0 ">
+    <div class="k-card border-warning border-0 ">
         <div class="card-header bg-warning bg-opacity-10 border-0">
-            <h6 class="mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>{% if ui_lang == 'en' %}Kindergartens Needing Improvement{% else %}رياض تحتاج تحسين{% endif %}</h6>
+            <h6 class="mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>{{ _t('Kindergartens Needing Improvement') }}</h6>
         </div>
         <div class="relative z-10">
             <div id="lowPerformersList" class="row g-2"></div>
@@ -197,35 +197,35 @@
 </div>
 
 <!-- Leaderboard Table -->
-<div class="cyberlume-card border-0  mb-4">
+<div class="k-card border-0  mb-4">
     <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-        <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>{% if ui_lang == 'en' %}Kindergarten Ranking (Weighted){% else %}ترتيب الرياض (ترجيحي){% endif %}</h6>
+        <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>{{ _t('Kindergarten Ranking (Weighted)') }}</h6>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-dark table-hover cyberlume-table align-middle mb-0">
+            <table class="table table-dark table-hover k-table align-middle mb-0">
                 <thead class="table-light">
                     <tr>
                         <th style="width:50px">#</th>
-                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Req{% else %}مطلوب{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Sub{% else %}مقدم{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Del{% else %}مسلم{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}View{% else %}مشاهد{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Raw%{% else %}خام%{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Score{% else %}النتيجة{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Reject%{% else %}رفض%{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Morning%{% else %}صباح%{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Consist.{% else %}اتساق{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Avg Approv.{% else %}متوسط موافقة{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Last Report{% else %}آخر تقرير{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Remind.{% else %}تذكيرات{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                        <th>{{ _t('Kindergarten') }}</th>
+                        <th>{{ _t('Req') }}</th>
+                        <th>{{ _t('Sub') }}</th>
+                        <th>{{ _t('Del') }}</th>
+                        <th>{{ _t('View') }}</th>
+                        <th>{{ _t('Raw%') }}</th>
+                        <th>{{ _t('Score') }}</th>
+                        <th>{{ _t('Reject%') }}</th>
+                        <th>{{ _t('Morning%') }}</th>
+                        <th>{{ _t('Consist.') }}</th>
+                        <th>{{ _t('Avg Approv.') }}</th>
+                        <th>{{ _t('Last Report') }}</th>
+                        <th>{{ _t('Remind.') }}</th>
+                        <th>{{ _t('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboardBody">
                     <tr>
-                        <td colspan="15" class="text-center text-on-surface-variant py-4">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td>
+                        <td colspan="15" class="text-center text-on-surface-variant py-4">{{ _t('Loading...') }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -234,25 +234,25 @@
 </div>
 
 <!-- Reminder History -->
-<div class="cyberlume-card border-0  mb-4">
+<div class="k-card border-0  mb-4">
     <div class="card-header bg-transparent border-0">
-        <h6 class="mb-0"><i class="bi bi-bell me-2"></i>{% if ui_lang == 'en' %}Reminders Log{% else %}سجل التذكيرات{% endif %}</h6>
+        <h6 class="mb-0"><i class="bi bi-bell me-2"></i>{{ _t('Reminders Log') }}</h6>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-dark table-hover cyberlume-table align-middle mb-0">
+            <table class="table table-dark table-hover k-table align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Target{% else %}الهدف{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Reminder Type{% else %}نوع التذكير{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Sent Date{% else %}تاريخ الإرسال{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Cooldown Expiry{% else %}انتهاء التبريد{% endif %}</th>
+                        <th>{{ _t('Type') }}</th>
+                        <th>{{ _t('Target') }}</th>
+                        <th>{{ _t('Reminder Type') }}</th>
+                        <th>{{ _t('Sent Date') }}</th>
+                        <th>{{ _t('Cooldown Expiry') }}</th>
                     </tr>
                 </thead>
                 <tbody id="remindersBody">
                     <tr>
-                        <td colspan="5" class="text-center text-on-surface-variant py-4">{% if ui_lang == 'en' %}No reminders{% else %}لا توجد تذكيرات{% endif %}</td>
+                        <td colspan="5" class="text-center text-on-surface-variant py-4">{{ _t('No reminders') }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -265,18 +265,18 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{% if ui_lang == 'en' %}Send Reminder{% else %}إرسال تذكير{% endif %}</h5>
+                <h5 class="modal-title">{{ _t('Send Reminder') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"
-                    aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+                    aria-label="{{ _t('Close') }}"></button>
             </div>
             <div class="modal-body">
-                <p>{% if ui_lang == 'en' %}Do you want to send a governance reminder to <strong id="reminderTargetName"></strong>?{% else %}هل تريد إرسال تذكير حوكمة إلى <strong id="reminderTargetName"></strong>؟{% endif %}</p>
-                <p class="text-on-surface-variant small">{% if ui_lang == 'en' %}A 48-hour cooldown period will be applied after sending.{% else %}سيتم تطبيق فترة تبريد 48 ساعة بعد الإرسال.{% endif %}</p>
+                <p>{{ _t('Do you want to send a governance reminder to <strong id="reminderTargetName"></strong>?') }}</p>
+                <p class="text-on-surface-variant small">{{ _t('A 48-hour cooldown period will be applied after sending.') }}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _t('Cancel') }}</button>
                 <button type="button" class="btn btn-warning" id="confirmReminderBtn">
-                    <i class="bi bi-bell me-1"></i>{% if ui_lang == 'en' %}Send{% else %}إرسال{% endif %}
+                    <i class="bi bi-bell me-1"></i>{{ _t('Send') }}
                 </button>
             </div>
         </div>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends
+﻿from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
@@ -50,7 +50,7 @@ def language_context_processor(request: Request) -> dict:
         "current_year": date.today().year,
         "support_contact_email": settings.SUPPORT_CONTACT_EMAIL,
         "support_contact_phone": settings.SUPPORT_CONTACT_PHONE,
-        # CAPTCHA_SITE_KEY is the public key — safe to expose to templates/JS.
+        # CAPTCHA_SITE_KEY is the public key â€” safe to expose to templates/JS.
         # CAPTCHA_SECRET_KEY never leaves the server.
         "captcha_enabled": settings.CAPTCHA_ENABLED,
         "captcha_provider": settings.CAPTCHA_PROVIDER,
@@ -66,6 +66,7 @@ templates = Jinja2Templates(
 templates.env.globals['encoding'] = 'utf-8'
 # Expose only the single non-sensitive value templates need (never the full settings object).
 templates.env.globals['session_timeout_minutes'] = settings.SESSION_TIMEOUT_MINUTES
+templates.env.globals['_t'] = lambda k, default=None, **kw: _i18n_gettext(k, **kw)
 templates.env.globals['max_attachment_size_mb'] = settings.MAX_ATTACHMENT_SIZE_MB
 
 
@@ -271,12 +272,12 @@ async def change_password_page(request: Request, current_user: User = Depends(ge
 
 @router.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_page(request: Request):
-    """Forgot password page — allows users to request a password reset email"""
+    """Forgot password page â€” allows users to request a password reset email"""
     return templates.TemplateResponse(request=request, name="auth/forgot-password.html", context={})
 
 @router.get("/reset-password", response_class=HTMLResponse)
 async def reset_password_page(request: Request, token: str = ""):
-    """Reset password page — consumes the token from the email link"""
+    """Reset password page â€” consumes the token from the email link"""
     return templates.TemplateResponse(request=request, name="auth/reset-password.html", context={"token": token})
 
 @router.get("/dashboard", response_class=HTMLResponse)
@@ -486,14 +487,14 @@ async def edit_kindergarten_page(request: Request, kg_id: int, db: Session = Dep
 
 @router.get("/classes", response_class=HTMLResponse)
 async def list_classes_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Class list page — Manager and Admin."""
+    """Class list page â€” Manager and Admin."""
     if current_user.role not in (UserRole.MANAGER, UserRole.ADMIN):
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     return templates.TemplateResponse(request=request, name="classes/list.html", context={"current_user": current_user})
 
 @router.get("/classes/create", response_class=HTMLResponse)
 async def create_class_page(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    """Create class page — Manager only."""
+    """Create class page â€” Manager only."""
     if current_user.role != UserRole.MANAGER:
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
@@ -505,7 +506,7 @@ async def create_class_page(request: Request, db: Session = Depends(get_db), cur
 
 @router.get("/classes/{class_id}/edit", response_class=HTMLResponse)
 async def edit_class_page(request: Request, class_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    """Edit class page — Manager only."""
+    """Edit class page â€” Manager only."""
     from models import Class
     if current_user.role != UserRole.MANAGER:
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
@@ -616,9 +617,9 @@ async def view_enrollment(request: Request, app_id: int, db: Session = Depends(g
     kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == enrollment.kindergarten_id).first()
 
     STATUS_AR = {
-        "DRAFT": "مسودة", "SUBMITTED": "مقدّم", "PENDING_REVIEW": "قيد المراجعة",
-        "ACCEPTED": "مقبول", "REJECTED": "مرفوض", "WITHDRAWN": "منسحب",
-        "WAITLISTED": "قائمة الانتظار", "ACTIVE": "نشط"
+        "DRAFT": "Ù…Ø³ÙˆØ¯Ø©", "SUBMITTED": "Ù…Ù‚Ø¯Ù‘Ù…", "PENDING_REVIEW": "Ù‚ÙŠØ¯ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©",
+        "ACCEPTED": "Ù…Ù‚Ø¨ÙˆÙ„", "REJECTED": "Ù…Ø±ÙÙˆØ¶", "WITHDRAWN": "Ù…Ù†Ø³Ø­Ø¨",
+        "WAITLISTED": "Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±", "ACTIVE": "Ù†Ø´Ø·"
     }
     STATUS_COLOR = {
         "DRAFT": "secondary", "SUBMITTED": "info", "PENDING_REVIEW": "warning",
@@ -638,26 +639,26 @@ async def view_enrollment(request: Request, app_id: int, db: Session = Depends(g
     data = {
         "id": enrollment.id,
         "child_id": enrollment.child_id,
-        "child_name": f"{child.first_name} {child.last_name}" if child else "غير معروف",
+        "child_name": f"{child.first_name} {child.last_name}" if child else "ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ",
         "kindergarten_id": enrollment.kindergarten_id,
-        "kindergarten_name": kg.name_ar if kg else "غير معروف",
+        "kindergarten_name": kg.name_ar if kg else "ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ",
         "status": status_val.lower(),
         "status_ar": STATUS_AR.get(status_val, status_val),
         "status_color": STATUS_COLOR.get(status_val, "secondary"),
-        "created_at": enrollment.created_at.strftime("%Y-%m-%d") if enrollment.created_at else "—",
+        "created_at": enrollment.created_at.strftime("%Y-%m-%d") if enrollment.created_at else "â€”",
         "submitted_at": enrollment.submitted_at.strftime("%Y-%m-%d") if enrollment.submitted_at else None,
-        "dob": child.date_of_birth.isoformat() if child and child.date_of_birth else "—",
-        "gender_ar": ("ذكر" if child and child.gender and child.gender.value == "MALE" else "أنثى") if child else "—",
-        "national_id": child.mother_national_id if child else "—",
+        "dob": child.date_of_birth.isoformat() if child and child.date_of_birth else "â€”",
+        "gender_ar": ("Ø°ÙƒØ±" if child and child.gender and child.gender.value == "MALE" else "Ø£Ù†Ø«Ù‰") if child else "â€”",
+        "national_id": child.mother_national_id if child else "â€”",
         "age": "",  # Will be computed by JS
         # Parent info
-        "father_name": child.father_name if child else "—",
-        "father_phone": parent_profile.phone_number if parent_profile else "—",
-        "father_occupation": "—",  # Not in model yet
+        "father_name": child.father_name if child else "â€”",
+        "father_phone": parent_profile.phone_number if parent_profile else "â€”",
+        "father_occupation": "â€”",  # Not in model yet
         # Mother info
-        "mother_name": f"{child.mother_first_name} {child.mother_last_name}" if child else "—",
-        "mother_phone": "—",  # Not in model yet
-        "mother_nationality": child.mother_nationality if child else "—",
+        "mother_name": f"{child.mother_first_name} {child.mother_last_name}" if child else "â€”",
+        "mother_phone": "â€”",  # Not in model yet
+        "mother_nationality": child.mother_nationality if child else "â€”",
         # Health info
         "medical_conditions": None,  # Not in model yet
         "vaccinations_up_to_date": None,  # Not in model yet
@@ -769,7 +770,7 @@ async def view_report(request: Request, report_id: int, current_user: User = Dep
         "child_name": "...",
         "date": "",
         "teacher_name": "...",
-        "mood_emoji": "😊",
+        "mood_emoji": "ðŸ˜Š",
         "mood_text": ""
     }
     return templates.TemplateResponse(
@@ -999,7 +1000,7 @@ async def curriculum_page(request: Request, current_user: User = Depends(get_cur
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role in ('ADMIN', 'SUPERVISOR'):
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
-    # Curriculum module placeholder — redirect to dashboard
+    # Curriculum module placeholder â€” redirect to dashboard
     return RedirectResponse(url="/dashboard")
 
 
@@ -1052,7 +1053,7 @@ async def new_message(request: Request, current_user: User = Depends(get_current
 
 @router.get("/profile", response_class=HTMLResponse)
 async def user_profile(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Canonical profile redirect — sends each role to its dedicated profile page."""
+    """Canonical profile redirect â€” sends each role to its dedicated profile page."""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role == 'PARENT':
         return RedirectResponse(url="/parent/profile")
@@ -1081,7 +1082,7 @@ async def kpi_main(request: Request, current_user: User = Depends(get_current_us
 
 @router.get("/classes/{class_id}", response_class=HTMLResponse)
 async def view_class(request: Request, class_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    """View class details — Admin and Manager can access; Manager scoped to own KG."""
+    """View class details â€” Admin and Manager can access; Manager scoped to own KG."""
     from models import Class
     class_obj = db.query(Class).filter(Class.id == class_id).first()
     if not class_obj:
@@ -1204,7 +1205,7 @@ async def parent_reports(
             for child in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()
         }
         for report in reports:
-            report.child_name = child_name_by_id.get(report.child_id, "طفل")
+            report.child_name = child_name_by_id.get(report.child_id, "Ø·ÙÙ„")
 
     return templates.TemplateResponse(
         request=request,
@@ -1504,7 +1505,7 @@ async def admin_messages_list(
     message_list = [
         {
             "id": msg.id,
-            "subject": msg.subject or "بدون وصول",
+            "subject": msg.subject or "Ø¨Ø¯ÙˆÙ† ÙˆØµÙˆÙ„",
             "created_at": msg.created_at,
             "recipient_count": msg.recipient_count or 0,
             "thread_type": msg.thread_type.value,
@@ -1653,7 +1654,7 @@ async def incident_report_detail_page(report_id: int, request: Request, current_
 
 
 # =============================================================================
-# Admin — Impersonation & Safety Analytics pages
+# Admin â€” Impersonation & Safety Analytics pages
 # =============================================================================
 
 @router.get("/admin/impersonate", response_class=HTMLResponse)
@@ -1764,12 +1765,12 @@ async def admin_heatmap_page(request: Request, current_user: User = Depends(get_
 
 
 # -----------------------------------------------------------------------------
-# Admin Data Management — Import Logs
+# Admin Data Management â€” Import Logs
 # -----------------------------------------------------------------------------
 
 @router.get("/admin/import-logs", response_class=HTMLResponse)
 async def admin_import_logs_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Admin import logs page — history of CSV/Excel import jobs"""
+    """Admin import logs page â€” history of CSV/Excel import jobs"""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
@@ -1777,12 +1778,12 @@ async def admin_import_logs_page(request: Request, current_user: User = Depends(
 
 
 # -----------------------------------------------------------------------------
-# Admin User Management — Import Users
+# Admin User Management â€” Import Users
 # -----------------------------------------------------------------------------
 
 @router.get("/admin/users/import", response_class=HTMLResponse)
 async def admin_import_users_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Admin import users page — bulk CSV import of user accounts"""
+    """Admin import users page â€” bulk CSV import of user accounts"""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
@@ -1790,12 +1791,12 @@ async def admin_import_users_page(request: Request, current_user: User = Depends
 
 
 # -----------------------------------------------------------------------------
-# Admin Governance — Reminders
+# Admin Governance â€” Reminders
 # -----------------------------------------------------------------------------
 
 @router.get("/admin/governance/reminders", response_class=HTMLResponse)
 async def admin_governance_reminders_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Admin governance reminders page — manage compliance reminders sent to supervisors"""
+    """Admin governance reminders page â€” manage compliance reminders sent to supervisors"""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
@@ -1812,7 +1813,7 @@ async def admin_profile_page(
     current_user: User = Depends(get_current_user_or_redirect),
     db: Session = Depends(get_db),
 ):
-    """Admin profile page — view account details and change password"""
+    """Admin profile page â€” view account details and change password"""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
@@ -1858,7 +1859,7 @@ async def admin_profile_page(
 
 @router.get("/admin/settings", response_class=HTMLResponse)
 async def admin_settings_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Admin settings page — view system configuration"""
+    """Admin settings page â€” view system configuration"""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
@@ -1867,6 +1868,7 @@ async def admin_settings_page(request: Request, current_user: User = Depends(get
 
 @router.get("/admin/observability", response_class=HTMLResponse)
 async def admin_observability_page(request: Request, current_user: User = Depends(require_admin)):
-    """Admin observability dashboard — system health, latency, data quality, alert quality."""
+    """Admin observability dashboard â€” system health, latency, data quality, alert quality."""
     return templates.TemplateResponse(request=request, name="admin/observability_dashboard.html", context={"current_user": current_user})
+
 

@@ -1,57 +1,57 @@
 {% extends "admin_base.html" %}
-{% block title %}{% if ui_lang == 'en' %}Contact Messages — KinJo{% else %}رسائل التواصل — KinJo{% endif %}{% endblock %}
+{% block title %}{{ _t('Contact Messages — KinJo') }}{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house" aria-hidden="true"></i></a>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{{ _t('Dashboard') }}"><i class="bi bi-house" aria-hidden="true"></i></a>
 <span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Contact Messages{% else %}رسائل التواصل{% endif %}</span>
+<span class="breadcrumb-item active">{{ _t('Contact Messages') }}</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-header mb-4">
-  <h1 class="page-title" cyberlume-glow-text>
-    <i class="bi bi-chat-dots me-2"></i>{% if ui_lang == 'en' %}Contact Messages{% else %}رسائل التواصل{% endif %}
+  <h1 class="page-title" k-text-glow>
+    <i class="bi bi-chat-dots me-2"></i>{{ _t('Contact Messages') }}
   </h1>
 </div>
 <!-- Filters -->
-<form method="get" action="/admin/contact-messages" class="cyberlume-card mb-4">
+<form method="get" action="/admin/contact-messages" class="k-card mb-4">
     <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
         <div class="input-group input-group-sm input-group-icon" style="max-width:280px;">
             <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
             <input type="text" name="q" value="{{ filters.q or '' }}"
                    class="form-control"
-                   aria-label="{% if ui_lang == 'en' %}Search by name or subject{% else %}بحث بالاسم أو الموضوع{% endif %}"
-                   placeholder="{% if ui_lang == 'en' %}Search by name or subject...{% else %}بحث بالاسم أو الموضوع...{% endif %}">
+                   aria-label="{{ _t('Search by name or subject') }}"
+                   placeholder="{{ _t('Search by name or subject...') }}">
         </div>
         <select name="status_filter" class="form-select form-select-sm w-auto">
-            <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
-            <option value="open" {% if filters.status_filter == 'open' %}selected{% endif %}>{% if ui_lang == 'en' %}Open{% else %}مفتوحة{% endif %}</option>
-            <option value="resolved" {% if filters.status_filter == 'resolved' %}selected{% endif %}>{% if ui_lang == 'en' %}Resolved{% else %}مُغلقة{% endif %}</option>
+            <option value="">{{ _t('All') }}</option>
+            <option value="open" {% if filters.status_filter == 'open' %}selected{% endif %}>{{ _t('Open') }}</option>
+            <option value="resolved" {% if filters.status_filter == 'resolved' %}selected{% endif %}>{{ _t('Resolved') }}</option>
         </select>
-        <button type="submit" class="btn cyberlume-btn cyberlume-btn-primary btn-sm">{% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}</button>
+        <button type="submit" class="btn cyberlume-btn cyberlume-btn-primary btn-sm">{{ _t('Filter') }}</button>
     </div>
 </form>
 
 <!-- Stats -->
 <div class="d-flex gap-3 mb-3">
-    <span class="badge badge-soft badge-soft-secondary fs-6">{% if ui_lang == 'en' %}Total:{% else %}الإجمالي:{% endif %} {{ pagination.total }}</span>
-    <span class="text-cyber-muted small">{% if ui_lang == 'en' %}Page{% else %}الصفحة{% endif %} {{ pagination.page }} {% if ui_lang == 'en' %}of{% else %}من{% endif %} {{ pagination.total_pages }}</span>
+    <span class="badge badge-soft badge-soft-secondary fs-6">{{ _t('Total:') }} {{ pagination.total }}</span>
+    <span class="text-cyber-muted small">{{ _t('Page') }} {{ pagination.page }} {{ _t('of') }} {{ pagination.total_pages }}</span>
 </div>
 
 <!-- Table -->
-<div class="cyberlume-card">
+<div class="k-card">
     {% if contact_messages %}
     <div class="table-responsive">
-        <table class="table table-dark table-hover cyberlume-table align-middle table-hover align-middle mb-0">
+        <table class="table table-dark table-hover k-table align-middle table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
                     <th>#</th>
-                    <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Email{% else %}البريد{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                    <th><span class="visually-hidden">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</span></th>
+                    <th>{{ _t('Name') }}</th>
+                    <th>{{ _t('Email') }}</th>
+                    <th>{{ _t('Subject') }}</th>
+                    <th>{{ _t('Date') }}</th>
+                    <th>{{ _t('Status') }}</th>
+                    <th><span class="visually-hidden">{{ _t('Actions') }}</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -66,9 +66,9 @@
                     </td>
                     <td>
                         {% if msg.is_resolved %}
-                        <span class="badge badge-soft badge-soft-success">{% if ui_lang == 'en' %}Resolved{% else %}مُغلقة{% endif %}</span>
+                        <span class="badge badge-soft badge-soft-success">{{ _t('Resolved') }}</span>
                         {% else %}
-                        <span class="badge badge-soft badge-soft-warning">{% if ui_lang == 'en' %}Open{% else %}مفتوحة{% endif %}</span>
+                        <span class="badge badge-soft badge-soft-warning">{{ _t('Open') }}</span>
                         {% endif %}
                     </td>
                     <td>
@@ -76,13 +76,13 @@
                         <button type="button"
                                 class="btn btn-ghost btn-sm text-success"
                                 data-resolve-url="/api/admin/contact-messages/{{ msg.id }}/resolve"
-                                title="{% if ui_lang == 'en' %}Close message{% else %}إغلاق الرسالة{% endif %}">
+                                title="{{ _t('Close message') }}">
                             <i class="bi bi-check-circle" aria-hidden="true"></i>
                         </button>
                         {% endif %}
                         <button class="btn btn-ghost btn-sm" data-bs-toggle="modal"
                                 data-bs-target="#msgModal{{ msg.id }}"
-                                title="{% if ui_lang == 'en' %}View message{% else %}عرض الرسالة{% endif %}">
+                                title="{{ _t('View message') }}">
                             <i class="bi bi-eye"></i>
                         </button>
                     </td>
@@ -94,14 +94,14 @@
     {% else %}
     <div class="card-body text-center py-5">
         <i class="bi bi-inbox d-block fs-1 mb-3 opacity-25"></i>
-        <p class="text-cyber-muted mb-0">{% if ui_lang == 'en' %}No messages found{% else %}لا توجد رسائل{% endif %}</p>
+        <p class="text-cyber-muted mb-0">{{ _t('No messages found') }}</p>
     </div>
     {% endif %}
 </div>
 
 <!-- Pagination -->
 {% if pagination.total_pages > 1 %}
-<nav class="mt-3" aria-label="{% if ui_lang == 'en' %}Page navigation{% else %}التنقل بين الصفحات{% endif %}">
+<nav class="mt-3" aria-label="{{ _t('Page navigation') }}">
     <ul class="pagination justify-content-center">
         {% for p in range(1, pagination.total_pages + 1) %}
         <li class="page-item {% if p == pagination.page %}active{% endif %}">
@@ -120,18 +120,18 @@
             <div class="modal-header">
                 <h5 class="modal-title">{{ msg.subject }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"
-                        aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+                        aria-label="{{ _t('Close') }}"></button>
             </div>
             <div class="modal-body">
                 <dl class="row mb-3">
-                    <dt class="col-sm-3">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</dt><dd class="col-sm-9">{{ msg.name }}</dd>
-                    <dt class="col-sm-3">{% if ui_lang == 'en' %}Email{% else %}البريد{% endif %}</dt><dd class="col-sm-9">{{ msg.email }}</dd>
-                    <dt class="col-sm-3">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</dt><dd class="col-sm-9">{{ msg.phone }}</dd>
+                    <dt class="col-sm-3">{{ _t('Name') }}</dt><dd class="col-sm-9">{{ msg.name }}</dd>
+                    <dt class="col-sm-3">{{ _t('Email') }}</dt><dd class="col-sm-9">{{ msg.email }}</dd>
+                    <dt class="col-sm-3">{{ _t('Phone') }}</dt><dd class="col-sm-9">{{ msg.phone }}</dd>
                 </dl>
                 <p style="white-space:pre-line;">{{ msg.message }}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _t('Close') }}</button>
             </div>
         </div>
     </div>
@@ -150,11 +150,11 @@ document.querySelectorAll('[data-resolve-url]').forEach((button) => {
       const response = await fetchWithAuth(button.dataset.resolveUrl, { method: 'POST', headers: { 'X-CSRF-Token': csrfToken } });
       if (!response || !response.ok) {
         const payload = await (response ? response.json().catch(() => ({})) : Promise.resolve({}));
-        throw new Error(payload.detail || '{% if ui_lang == "en" %}Failed to resolve contact message.{% else %}فشل إغلاق الرسالة.{% endif %}');
+        throw new Error(payload.detail || '{{ _t('Failed to resolve contact message.') }}');
       }
       window.location.reload();
     } catch (error) {
-      alert(error.message || '{% if ui_lang == "en" %}Failed to resolve contact message.{% else %}فشل إغلاق الرسالة.{% endif %}');
+      alert(error.message || '{{ _t('Failed to resolve contact message.') }}');
       button.disabled = false;
     }
   });

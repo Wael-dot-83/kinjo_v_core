@@ -1,13 +1,13 @@
 {% extends 'admin_base.html' %}
-{% block title %}{% if ui_lang == 'en' %}Incident Analytics — KinJo{% else %}تحليلات الحوادث — KinJo{% endif %}{% endblock %}
+{% block title %}{{ _t('Incident Analytics — KinJo') }}{% endblock %}
 
 {% block breadcrumb %}
 <a href="/admin/dashboard" class="breadcrumb-item">
     <i class="bi bi-house"></i>
-    <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
+    <span>{{ _t('Dashboard') }}</span>
 </a>
 <span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Incident Analytics{% else %}تحليلات الحوادث{% endif %}</span>
+<span class="breadcrumb-item active">{{ _t('Incident Analytics') }}</span>
 {% endblock %}
 
 {% block extra_head %}
@@ -64,14 +64,14 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
     <div>
         <div class="page-header-eyebrow text-danger">
             <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
-            <span>{% if ui_lang == 'en' %}Reports &amp; Analytics{% else %}تقارير وتحليلات{% endif %}</span>
+            <span>{{ _t('Reports &amp; Analytics') }}</span>
         </div>
-        <h1 class="page-header-title">{% if ui_lang == 'en' %}Incident Analytics Dashboard{% else %}لوحة تحليلات الحوادث{% endif %}</h1>
+        <h1 class="page-header-title">{{ _t('Incident Analytics Dashboard') }}</h1>
     </div>
     <div class="d-flex gap-2">
         <a href="/safety" class="btn btn-ghost">
             <i class="bi bi-arrow-{% if ui_dir == 'rtl' %}right{% else %}left{% endif %} me-1"></i>
-            {% if ui_lang == 'en' %}Safety Overview{% else %}نظرة عامة على السلامة{% endif %}
+            {{ _t('Safety Overview') }}
         </a>
     </div>
 </div>
@@ -80,16 +80,16 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
 <div class="alert alert-primary d-flex gap-3 align-items-start mb-4 rounded-3">
     <i class="bi bi-info-circle-fill flex-shrink-0 fs-5 mt-1" aria-hidden="true"></i>
     <div class="small">
-        <strong>{% if ui_lang == 'en' %}Monitoring &amp; Analysis Dashboard — {% else %}لوحة المراقبة والتحليل — {% endif %}</strong>
-        {% if ui_lang == 'en' %}This dashboard is for the system administrator to review incident statistics across all kindergartens. Administrators cannot register new incidents directly.{% else %}هذه اللوحة مخصصة للمشرف العام لمراجعة إحصائيات الحوادث عبر جميع الروضات. لا يمكن للمشرف العام تسجيل حوادث جديدة مباشرةً.{% endif %}
+        <strong>{{ _t('Monitoring &amp; Analysis Dashboard —') }}</strong>
+        {{ _t('This dashboard is for the system administrator to review incident statistics across all kindergartens. Administrators cannot register new incidents directly.') }}
     </div>
 </div>
 
 <!-- ── Global Error Banner ──────────────────────────────────────────────────── -->
 <div id="errorBanner" class="alert alert-danger d-flex gap-2 align-items-center mb-4 d-none" role="alert">
     <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
-    <span id="errorBannerText">{% if ui_lang == 'en' %}Failed to load analytics data.{% else %}فشل تحميل بيانات التحليلات.{% endif %}</span>
-    <button type="button" class="btn-close ms-auto" onclick="document.getElementById('errorBanner').classList.add('d-none')" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+    <span id="errorBannerText">{{ _t('Failed to load analytics data.') }}</span>
+    <button type="button" class="btn-close ms-auto" onclick="document.getElementById('errorBanner').classList.add('d-none')" aria-label="{{ _t('Close') }}"></button>
 </div>
 
 <!-- ── Filters ──────────────────────────────────────────────────────────────── -->
@@ -97,73 +97,73 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
     <div class="card-header d-flex justify-content-between align-items-center">
         <h6 class="card-title-sm mb-0">
             <i class="bi bi-funnel-fill me-2 text-primary"></i>
-            {% if ui_lang == 'en' %}Report Filters{% else %}فلاتر التقرير{% endif %}
+            {{ _t('Report Filters') }}
         </h6>
         <button class="btn btn-ghost btn-sm" id="resetFiltersBtn" type="button">
             <i class="bi bi-arrow-counterclockwise me-1"></i>
-            {% if ui_lang == 'en' %}Reset{% else %}إعادة ضبط{% endif %}
+            {{ _t('Reset') }}
         </button>
     </div>
     <div class="card-body">
         <div class="row g-3">
             <div class="col-md-3">
-                <label class="field-label mb-1" for="filterKg">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                <label class="field-label mb-1" for="filterKg">{{ _t('Kindergarten') }}</label>
                 <select class="form-select form-select-sm" id="filterKg">
-                    <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                    <option value="">{{ _t('All Kindergartens') }}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1" for="filterType">{% if ui_lang == 'en' %}Incident Type{% else %}نوع الحادث{% endif %}</label>
+                <label class="field-label mb-1" for="filterType">{{ _t('Incident Type') }}</label>
                 <select class="form-select form-select-sm" id="filterType">
-                    <option value="">{% if ui_lang == 'en' %}All Types{% else %}جميع الأنواع{% endif %}</option>
-                    <option value="INJURY">{% if ui_lang == 'en' %}Physical Injury{% else %}إصابة جسدية{% endif %}</option>
-                    <option value="ILLNESS">{% if ui_lang == 'en' %}Illness{% else %}مرض{% endif %}</option>
-                    <option value="ALLERGY">{% if ui_lang == 'en' %}Allergy{% else %}حساسية{% endif %}</option>
-                    <option value="BEHAVIOR">{% if ui_lang == 'en' %}Behavioral{% else %}سلوكي{% endif %}</option>
-                    <option value="OTHER">{% if ui_lang == 'en' %}Other{% else %}أخرى{% endif %}</option>
+                    <option value="">{{ _t('All Types') }}</option>
+                    <option value="INJURY">{{ _t('Physical Injury') }}</option>
+                    <option value="ILLNESS">{{ _t('Illness') }}</option>
+                    <option value="ALLERGY">{{ _t('Allergy') }}</option>
+                    <option value="BEHAVIOR">{{ _t('Behavioral') }}</option>
+                    <option value="OTHER">{{ _t('Other') }}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1" for="filterClass">{% if ui_lang == 'en' %}Classification{% else %}تصنيف الحادث{% endif %}</label>
+                <label class="field-label mb-1" for="filterClass">{{ _t('Classification') }}</label>
                 <select class="form-select form-select-sm" id="filterClass">
-                    <option value="">{% if ui_lang == 'en' %}All Classifications{% else %}جميع التصنيفات{% endif %}</option>
-                    <option value="ACCIDENT">{% if ui_lang == 'en' %}Accidental{% else %}حادث عرضي{% endif %}</option>
-                    <option value="BEHAVIORAL">{% if ui_lang == 'en' %}Behavioral{% else %}سلوكي{% endif %}</option>
-                    <option value="MEDICAL">{% if ui_lang == 'en' %}Medical{% else %}طبي{% endif %}</option>
-                    <option value="ENVIRONMENTAL">{% if ui_lang == 'en' %}Environmental{% else %}بيئي{% endif %}</option>
-                    <option value="OTHER">{% if ui_lang == 'en' %}Other{% else %}أخرى{% endif %}</option>
+                    <option value="">{{ _t('All Classifications') }}</option>
+                    <option value="ACCIDENT">{{ _t('Accidental') }}</option>
+                    <option value="BEHAVIORAL">{{ _t('Behavioral') }}</option>
+                    <option value="MEDICAL">{{ _t('Medical') }}</option>
+                    <option value="ENVIRONMENTAL">{{ _t('Environmental') }}</option>
+                    <option value="OTHER">{{ _t('Other') }}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1" for="filterSeverity">{% if ui_lang == 'en' %}Severity Level{% else %}درجة الخطورة{% endif %}</label>
+                <label class="field-label mb-1" for="filterSeverity">{{ _t('Severity Level') }}</label>
                 <select class="form-select form-select-sm" id="filterSeverity">
-                    <option value="">{% if ui_lang == 'en' %}All Levels{% else %}جميع الدرجات{% endif %}</option>
-                    <option value="LOW">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</option>
-                    <option value="MEDIUM">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</option>
-                    <option value="HIGH">{% if ui_lang == 'en' %}High{% else %}عالٍ{% endif %}</option>
-                    <option value="CRITICAL">{% if ui_lang == 'en' %}Critical{% else %}حرج{% endif %}</option>
+                    <option value="">{{ _t('All Levels') }}</option>
+                    <option value="LOW">{{ _t('Low') }}</option>
+                    <option value="MEDIUM">{{ _t('Medium') }}</option>
+                    <option value="HIGH">{{ _t('High') }}</option>
+                    <option value="CRITICAL">{{ _t('Critical') }}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1" for="filterParentInformed">{% if ui_lang == 'en' %}Parent Notified{% else %}إبلاغ ولي الأمر{% endif %}</label>
+                <label class="field-label mb-1" for="filterParentInformed">{{ _t('Parent Notified') }}</label>
                 <select class="form-select form-select-sm" id="filterParentInformed">
-                    <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
-                    <option value="true">{% if ui_lang == 'en' %}Notified{% else %}تم الإبلاغ{% endif %}</option>
-                    <option value="false">{% if ui_lang == 'en' %}Not Notified{% else %}لم يتم الإبلاغ{% endif %}</option>
+                    <option value="">{{ _t('All') }}</option>
+                    <option value="true">{{ _t('Notified') }}</option>
+                    <option value="false">{{ _t('Not Notified') }}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1" for="filterFrom">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %}</label>
+                <label class="field-label mb-1" for="filterFrom">{{ _t('From Date') }}</label>
                 <input type="date" class="form-control form-control-sm" id="filterFrom">
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1" for="filterTo">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %}</label>
+                <label class="field-label mb-1" for="filterTo">{{ _t('To Date') }}</label>
                 <input type="date" class="form-control form-control-sm" id="filterTo">
             </div>
             <div class="col-md-3 d-flex align-items-end">
                 <button class="btn btn-primary btn-sm w-100" id="applyFiltersBtn" type="button">
                     <i class="bi bi-search me-1"></i>
-                    {% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}
+                    {{ _t('Apply Filters') }}
                 </button>
             </div>
         </div>
@@ -176,7 +176,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="stat-card card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">{% if ui_lang == 'en' %}Total Incidents{% else %}إجمالي الحوادث{% endif %}</div>
+                    <div class="stat-label">{{ _t('Total Incidents') }}</div>
                     <div class="stat-value" id="kpiTotal">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-danger">
@@ -189,7 +189,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="stat-card warning card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">{% if ui_lang == 'en' %}Open{% else %}مفتوحة{% endif %}</div>
+                    <div class="stat-label">{{ _t('Open') }}</div>
                     <div class="stat-value" id="kpiOpen">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-warning">
@@ -202,7 +202,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="stat-card success card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">{% if ui_lang == 'en' %}Closed{% else %}مغلقة{% endif %}</div>
+                    <div class="stat-label">{{ _t('Closed') }}</div>
                     <div class="stat-value" id="kpiClosed">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-success">
@@ -215,7 +215,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="stat-card card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">{% if ui_lang == 'en' %}Parents Notified{% else %}أُبلغ أولياء الأمور{% endif %}</div>
+                    <div class="stat-label">{{ _t('Parents Notified') }}</div>
                     <div class="stat-value" id="kpiInformed">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-primary">
@@ -228,7 +228,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="stat-card danger card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">{% if ui_lang == 'en' %}Not Notified{% else %}لم يُبلَّغوا{% endif %}</div>
+                    <div class="stat-label">{{ _t('Not Notified') }}</div>
                     <div class="stat-value" id="kpiNotInformed">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-danger">
@@ -241,7 +241,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="stat-card card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">{% if ui_lang == 'en' %}Repeated Children{% else %}أطفال متكررون{% endif %}</div>
+                    <div class="stat-label">{{ _t('Repeated Children') }}</div>
                     <div class="stat-value" id="kpiRepeated">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-warning">
@@ -259,7 +259,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-header">
                 <h6 class="card-title-sm mb-0">
                     <i class="bi bi-bar-chart-fill me-2 text-danger"></i>
-                    {% if ui_lang == 'en' %}Severity Distribution{% else %}توزيع درجات الخطورة{% endif %}
+                    {{ _t('Severity Distribution') }}
                 </h6>
             </div>
             <div class="card-body" id="severityChart">
@@ -272,7 +272,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-header">
                 <h6 class="card-title-sm mb-0">
                     <i class="bi bi-pie-chart-fill me-2 text-warning"></i>
-                    {% if ui_lang == 'en' %}Type Distribution{% else %}توزيع أنواع الحوادث{% endif %}
+                    {{ _t('Type Distribution') }}
                 </h6>
             </div>
             <div class="card-body" id="typeChart">
@@ -285,7 +285,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-header">
                 <h6 class="card-title-sm mb-0">
                     <i class="bi bi-tags-fill me-2 text-primary"></i>
-                    {% if ui_lang == 'en' %}Classification Distribution{% else %}توزيع التصنيفات{% endif %}
+                    {{ _t('Classification Distribution') }}
                 </h6>
             </div>
             <div class="card-body" id="classificationChart">
@@ -303,7 +303,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-header">
                 <h6 class="card-title-sm mb-0">
                     <i class="bi bi-graph-up me-2 text-success"></i>
-                    {% if ui_lang == 'en' %}Monthly Trend{% else %}الاتجاه الشهري{% endif %}
+                    {{ _t('Monthly Trend') }}
                 </h6>
             </div>
             <div class="card-body" id="trendChart">
@@ -318,7 +318,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="card-title-sm mb-0">
                     <i class="bi bi-building-fill me-2 text-primary"></i>
-                    {% if ui_lang == 'en' %}Incidents by Kindergarten{% else %}الحوادث حسب الروضة{% endif %}
+                    {{ _t('Incidents by Kindergarten') }}
                 </h6>
                 <span class="badge badge-soft badge-soft-danger" id="highRiskBadge" style="display:none;"></span>
             </div>
@@ -327,9 +327,9 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
-                                <th class="th-sm">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
-                                <th class="th-sm" style="width:80px;">{% if ui_lang == 'en' %}Incidents{% else %}حوادث{% endif %}</th>
-                                <th class="th-sm" style="width:90px;">{% if ui_lang == 'en' %}Risk Level{% else %}مستوى الخطر{% endif %}</th>
+                                <th class="th-sm">{{ _t('Kindergarten') }}</th>
+                                <th class="th-sm" style="width:80px;">{{ _t('Incidents') }}</th>
+                                <th class="th-sm" style="width:90px;">{{ _t('Risk Level') }}</th>
                             </tr>
                         </thead>
                         <tbody id="kgTable">
@@ -349,7 +349,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-header bg-danger-subtle">
                 <h6 class="card-title-sm mb-0 text-danger">
                     <i class="bi bi-person-exclamation me-2" aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}Children with Repeated Incidents{% else %}أطفال بحوادث متكررة{% endif %}
+                    {{ _t('Children with Repeated Incidents') }}
                 </h6>
             </div>
             <div class="card-body p-0">
@@ -358,9 +358,9 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
                         <thead>
                             <tr>
                                 <th class="th-sm">#</th>
-                                <th class="th-sm">{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %}</th>
-                                <th class="th-sm" style="width:110px;">{% if ui_lang == 'en' %}Incident Count{% else %}عدد الحوادث{% endif %}</th>
-                                <th class="th-sm" style="width:110px;">{% if ui_lang == 'en' %}Actions{% else %}الإجراء{% endif %}</th>
+                                <th class="th-sm">{{ _t('Child Name') }}</th>
+                                <th class="th-sm" style="width:110px;">{{ _t('Incident Count') }}</th>
+                                <th class="th-sm" style="width:110px;">{{ _t('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody id="repeatedTable">
