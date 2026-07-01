@@ -190,6 +190,23 @@
     return map[reportType] || "/overview";
   }
 
+  function getStrategicReportType(reportType) {
+    const map = {
+      attendance: "children_summary",
+      incidents: "risk_ranking",
+      compliance: "compliance",
+      enrollment: "children_geography",
+      full_audit: "data_quality",
+      staff_training: "supervisors_coverage",
+      welfare: "children_gender",
+      trends: "overview",
+      capacity: "kindergartens_summary",
+      parent_engagement: "children_age_buckets",
+      data_quality: "data_quality",
+    };
+    return map[reportType] || "overview";
+  }
+
   function buildStrategicQuery() {
     const period = getPeriod();
     const params = new URLSearchParams();
@@ -667,7 +684,7 @@
     try {
       const endpoint = getStrategicEndpoint(reportType);
       const params = new URLSearchParams(buildStrategicQuery());
-      params.set("report_type", endpoint.replace("/", "").replace("-", "_"));
+      params.set("report_type", getStrategicReportType(reportType));
       params.set("export_format", format.toLowerCase() === "json" ? "json" : "csv");
       window.location.href = `${STRATEGIC_API_BASE}/export?${params.toString()}`;
     } catch (e) {
