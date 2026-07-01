@@ -20,6 +20,7 @@ from datetime import date, datetime, timedelta, time
 from unittest.mock import patch
 
 import models
+from audit_actions import AuditAction
 from auth import get_password_hash
 from validators import (
     validate_password_policy,
@@ -238,7 +239,7 @@ class TestEnrollmentReviewEnforcement:
         assert resp.status_code == 200
 
         audit = test_db.query(models.AuditLog).filter(
-            models.AuditLog.action == "ACCEPT"
+            models.AuditLog.action == AuditAction.ENROLLMENT_ACCEPTED
         ).first()
         assert audit is not None
 

@@ -155,29 +155,36 @@ def test_kpi_dashboard_cache_hit(client, admin_user, sample_kindergarten):
 
 def test_kpi_dashboard_cache_miss(client, admin_user, sample_kindergarten):
     """Test that cache miss occurs when parameters change"""
-    from datetime import date
+    from datetime import date, timedelta
     from cache_service import dashboard_cache
-    
+
     token = get_token_for_admin(client)
     headers = {"Authorization": f"Bearer {token}"}
-    start = date.today().replace(day=1)
-    end = date.today()
-    
+
+    # Anchor to previous month when today is the 1st to avoid day-1 arithmetic issues
+    today = date.today()
+    if today.day == 1:
+        end = today - timedelta(days=1)  # Last day of previous month
+        start = end.replace(day=1)       # First day of previous month
+    else:
+        end = today
+        start = today.replace(day=1)
+
     # Clear cache
     dashboard_cache.clear()
-    
+
     # First request
     url1 = f"/api/kpi/dashboard-data?period_start={start}&period_end={end}&locale=ar"
     response1 = client.get(url1, headers=headers)
     assert response1.status_code == 200
-    
-    # Second request with different date (ensure start2 < end)
-    start2 = start.replace(day=min(15, end.day - 1))  # Ensure start2 is before end
+
+    # Second request with different start (mid-month, guaranteed before end)
+    start2 = start.replace(day=min(15, end.day))
     url2 = f"/api/kpi/dashboard-data?period_start={start2}&period_end={end}&locale=ar"
     response2 = client.get(url2, headers=headers)
     assert response2.status_code == 200
-    
-    # Should be different responses
+
+    # Should be different responses (different date range → different cache key)
     assert response1.json() != response2.json()
 
 
