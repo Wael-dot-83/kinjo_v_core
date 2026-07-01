@@ -111,11 +111,19 @@ def run():
                 u = db.query(User).filter(User.username == username).first()
                 print(f"  Created {role} : {username} / {password}")
             else:
-                # Ensure mfa_enabled is False for existing users in dev
-                if hasattr(u, 'mfa_enabled') and u.mfa_enabled:
+                # Keep demo credentials deterministic in local/dev environments.
+                u.email = email
+                u.role = role
+                u.kindergarten_id = kg_id
+                u.status = UserStatus.ACTIVE
+                u.hashed_password = get_password_hash(password)
+                u.failed_login_count = 0
+                u.locked_until = None
+                u.must_change_password = False
+                if hasattr(u, 'mfa_enabled'):
                     u.mfa_enabled = False
-                    db.commit()
-                print(f"  Exists  {role} : {username}")
+                db.commit()
+                print(f"  Updated {role} : {username} / {password}")
             return u
 
         admin  = upsert_user("admin",       "admin@kinjo.jo",       "Admin@1234",   UserRole.ADMIN,      None,     "مدير", "النظام")

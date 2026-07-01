@@ -8,6 +8,7 @@
   window.AdminReports = {};
 
   const API_BASE = "/api/analytics";
+  const STRATEGIC_API_BASE = "/admin/reports";
 
   let historyItems = [];
   let previewItems = [];
@@ -126,6 +127,14 @@
     return getEl("governorateFilter")?.value || "";
   }
 
+  function getReportLevel() {
+    return getEl("reportLevel")?.value || "jordan";
+  }
+
+  function getCityFilter() {
+    return (getEl("cityFilter")?.value || "").trim();
+  }
+
   function getFilters() {
     const singleVal = (id) => { const el = getEl(id); return el?.value || ""; };
     return {
@@ -162,6 +171,109 @@
       if (target === "#pane-dataquality") return "data_quality";
     }
     return "attendance";
+  }
+
+  function getStrategicEndpoint(reportType) {
+    const map = {
+      attendance: "/children/summary",
+      incidents: "/risk-ranking",
+      compliance: "/compliance",
+      enrollment: "/children/geography",
+      full_audit: "/data-quality",
+      staff_training: "/supervisors/coverage",
+      welfare: "/children/gender",
+      trends: "/overview",
+      capacity: "/kindergartens/summary",
+      parent_engagement: "/children/age-buckets",
+      data_quality: "/data-quality",
+    };
+    return map[reportType] || "/overview";
+  }
+
+  function buildStrategicQuery() {
+    const period = getPeriod();
+    const params = new URLSearchParams();
+    params.set("lang", document.documentElement.getAttribute("lang") === "en" ? "en" : "ar");
+    params.set("level", getReportLevel());
+    if (period.start) params.set("date_from", period.start);
+    if (period.end) params.set("date_to", period.end);
+
+    const gov = getGovernorate();
+    if (gov) params.set("governorate", gov);
+    const city = getCityFilter();
+    if (city) params.set("city", city);
+
+    const kgVals = getMultiSelectValues("kindergartenFilter");
+    if (kgVals.length) params.set("kindergarten_id", kgVals[0]);
+    return params.toString();
+  }
+
+  function toPreviewPayloadFromStrategic(data) {
+    const kpis = [];
+    if (data.kpis) {
+      Object.entries(data.kpis).forEach(([key, value]) => {
+        if (typeof value === "number") {
+          kpis.push({
+            label_ar: key,
+            label_en: key,
+            value,
+            unit: key.includes("pct") || key.includes("score") ? "%" : "",
+          });
+        }
+      });
+    }
+
+    const charts = [];
+    if (data.charts?.children_by_governorate) {
+      charts.push({
+        id: "children_by_governorate",
+        type: "bar",
+        label_ar: "الأطفال حسب المحافظة",
+        label_en: "Children by Governorate",
+        data: data.charts.children_by_governorate,
+      });
+    }
+    if (data.charts?.children_by_city) {
+      charts.push({
+        id: "children_by_city",
+        type: "bar",
+        label_ar: "الأطفال حسب المدينة",
+        label_en: "Children by City",
+        data: data.charts.children_by_city,
+      });
+    }
+    if (data.charts?.age_distribution) {
+      charts.push({
+        id: "age_distribution",
+        type: "bar",
+        label_ar: "توزيع الفئات العمرية",
+        label_en: "Age Buckets",
+        data: data.charts.age_distribution,
+      });
+    }
+
+    const sample_data =
+      data.tables?.risk_ranking ||
+      data.tables?.city_breakdown ||
+      data.tables?.governorate_breakdown ||
+      data.ranking ||
+      data.cities ||
+      data.governorates ||
+      data.age_buckets ||
+      [];
+
+    const insights = [];
+    if (data.interpretation?.summary) insights.push(data.interpretation.summary);
+    if (data.interpretation?.recommended_action) insights.push(data.interpretation.recommended_action);
+
+    return {
+      total_records: Array.isArray(sample_data) ? sample_data.length : 0,
+      kpis,
+      charts,
+      sample_data,
+      insights,
+      warnings: [],
+    };
   }
 
   /**
@@ -337,13 +449,6 @@
     }
 
     const reportType = getReportType();
-    const payload = {
-      report_type: reportType,
-      period_start: period.start,
-      period_end: period.end,
-      filters: getFilters(),
-    };
-
     destroyChartInstances();
     hideEl("dataQualityBanner");
     hideEl("previewInsights");
@@ -352,14 +457,13 @@
     setText("reportsLastUpdated", reportsText("جاري تحميل المعاينة...", "Loading preview..."));
 
     try {
-      const res = await fetchWithAuth(`${API_BASE}/reports/preview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const endpoint = getStrategicEndpoint(reportType);
+      const query = buildStrategicQuery();
+      const res = await fetchWithAuth(`${STRATEGIC_API_BASE}${endpoint}?${query}`);
       if (!res) return;
-      const data = await res.json();
-      renderPreview(data);
+      const raw = await res.json();
+      const adapted = toPreviewPayloadFromStrategic(raw);
+      renderPreview(adapted);
       setText("reportsLastUpdated", reportsText("تم تحديث المعاينة", "Preview updated"));
     } catch (e) {
       console.error("Preview failed", e);
@@ -560,28 +664,12 @@
 
     const reportType = getReportType();
     const format = getEl("exportFormat")?.value || "CSV";
-    const payload = {
-      report_type: reportType,
-      export_format: format,
-      filters: {
-        ...getFilters(),
-        period_start: period.start,
-        period_end: period.end,
-      },
-    };
-
     try {
-      const res = await fetchWithAuth(`${API_BASE}/export`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res) return;
-      const result = await res.json();
-      if (result.job_id) {
-        // Poll for completion
-        pollExportStatus(result.job_id);
-      }
+      const endpoint = getStrategicEndpoint(reportType);
+      const params = new URLSearchParams(buildStrategicQuery());
+      params.set("report_type", endpoint.replace("/", "").replace("-", "_"));
+      params.set("export_format", format.toLowerCase() === "json" ? "json" : "csv");
+      window.location.href = `${STRATEGIC_API_BASE}/export?${params.toString()}`;
     } catch (e) {
       console.error("Export failed", e);
       alert(reportsText("فشل بدء التصدير", "Export failed to start"));

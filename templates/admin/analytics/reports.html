@@ -145,6 +145,23 @@
         <form id="reportBuilderForm"novalidate>
           <input type="hidden" aria-label="{% if ui_lang == 'en' %}Report Type{% else %}نوع التقرير{% endif %}" id="reportType" value="attendance">
 
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-bold" for="reportLevel">{% if ui_lang == 'en' %}Reporting Level{% else %}مستوى التقرير{% endif %}</label>
+              <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="reportLevel">
+                <option value="jordan">{% if ui_lang == 'en' %}Jordan{% else %}الأردن{% endif %}</option>
+                <option value="governorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</option>
+                <option value="city">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</option>
+                <option value="kindergarten">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</option>
+                <option value="class">{% if ui_lang == 'en' %}Class{% else %}الصف{% endif %}</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-bold" for="cityFilter">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
+              <input type="text" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors" id="cityFilter" placeholder="{% if ui_lang == 'en' %}e.g. Amman{% else %}مثال: عمان{% endif %}">
+            </div>
+          </div>
+
           <!-- Dynamic Filters -->
           <div class="mb-3" id="filterGovContainer">
             <label class="form-label fw-bold" for="governorateFilter">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>

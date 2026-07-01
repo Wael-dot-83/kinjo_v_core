@@ -1,0 +1,147 @@
+from datetime import date, timedelta
+
+import models
+
+
+def test_admin_reports_overview_shape(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment, sample_supervisor_assignment):
+    resp = client.get("/admin/reports/overview?level=jordan", headers=auth_headers_admin)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["report_type"] == "overview"
+    assert body["level"] == "jordan"
+    assert "kpis" in body
+    assert "children" in body
+    assert "quality" in body
+    assert "interpretation" in body
+
+
+def test_admin_reports_admin_only(client, auth_headers_manager, sample_kindergarten):
+    resp = client.get("/admin/reports/overview?level=jordan", headers=auth_headers_manager)
+    assert resp.status_code == 403
+
+
+def test_city_level_requires_city_filter(client, auth_headers_admin, sample_kindergarten):
+    resp = client.get(
+        "/admin/reports/children/summary?level=city&governorate=Amman",
+        headers=auth_headers_admin,
+    )
+    assert resp.status_code == 422
+
+
+def test_age_buckets_returns_distribution(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment):
+    resp = client.get("/admin/reports/children/age-buckets?level=jordan", headers=auth_headers_admin)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "age_buckets" in body
+    assert len(body["age_buckets"]) == 10
+    assert "invalid_reasons" in body
+
+
+def test_age_buckets_flags_too_young_child(
+    client,
+    auth_headers_admin,
+    test_db,
+    sample_kindergarten,
+    sample_class,
+    parent_user,
+):
+    child = models.Child(
+        parent_id=parent_user.parent_profile.id,
+        first_name="Baby",
+        last_name="Young",
+        gender=models.Gender.MALE,
+        date_of_birth=date.today() - timedelta(days=30),
+        father_name="Father Young",
+        mother_first_name="Mother",
+        mother_last_name="Young",
+        mother_nationality="Jordanian",
+        media_consent=True,
+    )
+    test_db.add(child)
+    test_db.commit()
+    test_db.refresh(child)
+
+    enrollment = models.EnrollmentApplication(
+        child_id=child.id,
+        kindergarten_id=sample_kindergarten.id,
+        class_id=sample_class.id,
+        status=models.EnrollmentStatus.ACTIVE,
+        source="WEB",
+    )
+    test_db.add(enrollment)
+    test_db.commit()
+
+    resp = client.get("/admin/reports/children/age-buckets?level=jordan", headers=auth_headers_admin)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["invalid_reasons"]["too_young"] >= 1
+
+
+def test_data_quality_and_compliance_endpoints(
+    client,
+    auth_headers_admin,
+    sample_kindergarten,
+    sample_class,
+    sample_enrollment,
+    sample_supervisor_assignment,
+):
+    dq = client.get("/admin/reports/data-quality?level=jordan", headers=auth_headers_admin)
+    assert dq.status_code == 200
+    dq_body = dq.json()
+    assert "data_quality_score" in dq_body
+    assert "issues" in dq_body
+
+    comp = client.get("/admin/reports/compliance?level=jordan", headers=auth_headers_admin)
+    assert comp.status_code == 200
+    comp_body = comp.json()
+    assert "compliance_score" in comp_body
+    assert "violations" in comp_body
+
+
+def test_risk_ranking_and_drilldown(
+    client,
+    auth_headers_admin,
+    sample_kindergarten,
+    sample_class,
+    sample_enrollment,
+):
+    ranking = client.get("/admin/reports/risk-ranking?level=jordan", headers=auth_headers_admin)
+    assert ranking.status_code == 200
+    rank_body = ranking.json()
+    assert "ranking" in rank_body
+    assert isinstance(rank_body["ranking"], list)
+
+    drilldown = client.get(
+        f"/admin/reports/drilldown?level=kindergarten&governorate=Amman&city=Amman&kindergarten_id={sample_kindergarten.id}",
+        headers=auth_headers_admin,
+    )
+    assert drilldown.status_code == 200
+    d_body = drilldown.json()
+    assert d_body["report_type"] == "drilldown"
+
+
+    def test_export_csv_success(client, auth_headers_admin):
+        response = client.get(
+            "/admin/reports/export",
+            headers=auth_headers_admin,
+            params={"report_type": "overview", "export_format": "csv", "level": "jordan"},
+        )
+        assert response.status_code == 200
+        assert "text/csv" in response.headers.get("content-type", "")
+        assert "content-disposition" in {k.lower(): v for k, v in response.headers.items()}
+
+
+    def test_export_requires_admin(client):
+        response = client.get("/admin/reports/export", params={"report_type": "overview", "export_format": "csv"})
+        assert response.status_code in (401, 403)
+
+
+    def test_overview_city_level_requires_city_filter(client, auth_headers_admin):
+        response = client.get(
+            "/admin/reports/overview",
+            headers=auth_headers_admin,
+            params={"level": "city"},
+        )
+        assert response.status_code == 422
+        assert "city" in response.json()["detail"].lower()
+    assert d_body["level"] == "kindergarten"
