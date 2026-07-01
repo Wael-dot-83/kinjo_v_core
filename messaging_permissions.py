@@ -389,6 +389,37 @@ def validate_announcement_permissions(
         if len(users) != len(user_ids):
             raise not_found_error("Recipient not found")
 
+        parent_user_ids = [u.id for u in users if u.role == models.UserRole.PARENT]
+
+        # Batch-prefetch parent enrollment sets to avoid N+1 per parent user
+        manager_enrolled_parents: set = set()
+        if parent_user_ids and current_user.role == models.UserRole.MANAGER:
+            manager_enrolled_parents = set(
+                row[0] for row in db.query(models.ParentProfile.user_id)
+                .join(models.Child, models.Child.parent_id == models.ParentProfile.id)
+                .join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id)
+                .filter(
+                    models.ParentProfile.user_id.in_(parent_user_ids),
+                    models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+                    models.EnrollmentApplication.status.in_(ACTIVE_ENROLLMENT_STATUSES),
+                )
+                .distinct().all()
+            )
+
+        scope_enrolled_parents: set = set()
+        if parent_user_ids and kindergarten_ids:
+            scope_enrolled_parents = set(
+                row[0] for row in db.query(models.ParentProfile.user_id)
+                .join(models.Child, models.Child.parent_id == models.ParentProfile.id)
+                .join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id)
+                .filter(
+                    models.ParentProfile.user_id.in_(parent_user_ids),
+                    models.EnrollmentApplication.kindergarten_id.in_(kindergarten_ids),
+                    models.EnrollmentApplication.status.in_(ACTIVE_ENROLLMENT_STATUSES),
+                )
+                .distinct().all()
+            )
+
         for user in users:
             if user.status != models.UserStatus.ACTIVE:
                 raise validation_error("Recipient is not active", fields={"recipient_id": "inactive"})
@@ -397,13 +428,13 @@ def validate_announcement_permissions(
                     if user.kindergarten_id != current_user.kindergarten_id:
                         raise forbidden_error("Managers can only message supervisors in their kindergarten")
                 elif user.role == models.UserRole.PARENT:
-                    if not parent_has_active_enrollment(db, user.id, current_user.kindergarten_id):
+                    if user.id not in manager_enrolled_parents:
                         raise forbidden_error("Managers can only message parents with active enrollment")
                 else:
                     raise forbidden_error("Managers can only message supervisors and parents")
             if kindergarten_ids:
                 if user.role == models.UserRole.PARENT:
-                    if not parent_has_active_enrollment_in_scope(db, user.id, kindergarten_ids):
+                    if user.id not in scope_enrolled_parents:
                         raise validation_error("Recipient not in scope", fields={"audience": "scope"})
                 elif user.kindergarten_id and user.kindergarten_id not in kindergarten_ids:
                     raise validation_error("Recipient not in scope", fields={"audience": "scope"})
