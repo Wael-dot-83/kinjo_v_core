@@ -29,6 +29,8 @@ from kpi_service import KPIService
 import validators
 from audit_actions import AuditAction
 from admin_security import log_audit_event
+from cache_service import cache_service
+from config import settings
 from analytics_domain import (
     PredictRequest,
     PredictResponse,
@@ -140,6 +142,26 @@ class WarmCacheRequest(BaseModel):
 # =============================================================================
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
+
+_DASHBOARD_CACHE_TTL = 60  # seconds
+
+
+def _analytics_cache_get(key: str):
+    if getattr(settings, "TESTING", False):
+        return None
+    try:
+        return cache_service.get(key)
+    except Exception:
+        return None
+
+
+def _analytics_cache_set(key: str, value: Any, ttl: int = _DASHBOARD_CACHE_TTL) -> None:
+    if getattr(settings, "TESTING", False):
+        return
+    try:
+        cache_service.set(key, value, ttl_seconds=ttl)
+    except Exception:
+        pass
 
 
 def _ensure_admin_only(current_user: models.User):
@@ -940,17 +962,20 @@ def _network_attended_child_days(
 ) -> int:
     if kg_ids is not None and not kg_ids:
         return 0
+    # Subquery for active child_ids in scope (avoids Cartesian product)
+    active_child_sq = db.query(models.EnrollmentApplication.child_id).filter(
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+    )
+    if kg_ids is not None:
+        active_child_sq = active_child_sq.filter(
+            models.EnrollmentApplication.kindergarten_id.in_(kg_ids)
+        )
+    active_child_sq = active_child_sq.distinct().scalar_subquery()
     query = db.query(func.count(models.AttendanceLog.id)).filter(
         models.AttendanceLog.date >= period_start,
         models.AttendanceLog.date <= period_end,
-    ).join(models.Child).join(
-        models.EnrollmentApplication,
-        models.EnrollmentApplication.child_id == models.Child.id,
-    ).filter(
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        models.AttendanceLog.child_id.in_(active_child_sq),
     )
-    if kg_ids is not None:
-        query = query.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
     return int(query.scalar() or 0)
 
 
@@ -1042,8 +1067,15 @@ def get_consolidated_dashboard_data(
         elif allowed_kgs is not None:
             kg_filter = allowed_kgs
 
+        # Cache keyed by date range + gov filter + user scope
+        cache_key = f"analytics:dashboard:{period_start}:{period_end}:{gov_filter}:{current_user.role.value}"
+        cached = _analytics_cache_get(cache_key)
+        if cached is not None:
+            logger.info("Returning cached analytics dashboard response")
+            return cached
+
         logger.info(f"Fetching analytics data for date range {period_start} to {period_end}")
-        
+
         network_summary = AnalyticsService.get_network_summary(db, period_start, period_end, kg_filter)
         previous_period_bounds = _previous_period_bounds(period_start, period_end)
         if previous_period_bounds:
@@ -1106,8 +1138,8 @@ def get_consolidated_dashboard_data(
         governance_distribution = AnalyticsService.get_governance_distribution(db, period_start, period_end, kg_filter)
 
         logger.info("Successfully retrieved analytics data")
-        
-        return ConsolidatedAnalyticsResponse(
+
+        result = ConsolidatedAnalyticsResponse(
             network_summary=network_summary,
             governorate_breakdown=governorate_breakdown,
             attendance_trend=attendance_trend,
@@ -1115,6 +1147,8 @@ def get_consolidated_dashboard_data(
             risk_radar=risk_radar,
             governance_distribution=governance_distribution,
         )
+        _analytics_cache_set(cache_key, result)
+        return result
     
     except HTTPException:
         raise
@@ -5634,23 +5668,23 @@ class AnalyticsService:
     @staticmethod
     def _compute_network_attendance_rate(db: Session, period_start: date, period_end: date, kg_ids: Optional[List[int]] = None) -> float:
         """Compute network-wide attendance rate (optionally filtered to a KG list)"""
-        # Single aggregate query for attended child-days
-        attended_q = db.query(func.count(models.AttendanceLog.id)).join(
-            models.Child,
-            models.AttendanceLog.child_id == models.Child.id,
-        ).join(
-            models.EnrollmentApplication,
-            models.EnrollmentApplication.child_id == models.Child.id,
-        ).filter(
-            models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end,
+        # Build subquery of active child_ids in scope to avoid Cartesian product
+        active_child_sq = db.query(models.EnrollmentApplication.child_id).filter(
             models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
         )
         if kg_ids:
-            attended_q = attended_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
-        total_attended_days = attended_q.scalar() or 0
+            active_child_sq = active_child_sq.filter(
+                models.EnrollmentApplication.kindergarten_id.in_(kg_ids)
+            )
+        active_child_sq = active_child_sq.distinct().scalar_subquery()
 
-        # Single aggregate query for active enrollment count
+        total_attended_days = db.query(func.count(models.AttendanceLog.id)).filter(
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.child_id.in_(active_child_sq),
+        ).scalar() or 0
+
+        # Active enrollment count (denominator for expected child-days)
         enroll_q = db.query(func.count(models.EnrollmentApplication.id)).filter(
             models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
         )
@@ -5678,24 +5712,33 @@ class AnalyticsService:
             incident_q = incident_q.filter(models.Incident.kindergarten_id.in_(kg_ids))
         total_incidents = incident_q.scalar() or 0
 
-        # Count physically attended child-days (PRESENT + LATE only, excludes EXCUSED)
-        child_days_q = db.query(func.count(models.AttendanceLog.id)).filter(
-            models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end,
-            models.AttendanceLog.status.in_([
-                models.AttendanceStatus.PRESENT,
-                models.AttendanceStatus.LATE,
-            ]),
-        )
+        # Subquery avoids Cartesian product when filtering by KG scope
         if kg_ids:
-            child_days_q = child_days_q.join(models.Child).join(
-                models.EnrollmentApplication,
-                models.EnrollmentApplication.child_id == models.Child.id
-            ).filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
-        total_child_days = child_days_q.scalar() or  0
+            scope_child_sq = db.query(models.EnrollmentApplication.child_id).filter(
+                models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            ).distinct().scalar_subquery()
+            child_days_q = db.query(func.count(models.AttendanceLog.id)).filter(
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end,
+                models.AttendanceLog.status.in_([
+                    models.AttendanceStatus.PRESENT,
+                    models.AttendanceStatus.LATE,
+                ]),
+                models.AttendanceLog.child_id.in_(scope_child_sq),
+            )
+        else:
+            child_days_q = db.query(func.count(models.AttendanceLog.id)).filter(
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end,
+                models.AttendanceLog.status.in_([
+                    models.AttendanceStatus.PRESENT,
+                    models.AttendanceStatus.LATE,
+                ]),
+            )
+        total_child_days = child_days_q.scalar() or 0
         if total_child_days == 0:
             return 0.0
-
 
         return round((total_incidents / total_child_days) * 1000, 3)
 
@@ -5764,24 +5807,21 @@ class AnalyticsService:
         if not kg_ids:
             return 0.0
 
-        # Count attended days
+        # Subquery for active child_ids in this governorate's KGs (avoids Cartesian product)
+        active_child_sq = db.query(models.EnrollmentApplication.child_id).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).distinct().scalar_subquery()
+
         attended = db.query(func.count(models.AttendanceLog.id)).filter(
             models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end
-        ).join(
-            models.Child
-        ).join(
-            models.EnrollmentApplication,
-            models.EnrollmentApplication.child_id == models.Child.id
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.child_id.in_(active_child_sq),
         ).scalar() or 0
 
-        # Count expected days
         active_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
             models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
         ).scalar() or 0
 
         days_in_period = (period_end - period_start).days + 1
@@ -5819,7 +5859,12 @@ class AnalyticsService:
             func.date(models.Incident.occurred_at) <= period_end
         ).scalar() or 0
 
-        # Count physically attended child-days (PRESENT + LATE only, excludes EXCUSED)
+        # Subquery avoids Cartesian product from joining through enrollment
+        child_sq = db.query(models.EnrollmentApplication.child_id).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).distinct().scalar_subquery()
+
         child_days = db.query(func.count(models.AttendanceLog.id)).filter(
             models.AttendanceLog.date >= period_start,
             models.AttendanceLog.date <= period_end,
@@ -5827,13 +5872,7 @@ class AnalyticsService:
                 models.AttendanceStatus.PRESENT,
                 models.AttendanceStatus.LATE,
             ]),
-        ).join(
-            models.Child
-        ).join(
-            models.EnrollmentApplication,
-            models.EnrollmentApplication.child_id == models.Child.id
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id.in_(kg_ids)
+            models.AttendanceLog.child_id.in_(child_sq),
         ).scalar() or 1
 
         return round((incidents / child_days) * 1000, 3)

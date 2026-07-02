@@ -540,11 +540,25 @@ function showSkeletonLoaders() {
 }
 
 function hideSkeletonLoaders() {
-  // KPI cards are updated by updateNetworkSummary which will overwrite skeletons
-  // Governorate table is updated by updateGovernorateBreakdown
-  // Risk radar is updated by updateRiskRadar
-  // Comparative analysis is updated by loadComparativeAnalysis
-  // Charts are re-initialized when data loads.
+  // Clear KPI card skeletons that weren't filled by updateNetworkSummary
+  document
+    .querySelectorAll("#totalKg, #totalChildren, #avgAttendance, #incidentRate, #enrollmentRate")
+    .forEach((el) => {
+      if (el.querySelector(".skeleton-text")) el.textContent = "--";
+    });
+  // Clear registration KPI skeletons
+  document
+    .querySelectorAll("#regTotalApplications, #regNewApplications, #regApproved, #regPending, #regRejected")
+    .forEach((el) => {
+      if (el.querySelector(".skeleton-text")) el.textContent = "--";
+    });
+  // Clear loading spinners in containers that were never populated
+  document.querySelectorAll(".spinner-border").forEach((spinner) => {
+    const container = spinner.closest("[aria-live]");
+    if (container && container.querySelectorAll(".skeleton-row, .spinner-border").length) {
+      container.innerHTML = `<p class="text-muted text-center small py-2">${adminAnalyticsText("لا توجد بيانات", "No data")}</p>`;
+    }
+  });
 }
 
 function updateLastUpdatedTimestamp() {
@@ -556,6 +570,17 @@ function updateLastUpdatedTimestamp() {
     timeStyle: "short",
   });
   el.innerHTML = `<i class="bi bi-clock"></i> <span>${adminAnalyticsText("آخر تحديث:", "Last updated:")} ${formatter.format(now)}</span>`;
+
+  // Update date range badge with unambiguous DD MMM YYYY display
+  const start = document.getElementById("periodStart")?.value;
+  const end   = document.getElementById("periodEnd")?.value;
+  const badge = document.getElementById("dateRangeBadge");
+  if (badge && start && end) {
+    const fmt = new Intl.DateTimeFormat(adminAnalyticsLocale(), { day: "2-digit", month: "short", year: "numeric" });
+    const fmtDate = (s) => fmt.format(new Date(s + "T00:00:00"));
+    badge.textContent = `${fmtDate(start)} – ${fmtDate(end)}`;
+    badge.classList.remove("d-none");
+  }
 }
 
 function updateNetworkSummary(summary) {
