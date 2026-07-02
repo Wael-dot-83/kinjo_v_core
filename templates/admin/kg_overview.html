@@ -129,7 +129,7 @@
 <script>
 if (!window.Chart) {
   var s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+  s.src = '/static/vendor/chartjs/chart.umd.min.js';
   s.onload = function() { document.dispatchEvent(new Event('chartjs:ready')); };
   document.head.appendChild(s);
 } else {
