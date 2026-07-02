@@ -5543,78 +5543,88 @@ class AnalyticsService:
     @staticmethod
     def get_high_risk_children(db: Session, kg_ids: Optional[List[int]] = None) -> List[Dict[str, Any]]:
         """Get list of high-risk children based on attendance and incidents"""
-        # Get children with low attendance (< 80%) in last 30 days
         period_end = _jordan_today()
         period_start = period_end - timedelta(days=30)
 
-        # Find children with attendance rate below 80%
-        low_attendance_children = db.query(
+        # Project kg_id alongside child to avoid lazy-load N+1 on .enrollments[0].kindergarten
+        low_att_q = db.query(
             models.Child,
-            func.count(models.AttendanceLog.id).label('attendance_days')
+            func.count(models.AttendanceLog.id).label('attendance_days'),
+            models.EnrollmentApplication.kindergarten_id.label('kg_id'),
         ).join(
-            models.EnrollmentApplication
+            models.EnrollmentApplication,
+            models.EnrollmentApplication.child_id == models.Child.id,
         ).outerjoin(
             models.AttendanceLog,
             and_(
                 models.AttendanceLog.child_id == models.Child.id,
                 models.AttendanceLog.date >= period_start,
-                models.AttendanceLog.date <= period_end
+                models.AttendanceLog.date <= period_end,
             )
         ).filter(
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
         )
         if kg_ids:
-            low_attendance_children = low_attendance_children.filter(
-                models.EnrollmentApplication.kindergarten_id.in_(kg_ids)
-            )
-        low_attendance_children = low_attendance_children.group_by(
-            models.Child.id
+            low_att_q = low_att_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
+        low_attendance_children = low_att_q.group_by(
+            models.Child.id,
+            models.EnrollmentApplication.kindergarten_id,
         ).having(
-            func.count(models.AttendanceLog.id) / 30.0 < 0.8  # Less than 80% attendance
+            func.count(models.AttendanceLog.id) / 30.0 < 0.8
         ).all()
 
-        # Get children with recent incidents
-        recent_incidents = db.query(
+        # Project kg_id from incident to avoid lazy-load N+1 on .incidents[0].kindergarten
+        inc_q = db.query(
             models.Child,
-            func.count(models.Incident.id).label('incident_count')
+            func.count(models.Incident.id).label('incident_count'),
+            models.Incident.kindergarten_id.label('kg_id'),
         ).join(
-            models.Incident
+            models.Incident,
+            models.Incident.child_id == models.Child.id,
         ).filter(
             models.Incident.occurred_at >= period_start,
-            models.Incident.severity_level.in_([models.SeverityLevel.HIGH, models.SeverityLevel.CRITICAL])
+            models.Incident.severity_level.in_([models.SeverityLevel.HIGH, models.SeverityLevel.CRITICAL]),
         )
         if kg_ids:
-            recent_incidents = recent_incidents.filter(models.Incident.kindergarten_id.in_(kg_ids))
-        recent_incidents = recent_incidents.group_by(
-            models.Child.id
+            inc_q = inc_q.filter(models.Incident.kindergarten_id.in_(kg_ids))
+        recent_incidents = inc_q.group_by(
+            models.Child.id,
+            models.Incident.kindergarten_id,
         ).having(
-            func.count(models.Incident.id) >= 2  # 2 or more serious incidents
+            func.count(models.Incident.id) >= 2
         ).all()
 
-        # Combine and deduplicate
-        risk_children = []
+        # Batch-load kindergarten names in two queries
+        all_kg_ids = {row.kg_id for row in low_attendance_children if row.kg_id} | \
+                     {row.kg_id for row in recent_incidents if row.kg_id}
+        kg_name_map: dict[int, str] = {}
+        if all_kg_ids:
+            kg_name_map = {
+                kg.id: kg.name_ar
+                for kg in db.query(models.Kindergarten.id, models.Kindergarten.name_ar)
+                            .filter(models.Kindergarten.id.in_(all_kg_ids))
+                            .all()
+            }
 
-        # Add low attendance children
-        for child, attendance_days in low_attendance_children:
+        risk_children = []
+        for child, attendance_days, kg_id in low_attendance_children:
             attendance_rate = (attendance_days / 30.0) * 100
             risk_children.append({
                 "child_id": child.id,
                 "child_name": f"{child.first_name} {child.last_name}",
-                "kindergarten_name": child.enrollments[0].kindergarten.name_ar if child.enrollments else "Unknown",
+                "kindergarten_name": kg_name_map.get(kg_id, "Unknown"),
                 "risk_type": "Low Attendance",
                 "risk_value": round(attendance_rate, 1),
-                "description": f"Attendance rate: {round(attendance_rate, 1)}%"
+                "description": f"Attendance rate: {round(attendance_rate, 1)}%",
             })
-
-        # Add children with multiple incidents
-        for child, incident_count in recent_incidents:
+        for child, incident_count, kg_id in recent_incidents:
             risk_children.append({
                 "child_id": child.id,
                 "child_name": f"{child.first_name} {child.last_name}",
-                "kindergarten_name": child.incidents[0].kindergarten.name_ar if child.incidents else "Unknown",
+                "kindergarten_name": kg_name_map.get(kg_id, "Unknown"),
                 "risk_type": "Multiple Incidents",
                 "risk_value": incident_count,
-                "description": f"{incident_count} serious incidents in last 30 days"
+                "description": f"{incident_count} serious incidents in last 30 days",
             })
 
         return risk_children
@@ -5624,48 +5634,32 @@ class AnalyticsService:
     @staticmethod
     def _compute_network_attendance_rate(db: Session, period_start: date, period_end: date, kg_ids: Optional[List[int]] = None) -> float:
         """Compute network-wide attendance rate (optionally filtered to a KG list)"""
-        from kpi_service import KPIService
-
-        # Get all active kindergartens
-        kg_query = db.query(models.Kindergarten).filter(
-            models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+        # Single aggregate query for attended child-days
+        attended_q = db.query(func.count(models.AttendanceLog.id)).join(
+            models.Child,
+            models.AttendanceLog.child_id == models.Child.id,
+        ).join(
+            models.EnrollmentApplication,
+            models.EnrollmentApplication.child_id == models.Child.id,
+        ).filter(
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
         )
         if kg_ids:
-            kg_query = kg_query.filter(models.Kindergarten.id.in_(kg_ids))
-        kindergartens = kg_query.all()
+            attended_q = attended_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
+        total_attended_days = attended_q.scalar() or 0
 
-        if not kindergartens:
-            return 0.0
+        # Single aggregate query for active enrollment count
+        enroll_q = db.query(func.count(models.EnrollmentApplication.id)).filter(
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        )
+        if kg_ids:
+            enroll_q = enroll_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
+        total_active_enrollments = enroll_q.scalar() or 0
 
-        total_attended_days = 0
-        total_expected_days = 0
-
-        for kg in kindergartens:
-            # Count attended days for this kindergarten
-            attended = db.query(func.count(models.AttendanceLog.id)).filter(
-                models.AttendanceLog.date >= period_start,
-                models.AttendanceLog.date <= period_end
-            ).join(
-                models.Child
-            ).join(
-                models.EnrollmentApplication,
-                models.EnrollmentApplication.child_id == models.Child.id
-            ).filter(
-                models.EnrollmentApplication.kindergarten_id == kg.id,
-                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-            ).scalar() or 0
-
-            # Count expected days for this kindergarten
-            active_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
-                models.EnrollmentApplication.kindergarten_id == kg.id,
-                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-            ).scalar() or 0
-
-            days_in_period = (period_end - period_start).days + 1
-            expected = active_enrollments * days_in_period
-
-            total_attended_days += attended
-            total_expected_days += expected
+        days_in_period = (period_end - period_start).days + 1
+        total_expected_days = total_active_enrollments * days_in_period
 
         if total_expected_days == 0:
             return 0.0
