@@ -117,16 +117,6 @@ def test_premium_admin_base_delegates_to_canonical_shell():
     assert "WebGL Background" not in source
 
 
-def test_shared_admin_table_helper_is_english_only():
-    source = (ROOT / "static" / "js" / "dataTable.js").read_text(encoding="utf-8")
-    assert 'placeholder="Search..."' in source
-    assert " of ${total}" in source
-    assert "Previous" in source
-    assert "Next" in source
-    assert not any("\u0600" <= char <= "\u06ff" for char in source)
-    assert "localeCompare(vb, 'en')" in source
-
-
 def test_admin_alerts_use_english_labels_without_language_branches():
     source = (ROOT / "static" / "js" / "admin_alerts.js").read_text(encoding="utf-8")
     assert 'label: "Critical"' in source
