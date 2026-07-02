@@ -15,52 +15,49 @@
   </a>
 </div>
 <div class="messages-list">
-    <div>
-            <div class="glass-panel border border-white/10 rounded-2xl p-6 relative overflow-hidden group mb-6">
-                <div class="absolute -top-32 -right-32 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500"></div>
-                <div class="mb-6 border-b border-white/5 pb-4 relative z-10">
-                    <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Sent Messages{% else %}الرسائل المرسلة{% endif %}</h5>
-                </div>
-                <div class="relative z-10">
-                    {% if messages %}
-                    <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Recipients{% else %}المستلمون{% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for message in messages %}
-                                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td class="px-4 py-3 text-body-md text-on-surface">{{ message.subject }}</td>
-                                    <td class="px-4 py-3 text-body-md text-on-surface">{{ message.created_at.strftime('%Y-%m-%d') }}</td>
-                                    <td class="px-4 py-3 text-body-md text-on-surface">{{ message.recipient_count }}</td>
-                                    <td class="px-4 py-3 text-body-md text-on-surface"><span class="badge badge-soft badge-soft-success">{% if ui_lang == 'en' %}Sent{% else %}مرسلة{% endif %}</span></td>
-                                    <td class="px-4 py-3 text-body-md text-on-surface">
-                                        <button class="btn btn-sm btn-outline-primary">{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}</button>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="text-center py-5">
-                        <i class="bi bi-envelope-x fs-1 text-on-surface-variant mb-3"></i>
-                        <h5 class="text-on-surface-variant">{% if ui_lang == 'en' %}No sent messages{% else %}لا توجد رسائل مرسلة{% endif %}</h5>
-                        <p class="text-on-surface-variant">{% if ui_lang == 'en' %}Start by composing a new message to users.{% else %}ابدأ بإنشاء رسالة جديدة للمستخدمين.{% endif %}</p>
-                        <a href="/admin/messages/compose" class="btn btn-primary d-inline-flex align-items-center gap-2 mt-2">
-                            <i class="bi bi-plus"></i>{% if ui_lang == 'en' %}Create First Message{% else %}إنشاء أول رسالة{% endif %}
-                        </a>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
+    <div class="glass-card fade-in mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Sent Messages{% else %}الرسائل المرسلة{% endif %}</h5>
         </div>
+        <div class="card-body p-0">
+            {% if messages %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Recipients{% else %}المستلمون{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for message in messages %}
+                        <tr>
+                            <td>{{ message.subject }}</td>
+                            <td class="text-muted small text-nowrap">{{ message.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ message.recipient_count }}</td>
+                            <td><span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">{% if ui_lang == 'en' %}Sent{% else %}مرسلة{% endif %}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary">{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-envelope-x fs-1 text-muted mb-3"></i>
+                <h5 class="text-muted">{% if ui_lang == 'en' %}No sent messages{% else %}لا توجد رسائل مرسلة{% endif %}</h5>
+                <p class="text-muted">{% if ui_lang == 'en' %}Start by composing a new message to users.{% else %}ابدأ بإنشاء رسالة جديدة للمستخدمين.{% endif %}</p>
+                <a href="/admin/messages/compose" class="btn btn-primary d-inline-flex align-items-center gap-2 mt-2">
+                    <i class="bi bi-plus"></i>{% if ui_lang == 'en' %}Create First Message{% else %}إنشاء أول رسالة{% endif %}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -3,83 +3,77 @@
 {% block title %}{% if ui_lang == 'en' %}System Settings{% else %}إعدادات النظام{% endif %} — KinJo{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-6">
-  
+<div class="fade-in">
+
   <!-- Header -->
-  <div class="flex items-center justify-between mb-8">
-    <div class="flex items-center gap-3">
-      <div class="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
-        <span class="material-symbols-outlined text-primary text-2xl">settings</span>
-      </div>
-      <div>
-        <h1 class="font-display-md text-display-md text-on-surface font-bold tracking-tight">
-          {% if ui_lang == 'en' %}System Settings{% else %}إعدادات النظام{% endif %}
-        </h1>
-        <p class="text-on-surface-variant font-body-md text-sm mt-1">
-          {% if ui_lang == 'en' %}Manage global configuration and platform environment variables.{% else %}إدارة التكوين العام ومتغيرات بيئة المنصة.{% endif %}
-        </p>
-      </div>
+  <div class="page-header mb-4 d-flex align-items-center gap-3">
+    <div class="glass-card d-flex align-items-center justify-content-center flex-shrink-0" style="width:48px;height:48px;">
+      <span class="material-symbols-outlined text-primary" aria-hidden="true">settings</span>
+    </div>
+    <div>
+      <h1 class="page-title mb-0">
+        {% if ui_lang == 'en' %}System Settings{% else %}إعدادات النظام{% endif %}
+      </h1>
+      <p class="text-muted small mb-0 mt-1">
+        {% if ui_lang == 'en' %}Manage global configuration and platform environment variables.{% else %}إدارة التكوين العام ومتغيرات بيئة المنصة.{% endif %}
+      </p>
     </div>
   </div>
 
   <!-- Settings Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    
+  <div class="row g-4">
+
     <!-- Session Card -->
-    <div class="glass-panel p-6 border border-white/10 rounded-2xl relative overflow-hidden group">
-      <!-- Glow effect -->
-      <div class="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-500"></div>
-      
-      <div class="flex items-center gap-3 mb-6">
-        <span class="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg">history_toggle_off</span>
-        <h2 class="font-title-lg text-title-lg text-on-surface">
-          {% if ui_lang == 'en' %}Session Management{% else %}إدارة الجلسة{% endif %}
-        </h2>
-      </div>
-      
-      <div class="space-y-4">
-        <div class="flex items-center justify-between bg-white/5 border border-white/10 p-4 rounded-xl">
-          <div>
-            <div class="font-label-md text-on-surface-variant mb-1">
-              {% if ui_lang == 'en' %}Session Timeout{% else %}مهلة انتهاء الجلسة{% endif %}
+    <div class="col-12 col-md-6">
+      <div class="glass-card fade-in h-100">
+        <div class="card-header d-flex align-items-center gap-2">
+          <span class="material-symbols-outlined text-primary" aria-hidden="true">history_toggle_off</span>
+          <h2 class="h6 mb-0">
+            {% if ui_lang == 'en' %}Session Management{% else %}إدارة الجلسة{% endif %}
+          </h2>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between border rounded p-3 bg-light bg-opacity-50">
+            <div>
+              <div class="fw-semibold mb-1">
+                {% if ui_lang == 'en' %}Session Timeout{% else %}مهلة انتهاء الجلسة{% endif %}
+              </div>
+              <div class="small text-muted">
+                {% if ui_lang == 'en' %}User will be logged out after inactivity.{% else %}سيتم تسجيل خروج المستخدم بعد فترة من عدم النشاط.{% endif %}
+              </div>
             </div>
-            <div class="text-xs text-on-surface-variant/70">
-              {% if ui_lang == 'en' %}User will be logged out after inactivity.{% else %}سيتم تسجيل خروج المستخدم بعد فترة من عدم النشاط.{% endif %}
+            <div class="fs-5 fw-bold text-primary bg-primary bg-opacity-10 px-3 py-2 rounded border border-primary border-opacity-25 text-nowrap">
+              {{ session_timeout_minutes | default(30) }} {% if ui_lang == 'en' %}min{% else %}دقيقة{% endif %}
             </div>
-          </div>
-          <div class="font-display-sm text-primary font-bold bg-primary/10 px-4 py-2 rounded-lg border border-primary/20">
-            {{ session_timeout_minutes | default(30) }} {% if ui_lang == 'en' %}min{% else %}دقيقة{% endif %}
           </div>
         </div>
       </div>
     </div>
 
     <!-- Environment Card -->
-    <div class="glass-panel p-6 border border-white/10 rounded-2xl relative overflow-hidden group">
-      <!-- Glow effect -->
-      <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-secondary/10 rounded-full blur-3xl group-hover:bg-secondary/20 transition-all duration-500"></div>
-      
-      <div class="flex items-center gap-3 mb-6">
-        <span class="material-symbols-outlined text-secondary bg-secondary/10 p-2 rounded-lg">memory</span>
-        <h2 class="font-title-lg text-title-lg text-on-surface">
-          {% if ui_lang == 'en' %}Environment Context{% else %}سياق البيئة{% endif %}
-        </h2>
-      </div>
-      
-      <div class="bg-surface-container-highest/30 border border-white/10 p-4 rounded-xl h-[calc(100%-4rem)] flex items-center">
-        <div class="flex items-start gap-4">
-          <span class="material-symbols-outlined text-warning text-2xl mt-1">info</span>
-          <p class="text-on-surface-variant font-body-sm text-sm leading-relaxed">
-            {% if ui_lang == 'en' %}
-              Server-level configuration is securely managed via environment variables and the 
-              <code class="px-2 py-0.5 bg-black/30 border border-white/10 rounded font-mono text-primary text-xs mx-1">.env</code> 
-              file. Please contact your system administrator to modify backend secrets, API keys, or database URLs.
-            {% else %}
-              يتم إدارة التكوين على مستوى الخادم بشكل آمن عبر متغيرات البيئة وملف 
-              <code class="px-2 py-0.5 bg-black/30 border border-white/10 rounded font-mono text-primary text-xs mx-1">.env</code>. 
-              يرجى التواصل مع مسؤول النظام لتعديل أسرار الواجهة الخلفية أو مفاتيح API أو عناوين قواعد البيانات.
-            {% endif %}
-          </p>
+    <div class="col-12 col-md-6">
+      <div class="glass-card fade-in delay-100 h-100">
+        <div class="card-header d-flex align-items-center gap-2">
+          <span class="material-symbols-outlined text-secondary" aria-hidden="true">memory</span>
+          <h2 class="h6 mb-0">
+            {% if ui_lang == 'en' %}Environment Context{% else %}سياق البيئة{% endif %}
+          </h2>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-start gap-3 border rounded p-3 bg-light bg-opacity-50 h-100">
+            <span class="material-symbols-outlined text-warning mt-1" aria-hidden="true">info</span>
+            <p class="text-muted small mb-0">
+              {% if ui_lang == 'en' %}
+                Server-level configuration is securely managed via environment variables and the
+                <code>.env</code>
+                file. Please contact your system administrator to modify backend secrets, API keys, or database URLs.
+              {% else %}
+                يتم إدارة التكوين على مستوى الخادم بشكل آمن عبر متغيرات البيئة وملف
+                <code>.env</code>.
+                يرجى التواصل مع مسؤول النظام لتعديل أسرار الواجهة الخلفية أو مفاتيح API أو عناوين قواعد البيانات.
+              {% endif %}
+            </p>
+          </div>
         </div>
       </div>
     </div>

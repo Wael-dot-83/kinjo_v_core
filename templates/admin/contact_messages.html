@@ -9,12 +9,12 @@
 
 {% block content %}
 <div class="page-header mb-4">
-  <h1 class="page-title" cyberlume-glow-text>
+  <h1 class="page-title">
     <i class="bi bi-chat-dots me-2"></i>{% if ui_lang == 'en' %}Contact Messages{% else %}رسائل التواصل{% endif %}
   </h1>
 </div>
 <!-- Filters -->
-<form method="get" action="/admin/contact-messages" class="cyberlume-card mb-4">
+<form method="get" action="/admin/contact-messages" class="glass-card fade-in mb-4">
     <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
         <div class="input-group input-group-sm input-group-icon" style="max-width:280px;">
             <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
@@ -28,21 +28,21 @@
             <option value="open" {% if filters.status_filter == 'open' %}selected{% endif %}>{% if ui_lang == 'en' %}Open{% else %}مفتوحة{% endif %}</option>
             <option value="resolved" {% if filters.status_filter == 'resolved' %}selected{% endif %}>{% if ui_lang == 'en' %}Resolved{% else %}مُغلقة{% endif %}</option>
         </select>
-        <button type="submit" class="btn cyberlume-btn cyberlume-btn-primary btn-sm">{% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}</button>
+        <button type="submit" class="btn btn-primary btn-sm">{% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}</button>
     </div>
 </form>
 
 <!-- Stats -->
 <div class="d-flex gap-3 mb-3">
-    <span class="badge badge-soft badge-soft-secondary fs-6">{% if ui_lang == 'en' %}Total:{% else %}الإجمالي:{% endif %} {{ pagination.total }}</span>
-    <span class="text-cyber-muted small">{% if ui_lang == 'en' %}Page{% else %}الصفحة{% endif %} {{ pagination.page }} {% if ui_lang == 'en' %}of{% else %}من{% endif %} {{ pagination.total_pages }}</span>
+    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fs-6">{% if ui_lang == 'en' %}Total:{% else %}الإجمالي:{% endif %} {{ pagination.total }}</span>
+    <span class="text-muted small">{% if ui_lang == 'en' %}Page{% else %}الصفحة{% endif %} {{ pagination.page }} {% if ui_lang == 'en' %}of{% else %}من{% endif %} {{ pagination.total_pages }}</span>
 </div>
 
 <!-- Table -->
-<div class="cyberlume-card">
+<div class="glass-card fade-in delay-100">
     {% if contact_messages %}
     <div class="table-responsive">
-        <table class="table table-dark table-hover cyberlume-table align-middle table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
                     <th>#</th>
@@ -57,18 +57,18 @@
             <tbody>
                 {% for msg in contact_messages %}
                 <tr>
-                    <td class="text-cyber-muted small">{{ msg.id }}</td>
+                    <td class="text-muted small">{{ msg.id }}</td>
                     <td class="fw-600">{{ msg.name }}</td>
-                    <td class="text-cyber-muted small">{{ msg.email }}</td>
+                    <td class="text-muted small">{{ msg.email }}</td>
                     <td>{{ msg.subject }}</td>
-                    <td class="text-cyber-muted small text-nowrap">
+                    <td class="text-muted small text-nowrap">
                         {{ msg.submitted_at.strftime('%Y-%m-%d') if msg.submitted_at else '—' }}
                     </td>
                     <td>
                         {% if msg.is_resolved %}
-                        <span class="badge badge-soft badge-soft-success">{% if ui_lang == 'en' %}Resolved{% else %}مُغلقة{% endif %}</span>
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">{% if ui_lang == 'en' %}Resolved{% else %}مُغلقة{% endif %}</span>
                         {% else %}
-                        <span class="badge badge-soft badge-soft-warning">{% if ui_lang == 'en' %}Open{% else %}مفتوحة{% endif %}</span>
+                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">{% if ui_lang == 'en' %}Open{% else %}مفتوحة{% endif %}</span>
                         {% endif %}
                     </td>
                     <td>
@@ -94,7 +94,7 @@
     {% else %}
     <div class="card-body text-center py-5">
         <i class="bi bi-inbox d-block fs-1 mb-3 opacity-25"></i>
-        <p class="text-cyber-muted mb-0">{% if ui_lang == 'en' %}No messages found{% else %}لا توجد رسائل{% endif %}</p>
+        <p class="text-muted mb-0">{% if ui_lang == 'en' %}No messages found{% else %}لا توجد رسائل{% endif %}</p>
     </div>
     {% endif %}
 </div>
