@@ -1032,7 +1032,7 @@ short_pass,short@test.jo,123,PARENT,{sample_kindergarten.id}"""
 def test_admin_import_kindergartens_rejects_non_excel(client, auth_headers_admin):
     """Import endpoint should reject non-Excel uploads."""
     response = client.post(
-        "/api/admin/kindergartens/import",
+        "/api/admin/kindergartens/import-excel",
         files={"file": ("kindergartens.txt", b"not excel", "text/plain")},
         headers=auth_headers_admin,
     )
@@ -1051,28 +1051,26 @@ def test_imported_kindergartens_list_access_control(client, auth_headers_admin, 
     assert parent_response.status_code == 403
 
 
-def test_admin_import_kindergartens_success_is_audited(client, test_db, admin_user, auth_headers_admin, monkeypatch):
+def test_admin_import_kindergartens_success_is_audited(client, test_db, admin_user, auth_headers_admin):
     """Successful kindergarten import should write an audit entry."""
-    def _fake_import(self, file_path, original_filename):
-        return {
-            "imported_count": 1,
-            "updated_count": 0,
-            "skipped_count": 0,
-            "errors": [],
-        }
+    import openpyxl
+    from io import BytesIO
 
-    monkeypatch.setattr(
-        "admin_endpoints.KindergartenImportService.import_from_excel",
-        _fake_import,
-    )
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["name_ar", "name_en", "governorate", "district", "area", "address", "phone"])
+    ws.append(["روضة التدقيق", "Audit KG", "عمان", "عمان", "عبدون", "شارع 1", "0790000000"])
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
 
     response = client.post(
-        "/api/admin/kindergartens/import",
-        files={"file": ("kindergartens.xlsx", b"fake-xlsx-content", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        "/api/admin/kindergartens/import-excel",
+        files={"file": ("kindergartens.xlsx", buf.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         headers=auth_headers_admin,
     )
     assert response.status_code == 200
-    assert response.json()["result"]["imported_count"] == 1
+    assert response.json()["inserted"] == 1
 
     audit_log = (
         test_db.query(models.AuditLog)
