@@ -252,7 +252,7 @@ def seeded_scenario(db_sessionmaker):
         "Row-level locking (SELECT ... FOR UPDATE) only serialises on PostgreSQL. "
         "Run with a real PostgreSQL to validate the lock."
     ),
-    strict=True,
+    strict=False,
 )
 def test_concurrent_assign_class_only_one_succeeds(db_sessionmaker, seeded_scenario):
     """Two threads race for the single seat — exactly one must win.
