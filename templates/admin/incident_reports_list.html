@@ -3,173 +3,173 @@
 {% block title %}{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %} — KinJo{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="fade-in">
 
   <!-- Page Header -->
-  <div class="flex items-center justify-between mb-8">
-    <div class="flex items-center gap-3">
-      <div class="w-12 h-12 rounded-xl bg-error/20 border border-error/30 flex items-center justify-center">
-        <span class="material-symbols-outlined text-error text-2xl">warning</span>
+  <div class="page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="glass-card d-flex align-items-center justify-content-center flex-shrink-0" style="width:48px;height:48px;">
+        <span class="material-symbols-outlined text-danger" aria-hidden="true">warning</span>
       </div>
       <div>
-        <h1 class="font-display-md text-display-md text-on-surface font-bold tracking-tight">
+        <h1 class="page-title mb-0">
           {% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}
         </h1>
-        <p class="text-on-surface-variant font-body-md text-sm mt-1">
+        <p class="text-muted small mb-0 mt-1">
           {% if ui_lang == 'en' %}Generate and view safety incident reports across all facilities.{% else %}إنشاء وعرض تقارير حوادث السلامة عبر جميع المنشآت.{% endif %}
         </p>
       </div>
     </div>
     <button onclick="showModal('generateReportModal')" class="btn btn-primary d-flex align-items-center gap-2">
-      <span class="material-symbols-outlined" style="font-size:1.1rem;">add_circle</span>
+      <span class="material-symbols-outlined" style="font-size:1.1rem;" aria-hidden="true">add_circle</span>
       {% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
     </button>
   </div>
 
   <!-- Filters -->
-  <div class="glass-panel border border-white/10 rounded-2xl p-6 relative overflow-hidden group mb-6">
-    <div class="absolute -top-32 -right-32 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500"></div>
-    
-    <div class="flex items-center gap-2 mb-4">
-      <span class="material-symbols-outlined text-on-surface-variant text-sm">filter_alt</span>
-      <h5 class="font-title-md text-on-surface">{% if ui_lang == 'en' %}Filter Reports{% else %}تصفية التقارير{% endif %}</h5>
+  <div class="glass-card fade-in mb-4">
+    <div class="card-header d-flex align-items-center gap-2">
+      <span class="material-symbols-outlined text-muted" style="font-size:1rem;" aria-hidden="true">filter_alt</span>
+      <h5 class="h6 mb-0">{% if ui_lang == 'en' %}Filter Reports{% else %}تصفية التقارير{% endif %}</h5>
     </div>
-    
-    <form id="filterForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div>
-            <label for="scopeFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Scope{% else %}النطاق{% endif %}</label>
-            <select id="scopeFilter" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none">
+    <div class="card-body">
+      <form id="filterForm" class="row g-3">
+        <div class="col-12 col-md-3">
+            <label for="scopeFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}Scope{% else %}النطاق{% endif %}</label>
+            <select id="scopeFilter" class="form-select form-select-sm">
                 <option value="">{% if ui_lang == 'en' %}All Scopes{% else %}جميع النطاقات{% endif %}</option>
                 <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة محددة{% endif %}</option>
                 <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
                 <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
             </select>
         </div>
-        <div>
-            <label for="kindergartenFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
-            <select id="kindergartenFilter" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none disabled:opacity-50" disabled>
+        <div class="col-12 col-md-3">
+            <label for="kindergartenFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+            <select id="kindergartenFilter" class="form-select form-select-sm" disabled>
                 <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
             </select>
         </div>
-        <div>
-            <label for="governorateFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-            <select id="governorateFilter" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none disabled:opacity-50" disabled>
+        <div class="col-12 col-md-3">
+            <label for="governorateFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+            <select id="governorateFilter" class="form-select form-select-sm" disabled>
                 <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
             </select>
         </div>
-        <div class="flex items-end gap-2">
-            <button type="button" class="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors" onclick="loadReports()">
-                <span class="material-symbols-outlined text-sm">search</span>
+        <div class="col-12 col-md-3 d-flex align-items-end gap-2">
+            <button type="button" class="btn btn-primary btn-sm flex-grow-1 d-inline-flex align-items-center justify-content-center gap-1" onclick="loadReports()">
+                <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">search</span>
                 {% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
             </button>
-            <button type="button" class="flex items-center justify-center px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface-variant hover:bg-white/10 transition-colors" onclick="resetFilters()">
-                <span class="material-symbols-outlined text-sm">close</span>
+            <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center" onclick="resetFilters()"
+                    aria-label="{% if ui_lang == 'en' %}Reset filters{% else %}إعادة تعيين{% endif %}">
+                <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">close</span>
             </button>
         </div>
-    </form>
+      </form>
+    </div>
   </div>
 
   <!-- Reports List -->
-  <div class="glass-panel border border-white/10 rounded-2xl p-0 overflow-hidden">
-      <div class="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-          <h5 class="font-title-md text-on-surface m-0">{% if ui_lang == 'en' %}Reports List{% else %}قائمة التقارير{% endif %}</h5>
-          <div id="loadingSpinner" class="hidden">
-              <span class="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+  <div class="glass-card fade-in delay-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="h6 mb-0">{% if ui_lang == 'en' %}Reports List{% else %}قائمة التقارير{% endif %}</h5>
+          <div id="loadingSpinner" class="d-none">
+              <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
           </div>
       </div>
-      <div class="p-0 overflow-x-auto">
-          <div id="reportsTableContainer">
+      <div class="card-body p-0">
+          <div id="reportsTableContainer" class="table-responsive">
               <!-- Reports will be loaded here -->
           </div>
-          <div id="emptyState" class="text-center py-12 hidden">
-              <span class="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4">description</span>
-              <h5 class="font-title-md text-on-surface mb-1">{% if ui_lang == 'en' %}No reports found{% else %}لا توجد تقارير{% endif %}</h5>
-              <p class="text-on-surface-variant font-body-sm">{% if ui_lang == 'en' %}Try adjusting your filter criteria.{% else %}حاول تعديل معايير البحث الخاصة بك.{% endif %}</p>
+          <div id="emptyState" class="text-center py-5 d-none">
+              <span class="material-symbols-outlined d-block text-muted opacity-50 mb-3" style="font-size:3.5rem;" aria-hidden="true">description</span>
+              <h5 class="mb-1">{% if ui_lang == 'en' %}No reports found{% else %}لا توجد تقارير{% endif %}</h5>
+              <p class="text-muted small">{% if ui_lang == 'en' %}Try adjusting your filter criteria.{% else %}حاول تعديل معايير البحث الخاصة بك.{% endif %}</p>
           </div>
       </div>
   </div>
 </div>
 
-<!-- CYBERLUME Generate Report Modal -->
-<div id="generateReportModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
-    <div class="glass-panel w-full max-w-xl p-0 border border-white/10 rounded-2xl transform scale-95 transition-transform duration-300 shadow-2xl overflow-hidden">
-        <div class="px-6 py-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
-            <h5 class="font-title-md text-on-surface">{% if ui_lang == 'en' %}Generate New Incident Report{% else %}إنشاء تقرير حوادث جديد{% endif %}</h5>
-            <button onclick="hideModal('generateReportModal')" class="text-on-surface-variant hover:text-on-surface transition-colors">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        <div class="p-6">
-            <form id="generateReportForm" class="space-y-4">
-                <div>
-                    <label for="reportScope" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
-                    <select id="reportScope" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 appearance-none" required>
-                        <option value="">{% if ui_lang == 'en' %}Select Scope{% else %}اختر النطاق{% endif %}</option>
-                        <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة محددة{% endif %}</option>
-                        <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
-                        <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
-                    </select>
-                </div>
-                <div id="kindergartenSelectDiv" class="hidden">
-                    <label for="reportKindergarten" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
-                    <select id="reportKindergarten" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 appearance-none">
-                        <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
-                    </select>
-                </div>
-                <div id="governorateSelectDiv" class="hidden">
-                    <label for="reportGovernorate" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-                    <select id="reportGovernorate" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 appearance-none">
-                        <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="reportPeriod" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
-                    <select id="reportPeriod" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 appearance-none" required>
-                        <option value="">{% if ui_lang == 'en' %}Select Period{% else %}اختر الفترة{% endif %}</option>
-                        <option value="week">{% if ui_lang == 'en' %}Current Week{% else %}الأسبوع الحالي{% endif %}</option>
-                        <option value="month">{% if ui_lang == 'en' %}Current Month{% else %}الشهر الحالي{% endif %}</option>
-                        <option value="3years">{% if ui_lang == 'en' %}Last 3 Years{% else %}آخر 3 سنوات{% endif %}</option>
-                        <option value="annual">{% if ui_lang == 'en' %}Current Year{% else %}السنة الحالية{% endif %}</option>
-                    </select>
-                </div>
-                <div id="yearSelectDiv" class="hidden">
-                    <label for="reportYear" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Year{% else %}السنة{% endif %}</label>
-                    <select id="reportYear" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 appearance-none">
-                        <option value="">{% if ui_lang == 'en' %}Select Year{% else %}اختر السنة{% endif %}</option>
-                    </select>
-                </div>
-            </form>
-        </div>
-        <div class="px-6 py-4 border-t border-white/10 bg-white/5 flex justify-end gap-3">
-            <button type="button" class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface hover:bg-white/10 transition-colors" onclick="hideModal('generateReportModal')">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-            <button type="button" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors" onclick="generateReport()">
-                <span class="material-symbols-outlined text-sm">check_circle</span>
-                {% if ui_lang == 'en' %}Generate Report{% else %}إنشاء التقرير{% endif %}
-            </button>
+<!-- Generate Report Modal -->
+<div class="modal fade" id="generateReportModal" tabindex="-1" aria-labelledby="generateReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="generateReportModalLabel">{% if ui_lang == 'en' %}Generate New Incident Report{% else %}إنشاء تقرير حوادث جديد{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+            </div>
+            <div class="modal-body">
+                <form id="generateReportForm">
+                    <div class="mb-3">
+                        <label for="reportScope" class="form-label">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
+                        <select id="reportScope" class="form-select" required>
+                            <option value="">{% if ui_lang == 'en' %}Select Scope{% else %}اختر النطاق{% endif %}</option>
+                            <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة محددة{% endif %}</option>
+                            <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
+                            <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                        </select>
+                    </div>
+                    <div id="kindergartenSelectDiv" class="mb-3 d-none">
+                        <label for="reportKindergarten" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                        <select id="reportKindergarten" class="form-select">
+                            <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
+                        </select>
+                    </div>
+                    <div id="governorateSelectDiv" class="mb-3 d-none">
+                        <label for="reportGovernorate" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                        <select id="reportGovernorate" class="form-select">
+                            <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reportPeriod" class="form-label">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
+                        <select id="reportPeriod" class="form-select" required>
+                            <option value="">{% if ui_lang == 'en' %}Select Period{% else %}اختر الفترة{% endif %}</option>
+                            <option value="week">{% if ui_lang == 'en' %}Current Week{% else %}الأسبوع الحالي{% endif %}</option>
+                            <option value="month">{% if ui_lang == 'en' %}Current Month{% else %}الشهر الحالي{% endif %}</option>
+                            <option value="3years">{% if ui_lang == 'en' %}Last 3 Years{% else %}آخر 3 سنوات{% endif %}</option>
+                            <option value="annual">{% if ui_lang == 'en' %}Current Year{% else %}السنة الحالية{% endif %}</option>
+                        </select>
+                    </div>
+                    <div id="yearSelectDiv" class="mb-3 d-none">
+                        <label for="reportYear" class="form-label">{% if ui_lang == 'en' %}Year{% else %}السنة{% endif %}</label>
+                        <select id="reportYear" class="form-select">
+                            <option value="">{% if ui_lang == 'en' %}Select Year{% else %}اختر السنة{% endif %}</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" onclick="generateReport()">
+                    <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">check_circle</span>
+                    {% if ui_lang == 'en' %}Generate Report{% else %}إنشاء التقرير{% endif %}
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- CYBERLUME Report Detail Modal -->
-<div id="reportDetailModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
-    <div class="glass-panel w-full max-w-4xl p-0 border border-white/10 rounded-2xl transform scale-95 transition-transform duration-300 shadow-2xl overflow-hidden">
-        <div class="px-6 py-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
-            <h5 class="font-title-md text-on-surface" id="reportDetailTitle">{% if ui_lang == 'en' %}Report Details{% else %}تفاصيل التقرير{% endif %}</h5>
-            <button onclick="hideModal('reportDetailModal')" class="text-on-surface-variant hover:text-on-surface transition-colors">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        <div class="p-6 overflow-y-auto max-h-[70vh]">
-            <div id="reportDetailContent">
-                <!-- Report details will be loaded here -->
+<!-- Report Detail Modal -->
+<div class="modal fade" id="reportDetailModal" tabindex="-1" aria-labelledby="reportDetailTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportDetailTitle">{% if ui_lang == 'en' %}Report Details{% else %}تفاصيل التقرير{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
-        </div>
-        <div class="px-6 py-4 border-t border-white/10 bg-white/5 flex justify-end gap-3">
-            <button type="button" class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-on-surface hover:bg-white/10 transition-colors" onclick="hideModal('reportDetailModal')">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
-            <button type="button" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors" onclick="exportReport()">
-                <span class="material-symbols-outlined text-sm">download</span>
-                {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
-            </button>
+            <div class="modal-body">
+                <div id="reportDetailContent">
+                    <!-- Report details will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2" onclick="exportReport()">
+                    <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">download</span>
+                    {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -182,21 +182,13 @@
 
     let currentReportId = null;
 
-    // CYBERLUME Modal Handling
+    // Bootstrap modal handling (function names kept for template onclick handlers)
     function showModal(id) {
-        const m = document.getElementById(id);
-        m.classList.remove('hidden');
-        // trigger reflow
-        void m.offsetWidth;
-        m.classList.remove('opacity-0');
-        m.querySelector('.glass-panel').classList.remove('scale-95');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById(id)).show();
     }
-    
+
     function hideModal(id) {
-        const m = document.getElementById(id);
-        m.classList.add('opacity-0');
-        m.querySelector('.glass-panel').classList.add('scale-95');
-        setTimeout(() => m.classList.add('hidden'), 300);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById(id)).hide();
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -209,13 +201,13 @@
     function setupFormHandlers() {
         document.getElementById('reportScope').addEventListener('change', function () {
             const scope = this.value;
-            document.getElementById('kindergartenSelectDiv').classList.toggle('hidden', scope !== 'KINDERGARTEN');
-            document.getElementById('governorateSelectDiv').classList.toggle('hidden', scope !== 'GOVERNORATE');
+            document.getElementById('kindergartenSelectDiv').classList.toggle('d-none', scope !== 'KINDERGARTEN');
+            document.getElementById('governorateSelectDiv').classList.toggle('d-none', scope !== 'GOVERNORATE');
         });
 
         document.getElementById('reportPeriod').addEventListener('change', function () {
             const period = this.value;
-            document.getElementById('yearSelectDiv').classList.toggle('hidden', period !== 'annual');
+            document.getElementById('yearSelectDiv').classList.toggle('d-none', period !== 'annual');
             if (period === 'annual') {
                 populateYearSelect();
             }
@@ -292,7 +284,7 @@
         const reportsContainer = document.getElementById('reportsTableContainer');
         const emptyState = document.getElementById('emptyState');
 
-        loadingSpinner.classList.remove('hidden');
+        loadingSpinner.classList.remove('d-none');
         reportsContainer.innerHTML = '';
 
         try {
@@ -312,59 +304,59 @@
             const reports = data.reports || [];
 
             if (reports.length === 0) {
-                emptyState.classList.remove('hidden');
+                emptyState.classList.remove('d-none');
                 return;
             }
 
-            emptyState.classList.add('hidden');
+            emptyState.classList.add('d-none');
             renderReportsTable(reports);
 
         } catch (error) {
             console.error('Error loading reports:', error);
-            reportsContainer.innerHTML = '<div class="p-4 text-error bg-error/10 border border-error/20 rounded-lg">' + T('حدث خطأ في تحميل التقارير', 'Error loading reports') + '</div>';
+            reportsContainer.innerHTML = '<div class="alert alert-danger m-3">' + T('حدث خطأ في تحميل التقارير', 'Error loading reports') + '</div>';
         } finally {
-            loadingSpinner.classList.add('hidden');
+            loadingSpinner.classList.add('d-none');
         }
     }
 
     function renderReportsTable(reports) {
         const container = document.getElementById('reportsTableContainer');
         let html = `
-        <table class="w-full text-left border-collapse min-w-[800px]">
-            <thead class="bg-white/5 border-b border-white/10 text-on-surface-variant font-label-sm uppercase tracking-wider">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
                 <tr>
-                    <th class="p-4">${T('العنوان', 'Title')}</th>
-                    <th class="p-4">${T('النطاق', 'Scope')}</th>
-                    <th class="p-4">${T('الفترة الزمنية', 'Time Period')}</th>
-                    <th class="p-4">${T('تاريخ الإنشاء', 'Created Date')}</th>
-                    <th class="p-4">${T('المولد', 'Created By')}</th>
-                    <th class="p-4 text-center">${T('عدد الحوادث', 'Incidents Count')}</th>
-                    <th class="p-4 text-right">${T('الإجراءات', 'Actions')}</th>
+                    <th>${T('العنوان', 'Title')}</th>
+                    <th>${T('النطاق', 'Scope')}</th>
+                    <th>${T('الفترة الزمنية', 'Time Period')}</th>
+                    <th>${T('تاريخ الإنشاء', 'Created Date')}</th>
+                    <th>${T('المولد', 'Created By')}</th>
+                    <th class="text-center">${T('عدد الحوادث', 'Incidents Count')}</th>
+                    <th>${T('الإجراءات', 'Actions')}</th>
                 </tr>
             </thead>
-            <tbody class="text-sm font-body-sm text-on-surface divide-y divide-white/5">
+            <tbody>
         `;
 
         reports.forEach(report => {
             html += `
-            <tr class="hover:bg-white/5 transition-colors">
-                <td class="p-4 font-medium">${escHtml(report.title)}</td>
-                <td class="p-4 text-on-surface-variant">${getScopeDisplayName(report.scope_type, report.scope_name)}</td>
-                <td class="p-4 text-on-surface-variant">${escHtml(report.start_date)} - ${escHtml(report.end_date)}</td>
-                <td class="p-4 text-on-surface-variant">${new Date(report.created_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}</td>
-                <td class="p-4 text-on-surface-variant">${escHtml(report.created_by)}</td>
-                <td class="p-4 text-center">
-                    <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error/20 text-error border border-error/30">
+            <tr>
+                <td class="fw-semibold">${escHtml(report.title)}</td>
+                <td class="text-muted small">${getScopeDisplayName(report.scope_type, report.scope_name)}</td>
+                <td class="text-muted small text-nowrap">${escHtml(report.start_date)} - ${escHtml(report.end_date)}</td>
+                <td class="text-muted small text-nowrap">${new Date(report.created_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}</td>
+                <td class="text-muted small">${escHtml(report.created_by)}</td>
+                <td class="text-center">
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill">
                         ${report.total_incidents}
                     </span>
                 </td>
-                <td class="p-4 text-right">
-                    <div class="flex items-center justify-end gap-2">
-                        <button class="p-1.5 rounded bg-white/5 border border-white/10 text-on-surface hover:text-primary hover:border-primary/50 transition-colors" onclick="viewReport(${report.id})" title="${T('عرض', 'View')}">
-                            <span class="material-symbols-outlined text-[18px]">visibility</span>
+                <td>
+                    <div class="d-flex align-items-center gap-1">
+                        <button class="btn btn-sm btn-outline-secondary border-0 d-inline-flex p-1" onclick="viewReport(${report.id})" title="${T('عرض', 'View')}">
+                            <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">visibility</span>
                         </button>
-                        <button class="p-1.5 rounded bg-white/5 border border-white/10 text-on-surface hover:text-secondary hover:border-secondary/50 transition-colors" onclick="exportReport(${report.id})" title="${T('تصدير', 'Export')}">
-                            <span class="material-symbols-outlined text-[18px]">download</span>
+                        <button class="btn btn-sm btn-outline-secondary border-0 d-inline-flex p-1" onclick="exportReport(${report.id})" title="${T('تصدير', 'Export')}">
+                            <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">download</span>
                         </button>
                     </div>
                 </td>
@@ -379,11 +371,11 @@
     function getScopeDisplayName(scopeType, scopeName) {
         switch (scopeType) {
             case 'KINDERGARTEN':
-                return `<span class="text-xs uppercase text-primary mr-1">${T('روضة:', 'KG:')}</span> ${escHtml(scopeName)}`;
+                return `<span class="small text-primary text-uppercase me-1">${T('روضة:', 'KG:')}</span> ${escHtml(scopeName)}`;
             case 'GOVERNORATE':
-                return `<span class="text-xs uppercase text-secondary mr-1">${T('محافظة:', 'Gov:')}</span> ${escHtml(scopeName)}`;
+                return `<span class="small text-info text-uppercase me-1">${T('محافظة:', 'Gov:')}</span> ${escHtml(scopeName)}`;
             case 'ALL':
-                return `<span class="px-2 py-0.5 rounded bg-white/5 text-xs">${T('جميع الروضات', 'All KGs')}</span>`;
+                return `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">${T('جميع الروضات', 'All KGs')}</span>`;
             default:
                 return escHtml(scopeName || scopeType);
         }
@@ -469,64 +461,72 @@
         const metrics = report.metrics_json || {};
 
         let html = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white/5 border border-white/10 rounded-xl p-4">
-                <h6 class="font-label-md text-primary uppercase tracking-wider mb-3">${T('معلومات التقرير', 'Report Information')}</h6>
-                <div class="space-y-2 text-sm">
-                    <div class="flex justify-between border-b border-white/5 pb-2">
-                        <span class="text-on-surface-variant">${T('النطاق:', 'Scope:')}</span>
-                        <span class="text-on-surface font-medium">${getScopeDisplayName(report.scope_type, report.governorate || report.kindergarten?.name_ar)}</span>
-                    </div>
-                    <div class="flex justify-between border-b border-white/5 pb-2">
-                        <span class="text-on-surface-variant">${T('الفترة:', 'Period:')}</span>
-                        <span class="text-on-surface font-medium">${report.start_date} - ${report.end_date}</span>
-                    </div>
-                    <div class="flex justify-between border-b border-white/5 pb-2">
-                        <span class="text-on-surface-variant">${T('تاريخ الإنشاء:', 'Created Date:')}</span>
-                        <span class="text-on-surface font-medium">${new Date(report.created_at).toLocaleString(IS_EN ? 'en-US' : 'ar-JO')}</span>
-                    </div>
-                    <div class="flex justify-between pb-1">
-                        <span class="text-on-surface-variant">${T('المولد:', 'Created By:')}</span>
-                        <span class="text-on-surface font-medium">${report.creator?.username || T('غير معروف', 'Unknown')}</span>
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-md-6">
+                <div class="border rounded p-3 bg-light bg-opacity-50 h-100">
+                    <h6 class="small text-primary text-uppercase fw-semibold mb-3">${T('معلومات التقرير', 'Report Information')}</h6>
+                    <div class="small">
+                        <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                            <span class="text-muted">${T('النطاق:', 'Scope:')}</span>
+                            <span class="fw-semibold">${getScopeDisplayName(report.scope_type, report.governorate || report.kindergarten?.name_ar)}</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                            <span class="text-muted">${T('الفترة:', 'Period:')}</span>
+                            <span class="fw-semibold">${escHtml(report.start_date)} - ${escHtml(report.end_date)}</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                            <span class="text-muted">${T('تاريخ الإنشاء:', 'Created Date:')}</span>
+                            <span class="fw-semibold">${new Date(report.created_at).toLocaleString(IS_EN ? 'en-US' : 'ar-JO')}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">${T('المولد:', 'Created By:')}</span>
+                            <span class="fw-semibold">${escHtml(report.creator?.username || T('غير معروف', 'Unknown'))}</span>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <div class="bg-white/5 border border-white/10 rounded-xl p-4">
-                <h6 class="font-label-md text-secondary uppercase tracking-wider mb-3">${T('الملخص', 'Summary')}</h6>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-error/10 border border-error/20 rounded-lg p-3 text-center">
-                        <div class="text-3xl font-display-sm font-bold text-error mb-1">${metrics.total_incidents || 0}</div>
-                        <div class="text-xs text-error/80 uppercase tracking-widest">${T('إجمالي الحوادث', 'Total Incidents')}</div>
-                    </div>
-                    <div class="bg-primary/10 border border-primary/20 rounded-lg p-3 text-center">
-                        <div class="text-3xl font-display-sm font-bold text-primary mb-1">${metrics.open_incidents || 0}</div>
-                        <div class="text-xs text-primary/80 uppercase tracking-widest">${T('حوادث مفتوحة', 'Open Incidents')}</div>
+
+            <div class="col-12 col-md-6">
+                <div class="border rounded p-3 bg-light bg-opacity-50 h-100">
+                    <h6 class="small text-info text-uppercase fw-semibold mb-3">${T('الملخص', 'Summary')}</h6>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="border border-danger border-opacity-25 bg-danger bg-opacity-10 rounded p-3 text-center">
+                                <div class="fs-3 fw-bold text-danger mb-1">${metrics.total_incidents || 0}</div>
+                                <div class="small text-danger text-uppercase">${T('إجمالي الحوادث', 'Total Incidents')}</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border border-primary border-opacity-25 bg-primary bg-opacity-10 rounded p-3 text-center">
+                                <div class="fs-3 fw-bold text-primary mb-1">${metrics.open_incidents || 0}</div>
+                                <div class="small text-primary text-uppercase">${T('حوادث مفتوحة', 'Open Incidents')}</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         ${metrics.per_kindergarten ? `
-        <div class="mt-6">
-            <h6 class="font-label-md text-on-surface uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-sm">domain</span>
+        <div class="mt-2">
+            <h6 class="small text-uppercase fw-semibold mb-3 d-flex align-items-center gap-2">
+                <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">domain</span>
                 ${T('الحوادث حسب الروضة', 'Incidents by Kindergarten')}
             </h6>
-            <div class="border border-white/10 rounded-xl overflow-hidden">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-white/5 border-b border-white/10 text-on-surface-variant">
+            <div class="table-responsive border rounded">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <th class="p-3 font-medium">${T('الروضة', 'Kindergarten')}</th>
-                            <th class="p-3 font-medium text-center w-32">${T('عدد الحوادث', 'Incidents Count')}</th>
+                            <th>${T('الروضة', 'Kindergarten')}</th>
+                            <th class="text-center" style="width:8rem">${T('عدد الحوادث', 'Incidents Count')}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-white/5">
+                    <tbody>
                         ${Object.entries(metrics.per_kindergarten).map(([name, count]) =>
-            `<tr class="hover:bg-white/5">
-                <td class="p-3">${escHtml(name)}</td>
-                <td class="p-3 text-center">
-                    <span class="inline-flex px-2 py-0.5 rounded bg-error/20 text-error font-medium border border-error/30 text-xs">${count}</span>
+            `<tr>
+                <td>${escHtml(name)}</td>
+                <td class="text-center">
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">${count}</span>
                 </td>
             </tr>`
         ).join('')}
