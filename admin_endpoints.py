@@ -4416,10 +4416,10 @@ def get_kg_overview(
         {
             "name": c.name_ar,
             "name_ar": c.name_ar,
-            "value": c.occupancy_rate,
-            "meta": {"status": c.occupancy_status, "id": c.id}
+            "value": c.capacity_utilization,
+            "meta": {"status": c.capacity_status, "id": c.id}
         }
-        for c in sorted(kg_cards, key=lambda x: x.occupancy_rate, reverse=True)
+        for c in sorted(kg_cards, key=lambda x: x.capacity_utilization, reverse=True)
     ]
 
     severity_chart = [
@@ -4458,7 +4458,7 @@ def get_kg_overview(
 
     # Executive health counters
     critical_alerts = sum(1 for c in kg_cards if c.health_score == "critical")
-    near_capacity_kgs = sum(1 for c in kg_cards if c.occupancy_status == "near_capacity")
+    near_capacity_kgs = sum(1 for c in kg_cards if c.capacity_status == "near_capacity")
     below_target = sum(1 for c in kg_cards if c.attendance_status in ("below_target", "critical_low"))
     data_quality_issues = sum(1 for c in kg_cards if c.teacher_data_status == "needs_update")
 
