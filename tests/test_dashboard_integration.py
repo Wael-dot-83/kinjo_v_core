@@ -3,7 +3,7 @@ def test_admin_dashboard_api_returns_dashboard_contract(client, auth_headers_adm
     assert response.status_code == 200
 
     payload = response.json()
-    for key in ("summary", "system_overview", "kindergartens", "charts", "alerts", "kpi_cards", "generated_at"):
+    for key in ("summary", "system_overview", "kindergartens", "charts", "alerts", "kpi_trends", "generated_at"):
         assert key in payload
 
     if payload["kindergartens"]:

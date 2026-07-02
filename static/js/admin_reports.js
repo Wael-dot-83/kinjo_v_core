@@ -25,46 +25,89 @@
     const toastMessage = getEl("toastMessage");
     const actionToast = getEl("actionToast");
     if (toastMessage && actionToast) {
-        toastMessage.innerText = msg;
-        const toast = new window.bootstrap.Toast(actionToast);
-        toast.show();
+      toastMessage.innerText = msg;
+      const toast = new window.bootstrap.Toast(actionToast);
+      toast.show();
     }
   }
 
   function updateFilterVisibility(reportType) {
     const allFilters = [
-      "filterGovContainer", "filterKgContainer", "filterStatusContainer",
-      "filterSeverityContainer", "filterSourceContainer", "filterReviewerContainer",
-      "filterAbsenceReasonContainer", "filterIncidentTypeContainer", "filterSlaContainer",
-      "filterParentInformedContainer", "filterDistrictContainer", "filterSensitivityContainer",
-      "filterActorRoleContainer", "filterTrainingStatusContainer",
+      "filterGovContainer",
+      "filterKgContainer",
+      "filterStatusContainer",
+      "filterSeverityContainer",
+      "filterSourceContainer",
+      "filterReviewerContainer",
+      "filterAbsenceReasonContainer",
+      "filterIncidentTypeContainer",
+      "filterSlaContainer",
+      "filterParentInformedContainer",
+      "filterDistrictContainer",
+      "filterSensitivityContainer",
+      "filterActorRoleContainer",
+      "filterTrainingStatusContainer",
     ];
-    allFilters.forEach(id => { const el = getEl(id); if (el) el.classList.add("d-none"); });
+    allFilters.forEach((id) => {
+      const el = getEl(id);
+      if (el) el.classList.add("d-none");
+    });
 
-    const show = (...ids) => ids.forEach(id => { const el = getEl(id); if (el) el.classList.remove("d-none"); });
+    const show = (...ids) =>
+      ids.forEach((id) => {
+        const el = getEl(id);
+        if (el) el.classList.remove("d-none");
+      });
 
     if (reportType === "attendance") {
-      show("filterGovContainer", "filterKgContainer", "filterAbsenceReasonContainer");
+      show(
+        "filterGovContainer",
+        "filterKgContainer",
+        "filterAbsenceReasonContainer",
+      );
     } else if (reportType === "compliance") {
       show("filterGovContainer", "filterKgContainer");
     } else if (reportType === "incidents") {
-      show("filterGovContainer", "filterKgContainer", "filterStatusContainer",
-           "filterSeverityContainer", "filterIncidentTypeContainer",
-           "filterSlaContainer", "filterParentInformedContainer");
+      show(
+        "filterGovContainer",
+        "filterKgContainer",
+        "filterStatusContainer",
+        "filterSeverityContainer",
+        "filterIncidentTypeContainer",
+        "filterSlaContainer",
+        "filterParentInformedContainer",
+      );
     } else if (reportType === "enrollment") {
-      show("filterStatusContainer", "filterSourceContainer", "filterReviewerContainer",
-           "filterDistrictContainer");
+      show(
+        "filterStatusContainer",
+        "filterSourceContainer",
+        "filterReviewerContainer",
+        "filterDistrictContainer",
+      );
     } else if (reportType === "full_audit") {
       show("filterSensitivityContainer", "filterActorRoleContainer");
     } else if (reportType === "staff_training") {
-      show("filterGovContainer", "filterKgContainer", "filterTrainingStatusContainer");
+      show(
+        "filterGovContainer",
+        "filterKgContainer",
+        "filterTrainingStatusContainer",
+      );
     } else if (reportType === "welfare") {
-      show("filterGovContainer", "filterKgContainer", "filterIncidentTypeContainer",
-           "filterSlaContainer", "filterParentInformedContainer");
+      show(
+        "filterGovContainer",
+        "filterKgContainer",
+        "filterIncidentTypeContainer",
+        "filterSlaContainer",
+        "filterParentInformedContainer",
+      );
     } else if (reportType === "trends") {
       show("filterGovContainer", "filterKgContainer");
     } else if (reportType === "capacity") {
-      show("filterGovContainer", "filterKgContainer", "filterDistrictContainer");
+      show(
+        "filterGovContainer",
+        "filterKgContainer",
+        "filterDistrictContainer",
+      );
     } else if (reportType === "parent_engagement") {
       show("filterGovContainer", "filterKgContainer");
     } else if (reportType === "data_quality") {
@@ -72,14 +115,15 @@
     }
   }
 
-
   // ===========================================================================
   // Helpers
   // ===========================================================================
-    function getMultiSelectValues(id) {
+  function getMultiSelectValues(id) {
     const el = getEl(id);
     if (!el) return [];
-    return Array.from(el.selectedOptions).map(opt => opt.value).filter(val => val !== "");
+    return Array.from(el.selectedOptions)
+      .map((opt) => opt.value)
+      .filter((val) => val !== "");
   }
 
   function escapeHtml(value) {
@@ -92,7 +136,8 @@
   }
 
   function reportsText(ar, en) {
-    const lang = document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+    const lang =
+      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
     return lang === "en" ? en : ar;
   }
 
@@ -136,7 +181,10 @@
   }
 
   function getFilters() {
-    const singleVal = (id) => { const el = getEl(id); return el?.value || ""; };
+    const singleVal = (id) => {
+      const el = getEl(id);
+      return el?.value || "";
+    };
     return {
       governorates: getMultiSelectValues("governorateFilter"),
       kindergarten_ids: getMultiSelectValues("kindergartenFilter").map(Number),
@@ -149,14 +197,18 @@
       sla_status: singleVal("slaFilter"),
       parent_informed: singleVal("parentInformedFilter"),
       district: singleVal("districtFilter"),
-      sensitivity_level: singleVal("sensitivityFilter") ? Number(singleVal("sensitivityFilter")) : null,
+      sensitivity_level: singleVal("sensitivityFilter")
+        ? Number(singleVal("sensitivityFilter"))
+        : null,
       actor_role: singleVal("actorRoleFilter"),
       training_status: singleVal("trainingStatusFilter"),
     };
   }
 
   function getReportType() {
-    const activeTab = document.querySelector("#reportCategoryTabs .nav-link.active");
+    const activeTab = document.querySelector(
+      "#reportCategoryTabs .nav-link.active",
+    );
     if (activeTab) {
       const target = activeTab.getAttribute("data-bs-target");
       if (target === "#pane-incidents") return "incidents";
@@ -210,7 +262,10 @@
   function buildStrategicQuery() {
     const period = getPeriod();
     const params = new URLSearchParams();
-    params.set("lang", document.documentElement.getAttribute("lang") === "en" ? "en" : "ar");
+    params.set(
+      "lang",
+      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar",
+    );
     params.set("level", getReportLevel());
     if (period.start) params.set("date_from", period.start);
     if (period.end) params.set("date_to", period.end);
@@ -280,8 +335,10 @@
       [];
 
     const insights = [];
-    if (data.interpretation?.summary) insights.push(data.interpretation.summary);
-    if (data.interpretation?.recommended_action) insights.push(data.interpretation.recommended_action);
+    if (data.interpretation?.summary)
+      insights.push(data.interpretation.summary);
+    if (data.interpretation?.recommended_action)
+      insights.push(data.interpretation.recommended_action);
 
     return {
       total_records: Array.isArray(sample_data) ? sample_data.length : 0,
@@ -307,10 +364,34 @@
   }
 
   const _AMMAN_TZ = "Asia/Amman";
-  const _DATE_FMT_AR = new Intl.DateTimeFormat("ar-JO", { year: "numeric", month: "short", day: "numeric", timeZone: _AMMAN_TZ });
-  const _DATETIME_FMT_AR = new Intl.DateTimeFormat("ar-JO", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: _AMMAN_TZ });
-  const _DATE_FMT_EN = new Intl.DateTimeFormat("en-JO", { year: "numeric", month: "short", day: "numeric", timeZone: _AMMAN_TZ });
-  const _DATETIME_FMT_EN = new Intl.DateTimeFormat("en-JO", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: _AMMAN_TZ });
+  const _DATE_FMT_AR = new Intl.DateTimeFormat("ar-JO", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: _AMMAN_TZ,
+  });
+  const _DATETIME_FMT_AR = new Intl.DateTimeFormat("ar-JO", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: _AMMAN_TZ,
+  });
+  const _DATE_FMT_EN = new Intl.DateTimeFormat("en-JO", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: _AMMAN_TZ,
+  });
+  const _DATETIME_FMT_EN = new Intl.DateTimeFormat("en-JO", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: _AMMAN_TZ,
+  });
 
   /**
    * Safely format a date/datetime value for display in Asia/Amman timezone.
@@ -323,7 +404,8 @@
     if (isNaN(d.getTime())) {
       return `<span class="badge bg-warning text-dark" title="${escapeHtml(String(val))}">Invalid Date</span>`;
     }
-    const lang = document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+    const lang =
+      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
     if (lang === "en") {
       return time ? _DATETIME_FMT_EN.format(d) : _DATE_FMT_EN.format(d);
     }
@@ -333,11 +415,20 @@
   async function fetchWithAuth(url, options) {
     const method = (options?.method || "GET").toUpperCase();
     const opts = Object.assign({ credentials: "same-origin" }, options || {});
-    opts.headers = Object.assign({ "Accept": "application/json" }, opts.headers || {});
+    opts.headers = Object.assign(
+      { Accept: "application/json" },
+      opts.headers || {},
+    );
     if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
       const csrfToken =
-        (window.CSRF_CONFIG && window.CSRF_CONFIG.cookieName && window.AuthStorage && window.AuthStorage.getCookie && window.AuthStorage.getCookie(window.CSRF_CONFIG.cookieName)) ||
-        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
+        (window.CSRF_CONFIG &&
+          window.CSRF_CONFIG.cookieName &&
+          window.AuthStorage &&
+          window.AuthStorage.getCookie &&
+          window.AuthStorage.getCookie(window.CSRF_CONFIG.cookieName)) ||
+        document
+          .querySelector('meta[name="csrf-token"]')
+          ?.getAttribute("content") ||
         "";
       if (csrfToken) {
         opts.headers["X-CSRF-Token"] = csrfToken;
@@ -345,11 +436,14 @@
     }
     const response = await fetch(url, opts);
     if (response.status === 401) {
-      window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
+      window.location.href =
+        "/login?redirect=" + encodeURIComponent(window.location.pathname);
       return null;
     }
     if (!response.ok) {
-      const err = new Error(response.statusText || `Request failed with status ${response.status}`);
+      const err = new Error(
+        response.statusText || `Request failed with status ${response.status}`,
+      );
       err.status = response.status;
       throw err;
     }
@@ -358,7 +452,7 @@
 
   function destroyChartInstances() {
     if (!window.Chart) return;
-    Object.values(window.Chart.instances).forEach(chart => {
+    Object.values(window.Chart.instances).forEach((chart) => {
       if (chart.canvas && chart.canvas.id.startsWith("chart-")) {
         chart.destroy();
       }
@@ -394,7 +488,9 @@
     if (!select) return;
     try {
       const gov = getGovernorate();
-      const url = gov ? `/api/admin/options/kindergartens?governorate=${encodeURIComponent(gov)}` : "/api/admin/options/kindergartens";
+      const url = gov
+        ? `/api/admin/options/kindergartens?governorate=${encodeURIComponent(gov)}`
+        : "/api/admin/options/kindergartens";
       const res = await fetchWithAuth(url);
       if (!res) return;
       const data = await res.json();
@@ -415,7 +511,9 @@
     const select = getEl("reviewerFilter");
     if (!select) return;
     try {
-      const res = await fetchWithAuth("/api/admin/users?role=MANAGER&limit=100");
+      const res = await fetchWithAuth(
+        "/api/admin/users?role=MANAGER&limit=100",
+      );
       if (!res) return;
       const data = await res.json();
       const users = data.data || [];
@@ -436,15 +534,24 @@
     if (!select) return;
     const fallback = [
       { value: "DRAFT", label_ar: "غير مكتمل", label_en: "Incomplete" },
-      { value: "SUBMITTED", label_ar: "قيد التحقق", label_en: "Under Verification" },
-      { value: "PENDING_REVIEW", label_ar: "قيد المراجعة", label_en: "Pending Review" },
+      {
+        value: "SUBMITTED",
+        label_ar: "قيد التحقق",
+        label_en: "Under Verification",
+      },
+      {
+        value: "PENDING_REVIEW",
+        label_ar: "قيد المراجعة",
+        label_en: "Pending Review",
+      },
       { value: "ACCEPTED", label_ar: "موافق عليه", label_en: "Approved" },
       { value: "REJECTED", label_ar: "مرفوض", label_en: "Rejected" },
       { value: "ACTIVE", label_ar: "نشط", label_en: "Active" },
       { value: "WAITLISTED", label_ar: "قائمة انتظار", label_en: "Waitlisted" },
       { value: "WITHDRAWN", label_ar: "منسحب", label_en: "Withdrawn" },
     ];
-    const lang = document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+    const lang =
+      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
     const labelKey = lang === "en" ? "label_en" : "label_ar";
     while (select.options.length > 1) select.remove(1);
     fallback.forEach((s) => {
@@ -461,7 +568,10 @@
   async function loadReportPreview({ silent = false } = {}) {
     const period = getPeriod();
     if (!period.start || !period.end) {
-      if (!silent) alert(reportsText("يرجى تحديد نطاق التاريخ", "Please select a date range"));
+      if (!silent)
+        alert(
+          reportsText("يرجى تحديد نطاق التاريخ", "Please select a date range"),
+        );
       return;
     }
 
@@ -471,27 +581,42 @@
     hideEl("previewInsights");
     hideEl("previewWarnings");
     setText("previewRecordCount", "...");
-    setText("reportsLastUpdated", reportsText("جاري تحميل المعاينة...", "Loading preview..."));
+    setText(
+      "reportsLastUpdated",
+      reportsText("جاري تحميل المعاينة...", "Loading preview..."),
+    );
 
     try {
       const endpoint = getStrategicEndpoint(reportType);
       const query = buildStrategicQuery();
-      const res = await fetchWithAuth(`${STRATEGIC_API_BASE}${endpoint}?${query}`);
+      const res = await fetchWithAuth(
+        `${STRATEGIC_API_BASE}${endpoint}?${query}`,
+      );
       if (!res) return;
       const raw = await res.json();
       const adapted = toPreviewPayloadFromStrategic(raw);
       renderPreview(adapted);
-      setText("reportsLastUpdated", reportsText("تم تحديث المعاينة", "Preview updated"));
+      setText(
+        "reportsLastUpdated",
+        reportsText("تم تحديث المعاينة", "Preview updated"),
+      );
     } catch (e) {
       console.error("Preview failed", e);
-      setText("reportsLastUpdated", reportsText("فشل تحميل المعاينة", "Preview failed"));
+      setText(
+        "reportsLastUpdated",
+        reportsText("فشل تحميل المعاينة", "Preview failed"),
+      );
       const tb = getEl("previewTableBody");
-      if (tb) tb.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${reportsText("تعذر تحميل المعاينة.", "Failed to load preview.")}</td></tr>`;
+      if (tb)
+        tb.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${reportsText("تعذر تحميل المعاينة.", "Failed to load preview.")}</td></tr>`;
     }
   }
 
   function renderPreview(data) {
-    setText("previewRecordCount", `${data.total_records || 0} ${reportsText("سجل", "records")}`);
+    setText(
+      "previewRecordCount",
+      `${data.total_records || 0} ${reportsText("سجل", "records")}`,
+    );
 
     // KPIs
     const kpiContainer = getEl("previewKpis");
@@ -505,19 +630,19 @@
                 <div class="small text-muted">${escapeHtml(reportsText(kpi.label_ar || kpi.label, kpi.label_en || kpi.label))}</div>
               </div>
             </div>
-            `
+            `,
         )
         .join("");
     }
 
-    // Charts 
+    // Charts
     const chartsContainer = getEl("previewCharts");
     if (chartsContainer && data.charts && data.charts.length) {
       chartsContainer.innerHTML = data.charts
         .map((chart) => {
-          const isLarge = chart.type === 'line' || chart.type === 'bar';
+          const isLarge = chart.type === "line" || chart.type === "bar";
           return `
-            <div class="${isLarge ? 'col-lg-12' : 'col-lg-6'} mb-4">
+            <div class="${isLarge ? "col-lg-12" : "col-lg-6"} mb-4">
               <div class="border rounded p-3 bg-white shadow-sm h-100">
                 <div class="fw-bold mb-3 text-center">${escapeHtml(reportsText(chart.label_ar || chart.label, chart.label_en || chart.label))}</div>
                 <div style="position: relative; height: 300px; width: 100%;">
@@ -528,42 +653,61 @@
             `;
         })
         .join("");
-        
-      data.charts.forEach(chart => {
+
+      data.charts.forEach((chart) => {
         const canvas = document.getElementById(`chart-${chart.id}`);
         if (!canvas) return;
         const chartData = chart.data || { labels: [], datasets: [] };
-        
+
         // Handle bilingual labels
         if (chartData.labels) {
-            chartData.labels = chartData.labels.map(l => typeof l === 'object' && l !== null ? reportsText(l.ar || l.en, l.en || l.ar) : l);
+          chartData.labels = chartData.labels.map((l) =>
+            typeof l === "object" && l !== null
+              ? reportsText(l.ar || l.en, l.en || l.ar)
+              : l,
+          );
         }
         if (chartData.datasets) {
-            chartData.datasets.forEach(ds => {
-                if (typeof ds.label === 'object' && ds.label !== null) {
-                    ds.label = reportsText(ds.label.ar || ds.label.en, ds.label.en || ds.label.ar);
-                }
-            });
+          chartData.datasets.forEach((ds) => {
+            if (typeof ds.label === "object" && ds.label !== null) {
+              ds.label = reportsText(
+                ds.label.ar || ds.label.en,
+                ds.label.en || ds.label.ar,
+              );
+            }
+          });
         }
-        
+
         new window.Chart(canvas, {
-          type: chart.type || 'bar',
+          type: chart.type || "bar",
           data: chartData,
           options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
               legend: {
-                position: 'bottom',
-                rtl: document.documentElement.getAttribute("dir") === "rtl" || document.documentElement.getAttribute("lang") === "ar",
-                textDirection: document.documentElement.getAttribute("dir") === "rtl" || document.documentElement.getAttribute("lang") === "ar" ? 'rtl' : 'ltr'
+                position: "bottom",
+                rtl:
+                  document.documentElement.getAttribute("dir") === "rtl" ||
+                  document.documentElement.getAttribute("lang") === "ar",
+                textDirection:
+                  document.documentElement.getAttribute("dir") === "rtl" ||
+                  document.documentElement.getAttribute("lang") === "ar"
+                    ? "rtl"
+                    : "ltr",
               },
               tooltip: {
-                rtl: document.documentElement.getAttribute("dir") === "rtl" || document.documentElement.getAttribute("lang") === "ar",
-                textDirection: document.documentElement.getAttribute("dir") === "rtl" || document.documentElement.getAttribute("lang") === "ar" ? 'rtl' : 'ltr'
-              }
-            }
-          }
+                rtl:
+                  document.documentElement.getAttribute("dir") === "rtl" ||
+                  document.documentElement.getAttribute("lang") === "ar",
+                textDirection:
+                  document.documentElement.getAttribute("dir") === "rtl" ||
+                  document.documentElement.getAttribute("lang") === "ar"
+                    ? "rtl"
+                    : "ltr",
+              },
+            },
+          },
         });
       });
     } else if (chartsContainer) {
@@ -580,7 +724,7 @@
     previewColumns = previewItems.length ? Object.keys(previewItems[0]) : [];
     previewCurrentPage = 1;
     previewSortColumn = "";
-    
+
     renderPreviewTable();
   }
 
@@ -608,10 +752,10 @@
         let valB = b[previewSortColumn];
         if (valA === null || valA === undefined) valA = "";
         if (valB === null || valB === undefined) valB = "";
-        if (typeof valA === 'string') valA = valA.toLowerCase();
-        if (typeof valB === 'string') valB = valB.toLowerCase();
-        if (valA < valB) return previewSortDirection === 'asc' ? -1 : 1;
-        if (valA > valB) return previewSortDirection === 'asc' ? 1 : -1;
+        if (typeof valA === "string") valA = valA.toLowerCase();
+        if (typeof valB === "string") valB = valB.toLowerCase();
+        if (valA < valB) return previewSortDirection === "asc" ? -1 : 1;
+        if (valA > valB) return previewSortDirection === "asc" ? 1 : -1;
         return 0;
       });
     }
@@ -626,21 +770,28 @@
     const paginated = sorted.slice(startIdx, endIdx);
 
     // Render Headers with sort icons
-    thead.innerHTML = `<tr>${previewColumns.map((col) => {
-      const isSorted = previewSortColumn === col;
-      const caret = isSorted ? (previewSortDirection === 'asc' ? ' <i class="bi bi-caret-up-fill"></i>' : ' <i class="bi bi-caret-down-fill"></i>') : '';
-      return `<th style="cursor: pointer" class="sortable-header" data-col="${escapeHtml(col)}">${escapeHtml(col)}${caret}</th>`;
-    }).join("")}</tr>`;
+    thead.innerHTML = `<tr>${previewColumns
+      .map((col) => {
+        const isSorted = previewSortColumn === col;
+        const caret = isSorted
+          ? previewSortDirection === "asc"
+            ? ' <i class="bi bi-caret-up-fill"></i>'
+            : ' <i class="bi bi-caret-down-fill"></i>'
+          : "";
+        return `<th style="cursor: pointer" class="sortable-header" data-col="${escapeHtml(col)}">${escapeHtml(col)}${caret}</th>`;
+      })
+      .join("")}</tr>`;
 
     // Add sort listeners
-    thead.querySelectorAll('.sortable-header').forEach(th => {
-      th.addEventListener('click', (e) => {
-        const col = e.currentTarget.getAttribute('data-col');
+    thead.querySelectorAll(".sortable-header").forEach((th) => {
+      th.addEventListener("click", (e) => {
+        const col = e.currentTarget.getAttribute("data-col");
         if (previewSortColumn === col) {
-          previewSortDirection = previewSortDirection === 'asc' ? 'desc' : 'asc';
+          previewSortDirection =
+            previewSortDirection === "asc" ? "desc" : "asc";
         } else {
           previewSortColumn = col;
-          previewSortDirection = 'asc';
+          previewSortDirection = "asc";
         }
         renderPreviewTable();
       });
@@ -655,17 +806,20 @@
           let val = row[col];
           if (val === null || val === undefined) val = "-";
           // Try to format if it looks like ISO date
-          if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
-             val = formatDateSafe(val);
+          if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+            val = formatDateSafe(val);
           }
           return `<td>${escapeHtml(String(val))}</td>`;
         })
-        .join("")}</tr>`
+        .join("")}</tr>`,
       )
       .join("");
 
     // Update pagination controls
-    setText("previewPaginationInfo", `${startIdx + 1}-${endIdx} of ${sorted.length}`);
+    setText(
+      "previewPaginationInfo",
+      `${startIdx + 1}-${endIdx} of ${sorted.length}`,
+    );
     const prevBtn = getEl("prevPreviewPageBtn");
     const nextBtn = getEl("nextPreviewPageBtn");
     if (prevBtn) prevBtn.disabled = previewCurrentPage === 1;
@@ -675,7 +829,9 @@
   async function exportCurrentReport() {
     const period = getPeriod();
     if (!period.start || !period.end) {
-      alert(reportsText("يرجى تحديد نطاق التاريخ", "Please select a date range"));
+      alert(
+        reportsText("يرجى تحديد نطاق التاريخ", "Please select a date range"),
+      );
       return;
     }
 
@@ -685,7 +841,10 @@
       const endpoint = getStrategicEndpoint(reportType);
       const params = new URLSearchParams(buildStrategicQuery());
       params.set("report_type", getStrategicReportType(reportType));
-      params.set("export_format", format.toLowerCase() === "json" ? "json" : "csv");
+      params.set(
+        "export_format",
+        format.toLowerCase() === "json" ? "json" : "csv",
+      );
       window.location.href = `${STRATEGIC_API_BASE}/export?${params.toString()}`;
     } catch (e) {
       console.error("Export failed", e);
@@ -710,7 +869,15 @@
           showExportJobError(status, jobId);
         } else if (attempts >= maxAttempts) {
           clearInterval(interval);
-          showExportJobError({ error: reportsText("تجاوز الوقت المسموح", "Export timed out after maximum wait") }, jobId);
+          showExportJobError(
+            {
+              error: reportsText(
+                "تجاوز الوقت المسموح",
+                "Export timed out after maximum wait",
+              ),
+            },
+            jobId,
+          );
         }
       } catch (e) {
         clearInterval(interval);
@@ -727,8 +894,13 @@
     if (!banner) return;
 
     if (msgEl) {
-      const ts = status.created_at ? ` (${formatDateSafe(status.created_at, { time: true })})` : "";
-      msgEl.textContent = (status.error || reportsText("فشلت عملية التصدير", "The export operation failed")) + ts;
+      const ts = status.created_at
+        ? ` (${formatDateSafe(status.created_at, { time: true })})`
+        : "";
+      msgEl.textContent =
+        (status.error ||
+          reportsText("فشلت عملية التصدير", "The export operation failed")) +
+        ts;
     }
     if (traceLink && status.trace_url) {
       traceLink.href = status.trace_url;
@@ -747,7 +919,7 @@
   // ===========================================================================
   // Templates
   // ===========================================================================
-  
+
   // ===========================================================================
   // Templates Loading logic
   // ===========================================================================
@@ -760,22 +932,24 @@
       const res = await fetchWithAuth(`${API_BASE}/reports/templates`);
       if (!res) return;
       loadedTemplates = await res.json();
-      
+
       if (!loadedTemplates.length) {
         list.innerHTML = `<li><span class="dropdown-item-text text-muted small">${reportsText("لا توجد قوالب محفوظة", "No saved templates")}</span></li>`;
         return;
       }
-      
-      list.innerHTML = loadedTemplates.map(t => {
+
+      list.innerHTML = loadedTemplates
+        .map((t) => {
           return `<li><a class="dropdown-item" href="#" data-template-id="${t.id}">${escapeHtml(t.name)}</a></li>`;
-      }).join('');
-      
-      list.querySelectorAll('.dropdown-item').forEach(item => {
-          item.addEventListener('click', (e) => {
-              e.preventDefault();
-              const tid = e.target.getAttribute('data-template-id');
-              applyTemplate(tid);
-          });
+        })
+        .join("");
+
+      list.querySelectorAll(".dropdown-item").forEach((item) => {
+        item.addEventListener("click", (e) => {
+          e.preventDefault();
+          const tid = e.target.getAttribute("data-template-id");
+          applyTemplate(tid);
+        });
       });
     } catch (e) {
       console.error("Failed to load templates", e);
@@ -784,62 +958,79 @@
   }
 
   function applyTemplate(id) {
-      const t = loadedTemplates.find(x => String(x.id) === String(id));
-      if (!t) return;
-      
-      // switch tab
-      const tabMap = {
-          "attendance": "#tab-attendance",
-          "incidents": "#tab-incidents",
-          "compliance": "#tab-compliance",
-          "enrollment": "#tab-enrollment",
-          "full_audit": "#tab-audit",
-          "staff_training": "#tab-staff",
-          "welfare": "#tab-welfare",
-          "trends": "#tab-trends",
-          "capacity": "#tab-capacity",
-          "parent_engagement": "#tab-parent",
-          "data_quality": "#tab-dataquality",
-      };
-      const tabId = tabMap[t.report_type];
-      if (tabId) {
-          const tabEl = document.querySelector(tabId);
-          if (tabEl) {
-              const tab = new window.bootstrap.Tab(tabEl);
-              tab.show();
-          }
+    const t = loadedTemplates.find((x) => String(x.id) === String(id));
+    if (!t) return;
+
+    // switch tab
+    const tabMap = {
+      attendance: "#tab-attendance",
+      incidents: "#tab-incidents",
+      compliance: "#tab-compliance",
+      enrollment: "#tab-enrollment",
+      full_audit: "#tab-audit",
+      staff_training: "#tab-staff",
+      welfare: "#tab-welfare",
+      trends: "#tab-trends",
+      capacity: "#tab-capacity",
+      parent_engagement: "#tab-parent",
+      data_quality: "#tab-dataquality",
+    };
+    const tabId = tabMap[t.report_type];
+    if (tabId) {
+      const tabEl = document.querySelector(tabId);
+      if (tabEl) {
+        const tab = new window.bootstrap.Tab(tabEl);
+        tab.show();
       }
-      
-      // Wait a moment for tab switch to update visibility
-      setTimeout(() => {
-          if (t.filters) {
-              const setMultiValues = (id, vals) => {
-                  const select = getEl(id);
-                  if (!select || !vals) return;
-                  const arr = Array.isArray(vals) ? vals : [vals];
-                  Array.from(select.options).forEach(opt => {
-                      opt.selected = arr.map(String).includes(String(opt.value));
-                  });
-              };
-              setMultiValues("governorateFilter", t.filters.governorates || t.filters.governorate);
-              setMultiValues("kindergartenFilter", t.filters.kindergarten_ids || t.filters.kindergarten_id);
-              setMultiValues("statusFilter", t.filters.statuses || t.filters.status);
-              setMultiValues("severityFilter", t.filters.severities || t.filters.severity);
-              setMultiValues("sourceFilter", t.filters.sources || t.filters.source);
-              setMultiValues("reviewerFilter", t.filters.reviewer_ids || t.filters.reviewer_id);
-          }
-          if(getEl("exportFormat")) getEl("exportFormat").value = t.export_format || "CSV";
-          if(getEl("includeCharts")) getEl("includeCharts").checked = t.include_charts;
-          if(getEl("includeSummary")) getEl("includeSummary").checked = t.include_summary;
-          
-          loadReportPreview();
-      }, 100);
+    }
+
+    // Wait a moment for tab switch to update visibility
+    setTimeout(() => {
+      if (t.filters) {
+        const setMultiValues = (id, vals) => {
+          const select = getEl(id);
+          if (!select || !vals) return;
+          const arr = Array.isArray(vals) ? vals : [vals];
+          Array.from(select.options).forEach((opt) => {
+            opt.selected = arr.map(String).includes(String(opt.value));
+          });
+        };
+        setMultiValues(
+          "governorateFilter",
+          t.filters.governorates || t.filters.governorate,
+        );
+        setMultiValues(
+          "kindergartenFilter",
+          t.filters.kindergarten_ids || t.filters.kindergarten_id,
+        );
+        setMultiValues("statusFilter", t.filters.statuses || t.filters.status);
+        setMultiValues(
+          "severityFilter",
+          t.filters.severities || t.filters.severity,
+        );
+        setMultiValues("sourceFilter", t.filters.sources || t.filters.source);
+        setMultiValues(
+          "reviewerFilter",
+          t.filters.reviewer_ids || t.filters.reviewer_id,
+        );
+      }
+      if (getEl("exportFormat"))
+        getEl("exportFormat").value = t.export_format || "CSV";
+      if (getEl("includeCharts"))
+        getEl("includeCharts").checked = t.include_charts;
+      if (getEl("includeSummary"))
+        getEl("includeSummary").checked = t.include_summary;
+
+      loadReportPreview();
+    }, 100);
   }
 
   async function saveAsTemplate() {
     const name = getEl("templateName")?.value?.trim();
     if (!name) {
-      alert(reportsText("يرجى إدخال اسم القالب", "Please enter a template name"));
+      alert(
+        reportsText("يرجى إدخال اسم القالب", "Please enter a template name"),
+      );
       return;
     }
 
@@ -860,9 +1051,13 @@
       });
       if (!res) return;
       await res.json();
-      const modal = window.bootstrap?.Modal?.getInstance(getEl("saveTemplateModal"));
+      const modal = window.bootstrap?.Modal?.getInstance(
+        getEl("saveTemplateModal"),
+      );
       if (modal) modal.hide();
-      showToast(reportsText("تم حفظ القالب بنجاح", "Template saved successfully"));
+      showToast(
+        reportsText("تم حفظ القالب بنجاح", "Template saved successfully"),
+      );
       loadSavedTemplates();
     } catch (e) {
       console.error("Save template failed", e);
@@ -876,7 +1071,9 @@
   async function scheduleReport() {
     const name = getEl("scheduleName")?.value?.trim();
     if (!name) {
-      alert(reportsText("يرجى إدخال اسم الجدولة", "Please enter a schedule name"));
+      alert(
+        reportsText("يرجى إدخال اسم الجدولة", "Please enter a schedule name"),
+      );
       return;
     }
 
@@ -904,7 +1101,9 @@
       });
       if (!res) return;
       await res.json();
-      const modal = window.bootstrap?.Modal?.getInstance(getEl("scheduleModal"));
+      const modal = window.bootstrap?.Modal?.getInstance(
+        getEl("scheduleModal"),
+      );
       if (modal) modal.hide();
       alert(reportsText("تمت الجدولة بنجاح", "Report scheduled successfully"));
       loadRecentHistory();
@@ -940,12 +1139,14 @@
     if (!tbody) return;
 
     // Filter
-    const filtered = historyItems.filter(item => {
+    const filtered = historyItems.filter((item) => {
       const name = (item.report_name || item.report_type).toLowerCase();
       const format = (item.format || "").toLowerCase();
       const status = (item.status || "").toLowerCase();
       const query = historySearchText.toLowerCase();
-      return name.includes(query) || format.includes(query) || status.includes(query);
+      return (
+        name.includes(query) || format.includes(query) || status.includes(query)
+      );
     });
 
     if (!filtered.length) {
@@ -984,20 +1185,23 @@
           ${item.status === "COMPLETED" && item.id ? `<a href="/api/analytics/export/${item.id}/file" class="btn btn-sm btn-outline-primary" aria-label="Download report"><i class="bi bi-download"></i></a>` : ""}
           ${item.status === "FAILED" ? `<button class="btn btn-sm btn-outline-danger retry-export-btn" data-job-id="${item.id}" aria-label="Retry export"><i class="bi bi-arrow-counterclockwise"></i></button>` : ""}
         </td>
-      </tr>`
+      </tr>`,
       )
       .join("");
 
     // Wire up retry buttons
-    tbody.querySelectorAll('.retry-export-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-         const jobId = e.currentTarget.getAttribute('data-job-id');
-         await retryExportJob(jobId);
+    tbody.querySelectorAll(".retry-export-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        const jobId = e.currentTarget.getAttribute("data-job-id");
+        await retryExportJob(jobId);
       });
     });
 
     // Update pagination elements
-    setText("historyPaginationInfo", `${startIdx + 1}-${endIdx} of ${filtered.length}`);
+    setText(
+      "historyPaginationInfo",
+      `${startIdx + 1}-${endIdx} of ${filtered.length}`,
+    );
     const prevBtn = getEl("prevHistoryPageBtn");
     const nextBtn = getEl("nextHistoryPageBtn");
     if (prevBtn) prevBtn.disabled = historyCurrentPage === 1;
@@ -1005,23 +1209,26 @@
   }
 
   async function retryExportJob(jobId) {
-     showToast(reportsText("جاري إعادة محاولة التصدير...", "Retrying export..."));
-     try {
-       const res = await fetchWithAuth(`${API_BASE}/export`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ retry_job_id: Number(jobId) })
-       });
-       if (res) {
-          showToast(reportsText("تم بدء تصدير التقرير", "Export job started"));
-          await loadRecentHistory();
-       }
-     } catch(e) {
-        showToast(reportsText("تعذر إعادة محاولة التصدير", "Failed to retry export"));
-     }
+    showToast(
+      reportsText("جاري إعادة محاولة التصدير...", "Retrying export..."),
+    );
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ retry_job_id: Number(jobId) }),
+      });
+      if (res) {
+        showToast(reportsText("تم بدء تصدير التقرير", "Export job started"));
+        await loadRecentHistory();
+      }
+    } catch (e) {
+      showToast(
+        reportsText("تعذر إعادة محاولة التصدير", "Failed to retry export"),
+      );
+    }
   }
 
-  
   async function loadSavedTemplates() {
     const list = getEl("templateList");
     if (!list) return;
@@ -1029,22 +1236,24 @@
       const res = await fetchWithAuth(`${API_BASE}/reports/templates`);
       if (!res) return;
       loadedTemplates = await res.json();
-      
+
       if (!loadedTemplates.length) {
         list.innerHTML = `<li><span class="dropdown-item-text text-muted small">${reportsText("لا توجد قوالب محفوظة", "No saved templates")}</span></li>`;
         return;
       }
-      
-      list.innerHTML = loadedTemplates.map(t => {
+
+      list.innerHTML = loadedTemplates
+        .map((t) => {
           return `<li><a class="dropdown-item" href="#" data-template-id="${t.id}">${escapeHtml(t.name)}</a></li>`;
-      }).join('');
-      
-      list.querySelectorAll('.dropdown-item').forEach(item => {
-          item.addEventListener('click', (e) => {
-              e.preventDefault();
-              const tid = e.target.getAttribute('data-template-id');
-              applyTemplate(tid);
-          });
+        })
+        .join("");
+
+      list.querySelectorAll(".dropdown-item").forEach((item) => {
+        item.addEventListener("click", (e) => {
+          e.preventDefault();
+          const tid = e.target.getAttribute("data-template-id");
+          applyTemplate(tid);
+        });
       });
     } catch (e) {
       console.error("Failed to load templates", e);
@@ -1053,62 +1262,79 @@
   }
 
   function applyTemplate(id) {
-      const t = loadedTemplates.find(x => String(x.id) === String(id));
-      if (!t) return;
-      
-      // switch tab
-      const tabMap = {
-          "attendance": "#tab-attendance",
-          "incidents": "#tab-incidents",
-          "compliance": "#tab-compliance",
-          "enrollment": "#tab-enrollment",
-          "full_audit": "#tab-audit",
-          "staff_training": "#tab-staff",
-          "welfare": "#tab-welfare",
-          "trends": "#tab-trends",
-          "capacity": "#tab-capacity",
-          "parent_engagement": "#tab-parent",
-          "data_quality": "#tab-dataquality",
-      };
-      const tabId = tabMap[t.report_type];
-      if (tabId) {
-          const tabEl = document.querySelector(tabId);
-          if (tabEl) {
-              const tab = new window.bootstrap.Tab(tabEl);
-              tab.show();
-          }
+    const t = loadedTemplates.find((x) => String(x.id) === String(id));
+    if (!t) return;
+
+    // switch tab
+    const tabMap = {
+      attendance: "#tab-attendance",
+      incidents: "#tab-incidents",
+      compliance: "#tab-compliance",
+      enrollment: "#tab-enrollment",
+      full_audit: "#tab-audit",
+      staff_training: "#tab-staff",
+      welfare: "#tab-welfare",
+      trends: "#tab-trends",
+      capacity: "#tab-capacity",
+      parent_engagement: "#tab-parent",
+      data_quality: "#tab-dataquality",
+    };
+    const tabId = tabMap[t.report_type];
+    if (tabId) {
+      const tabEl = document.querySelector(tabId);
+      if (tabEl) {
+        const tab = new window.bootstrap.Tab(tabEl);
+        tab.show();
       }
-      
-      // Wait a moment for tab switch to update visibility
-      setTimeout(() => {
-          if (t.filters) {
-              const setMultiValues = (id, vals) => {
-                  const select = getEl(id);
-                  if (!select || !vals) return;
-                  const arr = Array.isArray(vals) ? vals : [vals];
-                  Array.from(select.options).forEach(opt => {
-                      opt.selected = arr.map(String).includes(String(opt.value));
-                  });
-              };
-              setMultiValues("governorateFilter", t.filters.governorates || t.filters.governorate);
-              setMultiValues("kindergartenFilter", t.filters.kindergarten_ids || t.filters.kindergarten_id);
-              setMultiValues("statusFilter", t.filters.statuses || t.filters.status);
-              setMultiValues("severityFilter", t.filters.severities || t.filters.severity);
-              setMultiValues("sourceFilter", t.filters.sources || t.filters.source);
-              setMultiValues("reviewerFilter", t.filters.reviewer_ids || t.filters.reviewer_id);
-          }
-          if(getEl("exportFormat")) getEl("exportFormat").value = t.export_format || "CSV";
-          if(getEl("includeCharts")) getEl("includeCharts").checked = t.include_charts;
-          if(getEl("includeSummary")) getEl("includeSummary").checked = t.include_summary;
-          
-          loadReportPreview();
-      }, 100);
+    }
+
+    // Wait a moment for tab switch to update visibility
+    setTimeout(() => {
+      if (t.filters) {
+        const setMultiValues = (id, vals) => {
+          const select = getEl(id);
+          if (!select || !vals) return;
+          const arr = Array.isArray(vals) ? vals : [vals];
+          Array.from(select.options).forEach((opt) => {
+            opt.selected = arr.map(String).includes(String(opt.value));
+          });
+        };
+        setMultiValues(
+          "governorateFilter",
+          t.filters.governorates || t.filters.governorate,
+        );
+        setMultiValues(
+          "kindergartenFilter",
+          t.filters.kindergarten_ids || t.filters.kindergarten_id,
+        );
+        setMultiValues("statusFilter", t.filters.statuses || t.filters.status);
+        setMultiValues(
+          "severityFilter",
+          t.filters.severities || t.filters.severity,
+        );
+        setMultiValues("sourceFilter", t.filters.sources || t.filters.source);
+        setMultiValues(
+          "reviewerFilter",
+          t.filters.reviewer_ids || t.filters.reviewer_id,
+        );
+      }
+      if (getEl("exportFormat"))
+        getEl("exportFormat").value = t.export_format || "CSV";
+      if (getEl("includeCharts"))
+        getEl("includeCharts").checked = t.include_charts;
+      if (getEl("includeSummary"))
+        getEl("includeSummary").checked = t.include_summary;
+
+      loadReportPreview();
+    }, 100);
   }
 
   async function saveAsTemplate() {
     const name = getEl("templateName")?.value?.trim();
     if (!name) {
-      alert(reportsText("يرجى إدخال اسم القالب", "Please enter a template name"));
+      alert(
+        reportsText("يرجى إدخال اسم القالب", "Please enter a template name"),
+      );
       return;
     }
 
@@ -1129,9 +1355,13 @@
       });
       if (!res) return;
       await res.json();
-      const modal = window.bootstrap?.Modal?.getInstance(getEl("saveTemplateModal"));
+      const modal = window.bootstrap?.Modal?.getInstance(
+        getEl("saveTemplateModal"),
+      );
       if (modal) modal.hide();
-      showToast(reportsText("تم حفظ القالب بنجاح", "Template saved successfully"));
+      showToast(
+        reportsText("تم حفظ القالب بنجاح", "Template saved successfully"),
+      );
       loadSavedTemplates();
     } catch (e) {
       console.error("Save template failed", e);
@@ -1145,7 +1375,9 @@
   async function scheduleReport() {
     const name = getEl("scheduleName")?.value?.trim();
     if (!name) {
-      alert(reportsText("يرجى إدخال اسم الجدولة", "Please enter a schedule name"));
+      alert(
+        reportsText("يرجى إدخال اسم الجدولة", "Please enter a schedule name"),
+      );
       return;
     }
 
@@ -1173,7 +1405,9 @@
       });
       if (!res) return;
       await res.json();
-      const modal = window.bootstrap?.Modal?.getInstance(getEl("scheduleModal"));
+      const modal = window.bootstrap?.Modal?.getInstance(
+        getEl("scheduleModal"),
+      );
       if (modal) modal.hide();
       alert(reportsText("تمت الجدولة بنجاح", "Report scheduled successfully"));
       loadRecentHistory();
@@ -1213,16 +1447,17 @@
       };
 
       tbody.innerHTML = items
-        .map(
-          (item) => {
-            const isFailed = item.status === "FAILED";
-            const errorDetail = isFailed && item.error
+        .map((item) => {
+          const isFailed = item.status === "FAILED";
+          const errorDetail =
+            isFailed && item.error
               ? `<div class="small text-danger mt-1"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>${escapeHtml(item.error)}</div>`
               : "";
-            const traceLink = isFailed && item.trace_url
-              ? `<a href="${escapeHtml(item.trace_url)}" class="btn btn-sm btn-outline-secondary ms-1" title="${reportsText("عرض السجلات","View Logs")}"><i class="bi bi-journal-text"></i></a>`
+          const traceLink =
+            isFailed && item.trace_url
+              ? `<a href="${escapeHtml(item.trace_url)}" class="btn btn-sm btn-outline-secondary ms-1" title="${reportsText("عرض السجلات", "View Logs")}"><i class="bi bi-journal-text"></i></a>`
               : "";
-            return `
+          return `
         <tr>
           <td class="fw-medium">${escapeHtml(item.report_name || item.report_type)}</td>
           <td>${escapeHtml(item.format)}</td>
@@ -1232,14 +1467,13 @@
             ${errorDetail}
           </td>
           <td class="text-center">
-            ${item.status === "COMPLETED" && item.id ? `<a href="/api/analytics/export/${item.id}/file" class="btn btn-sm btn-outline-primary" title="${reportsText("تنزيل","Download")}"><i class="bi bi-download"></i></a>` : ""}
-            <button class="btn btn-sm btn-outline-secondary" data-action="rerun" data-id="${item.id}" title="${reportsText("إعادة إنشاء","Regenerate")}"><i class="bi bi-arrow-clockwise"></i></button>
+            ${item.status === "COMPLETED" && item.id ? `<a href="/api/analytics/export/${item.id}/file" class="btn btn-sm btn-outline-primary" title="${reportsText("تنزيل", "Download")}"><i class="bi bi-download"></i></a>` : ""}
+            <button class="btn btn-sm btn-outline-secondary" data-action="rerun" data-id="${item.id}" title="${reportsText("إعادة إنشاء", "Regenerate")}"><i class="bi bi-arrow-clockwise"></i></button>
             ${traceLink}
           </td>
         </tr>
       `;
-          }
-        )
+        })
         .join("");
 
       // Wire rerun buttons
@@ -1248,7 +1482,9 @@
           const id = btn.getAttribute("data-id");
           if (!id) return;
           try {
-            await fetchWithAuth(`${API_BASE}/export/${id}/file`, { method: "GET" });
+            await fetchWithAuth(`${API_BASE}/export/${id}/file`, {
+              method: "GET",
+            });
             window.location.href = `${API_BASE}/export/${id}/file`;
           } catch (e) {
             console.error("Rerun failed", e);
@@ -1275,7 +1511,10 @@
         const d = new Date(it.generated_at);
         // Skip entries whose generated_at cannot be parsed (avoids NaN comparisons)
         if (isNaN(d.getTime())) return false;
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        return (
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear()
+        );
       });
       const failed = items.filter((it) => it.status === "FAILED");
 
@@ -1286,7 +1525,12 @@
       if (items.length > 0) {
         const latest = items[0];
         setText("statLastGenerated", formatDateSafe(latest.generated_at));
-        setText("statLastGeneratedTime", formatDateSafe(latest.generated_at, { time: true }).split(",")[1]?.trim() || formatDateSafe(latest.generated_at, { time: true }));
+        setText(
+          "statLastGeneratedTime",
+          formatDateSafe(latest.generated_at, { time: true })
+            .split(",")[1]
+            ?.trim() || formatDateSafe(latest.generated_at, { time: true }),
+        );
       }
     } catch (e) {
       console.error("Stats load failed", e);
@@ -1322,50 +1566,52 @@
     const initialType = getReportType();
     updateFilterVisibility(initialType);
 
-    document.querySelectorAll("#reportCategoryTabs .nav-link").forEach(tab => {
+    document
+      .querySelectorAll("#reportCategoryTabs .nav-link")
+      .forEach((tab) => {
         tab.addEventListener("shown.bs.tab", (e) => {
-            const reportType = getReportType();
-            updateFilterVisibility(reportType);
+          const reportType = getReportType();
+          updateFilterVisibility(reportType);
         });
-    });
+      });
 
     // History search input
     getEl("searchHistoryInput")?.addEventListener("input", (e) => {
-        historySearchText = e.target.value;
-        historyCurrentPage = 1;
-        renderRecentHistory();
+      historySearchText = e.target.value;
+      historyCurrentPage = 1;
+      renderRecentHistory();
     });
 
     // History Pagination controls
     getEl("prevHistoryPageBtn")?.addEventListener("click", () => {
-        if (historyCurrentPage > 1) {
-            historyCurrentPage--;
-            renderRecentHistory();
-        }
+      if (historyCurrentPage > 1) {
+        historyCurrentPage--;
+        renderRecentHistory();
+      }
     });
 
     getEl("nextHistoryPageBtn")?.addEventListener("click", () => {
-        const totalPages = Math.ceil(historyItems.length / historyPageSize);
-        if (historyCurrentPage < totalPages) {
-            historyCurrentPage++;
-            renderRecentHistory();
-        }
+      const totalPages = Math.ceil(historyItems.length / historyPageSize);
+      if (historyCurrentPage < totalPages) {
+        historyCurrentPage++;
+        renderRecentHistory();
+      }
     });
 
     // Preview Pagination controls
     getEl("prevPreviewPageBtn")?.addEventListener("click", () => {
-        if (previewCurrentPage > 1) {
-            previewCurrentPage--;
-            renderPreviewTable();
-        }
+      if (previewCurrentPage > 1) {
+        previewCurrentPage--;
+        renderPreviewTable();
+      }
     });
 
     getEl("nextPreviewPageBtn")?.addEventListener("click", () => {
-        const totalPages = Math.ceil(previewItems.length / previewPageSize);
-        if (previewCurrentPage < totalPages) {
-            previewCurrentPage++;
-            renderPreviewTable();
-        }
+      const totalPages = Math.ceil(previewItems.length / previewPageSize);
+      if (previewCurrentPage < totalPages) {
+        previewCurrentPage++;
+        renderPreviewTable();
+      }
     });
 
     getEl("previewReportBtn")?.addEventListener("click", loadReportPreview);
@@ -1399,13 +1645,15 @@
     getEl("governorateFilter")?.addEventListener("change", loadKindergartens);
 
     // Tab change -> update hidden reportType and refresh preview (silent — no alert if dates not set yet)
-    document.querySelectorAll("#reportCategoryTabs .nav-link").forEach((tab) => {
-      tab.addEventListener("shown.bs.tab", () => {
-        getEl("reportType").value = getReportType();
-        updateFilterVisibility();
-        loadReportPreview({ silent: true });
+    document
+      .querySelectorAll("#reportCategoryTabs .nav-link")
+      .forEach((tab) => {
+        tab.addEventListener("shown.bs.tab", () => {
+          getEl("reportType").value = getReportType();
+          updateFilterVisibility();
+          loadReportPreview({ silent: true });
+        });
       });
-    });
 
     // Period change — user explicitly set dates, show alert if still incomplete
     getEl("periodStart")?.addEventListener("change", loadReportPreview);
@@ -1442,6 +1690,6 @@
   // Expose helpers for tests and external callers
   window.AdminReports = window.AdminReports || {};
   window.AdminReports.formatDateSafe = formatDateSafe;
-  window.AdminReports.formatToAmman   = formatDateSafe;
-  window.AdminReports.debounce        = debounce;
+  window.AdminReports.formatToAmman = formatDateSafe;
+  window.AdminReports.debounce = debounce;
 })();

@@ -559,6 +559,322 @@ def _risk_rows(metrics: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def _classify_kindergarten(
+    children_count: int,
+    supervisors_count: int,
+    classes_count: int,
+    capacity: int,
+    has_supervisor: bool,
+    has_children: bool,
+    children_per_supervisor: float,
+    capacity_utilization_pct: float,
+    children_per_class: float,
+) -> str:
+    if not has_children and not has_supervisor:
+        return "inactive"
+    if has_supervisor and not has_children:
+        return "resource_underuse"
+    if has_children and not has_supervisor:
+        return "critical_risk"
+    if children_per_supervisor > 12:
+        return "under_supervised"
+    if children_per_class > 0 and children_per_class > 20:
+        return "capacity_class_pressure"
+    if capacity_utilization_pct > 100:
+        return "over_capacity"
+    if has_children and classes_count == 0:
+        return "operational_issue"
+    return "normal"
+
+
+def _kindergarten_detail_rows(
+    db: Session,
+    filters: ScopeFilters,
+    official_children_ids: set[int],
+    official_enrollments: list[models.EnrollmentApplication],
+    classes: list[models.Class],
+    supervisors: list[models.User],
+    active_assignments: list[models.SupervisorAssignment],
+) -> list[dict[str, Any]]:
+    kg_ids = {k.id for k in db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE).all()}
+    if filters.governorate:
+        kg_ids = {k.id for k in db.query(models.Kindergarten).filter(models.Kindergarten.governorate == filters.governorate, models.Kindergarten.status == models.KindergartenStatus.ACTIVE).all()}
+    if filters.city:
+        kg_ids = {k.id for k in db.query(models.Kindergarten).filter(models.Kindergarten.district == filters.city, models.Kindergarten.status == models.KindergartenStatus.ACTIVE).all()}
+    if filters.kindergarten_id:
+        kg_ids = {filters.kindergarten_id}
+
+    rows: list[dict[str, Any]] = []
+    for kg_id in kg_ids:
+        kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kg_id).first()
+        if not kg:
+            continue
+        kg_classes = [c for c in classes if c.kindergarten_id == kg_id]
+        kg_supervisors = [s for s in supervisors if s.kindergarten_id == kg_id]
+        kg_enrollments = [e for e in official_enrollments if e.kindergarten_id == kg_id]
+        kg_class_ids = {c.id for c in kg_classes}
+        kg_active_assignments = [a for a in active_assignments if a.class_id in kg_class_ids]
+        active_sup_count = len({a.supervisor_id for a in kg_active_assignments})
+        children_count = len({e.child_id for e in kg_enrollments})
+        capacity = sum(c.capacity_total or 0 for c in kg_classes)
+        cps = _safe_div(children_count, active_sup_count)
+        cap_util = _pct(children_count, capacity)
+        enrolled_by_class = {}
+        for e in kg_enrollments:
+            if e.class_id:
+                enrolled_by_class[e.class_id] = enrolled_by_class.get(e.class_id, 0) + 1
+        required_sup = 0
+        for c in kg_classes:
+            children_in_class = enrolled_by_class.get(c.id, 0)
+            if children_in_class > 0:
+                try:
+                    required_sup += calculate_required_supervisors(str(c.age_group), children_in_class)
+                except Exception:
+                    required_sup += 1
+        children_per_class = _safe_div(children_count, len(kg_classes))
+        classification = _classify_kindergarten(
+            children_count=children_count,
+            supervisors_count=active_sup_count,
+            classes_count=len(kg_classes),
+            capacity=capacity,
+            has_supervisor=active_sup_count > 0,
+            has_children=children_count > 0,
+            children_per_supervisor=cps,
+            capacity_utilization_pct=cap_util,
+            children_per_class=children_per_class,
+        )
+        over_capacity = capacity > 0 and children_count > capacity
+        missing_capacity = capacity <= 0 and children_count > 0
+        no_supervisor_with_children = children_count > 0 and active_sup_count == 0
+        classes_without_supervisor = sum(1 for c in kg_classes if enrolled_by_class.get(c.id, 0) > 0 and all(a.class_id != c.id for a in kg_active_assignments))
+        data_issues = []
+        if missing_capacity:
+            data_issues.append("missing_capacity")
+        if kg.latitude is None or kg.longitude is None:
+            data_issues.append("missing_coordinates")
+        if children_count == 0 and active_sup_count > 0:
+            data_issues.append("underuse")
+        if no_supervisor_with_children:
+            data_issues.append("no_supervisor")
+        if over_capacity:
+            data_issues.append("over_capacity")
+        if classes_without_supervisor > 0:
+            data_issues.append("class_without_supervisor")
+
+        if classification == "critical_risk" or over_capacity or missing_capacity:
+            risk_status = "critical"
+        elif classification == "under_supervised" or classes_without_supervisor > 0:
+            risk_status = "warning"
+        else:
+            risk_status = "normal"
+
+        if classification == "over_capacity" or no_supervisor_with_children:
+            recommended_action_ar = "إجراء عاجل: خفض الاستيعاب أو تعيين مشرف فورا."
+            recommended_action_en = "Urgent: reduce enrollment or assign a supervisor immediately."
+        elif classification == "under_supervised":
+            recommended_action_ar = "إجراء وقائي: تعزيز المشرفين في الموقع."
+            recommended_action_en = "Preventive: reinforce supervisors at this site."
+        elif classification == "inactive":
+            recommended_action_ar = "تحقق من حالة العمل وتفعيل الروضة أو إيقافها رسميا."
+            recommended_action_en = "Verify operational status and activate or formally close."
+        elif classification == "resource_underuse":
+            recommended_action_ar = "استخدم الموارد بشكل أفضل أو أعد توزيعها."
+            recommended_action_en = "Better utilize resources or redistribute them."
+        else:
+            recommended_action_ar = "الوضع مستقر: استمر في المراقبة."
+            recommended_action_en = "Stable: continue monitoring."
+
+        rows.append({
+            "id": kg.id,
+            "name_ar": kg.name_ar,
+            "name_en": kg.name_en,
+            "governorate": kg.governorate,
+            "city": kg.district,
+            "children_count": children_count,
+            "supervisors_count": active_sup_count,
+            "classes_count": len(kg_classes),
+            "capacity": capacity,
+            "capacity_utilization_pct": cap_util,
+            "children_per_supervisor": cps,
+            "children_per_class": children_per_class,
+            "required_supervisors": required_sup,
+            "supervisor_gap": max(0, required_sup - active_sup_count),
+            "over_capacity": over_capacity,
+            "missing_capacity": missing_capacity,
+            "no_supervisor_with_children": no_supervisor_with_children,
+            "classes_without_supervisor": classes_without_supervisor,
+            "classification": classification,
+            "risk_status": risk_status,
+            "data_issues": data_issues,
+            "recommended_action_ar": recommended_action_ar,
+            "recommended_action_en": recommended_action_en,
+        })
+    rows.sort(key=lambda x: ({"critical": 0, "warning": 1, "normal": 2}.get(x["risk_status"], 3), -x.get("risk_score", 0)))
+    return rows
+
+
+def _class_detail_rows(
+    db: Session,
+    filters: ScopeFilters,
+    official_enrollments: list[models.EnrollmentApplication],
+    supervisors: list[models.User],
+    active_assignments: list[models.SupervisorAssignment],
+) -> list[dict[str, Any]]:
+    classes_q = db.query(models.Class).filter(models.Class.is_active.is_(True))
+    if filters.kindergarten_id:
+        classes_q = classes_q.filter(models.Class.kindergarten_id == filters.kindergarten_id)
+    if filters.class_id:
+        classes_q = classes_q.filter(models.Class.id == filters.class_id)
+    classes = classes_q.all()
+
+    rows: list[dict[str, Any]] = []
+    for cls in classes:
+        kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == cls.kindergarten_id).first()
+        cls_enrollments = [e for e in official_enrollments if e.class_id == cls.id]
+        children_count = len({e.child_id for e in cls_enrollments})
+        cls_assignments = [a for a in active_assignments if a.class_id == cls.id]
+        sup_ids = {a.supervisor_id for a in cls_assignments}
+        supervisors_in_class = [s for s in supervisors if s.id in sup_ids]
+        try:
+            required_sup = calculate_required_supervisors(str(cls.age_group), children_count) if children_count > 0 else 0
+        except Exception:
+            required_sup = 1 if children_count > 0 else 0
+        actual_sup = len(sup_ids)
+        supervisor_gap = max(0, required_sup - actual_sup)
+        cps = _safe_div(children_count, actual_sup)
+        cap_util = _pct(children_count, cls.capacity_total or 0)
+
+        if children_count > 0 and actual_sup == 0:
+            risk_status = "critical"
+        elif supervisor_gap > 0:
+            risk_status = "warning"
+        else:
+            risk_status = "normal"
+
+        if children_count > 0 and actual_sup == 0:
+            recommended_action_ar = "إجراء عاجل: تعيين مشرف لهذا الفصل قبل قبول أي تسجيلات جديدة."
+            recommended_action_en = "Urgent: assign a supervisor to this class before accepting new enrollments."
+        elif supervisor_gap > 0:
+            recommended_action_ar = "إجراء وقائي: إضافة مشرف إضافي لتغطية الفصل."
+            recommended_action_en = "Preventive: add additional supervisor coverage for this class."
+        else:
+            recommended_action_ar = "الوضع مستقر: استمر في المراقبة."
+            recommended_action_en = "Stable: continue monitoring."
+
+        supervisor_names = [s.full_name or s.username for s in supervisors_in_class]
+
+        rows.append({
+            "id": cls.id,
+            "class_code": cls.class_code,
+            "name_ar": cls.name_ar,
+            "name_en": cls.name_en,
+            "age_group": cls.age_group,
+            "kindergarten_id": cls.kindergarten_id,
+            "kindergarten_name_ar": kg.name_ar if kg else "",
+            "kindergarten_name_en": kg.name_en if kg else "",
+            "governorate": kg.governorate if kg else "",
+            "city": kg.district if kg else "",
+            "children_count": children_count,
+            "capacity": cls.capacity_total or 0,
+            "capacity_utilization_pct": cap_util,
+            "supervisors": supervisor_names,
+            "supervisors_count": actual_sup,
+            "required_supervisors": required_sup,
+            "supervisor_gap": supervisor_gap,
+            "children_per_supervisor": cps,
+            "risk_status": risk_status,
+            "recommended_action_ar": recommended_action_ar,
+            "recommended_action_en": recommended_action_en,
+        })
+    rows.sort(key=lambda x: ({"critical": 0, "warning": 1, "normal": 2}.get(x["risk_status"], 3)))
+    return rows
+
+
+def _supervisor_analytics(
+    db: Session,
+    filters: ScopeFilters,
+    classes: list[models.Class],
+    supervisors: list[models.User],
+    active_assignments: list[models.SupervisorAssignment],
+    official_enrollments: list[models.EnrollmentApplication],
+) -> dict[str, Any]:
+    class_supervisor_map: dict[int, list[int]] = {}
+    for a in active_assignments:
+        class_supervisor_map.setdefault(a.class_id, []).append(a.supervisor_id)
+
+    class_map = {c.id: c for c in classes}
+    kg_map = {k.id: k for k in db.query(models.Kindergarten).all()}
+
+    enrolled_by_class: dict[int, int] = {}
+    for e in official_enrollments:
+        if e.class_id:
+            enrolled_by_class[e.class_id] = enrolled_by_class.get(e.class_id, 0) + 1
+
+    supervisors_data: list[dict[str, Any]] = []
+    for s in supervisors:
+        s_assignments = [a for a in active_assignments if a.supervisor_id == s.id]
+        s_class_ids = {a.class_id for a in s_assignments}
+        s_classes = [class_map[cid] for cid in s_class_ids if cid in class_map]
+        kgs_in_charge = {class_map[cid].kindergarten_id for cid in s_class_ids if cid in class_map}
+        children_count = sum(enrolled_by_class.get(cid, 0) for cid in s_class_ids)
+        expected_kgs = {s.kindergarten_id} if s.kindergarten_id else set()
+        outside_kg = kgs_in_charge - expected_kgs
+        multiple_classes = len(s_class_ids) > 1
+        error_flags = []
+        if outside_kg:
+            error_flags.append("assigned_outside_kindergarten")
+        if multiple_classes:
+            error_flags.append("assigned_to_multiple_classes")
+        inactive_classes = [c for c in s_classes if not c.is_active]
+        if inactive_classes:
+            error_flags.append("assigned_to_inactive_class")
+        no_class_assignment = len(s_class_ids) == 0
+        if no_class_assignment:
+            error_flags.append("no_class_assignment")
+
+        if children_count > 0 and len(s_class_ids) == 0:
+            issue_flag = "critical"
+        elif error_flags:
+            issue_flag = "invalid"
+        elif children_count == 0 and len(s_class_ids) > 0:
+            issue_flag = "underused"
+        else:
+            issue_flag = "ok"
+
+        supervisors_data.append({
+            "id": s.id,
+            "username": s.username,
+            "full_name": s.full_name or s.username,
+            "kindergarten_id": s.kindergarten_id,
+            "kindergarten_name_ar": kg_map[s.kindergarten_id].name_ar if s.kindergarten_id and s.kindergarten_id in kg_map else "",
+            "kindergarten_name_en": kg_map[s.kindergarten_id].name_en if s.kindergarten_id and s.kindergarten_id in kg_map else "",
+            "governorate": kg_map[s.kindergarten_id].governorate if s.kindergarten_id and s.kindergarten_id in kg_map else "",
+            "city": kg_map[s.kindergarten_id].district if s.kindergarten_id and s.kindergarten_id in kg_map else "",
+            "classes_count": len(s_classes),
+            "children_count": children_count,
+            "classes_per_supervisor": _safe_div(len(s_classes), 1),
+            "children_per_supervisor": _safe_div(children_count, 1),
+            "error_flags": error_flags,
+            "issue_flag": issue_flag,
+        })
+
+    total_supervisors = len(supervisors)
+    supervisors_with_errors = [s for s in supervisors_data if s["error_flags"]]
+    supervisors_without_class = [s for s in supervisors_data if "no_class_assignment" in s["error_flags"]]
+    supervisors_multiple_classes = [s for s in supervisors_data if "assigned_to_multiple_classes" in s["error_flags"]]
+    supervisors_outside_kg = [s for s in supervisors_data if "assigned_outside_kindergarten" in s["error_flags"]]
+
+    return {
+        "total_supervisors": total_supervisors,
+        "supervisors": supervisors_data,
+        "supervisors_with_errors": len(supervisors_with_errors),
+        "supervisors_without_class": len(supervisors_without_class),
+        "supervisors_multiple_classes": len(supervisors_multiple_classes),
+        "supervisors_outside_kg": len(supervisors_outside_kg),
+        "error_table": supervisors_with_errors,
+    }
+
+
 def _build_response(report_type: str, filters: ScopeFilters, metrics: dict[str, Any], lang: str) -> dict[str, Any]:
     interpretation = _interpret_overview(metrics, lang)
     risk_rows = _risk_rows(metrics)
@@ -665,6 +981,53 @@ def _resolve_report_payload(
 
     if report_type in {"overview", "children_summary", "kindergartens_summary", "supervisors_coverage", "drilldown"}:
         return _build_response(report_type, filters, metrics, lang)
+    if report_type == "kindergartens_detail":
+        return kindergartens_detail(
+            level=level,
+            governorate=filters.governorate,
+            city=filters.city,
+            kindergarten_id=filters.kindergarten_id,
+            date_from=start,
+            date_to=end,
+            lang=lang,
+            db=db,
+            _=None,
+        )
+    if report_type == "classes_detail":
+        return classes_detail(
+            level=level,
+            governorate=filters.governorate,
+            city=filters.city,
+            kindergarten_id=filters.kindergarten_id,
+            date_from=start,
+            date_to=end,
+            lang=lang,
+            db=db,
+            _=None,
+        )
+    if report_type == "supervisors_analytics":
+        return supervisors_analytics(
+            level=level,
+            governorate=filters.governorate,
+            city=filters.city,
+            kindergarten_id=filters.kindergarten_id,
+            date_from=start,
+            date_to=end,
+            lang=lang,
+            db=db,
+            _=None,
+        )
+    if report_type == "kindergartens_classification":
+        return kindergartens_classification(
+            level=level,
+            governorate=filters.governorate,
+            city=filters.city,
+            date_from=start,
+            date_to=end,
+            lang=lang,
+            db=db,
+            _=None,
+        )
     if report_type == "children_geography":
         return {
             "governorates": metrics["by_governorate"],
@@ -719,6 +1082,86 @@ def _resolve_report_payload(
     raise HTTPException(status_code=422, detail="Unsupported report_type")
 
 
+def resolve_kindergarten_detail_report(db: Session, filters: ScopeFilters, date_from: date, date_to: date, lang: str) -> dict[str, Any]:
+    enroll_q = _base_enrollment_query(db, filters)
+    official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
+    all_enroll_rows = enroll_q.all()
+    official_rows = official_enroll_q.all()
+    official_children_ids = {r.child_id for r in official_rows}
+
+    classes_q = db.query(models.Class).filter(models.Class.is_active.is_(True))
+    kg_q = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+    if filters.governorate:
+        kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
+    if filters.city:
+        kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
+    if filters.kindergarten_id:
+        kg_q = kg_q.filter(models.Kindergarten.id == filters.kindergarten_id)
+    kg_ids = [k.id for k in kg_q.all()]
+    if kg_ids:
+        classes_q = classes_q.filter(models.Class.kindergarten_id.in_(kg_ids))
+    classes = classes_q.all()
+
+    supervisors_q = db.query(models.User).filter(
+        models.User.role == models.UserRole.SUPERVISOR,
+        models.User.status == models.UserStatus.ACTIVE,
+    )
+    if kg_ids:
+        supervisors_q = supervisors_q.filter(models.User.kindergarten_id.in_(kg_ids))
+    supervisors = supervisors_q.all()
+
+    active_assignments_q = db.query(models.SupervisorAssignment).filter(
+        or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= _today()),
+        models.SupervisorAssignment.deleted_at.is_(None),
+    )
+    class_ids = [c.id for c in classes]
+    if class_ids:
+        active_assignments_q = active_assignments_q.filter(models.SupervisorAssignment.class_id.in_(class_ids))
+    active_assignments = active_assignments_q.all()
+
+    rows = _kindergarten_detail_rows(db, filters, official_children_ids, official_rows, classes, supervisors, active_assignments)
+    total_kindergartens = len(rows)
+    total_children = sum(r["children_count"] for r in rows)
+    total_supervisors = sum(r["supervisors_count"] for r in rows)
+    total_classes = sum(r["classes_count"] for r in rows)
+    total_capacity = sum(r["capacity"] for r in rows)
+    critical_count = sum(1 for r in rows if r["risk_status"] == "critical")
+    warning_count = sum(1 for r in rows if r["risk_status"] == "warning")
+    return {
+        "level": filters.level.value,
+        "filters": {
+            "governorate": filters.governorate,
+            "city": filters.city,
+            "kindergarten_id": filters.kindergarten_id,
+            "period": {"from": date_from.isoformat(), "to": date_to.isoformat()},
+        },
+        "summary": {
+            "total_kindergartens": total_kindergartens,
+            "total_children": total_children,
+            "total_supervisors": total_supervisors,
+            "total_classes": total_classes,
+            "total_capacity": total_capacity,
+            "critical_count": critical_count,
+            "warning_count": warning_count,
+        },
+        "kindergartens": rows,
+        "interpretation": {
+            "summary": _localized(
+                f"يوجد {total_kindergartens} روضة نشطة ضمن النطاق المحدد، منها {critical_count} ذات خطورة حرجة.",
+                f"There are {total_kindergartens} active kindergartens in scope, {critical_count} at critical risk.",
+                lang,
+            ),
+            "severity": "critical" if critical_count > 0 else "warning" if warning_count > 0 else "normal",
+            "comparison_baseline": _localized("متوسط الشبكة", "Network average", lang),
+            "recommended_action": _localized(
+                "ابدأ بالروضات الحرجة ثم التي تحتاج انتباه.",
+                "Start with critical kindergartens, then those needing attention.",
+                lang,
+            ),
+        },
+    }
+
+
 def _safe_csv_cell(value: Any) -> str:
     text = "" if value is None else str(value)
     if text.startswith(("=", "+", "-", "@")):
@@ -734,7 +1177,7 @@ def _rows_for_export(payload: dict[str, Any]) -> list[dict[str, Any]]:
         gov = payload["tables"].get("governorate_breakdown", [])
         if gov:
             return gov
-    for key in ("ranking", "governorates", "cities", "age_buckets"):
+    for key in ("ranking", "governorates", "cities", "age_buckets", "kindergartens", "classes", "supervisors"):
         if isinstance(payload.get(key), list) and payload[key]:
             return payload[key]
     if isinstance(payload.get("issues"), dict):
@@ -1080,6 +1523,356 @@ def drilldown(
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     return _build_response("drilldown", filters, metrics, lang)
+
+
+@router.get("/kindergartens/detail")
+def kindergartens_detail(
+    level: ReportLevel = Query(ReportLevel.CITY),
+    governorate: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    period: Optional[str] = Query("this_month"),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    lang: str = Query("ar", pattern="^(ar|en)$"),
+    db: Session = Depends(get_db),
+    _: models.User = Depends(require_admin),
+):
+    filters = _build_scope_filters(level, governorate, city, kindergarten_id, None)
+    start, end = _resolve_dates(date_from, date_to, period)
+    enroll_q = _base_enrollment_query(db, filters)
+    official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
+    all_enroll_rows = enroll_q.all()
+    official_rows = official_enroll_q.all()
+    official_children_ids = {r.child_id for r in official_rows}
+
+    classes_q = db.query(models.Class).filter(models.Class.is_active.is_(True))
+    kg_q = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+    if filters.governorate:
+        kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
+    if filters.city:
+        kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
+    if filters.kindergarten_id:
+        kg_q = kg_q.filter(models.Kindergarten.id == filters.kindergarten_id)
+    kg_ids = [k.id for k in kg_q.all()]
+    if kg_ids:
+        classes_q = classes_q.filter(models.Class.kindergarten_id.in_(kg_ids))
+    classes = classes_q.all()
+
+    supervisors_q = db.query(models.User).filter(
+        models.User.role == models.UserRole.SUPERVISOR,
+        models.User.status == models.UserStatus.ACTIVE,
+    )
+    if kg_ids:
+        supervisors_q = supervisors_q.filter(models.User.kindergarten_id.in_(kg_ids))
+    supervisors = supervisors_q.all()
+
+    active_assignments_q = db.query(models.SupervisorAssignment).filter(
+        or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= _today()),
+        models.SupervisorAssignment.deleted_at.is_(None),
+    )
+    class_ids = [c.id for c in classes]
+    if class_ids:
+        active_assignments_q = active_assignments_q.filter(models.SupervisorAssignment.class_id.in_(class_ids))
+    active_assignments = active_assignments_q.all()
+
+    rows = _kindergarten_detail_rows(db, filters, official_children_ids, official_rows, classes, supervisors, active_assignments)
+    total_kindergartens = len(rows)
+    total_children = sum(r["children_count"] for r in rows)
+    total_supervisors = sum(r["supervisors_count"] for r in rows)
+    total_classes = sum(r["classes_count"] for r in rows)
+    total_capacity = sum(r["capacity"] for r in rows)
+    critical_count = sum(1 for r in rows if r["risk_status"] == "critical")
+    warning_count = sum(1 for r in rows if r["risk_status"] == "warning")
+
+    return {
+        "level": level.value,
+        "filters": {
+            "governorate": filters.governorate,
+            "city": filters.city,
+            "kindergarten_id": filters.kindergarten_id,
+            "period": {"from": start.isoformat(), "to": end.isoformat()},
+        },
+        "summary": {
+            "total_kindergartens": total_kindergartens,
+            "total_children": total_children,
+            "total_supervisors": total_supervisors,
+            "total_classes": total_classes,
+            "total_capacity": total_capacity,
+            "critical_count": critical_count,
+            "warning_count": warning_count,
+        },
+        "kindergartens": rows,
+        "interpretation": {
+            "summary": _localized(
+                f"يوجد {total_kindergartens} روضة نشطة ضمن النطاق المحدد، منها {critical_count} ذات خطورة حرجة.",
+                f"There are {total_kindergartens} active kindergartens in scope, {critical_count} at critical risk.",
+                lang,
+            ),
+            "severity": "critical" if critical_count > 0 else "warning" if warning_count > 0 else "normal",
+            "comparison_baseline": _localized("متوسط الشبكة", "Network average", lang),
+            "recommended_action": _localized(
+                "ابدأ بالروضات الحرجة ثم التي تحتاج انتباه.",
+                "Start with critical kindergartens, then those needing attention.",
+                lang,
+            ),
+        },
+    }
+
+
+@router.get("/classes/detail")
+def classes_detail(
+    level: ReportLevel = Query(ReportLevel.KINDERGARTEN),
+    governorate: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    class_id: Optional[int] = Query(None),
+    period: Optional[str] = Query("this_month"),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    lang: str = Query("ar", pattern="^(ar|en)$"),
+    db: Session = Depends(get_db),
+    _: models.User = Depends(require_admin),
+):
+    if level != ReportLevel.KINDERGARTEN or not kindergarten_id:
+        raise HTTPException(status_code=422, detail="kindergarten_id is required for class detail")
+    filters = _build_scope_filters(level, governorate, city, kindergarten_id, class_id)
+    start, end = _resolve_dates(date_from, date_to, period)
+    enroll_q = _base_enrollment_query(db, filters)
+    official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
+    all_enroll_rows = enroll_q.all()
+    official_rows = official_enroll_q.all()
+
+    classes_q = db.query(models.Class).filter(models.Class.is_active.is_(True), models.Class.kindergarten_id == kindergarten_id)
+    if class_id:
+        classes_q = classes_q.filter(models.Class.id == class_id)
+    classes = classes_q.all()
+    class_ids = [c.id for c in classes]
+
+    supervisors_q = db.query(models.User).filter(
+        models.User.role == models.UserRole.SUPERVISOR,
+        models.User.status == models.UserStatus.ACTIVE,
+    )
+    if class_ids:
+        supervisors_q = supervisors_q.filter(
+            models.User.id.in_(
+                db.query(models.SupervisorAssignment.supervisor_id).filter(
+                    models.SupervisorAssignment.class_id.in_(class_ids),
+                    or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= _today()),
+                    models.SupervisorAssignment.deleted_at.is_(None),
+                )
+            )
+        )
+    supervisors = supervisors_q.all()
+
+    active_assignments_q = db.query(models.SupervisorAssignment).filter(
+        or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= _today()),
+        models.SupervisorAssignment.deleted_at.is_(None),
+    )
+    if class_ids:
+        active_assignments_q = active_assignments_q.filter(models.SupervisorAssignment.class_id.in_(class_ids))
+    active_assignments = active_assignments_q.all()
+
+    rows = _class_detail_rows(db, filters, official_rows, supervisors, active_assignments)
+    total_classes = len(rows)
+    total_children = sum(r["children_count"] for r in rows)
+    total_capacity = sum(r["capacity"] for r in rows)
+    critical_count = sum(1 for r in rows if r["risk_status"] == "critical")
+    warning_count = sum(1 for r in rows if r["risk_status"] == "warning")
+
+    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+
+    return {
+        "level": level.value,
+        "kindergarten": {
+            "id": kg.id if kg else None,
+            "name_ar": kg.name_ar if kg else "",
+            "name_en": kg.name_en if kg else "",
+            "governorate": kg.governorate if kg else "",
+            "city": kg.district if kg else "",
+        },
+        "filters": {
+            "governorate": filters.governorate,
+            "city": filters.city,
+            "kindergarten_id": filters.kindergarten_id,
+            "period": {"from": start.isoformat(), "to": end.isoformat()},
+        },
+        "summary": {
+            "total_classes": total_classes,
+            "total_children": total_children,
+            "total_capacity": total_capacity,
+            "critical_count": critical_count,
+            "warning_count": warning_count,
+        },
+        "classes": rows,
+        "interpretation": {
+            "summary": _localized(
+                f"يوجد {total_classes} فصل نشط في الروضة المختارة، منها {critical_count} بحالة حرجة.",
+                f"There are {total_classes} active classes in the selected kindergarten, {critical_count} at critical risk.",
+                lang,
+            ),
+            "severity": "critical" if critical_count > 0 else "warning" if warning_count > 0 else "normal",
+            "comparison_baseline": _localized("معدل الشبكة", "Network average", lang),
+            "recommended_action": _localized(
+                "عالج الفصول الحرجة أولا ثم راجع التغطية المشرفية.",
+                "Address critical classes first, then review supervisor coverage.",
+                lang,
+            ),
+        },
+    }
+
+
+@router.get("/supervisors/analytics")
+def supervisors_analytics(
+    level: ReportLevel = Query(ReportLevel.JORDAN),
+    governorate: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    period: Optional[str] = Query("this_month"),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    lang: str = Query("ar", pattern="^(ar|en)$"),
+    db: Session = Depends(get_db),
+    _: models.User = Depends(require_admin),
+):
+    filters = _build_scope_filters(level, governorate, city, kindergarten_id, None)
+    start, end = _resolve_dates(date_from, date_to, period)
+    enroll_q = _base_enrollment_query(db, filters)
+    official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
+    official_rows = official_enroll_q.all()
+
+    classes_q = db.query(models.Class).filter(models.Class.is_active.is_(True))
+    kg_q = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+    if filters.governorate:
+        kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
+    if filters.city:
+        kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
+    if filters.kindergarten_id:
+        kg_q = kg_q.filter(models.Kindergarten.id == filters.kindergarten_id)
+    kg_ids = [k.id for k in kg_q.all()]
+    if kg_ids:
+        classes_q = classes_q.filter(models.Class.kindergarten_id.in_(kg_ids))
+    classes = classes_q.all()
+    class_ids = [c.id for c in classes]
+
+    supervisors_q = db.query(models.User).filter(
+        models.User.role == models.UserRole.SUPERVISOR,
+        models.User.status == models.UserStatus.ACTIVE,
+    )
+    if kg_ids:
+        supervisors_q = supervisors_q.filter(models.User.kindergarten_id.in_(kg_ids))
+    supervisors = supervisors_q.all()
+
+    active_assignments_q = db.query(models.SupervisorAssignment).filter(
+        or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= _today()),
+        models.SupervisorAssignment.deleted_at.is_(None),
+    )
+    if class_ids:
+        active_assignments_q = active_assignments_q.filter(models.SupervisorAssignment.class_id.in_(class_ids))
+    active_assignments = active_assignments_q.all()
+
+    analytics = _supervisor_analytics(db, filters, classes, supervisors, active_assignments, official_rows)
+
+    return {
+        "level": level.value,
+        "filters": {
+            "governorate": filters.governorate,
+            "city": filters.city,
+            "kindergarten_id": filters.kindergarten_id,
+            "period": {"from": start.isoformat(), "to": end.isoformat()},
+        },
+        **analytics,
+        "interpretation": {
+            "summary": _localized(
+                f"يوجد {analytics['total_supervisors']} مشرف نشط، مع {analytics['supervisors_with_errors']} يحتاج مراجعة.",
+                f"There are {analytics['total_supervisors']} active supervisors, {analytics['supervisors_with_errors']} need review.",
+                lang,
+            ),
+            "severity": "warning" if analytics["supervisors_with_errors"] > 0 else "normal",
+            "comparison_baseline": _localized("متوسط الشبكة", "Network average", lang),
+            "recommended_action": _localized(
+                "صحح أخطاء التعيين وتأكد من تغطية كل فصل بمشرف مؤهل.",
+                "Correct assignment errors and ensure every class has a qualified supervisor.",
+                lang,
+            ),
+        },
+    }
+
+
+@router.get("/kindergartens/classification")
+def kindergartens_classification(
+    level: ReportLevel = Query(ReportLevel.GOVERNORATE),
+    governorate: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
+    period: Optional[str] = Query("this_month"),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    lang: str = Query("ar", pattern="^(ar|en)$"),
+    db: Session = Depends(get_db),
+    _: models.User = Depends(require_admin),
+):
+    filters = _build_scope_filters(level, governorate, city, None, None)
+    start, end = _resolve_dates(date_from, date_to, period)
+    enroll_q = _base_enrollment_query(db, filters)
+    official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
+    all_enroll_rows = enroll_q.all()
+    official_rows = official_enroll_q.all()
+    official_children_ids = {r.child_id for r in official_rows}
+
+    classes_q = db.query(models.Class).filter(models.Class.is_active.is_(True))
+    kg_q = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+    if filters.governorate:
+        kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
+    if filters.city:
+        kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
+    kg_ids = [k.id for k in kg_q.all()]
+    if kg_ids:
+        classes_q = classes_q.filter(models.Class.kindergarten_id.in_(kg_ids))
+    classes = classes_q.all()
+    class_ids = [c.id for c in classes]
+
+    supervisors_q = db.query(models.User).filter(
+        models.User.role == models.UserRole.SUPERVISOR,
+        models.User.status == models.UserStatus.ACTIVE,
+    )
+    if kg_ids:
+        supervisors_q = supervisors_q.filter(models.User.kindergarten_id.in_(kg_ids))
+    supervisors = supervisors_q.all()
+
+    active_assignments_q = db.query(models.SupervisorAssignment).filter(
+        or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= _today()),
+        models.SupervisorAssignment.deleted_at.is_(None),
+    )
+    if class_ids:
+        active_assignments_q = active_assignments_q.filter(models.SupervisorAssignment.class_id.in_(class_ids))
+    active_assignments = active_assignments_q.all()
+
+    rows = _kindergarten_detail_rows(db, filters, official_children_ids, official_rows, classes, supervisors, active_assignments)
+
+    classification_counts = {}
+    for r in rows:
+        cls = r["classification"]
+        classification_counts[cls] = classification_counts.get(cls, 0) + 1
+
+    return {
+        "level": level.value,
+        "kindergartens": rows,
+        "classification_counts": classification_counts,
+        "interpretation": {
+            "summary": _localized(
+                f"يوجد {len(rows)} روضة مصنفة ضمن النطاق المحدد.",
+                f"There are {len(rows)} classified kindergartens in scope.",
+                lang,
+            ),
+            "severity": "warning" if any(r["risk_status"] in ("critical", "warning") for r in rows) else "normal",
+            "comparison_baseline": _localized("توزيع الفئات", "Category distribution", lang),
+            "recommended_action": _localized(
+                "راجع الفئات الحرجة وغير الطبيعية واتخذ إجراء تصحيحي.",
+                "Review critical and abnormal categories and take corrective action.",
+                lang,
+            ),
+        },
+    }
 
 
 @router.get("/export")

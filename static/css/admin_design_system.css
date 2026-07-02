@@ -557,6 +557,40 @@ html[dir="rtl"] .nav-item.active::before {
   color: var(--color-gray-500);
 }
 
+.admin-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-gray-700);
+}
+
+/* Directional icons (arrows, chevrons, pagination) mirror in RTL.
+   Universal icons (search, gear, user, bell, clock, etc.) must NOT use this class. */
+.icon-directional {
+  display: inline-block;
+  transform-origin: center;
+}
+
+html[dir="rtl"] .icon-directional {
+  transform: scaleX(-1);
+}
+
+/* Non-interactive sub-group label inside a collapsible sidebar submenu */
+.submenu-group-label {
+  padding-inline-start: var(--space-3, 0.75rem);
+  padding-inline-end: var(--space-3, 0.75rem);
+  padding-block-start: var(--space-2, 0.5rem);
+  padding-block-end: var(--space-1, 0.25rem);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-gray-500);
+  text-align: start;
+}
+
 /* Page Header — standard section at the top of every admin page */
 .page-header {
   display: flex;
@@ -2043,6 +2077,83 @@ html[dir="rtl"] .admin-sidebar .nav-link.active {
   margin-top: var(--space-1);
 }
 
+/* KPI card trend row — icon + comparison text, never color alone */
+.admin-kpi-card-trend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  margin-top: var(--space-2);
+}
+.admin-kpi-card-trend--up   { color: var(--color-success-dark); }
+.admin-kpi-card-trend--down { color: var(--color-error-dark); }
+.admin-kpi-card-trend--flat { color: var(--color-gray-500); }
+
+/* KPI card status meaning — icon + label, never color alone */
+.admin-kpi-card-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+}
+.admin-kpi-card-status--good    { color: var(--color-success-dark); }
+.admin-kpi-card-status--warning { color: var(--color-warning-dark); }
+
+/* KPI card drill-down link */
+.admin-kpi-card-drilldown {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+.admin-kpi-card-drilldown:hover,
+.admin-kpi-card-drilldown:focus-visible {
+  text-decoration: underline;
+}
+.admin-kpi-card-drilldown .icon-directional {
+  font-size: 0.7em;
+}
+
+/* Data Quality reasons disclosure (native <details>, free keyboard support) */
+.admin-kpi-dq-reasons {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+}
+.admin-kpi-dq-reasons summary {
+  cursor: pointer;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+.admin-kpi-dq-reasons summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.admin-kpi-dq-reasons-list {
+  list-style: disc;
+  padding-inline-start: var(--space-4);
+  margin-block-start: var(--space-2);
+  margin-block-end: 0;
+  color: var(--color-gray-700);
+  text-align: start;
+}
+.admin-kpi-dq-improve-link {
+  display: inline-block;
+  margin-top: var(--space-2);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+.admin-kpi-dq-improve-link:hover,
+.admin-kpi-dq-improve-link:focus-visible {
+  text-decoration: underline;
+}
+
 /* Dashboard Charts */
 .admin-dashboard-charts {
   display: grid;
@@ -2084,6 +2195,68 @@ html[dir="rtl"] .admin-sidebar .nav-link.active {
   gap: var(--space-6);
 }
 
+/* Recent Activity filter bar */
+.admin-activity-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block-end: var(--space-3);
+  margin-block-end: var(--space-3);
+  border-block-end: 1px solid var(--color-gray-100);
+}
+
+.admin-activity-filter-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.admin-activity-filter-select,
+.admin-activity-filter-input {
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-surface);
+  color: var(--color-gray-900);
+  text-align: start;
+}
+
+.admin-activity-filter-input {
+  width: 8rem;
+}
+
+.admin-activity-filter-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1 1 auto;
+  min-width: 12rem;
+}
+
+.admin-activity-filter-search .admin-activity-filter-input {
+  width: 100%;
+}
+
+.admin-activity-filter-custom-range {
+  display: none; /* toggled to "flex" by JS when period=custom */
+  gap: var(--space-1);
+}
+
+.admin-activity-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding-block-start: var(--space-3);
+}
+
+.admin-activity-pagination-status {
+  font-size: var(--text-xs);
+  color: var(--color-gray-600);
+}
+
 /* Activity Feed */
 .admin-activity-feed {
   max-height: 400px;
@@ -2091,9 +2264,7 @@ html[dir="rtl"] .admin-sidebar .nav-link.active {
 }
 
 .admin-activity-item {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
+  display: block;
   padding: var(--space-4);
   border-bottom: 1px solid var(--color-gray-100);
   transition: var(--transition-fast);
@@ -2105,6 +2276,13 @@ html[dir="rtl"] .admin-sidebar .nav-link.active {
 
 .admin-activity-item:last-child {
   border-bottom: none;
+}
+
+.admin-activity-item-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .admin-activity-icon {
@@ -2120,7 +2298,9 @@ html[dir="rtl"] .admin-sidebar .nav-link.active {
   flex-shrink: 0;
 }
 
-.admin-activity-content {
+.admin-activity-user {
+  font-size: var(--text-sm);
+  color: var(--color-gray-900);
   flex: 1;
   min-width: 0;
 }
@@ -2128,13 +2308,53 @@ html[dir="rtl"] .admin-sidebar .nav-link.active {
 .admin-activity-message {
   font-size: var(--text-sm);
   color: var(--color-gray-900);
-  margin-bottom: var(--space-1);
+  margin-inline-start: calc(32px + var(--space-2));
+  margin-bottom: var(--space-2);
   line-height: var(--line-height-normal);
+  text-align: start;
 }
 
 .admin-activity-time {
   font-size: var(--text-xs);
   color: var(--color-gray-500);
+  white-space: nowrap;
+}
+
+.admin-activity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin-inline-start: calc(32px + var(--space-2));
+  margin-block: 0;
+}
+
+.admin-activity-meta dt {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  font-weight: var(--font-weight-medium);
+}
+
+.admin-activity-meta dd {
+  display: inline;
+  margin-inline-start: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-gray-700);
+}
+
+.admin-activity-meta dt::after {
+  content: ":";
+}
+
+.admin-activity-status--failed,
+.admin-activity-severity--high,
+.admin-activity-severity--critical {
+  color: var(--color-error-dark);
+  font-weight: var(--font-weight-semibold);
+}
+
+.admin-activity-severity--medium {
+  color: var(--color-warning-dark);
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Alerts List */

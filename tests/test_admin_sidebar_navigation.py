@@ -8,49 +8,50 @@ FRONTEND = ROOT / "frontend.py"
 ADMIN_CSS = ROOT / "static" / "css" / "admin_design_system.css"
 
 EXPECTED_ARABIC_LABEL_ORDER = [
-    "الرئيسية",
-    "لوحة التحكم العامة",
-    "الإدارة",
+    "لوحة التحكم",
+    "إدارة النظام",
     "المستخدمون",
     "التواصل",
-    "إدارة البيانات",
-    "التحليلات والتقارير",
-    "نظرة عامة على التحليلات",
-    "التقارير المفصلة",
-    "التقارير اليومية",
-    "جدولة التقارير",
-    "الحوادث",
+    "الروضات",
+    "البيانات",
+    "العمليات",
     "سجل الحوادث",
     "تقارير الحوادث",
-    "الخريطة الحرارية",
+    "التقارير والتحليل",
+    "نظرة عامة على التحليلات",
+    "التقارير المفصلة",
+    "تقارير الدعم القرارى",
+    "التقارير اليومية",
+    "جدولة التقارير",
     "نظرة عامة على الخريطة",
     "تحليل المحافظات",
     "الحوكمة",
-    "مؤشرات الحوكمة",
-    "التصنيف والمقارنات",
-    "النظام",
-    "الأمان",
+    "السياسات",
+    "الامتثال",
     "الإعدادات",
+    "إعدادات النظام",
+    "السجلات",
 ]
 
 EXPECTED_VISIBLE_HREFS = [
     "/admin/dashboard",
     "/admin/users",
     "/admin/messages",
+    "/admin/kg-overview",
     "/admin/imported-kindergartens",
-    "/admin/analytics",
-    "/admin/analytics/reports",
-    "/admin/analytics/daily-reports",
-    "/admin/daily-reports-organization",
     "/admin/reports/incidents",
     "/admin/reports/incidents/generate",
+    "/admin/analytics",
+    "/admin/analytics/reports",
+    "/admin/analytics/decision-support",
+    "/admin/analytics/daily-reports",
+    "/admin/daily-reports-organization",
     "/admin/heatmap",
     "/admin/heatmap#governorates",
     "/admin/governance-reports",
     "/admin/classification",
-    "/admin/audit-logs",
     "/admin/settings",
-    "/admin/observability",
+    "/admin/audit-logs",
 ]
 
 REMOVED_VISIBLE_HREFS = {
@@ -64,6 +65,7 @@ REMOVED_VISIBLE_HREFS = {
     "/admin/alerts",
     "/admin/safety-analytics",
     "/admin/impersonate",
+    "/admin/observability",
 }
 
 
@@ -85,7 +87,7 @@ def test_admin_sidebar_arabic_structure_matches_required_order():
         positions.append(sidebar.index(marker))
 
     assert positions == sorted(positions)
-    assert '"label_ar": "لوحة التحكم"' not in sidebar
+    assert '"label_ar": "لوحة التحكم العامة"' not in sidebar
     assert '"label_ar": "نظرة عامة"' not in sidebar
 
 

@@ -1,0 +1,652 @@
+{% extends "admin_base.html" %}
+{% from 'components/date-range-filter.html' import date_range_filter %}
+
+{% block title %}{% if ui_lang == 'en' %}Decision Support Reports{% else %}تقارير الدعم القرارى{% endif %} — KinJo{% endblock %}
+
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Decision Support Reports{% else %}تقارير الدعم القرارى{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page-header reports-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
+  <div class="reports-page-titleblock">
+    <h1 class="admin-page-title mb-0" style="font: var(--type-page-title)">
+      <i class="bi bi-graph-up-arrow me-2"></i>
+      {% if ui_lang == 'en' %}Decision Support Reports{% else %}تقارير الدعم القرارى{% endif %}
+    </h1>
+    <small class="text-on-surface-variant mt-1" id="reportsLastUpdated">
+      <i class="bi bi-clock"></i>
+      <span>{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+    </small>
+  </div>
+  <div class="reports-page-actions">
+    {{ date_range_filter(
+      start_id="periodStart",
+      end_id="periodEnd",
+      governorate_id="governorateFilter",
+      city_id="cityFilter",
+      show_governorate=(current_user.role in ["ADMIN","SUPERVISOR"]),
+      refresh_btn_id="refreshReportBtn",
+      on_refresh="loadAllReports",
+      show_export=True,
+      user_role=current_user.role
+    ) }}
+  </div>
+</div>
+
+{% if ui_lang == 'en' %}
+{% set level_options = [
+  {"value": "jordan", "label": "Jordan"},
+  {"value": "governorate", "label": "Governorate"},
+  {"value": "city", "label": "City"},
+  {"value": "kindergarten", "label": "Kindergarten"},
+  {"value": "class", "label": "Class"}
+] %}
+{% set section_titles = {
+  "national": "National Overview",
+  "children": "Children Analytics",
+  "kindergartens": "Kindergartens Analytics",
+  "supervisors": "Supervisors Analytics",
+  "data_quality": "Data Quality",
+  "compliance": "Compliance",
+  "risk": "Risk Ranking",
+  "drilldown": "Drill-Down Profile"
+} %}
+{% else %}
+{% set level_options = [
+  {"value": "jordan", "label": "الأردن"},
+  {"value": "governorate", "label": "المحافظة"},
+  {"value": "city", "label": "المدينة"},
+  {"value": "kindergarten", "label": "الروضة"},
+  {"value": "class", "label": "الصف"}
+] %}
+{% set section_titles = {
+  "national": "النظرة الوطنية",
+  "children": "تحليلات الأطفال",
+  "kindergartens": "تحليلات الروضات",
+  "supervisors": "تحليلات المشرفين",
+  "data_quality": "جودة البيانات",
+  "compliance": "الامتثال",
+  "risk": "ترتيب المخاطر",
+  "drilldown": "الملف التفصيلي"
+} %}
+{% endif %}
+
+<!-- Level selector -->
+<div class="card mb-4 glass-panel shadow-sm border-0">
+  <div class="card-body p-card">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label fw-bold" for="reportLevel">{% if ui_lang == 'en' %}Reporting Level{% else %}مستوى التقرير{% endif %}</label>
+        <select class="form-select" id="reportLevel" onchange="onLevelChange()">
+          {% for opt in level_options %}
+          <option value="{{ opt.value }}" {% if opt.value == 'jordan' %}selected{% endif %}>{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3" id="governorateContainer">
+        <label class="form-label fw-bold" for="governorateFilter">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+        <input type="text" class="form-control" id="governorateFilter" placeholder="{% if ui_lang == 'en' %}e.g. Amman{% else %}مثال: عمان{% endif %}">
+      </div>
+      <div class="col-md-3" id="cityContainer" style="display:none;">
+        <label class="form-label fw-bold" for="cityFilter">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
+        <input type="text" class="form-control" id="cityFilter" placeholder="{% if ui_lang == 'en' %}e.g. Amman{% else %}مثال: عمان{% endif %}">
+      </div>
+      <div class="col-md-3" id="kgContainer" style="display:none;">
+        <label class="form-label fw-bold" for="kindergartenIdFilter">{% if ui_lang == 'en' %}Kindergarten ID{% else %}معرف الروضة{% endif %}</label>
+        <input type="number" class="form-control" id="kindergartenIdFilter" placeholder="{% if ui_lang == 'en' %}ID{% else %}معرف{% endif %}">
+      </div>
+      <div class="col-md-3" id="classContainer" style="display:none;">
+        <label class="form-label fw-bold" for="classIdFilter">{% if ui_lang == 'en' %}Class ID{% else %}معرف الفصل{% endif %}</label>
+        <input type="number" class="form-control" id="classIdFilter" placeholder="{% if ui_lang == 'en' %}ID{% else %}معرف{% endif %}">
+      </div>
+      <div class="col-md-auto">
+        <button class="btn btn-primary" onclick="loadAllReports()" id="refreshReportBtn">
+          <i class="bi bi-arrow-clockwise me-1"></i>
+          {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loadingIndicator" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+  </div>
+  <p class="mt-2">{% if ui_lang == 'en' %}Loading reports...{% else %}جاري تحميل التقارير...{% endif %}</p>
+</div>
+
+<div id="reportContent" class="d-none">
+
+  <!-- National Overview KPI Cards -->
+  <section class="mb-5" id="section-national">
+    <h2 class="section-title mb-3">
+      <i class="bi bi-speedometer2 me-2 text-primary"></i>
+      {{ section_titles.national }}
+    </h2>
+    <div class="row g-4 mb-4" id="nationalKpiRow">
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-primary shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Children{% else %}الأطفال{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-primary" id="kpiTotalChildren">--</h3>
+            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Active children{% else %}أطفال نشطون{% endif %}</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-success shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-success" id="kpiTotalKindergartens">--</h3>
+            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Active kindergartens{% else %}روضات نشطة{% endif %}</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-warning shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-warning" id="kpiTotalSupervisors">--</h3>
+            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Active supervisors{% else %}مشرفون نشطون{% endif %}</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-info shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Classes{% else %}الفصول{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-info" id="kpiTotalClasses">--</h3>
+            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Active classes{% else %}فصول نشطة{% endif %}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row g-4 mb-4">
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-secondary shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Children per Supervisor{% else %}أطفال لكل مشرف{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-secondary" id="kpiChildrenPerSupervisor">--</h3>
+            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}National average{% else %}المعدل الوطني{% endif %}</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-danger shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Supervisor Gap{% else %}فجوة المشرفين{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-danger" id="kpiSupervisorGap">--</h3>
+            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Required minus actual{% else %}مطلوب ناقص الفعلي{% endif %}</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-warning shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Capacity Utilization{% else %}استخدام السعة{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-warning" id="kpiCapacityUtil">--%</h3>
+            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Of licensed capacity{% else %}من السعة المرخصة{% endif %}</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-info shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Data Quality Score{% else %}درجة جودة البيانات{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-info" id="kpiDataQuality">--%</h3>
+            <small class="text-on-surface-variant" id="kpiDataQualityBand">--</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row g-4 mb-4">
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-success shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Compliance Score{% else %}درجة الامتثال{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-success" id="kpiCompliance">--%</h3>
+            <small class="text-on-surface-variant" id="kpiComplianceBand">--</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-danger shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Critical Kindergartens{% else %}روضات حرجة{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-danger" id="kpiCriticalKgs">--</h3>
+            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Requires immediate action{% else %}تتطلب تدخل فوري{% endif %}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card mb-4 glass-panel shadow-sm border-0">
+      <div class="card-body p-card">
+        <div class="alert alert-info d-flex align-items-center" role="alert" id="nationalInterpretation">
+          <i class="bi bi-info-circle me-2 fs-4"></i>
+          <div>{% if ui_lang == 'en' %}Loading interpretation...{% else %}جاري تحميل التفسير...{% endif %}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Children Analytics -->
+  <section class="mb-5" id="section-children">
+    <h2 class="section-title mb-3">
+      <i class="bi bi-people me-2 text-primary"></i>
+      {{ section_titles.children }}
+    </h2>
+    <div class="row g-4 mb-4">
+      <div class="col-lg-6">
+        <div class="card h-100 glass-panel shadow-sm border-0">
+          <div class="card-header bg-transparent border-bottom">
+            <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+              <i class="bi bi-bar-chart me-2 text-primary"></i>
+              {% if ui_lang == 'en' %}Age Distribution{% else %}التوزيع العمرى{% endif %}
+            </h5>
+          </div>
+          <div class="card-body">
+            <canvas id="ageDistributionChart" height="280"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card h-100 glass-panel shadow-sm border-0">
+          <div class="card-header bg-transparent border-bottom">
+            <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+              <i class="bi bi-gender-ambiguous me-2 text-primary"></i>
+              {% if ui_lang == 'en' %}Gender Distribution{% else %}التوزيع حسب الجنس{% endif %}
+            </h5>
+          </div>
+          <div class="card-body">
+            <canvas id="genderDistributionChart" height="280"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row g-4 mb-4">
+      <div class="col-lg-6">
+        <div class="card h-100 glass-panel shadow-sm border-0">
+          <div class="card-header bg-transparent border-bottom">
+            <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+              <i class="bi bi-geo-alt me-2 text-primary"></i>
+              {% if ui_lang == 'en' %}Children by Governorate{% else %}الأطفال حسب المحافظة{% endif %}
+            </h5>
+          </div>
+          <div class="card-body">
+            <canvas id="childrenByGovernorateChart" height="280"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card h-100 glass-panel shadow-sm border-0">
+          <div class="card-header bg-transparent border-bottom">
+            <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+              <i class="bi bi-building me-2 text-primary"></i>
+              {% if ui_lang == 'en' %}Children by City{% else %}الأطفال حسب المدينة{% endif %}
+            </h5>
+          </div>
+          <div class="card-body">
+            <canvas id="childrenByCityChart" height="280"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kindergartens Analytics -->
+  <section class="mb-5" id="section-kindergartens">
+    <h2 class="section-title mb-3">
+      <i class="bi bi-building me-2 text-primary"></i>
+      {{ section_titles.kindergartens }}
+    </h2>
+    <div class="row g-4 mb-4">
+      <div class="col-lg-6">
+        <div class="card h-100 glass-panel shadow-sm border-0">
+          <div class="card-header bg-transparent border-bottom">
+            <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+              <i class="bi bi-diagram-3 me-2 text-primary"></i>
+              {% if ui_lang == 'en' %}Children vs Supervisors{% else %}أطفال مقابل مشرفين{% endif %}
+            </h5>
+          </div>
+          <div class="card-body">
+            <canvas id="childrenVsSupervisorsChart" height="280"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card h-100 glass-panel shadow-sm border-0">
+          <div class="card-header bg-transparent border-bottom">
+            <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+              <i class="bi bi-pie-chart me-2 text-primary"></i>
+              {% if ui_lang == 'en' %}Risk Classification{% else %}تصنيف المخاطر{% endif %}
+            </h5>
+          </div>
+          <div class="card-body">
+            <canvas id="riskClassificationChart" height="280"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card mb-4 glass-panel shadow-sm border-0">
+      <div class="card-header bg-transparent border-bottom">
+        <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+          <i class="bi bi-table me-2 text-primary"></i>
+          {% if ui_lang == 'en' %}Kindergarten Risk Ranking{% else %}ترتيب المخاطر حسب الروضة{% endif %}
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="kindergartenRiskTable">
+            <thead class="table-light">
+              <tr>
+                <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Utilization{% else %}الاستخدام{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Risk{% else %}المخاطرة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+              </tr>
+            </thead>
+            <tbody id="kindergartenRiskTableBody">
+              <tr><td colspan="9" class="text-center py-4">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Supervisors Analytics -->
+  <section class="mb-5" id="section-supervisors">
+    <h2 class="section-title mb-3">
+      <i class="bi bi-person-badge me-2 text-primary"></i>
+      {{ section_titles.supervisors }}
+    </h2>
+    <div class="row g-4 mb-4">
+      <div class="col-lg-6">
+        <div class="card h-100 glass-panel shadow-sm border-0">
+          <div class="card-header bg-transparent border-bottom">
+            <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+              <i class="bi bi-bar-chart-line me-2 text-primary"></i>
+              {% if ui_lang == 'en' %}Required vs Actual Supervisors{% else %}مطلوب مقابل فعلي{% endif %}
+            </h5>
+          </div>
+          <div class="card-body">
+            <canvas id="supervisorGapChart" height="280"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card h-100 glass-panel shadow-sm border-0">
+          <div class="card-header bg-transparent border-bottom">
+            <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+              <i class="bi bi-exclamation-triangle me-2 text-primary"></i>
+              {% if ui_lang == 'en' %}Assignment Errors{% else %}أخطاء التعيين{% endif %}
+            </h5>
+          </div>
+          <div class="card-body">
+            <canvas id="supervisorErrorsChart" height="280"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card mb-4 glass-panel shadow-sm border-0">
+      <div class="card-header bg-transparent border-bottom">
+        <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+          <i class="bi bi-table me-2 text-primary"></i>
+          {% if ui_lang == 'en' %}Supervisor Assignment Errors{% else %}أخطاء تعيين المشرفين{% endif %}
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="supervisorErrorsTable">
+            <thead class="table-light">
+              <tr>
+                <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Classes{% else %}فصول{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Errors{% else %}أخطاء{% endif %}</th>
+              </tr>
+            </thead>
+            <tbody id="supervisorErrorsTableBody">
+              <tr><td colspan="6" class="text-center py-4">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Data Quality -->
+  <section class="mb-5" id="section-data-quality">
+    <h2 class="section-title mb-3">
+      <i class="bi bi-clipboard-data me-2 text-primary"></i>
+      {{ section_titles.data_quality }}
+    </h2>
+    <div class="row g-4 mb-4">
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-success shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Data Quality Score{% else %}درجة جودة البيانات{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-success" id="dqScore">--%</h3>
+            <small class="text-on-surface-variant" id="dqBand">--</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-warning shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Missing DOB{% else %}تاريخ الميلاد مفقود{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-warning" id="dqMissingDob">--</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-danger shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Children Without KG{% else %}أطفال بلا روضة{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-danger" id="dqWithoutKg">--</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-danger shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Duplicate Children{% else %}سجلات مكررة{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-danger" id="dqDuplicate">--</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card mb-4 glass-panel shadow-sm border-0">
+      <div class="card-body p-card">
+        <div class="alert alert-warning d-flex align-items-center" role="alert" id="dqInterpretation">
+          <i class="bi bi-exclamation-circle me-2 fs-4"></i>
+          <div>{% if ui_lang == 'en' %}Loading interpretation...{% else %}جاري تحميل التفسير...{% endif %}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Compliance -->
+  <section class="mb-5" id="section-compliance">
+    <h2 class="section-title mb-3">
+      <i class="bi bi-shield-check me-2 text-primary"></i>
+      {{ section_titles.compliance }}
+    </h2>
+    <div class="row g-4 mb-4">
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-success shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Compliance Score{% else %}درجة الامتثال{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-success" id="compScore">--%</h3>
+            <small class="text-on-surface-variant" id="compBand">--</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-danger shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Over Capacity{% else %}تجاوز الطاقة الاستيعابية{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-danger" id="compOverCapacity">--</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-warning shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}No Supervisor{% else %}بلا مشرف{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-warning" id="compNoSupervisor">--</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-xl-3">
+        <div class="card h-100 glass-panel hover-elevate border-start border-4 border-danger shadow-sm" role="region">
+          <div class="card-body p-card">
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Invalid Age{% else %}عمر غير صالح{% endif %}</h6>
+            <h3 class="mb-0 fw-bold text-danger" id="compInvalidAge">--</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card mb-4 glass-panel shadow-sm border-0">
+      <div class="card-body p-card">
+        <div class="alert alert-danger d-flex align-items-center" role="alert" id="compInterpretation">
+          <i class="bi bi-shield-exclamation me-2 fs-4"></i>
+          <div>{% if ui_lang == 'en' %}Loading interpretation...{% else %}جاري تحميل التفسير...{% endif %}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Risk Ranking -->
+  <section class="mb-5" id="section-risk">
+    <h2 class="section-title mb-3">
+      <i class="bi bi-arrow-up-right-square me-2 text-primary"></i>
+      {{ section_titles.risk }}
+    </h2>
+    <div class="card mb-4 glass-panel shadow-sm border-0">
+      <div class="card-header bg-transparent border-bottom">
+        <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+          <i class="bi bi-list-ol me-2 text-primary"></i>
+          {% if ui_lang == 'en' %}Risk Ranking{% else %}ترتيب المخاطر{% endif %}
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="riskRankingTable">
+            <thead class="table-light">
+              <tr>
+                <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Risk Score{% else %}درجة المخاطرة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Children/Supervisor{% else %}أطفال/مشرف{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+              </tr>
+            </thead>
+            <tbody id="riskRankingTableBody">
+              <tr><td colspan="6" class="text-center py-4">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kindergarten Detail (shown when city/governorate level selected) -->
+  <section class="mb-5 d-none" id="section-kindergarten-detail">
+    <h2 class="section-title mb-3">
+      <i class="bi bi-building me-2 text-primary"></i>
+      {% if ui_lang == 'en' %}Kindergarten Detail{% else %}تفاصيل الروضات{% endif %}
+    </h2>
+    <div class="card mb-4 glass-panel shadow-sm border-0">
+      <div class="card-header bg-transparent border-bottom">
+        <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+          <i class="bi bi-table me-2 text-primary"></i>
+          {% if ui_lang == 'en' %}Kindergartens in Scope{% else %}الروضات في النطاق{% endif %}
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="kindergartenDetailTable">
+            <thead class="table-light">
+              <tr>
+                <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Classes{% else %}فصول{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Utilization{% else %}الاستخدام{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Supervisor Gap{% else %}فجوة المشرفين{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Risk{% else %}المخاطرة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Classification{% else %}التصنيف{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+              </tr>
+            </thead>
+            <tbody id="kindergartenDetailTableBody">
+              <tr><td colspan="12" class="text-center py-4">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Class Detail (shown when kindergarten level selected) -->
+  <section class="mb-5 d-none" id="section-class-detail">
+    <h2 class="section-title mb-3">
+      <i class="bi bi-collection-play me-2 text-primary"></i>
+      {% if ui_lang == 'en' %}Class Detail{% else %}تفاصيل الفصول{% endif %}
+    </h2>
+    <div class="card mb-4 glass-panel shadow-sm border-0">
+      <div class="card-header bg-transparent border-bottom">
+        <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+          <i class="bi bi-table me-2 text-primary"></i>
+          {% if ui_lang == 'en' %}Classes in Selected Kindergarten{% else %}الفصول في الروضة المختارة{% endif %}
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="classDetailTable">
+            <thead class="table-light">
+              <tr>
+                <th>{% if ui_lang == 'en' %}Class Code{% else %}رمز الفصل{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Age Group{% else %}الفئة العمرية{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Required Sup{% else %}مطلوب{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Gap{% else %}فجوة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Risk{% else %}المخاطرة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+              </tr>
+            </thead>
+            <tbody id="classDetailTableBody">
+              <tr><td colspan="10" class="text-center py-4">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script defer src="/static/js/admin_reporting_dashboard.js" charset="utf-8"></script>
+{% endblock %}
+

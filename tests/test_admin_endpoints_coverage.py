@@ -674,7 +674,7 @@ class TestAdminDashboardCoverage:
         body = r.json()
         assert "summary" in body
         assert "system_overview" in body
-        assert "kpi_cards" in body
+        assert "kpi_trends" in body
 
     def test_admin_dashboard_with_period_days(self, client, test_db, sample_kindergarten):
         _make_admin(test_db, "dash_admin", "2")

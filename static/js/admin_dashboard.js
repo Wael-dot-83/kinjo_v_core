@@ -46,13 +46,13 @@ const ENROLLMENT_FALLBACK = {
 
 // KPI configuration — single source of truth, order determines render order
 const KPI_CONFIG = [
-  { key: "total_users",          icon: "bi bi-people-fill",       color: "primary", format: "number" },
-  { key: "active_users",         icon: "bi bi-person-check-fill", color: "success", format: "number" },
-  { key: "total_kindergartens",  icon: "bi bi-house-fill",        color: "info",    format: "number" },
-  { key: "active_kindergartens", icon: "bi bi-house-check-fill",  color: "success", format: "number" },
-  { key: "total_submissions",    icon: "bi bi-file-earmark-fill", color: "warning", format: "number" },
-  { key: "pending_submissions",  icon: "bi bi-clock-fill",        color: "danger",  format: "number" },
-  { key: "data_quality_score",   icon: "bi bi-graph-up-arrow",    color: "primary", format: "percentage" },
+  { key: "total_users",          icon: "bi bi-people-fill",       color: "primary", format: "number",     drilldown: "/admin/users",                     drilldownLabelKey: "dashboard.view_users" },
+  { key: "active_users",         icon: "bi bi-person-check-fill", color: "success", format: "number",     drilldown: "/admin/users",                     drilldownLabelKey: "dashboard.view_users" },
+  { key: "total_kindergartens",  icon: "bi bi-house-fill",        color: "info",    format: "number",     drilldown: "/admin/kg-overview",               drilldownLabelKey: "dashboard.view_kindergartens" },
+  { key: "active_kindergartens", icon: "bi bi-house-check-fill",  color: "success", format: "number",     drilldown: "/admin/kg-overview",               drilldownLabelKey: "dashboard.view_kindergartens" },
+  { key: "total_submissions",    icon: "bi bi-file-earmark-fill", color: "warning", format: "number",     drilldown: "/admin/analytics/daily-reports",   drilldownLabelKey: "dashboard.view_reports" },
+  { key: "pending_submissions",  icon: "bi bi-clock-fill",        color: "danger",  format: "number",     drilldown: "/admin/analytics/daily-reports",   drilldownLabelKey: "dashboard.view_reports" },
+  { key: "data_quality_score",   icon: "bi bi-graph-up-arrow",    color: "primary", format: "percentage", drilldown: "/admin/imported-kindergartens",    drilldownLabelKey: "dashboard.view_data_management" },
 ];
 
 // English fallbacks for KPI labels (used if i18n JSON hasn't loaded yet)
@@ -135,8 +135,10 @@ class AdminDashboard {
       clearTimeout(timeoutId);
       if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       const data = await response.json();
+      this._lastData = data;
       this.renderDashboard(data);
       this.setState("success");
+      this._waitForI18nThenRefresh();
     } catch (error) {
       clearTimeout(timeoutId);
       console.error("[AdminDashboard] load error:", error);
@@ -156,11 +158,29 @@ class AdminDashboard {
     if (el) el.textContent = message;
   }
 
+  // Under heavy load the async translation JSON can still be loading when this
+  // first render happens, leaving KPI trend/status/drilldown and activity-meta
+  // text stuck on their (English) fallback. Poll for a canary key, bounded,
+  // and re-render exactly once when translations land — never again after
+  // that, so later user-driven refreshes don't get needlessly re-rendered.
+  _waitForI18nThenRefresh(attemptsLeft = 20) {
+    if (this._i18nRefreshed) return;
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const canary = window.AdminI18n?.translations?.[lang]?.dashboard?.trend_compare_period;
+    if (canary) {
+      this._i18nRefreshed = true;
+      if (this._lastData) this.renderDashboard(this._lastData);
+      return;
+    }
+    if (attemptsLeft <= 0) return;
+    setTimeout(() => this._waitForI18nThenRefresh(attemptsLeft - 1), 100);
+  }
+
   // ── Rendering ─────────────────────────────────────────────────────────────
 
   renderDashboard(data) {
     const normalized = this.normalizePayload(data || {});
-    this.renderKPICards(normalized.kpis);
+    this.renderKPICards(normalized.kpis, normalized.kpi_trends, normalized.data_quality_reasons);
     this.renderCharts(normalized.charts);
     this.renderActivityFeed(normalized.recent_activity);
     this.renderAlerts(normalized.alerts);
@@ -178,6 +198,8 @@ class AdminDashboard {
 
     // kpis is now a flat dict provided directly by the API
     const kpis = data.kpis || {};
+    const kpiTrends = data.kpi_trends || {};
+    const dataQualityReasons = Array.isArray(data.data_quality_reasons) ? data.data_quality_reasons : [];
 
     const chartPayload      = data.charts || {};
     const userActivityChart = {
@@ -201,6 +223,8 @@ class AdminDashboard {
 
     return {
       kpis,
+      kpi_trends: kpiTrends,
+      data_quality_reasons: dataQualityReasons,
       charts: { user_activity: userActivityChart, data_submissions: submissionChart },
       recent_activity: recentActivity,
       alerts,
@@ -209,14 +233,19 @@ class AdminDashboard {
 
   // ── KPI Cards ─────────────────────────────────────────────────────────────
 
-  renderKPICards(kpis) {
+  renderKPICards(kpis, kpiTrends, dataQualityReasons) {
     const container = document.getElementById("kpi-cards");
     if (!container) return;
     container.innerHTML = "";
     // Always render all KPI slots — sanitizeKPIValue returns null for invalid/missing values,
     // which formatKPIValue renders as "—" to preserve layout integrity.
     KPI_CONFIG.forEach((config) => {
-      container.appendChild(this.createKPICard(config, this.sanitizeKPIValue(config.key, kpis[config.key])));
+      container.appendChild(this.createKPICard(
+        config,
+        this.sanitizeKPIValue(config.key, kpis[config.key]),
+        (kpiTrends || {})[config.key],
+        config.key === "data_quality_score" ? (dataQualityReasons || []) : null
+      ));
     });
   }
 
@@ -228,7 +257,7 @@ class AdminDashboard {
     return num;
   }
 
-  createKPICard(config, value) {
+  createKPICard(config, value, trendMeta, dataQualityReasons) {
     const card = document.createElement("div");
     card.className = "admin-kpi-card";
     card.setAttribute("role", "region");
@@ -265,9 +294,121 @@ class AdminDashboard {
     titleDiv.textContent = this.t(`dashboard.${config.key}`, KPI_LABEL_FALLBACK[config.key] || config.key);
     contentDiv.appendChild(titleDiv);
 
+    if (trendMeta && value !== null) {
+      contentDiv.appendChild(this.createKPITrendRow(trendMeta));
+      contentDiv.appendChild(this.createKPIStatusRow(trendMeta));
+    }
+
+    if (Array.isArray(dataQualityReasons) && dataQualityReasons.length > 0) {
+      contentDiv.appendChild(this.createDataQualityReasons(dataQualityReasons));
+    }
+
+    if (config.drilldown) {
+      contentDiv.appendChild(this.createKPIDrilldownLink(config));
+    }
+
     card.appendChild(iconDiv);
     card.appendChild(contentDiv);
     return card;
+  }
+
+  // Trend row: icon (shape, not just color) + comparison-to-previous-period text.
+  createKPITrendRow(trendMeta) {
+    const row = document.createElement("div");
+    row.className = `admin-kpi-card-trend admin-kpi-card-trend--${trendMeta.trend || "flat"}`;
+
+    const icon = document.createElement("i");
+    // Up/down are vertical arrows — direction is unaffected by RTL/LTR, so no .icon-directional here.
+    icon.className =
+      trendMeta.trend === "up"   ? "bi bi-arrow-up-short" :
+      trendMeta.trend === "down" ? "bi bi-arrow-down-short" :
+      "bi bi-dash-lg";
+    icon.setAttribute("aria-hidden", "true");
+    row.appendChild(icon);
+
+    const text = document.createElement("span");
+    text.textContent = this.formatTrendComparison(trendMeta);
+    row.appendChild(text);
+
+    return row;
+  }
+
+  formatTrendComparison(trendMeta) {
+    const locale = window.KINJO_LANG === "ar" ? "ar-JO" : "en-US";
+    const sign = trendMeta.trend === "up" ? "+" : trendMeta.trend === "down" ? "-" : "";
+    let changeText;
+    if (trendMeta.change_pct !== null && trendMeta.change_pct !== undefined) {
+      changeText = sign + new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Math.abs(trendMeta.change_pct)) + "%";
+    } else {
+      changeText = sign + new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Math.abs(trendMeta.change || 0));
+    }
+    return this.t("dashboard.trend_compare_period", `${changeText} vs. previous period`, { change: changeText });
+  }
+
+  // Status meaning — icon + text, never color alone.
+  createKPIStatusRow(trendMeta) {
+    const row = document.createElement("div");
+    row.className = `admin-kpi-card-status admin-kpi-card-status--${trendMeta.status || "good"}`;
+
+    const icon = document.createElement("i");
+    icon.className = trendMeta.status === "warning" ? "bi bi-exclamation-triangle-fill" : "bi bi-check-circle-fill";
+    icon.setAttribute("aria-hidden", "true");
+    row.appendChild(icon);
+
+    const text = document.createElement("span");
+    text.textContent = trendMeta.status === "warning"
+      ? this.t("dashboard.status_warning", "Needs attention")
+      : this.t("dashboard.status_good", "Good");
+    row.appendChild(text);
+
+    return row;
+  }
+
+  // Data Quality card only: reasons behind the score, in a native <details> disclosure (free keyboard support).
+  createDataQualityReasons(reasons) {
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+
+    const details = document.createElement("details");
+    details.className = "admin-kpi-dq-reasons";
+
+    const summary = document.createElement("summary");
+    summary.textContent = this.t("dashboard.dq_view_issues", "View data issues");
+    details.appendChild(summary);
+
+    const list = document.createElement("ul");
+    list.className = "admin-kpi-dq-reasons-list";
+    reasons.forEach((reason) => {
+      const li = document.createElement("li");
+      li.setAttribute("dir", "auto");
+      li.textContent = reason[`label_${lang}`] || reason.label_ar || "";
+      list.appendChild(li);
+    });
+    details.appendChild(list);
+
+    const improveLink = document.createElement("a");
+    improveLink.className = "admin-kpi-dq-improve-link";
+    improveLink.href = "/admin/imported-kindergartens";
+    improveLink.textContent = this.t("dashboard.dq_improve", "Improve data quality");
+    details.appendChild(improveLink);
+
+    return details;
+  }
+
+  createKPIDrilldownLink(config) {
+    const link = document.createElement("a");
+    link.className = "admin-kpi-card-drilldown";
+    link.href = config.drilldown;
+
+    const text = document.createElement("span");
+    text.textContent = this.t(config.drilldownLabelKey, KPI_LABEL_FALLBACK[config.key] || "View details");
+    link.appendChild(text);
+
+    const chevron = document.createElement("i");
+    chevron.className = "bi bi-chevron-right icon icon-directional";
+    chevron.setAttribute("aria-hidden", "true");
+    link.appendChild(chevron);
+
+    return link;
   }
 
   formatKPIValue(config, value) {
@@ -417,16 +558,79 @@ class AdminDashboard {
   createActivityItem(activity) {
     const lang    = window.KINJO_LANG === "en" ? "en" : "ar";
     const message = activity[`message_${lang}`] || activity.message || "";
-    return this._createFeedItem({
-      wrapperClass:  "admin-activity-item",
-      iconWrapClass: "admin-activity-icon",
-      iconClass:     this.getActivityIcon(activity.type),
-      contentClass:  "admin-activity-content",
-      msgClass:      "admin-activity-message",
-      timeClass:     "admin-activity-time",
-      message,
-      timestamp:     activity.timestamp,
-    });
+
+    const article = document.createElement("article");
+    article.className = "admin-activity-item";
+    article.setAttribute("role", "listitem");
+
+    const header = document.createElement("header");
+    header.className = "admin-activity-item-header";
+
+    const iconWrap = document.createElement("span");
+    iconWrap.className = "admin-activity-icon";
+    const icon = document.createElement("i");
+    icon.className = this.getActivityIcon(activity.type);
+    icon.setAttribute("aria-hidden", "true");
+    iconWrap.appendChild(icon);
+    header.appendChild(iconWrap);
+
+    const userName = document.createElement("strong");
+    userName.className = "admin-activity-user";
+    userName.setAttribute("dir", "auto");
+    userName.textContent = activity.user_name || this.t("dashboard.system_actor", "System");
+    header.appendChild(userName);
+
+    const time = document.createElement("span");
+    time.className = "admin-activity-time";
+    time.textContent = this.formatTimeAgo(activity.timestamp);
+    header.appendChild(time);
+
+    article.appendChild(header);
+
+    const messageEl = document.createElement("p");
+    messageEl.className = "admin-activity-message";
+    messageEl.setAttribute("dir", "auto");
+    messageEl.textContent = message;
+    article.appendChild(messageEl);
+
+    const dl = document.createElement("dl");
+    dl.className = "admin-activity-meta";
+
+    const addTerm = (termKey, termFallback, value, ddClass) => {
+      if (!value) return;
+      const dt = document.createElement("dt");
+      dt.textContent = this.t(termKey, termFallback);
+      const dd = document.createElement("dd");
+      if (ddClass) dd.className = ddClass;
+      dd.textContent = value;
+      dl.appendChild(dt);
+      dl.appendChild(dd);
+    };
+
+    addTerm("dashboard.activity_role",     "Role",     this.formatRole(activity.user_role));
+    addTerm("dashboard.activity_module",   "Module",   lang === "en" ? activity.module_en : activity.module_ar);
+    addTerm("dashboard.activity_entity",   "Entity",   lang === "en" ? activity.entity_label_en : activity.entity_label_ar);
+    addTerm("dashboard.activity_status",   "Status",   this.formatStatus(activity.status), `admin-activity-status admin-activity-status--${activity.status || "success"}`);
+    addTerm("dashboard.activity_severity", "Severity", this.formatSeverity(activity.severity), `admin-activity-severity admin-activity-severity--${activity.severity || "low"}`);
+
+    if (dl.children.length > 0) article.appendChild(dl);
+
+    return article;
+  }
+
+  formatRole(role) {
+    if (!role) return "";
+    return this.t(`users.${String(role).toLowerCase()}`, role);
+  }
+
+  formatStatus(status) {
+    if (!status) return "";
+    return this.t(`dashboard.status_${status}`, status);
+  }
+
+  formatSeverity(severity) {
+    if (!severity) return "";
+    return this.t(`dashboard.severity_${severity}`, severity);
   }
 
   // ── Alerts ────────────────────────────────────────────────────────────────

@@ -48,6 +48,7 @@ from api.auth.password_reset_service import (
 from messaging_permissions import ACTIVE_ENROLLMENT_STATUSES, ensure_kindergartens_exist
 from validators import build_arabic_search_terms
 from kindergarten_import_service import KindergartenImportService
+from kpi_service import KPIService
 from cache_service import cache_service
 from csv_utils import escape_csv_formula
 from audit_actions import AuditAction
@@ -3160,15 +3161,22 @@ def get_system_metrics(
 # Admin Dashboard Models
 # =============================================================================
 
-class DashboardKPICard(BaseModel):
-    """KPI card data for dashboard"""
-    title: str
-    value: Union[str, int, float]
-    change: Optional[float] = None
-    change_type: Optional[str] = None
-    trend: Optional[str] = None
-    status: Optional[str] = None
-    icon: Optional[str] = None
+class KPITrendMeta(BaseModel):
+    """Trend/comparison metadata for a single dashboard KPI, keyed to match `kpis`."""
+    value: float
+    previous_value: float
+    change: float
+    change_pct: Optional[float] = None
+    trend: str = "flat"
+    status: str = "good"
+
+
+class DataQualityReason(BaseModel):
+    """A single derivable reason contributing to a low data_quality_score."""
+    id: str
+    label_ar: str
+    label_en: str
+    count: int
 
 class DashboardSummary(BaseModel):
     """Summary statistics for admin dashboard"""
@@ -3236,6 +3244,15 @@ class ActivityItem(BaseModel):
     message_ar: str = ""
     message_en: str = ""
     timestamp: str
+    user_name: Optional[str] = None
+    user_role: Optional[str] = None
+    module_ar: Optional[str] = None
+    module_en: Optional[str] = None
+    entity_type: Optional[str] = None
+    entity_label_ar: Optional[str] = None
+    entity_label_en: Optional[str] = None
+    status: str = "success"
+    severity: str = "low"
 
 class AdminDashboardResponse(BaseModel):
     """Complete admin dashboard response"""
@@ -3244,10 +3261,131 @@ class AdminDashboardResponse(BaseModel):
     kindergartens: List[DashboardKindergarten]
     charts: DashboardCharts
     alerts: List[DashboardAlert]
-    kpi_cards: List[DashboardKPICard]
     kpis: Dict[str, Optional[float]]
+    kpi_trends: Dict[str, KPITrendMeta]
+    data_quality_reasons: List[DataQualityReason]
     recent_activity: List[ActivityItem]
     generated_at: str
+
+
+# =============================================================================
+# Recent Activity Taxonomy — shared by the dashboard's recent-activity feed
+# and the filterable /api/admin/dashboard/activity endpoint (Phase 4).
+# =============================================================================
+
+_SIDEBAR_MODULE_LABELS: Dict[str, tuple] = {
+    "management":         ("إدارة النظام", "System Management"),
+    "operations":         ("العمليات", "Operations"),
+    "reports-analytics":  ("التقارير والتحليل", "Reports & Analytics"),
+    "governance":         ("الحوكمة", "Governance"),
+    "settings":           ("الإعدادات", "Settings"),
+}
+
+# action -> (message_ar, message_en, activity_type, module_id)
+_ACTIVITY_MAP: Dict[str, tuple] = {
+    AuditAction.LOGIN_SUCCESS:              ("تسجيل دخول ناجح إلى النظام", "Successful login",              "user_login",       "settings"),
+    AuditAction.LOGIN_FAILED:               ("محاولة تسجيل دخول فاشلة",   "Failed login attempt",           "user_login",       "settings"),
+    AuditAction.LOGOUT:                     ("تسجيل خروج من النظام",      "Logged out",                     "user_logout",      "settings"),
+    AuditAction.ACCESS_DENIED:               ("رفض الوصول",                "Access denied",                  "user_login",       "settings"),
+    AuditAction.USER_CREATED:               ("إضافة مستخدم جديد",         "New user added",                 "user_create",      "management"),
+    AuditAction.USER_UPDATED:               ("تحديث بيانات مستخدم",       "User data updated",              "user_update",      "management"),
+    AuditAction.USER_DELETED:               ("حذف مستخدم",                "User deleted",                   "user_delete",      "management"),
+    AuditAction.BULK_USER_CREATE:           ("إضافة مستخدمين بالجملة",    "Bulk users added",               "user_create",      "management"),
+    AuditAction.BULK_USER_DELETE:           ("حذف مستخدمين بالجملة",      "Bulk users deleted",             "user_delete",      "management"),
+    AuditAction.KINDERGARTEN_CREATED:       ("إضافة روضة جديدة",          "New kindergarten added",         "data_create",      "management"),
+    AuditAction.KINDERGARTEN_UPDATED:       ("تحديث بيانات روضة",         "Kindergarten data updated",      "data_update",      "management"),
+    AuditAction.KINDERGARTEN_DELETED:       ("حذف روضة",                  "Kindergarten deleted",           "data_delete",      "management"),
+    AuditAction.DAILY_REPORT_CREATED:       ("إنشاء تقرير يومي",          "Daily report created",           "data_create",      "reports-analytics"),
+    AuditAction.DAILY_REPORT_EDITED:        ("تعديل تقرير يومي",          "Daily report edited",            "data_update",      "reports-analytics"),
+    AuditAction.DAILY_REPORT_DELETED:       ("حذف تقرير يومي",            "Daily report deleted",           "data_delete",      "reports-analytics"),
+    AuditAction.DAILY_REPORT_SUBMITTED:     ("تقديم تقرير يومي",          "Daily report submitted",         "data_submit",      "reports-analytics"),
+    AuditAction.ADMIN_MESSAGE_SENT:         ("إرسال رسالة إدارية",        "Admin message sent",             "message_sent",     "management"),
+    AuditAction.MESSAGE_SENT:               ("إرسال رسالة",               "Message sent",                   "message_sent",     "management"),
+    AuditAction.INCIDENT_RESOLVED:          ("إغلاق حادثة",               "Incident resolved",              "incident_log",     "operations"),
+    AuditAction.USER_EXPORT:                ("تصدير بيانات المستخدمين",   "User data exported",             "report_export",    "management"),
+    AuditAction.AUDIT_LOG_EXPORT:           ("تصدير سجل التدقيق",         "Audit log exported",             "report_export",    "settings"),
+    AuditAction.ANALYTICS_EXPORT_DOWNLOADED:("تنزيل تقرير تحليلي",        "Analytics report downloaded",    "report_export",    "reports-analytics"),
+    AuditAction.ADMIN_PROFILE_UPDATED:      ("تحديث إعدادات النظام",      "System settings updated",        "settings_change",  "settings"),
+    AuditAction.ENROLLMENT_ACCEPTED:        ("قبول طلب تسجيل",            "Enrollment application accepted","data_update",      "operations"),
+    AuditAction.ENROLLMENT_REJECTED:        ("رفض طلب تسجيل",             "Enrollment application rejected","data_update",      "operations"),
+}
+
+# High-risk actions escalated to "critical" regardless of their sensitivity_level.
+_CRITICAL_SEVERITY_ACTIONS = frozenset({
+    AuditAction.USER_DELETED,
+    AuditAction.BULK_USER_DELETE,
+    AuditAction.KINDERGARTEN_DELETED,
+    AuditAction.MFA_BYPASS_INITIATED,
+    AuditAction.IMPERSONATION_START,
+    AuditAction.AUDIT_LOG_CLEANUP,
+    AuditAction.AUDIT_LOG_EXPORT,
+    AuditAction.ANALYTICS_EXPORT_DOWNLOADED,
+})
+
+# Actions that represent a failed/denied attempt rather than a completed action.
+_FAILURE_ACTIONS = frozenset({
+    AuditAction.LOGIN_FAILED,
+    AuditAction.ACCESS_DENIED,
+    AuditAction.BULK_ACCESS_DENIED,
+    AuditAction.MFA_BYPASS_FAILED_AUTH,
+    AuditAction.IMPERSONATION_ATTEMPT_FAILED,
+})
+
+_ENTITY_TYPE_LABELS: Dict[str, tuple] = {
+    "Auth":                   ("المصادقة", "Authentication"),
+    "User":                   ("مستخدم", "User"),
+    "Kindergarten":           ("روضة", "Kindergarten"),
+    "DailyReport":            ("تقرير يومي", "Daily Report"),
+    "Dashboard":              ("لوحة التحكم", "Dashboard"),
+    "EnrollmentApplication":  ("طلب تسجيل", "Enrollment Application"),
+    "Message":                ("رسالة", "Message"),
+    "Incident":               ("حادثة", "Incident"),
+}
+
+
+def _severity_for(action: str, sensitivity_level: Optional[int]) -> str:
+    """Map an AuditLog row to a low/medium/high/critical severity tier."""
+    if action in _CRITICAL_SEVERITY_ACTIONS:
+        return "critical"
+    return {1: "low", 2: "medium", 3: "high"}.get(sensitivity_level or 2, "medium")
+
+
+def _activity_item_from_log(log: "models.AuditLog", actor_username: Optional[str] = None) -> Optional["ActivityItem"]:
+    """Build a bilingual, enriched ActivityItem from a raw AuditLog row.
+    USER_UPDATED is special-cased: a role change in old_data/new_data is
+    surfaced as a permission-change message rather than a generic update.
+    `actor_username` must come from a caller-side batched User lookup —
+    AuditLog has no `user` relationship, so looking it up here would N+1."""
+    action_str = str(log.action.value if hasattr(log.action, "value") else log.action)
+    mapping = _ACTIVITY_MAP.get(action_str)
+    if not mapping:
+        return None
+    msg_ar, msg_en, act_type, module_id = mapping
+
+    if action_str == AuditAction.USER_UPDATED:
+        old_role = (log.old_data or {}).get("role") if log.old_data else None
+        new_role = (log.new_data or {}).get("role") if log.new_data else None
+        if old_role is not None and new_role is not None and old_role != new_role:
+            msg_ar, msg_en, act_type = "تعديل صلاحيات مستخدم", "User permissions updated", "permission_change"
+
+    module_ar, module_en = _SIDEBAR_MODULE_LABELS.get(module_id, ("", ""))
+    entity_ar, entity_en = _ENTITY_TYPE_LABELS.get(log.entity_type or "", (log.entity_type or "", log.entity_type or ""))
+
+    return ActivityItem(
+        type=act_type,
+        message_ar=msg_ar,
+        message_en=msg_en,
+        timestamp=log.created_at.isoformat(),
+        user_name=actor_username,
+        user_role=(log.actor_role or None),
+        module_ar=module_ar,
+        module_en=module_en,
+        entity_type=log.entity_type,
+        entity_label_ar=entity_ar,
+        entity_label_en=entity_en,
+        status="failed" if action_str in _FAILURE_ACTIONS else "success",
+        severity=_severity_for(action_str, log.sensitivity_level),
+    )
 
 
 # =============================================================================
@@ -3305,7 +3443,7 @@ def get_admin_dashboard(
     now = datetime.now(_JORDAN_TZ)
     today = now.date()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    cache_key = f"dashboard:admin:v3:period_{period_days}:date_{today.isoformat()}"
+    cache_key = f"dashboard:admin:v4:period_{period_days}:date_{today.isoformat()}"
     cached_payload = _admin_dashboard_cache_get(cache_key)
     if isinstance(cached_payload, dict):
         return AdminDashboardResponse(**cached_payload)
@@ -3362,18 +3500,6 @@ def get_admin_dashboard(
     data_quality_score = round(
         (active_kg_with_recent_report / active_kindergartens * 100.0) if active_kindergartens > 0 else 0.0, 1
     )
-
-    kpi_cards = [
-        DashboardKPICard(title="إجمالي المستخدمين", value=total_users, icon="users", status="good"),
-        DashboardKPICard(title="المستخدمون النشطون اليوم", value=active_users_today, icon="user-check", status="good"),
-        DashboardKPICard(title="إجمالي الروضات", value=total_kindergartens, icon="building", status="good"),
-        DashboardKPICard(
-            title="التقارير اليومية المعلقة",
-            value=pending_reports,
-            icon="journal-text",
-            status="warning" if pending_reports > 0 else "good",
-        ),
-    ]
 
     summary = DashboardSummary(
         attendance_today=attendance_today,
@@ -3538,11 +3664,50 @@ def get_admin_dashboard(
         key=lambda alert: {"critical": 0, "high": 1, "medium": 2, "low": 3}.get(alert.priority or "medium", 4),
     )
 
-    # Recent activity from audit log (logins and user-creation events, last 7 days)
-    _ACTIVITY_MAP: Dict[str, tuple] = {
-        "LOGIN_SUCCESS": ("تسجيل دخول مستخدم", "User logged in",   "user_login"),
-        "USER_CREATED":  ("تم إنشاء مستخدم",   "User created",    "user_create"),
-    }
+    # Data quality reasons: concrete, derivable causes behind a low data_quality_score.
+    # Computed live from existing columns — no new table, mirrors data_quality_score itself.
+    missing_report_count = max(active_kindergartens - active_kg_with_recent_report, 0)
+    missing_contact_count = db.query(func.count(models.Kindergarten.id)).filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+        or_(models.Kindergarten.contact_email.is_(None), models.Kindergarten.contact_email == ""),
+    ).scalar() or 0
+    missing_geo_count = db.query(func.count(models.Kindergarten.id)).filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+        or_(models.Kindergarten.latitude.is_(None), models.Kindergarten.longitude.is_(None)),
+    ).scalar() or 0
+    expired_license_count = sum(1 for kg in expiring_licenses if (kg.license_valid_until - today).days < 0)
+
+    data_quality_reasons: List[DataQualityReason] = []
+    if missing_report_count > 0:
+        data_quality_reasons.append(DataQualityReason(
+            id="missing_recent_report",
+            label_ar=f"{missing_report_count} روضة نشطة بدون تقرير خلال آخر 7 أيام",
+            label_en=f"{missing_report_count} active kindergarten(s) without a report in the last 7 days",
+            count=missing_report_count,
+        ))
+    if missing_contact_count > 0:
+        data_quality_reasons.append(DataQualityReason(
+            id="missing_contact_email",
+            label_ar=f"{missing_contact_count} روضة نشطة بدون بريد إلكتروني للتواصل",
+            label_en=f"{missing_contact_count} active kindergarten(s) missing a contact email",
+            count=missing_contact_count,
+        ))
+    if missing_geo_count > 0:
+        data_quality_reasons.append(DataQualityReason(
+            id="missing_geo_coordinates",
+            label_ar=f"{missing_geo_count} روضة نشطة بدون إحداثيات موقع",
+            label_en=f"{missing_geo_count} active kindergarten(s) missing map coordinates",
+            count=missing_geo_count,
+        ))
+    if expired_license_count > 0:
+        data_quality_reasons.append(DataQualityReason(
+            id="expired_license",
+            label_ar=f"{expired_license_count} روضة بترخيص منتهي الصلاحية",
+            label_en=f"{expired_license_count} kindergarten(s) with an expired license",
+            count=expired_license_count,
+        ))
+
+    # Recent activity from audit log — enriched with actor/role/module/entity/severity.
     recent_audit_logs = (
         db.query(models.AuditLog)
         .filter(
@@ -3553,19 +3718,16 @@ def get_admin_dashboard(
         .limit(10)
         .all()
     )
-    recent_activity: List[ActivityItem] = []
-    for log in recent_audit_logs:
-        action_str = str(log.action.value if hasattr(log.action, "value") else log.action)
-        mapping = _ACTIVITY_MAP.get(action_str)
-        if not mapping:
-            continue
-        msg_ar, msg_en, act_type = mapping
-        recent_activity.append(ActivityItem(
-            type=act_type,
-            message_ar=msg_ar,
-            message_en=msg_en,
-            timestamp=log.created_at.isoformat(),
-        ))
+    # Batch-fetch actor usernames in one query — AuditLog has no `user` relationship.
+    _actor_ids = {log.user_id for log in recent_audit_logs if log.user_id}
+    _actor_usernames: Dict[int, str] = dict(
+        db.query(models.User.id, models.User.username).filter(models.User.id.in_(_actor_ids)).all()
+    ) if _actor_ids else {}
+    recent_activity: List[ActivityItem] = [
+        item for item in (
+            _activity_item_from_log(log, _actor_usernames.get(log.user_id)) for log in recent_audit_logs
+        ) if item is not None
+    ]
 
     kpis: Dict[str, Optional[float]] = {
         "total_users":          float(total_users),
@@ -3577,6 +3739,82 @@ def get_admin_dashboard(
         "data_quality_score":   data_quality_score,
     }
 
+    # KPI trend/comparison metadata: current value vs the equivalent previous period.
+    period_start = today - timedelta(days=period_days - 1)
+    prev_start, prev_end = KPIService._compute_previous_period(period_start, today)
+    prev_boundary = datetime.combine(prev_end + timedelta(days=1), datetime.min.time(), tzinfo=_JORDAN_TZ)
+    yesterday = today - timedelta(days=1)
+    yesterday_start = datetime.combine(yesterday, datetime.min.time(), tzinfo=_JORDAN_TZ)
+
+    prev_total_users = db.query(func.count(models.User.id)).filter(
+        models.User.created_at < prev_boundary
+    ).scalar() or 0
+    prev_total_kindergartens = db.query(func.count(models.Kindergarten.id)).filter(
+        models.Kindergarten.created_at < prev_boundary
+    ).scalar() or 0
+    # Approximation: applies current status retroactively (no status-history table exists).
+    prev_active_kindergartens = db.query(func.count(models.Kindergarten.id)).filter(
+        models.Kindergarten.created_at < prev_boundary,
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+    ).scalar() or 0
+    prev_active_users = db.query(func.count(func.distinct(models.AuditLog.user_id))).filter(
+        models.AuditLog.action == "LOGIN_SUCCESS",
+        models.AuditLog.user_id.isnot(None),
+        models.AuditLog.created_at >= yesterday_start,
+        models.AuditLog.created_at < today_start,
+    ).scalar() or 0
+    prev_total_submissions = db.query(func.count(models.DailyReport.id)).filter(
+        models.DailyReport.date >= prev_start,
+        models.DailyReport.date <= prev_end,
+    ).scalar() or 0
+    prev_pending_submissions = db.query(func.count(models.DailyReport.id)).filter(
+        models.DailyReport.status == models.DailyReportStatus.SUBMITTED,
+        models.DailyReport.created_at < prev_boundary,
+    ).scalar() or 0
+    prev_active_kg_with_recent_report = 0
+    if prev_active_kindergartens > 0:
+        prev_active_kg_with_recent_report = db.query(
+            func.count(func.distinct(models.DailyReport.kindergarten_id))
+        ).join(
+            models.Kindergarten,
+            models.Kindergarten.id == models.DailyReport.kindergarten_id,
+        ).filter(
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+            models.DailyReport.date >= prev_end - timedelta(days=6),
+            models.DailyReport.date <= prev_end,
+        ).scalar() or 0
+    prev_data_quality_score = round(
+        (prev_active_kg_with_recent_report / prev_active_kindergartens * 100.0) if prev_active_kindergartens > 0 else 0.0, 1
+    )
+
+    def _kpi_trend(key: str, current: float, previous: float) -> KPITrendMeta:
+        direction, change = KPIService._trend_from_values(current, previous)
+        change_pct = round((change / previous * 100.0), 1) if previous else None
+        if key == "pending_submissions":
+            status = "warning" if current > 0 else "good"
+        elif key == "data_quality_score":
+            status = "good" if current >= 70 else "warning"
+        else:
+            status = "good"
+        return KPITrendMeta(
+            value=current,
+            previous_value=previous,
+            change=change,
+            change_pct=change_pct,
+            trend=direction,
+            status=status,
+        )
+
+    kpi_trends: Dict[str, KPITrendMeta] = {
+        "total_users":          _kpi_trend("total_users", total_users, prev_total_users),
+        "active_users":         _kpi_trend("active_users", active_users_today, prev_active_users),
+        "total_kindergartens":  _kpi_trend("total_kindergartens", total_kindergartens, prev_total_kindergartens),
+        "active_kindergartens": _kpi_trend("active_kindergartens", active_kindergartens, prev_active_kindergartens),
+        "total_submissions":    _kpi_trend("total_submissions", total_reports_in_period, prev_total_submissions),
+        "pending_submissions":  _kpi_trend("pending_submissions", pending_reports, prev_pending_submissions),
+        "data_quality_score":   _kpi_trend("data_quality_score", data_quality_score, prev_data_quality_score),
+    }
+
     # Log dashboard access
     log_audit_event(
         db=db,
@@ -3586,7 +3824,7 @@ def get_admin_dashboard(
         target_ids=None,
         metadata={
             "period_days": period_days,
-            "kpi_count": len(kpi_cards)
+            "kpi_count": len(kpis)
         },
         sensitivity_level=2,
     )
@@ -3597,13 +3835,147 @@ def get_admin_dashboard(
         kindergartens=kindergartens_list,
         charts=charts,
         alerts=alerts,
-        kpi_cards=kpi_cards,
         kpis=kpis,
+        kpi_trends=kpi_trends,
+        data_quality_reasons=data_quality_reasons,
         recent_activity=recent_activity,
         generated_at=now.isoformat(),
     )
     _admin_dashboard_cache_set(cache_key, response_payload.model_dump(mode="json"))
     return response_payload
+
+
+class DashboardActivityResponse(BaseModel):
+    """Paginated, filtered recent-activity feed."""
+    total: int
+    items: List[ActivityItem]
+    page: int
+    page_size: int
+
+
+@router.get("/admin/dashboard/activity", response_model=DashboardActivityResponse)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_admin_dashboard_activity(
+    request: Request,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: Optional[str] = None,
+    period: Optional[str] = Query(None, description="today|24h|7d|30d|month|custom"),
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    activity_type: Optional[str] = None,
+    user_id: Optional[int] = None,
+    role: Optional[models.UserRole] = None,
+    module: Optional[str] = None,
+    status_filter: Optional[str] = Query(None, alias="status"),
+    severity: Optional[str] = None,
+    entity_type: Optional[str] = None,
+    governorate: Optional[str] = None,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Filterable, paginated recent-activity feed backing the dashboard's activity filter bar."""
+    page, page_size, offset = enforce_pagination(page, page_size)
+    now = datetime.now(_JORDAN_TZ)
+    today = now.date()
+
+    query = db.query(models.AuditLog).filter(
+        models.AuditLog.action.in_(list(_ACTIVITY_MAP.keys()))
+    )
+
+    if period == "today":
+        query = query.filter(models.AuditLog.created_at >= datetime.combine(today, datetime.min.time(), tzinfo=_JORDAN_TZ))
+    elif period == "24h":
+        query = query.filter(models.AuditLog.created_at >= now - timedelta(hours=24))
+    elif period == "7d":
+        query = query.filter(models.AuditLog.created_at >= now - timedelta(days=7))
+    elif period == "30d":
+        query = query.filter(models.AuditLog.created_at >= now - timedelta(days=30))
+    elif period == "month":
+        query = query.filter(models.AuditLog.created_at >= datetime.combine(today.replace(day=1), datetime.min.time(), tzinfo=_JORDAN_TZ))
+    elif period == "custom" and start_date and end_date:
+        query = query.filter(
+            models.AuditLog.created_at >= datetime.combine(start_date, datetime.min.time(), tzinfo=_JORDAN_TZ),
+            models.AuditLog.created_at < datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=_JORDAN_TZ),
+        )
+
+    if activity_type:
+        query = query.filter(models.AuditLog.action.in_(
+            [a for a, m in _ACTIVITY_MAP.items() if m[2] == activity_type]
+        ))
+
+    if module:
+        query = query.filter(models.AuditLog.action.in_(
+            [a for a, m in _ACTIVITY_MAP.items() if m[3] == module]
+        ))
+
+    if entity_type:
+        query = query.filter(models.AuditLog.entity_type == entity_type)
+
+    if user_id:
+        query = query.filter(models.AuditLog.user_id == user_id)
+
+    if role or governorate:
+        scoped_users = db.query(models.User.id)
+        if role:
+            scoped_users = scoped_users.filter(models.User.role == role)
+        if governorate:
+            scoped_users = scoped_users.join(
+                models.Kindergarten, models.Kindergarten.id == models.User.kindergarten_id
+            ).filter(models.Kindergarten.governorate == governorate)
+        query = query.filter(models.AuditLog.user_id.in_([r[0] for r in scoped_users.all()]))
+
+    if search:
+        search_term = f"%{search[:100]}%"
+        matching_user_ids = [
+            r[0] for r in db.query(models.User.id).filter(models.User.username.ilike(search_term)).all()
+        ]
+        query = query.filter(or_(
+            models.AuditLog.user_id.in_(matching_user_ids),
+            models.AuditLog.details.ilike(search_term),
+        ))
+
+    # status/severity are derived (not raw columns) — push the same logic used by
+    # _severity_for/_FAILURE_ACTIONS down into SQL so pagination/total stay correct.
+    if status_filter == "failed":
+        query = query.filter(models.AuditLog.action.in_(list(_FAILURE_ACTIONS)))
+    elif status_filter == "success":
+        query = query.filter(~models.AuditLog.action.in_(list(_FAILURE_ACTIONS)))
+
+    if severity == "critical":
+        query = query.filter(models.AuditLog.action.in_(list(_CRITICAL_SEVERITY_ACTIONS)))
+    elif severity in ("low", "medium", "high"):
+        target_level = {"low": 1, "medium": 2, "high": 3}[severity]
+        non_critical = ~models.AuditLog.action.in_(list(_CRITICAL_SEVERITY_ACTIONS))
+        if severity == "medium":
+            query = query.filter(non_critical, or_(
+                models.AuditLog.sensitivity_level == target_level,
+                models.AuditLog.sensitivity_level.is_(None),
+            ))
+        else:
+            query = query.filter(non_critical, models.AuditLog.sensitivity_level == target_level)
+
+    total = query.count()
+    logs = (
+        query.order_by(models.AuditLog.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    # Batch-fetch actor usernames in one query — AuditLog has no `user` relationship.
+    actor_ids = {log.user_id for log in logs if log.user_id}
+    actor_usernames: Dict[int, str] = dict(
+        db.query(models.User.id, models.User.username).filter(models.User.id.in_(actor_ids)).all()
+    ) if actor_ids else {}
+
+    items: List[ActivityItem] = [
+        item for item in (
+            _activity_item_from_log(log, actor_usernames.get(log.user_id)) for log in logs
+        ) if item is not None
+    ]
+
+    return DashboardActivityResponse(total=total, items=items, page=page, page_size=page_size)
 
 
 # =============================================================================

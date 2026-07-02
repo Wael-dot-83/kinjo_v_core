@@ -2625,9 +2625,9 @@ class TestFrontendRoutes:
         page = response.text
         sidebar = page[page.index('id="admin-sidebar"'):page.index("</aside>")]
         sidebar_no_comments = re.sub(r"<!--.*?-->", "", sidebar, flags=re.DOTALL)
-        assert "لوحة التحكم العامة" in sidebar
+        assert "لوحة التحكم" in sidebar
         assert "المستخدمون" in sidebar
-        assert "إدارة البيانات" in sidebar
+        assert "البيانات" in sidebar
         assert "التحليلات والتقارير" in sidebar
         assert "الخريطة الحرارية" in sidebar
         assert "النظام" in sidebar
@@ -2648,10 +2648,10 @@ class TestFrontendRoutes:
         assert response.status_code == 200
         page = response.text
         sidebar = page[page.index('id="admin-sidebar"'):page.index("</aside>")]
-        assert "General Dashboard" in sidebar
+        assert "Dashboard" in sidebar
         assert "Users" in sidebar
         assert "Data Management" in sidebar
-        assert "Analytics &amp; Reports" in sidebar
+        assert "Reports &amp; Analytics" in sidebar
         assert "Heat Map" in sidebar
         assert "System" in sidebar
         assert "Impersonation" not in sidebar

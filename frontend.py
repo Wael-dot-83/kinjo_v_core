@@ -1400,6 +1400,18 @@ async def admin_reports(request: Request, current_user: User = Depends(get_curre
     )
 
 
+@router.get("/admin/analytics/decision-support", response_class=HTMLResponse)
+async def admin_decision_support_reports(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin decision support reports page"""
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/analytics/reporting_dashboard.html",
+        context={"current_user": current_user, "today": _today()}
+    )
+
+
 @router.get("/admin/governance-reports", response_class=HTMLResponse)
 async def admin_governance_reports(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Admin governance reports dashboard for daily report compliance"""

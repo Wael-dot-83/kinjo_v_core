@@ -139,57 +139,45 @@
         {% endif %}
 
         {% set current_path = request.url.path %}
+        {% set top_level_items = [
+          {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم", "label_en": "Dashboard", "active_paths": ["/admin/dashboard"]}
+        ] %}
         {% set sidebar_sections = [
-          {
-            "id": "home",
-            "icon": "bi-house-door",
-            "label_ar": "الرئيسية",
-            "label_en": "Home",
-            "items": [
-              {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم العامة", "label_en": "General Dashboard", "active_paths": ["/admin/dashboard"]}
-            ]
-          },
           {
             "id": "management",
             "icon": "bi-grid-1x2",
-            "label_ar": "الإدارة",
-            "label_en": "Management",
+            "label_ar": "إدارة النظام",
+            "label_en": "System Management",
             "items": [
               {"href": "/admin/users", "icon": "bi-people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users"], "active_prefixes": ["/admin/users/"]},
               {"href": "/admin/messages", "icon": "bi-send", "label_ar": "التواصل", "label_en": "Communication", "active_paths": ["/admin/messages", "/admin/contact-messages"], "active_prefixes": ["/admin/messages/"]},
-              {"href": "/admin/imported-kindergartens", "icon": "bi-database", "label_ar": "إدارة البيانات", "label_en": "Data Management", "active_paths": ["/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs"]}
+              {"href": "/admin/kg-overview", "icon": "bi-building", "label_ar": "الروضات", "label_en": "Kindergartens", "active_paths": ["/admin/kg-overview"]},
+              {"href": "/admin/imported-kindergartens", "icon": "bi-database", "label_ar": "البيانات", "label_en": "Data Management", "active_paths": ["/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs"]}
             ]
           },
           {
-            "id": "analytics-reports",
-            "icon": "bi-bar-chart-line",
-            "label_ar": "التحليلات والتقارير",
-            "label_en": "Analytics & Reports",
-            "items": [
-              {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics", "/admin/kpi", "/admin/kg-overview", "/admin/analytics/charts"]},
-              {"href": "/admin/analytics/reports", "icon": "bi-file-earmark-text", "label_ar": "التقارير المفصلة", "label_en": "Detailed Reports", "active_paths": ["/admin/analytics/reports"]},
-              {"href": "/admin/analytics/daily-reports", "icon": "bi-calendar-day", "label_ar": "التقارير اليومية", "label_en": "Daily Reports", "active_paths": ["/admin/analytics/daily-reports"]},
-              {"href": "/admin/daily-reports-organization", "icon": "bi-calendar-check", "label_ar": "جدولة التقارير", "label_en": "Report Scheduling", "active_paths": ["/admin/daily-reports-organization"]}
-            ]
-          },
-          {
-            "id": "incidents",
+            "id": "operations",
             "icon": "bi-exclamation-triangle",
-            "label_ar": "الحوادث",
-            "label_en": "Incidents",
+            "label_ar": "العمليات",
+            "label_en": "Operations",
             "items": [
               {"href": "/admin/reports/incidents", "icon": "bi-list-check", "label_ar": "سجل الحوادث", "label_en": "Incident Log", "active_paths": ["/admin/reports/incidents"]},
               {"href": "/admin/reports/incidents/generate", "icon": "bi-file-medical", "label_ar": "تقارير الحوادث", "label_en": "Incident Reports", "active_paths": ["/admin/reports/incidents/generate"]}
             ]
           },
           {
-            "id": "heatmap",
-            "icon": "bi-map",
-            "label_ar": "الخريطة الحرارية",
-            "label_en": "Heat Map",
+            "id": "reports-analytics",
+            "icon": "bi-bar-chart-line",
+            "label_ar": "التقارير والتحليل",
+            "label_en": "Reports & Analytics",
             "items": [
-              {"href": "/admin/heatmap", "icon": "bi-globe-asia-australia", "label_ar": "نظرة عامة على الخريطة", "label_en": "Map Overview", "active_paths": ["/admin/heatmap"]},
-              {"href": "/admin/heatmap#governorates", "icon": "bi-pin-map", "label_ar": "تحليل المحافظات", "label_en": "Governorate Analysis", "active_paths": []}
+              {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics", "/admin/kpi", "/admin/analytics/charts"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
+              {"href": "/admin/analytics/reports", "icon": "bi-file-earmark-text", "label_ar": "التقارير المفصلة", "label_en": "Detailed Reports", "active_paths": ["/admin/analytics/reports"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
+              {"href": "/admin/analytics/decision-support", "icon": "bi-graph-up-arrow", "label_ar": "تقارير الدعم القرارى", "label_en": "Decision Support Reports", "active_paths": ["/admin/analytics/decision-support"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
+              {"href": "/admin/analytics/daily-reports", "icon": "bi-calendar-day", "label_ar": "التقارير اليومية", "label_en": "Daily Reports", "active_paths": ["/admin/analytics/daily-reports"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
+              {"href": "/admin/daily-reports-organization", "icon": "bi-calendar-check", "label_ar": "جدولة التقارير", "label_en": "Report Scheduling", "active_paths": ["/admin/daily-reports-organization"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
+              {"href": "/admin/heatmap", "icon": "bi-globe-asia-australia", "label_ar": "نظرة عامة على الخريطة", "label_en": "Map Overview", "active_paths": ["/admin/heatmap"], "group_label_ar": "الخريطة الحرارية", "group_label_en": "Heat Map"},
+              {"href": "/admin/heatmap#governorates", "icon": "bi-pin-map", "label_ar": "تحليل المحافظات", "label_en": "Governorate Analysis", "active_paths": [], "group_label_ar": "الخريطة الحرارية", "group_label_en": "Heat Map"}
             ]
           },
           {
@@ -198,25 +186,37 @@
             "label_ar": "الحوكمة",
             "label_en": "Governance",
             "items": [
-              {"href": "/admin/governance-reports", "icon": "bi-clipboard-data", "label_ar": "مؤشرات الحوكمة", "label_en": "Governance Indicators", "active_paths": ["/admin/governance-reports", "/admin/governance/reminders"]},
-              {"href": "/admin/classification", "icon": "bi-award", "label_ar": "التصنيف والمقارنات", "label_en": "Classification & Benchmarking", "active_paths": ["/admin/classification"]}
+              {"href": "/admin/governance-reports", "icon": "bi-clipboard-data", "label_ar": "السياسات", "label_en": "Policies", "active_paths": ["/admin/governance-reports", "/admin/governance/reminders"]},
+              {"href": "/admin/classification", "icon": "bi-award", "label_ar": "الامتثال", "label_en": "Compliance", "active_paths": ["/admin/classification"]}
             ]
           },
           {
-            "id": "system",
+            "id": "settings",
             "icon": "bi-sliders",
-            "label_ar": "النظام",
-            "label_en": "System",
+            "label_ar": "الإعدادات",
+            "label_en": "Settings",
             "items": [
-              {"href": "/admin/audit-logs", "icon": "bi-shield-lock", "label_ar": "الأمان", "label_en": "Security & Audit", "active_paths": ["/admin/audit-logs", "/admin/alerts", "/admin/safety-analytics", "/admin/impersonate"]},
-              {"href": "/admin/settings", "icon": "bi-gear", "label_ar": "الإعدادات", "label_en": "Settings", "active_paths": ["/admin/settings"]},
-              {"href": "/admin/observability", "icon": "bi-speedometer", "label_ar": "المراقبة والأداء", "label_en": "Observability", "active_paths": ["/admin/observability"]}
+              {"href": "/admin/settings", "icon": "bi-gear", "label_ar": "إعدادات النظام", "label_en": "System Settings", "active_paths": ["/admin/settings", "/admin/observability"]},
+              {"href": "/admin/audit-logs", "icon": "bi-shield-lock", "label_ar": "السجلات", "label_en": "Logs", "active_paths": ["/admin/audit-logs", "/admin/alerts", "/admin/safety-analytics", "/admin/impersonate"]}
             ]
           }
         ] %}
 
         <nav class="sidebar-nav" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
           <ul class="sidebar-menu sidebar-menu" role="list">
+            {% for item in top_level_items %}
+              {% set item_state = namespace(active=current_path in item.active_paths) %}
+              <li class="nav-item sidebar-top-level" role="listitem">
+                <a
+                  href="{{ item.href }}"
+                  class="nav-link{% if item_state.active %} active{% endif %}"
+                  {% if item_state.active %}aria-current="page"{% endif %}
+                >
+                  <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                  <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
+                </a>
+              </li>
+            {% endfor %}
             {% for section in sidebar_sections %}
               {% set section_state = namespace(active=false) %}
               {% for item in section["items"] %}
@@ -244,7 +244,8 @@
                   <span class="nav-toggle-label">{% if ui_lang == 'en' %}{{ section.label_en }}{% else %}{{ section.label_ar }}{% endif %}</span>
                   <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
                 </button>
-                <ul id="{{ section.id }}-submenu" class="submenu" role="list">
+                <ul id="{{ section.id }}-submenu" class="submenu{% if section_state.active %} is-open{% endif %}" role="list">
+                  {% set ns = namespace(current_group=none) %}
                   {% for item in section["items"] %}
                     {% set item_state = namespace(active=current_path in item.active_paths) %}
                     {% if item.active_prefixes is defined %}
@@ -253,6 +254,12 @@
                           {% set item_state.active = true %}
                         {% endif %}
                       {% endfor %}
+                    {% endif %}
+                    {% if item.group_label_ar is defined and item.group_label_ar != ns.current_group %}
+                      {% set ns.current_group = item.group_label_ar %}
+                      <li class="submenu-group-label" role="presentation" aria-hidden="true">
+                        <span>{% if ui_lang == 'en' %}{{ item.group_label_en }}{% else %}{{ item.group_label_ar }}{% endif %}</span>
+                      </li>
                     {% endif %}
                     <li class="nav-item" role="listitem">
                       <a
@@ -292,10 +299,14 @@
             <!-- Breadcrumb -->
             <nav class="admin-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
               {% block breadcrumb %}
-              <a href="/admin/dashboard" class="admin-breadcrumb-item">
+              <a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}">
                 <i class="bi bi-house-fill" aria-hidden="true"></i>
-                <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
+                <span>{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</span>
               </a>
+              <span class="breadcrumb-separator">/</span>
+              <span class="breadcrumb-item active" aria-current="page">
+                {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
+              </span>
               {% endblock %}
             </nav>
           </div>
@@ -462,6 +473,29 @@
           return Promise.resolve(window.confirm(opts.title));
         };
 
+        /* â"€â"€ Sidebar collapsible sections (Home/Management/Operations/etc.) â"€â"€â"€â"€â"€â"€ */
+        function setupSidebarSections() {
+          document.querySelectorAll(".sidebar-section-toggle").forEach(function (btn) {
+            var submenu = document.getElementById(btn.getAttribute("aria-controls"));
+            if (!submenu) return;
+            btn.addEventListener("click", function () {
+              var isOpen = submenu.classList.toggle("is-open");
+              btn.setAttribute("aria-expanded", String(isOpen));
+              btn.classList.toggle("is-active", isOpen);
+            });
+          });
+
+          document.addEventListener("keydown", function (e) {
+            if (e.key !== "Escape") return;
+            document.querySelectorAll('.sidebar-section-toggle[aria-expanded="true"]').forEach(function (btn) {
+              var submenu = document.getElementById(btn.getAttribute("aria-controls"));
+              if (submenu) submenu.classList.remove("is-open");
+              btn.setAttribute("aria-expanded", "false");
+              btn.classList.remove("is-active");
+            });
+          });
+        }
+
         /* â"€â"€ Nav group collapsible â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */
         function setupNavGroups() {
           document.querySelectorAll(".admin-nav-group").forEach(function (group) {
@@ -488,6 +522,7 @@
 
         document.addEventListener("DOMContentLoaded", function () {
           setupSidebarToggle();
+          setupSidebarSections();
           setupNavGroups();
         });
 
