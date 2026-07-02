@@ -1575,7 +1575,7 @@ html[dir="rtl"] .submenu .nav-link {
 }
 
 /* High Contrast Mode Support */
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
   :root {
     --color-gray-200: #000;
     --color-gray-400: #000;
@@ -3181,7 +3181,7 @@ html[dir="rtl"] .submenu .nav-link {
 
   .kd-kpi-value { font-size: 1.35rem; }
 }
-=======
+/* ============================================================================
    EXTENDED COMPONENT STYLES (extracted from templates)
    ============================================================================ */
 
