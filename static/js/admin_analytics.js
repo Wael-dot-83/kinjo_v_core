@@ -2816,3 +2816,15 @@ document.addEventListener('exportData', async function(e) {
         showToast(adminAnalyticsText("فشل التصدير", "Export failed"), "error");
     }
 });
+
+// Persist active tab across page reloads
+(function() {
+  var saved = sessionStorage.getItem('analyticsActiveTab');
+  if (saved) {
+    var el = document.querySelector('[data-bs-target="' + saved + '"]');
+    if (el) { bootstrap.Tab.getOrCreateInstance(el).show(); }
+  }
+  document.getElementById('analyticsTabsNav')?.addEventListener('shown.bs.tab', function(e) {
+    sessionStorage.setItem('analyticsActiveTab', e.target.getAttribute('data-bs-target'));
+  });
+})();
