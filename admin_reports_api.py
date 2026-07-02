@@ -87,8 +87,14 @@ def _resolve_dates(
         start = date(today.year, today.month, 1)
         return start, today
     if p == "this_semester":
-        start_month = 1 if today.month <= 6 else 7
-        start = date(today.year, start_month, 1)
+        # Jordan academic calendar: 1st semester Sep–Jan, 2nd semester Feb–Jun
+        m = today.month
+        if m >= 9:
+            start = date(today.year, 9, 1)       # Sep–Dec: first semester
+        elif m >= 2:
+            start = date(today.year, 2, 1)        # Feb–Jun: second semester
+        else:
+            start = date(today.year - 1, 9, 1)   # January: still in Sep semester
         return start, today
     if p == "this_year":
         return date(today.year, 1, 1), today
@@ -102,6 +108,17 @@ def _resolve_dates(
 
 def _localized(ar: str, en: str, lang: str) -> str:
     return en if lang == "en" else ar
+
+
+def _prev_period(start: date, end: date) -> tuple[date, date]:
+    """Return a mirror window of the same duration immediately before [start, end]."""
+    days = (end - start).days + 1
+    return start - timedelta(days=days), end - timedelta(days=days)
+
+
+def _delta(current: float | int, previous: float | int) -> float:
+    """Absolute change current − previous, rounded to 2 decimal places."""
+    return round(float(current) - float(previous), 2)
 
 
 def _build_scope_filters(
@@ -304,7 +321,7 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         try:
             required_supervisors += calculate_required_supervisors(str(cls.age_group), children_in_class)
         except Exception:
-            required_supervisors += 1
+            required_supervisors += max(1, -(-children_in_class // 4))
 
     actual_supervisors = len({a.supervisor_id for a in active_assignments})
 
@@ -344,6 +361,8 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
 
     children_without_class = len({r.child_id for r in official_rows if r.class_id is None})
     children_without_kindergarten = sum(1 for r in official_rows if r.kindergarten_id is None)
+    kg_missing_location = {kg.id for kg in kindergartens if not kg.governorate or not kg.district}
+    children_missing_location = len({r.child_id for r in official_rows if r.kindergarten_id in kg_missing_location})
 
     # Geography aggregations
     by_governorate: dict[str, dict[str, Any]] = {}
@@ -483,6 +502,7 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
     compliance_violations = (
         age_invalid_reasons["too_young"]
         + age_invalid_reasons["too_old"]
+        + age_invalid_reasons["future_dob"]
         + classes_with_children_no_supervisor
         + kindergartens_no_supervisor_with_children
         + kindergartens_over_capacity
@@ -526,6 +546,7 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         "gender_counts": gender_counts,
         "children_without_kindergarten": children_without_kindergarten,
         "children_without_class": children_without_class,
+        "children_missing_location": children_missing_location,
         "children_in_multiple_classes": children_in_multiple_classes,
         "duplicate_children": duplicate_children,
         "classes_without_supervisor": classes_without_supervisor,
@@ -979,6 +1000,7 @@ def _build_response(report_type: str, filters: ScopeFilters, metrics: dict[str, 
         "quality": {
             "children_without_kindergarten": metrics["children_without_kindergarten"],
             "children_without_class": metrics["children_without_class"],
+            "children_missing_location": metrics["children_missing_location"],
             "children_in_multiple_classes": metrics["children_in_multiple_classes"],
             "duplicate_children": metrics["duplicate_children"],
             "classes_without_supervisor": metrics["classes_without_supervisor"],
@@ -1254,7 +1276,33 @@ def reports_overview(
     filters = _build_scope_filters(level, governorate, city, kindergarten_id, class_id)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
-    return _build_response("overview", filters, metrics, lang)
+    prev_start, prev_end = _prev_period(start, end)
+    prev_metrics = _collect_core_metrics(db, filters, prev_start, prev_end)
+    response = _build_response("overview", filters, metrics, lang)
+    children_delta = _delta(metrics["total_children"], prev_metrics["total_children"])
+    quality_delta = _delta(metrics["data_quality_score"], prev_metrics["data_quality_score"])
+    compliance_delta = _delta(metrics["compliance_score"], prev_metrics["compliance_score"])
+    util_delta = _delta(metrics["capacity_utilization_pct"], prev_metrics["capacity_utilization_pct"])
+    gap_delta = _delta(metrics["supervisor_gap"], prev_metrics["supervisor_gap"])
+    response["comparison"] = {
+        "period": {"from": prev_start.isoformat(), "to": prev_end.isoformat()},
+        "total_children_delta": children_delta,
+        "supervisor_gap_delta": gap_delta,
+        "data_quality_score_delta": quality_delta,
+        "compliance_score_delta": compliance_delta,
+        "capacity_utilization_delta": util_delta,
+        "prev_total_children": prev_metrics["total_children"],
+        "prev_supervisor_gap": prev_metrics["supervisor_gap"],
+        "prev_data_quality_score": prev_metrics["data_quality_score"],
+        "prev_compliance_score": prev_metrics["compliance_score"],
+    }
+    sign = lambda v: "+" if v > 0 else ""
+    response["interpretation"]["comparison_baseline"] = _localized(
+        f"الفترة السابقة: {prev_metrics['total_children']} طفل | جودة البيانات {sign(quality_delta)}{quality_delta}% | امتثال {sign(compliance_delta)}{compliance_delta}%",
+        f"Previous period: {prev_metrics['total_children']} children | data quality {sign(quality_delta)}{quality_delta}% | compliance {sign(compliance_delta)}{compliance_delta}%",
+        lang,
+    )
+    return response
 
 
 @router.get("/children/summary")
@@ -1448,6 +1496,8 @@ def data_quality_report(
     filters = _build_scope_filters(level, governorate, city, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
+    prev_start, prev_end = _prev_period(start, end)
+    prev_metrics = _collect_core_metrics(db, filters, prev_start, prev_end)
     score = metrics["data_quality_score"]
     if score >= 95:
         status_band = "green"
@@ -1457,17 +1507,24 @@ def data_quality_report(
         status_band = "orange"
     else:
         status_band = "red"
-
+    quality_delta = _delta(score, prev_metrics["data_quality_score"])
+    sign = lambda v: "+" if v > 0 else ""
     return {
         "level": level.value,
         "data_quality_score": score,
         "status": status_band,
+        "comparison": {
+            "period": {"from": prev_start.isoformat(), "to": prev_end.isoformat()},
+            "data_quality_score_delta": quality_delta,
+            "prev_data_quality_score": prev_metrics["data_quality_score"],
+        },
         "issues": {
             "missing_dob": metrics["age_invalid_reasons"]["missing_dob"],
             "future_dob": metrics["age_invalid_reasons"]["future_dob"],
             "missing_gender": metrics["gender_counts"]["unknown"],
             "children_without_kindergarten": metrics["children_without_kindergarten"],
             "children_without_class": metrics["children_without_class"],
+            "children_missing_location": metrics["children_missing_location"],
             "children_in_multiple_classes": metrics["children_in_multiple_classes"],
             "duplicate_children": metrics["duplicate_children"],
             "kindergartens_missing_coordinates": metrics["kindergartens_missing_coordinates"],
@@ -1477,7 +1534,11 @@ def data_quality_report(
         "interpretation": {
             "summary": _localized("يعكس المؤشر مدى اكتمال وصحة السجلات التشغيلية.", "The score reflects operational record completeness and validity.", lang),
             "severity": "critical" if status_band == "red" else "warning" if status_band in {"yellow", "orange"} else "normal",
-            "comparison_baseline": _localized("حد الجودة الوطني", "National quality threshold", lang),
+            "comparison_baseline": _localized(
+                f"الفترة السابقة: جودة البيانات {prev_metrics['data_quality_score']}% (التغيير: {sign(quality_delta)}{quality_delta}%)",
+                f"Previous period: data quality {prev_metrics['data_quality_score']}% (change: {sign(quality_delta)}{quality_delta}%)",
+                lang,
+            ),
             "recommended_action": _localized("نفّذ خطة تصحيح للحقول المفقودة والتعارضات قبل دورة التقارير القادمة.", "Run a correction plan for missing/conflicting fields before the next reporting cycle.", lang),
         },
     }
@@ -1498,6 +1559,8 @@ def compliance_report(
     filters = _build_scope_filters(level, governorate, city, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
+    prev_start, prev_end = _prev_period(start, end)
+    prev_metrics = _collect_core_metrics(db, filters, prev_start, prev_end)
     score = metrics["compliance_score"]
     if score >= 95:
         status_band = "green"
@@ -1507,14 +1570,21 @@ def compliance_report(
         status_band = "orange"
     else:
         status_band = "red"
-
+    compliance_delta = _delta(score, prev_metrics["compliance_score"])
+    sign = lambda v: "+" if v > 0 else ""
     return {
         "level": level.value,
         "compliance_score": score,
         "status": status_band,
+        "comparison": {
+            "period": {"from": prev_start.isoformat(), "to": prev_end.isoformat()},
+            "compliance_score_delta": compliance_delta,
+            "prev_compliance_score": prev_metrics["compliance_score"],
+        },
         "violations": {
             "invalid_age_too_young": metrics["age_invalid_reasons"]["too_young"],
             "invalid_age_too_old": metrics["age_invalid_reasons"]["too_old"],
+            "future_dob": metrics["age_invalid_reasons"]["future_dob"],
             "children_in_multiple_classes": metrics["children_in_multiple_classes"],
             "classes_with_children_no_supervisor": metrics["classes_with_children_no_supervisor"],
             "kindergartens_no_supervisor_with_children": metrics["kindergartens_no_supervisor_with_children"],
@@ -1523,7 +1593,11 @@ def compliance_report(
         "interpretation": {
             "summary": _localized("مؤشر الامتثال يقيس الالتزام بالقواعد التنظيمية والتشغيلية.", "Compliance score measures adherence to operational and regulatory rules.", lang),
             "severity": "critical" if status_band == "red" else "warning" if status_band in {"yellow", "orange"} else "normal",
-            "comparison_baseline": _localized("سياسة الامتثال الوطنية", "National compliance policy", lang),
+            "comparison_baseline": _localized(
+                f"الفترة السابقة: امتثال {prev_metrics['compliance_score']}% (التغيير: {sign(compliance_delta)}{compliance_delta}%)",
+                f"Previous period: compliance {prev_metrics['compliance_score']}% (change: {sign(compliance_delta)}{compliance_delta}%)",
+                lang,
+            ),
             "recommended_action": _localized("عالج المخالفات الحرجة أولا: الفصول بلا مشرف والتجاوزات الاستيعابية.", "Address critical violations first: classes without supervisors and over-capacity sites.", lang),
         },
     }
