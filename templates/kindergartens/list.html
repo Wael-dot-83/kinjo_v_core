@@ -54,7 +54,7 @@
 <div class="row">
     <div class="col-12">
         <!-- Search and Filter Form -->
-        <div class="card mb-4">
+        <div class="glass-card fade-in mb-4">
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="bi bi-search me-2"></i>{% if ui_lang == 'en' %}Search & Filter{% else %}البحث والتصفية{% endif %}
@@ -115,7 +115,7 @@
         </div>
 
         <!-- Kindergartens Table -->
-        <div class="card">
+        <div class="glass-card fade-in">
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="bi bi-list-ul me-2"></i>{% if ui_lang == 'en' %}Kindergartens List{% else %}قائمة الروضات{% endif %}
@@ -124,7 +124,7 @@
             <div class="card-body p-0">
                 {% if kindergartens %}
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover table-borderless mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th class="border-0">#</th>
@@ -158,11 +158,11 @@
                                 <td>{{ kg.contact_phone or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</td>
                                 <td>
                                     {% if kg.status.value == 'ACTIVE' %}
-                                    <span class="badge badge-soft badge-soft-success">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
                                     {% elif kg.status.value == 'DRAFT' %}
-                                    <span class="badge badge-soft badge-soft-warning">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
                                     {% else %}
-                                    <span class="badge badge-soft badge-soft-secondary">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -247,7 +247,7 @@
 {% if not kindergartens or kindergartens|length == 0 or not kindergartens[0] %}
 <div class="row justify-content-center">
     <div class="col-lg-8">
-        <div class="card">
+        <div class="glass-card fade-in">
             <div class="card-body text-center py-5">
                 <i class="bi bi-exclamation-triangle fs-1 text-warning mb-3"></i>
                 <h5 class="text-muted">{% if ui_lang == 'en' %}Unauthorized Access{% else %}غير مصرح لك بالوصول{% endif %}</h5>
@@ -261,7 +261,7 @@
 <div class="row">
     <div class="col-lg-8">
         <!-- Kindergarten Information Card -->
-        <div class="card mb-4">
+        <div class="glass-card fade-in mb-4">
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="bi bi-info-circle me-2"></i>
@@ -337,7 +337,7 @@
 
     <div class="col-lg-4">
         <!-- Status Card -->
-        <div class="card mb-4">
+        <div class="glass-card fade-in mb-4">
             <div class="card-header">
                 <h6 class="mb-0">
                     <i class="bi bi-flag me-2"></i>{% if ui_lang == 'en' %}Kindergarten Status{% else %}حالة الروضة{% endif %}
@@ -346,18 +346,18 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     {% if kg.status.value == 'ACTIVE' %}
-                    <span class="badge badge-soft badge-soft-success fs-6">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 fs-6">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
                     {% elif kg.status.value == 'DRAFT' %}
-                    <span class="badge badge-soft badge-soft-warning fs-6">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
+                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 fs-6">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
                     {% else %}
-                    <span class="badge badge-soft badge-soft-secondary fs-6">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fs-6">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
                     {% endif %}
                 </div>
             </div>
         </div>
 
         <!-- Quick Actions -->
-        <div class="card">
+        <div class="glass-card fade-in">
             <div class="card-header">
                 <h6 class="mb-0">
                     <i class="bi bi-gear me-2"></i>{% if ui_lang == 'en' %}Quick Actions{% else %}إجراءات سريعة{% endif %}

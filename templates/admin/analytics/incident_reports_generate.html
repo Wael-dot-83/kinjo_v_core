@@ -225,7 +225,7 @@
             if (scopeData.governorate) requestData.append('governorate', scopeData.governorate);
             requestData.append('period_type', periodType);
 
-            const response = await fetch('/api/admin/reports/incidents/generate', {
+            const response = await fetchWithAuth('/api/admin/reports/incidents/generate', {
                 method: 'POST',
                 body: requestData
             });

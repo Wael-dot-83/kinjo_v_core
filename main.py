@@ -841,7 +841,7 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
         },
     }
 
-    if not settings.TESTING and is_privileged_role(user.role):
+    if not settings.TESTING and settings.REQUIRE_MFA and is_privileged_role(user.role):
         purpose = "mfa_challenge" if user.mfa_enabled else "mfa_setup"
         mfa_ticket = create_access_token(
             data={

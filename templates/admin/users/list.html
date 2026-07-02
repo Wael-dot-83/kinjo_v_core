@@ -3,187 +3,187 @@
 {% block title %}{% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}{% endblock %}
 
 {% block content %}
-<div class="max-w-container-max mx-auto animate-fade-in-up pb-32">
-  
-  <header class="mb-xl flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+<div class="fade-in pb-5">
+
+  <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
     <div>
-      <h1 class="font-headline-lg text-headline-lg text-on-surface mb-2">
+      <h1 class="h3 mb-1">
         {% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}
       </h1>
-      <p class="font-body-md text-body-md text-on-surface-variant">
+      <p class="text-muted mb-0">
         {% if ui_lang == 'en' %}Manage system users, roles, and access permissions.{% else %}إدارة مستخدمي النظام والأدوار وصلاحيات الوصول.{% endif %}
       </p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="d-flex align-items-center gap-2">
       <button class="btn btn-outline-secondary d-flex align-items-center gap-2" onclick="showImportModal()">
-        <span class="material-symbols-outlined" style="font-size:1.1rem;">upload</span>
+        <span class="material-symbols-outlined" style="font-size:1.1rem;" aria-hidden="true">upload</span>
         {% if ui_lang == 'en' %}Import from CSV{% else %}استيراد من CSV{% endif %}
       </button>
       <a href="/admin/users/create" class="btn btn-primary d-flex align-items-center gap-2">
-        <span class="material-symbols-outlined" style="font-size:1.1rem;">person_add</span>
+        <span class="material-symbols-outlined" style="font-size:1.1rem;" aria-hidden="true">person_add</span>
         {% if ui_lang == 'en' %}Add User{% else %}إضافة مستخدم{% endif %}
       </a>
     </div>
   </header>
 
   <!-- Filters & Search -->
-  <div class="glass-card rounded-xl p-4 mb-lg flex flex-col md:flex-row gap-4 items-center justify-between border border-white/5">
-    
+  <div class="glass-card fade-in p-3 mb-4">
+
     <!-- Bulk Actions (Hidden by default) -->
-    <div id="bulkActions" class="w-full flex flex-wrap gap-2 items-center" style="display: none;">
-        <span class="text-on-surface font-label-md mr-4"><span id="selectedCountDisplay">0</span> {% if ui_lang == 'en' %}Selected{% else %}محدد{% endif %}</span>
-        
-        <button class="px-3 py-1.5 rounded bg-error/20 text-error border border-error/30 hover:bg-error/30 transition-colors font-label-sm flex items-center gap-1" onclick="bulkDelete()" id="bulkDeleteBtn">
-            <span class="material-symbols-outlined text-sm">delete</span> <span id="bulkDeleteLabel">{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}</span>
+    <div id="bulkActions" class="w-100 d-flex flex-wrap gap-2 align-items-center" style="display: none;">
+        <span class="fw-semibold me-3"><span id="selectedCountDisplay">0</span> {% if ui_lang == 'en' %}Selected{% else %}محدد{% endif %}</span>
+
+        <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" onclick="bulkDelete()" id="bulkDeleteBtn">
+            <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">delete</span> <span id="bulkDeleteLabel">{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}</span>
         </button>
-        <button class="px-3 py-1.5 rounded bg-[#fbbf24]/20 text-[#fbbf24] border border-[#fbbf24]/30 hover:bg-[#fbbf24]/30 transition-colors font-label-sm flex items-center gap-1" onclick="bulkStatusUpdate('SUSPENDED')">
-            <span class="material-symbols-outlined text-sm">pause_circle</span> {% if ui_lang == 'en' %}Suspend{% else %}تعليق{% endif %}
+        <button class="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1" onclick="bulkStatusUpdate('SUSPENDED')">
+            <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">pause_circle</span> {% if ui_lang == 'en' %}Suspend{% else %}تعليق{% endif %}
         </button>
-        <button class="px-3 py-1.5 rounded bg-[#4ade80]/20 text-[#4ade80] border border-[#4ade80]/30 hover:bg-[#4ade80]/30 transition-colors font-label-sm flex items-center gap-1" onclick="bulkStatusUpdate('ACTIVE')">
-            <span class="material-symbols-outlined text-sm">play_circle</span> {% if ui_lang == 'en' %}Activate{% else %}تفعيل{% endif %}
+        <button class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1" onclick="bulkStatusUpdate('ACTIVE')">
+            <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">play_circle</span> {% if ui_lang == 'en' %}Activate{% else %}تفعيل{% endif %}
         </button>
-        <button class="px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors font-label-sm flex items-center gap-1 ml-auto" onclick="clearSelection()">
-            <span class="material-symbols-outlined text-sm">close</span> {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+        <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 ms-auto" onclick="clearSelection()">
+            <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">close</span> {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
         </button>
     </div>
 
     <!-- Regular Filters (Visible by default) -->
-    <div id="regularFilters" class="w-full flex flex-col md:flex-row gap-4 justify-between items-center">
+    <div id="regularFilters" class="w-100 d-flex flex-column flex-md-row gap-3 justify-content-between align-items-md-center">
         <!-- Search -->
-        <div class="relative w-full md:w-96 group">
-            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60">search</span>
-            <input type="text" class="input-glass rounded-lg pl-10 pr-4 py-2 w-full text-sm font-body-md focus:shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-300 placeholder:text-on-surface-variant/40" id="searchUser" placeholder="{% if ui_lang == 'en' %}Search by name or email...{% else %}بحث بالاسم أو البريد الإلكتروني...{% endif %}">
+        <div class="input-group input-group-sm" style="max-width: 380px;">
+            <span class="input-group-text"><span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">search</span></span>
+            <input type="text" class="form-control" id="searchUser"
+                   aria-label="{% if ui_lang == 'en' %}Search by name or email{% else %}بحث بالاسم أو البريد الإلكتروني{% endif %}"
+                   placeholder="{% if ui_lang == 'en' %}Search by name or email...{% else %}بحث بالاسم أو البريد الإلكتروني...{% endif %}">
         </div>
 
-        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <select name="roleFilter" class="input-glass rounded-lg px-3 py-2 text-sm text-on-surface cursor-pointer w-full md:w-auto" id="roleFilter">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <select name="roleFilter" class="form-select form-select-sm w-auto" id="roleFilter"
+                    aria-label="{% if ui_lang == 'en' %}Filter by role{% else %}تصفية حسب الدور{% endif %}">
                 <option value="">{% if ui_lang == 'en' %}All Roles{% else %}كل الأدوار{% endif %}</option>
                 <option value="MANAGER">{% if ui_lang == 'en' %}Manager{% else %}مدير{% endif %}</option>
                 <option value="SUPERVISOR">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
                 <option value="PARENT">{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</option>
             </select>
-            
-            <select name="statusFilter" class="input-glass rounded-lg px-3 py-2 text-sm text-on-surface cursor-pointer w-full md:w-auto" id="statusFilter">
+
+            <select name="statusFilter" class="form-select form-select-sm w-auto" id="statusFilter"
+                    aria-label="{% if ui_lang == 'en' %}Filter by status{% else %}تصفية حسب الحالة{% endif %}">
                 <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
                 <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
                 <option value="SUSPENDED">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}</option>
                 <option value="INACTIVE">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</option>
             </select>
 
-            <button class="p-2 rounded-lg bg-surface-container-highest text-on-surface-variant hover:text-on-surface hover:bg-white/10 transition-colors flex items-center justify-center w-full md:w-auto" id="resetFilters" title="{% if ui_lang == 'en' %}Reset Filters{% else %}إعادة تعيين{% endif %}">
-                <span class="material-symbols-outlined text-sm">restart_alt</span>
+            <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center" id="resetFilters" title="{% if ui_lang == 'en' %}Reset Filters{% else %}إعادة تعيين{% endif %}">
+                <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">restart_alt</span>
             </button>
         </div>
     </div>
   </div>
 
-  <div class="flex justify-between items-center mb-4">
-    <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2">
-            <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-white/20 bg-surface focus:ring-primary focus:ring-offset-surface text-primary" onchange="toggleSelectAll()">
-            <label for="selectAll" class="text-sm text-on-surface-variant cursor-pointer">{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}</label>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-3">
+        <div class="form-check mb-0">
+            <input type="checkbox" id="selectAll" class="form-check-input" onchange="toggleSelectAll()">
+            <label for="selectAll" class="form-check-label small text-muted">{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}</label>
         </div>
-        <small class="text-on-surface-variant" id="resultCount"></small>
+        <small class="text-muted" id="resultCount"></small>
     </div>
-    
-    <div class="flex items-center gap-2">
-        <span class="text-on-surface-variant/60 font-label-sm text-label-sm uppercase tracking-wider">{% if ui_lang == 'en' %}Sort by:{% else %}ترتيب حسب:{% endif %}</span>
-        <button class="flex items-center gap-1 text-on-surface font-label-md text-label-md hover:text-primary transition-colors" onclick="sortTable('created_at')" id="sortDateBtn">
-            {% if ui_lang == 'en' %}Registration Date{% else %}تاريخ التسجيل{% endif %} <span class="material-symbols-outlined text-sm" id="sortDateIcon">expand_more</span>
+
+    <div class="d-flex align-items-center gap-2">
+        <span class="small text-muted text-uppercase">{% if ui_lang == 'en' %}Sort by:{% else %}ترتيب حسب:{% endif %}</span>
+        <button class="btn btn-sm btn-link text-decoration-none p-0 d-inline-flex align-items-center gap-1" onclick="sortTable('created_at')" id="sortDateBtn">
+            {% if ui_lang == 'en' %}Registration Date{% else %}تاريخ التسجيل{% endif %} <span class="material-symbols-outlined" style="font-size:1rem;" id="sortDateIcon" aria-hidden="true">expand_more</span>
         </button>
     </div>
   </div>
 
   <!-- User Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-lg" id="usersTableBody">
+  <div class="row g-3" id="usersTableBody">
       <!-- Populated by JavaScript -->
-      <div class="col-span-full text-center py-12 text-on-surface-variant">
-          <span class="material-symbols-outlined text-4xl animate-spin mb-4">hourglass_empty</span>
+      <div class="col-12 text-center py-5 text-muted">
+          <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
           <p>{% if ui_lang == 'en' %}Loading user data...{% else %}جاري تحميل بيانات المستخدمين...{% endif %}</p>
       </div>
   </div>
 
   <!-- Pagination Placeholder -->
-  <div class="mt-8 flex justify-center" id="pagination-container">
+  <div class="mt-4 d-flex justify-content-center" id="pagination-container">
       <!-- Handled by generic JS if it exists, otherwise we keep the container -->
       <nav id="pagination" aria-label="{% if ui_lang == 'en' %}Page navigation{% else %}التنقل بين الصفحات{% endif %}"></nav>
   </div>
 </div>
 
-<!-- CSV Import Modal (Premium Redesign) -->
-<div id="importModalWrapper" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
-    <!-- Backdrop -->
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="hideImportModal()"></div>
-    
-    <!-- Modal Content -->
-    <div class="glass-card rounded-2xl w-full max-w-3xl relative z-10 m-4 flex flex-col max-h-[90vh] overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.4),0_0_20px_rgba(99,102,241,0.1)] border border-white/10 animate-fade-in-up">
-        <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-surface/30">
-            <h5 class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary">upload</span>
-                {% if ui_lang == 'en' %}Import Users from CSV{% else %}استيراد المستخدمين من CSV{% endif %}
-            </h5>
-            <button class="text-on-surface-variant hover:text-white transition-colors" onclick="hideImportModal()">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        
-        <div class="p-6 overflow-y-auto flex-1">
-            <div class="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6 flex gap-3 text-on-surface">
-                <span class="material-symbols-outlined text-primary mt-1">info</span>
-                <div>
-                    <strong class="font-label-md block mb-2">{% if ui_lang == 'en' %}Required file format:{% else %}تنسيق الملف المطلوب:{% endif %}</strong>
-                    <p class="text-sm text-on-surface-variant mb-2">{% if ui_lang == 'en' %}The file must contain the following columns (in English as inside the file):{% else %}يجب أن يحتوي الملف على الأعمدة التالية (بالإنجليزية كما هي داخل الملف):{% endif %}</p>
-                    <code class="block bg-surface-container-highest px-3 py-2 rounded text-primary mb-2 text-sm font-mono border border-white/5">username, email, password, role</code>
-                    <small class="text-on-surface-variant text-xs">{% if ui_lang == 'en' %}Optional columns:{% else %}الأعمدة الاختيارية:{% endif %} <code class="text-primary bg-surface-container-highest px-1 rounded border border-white/5">kindergarten_id</code></small>
-                </div>
+<!-- CSV Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title d-flex align-items-center gap-2" id="importModalLabel">
+                    <span class="material-symbols-outlined text-primary" aria-hidden="true">upload</span>
+                    {% if ui_lang == 'en' %}Import Users from CSV{% else %}استيراد المستخدمين من CSV{% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
 
-            <div class="mb-6">
-                <label class="block font-label-md text-on-surface mb-2 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-sm">description</span>
-                    {% if ui_lang == 'en' %}Choose CSV File{% else %}اختر ملف CSV{% endif %}
-                </label>
-                <input type="file" id="csvFile" accept=".csv" class="w-full block text-sm text-on-surface-variant file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-label-md file:bg-surface-container-highest file:text-on-surface hover:file:bg-white/10 transition-colors border border-white/10 rounded-lg p-2 bg-[#16161A]">
-                <div class="text-xs text-on-surface-variant mt-2">{% if ui_lang == 'en' %}Maximum file size: 5 MB{% else %}الحد الأقصى لحجم الملف: 5 ميجابايت{% endif %}</div>
-            </div>
-
-            <div class="mb-2">
-                <label class="block font-label-md text-on-surface mb-2 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-sm">visibility</span>
-                    {% if ui_lang == 'en' %}Data Preview{% else %}معاينة البيانات{% endif %}
-                </label>
-                <div id="csvPreview" class="border border-white/5 rounded-lg p-4 bg-[#16161A] overflow-x-auto min-h-[150px] flex items-center justify-center">
-                    <div class="text-center text-on-surface-variant opacity-60">
-                        <span class="material-symbols-outlined text-4xl block mb-2">cloud_upload</span>
-                        <p class="text-sm">{% if ui_lang == 'en' %}Choose a CSV file to see the preview...{% else %}اختر ملف CSV لرؤية المعاينة...{% endif %}</p>
+            <div class="modal-body">
+                <div class="alert alert-info d-flex gap-2">
+                    <span class="material-symbols-outlined mt-1" aria-hidden="true">info</span>
+                    <div>
+                        <strong class="d-block mb-2">{% if ui_lang == 'en' %}Required file format:{% else %}تنسيق الملف المطلوب:{% endif %}</strong>
+                        <p class="small mb-2">{% if ui_lang == 'en' %}The file must contain the following columns (in English as inside the file):{% else %}يجب أن يحتوي الملف على الأعمدة التالية (بالإنجليزية كما هي داخل الملف):{% endif %}</p>
+                        <code class="d-block bg-light px-3 py-2 rounded mb-2 border">username, email, password, role</code>
+                        <small>{% if ui_lang == 'en' %}Optional columns:{% else %}الأعمدة الاختيارية:{% endif %} <code>kindergarten_id</code></small>
                     </div>
                 </div>
+
+                <div class="mb-4">
+                    <label for="csvFile" class="form-label d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">description</span>
+                        {% if ui_lang == 'en' %}Choose CSV File{% else %}اختر ملف CSV{% endif %}
+                    </label>
+                    <input type="file" id="csvFile" accept=".csv" class="form-control">
+                    <div class="form-text">{% if ui_lang == 'en' %}Maximum file size: 5 MB{% else %}الحد الأقصى لحجم الملف: 5 ميجابايت{% endif %}</div>
+                </div>
+
+                <div class="mb-2">
+                    <span class="form-label d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">visibility</span>
+                        {% if ui_lang == 'en' %}Data Preview{% else %}معاينة البيانات{% endif %}
+                    </span>
+                    <div id="csvPreview" class="border rounded p-3 bg-light overflow-auto d-flex align-items-center justify-content-center" style="min-height:150px">
+                        <div class="text-center text-muted">
+                            <span class="material-symbols-outlined d-block mb-2" style="font-size:2.5rem;" aria-hidden="true">cloud_upload</span>
+                            <p class="small mb-0">{% if ui_lang == 'en' %}Choose a CSV file to see the preview...{% else %}اختر ملف CSV لرؤية المعاينة...{% endif %}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="importResults" class="d-none mt-4">
+                    <h6 class="d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">assignment_turned_in</span>
+                        {% if ui_lang == 'en' %}Import Results:{% else %}نتائج الاستيراد:{% endif %}
+                    </h6>
+                    <div id="importSuccess" class="d-none alert alert-success py-2 small mb-3"></div>
+                    <div id="importErrors" class="d-none alert alert-danger py-2 small"></div>
+                </div>
             </div>
 
-            <div id="importResults" class="hidden mt-6">
-                <h6 class="font-label-md text-on-surface mb-3 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-sm">assignment_turned_in</span>
-                    {% if ui_lang == 'en' %}Import Results:{% else %}نتائج الاستيراد:{% endif %}
-                </h6>
-                <div id="importSuccess" class="hidden bg-[#4ade80]/10 border border-[#4ade80]/20 text-[#4ade80] rounded-lg p-3 text-sm mb-3"></div>
-                <div id="importErrors" class="hidden bg-error/10 border border-error/20 text-error rounded-lg p-3 text-sm"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+                </button>
+                <button type="button" id="importBtn" class="btn btn-primary d-inline-flex align-items-center gap-2" disabled>
+                    <span class="btn-text d-inline-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">upload</span>
+                        {% if ui_lang == 'en' %}Import Users{% else %}استيراد المستخدمين{% endif %}
+                    </span>
+                    <span class="btn-loading d-inline-flex d-none align-items-center gap-2">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        {% if ui_lang == 'en' %}Importing...{% else %}جاري الاستيراد...{% endif %}
+                    </span>
+                </button>
             </div>
-        </div>
-        
-        <div class="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-surface/30">
-            <button type="button" class="px-4 py-2 rounded-lg bg-surface-container-highest text-on-surface font-label-sm border border-white/10 hover:bg-white/10 transition-colors" onclick="hideImportModal()">
-                {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
-            </button>
-            <button type="button" id="importBtn" class="px-6 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary text-surface font-label-sm shadow-[0_0_15px_rgba(192,193,255,0.3)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed flex items-center gap-2" disabled>
-                <span class="btn-text flex items-center gap-2">
-                    <span class="material-symbols-outlined text-sm">upload</span>
-                    {% if ui_lang == 'en' %}Import Users{% else %}استيراد المستخدمين{% endif %}
-                </span>
-                <span class="btn-loading hidden flex items-center gap-2">
-                    <span class="material-symbols-outlined text-sm animate-spin">refresh</span>
-                    {% if ui_lang == 'en' %}Importing...{% else %}جاري الاستيراد...{% endif %}
-                </span>
-            </button>
         </div>
     </div>
 </div>
@@ -215,6 +215,11 @@
         const importBtn = document.getElementById('importBtn');
         if (importBtn) {
             importBtn.addEventListener('click', performImport);
+        }
+
+        const csvFile = document.getElementById('csvFile');
+        if (csvFile) {
+            csvFile.addEventListener('change', handleFileSelect);
         }
 
         const usersTableBody = document.getElementById('usersTableBody');
@@ -272,8 +277,8 @@
     async function loadUsers() {
         const tbody = document.getElementById('usersTableBody');
         tbody.innerHTML = `
-            <div class="col-span-full text-center py-12 text-on-surface-variant">
-                <span class="material-symbols-outlined text-4xl animate-spin mb-4">hourglass_empty</span>
+            <div class="col-12 text-center py-5 text-muted">
+                <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
                 <p>${T('جاري التحديث...', 'Updating...')}</p>
             </div>
         `;
@@ -302,13 +307,15 @@
         } catch (error) {
             console.error('Error loading users:', error);
             tbody.innerHTML = `
-                <div class="col-span-full glass-card border-error/30 p-8 text-center rounded-xl max-w-md mx-auto">
-                    <span class="material-symbols-outlined text-error text-4xl mb-4">error</span>
-                    <h3 class="font-headline-md text-on-surface mb-2">${T('حدث خطأ', 'Error occurred')}</h3>
-                    <p class="text-on-surface-variant mb-6">${escapeHtml(error.message)}</p>
-                    <button class="px-6 py-2 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors" onclick="loadUsers()">
-                        ${T('إعادة المحاولة', 'Retry')}
-                    </button>
+                <div class="col-12">
+                    <div class="glass-card fade-in p-4 text-center mx-auto" style="max-width:420px">
+                        <span class="material-symbols-outlined text-danger d-block mb-3" style="font-size:2.5rem;" aria-hidden="true">error</span>
+                        <h3 class="h5 mb-2">${T('حدث خطأ', 'Error occurred')}</h3>
+                        <p class="text-muted mb-4">${escapeHtml(error.message)}</p>
+                        <button class="btn btn-outline-primary" onclick="loadUsers()">
+                            ${T('إعادة المحاولة', 'Retry')}
+                        </button>
+                    </div>
                 </div>
             `;
         }
@@ -328,10 +335,10 @@
 
         if (!users || users.length === 0) {
             container.innerHTML = `
-                <div class="col-span-full text-center py-16 text-on-surface-variant opacity-70">
-                    <span class="material-symbols-outlined text-6xl mb-4 opacity-50">person_off</span>
-                    <h5 class="font-headline-md text-on-surface mb-2">${T('لا توجد نتائج مطابقة', 'No matching results')}</h5>
-                    <p class="font-body-sm">${T('جرب تغيير معايير البحث أو الفلاتر', 'Try changing search criteria or filters')}</p>
+                <div class="col-12 text-center py-5 text-muted">
+                    <span class="material-symbols-outlined d-block mb-3 opacity-50" style="font-size:3.5rem;" aria-hidden="true">person_off</span>
+                    <h5 class="mb-2">${T('لا توجد نتائج مطابقة', 'No matching results')}</h5>
+                    <p class="small">${T('جرب تغيير معايير البحث أو الفلاتر', 'Try changing search criteria or filters')}</p>
                 </div>
             `;
             return;
@@ -342,76 +349,78 @@
             resultCount.textContent = T(`عرض ${users.length} مستخدم`, `Showing ${users.length} user(s)`);
         }
 
-        let delay = 100;
         container.innerHTML = users.map((user, idx) => {
             const safeUsername = escapeHtml(user.username);
             const safeEmail = escapeHtml(user.email);
             const initial = safeUsername.charAt(0).toUpperCase();
-            
-            // Adjust delay for staggered animation (max out at 500ms to not be annoying)
+
+            // Staggered entrance (capped so late cards don't lag)
             const d = (idx % 5 + 1) * 100;
-            
-            // Status specific styling for avatar ring
-            let ringColor = "border-surface-variant opacity-60 grayscale";
-            let dotColor = "bg-surface-variant";
+
+            // Status specific styling for avatar ring + presence dot
+            let ringClass = "border-secondary opacity-75";
+            let dotClass = "bg-secondary";
             if(user.status === 'ACTIVE') {
-                ringColor = "border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.3)]";
-                dotColor = "bg-emerald-500";
+                ringClass = "border-success";
+                dotClass = "bg-success";
             } else if (user.status === 'SUSPENDED') {
-                ringColor = "border-error shadow-[0_0_10px_rgba(255,180,171,0.3)]";
-                dotColor = "bg-error";
+                ringClass = "border-danger";
+                dotClass = "bg-danger";
             }
 
             return `
-            <div class="glass-card rounded-xl p-6 relative group flex flex-col justify-between min-h-[200px] animate-fade-in-up" style="animation-delay: ${d}ms">
-                
+            <div class="col-12 col-md-6 col-xl-4">
+              <div class="glass-card fade-in h-100 p-4 position-relative" style="animation-delay: ${d}ms">
+
                 <!-- Checkbox -->
-                <div class="absolute top-4 left-4 z-10">
-                    <input type="checkbox" class="w-4 h-4 rounded border-white/20 bg-black/30 focus:ring-primary focus:ring-offset-surface text-primary user-checkbox cursor-pointer" value="${user.id}" onchange="updateBulkActions()">
+                <div class="position-absolute top-0 start-0 m-3">
+                    <input type="checkbox" class="form-check-input user-checkbox" value="${user.id}" onchange="updateBulkActions()"
+                           aria-label="${T('تحديد المستخدم', 'Select user')} ${safeUsername}">
                 </div>
 
                 <!-- Actions Menu -->
-                <div class="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-0 focus-within:opacity-100">
-                    <a href="/admin/users/${user.id}/edit" class="p-2 rounded text-on-surface-variant/60 hover:text-primary hover:bg-primary/10 transition-colors flex" title="${T('تعديل', 'Edit')}">
-                        <span class="material-symbols-outlined text-[18px]">edit</span>
+                <div class="position-absolute top-0 end-0 m-2 d-flex gap-1">
+                    <a href="/admin/users/${user.id}/edit" class="btn btn-sm btn-outline-secondary border-0 d-inline-flex p-1" title="${T('تعديل', 'Edit')}">
+                        <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">edit</span>
                     </a>
                     ${currentUserRole === 'ADMIN' ? `
-                    <button data-action="reset-password" data-user-id="${user.id}" data-username="${safeUsername}" class="p-2 rounded text-on-surface-variant/60 hover:text-[#fbbf24] hover:bg-[#fbbf24]/10 transition-colors flex" title="${T('إعادة تعيين كلمة المرور', 'Reset password')}">
-                        <span class="material-symbols-outlined text-[18px]">key</span>
+                    <button data-action="reset-password" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-warning border-0 d-inline-flex p-1" title="${T('إعادة تعيين كلمة المرور', 'Reset password')}">
+                        <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">key</span>
                     </button>
                     ` : ''}
                     ${currentUserRole === 'ADMIN' && user.role !== 'ADMIN' ? `
-                    <button data-action="delete-user" data-user-id="${user.id}" data-username="${safeUsername}" class="p-2 rounded text-on-surface-variant/60 hover:text-error hover:bg-error/10 transition-colors flex" title="${T('حذف', 'Delete')}">
-                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                    <button data-action="delete-user" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-danger border-0 d-inline-flex p-1" title="${T('حذف', 'Delete')}">
+                        <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">delete</span>
                     </button>
                     ` : ''}
                 </div>
 
-                <div class="flex items-start gap-4 mb-4 mt-4">
-                    <div class="relative flex-shrink-0">
-                        <div class="w-12 h-12 rounded-full overflow-hidden border-2 ${ringColor} flex items-center justify-center bg-surface-container-highest text-on-surface font-headline-md">
+                <div class="d-flex align-items-start gap-3 mb-3 mt-4">
+                    <div class="position-relative flex-shrink-0">
+                        <div class="rounded-circle overflow-hidden border border-2 ${ringClass} d-flex align-items-center justify-content-center bg-light fw-bold fs-5" style="width:48px;height:48px;">
                             ${initial}
                         </div>
-                        <div class="absolute -bottom-1 -right-1 w-4 h-4 ${dotColor} rounded-full border-2 border-surface"></div>
+                        <span class="position-absolute bottom-0 end-0 ${dotClass} rounded-circle border border-2 border-white" style="width:14px;height:14px;"></span>
                     </div>
-                    <div class="min-w-0 pr-8">
-                        <h3 class="font-headline-sm text-on-surface truncate" title="${safeUsername}">${safeUsername}</h3>
-                        <p class="text-on-surface-variant/60 font-body-sm truncate text-sm" title="${safeEmail}">${safeEmail}</p>
-                        ${user.kindergarten_id ? `<p class="text-on-surface-variant/40 text-[11px] truncate mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">business</span> ${T('روضة رقم', 'KG No.')} ${user.kindergarten_id}</p>` : ''}
+                    <div class="min-w-0">
+                        <h3 class="h6 mb-0 text-truncate" title="${safeUsername}">${safeUsername}</h3>
+                        <p class="small text-muted text-truncate mb-0" title="${safeEmail}">${safeEmail}</p>
+                        ${user.kindergarten_id ? `<p class="small text-muted mb-0 mt-1 d-flex align-items-center gap-1"><span class="material-symbols-outlined" style="font-size:12px;" aria-hidden="true">business</span> ${T('روضة رقم', 'KG No.')} ${user.kindergarten_id}</p>` : ''}
                     </div>
                 </div>
 
                 <div>
-                    <div class="flex flex-wrap items-center gap-2 mb-4">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
                         ${getRoleBadge(user.role)}
                         ${getStatusBadge(user.status)}
                     </div>
-                    <div class="w-full h-[1px] bg-white/5 mb-3"></div>
-                    <div class="flex items-center text-on-surface-variant/40 text-xs">
-                        <span class="material-symbols-outlined text-[14px] mr-1">history</span> 
+                    <hr class="my-2">
+                    <div class="d-flex align-items-center text-muted small">
+                        <span class="material-symbols-outlined me-1" style="font-size:14px;" aria-hidden="true">history</span>
                         ${T('تسجيل:', 'Joined:')} ${new Date(user.created_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}
                     </div>
                 </div>
+              </div>
             </div>
             `;
         }).join('');
@@ -419,57 +428,54 @@
 
     function getRoleBadge(role) {
         const b = {
-            'ADMIN': `bg-secondary-container/20 text-secondary-container border-secondary-container/30`,
-            'MANAGER': `bg-primary-container/20 text-primary-container border-primary-container/30`,
-            'SUPERVISOR': `bg-tertiary-container/20 text-tertiary border-tertiary-container/30`,
-            'PARENT': `bg-[#4ade80]/10 text-[#4ade80] border-[#4ade80]/20`
+            'ADMIN': `bg-info bg-opacity-10 text-info border-info`,
+            'MANAGER': `bg-primary bg-opacity-10 text-primary border-primary`,
+            'SUPERVISOR': `bg-secondary bg-opacity-10 text-secondary border-secondary`,
+            'PARENT': `bg-success bg-opacity-10 text-success border-success`
         };
-        const c = b[role] || `bg-surface-variant text-on-surface-variant border-outline/30`;
+        const c = b[role] || `bg-secondary bg-opacity-10 text-secondary border-secondary`;
         const l = {
             'ADMIN': T('مدير النظام', 'System Admin'),
             'MANAGER': T('مدير روضة', 'KG Manager'),
             'SUPERVISOR': T('مشرف', 'Supervisor'),
             'PARENT': T('ولي أمر', 'Parent')
         };
-        return `<span class="px-2 py-1 rounded font-label-sm text-[11px] border ${c}">${l[role] || role}</span>`;
+        return `<span class="badge ${c} border border-opacity-25">${l[role] || role}</span>`;
     }
 
     function getStatusBadge(status) {
-        const b = {
-            'ACTIVE': `text-[#4ade80]`,
-            'INACTIVE': `text-on-surface-variant/60`,
-            'SUSPENDED': `text-error`
-        };
-        const c = b[status] || `text-on-surface-variant`;
+        const c = {
+            'ACTIVE': `text-success`,
+            'INACTIVE': `text-muted`,
+            'SUSPENDED': `text-danger`
+        }[status] || `text-muted`;
         const l = {
             'ACTIVE': T('نشط', 'Active'),
             'INACTIVE': T('غير نشط', 'Inactive'),
             'SUSPENDED': T('موقوف', 'Suspended')
         };
         const i = { 'ACTIVE': 'check_circle', 'INACTIVE': 'remove_circle_outline', 'SUSPENDED': 'block'};
-        
-        return `<span class="px-2 py-1 flex items-center gap-1 font-label-sm text-[11px] ${c}">
-            <span class="material-symbols-outlined text-[12px]">${i[status] || 'info'}</span> ${l[status] || status}
+
+        return `<span class="d-inline-flex align-items-center gap-1 small ${c}">
+            <span class="material-symbols-outlined" style="font-size:12px;" aria-hidden="true">${i[status] || 'info'}</span> ${l[status] || status}
         </span>`;
     }
 
     // Modal logic
     function showImportModal() {
-        document.getElementById('importModalWrapper').classList.remove('hidden');
-        
         document.getElementById('csvFile').value = '';
         document.getElementById('csvPreview').innerHTML = `
-            <div class="text-center text-on-surface-variant opacity-60">
-                <span class="material-symbols-outlined text-4xl block mb-2">cloud_upload</span>
-                <p class="text-sm">${T('اختر ملف CSV لرؤية المعاينة...', 'Choose a CSV file to see the preview...')}</p>
+            <div class="text-center text-muted">
+                <span class="material-symbols-outlined d-block mb-2" style="font-size:2.5rem;" aria-hidden="true">cloud_upload</span>
+                <p class="small mb-0">${T('اختر ملف CSV لرؤية المعاينة...', 'Choose a CSV file to see the preview...')}</p>
             </div>`;
-        document.getElementById('importResults').classList.add('hidden');
+        document.getElementById('importResults').classList.add('d-none');
         document.getElementById('importBtn').disabled = true;
-        document.getElementById('csvFile').addEventListener('change', handleFileSelect);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('importModal')).show();
     }
 
     function hideImportModal() {
-        document.getElementById('importModalWrapper').classList.add('hidden');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('importModal')).hide();
     }
 
     // Data parsing logic copied directly from old implementation
@@ -501,23 +507,23 @@
         }
 
         const previewRows = lines.slice(1, 6);
-        let previewHTML = '<table class="w-full text-left text-sm text-on-surface"><thead><tr class="border-b border-white/10 text-on-surface-variant">';
+        let previewHTML = '<table class="table table-sm mb-0"><thead><tr>';
         headers.forEach(header => {
-            previewHTML += `<th class="pb-2 font-label-md">${escapeHtml(header)}</th>`;
+            previewHTML += `<th class="small">${escapeHtml(header)}</th>`;
         });
-        previewHTML += '</tr></thead><tbody class="divide-y divide-white/5">';
+        previewHTML += '</tr></thead><tbody>';
 
         previewRows.forEach(row => {
             const cells = row.split(',').map(cell => cell.trim());
             previewHTML += '<tr>';
             cells.forEach(cell => {
-                previewHTML += `<td class="py-2 text-on-surface/80">${escapeHtml(cell)}</td>`;
+                previewHTML += `<td class="small">${escapeHtml(cell)}</td>`;
             });
             previewHTML += '</tr>';
         });
 
         if (lines.length > 6) {
-            previewHTML += `<tr><td colspan="${headers.length}" class="py-2 text-on-surface-variant/60 text-center text-xs">... ${T('و', 'and')} ${lines.length - 6} ${T('صفوف أخرى', 'more rows')}</td></tr>`;
+            previewHTML += `<tr><td colspan="${headers.length}" class="small text-muted text-center">... ${T('و', 'and')} ${lines.length - 6} ${T('صفوف أخرى', 'more rows')}</td></tr>`;
         }
 
         previewHTML += '</tbody></table>';
@@ -535,7 +541,7 @@
     }
 
     function showCSVError(message) {
-        document.getElementById('csvPreview').innerHTML = `<div class="bg-error/20 text-error p-3 rounded-lg text-sm">${message}</div>`;
+        document.getElementById('csvPreview').innerHTML = `<div class="alert alert-danger py-2 small mb-0">${message}</div>`;
         document.getElementById('importBtn').disabled = true;
     }
 
@@ -544,8 +550,8 @@
 
         const btn = document.getElementById('importBtn');
         btn.disabled = true;
-        btn.querySelector('.btn-text').classList.add('hidden');
-        btn.querySelector('.btn-loading').classList.remove('hidden');
+        btn.querySelector('.btn-text').classList.add('d-none');
+        btn.querySelector('.btn-loading').classList.remove('d-none');
 
         try {
             const users = window.csvData.map(row => ({
@@ -557,19 +563,19 @@
             }));
 
             const response = await api.post('/api/admin/users/bulk-create', { users: users });
-            
-            document.getElementById('importResults').classList.remove('hidden');
+
+            document.getElementById('importResults').classList.remove('d-none');
             const createdCount = (response.succeeded || []).length;
-            
+
             if (createdCount > 0) {
                 const s = document.getElementById('importSuccess');
-                s.classList.remove('hidden');
+                s.classList.remove('d-none');
                 s.textContent = T(`تم إنشاء ${createdCount} مستخدم بنجاح`, `Successfully created ${createdCount} user(s)`);
             }
 
             if (response.errors && response.errors.length > 0) {
                 const errEl = document.getElementById('importErrors');
-                errEl.classList.remove('hidden');
+                errEl.classList.remove('d-none');
                 const formattedErrors = response.errors.map(err => {
                     if (typeof err === 'string') return escapeHtml(err);
                     return `Row ${err.row || ''}: ${escapeHtml(err.message || '')}`;
@@ -580,14 +586,14 @@
             if (createdCount > 0) loadUsers();
 
         } catch (error) {
-            document.getElementById('importResults').classList.remove('hidden');
+            document.getElementById('importResults').classList.remove('d-none');
             const errEl = document.getElementById('importErrors');
-            errEl.classList.remove('hidden');
+            errEl.classList.remove('d-none');
             errEl.textContent = error.message || T('حدث خطأ', 'An error occurred');
         } finally {
             btn.disabled = false;
-            btn.querySelector('.btn-text').classList.remove('hidden');
-            btn.querySelector('.btn-loading').classList.add('hidden');
+            btn.querySelector('.btn-text').classList.remove('d-none');
+            btn.querySelector('.btn-loading').classList.add('d-none');
         }
     }
 
@@ -602,7 +608,7 @@
         const count = document.querySelectorAll('.user-checkbox:checked').length;
         const bulk = document.getElementById('bulkActions');
         const reg = document.getElementById('regularFilters');
-        
+
         if (count > 0) {
             bulk.style.display = 'flex';
             reg.style.display = 'none';
@@ -643,7 +649,6 @@
         const ids = Array.from(cbs).map(cb => parseInt(cb.value));
         if (ids.length === 0) return;
 
-        const actionText = newStatus === 'ACTIVE' ? T('تفعيل', 'activate') : 'تعليق/suspend';
         if (!confirm(T(`تأكيد تغيير حالة ${ids.length} مستخدم؟`, `Confirm status change for ${ids.length} user(s)?`))) return;
 
         try {

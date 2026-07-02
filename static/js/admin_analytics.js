@@ -17,6 +17,16 @@ window.hideDataErrorBanner = function() {
 
 // safeChartData() is provided globally by chart_utils.js (loaded before this script).
 
+function adminAnalyticsText(arText, enText) {
+  const lang =
+    window.AdminI18n?.getCurrentLanguage?.().code ||
+    localStorage.getItem("admin_language") ||
+    localStorage.getItem("kinjo_lang") ||
+    document.documentElement.lang ||
+    "ar";
+  return String(lang).toLowerCase().startsWith("en") ? enText : arText;
+}
+
 var lastDashboardData = null;
 var fetchWithAuth = window.fetchWithAuth || async function adminAnalyticsFetchFallback(url, options) {
   const opts = Object.assign({ credentials: "same-origin" }, options || {});
@@ -178,14 +188,47 @@ let governanceChart = null;
 let trendChartInstance = null;
 let governorateTableSorter = null;
 
-function adminAnalyticsText(arText, enText) {
-  const lang =
-    window.AdminI18n?.getCurrentLanguage?.().code ||
-    localStorage.getItem("admin_language") ||
-    localStorage.getItem("kinjo_lang") ||
-    document.documentElement.lang ||
-    "ar";
-  return String(lang).toLowerCase().startsWith("en") ? enText : arText;
+// =============================================================================
+// Unified Translation Dictionary — Ensures linguistic consistency
+// =============================================================================
+const ADMIN_TRANSLATIONS = {
+  pageTitles: {
+    overview: { ar: "نظرة عامة", en: "Overview" },
+    registrations: { ar: "التسجيلات", en: "Registrations" },
+    regions: { ar: "المناطق", en: "Regions" },
+    governance: { ar: "الحوكمة", en: "Governance" },
+    aiPredictions: { ar: "الذكاء والتنبؤات", en: "AI & Predictions" }
+  },
+  metrics: {
+    facilities: { ar: "إجمالي المرافق", en: "Total Facilities" },
+    children: { ar: "الأطفال المسجلون", en: "Enrolled Children" },
+    attendance: { ar: "الحضور اليومي", en: "Daily Attendance" },
+    incidents: { ar: "معدل الحوادث", en: "Incident Rate" },
+    governanceScore: { ar: "متوسط الحوكمة", en: "Governance Score" },
+    conversion: { ar: "معدل الإكمال", en: "Completion Rate" }
+  },
+  statuses: {
+    excellent: { ar: "ممتاز", en: "Excellent" },
+    good: { ar: "جيد", en: "Good" },
+    average: { ar: "متوسط", en: "Average" },
+    needsImprovement: { ar: "يحتاج تحسين", en: "Needs Improvement" }
+  },
+  timeframes: {
+    vsPrevious: { ar: "عن الفترة السابقة", en: "vs previous period" },
+    noChange: { ar: "لا تغيير عن الفترة السابقة", en: "No change vs previous period" },
+    improved: { ar: "تحسن", en: "Improved" },
+    declined: { ar: "انخفاض", en: "Declined" }
+  }
+};
+
+function t(key, subkey) {
+  const lang = adminAnalyticsLocale();
+  const isEnglish = lang.startsWith("en");
+  const category = ADMIN_TRANSLATIONS[key];
+  if (!category) return key;
+  const entry = category[subkey];
+  if (!entry) return subkey;
+  return isEnglish ? entry.en : entry.ar;
 }
 
 // Safe translate wrapper for AdminI18n
@@ -368,6 +411,13 @@ async function loadAdminAnalytics(retryCount = 0) {
     );
     // Update last-updated timestamp
     updateLastUpdatedTimestamp();
+
+    // Fire event for v2 enhancement layer
+    document.dispatchEvent(new CustomEvent('analyticsDataLoaded', {
+      detail: Object.assign({}, data, {
+        __period__: { start: start, end: end }
+      })
+    }));
   } catch (error) {
     console.error("Analytics load error:", error);
 
@@ -584,57 +634,70 @@ function updateLastUpdatedTimestamp() {
 }
 
 function updateNetworkSummary(summary) {
-  if (!summary) {
-    return;
-  }
+   if (!summary) {
+     return;
+   }
 
-  // Update KPI cards with proper formatting
-  safeSetText(
-    "totalKg",
-    summary.total_kindergartens?.toLocaleString(adminAnalyticsLocale()) || "0"
-  );
+   // Update KPI cards with proper formatting
+   safeSetText(
+     "totalKg",
+     summary.total_kindergartens?.toLocaleString(adminAnalyticsLocale()) || "0"
+   );
 
-  const childrenCount = summary.total_children || 0;
-  safeSetText("totalChildren", childrenCount.toLocaleString(adminAnalyticsLocale()));
+   const childrenCount = summary.total_children || 0;
+   safeSetText("totalChildren", childrenCount.toLocaleString(adminAnalyticsLocale()));
 
-  const attendanceRate = summary.attendance_rate || 0;
-  safeSetText("avgAttendance", attendanceRate.toFixed(1) + "%");
+   const attendanceRate = summary.attendance_rate || 0;
+   safeSetText("avgAttendance", attendanceRate.toFixed(1) + "%");
 
-  const incidentRate = summary.incident_rate || 0;
-  safeSetText("incidentRate", incidentRate.toFixed(2) + "/1K");
+   const incidentRate = summary.incident_rate || 0;
+   safeSetText("incidentRate", incidentRate.toFixed(2) + "/1K");
 
-  const enrollmentRate = summary.enrollment_rate || 0;
-  safeSetText("enrollmentRate", enrollmentRate.toFixed(1) + "%");
+   const enrollmentRate = summary.enrollment_rate || 0;
+   safeSetText("enrollmentRate", enrollmentRate.toFixed(1) + "%");
 
-  // Update progress bars
-  const enrollmentBar = document.getElementById("enrollmentRateBar");
-  if (enrollmentBar) {
-    enrollmentBar.style.width = Math.min(enrollmentRate, 100) + "%";
-    enrollmentBar.className = `progress-bar ${enrollmentRate > 90 ? "bg-success" : enrollmentRate > 70 ? "bg-info" : "bg-warning"}`;
-  }
+   // Update progress bars
+   const enrollmentBar = document.getElementById("enrollmentRateBar");
+   if (enrollmentBar) {
+     enrollmentBar.style.width = Math.min(enrollmentRate, 100) + "%";
+     enrollmentBar.className = `progress-bar ${enrollmentRate > 90 ? "bg-success" : enrollmentRate > 70 ? "bg-info" : "bg-warning"}`;
+   }
 
-  updateTrendIndicators(summary);
-  if (lastDashboardData) {
-    lastDashboardData.network_summary = summary;
-    renderSparklines(lastDashboardData);
-  }
+   // Add visual score indicators to KPI cards
+   const kgCard = document.querySelector('[aria-label*="Facilities"]');
+   if (kgCard) {
+     kgCard.classList.add("kpi-card-v2--success", "kpi-score-good");
+   }
 
-  // Populate Overview operational health summary cards
-  const ohAtt = document.getElementById("ohAttendanceHealth");
-  if (ohAtt) {
-    const rate = (summary.attendance_rate || 0).toFixed(1);
-    const cls = attendanceRate >= 80 ? "text-success" : attendanceRate >= 60 ? "text-warning" : "text-danger";
-    ohAtt.textContent = rate + "%";
-    ohAtt.className = `fw-bold fs-5 ${cls}`;
-  }
-  const ohGov = document.getElementById("ohGovernanceScore");
-  if (ohGov) {
-    const score = (summary.governance_avg_score || 0).toFixed(1);
-    const cls2 = (summary.governance_avg_score || 0) >= 80 ? "text-success" : (summary.governance_avg_score || 0) >= 60 ? "text-warning" : "text-danger";
-    ohGov.textContent = score;
-    ohGov.className = `fw-bold fs-5 ${cls2}`;
-  }
-}
+   updateTrendIndicators(summary);
+   if (lastDashboardData) {
+     lastDashboardData.network_summary = summary;
+     renderSparklines(lastDashboardData);
+   }
+
+   // Populate Overview operational health summary cards
+   const ohAtt = document.getElementById("ohAttendanceHealth");
+   if (ohAtt) {
+     const rate = (summary.attendance_rate || 0).toFixed(1);
+     const cls = attendanceRate >= 80 ? "text-success" : attendanceRate >= 60 ? "text-warning" : "text-danger";
+     ohAtt.textContent = rate + "%";
+     ohAtt.className = `fw-bold fs-5 ${cls}`;
+   }
+
+   const ohGov = document.getElementById("ohGovernanceScore");
+   if (ohGov) {
+     const govVal = summary.governance_avg_score || 0;
+     ohGov.textContent = govVal.toFixed(1);
+     // v2 card — no Bootstrap class needed, value only
+     ohGov.removeAttribute('class');
+     // Add score tier class for visual indication
+     ohGov.classList.add(govVal >= 80 ? "text-success" : govVal >= 60 ? "text-warning" : "text-danger");
+   }
+   // Update data quality ring if already loaded
+   if (typeof window._updateDQRing === 'function' && summary.data_quality_score != null) {
+     window._updateDQRing(summary.data_quality_score);
+   }
+ }
 
 function updateTrendIndicators(summary) {
   renderDeltaIndicator(
@@ -650,10 +713,9 @@ function renderDeltaIndicator(delta, elementId, metricKey) {
   const element = document.getElementById(elementId);
   if (!element) return;
 
-  const unavailableText = adminAnalyticsText(
-    "غير متوفر للفترة السابقة",
-    "No previous-period data"
-  );
+  const unavailableText = t("timeframes", "vsPrevious").startsWith("vs")
+    ? "No previous-period data"
+    : "غير متوفر للفترة السابقة";
 
   if (!delta || delta.source !== "real" || delta.delta_percent == null) {
     element.className = "text-muted";
@@ -672,17 +734,21 @@ function renderDeltaIndicator(delta, elementId, metricKey) {
     : isImprovement
       ? "bi-arrow-up-short"
       : "bi-arrow-down-short";
-  const className = isNeutral ? "text-muted" : isImprovement ? "text-success" : "text-danger";
-  const label = adminAnalyticsText("عن الفترة السابقة", "vs previous period");
+  const className = isNeutral ? "kpi-delta kpi-delta--flat" : isImprovement ? "kpi-delta kpi-delta--up" : "kpi-delta kpi-delta--down";
+  const label = t("timeframes", "vsPrevious");
   const ariaLabel = isNeutral
-    ? adminAnalyticsText("لا تغيير عن الفترة السابقة", "No change vs previous period")
+    ? t("timeframes", "noChange")
     : isImprovement
-      ? adminAnalyticsText(`تحسن بنسبة ${percent}% عن الفترة السابقة`, `Increased by ${percent}% vs previous period`)
-      : adminAnalyticsText(`انخفاض بنسبة ${percent}% عن الفترة السابقة`, `Decreased by ${percent}% vs previous period`);
+      ? `${t("timeframes", "improved")} ${percent}% ${t("timeframes", "vsPrevious")}`
+      : `${t("timeframes", "declined")} ${percent}% ${t("timeframes", "vsPrevious")}`;
+
+  // For incidents, down is good (fewer incidents)
+  // For other metrics, up is good (more facilities, more attendance, etc.)
+  const displaySign = isNeutral ? "" : (isImprovement ? "▲" : "▼");
 
   element.className = className;
   element.setAttribute("aria-label", ariaLabel);
-  element.innerHTML = `<i class="bi ${icon} me-1" aria-hidden="true"></i>${isNeutral ? "—" : (delta.delta_percent < 0 ? "-" : "+")}${percent}% ${label}`;
+  element.innerHTML = `<i class="bi ${icon}" aria-hidden="true"></i><span class="delta-value" aria-hidden="true">${displaySign}${percent}%</span><span class="delta-label">${label}</span>`;
 }
 
 function updateTrendCharts(attendanceData, incidentData) {
@@ -776,11 +842,11 @@ function buildTrendChartData(type) {
   const forecastLabels = forecastPoints.map((d) => formatDateForDisplay(d.date));
   const fullLabels = labels.concat(forecastLabels);
 
-  const lineColor = type === "attendance" ? "#198754" : "#fd7e14";
+  const lineColor = type === "attendance" ? "#2563EB" : "#DC2626";
   const lineLabel =
     type === "attendance"
-      ? adminAnalyticsText("عدد الحضور", "Attendance count")
-      : adminAnalyticsText("عدد الحوادث", "Incident count");
+      ? adminAnalyticsText("معدل الحضور", "Attendance Rate")
+      : adminAnalyticsText("عدد الحوادث", "Incident Rate");
 
   return {
     data: {
@@ -790,15 +856,23 @@ function buildTrendChartData(type) {
           label: lineLabel,
           data: safeChartData(dataSeries.map((d) => d.value)),
           borderColor: lineColor,
-          backgroundColor:
-            type === "attendance" ? "rgba(25, 135, 84, 0.1)" : "rgba(253, 126, 20, 0.1)",
+          backgroundColor: function(context) {
+            const chart = context.chart;
+            const { ctx: c, chartArea } = chart;
+            if (!chartArea) return 'transparent';
+            const gradient = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            const alpha = type === "attendance" ? "0.18" : "0.15";
+            gradient.addColorStop(0, lineColor.replace(')', ', ' + alpha + ')').replace('rgb', 'rgba'));
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+            return gradient;
+          },
           yAxisID: "y",
           fill: true,
           tension: 0.4,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: lineColor,
-          pointBorderColor: "#fff",
+          pointRadius: 3,
+          pointHoverRadius: 7,
+          pointBackgroundColor: "#fff",
+          pointBorderColor: lineColor,
           pointBorderWidth: 2,
         },
         {
@@ -857,8 +931,12 @@ function buildTrendChartData(type) {
         tooltip: {
           mode: "index",
           intersect: false,
-          backgroundColor: "rgba(0,0,0,0.8)",
-          titleColor: "#fff",
+          backgroundColor: "rgba(15,23,42,0.92)",
+          titleColor: "#F8FAFC",
+          bodyColor: "#CBD5E1",
+          padding: 12,
+          cornerRadius: 10,
+          boxPadding: 4,
           bodyColor: "#fff",
           borderColor: lineColor,
           borderWidth: 1,
@@ -994,47 +1072,32 @@ function updateRiskRadar(riskData) {
   // Sort by risk score descending
   validRiskItems.sort(function (a, b) { return (b.risk_score || 0) - (a.risk_score || 0); });
 
+  // Use v2 renderer if available, otherwise fall back to legacy
+  if (typeof window._renderRiskCards === 'function') {
+    window._renderRiskCards(validRiskItems);
+    return;
+  }
+
   validRiskItems.forEach(function (item) {
     const li = document.createElement("li");
     li.className = "list-group-item d-flex justify-content-between align-items-center border-0 py-3";
-
     const riskScore = item.risk_score || 0;
-    const riskColor = riskScore >= 80 ? "danger" : riskScore >= 40 ? "warning" : "success";
-
-    const safeName = window.KpiValidation
-      ? window.KpiValidation.sanitizeCorruptedText(item.name, "غير متاح")
-      : (item.name || "غير متاح");
-    const safeKindergarten = window.KpiValidation
-      ? window.KpiValidation.sanitizeCorruptedText(item.kindergarten, "غير محدد")
-      : (item.kindergarten || "غير محدد");
-    const safeReason = window.KpiValidation
-      ? window.KpiValidation.sanitizeCorruptedText(item.reason, "سبب غير محدد")
-      : (item.reason || "سبب غير ممدد");
-
-    li.innerHTML = `
-             <div class="flex-grow-1">
-                 <div class="d-flex align-items-center mb-1">
-                     <span class="fw-bold text-dark me-2">${adminAnalyticsLiteral(safeName)}</span>
-                     <small class="badge bg-${riskColor} text-white">${riskScore}% ${adminAnalyticsText("خطر", "risk")}</small>
-                 </div>
-                 <small class="text-muted d-block">${adminAnalyticsLiteral(safeKindergarten)}</small>
-                 <div class="small text-danger mt-1">${adminAnalyticsLiteral(safeReason)}</div>
-             </div>
-             <div class="text-end">
-                 <div class="progress" style="width: 60px; height: 6px;">
-                     <div class="progress-bar bg-${riskColor}" style="width: ${riskScore}%"></div>
-                 </div>
-             </div>
-         `;
-
-    // Add click handler for drill-down
+    const riskColor = riskScore >= 70 ? "danger" : riskScore >= 40 ? "warning" : "success";
+    const safeName = item.name || "غير متاح";
+    const safeKindergarten = item.kindergarten || "غير محدد";
+    const safeReason = item.reason || "سبب غير محدد";
+    li.innerHTML = `<div class="flex-grow-1">
+      <div class="d-flex align-items-center mb-1">
+        <span class="fw-bold text-dark me-2">${adminAnalyticsLiteral(safeName)}</span>
+        <small class="badge bg-${riskColor} text-white">${riskScore} ${adminAnalyticsText("خطر", "risk")}</small>
+      </div>
+      <small class="text-muted d-block">${adminAnalyticsLiteral(safeKindergarten)}</small>
+      <div class="small text-danger mt-1">${adminAnalyticsLiteral(safeReason)}</div>
+    </div>`;
     li.style.cursor = "pointer";
     li.addEventListener("click", function () {
-      if (item.kindergarten_id) {
-        window.location.href = `/admin/analytics/drilldown/KINDERGARTEN/${item.kindergarten_id}`;
-      }
+      if (item.kindergarten_id) window.location.href = `/admin/analytics/drilldown/KINDERGARTEN/${item.kindergarten_id}`;
     });
-
     list.appendChild(li);
   });
 }
@@ -1185,10 +1248,21 @@ async function loadComparativeAnalysis(start, end) {
 
      renderRankingList(topList, topData.rankings, "top", seenTopIds);
      renderRankingList(lowList, lowData.rankings, "low", seenTopIds, topCount);
+
+     // Governance tab hosts its own copy of the leaderboard under distinct IDs
+     const govTopList = document.getElementById("govTopPerformersList");
+     const govLowList = document.getElementById("govLowPerformersList");
+     if (govTopList) renderRankingList(govTopList, topData.rankings, "top", seenTopIds);
+     if (govLowList) renderRankingList(govLowList, lowData.rankings, "low", seenTopIds, topCount);
    } catch (error) {
      console.error("Comparative analysis error:", error);
-     topList.innerHTML = `<div class="list-group-item text-danger small">${adminAnalyticsText("تعذر تحميل التصنيفات.", "Unable to load rankings.")}</div>`;
-     lowList.innerHTML = `<div class="list-group-item text-danger small">${adminAnalyticsText("تعذر تحميل التصنيفات.", "Unable to load rankings.")}</div>`;
+     const failHtml = `<div class="list-group-item text-danger small">${adminAnalyticsText("تعذر تحميل التصنيفات.", "Unable to load rankings.")}</div>`;
+     topList.innerHTML = failHtml;
+     lowList.innerHTML = failHtml;
+     const govTopList = document.getElementById("govTopPerformersList");
+     const govLowList = document.getElementById("govLowPerformersList");
+     if (govTopList) govTopList.innerHTML = failHtml;
+     if (govLowList) govLowList.innerHTML = failHtml;
    }
  }
 
@@ -1297,15 +1371,18 @@ function updateGovernanceChart(green, amber, red) {
   const ctx = document.getElementById("governancePieChart");
   if (!ctx) return;
 
+  // Update legend counters
   safeSetText("countGreen", green);
   safeSetText("countAmber", amber);
   safeSetText("countRed", red);
   const total = (green || 0) + (amber || 0) + (red || 0);
   if (total > 0) {
-    safeSetText("pctGreen", `(${((green / total) * 100).toFixed(0)}%)`);
-    safeSetText("pctAmber", `(${((amber / total) * 100).toFixed(0)}%)`);
-    safeSetText("pctRed", `(${((red / total) * 100).toFixed(0)}%)`);
+    safeSetText("pctGreen", `${((green / total) * 100).toFixed(0)}%`);
+    safeSetText("pctAmber", `${((amber / total) * 100).toFixed(0)}%`);
+    safeSetText("pctRed",   `${((red   / total) * 100).toFixed(0)}%`);
   }
+  // v2 progress bars
+  if (typeof window._updateGovBars === 'function') window._updateGovBars(green, amber, red);
 
   if (!adminAnalyticsHasChart()) {
     return;
@@ -1313,41 +1390,62 @@ function updateGovernanceChart(green, amber, red) {
 
   if (governanceChart) governanceChart.destroy();
 
+  // Calculate average score for center display
+  const avgScore = total > 0 ? ((green * 90 + amber * 70 + red * 40) / total / 0.85).toFixed(1) : "0";
+
   governanceChart = new Chart(ctx, {
     type: "doughnut",
     data: {
       labels: [
-        adminAnalyticsText("متميز", "Excellent"),
-        adminAnalyticsText("متوسط", "Average"),
-        adminAnalyticsText("يحتاج تحسين", "Needs improvement"),
+        t("statuses", "excellent"),
+        t("statuses", "average"),
+        t("statuses", "needsImprovement"),
       ],
       datasets: [
         {
           data: safeChartData([green, amber, red]),
-          backgroundColor: ["#198754", "#ffc107", "#dc3545"],
-          hoverBackgroundColor: ["#157347", "#e0a800", "#bb2d3b"],
-          borderWidth: 0,
-          hoverOffset: 6,
+          backgroundColor: ["#16A34A", "#D97706", "#DC2626"],
+          hoverBackgroundColor: ["#15803D", "#B45309", "#B91C1C"],
+          borderWidth: 3,
+          borderColor: "#fff",
+          hoverOffset: 8,
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 600, easing: "easeOutQuart" },
+      animation: {
+        duration: 600,
+        easing: "easeOutQuart",
+        onComplete: function() {
+          // Add center label after animation
+          const chart = this;
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.font = "700 1.5rem/" + ctx.canvas.height + "px var(--font-ar)";
+          ctx.fillStyle = "var(--slate-900)";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(avgScore, ctx.canvas.width / 2, ctx.canvas.height / 2);
+          ctx.restore();
+        }
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
           backgroundColor: "rgba(17,24,39,0.92)",
           titleColor: "#f8fafc",
           bodyColor:  "#f8fafc",
-          padding:    10,
+          padding:    12,
           cornerRadius: 8,
+          displayColors: true,
           callbacks: {
             label: function(ctx) {
               const total = (ctx.dataset.data || []).reduce((a, b) => a + (b || 0), 0);
               const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : "0.0";
-              return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+              const label = ctx.label || "";
+              return `${label}: ${ctx.parsed} (${pct}%)`;
             },
           },
         },
@@ -1403,27 +1501,33 @@ function safeSetText(id, text) {
 }
 
 function showToast(message, type = "info") {
-  const toastContainer = document.getElementById("toastContainer") || document.createElement("div");
-  toastContainer.id = "toastContainer";
-  toastContainer.className = "toast-container position-fixed bottom-0 end-0 p-3";
-  document.body.appendChild(toastContainer);
+   const toastContainer = document.getElementById("toastContainer") || document.createElement("div");
+   toastContainer.id = "toastContainer";
+   toastContainer.className = "toast-container position-fixed bottom-0 end-0 p-3";
+   document.body.appendChild(toastContainer);
 
-  const toastEl = document.createElement("div");
-  toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
-  toastEl.setAttribute("role", "alert");
-  toastEl.setAttribute("aria-live", "assertive");
-  toastEl.setAttribute("aria-atomic", "true");
-  var safeMessage = message ? String(message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
-  toastEl.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">${safeMessage}</div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-    `;
-  toastContainer.appendChild(toastEl);
-  const toast = new bootstrap.Toast(toastEl);
-  toast.show();
-}
+   const toastEl = document.createElement("div");
+   toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+   toastEl.setAttribute("role", "alert");
+   toastEl.setAttribute("aria-live", "assertive");
+   toastEl.setAttribute("aria-atomic", "true");
+
+   // Ensure proper text direction for RTL languages
+   if (!adminAnalyticsLocale().startsWith("en")) {
+     toastEl.setAttribute("dir", "rtl");
+   }
+
+   var safeMessage = message ? String(message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
+   toastEl.innerHTML = `
+         <div class="d-flex">
+             <div class="toast-body">${safeMessage}</div>
+             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+         </div>
+     `;
+   toastContainer.appendChild(toastEl);
+   const toast = new bootstrap.Toast(toastEl);
+   toast.show();
+ }
 
 // Auth Helper
 // fetchWithAuth is now defined in auth.js
@@ -1811,16 +1915,17 @@ async function loadDataQuality() {
     const statusEl = document.getElementById("dataQualityStatus");
     const pct = (data.completeness_percent ?? 0);
     if (scoreEl) scoreEl.textContent = `${pct.toFixed(1)}%`;
-    if (statusEl)
-      statusEl.textContent =
-        pct > 85
-          ? adminAnalyticsText("ممتاز", "Excellent")
+    const dqCls = pct >= 85 ? "az-badge--green" : pct >= 60 ? "az-badge--amber" : "az-badge--red";
+    if (statusEl) {
+      statusEl.textContent = pct >= 85
+        ? adminAnalyticsText("ممتاز", "Excellent")
+        : pct >= 60
+          ? adminAnalyticsText("جيد", "Good")
           : adminAnalyticsText("بحاجة تحسين", "Needs improvement");
-    const ohDQ = document.getElementById("ohDataQuality");
-    if (ohDQ) {
-      ohDQ.textContent = pct.toFixed(1) + "%";
-      ohDQ.className = `fw-bold fs-5 ${pct >= 85 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger"}`;
+      statusEl.className = "az-badge " + dqCls;
     }
+    // Update the progress ring
+    if (typeof window._updateDQRing === 'function') window._updateDQRing(pct);
   } catch (error) {
     console.error("Data quality error", error);
   }

@@ -57,7 +57,10 @@ def _unlabelled_inputs(html: str) -> list[str]:
         ctx = html[start : m.end() + 100]
         if nested_re.search(ctx):
             continue
-        full_tag = m.group(0)
+        # Scan the whole tag (up to '>'), not just the regex match, so an
+        # aria-label written after the id attribute is still detected.
+        tag_end = html.find(">", m.start())
+        full_tag = html[m.start() : tag_end] if tag_end != -1 else m.group(0)
         if _ARIA_LABEL_RE.search(full_tag):
             continue
         unlabelled.append(id_)

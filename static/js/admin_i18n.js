@@ -990,11 +990,11 @@ const defaultEnglishTranslations = {
     security: "Security",
   },
   a11y: {
-    skip_nav: { en: "Skip to navigation", ar: "تخطي إلى التصفح" }
+    skip_nav: "Skip to navigation"
   },
   components: {
-    error_title: { en: "Error", ar: "خطأ" },
-    background_error: { en: "A background error occurred", ar: "حدث خطأ في الخلفية" }
+    error_title: "Error",
+    background_error: "A background error occurred"
   },
   common: {
     save: "Save",
@@ -1086,11 +1086,11 @@ const defaultArabicTranslations = {
     security: "الأمان",
   },
   a11y: {
-    skip_nav: { en: "Skip to navigation", ar: "تخطي إلى التصفح" }
+    skip_nav: "تخطي إلى التصفح"
   },
   components: {
-    error_title: { en: "Error", ar: "خطأ" },
-    background_error: { en: "A background error occurred", ar: "حدث خطأ في الخلفية" }
+    error_title: "خطأ",
+    background_error: "حدث خطأ في الخلفية"
   },
   common: {
     save: "حفظ",

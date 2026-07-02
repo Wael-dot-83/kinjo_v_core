@@ -5,62 +5,61 @@
 {% set start_field_id = start_id or start_date_id %}
 {% set end_field_id = end_id or end_date_id %}
 
-<div class="flex flex-wrap items-end gap-3 w-full">
-    
+<div class="d-flex flex-wrap align-items-end gap-3 w-100">
+
     <!-- Dates -->
-    <div class="flex flex-wrap items-center gap-3 bg-black/20 p-1.5 rounded-xl border border-white/5 relative z-20">
-        <div class="flex flex-col relative">
-            <label for="{{ start_field_id }}" class="absolute -top-5 start-1 font-label-sm text-[10px] text-on-surface-variant">{{ _start_label }}</label>
-            <input type="date" class="bg-transparent text-on-surface text-sm border-none focus:ring-0 outline-none ps-2 pe-2 cursor-pointer" id="{{ start_field_id }}">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <div class="d-flex flex-column">
+            <label for="{{ start_field_id }}" class="form-label small text-muted mb-1">{{ _start_label }}</label>
+            <input type="date" class="form-control form-control-sm" id="{{ start_field_id }}">
         </div>
-        <div class="w-[1px] h-6 bg-white/10"></div>
-        <div class="flex flex-col relative">
-            <label for="{{ end_field_id }}" class="absolute -top-5 start-1 font-label-sm text-[10px] text-on-surface-variant">{{ _end_label }}</label>
-            <input type="date" class="bg-transparent text-on-surface text-sm border-none focus:ring-0 outline-none ps-2 pe-2 cursor-pointer" id="{{ end_field_id }}">
+        <div class="d-flex flex-column">
+            <label for="{{ end_field_id }}" class="form-label small text-muted mb-1">{{ _end_label }}</label>
+            <input type="date" class="form-control form-control-sm" id="{{ end_field_id }}">
         </div>
     </div>
 
     <!-- Governorate -->
     {% if show_governorate and governorate_id %}
-    <div class="flex flex-col relative min-w-[140px] z-20">
-        <label for="{{ governorate_id }}" class="absolute -top-5 start-1 font-label-sm text-[10px] text-on-surface-variant">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-        <select class="w-full bg-black/20 border border-white/5 text-on-surface text-sm rounded-xl px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none cursor-pointer" id="{{ governorate_id }}" data-user-role="{{ user_role or '' }}">
-            <option value="" class="bg-surface text-on-surface">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
+    <div class="d-flex flex-column filter-dropdown-glass" style="min-width:140px">
+        <label for="{{ governorate_id }}" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+        <select class="form-select form-select-sm" id="{{ governorate_id }}" data-user-role="{{ user_role or '' }}">
+            <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
         </select>
     </div>
     {% endif %}
 
     <!-- Actions -->
-    <div class="flex items-center gap-2 ms-auto relative z-20">
-        
+    <div class="d-flex align-items-center gap-2 ms-auto">
+
         <!-- Quick Preset -->
-        <button type="button" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-on-surface text-sm transition-colors" onclick="setLastMonth('{{ start_field_id }}', '{{ end_field_id }}')" title="{% if ui_lang == 'en' %}Last Month{% else %}الشهر الماضي{% endif %}">
-            <span class="material-symbols-outlined text-[18px]">calendar_month</span>
-            <span class="hidden xl:inline">{% if ui_lang == 'en' %}Last Month{% else %}الشهر الماضي{% endif %}</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" onclick="setLastMonth('{{ start_field_id }}', '{{ end_field_id }}')" title="{% if ui_lang == 'en' %}Last Month{% else %}الشهر الماضي{% endif %}">
+            <span class="material-symbols-outlined" style="font-size:18px" aria-hidden="true">calendar_month</span>
+            <span class="d-none d-xl-inline">{% if ui_lang == 'en' %}Last Month{% else %}الشهر الماضي{% endif %}</span>
         </button>
-        
-        <button type="button" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-error/20 border border-white/5 hover:border-error/30 text-on-surface hover:text-error text-sm transition-colors" onclick="clearDateFilters('{{ start_field_id }}', '{{ end_field_id }}')" title="{% if ui_lang == 'en' %}Clear Filters{% else %}مسح الفلاتر{% endif %}">
-            <span class="material-symbols-outlined text-[18px]">close</span>
-            <span class="hidden xl:inline">{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</span>
+
+        <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" onclick="clearDateFilters('{{ start_field_id }}', '{{ end_field_id }}')" title="{% if ui_lang == 'en' %}Clear Filters{% else %}مسح الفلاتر{% endif %}">
+            <span class="material-symbols-outlined" style="font-size:18px" aria-hidden="true">close</span>
+            <span class="d-none d-xl-inline">{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</span>
         </button>
 
         {% if refresh_btn_id %}
-        <button type="button" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-sm transition-colors shadow-[0_0_15px_rgba(47,125,98,0.2)]" id="{{ refresh_btn_id }}" {% if on_refresh %}onclick="{{ on_refresh }}()"{% endif %}>
-            <span class="material-symbols-outlined text-[18px]">refresh</span>
+        <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" id="{{ refresh_btn_id }}" {% if on_refresh %}onclick="{{ on_refresh }}()"{% endif %}>
+            <span class="material-symbols-outlined" style="font-size:18px" aria-hidden="true">refresh</span>
             <span>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}</span>
         </button>
         {% else %}
-        <button type="button" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-sm transition-colors shadow-[0_0_15px_rgba(47,125,98,0.2)]" id="{{ apply_button_id }}">
-            <span class="material-symbols-outlined text-[18px]">filter_alt</span>
+        <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" id="{{ apply_button_id }}">
+            <span class="material-symbols-outlined" style="font-size:18px" aria-hidden="true">filter_alt</span>
             <span>{{ _apply_text }}</span>
         </button>
         {% endif %}
 
         {% if show_export and export_modal_id %}
-        <div class="w-[1px] h-8 bg-white/10 mx-1"></div>
-        <button type="button" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-tertiary/20 hover:bg-tertiary/30 border border-tertiary/30 text-tertiary text-sm transition-colors shadow-[0_0_10px_rgba(102,153,204,0.1)]" data-bs-toggle="modal" data-bs-target="#{{ export_modal_id }}" onclick="typeof showModal !== 'undefined' ? showModal('{{ export_modal_id }}') : null">
-            <span class="material-symbols-outlined text-[18px]">download</span>
-            <span class="hidden md:inline">{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}</span>
+        <div class="vr mx-1"></div>
+        <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#{{ export_modal_id }}" onclick="typeof showModal !== 'undefined' ? showModal('{{ export_modal_id }}') : null">
+            <span class="material-symbols-outlined" style="font-size:18px" aria-hidden="true">download</span>
+            <span class="d-none d-md-inline">{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}</span>
         </button>
         {% endif %}
     </div>

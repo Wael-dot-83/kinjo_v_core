@@ -184,10 +184,9 @@
         formData.append('file', fileInput.files[0]);
 
         try {
-            const response = await fetch('/api/admin/kindergartens/import', {
+            const response = await fetchWithAuth('/api/admin/kindergartens/import-excel', {
                 method: 'POST',
-                body: formData,
-                headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
+                body: formData
             });
 
             const data = await response.json();
@@ -199,12 +198,12 @@
             progress.style.display = 'none';
             results.style.display  = 'block';
 
-            document.getElementById('importedCount').textContent = data.result.imported_count;
-            document.getElementById('updatedCount').textContent  = data.result.updated_count;
-            document.getElementById('skippedCount').textContent  = data.result.skipped_count;
-            document.getElementById('errorCount').textContent    = data.result.errors.length;
+            document.getElementById('importedCount').textContent = data.inserted || 0;
+            document.getElementById('updatedCount').textContent  = 0;
+            document.getElementById('skippedCount').textContent  = (data.skipped_duplicate || 0) + (data.skipped_empty || 0);
+            document.getElementById('errorCount').textContent    = data.errors ? data.errors.length : 0;
 
-            if (data.result.imported_count > 0 || data.result.updated_count > 0) {
+            if (data.inserted > 0) {
                 const recordsResponse = await fetch('/api/admin/kindergartens/imported?page=1&per_page=100');
                 const recordsData     = await recordsResponse.json();
 
@@ -228,12 +227,12 @@
                 }
             }
 
-            if (data.result.errors && data.result.errors.length > 0) {
+            if (data.errors && data.errors.length > 0) {
                 const errorList = document.getElementById('errorList');
                 errorList.innerHTML = '';
-                data.result.errors.forEach(error => {
+                data.errors.forEach(error => {
                     const li = document.createElement('li');
-                    li.textContent = `${_isEn ? 'Row' : 'صف'} ${error.row}: ${error.errors.join(', ')}`;
+                    li.textContent = `${_isEn ? 'Row' : 'صف'} ${error.row}: ${error.error}`;
                     errorList.appendChild(li);
                 });
                 document.getElementById('errorsSection').style.display = 'block';

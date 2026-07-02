@@ -5414,77 +5414,7 @@ async def list_governance_reminders(
     }
 
 
-# Kindergarten Import Routes
-@router.post("/admin/kindergartens/import")
-@limiter.limit("10/minute")
-async def import_kindergartens(
-    request: Request,
-    file: UploadFile = File(...),
-    current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
-):
-    """Upload and import kindergartens from Excel file."""
-
-    if not file.filename.endswith(('.xlsx', '.xls')):
-        raise validation_error("File must be Excel format (.xlsx or .xls)")
-
-    # Create storage directory
-    import_dir = os.path.join(settings.STATIC_DIR, "imports")
-    os.makedirs(import_dir, exist_ok=True)
-
-    # Generate unique filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    stored_filename = f"kindergartens_{timestamp}_{secrets.token_hex(4)}.xlsx"
-    file_path = os.path.join(import_dir, stored_filename)
-
-    # Save uploaded file
-    try:
-        with open(file_path, "wb") as f:
-            content = await file.read()
-            f.write(content)
-    except (OSError, IOError) as e:
-        raise APIError(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            code=ErrorCode.INTERNAL_ERROR,
-            message=f"Failed to save file: {str(e)}",
-        )
-
-    # Import data
-    try:
-        service = KindergartenImportService(db)
-        result = service.import_from_excel(file_path, file.filename)
-
-        # Log audit event
-        log_audit_event(
-            db=db,
-            action=AuditAction.KINDERGARTEN_IMPORT,
-            actor=current_user,
-            target_type="Kindergarten",
-            metadata={
-                "filename": file.filename,
-                "stored_filename": stored_filename,
-                "imported_count": result.get("imported_count", 0),
-                "updated_count": result.get("updated_count", 0),
-                "skipped_count": result.get("skipped_count", 0),
-                "error_count": len(result.get("errors", [])),
-            },
-            sensitivity_level=2,
-        )
-
-        return {
-            "message": "Import completed",
-            "result": result
-        }
-
-    except (SQLAlchemyError, OSError, IOError, ValueError) as e:
-        # Clean up file on error
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        raise APIError(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            code=ErrorCode.INTERNAL_ERROR,
-            message=f"Import failed: {str(e)}",
-        )
+# (Duplicated import endpoint removed in favor of canonical /import-excel)
 
 
 @router.get("/admin/kindergartens/imported")

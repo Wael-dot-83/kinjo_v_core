@@ -772,27 +772,6 @@ class TestExcelKGImport:
 
 
 # ---------------------------------------------------------------------------
-# Lines 4189-4190 — admin KG import file save error
-# ---------------------------------------------------------------------------
-
-class TestAdminKGImportSaveError:
-    def test_file_save_oserror_returns_500_line_4190(self, client, test_db):
-        """Lines 4189-4190: OSError when saving uploaded KG file → 500."""
-        admin = _make_admin(test_db, "akgi4190a")
-        headers = _tok(client, "akgi4190a")
-        fake_xlsx = _make_xlsx([["روضة", "KG", "عمان", "عمان", "a", "b", "0777"]])
-        with patch("builtins.open", MagicMock(side_effect=OSError("permission denied"))):
-            r = client.post(
-                "/api/admin/kindergartens/import",
-                headers=headers,
-                files={"file": ("test.xlsx", fake_xlsx,
-                                "application/vnd.openxmlformats-officedocument"
-                                ".spreadsheetml.sheet")},
-            )
-        assert r.status_code in [400, 500]
-
-
-# ---------------------------------------------------------------------------
 # Line 4268 — import logs non-admin (MANAGER role) → 403
 # ---------------------------------------------------------------------------
 

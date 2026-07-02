@@ -26,10 +26,10 @@
   </div>
 
   <!-- Dashboard Root — initial state is "loading"; JS drives transitions -->
-  <div class="admin-dashboard" id="admin-dashboard" data-ui-state="loading">
+  <div class="admin-dashboard fade-in" id="admin-dashboard" data-ui-state="loading">
 
     <!-- Loading State — skeleton loader -->
-    <div class="admin-dashboard-skeleton" id="dashboard-loading" aria-busy="true" role="status">
+    <div class="admin-dashboard-skeleton fade-in delay-100" id="dashboard-loading" aria-busy="true" role="status">
       <span class="visually-hidden">{% if ui_lang == 'en' %}Loading dashboard data…{% else %}جارٍ تحميل البيانات…{% endif %}</span>
 
       <!-- Skeleton KPI cards (7 placeholders — matches actual KPI count) -->
@@ -53,7 +53,7 @@
     </div>
 
     <!-- Error State -->
-    <div class="admin-dashboard-error" id="dashboard-error">
+    <div class="admin-dashboard-error fade-in" id="dashboard-error">
       <div class="admin-error-state">
         <i class="bi bi-exclamation-triangle"></i>
         <h3>{% if ui_lang == 'en' %}Error Loading Dashboard{% else %}خطأ في تحميل لوحة التحكم{% endif %}</h3>
@@ -68,7 +68,7 @@
     </div>
 
     <!-- Dashboard Content -->
-    <div class="admin-dashboard-grid" id="dashboard-content">
+    <div class="admin-dashboard-grid fade-in delay-100" id="dashboard-content">
 
       <!-- KPI Cards -->
       <div class="admin-dashboard-cards" id="kpi-cards">

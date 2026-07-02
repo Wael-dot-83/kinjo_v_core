@@ -780,33 +780,6 @@ class TestGovernanceReminders:
 # ---------------------------------------------------------------------------
 
 class TestImportEndpoints:
-    def test_import_kindergartens_non_admin_forbidden(self, client, test_db, sample_kindergarten):
-        """Line 4166: forbidden_error for non-admin."""
-        mgr = _make_user(test_db, "imp_mgr", models.UserRole.MANAGER, kg_id=sample_kindergarten.id)
-        r_login = client.post("/token", data={"username": "imp_mgr", "password": "Pass123!"})
-        headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
-        r = client.post("/api/admin/kindergartens/import",
-                        headers=headers,
-                        files={"file": ("test.xlsx", io.BytesIO(b"data"),
-                                       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
-        assert r.status_code == 403
-
-    def test_import_service_error_returns_500(self, client, test_db):
-        """Lines 4219-4223: KindergartenImportService raises → 500."""
-        admin = _make_admin(test_db, "imp_adm", "1")
-        headers = _tok(client, "imp_adm1")
-        from sqlalchemy.exc import SQLAlchemyError
-        with patch("admin_endpoints.KindergartenImportService") as MockService:
-            instance = MagicMock()
-            instance.import_from_excel.side_effect = SQLAlchemyError("db error")
-            MockService.return_value = instance
-            r = client.post(
-                "/api/admin/kindergartens/import",
-                headers=headers,
-                files={"file": ("test.xlsx", io.BytesIO(b"\x50\x4b\x03\x04"),
-                               "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
-            )
-        assert r.status_code in [400, 500]
 
     def test_import_logs_list(self, client, test_db):
         """Lines 4263-4269: list import logs."""

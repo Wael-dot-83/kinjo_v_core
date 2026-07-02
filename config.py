@@ -73,6 +73,7 @@ class Settings(BaseSettings):
     PUBLIC_REGISTRATION_ENABLED: bool = False
     MFA_TOTP_ISSUER: str = "KinJo"
     MFA_TICKET_EXPIRE_MINUTES: int = 10
+    REQUIRE_MFA: bool = True
 
     # AI Integration
     GOOGLE_API_KEY: str = ""

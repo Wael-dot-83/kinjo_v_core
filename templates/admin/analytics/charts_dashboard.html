@@ -1,4 +1,4 @@
-﻿{% extends "admin_base.html" %}
+{% extends "admin_base.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{% endif %} — KinJo{% endblock %}
 
@@ -265,7 +265,7 @@ async function getSuggestions() {
   panel.style.display = '';
 
   try {
-    const resp = await fetch('/admin/charts/suggest', {
+    const resp = await fetchWithAuth('/admin/charts/suggest', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(body),

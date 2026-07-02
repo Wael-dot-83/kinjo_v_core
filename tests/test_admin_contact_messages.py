@@ -56,7 +56,7 @@ def _get_admin_csrf_headers(client):
     assert r.status_code == 200
     csrf = secrets.token_hex(32)
     return {
-        "Authorization": f"Bearer {r.json()["access_token"]}",
+        "Authorization": f"Bearer {r.json()['access_token']}",
         "X-CSRF-Token": csrf,
         "Cookie": f"kinjo_csrf_token={csrf}",
     }

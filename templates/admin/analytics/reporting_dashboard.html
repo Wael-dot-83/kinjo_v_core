@@ -26,7 +26,6 @@
       start_id="periodStart",
       end_id="periodEnd",
       governorate_id="governorateFilter",
-      city_id="cityFilter",
       show_governorate=(current_user.role in ["ADMIN","SUPERVISOR"]),
       refresh_btn_id="refreshReportBtn",
       on_refresh="loadAllReports",
@@ -644,6 +643,8 @@
   </section>
 
 </div>
+
+{% endblock %}
 
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>

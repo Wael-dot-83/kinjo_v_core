@@ -18,7 +18,7 @@ from dependencies import get_current_user_or_redirect, get_current_user
 class TestAnalyticsDOMVisibility:
     """
     Pinpoint tests verifying that every live widget ID in the analytics
-    dashboard is inside the VISIBLE .analytics-dashboard container and
+    dashboard is inside the VISIBLE .az-analytics-page container and
     NOT trapped inside #pageHelpContent (which is display:none).
     """
 
@@ -36,7 +36,7 @@ class TestAnalyticsDOMVisibility:
         )
 
     def test_all_live_widgets_in_visible_dashboard(self):
-        dash_start = self.page.index('class="analytics-dashboard"')
+        dash_start = self.page.index('class="az-analytics-page"')
         visible = self.page[dash_start:]
         live_ids = [
             "attendanceForecast", "incidentForecast", "enrollmentForecast",
@@ -45,23 +45,24 @@ class TestAnalyticsDOMVisibility:
             "targetList", "benchmarkList", "recommendationList",
         ]
         for wid in live_ids:
-            assert f'id="{wid}"' in visible, f"#{wid} missing from visible .analytics-dashboard"
+            assert f'id="{wid}"' in visible, f"#{wid} missing from visible .az-analytics-page"
 
     def test_kpi_card_ids_in_visible_dashboard(self):
-        visible = self.page[self.page.index('class="analytics-dashboard"'):]
+        visible = self.page[self.page.index('class="az-analytics-page"'):]
         for kid in ["totalKg", "totalChildren", "avgAttendance", "incidentRate",
                     "enrollmentRate", "kpiKgGrowth", "attendanceTrendIndicator", "incidentTrend"]:
             assert f'id="{kid}"' in visible, f"KPI #{kid} missing from visible dashboard"
 
     def test_chart_canvas_ids_present_and_visible(self):
-        visible = self.page[self.page.index('class="analytics-dashboard"'):]
+        visible = self.page[self.page.index('class="az-analytics-page"'):]
         assert 'id="trendChart"' in visible
         assert 'id="governancePieChart"' in visible
 
     def test_error_state_markup_exists(self):
-        visible = self.page[self.page.index('class="analytics-dashboard"'):]
+        visible = self.page[self.page.index('class="az-analytics-page"'):]
         assert 'id="trendChartError"' in visible
-        assert "analytics-error-state" in visible
+        # v2 design renamed analytics-error-state → az-chart-overlay
+        assert "az-chart-overlay" in visible
 
     def test_no_hardcoded_mock_risk_entry(self):
         assert "Al-Amal Kindergarten" not in self.page
@@ -69,9 +70,10 @@ class TestAnalyticsDOMVisibility:
         assert "92% خطر" not in self.page
 
     def test_skeleton_loaders_present_for_initial_state(self):
-        assert "skeleton-text" in self.page
-        visible = self.page[self.page.index('class="analytics-dashboard"'):]
-        assert "skeleton-row" in visible or "skeleton-text" in visible
+        # v2 design renamed skeleton-text/skeleton-row → skel/skel-row
+        assert "skel" in self.page
+        visible = self.page[self.page.index('class="az-analytics-page"'):]
+        assert "skel-row" in visible or "skeleton-row" in visible
 
 
 class TestAnalyticsRTLStructure:
@@ -85,10 +87,16 @@ class TestAnalyticsRTLStructure:
         app.dependency_overrides.clear()
 
     def test_rtl_css_rules_present(self):
-        assert 'html[dir="rtl"]' in self.page
+        # v2 moved RTL rules from inline <style> into admin_analytics_v2.css;
+        # verify the page links it and the stylesheet carries [dir="rtl"] rules.
+        assert "admin_analytics_v2.css" in self.page
+        css = open("static/css/admin_analytics_v2.css", encoding="utf-8").read()
+        assert '[dir="rtl"]' in css
 
     def test_direction_aware_btn_group_rules(self):
-        assert '.btn-group .btn:first-child' in self.page or 'btn-group' in self.page
+        # v2 uses CSS logical properties for direction awareness
+        css = open("static/css/admin_analytics_v2.css", encoding="utf-8").read()
+        assert "border-inline-start" in css or "inset-inline" in css or "margin-inline" in css
 
     def test_page_renders_in_arabic_by_default(self):
         assert 'lang="ar"' in self.page or 'لوحة التحليلات' in self.page
@@ -308,9 +316,10 @@ class TestHelpModalIntegration:
         assert "bi bi-question-circle" in resp.text
 
     def test_help_modal_is_included_before_extra_scripts(self):
+        # v2 dropped tablesort; admin_analytics.js is the extra_scripts marker
         resp = self.client.get("/admin/analytics")
         modal_pos = resp.text.index('id="helpExpressModal"')
-        extra_scripts_pos = resp.text.index("tablesort@5.3.0")
+        extra_scripts_pos = resp.text.index("admin_analytics.js")
         assert modal_pos < extra_scripts_pos
 
     def test_dashboard_submenu_no_stale_system_health_link(self):
@@ -419,30 +428,34 @@ class TestBootstrapUtilityConsistency:
         app.dependency_overrides.clear()
 
     def test_no_badge_soft_classes_on_analytics(self):
-        visible = self.page[self.page.index('class="analytics-dashboard"'):]
-        assert "badge-soft" not in visible, \
-            "badge-soft classes are unstyled on admin pages — use bg-*-subtle instead"
+        visible = self.page[self.page.index('class="az-analytics-page"'):]
+        assert "glass-card" not in visible, \
+            "glass-card classes are unstyled on admin pages — use fade-in instead"
 
     def test_bg_subtle_classes_used_correctly(self):
-        assert "bg-warning-subtle" in self.page
-        assert "bg-success-subtle" in self.page
+        # v2 replaced bootstrap bg-*-subtle badges with the az-badge system;
+        # legacy badge-soft classes must not reappear.
+        assert "az-badge" in self.page
+        assert "badge-soft" not in self.page
 
     def test_bootstrap_responsive_classes_present(self):
         for pattern in [r'col-md-\d+', r'col-lg-\d+']:
             assert re.search(pattern, self.page), f"Missing responsive class: {pattern}"
 
     def test_card_shadow_classes_consistent(self):
-        dashboard = self.page[self.page.index('class="analytics-dashboard"'):]
+        dashboard = self.page[self.page.index('class="az-analytics-page"'):]
         top_cards = re.findall(r'<div class="card h-100 [^"]*"', dashboard)
         for div in top_cards:
             assert "shadow-sm" in div, f"Top-level card '{div}' missing shadow-sm"
 
     def test_btn_classes_are_bootstrap_standard(self):
-        dashboard = self.page[self.page.index('class="analytics-dashboard"'):]
+        dashboard = self.page[self.page.index('class="az-analytics-page"'):]
         buttons = re.findall(r'<button[^>]*class="([^"]*)"', dashboard)
         for btn_class in buttons:
             is_btn = "btn " in btn_class or btn_class.startswith("btn-")
-            if btn_class in ("btn-close",):
+            # nav-link: Bootstrap tab buttons; az-*: v2 design-system buttons
+            is_design_system = btn_class.startswith("nav-link") or btn_class.startswith("az-")
+            if btn_class in ("btn-close",) or is_design_system:
                 continue
             assert is_btn, f"Button '{btn_class}' not using Bootstrap btn base"
 
@@ -569,7 +582,7 @@ test.describe('Admin Analytics Dashboard', () => {
   test('RTL layout verified via computed style', async ({ page }) => {
     const dir = await page.getAttribute('html', 'dir');
     if (dir === 'rtl') {
-      const textAlign = await page.locator('.analytics-dashboard .card').first()
+      const textAlign = await page.locator('.az-analytics-page .card').first()
         .evaluate(el => getComputedStyle(el).textAlign);
       expect(['right', 'start'].includes(textAlign)).toBeTruthy();
     }

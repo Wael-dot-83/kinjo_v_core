@@ -2,45 +2,92 @@
 {% from 'components/date-range-filter.html' import date_range_filter %}
 {% from 'components/export-modal.html' import export_modal %}
 
-{% block title %}{% if ui_lang == 'en' %}Central Analytics Dashboard{% else %}لوحة التحليلات المركزية{% endif %} — KinJo{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Analytics Intelligence Center{% else %}مركز الذكاء التحليلي{% endif %} — KinJo{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=2.0">
+<style>
+  /* Suppress Bootstrap's default card styling where we use az-card */
+  .kpi-grid, .kpi-card { display: none !important; }
+</style>
+{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house"aria-hidden="true"></i></a>
+<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
+  <i class="bi bi-house" aria-hidden="true"></i>
+</a>
 <span class="admin-breadcrumb-separator">/</span>
 <span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header analytics-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
-  <div class="analytics-page-titleblock">
-    <h1 class="admin-page-title mb-0"style="font: var(--type-page-title)">
-      <i class="bi bi-bar-chart-line-fill me-2"></i>
-      {% if ui_lang == 'en' %}Central Analytics{% else %}التحليلات المركزية{% endif %}
-    </h1>
-    <small class="text-muted datetime-indicator mt-1"id="analyticsLastUpdated">
-      <i class="bi bi-clock"></i>
-      <span>{% if ui_lang == 'en' %}Loading data...{% else %}جاري تحميل البيانات...{% endif %}</span>
-    </small>
-    <span id="dateRangeBadge" class="badge bg-light text-dark border ms-2 d-none" style="font-size:.75rem;font-weight:500"></span>
-  </div>
-  <div class="analytics-page-actions d-flex align-items-center">
-    <button type="button" class="btn btn-outline-secondary" id="helpBtn"
-            data-bs-toggle="modal" data-bs-target="#helpExpressModal"
-            aria-label="{% if ui_lang == 'ar' %}مساعدة{% else %}Help{% endif %}">
-      <i class="bi bi-question-circle me-1"></i>
-      {% if ui_lang == 'ar' %}مساعدة{% else %}Help{% endif %}
-    </button>
-    <button type="button" class="btn btn-primary" id="refreshBtn" onclick="loadAdminAnalytics()">
-      <i class="bi bi-arrow-clockwise me-2"></i>
-      {% if ui_lang == 'en' %}Refresh Data{% else %}تحديث البيانات{% endif %}
-    </button>
-  </div>
-</div>
+<div class="az-analytics-page" id="azAnalyticsPage">
 
-<!-- Professional Filter Bar — sticky -->
-<div class="card shadow-sm border-0 mb-4 bg-white analytics-filter-sticky" style="border-radius: 12px; border: 1px solid rgba(var(--bs-primary-rgb), 0.1) !important;">
-  <div class="card-body p-3">
-    <div class="row g-3 align-items-end">
+  {# ══ SECTION 0 — Page Header (compact) ══════════════════════════════════ #}
+  <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap" style="margin-bottom:-8px">
+    <div>
+      <h1 class="admin-page-title mb-1">
+        <i class="bi bi-bar-chart-line-fill me-2 text-primary"></i>
+        {% if ui_lang == 'en' %}Analytics Intelligence Center{% else %}مركز الذكاء التحليلي{% endif %}
+      </h1>
+      <small class="text-muted" id="analyticsLastUpdated">
+        <i class="bi bi-clock me-1"></i>
+        <span id="lastUpdatedText">{% if ui_lang == 'en' %}Initializing…{% else %}جاري التهيئة…{% endif %}</span>
+      </small>
+      <span id="dateRangeBadge" class="badge bg-light text-dark border ms-2 d-none" style="font-size:.75rem;font-weight:500"></span>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-secondary" id="helpBtn"
+              data-bs-toggle="modal" data-bs-target="#helpExpressModal"
+              aria-label="{% if ui_lang == 'ar' %}مساعدة{% else %}Help{% endif %}">
+        <i class="bi bi-question-circle me-1"></i>{% if ui_lang == 'ar' %}مساعدة{% else %}Help{% endif %}
+      </button>
+      <button class="btn btn-sm btn-primary" id="refreshBtn" onclick="loadAdminAnalytics()">
+        <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+      </button>
+    </div>
+  </div>
+
+  {# ══ SECTION 1 — Executive Banner (Hero) ═════════════════════════════════ #}
+  <section class="exec-banner hero-mode" id="executiveBanner" aria-label="{% if ui_lang == 'en' %}Executive Summary{% else %}الملخص التنفيذي{% endif %}">
+    <div class="exec-banner__bg-glow"></div>
+    <div class="exec-banner__inner">
+      <div class="exec-banner__content">
+        <p class="exec-banner__title">{% if ui_lang == 'en' %}EXECUTIVE SUMMARY{% else %}الملخص التنفيذي{% endif %}</p>
+        <h2 class="exec-banner__heading mb-4">
+          {% if ui_lang == 'en' %}Jordan Kindergarten Network{% else %}شبكة رياض الأطفال في الأردن{% endif %}
+        </h2>
+        <div class="exec-banner__insights hero-insights" id="execInsights" role="list" aria-label="{% if ui_lang == 'en' %}Key insights{% else %}رؤى رئيسية{% endif %}">
+          {# JS-populated — skeleton micro-cards #}
+          <div class="exec-insight-card skel" style="width:200px;height:50px;border:none"></div>
+          <div class="exec-insight-card skel" style="width:220px;height:50px;border:none;animation-delay:0.2s"></div>
+          <div class="exec-insight-card skel" style="width:180px;height:50px;border:none;animation-delay:0.4s"></div>
+        </div>
+      </div>
+      <div class="exec-banner__meta d-flex flex-column align-items-end gap-3">
+        <div class="exec-banner__status-glass" id="execStatusBadge">
+          <span class="status-dot status-dot--green" id="execStatusDot"></span>
+          <span class="fw-bold ms-2" id="execStatusText">{% if ui_lang == 'en' %}System Healthy{% else %}النظام بوضع جيد{% endif %}</span>
+        </div>
+        <div class="exec-banner__date glass-pill" id="execDateRange">
+          <i class="bi bi-calendar3 me-2"></i>
+          <span id="execDateText">{% if ui_lang == 'en' %}Loading…{% else %}جاري التحميل…{% endif %}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# ══ SECTION 2 — Filter Bar (sticky) ════════════════════════════════════ #}
+  {% if current_user.role == "SUPERVISOR" %}
+  <div id="supervisorScopeHint" class="alert alert-info py-2 px-3 d-none" role="alert">
+    <small><i class="bi bi-info-circle me-1"></i>
+    {% if ui_lang == 'en' %}Select a governorate to filter to your scope.{% else %}اختر المحافظة لتصفية نطاقك.{% endif %}
+    </small>
+  </div>
+  {% endif %}
+
+  <div class="az-filter-bar glass-filter-bar" role="search" aria-label="{% if ui_lang == 'en' %}Analytics filters{% else %}مرشحات التحليلات{% endif %}">
+    <div class="row g-3 align-items-center">
       <div class="col-12 col-xl-auto flex-grow-1">
         {{ date_range_filter(
           start_id="periodStart",
@@ -53,1357 +100,1214 @@
         ) }}
       </div>
       <div class="col-12 col-xl-auto">
-        <div class="d-flex gap-2 flex-wrap">
-            <select aria-label="{% if ui_lang == 'en' %}Filter by Status{% else %}تصفية حسب الحالة{% endif %}" class="form-select form-select-sm" id="regStatusFilter" style="min-width: 150px; border-radius: 8px;">
-                <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
-                <option value="DRAFT">{% if ui_lang == 'en' %}Incomplete{% else %}غير مكتمل{% endif %}</option>
-                <option value="SUBMITTED">{% if ui_lang == 'en' %}Under Verification{% else %}قيد التحقق{% endif %}</option>
-                <option value="PENDING_REVIEW">{% if ui_lang == 'en' %}Pending{% else %}قيد المراجعة{% endif %}</option>
-                <option value="ACCEPTED">{% if ui_lang == 'en' %}Approved{% else %}موافق عليه{% endif %}</option>
-                <option value="REJECTED">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</option>
-                <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
-                <option value="WAITLISTED">{% if ui_lang == 'en' %}Waitlisted{% else %}قائمة انتظار{% endif %}</option>
-                <option value="WITHDRAWN">{% if ui_lang == 'en' %}Withdrawn{% else %}منسحب{% endif %}</option>
+        <div class="d-flex gap-3 flex-wrap">
+          <div class="filter-dropdown-glass">
+            <select aria-label="{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}" class="form-select form-select-sm" id="regStatusFilter">
+              <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
+              <option value="DRAFT">{% if ui_lang == 'en' %}Incomplete{% else %}غير مكتمل{% endif %}</option>
+              <option value="SUBMITTED">{% if ui_lang == 'en' %}Submitted{% else %}مُقدَّم{% endif %}</option>
+              <option value="PENDING_REVIEW">{% if ui_lang == 'en' %}Pending{% else %}قيد المراجعة{% endif %}</option>
+              <option value="ACCEPTED">{% if ui_lang == 'en' %}Approved{% else %}موافق عليه{% endif %}</option>
+              <option value="REJECTED">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</option>
+              <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
             </select>
-            <select aria-label="{% if ui_lang == 'en' %}Filter by Source{% else %}تصفية حسب المصدر{% endif %}" class="form-select form-select-sm" id="regSourceFilter" style="min-width: 130px; border-radius: 8px;">
-                <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
-                <option value="WEB">Web</option>
-                <option value="MOBILE">{% if ui_lang == 'en' %}Mobile{% else %}موبايل{% endif %}</option>
-                <option value="OFFICE">{% if ui_lang == 'en' %}Office{% else %}مكتب{% endif %}</option>
+          </div>
+          <div class="filter-dropdown-glass">
+            <select aria-label="{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}" class="form-select form-select-sm" id="regSourceFilter">
+              <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
+              <option value="WEB">Web</option>
+              <option value="MOBILE">Mobile</option>
+              <option value="OFFICE">Office</option>
             </select>
-            <select aria-label="{% if ui_lang == 'en' %}Filter by Reviewer{% else %}تصفية حسب المراجع{% endif %}" class="form-select form-select-sm" id="regReviewerFilter" style="min-width: 160px; border-radius: 8px;">
-                <option value="">{% if ui_lang == 'en' %}All Reviewers{% else %}كل المُراجعين{% endif %}</option>
+          </div>
+          <div class="filter-dropdown-glass">
+            <select aria-label="{% if ui_lang == 'en' %}Reviewer{% else %}المراجع{% endif %}" class="form-select form-select-sm" id="regReviewerFilter">
+              <option value="">{% if ui_lang == 'en' %}All Reviewers{% else %}كل المراجعين{% endif %}</option>
             </select>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-{% if current_user.role == "SUPERVISOR"%}
-<div id="supervisorScopeHint"class="alert alert-info py-2 px-3 d-none"role="alert">
-    <small class="mb-0">
-        <i class="bi bi-info-circle me-1"></i>
-        {% if ui_lang == 'en' %}You have multiple allowed kindergartens. Select a governorate to filter results to your scope only.{% else %}لديك عدة رياض مسموح بها. اختر المحافظة لتصفية النتائج إلى نطاقك فقط.{% endif %}
-    </small>
-</div>
-{% endif %}
+  {# ══ SECTION 3 — Tab Navigation ══════════════════════════════════════════ #}
+  <ul class="nav az-tabs segmented-tabs" id="analyticsTabsNav" role="tablist" aria-label="{% if ui_lang == 'en' %}Analytics sections{% else %}أقسام التحليلات{% endif %}">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-overview-btn" data-bs-toggle="pill" data-bs-target="#tabOverview"
+              type="button" role="tab" aria-controls="tabOverview" aria-selected="true">
+        <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Overview{% else %}نظرة عامة{% endif %}
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-operations-btn" data-bs-toggle="pill" data-bs-target="#tabOperations"
+              type="button" role="tab" aria-controls="tabOperations" aria-selected="false">
+        <i class="bi bi-clipboard2-data" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Registrations{% else %}التسجيلات{% endif %}
+        <span class="tab-badge" id="tabBadgeOps" aria-label="pending count">0</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-geographic-btn" data-bs-toggle="pill" data-bs-target="#tabGeographic"
+              type="button" role="tab" aria-controls="tabGeographic" aria-selected="false">
+        <i class="bi bi-geo-alt" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Regions{% else %}المناطق{% endif %}
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-governance-btn" data-bs-toggle="pill" data-bs-target="#tabGovernance"
+              type="button" role="tab" aria-controls="tabGovernance" aria-selected="false">
+        <i class="bi bi-shield-check" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Governance{% else %}الحوكمة{% endif %}
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-ai-btn" data-bs-toggle="pill" data-bs-target="#tabAI"
+              type="button" role="tab" aria-controls="tabAI" aria-selected="false">
+        <i class="bi bi-cpu-fill" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}AI & Predictions{% else %}الذكاء والتنبؤات{% endif %}
+      </button>
+    </li>
+  </ul>
 
-<div class="analytics-dashboard">
+  <div class="tab-content" id="analyticsTabContent">
 
-    <!-- ── Tab Navigation ──────────────────────────────────────────────────── -->
-    <ul class="nav nav-pills analytics-tabs mb-4" id="analyticsTabsNav" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="tab-overview-btn"
-                data-bs-toggle="pill" data-bs-target="#tabOverview"
-                type="button" role="tab" aria-controls="tabOverview" aria-selected="true">
-          <i class="bi bi-grid-3x3-gap me-1"></i>
-          {% if ui_lang == 'en' %}Overview{% else %}نظرة عامة{% endif %}
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-operations-btn"
-                data-bs-toggle="pill" data-bs-target="#tabOperations"
-                type="button" role="tab" aria-controls="tabOperations" aria-selected="false">
-          <i class="bi bi-clipboard2-data me-1"></i>
-          {% if ui_lang == 'en' %}Operations{% else %}العمليات{% endif %}
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-geographic-btn"
-                data-bs-toggle="pill" data-bs-target="#tabGeographic"
-                type="button" role="tab" aria-controls="tabGeographic" aria-selected="false">
-          <i class="bi bi-geo-alt me-1"></i>
-          {% if ui_lang == 'en' %}Geographic{% else %}الجغرافيا{% endif %}
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-governance-btn"
-                data-bs-toggle="pill" data-bs-target="#tabGovernance"
-                type="button" role="tab" aria-controls="tabGovernance" aria-selected="false">
-          <i class="bi bi-shield-check me-1"></i>
-          {% if ui_lang == 'en' %}Governance{% else %}الحوكمة{% endif %}
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-ai-btn"
-                data-bs-toggle="pill" data-bs-target="#tabAI"
-                type="button" role="tab" aria-controls="tabAI" aria-selected="false">
-          <i class="bi bi-cpu-fill me-1"></i>
-          {% if ui_lang == 'en' %}AI Insights{% else %}رؤى الذكاء{% endif %}
-        </button>
-      </li>
-    </ul>
+    {# ═══════════════════════════════════════════════════════════════════════
+       TAB 1 — OVERVIEW
+       ════════════════════════════════════════════════════════════════════ #}
+    <div class="tab-pane fade show active" id="tabOverview" role="tabpanel" aria-labelledby="tab-overview-btn">
 
-    <div class="tab-content" id="analyticsTabContent">
+      {# — 6 Premium KPI Cards ─────────────────────────────────────────── #}
+      <section aria-label="{% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}" class="mb-section">
+        <div class="kpi-grid-v2" id="kpiGridV2">
 
-      <!-- ══════════════════════════════════════════════════════════════════════
-           TAB 1 — OVERVIEW
-           ══════════════════════════════════════════════════════════════════════ -->
-      <div class="tab-pane fade show active" id="tabOverview" role="tabpanel" aria-labelledby="tab-overview-btn">
-
-        <!-- ── Network KPI Strip ──────────────────────────────────────────────────
-             Before: .row.g-4 > .col-md-6.col-xl-3 > .card.border-start.border-4
-                     (Bootstrap-only, fixed breakpoints, text-warning fails AA)
-             After:  .kpi-grid > .kpi-card
-                     (CSS Grid auto-fit, container queries, per-card accent token,
-                      all text/bg pairs WCAG 2.1 AA verified in design-tokens.css)
-             All JS-targeted IDs preserved: totalKg, totalChildren, avgAttendance,
-             incidentRate, kpiKgGrowth, enrollmentRateBar, enrollmentRate,
-             attendanceTrendIndicator, incidentTrend, .kpi-sparkline[data-metric]  -->
-        <section class="kpi-grid mb-section"
-                 aria-label="{% if ui_lang == 'en' %}Network KPIs{% else %}مؤشرات الشبكة الرئيسية{% endif %}">
-
-          <!-- Kindergartens — accent: brand green (#1f5e47, 7.10:1) -->
-          <article class="kpi-card"
-                   style="--kpi-accent:var(--kpi-accent-kg);--kpi-icon-bg:var(--kpi-icon-bg-kg);"
-                   aria-label="{% if ui_lang == 'ar' %}عدد الروضات{% else %}Kindergartens KPI{% endif %}">
-            <header class="kpi-card__header">
-              <p class="kpi-card__label">
-                {% if ui_lang == 'en' %}Kindergartens{% else %}عدد الروضات{% endif %}
-                <i class="bi bi-info-circle-fill ms-1"
-                   data-bs-toggle="tooltip"data-bs-placement="top"
-                   title="{% if ui_lang == 'ar' %}إجمالي الحضانات النشطة في الفترة المحددة{% else %}Total active kindergartens in the selected period{% endif %}"
-                   aria-hidden="true"></i>
-              </p>
-              <span class="kpi-card__icon"aria-hidden="true"><i class="bi bi-building"></i></span>
-            </header>
-            <p class="kpi-card__value"id="totalKg"
-               aria-label="{% if ui_lang == 'en' %}Kindergartens Count{% else %}عدد الروضات{% endif %}"
-               aria-live="polite">
-              <span class="skeleton-text w-50"aria-hidden="true"></span>
-            </p>
-            <p class="kpi-card__delta"id="kpiKgGrowth">
-              <span class="skeleton-text w-75"aria-hidden="true"></span>
-            </p>
-            <div class="kpi-sparkline"data-metric="total_kg"aria-hidden="true"></div>
-          </article>
-
-          <!-- Children — accent: sky blue (#0369a1, 6.94:1) -->
-          <article class="kpi-card"
-                   style="--kpi-accent:var(--kpi-accent-children);--kpi-icon-bg:var(--kpi-icon-bg-children);"
-                   aria-label="{% if ui_lang == 'ar' %}إجمالي الأطفال{% else %}Total Children KPI{% endif %}">
-            <header class="kpi-card__header">
-              <p class="kpi-card__label">
-                {% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}
-                <i class="bi bi-info-circle-fill ms-1"
-                   data-bs-toggle="tooltip"data-bs-placement="top"
-                   title="{% if ui_lang == 'ar' %}إجمالي الأطفال المسجلين في جميع الحضانات{% else %}Total enrolled children across all kindergartens{% endif %}"
-                   aria-hidden="true"></i>
-              </p>
-              <span class="kpi-card__icon"aria-hidden="true"><i class="bi bi-people"></i></span>
-            </header>
-            <p class="kpi-card__value"id="totalChildren"
-               aria-label="{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}"
-               aria-live="polite">
-              <span class="skeleton-text w-50"aria-hidden="true"></span>
-            </p>
-            <div class="kpi-card__progress"
-                 role="progressbar"aria-valuenow="0"aria-valuemin="0"aria-valuemax="100"
-                 aria-label="{% if ui_lang == 'en' %}Occupancy Rate{% else %}نسبة الإشغال{% endif %}">
-              <div id="enrollmentRateBar"style="width:0%"></div>
+          {# Card 1: Kindergartens #}
+          <article class="kpi-card-v2" style="--kpi-accent:var(--kpi-accent-kg);--kpi-icon-bg:var(--kpi-icon-bg-kg);"
+                   aria-label="{% if ui_lang == 'ar' %}عدد الروضات{% else %}Kindergartens{% endif %}">
+            <div class="kpi-card-v2__header">
+              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Kindergartens{% else %}رياض الأطفال{% endif %}</p>
+              <span class="kpi-card-v2__icon" aria-hidden="true"><i class="bi bi-building"></i></span>
             </div>
-            <p class="kpi-card__meta">
-              {% if ui_lang == 'en' %}Occupancy:{% else %}نسبة الإشغال:{% endif %}
-              <span class="kpi-card__meta-value"id="enrollmentRate">
-                <span class="skeleton-text w-25 d-inline-block"aria-hidden="true"></span>
+            <p class="kpi-card-v2__value" id="totalKg" aria-live="polite" aria-label="{% if ui_lang == 'en' %}Total kindergartens{% else %}إجمالي الروضات{% endif %}">
+              <span class="skel skel-value" aria-hidden="true"></span>
+            </p>
+            <div class="kpi-card-v2__footer">
+              <span class="kpi-delta kpi-delta--flat" id="kpiKgGrowth" aria-live="polite">
+                <span class="skel skel-chip" aria-hidden="true"></span>
               </span>
-            </p>
-            <div class="kpi-sparkline"data-metric="total_children"aria-hidden="true"></div>
+              <span class="text-muted" style="font:.4rem/1 sans-serif"> </span>
+            </div>
+            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="total_kg" aria-hidden="true"></div>
           </article>
 
-          <!-- Attendance — accent: emerald green (#047857, 5.08:1) -->
-          <article class="kpi-card"
-                   style="--kpi-accent:var(--kpi-accent-attendance);--kpi-icon-bg:var(--kpi-icon-bg-attendance);"
-                   aria-label="{% if ui_lang == 'ar' %}نسبة الحضور{% else %}Attendance Rate KPI{% endif %}">
-            <header class="kpi-card__header">
-              <p class="kpi-card__label">
-                {% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}
-                <i class="bi bi-info-circle-fill ms-1"
-                   data-bs-toggle="tooltip"data-bs-placement="top"
-                   title="{% if ui_lang == 'ar' %}متوسط معدل الحضور اليومي عبر الشبكة{% else %}Average daily attendance rate across the network{% endif %}"
-                   aria-hidden="true"></i>
-              </p>
-              <span class="kpi-card__icon"aria-hidden="true"><i class="bi bi-check-circle"></i></span>
-            </header>
-            <p class="kpi-card__value"id="avgAttendance"
-               aria-label="{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}"
-               aria-live="polite">
-              <span class="skeleton-text w-50"aria-hidden="true"></span>
+          {# Card 2: Total Children #}
+          <article class="kpi-card-v2" style="--kpi-accent:var(--kpi-accent-children);--kpi-icon-bg:var(--kpi-icon-bg-children);"
+                   aria-label="{% if ui_lang == 'ar' %}إجمالي الأطفال{% else %}Children{% endif %}">
+            <div class="kpi-card-v2__header">
+              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}</p>
+              <span class="kpi-card-v2__icon" aria-hidden="true"><i class="bi bi-people"></i></span>
+            </div>
+            <p class="kpi-card-v2__value" id="totalChildren" aria-live="polite">
+              <span class="skel skel-value" aria-hidden="true"></span>
             </p>
-            <p class="kpi-card__delta"id="attendanceTrendIndicator">
-              <span class="skeleton-text w-75"aria-hidden="true"></span>
-            </p>
-            <div class="kpi-sparkline"data-metric="attendance_rate"aria-hidden="true"></div>
+            <div class="kpi-card-v2__footer">
+              <span class="text-muted" style="font-size:.8rem">{% if ui_lang == 'en' %}Occupancy:{% else %}الإشغال:{% endif %}&nbsp;<strong id="enrollmentRate">—</strong></span>
+            </div>
+            <div style="height:6px;background:var(--slate-100);border-radius:var(--r-full);overflow:hidden;margin-top:4px"
+                 role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <div id="enrollmentRateBar" style="height:100%;width:0%;background:var(--kpi-accent-children);border-radius:var(--r-full);transition:width .6s ease"></div>
+            </div>
+            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="total_children" aria-hidden="true"></div>
           </article>
 
-          <!-- Incident Rate — accent: amber (#b45309, 4.90:1)
-               Fixes: old text-warning (#f59e0b) was only 2.71:1 on white — WCAG FAIL -->
-          <article class="kpi-card"
-                   style="--kpi-accent:var(--kpi-accent-incident);--kpi-icon-bg:var(--kpi-icon-bg-incident);"
-                   aria-label="{% if ui_lang == 'ar' %}معدل الحوادث{% else %}Incident Rate KPI{% endif %}">
-            <header class="kpi-card__header">
-              <p class="kpi-card__label">
-                {% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}
-                <i class="bi bi-info-circle-fill ms-1"
-                   data-bs-toggle="tooltip"data-bs-placement="top"
-                   title="{% if ui_lang == 'ar' %}حوادث السلامة المبلغ عنها لكل 1,000 يوم طفل{% else %}Reported safety incidents per 1,000 child-days{% endif %}"
-                   aria-hidden="true"></i>
-              </p>
-              <span class="kpi-card__icon"aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
-            </header>
-            <p class="kpi-card__value"id="incidentRate"
-               aria-label="{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}"
-               aria-live="polite">
-              <span class="skeleton-text w-50"aria-hidden="true"></span>
+          {# Card 3: Attendance Rate #}
+          <article class="kpi-card-v2" style="--kpi-accent:var(--kpi-accent-attendance);--kpi-icon-bg:var(--kpi-icon-bg-attendance);"
+                   aria-label="{% if ui_lang == 'ar' %}نسبة الحضور{% else %}Attendance Rate{% endif %}">
+            <div class="kpi-card-v2__header">
+              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}</p>
+              <span class="kpi-card-v2__icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
+            </div>
+            <p class="kpi-card-v2__value" id="avgAttendance" aria-live="polite">
+              <span class="skel skel-value" aria-hidden="true"></span>
             </p>
-            <p class="kpi-card__delta"id="incidentTrend">
-              <span class="skeleton-text w-75"aria-hidden="true"></span>
-            </p>
-            <div class="kpi-sparkline"data-metric="incident_rate"aria-hidden="true"></div>
+            <div class="kpi-card-v2__footer">
+              <span class="kpi-delta kpi-delta--flat" id="attendanceTrendIndicator" aria-live="polite">
+                <span class="skel skel-chip" aria-hidden="true"></span>
+              </span>
+            </div>
+            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="attendance_rate" aria-hidden="true"></div>
           </article>
 
-        </section>
+          {# Card 4: Incident Rate #}
+          <article class="kpi-card-v2" style="--kpi-accent:var(--kpi-accent-incident);--kpi-icon-bg:var(--kpi-icon-bg-incident);"
+                   aria-label="{% if ui_lang == 'ar' %}معدل الحوادث{% else %}Incident Rate{% endif %}">
+            <div class="kpi-card-v2__header">
+              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Safety Incidents{% else %}حوادث السلامة{% endif %}</p>
+              <span class="kpi-card-v2__icon" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
+            </div>
+            <p class="kpi-card-v2__value" id="incidentRate" aria-live="polite">
+              <span class="skel skel-value" aria-hidden="true"></span>
+            </p>
+            <div class="kpi-card-v2__footer">
+              <span class="kpi-delta kpi-delta--flat" id="incidentTrend" aria-live="polite">
+                <span class="skel skel-chip" aria-hidden="true"></span>
+              </span>
+              <span class="text-muted" style="font-size:.75rem">{% if ui_lang == 'en' %}per 1k days{% else %}لكل ألف يوم{% endif %}</span>
+            </div>
+            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="incident_rate" aria-hidden="true"></div>
+          </article>
 
-        <!-- ── Operational Health Summary Row ──────────────────────────── -->
-        <div class="row g-3 mb-4" id="operationalHealthRow">
-          <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 oh-card" style="border-radius:12px;">
-              <div class="card-body d-flex align-items-center gap-3 p-3">
-                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width:48px;height:48px;background:rgba(var(--bs-success-rgb),.12);">
-                  <i class="bi bi-funnel-fill fs-5 text-success"></i>
-                </div>
-                <div>
-                  <div class="text-muted small">{% if ui_lang == 'en' %}Registration Funnel{% else %}قمع التسجيل{% endif %}</div>
-                  <div class="fw-bold fs-5" id="ohFunnelRate">--</div>
-                  <div class="text-muted" style="font-size:.75rem;">{% if ui_lang == 'en' %}conversion rate{% else %}معدل التحويل{% endif %}</div>
-                </div>
+          {# Card 5: Governance Score #}
+          <article class="kpi-card-v2" style="--kpi-accent:var(--kpi-accent-governance);--kpi-icon-bg:var(--kpi-icon-bg-governance);"
+                   aria-label="{% if ui_lang == 'ar' %}درجة الحوكمة{% else %}Governance Score{% endif %}">
+            <div class="kpi-card-v2__header">
+              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Governance Score{% else %}درجة الحوكمة{% endif %}</p>
+              <span class="kpi-card-v2__icon" aria-hidden="true"><i class="bi bi-shield-check"></i></span>
+            </div>
+            <p class="kpi-card-v2__value" id="ohGovernanceScore" aria-live="polite">
+              <span class="skel skel-value" aria-hidden="true"></span>
+            </p>
+            <div class="kpi-card-v2__footer">
+              <span class="kpi-delta kpi-delta--flat" id="govScoreTrend" aria-live="polite">—</span>
+            </div>
+            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="governance_score" aria-hidden="true"></div>
+          </article>
+
+          {# Card 6: Registration Conversion #}
+          <article class="kpi-card-v2" style="--kpi-accent:var(--kpi-accent-occupancy);--kpi-icon-bg:var(--kpi-icon-bg-occupancy);"
+                   aria-label="{% if ui_lang == 'ar' %}معدل التحويل{% else %}Conversion Rate{% endif %}">
+            <div class="kpi-card-v2__header">
+              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Registration Conversion{% else %}تحويل التسجيل{% endif %}</p>
+              <span class="kpi-card-v2__icon" aria-hidden="true"><i class="bi bi-funnel"></i></span>
+            </div>
+            <p class="kpi-card-v2__value" id="ohFunnelRate" aria-live="polite">
+              <span class="skel skel-value" aria-hidden="true"></span>
+            </p>
+            <div class="kpi-card-v2__footer">
+              <span class="text-muted" style="font-size:.8rem" id="ohFunnelLabel">{% if ui_lang == 'en' %}of applications approved{% else %}من الطلبات مُوافق عليها{% endif %}</span>
+            </div>
+            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="conversion_rate" aria-hidden="true"></div>
+          </article>
+
+        </div>{# /kpi-grid-v2 #}
+      </section>
+
+      {# — Trend + Risk two-column ─────────────────────────────────────── #}
+      <div class="row g-4 mb-section">
+        <div class="col-lg-8">
+          <div class="az-card h-100">
+            <div class="az-card__header">
+              <h3 class="az-card__title"><i class="bi bi-graph-up"></i>
+                {% if ui_lang == 'en' %}Network Trend{% else %}اتجاه الشبكة{% endif %}
+              </h3>
+              <div class="chart-toggle" role="group" aria-label="{% if ui_lang == 'en' %}Trend metric selector{% else %}اختيار مقياس الاتجاه{% endif %}">
+                <input type="radio" name="trendMetric" id="attendanceTrend" value="attendance" checked>
+                <label for="attendanceTrend">{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}</label>
+                <input type="radio" name="trendMetric" id="incidentsTrend" value="incidents">
+                <label for="incidentsTrend">{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}</label>
               </div>
             </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 oh-card" style="border-radius:12px;">
-              <div class="card-body d-flex align-items-center gap-3 p-3">
-                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width:48px;height:48px;background:rgba(var(--bs-primary-rgb),.12);">
-                  <i class="bi bi-heart-pulse-fill fs-5 text-primary"></i>
+            <div class="az-card__body">
+              <div class="az-chart-wrap az-chart-wrap--md" style="position:relative">
+                <canvas id="trendChart" aria-label="{% if ui_lang == 'en' %}Network trend chart{% else %}مخطط اتجاه الشبكة{% endif %}" role="img"></canvas>
+                <div class="az-chart-overlay" id="trendChartOverlay" aria-live="polite">
+                  <div class="skel skel-chart skel-chart--md" style="position:absolute;inset:0"></div>
                 </div>
-                <div>
-                  <div class="text-muted small">{% if ui_lang == 'en' %}Attendance Health{% else %}صحة الحضور{% endif %}</div>
-                  <div class="fw-bold fs-5" id="ohAttendanceHealth">--</div>
-                  <div class="text-muted" style="font-size:.75rem;">{% if ui_lang == 'en' %}network avg{% else %}متوسط الشبكة{% endif %}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 oh-card" style="border-radius:12px;">
-              <div class="card-body d-flex align-items-center gap-3 p-3">
-                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width:48px;height:48px;background:rgba(var(--bs-info-rgb),.12);">
-                  <i class="bi bi-shield-fill-check fs-5 text-info"></i>
-                </div>
-                <div>
-                  <div class="text-muted small">{% if ui_lang == 'en' %}Governance Score{% else %}درجة الحوكمة{% endif %}</div>
-                  <div class="fw-bold fs-5" id="ohGovernanceScore">--</div>
-                  <div class="text-muted" style="font-size:.75rem;">{% if ui_lang == 'en' %}network avg{% else %}متوسط الشبكة{% endif %}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100 oh-card" style="border-radius:12px;">
-              <div class="card-body d-flex align-items-center gap-3 p-3">
-                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                     style="width:48px;height:48px;background:rgba(var(--bs-warning-rgb),.12);">
-                  <i class="bi bi-database-check fs-5 text-warning"></i>
-                </div>
-                <div>
-                  <div class="text-muted small">{% if ui_lang == 'en' %}Data Quality{% else %}جودة البيانات{% endif %}</div>
-                  <div class="fw-bold fs-5" id="ohDataQuality">--</div>
-                  <div class="text-muted" style="font-size:.75rem;">{% if ui_lang == 'en' %}reports filed (7d){% else %}تقارير مقدمة (7 أيام){% endif %}</div>
+                <div class="az-chart-overlay hidden" id="trendChartError" aria-live="assertive">
+                  <i class="bi bi-exclamation-circle text-danger fs-3"></i>
+                  <span class="text-muted small">{% if ui_lang == 'en' %}Chart unavailable{% else %}المخطط غير متاح{% endif %}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- ── Trends & Risk Radar ──────────────────────────────────────── -->
-        <div class="row g-4 mb-section gap-card">
-            <!-- Trend Chart -->
-            <div class="col-lg-8">
-                <div class="card h-100 shadow-sm border-0">
-                    <div class="card-header bg-gradient-primary text-white border-0">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
-                                <i class="bi bi-graph-up me-2"></i>{% if ui_lang == 'en' %}Time Trend Analysis{% else %}تحليل الاتجاهات الزمنية{% endif %}
-                            </h5>
-                            <div class="btn-group btn-group-sm"role="group"aria-label="{% if ui_lang == 'en' %}Select Trend{% else %}اختيار الاتجاه{% endif %}">
-                                <input type="radio"class="btn-check"name="trendType"id="attendanceTrend"
-                                    autocomplete="off"checked>
-                                <label class="btn btn-outline-light active"for="attendanceTrend">
-                                    <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
-                                </label>
-                                <input type="radio"class="btn-check"name="trendType"id="incidentsTrend"
-                                    autocomplete="off">
-                                <label class="btn btn-outline-light"for="incidentsTrend">
-                                    <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body p-card">
-                        <div style="height: 320px; position: relative;">
-                            <canvas id="trendChart"style="max-width: 100%; max-height: 100%;"></canvas>
-                            <div id="trendChartOverlay"class="d-none position-absolute top-50 start-50 translate-middle">
-                                <div class="text-center">
-                                    <div class="spinner-border text-primary"role="status">
-                                        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
-                                    </div>
-                                    <div class="mt-2 text-muted small">{% if ui_lang == 'en' %}Loading data...{% else %}جاري تحميل البيانات...{% endif %}</div>
-                                </div>
-                            </div>
-                            <div id="trendChartError"class="analytics-error-state">
-                                <div class="icon">&#x26A0;&#xFE0F;</div>
-                                <p>{% if ui_lang == 'en' %}Failed to load trend data.{% else %}تعذر تحميل بيانات الاتجاهات.{% endif %}</p>
-                                <button type="button"class="btn btn-sm btn-outline-primary"onclick="loadAdminAnalytics()">
-                                    <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="col-lg-4">
+          {# — Alert + Quality card #}
+          <div class="az-card mb-4">
+            <div class="az-card__header">
+              <h3 class="az-card__title"><i class="bi bi-database-check"></i>
+                {% if ui_lang == 'en' %}Data Quality{% else %}جودة البيانات{% endif %}
+              </h3>
             </div>
+            <div class="az-card__body--compact">
+              <div class="data-health-widget mb-3">
+                <div class="health-bar">
+                  <span class="health-bar__label">{% if ui_lang == 'en' %}Completeness{% else %}الاكتمال{% endif %}</span>
+                  <div class="health-bar__track"><div class="health-bar__fill bg-success" style="width: 85%" id="dqCompBar"></div></div>
+                  <span class="health-bar__val" id="dqCompVal">85%</span>
+                </div>
+                <div class="health-bar">
+                  <span class="health-bar__label">{% if ui_lang == 'en' %}Accuracy{% else %}الدقة{% endif %}</span>
+                  <div class="health-bar__track"><div class="health-bar__fill bg-primary" style="width: 92%" id="dqAccBar"></div></div>
+                  <span class="health-bar__val" id="dqAccVal">92%</span>
+                </div>
+                <div class="health-bar">
+                  <span class="health-bar__label">{% if ui_lang == 'en' %}Freshness{% else %}الحداثة{% endif %}</span>
+                  <div class="health-bar__track"><div class="health-bar__fill bg-warning" style="width: 78%" id="dqFreshBar"></div></div>
+                  <span class="health-bar__val" id="dqFreshVal">78%</span>
+                </div>
+              </div>
+              <div class="d-flex align-items-center justify-content-between">
+                <div class="az-badge" id="dataQualityStatus" style="margin-bottom:0">—</div>
+                <div style="font:700 1.25rem/1 var(--font-ar);color:var(--slate-800)" id="dataQualityScore">—</div>
+              </div>
+              <div id="ohDataQuality" style="display:none"></div>{# preserve ID for JS #}
+              <!-- hidden SVG for backwards compatibility with JS -->
+              <svg style="display:none" width="0" height="0"><circle id="dqRingFill"></circle></svg>
+            </div>
+          </div>
 
-            <!-- Predictive Risk Radar -->
-            <div class="col-lg-4">
-                <div class="card h-100 shadow-sm border-warning border-2">
-                    <div class="card-header bg-warning bg-opacity-10 text-dark border-bottom border-warning">
-                        <h5 class="card-title mb-0 fw-bold"style="font: var(--type-card-title)">
-                            <i class="bi bi-shield-exclamation me-2 text-warning"></i>{% if ui_lang == 'en' %}Smart Risk Indicator{% else %}مؤشر الخطر الذكي{% endif %}
-                        </h5>
-                    </div>
-                    <div class="card-body p-card">
-                        <div class="alert alert-warning border-0 small mb-3">
-                            <i class="bi bi-robot me-1"></i>
-                            {% if ui_lang == 'en' %}The system analyzes data to identify kindergartens that need urgent attention.{% else %}يقوم النظام بتحليل البيانات لتحديد الروضات التي تحتاج انتباه عاجل.{% endif %}
-                        </div>
-                        <div id="riskListContainer">
-                            <ul class="list-group list-group-flush"id="riskList">
-                                <li class="list-group-item d-flex justify-content-between align-items-center border-0">
-                                    <div><div class="skeleton-text w-75 mb-1"></div><div class="skeleton-text w-50"></div></div>
-                                    <div class="skeleton-text w-25"></div>
-                                </li>
-                            </ul>
-                        </div>
-                        <div id="noRiskData"class="text-center text-muted d-none">
-                            <i class="bi bi-check-circle fs-1 text-success mb-2"></i>
-                            <div class="small">{% if ui_lang == 'en' %}No risk cases recorded{% else %}لا توجد حالات خطر مسجلة{% endif %}</div>
-                        </div>
-                    </div>
-                </div>
+          {# — Alerts #}
+          <div class="az-card">
+            <div class="az-card__header">
+              <h3 class="az-card__title"><i class="bi bi-bell"></i>
+                {% if ui_lang == 'en' %}Active Alerts{% else %}التنبيهات النشطة{% endif %}
+              </h3>
+              <span class="az-badge az-badge--red d-none" id="alertBadgeCount">0</span>
             </div>
+            <div class="az-card__body--compact" id="alertBanner">
+              <div id="alertList">
+                <div class="skel skel-row"></div>
+                <div class="skel skel-row" style="width:80%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# — Risk Intelligence ─────────────────────────────────────────── #}
+      <div class="az-card mb-section">
+        <div class="az-card__header">
+          <h3 class="az-card__title"><i class="bi bi-shield-exclamation text-danger-az"></i>
+            {% if ui_lang == 'en' %}Risk Intelligence{% else %}ذكاء المخاطر{% endif %}
+          </h3>
+          <button class="btn btn-sm btn-outline-danger" id="riskViewAllBtn" style="font-size:.8rem;display:none">
+            {% if ui_lang == 'en' %}View All Risks{% else %}عرض كل المخاطر{% endif %}
+          </button>
+        </div>
+        <div class="az-card__body" id="riskListContainer">
+          <div class="risk-grid" id="riskList">
+            <div class="skel skel-row"></div>
+            <div class="skel skel-row" style="width:90%"></div>
+            <div class="skel skel-row" style="width:75%"></div>
+          </div>
+          <div class="az-empty d-none" id="noRiskData">
+            <i class="bi bi-shield-check text-success-az"></i>
+            <span class="az-empty__text">{% if ui_lang == 'en' %}No risk alerts — all facilities healthy{% else %}لا توجد تنبيهات مخاطر — جميع المرافق بصحة جيدة{% endif %}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>{# /tabOverview #}
+
+    {# ═══════════════════════════════════════════════════════════════════════
+       TAB 2 — REGISTRATIONS (formerly Operations)
+       ════════════════════════════════════════════════════════════════════ #}
+    <div class="tab-pane fade" id="tabOperations" role="tabpanel" aria-labelledby="tab-operations-btn">
+
+      {# — Entity Summary Cards ────────────────────────────────────────── #}
+      <div class="row g-4 mb-section" id="registrationAnalyticsSection">
+        {# Users entity card #}
+        <div class="col-sm-6 col-xl-3">
+          <div class="az-card h-100 reg-entity-card">
+            <div class="az-card__header">
+              <h3 class="az-card__title" style="font-size:.85rem"><i class="bi bi-people"></i>{% if ui_lang == 'en' %}Users{% else %}المستخدمون{% endif %}</h3>
+              <span class="az-badge az-badge--blue" id="regUsersNew" style="font-size:.7rem">+0</span>
+            </div>
+            <div class="az-card__body--compact">
+              <div class="kpi-card-v2__value mb-2" style="font-size:1.75rem" id="regUsersTotal">
+                <span class="skel skel-value"></span>
+              </div>
+              <div class="d-flex flex-column gap-2">
+                <div>
+                  <div class="d-flex justify-content-between mb-1" style="font-size:.8rem">
+                    <span class="text-success-az">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %} <strong id="regUsersActive">—</strong></span>
+                    <span class="text-muted" id="regUsersActiveBar" style="font-size:.75rem">0%</span>
+                  </div>
+                  <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--green" id="regUsersActivePct" style="width:0%"></div></div>
+                </div>
+                <div>
+                  <div class="d-flex justify-content-between mb-1" style="font-size:.8rem">
+                    <span class="text-warning-az">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %} <strong id="regUsersSuspended">—</strong></span>
+                    <span class="text-muted" id="regUsersSuspendedBar" style="font-size:.75rem">0%</span>
+                  </div>
+                  <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--amber" id="regUsersSuspendedPct" style="width:0%"></div></div>
+                </div>
+              </div>
+              <div class="d-none" id="regUsersInactive"></div>
+              <div class="d-none" id="regUsersInactiveBar"></div>
+            </div>
+          </div>
         </div>
 
-        <!-- ── Data Quality & Alerts (standalone in Overview) ─────────── -->
-        <div class="row g-4 mb-section gap-card">
-            <div class="col-lg-6">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header bg-transparent border-bottom">
-                        <h5 class="card-title mb-0 fw-bold"style="font: var(--type-card-title)">
-                            <i class="bi bi-graph-up-arrow me-2 text-success"></i>{% if ui_lang == 'en' %}Data Quality & Alerts{% else %}جودة البيانات والتنبيهات{% endif %}
-                        </h5>
-                    </div>
-                    <div class="card-body p-card">
-                        <div id="alertBanner"class="alert alert-danger d-none"role="alert"></div>
-                        <div class="mb-3">
-                            <div class="small text-muted">{% if ui_lang == 'en' %}Data Quality{% else %}جودة البيانات{% endif %}</div>
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="fw-bold"id="dataQualityScore">--</span>
-                                <span class="badge bg-success-subtle text-success-emphasis"id="dataQualityStatus">--</span>
-                            </div>
-                        </div>
-                        <div class="list-group list-group-flush"id="alertList"></div>
-                    </div>
-                </div>
+        {# KGs entity card #}
+        <div class="col-sm-6 col-xl-3">
+          <div class="az-card h-100 reg-entity-card">
+            <div class="az-card__header">
+              <h3 class="az-card__title" style="font-size:.85rem"><i class="bi bi-building"></i>{% if ui_lang == 'en' %}Facilities{% else %}المرافق{% endif %}</h3>
+              <span class="az-badge az-badge--blue" id="regKgNew" style="font-size:.7rem">+0</span>
             </div>
+            <div class="az-card__body--compact">
+              <div class="kpi-card-v2__value mb-2" style="font-size:1.75rem" id="regKgTotal">
+                <span class="skel skel-value"></span>
+              </div>
+              <div class="d-flex flex-column gap-2">
+                <div>
+                  <div class="d-flex justify-content-between mb-1" style="font-size:.8rem">
+                    <span class="text-success-az">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %} <strong id="regKgActive">—</strong></span>
+                    <span class="text-muted" id="regKgActiveBar" style="font-size:.75rem">0%</span>
+                  </div>
+                  <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--green" id="regKgActivePct" style="width:0%"></div></div>
+                </div>
+                <div>
+                  <div class="d-flex justify-content-between mb-1" style="font-size:.8rem">
+                    <span class="text-muted">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %} <strong id="regKgDraft">—</strong></span>
+                    <span class="text-muted" id="regKgDraftBar" style="font-size:.75rem">0%</span>
+                  </div>
+                  <div class="gov-bar-track"><div class="gov-bar-fill" id="regKgDraftPct" style="width:0%;background:var(--slate-300)"></div></div>
+                </div>
+              </div>
+              <div class="d-none" id="regKgInactive"></div>
+              <div class="d-none" id="regKgInactiveBar"></div>
+            </div>
+          </div>
         </div>
 
-      </div><!-- /tabOverview -->
-
-      <!-- ══════════════════════════════════════════════════════════════════════
-           TAB 2 — OPERATIONS
-           ══════════════════════════════════════════════════════════════════════ -->
-      <div class="tab-pane fade" id="tabOperations" role="tabpanel" aria-labelledby="tab-operations-btn">
-
-        <!-- Registration Status Module — comprehensive multi-entity view -->
-        <div class="card shadow-sm border-0 mb-section"id="registrationAnalyticsSection"
-             role="region"aria-label="{% if ui_lang == 'en' %}Registration Status{% else %}حالة التسجيل الشاملة{% endif %}">
-          <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div>
-              <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
-                <i class="bi bi-clipboard2-data me-2 text-primary"aria-hidden="true"></i>
-                {% if ui_lang == 'en' %}Registration Status — Comprehensive{% else %}حالة التسجيل الشاملة{% endif %}
-              </h5>
-              <small class="text-muted d-block mt-1"id="regStatusFreshness">
-                {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
-              </small>
+        {# Enrollments entity card #}
+        <div class="col-sm-6 col-xl-3">
+          <div class="az-card h-100 reg-entity-card">
+            <div class="az-card__header">
+              <h3 class="az-card__title" style="font-size:.85rem"><i class="bi bi-file-earmark-check"></i>{% if ui_lang == 'en' %}Applications{% else %}الطلبات{% endif %}</h3>
+              <span class="az-badge az-badge--blue" id="regNewApplications" style="font-size:.7rem">+0</span>
             </div>
-            <button type="button"class="btn btn-sm btn-outline-primary"id="regEntityRefreshBtn"
-                    aria-label="{% if ui_lang == 'en' %}Refresh registration data{% else %}تحديث بيانات التسجيل{% endif %}">
-              <i class="bi bi-arrow-clockwise me-1"aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+            <div class="az-card__body--compact">
+              <div class="kpi-card-v2__value mb-2" style="font-size:1.75rem" id="regTotalApplications">
+                <span class="skel skel-value"></span>
+              </div>
+              <div class="row g-2 text-center mt-1">
+                <div class="col-4">
+                  <div class="az-badge az-badge--green d-block mb-1" id="regApproved" style="justify-content:center">0</div>
+                  <div style="font-size:.7rem;color:var(--slate-500)">{% if ui_lang == 'en' %}Approved{% else %}موافق{% endif %}</div>
+                </div>
+                <div class="col-4">
+                  <div class="az-badge az-badge--amber d-block mb-1" id="regPending" style="justify-content:center">0</div>
+                  <div style="font-size:.7rem;color:var(--slate-500)">{% if ui_lang == 'en' %}Pending{% else %}انتظار{% endif %}</div>
+                </div>
+                <div class="col-4">
+                  <div class="az-badge az-badge--red d-block mb-1" id="regRejected" style="justify-content:center">0</div>
+                  <div style="font-size:.7rem;color:var(--slate-500)">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</div>
+                </div>
+              </div>
+              <div class="d-none" id="regNewApplicationsLabel"></div>
+            </div>
+          </div>
+        </div>
+
+        {# Children entity card #}
+        <div class="col-sm-6 col-xl-3">
+          <div class="az-card h-100 reg-entity-card">
+            <div class="az-card__header">
+              <h3 class="az-card__title" style="font-size:.85rem"><i class="bi bi-emoji-smile"></i>{% if ui_lang == 'en' %}Children{% else %}الأطفال{% endif %}</h3>
+            </div>
+            <div class="az-card__body--compact">
+              <div class="kpi-card-v2__value mb-2" style="font-size:1.75rem" id="regChildrenTotal">
+                <span class="skel skel-value"></span>
+              </div>
+              <div class="d-flex flex-column gap-2">
+                <div class="d-flex justify-content-between" style="font-size:.8rem">
+                  <span class="text-success-az">{% if ui_lang == 'en' %}Enrolled{% else %}مسجل{% endif %}</span>
+                  <strong id="regChildrenEnrolledCount">—</strong>
+                </div>
+                <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--green" id="regChildrenEnrolledBar" style="width:0%"></div></div>
+                <div class="d-flex justify-content-between" style="font-size:.8rem">
+                  <span class="text-warning-az">{% if ui_lang == 'en' %}Pending{% else %}انتظار{% endif %}</span>
+                  <strong id="regChildrenPending">—</strong>
+                </div>
+                <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--amber" id="regChildrenPendingBar" style="width:0%"></div></div>
+              </div>
+              <div class="d-none" id="regChildrenEnrolled"></div>
+              <div class="d-none" id="regChildrenNone"></div>
+              <div class="d-none" id="regChildrenNoEnrollBar"></div>
+            </div>
+          </div>
+        </div>
+      </div>{# /row entity cards #}
+
+      {# Actions queue alert #}
+      <div class="az-card mb-section" id="regStatusMatrix">
+        <div class="az-card__header">
+          <h3 class="az-card__title"><i class="bi bi-list-task text-warning-az"></i>
+            {% if ui_lang == 'en' %}Actions Required{% else %}إجراءات مطلوبة{% endif %}
+          </h3>
+          <span class="az-badge az-badge--amber" id="regActionsBadge">0</span>
+        </div>
+        <div class="az-card__body--compact" id="regActionQueue">
+          <div class="skel skel-row"></div>
+        </div>
+      </div>
+
+      {# Funnel + Source — two column #}
+      <div class="row g-4 mb-section">
+        <div class="col-lg-6">
+          <div class="az-card h-100">
+            <div class="az-card__header">
+              <h3 class="az-card__title"><i class="bi bi-funnel"></i>
+                {% if ui_lang == 'en' %}Registration Funnel{% else %}قمع التسجيل{% endif %}
+              </h3>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="text-muted" style="font-size:.8rem">{% if ui_lang == 'en' %}Conversion:{% else %}التحويل:{% endif %}</span>
+                <strong id="regConversionRate" class="text-success-az">—</strong>
+                <span class="d-none" id="regConversionValue"></span>
+              </div>
+            </div>
+            <div class="az-card__body">
+              <div id="registrationFunnel">
+                <div class="funnel-steps" id="funnelStepsViz">
+                  <div class="skel skel-row"></div>
+                  <div class="skel skel-row" style="width:85%"></div>
+                  <div class="skel skel-row" style="width:70%"></div>
+                  <div class="skel skel-row" style="width:55%"></div>
+                </div>
+              </div>
+              <div class="az-chart-wrap" style="height:180px;margin-top:16px;display:none" id="funnelChartWrap">
+                <canvas id="funnelChart" aria-label="{% if ui_lang == 'en' %}Registration funnel chart{% else %}مخطط قمع التسجيل{% endif %}" role="img"></canvas>
+              </div>
+              <div class="az-empty d-none" id="funnelEmpty">
+                <i class="bi bi-inbox"></i>
+                <span class="az-empty__text">{% if ui_lang == 'en' %}No funnel data{% else %}لا توجد بيانات{% endif %}</span>
+              </div>
+              <div style="display:none" id="regRejectionRate"></div>
+              <div style="display:none" id="regRejectionValue"></div>
+              <div style="display:none" id="regAvgApprovalTime"></div>
+              <div style="display:none" id="regApprovalTimeValue"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="az-card h-100">
+            <div class="az-card__header">
+              <h3 class="az-card__title"><i class="bi bi-pie-chart"></i>
+                {% if ui_lang == 'en' %}Application Source{% else %}مصدر الطلبات{% endif %}
+              </h3>
+            </div>
+            <div class="az-card__body">
+              <div class="az-chart-wrap" style="height:200px;position:relative">
+                <canvas id="sourceChart" aria-label="{% if ui_lang == 'en' %}Source breakdown chart{% else %}مخطط توزيع المصدر{% endif %}" role="img"></canvas>
+              </div>
+              <div id="sourceBreakdown" class="d-none"></div>
+              <div class="az-empty d-none" id="sourceEmpty">
+                <i class="bi bi-pie-chart"></i>
+                <span class="az-empty__text">{% if ui_lang == 'en' %}No source data{% else %}لا توجد بيانات{% endif %}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Rejection Reasons #}
+      <div class="az-card mb-section">
+        <div class="az-card__header">
+          <h3 class="az-card__title"><i class="bi bi-x-circle text-danger-az"></i>
+            {% if ui_lang == 'en' %}Rejection Reasons{% else %}أسباب الرفض{% endif %}
+          </h3>
+        </div>
+        <div class="az-card__body--compact">
+          <div id="rejectionReasonsList">
+            <div class="skel skel-row"></div>
+          </div>
+          <div class="az-empty d-none" id="rejectionEmpty">
+            <i class="bi bi-check-circle text-success-az"></i>
+            <span class="az-empty__text">{% if ui_lang == 'en' %}No rejection reasons on record{% else %}لا توجد أسباب رفض{% endif %}</span>
+          </div>
+        </div>
+      </div>
+
+      {# Monthly trend chart #}
+      <div class="az-card mb-section">
+        <div class="az-card__header">
+          <h3 class="az-card__title"><i class="bi bi-calendar3"></i>
+            {% if ui_lang == 'en' %}Monthly Registration Trend{% else %}الاتجاه الشهري للتسجيل{% endif %}
+          </h3>
+          <span class="az-badge az-badge--blue" id="avgCompletenessBadge">—</span>
+        </div>
+        <div class="az-card__body">
+          <div class="az-chart-wrap az-chart-wrap--md">
+            <canvas id="regMonthlyTrendChart" aria-label="{% if ui_lang == 'en' %}Monthly registration trend{% else %}الاتجاه الشهري{% endif %}" role="img"></canvas>
+          </div>
+          <div class="az-empty d-none" id="regTrendEmpty">
+            <i class="bi bi-graph-up"></i>
+            <span class="az-empty__text">{% if ui_lang == 'en' %}No trend data available{% else %}لا توجد بيانات اتجاه{% endif %}</span>
+          </div>
+        </div>
+        <div class="d-none" id="regCompletenessPanel"></div>
+        <div class="d-none" id="regRoleBreakdown"></div>
+        <div class="d-none" id="regStatusFreshness"></div>
+      </div>
+
+      {# Smart Applications Table #}
+      <div class="az-card">
+        <div class="az-card__header">
+          <h3 class="az-card__title"><i class="bi bi-table"></i>
+            {% if ui_lang == 'en' %}Registration Applications{% else %}طلبات التسجيل{% endif %}
+          </h3>
+          <div class="d-flex gap-2 align-items-center">
+            <span class="text-muted" style="font-size:.8rem" id="regTableInfo"></span>
+            <button class="btn btn-sm btn-outline-secondary" id="regRefreshTable" style="border-radius:var(--r-sm)">
+              <i class="bi bi-arrow-clockwise"></i>
             </button>
           </div>
+        </div>
+        <div class="az-table-toolbar">
+          <div class="az-table-search">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input type="search" id="regSearchInput" placeholder="{% if ui_lang == 'en' %}Search applications…{% else %}بحث في الطلبات…{% endif %}"
+                   aria-label="{% if ui_lang == 'en' %}Search applications{% else %}بحث في الطلبات{% endif %}"
+                   class="form-control form-control-sm">
+          </div>
+          <nav aria-label="{% if ui_lang == 'en' %}Pagination{% else %}الصفحات{% endif %}" id="regPagination">
+            <button class="btn btn-sm btn-outline-secondary" id="regPrevPage" aria-label="{% if ui_lang == 'en' %}Previous page{% else %}الصفحة السابقة{% endif %}" disabled>
+              <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary ms-1" id="regNextPage" aria-label="{% if ui_lang == 'en' %}Next page{% else %}الصفحة التالية{% endif %}">
+              <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </button>
+          </nav>
+        </div>
+        <div class="az-table-scroll">
+          <table class="az-table" id="registrationTable" aria-label="{% if ui_lang == 'en' %}Registration applications{% else %}طلبات التسجيل{% endif %}">
+            <thead>
+              <tr>
+                <th scope="col">{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Parent{% else %}الوالد{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Facility{% else %}الروضة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Submitted{% else %}تاريخ التقديم{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Reviewer{% else %}المراجع{% endif %}</th>
+              </tr>
+            </thead>
+            <tbody id="registrationTableBody">
+              <tr><td colspan="7"><div class="skel skel-row"></div></td></tr>
+              <tr><td colspan="7"><div class="skel skel-row" style="width:90%"></div></td></tr>
+              <tr><td colspan="7"><div class="skel skel-row" style="width:80%"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-          <div class="card-body p-3">
-            <!-- ROW 1: Entity summary cards — Users / Kindergartens / Enrollments / Children -->
-            <div class="row g-3 mb-3">
+      {# Hidden: Governorate registration breakdown (preserved for JS) #}
+      <div class="d-none" id="regEntityRefreshBtn"></div>
+      <div class="d-none">
+        <span id="regGovCount"></span>
+        <span id="regGovSubtitle"></span>
+        <table id="regGovTable"><tbody id="regGovTableBody"></tbody></table>
+      </div>
 
-              <!-- Users -->
-              <div class="col-sm-6 col-xl-3">
-                <div class="reg-entity-card rounded-3 p-3 h-100"
-                     style="background:var(--bs-gray-100,#f8f9fa);"
-                     role="group"aria-label="{% if ui_lang == 'en' %}Users registration status{% else %}حالة تسجيل المستخدمين{% endif %}">
-                  <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <div class="text-muted small fw-semibold mb-1">
-                        <i class="bi bi-person-gear me-1"aria-hidden="true"></i>
-                        {% if ui_lang == 'en' %}Users{% else %}المستخدمون{% endif %}
-                      </div>
-                      <div class="fs-3 fw-bold text-primary mb-0"id="regUsersTotal"aria-live="polite">--</div>
-                      <div class="small text-muted mt-1">
-                        <span class="text-success fw-semibold"id="regUsersNew">--</span>
-                        {% if ui_lang == 'en' %}new this period{% else %}جديد في الفترة{% endif %}
-                      </div>
-                    </div>
-                    <div class="icon-circle bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:40px;height:40px;"aria-hidden="true">
-                      <i class="bi bi-people fs-5"></i>
-                    </div>
-                  </div>
-                  <div class="progress mb-2"style="height:5px;"role="progressbar"
-                       aria-label="{% if ui_lang == 'en' %}User status distribution{% else %}توزيع حالات المستخدمين{% endif %}">
-                    <div class="progress-bar bg-success"id="regUsersActiveBar"style="width:0%"
-                         title="{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}"></div>
-                    <div class="progress-bar bg-warning"id="regUsersSuspendedBar"style="width:0%"
-                         title="{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}"></div>
-                    <div class="progress-bar bg-secondary"id="regUsersInactiveBar"style="width:0%"
-                         title="{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}"></div>
-                  </div>
-                  <div class="d-flex flex-wrap gap-2"style="font-size:.72rem;">
-                    <span class="text-success d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regUsersActive">--</span>
-                      {% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}
-                    </span>
-                    <span class="text-warning d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regUsersSuspended">--</span>
-                      {% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}
-                    </span>
-                    <span class="text-secondary d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regUsersInactive">--</span>
-                      {% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}
-                    </span>
-                  </div>
-                </div>
-              </div>
+    </div>{# /tabOperations #}
 
-              <!-- Kindergartens -->
-              <div class="col-sm-6 col-xl-3">
-                <div class="reg-entity-card rounded-3 p-3 h-100"
-                     style="background:var(--bs-gray-100,#f8f9fa);"
-                     role="group"aria-label="{% if ui_lang == 'en' %}Kindergartens registration status{% else %}حالة تسجيل الروضات{% endif %}">
-                  <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <div class="text-muted small fw-semibold mb-1">
-                        <i class="bi bi-building me-1"aria-hidden="true"></i>
-                        {% if ui_lang == 'en' %}Kindergartens{% else %}الروضات والحضانات{% endif %}
-                      </div>
-                      <div class="fs-3 fw-bold text-info mb-0"id="regKgTotal"aria-live="polite">--</div>
-                      <div class="small text-muted mt-1">
-                        <span class="text-success fw-semibold"id="regKgNew">--</span>
-                        {% if ui_lang == 'en' %}new this period{% else %}جديد في الفترة{% endif %}
-                      </div>
-                    </div>
-                    <div class="icon-circle bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:40px;height:40px;"aria-hidden="true">
-                      <i class="bi bi-building fs-5"></i>
-                    </div>
-                  </div>
-                  <div class="progress mb-2"style="height:5px;">
-                    <div class="progress-bar bg-success"id="regKgActiveBar"style="width:0%"
-                         title="{% if ui_lang == 'en' %}Active{% else %}نشطة{% endif %}"></div>
-                    <div class="progress-bar bg-secondary"id="regKgInactiveBar"style="width:0%"
-                         title="{% if ui_lang == 'en' %}Inactive{% else %}غير نشطة{% endif %}"></div>
-                    <div class="progress-bar bg-warning"id="regKgDraftBar"style="width:0%"
-                         title="{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}"></div>
-                  </div>
-                  <div class="d-flex flex-wrap gap-2"style="font-size:.72rem;">
-                    <span class="text-success d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regKgActive">--</span>
-                      {% if ui_lang == 'en' %}Active{% else %}نشطة{% endif %}
-                    </span>
-                    <span class="text-secondary d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regKgInactive">--</span>
-                      {% if ui_lang == 'en' %}Inactive{% else %}غير نشطة{% endif %}
-                    </span>
-                    <span class="text-warning d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regKgDraft">--</span>
-                      {% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}
-                    </span>
-                  </div>
-                </div>
-              </div>
+    {# ═══════════════════════════════════════════════════════════════════════
+       TAB 3 — REGIONS (formerly Geographic)
+       ════════════════════════════════════════════════════════════════════ #}
+    <div class="tab-pane fade" id="tabGeographic" role="tabpanel" aria-labelledby="tab-geographic-btn">
 
-              <!-- Enrollment Applications (preserves all existing IDs) -->
-              <div class="col-sm-6 col-xl-3">
-                <div class="reg-entity-card rounded-3 p-3 h-100"
-                     style="background:var(--bs-gray-100,#f8f9fa);"
-                     role="group"aria-label="{% if ui_lang == 'en' %}Enrollment applications{% else %}طلبات التسجيل{% endif %}">
-                  <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <div class="text-muted small fw-semibold mb-1">
-                        <i class="bi bi-folder2-open me-1"aria-hidden="true"></i>
-                        {% if ui_lang == 'en' %}Enrollment Apps{% else %}طلبات التسجيل{% endif %}
-                      </div>
-                      <div class="fs-3 fw-bold text-primary mb-0"id="regTotalApplications"aria-live="polite">--</div>
-                      <div class="small text-muted mt-1">
-                        <span class="text-success fw-semibold"id="regNewApplications">--</span>
-                        <span id="regNewApplicationsLabel">
-                          {% if ui_lang == 'en' %}new this period{% else %}جديد في الفترة{% endif %}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="icon-circle bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:40px;height:40px;"aria-hidden="true">
-                      <i class="bi bi-folder2-open fs-5"></i>
-                    </div>
-                  </div>
-                  <div class="d-flex flex-wrap gap-2 mb-1"style="font-size:.72rem;">
-                    <span class="text-success d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regApproved">--</span>
-                      {% if ui_lang == 'en' %}Approved{% else %}مقبول{% endif %}
-                    </span>
-                    <span class="text-warning d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regPending">--</span>
-                      {% if ui_lang == 'en' %}Pending{% else %}معلق{% endif %}
-                    </span>
-                    <span class="text-danger d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regRejected">--</span>
-                      {% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}
-                    </span>
-                  </div>
-                  <div class="d-flex flex-wrap gap-2"style="font-size:.72rem;">
-                    <span class="text-muted">
-                      <span id="regConversionRate">{% if ui_lang == 'en' %}Conversion:{% else %}معدل التحويل:{% endif %}</span>
-                      <strong class="text-primary"id="regConversionValue">--</strong>
-                    </span>
-                    <span class="text-muted">
-                      <span id="regRejectionRate">{% if ui_lang == 'en' %}Rejection:{% else %}معدل الرفض:{% endif %}</span>
-                      <strong class="text-danger"id="regRejectionValue">--</strong>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Children -->
-              <div class="col-sm-6 col-xl-3">
-                <div class="reg-entity-card rounded-3 p-3 h-100"
-                     style="background:var(--bs-gray-100,#f8f9fa);"
-                     role="group"aria-label="{% if ui_lang == 'en' %}Children registration status{% else %}حالة تسجيل الأطفال{% endif %}">
-                  <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <div class="text-muted small fw-semibold mb-1">
-                        <i class="bi bi-emoji-smile me-1"aria-hidden="true"></i>
-                        {% if ui_lang == 'en' %}Children{% else %}الأطفال المسجلون{% endif %}
-                      </div>
-                      <div class="fs-3 fw-bold text-success mb-0"id="regChildrenTotal"aria-live="polite">--</div>
-                      <div class="small text-muted mt-1">
-                        <span class="text-success fw-semibold"id="regChildrenEnrolled">--</span>
-                        {% if ui_lang == 'en' %}actively enrolled{% else %}مسجل نشط{% endif %}
-                      </div>
-                    </div>
-                    <div class="icon-circle bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width:40px;height:40px;"aria-hidden="true">
-                      <i class="bi bi-emoji-smile fs-5"></i>
-                    </div>
-                  </div>
-                  <div class="progress mb-2"style="height:5px;">
-                    <div class="progress-bar bg-success"id="regChildrenEnrolledBar"style="width:0%"
-                         title="{% if ui_lang == 'en' %}Active enrollment{% else %}مسجل نشط{% endif %}"></div>
-                    <div class="progress-bar bg-warning"id="regChildrenPendingBar"style="width:0%"
-                         title="{% if ui_lang == 'en' %}Pending{% else %}في انتظار القبول{% endif %}"></div>
-                    <div class="progress-bar bg-secondary"id="regChildrenNoEnrollBar"style="width:0%"
-                         title="{% if ui_lang == 'en' %}No enrollment{% else %}بدون تسجيل{% endif %}"></div>
-                  </div>
-                  <div class="d-flex flex-wrap gap-2 mb-1"style="font-size:.72rem;">
-                    <span class="text-success d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regChildrenEnrolledCount">--</span>
-                      {% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}
-                    </span>
-                    <span class="text-warning d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regChildrenPending">--</span>
-                      {% if ui_lang == 'en' %}Pending{% else %}معلق{% endif %}
-                    </span>
-                    <span class="text-secondary d-flex align-items-center gap-1">
-                      <i class="bi bi-circle-fill"style="font-size:.45rem;"aria-hidden="true"></i>
-                      <span id="regChildrenNone">--</span>
-                      {% if ui_lang == 'en' %}No enrollment{% else %}بدون{% endif %}
-                    </span>
-                  </div>
-                  <div style="font-size:.72rem;"class="text-muted">
-                    <span id="regAvgApprovalTime">
-                      {% if ui_lang == 'en' %}Avg. approval time:{% else %}متوسط وقت الموافقة:{% endif %}
-                    </span>
-                    <strong id="regApprovalTimeValue">--</strong>
-                  </div>
-                </div>
-              </div>
-            </div><!-- /ROW 1 -->
-
-            <!-- ROW 2: Status matrix + Funnel + Action queue -->
-            <div class="row g-3 mb-3">
-              <!-- Enrollment status matrix -->
-              <div class="col-lg-5">
-                <div class="rounded-3 p-3 h-100"style="background:var(--bs-gray-100,#f8f9fa);">
-                  <h6 class="fw-semibold mb-3"style="font: var(--type-label);">
-                    <i class="bi bi-list-check me-1 text-primary"aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}Enrollment Status Breakdown{% else %}مسار حالات الطلبات{% endif %}
-                  </h6>
-                  <div id="regStatusMatrix"aria-live="polite">
-                    <div class="text-center text-muted py-3">
-                      <div class="spinner-border spinner-border-sm"role="status">
-                        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Registration funnel chart (preserves canvas id) -->
-              <div class="col-lg-4">
-                <div class="rounded-3 p-3 h-100"style="background:var(--bs-gray-100,#f8f9fa);">
-                  <h6 class="fw-semibold mb-3"style="font: var(--type-label);">
-                    <i class="bi bi-filter-circle me-1 text-primary"aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}Registration Funnel{% else %}قمع التسجيل{% endif %}
-                  </h6>
-                  <div id="registrationFunnel"style="height:220px;position:relative;">
-                    <canvas id="funnelChart"></canvas>
-                  </div>
-                  <div id="funnelEmpty"class="text-center text-muted d-none py-4">
-                    <i class="bi bi-inbox fs-2 mb-2"aria-hidden="true"></i>
-                    <div class="small">{% if ui_lang == 'en' %}No data available{% else %}لا توجد بيانات{% endif %}</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Action queue -->
-              <div class="col-lg-3">
-                <div class="rounded-3 p-3 h-100"style="background:var(--bs-gray-100,#f8f9fa);">
-                  <h6 class="fw-semibold mb-3 d-flex align-items-center gap-2"style="font: var(--type-label);">
-                    <i class="bi bi-lightning-charge-fill text-warning"aria-hidden="true"></i>
-                    <span>{% if ui_lang == 'en' %}Actions Required{% else %}إجراءات مطلوبة{% endif %}</span>
-                    <span class="badge bg-secondary ms-auto"id="regActionsBadge"aria-live="polite">0</span>
-                  </h6>
-                  <div id="regActionQueue"aria-live="polite">
-                    <div class="text-center text-muted py-3 small">
-                      <div class="spinner-border spinner-border-sm"role="status">
-                        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div><!-- /ROW 2 -->
-
-            <!-- ROW 3: Rejection reasons + Source breakdown + Role distribution -->
-            <div class="row g-3">
-              <!-- Rejection reasons (preserves existing IDs) -->
-              <div class="col-lg-4">
-                <div class="rounded-3 p-3 h-100"style="background:var(--bs-gray-100,#f8f9fa);">
-                  <h6 class="fw-semibold mb-3"style="font: var(--type-label);">
-                    <i class="bi bi-x-circle me-1 text-danger"aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}Rejection Reasons{% else %}أسباب الرفض{% endif %}
-                  </h6>
-                  <div id="rejectionReasonsList"class="list-group list-group-flush"style="max-height:220px;overflow-y:auto;">
-                    <div class="text-center text-muted py-3 small">
-                      {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
-                    </div>
-                  </div>
-                  <div id="rejectionEmpty"class="text-center text-muted d-none py-4">
-                    <i class="bi bi-check-circle-fill fs-2 text-success mb-2"aria-hidden="true"></i>
-                    <div class="small">{% if ui_lang == 'en' %}No rejections recorded{% else %}لا توجد حالات رفض{% endif %}</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Source breakdown (preserves existing IDs) -->
-              <div class="col-lg-4">
-                <div class="rounded-3 p-3 h-100"style="background:var(--bs-gray-100,#f8f9fa);">
-                  <h6 class="fw-semibold mb-3"style="font: var(--type-label);">
-                    <i class="bi bi-graph-up-arrow me-1 text-success"aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}Source Breakdown{% else %}توزيع مصادر التقديم{% endif %}
-                  </h6>
-                  <div id="sourceBreakdown"style="height:220px;position:relative;">
-                    <canvas id="sourceChart"></canvas>
-                  </div>
-                  <div id="sourceEmpty"class="text-center text-muted d-none py-4">
-                    <i class="bi bi-inbox fs-2 mb-2"aria-hidden="true"></i>
-                    <div class="small">{% if ui_lang == 'en' %}No data{% else %}لا توجد بيانات{% endif %}</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- User role distribution (new) -->
-              <div class="col-lg-4">
-                <div class="rounded-3 p-3 h-100"style="background:var(--bs-gray-100,#f8f9fa);">
-                  <h6 class="fw-semibold mb-3"style="font: var(--type-label);">
-                    <i class="bi bi-people me-1 text-info"aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}User Role Distribution{% else %}توزيع أدوار المستخدمين{% endif %}
-                  </h6>
-                  <div id="regRoleBreakdown"aria-live="polite">
-                    <div class="text-center text-muted py-3 small">
-                      {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div><!-- /ROW 3 -->
-
-            <!-- ROW 4: Governorate registration breakdown -->
-            <div class="row g-3 mb-3">
-              <div class="col-12">
-                <div class="rounded-3 p-3"style="background:var(--bs-gray-100,#f8f9fa);">
-                  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <h6 class="fw-semibold mb-0"style="font: var(--type-label);">
-                      <i class="bi bi-geo-alt me-1 text-primary"aria-hidden="true"></i>
-                      {% if ui_lang == 'en' %}Registration by Governorate{% else %}التسجيل حسب المحافظة{% endif %}
-                      <span class="badge bg-light text-muted border fw-normal ms-1"id="regGovCount"></span>
-                    </h6>
-                    <small class="text-muted"id="regGovSubtitle"style="font-size:.72rem;"></small>
-                  </div>
-                  <div class="table-responsive"style="max-height:260px;overflow-y:auto;">
-                    <table class="table table-sm table-hover align-middle mb-0"id="regGovTable">
-                      <thead class="table-light sticky-top">
-                        <tr>
-                          <th scope="col"style="min-width:90px;font-size:.75rem;">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-                          <th scope="col"class="text-center"style="font-size:.75rem;">{% if ui_lang == 'en' %}KGs{% else %}الروضات{% endif %}</th>
-                          <th scope="col"class="text-center"style="font-size:.75rem;">{% if ui_lang == 'en' %}Active{% else %}نشطة{% endif %}</th>
-                          <th scope="col"class="text-center"style="font-size:.75rem;">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</th>
-                          <th scope="col"class="text-center"style="font-size:.75rem;">{% if ui_lang == 'en' %}Enrollments{% else %}الطلبات{% endif %}</th>
-                          <th scope="col"class="text-center"style="font-size:.75rem;">{% if ui_lang == 'en' %}Pending{% else %}معلق{% endif %}</th>
-                          <th scope="col"style="min-width:110px;font-size:.75rem;">{% if ui_lang == 'en' %}Completion%{% else %}نسبة الاستكمال{% endif %}</th>
-                        </tr>
-                      </thead>
-                      <tbody id="regGovTableBody">
-                        <tr><td colspan="7"class="text-center py-4">
-                          <div class="spinner-border spinner-border-sm text-secondary"role="status">
-                            <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
-                          </div>
-                        </td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div><!-- /ROW 4 -->
-
-            <!-- ROW 5: Data completeness + Monthly registration trend -->
-            <div class="row g-3">
-              <!-- Profile & data completeness -->
-              <div class="col-lg-5">
-                <div class="rounded-3 p-3 h-100"style="background:var(--bs-gray-100,#f8f9fa);">
-                  <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-semibold mb-0"style="font: var(--type-label);">
-                      <i class="bi bi-clipboard-check me-1 text-success"aria-hidden="true"></i>
-                      {% if ui_lang == 'en' %}Data Completeness{% else %}اكتمال بيانات التسجيل{% endif %}
-                    </h6>
-                    <span class="badge border fw-semibold"id="avgCompletenessBadge"
-                          aria-live="polite">--%</span>
-                  </div>
-                  <div id="regCompletenessPanel"aria-live="polite">
-                    <div class="text-center text-muted py-3">
-                      <div class="spinner-border spinner-border-sm"role="status">
-                        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Monthly registration trend chart -->
-              <div class="col-lg-7">
-                <div class="rounded-3 p-3 h-100"style="background:var(--bs-gray-100,#f8f9fa);">
-                  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-1">
-                    <h6 class="fw-semibold mb-0"style="font: var(--type-label);">
-                      <i class="bi bi-graph-up me-1 text-info"aria-hidden="true"></i>
-                      {% if ui_lang == 'en' %}Monthly Registration Trend{% else %}الاتجاه الشهري للتسجيل{% endif %}
-                    </h6>
-                    <div class="d-flex align-items-center gap-2"style="font-size:.68rem;color:#64748b;">
-                      <span><span style="color:#2563EB;font-size:.85em;">&#9632;</span> {% if ui_lang == 'en' %}Users{% else %}مستخدمون{% endif %}</span>
-                      <span><span style="color:#0891B2;font-size:.85em;">&#9632;</span> {% if ui_lang == 'en' %}Enrollments{% else %}طلبات{% endif %}</span>
-                      <span><span style="color:#1F5E47;font-size:.85em;">&#9632;</span> {% if ui_lang == 'en' %}KGs{% else %}روضات{% endif %}</span>
-                    </div>
-                  </div>
-                  <div style="height:200px;position:relative;">
-                    <canvas id="regMonthlyTrendChart"></canvas>
-                  </div>
-                  <div id="regTrendEmpty"class="text-center text-muted d-none py-4">
-                    <i class="bi bi-graph-up fs-2 mb-2"aria-hidden="true"></i>
-                    <div class="small">{% if ui_lang == 'en' %}No trend data yet{% else %}لا توجد بيانات اتجاهات بعد{% endif %}</div>
-                  </div>
-                </div>
-              </div>
-            </div><!-- /ROW 5 -->
-
-          </div><!-- /card-body -->
-        </div><!-- /registrationAnalyticsSection -->
-
-        <!-- Recent Applications Data Table -->
-        <div class="row g-4 mb-section gap-card">
-            <div class="col-12">
-                <div class="card h-100 shadow-sm border-0">
-                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center border-bottom">
-                        <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
-                            <i class="bi bi-table me-2 text-primary"></i>{% if ui_lang == 'en' %}Recent Applications{% else %}الطلبات الحديثة{% endif %}
-                        </h5>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <input aria-label="{% if ui_lang == 'en' %}Search applications{% else %}البحث في الطلبات{% endif %}" type="text" class="form-control form-control-sm" id="regSearchInput" placeholder="{% if ui_lang == 'en' %}Search...{% else %}بحث...{% endif %}" style="min-width: 200px;">
-                            <button type="button"class="btn btn-sm btn-outline-primary"id="regRefreshTable">
-                                <i class="bi bi-arrow-clockwise"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0"id="registrationTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Parent{% else %}الوصي{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Submitted{% else %}تاريخ التقديم{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Reviewer{% else %}المُراجع{% endif %}</th>
-                                    <th class="text-center">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</th>
-                                </tr>
-                            </thead>
-                            <tbody id="registrationTableBody">
-                                <tr><td colspan="9"class="text-center py-4 text-muted">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
-                        <small class="text-muted"id="regTableInfo">--</small>
-                        <div class="btn-group btn-group-sm"id="regPagination">
-                            <button type="button"class="btn btn-outline-secondary"id="regPrevPage">{% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}</button>
-                            <button type="button"class="btn btn-outline-secondary"id="regNextPage">{% if ui_lang == 'en' %}Next{% else %}التالي{% endif %}</button>
-                        </div>
-                    </div>
-                </div>
+      {# Summary cards row #}
+      <div class="row g-4 mb-section">
+        <div class="col-lg-8">
+          <div class="az-card h-100">
+            <div class="az-card__header">
+              <h3 class="az-card__title"><i class="bi bi-map"></i>
+                {% if ui_lang == 'en' %}Governorate Breakdown{% else %}التوزيع المحافظي{% endif %}
+              </h3>
             </div>
+            <div class="az-table-toolbar">
+              <div class="az-table-search">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="search" id="govTableSearch" placeholder="{% if ui_lang == 'en' %}Filter governorate…{% else %}تصفية المحافظة…{% endif %}"
+                       class="form-control form-control-sm" aria-label="{% if ui_lang == 'en' %}Filter governorates{% else %}تصفية المحافظات{% endif %}">
+              </div>
+            </div>
+            <div class="az-table-scroll" style="max-height:380px">
+              <table class="az-table" id="governorateTable"
+                     aria-label="{% if ui_lang == 'en' %}Governorate performance table{% else %}جدول أداء المحافظات{% endif %}">
+                <thead>
+                  <tr>
+                    <th scope="col">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Facilities{% else %}المرافق{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Children{% else %}الأطفال{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Attendance%{% else %}الحضور%{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Gov. Score{% else %}درجة الحوكمة{% endif %}</th>
+                  </tr>
+                </thead>
+                <tbody id="governorateTableBody">
+                  <tr><td colspan="6"><div class="skel skel-row"></div></td></tr>
+                  <tr><td colspan="6"><div class="skel skel-row" style="width:85%"></div></td></tr>
+                  <tr><td colspan="6"><div class="skel skel-row" style="width:70%"></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
-      </div><!-- /tabOperations -->
-
-      <!-- ══════════════════════════════════════════════════════════════════════
-           TAB 3 — GEOGRAPHIC
-           ══════════════════════════════════════════════════════════════════════ -->
-      <div class="tab-pane fade" id="tabGeographic" role="tabpanel" aria-labelledby="tab-geographic-btn">
-
-        <div class="row g-4 mb-section gap-card">
-            <!-- Governorate Breakdown -->
-            <div class="col-lg-8">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center border-bottom">
-                        <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
-                            <i class="bi bi-geo-alt me-2 text-primary"></i>{% if ui_lang == 'en' %}Governorate Analysis{% else %}تحليل المحافظات{% endif %}
-                        </h5>
-                        <div class="d-flex gap-2">
-                            <button type="button"class="btn btn-sm btn-outline-primary"onclick="refreshGovernorateData()">
-                                <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
-                            </button>
-                            <button type="button"class="btn btn-sm btn-primary"data-bs-toggle="modal"data-bs-target="#exportModal">
-                                <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0 p-card">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0"id="governorateTable">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="fw-semibold text-muted border-0 ps-4">
-                                            <i class="bi bi-geo-alt me-1"></i>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
-                                        </th>
-                                        <th class="text-center fw-semibold text-muted border-0">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</th>
-                                        <th class="text-center fw-semibold text-muted border-0">{% if ui_lang == 'en' %}Students{% else %}الطلاب{% endif %}</th>
-                                        <th class="text-center fw-semibold text-muted border-0"data-sort-method="number">
-                                            <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
-                                        </th>
-                                        <th class="text-center fw-semibold text-muted border-0"data-sort-method="number">
-                                            <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
-                                        </th>
-                                        <th class="text-center fw-semibold text-muted border-0"data-sort-method="number">
-                                            <i class="bi bi-shield-check me-1"></i>{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody id="governorateTableBody">
-                                    <tr class="skeleton-row">
-                                        <td class="ps-4"><div class="skeleton-text w-75"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-75 mx-auto"></div></td>
-                                    </tr>
-                                    <tr class="skeleton-row">
-                                        <td class="ps-4"><div class="skeleton-text w-75"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-75 mx-auto"></div></td>
-                                    </tr>
-                                    <tr class="skeleton-row">
-                                        <td class="ps-4"><div class="skeleton-text w-75"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
-                                        <td class="text-center"><div class="skeleton-text w-75 mx-auto"></div></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+        <div class="col-lg-4">
+          {# Top/Bottom Performers #}
+          <div class="az-card h-100">
+            <div class="az-card__header">
+              <h3 class="az-card__title"><i class="bi bi-trophy"></i>
+                {% if ui_lang == 'en' %}Top Performers{% else %}الأفضل أداءً{% endif %}
+              </h3>
             </div>
-
-            <!-- Governance Distribution -->
-            <div class="col-lg-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header bg-transparent border-bottom">
-                        <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
-                            <i class="bi bi-pie-chart me-2 text-info"></i>{% if ui_lang == 'en' %}Governance Rating Distribution{% else %}توزيع تقييم الحوكمة{% endif %}
-                        </h5>
-                    </div>
-                    <div class="card-body p-card d-flex flex-column justify-content-center align-items-center">
-                        <div style="width: 200px; height: 200px;">
-                            <canvas id="governancePieChart"></canvas>
-                        </div>
-                        <div class="mt-4 w-100">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span><i class="bi bi-circle-fill text-success me-2"></i>{% if ui_lang == 'en' %}Excellent (Green){% else %}متميز (أخضر){% endif %}</span>
-                                <span><span class="fw-bold" id="countGreen">--</span> <span id="pctGreen" class="text-muted" style="font-size:.8em;"></span></span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span><i class="bi bi-circle-fill text-warning me-2"></i>{% if ui_lang == 'en' %}Average (Amber){% else %}متوسط (برتقالي){% endif %}</span>
-                                <span><span class="fw-bold" id="countAmber">--</span> <span id="pctAmber" class="text-muted" style="font-size:.8em;"></span></span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span><i class="bi bi-circle-fill text-danger me-2"></i>{% if ui_lang == 'en' %}Needs Improvement (Red){% else %}يحتاج تحسين (أحمر){% endif %}</span>
-                                <span><span class="fw-bold" id="countRed">--</span> <span id="pctRed" class="text-muted" style="font-size:.8em;"></span></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="az-card__body--compact">
+              <div class="rank-list" id="topPerformersList">
+                <div class="skel skel-row"></div>
+                <div class="skel skel-row" style="width:90%"></div>
+                <div class="skel skel-row" style="width:80%"></div>
+              </div>
+              <hr style="border-color:var(--slate-100);margin:12px 0">
+              <h4 style="font:.6rem/1 var(--font-ar);text-transform:uppercase;color:var(--slate-400);letter-spacing:.06em;margin-bottom:10px">
+                {% if ui_lang == 'en' %}Needs Attention{% else %}تحتاج عناية{% endif %}
+              </h4>
+              <div class="rank-list" id="lowPerformersList">
+                <div class="skel skel-row"></div>
+                <div class="skel skel-row" style="width:85%"></div>
+              </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {# Targets + Benchmarks #}
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="az-card">
+            <div class="az-card__header">
+              <h3 class="az-card__title"><i class="bi bi-bullseye"></i>
+                {% if ui_lang == 'en' %}Performance Targets{% else %}أهداف الأداء{% endif %}
+              </h3>
+            </div>
+            <div class="az-card__body--compact" id="targetList">
+              <div class="skel skel-row"></div>
+              <div class="skel skel-row" style="width:75%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="az-card">
+            <div class="az-card__header">
+              <h3 class="az-card__title"><i class="bi bi-bar-chart-steps"></i>
+                {% if ui_lang == 'en' %}Benchmarks{% else %}المعايير المرجعية{% endif %}
+              </h3>
+            </div>
+            <div class="az-card__body--compact" id="benchmarkList">
+              <div class="skel skel-row"></div>
+              <div class="skel skel-row" style="width:80%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>{# /tabGeographic #}
+
+    {# ═══════════════════════════════════════════════════════════════════════
+       TAB 4 — GOVERNANCE CENTER
+       ════════════════════════════════════════════════════════════════════ #}
+    <div class="tab-pane fade" id="tabGovernance" role="tabpanel" aria-labelledby="tab-governance-btn">
+
+      {# Distribution + Legend #}
+      <div class="row g-4 mb-section">
+        <div class="col-lg-5">
+          <div class="az-card h-100">
+            <div class="az-card__header">
+              <h3 class="az-card__title"><i class="bi bi-pie-chart"></i>
+                {% if ui_lang == 'en' %}Score Distribution{% else %}توزيع الدرجات{% endif %}
+              </h3>
+            </div>
+            <div class="az-card__body">
+              <div class="gov-distribution">
+                <div class="gov-donut-wrap">
+                  <canvas id="governancePieChart"
+                          aria-label="{% if ui_lang == 'en' %}Governance score distribution{% else %}توزيع درجات الحوكمة{% endif %}"
+                          role="img"></canvas>
+                </div>
+                <div class="gov-legend">
+                  <div class="gov-legend-item">
+                    <div class="gov-legend-label">
+                      <span class="gov-legend-dot gov-legend-dot--green"></span>
+                      {% if ui_lang == 'en' %}Excellent{% else %}ممتاز{% endif %}
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2">
+                      <span class="gov-legend-count" id="countGreen">—</span>
+                      <span class="gov-legend-pct" id="pctGreen"></span>
+                    </div>
+                  </div>
+                  <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--green" id="govBarGreen" style="width:0%"></div></div>
+                  <div class="gov-legend-item mt-2">
+                    <div class="gov-legend-label">
+                      <span class="gov-legend-dot gov-legend-dot--amber"></span>
+                      {% if ui_lang == 'en' %}Average{% else %}متوسط{% endif %}
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2">
+                      <span class="gov-legend-count" id="countAmber">—</span>
+                      <span class="gov-legend-pct" id="pctAmber"></span>
+                    </div>
+                  </div>
+                  <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--amber" id="govBarAmber" style="width:0%"></div></div>
+                  <div class="gov-legend-item mt-2">
+                    <div class="gov-legend-label">
+                      <span class="gov-legend-dot gov-legend-dot--red"></span>
+                      {% if ui_lang == 'en' %}Critical{% else %}حرج{% endif %}
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2">
+                      <span class="gov-legend-count" id="countRed">—</span>
+                      <span class="gov-legend-pct" id="pctRed"></span>
+                    </div>
+                  </div>
+                  <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--red" id="govBarRed" style="width:0%"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-      </div><!-- /tabGeographic -->
-
-      <!-- ══════════════════════════════════════════════════════════════════════
-           TAB 4 — GOVERNANCE
-           ══════════════════════════════════════════════════════════════════════ -->
-      <div class="tab-pane fade" id="tabGovernance" role="tabpanel" aria-labelledby="tab-governance-btn">
-
-        <!-- Comparative Analysis -->
-        <div class="row g-4 mb-section gap-card">
-            <div class="col-md-6">
-                <div class="card h-100 border-0 shadow-sm border-start border-success border-4">
-                    <div class="card-header bg-success bg-opacity-10 text-success fw-bold border-bottom border-success border-opacity-25"style="font: var(--type-card-title)">
-                        <i class="bi bi-trophy-fill me-2"></i>{% if ui_lang == 'en' %}Top 5 Performing Kindergartens{% else %}أفضل 5 روضات أداءً{% endif %}
-                        <small class="float-end text-success-emphasis fw-normal" style="cursor:pointer;" data-bs-toggle="modal" data-bs-target="#governanceModal"><i class="bi bi-question-circle me-1"></i>{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="list-group list-group-flush"id="topPerformersList">
-                            <div class="list-group-item text-muted text-center py-4 border-0">
-                                <div class="skeleton-text w-75 mx-auto mb-2"></div>
-                                <div class="skeleton-text w-50 mx-auto"></div>
-                            </div>
-                            <div class="list-group-item text-muted text-center py-4 border-0">
-                                <div class="skeleton-text w-75 mx-auto mb-2"></div>
-                                <div class="skeleton-text w-50 mx-auto"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="col-lg-7">
+          <div class="az-card h-100">
+            <div class="az-card__header">
+              <h3 class="az-card__title"><i class="bi bi-trophy"></i>
+                {% if ui_lang == 'en' %}Governance Leaderboard{% else %}قائمة الحوكمة{% endif %}
+              </h3>
             </div>
-            <div class="col-md-6">
-                <div class="card h-100 border-0 shadow-sm border-start border-danger border-4">
-                    <div class="card-header bg-danger bg-opacity-10 text-danger fw-bold border-bottom border-danger border-opacity-25"style="font: var(--type-card-title)">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>{% if ui_lang == 'en' %}Kindergartens Need Urgent Support{% else %}الروضات تحتاج دعم عاجل{% endif %}
-                        <small class="float-end text-danger-emphasis fw-normal" style="cursor:pointer;" data-bs-toggle="modal" data-bs-target="#governanceModal"><i class="bi bi-question-circle me-1"></i>{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="list-group list-group-flush"id="lowPerformersList">
-                            <div class="list-group-item text-muted text-center py-4 border-0">
-                                <div class="skeleton-text w-75 mx-auto mb-2"></div>
-                                <div class="skeleton-text w-50 mx-auto"></div>
-                            </div>
-                            <div class="list-group-item text-muted text-center py-4 border-0">
-                                <div class="skeleton-text w-75 mx-auto mb-2"></div>
-                                <div class="skeleton-text w-50 mx-auto"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="az-card__body--compact">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <span style="font:.7rem/1 var(--font-ar);text-transform:uppercase;color:var(--slate-400);letter-spacing:.06em">
+                  {% if ui_lang == 'en' %}Top 5 Facilities{% else %}أفضل 5 مرافق{% endif %}
+                </span>
+              </div>
+              <div class="rank-list" id="govTopPerformersList">
+                <div class="skel skel-row"></div>
+                <div class="skel skel-row" style="width:90%"></div>
+                <div class="skel skel-row" style="width:80%"></div>
+              </div>
+              <hr style="border-color:var(--slate-100);margin:14px 0">
+              <span style="font:.7rem/1 var(--font-ar);text-transform:uppercase;color:var(--slate-400);letter-spacing:.06em;display:block;margin-bottom:10px">
+                {% if ui_lang == 'en' %}Bottom 5 — Requires Intervention{% else %}أدنى 5 — تحتاج تدخلاً{% endif %}
+              </span>
+              <div class="rank-list" id="govLowPerformersList">
+                <div class="skel skel-row"></div>
+                <div class="skel skel-row" style="width:85%"></div>
+              </div>
             </div>
+          </div>
         </div>
+      </div>
 
-        <!-- Targets, Benchmarks, Recommendations -->
-        <div class="row g-4 mb-section gap-card">
-            <div class="col-lg-6">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header bg-transparent border-bottom">
-                        <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
-                            <i class="bi bi-bullseye me-2 text-primary"></i>{% if ui_lang == 'en' %}Targets & Benchmarks{% else %}الأهداف والمعايير{% endif %}
-                        </h5>
-                    </div>
-                    <div class="card-body p-card">
-                        <div id="targetList"class="list-group list-group-flush"></div>
-                        <hr />
-                        <div id="benchmarkList"class="list-group list-group-flush"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header bg-transparent border-bottom">
-                        <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
-                            <i class="bi bi-lightbulb-fill me-2 text-warning"></i>{% if ui_lang == 'en' %}Recommendations & Action Plans{% else %}التوصيات وخطط العمل{% endif %}
-                        </h5>
-                    </div>
-                    <div class="card-body p-card">
-                        <div id="recommendationList"class="list-group list-group-flush"></div>
-                    </div>
-                </div>
-            </div>
+      {# Recommendations #}
+      <div class="az-card">
+        <div class="az-card__header">
+          <h3 class="az-card__title"><i class="bi bi-lightbulb"></i>
+            {% if ui_lang == 'en' %}Governance Recommendations{% else %}توصيات الحوكمة{% endif %}
+          </h3>
         </div>
-
-      </div><!-- /tabGovernance -->
-
-      <!-- ══════════════════════════════════════════════════════════════════════
-           TAB 5 — AI INSIGHTS
-           ══════════════════════════════════════════════════════════════════════ -->
-      <div class="tab-pane fade" id="tabAI" role="tabpanel" aria-labelledby="tab-ai-btn">
-
-        <!-- Predictive & Anomaly Insights -->
-        <div class="row g-4 mb-section gap-card">
-            <div class="col-lg-8">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
-                            <i class="bi bi-cpu-fill me-2 text-primary"></i>{% if ui_lang == 'en' %}Predictions & Alerts{% else %}التوقعات والإنذارات{% endif %}
-                        </h5>
-                        <button class="btn btn-sm btn-outline-primary"type="button"data-bs-toggle="collapse"
-                            data-bs-target="#modelMetaPanel"aria-expanded="false">
-                            <i class="bi bi-info-circle me-1"></i>{% if ui_lang == 'en' %}Model Data{% else %}بيانات النموذج{% endif %}
-                        </button>
-                    </div>
-                    <div class="card-body p-card">
-                        <div id="modelMetaPanel"class="collapse">
-                            <div class="alert alert-light border"id="modelMeta">
-                                <div class="small text-muted">{% if ui_lang == 'en' %}Last Training: -- | Version: -- | Confidence: --{% else %}آخر تدريب: -- | الإصدار: -- | الثقة: --{% endif %}</div>
-                            </div>
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <div class="card border-0 bg-light h-100">
-                                    <div class="card-body">
-                                        <div class="small text-muted">{% if ui_lang == 'en' %}Attendance Forecast (30 days){% else %}توقع الحضور (30 يوم){% endif %}</div>
-                                        <div class="fs-4 fw-bold"id="attendanceForecast">--</div>
-                                        <small class="text-muted"id="attendanceForecastBand">--</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-0 bg-light h-100">
-                                    <div class="card-body">
-                                        <div class="small text-muted">{% if ui_lang == 'en' %}Incident Forecast{% else %}توقع الحوادث{% endif %}</div>
-                                        <div class="fs-4 fw-bold"id="incidentForecast">--</div>
-                                        <small class="text-muted"id="incidentForecastBand">--</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-0 bg-light h-100">
-                                    <div class="card-body">
-                                        <div class="small text-muted">{% if ui_lang == 'en' %}Enrollment Forecast{% else %}توقع التسجيل{% endif %}</div>
-                                        <div class="fs-4 fw-bold"id="enrollmentForecast">--</div>
-                                        <small class="text-muted"id="enrollmentForecastBand">--</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <hr />
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h6 class="mb-0">{% if ui_lang == 'en' %}Anomaly Indicators{% else %}مؤشرات الشذوذ{% endif %}</h6>
-                            <span class="badge bg-warning-subtle text-warning-emphasis"id="anomalyCount">0</span>
-                        </div>
-                        <div id="anomalyList"class="list-group list-group-flush"></div>
-                        <hr />
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h6 class="mb-0">{% if ui_lang == 'en' %}Risk Map{% else %}خريطة المخاطر{% endif %}</h6>
-                            <small class="text-muted">{% if ui_lang == 'en' %}Governorate × Governance Index{% else %}محافظة × مؤشر الحوكمة{% endif %}</small>
-                        </div>
-                        <div id="riskHeatmap"class="row g-2"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="card h-100 shadow-sm border-warning border-2">
-                    <div class="card-header bg-warning bg-opacity-10 text-dark border-bottom border-warning">
-                        <h5 class="card-title mb-0 fw-bold"style="font: var(--type-card-title)">
-                            <i class="bi bi-cpu-fill me-2 text-primary ai-pulse-icon"></i>{% if ui_lang == 'en' %}AI Summary{% else %}ملخص الذكاء الاصطناعي{% endif %}
-                        </h5>
-                    </div>
-                    <div class="card-body p-card">
-                        <div class="alert alert-info border-0 small mb-3">
-                            <i class="bi bi-robot me-1"></i>
-                            {% if ui_lang == 'en' %}AI-powered insights derived from pattern analysis across the network.{% else %}رؤى مدعومة بالذكاء الاصطناعي مستمدة من تحليل الأنماط عبر الشبكة.{% endif %}
-                        </div>
-                        <div class="ai-insight-badge mb-3">
-                            <i class="bi bi-stars text-primary"></i>
-                            <span class="small">{% if ui_lang == 'en' %}Predictive models active{% else %}النماذج التنبؤية نشطة{% endif %}</span>
-                        </div>
-                        <p class="text-muted small">
-                            {% if ui_lang == 'en' %}Review the prediction cards and risk map on the left for actionable AI-generated recommendations.{% else %}راجع بطاقات التوقعات وخريطة المخاطر على اليسار للحصول على توصيات قابلة للتنفيذ.{% endif %}
-                        </p>
-                    </div>
-                </div>
-            </div>
+        <div class="az-card__body--compact" id="recommendationList">
+          <div class="skel skel-row"></div>
+          <div class="skel skel-row" style="width:75%"></div>
         </div>
+      </div>
 
-        <!-- Advanced Analytics (Dynamic 33 Metrics) -->
-        <div class="row g-4 mb-section">
-            <div class="col-12">
-                <h5 class="fw-bold mb-3" style="font: var(--type-section-title)">
-                    <i class="bi bi-cpu text-info me-2"></i>{% if ui_lang == 'en' %}Advanced Analytics (AI Powered){% else %}التحليلات المتقدمة (مدعومة بالذكاء الاصطناعي){% endif %}
-                </h5>
-                <div id="advancedMetricsContainer" class="row g-3">
-                    <!-- Dynamically populated by admin_advanced_analytics.js -->
-                    <div class="col-12 text-center text-muted p-4">
-                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                        {% if ui_lang == 'en' %}Loading advanced metrics...{% else %}جاري تحميل المؤشرات المتقدمة...{% endif %}
-                    </div>
-                </div>
-            </div>
+    </div>{# /tabGovernance #}
+
+    {# ═══════════════════════════════════════════════════════════════════════
+       TAB 5 — AI & PREDICTIONS
+       ════════════════════════════════════════════════════════════════════ #}
+    <div class="tab-pane fade" id="tabAI" role="tabpanel" aria-labelledby="tab-ai-btn">
+
+      {# Model Meta Banner #}
+      <div class="model-meta-card mb-section" id="modelMetaPanel" aria-label="{% if ui_lang == 'en' %}AI Model information{% else %}معلومات نموذج الذكاء الاصطناعي{% endif %}">
+        <div class="model-meta-item">
+          <span class="model-meta-item__label">{% if ui_lang == 'en' %}Model Status{% else %}حالة النموذج{% endif %}</span>
+          <span class="az-badge az-badge--green"><i class="bi bi-circle-fill" style="font-size:.4rem"></i>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
         </div>
+        <div class="model-meta-item" id="modelMeta">
+          <span class="model-meta-item__label">{% if ui_lang == 'en' %}Version{% else %}الإصدار{% endif %}</span>
+          <span class="model-meta-item__value">—</span>
+        </div>
+        <div class="model-meta-item">
+          <span class="model-meta-item__label">{% if ui_lang == 'en' %}Last Trained{% else %}آخر تدريب{% endif %}</span>
+          <span class="model-meta-item__value" id="aiLastTrained">—</span>
+        </div>
+        <div class="model-meta-item">
+          <span class="model-meta-item__label">{% if ui_lang == 'en' %}Confidence{% else %}الثقة{% endif %}</span>
+          <span class="model-meta-item__value" id="aiConfidence">—</span>
+        </div>
+        <div class="model-meta-item">
+          <span class="model-meta-item__label" style="font-size:.7rem">{% if ui_lang == 'en' %}Predictions are statistical forecasts based on historical patterns and may not reflect actual outcomes.{% else %}التنبؤات تقديرات إحصائية وقد لا تعكس النتائج الفعلية.{% endif %}</span>
+        </div>
+      </div>
 
-      </div><!-- /tabAI -->
+      {# Forecast Cards #}
+      <section aria-label="{% if ui_lang == 'en' %}AI Forecasts{% else %}توقعات الذكاء الاصطناعي{% endif %}" class="mb-section">
+        <div class="forecast-grid">
+          <div class="forecast-card">
+            <div class="forecast-card__icon"><i class="bi bi-person-check"></i></div>
+            <div class="forecast-card__label">{% if ui_lang == 'en' %}Attendance Forecast (30d){% else %}توقع الحضور (30 يوم){% endif %}</div>
+            <div class="forecast-card__value" id="attendanceForecast">
+              <span class="skel skel-value"></span>
+            </div>
+            <div class="forecast-card__band" id="attendanceForecastBand">—</div>
+            <div class="forecast-card__confidence">
+              <i class="bi bi-cpu"></i>{% if ui_lang == 'en' %}AI Prediction{% else %}توقع الذكاء{% endif %}
+            </div>
+          </div>
 
-    </div><!-- /tab-content -->
+          <div class="forecast-card">
+            <div class="forecast-card__icon"><i class="bi bi-exclamation-octagon"></i></div>
+            <div class="forecast-card__label">{% if ui_lang == 'en' %}Incident Forecast (30d){% else %}توقع الحوادث (30 يوم){% endif %}</div>
+            <div class="forecast-card__value" id="incidentForecast">
+              <span class="skel skel-value"></span>
+            </div>
+            <div class="forecast-card__band" id="incidentForecastBand">—</div>
+            <div class="forecast-card__confidence">
+              <i class="bi bi-cpu"></i>{% if ui_lang == 'en' %}AI Prediction{% else %}توقع الذكاء{% endif %}
+            </div>
+          </div>
 
-</div><!-- /analytics-dashboard -->
+          <div class="forecast-card">
+            <div class="forecast-card__icon"><i class="bi bi-file-earmark-plus"></i></div>
+            <div class="forecast-card__label">{% if ui_lang == 'en' %}Enrollment Forecast (30d){% else %}توقع التسجيل (30 يوم){% endif %}</div>
+            <div class="forecast-card__value" id="enrollmentForecast">
+              <span class="skel skel-value"></span>
+            </div>
+            <div class="forecast-card__band" id="enrollmentForecastBand">—</div>
+            <div class="forecast-card__confidence">
+              <i class="bi bi-cpu"></i>{% if ui_lang == 'en' %}AI Prediction{% else %}توقع الذكاء{% endif %}
+            </div>
+          </div>
+        </div>
+      </section>
 
-<!-- Export Modal -->
-{{ export_modal(
-  modal_id="exportModal",
-  form_id="exportForm",
-  spinner_id="exportSpinner",
-  report_types=[
-    {"value": "overview", "label": "Network Overview"if ui_lang == 'en' else "نظرة عامة للشبكة"},
-    {"value": "attendance", "label": "Attendance Report"if ui_lang == 'en' else "تقرير الحضور"},
-    {"value": "incidents", "label": "Incidents Report"if ui_lang == 'en' else "تقرير الحوادث"},
-    {"value": "compliance", "label": "Compliance Report"if ui_lang == 'en' else "تقرير الامتثال"},
-    {"value": "governorate", "label": "Governorate Detail"if ui_lang == 'en' else "تفصيل المحافظات"},
-    {"value": "full_audit", "label": "Full Audit Log"if ui_lang == 'en' else "سجل التدقيق الكامل"}
-  ]
-) }}
+      {# Anomalies #}
+      <div class="az-card mb-section">
+        <div class="az-card__header">
+          <h3 class="az-card__title"><i class="bi bi-activity"></i>
+            {% if ui_lang == 'en' %}Anomaly Detection{% else %}كشف الشذوذات{% endif %}
+          </h3>
+          <span class="az-badge az-badge--red d-none" id="anomalyCount">0</span>
+        </div>
+        <div class="az-card__body--compact" id="anomalyList">
+          <div class="skel skel-row"></div>
+          <div class="skel skel-row" style="width:85%"></div>
+        </div>
+      </div>
+
+      {# Risk Heatmap + Advanced Metrics #}
+      <div class="az-card">
+        <div class="az-card__header">
+          <h3 class="az-card__title"><i class="bi bi-grid-fill"></i>
+            {% if ui_lang == 'en' %}Risk Heatmap{% else %}خريطة المخاطر الحرارية{% endif %}
+          </h3>
+        </div>
+        <div class="az-card__body--compact" id="riskHeatmap">
+          <div class="skel skel-chart skel-chart--sm"></div>
+        </div>
+        <div class="d-none" id="advancedMetricsContainer"></div>
+      </div>
+
+    </div>{# /tabAI #}
+
+  </div>{# /tab-content #}
+
+</div>{# /az-analytics-page #}
 
 {% include 'components/help_modal.html' %}
+
+{# Export Modal #}
+{{ export_modal() }}
+
+{# Export FAB #}
+<button class="az-export-fab" id="exportFab" type="button"
+        data-bs-toggle="modal" data-bs-target="#exportModal"
+        aria-label="{% if ui_lang == 'en' %}Export data{% else %}تصدير البيانات{% endif %}">
+  <i class="bi bi-download" aria-hidden="true"></i>
+</button>
+
 {% endblock %}
 
 {% block extra_scripts %}
-<script defer src="https://cdn.jsdelivr.net/npm/tablesort@5.3.0/dist/tablesort.min.js"
-    integrity="sha384-vhcBfNt762rNlbnxZsIJQSPWX7b+8NzToPmcW6J5cJzXSnOjZKS2LQ/O2uqLlHcX"
-    crossorigin="anonymous"></script>
-<script defer src="/static/js/chart_utils.js?v=2.1"charset="utf-8"></script>
-<script defer src="/static/js/kpi-validation.js?v=2.1"charset="utf-8"></script>
-<script defer src="/static/js/admin_analytics.js?v=2.1"charset="utf-8"></script>
-<style>
-    .admin-content:has(.analytics-dashboard) {
-      background: var(--admin-bg-gray-100, #F5F5F5);
-    }
-    .analytics-dashboard {
-      font-family: var(--admin-font-family-ar), var(--admin-font-family-en);
-    }
-    :root {
-      --type-page-title: 700 24px/32px;
-      --type-section-title: 600 18px/24px;
-      --type-card-title: 600 14px/20px;
-      --type-body: 400 13px/20px;
-      --type-label: 500 12px/16px;
-      --space-32: 32px;
-    }
-    .analytics-page-header {
-      background: #fff;
-      border: 1px solid var(--admin-border-color-light);
-      border-radius: 8px;
-      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-      padding: 16px;
-    }
-    .analytics-page-titleblock {
-      min-width: 240px;
-      padding-block: 6px;
-    }
-    .analytics-page-actions {
-      flex: 1 1 720px;
-      max-width: 940px;
-    }
-    .analytics-page-actions .card {
-      margin: 0 !important;
-      border: 0;
-      border-radius: 8px;
-      box-shadow: none;
-      background: transparent;
-    }
-    .analytics-page-actions .card-body {
-      padding: 0;
-    }
-    .analytics-page-actions .row {
-      --bs-gutter-x: 0.75rem;
-      --bs-gutter-y: 0.75rem;
-      align-items: end;
-    }
-    .analytics-page-actions .form-label {
-      color: var(--admin-text-secondary);
-      font-size: 0.78rem;
-      font-weight: 700;
-      margin-bottom: 0.25rem;
-    }
-    .analytics-page-actions .form-control,
-    .analytics-page-actions .form-select,
-    .analytics-page-actions .btn {
-      min-height: 38px;
-      border-radius: 8px;
-      font-size: 0.86rem;
-    }
-    .analytics-dashboard .card {
-      border-color: var(--admin-border-color-light);
-      border-radius: 8px;
-      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05) !important;
-    }
-    .analytics-dashboard .card-header {
-      min-height: 52px;
-      border-color: var(--admin-border-color-light) !important;
-    }
-    .analytics-dashboard .icon-circle,
-    .analytics-dashboard .rank-circle {
-      border-radius: 8px !important;
-    }
-    .mb-section { margin-bottom: var(--space-32); }
-    .p-card { padding: 16px; }
-    .gap-card { row-gap: 16px; }
-    [dir="rtl"] .trend-chart-wrapper canvas { direction: rtl; }
-    .analytics-error-state { display: none; text-align: center; padding: 3rem 1rem; color: var(--admin-text-muted); }
-    .analytics-error-state.show { display: block; }
-    .analytics-error-state .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .datetime-indicator { font-size: 0.75rem; color: var(--admin-text-muted); display: flex; align-items: center; gap: 0.3rem; }
-    .analytics-empty-state {
-      color: var(--admin-text-muted);
-      font-size: 0.9rem;
-      padding: 1rem;
-      text-align: center;
-    }
-    html[dir="rtl"] .btn-group .btn:first-child { border-radius: 0 0.25rem 0.25rem 0; }
-    html[dir="rtl"] .btn-group .btn:last-child { border-radius: 0.25rem 0 0 0.25rem; }
-    @media (max-width: 991.98px) {
-      .analytics-page-actions {
-        flex-basis: 100%;
-        max-width: none;
-      }
-    }
-    /* AI Predictive Premium Styling */
-    .ai-card {
-        background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.05) 0%, rgba(var(--bs-info-rgb), 0.1) 100%);
-        border: 1px solid rgba(var(--bs-primary-rgb), 0.15) !important;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        border-radius: 12px;
-    }
-    .ai-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(var(--bs-primary-rgb), 0.1);
-    }
-    .ai-pulse-icon {
-        animation: ai-pulse 2s infinite;
-        color: var(--bs-primary);
-    }
-    @keyframes ai-pulse {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.15); opacity: 0.7; }
-        100% { transform: scale(1); opacity: 1; }
-    }
-    .ai-insight-badge {
-        background: rgba(var(--bs-primary-rgb), 0.1);
-        padding: 6px 12px;
-        border-radius: 20px;
-        border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-    /* Tab bar */
-    .analytics-tabs { gap: 4px; }
-    .analytics-tabs .nav-link {
-      border-radius: 8px !important;
-      font-size: .875rem;
-      padding: 8px 16px;
-      color: var(--admin-text-secondary, #64748b);
-      font-weight: 500;
-      transition: all .15s;
-    }
-    .analytics-tabs .nav-link.active {
-      background: var(--bs-primary);
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(var(--bs-primary-rgb), .3);
-    }
-    .analytics-tabs .nav-link:not(.active):hover {
-      background: rgba(var(--bs-primary-rgb), .08);
-      color: var(--bs-primary);
-    }
-    /* Sticky filter bar */
-    .analytics-filter-sticky {
-      position: sticky;
-      top: 0;
-      z-index: 1020;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(15,23,42,.08);
-    }
-    /* Operational health row */
-    .oh-card { transition: transform .15s; }
-    .oh-card:hover { transform: translateY(-2px); }
-</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script defer src="/static/js/chart_utils.js?v=2.1" charset="utf-8"></script>
+<script defer src="/static/js/kpi-validation.js?v=2.1" charset="utf-8"></script>
+<script defer src="/static/js/admin_analytics.js?v=2.1" charset="utf-8"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.forEach(function(el) { new bootstrap.Tooltip(el); });
-});
+/* ── Analytics v2 Enhancement Layer ───────────────────────────────────────── */
+(function () {
+  'use strict';
+
+  /* Escape API-sourced strings before innerHTML interpolation */
+  const esc = function (v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  };
+
+  /* Tab persistence */
+  (function () {
+    const STORAGE_KEY = 'analyticsActiveTab';
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const el = document.querySelector('[data-bs-target="' + saved + '"]');
+      if (el) bootstrap.Tab.getOrCreateInstance(el).show();
+    }
+    document.getElementById('analyticsTabsNav')?.addEventListener('shown.bs.tab', function (e) {
+      sessionStorage.setItem(STORAGE_KEY, e.target.getAttribute('data-bs-target'));
+    });
+  }());
+
+  /* Governorate table in-page search */
+  document.getElementById('govTableSearch')?.addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('#governorateTableBody tr').forEach(function (tr) {
+      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+
+  /* ── Executive Banner updater ───────────────────────────────────────────── */
+  window._updateExecutiveBanner = function (dashData, period) {
+    if (!dashData) return;
+    const summary  = dashData.network_summary || {};
+    const deltas   = summary.deltas || {};
+    const riskArr  = dashData.risk_radar || [];
+    const isAr     = (window.KINJO_LANG || 'ar') === 'ar';
+
+    /* Date range label */
+    if (period && period.start && period.end) {
+      const fmt = function (d) { return new Date(d).toLocaleDateString(isAr ? 'ar-JO' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
+      const el = document.getElementById('execDateText');
+      if (el) el.textContent = fmt(period.start) + ' — ' + fmt(period.end);
+    }
+
+    /* Build insight chips */
+    const chips = [];
+    const addChip = function (icon, text, cls) {
+      chips.push(
+        '<div class="exec-insight-card exec-insight-card--' + cls + '" role="listitem">' +
+          '<i class="bi bi-' + icon + '"></i>' +
+          '<div class="exec-insight-card__text">' +
+            '<span class="exec-insight-card__value">' + text + '</span>' +
+          '</div>' +
+        '</div>'
+      );
+    };
+
+    /* Attendance delta */
+    const attDelta = deltas.attendance_rate;
+    if (attDelta) {
+      const pct = Math.abs(attDelta.delta_percent || 0).toFixed(1);
+      const up  = attDelta.direction === 'up';
+      addChip(
+        up ? 'arrow-up-circle-fill' : 'arrow-down-circle-fill',
+        (isAr ? 'الحضور ' : 'Attendance ') + (up ? '↑' : '↓') + ' ' + pct + '%',
+        up ? 'success' : 'warning'
+      );
+    }
+
+    /* KG delta */
+    const kgDelta = deltas.total_kindergartens;
+    if (kgDelta && (kgDelta.delta_percent || 0) !== 0) {
+      const pct = Math.abs(kgDelta.delta_percent || 0).toFixed(1);
+      addChip('building-check', (isAr ? 'مرافق جديدة +' : 'Facilities +') + pct + '%', 'success');
+    }
+
+    /* Risk count */
+    const criticalCount = riskArr.filter(function (r) { return (r.risk_score || 0) >= 7; }).length;
+    if (criticalCount > 0) {
+      addChip('exclamation-triangle-fill', criticalCount + (isAr ? ' مرفق بحاجة لمراجعة' : ' facilities need review'), 'danger');
+    } else {
+      addChip('shield-check-fill', isAr ? 'جميع المرافق بوضع جيد' : 'All facilities healthy', 'success');
+    }
+
+    /* Governance score */
+    const govScore = summary.governance_avg_score;
+    if (govScore != null) {
+      const cls = govScore >= 80 ? 'success' : govScore >= 60 ? 'warning' : 'danger';
+      addChip('shield-check', (isAr ? 'الحوكمة ' : 'Governance ') + govScore.toFixed(0), cls);
+    }
+
+    const container = document.getElementById('execInsights');
+    if (container && chips.length) container.innerHTML = chips.join('');
+
+    /* System status badge */
+    const badge = document.getElementById('execStatusBadge');
+    const dot   = document.getElementById('execStatusDot');
+    const text  = document.getElementById('execStatusText');
+    if (badge && criticalCount > 2) {
+      badge.className = 'exec-banner__status-badge exec-banner__status-badge--critical';
+      if (dot)  dot.className  = 'status-dot status-dot--red';
+      if (text) text.textContent = isAr ? 'يتطلب تدخلاً' : 'Needs Attention';
+    } else if (criticalCount > 0) {
+      badge.className = 'exec-banner__status-badge exec-banner__status-badge--warning';
+      if (dot)  dot.className  = 'status-dot status-dot--amber';
+      if (text) text.textContent = isAr ? 'مراقبة' : 'Monitoring';
+    }
+  };
+
+  /* ── Governance bar fills updater ───────────────────────────────────────── */
+  window._updateGovBars = function (green, amber, red) {
+    const total = (green || 0) + (amber || 0) + (red || 0);
+    if (!total) return;
+    const setBar = function (id, val) {
+      const el = document.getElementById(id);
+      if (el) el.style.width = ((val / total) * 100).toFixed(1) + '%';
+    };
+    setBar('govBarGreen', green);
+    setBar('govBarAmber', amber);
+    setBar('govBarRed',   red);
+  };
+
+  /* ── Data quality ring updater ──────────────────────────────────────────── */
+  window._updateDQRing = function (pct) {
+    const r = 30, circ = 2 * Math.PI * r;
+    const fill = document.getElementById('dqRingFill');
+    if (!fill) return;
+    fill.setAttribute('stroke-dashoffset', (circ * (1 - pct / 100)).toFixed(2));
+    const clr = pct >= 85 ? '#16A34A' : pct >= 60 ? '#D97706' : '#DC2626';
+    fill.setAttribute('stroke', clr);
+  };
+
+  /* ── Risk card renderer ─────────────────────────────────────────────────── */
+  window._renderRiskCards = function (riskArr) {
+    const container = document.getElementById('riskList');
+    const empty     = document.getElementById('noRiskData');
+    const viewAll   = document.getElementById('riskViewAllBtn');
+    if (!container) return;
+    if (!riskArr || !riskArr.length) {
+      container.innerHTML = '';
+      empty?.classList.remove('d-none');
+      return;
+    }
+    empty?.classList.add('d-none');
+    if (viewAll && riskArr.length > 5) viewAll.style.display = '';
+
+    const isAr = (window.KINJO_LANG || 'ar') === 'ar';
+    const MAX = 5;
+    container.innerHTML = riskArr.slice(0, MAX).map(function (r) {
+      const score  = r.risk_score || 0;
+      const lvl    = score >= 7 ? 'critical' : score >= 4 ? 'high' : 'medium';
+      const icon   = lvl === 'critical' ? 'exclamation-octagon-fill' : lvl === 'high' ? 'exclamation-triangle-fill' : 'info-circle-fill';
+      const label  = lvl === 'critical' ? (isAr ? 'حرج' : 'Critical') : lvl === 'high' ? (isAr ? 'مرتفع' : 'High') : (isAr ? 'متوسط' : 'Medium');
+      const action = isAr ? 'عرض تفاصيل المرفق' : 'View facility details';
+      return [
+        '<div class="risk-card risk-card--' + lvl + '" role="article">',
+        '  <div class="risk-card__icon"><i class="bi bi-' + icon + '"></i></div>',
+        '  <div class="risk-card__body">',
+        '    <div class="risk-card__name">' + esc(r.name || r.kindergarten || '—') + '</div>',
+        '    <div class="risk-card__reason">' + esc(r.reason || '—') + '</div>',
+        `    <a href="/kindergartens/${encodeURIComponent(r.kindergarten_id || '')}" class="risk-card__action">`,
+        '      <i class="bi bi-arrow-up-right-circle"></i>' + action,
+        '    </a>',
+        '  </div>',
+        '  <div class="risk-card__score">',
+        '    <span class="az-badge az-badge--' + (lvl === 'critical' ? 'red' : lvl === 'high' ? 'amber' : 'blue') + '">' + label + '</span>',
+        '    <div style="text-align:center;font:700 1rem/1 var(--font-ar);color:var(--slate-700);margin-top:4px">' + score.toFixed(1) + '</div>',
+        '  </div>',
+        '</div>'
+      ].join('');
+    }).join('');
+  };
+
+  /* ── Alert renderer ─────────────────────────────────────────────────────── */
+  window._renderAlertItems = function (alerts) {
+    const list   = document.getElementById('alertList');
+    const badge  = document.getElementById('alertBadgeCount');
+    if (!list) return;
+    if (!alerts || !alerts.length) {
+      list.innerHTML = '<div class="az-empty" style="padding:16px 0"><i class="bi bi-bell-slash"></i><span class="az-empty__text">' + (window.KINJO_LANG === 'en' ? 'No active alerts' : 'لا توجد تنبيهات نشطة') + '</span></div>';
+      return;
+    }
+    if (badge) { badge.textContent = alerts.length; badge.classList.remove('d-none'); }
+    const isAr = window.KINJO_LANG !== 'en';
+    list.innerHTML = alerts.slice(0, 6).map(function (a) {
+      const sev  = (a.priority || a.type || 'info').toLowerCase();
+      const lvl  = sev.includes('critical') || sev.includes('high') ? 'high' : sev.includes('medium') ? 'medium' : 'low';
+      const msg  = isAr ? (a.message_ar || a.message || '') : (a.message_en || a.message || '');
+      const icon = lvl === 'high' ? 'exclamation-triangle-fill' : 'info-circle-fill';
+      return '<div class="anomaly-item anomaly-item--' + lvl + '"><i class="bi bi-' + icon + '"></i><span>' + esc(msg) + '</span></div>';
+    }).join('');
+  };
+
+  /* ── Funnel visual renderer ─────────────────────────────────────────────── */
+  window._renderFunnelSteps = function (funnel) {
+    const container = document.getElementById('funnelStepsViz');
+    if (!container || !funnel) return;
+    const isAr = window.KINJO_LANG !== 'en';
+    const steps = [
+      { key: 'draft',          label: isAr ? 'مسودة'         : 'Draft' },
+      { key: 'submitted',      label: isAr ? 'مُقدَّم'        : 'Submitted' },
+      { key: 'pending_review', label: isAr ? 'قيد المراجعة'   : 'Pending Review' },
+      { key: 'accepted',       label: isAr ? 'مقبول'          : 'Accepted' },
+      { key: 'active',         label: isAr ? 'نشط'            : 'Active' },
+    ];
+    const max = Math.max.apply(null, steps.map(function (s) { return funnel[s.key] || 0; })) || 1;
+    container.innerHTML = steps.map(function (s) {
+      const val = funnel[s.key] || 0;
+      const pct = ((val / max) * 100).toFixed(0);
+      return [
+        '<div class="funnel-step">',
+        '  <span class="funnel-step__label">' + s.label + '</span>',
+        '  <div class="funnel-step__bar"><div class="funnel-step__fill" style="width:' + pct + '%"></div></div>',
+        '  <span class="funnel-step__count">' + val.toLocaleString() + '</span>',
+        '</div>'
+      ].join('');
+    }).join('');
+  };
+
+  /* ── Intercept existing JS to call our enhancers ────────────────────────── */
+  /* Hook into dashboard load completion — patch updateNetworkSummary */
+  const _origUpdateNetworkSummary = window.updateNetworkSummary;
+  if (typeof _origUpdateNetworkSummary === 'function') {
+    window.updateNetworkSummary = function (summary) {
+      _origUpdateNetworkSummary.call(this, summary);
+    };
+  }
+
+  /* Listen for custom event that admin_analytics.js should fire post-load */
+  document.addEventListener('analyticsDataLoaded', function (e) {
+    const data = e.detail;
+    if (!data) return;
+    window._updateExecutiveBanner(data, data.__period__);
+    if (data.risk_radar) window._renderRiskCards(data.risk_radar);
+    const gd = data.governance_distribution;
+    if (gd) window._updateGovBars(gd.green, gd.amber, gd.red);
+  });
+
+  /* Patch updateGovernanceChart to also update bars */
+  document.addEventListener('DOMContentLoaded', function () {
+    const origGov = window.updateGovernanceChart;
+    if (typeof origGov === 'function') {
+      window.updateGovernanceChart = function (dist) {
+        origGov.call(this, dist);
+        if (dist) window._updateGovBars(dist.green, dist.amber, dist.red);
+      };
+    }
+    const origDQ = window.loadDataQuality;
+    if (typeof origDQ === 'function') {
+      window.loadDataQuality = function () {
+        return origDQ.apply(this, arguments).then
+          ? origDQ.apply(this, arguments).then(function (pct) {
+              if (pct != null) window._updateDQRing(pct);
+            })
+          : origDQ.apply(this, arguments);
+      };
+    }
+    /* Funnel steps */
+    const origFunnel = window.renderFunnelChart;
+    if (typeof origFunnel === 'function') {
+      window.renderFunnelChart = function (funnelData) {
+        origFunnel.call(this, funnelData);
+        window._renderFunnelSteps(funnelData);
+      };
+    }
+  });
+
+}());
 </script>
 {% endblock %}

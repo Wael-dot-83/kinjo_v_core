@@ -1213,7 +1213,7 @@ class TestFrontendRoutes:
             "#pageHelpContent must not be present — help section was removed"
         )
 
-        dashboard_start = page.index('class="analytics-dashboard"')
+        dashboard_start = page.index('class="az-analytics-page"')
         visible_section = page[dashboard_start:]
 
         live_widget_ids = [

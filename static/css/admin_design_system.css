@@ -4713,3 +4713,129 @@ html[dir="rtl"] .submenu .nav-link {
 .pe-4-logical     { padding-inline-end: var(--space-4); }
 
 
+
+
+/* ============================================================================
+   STITCH MODERN REDESIGN - GLASSMORPHISM & ANIMATIONS
+   ============================================================================ */
+
+/* Glassmorphism Classes */
+.glass-sidebar {
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-inline-end: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 20px 40px 40px rgba(30, 64, 175, 0.1) !important;
+}
+
+/* Glass card — drop-in replacement for Bootstrap .card. Re-declares the
+   --bs-card-* variables because .card-header/.card-body resolve their
+   padding from them; without a .card ancestor they collapse to 0. */
+.glass-card {
+    --bs-card-spacer-y: 1rem;
+    --bs-card-spacer-x: 1rem;
+    --bs-card-title-spacer-y: 0.5rem;
+    --bs-card-border-width: 1px;
+    --bs-card-border-color: rgba(255, 255, 255, 0.5);
+    --bs-card-border-radius: 0.5rem;
+    --bs-card-inner-border-radius: calc(0.5rem - 1px);
+    --bs-card-cap-padding-y: 0.5rem;
+    --bs-card-cap-padding-x: 1rem;
+    --bs-card-cap-bg: rgba(248, 249, 255, 0.65);
+    --bs-card-bg: transparent;
+    --bs-card-img-overlay-padding: 1rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    word-wrap: break-word;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background-clip: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 20px rgba(0, 40, 142, 0.05);
+    border-radius: 0.5rem;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-header {
+    background: rgba(248, 249, 255, 0.8) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(196, 197, 213, 0.3) !important;
+}
+
+.admin-card {
+    background: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    box-shadow: 0 4px 20px rgba(0, 40, 142, 0.05) !important;
+    border-radius: 0.5rem !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.admin-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 24px rgba(0, 40, 142, 0.1) !important;
+}
+
+/* Micro-animations */
+.hover-float:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 24px rgba(0, 40, 142, 0.1);
+}
+
+.fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
+    opacity: 0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+
+/* Redesign Dashboard Elements */
+.admin-header {
+    background: rgba(248, 249, 255, 0.8) !important;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(196, 197, 213, 0.3) !important;
+}
+
+#admin-sidebar {
+    background: linear-gradient(180deg, #f0f4ff 0%, #eef2ff 100%) !important;
+    border-inline-end: 1px solid rgba(0,0,0,0.05) !important;
+}
+
+.top-menu-link {
+    border-radius: 8px !important;
+    margin: 4px 8px !important;
+    transition: all 0.3s !important;
+}
+
+.top-menu-link:hover {
+    background: rgba(30, 64, 175, 0.05) !important;
+    transform: scale(1.02) !important;
+}
+
+.top-menu-link.active {
+    background: rgba(30, 64, 175, 0.1) !important;
+    color: #1e40af !important;
+    border-inline-start: 4px solid #1e40af !important;
+}
+
+body.admin-container {
+    background: #f8f9ff !important;
+}
+
+/* Respect reduced-motion preferences: show content immediately, no lifts */
+@media (prefers-reduced-motion: reduce) {
+    .fade-in { animation: none !important; opacity: 1 !important; }
+    .glass-card, .admin-card, .hover-float, .top-menu-link { transition: none !important; }
+    .glass-card:hover, .admin-card:hover, .hover-float:hover, .top-menu-link:hover { transform: none !important; }
+}
