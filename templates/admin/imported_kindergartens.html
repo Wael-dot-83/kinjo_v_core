@@ -3,80 +3,121 @@
 {% block title %}{% if ui_lang == 'en' %}Imported Kindergartens — KinJo{% else %}الروضات المستوردة — KinJo{% endif %}{% endblock %}
 
 
-
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-6">
-    <div>
-            <div class="glass-panel border border-white/10 rounded-2xl p-6 relative overflow-hidden group mb-6">
-                <div class="absolute -top-32 -right-32 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500"></div>
-                <div class="flex items-center justify-between mb-8 border-b border-white/5 pb-4 relative z-10">
-                    <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center"><span class="material-symbols-outlined text-primary">analytics</span></div><h1 class="font-display-md text-display-md text-on-surface font-bold tracking-tight">{% if ui_lang == 'en' %}Imported Kindergartens{% else %}الروضات المستوردة{% endif %}</h1></div>
-                    <a href="/admin/import-kindergartens" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]">
-                        <span class="material-symbols-outlined text-sm">upload</span> {% if ui_lang == 'en' %}Import More{% else %}استيراد المزيد{% endif %}
-                    </a>
-                </div>
-                <div class="relative z-10">
-                    <!-- Filters -->
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                        <div>
-                            <input type="text" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="searchInput"
-                                placeholder="{% if ui_lang == 'en' %}Search by name or phone{% else %}بحث بالاسم أو الهاتف{% endif %}"
-                                aria-label="{% if ui_lang == 'en' %}Search by name or phone{% else %}بحث بالاسم أو الهاتف{% endif %}">
-                        </div>
-                        <div>
-                            <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="governorateFilter"
-                                    aria-label="{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}">
-                                <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
-                            </select>
-                        </div>
-                        <div>
-                            <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="cityFilter"
-                                    aria-label="{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}">
-                                <option value="">{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}</option>
-                            </select>
-                        </div>
-                        <div>
-                            <button class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" id="clearFilters">
-                                {% if ui_lang == 'en' %}Clear Filters{% else %}مسح الفلاتر{% endif %}
-                            </button>
-                        </div>
-                    </div>
+<div class="fade-in">
 
-                    <!-- Results info -->
-                    <div class="mb-3">
-                        <small class="text-on-surface-variant" id="resultsInfo">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</small>
-                    </div>
+  <!-- Page Header -->
+  <div class="page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="glass-card d-flex align-items-center justify-content-center flex-shrink-0" style="width:48px;height:48px;">
+        <span class="material-symbols-outlined text-primary" aria-hidden="true">upload_file</span>
+      </div>
+      <div>
+        <h1 class="page-title mb-0">
+          {% if ui_lang == 'en' %}Imported Kindergartens{% else %}الروضات المستوردة{% endif %}
+        </h1>
+        <p class="text-muted small mb-0 mt-1">
+          {% if ui_lang == 'en' %}Manage all imported kindergarten records from external databases.{% else %}إدارة جميع سجلات الروضات المستوردة من قواعد البيانات الخارجية.{% endif %}
+        </p>
+      </div>
+    </div>
+    <a href="/admin/import-kindergartens" class="btn btn-primary d-flex align-items-center gap-2">
+      <span class="material-symbols-outlined" style="font-size:1.1rem;" aria-hidden="true">upload</span>
+      {% if ui_lang == 'en' %}Import More{% else %}استيراد المزيد{% endif %}
+    </a>
+  </div>
 
-                    <!-- Table -->
-                    <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-                        <table class="w-full text-start" id="kindergartensTable">
-                            <thead>
-                                <tr>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Name (AR){% else %}الاسم (عربي){% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Name (EN){% else %}الاسم (إنجليزي){% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Imported At{% else %}تاريخ الاستيراد{% endif %}</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tableBody">
-                                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td colspan="8" class="text-center">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Pagination -->
-                    <nav aria-label="{% if ui_lang == 'en' %}Pagination{% else %}التنقل بين الصفحات{% endif %}" id="paginationNav" style="display: none;">
-                        <ul class="pagination justify-content-center" id="pagination"></ul>
-                    </nav>
-                </div>
-            </div>
+  <!-- Filters -->
+  <div class="glass-card fade-in mb-4">
+    <div class="card-header d-flex align-items-center gap-2">
+      <span class="material-symbols-outlined text-muted" style="font-size:1rem;" aria-hidden="true">filter_alt</span>
+      <h5 class="h6 mb-0">{% if ui_lang == 'en' %}Filter Kindergartens{% else %}تصفية الروضات{% endif %}</h5>
+    </div>
+    <div class="card-body">
+      <form id="filterForm" class="row g-3">
+        <div class="col-12 col-md-3">
+          <label for="searchInput" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}Search by name or phone{% else %}بحث بالاسم أو الهاتف{% endif %}</label>
+          <input type="text" class="form-control form-control-sm" id="searchInput"
+                 placeholder="{% if ui_lang == 'en' %}Search...{% else %}ابحث...{% endif %}"
+                 aria-label="{% if ui_lang == 'en' %}Search by name or phone{% else %}بحث بالاسم أو الهاتف{% endif %}">
         </div>
+        <div class="col-12 col-md-3">
+          <label for="governorateFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+          <select class="form-select form-select-sm" id="governorateFilter"
+                  aria-label="{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}">
+            <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-3">
+          <label for="cityFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
+          <select class="form-select form-select-sm" id="cityFilter"
+                  aria-label="{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}">
+            <option value="">{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-3 d-flex align-items-end gap-2">
+          <button type="button" class="btn btn-primary btn-sm flex-grow-1 d-inline-flex align-items-center justify-content-center gap-1" onclick="applyFilters()">
+            <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">search</span>
+            {% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center" onclick="clearFilters()"
+                  aria-label="{% if ui_lang == 'en' %}Clear filters{% else %}مسح الفلاتر{% endif %}">
+            <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">close</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Results info -->
+  <div class="mb-3">
+    <small class="text-muted" id="resultsInfo">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</small>
+  </div>
+
+  <!-- Table -->
+  <div class="glass-card fade-in delay-100">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="h6 mb-0">{% if ui_lang == 'en' %}Kindergartens List{% else %}قائمة الروضات{% endif %}</h5>
+      <div id="loadingSpinner" class="d-none">
+        <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div id="tableContainer" class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="kindergartensTable">
+          <thead class="table-light">
+            <tr>
+              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Name (AR){% else %}الاسم (عربي){% endif %}</th>
+              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Name (EN){% else %}الاسم (إنجليزي){% endif %}</th>
+              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</th>
+              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</th>
+              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
+              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %}</th>
+              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Imported At{% else %}تاريخ الاستيراد{% endif %}</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="8" class="text-center text-muted py-4">
+                {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="emptyState" class="text-center py-5 d-none">
+        <span class="material-symbols-outlined d-block text-muted opacity-50 mb-3" style="font-size:3.5rem;" aria-hidden="true">apartment</span>
+        <h5 class="mb-1">{% if ui_lang == 'en' %}No kindergartens found{% else %}لا توجد روضات{% endif %}</h5>
+        <p class="text-muted small">{% if ui_lang == 'en' %}Try adjusting your filter criteria.{% else %}حاول تعديل معايير البحث الخاصة بك.{% endif %}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <nav aria-label="{% if ui_lang == 'en' %}Pagination{% else %}التنقل بين الصفحات{% endif %}" id="paginationNav" class="d-none mt-4">
+    <ul class="pagination justify-content-center" id="pagination"></ul>
+  </nav>
 </div>
 
 <script>
@@ -101,8 +142,13 @@
     async function loadKindergartens(page) {
         page = page || 1;
         const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = `<tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td colspan="8" class="text-center">${_loading}</td></tr>`;
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const emptyState = document.getElementById('emptyState');
+        const tableContainer = document.getElementById('tableContainer');
+        
+        loadingSpinner.classList.remove('d-none');
+        emptyState.classList.add('d-none');
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">${_loading}</td></tr>`;
 
         const params = new URLSearchParams({ page: page, per_page: 50, ...currentFilters });
 
@@ -111,8 +157,7 @@
             const data = await response.json();
 
             if (!response.ok) {
-                tbody.innerHTML = `<tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td colspan="8" class="text-center text-danger">${_errLoad}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${_errLoad}</td></tr>`;
                 return;
             }
 
@@ -120,19 +165,19 @@
                 `${_showing} ${data.kindergartens.length} ${_of} ${data.total} ${_kgs}`;
 
             if (data.kindergartens.length === 0) {
-                tbody.innerHTML = `<tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td colspan="8" class="text-center">${_noData}</td></tr>`;
+                tbody.innerHTML = '';
+                emptyState.classList.remove('d-none');
             } else {
                 tbody.innerHTML = data.kindergartens.map(kg => `
-                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.name_ar)}</td>
-                        <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.name_en || '')}</td>
-                        <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.governorate)}</td>
-                        <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.district)}</td>
-                        <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.area || '')}</td>
-                        <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.phone)}</td>
-                        <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.detailed_address || '')}</td>
-                        <td class="px-4 py-3 text-body-md text-on-surface">${new Date(kg.created_at).toLocaleDateString(_isEn ? 'en-GB' : 'ar-SA')}</td>
+                    <tr>
+                        <td>${escHtml(kg.name_ar)}</td>
+                        <td>${escHtml(kg.name_en || '')}</td>
+                        <td>${escHtml(kg.governorate)}</td>
+                        <td>${escHtml(kg.district)}</td>
+                        <td>${escHtml(kg.area || '')}</td>
+                        <td>${escHtml(kg.phone)}</td>
+                        <td>${escHtml(kg.detailed_address || '')}</td>
+                        <td class="text-nowrap">${new Date(kg.created_at).toLocaleDateString(_isEn ? 'en-GB' : 'ar-SA')}</td>
                     </tr>
                 `).join('');
             }
@@ -140,8 +185,9 @@
             updatePagination(data.page, data.pages);
 
         } catch (error) {
-            tbody.innerHTML = `<tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td colspan="8" class="text-center text-danger">${_errLoad}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${_errLoad}</td></tr>`;
+        } finally {
+            loadingSpinner.classList.add('d-none');
         }
     }
 
@@ -149,8 +195,8 @@
         const pagination = document.getElementById('pagination');
         const nav = document.getElementById('paginationNav');
 
-        if (totalPages <= 1) { nav.style.display = 'none'; return; }
-        nav.style.display = 'block';
+        if (totalPages <= 1) { nav.classList.add('d-none'); return; }
+        nav.classList.remove('d-none');
         pagination.innerHTML = '';
 
         if (currentPg > 1) {
@@ -184,7 +230,6 @@
     document.getElementById('searchInput').addEventListener('input', applyFilters);
     document.getElementById('governorateFilter').addEventListener('change', applyFilters);
     document.getElementById('cityFilter').addEventListener('change', applyFilters);
-    document.getElementById('clearFilters').addEventListener('click', clearFilters);
 
     loadKindergartens();
 })();
