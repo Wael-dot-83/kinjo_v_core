@@ -755,12 +755,13 @@ if (typeof module !== "undefined" && module.exports) {
 // ============================================================================
 // OFFLINE BANNER
 // Displays a non-dismissible banner when the browser loses connectivity.
-// Retries connectivity automatically every 10 seconds.
+// Retries connectivity automatically every 30 seconds (hidden tabs skip the
+// check; online/offline events trigger an immediate one).
 // ============================================================================
 
 (function initOfflineBanner() {
   const BANNER_ID = "kinjo-offline-banner";
-  const RETRY_INTERVAL_MS = 10_000;
+  const RETRY_INTERVAL_MS = 30_000;
 
   function _createBanner() {
     const banner = document.createElement("div");
@@ -835,7 +836,9 @@ if (typeof module !== "undefined" && module.exports) {
     _showBanner();
   }
 
-  setInterval(_checkConnectivity, RETRY_INTERVAL_MS);
+  setInterval(function () {
+    if (!document.hidden) _checkConnectivity();
+  }, RETRY_INTERVAL_MS);
 })();
 
 // ============================================================================
