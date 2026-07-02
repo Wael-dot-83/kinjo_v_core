@@ -1147,7 +1147,7 @@ def get_consolidated_dashboard_data(
             risk_radar=risk_radar,
             governance_distribution=governance_distribution,
         )
-        _analytics_cache_set(cache_key, result)
+        _analytics_cache_set(cache_key, result.model_dump(mode="json"))
         return result
     
     except HTTPException:
