@@ -13,6 +13,8 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 import models
+from admin_security import log_audit_event
+from audit_actions import AuditAction
 from child_age_policy import calculate_age_days, calculate_age_months
 from database import get_db
 from dependencies import require_admin
@@ -373,17 +375,19 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         by_governorate[gov]["kindergarten_count"] += 1
         by_city[key]["kindergarten_count"] += 1
 
+    kg_id_map = {k.id: k for k in kindergartens}
     class_map = {c.id: c for c in classes}
     kg_class_counts: dict[int, int] = {}
     for c in classes:
         kg_class_counts[c.kindergarten_id] = kg_class_counts.get(c.kindergarten_id, 0) + 1
-        gov = next((k.governorate for k in kindergartens if k.id == c.kindergarten_id), "Unknown")
-        city = next((k.district for k in kindergartens if k.id == c.kindergarten_id), "Unknown")
+        parent_kg = kg_id_map.get(c.kindergarten_id)
+        gov = (parent_kg.governorate if parent_kg else None) or "Unknown"
+        city = (parent_kg.district if parent_kg else None) or "Unknown"
         by_governorate.setdefault(gov, {"governorate": gov, "kindergarten_count": 0, "class_count": 0, "children_count": 0, "supervisor_count": 0, "capacity": 0})
         by_governorate[gov]["class_count"] += 1
         by_governorate[gov]["capacity"] += c.capacity_total or 0
-        city_key = (gov, city or "Unknown")
-        by_city.setdefault(city_key, {"governorate": gov, "city": city or "Unknown", "kindergarten_count": 0, "class_count": 0, "children_count": 0, "supervisor_count": 0, "capacity": 0})
+        city_key = (gov, city)
+        by_city.setdefault(city_key, {"governorate": gov, "city": city, "kindergarten_count": 0, "class_count": 0, "children_count": 0, "supervisor_count": 0, "capacity": 0})
         by_city[city_key]["class_count"] += 1
         by_city[city_key]["capacity"] += c.capacity_total or 0
 
@@ -392,9 +396,14 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         if s.kindergarten_id:
             supervisor_counts_by_kg[s.kindergarten_id] = supervisor_counts_by_kg.get(s.kindergarten_id, 0) + 1
 
+    children_by_kg: dict[int, int] = {}
+    for row in official_rows:
+        if row.kindergarten_id:
+            children_by_kg[row.kindergarten_id] = children_by_kg.get(row.kindergarten_id, 0) + 1
+
     for row in official_rows:
         kg_id = row.kindergarten_id
-        kg = next((k for k in kindergartens if k.id == kg_id), None)
+        kg = kg_id_map.get(kg_id)
         if not kg:
             continue
         gov = kg.governorate or "Unknown"
@@ -439,7 +448,7 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
     kindergartens_missing_capacity = 0
 
     for kg in kindergartens:
-        children_kg = sum(1 for r in official_rows if r.kindergarten_id == kg.id)
+        children_kg = children_by_kg.get(kg.id, 0)
         supervisors_kg = supervisor_counts_by_kg.get(kg.id, 0)
         classes_kg = [c for c in classes if c.kindergarten_id == kg.id]
         cap_kg = sum((c.capacity_total or 0) for c in classes_kg)
@@ -455,17 +464,6 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         if kg.latitude is None or kg.longitude is None:
             kindergartens_missing_coordinates += 1
 
-    data_quality_issue_count = (
-        age_invalid_reasons["missing_dob"]
-        + age_invalid_reasons["future_dob"]
-        + gender_counts["unknown"]
-        + children_without_kindergarten
-        + children_without_class
-        + duplicate_children
-        + kindergartens_missing_coordinates
-        + kindergartens_missing_capacity
-    )
-
     compliance_violations = (
         age_invalid_reasons["too_young"]
         + age_invalid_reasons["too_old"]
@@ -474,8 +472,21 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         + kindergartens_over_capacity
     )
 
-    entity_base = max(1, total_children + len(kindergartens) + len(classes))
-    data_quality_score = max(0.0, round(100.0 - ((data_quality_issue_count / entity_base) * 100.0), 2))
+    # data_quality_score: % of active kindergartens in scope that filed a report in the last 7 days
+    # This matches the canonical definition in admin_endpoints.py and CLAUDE.md.
+    active_kg_count = len(kindergartens)
+    if active_kg_count > 0 and kg_ids:
+        kg_with_recent_report = db.query(
+            func.count(func.distinct(models.DailyReport.kindergarten_id))
+        ).filter(
+            models.DailyReport.kindergarten_id.in_(kg_ids),
+            models.DailyReport.date >= _today() - timedelta(days=7),
+        ).scalar() or 0
+        data_quality_score = round((kg_with_recent_report / active_kg_count) * 100.0, 2)
+    else:
+        data_quality_score = 0.0
+
+    entity_base = max(1, total_children + active_kg_count + len(classes))
     compliance_score = max(0.0, round(100.0 - ((compliance_violations / entity_base) * 100.0), 2))
 
     metrics = {
@@ -596,19 +607,18 @@ def _kindergarten_detail_rows(
     supervisors: list[models.User],
     active_assignments: list[models.SupervisorAssignment],
 ) -> list[dict[str, Any]]:
-    kg_ids = {k.id for k in db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE).all()}
+    kg_q = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
     if filters.governorate:
-        kg_ids = {k.id for k in db.query(models.Kindergarten).filter(models.Kindergarten.governorate == filters.governorate, models.Kindergarten.status == models.KindergartenStatus.ACTIVE).all()}
+        kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
     if filters.city:
-        kg_ids = {k.id for k in db.query(models.Kindergarten).filter(models.Kindergarten.district == filters.city, models.Kindergarten.status == models.KindergartenStatus.ACTIVE).all()}
+        kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
     if filters.kindergarten_id:
-        kg_ids = {filters.kindergarten_id}
+        kg_q = kg_q.filter(models.Kindergarten.id == filters.kindergarten_id)
+    kindergartens = kg_q.all()
+    kg_map = {k.id: k for k in kindergartens}
 
     rows: list[dict[str, Any]] = []
-    for kg_id in kg_ids:
-        kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kg_id).first()
-        if not kg:
-            continue
+    for kg_id, kg in kg_map.items():
         kg_classes = [c for c in classes if c.kindergarten_id == kg_id]
         kg_supervisors = [s for s in supervisors if s.kindergarten_id == kg_id]
         kg_enrollments = [e for e in official_enrollments if e.kindergarten_id == kg_id]
@@ -727,9 +737,14 @@ def _class_detail_rows(
         classes_q = classes_q.filter(models.Class.id == filters.class_id)
     classes = classes_q.all()
 
+    needed_kg_ids = {cls.kindergarten_id for cls in classes if cls.kindergarten_id}
+    kg_map: dict[int, models.Kindergarten] = {}
+    if needed_kg_ids:
+        kg_map = {k.id: k for k in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(needed_kg_ids)).all()}
+
     rows: list[dict[str, Any]] = []
     for cls in classes:
-        kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == cls.kindergarten_id).first()
+        kg = kg_map.get(cls.kindergarten_id) if cls.kindergarten_id else None
         cls_enrollments = [e for e in official_enrollments if e.class_id == cls.id]
         children_count = len({e.child_id for e in cls_enrollments})
         cls_assignments = [a for a in active_assignments if a.class_id == cls.id]
@@ -859,6 +874,16 @@ def _supervisor_analytics(
         })
 
     total_supervisors = len(supervisors)
+    actual_supervisors = len({a.supervisor_id for a in active_assignments})
+    required_supervisors = 0
+    for c in classes:
+        n = enrolled_by_class.get(c.id, 0)
+        if n > 0:
+            try:
+                required_supervisors += calculate_required_supervisors(str(c.age_group), n)
+            except Exception:
+                required_supervisors += 1
+
     supervisors_with_errors = [s for s in supervisors_data if s["error_flags"]]
     supervisors_without_class = [s for s in supervisors_data if "no_class_assignment" in s["error_flags"]]
     supervisors_multiple_classes = [s for s in supervisors_data if "assigned_to_multiple_classes" in s["error_flags"]]
@@ -866,6 +891,10 @@ def _supervisor_analytics(
 
     return {
         "total_supervisors": total_supervisors,
+        "kpis": {
+            "required_supervisors": required_supervisors,
+            "actual_supervisors": actual_supervisors,
+        },
         "supervisors": supervisors_data,
         "supervisors_with_errors": len(supervisors_with_errors),
         "supervisors_without_class": len(supervisors_without_class),
@@ -1889,7 +1918,7 @@ def export_report(
     date_to: Optional[date] = Query(None),
     lang: str = Query("ar", pattern="^(ar|en)$"),
     db: Session = Depends(get_db),
-    _: models.User = Depends(require_admin),
+    current_user: models.User = Depends(require_admin),
 ):
     payload = _resolve_report_payload(
         report_type=report_type,
@@ -1906,6 +1935,17 @@ def export_report(
     )
 
     fmt = export_format.lower()
+
+    log_audit_event(
+        db=db,
+        action=AuditAction.ANALYTICS_EXPORT_DOWNLOADED,
+        actor=current_user,
+        target_type="Report",
+        target_ids=None,
+        metadata={"report_type": report_type, "level": level.value, "format": fmt},
+        sensitivity_level=2,
+    )
+
     if fmt == "json":
         return payload
 

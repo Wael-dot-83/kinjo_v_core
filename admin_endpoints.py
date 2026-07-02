@@ -3476,10 +3476,7 @@ def get_admin_dashboard(
         models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
     ).scalar() or 0
     active_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
-        models.EnrollmentApplication.status.in_([
-            models.EnrollmentStatus.ACTIVE,
-            models.EnrollmentStatus.ACCEPTED
-        ])
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
     ).scalar() or 0
 
     attendance_rate = (attendance_today / active_enrollments * 100.0) if active_enrollments > 0 else 0.0
@@ -3629,6 +3626,7 @@ def get_admin_dashboard(
         )
 
     expiring_licenses = db.query(models.Kindergarten).filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
         models.Kindergarten.license_valid_until.isnot(None),
         models.Kindergarten.license_valid_until <= today + timedelta(days=30),
     ).all()
@@ -3769,7 +3767,8 @@ def get_admin_dashboard(
     ).scalar() or 0
     prev_pending_submissions = db.query(func.count(models.DailyReport.id)).filter(
         models.DailyReport.status == models.DailyReportStatus.SUBMITTED,
-        models.DailyReport.created_at < prev_boundary,
+        models.DailyReport.date >= prev_start,
+        models.DailyReport.date <= prev_end,
     ).scalar() or 0
     prev_active_kg_with_recent_report = 0
     if prev_active_kindergartens > 0:

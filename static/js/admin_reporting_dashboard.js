@@ -72,6 +72,19 @@
     };
   }
 
+  const _isAr = () => document.documentElement.lang === 'ar';
+  const _t = (ar, en) => _isAr() ? ar : en;
+
+  function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
@@ -80,6 +93,14 @@
   function setHtml(id, html) {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
+  }
+
+  function emptyRow(colspan) {
+    return `<tr><td colspan="${colspan}" class="text-center py-4 text-muted">${_t('لا توجد بيانات', 'No data available')}</td></tr>`;
+  }
+
+  function errorRow(colspan) {
+    return `<tr><td colspan="${colspan}" class="text-center py-4 text-danger">${_t('فشل التحميل', 'Failed to load')}</td></tr>`;
   }
 
   function formatPct(value) {
@@ -94,33 +115,31 @@
 
   function statusBadge(status) {
     const map = {
-      critical: { class: 'badge bg-danger', ar: 'حرج', en: 'Critical' },
-      warning: { class: 'badge bg-warning text-dark', ar: 'تحذير', en: 'Warning' },
-      normal: { class: 'badge bg-success', ar: 'طبيعي', en: 'Normal' },
-      green: { class: 'badge bg-success', ar: 'أخضر', en: 'Green' },
-      yellow: { class: 'badge bg-warning text-dark', ar: 'أصفر', en: 'Yellow' },
-      orange: { class: 'badge bg-orange', ar: 'برتقالي', en: 'Orange' },
-      red: { class: 'badge bg-danger', ar: 'أحمر', en: 'Red' },
+      critical: { cls: 'badge bg-danger',           ar: 'حرج',      en: 'Critical' },
+      warning:  { cls: 'badge bg-warning text-dark', ar: 'تحذير',    en: 'Warning' },
+      normal:   { cls: 'badge bg-success',           ar: 'طبيعي',    en: 'Normal' },
+      green:    { cls: 'badge bg-success',           ar: 'أخضر',     en: 'Green' },
+      yellow:   { cls: 'badge bg-warning text-dark', ar: 'أصفر',     en: 'Yellow' },
+      orange:   { cls: 'badge bg-orange',            ar: 'برتقالي',  en: 'Orange' },
+      red:      { cls: 'badge bg-danger',            ar: 'أحمر',     en: 'Red' },
     };
-    const isAr = document.documentElement.lang === 'ar';
-    const entry = map[status] || { class: 'badge bg-secondary', ar: status, en: status };
-    return `<span class="${entry.class}">${isAr ? entry.ar : entry.en}</span>`;
+    const entry = map[status] || { cls: 'badge bg-secondary', ar: escapeHtml(status), en: escapeHtml(status) };
+    return `<span class="${entry.cls}">${_t(entry.ar, entry.en)}</span>`;
   }
 
   function classificationLabel(cls) {
     const map = {
-      inactive: { ar: 'غير نشط', en: 'Inactive' },
-      resource_underuse: { ar: 'استخدام منخفض', en: 'Underuse' },
-      critical_risk: { ar: 'خطورة حرجة', en: 'Critical risk' },
-      normal: { ar: 'طبيعي', en: 'Normal' },
-      under_supervised: { ar: 'إشراف منخفض', en: 'Under-supervised' },
-      capacity_class_pressure: { ar: 'ضغط على الفصل', en: 'Class pressure' },
-      over_capacity: { ar: 'تجاوز السعة', en: 'Over capacity' },
-      operational_issue: { ar: 'مشكلة تشغيلية', en: 'Operational issue' },
+      inactive:                 { ar: 'غير نشط',          en: 'Inactive' },
+      resource_underuse:        { ar: 'استخدام منخفض',     en: 'Underuse' },
+      critical_risk:            { ar: 'خطورة حرجة',        en: 'Critical risk' },
+      normal:                   { ar: 'طبيعي',             en: 'Normal' },
+      under_supervised:         { ar: 'إشراف منخفض',       en: 'Under-supervised' },
+      capacity_class_pressure:  { ar: 'ضغط على الفصل',    en: 'Class pressure' },
+      over_capacity:            { ar: 'تجاوز السعة',       en: 'Over capacity' },
+      operational_issue:        { ar: 'مشكلة تشغيلية',     en: 'Operational issue' },
     };
-    const isAr = document.documentElement.lang === 'ar';
-    const entry = map[cls] || { ar: cls, en: cls };
-    return isAr ? entry.ar : entry.en;
+    const entry = map[cls] || { ar: escapeHtml(cls), en: escapeHtml(cls) };
+    return _t(entry.ar, entry.en);
   }
 
   let ageChartInstance = null;
@@ -139,7 +158,7 @@
 
   async function loadNationalKPIs() {
     try {
-      const data = await apiGet('/admin/reports/overview', { level: 'jordan', ...getPeriod() });
+      const data = await apiGet('/api/admin/reports/overview', { level: 'jordan', ...getPeriod() });
       setText('kpiTotalChildren', formatNumber(data.kpis?.total_children));
       setText('kpiTotalKindergartens', formatNumber(data.kpis?.total_kindergartens));
       setText('kpiTotalSupervisors', formatNumber(data.kpis?.total_supervisors));
@@ -177,9 +196,9 @@
 
   async function loadChildrenAnalytics() {
     try {
-      const ageData = await apiGet('/admin/reports/children/age-buckets', { ...getFilters(), level: getLevel() });
-      const genderData = await apiGet('/admin/reports/children/gender', { ...getFilters(), level: getLevel() });
-      const geoData = await apiGet('/admin/reports/children/geography', { ...getFilters(), level: getLevel() });
+      const ageData = await apiGet('/api/admin/reports/children/age-buckets', { ...getFilters(), level: getLevel() });
+      const genderData = await apiGet('/api/admin/reports/children/gender', { ...getFilters(), level: getLevel() });
+      const geoData = await apiGet('/api/admin/reports/children/geography', { ...getFilters(), level: getLevel() });
 
       ageChartInstance = destroyChart(ageChartInstance);
       const ageCtx = document.getElementById('ageDistributionChart');
@@ -265,21 +284,26 @@
 
   async function loadKindergartensAnalytics() {
     try {
-      const data = await apiGet('/admin/reports/kindergartens/classification', { ...getFilters(), level: getLevel() === 'jordan' ? 'governorate' : getLevel() });
+      const data = await apiGet('/api/admin/reports/kindergartens/classification', { ...getFilters(), level: getLevel() });
       const kgs = data.kindergartens || [];
-      document.getElementById('kindergartenRiskTableBody').innerHTML = kgs.map(kg => `
-        <tr>
-          <td>${kg.name_ar || kg.name_en || '--'}</td>
-          <td>${kg.governorate || '--'}</td>
-          <td>${kg.city || '--'}</td>
-          <td>${formatNumber(kg.children_count)}</td>
-          <td>${formatNumber(kg.supervisors_count)}</td>
-          <td>${formatNumber(kg.capacity)}</td>
-          <td>${formatPct(kg.capacity_utilization_pct)}</td>
-          <td>${statusBadge(kg.risk_status)}</td>
-          <td>${kg.recommended_action_ar || kg.recommended_action_en || '--'}</td>
-        </tr>
-      `).join('');
+      const tbody = document.getElementById('kindergartenRiskTableBody');
+      if (kgs.length === 0) {
+        tbody.innerHTML = emptyRow(9);
+      } else {
+        tbody.innerHTML = kgs.map(kg => `
+          <tr>
+            <td>${escapeHtml(kg.name_ar || kg.name_en) || '--'}</td>
+            <td>${escapeHtml(kg.governorate) || '--'}</td>
+            <td>${escapeHtml(kg.city) || '--'}</td>
+            <td>${formatNumber(kg.children_count)}</td>
+            <td>${formatNumber(kg.supervisors_count)}</td>
+            <td>${formatNumber(kg.capacity)}</td>
+            <td>${formatPct(kg.capacity_utilization_pct)}</td>
+            <td>${statusBadge(kg.risk_status)}</td>
+            <td>${escapeHtml(kg.recommended_action_ar || kg.recommended_action_en) || '--'}</td>
+          </tr>
+        `).join('');
+      }
 
       const classificationCounts = data.classification_counts || {};
       const labels = Object.keys(classificationCounts).map(classificationLabel);
@@ -323,18 +347,23 @@
 
   async function loadSupervisorsAnalytics() {
     try {
-      const data = await apiGet('/admin/reports/supervisors/analytics', { ...getFilters(), level: getLevel() });
+      const data = await apiGet('/api/admin/reports/supervisors/analytics', { ...getFilters(), level: getLevel() });
       const errorTable = data.error_table || [];
-      document.getElementById('supervisorErrorsTableBody').innerHTML = errorTable.map(s => `
-        <tr>
-          <td>${s.full_name || s.username || '--'}</td>
-          <td>${s.kindergarten_name_ar || s.kindergarten_name_en || '--'}</td>
-          <td>${s.city || s.governorate || '--'}</td>
-          <td>${formatNumber(s.classes_count)}</td>
-          <td>${formatNumber(s.children_count)}</td>
-          <td>${(s.error_flags || []).map(f => f.replace(/_/g, ' ')).join(', ') || '--'}</td>
-        </tr>
-      `).join('');
+      const supTbody = document.getElementById('supervisorErrorsTableBody');
+      if (errorTable.length === 0) {
+        supTbody.innerHTML = emptyRow(6);
+      } else {
+        supTbody.innerHTML = errorTable.map(s => `
+          <tr>
+            <td>${escapeHtml(s.full_name || s.username) || '--'}</td>
+            <td>${escapeHtml(s.kindergarten_name_ar || s.kindergarten_name_en) || '--'}</td>
+            <td>${escapeHtml(s.city || s.governorate) || '--'}</td>
+            <td>${formatNumber(s.classes_count)}</td>
+            <td>${formatNumber(s.children_count)}</td>
+            <td>${escapeHtml((s.error_flags || []).map(f => f.replace(/_/g, ' ')).join(', ')) || '--'}</td>
+          </tr>
+        `).join('');
+      }
 
       supGapChartInstance = destroyChart(supGapChartInstance);
       const gapCtx = document.getElementById('supervisorGapChart');
@@ -386,7 +415,7 @@
 
   async function loadDataQuality() {
     try {
-      const data = await apiGet('/admin/reports/data-quality', { ...getFilters(), level: getLevel() });
+      const data = await apiGet('/api/admin/reports/data-quality', { ...getFilters(), level: getLevel() });
       setText('dqScore', formatPct(data.data_quality_score));
       const score = data.data_quality_score ?? 0;
       let bandAr = 'أحمر', bandEn = 'Red';
@@ -413,7 +442,7 @@
 
   async function loadCompliance() {
     try {
-      const data = await apiGet('/admin/reports/compliance', { ...getFilters(), level: getLevel() });
+      const data = await apiGet('/api/admin/reports/compliance', { ...getFilters(), level: getLevel() });
       setText('compScore', formatPct(data.compliance_score));
       const score = data.compliance_score ?? 0;
       let bandAr = 'أحمر', bandEn = 'Red';
@@ -440,21 +469,22 @@
 
   async function loadRiskRanking() {
     try {
-      const data = await apiGet('/admin/reports/risk-ranking', { ...getFilters(), level: getLevel() });
+      const data = await apiGet('/api/admin/reports/risk-ranking', { ...getFilters(), level: getLevel() });
       const ranking = data.ranking || [];
-      document.getElementById('riskRankingTableBody').innerHTML = ranking.map(r => `
-        <tr>
-          <td>${r.governorate || '--'}</td>
-          <td>${r.city || '--'}</td>
-          <td>${formatNumber(r.risk_score)}</td>
-          <td>${statusBadge(r.risk_status)}</td>
-          <td>${formatNumber(r.children_per_supervisor)}</td>
-          <td>${formatPct(r.capacity_utilization_pct)}</td>
-        </tr>
-      `).join('');
-
+      const tbody = document.getElementById('riskRankingTableBody');
       if (ranking.length === 0) {
-        document.getElementById('riskRankingTableBody').innerHTML = `<tr><td colspan="6" class="text-center py-4">{% if ui_lang == 'en' %}No data available{% else %}لا توجد بيانات{% endif %}</td></tr>`;
+        tbody.innerHTML = emptyRow(6);
+      } else {
+        tbody.innerHTML = ranking.map(r => `
+          <tr>
+            <td>${escapeHtml(r.governorate) || '--'}</td>
+            <td>${escapeHtml(r.city) || '--'}</td>
+            <td>${formatNumber(r.risk_score)}</td>
+            <td>${statusBadge(r.risk_status)}</td>
+            <td>${formatNumber(r.children_per_supervisor)}</td>
+            <td>${formatPct(r.capacity_utilization_pct)}</td>
+          </tr>
+        `).join('');
       }
     } catch (err) {
       console.error('Failed to load risk ranking:', err);
@@ -466,31 +496,33 @@
     const section = document.getElementById('section-kindergarten-detail');
     if (level === 'jordan' || level === 'governorate' || level === 'city') {
       section.classList.remove('d-none');
+      const tbody = document.getElementById('kindergartenDetailTableBody');
       try {
-        const data = await apiGet('/admin/reports/kindergartens/detail', { ...getFilters(), level });
+        const data = await apiGet('/api/admin/reports/kindergartens/detail', { ...getFilters(), level });
         const kgs = data.kindergartens || [];
-        document.getElementById('kindergartenDetailTableBody').innerHTML = kgs.map(kg => `
-          <tr>
-            <td>${kg.name_ar || kg.name_en || '--'}</td>
-            <td>${kg.governorate || '--'}</td>
-            <td>${kg.city || '--'}</td>
-            <td>${formatNumber(kg.children_count)}</td>
-            <td>${formatNumber(kg.supervisors_count)}</td>
-            <td>${formatNumber(kg.classes_count)}</td>
-            <td>${formatNumber(kg.capacity)}</td>
-            <td>${formatPct(kg.capacity_utilization_pct)}</td>
-            <td>${formatNumber(kg.supervisor_gap)}</td>
-            <td>${statusBadge(kg.risk_status)}</td>
-            <td>${classificationLabel(kg.classification)}</td>
-            <td>${kg.recommended_action_ar || kg.recommended_action_en || '--'}</td>
-          </tr>
-        `).join('');
         if (kgs.length === 0) {
-          document.getElementById('kindergartenDetailTableBody').innerHTML = `<tr><td colspan="12" class="text-center py-4">{% if ui_lang == 'en' %}No data available{% else %}لا توجد بيانات{% endif %}</td></tr>`;
+          tbody.innerHTML = emptyRow(12);
+        } else {
+          tbody.innerHTML = kgs.map(kg => `
+            <tr>
+              <td>${escapeHtml(kg.name_ar || kg.name_en) || '--'}</td>
+              <td>${escapeHtml(kg.governorate) || '--'}</td>
+              <td>${escapeHtml(kg.city) || '--'}</td>
+              <td>${formatNumber(kg.children_count)}</td>
+              <td>${formatNumber(kg.supervisors_count)}</td>
+              <td>${formatNumber(kg.classes_count)}</td>
+              <td>${formatNumber(kg.capacity)}</td>
+              <td>${formatPct(kg.capacity_utilization_pct)}</td>
+              <td>${formatNumber(kg.supervisor_gap)}</td>
+              <td>${statusBadge(kg.risk_status)}</td>
+              <td>${classificationLabel(kg.classification)}</td>
+              <td>${escapeHtml(kg.recommended_action_ar || kg.recommended_action_en) || '--'}</td>
+            </tr>
+          `).join('');
         }
       } catch (err) {
         console.error('Failed to load kindergarten detail:', err);
-        document.getElementById('kindergartenDetailTableBody').innerHTML = `<tr><td colspan="12" class="text-center py-4 text-danger">{% if ui_lang == 'en' %}Failed to load{% else %}فشل التحميل{% endif %}</td></tr>`;
+        tbody.innerHTML = errorRow(12);
       }
     } else {
       section.classList.add('d-none');
@@ -502,30 +534,31 @@
     const section = document.getElementById('section-class-detail');
     if (level === 'kindergarten' || level === 'class') {
       section.classList.remove('d-none');
+      const tbody = document.getElementById('classDetailTableBody');
       try {
-        const data = await apiGet('/admin/reports/classes/detail', { ...getFilters(), level: 'kindergarten', kindergarten_id: getKindergartenId(), class_id: getClassId() });
+        const data = await apiGet('/api/admin/reports/classes/detail', { ...getFilters(), level: 'kindergarten', kindergarten_id: getKindergartenId(), class_id: getClassId() });
         const classes = data.classes || [];
-        const isAr = document.documentElement.lang === 'ar';
-        document.getElementById('classDetailTableBody').innerHTML = classes.map(c => `
-          <tr>
-            <td>${c.class_code || '--'}</td>
-            <td>${isAr ? c.name_ar : c.name_en || '--'}</td>
-            <td>${c.age_group || '--'}</td>
-            <td>${formatNumber(c.children_count)}</td>
-            <td>${formatNumber(c.capacity)}</td>
-            <td>${formatNumber(c.supervisors_count)}</td>
-            <td>${formatNumber(c.required_supervisors)}</td>
-            <td>${formatNumber(c.supervisor_gap)}</td>
-            <td>${statusBadge(c.risk_status)}</td>
-            <td>${c.recommended_action_ar || c.recommended_action_en || '--'}</td>
-          </tr>
-        `).join('');
         if (classes.length === 0) {
-          document.getElementById('classDetailTableBody').innerHTML = `<tr><td colspan="10" class="text-center py-4">{% if ui_lang == 'en' %}No data available{% else %}لا توجد بيانات{% endif %}</td></tr>`;
+          tbody.innerHTML = emptyRow(10);
+        } else {
+          tbody.innerHTML = classes.map(c => `
+            <tr>
+              <td>${escapeHtml(c.class_code) || '--'}</td>
+              <td>${escapeHtml(_isAr() ? c.name_ar : c.name_en) || '--'}</td>
+              <td>${escapeHtml(c.age_group) || '--'}</td>
+              <td>${formatNumber(c.children_count)}</td>
+              <td>${formatNumber(c.capacity)}</td>
+              <td>${formatNumber(c.supervisors_count)}</td>
+              <td>${formatNumber(c.required_supervisors)}</td>
+              <td>${formatNumber(c.supervisor_gap)}</td>
+              <td>${statusBadge(c.risk_status)}</td>
+              <td>${escapeHtml(c.recommended_action_ar || c.recommended_action_en) || '--'}</td>
+            </tr>
+          `).join('');
         }
       } catch (err) {
         console.error('Failed to load class detail:', err);
-        document.getElementById('classDetailTableBody').innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger">{% if ui_lang == 'en' %}Failed to load{% else %}فشل التحميل{% endif %}</td></tr>`;
+        tbody.innerHTML = errorRow(10);
       }
     } else {
       section.classList.add('d-none');
@@ -556,9 +589,10 @@
       indicator.classList.add('d-none');
       content.classList.remove('d-none');
       const now = new Date();
-      setText('reportsLastUpdated', document.documentElement.lang === 'ar'
-        ? `آخر تحديث: ${now.toLocaleString('ar-JO')}`
-        : `Last updated: ${now.toLocaleString('en-US')}`);
+      setText('reportsLastUpdated', _t(
+        `آخر تحديث: ${now.toLocaleString('ar-JO')}`,
+        `Last updated: ${now.toLocaleString('en-US')}`
+      ));
     }
   }
 

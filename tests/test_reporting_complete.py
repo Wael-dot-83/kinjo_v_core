@@ -9,7 +9,7 @@ from validators import calculate_required_supervisors
 
 def test_kindergartens_detail_city_level(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment, sample_supervisor_assignment):
     resp = client.get(
-        "/admin/reports/kindergartens/detail",
+        "/api/admin/reports/kindergartens/detail",
         headers=auth_headers_admin,
         params={"level": "city", "governorate": "Amman", "city": "Amman"},
     )
@@ -30,7 +30,7 @@ def test_kindergartens_detail_city_level(client, auth_headers_admin, sample_kind
 
 def test_kindergartens_detail_governorate_level(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment):
     resp = client.get(
-        "/admin/reports/kindergartens/detail",
+        "/api/admin/reports/kindergartens/detail",
         headers=auth_headers_admin,
         params={"level": "governorate", "governorate": "Amman"},
     )
@@ -42,7 +42,7 @@ def test_kindergartens_detail_governorate_level(client, auth_headers_admin, samp
 
 def test_kindergartens_detail_requires_admin(client, auth_headers_manager, sample_kindergarten):
     resp = client.get(
-        "/admin/reports/kindergartens/detail",
+        "/api/admin/reports/kindergartens/detail",
         headers=auth_headers_manager,
         params={"level": "city", "governorate": "Amman", "city": "Amman"},
     )
@@ -51,7 +51,7 @@ def test_kindergartens_detail_requires_admin(client, auth_headers_manager, sampl
 
 def test_classes_detail_requires_kindergarten_id(client, auth_headers_admin):
     resp = client.get(
-        "/admin/reports/classes/detail",
+        "/api/admin/reports/classes/detail",
         headers=auth_headers_admin,
         params={"level": "kindergarten"},
     )
@@ -60,7 +60,7 @@ def test_classes_detail_requires_kindergarten_id(client, auth_headers_admin):
 
 def test_classes_detail_kindergarten_level(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment, sample_supervisor_assignment):
     resp = client.get(
-        "/admin/reports/classes/detail",
+        "/api/admin/reports/classes/detail",
         headers=auth_headers_admin,
         params={"level": "kindergarten", "kindergarten_id": sample_kindergarten.id},
     )
@@ -81,7 +81,7 @@ def test_classes_detail_kindergarten_level(client, auth_headers_admin, sample_ki
 
 def test_supervisors_analytics_jordan_level(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment, sample_supervisor_assignment):
     resp = client.get(
-        "/admin/reports/supervisors/analytics",
+        "/api/admin/reports/supervisors/analytics",
         headers=auth_headers_admin,
         params={"level": "jordan"},
     )
@@ -147,7 +147,7 @@ def test_supervisors_analytics_detects_errors(client, auth_headers_admin, test_d
     test_db.commit()
 
     resp = client.get(
-        "/admin/reports/supervisors/analytics",
+        "/api/admin/reports/supervisors/analytics",
         headers=auth_headers_admin,
         params={"level": "jordan"},
     )
@@ -159,7 +159,7 @@ def test_supervisors_analytics_detects_errors(client, auth_headers_admin, test_d
 
 def test_kindergartens_classification(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment):
     resp = client.get(
-        "/admin/reports/kindergartens/classification",
+        "/api/admin/reports/kindergartens/classification",
         headers=auth_headers_admin,
         params={"level": "governorate", "governorate": "Amman"},
     )
@@ -172,7 +172,7 @@ def test_kindergartens_classification(client, auth_headers_admin, sample_kinderg
 
 def test_kindergarten_detail_classifications(client, auth_headers_admin, sample_kindergarten):
     resp = client.get(
-        "/admin/reports/kindergartens/detail",
+        "/api/admin/reports/kindergartens/detail",
         headers=auth_headers_admin,
         params={"level": "kindergarten", "kindergarten_id": sample_kindergarten.id},
     )
@@ -228,7 +228,7 @@ def test_classes_detail_supervisor_gap(client, auth_headers_admin, test_db, samp
     test_db.commit()
 
     resp = client.get(
-        "/admin/reports/classes/detail",
+        "/api/admin/reports/classes/detail",
         headers=auth_headers_admin,
         params={"level": "kindergarten", "kindergarten_id": sample_kindergarten.id},
     )
@@ -244,7 +244,7 @@ def test_classes_detail_supervisor_gap(client, auth_headers_admin, test_db, samp
 
 def test_export_kindergartens_detail_csv(client, auth_headers_admin):
     response = client.get(
-        "/admin/reports/export",
+        "/api/admin/reports/export",
         headers=auth_headers_admin,
         params={"report_type": "kindergartens_detail", "export_format": "csv", "level": "jordan"},
     )
@@ -254,7 +254,7 @@ def test_export_kindergartens_detail_csv(client, auth_headers_admin):
 
 def test_export_supervisors_analytics_csv(client, auth_headers_admin):
     response = client.get(
-        "/admin/reports/export",
+        "/api/admin/reports/export",
         headers=auth_headers_admin,
         params={"report_type": "supervisors_analytics", "export_format": "csv", "level": "jordan"},
     )
@@ -264,7 +264,7 @@ def test_export_supervisors_analytics_csv(client, auth_headers_admin):
 
 def test_export_kindergartens_classification_csv(client, auth_headers_admin):
     response = client.get(
-        "/admin/reports/export",
+        "/api/admin/reports/export",
         headers=auth_headers_admin,
         params={"report_type": "kindergartens_classification", "export_format": "csv", "level": "governorate", "governorate": "Amman"},
     )
@@ -274,7 +274,7 @@ def test_export_kindergartens_classification_csv(client, auth_headers_admin):
 
 def test_kindergarten_detail_empty_scope(client, auth_headers_admin):
     resp = client.get(
-        "/admin/reports/kindergartens/detail",
+        "/api/admin/reports/kindergartens/detail",
         headers=auth_headers_admin,
         params={"level": "city", "governorate": "NonExistent", "city": "NoWhere"},
     )
@@ -286,7 +286,7 @@ def test_kindergarten_detail_empty_scope(client, auth_headers_admin):
 
 def test_supervisors_analytics_empty_scope(client, auth_headers_admin):
     resp = client.get(
-        "/admin/reports/supervisors/analytics",
+        "/api/admin/reports/supervisors/analytics",
         headers=auth_headers_admin,
         params={"level": "jordan"},
     )
@@ -297,7 +297,7 @@ def test_supervisors_analytics_empty_scope(client, auth_headers_admin):
 
 
 def test_admin_reports_overview_shape_with_new_fields(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment, sample_supervisor_assignment):
-    resp = client.get("/admin/reports/overview?level=jordan", headers=auth_headers_admin)
+    resp = client.get("/api/admin/reports/overview?level=jordan", headers=auth_headers_admin)
     assert resp.status_code == 200
     body = resp.json()
     assert body["report_type"] == "overview"
@@ -309,7 +309,7 @@ def test_admin_reports_overview_shape_with_new_fields(client, auth_headers_admin
 
 def test_children_summary_city_level(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment):
     resp = client.get(
-        "/admin/reports/children/summary?level=city&governorate=Amman&city=Amman",
+        "/api/admin/reports/children/summary?level=city&governorate=Amman&city=Amman",
         headers=auth_headers_admin,
     )
     assert resp.status_code == 200
@@ -320,7 +320,7 @@ def test_children_summary_city_level(client, auth_headers_admin, sample_kinderga
 
 def test_children_geography(client, auth_headers_admin, sample_kindergarten):
     resp = client.get(
-        "/admin/reports/children/geography?level=jordan",
+        "/api/admin/reports/children/geography?level=jordan",
         headers=auth_headers_admin,
     )
     assert resp.status_code == 200
@@ -330,7 +330,7 @@ def test_children_geography(client, auth_headers_admin, sample_kindergarten):
 
 def test_kindergartens_summary_city_level(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment):
     resp = client.get(
-        "/admin/reports/kindergartens/summary?level=city&governorate=Amman&city=Amman",
+        "/api/admin/reports/kindergartens/summary?level=city&governorate=Amman&city=Amman",
         headers=auth_headers_admin,
     )
     assert resp.status_code == 200
@@ -340,7 +340,7 @@ def test_kindergartens_summary_city_level(client, auth_headers_admin, sample_kin
 
 def test_supervisors_coverage_city_level(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment):
     resp = client.get(
-        "/admin/reports/supervisors/coverage?level=city&governorate=Amman&city=Amman",
+        "/api/admin/reports/supervisors/coverage?level=city&governorate=Amman&city=Amman",
         headers=auth_headers_admin,
     )
     assert resp.status_code == 200
@@ -350,7 +350,7 @@ def test_supervisors_coverage_city_level(client, auth_headers_admin, sample_kind
 
 def test_drilldown_kindergarten_level(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment):
     resp = client.get(
-        f"/admin/reports/drilldown?level=kindergarten&governorate=Amman&city=Amman&kindergarten_id={sample_kindergarten.id}",
+        f"/api/admin/reports/drilldown?level=kindergarten&governorate=Amman&city=Amman&kindergarten_id={sample_kindergarten.id}",
         headers=auth_headers_admin,
     )
     assert resp.status_code == 200
@@ -361,7 +361,7 @@ def test_drilldown_kindergarten_level(client, auth_headers_admin, sample_kinderg
 
 def test_data_quality_city_level(client, auth_headers_admin, sample_kindergarten):
     resp = client.get(
-        "/admin/reports/data-quality?level=city&governorate=Amman&city=Amman",
+        "/api/admin/reports/data-quality?level=city&governorate=Amman&city=Amman",
         headers=auth_headers_admin,
     )
     assert resp.status_code == 200
@@ -372,7 +372,7 @@ def test_data_quality_city_level(client, auth_headers_admin, sample_kindergarten
 
 def test_compliance_city_level(client, auth_headers_admin, sample_kindergarten):
     resp = client.get(
-        "/admin/reports/compliance?level=city&governorate=Amman&city=Amman",
+        "/api/admin/reports/compliance?level=city&governorate=Amman&city=Amman",
         headers=auth_headers_admin,
     )
     assert resp.status_code == 200
@@ -384,7 +384,7 @@ def test_compliance_city_level(client, auth_headers_admin, sample_kindergarten):
 
 def test_risk_ranking_city_level(client, auth_headers_admin, sample_kindergarten):
     resp = client.get(
-        "/admin/reports/risk-ranking?level=city&governorate=Amman&city=Amman",
+        "/api/admin/reports/risk-ranking?level=city&governorate=Amman&city=Amman",
         headers=auth_headers_admin,
     )
     assert resp.status_code == 200
@@ -395,7 +395,7 @@ def test_risk_ranking_city_level(client, auth_headers_admin, sample_kindergarten
 
 def test_export_json_format(client, auth_headers_admin):
     response = client.get(
-        "/admin/reports/export",
+        "/api/admin/reports/export",
         headers=auth_headers_admin,
         params={"report_type": "overview", "export_format": "json", "level": "jordan"},
     )
@@ -404,14 +404,14 @@ def test_export_json_format(client, auth_headers_admin):
 
 
 def test_children_age_buckets_has_dominant_bucket(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment):
-    resp = client.get("/admin/reports/children/age-buckets?level=jordan", headers=auth_headers_admin)
+    resp = client.get("/api/admin/reports/children/age-buckets?level=jordan", headers=auth_headers_admin)
     assert resp.status_code == 200
     body = resp.json()
     assert "dominant_bucket" in body
 
 
 def test_children_gender_percentages(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment):
-    resp = client.get("/admin/reports/children/gender?level=jordan", headers=auth_headers_admin)
+    resp = client.get("/api/admin/reports/children/gender?level=jordan", headers=auth_headers_admin)
     assert resp.status_code == 200
     body = resp.json()
     assert "percentages" in body
@@ -423,7 +423,7 @@ def test_children_gender_percentages(client, auth_headers_admin, sample_kinderga
 
 
 def test_kindergartens_supervision_endpoint(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment):
-    resp = client.get("/admin/reports/kindergartens/supervision?level=jordan", headers=auth_headers_admin)
+    resp = client.get("/api/admin/reports/kindergartens/supervision?level=jordan", headers=auth_headers_admin)
     assert resp.status_code == 200
     body = resp.json()
     assert "required_supervisors" in body
@@ -433,20 +433,20 @@ def test_kindergartens_supervision_endpoint(client, auth_headers_admin, sample_k
 
 def test_admin_reports_admin_only_all_endpoints(client, auth_headers_manager, sample_kindergarten):
     endpoints = [
-        "/admin/reports/overview?level=jordan",
-        "/admin/reports/children/summary?level=jordan",
-        "/admin/reports/children/geography?level=jordan",
-        "/admin/reports/children/age-buckets?level=jordan",
-        "/admin/reports/children/gender?level=jordan",
-        "/admin/reports/kindergartens/summary?level=jordan",
-        "/admin/reports/kindergartens/supervision?level=jordan",
-        "/admin/reports/supervisors/coverage?level=jordan",
-        "/admin/reports/data-quality?level=jordan",
-        "/admin/reports/compliance?level=jordan",
-        "/admin/reports/risk-ranking?level=jordan",
-        "/admin/reports/kindergartens/detail?level=city&governorate=Amman&city=Amman",
-        "/admin/reports/supervisors/analytics?level=jordan",
-        "/admin/reports/kindergartens/classification?level=governorate&governorate=Amman",
+        "/api/admin/reports/overview?level=jordan",
+        "/api/admin/reports/children/summary?level=jordan",
+        "/api/admin/reports/children/geography?level=jordan",
+        "/api/admin/reports/children/age-buckets?level=jordan",
+        "/api/admin/reports/children/gender?level=jordan",
+        "/api/admin/reports/kindergartens/summary?level=jordan",
+        "/api/admin/reports/kindergartens/supervision?level=jordan",
+        "/api/admin/reports/supervisors/coverage?level=jordan",
+        "/api/admin/reports/data-quality?level=jordan",
+        "/api/admin/reports/compliance?level=jordan",
+        "/api/admin/reports/risk-ranking?level=jordan",
+        "/api/admin/reports/kindergartens/detail?level=city&governorate=Amman&city=Amman",
+        "/api/admin/reports/supervisors/analytics?level=jordan",
+        "/api/admin/reports/kindergartens/classification?level=governorate&governorate=Amman",
     ]
     for endpoint in endpoints:
         resp = client.get(endpoint, headers=auth_headers_manager)
@@ -455,8 +455,8 @@ def test_admin_reports_admin_only_all_endpoints(client, auth_headers_manager, sa
 
 def test_city_level_requires_city_filter_all_endpoints(client, auth_headers_admin, sample_kindergarten):
     endpoints_missing_city = [
-        "/admin/reports/children/summary?level=city&governorate=Amman",
-        "/admin/reports/kindergartens/summary?level=city&level=city&governorate=Amman",
+        "/api/admin/reports/children/summary?level=city&governorate=Amman",
+        "/api/admin/reports/kindergartens/summary?level=city&level=city&governorate=Amman",
     ]
     for endpoint in endpoints_missing_city:
         resp = client.get(endpoint, headers=auth_headers_admin)
@@ -464,7 +464,7 @@ def test_city_level_requires_city_filter_all_endpoints(client, auth_headers_admi
 
 
 def test_empty_data_quality_returns_score(client, auth_headers_admin):
-    resp = client.get("/admin/reports/data-quality?level=jordan", headers=auth_headers_admin)
+    resp = client.get("/api/admin/reports/data-quality?level=jordan", headers=auth_headers_admin)
     assert resp.status_code == 200
     body = resp.json()
     assert "data_quality_score" in body
@@ -473,7 +473,7 @@ def test_empty_data_quality_returns_score(client, auth_headers_admin):
 
 
 def test_empty_compliance_returns_score(client, auth_headers_admin):
-    resp = client.get("/admin/reports/compliance?level=jordan", headers=auth_headers_admin)
+    resp = client.get("/api/admin/reports/compliance?level=jordan", headers=auth_headers_admin)
     assert resp.status_code == 200
     body = resp.json()
     assert "compliance_score" in body
