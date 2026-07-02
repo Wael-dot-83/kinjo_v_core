@@ -637,7 +637,7 @@ html[dir="rtl"] .sidebar-nav .submenu .nav-link {
 /* ============================================================================
    RESPONSIVE — Mobile Drawer
    ============================================================================ */
-@media (max-width: 768px) {
+@media (max-width: 991px) {
   .sidebar {
     position: fixed;
     top: 0;

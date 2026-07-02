@@ -8,7 +8,7 @@
   window.AdminReports = {};
 
   const API_BASE = "/api/analytics";
-  const STRATEGIC_API_BASE = "/admin/reports";
+  const STRATEGIC_API_BASE = "/api/admin/reports";
 
   let historyItems = [];
   let previewItems = [];

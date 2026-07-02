@@ -3708,8 +3708,9 @@ def get_admin_dashboard(
         ))
 
     # Recent activity from audit log — enriched with actor/role/module/entity/severity.
-    recent_audit_logs = (
-        db.query(models.AuditLog)
+    recent_audit_logs_with_users = (
+        db.query(models.AuditLog, models.User.username)
+        .outerjoin(models.User, models.AuditLog.user_id == models.User.id)
         .filter(
             models.AuditLog.action.in_(list(_ACTIVITY_MAP.keys())),
             models.AuditLog.created_at >= now - timedelta(days=7),
@@ -3718,14 +3719,9 @@ def get_admin_dashboard(
         .limit(10)
         .all()
     )
-    # Batch-fetch actor usernames in one query — AuditLog has no `user` relationship.
-    _actor_ids = {log.user_id for log in recent_audit_logs if log.user_id}
-    _actor_usernames: Dict[int, str] = dict(
-        db.query(models.User.id, models.User.username).filter(models.User.id.in_(_actor_ids)).all()
-    ) if _actor_ids else {}
     recent_activity: List[ActivityItem] = [
         item for item in (
-            _activity_item_from_log(log, _actor_usernames.get(log.user_id)) for log in recent_audit_logs
+            _activity_item_from_log(log, username) for log, username in recent_audit_logs_with_users
         ) if item is not None
     ]
 
@@ -3879,7 +3875,9 @@ def get_admin_dashboard_activity(
     now = datetime.now(_JORDAN_TZ)
     today = now.date()
 
-    query = db.query(models.AuditLog).filter(
+    query = db.query(models.AuditLog, models.User.username).outerjoin(
+        models.User, models.AuditLog.user_id == models.User.id
+    ).filter(
         models.AuditLog.action.in_(list(_ACTIVITY_MAP.keys()))
     )
 
@@ -3956,22 +3954,16 @@ def get_admin_dashboard_activity(
             query = query.filter(non_critical, models.AuditLog.sensitivity_level == target_level)
 
     total = query.count()
-    logs = (
+    logs_with_users = (
         query.order_by(models.AuditLog.created_at.desc())
         .offset(offset)
         .limit(page_size)
         .all()
     )
 
-    # Batch-fetch actor usernames in one query — AuditLog has no `user` relationship.
-    actor_ids = {log.user_id for log in logs if log.user_id}
-    actor_usernames: Dict[int, str] = dict(
-        db.query(models.User.id, models.User.username).filter(models.User.id.in_(actor_ids)).all()
-    ) if actor_ids else {}
-
     items: List[ActivityItem] = [
         item for item in (
-            _activity_item_from_log(log, actor_usernames.get(log.user_id)) for log in logs
+            _activity_item_from_log(log, username) for log, username in logs_with_users
         ) if item is not None
     ]
 

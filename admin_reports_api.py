@@ -19,7 +19,7 @@ from dependencies import require_admin
 from validators import calculate_required_supervisors
 
 
-router = APIRouter(prefix="/admin/reports", tags=["Admin Reports"])
+router = APIRouter(prefix="/api/admin/reports", tags=["Admin Reports"])
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 _ACTIVE_STATUSES = {models.EnrollmentStatus.ACTIVE, models.EnrollmentStatus.ACCEPTED}

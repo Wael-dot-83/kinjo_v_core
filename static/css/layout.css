@@ -14,15 +14,9 @@ body.admin-container {
   overflow: hidden;
 }
 
-/* Sidebar */
+/* Sidebar macro layout (visuals in sidebar-professional.css) */
 .admin-sidebar {
-  width: 280px;
-  background-color: var(--kinjo-color-bg-surface);
-  border-inline-end: 1px solid var(--kinjo-color-border);
-  display: flex;
-  flex-direction: column;
   flex-shrink: 0;
-  transition: transform var(--kinjo-transition-normal);
   z-index: 1000;
 }
 
@@ -105,18 +99,5 @@ body.admin-container {
 }
 
 @media (max-width: 991px) {
-  .admin-sidebar {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    inset-inline-start: 0;
-    transform: translateX(calc(-100% * var(--transform-direction, 1)));
-  }
-  [dir="rtl"] .admin-sidebar {
-    --transform-direction: -1;
-  }
-  .admin-sidebar.open {
-    transform: translateX(0);
-  }
   .admin-grid-cols-2 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
 }
