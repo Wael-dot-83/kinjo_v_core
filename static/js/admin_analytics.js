@@ -618,6 +618,22 @@ function updateNetworkSummary(summary) {
     lastDashboardData.network_summary = summary;
     renderSparklines(lastDashboardData);
   }
+
+  // Populate Overview operational health summary cards
+  const ohAtt = document.getElementById("ohAttendanceHealth");
+  if (ohAtt) {
+    const rate = (summary.attendance_rate || 0).toFixed(1);
+    const cls = attendanceRate >= 80 ? "text-success" : attendanceRate >= 60 ? "text-warning" : "text-danger";
+    ohAtt.textContent = rate + "%";
+    ohAtt.className = `fw-bold fs-5 ${cls}`;
+  }
+  const ohGov = document.getElementById("ohGovernanceScore");
+  if (ohGov) {
+    const score = (summary.governance_avg_score || 0).toFixed(1);
+    const cls2 = (summary.governance_avg_score || 0) >= 80 ? "text-success" : (summary.governance_avg_score || 0) >= 60 ? "text-warning" : "text-danger";
+    ohGov.textContent = score;
+    ohGov.className = `fw-bold fs-5 ${cls2}`;
+  }
 }
 
 function updateTrendIndicators(summary) {
@@ -1284,6 +1300,12 @@ function updateGovernanceChart(green, amber, red) {
   safeSetText("countGreen", green);
   safeSetText("countAmber", amber);
   safeSetText("countRed", red);
+  const total = (green || 0) + (amber || 0) + (red || 0);
+  if (total > 0) {
+    safeSetText("pctGreen", `(${((green / total) * 100).toFixed(0)}%)`);
+    safeSetText("pctAmber", `(${((amber / total) * 100).toFixed(0)}%)`);
+    safeSetText("pctRed", `(${((red / total) * 100).toFixed(0)}%)`);
+  }
 
   if (!adminAnalyticsHasChart()) {
     return;
@@ -1787,12 +1809,18 @@ async function loadDataQuality() {
     const data = await res.json();
     const scoreEl = document.getElementById("dataQualityScore");
     const statusEl = document.getElementById("dataQualityStatus");
-    if (scoreEl) scoreEl.textContent = `${(data.completeness_percent ?? 0).toFixed(1)}%`;
+    const pct = (data.completeness_percent ?? 0);
+    if (scoreEl) scoreEl.textContent = `${pct.toFixed(1)}%`;
     if (statusEl)
       statusEl.textContent =
-        (data.completeness_percent ?? 0) > 85
+        pct > 85
           ? adminAnalyticsText("ممتاز", "Excellent")
           : adminAnalyticsText("بحاجة تحسين", "Needs improvement");
+    const ohDQ = document.getElementById("ohDataQuality");
+    if (ohDQ) {
+      ohDQ.textContent = pct.toFixed(1) + "%";
+      ohDQ.className = `fw-bold fs-5 ${pct >= 85 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger"}`;
+    }
   } catch (error) {
     console.error("Data quality error", error);
   }
@@ -2230,6 +2258,12 @@ function updateRegistrationKPIs(data) {
   safeSetText("regConversionValue", `${data.conversion_rate ?? 0}%`);
   safeSetText("regRejectionValue", `${data.approval_workflow?.rejection_rate ?? 0}%`);
   safeSetText("regApprovalTimeValue", `${data.approval_workflow?.avg_approval_hours ?? 0}h`);
+  const ohFunnel = document.getElementById("ohFunnelRate");
+  if (ohFunnel) {
+    const rate = Number(data.conversion_rate ?? 0);
+    ohFunnel.textContent = rate.toFixed(1) + "%";
+    ohFunnel.className = `fw-bold fs-5 ${rate >= 70 ? "text-success" : rate >= 40 ? "text-warning" : "text-danger"}`;
+  }
 }
 
 function renderFunnelChart(funnel) {
