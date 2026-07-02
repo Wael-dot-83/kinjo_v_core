@@ -421,6 +421,21 @@ html[dir="ltr"] .dropdown-menu {
   align-items: center;
 }
 
+/* admin-sidebar wrapper — scoped RTL rules for the top-nav aside */
+.admin-sidebar .nav-link span {
+  transition: opacity 0.15s ease;
+}
+
+html[dir="rtl"] .admin-sidebar .nav-link.active {
+  border-inline-start: 3px solid #D6C56B;
+  border-inline-end: none;
+}
+
+.admin-sidebar .submenu .nav-link.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
 .sidebar .nav-link.active {
   border-inline-end: 3px solid #D6C56B;
   background: rgba(255, 255, 255, 0.12);
