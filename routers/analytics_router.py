@@ -154,10 +154,12 @@ def scatter_plot_data(
     
     if dim_type == "GOVERNORATE":
         query = query.filter(models.AnalyticsDimensionCache.dimension_id.like(f"{dim_id}_%"))
-    elif dim_type == "DISTRICT":
+    elif dim_type == "CITY":
         # For City -> KG, we need a join. But since we lack direct parent IDs in cache,
         # we just plot all KGs for now as a statistical sample.
         pass
+    elif dim_type in ["JORDAN", "NETWORK"]:
+        pass # No additional filter for national level
 
     results = query.order_by(models.AnalyticsDimensionCache.period_date.desc()).limit(100).all()
 
@@ -193,46 +195,89 @@ def get_demographics(
         models.Kindergarten,
         models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id
     ).filter(
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        models.EnrollmentApplication.status.in_([
+            models.EnrollmentStatus.ACTIVE, 
+            models.EnrollmentStatus.ACCEPTED
+        ])
     )
 
     if dim_type == "GOVERNORATE":
         query = query.filter(models.Kindergarten.governorate == dim_id)
-    elif dim_type == "DISTRICT":
+    elif dim_type == "CITY":
         # dim_id might be "Amman_Amman" or just "Amman". We'll use like or split.
         district_name = dim_id.split("_")[-1] if "_" in dim_id else dim_id
         query = query.filter(models.Kindergarten.district == district_name)
     elif dim_type == "KINDERGARTEN":
         query = query.filter(models.Kindergarten.id == dim_id)
+    elif dim_type == "CLASS":
+        # Need to join class but since we don't have it in the SELECT, just filter by it
+        query = query.filter(models.EnrollmentApplication.class_id == dim_id)
+    elif dim_type in ["JORDAN", "NETWORK"]:
+        pass
 
     results = query.all()
 
     # Process distributions in memory (fast enough for 10-50k rows)
     gender_counts = {"MALE": 0, "FEMALE": 0}
-    age_bands = {"<2 Years": 0, "2-3 Years": 0, "3-4 Years": 0, "4-5 Years": 0, "5+ Years": 0}
+    age_bands = {
+        "B1: 70 days - <6 mo": 0,
+        "B2: 6 - <12 mo": 0,
+        "B3: 12 - <18 mo": 0,
+        "B4: 18 - <24 mo": 0,
+        "B5: 24 - <30 mo": 0,
+        "B6: 30 - <36 mo": 0,
+        "B7: 36 - <42 mo": 0,
+        "B8: 42 - <48 mo": 0,
+        "B9: 48 - <54 mo": 0,
+        "B10: 54 - 56 mo": 0
+    }
+    data_quality = {
+        "missing_dob": 0,
+        "invalid_age": 0,
+        "missing_gender": 0
+    }
     kg_density = {}
 
     for dob, gender, kg_id in results:
         # Gender
-        gender_counts[gender.value] += 1
+        if not gender:
+            data_quality["missing_gender"] += 1
+        else:
+            gender_counts[gender.value] += 1
         
         # Density
         kg_density[kg_id] = kg_density.get(kg_id, 0) + 1
         
         # Age
-        if dob:
+        if not dob:
+            data_quality["missing_dob"] += 1
+        else:
             age_days = (today - dob).days
-            age_years = age_days / 365.25
-            if age_years < 2:
-                age_bands["<2 Years"] += 1
-            elif age_years < 3:
-                age_bands["2-3 Years"] += 1
-            elif age_years < 4:
-                age_bands["3-4 Years"] += 1
-            elif age_years < 5:
-                age_bands["4-5 Years"] += 1
+            age_months = age_days / 30.4375  # approximate months
+            
+            if age_days < 70 or age_months > 56:
+                data_quality["invalid_age"] += 1
             else:
-                age_bands["5+ Years"] += 1
+                if age_months < 6:
+                    age_bands["B1: 70 days - <6 mo"] += 1
+                elif age_months < 12:
+                    age_bands["B2: 6 - <12 mo"] += 1
+                elif age_months < 18:
+                    age_bands["B3: 12 - <18 mo"] += 1
+                elif age_months < 24:
+                    age_bands["B4: 18 - <24 mo"] += 1
+                elif age_months < 30:
+                    age_bands["B5: 24 - <30 mo"] += 1
+                elif age_months < 36:
+                    age_bands["B6: 30 - <36 mo"] += 1
+                elif age_months < 42:
+                    age_bands["B7: 36 - <42 mo"] += 1
+                elif age_months < 48:
+                    age_bands["B8: 42 - <48 mo"] += 1
+                elif age_months < 54:
+                    age_bands["B9: 48 - <54 mo"] += 1
+                else:
+                    age_bands["B10: 54 - 56 mo"] += 1
 
     # Bucket KG densities (Histogram)
     density_histogram = {"<20": 0, "20-50": 0, "50-100": 0, "100+": 0}
@@ -251,7 +296,8 @@ def get_demographics(
         "age_bands": age_bands,
         "density_histogram": density_histogram,
         "total_children": len(results),
-        "total_kgs": len(kg_density)
+        "total_kgs": len(kg_density),
+        "data_quality": data_quality
     }
 
 @router.get("/government-report")
@@ -268,14 +314,14 @@ def get_government_report(
     
     # 2. Fetch Z-Scores
     # To get Z-scores, we just use the existing logic (simplified)
-    dim_enum = getattr(AnalyticsDimensionType, dim_type, AnalyticsDimensionType.NETWORK)
+    dim_enum = getattr(models.AnalyticsDimensionType, dim_type, models.AnalyticsDimensionType.NETWORK)
     target = db.query(models.AnalyticsDimensionCache).filter(
         models.AnalyticsDimensionCache.dimension_type == dim_enum,
         models.AnalyticsDimensionCache.dimension_id == dim_id
     ).order_by(models.AnalyticsDimensionCache.period_date.desc()).first()
     
     network_targets = db.query(models.AnalyticsDimensionCache).filter(
-        models.AnalyticsDimensionCache.dimension_type == AnalyticsDimensionType.NETWORK,
+        models.AnalyticsDimensionCache.dimension_type == models.AnalyticsDimensionType.NETWORK,
         models.AnalyticsDimensionCache.dimension_id == "JORDAN"
     ).order_by(models.AnalyticsDimensionCache.period_date.desc()).all()
     

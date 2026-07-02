@@ -14,34 +14,7 @@ body.admin-container {
   overflow: hidden;
 }
 
-/* Sidebar macro layout (visuals in sidebar-professional.css) */
-.admin-sidebar {
-  flex-shrink: 0;
-  z-index: 1000;
-}
-
-.admin-sidebar-header {
-  padding: var(--kinjo-spacing-4);
-  border-block-end: 1px solid var(--kinjo-color-border);
-  display: flex;
-  align-items: center;
-}
-
-.admin-sidebar-logo {
-  display: flex;
-  align-items: center;
-  gap: var(--kinjo-spacing-3);
-  font-size: var(--kinjo-font-size-xl);
-  font-weight: var(--kinjo-font-weight-bold);
-  color: var(--kinjo-color-primary);
-  text-decoration: none;
-}
-
-.admin-sidebar-nav {
-  padding: var(--kinjo-spacing-4) 0;
-  overflow-y: auto;
-  flex-grow: 1;
-}
+/* Sidebar macro layout removed in favor of top-menu layout */
 
 /* Main Area */
 .admin-main {
@@ -68,6 +41,131 @@ body.admin-container {
   display: flex;
   align-items: center;
   gap: var(--kinjo-spacing-4);
+}
+
+/* ============================================================================
+   HEADER REDESIGN (Enterprise Components)
+   ============================================================================ */
+.admin-header-right {
+  gap: 1.5rem; /* 24px */
+}
+
+.btn-header-action,
+.btn-header-user {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  color: #374151;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  transition: background-color 150ms ease, color 150ms ease;
+  cursor: pointer;
+}
+
+.btn-header-action:hover,
+.btn-header-action:focus-visible,
+.btn-header-user:hover,
+.btn-header-user:focus-visible {
+  background-color: #F3F4F6;
+  color: #111827;
+  outline: none;
+}
+
+.header-divider {
+  width: 1px;
+  height: 32px;
+  background-color: #E5E7EB;
+}
+
+.header-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1E40AF, #3B82F6);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.header-user-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-inline-start: 12px;
+  margin-inline-end: 8px;
+  text-align: start;
+}
+
+.header-user-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.header-user-role {
+  font-size: 14px;
+  font-weight: 400;
+  color: #6B7280;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.btn-header-user::after,
+.btn-header-action::after {
+  margin-inline-start: 4px;
+}
+
+/* Dropdown refinements */
+.header-lang-dropdown .dropdown-menu {
+  min-width: 180px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.header-lang-dropdown .dropdown-item {
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+  color: #374151;
+  transition: all 150ms ease;
+}
+
+.header-lang-dropdown .dropdown-item:hover,
+.header-lang-dropdown .dropdown-item:focus {
+  background-color: #F3F4F6;
+  color: #111827;
+}
+
+.header-lang-dropdown .dropdown-item.active {
+  background-color: #EFF6FF;
+  color: #1E40AF;
+  font-weight: 600;
+}
+
+.header-user-dropdown .dropdown-menu {
+  min-width: 220px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.header-user-dropdown .dropdown-item {
+  border-radius: 6px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.header-user-dropdown .dropdown-item:hover,
+.header-user-dropdown .dropdown-item:focus {
+  background-color: #F3F4F6;
+  color: #111827;
 }
 
 /* Content */

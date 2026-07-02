@@ -8,31 +8,31 @@
    ============================================================================ */
 .sidebar {
   /* Layout */
-  --sidebar-width: 260px;
+  --sidebar-width: max-content;
   --sidebar-collapsed-width: 72px;
   --sidebar-z-index: 100;
 
-  /* Colors — Slate-900 base with gold accent (WCAG AA compliant) */
-  --sidebar-bg: #0f172a;
-  --sidebar-bg-elevated: #1e293b;
-  --sidebar-border: rgba(148, 163, 184, 0.12);
-  --sidebar-text: #e2e8f0;
-  --sidebar-text-muted: #94a3b8;
-  --sidebar-text-subtle: #64748b;
-  --sidebar-accent: #d6c56b;
-  --sidebar-accent-hover: #e8d98a;
-  --sidebar-accent-soft: rgba(214, 197, 107, 0.12);
-  --sidebar-active-bg: rgba(255, 255, 255, 0.06);
-  --sidebar-hover-bg: rgba(255, 255, 255, 0.035);
-  --sidebar-profile-bg: rgba(255, 255, 255, 0.03);
-  --sidebar-profile-border: rgba(148, 163, 184, 0.1);
-  --sidebar-section-line: rgba(148, 163, 184, 0.08);
+  /* Colors — Custom Yellow Theme */
+  --sidebar-bg: #FEFCE8; /* Custom light yellow */
+  --sidebar-bg-elevated: #F9FAFB;
+  --sidebar-border: #E5E7EB;
+  --sidebar-text: #374151;
+  --sidebar-text-muted: #6B7280;
+  --sidebar-text-subtle: #9CA3AF;
+  --sidebar-accent: #1E40AF;
+  --sidebar-accent-hover: #1E3A8A;
+  --sidebar-accent-soft: rgba(30, 64, 175, 0.12);
+  --sidebar-active-bg: #1E40AF;
+  --sidebar-hover-bg: #DBEAFE;
+  --sidebar-profile-bg: #F3F4F6;
+  --sidebar-profile-border: #E5E7EB;
+  --sidebar-section-line: #E5E7EB;
 
   /* Typography Scale */
-  --sidebar-text-xs: 0.6875rem;   /* 11px — section labels, badges */
-  --sidebar-text-sm: 0.8125rem;   /* 13px — nav links */
-  --sidebar-text-base: 0.875rem;  /* 14px — user name */
-  --sidebar-text-lg: 1rem;        /* 16px — logo */
+  --sidebar-text-xs: 0.75rem;     /* 12px */
+  --sidebar-text-sm: 1rem;        /* 16px — nav links */
+  --sidebar-text-base: 1rem;      /* 16px — user name */
+  --sidebar-text-lg: 1.125rem;    /* 18px — logo */
   --sidebar-font-medium: 500;
   --sidebar-font-semibold: 600;
   --sidebar-font-bold: 700;
@@ -50,17 +50,17 @@
   --sidebar-radius-md: 10px;
   --sidebar-radius-lg: 12px;
   --sidebar-radius-full: 999px;
-  --sidebar-icon-size: 1.125rem;  /* 18px */
-  --sidebar-icon-size-lg: 1.5rem; /* 24px — collapsed state */
+  --sidebar-icon-size: 24px;
+  --sidebar-icon-size-lg: 24px;
   --sidebar-gap: 0.75rem;
-  --sidebar-padding: 1rem 0.875rem;
+  --sidebar-padding: 24px;
 
   /* Transitions */
   --sidebar-transition: 160ms ease;
   --sidebar-transition-slow: 220ms ease;
 
   /* Touch Targets */
-  --sidebar-touch-target: 44px;
+  --sidebar-touch-target: 48px;
 }
 
 /* RTL Support */
@@ -79,7 +79,7 @@ html[dir="rtl"] .sidebar {
   min-height: 100vh;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border);
-  padding: var(--sidebar-space-4) var(--sidebar-space-2);
+  padding: var(--sidebar-padding);
   overflow-y: auto;
   position: sticky;
   top: 0;
@@ -327,8 +327,10 @@ html[dir="rtl"] .sidebar {
 }
 
 /* ============================================================================
-   NAV LINKS — Base Styles
+/* ============================================================================
+   NAV LINKS — Node-based Mind Map Structure
    ============================================================================ */
+/* Common structure for all nodes */
 .sidebar-nav .nav-link,
 .sidebar-nav .nav-toggle {
   display: flex;
@@ -338,51 +340,214 @@ html[dir="rtl"] .sidebar {
   min-height: var(--sidebar-touch-target);
   padding: var(--sidebar-space-2) var(--sidebar-space-3);
   border-radius: var(--sidebar-radius-md);
-  color: var(--sidebar-text);
-  font-size: var(--sidebar-text-sm);
-  font-weight: var(--sidebar-font-medium);
   line-height: 1.35;
   white-space: nowrap;
   text-decoration: none;
-  background: transparent;
-  border: 1px solid transparent;
   cursor: pointer;
-  transition:
-    background-color var(--sidebar-transition),
-    border-color var(--sidebar-transition),
-    color var(--sidebar-transition);
+  transition: all var(--sidebar-transition);
   position: relative;
+  margin-bottom: 8px; /* 8pt system spacing on items */
+  border: 1px solid transparent;
+  border-inline-start: 4px solid transparent; /* Fillup border reservation */
 }
 
+/* ----------------------------------------------------------------------------
+   PARENT NODES (Top level items & section toggles)
+   ---------------------------------------------------------------------------- */
+.sidebar-top-level .nav-link,
 .sidebar-nav .nav-toggle {
-  font-family: inherit;
-  font-weight: var(--sidebar-font-bold);
-  color: var(--sidebar-text-muted);
-  min-height: 42px;
+  background-color: #FFFFFF;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+  border-color: #E5E7EB;
+  border-inline-start-color: transparent;
 }
 
-.sidebar-nav .nav-link:focus-visible,
-.sidebar-nav .nav-toggle:focus-visible {
-  outline: 2px solid var(--sidebar-accent);
-  outline-offset: 2px;
-}
-
-/* Icon Styling */
-.sidebar-nav .nav-link i,
+.sidebar-top-level .nav-link i,
 .sidebar-nav .nav-toggle i:first-child {
+  color: #6B7280;
+  opacity: 0.9;
   width: var(--sidebar-icon-size);
   height: var(--sidebar-icon-size);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--sidebar-text-muted);
-  opacity: 0.88;
-  transition: color var(--sidebar-transition), opacity var(--sidebar-transition);
   font-size: 1rem;
 }
 
-/* Label/Text */
+.sidebar-top-level .nav-link:hover,
+.sidebar-nav .nav-toggle:hover {
+  background-color: #F9FAFB;
+  color: #111827;
+  border-color: #D1D5DB;
+}
+
+.sidebar-top-level .nav-link:hover i,
+.sidebar-nav .nav-toggle:hover i:first-child {
+  color: #374151;
+}
+
+.sidebar-top-level .nav-link:focus-visible,
+.sidebar-nav .nav-toggle:focus-visible {
+  outline: 2px solid #93C5FD;
+  outline-offset: 2px;
+}
+
+/* Parent active state - Fillup Border */
+.sidebar-top-level .nav-link.active,
+.sidebar-nav .nav-toggle.is-active,
+.sidebar-nav .nav-toggle[aria-expanded="true"] {
+  background-color: #EFF6FF;
+  color: #1D4ED8;
+  border-color: #BFDBFE;
+  border-inline-start-color: #2563EB; /* Fillup active border */
+}
+
+.sidebar-top-level .nav-link.active i,
+.sidebar-nav .nav-toggle.is-active i:first-child,
+.sidebar-nav .nav-toggle[aria-expanded="true"] i:first-child {
+  color: #2563EB;
+}
+
+/* ----------------------------------------------------------------------------
+   CHILD NODES (Submenu items)
+   ---------------------------------------------------------------------------- */
+.sidebar-nav .submenu .nav-link {
+  background-color: transparent;
+  color: #4B5563;
+  font-size: 15px;
+  font-weight: 500;
+  min-height: var(--sidebar-touch-target);
+}
+
+.sidebar-nav .submenu .nav-link i {
+  color: #9CA3AF;
+  opacity: 0.8;
+  width: var(--sidebar-icon-size);
+  height: var(--sidebar-icon-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.sidebar-nav .submenu .nav-link:hover {
+  background-color: #F3F4F6;
+  color: #1F2937;
+  border-color: #E5E7EB;
+  border-inline-start-color: transparent;
+}
+
+.sidebar-nav .submenu .nav-link:hover i {
+  color: #6B7280;
+}
+
+/* Child active state - Fillup Border */
+.sidebar-nav .submenu .nav-link.active {
+  background-color: #E0F2FE;
+  color: #0369A1;
+  font-weight: 600;
+  border-color: #BAE6FD;
+  border-inline-start-color: #0284C7; /* Fillup active border */
+}
+
+.sidebar-nav .submenu .nav-link.active i {
+  color: #0284C7;
+  opacity: 1;
+}
+
+/* ----------------------------------------------------------------------------
+   CONNECTORS (Mind-map inspired tree)
+   ---------------------------------------------------------------------------- */
+.sidebar-section {
+  position: relative;
+}
+
+.sidebar-nav .submenu {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0 24px; /* LTR Indent */
+  position: relative;
+  display: none;
+}
+
+html[dir="rtl"] .sidebar-nav .submenu {
+  margin: 0 24px 0 0; /* RTL Indent */
+}
+
+.sidebar-nav .submenu.is-open {
+  display: block;
+  animation: submenuSlideIn 160ms ease;
+}
+
+@keyframes submenuSlideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Vertical Spine connecting to the parent */
+.sidebar-nav .submenu::before {
+  content: "";
+  position: absolute;
+  top: -8px; /* Connecting upwards to the parent node gap */
+  height: 32px; /* Reaches exactly the center of the first child item */
+  left: 0; /* LTR */
+  width: 2px;
+  background-color: #E5E7EB;
+}
+
+html[dir="rtl"] .sidebar-nav .submenu::before {
+  left: auto;
+  right: 0;
+}
+
+/* Horizontal branch to each child */
+.sidebar-nav .submenu .nav-item {
+  position: relative;
+  margin: 0; /* Clear default item margin */
+  padding-left: 24px; /* Space for the horizontal branch */
+}
+
+html[dir="rtl"] .sidebar-nav .submenu .nav-item {
+  padding-left: 0;
+  padding-right: 24px;
+}
+
+.sidebar-nav .submenu .nav-item::before {
+  content: "";
+  position: absolute;
+  top: 24px; /* Center of the 48px touch target */
+  left: 0; /* LTR */
+  width: 24px; /* Extend to meet the child node padding */
+  height: 2px;
+  background-color: #E5E7EB;
+}
+
+html[dir="rtl"] .sidebar-nav .submenu .nav-item::before {
+  left: auto;
+  right: 0;
+}
+
+/* Draw vertical spine downwards to the next item */
+.sidebar-nav .submenu .nav-item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 24px; 
+  left: 0;
+  width: 2px;
+  height: 56px; /* 48px touch target + 8px margin */
+  background-color: #E5E7EB;
+}
+
+html[dir="rtl"] .sidebar-nav .submenu .nav-item:not(:last-child)::after {
+  left: auto;
+  right: 0;
+}
+
+/* Labels & Chevrons */
 .sidebar-nav .nav-link span,
 .sidebar-nav .nav-toggle-label {
   color: inherit;
@@ -392,153 +557,17 @@ html[dir="rtl"] .sidebar {
   flex: 1;
 }
 
-/* Chevron for expandable items */
 .sidebar-nav .nav-chevron {
   font-size: 0.65rem;
-  opacity: 0.72;
-  transition: transform var(--sidebar-transition), opacity var(--sidebar-transition);
+  opacity: 0.9;
+  transition: transform var(--sidebar-transition);
   margin-inline-start: auto;
   flex-shrink: 0;
+  color: inherit;
 }
 
 .sidebar-nav .nav-toggle[aria-expanded="true"] .nav-chevron {
   transform: rotate(180deg);
-  opacity: 1;
-}
-
-/* ============================================================================
-   NAV LINK — States
-   ============================================================================ */
-
-/* Hover */
-.sidebar-nav .nav-link:hover,
-.sidebar-nav .nav-toggle:hover {
-  background-color: var(--sidebar-hover-bg);
-  color: var(--sidebar-text);
-}
-
-.sidebar-nav .nav-link:hover i,
-.sidebar-nav .nav-toggle:hover i:first-child {
-  color: var(--sidebar-accent);
-  opacity: 1;
-}
-
-/* Active — Primary navigation item */
-.sidebar-nav .nav-link.active {
-  background: var(--sidebar-active-bg);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  font-weight: var(--sidebar-font-semibold);
-}
-
-.sidebar-nav .nav-link.active::before {
-  content: "";
-  position: absolute;
-  inset-inline-start: -1px;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
-  background: var(--sidebar-accent);
-  border-radius: 999px;
-}
-
-html[dir="rtl"] .sidebar-nav .nav-link.active::before {
-  inset-inline-end: -1px;
-  inset-inline-start: auto;
-  border-radius: 999px;
-}
-
-.sidebar-nav .nav-link.active i {
-  color: var(--sidebar-accent);
-  opacity: 1;
-}
-
-/* Active toggle (expanded parent) */
-.sidebar-nav .nav-toggle.is-active,
-.sidebar-nav .nav-toggle[aria-expanded="true"] {
-  background-color: rgba(0, 0, 0, 0.2);
-  border-color: rgba(148, 163, 184, 0.14);
-  color: var(--sidebar-text);
-}
-
-.sidebar-nav .nav-toggle.is-active i:first-child,
-.sidebar-nav .nav-toggle[aria-expanded="true"] i:first-child {
-  color: var(--sidebar-accent);
-  opacity: 1;
-}
-
-/* ============================================================================
-   SUBMENU — Nested Navigation
-   ============================================================================ */
-.sidebar-nav .submenu {
-  list-style: none;
-  padding: var(--sidebar-space-1) 0 var(--sidebar-space-2);
-  margin: 0 0 0 calc(var(--sidebar-icon-size) + var(--sidebar-gap) + var(--sidebar-space-3));
-  border-inline-start: 1px solid var(--sidebar-section-line);
-  display: none;
-}
-
-html[dir="rtl"] .sidebar-nav .submenu {
-  margin-left: 0;
-  margin-right: calc(var(--sidebar-icon-size) + var(--sidebar-gap) + var(--sidebar-space-3));
-}
-
-.sidebar-nav .submenu.is-open {
-  display: block;
-  animation: submenuSlideIn 160ms ease;
-}
-
-@keyframes submenuSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.sidebar-nav .submenu .nav-item {
-  margin: 0;
-}
-
-.sidebar-nav .submenu .nav-link {
-  min-height: 36px;
-  padding: var(--sidebar-space-1) var(--sidebar-space-3);
-  font-size: calc(var(--sidebar-text-sm) - 0.025rem);
-  border: 0;
-  border-inline-start: 2px solid transparent;
-  border-radius: 0 var(--sidebar-radius-md) var(--sidebar-radius-md) 0;
-  margin-inline-start: -1px;
-  color: #dbe4ef;
-}
-
-html[dir="rtl"] .sidebar-nav .submenu .nav-link {
-  border-radius: var(--sidebar-radius-md) 0 0 var(--sidebar-radius-md);
-}
-
-.sidebar-nav .submenu .nav-link:hover {
-  border-inline-start-color: rgba(214, 197, 107, 0.55);
-  background: var(--sidebar-hover-bg);
-  color: var(--sidebar-text);
-}
-
-.sidebar-nav .submenu .nav-link.active {
-  background: var(--sidebar-active-bg);
-  border-inline-start-color: var(--sidebar-accent);
-  color: #ffffff;
-  font-weight: var(--sidebar-font-semibold);
-}
-
-.sidebar-nav .submenu .nav-link.active::before {
-  display: none;
-}
-
-.sidebar-nav .submenu .nav-link i {
-  width: 1rem;
-  color: inherit;
-  opacity: 0.8;
 }
 
 /* Collapsed: hide submenus entirely (handled by JS) */

@@ -11,102 +11,113 @@
   --chart-color-6: #065F46;  /* emerald dark  */
 
   /* Arabic/RTL typography stack */
-  --font-arabic: "Cairo", "Noto Sans Arabic", "Segoe UI", sans-serif;
+  --font-arabic: "Cairo", "Noto Sans Arabic", sans-serif;
   --font-latin:  "Inter", "Segoe UI", sans-serif;
 
   /* Sidebar layout token */
   --admin-sidebar-width: 280px;
 
   /* Focus ring — visible keyboard navigation */
-  --focus-ring: 0 0 0 3px rgba(43, 58, 103, 0.45);
+  --focus-ring: 0 0 0 3px rgba(30, 64, 175, 0.45);
 
   /* Primary Palette */
-  --color-primary: #0B1E33;
-  --color-primary-hover: #142e4a;
-  --color-primary-light: #e6ebf2;
-  --color-primary-surface: #f8fafc;
+  --color-primary: #1E40AF;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-light: #DBEAFE;
+  --color-primary-surface: #F8FAFC;
   --color-primary-accent: #B49B3B;
   --color-primary-accent-hover: #967f2e;
   --color-primary-accent-light: #D6C56B;
 
   /* Secondary Palette */
-  --color-secondary: #0D9488;
-  --color-secondary-hover: #0f766e;
-  --color-secondary-light: #ccfbf1;
-  --color-secondary-surface: #f0fdfa;
+  --color-secondary: #2563EB;
+  --color-secondary-hover: #1D4ED8;
+  --color-secondary-light: #DBEAFE;
+  --color-secondary-surface: #F8FAFC;
 
   /* Semantic Colors */
-  --color-success: #10b981;
-  --color-success-hover: #059669;
-  --color-success-light: #d1fae5;
-  --color-success-dark: #047857;
+  --color-success: #16A34A;
+  --color-success-hover: #15803D;
+  --color-success-light: #DCFCE7;
+  --color-success-dark: #166534;
 
-  --color-warning: #f59e0b;
-  --color-warning-hover: #d97706;
-  --color-warning-light: #fef3c7;
-  --color-warning-dark: #b45309;
+  --color-warning: #F59E0B;
+  --color-warning-hover: #D97706;
+  --color-warning-light: #FEF3C7;
+  --color-warning-dark: #B45309;
 
-  --color-error: #ef4444;
-  --color-error-hover: #dc2626;
-  --color-error-light: #fee2e2;
-  --color-error-dark: #b91c1c;
+  --color-error: #DC2626;
+  --color-error-hover: #B91C1C;
+  --color-error-light: #FEE2E2;
+  --color-error-dark: #991B1B;
 
-  --color-info: #2F7D62;
-  --color-info-hover: #1F5E47;
-  --color-info-light: #e0f0eb;
-  --color-info-dark: #163d2e;
+  --color-info: #2563EB;
+  --color-info-hover: #1D4ED8;
+  --color-info-light: #DBEAFE;
+  --color-info-dark: #1E40AF;
 
   /* Gray Scale */
   --color-gray-50: #f8fafc;
   --color-gray-100: #f1f5f9;
-  --color-gray-200: #e2e8f0;
+  --color-gray-200: #E5E7EB;
   --color-gray-300: #cbd5e1;
   --color-gray-400: #94a3b8;
-  --color-gray-500: #64748b;
+  --color-gray-500: #6B7280;
   --color-gray-600: #475569;
   --color-gray-700: #334155;
   --color-gray-800: #1e293b;
-  --color-gray-900: #0f172a;
+  --color-gray-900: #111827;
 
-  /* Spacing Scale */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-7: 1.75rem;
-  --space-8: 2rem;
-  --space-9: 2.5rem;
-  --space-10: 3rem;
+  /* Spacing Scale (8pt System) */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+  --space-7: 56px;
+  --space-8: 64px;
+  --space-9: 72px;
+  --space-10: 80px;
 
   /* Typography Scale */
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 32px;
 
   /* Font Families */
-  --font-family-ar: "Cairo", "Noto Sans Arabic", "Tahoma", sans-serif;
+  --font-family-ar: "Cairo", "Noto Sans Arabic", sans-serif;
   --font-family-en: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-family-mono: "JetBrains Mono", "Fira Code", monospace;
   --font-family-base: var(--font-family-ar);
   html[dir="ltr"] & { --font-family-base: var(--font-family-en); }
+  
+  /* Font Weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
   /* Motion Primitives */
   --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 360ms cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+  --shadow-lg: 0 10px 24px rgba(0,0,0,0.15);
+  
+  /* Border Radii */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
   --radius-full: 9999px;
+  
   --border-width: 1px;
   --border-width-2: 2px;
   --border-width-4: 4px;
@@ -115,37 +126,7 @@
   --z-dropdown: 1000;
 
   /* Backward-compatibility aliases */
-  --color-primary: var(--color-primary);
-  --color-primary-hover: var(--color-primary-hover);
-  --color-primary-light: var(--color-primary-light);
-  --color-primary-dark: var(--color-primary-dark);
-  --color-secondary: var(--color-secondary);
-  --color-secondary-hover: var(--color-secondary-hover);
-  --color-secondary-light: var(--color-secondary-light);
-  --color-primary-surface: var(--color-primary-surface);
-  --color-primary: var(--color-primary);
-  --color-gray-100: var(--color-gray-100);
-  --color-gray-900: var(--color-gray-900);
-  --color-gray-700: var(--color-gray-700);
-  --color-gray-500: var(--color-gray-500);
-  --color-gray-200: var(--color-gray-200);
-  --radius-md: var(--radius-md);
-  --radius-lg: var(--radius-lg);
-  --radius-sm: var(--radius-sm);
-  --shadow-md: var(--shadow-md);
-  --shadow-sm: var(--shadow-sm);
-  --space-1: var(--space-1);
-  --space-2: var(--space-2);
-  --space-3: var(--space-3);
-  --space-4: var(--space-4);
-  --space-5: var(--space-5);
-  --space-6: var(--space-6);
-  --space-8: var(--space-8);
-  --text-sm: var(--text-sm);
-  --text-base: var(--text-base);
-  --text-lg: var(--text-lg);
-  --text-xl: var(--text-xl);
-  --text-2xl: var(--text-2xl);
+  --color-primary-dark: #1E3A8A;
 }
 ﻿/**
  * KinJo Admin Interface - Elite Design System
@@ -1499,199 +1480,7 @@ html[dir="rtl"] .submenu .nav-link {
   opacity: 1;
 }
 
-/* Sidebar icon contrast on dark background (#0f172a).
-   .nav-link and .nav-toggle set color:#475569 globally (2.35:1 on dark sidebar — WCAG fail).
-   Text spans are already overridden to #e5e7eb by later rules but icons are not.
-   These rules raise icon/base color to #cbd5e1 (12:1) for the dark-sidebar context only.
-   Hover/active states retain their own light-background rules and are unaffected. */
-.sidebar .nav-link,
-.sidebar .nav-item.has-children > .nav-toggle {
-  color: #cbd5e1;
-}
-
-/* Refined admin sidebar navigation. Scoped below the sidebar to avoid changing
-   Bootstrap tabs and other page-level navigation components. */
-.sidebar .sidebar-menu,
-.sidebar .submenu {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.sidebar .sidebar-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.sidebar .nav-item {
-  margin: 0;
-}
-
-.sidebar .sidebar-section {
-  margin-bottom: 0.125rem;
-}
-
-.sidebar .nav-link,
-.sidebar .nav-item.has-children > .nav-toggle {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 38px;
-  gap: 0.625rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  color: #cbd5e1;
-  line-height: 1.35;
-  white-space: nowrap;
-  text-decoration: none;
-  transition:
-    background-color var(--transition-fast),
-    border-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.sidebar .nav-item.has-children > .nav-toggle {
-  min-height: 42px;
-  background: transparent;
-  border: 1px solid transparent;
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 800;
-  color: #94a3b8;
-}
-
-.sidebar .nav-link {
-  border: 1px solid transparent;
-  font-weight: 500;
-}
-
-.sidebar .nav-link:hover,
-.sidebar .nav-item.has-children > .nav-toggle:hover {
-  background-color: rgba(148, 163, 184, 0.11);
-  color: #ffffff;
-}
-
-.sidebar .nav-link:focus-visible,
-.sidebar .nav-item.has-children > .nav-toggle:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.8);
-  outline-offset: 2px;
-}
-
-.sidebar .nav-link.active {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.06));
-  border-color: rgba(255, 255, 255, 0.22);
-  border-inline-end: 0;
-  color: #ffffff;
-  font-weight: 700;
-}
-
-html[dir="rtl"] .sidebar .nav-link.active {
-  background: linear-gradient(270deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.06));
-}
-
-.sidebar .nav-link.active::before {
-  inset-inline-start: -1px;
-  top: 0.45rem;
-  bottom: 0.45rem;
-  width: 3px;
-  background: #D6C56B;
-  border-radius: 999px;
-}
-
-.sidebar .nav-item.has-children > .nav-toggle.is-active,
-.sidebar .nav-item.has-children > .nav-toggle[aria-expanded="true"] {
-  background-color: rgba(0, 0, 0, 0.22);
-  border-color: rgba(148, 163, 184, 0.14);
-  color: #f8fafc;
-}
-
-.sidebar .nav-toggle-label,
-.sidebar .nav-link span {
-  color: inherit !important;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sidebar .nav-chevron {
-  opacity: 0.72;
-}
-
-.sidebar .submenu {
-  padding: 0.25rem 0 0.375rem;
-  margin: 0 0 0 1.25rem;
-  border-inline-start: 1px solid rgba(148, 163, 184, 0.17);
-}
-
-html[dir="rtl"] .sidebar .submenu {
-  margin-left: 0;
-  margin-right: 1.25rem;
-}
-
-.sidebar .submenu .nav-link {
-  min-height: 34px;
-  padding: 0.45rem 0.75rem;
-  border: 0;
-  border-inline-start: 2px solid transparent;
-  border-radius: 0 8px 8px 0;
-  margin-inline-start: -1px;
-  color: #dbe4ef;
-  font-size: 0.8125rem;
-}
-
-html[dir="rtl"] .sidebar .submenu .nav-link {
-  border-radius: 8px 0 0 8px;
-}
-
-.sidebar .submenu .nav-link:hover {
-  border-inline-start-color: rgba(214, 197, 107, 0.55);
-}
-
-.sidebar .submenu .nav-link.active {
-  background-color: rgba(255, 255, 255, 0.12);
-  border-inline-start-color: #D6C56B;
-  color: #ffffff;
-}
-
-.sidebar .submenu .nav-link.active::before {
-  display: none;
-}
-
-.sidebar .nav-link i,
-.sidebar .nav-toggle i:first-child {
-  width: 1.05rem;
-  color: inherit;
-  opacity: 0.88;
-}
-
-.sidebar .nav-link.active i,
-.sidebar .nav-toggle.is-active i:first-child {
-  color: #D6C56B;
-  opacity: 1;
-}
-
-/* admin-sidebar semantic alias — the <aside> carries both classes; these selectors
-   mirror the .sidebar equivalents so both families match the same elements. */
-.admin-sidebar .nav-link span {
-  color: inherit !important;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-html[dir="rtl"] .admin-sidebar .nav-link.active {
-  background-color: rgba(214, 197, 107, 0.12);
-  border-inline-start-color: #D6C56B;
-  color: #ffffff;
-}
-
-.admin-sidebar .submenu .nav-link.active {
-  background-color: rgba(255, 255, 255, 0.12);
-  border-inline-start-color: #D6C56B;
-  color: #ffffff;
-}
-
+/* End of Sidebar overrides */
 /* Responsive Design */
 @media (max-width: 768px) {
   .layout {
@@ -1993,9 +1782,21 @@ html[dir="rtl"] .admin-sidebar .nav-link.active {
 /* KPI Cards */
 .admin-dashboard-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3); /* 24px */
+  margin-bottom: var(--space-4); /* 32px */
+}
+
+@media (max-width: 1024px) {
+  .admin-dashboard-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-dashboard-cards {
+    grid-template-columns: 1fr;
+  }
 }
 
 .admin-kpi-card {

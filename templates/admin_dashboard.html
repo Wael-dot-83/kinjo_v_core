@@ -7,17 +7,20 @@
   <!-- Page Header -->
   <div class="admin-page-header">
     <div class="admin-page-header-content">
-      <h1 class="admin-page-title">
-        {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
+      <h1 class="admin-page-title" style="font-size: 20px;">
+        {% if ui_lang == 'en' %}Operational Indicators{% else %}المؤشرات التشغيلية{% endif %}
       </h1>
       <p class="admin-page-subtitle">
-        {% if ui_lang == 'en' %}Monitor system performance and manage operations{% else %}مراقبة أداء النظام وإدارة العمليات{% endif %}
+        {% if ui_lang == 'en' %}Monitor system status, operations, and current activities{% else %}متابعة حالة النظام والعمليات والأنشطة الحالية{% endif %}
       </p>
     </div>
-    <div class="admin-page-header-actions">
-      <button class="admin-btn admin-btn-secondary" id="refresh-dashboard">
-        <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
-        {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+    <div class="admin-page-header-actions" style="display: flex; align-items: center; gap: 16px;">
+      <span id="last-updated-time" style="font-size: 14px; color: #6B7280; font-weight: 500;">
+        {% if ui_lang == 'en' %}Last updated: --:--{% else %}آخر تحديث: --:--{% endif %}
+      </span>
+      <button class="admin-btn-enterprise-refresh" id="refresh-dashboard">
+        <i class="bi bi-arrow-clockwise refresh-icon" aria-hidden="true"></i>
+        <span class="refresh-text">{% if ui_lang == 'en' %}Update Data{% else %}تحديث البيانات{% endif %}</span>
       </button>
     </div>
   </div>
@@ -72,9 +75,22 @@
         <!-- Populated by JavaScript -->
       </div>
 
+      <!-- System Alerts -->
+      <div class="admin-dashboard-alerts">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3 class="admin-card-title">
+              {% if ui_lang == 'en' %}System Alerts{% else %}تنبيهات النظام{% endif %}
+            </h3>
+          </div>
+          <div class="admin-card-body">
+            <div class="admin-alerts-list" id="alerts-list" role="list"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Charts -->
       <div class="admin-dashboard-charts">
-
         <div class="admin-dashboard-chart-container">
           <div class="admin-card">
             <div class="admin-card-header">
@@ -100,17 +116,15 @@
             </div>
           </div>
         </div>
-
       </div>
 
-      <!-- Activity, Alerts & Quick Actions -->
+      <!-- Activity & Quick Actions -->
       <div class="admin-dashboard-bottom">
-
         <div class="admin-dashboard-activity">
           <div class="admin-card">
             <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}Recent Activity{% else %}النشاط الأخير{% endif %}
+              <h3 class="admin-card-title" style="font-size: 20px;">
+                {% if ui_lang == 'en' %}Recent Activities{% else %}النشاطات الحديثة{% endif %}
               </h3>
             </div>
             <div class="admin-card-body">
@@ -121,20 +135,7 @@
           </div>
         </div>
 
-        <div class="admin-dashboard-alerts">
-          <!-- Alerts -->
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}System Alerts{% else %}تنبيهات النظام{% endif %}
-              </h3>
-            </div>
-            <div class="admin-card-body">
-              <div class="admin-alerts-list" id="alerts-list" role="list"></div>
-            </div>
-          </div>
-
-          <!-- Quick Actions -->
+        <div class="admin-dashboard-quick-actions">
           <div class="admin-card">
             <div class="admin-card-header">
               <h3 class="admin-card-title">
@@ -148,43 +149,62 @@
                   <span class="admin-quick-action-card-icon admin-quick-action-card-icon--primary">
                     <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
                   </span>
-                  <span class="admin-quick-action-card-label">
-                    {% if ui_lang == 'en' %}Manage Users{% else %}إدارة المستخدمين{% endif %}
-                  </span>
+                  <div class="admin-quick-action-card-content">
+                    <span class="admin-quick-action-card-label">
+                      {% if ui_lang == 'en' %}Manage Users{% else %}إدارة المستخدمين{% endif %}
+                    </span>
+                    <span class="admin-quick-action-card-desc">
+                      {% if ui_lang == 'en' %}Add or modify accounts{% else %}إضافة أو تعديل الحسابات{% endif %}
+                    </span>
+                  </div>
                 </a>
 
                 <a href="/admin/messages/compose" class="admin-quick-action-card">
                   <span class="admin-quick-action-card-icon admin-quick-action-card-icon--success">
                     <i class="bi bi-envelope-fill" aria-hidden="true"></i>
                   </span>
-                  <span class="admin-quick-action-card-label">
-                    {% if ui_lang == 'en' %}Send Message{% else %}إرسال رسالة{% endif %}
-                  </span>
+                  <div class="admin-quick-action-card-content">
+                    <span class="admin-quick-action-card-label">
+                      {% if ui_lang == 'en' %}Send Message{% else %}إرسال رسالة{% endif %}
+                    </span>
+                    <span class="admin-quick-action-card-desc">
+                      {% if ui_lang == 'en' %}Broadcast or direct messages{% else %}رسائل جماعية أو مباشرة{% endif %}
+                    </span>
+                  </div>
                 </a>
 
                 <a href="/admin/analytics" class="admin-quick-action-card">
                   <span class="admin-quick-action-card-icon admin-quick-action-card-icon--info">
                     <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
                   </span>
-                  <span class="admin-quick-action-card-label">
-                    {% if ui_lang == 'en' %}View Analytics{% else %}عرض التحليلات{% endif %}
-                  </span>
+                  <div class="admin-quick-action-card-content">
+                    <span class="admin-quick-action-card-label">
+                      {% if ui_lang == 'en' %}View Analytics{% else %}عرض التحليلات{% endif %}
+                    </span>
+                    <span class="admin-quick-action-card-desc">
+                      {% if ui_lang == 'en' %}Detailed system reports{% else %}تقارير نظام مفصلة{% endif %}
+                    </span>
+                  </div>
                 </a>
 
                 <a href="/admin/imported-kindergartens" class="admin-quick-action-card">
                   <span class="admin-quick-action-card-icon admin-quick-action-card-icon--warning">
                     <i class="bi bi-database-fill" aria-hidden="true"></i>
                   </span>
-                  <span class="admin-quick-action-card-label">
-                    {% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}
-                  </span>
+                  <div class="admin-quick-action-card-content">
+                    <span class="admin-quick-action-card-label">
+                      {% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}
+                    </span>
+                    <span class="admin-quick-action-card-desc">
+                      {% if ui_lang == 'en' %}Review imported records{% else %}مراجعة السجلات المستوردة{% endif %}
+                    </span>
+                  </div>
                 </a>
 
               </div>
             </div>
           </div>
         </div>
-
       </div><!-- /.admin-dashboard-bottom -->
     </div><!-- /#dashboard-content -->
   </div><!-- /#admin-dashboard -->
@@ -194,6 +214,6 @@
 {% block extra_scripts %}
 <script>window.KINJO_LANG = "{{ ui_lang }}";</script>
 <script src="/static/js/chart_utils.js?v=2.1"></script>
-<script src="/static/js/admin_dashboard.js?v=2.7"></script>
+<script src="/static/js/admin_dashboard.js?v=2.9"></script>
 <script src="/static/js/admin_activity_filters.js?v=1.0"></script>
 {% endblock %}

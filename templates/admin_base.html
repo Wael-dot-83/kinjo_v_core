@@ -51,15 +51,15 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
     <!-- Kinjo Admin Design System -->
-    <link rel="stylesheet" href="/static/css/admin_design_system.css?v=2.9" />
-    <link rel="stylesheet" href="/static/css/sidebar-professional.css?v=1.0" />
+    <link rel="stylesheet" href="/static/css/admin_design_system.css?v=3.0" />
+    <link rel="stylesheet" href="/static/css/top-menu.css?v=1.0" />
     <link rel="stylesheet" href="/static/css/design-tokens.css?v=1" />
-    <link rel="stylesheet" href="/static/css/layout.css?v=1" />
-    <link rel="stylesheet" href="/static/css/components.css?v=1" />
+    <link rel="stylesheet" href="/static/css/layout.css?v=1.1" />
+    <link rel="stylesheet" href="/static/css/components.css?v=1.2" />
     <link rel="stylesheet" href="/static/css/utilities.css?v=1" />
 
     <!-- Legacy compatibility -->
-    <link rel="stylesheet" href="/static/css/kinjo.css?v=20260525" />
+    <link rel="stylesheet" href="/static/css/kinjo.css?v=20260702" />
     {% if ui_dir == 'rtl' %}
     <link rel="stylesheet" href="/static/css/rtl.css" />
     {% endif %}
@@ -88,282 +88,218 @@
     {% include 'components/impersonation_banner.html' %}
 
     <div class="admin-layout" id="admin-layout">
-      <!-- Sidebar -->
-      <aside class="admin-sidebar sidebar" id="admin-sidebar">
-        <div class="sidebar-header">
-          <a href="/admin/dashboard" class="sidebar-logo">
-            <img src="/static/favicon.svg" width="32" height="32" alt="" class="sidebar-logo-icon" aria-hidden="true" loading="eager" />
-            <span data-i18n="nav.brand">KinJo</span>
-          </a>
-        </div>
-
-        <!-- Admin profile card — visible immediately after login -->
-        {% if current_user %}
-        {% set admin_display_name = current_user.full_name or current_user.username %}
-        {% set admin_initials = (admin_display_name[0] | upper) if admin_display_name else 'A' %}
-        <div class="sidebar-profile">
-          <div class="sidebar-profile-avatar">
-            <img
-              src="/static/img/admin_avatar.png"
-              alt="{% if ui_lang == 'en' %}Admin profile{% else %}صورة المدير{% endif %}"
-              loading="eager"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
-            />
-            <span class="sidebar-profile-initials" style="display:none;">
-              {{ admin_initials }}
-            </span>
-          </div>
-          <div class="sidebar-profile-info">
-            <div class="sidebar-profile-org" style="font-size:0.82rem;font-weight:700;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-              {{ admin_display_name }}
-            </div>
-            <div class="sidebar-profile-dept">
-              {% if ui_lang == 'en' %}Family &amp; Childhood Directorate{% else %}مديرية الأسرة والطفولة{% endif %}
-            </div>
-            <div class="sidebar-profile-role">
-              <span class="sidebar-profile-badge">
-                {% if ui_lang == 'en' %}Administrator{% else %}مدير النظام{% endif %}
-              </span>
-              <span class="ms-2 text-success" style="font-size:0.72rem;">
-                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-                <small>{% if ui_lang == 'en' %}Logged in{% else %}مسجل الدخول{% endif %}</small>
-              </span>
-            </div>
-            <div class="mt-1">
-              <a href="/admin/profile" style="font-size:0.72rem;color:rgba(255,255,255,0.7);text-decoration:none;">
-                {% if ui_lang == 'en' %}View full profile &rarr;{% else %}عرض الملف الشخصي &larr;{% endif %}
-              </a>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-
-        {% set current_path = request.url.path %}
-        {% set top_level_items = [
-          {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم", "label_en": "Dashboard", "active_paths": ["/admin/dashboard"]}
-        ] %}
-        {% set sidebar_sections = [
-          {
-            "id": "management",
-            "icon": "bi-grid-1x2",
-            "label_ar": "إدارة النظام",
-            "label_en": "System Management",
-            "items": [
-              {"href": "/admin/users", "icon": "bi-people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users"], "active_prefixes": ["/admin/users/"]},
-              {"href": "/admin/messages", "icon": "bi-send", "label_ar": "التواصل", "label_en": "Communication", "active_paths": ["/admin/messages", "/admin/contact-messages"], "active_prefixes": ["/admin/messages/"]},
-              {"href": "/admin/kg-overview", "icon": "bi-building", "label_ar": "الروضات", "label_en": "Kindergartens", "active_paths": ["/admin/kg-overview"]},
-              {"href": "/admin/imported-kindergartens", "icon": "bi-database", "label_ar": "البيانات", "label_en": "Data Management", "active_paths": ["/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs"]}
-            ]
-          },
-          {
-            "id": "operations",
-            "icon": "bi-exclamation-triangle",
-            "label_ar": "العمليات",
-            "label_en": "Operations",
-            "items": [
-              {"href": "/admin/reports/incidents", "icon": "bi-list-check", "label_ar": "سجل الحوادث", "label_en": "Incident Log", "active_paths": ["/admin/reports/incidents"]},
-              {"href": "/admin/reports/incidents/generate", "icon": "bi-file-medical", "label_ar": "تقارير الحوادث", "label_en": "Incident Reports", "active_paths": ["/admin/reports/incidents/generate"]}
-            ]
-          },
-          {
-            "id": "reports-analytics",
-            "icon": "bi-bar-chart-line",
-            "label_ar": "التقارير والتحليل",
-            "label_en": "Reports & Analytics",
-            "items": [
-              {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics", "/admin/kpi", "/admin/analytics/charts"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
-              {"href": "/admin/analytics/reports", "icon": "bi-file-earmark-text", "label_ar": "التقارير المفصلة", "label_en": "Detailed Reports", "active_paths": ["/admin/analytics/reports"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
-              {"href": "/admin/analytics/decision-support", "icon": "bi-graph-up-arrow", "label_ar": "تقارير الدعم القرارى", "label_en": "Decision Support Reports", "active_paths": ["/admin/analytics/decision-support"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
-              {"href": "/admin/analytics/daily-reports", "icon": "bi-calendar-day", "label_ar": "التقارير اليومية", "label_en": "Daily Reports", "active_paths": ["/admin/analytics/daily-reports"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
-              {"href": "/admin/daily-reports-organization", "icon": "bi-calendar-check", "label_ar": "جدولة التقارير", "label_en": "Report Scheduling", "active_paths": ["/admin/daily-reports-organization"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
-              {"href": "/admin/heatmap", "icon": "bi-globe-asia-australia", "label_ar": "نظرة عامة على الخريطة", "label_en": "Map Overview", "active_paths": ["/admin/heatmap"], "group_label_ar": "الخريطة الحرارية", "group_label_en": "Heat Map"},
-              {"href": "/admin/heatmap#governorates", "icon": "bi-pin-map", "label_ar": "تحليل المحافظات", "label_en": "Governorate Analysis", "active_paths": [], "group_label_ar": "الخريطة الحرارية", "group_label_en": "Heat Map"}
-            ]
-          },
-          {
-            "id": "governance",
-            "icon": "bi-bank",
-            "label_ar": "الحوكمة",
-            "label_en": "Governance",
-            "items": [
-              {"href": "/admin/governance-reports", "icon": "bi-clipboard-data", "label_ar": "السياسات", "label_en": "Policies", "active_paths": ["/admin/governance-reports", "/admin/governance/reminders"]},
-              {"href": "/admin/classification", "icon": "bi-award", "label_ar": "الامتثال", "label_en": "Compliance", "active_paths": ["/admin/classification"]}
-            ]
-          },
-          {
-            "id": "settings",
-            "icon": "bi-sliders",
-            "label_ar": "الإعدادات",
-            "label_en": "Settings",
-            "items": [
-              {"href": "/admin/settings", "icon": "bi-gear", "label_ar": "إعدادات النظام", "label_en": "System Settings", "active_paths": ["/admin/settings", "/admin/observability"]},
-              {"href": "/admin/audit-logs", "icon": "bi-shield-lock", "label_ar": "السجلات", "label_en": "Logs", "active_paths": ["/admin/audit-logs", "/admin/alerts", "/admin/safety-analytics", "/admin/impersonate"]}
-            ]
-          }
-        ] %}
-
-        <nav class="sidebar-nav" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
-          <ul class="sidebar-menu sidebar-menu" role="list">
-            {% for item in top_level_items %}
-              {% set item_state = namespace(active=current_path in item.active_paths) %}
-              <li class="nav-item sidebar-top-level" role="listitem">
-                <a
-                  href="{{ item.href }}"
-                  class="nav-link{% if item_state.active %} active{% endif %}"
-                  {% if item_state.active %}aria-current="page"{% endif %}
-                >
-                  <i class="bi {{ item.icon }}" aria-hidden="true"></i>
-                  <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
-                </a>
-              </li>
-            {% endfor %}
-            {% for section in sidebar_sections %}
-              {% set section_state = namespace(active=false) %}
-              {% for item in section["items"] %}
-                {% set item_state = namespace(active=current_path in item.active_paths) %}
-                {% if item.active_prefixes is defined %}
-                  {% for prefix in item.active_prefixes %}
-                    {% if current_path.startswith(prefix) %}
-                      {% set item_state.active = true %}
-                    {% endif %}
-                  {% endfor %}
-                {% endif %}
-                {% if item_state.active %}
-                  {% set section_state.active = true %}
-                {% endif %}
-              {% endfor %}
-
-              <li class="nav-item has-children sidebar-section{% if section_state.active %} is-active{% endif %}">
-                <button
-                  class="nav-toggle sidebar-section-toggle{% if section_state.active %} is-active{% endif %}"
-                  type="button"
-                  aria-expanded="{{ 'true' if section_state.active else 'false' }}"
-                  aria-controls="{{ section.id }}-submenu"
-                >
-                  <i class="bi {{ section.icon }}" aria-hidden="true"></i>
-                  <span class="nav-toggle-label">{% if ui_lang == 'en' %}{{ section.label_en }}{% else %}{{ section.label_ar }}{% endif %}</span>
-                  <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
-                </button>
-                <ul id="{{ section.id }}-submenu" class="submenu{% if section_state.active %} is-open{% endif %}" role="list">
-                  {% set ns = namespace(current_group=none) %}
-                  {% for item in section["items"] %}
-                    {% set item_state = namespace(active=current_path in item.active_paths) %}
-                    {% if item.active_prefixes is defined %}
-                      {% for prefix in item.active_prefixes %}
-                        {% if current_path.startswith(prefix) %}
-                          {% set item_state.active = true %}
-                        {% endif %}
-                      {% endfor %}
-                    {% endif %}
-                    {% if item.group_label_ar is defined and item.group_label_ar != ns.current_group %}
-                      {% set ns.current_group = item.group_label_ar %}
-                      <li class="submenu-group-label" role="presentation" aria-hidden="true">
-                        <span>{% if ui_lang == 'en' %}{{ item.group_label_en }}{% else %}{{ item.group_label_ar }}{% endif %}</span>
-                      </li>
-                    {% endif %}
-                    <li class="nav-item" role="listitem">
-                      <a
-                        href="{{ item.href }}"
-                        class="nav-link{% if item_state.active %} active{% endif %}"
-                        {% if item_state.active %}aria-current="page"{% endif %}
-                      >
-                        <i class="bi {{ item.icon }}" aria-hidden="true"></i>
-                        <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
-                      </a>
-                    </li>
-                  {% endfor %}
-                </ul>
-              </li>
-            {% endfor %}
-          </ul>
-        </nav>
-      </aside>
-
       <!-- Main Content Area -->
       <main class="admin-main" id="admin-main-content">
-        <!-- Header -->
+        <!-- Header (Tier 1) -->
         <header class="admin-header">
           <div class="admin-header-left">
-            <!-- Mobile menu toggle -->
-            <button
-              class="admin-btn admin-btn-ghost admin-btn-icon d-lg-none"
-              id="sidebar-toggle"
-              type="button"
-              aria-label="{% if ui_lang == 'en' %}Toggle sidebar menu{% else %}تبديل القائمة الجانبية{% endif %}"
-              aria-expanded="false"
-              aria-controls="admin-sidebar"
-            >
-              <i class="bi bi-list" aria-hidden="true"></i>
-            </button>
-
-            <!-- Breadcrumb -->
-            <nav class="admin-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-              {% block breadcrumb %}
-              <a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}">
-                <i class="bi bi-house-fill" aria-hidden="true"></i>
-                <span>{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</span>
-              </a>
-              <span class="breadcrumb-separator">/</span>
-              <span class="breadcrumb-item active" aria-current="page">
-                {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
-              </span>
-              {% endblock %}
-            </nav>
+            <a href="/admin/dashboard" class="header-logo" style="display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; color: #1E40AF; text-decoration: none;">
+              <img src="/static/favicon.svg" width="32" height="32" alt="" class="header-logo-icon" aria-hidden="true" loading="eager" />
+              <span data-i18n="nav.brand">KinJo</span>
+            </a>
           </div>
 
           <div class="admin-header-right">
-            <!-- Language Switcher -->
-            <div class="admin-lang-switcher" role="group" aria-label="{% if ui_lang == 'en' %}Language{% else %}اللغة{% endif %}">
+            <!-- Language Switcher Component -->
+            <div class="dropdown header-lang-dropdown">
               <button
+                class="btn-header-action dropdown-toggle"
                 type="button"
-                class="admin-lang-btn {% if ui_lang == 'en' %}active{% endif %}"
-                onclick="setAdminLanguage('en')"
-                {% if ui_lang == 'en' %}aria-pressed="true"{% else %}aria-pressed="false"{% endif %}
-                title="English"
-              >EN</button>
-              <button
-                type="button"
-                class="admin-lang-btn {% if ui_lang == 'ar' %}active{% endif %}"
-                onclick="setAdminLanguage('ar')"
-                {% if ui_lang == 'ar' %}aria-pressed="true"{% else %}aria-pressed="false"{% endif %}
-                title="العربية"
-              >AR</button>
+                id="languageDropdown"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                aria-label="{% if ui_lang == 'en' %}Language{% else %}اللغة{% endif %}"
+              >
+                <i class="bi bi-globe fs-5" aria-hidden="true"></i>
+                <span class="d-none d-md-inline ms-2 me-1 fw-medium small">
+                  {% if ui_lang == 'en' %}English{% else %}العربية{% endif %}
+                </span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="languageDropdown">
+                <li>
+                  <button class="dropdown-item d-flex align-items-center justify-content-between {% if ui_lang == 'en' %}active{% endif %}" onclick="setAdminLanguage('en')">
+                    English
+                    {% if ui_lang == 'en' %}<i class="bi bi-check2 ms-2"></i>{% endif %}
+                  </button>
+                </li>
+                <li>
+                  <button class="dropdown-item d-flex align-items-center justify-content-between {% if ui_lang == 'ar' %}active{% endif %}" onclick="setAdminLanguage('ar')">
+                    العربية
+                    {% if ui_lang == 'ar' %}<i class="bi bi-check2 ms-2"></i>{% endif %}
+                  </button>
+                </li>
+              </ul>
             </div>
 
-            <!-- User Menu -->
-            <div class="dropdown">
+            <!-- Vertical Divider -->
+            <div class="header-divider d-none d-md-block"></div>
+
+            <!-- User Profile Component -->
+            <div class="dropdown header-user-dropdown">
               <button
-                class="admin-user-info dropdown-toggle"
+                class="btn-header-user dropdown-toggle"
                 type="button"
+                id="userProfileDropdown"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
                 aria-label="{% if ui_lang == 'en' %}User menu{% else %}قائمة المستخدم{% endif %}"
               >
-                <div class="admin-user-avatar-circle" aria-hidden="true">
-                  {{ current_user.username[:2] | upper if current_user else 'AD' }}
+                <div class="header-user-avatar" aria-hidden="true">
+                  {{ current_user.full_name[:2] | upper if current_user and current_user.full_name else (current_user.username[:2] | upper if current_user else 'AD') }}
                 </div>
-                <span class="d-none d-md-inline ms-2 me-1 fw-medium small">
-                  {{ current_user.username if current_user else 'Admin' }}
-                </span>
+                <div class="header-user-details d-none d-md-flex">
+                  <span class="header-user-name">
+                    {{ current_user.full_name if current_user and current_user.full_name else (current_user.username if current_user else 'System Admin') }}
+                  </span>
+                  <span class="header-user-role">
+                    {{ current_user.role | title if current_user and current_user.role else 'Administrator' }}
+                  </span>
+                </div>
               </button>
-              <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userProfileDropdown">
                 <li>
-                  <a class="dropdown-item" href="/profile">
-                    <i class="bi bi-person me-2" aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}Profile{% else %}الملف الشخصي{% endif %}
+                  <a class="dropdown-item py-2" href="/profile">
+                    <i class="bi bi-person-circle me-2 text-muted" aria-hidden="true"></i>
+                    {% if ui_lang == 'en' %}Profile Settings{% else %}إعدادات الملف الشخصي{% endif %}
                   </a>
                 </li>
                 <li><hr class="dropdown-divider" /></li>
                 <li>
-                  <a class="dropdown-item text-danger" href="#" data-action="logout">
+                  <a class="dropdown-item py-2 text-danger" href="#" data-action="logout">
                     <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}Logout{% else %}تسجيل الخروج{% endif %}
+                    {% if ui_lang == 'en' %}Sign Out{% else %}تسجيل الخروج{% endif %}
                   </a>
                 </li>
               </ul>
             </div>
           </div>
         </header>
+
+        <!-- Main Navigation Bar (Tier 2) -->
+        <nav class="admin-top-nav" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
+          {% set current_path = request.url.path %}
+          {% set top_level_items = [
+            {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم", "label_en": "Dashboard", "active_paths": ["/admin/dashboard"]}
+          ] %}
+          {% set sidebar_sections = [
+            {
+              "id": "management",
+              "icon": "bi-grid-1x2",
+              "label_ar": "إدارة النظام",
+              "label_en": "System Management",
+              "items": [
+                {"href": "/admin/users", "icon": "bi-people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users"], "active_prefixes": ["/admin/users/"]},
+                {"href": "/admin/messages", "icon": "bi-send", "label_ar": "التواصل", "label_en": "Communication", "active_paths": ["/admin/messages", "/admin/contact-messages"], "active_prefixes": ["/admin/messages/"]},
+                {"href": "/admin/kg-overview", "icon": "bi-building", "label_ar": "الروضات", "label_en": "Kindergartens", "active_paths": ["/admin/kg-overview"]},
+                {"href": "/admin/imported-kindergartens", "icon": "bi-database", "label_ar": "البيانات", "label_en": "Data Management", "active_paths": ["/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs"]}
+              ]
+            },
+            {
+              "id": "operations",
+              "icon": "bi-exclamation-triangle",
+              "label_ar": "العمليات",
+              "label_en": "Operations",
+              "items": [
+                {"href": "/admin/reports/incidents", "icon": "bi-list-check", "label_ar": "سجل الحوادث", "label_en": "Incident Log", "active_paths": ["/admin/reports/incidents"]},
+                {"href": "/admin/reports/incidents/generate", "icon": "bi-file-medical", "label_ar": "تقارير الحوادث", "label_en": "Incident Reports", "active_paths": ["/admin/reports/incidents/generate"]}
+              ]
+            },
+            {
+              "id": "reports-analytics",
+              "icon": "bi-bar-chart-line",
+              "label_ar": "التقارير والتحليل",
+              "label_en": "Reports & Analytics",
+              "items": [
+                {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics", "/admin/kpi", "/admin/analytics/charts"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
+                {"href": "/admin/analytics/reports", "icon": "bi-file-earmark-text", "label_ar": "التقارير المفصلة", "label_en": "Detailed Reports", "active_paths": ["/admin/analytics/reports"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
+                {"href": "/admin/analytics/decision-support", "icon": "bi-graph-up-arrow", "label_ar": "تقارير الدعم القرارى", "label_en": "Decision Support Reports", "active_paths": ["/admin/analytics/decision-support"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
+                {"href": "/admin/analytics/daily-reports", "icon": "bi-calendar-day", "label_ar": "التقارير اليومية", "label_en": "Daily Reports", "active_paths": ["/admin/analytics/daily-reports"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
+                {"href": "/admin/daily-reports-organization", "icon": "bi-calendar-check", "label_ar": "جدولة التقارير", "label_en": "Report Scheduling", "active_paths": ["/admin/daily-reports-organization"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
+                {"href": "/admin/heatmap", "icon": "bi-globe-asia-australia", "label_ar": "نظرة عامة على الخريطة", "label_en": "Map Overview", "active_paths": ["/admin/heatmap"], "group_label_ar": "الخريطة الحرارية", "group_label_en": "Heat Map"},
+                {"href": "/admin/heatmap#governorates", "icon": "bi-pin-map", "label_ar": "تحليل المحافظات", "label_en": "Governorate Analysis", "active_paths": [], "group_label_ar": "الخريطة الحرارية", "group_label_en": "Heat Map"}
+              ]
+            },
+            {
+              "id": "governance",
+              "icon": "bi-bank",
+              "label_ar": "الحوكمة",
+              "label_en": "Governance",
+              "items": [
+                {"href": "/admin/governance-reports", "icon": "bi-clipboard-data", "label_ar": "السياسات", "label_en": "Policies", "active_paths": ["/admin/governance-reports", "/admin/governance/reminders"]},
+                {"href": "/admin/classification", "icon": "bi-award", "label_ar": "الامتثال", "label_en": "Compliance", "active_paths": ["/admin/classification"]}
+              ]
+            },
+            {
+              "id": "settings",
+              "icon": "bi-sliders",
+              "label_ar": "الإعدادات",
+              "label_en": "Settings",
+              "items": [
+                {"href": "/admin/settings", "icon": "bi-gear", "label_ar": "إعدادات النظام", "label_en": "System Settings", "active_paths": ["/admin/settings", "/admin/observability"]},
+                {"href": "/admin/audit-logs", "icon": "bi-shield-lock", "label_ar": "السجلات", "label_en": "Logs", "active_paths": ["/admin/audit-logs", "/admin/alerts", "/admin/safety-analytics", "/admin/impersonate"]}
+              ]
+            }
+          ] %}
+          
+          <div class="top-nav-container">
+            <ul class="top-menu" role="menubar">
+              {% for item in top_level_items %}
+                {% set item_state = namespace(active=current_path in item.active_paths) %}
+                <li class="top-menu-item" role="presentation">
+                  <a href="{{ item.href }}" class="top-menu-link{% if item_state.active %} active{% endif %}" role="menuitem">
+                    <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                    <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
+                  </a>
+                </li>
+              {% endfor %}
+
+              {% for section in sidebar_sections %}
+                {% set section_state = namespace(active=false) %}
+                {% for item in section["items"] %}
+                  {% set item_state = namespace(active=current_path in item.active_paths) %}
+                  {% if item.active_prefixes is defined %}
+                    {% for prefix in item.active_prefixes %}
+                      {% if current_path.startswith(prefix) %}{% set item_state.active = true %}{% endif %}
+                    {% endfor %}
+                  {% endif %}
+                  {% if item_state.active %}{% set section_state.active = true %}{% endif %}
+                {% endfor %}
+
+                <li class="top-menu-item has-dropdown" role="presentation">
+                  <button class="top-menu-link dropdown-toggle{% if section_state.active %} active{% endif %}" type="button" aria-expanded="false" role="menuitem">
+                    <i class="bi {{ section.icon }}" aria-hidden="true"></i>
+                    <span>{% if ui_lang == 'en' %}{{ section.label_en }}{% else %}{{ section.label_ar }}{% endif %}</span>
+                  </button>
+                  <ul class="top-menu-dropdown shadow-sm" role="menu">
+                    {% set ns = namespace(current_group=none) %}
+                    {% for item in section["items"] %}
+                      {% set item_state = namespace(active=current_path in item.active_paths) %}
+                      {% if item.active_prefixes is defined %}
+                        {% for prefix in item.active_prefixes %}
+                          {% if current_path.startswith(prefix) %}{% set item_state.active = true %}{% endif %}
+                        {% endfor %}
+                      {% endif %}
+                      
+                      {% if item.group_label_ar is defined and item.group_label_ar != ns.current_group %}
+                        {% set ns.current_group = item.group_label_ar %}
+                        <li class="dropdown-group-label" role="presentation">
+                          {% if ui_lang == 'en' %}{{ item.group_label_en }}{% else %}{{ item.group_label_ar }}{% endif %}
+                        </li>
+                      {% endif %}
+                      
+                      <li role="presentation">
+                        <a href="{{ item.href }}" class="dropdown-item{% if item_state.active %} active{% endif %}" role="menuitem">
+                          <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                          <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
+                        </a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </nav>
 
         <!-- Page Header block (for page-specific headers) -->
         {% block page_header %}{% endblock %}
@@ -418,28 +354,6 @@
           window.location.reload();
         };
 
-        /* â"€â"€ Sidebar mobile toggle â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */
-        function setupSidebarToggle() {
-          var sidebar = document.getElementById("admin-sidebar");
-          var layout  = document.getElementById("admin-layout");
-          var toggle  = document.getElementById("sidebar-toggle");
-          if (!toggle || !sidebar || !layout) return;
-
-          toggle.addEventListener("click", function () {
-            var isOpen = sidebar.classList.contains("open");
-            sidebar.classList.toggle("open", !isOpen);
-            toggle.setAttribute("aria-expanded", String(!isOpen));
-          });
-
-          document.addEventListener("click", function (e) {
-            if (window.innerWidth >= 992) return;
-            if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
-              sidebar.classList.remove("open");
-              toggle.setAttribute("aria-expanded", "false");
-            }
-          });
-        }
-
         /* â"€â"€ Global error handler â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */
         window.addEventListener("error", function (e) {
           console.error("Admin interface error:", e.error);
@@ -473,29 +387,6 @@
           return Promise.resolve(window.confirm(opts.title));
         };
 
-        /* â"€â"€ Sidebar collapsible sections (Home/Management/Operations/etc.) â"€â"€â"€â"€â"€â"€ */
-        function setupSidebarSections() {
-          document.querySelectorAll(".sidebar-section-toggle").forEach(function (btn) {
-            var submenu = document.getElementById(btn.getAttribute("aria-controls"));
-            if (!submenu) return;
-            btn.addEventListener("click", function () {
-              var isOpen = submenu.classList.toggle("is-open");
-              btn.setAttribute("aria-expanded", String(isOpen));
-              btn.classList.toggle("is-active", isOpen);
-            });
-          });
-
-          document.addEventListener("keydown", function (e) {
-            if (e.key !== "Escape") return;
-            document.querySelectorAll('.sidebar-section-toggle[aria-expanded="true"]').forEach(function (btn) {
-              var submenu = document.getElementById(btn.getAttribute("aria-controls"));
-              if (submenu) submenu.classList.remove("is-open");
-              btn.setAttribute("aria-expanded", "false");
-              btn.classList.remove("is-active");
-            });
-          });
-        }
-
         /* â"€â"€ Nav group collapsible â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */
         function setupNavGroups() {
           document.querySelectorAll(".admin-nav-group").forEach(function (group) {
@@ -521,8 +412,6 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
-          setupSidebarToggle();
-          setupSidebarSections();
           setupNavGroups();
         });
 

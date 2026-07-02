@@ -1,4 +1,4 @@
-﻿/**
+/**
  * KinJo - Kindergarten & Childcare Management Platform
  * Professional Design System v2.0
  */
@@ -441,7 +441,6 @@ h6 {
   padding: 0;
   border-inline-end: 1px solid rgba(15, 23, 42, 0.08);
   overflow-y: auto;
-  background-color: var(--kinjo-sidebar-bg) !important;
 }
 
 .sidebar-sticky {
@@ -2410,7 +2409,6 @@ body.sidebar-open .sidebar-backdrop {
 }
 
 .sidebar {
-  background-color: var(--kinjo-sidebar-bg) !important;
   border-inline-end: 1px solid var(--kinjo-sidebar-border) !important;
 }
 html[dir="rtl"] .sidebar {

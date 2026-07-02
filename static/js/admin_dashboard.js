@@ -122,6 +122,20 @@ class AdminDashboard {
     this.isLoading = true;
     this.setState("loading");
 
+    const refreshBtn = document.getElementById("refresh-dashboard");
+    const refreshText = refreshBtn?.querySelector(".refresh-text");
+    const refreshIcon = refreshBtn?.querySelector(".refresh-icon");
+    const lastUpdatedLabel = document.getElementById("last-updated-time");
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.classList.add("is-loading");
+      refreshBtn.classList.remove("is-success");
+      if (refreshText) refreshText.textContent = lang === "en" ? "Updating data..." : "جاري تحديث البيانات...";
+      if (refreshIcon) refreshIcon.classList.add("spin");
+    }
+
     const controller = new AbortController();
     const timeoutId  = setTimeout(() => controller.abort(), 8000);
 
@@ -139,6 +153,32 @@ class AdminDashboard {
       this.renderDashboard(data);
       this.setState("success");
       this._waitForI18nThenRefresh();
+
+      if (refreshBtn) {
+        refreshBtn.classList.remove("is-loading");
+        refreshBtn.classList.add("is-success");
+        if (refreshText) refreshText.textContent = lang === "en" ? "Update Successful" : "تم التحديث بنجاح";
+        if (refreshIcon) {
+            refreshIcon.classList.remove("spin", "bi-arrow-clockwise");
+            refreshIcon.classList.add("bi-check2");
+        }
+        
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString(lang === "en" ? "en-US" : "ar-SA", { hour: '2-digit', minute: '2-digit' });
+        if (lastUpdatedLabel) {
+            lastUpdatedLabel.textContent = lang === "en" ? `Last updated: ${timeStr}` : `آخر تحديث: ${timeStr}`;
+        }
+
+        setTimeout(() => {
+          refreshBtn.disabled = false;
+          refreshBtn.classList.remove("is-success");
+          if (refreshText) refreshText.textContent = lang === "en" ? "Update Data" : "تحديث البيانات";
+          if (refreshIcon) {
+            refreshIcon.classList.add("bi-arrow-clockwise");
+            refreshIcon.classList.remove("bi-check2");
+          }
+        }, 2000);
+      }
     } catch (error) {
       clearTimeout(timeoutId);
       console.error("[AdminDashboard] load error:", error);
@@ -148,6 +188,13 @@ class AdminDashboard {
         isTimeout ? "Request timed out. Please try again." : "An error occurred. Please try again."
       ));
       this.setState("error");
+
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.classList.remove("is-loading");
+        if (refreshText) refreshText.textContent = lang === "en" ? "Update Data" : "تحديث البيانات";
+        if (refreshIcon) refreshIcon.classList.remove("spin");
+      }
     } finally {
       this.isLoading = false;
     }
@@ -556,64 +603,60 @@ class AdminDashboard {
   }
 
   createActivityItem(activity) {
-    const lang    = window.KINJO_LANG === "en" ? "en" : "ar";
-    const message = activity[`message_${lang}`] || activity.message || "";
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    let message = activity[`message_${lang}`] || activity.message || "";
+    
+    // Elevate low-value repetitive messages to professional event titles
+    if (message.includes("تسجيل دخول") || message.includes("User login") || message.includes("login")) {
+      message = lang === "en" ? "Successful Authentication" : "دخول ناجح";
+    }
 
     const article = document.createElement("article");
-    article.className = "admin-activity-item";
+    article.className = "executive-activity-item";
     article.setAttribute("role", "listitem");
 
-    const header = document.createElement("header");
-    header.className = "admin-activity-item-header";
+    // Title Row
+    const titleRow = document.createElement("div");
+    titleRow.className = "activity-title-row";
+    
+    const title = document.createElement("h4");
+    title.className = "activity-event-title";
+    title.textContent = message;
 
-    const iconWrap = document.createElement("span");
-    iconWrap.className = "admin-activity-icon";
-    const icon = document.createElement("i");
-    icon.className = this.getActivityIcon(activity.type);
-    icon.setAttribute("aria-hidden", "true");
-    iconWrap.appendChild(icon);
-    header.appendChild(iconWrap);
+    const badge = document.createElement("span");
+    const statusClass = activity.status || "success";
+    badge.className = `activity-status-badge badge-${statusClass}`;
+    badge.textContent = this.formatStatus(activity.status) || (lang === "en" ? "Success" : "مكتمل");
 
-    const userName = document.createElement("strong");
-    userName.className = "admin-activity-user";
-    userName.setAttribute("dir", "auto");
-    userName.textContent = activity.user_name || this.t("dashboard.system_actor", "System");
-    header.appendChild(userName);
+    titleRow.appendChild(title);
+    titleRow.appendChild(badge);
+
+    // Meta Row
+    const metaRow = document.createElement("div");
+    metaRow.className = "activity-meta-row";
+
+    const actor = document.createElement("span");
+    actor.className = "activity-actor";
+    actor.innerHTML = `<i class="bi bi-person-fill"></i> ${activity.user_name || this.t("dashboard.system_actor", "System")}`;
 
     const time = document.createElement("span");
-    time.className = "admin-activity-time";
-    time.textContent = this.formatTimeAgo(activity.timestamp);
-    header.appendChild(time);
+    time.className = "activity-time";
+    time.innerHTML = `<i class="bi bi-clock"></i> ${this.formatTimeAgo(activity.timestamp)}`;
 
-    article.appendChild(header);
+    metaRow.appendChild(actor);
+    metaRow.appendChild(time);
 
-    const messageEl = document.createElement("p");
-    messageEl.className = "admin-activity-message";
-    messageEl.setAttribute("dir", "auto");
-    messageEl.textContent = message;
-    article.appendChild(messageEl);
+    article.appendChild(titleRow);
+    article.appendChild(metaRow);
 
-    const dl = document.createElement("dl");
-    dl.className = "admin-activity-meta";
-
-    const addTerm = (termKey, termFallback, value, ddClass) => {
-      if (!value) return;
-      const dt = document.createElement("dt");
-      dt.textContent = this.t(termKey, termFallback);
-      const dd = document.createElement("dd");
-      if (ddClass) dd.className = ddClass;
-      dd.textContent = value;
-      dl.appendChild(dt);
-      dl.appendChild(dd);
-    };
-
-    addTerm("dashboard.activity_role",     "Role",     this.formatRole(activity.user_role));
-    addTerm("dashboard.activity_module",   "Module",   lang === "en" ? activity.module_en : activity.module_ar);
-    addTerm("dashboard.activity_entity",   "Entity",   lang === "en" ? activity.entity_label_en : activity.entity_label_ar);
-    addTerm("dashboard.activity_status",   "Status",   this.formatStatus(activity.status), `admin-activity-status admin-activity-status--${activity.status || "success"}`);
-    addTerm("dashboard.activity_severity", "Severity", this.formatSeverity(activity.severity), `admin-activity-severity admin-activity-severity--${activity.severity || "low"}`);
-
-    if (dl.children.length > 0) article.appendChild(dl);
+    // Optional Category
+    const moduleName = lang === "en" ? activity.module_en : activity.module_ar;
+    if (moduleName) {
+      const categoryRow = document.createElement("div");
+      categoryRow.className = "activity-category-row";
+      categoryRow.innerHTML = `<span class="activity-category-badge"><i class="bi bi-folder2"></i> ${moduleName}</span>`;
+      article.appendChild(categoryRow);
+    }
 
     return article;
   }

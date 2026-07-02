@@ -114,3 +114,132 @@
 .k-badge-warning { background-color: #fef3c7; color: #92400e; }
 .k-badge-danger { background-color: #fee2e2; color: #991b1b; }
 .k-badge-info { background-color: #dbeafe; color: #1e40af; }
+
+/* ============================================================================
+   EXECUTIVE ACTIVITY FEED
+   ============================================================================ */
+.admin-dashboard-activity .admin-card-body {
+  padding: 24px;
+}
+
+.executive-activity-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--kinjo-color-border, #E5E7EB);
+}
+
+.executive-activity-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.executive-activity-item:first-child {
+  padding-top: 0;
+}
+
+.activity-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.activity-event-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--kinjo-color-text-primary, #111827);
+  margin: 0;
+}
+
+.activity-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.activity-status-badge.badge-success { background-color: #D1FAE5; color: #065F46; }
+.activity-status-badge.badge-warning { background-color: #FEF3C7; color: #92400E; }
+.activity-status-badge.badge-danger  { background-color: #FEE2E2; color: #991B1B; }
+.activity-status-badge.badge-info    { background-color: #DBEAFE; color: #1E40AF; }
+
+.activity-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+  color: var(--kinjo-color-text-secondary, #4B5563);
+}
+
+.activity-actor, .activity-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.activity-category-row {
+  margin-top: 4px;
+}
+
+.activity-category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #4B5563;
+  background-color: #F3F4F6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ============================================================================
+   ENTERPRISE REFRESH BUTTON
+   ============================================================================ */
+.admin-btn-enterprise-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  background-color: #FFFFFF;
+  color: #374151;
+  border: 1px solid #D1D5DB;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-btn-enterprise-refresh:hover:not(:disabled) {
+  background-color: #F9FAFB;
+  border-color: #9CA3AF;
+  color: #111827;
+}
+
+.admin-btn-enterprise-refresh:disabled,
+.admin-btn-enterprise-refresh.is-loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: #F3F4F6;
+}
+
+.admin-btn-enterprise-refresh.is-success {
+  background-color: #DCFCE7;
+  color: #065F46;
+  border-color: #34D399;
+}
+
+.admin-btn-enterprise-refresh .refresh-icon.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

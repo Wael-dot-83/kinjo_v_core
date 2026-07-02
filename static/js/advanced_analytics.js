@@ -235,9 +235,31 @@ function renderAgeChart(ageData) {
     
     const ar = window.KINJO_LANG === 'ar' || true;
     
-    // Maintain strict ordering
-    const labels = ["<2 Years", "2-3 Years", "3-4 Years", "4-5 Years", "5+ Years"];
-    const arLabels = ["أقل من سنتين", "2-3 سنوات", "3-4 سنوات", "4-5 سنوات", "5+ سنوات"];
+    // Maintain strict ordering matching Jordan Reporting Rules
+    const labels = [
+        "B1: 70 days - <6 mo",
+        "B2: 6 - <12 mo",
+        "B3: 12 - <18 mo",
+        "B4: 18 - <24 mo",
+        "B5: 24 - <30 mo",
+        "B6: 30 - <36 mo",
+        "B7: 36 - <42 mo",
+        "B8: 42 - <48 mo",
+        "B9: 48 - <54 mo",
+        "B10: 54 - 56 mo"
+    ];
+    const arLabels = [
+        "B1: 70 يوم - <6 شهر",
+        "B2: 6 - <12 شهر",
+        "B3: 12 - <18 شهر",
+        "B4: 18 - <24 شهر",
+        "B5: 24 - <30 شهر",
+        "B6: 30 - <36 شهر",
+        "B7: 36 - <42 شهر",
+        "B8: 42 - <48 شهر",
+        "B9: 48 - <54 شهر",
+        "B10: 54 - 56 شهر"
+    ];
     
     const values = labels.map(l => ageData[l] || 0);
 
@@ -373,7 +395,7 @@ async function generateGovReport() {
     }
 
     try {
-        const res = await fetch(/api/analytics/government-report?dim_type=&dim_id=);
+        const res = await fetch(`/api/analytics/government-report?dim_type=${dimType}&dim_id=${dimId}`);
         if (!res.ok) throw new Error('Failed to generate report');
         
         const report = await res.json();

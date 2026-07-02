@@ -19,6 +19,7 @@ import os
 import secrets
 import enum
 import logging
+import math
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone, date
 from typing import List, Optional, Dict, Any, Set, Tuple, Union
@@ -3475,7 +3476,10 @@ def get_admin_dashboard(
         models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
     ).scalar() or 0
     active_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        models.EnrollmentApplication.status.in_([
+            models.EnrollmentStatus.ACTIVE,
+            models.EnrollmentStatus.ACCEPTED
+        ])
     ).scalar() or 0
 
     attendance_rate = (attendance_today / active_enrollments * 100.0) if active_enrollments > 0 else 0.0
@@ -4002,9 +4006,11 @@ class KgKindergartenCard(BaseModel):
     children_count: int
     attendance_rate: float
     attendance_status: str
-    occupancy_rate: float
-    occupancy_status: str
+    capacity_utilization: float
+    capacity_status: str
     teachers_count: int
+    supervisor_gap: int
+    children_per_supervisor: float
     open_alerts: int
     health_score: str
     health_label_ar: str
@@ -4096,6 +4102,9 @@ def get_kg_overview(
     request: Request,
     period: str = Query("month", description="Filter period: today, week, month, custom"),
     governorate: Optional[str] = Query(None, description="Filter by governorate"),
+    city: Optional[str] = Query(None, description="Filter by city (mapped to district)"),
+    kindergarten_id: Optional[int] = Query(None, description="Filter by specific kindergarten"),
+    class_id: Optional[int] = Query(None, description="Filter by specific class"),
     risk_level: Optional[str] = Query(None, description="Filter by risk level"),
     current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
@@ -4124,8 +4133,25 @@ def get_kg_overview(
     if governorate:
         gov_normalized = settings.JORDAN_GOVERNORATE_ALIASES.get(governorate, governorate)
         all_kgs = [kg for kg in all_kgs if kg.governorate == gov_normalized]
-        kg_ids = [kg.id for kg in all_kgs]
-        active_kgs = [kg for kg in active_kgs if kg.governorate == gov_normalized]
+    
+    if city:
+        # If city contains _, take the last part (e.g. Amman_Amman -> Amman)
+        city_normalized = city.split("_")[-1] if "_" in city else city
+        all_kgs = [kg for kg in all_kgs if kg.district == city_normalized]
+
+    if kindergarten_id:
+        all_kgs = [kg for kg in all_kgs if kg.id == kindergarten_id]
+
+    if class_id:
+        # Get the kindergarten associated with the class
+        cls = db.query(models.Class).filter(models.Class.id == class_id).first()
+        if cls:
+            all_kgs = [kg for kg in all_kgs if kg.id == cls.kindergarten_id]
+        else:
+            all_kgs = []
+
+    kg_ids = [kg.id for kg in all_kgs]
+    active_kgs = [kg for kg in all_kgs if kg.status == models.KindergartenStatus.ACTIVE]
 
     # Batch queries
     active_enrollments = db.query(
@@ -4133,7 +4159,10 @@ def get_kg_overview(
         func.count(models.EnrollmentApplication.id)
     ).filter(
         models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        models.EnrollmentApplication.status.in_([
+            models.EnrollmentStatus.ACTIVE,
+            models.EnrollmentStatus.ACCEPTED
+        ])
     ).group_by(models.EnrollmentApplication.kindergarten_id).all()
     children_by_kg = {kid: cnt for kid, cnt in active_enrollments}
 
@@ -4238,19 +4267,30 @@ def get_kg_overview(
         else:
             att_status = "critical_low"
 
-        if occ_rate < _OCCUPANCY_SAFE:
-            occ_status = "safe"
-        elif occ_rate < _OCCUPANCY_MONITOR:
-            occ_status = "monitor"
-        elif occ_rate < _OCCUPANCY_NEAR:
-            occ_status = "near_capacity"
+        if cap["total_capacity"] > 0:
+            cap_util = round((cap["total_enrolled"] / cap["total_capacity"] * 100.0), 1)
         else:
-            occ_status = "full"
+            cap_util = 0.0
+
+        if cap_util < _OCCUPANCY_SAFE:
+            cap_status = "safe"
+        elif cap_util < _OCCUPANCY_MONITOR:
+            cap_status = "monitor"
+        elif cap_util < _OCCUPANCY_NEAR:
+            cap_status = "near_capacity"
+        else:
+            cap_status = "full"
+
+        # Calculate supervisor KPIs
+        req_supervisors = math.ceil(kids / 20.0) if kids > 0 else 0  # Assuming 1 per 20
+        sup_gap = req_supervisors - teachers
+        sup_gap = max(0, sup_gap)
+        cps = round(kids / teachers, 1) if teachers > 0 else 0.0
 
         teacher_data_ok = teachers > 0
         data_ok = teacher_data_ok
 
-        health = _compute_health_score(att_rate, occ_rate, open_alerts, data_ok)
+        health = _compute_health_score(att_rate, cap_util, open_alerts, data_ok)
         health_ar, health_en = _HEALTH_LABELS.get(health, ("غير معروف", "Unknown"))
 
         if health == "critical":
@@ -4283,9 +4323,11 @@ def get_kg_overview(
             children_count=kids,
             attendance_rate=att_rate,
             attendance_status=att_status,
-            occupancy_rate=occ_rate,
-            occupancy_status=occ_status,
+            capacity_utilization=cap_util,
+            capacity_status=cap_status,
             teachers_count=teachers,
+            supervisor_gap=sup_gap,
+            children_per_supervisor=cps,
             open_alerts=open_alerts,
             health_score=health,
             health_label_ar=health_ar,
