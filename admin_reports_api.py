@@ -342,7 +342,7 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         else:
             gender_counts["unknown"] += 1
 
-    children_without_class = sum(1 for r in official_rows if r.class_id is None)
+    children_without_class = len({r.child_id for r in official_rows if r.class_id is None})
     children_without_kindergarten = sum(1 for r in official_rows if r.kindergarten_id is None)
 
     # Geography aggregations
@@ -436,6 +436,22 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         or 0
     )
 
+    # Children enrolled in more than one class simultaneously (compliance violation)
+    _multi_class_sq = (
+        db.query(models.EnrollmentApplication.child_id)
+        .filter(
+            models.EnrollmentApplication.child_id.in_(list(child_ids)),
+            models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)),
+            models.EnrollmentApplication.class_id.isnot(None),
+        )
+        .group_by(models.EnrollmentApplication.child_id)
+        .having(func.count(func.distinct(models.EnrollmentApplication.class_id)) > 1)
+        .subquery()
+    )
+    children_in_multiple_classes = (
+        db.query(func.count()).select_from(_multi_class_sq).scalar() or 0
+    )
+
     classes_without_supervisor = sum(1 for c in classes if class_supervisor_counts.get(c.id, 0) == 0)
     classes_with_children_no_supervisor = sum(
         1
@@ -470,6 +486,7 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         + classes_with_children_no_supervisor
         + kindergartens_no_supervisor_with_children
         + kindergartens_over_capacity
+        + children_in_multiple_classes
     )
 
     # data_quality_score: % of active kindergartens in scope that filed a report in the last 7 days
@@ -509,6 +526,7 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         "gender_counts": gender_counts,
         "children_without_kindergarten": children_without_kindergarten,
         "children_without_class": children_without_class,
+        "children_in_multiple_classes": children_in_multiple_classes,
         "duplicate_children": duplicate_children,
         "classes_without_supervisor": classes_without_supervisor,
         "classes_with_children_no_supervisor": classes_with_children_no_supervisor,
@@ -961,6 +979,7 @@ def _build_response(report_type: str, filters: ScopeFilters, metrics: dict[str, 
         "quality": {
             "children_without_kindergarten": metrics["children_without_kindergarten"],
             "children_without_class": metrics["children_without_class"],
+            "children_in_multiple_classes": metrics["children_in_multiple_classes"],
             "duplicate_children": metrics["duplicate_children"],
             "classes_without_supervisor": metrics["classes_without_supervisor"],
             "classes_with_children_no_supervisor": metrics["classes_with_children_no_supervisor"],
@@ -1091,6 +1110,7 @@ def _resolve_report_payload(
                 "missing_gender": metrics["gender_counts"]["unknown"],
                 "children_without_kindergarten": metrics["children_without_kindergarten"],
                 "children_without_class": metrics["children_without_class"],
+                "children_in_multiple_classes": metrics["children_in_multiple_classes"],
                 "duplicate_children": metrics["duplicate_children"],
             },
         }
@@ -1100,6 +1120,7 @@ def _resolve_report_payload(
             "violations": {
                 "invalid_age_too_young": metrics["age_invalid_reasons"]["too_young"],
                 "invalid_age_too_old": metrics["age_invalid_reasons"]["too_old"],
+                "children_in_multiple_classes": metrics["children_in_multiple_classes"],
                 "classes_with_children_no_supervisor": metrics["classes_with_children_no_supervisor"],
                 "kindergartens_no_supervisor_with_children": metrics["kindergartens_no_supervisor_with_children"],
                 "kindergartens_over_capacity": metrics["kindergartens_over_capacity"],
@@ -1447,6 +1468,7 @@ def data_quality_report(
             "missing_gender": metrics["gender_counts"]["unknown"],
             "children_without_kindergarten": metrics["children_without_kindergarten"],
             "children_without_class": metrics["children_without_class"],
+            "children_in_multiple_classes": metrics["children_in_multiple_classes"],
             "duplicate_children": metrics["duplicate_children"],
             "kindergartens_missing_coordinates": metrics["kindergartens_missing_coordinates"],
             "kindergartens_missing_capacity": metrics["kindergartens_missing_capacity"],
@@ -1493,6 +1515,7 @@ def compliance_report(
         "violations": {
             "invalid_age_too_young": metrics["age_invalid_reasons"]["too_young"],
             "invalid_age_too_old": metrics["age_invalid_reasons"]["too_old"],
+            "children_in_multiple_classes": metrics["children_in_multiple_classes"],
             "classes_with_children_no_supervisor": metrics["classes_with_children_no_supervisor"],
             "kindergartens_no_supervisor_with_children": metrics["kindergartens_no_supervisor_with_children"],
             "kindergartens_over_capacity": metrics["kindergartens_over_capacity"],
