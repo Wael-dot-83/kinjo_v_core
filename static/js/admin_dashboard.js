@@ -207,13 +207,12 @@ class AdminDashboard {
 
   // Under heavy load the async translation JSON can still be loading when this
   // first render happens, leaving KPI trend/status/drilldown and activity-meta
-  // text stuck on their (English) fallback. Poll for a canary key, bounded,
+  // text stuck on their (English) fallback. Poll for the loaded-from-files flag, bounded,
   // and re-render exactly once when translations land — never again after
   // that, so later user-driven refreshes don't get needlessly re-rendered.
   _waitForI18nThenRefresh(attemptsLeft = 20) {
     if (this._i18nRefreshed) return;
-    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
-    const canary = window.AdminI18n?.translations?.[lang]?.dashboard?.trend_compare_period;
+    const canary = window.AdminI18n?.loadedFromFiles;
     if (canary) {
       this._i18nRefreshed = true;
       if (this._lastData) this.renderDashboard(this._lastData);

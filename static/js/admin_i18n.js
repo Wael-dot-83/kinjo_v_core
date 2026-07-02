@@ -72,6 +72,10 @@ class AdminI18n {
           const response = await fetch(`/static/i18n/admin_${lang}.json`, { cache: "no-cache" });
           if (response.ok) {
             this.translations[lang] = await response.json();
+            // Signals "real JSON catalog loaded" — consumers (e.g. the
+            // dashboard re-render canary) must check this, not key presence,
+            // because the inline defaults also contain most keys.
+            this.loadedFromFiles = true;
           } else {
             console.warn(`Translation file for ${lang} not found — keeping defaults`);
             // Do NOT overwrite defaults with {} — leave whatever was set already
@@ -981,6 +985,7 @@ const defaultEnglishTranslations = {
     description: "Professional Kindergarten Management System",
   },
   nav: {
+    brand: "KinJo",
     dashboard: "Dashboard",
     users: "Users",
     communication: "Communication",
@@ -1075,6 +1080,13 @@ const defaultEnglishTranslations = {
     status_warning: "Needs attention",
     status_success: "Success",
     status_failed: "Failed",
+    trend_compare_period: "{{change}} vs. previous period",
+    view_users: "View Users",
+    view_kindergartens: "View Kindergartens",
+    view_reports: "View Reports",
+    dq_view_issues: "View data issues",
+    dq_improve: "Improve data quality",
+    view_data_management: "Data Management",
   },
   errors: {
     generic_error:   "An error occurred. Please try again.",
@@ -1094,6 +1106,7 @@ const defaultArabicTranslations = {
     description: "نظام إدارة روضات الأطفال المهني",
   },
   nav: {
+    brand: "كينجو",
     dashboard: "لوحة التحكم",
     users: "المستخدمون",
     communication: "التواصل",
@@ -1188,6 +1201,13 @@ const defaultArabicTranslations = {
     status_warning: "يتطلب انتباه",
     status_success: "ناجح",
     status_failed: "فشل",
+    trend_compare_period: "{{change}} مقارنة بالفترة السابقة",
+    view_users: "عرض المستخدمين",
+    view_kindergartens: "عرض الروضات",
+    view_reports: "عرض التقارير",
+    dq_view_issues: "عرض مشاكل البيانات",
+    dq_improve: "تحسين جودة البيانات",
+    view_data_management: "إدارة البيانات",
   },
   errors: {
     generic_error:   "حدث خطأ. يرجى المحاولة مرة أخرى.",
