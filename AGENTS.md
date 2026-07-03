@@ -3,6 +3,17 @@
 This file defines how an AI coding agent (Claude Code, or any compatible agent reading
 `AGENTS.md`) must approach Admin module production-readiness work in this repository.
 
+## Work in the repository root — no worktrees
+
+All agent work happens directly in `d:\Final Version` on the `main` branch. Do **not**
+create or use git worktrees (`.kilo/worktrees/`, `.claude/worktrees/`); past worktrees
+accumulated stale, superseded diffs and were removed on 2026-07-03. If a session starts
+with its working directory inside a leftover worktree stub, immediately switch to
+absolute paths under `d:\Final Version`. Commit all work on `main` in the root checkout.
+Historical audit/readiness reports live in `docs/reports/`; manually-run diagnostic and
+data scripts live in `scripts/manual-diagnostics/` (the former `scripts/one_off/` was
+merged into it).
+
 ## Tooling reality check (read this before following the workflow below)
 
 This workflow describes a four-role task force ("lead implementer," "broad-sweep

@@ -31,9 +31,9 @@ def populate_all_ratio_compliance():
             print(f"Populating ratio compliance for {kg.name_en} (ID: {kg.id})")
             try:
                 KPIService.populate_ratio_compliance_for_period(db, kg.id, start_date, end_date)
-                print(f"  ✓ Completed for {kg.name_en}")
-            except Exception as e:
-                print(f"  ✗ Error for {kg.name_en}: {e}")
+                print(f"  [OK] Completed for {kg.name_en}")
+            except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
+                print(f"  [ERROR] Error for {kg.name_en}: {e}")
 
         print("Ratio compliance data population completed")
 

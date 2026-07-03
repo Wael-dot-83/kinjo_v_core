@@ -65,7 +65,7 @@ try:
     for i in range(5):
         c = models.Child(
             parent_id=pp.id, first_name=f"C{i}", last_name="T", 
-            date_of_birth=date.today(), gender=models.Gender.MALE,
+            date_of_birth=date.today() - timedelta(days=365 * 3), gender=models.Gender.MALE,
             father_name="F", mother_first_name="M", mother_last_name="L", mother_nationality="J"
         )
         children.append(c)
@@ -118,7 +118,7 @@ try:
     print("SEEDING COMPLETE")
     print("-" * 50)
 
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     print(f"SEEDING FAILED: {e}")
     sys.exit(1)
 
@@ -135,7 +135,7 @@ try:
     else:
         log("1. Attendance Rate Calculation", "FAIL", f"Got {rate}%, Expected {expected}%")
 
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     log("1. Attendance Rate Calculation", "ERROR", str(e))
 
 
@@ -147,7 +147,7 @@ except Exception as e:
 try:
     res = get_kpi_summary(start_date=start_date, end_date=end_date, current_user=mgr, db=db)
     log("2.1 Manager Access", "PASS", f"Retrieved summary: Attendance={res.attendance_rate}")
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     log("2.1 Manager Access", "FAIL", str(e))
 
 # Case 2.2: Supervisor Access (Should Fail currently, per code)
@@ -159,5 +159,6 @@ except HTTPException as e:
         log("2.2 Supervisor Access", "PASS", "Blocked Supervisor access (Manager Only)")
     else:
         log("2.2 Supervisor Access", "FAIL", f"Wrong error: {e.status_code}")
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     log("2.2 Supervisor Access", "ERROR", str(e))
+

@@ -82,3 +82,4 @@ python -m pytest tests/test_new_modules.py -x -v
 - Do not add N+1 queries; always batch aggregates
 - Do not skip `log_audit_event()` on admin state-changing operations
 - Do not use Pydantic v1 patterns (`.dict()`, `@validator`, `class Config`) — use Pydantic v2
+- Do not create or use git worktrees — all agent work happens directly in the repo root (`d:\Final Version`) on `main`; historical reports go in `docs/reports/`, manual scripts in `scripts/manual-diagnostics/`

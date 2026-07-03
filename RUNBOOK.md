@@ -44,7 +44,7 @@ pip install -r requirements.txt
 alembic upgrade head
 
 # 6. Seed initial admin user
-python seed_local.py   # development
+python scripts/seed_local.py   # development
 # OR
 python scripts/seed_comprehensive.py  # production (uses SEED_*_PASSWORD env vars)
 

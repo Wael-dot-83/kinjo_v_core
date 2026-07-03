@@ -84,7 +84,7 @@ try:
     # Child in KG1
     child1 = models.Child(
         parent_id=pp.id, first_name="Child1", last_name="Test", 
-        date_of_birth=date.today(), gender=models.Gender.MALE,
+        date_of_birth=date.today() - timedelta(days=365 * 3), gender=models.Gender.MALE,
         father_name="F", mother_first_name="M", mother_last_name="L", mother_nationality="J"
     )
     db.add(child1)
@@ -100,7 +100,7 @@ try:
     print("SEEDING COMPLETE")
     print("-" * 50)
 
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     print(f"SEEDING FAILED: {e}")
     sys.exit(1)
 
@@ -124,7 +124,7 @@ try:
     log("1.1 Supervisor Report Incident", "PASS", "Supervisor successfully created incident")
 except HTTPException as e:
     log("1.1 Supervisor Report Incident", "FAIL", f"HTTP {e.status_code}: {e.detail}")
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     log("1.1 Supervisor Report Incident", "ERROR", str(e))
 
 # Case 1.2: Cross-Tenant Incident (KG2 Manager reports on KG1 Child)
@@ -161,7 +161,7 @@ alert_req = HealthAlertCreateRequest(
 try:
     create_health_alert(child_id=child1.id, alert_data=alert_req, current_user=auth_sup1, db=db)
     log("2.1 Supervisor Create Health Alert", "PASS", "Success")
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     log("2.1 Supervisor Create Health Alert", "FAIL", str(e))
 
 # Case 2.2: Cross-Tenant Health Alert (KG2 Manager creates for KG1 Child)
@@ -178,6 +178,7 @@ try:
         log("2.3 Parent View Own Alerts", "PASS", f"Saw {len(alerts)} alerts")
     else:
          log("2.3 Parent View Own Alerts", "FAIL", "Returned 0 alerts (should see the one created in 2.1)")
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     log("2.3 Parent View Own Alerts", "ERROR", str(e))
+
 

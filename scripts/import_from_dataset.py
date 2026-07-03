@@ -8,6 +8,10 @@ Import all kindergartens from Dataset Excel files into KinJo DB.
 """
 import os
 import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import os
+import sys
 import unicodedata
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 import re

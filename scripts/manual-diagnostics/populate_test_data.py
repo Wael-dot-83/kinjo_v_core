@@ -31,7 +31,7 @@ def check_existing_data():
 
         return kg is not None
 
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
         print(f'Error checking data: {e}')
         return False
     finally:
@@ -84,7 +84,7 @@ def create_supervisors(db: Session):
                 )
                 supervisors.append(user)
                 print(f"Created supervisor: {user.username}")
-            except Exception as e:
+            except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
                 print(f"Error creating supervisor {data['username']}: {e}")
 
     return supervisors
@@ -113,12 +113,13 @@ def create_children_and_enrollments(db: Session):
         }
     ]
 
+    valid_dob = date.today() - timedelta(days=365 * 3)
     children_data = [
         {
             "first_name": "علي",
             "last_name": "محمد",
             "gender": "MALE",
-            "date_of_birth": date(2020, 5, 15),
+            "date_of_birth": valid_dob - timedelta(days=30),
             "father_name": "محمد العلي",
             "mother_first_name": "فاطمة",
             "mother_last_name": "العلي",
@@ -129,7 +130,7 @@ def create_children_and_enrollments(db: Session):
             "first_name": "لينا",
             "last_name": "أحمد",
             "gender": "FEMALE",
-            "date_of_birth": date(2020, 8, 20),
+            "date_of_birth": valid_dob - timedelta(days=60),
             "father_name": "أحمد سارة",
             "mother_first_name": "سارة",
             "mother_last_name": "أحمد",
@@ -140,7 +141,7 @@ def create_children_and_enrollments(db: Session):
             "first_name": "يوسف",
             "last_name": "محمد",
             "gender": "MALE",
-            "date_of_birth": date(2020, 3, 10),
+            "date_of_birth": valid_dob - timedelta(days=90),
             "father_name": "محمد العلي",
             "mother_first_name": "فاطمة",
             "mother_last_name": "العلي",
@@ -151,7 +152,7 @@ def create_children_and_enrollments(db: Session):
             "first_name": "نور",
             "last_name": "أحمد",
             "gender": "FEMALE",
-            "date_of_birth": date(2020, 11, 5),
+            "date_of_birth": valid_dob - timedelta(days=120),
             "father_name": "أحمد سارة",
             "mother_first_name": "سارة",
             "mother_last_name": "أحمد",
@@ -162,7 +163,7 @@ def create_children_and_enrollments(db: Session):
             "first_name": "عمر",
             "last_name": "محمد",
             "gender": "MALE",
-            "date_of_birth": date(2020, 7, 12),
+            "date_of_birth": valid_dob - timedelta(days=150),
             "father_name": "محمد العلي",
             "mother_first_name": "فاطمة",
             "mother_last_name": "العلي",
@@ -210,7 +211,7 @@ def create_children_and_enrollments(db: Session):
                 db.refresh(parent_profile)
                 parents.append(parent_profile)
                 print(f"Created parent: {user.username}")
-            except Exception as e:
+            except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
                 print(f"Error creating parent {parent_data['username']}: {e}")
 
     # Create children and enrollments
@@ -252,7 +253,7 @@ def create_children_and_enrollments(db: Session):
             enrollments.append(enrollment)
             print(f"Created child and enrollment: {child.first_name} {child.last_name}")
 
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
             print(f"Error creating child {child_data['first_name']}: {e}")
 
     return enrollments
@@ -343,7 +344,7 @@ def create_incidents(db: Session, enrollments):
             )
             db.add(incident)
             print(f"Created incident: {incident.description[:30]}...")
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
             print(f"Error creating incident: {e}")
 
     db.commit()
@@ -397,13 +398,13 @@ if __name__ == "__main__":
         update_ratio_compliance(db)
 
         print("\n=== DATA POPULATION COMPLETE ===")
-        print("✅ Supervisors created")
-        print("✅ Children and enrollments created")
-        print("✅ Attendance records created")
-        print("✅ Safety incidents created")
-        print("✅ Ratio compliance data updated")
+        print("[OK] Supervisors created")
+        print("[OK] Children and enrollments created")
+        print("[OK] Attendance records created")
+        print("[OK] Safety incidents created")
+        print("[OK] Ratio compliance data updated")
 
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
         print(f"Error during data population: {e}")
         db.rollback()
     finally:

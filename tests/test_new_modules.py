@@ -327,12 +327,19 @@ class TestSupervisorSafetyAndObservations:
         sample_child,
         sample_enrollment,
         supervisor_token,
+        monkeypatch,
     ):
         """Supervisor can mark attendance for a child in their assigned class."""
-        jordan_today = datetime.now(timezone(timedelta(hours=3))).date()
+        from routers import supervisor as supervisor_module
+
+        # Pin the server clock to a Wednesday: the endpoint locks Fridays
+        # (Jordan weekend) and non-today dates, so a real Friday run would
+        # 400 regardless of the payload.
+        fixed_now = datetime(2026, 7, 1, 10, 0, tzinfo=timezone(timedelta(hours=3)))
+        monkeypatch.setattr(supervisor_module, "_ksa_now", lambda: fixed_now)
         payload = {
             "child_id": sample_child.id,
-            "date": jordan_today.isoformat(),
+            "date": fixed_now.date().isoformat(),
             "action": "check_in",
         }
         r = client.post("/api/supervisor/attendance", json=payload, headers=_hdr(supervisor_token))
