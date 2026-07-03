@@ -288,7 +288,7 @@ class TestEnrollmentWorkflowIntegration:
         
         # Create second kindergarten
         kg2 = models.Kindergarten(
-            name_ar="روضة ثانية",
+            name_ar="حضانة ثانية",
             name_en="Second KG",
             license_number="LIC-002",
             governorate="Zarqa",
@@ -921,7 +921,7 @@ class TestMultiTenancyIsolation:
         """Sad path: Supervisor cannot access other kindergarten's data"""
         # Create another kindergarten
         other_kg = models.Kindergarten(
-            name_ar="روضة أخرى",
+            name_ar="حضانة أخرى",
             name_en="Other KG",
             license_number="LIC-OTHER-001",
             governorate="Irbid",
@@ -1004,7 +1004,7 @@ class TestDataIntegrity:
         """Verify unique constraints prevent duplicate data"""
         # Create kindergarten
         kg = models.Kindergarten(
-            name_ar="روضة فريدة",
+            name_ar="حضانة فريدة",
             name_en="Unique KG",
             license_number="UNIQUE-001",
             governorate="Amman",

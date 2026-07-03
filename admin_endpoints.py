@@ -3062,7 +3062,7 @@ def list_kindergarten_options(
         "kindergartens": [
             {
                 "id": kg.id,
-                "name": kg.name_ar or kg.name_en or f"روضة {kg.id}",
+                "name": kg.name_ar or kg.name_en or f"حضانة {kg.id}",
                 "name_ar": kg.name_ar,
                 "name_en": kg.name_en,
                 "governorate": kg.governorate,
@@ -3293,9 +3293,9 @@ _ACTIVITY_MAP: Dict[str, tuple] = {
     AuditAction.USER_DELETED:               ("حذف مستخدم",                "User deleted",                   "user_delete",      "management"),
     AuditAction.BULK_USER_CREATE:           ("إضافة مستخدمين بالجملة",    "Bulk users added",               "user_create",      "management"),
     AuditAction.BULK_USER_DELETE:           ("حذف مستخدمين بالجملة",      "Bulk users deleted",             "user_delete",      "management"),
-    AuditAction.KINDERGARTEN_CREATED:       ("إضافة روضة جديدة",          "New kindergarten added",         "data_create",      "management"),
-    AuditAction.KINDERGARTEN_UPDATED:       ("تحديث بيانات روضة",         "Kindergarten data updated",      "data_update",      "management"),
-    AuditAction.KINDERGARTEN_DELETED:       ("حذف روضة",                  "Kindergarten deleted",           "data_delete",      "management"),
+    AuditAction.KINDERGARTEN_CREATED:       ("إضافة حضانة جديدة",          "New kindergarten added",         "data_create",      "management"),
+    AuditAction.KINDERGARTEN_UPDATED:       ("تحديث بيانات حضانة",         "Kindergarten data updated",      "data_update",      "management"),
+    AuditAction.KINDERGARTEN_DELETED:       ("حذف حضانة",                  "Kindergarten deleted",           "data_delete",      "management"),
     AuditAction.DAILY_REPORT_CREATED:       ("إنشاء تقرير يومي",          "Daily report created",           "data_create",      "reports-analytics"),
     AuditAction.DAILY_REPORT_EDITED:        ("تعديل تقرير يومي",          "Daily report edited",            "data_update",      "reports-analytics"),
     AuditAction.DAILY_REPORT_DELETED:       ("حذف تقرير يومي",            "Daily report deleted",           "data_delete",      "reports-analytics"),
@@ -3335,7 +3335,7 @@ _FAILURE_ACTIONS = frozenset({
 _ENTITY_TYPE_LABELS: Dict[str, tuple] = {
     "Auth":                   ("المصادقة", "Authentication"),
     "User":                   ("مستخدم", "User"),
-    "Kindergarten":           ("روضة", "Kindergarten"),
+    "Kindergarten":           ("حضانة", "Kindergarten"),
     "DailyReport":            ("تقرير يومي", "Daily Report"),
     "Dashboard":              ("لوحة التحكم", "Dashboard"),
     "EnrollmentApplication":  ("طلب تسجيل", "Enrollment Application"),
@@ -3683,28 +3683,28 @@ def get_admin_dashboard(
     if missing_report_count > 0:
         data_quality_reasons.append(DataQualityReason(
             id="missing_recent_report",
-            label_ar=f"{missing_report_count} روضة نشطة بدون تقرير خلال آخر 7 أيام",
+            label_ar=f"{missing_report_count} حضانة نشطة بدون تقرير خلال آخر 7 أيام",
             label_en=f"{missing_report_count} active kindergarten(s) without a report in the last 7 days",
             count=missing_report_count,
         ))
     if missing_contact_count > 0:
         data_quality_reasons.append(DataQualityReason(
             id="missing_contact_email",
-            label_ar=f"{missing_contact_count} روضة نشطة بدون بريد إلكتروني للتواصل",
+            label_ar=f"{missing_contact_count} حضانة نشطة بدون بريد إلكتروني للتواصل",
             label_en=f"{missing_contact_count} active kindergarten(s) missing a contact email",
             count=missing_contact_count,
         ))
     if missing_geo_count > 0:
         data_quality_reasons.append(DataQualityReason(
             id="missing_geo_coordinates",
-            label_ar=f"{missing_geo_count} روضة نشطة بدون إحداثيات موقع",
+            label_ar=f"{missing_geo_count} حضانة نشطة بدون إحداثيات موقع",
             label_en=f"{missing_geo_count} active kindergarten(s) missing map coordinates",
             count=missing_geo_count,
         ))
     if expired_license_count > 0:
         data_quality_reasons.append(DataQualityReason(
             id="expired_license",
-            label_ar=f"{expired_license_count} روضة بترخيص منتهي الصلاحية",
+            label_ar=f"{expired_license_count} حضانة بترخيص منتهي الصلاحية",
             label_en=f"{expired_license_count} kindergarten(s) with an expired license",
             count=expired_license_count,
         ))
@@ -4473,7 +4473,7 @@ def get_kg_overview(
             status="good" if total_children > 0 else "warning",
             details=KgKpiDetail(
                 active_kindergartens=len(active_kgs),
-                note_ar=f"{len(active_kgs)} روضات نشطة",
+                note_ar=f"{len(active_kgs)} حضانات نشطة",
                 note_en=f"{len(active_kgs)} active kindergartens",
             )
         ),
@@ -4486,7 +4486,7 @@ def get_kg_overview(
             target=_ATTENDANCE_TARGET,
             status="critical" if avg_attendance < _ATTENDANCE_TARGET else ("warning" if avg_attendance < 80 else "good"),
             details=KgKpiDetail(
-                note_ar=f"{below_target} روضات أقل من الحد الأدنى {_ATTENDANCE_TARGET}%",
+                note_ar=f"{below_target} حضانات أقل من الحد الأدنى {_ATTENDANCE_TARGET}%",
                 note_en=f"{below_target} kindergartens below target {_ATTENDANCE_TARGET}%",
             )
         ),
@@ -4498,7 +4498,7 @@ def get_kg_overview(
             target=None,
             status="good" if total_teachers > 0 else "warning",
             details=KgKpiDetail(
-                note_ar="تحقق من نسبة الأطفال إلى المعلمات حسب الروضة",
+                note_ar="تحقق من نسبة الأطفال إلى المعلمات حسب الحضانة",
                 note_en="Verify child-to-teacher ratio per kindergarten",
             )
         ),
@@ -4869,8 +4869,8 @@ def import_kindergartens_from_excel(
     Import kindergartens from an Excel (.xlsx) file (Admin only).
 
     Expected columns in the first sheet:
-      - Column A: اسم الروضة (عربي)  → name_ar
-      - Column B: اسم الروضة (إنجليزي) → name_en
+      - Column A: اسم الحضانة (عربي)  → name_ar
+      - Column B: اسم الحضانة (إنجليزي) → name_en
       - Column C: المحافظة           → governorate
       - Column D: المدينة            → district
       - Column E: المنطقة            → area
@@ -5635,7 +5635,7 @@ def list_incident_reports(
             elif report.scope_type == models.ReportScopeType.GOVERNORATE:
                 scope_name = report.governorate
             elif report.scope_type == models.ReportScopeType.ALL:
-                scope_name = "جميع الروضات"
+                scope_name = "جميع الحضانات"
 
             report_list.append({
                 "id": report.id,
@@ -5691,7 +5691,7 @@ def get_incident_report_detail(
         elif report.scope_type == models.ReportScopeType.GOVERNORATE:
             scope_name = report.governorate
         elif report.scope_type == models.ReportScopeType.ALL:
-            scope_name = "جميع الروضات"
+            scope_name = "جميع الحضانات"
 
         return {
             "id": report.id,
@@ -6165,7 +6165,7 @@ class HeatmapResponse(BaseModel):
 
 
 INDICATOR_LABELS = {
-    'nursery_status': {'ar': 'حالة الروضات', 'en': 'Nursery Status'},
+    'nursery_status': {'ar': 'حالة الحضانات', 'en': 'Nursery Status'},
     'children_registration': {'ar': 'الأطفال والتسجيل', 'en': 'Children Registration'},
     'staff_classrooms': {'ar': 'الموظفون والفصول', 'en': 'Staff & Classrooms'},
     'safety_incidents': {'ar': 'السلامة والحوادث', 'en': 'Safety & Incidents'},

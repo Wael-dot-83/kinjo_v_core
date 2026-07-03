@@ -75,7 +75,7 @@
 <div class="reports-tabs mb-4">
   <ul class="nav nav-pills"id="reportCategoryTabs"role="tablist">
     <li class="nav-item"role="presentation">
-      <button class="nav-link active"id="tab-attendance"data-bs-toggle="pill"data-bs-target="#pane-attendance"type="button"role="tab" title="{% if ui_lang == 'en' %}Track kindergarten attendance rates, absences, and governorate-level breakdowns.{% else %}تتبع نسب حضور رياض الأطفال، الغياب، وتفاصيل المحافظات.{% endif %}">
+      <button class="nav-link active"id="tab-attendance"data-bs-toggle="pill"data-bs-target="#pane-attendance"type="button"role="tab" title="{% if ui_lang == 'en' %}Track kindergarten attendance rates, absences, and governorate-level breakdowns.{% else %}تتبع نسب حضور الحضانات، الغياب، وتفاصيل المحافظات.{% endif %}">
         <i class="bi bi-calendar-check me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور والغياب{% endif %}
       </button>
     </li>
@@ -85,7 +85,7 @@
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-compliance"data-bs-toggle="pill"data-bs-target="#pane-compliance"type="button"role="tab" title="{% if ui_lang == 'en' %}Assess nursery compliance scores and governance level distributions.{% else %}تقييم درجات امتثال رياض الأطفال وتوزيعات مستويات الحوكمة.{% endif %}">
+      <button class="nav-link"id="tab-compliance"data-bs-toggle="pill"data-bs-target="#pane-compliance"type="button"role="tab" title="{% if ui_lang == 'en' %}Assess nursery compliance scores and governance level distributions.{% else %}تقييم درجات امتثال الحضانات وتوزيعات مستويات الحوكمة.{% endif %}">
         <i class="bi bi-shield-check me-1"></i>{% if ui_lang == 'en' %}Governance{% else %}الحوكمة والامتثال{% endif %}
       </button>
     </li>
@@ -152,7 +152,7 @@
                 <option value="jordan">{% if ui_lang == 'en' %}Jordan{% else %}الأردن{% endif %}</option>
                 <option value="governorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</option>
                 <option value="city">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</option>
-                <option value="kindergarten">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</option>
+                <option value="kindergarten">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</option>
                 <option value="class">{% if ui_lang == 'en' %}Class{% else %}الصف{% endif %}</option>
               </select>
             </div>
@@ -169,9 +169,9 @@
           </div>
 
           <div class="mb-3" id="filterKgContainer">
-            <label class="form-label fw-bold" for="kindergartenFilter">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+            <label class="form-label fw-bold" for="kindergartenFilter">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="kindergartenFilter" multiple size="3">
-              <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}كل الروضات{% endif %}</option>
+              <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}كل الحضانات{% endif %}</option>
             </select>
           </div>
 
@@ -522,5 +522,5 @@
 {% block extra_scripts %}
 <script defer src="/static/js/chart_utils.js?v=2.1"charset="utf-8"></script>
 <script defer src="/static/js/admin_analytics.js?v=2.1"charset="utf-8"></script>
-<script defer src="/static/js/admin_reports.js?v=1.0"charset="utf-8"></script>
+<script defer src="/static/js/admin_reports.js?v=1.1"charset="utf-8"></script>
 {% endblock %}

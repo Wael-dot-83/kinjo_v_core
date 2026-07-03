@@ -79,13 +79,13 @@ msgstr "مرفوض"
 
 #: i18n.py:172
 msgid "No data found"
-msgstr "لا توجد بيانات"
+msgstr "لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف."
 
 #: i18n.py:173 templates/attendance/absence_requests.html:64
 #: templates/parent/attendance.html:96 templates/parent/enrollments.html:82
 #: templates/parent/profile.html:278
 msgid "Loading..."
-msgstr "جاري التحميل..."
+msgstr "جارٍ تحميل البيانات، يرجى الانتظار."
 
 #: i18n.py:174
 msgid "Submit"
@@ -152,7 +152,7 @@ msgstr "الرسائل"
 
 #: templates/dashboard/parent.html
 msgid "Contact the Kindergarten"
-msgstr "تواصل مع الروضة"
+msgstr "تواصل مع الحضانة"
 
 #: templates/dashboard/parent.html
 msgid "Settings"
@@ -228,7 +228,7 @@ msgstr "لم تقم بتسجيل أي طفل بعد"
 
 #: templates/dashboard/parent.html
 msgid "Start by enrolling your child in a kindergarten"
-msgstr "ابدأ بتسجيل طفلك في إحدى الروضات"
+msgstr "ابدأ بتسجيل طفلك في إحدى الحضانات"
 
 
 #: i18n.py:181
@@ -265,11 +265,11 @@ msgstr "التسجيل متاح لأولياء الأمور فقط"
 
 #: api/enrollment.py
 msgid "Duplicate enrollment exists for this child at the same kindergarten"
-msgstr "يوجد طلب تسجيل لهذا الطفل في نفس الروضة"
+msgstr "يوجد طلب تسجيل لهذا الطفل في نفس الحضانة"
 
 #: api/enrollment.py api/registration.py
 msgid "Child is already enrolled at another kindergarten"
-msgstr "هذا الطفل مسجل حالياً في روضة أخرى"
+msgstr "هذا الطفل مسجل حالياً في حضانة أخرى"
 
 #: api/enrollment.py
 msgid "national_id required for Jordanian children"
@@ -444,7 +444,7 @@ msgstr "هل تحتاج إلى مساعدة؟"
 
 #: templates/dashboard/parent.html:108
 msgid "Contact kindergarten management"
-msgstr "تواصل مع إدارة الروضة"
+msgstr "تواصل مع إدارة الحضانة"
 
 #: templates/dashboard/parent.html:110
 msgid "Contact Us"
@@ -509,7 +509,7 @@ msgstr "نشط / مقبول"
 
 #: templates/parent/enrollments.html:73
 msgid "Kindergarten"
-msgstr "الروضة"
+msgstr "الحضانة"
 
 #: templates/parent/enrollments.html:75
 msgid "Submitted"
@@ -721,7 +721,7 @@ msgid "System Admin"
 msgstr "مدير النظام"
 
 msgid "Kindergarten Manager"
-msgstr "مدير الروضة"
+msgstr "مدير الحضانة"
 
 msgid "Supervisor"
 msgstr "مشرف"
@@ -739,7 +739,7 @@ msgid "Messages"
 msgstr "الرسائل"
 
 msgid "Kindergartens"
-msgstr "الروضات"
+msgstr "الحضانات"
 
 msgid "Daily Reports"
 msgstr "التقارير اليومية"
@@ -820,7 +820,7 @@ msgid "Open Menu"
 msgstr "فتح القائمة"
 
 msgid "Search for a child, parent, kindergarten..."
-msgstr "البحث عن طفل، ولي أمر، روضة..."
+msgstr "البحث عن طفل، ولي أمر، حضانة..."
 
 msgid "Global Search"
 msgstr "بحث شامل"
@@ -874,7 +874,7 @@ msgid "Child"
 msgstr "طفل"
 
 msgid "Kindergarten"
-msgstr "روضة"
+msgstr "حضانة"
 
 msgid "Report"
 msgstr "تقرير"
@@ -1035,7 +1035,7 @@ msgstr "تقرير"
 #~ msgstr "مريض"
 
 #~ msgid "Start by enrolling your child in a kindergarten"
-#~ msgstr "ابدأ بتسجيل طفلك في إحدى الروضات"
+#~ msgstr "ابدأ بتسجيل طفلك في إحدى الحضانات"
 
 #~ msgid "Submit New Application"
 #~ msgstr "تقديم طلب جديد"

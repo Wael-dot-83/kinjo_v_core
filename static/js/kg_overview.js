@@ -451,8 +451,8 @@ class KgOverview {
         ${govs.map(g => `<option value="${g}">${g === 'all' ? (isAr ? 'كل المحافظات' : 'All Governorates') : g}</option>`).join('')}
       </select>
 
-      <select class="ko-filter-select" id="ko-kg-filter" aria-label="${isAr ? 'الروضة' : 'Kindergarten'}">
-        ${kgNames.map(n => `<option value="${n}">${n === 'all' ? (isAr ? 'كل الروضات' : 'All Kindergartens') : n}</option>`).join('')}
+      <select class="ko-filter-select" id="ko-kg-filter" aria-label="${isAr ? 'الحضانة' : 'Kindergarten'}">
+        ${kgNames.map(n => `<option value="${n}">${n === 'all' ? (isAr ? 'كل الحضانات' : 'All Kindergartens') : n}</option>`).join('')}
       </select>
 
       <div class="ko-bar-end">
@@ -627,7 +627,7 @@ class KgOverview {
       <div class="ko-section-header">
         <h2 class="ko-section-title">
           <i class="bi bi-bar-chart-line-fill"></i>
-          ${isAr ? 'نظرة عامة على الروضات' : 'Kindergartens Overview'}
+          ${isAr ? 'نظرة عامة على الحضانات' : 'Kindergartens Overview'}
         </h2>
         <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
           <div class="ko-chart-type-btns" id="ko-chart-type-btns">
@@ -674,7 +674,7 @@ class KgOverview {
             <thead>
               <tr>
                 ${[
-                  { k:'name', ar:'اسم الروضة',     en:'Kindergarten'  },
+                  { k:'name', ar:'اسم الحضانة',     en:'Kindergarten'  },
                   { k:'gov',  ar:'المحافظة',        en:'Governorate'   },
                   { k:'children', ar:'الأطفال',     en:'Children'      },
                   { k:'teachers', ar:'المعلمات',    en:'Teachers'      },
@@ -955,7 +955,7 @@ class KgOverview {
 
     const actions = [
       { icon:'bi-person-plus-fill', ar:'إضافة طفل',      en:'Add Child',     accent:'#2563eb', href:'/enroll',         cls:'primary' },
-      { icon:'bi-building-fill',    ar:'إدارة الروضات',  en:'Manage KGs',    accent:'#7c3aed', href:'/admin/heatmap',  cls:'' },
+      { icon:'bi-building-fill',    ar:'إدارة الحضانات',  en:'Manage KGs',    accent:'#7c3aed', href:'/admin/heatmap',  cls:'' },
       { icon:'bi-bar-chart-fill',   ar:'عرض تقرير',      en:'View Report',   accent:'#16a34a', href:'/admin/analytics',cls:'' },
       { icon:'bi-bell-fill',        ar:'مراجعة التنبيهات',en:'Review Alerts', accent:'#dc2626', href:'/admin/alerts',   cls:'' },
     ];
@@ -1078,13 +1078,13 @@ class KgOverview {
       <div class="ko-panel-stat">
         <div class="ko-panel-stat-label">${isAr ? 'الإجمالي الحالي' : 'Current Total'}</div>
         <div class="ko-panel-stat-val" style="color:${meta.accent}">${val}${meta.unit}</div>
-        <div class="ko-panel-stat-sub">${isAr ? 'عبر' : 'across'} ${kgs.length} ${isAr ? 'روضة' : 'kindergartens'}</div>
+        <div class="ko-panel-stat-sub">${isAr ? 'عبر' : 'across'} ${kgs.length} ${isAr ? 'حضانة' : 'kindergartens'}</div>
       </div>
       <div style="height:180px;margin-bottom:1.5rem;">
         <canvas id="ko-panel-chart"></canvas>
       </div>
       <h3 style="font-size:.85rem;font-weight:700;color:var(--ko-text-muted);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.06em;">
-        ${isAr ? 'توزيع حسب الروضة' : 'Breakdown by Kindergarten'}
+        ${isAr ? 'توزيع حسب الحضانة' : 'Breakdown by Kindergarten'}
       </h3>
       ${kgs.map(kg => {
         const v = key === 'children' ? kg.children : key === 'attendance' ? kg.attendance : key === 'teachers' ? kg.teachers : kg.alerts;
@@ -1109,7 +1109,7 @@ class KgOverview {
         new Chart(ctx, {
           type: 'bar',
           data: {
-            labels: kgs.map(k => k.name.replace('روضة ','').substring(0,6)),
+            labels: kgs.map(k => k.name.replace('حضانة ','').substring(0,6)),
             datasets: [{ data: panelData, backgroundColor: meta.accent + 'bb', borderRadius: 6 }]
           },
           options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{display:true,ticks:{font:{size:9}}}, y:{display:true} } }
@@ -1161,7 +1161,7 @@ class KgOverview {
       </div>
       <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:.625rem;">
         <a href="/kindergartens/${encodeURIComponent(kg.id)}" class="ko-action-btn" style="justify-content:center">
-          <i class="bi bi-building-fill"></i> ${isAr ? 'عرض الروضة' : 'View Kindergarten'}
+          <i class="bi bi-building-fill"></i> ${isAr ? 'عرض الحضانة' : 'View Kindergarten'}
         </a>
         <a href="/attendance/daily?kg=${encodeURIComponent(kg.id)}" class="ko-action-btn" style="justify-content:center">
           <i class="bi bi-calendar-check-fill"></i> ${isAr ? 'سجل الحضور' : 'Attendance Log'}
@@ -1296,7 +1296,7 @@ class KgOverview {
     } catch (error) {
       console.error('[KgOverview] refresh failed', error);
       if (!silent) {
-        alert(window.KINJO_LANG === 'en' ? 'Failed to refresh kindergarten overview.' : 'تعذر تحديث نظرة الروضات.');
+        alert(window.KINJO_LANG === 'en' ? 'Failed to refresh kindergarten overview.' : 'تعذر تحديث نظرة الحضانات.');
       }
     } finally {
       setTimeout(() => { if (icon) icon.style.animation = ''; }, 700);
@@ -1332,7 +1332,7 @@ class KgOverview {
 
   #exportCSV() {
     const kgs  = this.#filteredKGs();
-    const rows = [['الروضة','المحافظة','الأطفال','المعلمات','الحضور %','التنبيهات']];
+    const rows = [['الحضانة','المحافظة','الأطفال','المعلمات','الحضور %','التنبيهات']];
     kgs.forEach(k => rows.push([k.name, k.gov, k.children, k.teachers, k.attendance, k.alerts]));
     const csv  = rows.map(r => r.join(',')).join('\n');
     const blob = new Blob(['﻿' + csv], { type:'text/csv;charset=utf-8;' });

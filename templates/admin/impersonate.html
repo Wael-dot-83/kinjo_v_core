@@ -66,7 +66,7 @@
                     <div class="mb-3">
                         <label class="field-label" for="managerSearch">{% if ui_lang == 'en' %}Search & Filter Managers{% else %}بحث وتصفية المديرين{% endif %}</label>
                         <input type="search" class="form-control" id="managerSearch"
-                               placeholder="{% if ui_lang == 'en' %}Search by manager name or kindergarten...{% else %}ابحث باسم المدير أو الروضة...{% endif %}"
+                               placeholder="{% if ui_lang == 'en' %}Search by manager name or kindergarten...{% else %}ابحث باسم المدير أو الحضانة...{% endif %}"
                                aria-label="{% if ui_lang == 'en' %}Search manager list{% else %}بحث في قائمة المديرين{% endif %}"
                                oninput="filterManagers(this.value)">
                     </div>
@@ -175,7 +175,7 @@
     'use strict';
 
     const _isEn = document.documentElement.lang === 'en';
-    const _noKg = _isEn ? 'No kindergarten' : 'بدون روضة';
+    const _noKg = _isEn ? 'No kindergarten' : 'بدون حضانة';
     const _noReason = _isEn ? 'No reason provided' : 'بدون سبب';
     const _eventLabel = _isEn ? 'Impersonated ' : 'انتحال هوية ';
     const _eventCount = _isEn ? ' event(s)' : ' عملية';

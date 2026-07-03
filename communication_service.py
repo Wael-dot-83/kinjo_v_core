@@ -557,7 +557,7 @@ class AvailableRecipientResponse(BaseModel):
             "id": 123,
             "name": "أحمد محمد",
             "role": "PARENT",
-            "kindergarten_name": "روضة الأمل",
+            "kindergarten_name": "حضانة الأمل",
             "children_count": 2
         }
     })
@@ -574,7 +574,7 @@ class AvailableRecipientsResponse(BaseModel):
                     "id": 123,
                     "name": "أحمد محمد",
                     "role": "PARENT",
-                    "kindergarten_name": "روضة الأمل",
+                    "kindergarten_name": "حضانة الأمل",
                     "children_count": 2
                 }
             ],
@@ -583,7 +583,7 @@ class AvailableRecipientsResponse(BaseModel):
                     "id": 456,
                     "name": "فاطمة علي",
                     "role": "SUPERVISOR",
-                    "kindergarten_name": "روضة الأمل",
+                    "kindergarten_name": "حضانة الأمل",
                     "children_count": None
                 }
             ]

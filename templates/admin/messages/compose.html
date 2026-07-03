@@ -73,7 +73,7 @@
                         <option value="ALL_SUPERVISORS">{% if ui_lang == 'en' %}All Supervisors{% else %}جميع المشرفين{% endif %}</option>
                         <option value="ALL_PARENTS">{% if ui_lang == 'en' %}All Parents{% else %}جميع أولياء الأمور{% endif %}</option>
                         <option value="GOVERNORATE">{% if ui_lang == 'en' %}By Governorate{% else %}حسب المحافظة (محافظة واحدة أو أكثر){% endif %}</option>
-                        <option value="KINDERGARTENS">{% if ui_lang == 'en' %}By Kindergarten{% else %}حسب الروضة{% endif %}</option>
+                        <option value="KINDERGARTENS">{% if ui_lang == 'en' %}By Kindergarten{% else %}حسب الحضانة{% endif %}</option>
                     </select>
                 </div>
 
@@ -98,11 +98,11 @@
 
                     <!-- Kindergarten Filter -->
                     <div id="kindergartenFilter" class="mb-3 d-none">
-                        <label for="kindergartenSelect" class="form-label">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</label>
+                        <label for="kindergartenSelect" class="form-label">{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}</label>
                         <div class="input-group input-group-icon mb-2">
                             <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
                             <input type="text" class="form-control form-control-sm" id="kgSearch"
-                                placeholder="{% if ui_lang == 'en' %}Search kindergarten...{% else %}بحث عن روضة...{% endif %}" onkeyup="filterKgList()">
+                                placeholder="{% if ui_lang == 'en' %}Search kindergarten...{% else %}بحث عن حضانة...{% endif %}" onkeyup="filterKgList()">
                         </div>
                         <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;"
                             id="kgListContainer">
@@ -239,7 +239,7 @@
     async function loadKindergartens() {
         kgLoading = true;
         const container = document.getElementById('kgListContainer');
-        container.innerHTML = '<div class="text-center text-muted small py-2"><span class="spinner-border spinner-border-sm"></span> ' + T('جاري التحميل...', 'Loading...') + '</div>';
+        container.innerHTML = '<div class="text-center text-muted small py-2"><span class="spinner-border spinner-border-sm"></span> ' + T('جارٍ تحميل البيانات، يرجى الانتظار.', 'Loading...') + '</div>';
         const accumulated = [];
         let page = 1;
 
@@ -247,7 +247,7 @@
             while (true) {
                 const params = new URLSearchParams({ page, page_size: KG_PAGE_SIZE });
                 const response = await fetch(`/api/admin/options/kindergartens?${params}`);
-                if (!response.ok) throw new Error(T('فشل في تحميل الروضات', 'Failed to load kindergartens'));
+                if (!response.ok) throw new Error(T('فشل في تحميل الحضانات', 'Failed to load kindergartens'));
                 const data = await response.json();
                 accumulated.push(...(data.kindergartens || []));
                 const pagination = data.pagination || {};
@@ -267,7 +267,7 @@
             kindergartensLoaded = true;
         } catch (error) {
             console.error(error);
-            container.innerHTML = '<div class="text-danger small text-center">' + T('فشل في تحميل قائمة الروضات', 'Failed to load kindergartens list') + '</div>';
+            container.innerHTML = '<div class="text-danger small text-center">' + T('فشل في تحميل قائمة الحضانات', 'Failed to load kindergartens list') + '</div>';
         } finally {
             kgLoading = false;
         }
@@ -358,7 +358,7 @@
             return;
         }
         if (target.mode === 'KINDERGARTENS' && !target.kindergarten_ids) {
-            Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار روضة واحدة على الأقل', 'Please select at least one kindergarten'), 'warning');
+            Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار حضانة واحدة على الأقل', 'Please select at least one kindergarten'), 'warning');
             return;
         }
 
@@ -454,7 +454,7 @@
             return;
         }
         if (target.mode === 'KINDERGARTENS' && !target.kindergarten_ids) {
-            Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار روضة واحدة على الأقل', 'Please select at least one kindergarten'), 'warning');
+            Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار حضانة واحدة على الأقل', 'Please select at least one kindergarten'), 'warning');
             return;
         }
 

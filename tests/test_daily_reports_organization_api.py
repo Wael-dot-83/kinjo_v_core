@@ -28,7 +28,7 @@ def test_daily_reports_organization_grouping_and_statuses(
     active_enrollment,
 ):
     second_kindergarten = models.Kindergarten(
-        name_ar="روضة النخبة",
+        name_ar="حضانة النخبة",
         name_en="Elite KG",
         governorate="Amman",
         district="Amman",
@@ -49,7 +49,7 @@ def test_daily_reports_organization_grouping_and_statuses(
         role=models.UserRole.MANAGER,
         status=models.UserStatus.ACTIVE,
         kindergarten_id=second_kindergarten.id,
-        full_name="مدير الروضة الثانية",
+        full_name="مدير الحضانة الثانية",
     )
     test_db.add(second_manager)
 

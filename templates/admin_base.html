@@ -10,7 +10,7 @@
     <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
     <meta
       name="description"
-      content="{% if ui_lang == 'en' %}KinJo Admin - Professional Kindergarten Management System{% else %}KinJo - إدارة احترافية لرياض الأطفال{% endif %}"
+      content="{% if ui_lang == 'en' %}KinJo Admin - Professional Kindergarten Management System{% else %}KinJo - إدارة احترافية للحضانات{% endif %}"
     />
     <meta name="author" content="KinJo Team" />
     <meta name="theme-color" content="#2563eb" />
@@ -148,7 +148,7 @@
                     {{ current_user.full_name if current_user and current_user.full_name else (current_user.username if current_user else 'System Admin') }}
                   </span>
                   <span class="header-user-role">
-                    {{ current_user.role | title if current_user and current_user.role else 'Administrator' }}
+                    {% if ui_lang == 'en' %}{{ current_user.role | title if current_user and current_user.role else 'Administrator' }}{% else %}{{ current_user.role.value | role_ar if current_user and current_user.role else 'مدير النظام' }}{% endif %}
                   </span>
                 </div>
               </button>
@@ -176,7 +176,8 @@
         <nav class="admin-top-nav" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
           {% set current_path = request.url.path %}
           {% set top_level_items = [
-            {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم", "label_en": "Dashboard", "active_paths": ["/admin/dashboard"]}
+            {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم", "label_en": "Dashboard", "active_paths": ["/admin/dashboard"]},
+            {"href": "/admin/help", "icon": "bi-life-preserver", "label_ar": "المساعدة", "label_en": "Help", "active_paths": ["/admin/help"]}
           ] %}
           {% set sidebar_sections = [
             {
@@ -187,7 +188,7 @@
               "items": [
                 {"href": "/admin/users", "icon": "bi-people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users"], "active_prefixes": ["/admin/users/"]},
                 {"href": "/admin/messages", "icon": "bi-send", "label_ar": "التواصل", "label_en": "Communication", "active_paths": ["/admin/messages", "/admin/contact-messages"], "active_prefixes": ["/admin/messages/"]},
-                {"href": "/admin/kg-overview", "icon": "bi-building", "label_ar": "الروضات", "label_en": "Kindergartens", "active_paths": ["/admin/kg-overview"]},
+                {"href": "/admin/kg-overview", "icon": "bi-building", "label_ar": "الحضانات", "label_en": "Kindergartens", "active_paths": ["/admin/kg-overview"]},
                 {"href": "/admin/imported-kindergartens", "icon": "bi-database", "label_ar": "البيانات", "label_en": "Data Management", "active_paths": ["/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs"]}
               ]
             },

@@ -211,7 +211,7 @@ def _build_literal_map() -> dict[str, str]:
         "بحث": "Search",
         "تسجيل الدخول": "Sign in",
         "تسجيل الخروج": "Log out",
-        "جاري التحميل": "Loading",
+        "جارٍ تحميل البيانات، يرجى الانتظار.": "Loading",
         "غير متاح": "Not available",
         "غير محدد": "Unspecified",
     }

@@ -35,9 +35,9 @@
                     <input type="date" id="dateTo" class="form-control" value="{{ default_date_to }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                    <label class="form-label fw-bold">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
                     <select id="kindergartenFilter" class="form-select">
-                        <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                        <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الحضانات{% endif %}</option>
                         {% for kg in kindergartens %}
                         <option value="{{ kg.id }}">{{ kg.name_ar }}</option>
                         {% endfor %}
@@ -402,7 +402,7 @@
             if (charts[key] && charts[key].data) {
                 Plotly.newPlot(el, charts[key].data, charts[key].layout || {}, plotlyConfig);
             } else {
-                el.innerHTML = `<p class="text-muted text-center mt-5">${T('لا توجد بيانات','No data')}</p>`;
+                el.innerHTML = `<p class="text-muted text-center mt-5">${T('لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.','No data')}</p>`;
             }
         }
     }

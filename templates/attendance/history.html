@@ -59,9 +59,9 @@
         <form id="historyFilters" class="row g-3">
             {% if is_admin %}
             <div class="col-md-4 col-lg-3">
-                <label class="form-label" for="kindergartenFilter">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                <label class="form-label" for="kindergartenFilter">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
                 <select class="form-select" id="kindergartenFilter">
-                    <option id="allKindergartensOption" value="" data-all-kindergartens="true">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                    <option id="allKindergartensOption" value="" data-all-kindergartens="true">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الحضانات{% endif %}</option>
                     {% for kg in kindergartens %}
                     <option value="{{ kg.id }}">{{ kg.name_en if ui_lang == 'en' and kg.name_en else kg.name_ar }}{% if kg.governorate %} - {{ kg.governorate }}{% endif %}</option>
                     {% endfor %}
@@ -77,7 +77,7 @@
                 </select>
             </div>
             <div class="col-md-4 col-lg-3">
-                <label class="form-label" for="kindergartenNameFilter">{% if ui_lang == 'en' %}Search Kindergarten Name{% else %}بحث باسم الروضة{% endif %}</label>
+                <label class="form-label" for="kindergartenNameFilter">{% if ui_lang == 'en' %}Search Kindergarten Name{% else %}بحث باسم الحضانة{% endif %}</label>
                 <input
                     type="text"
                     id="kindergartenNameFilter"
@@ -88,7 +88,7 @@
             </div>
             {% else %}
             <div class="col-md-4">
-                <label class="form-label" for="kindergartenReadonly">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                <label class="form-label" for="kindergartenReadonly">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
                 <input
                     type="text"
                     id="kindergartenReadonly"
@@ -234,7 +234,7 @@
     const setLoadingState = (isLoading) => {
         submitButton.disabled = isLoading;
         if (isLoading) {
-            submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${T('جاري التحميل...', 'Loading...')}`;
+            submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${T('جارٍ تحميل البيانات، يرجى الانتظار.', 'Loading...')}`;
         } else {
             submitButton.innerHTML = `<i class="bi bi-funnel me-1"></i>${T('عرض السجل', 'Show Records')}`;
         }
@@ -266,14 +266,14 @@
         const filterSuffix = filterParts.length ? ` - ${filterParts.join(" | ")}` : "";
 
         if (scope.mode === "all_kindergartens") {
-            scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${T('جميع الروضات', 'All Kindergartens')} (${scope.kindergarten_count || 0})${filterSuffix}`;
+            scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${T('جميع الحضانات', 'All Kindergartens')} (${scope.kindergarten_count || 0})${filterSuffix}`;
             return;
         }
         if (scope.mode === "filtered_kindergartens") {
-            scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${scope.kindergarten_count || 0} ${T('روضة', 'kindergartens')}${filterSuffix}`;
+            scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${scope.kindergarten_count || 0} ${T('حضانة', 'kindergartens')}${filterSuffix}`;
             return;
         }
-        scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${scope.kindergarten_name || T('روضة محددة', 'Selected kindergarten')}${filterSuffix}`;
+        scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${scope.kindergarten_name || T('حضانة محددة', 'Selected kindergarten')}${filterSuffix}`;
     };
 
     const renderRows = (rows) => {

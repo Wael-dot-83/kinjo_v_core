@@ -603,7 +603,7 @@ class BenchmarkingService:
             row = ClassificationRow(
                 entity_type="KINDERGARTEN",
                 entity_id=kg.id,
-                display_name=kg.name_ar or kg.name_en or f"روضة {kg.id}",
+                display_name=kg.name_ar or kg.name_en or f"حضانة {kg.id}",
                 final_score=round(final_score, 2) if final_score is not None else None,
                 trend_vs_previous=trend,
                 trend_direction=_trend_direction(trend),
@@ -1172,7 +1172,7 @@ class BenchmarkingService:
                     size_band_label=kg_row.size_band_label,
                     geography=kg_row.geography,
                     aspects={
-                        "حوكمة_الروضة": float(kg_row.final_score or 0.0),
+                        "حوكمة_الحضانة": float(kg_row.final_score or 0.0),
                         "سرعة_الاعتماد": on_time_rate,
                         "جودة_المراجعة": quality_rate,
                     },
@@ -1379,7 +1379,7 @@ def _load_filters(db: Session) -> ClassificationFiltersResponse:
             {"value": "GOVERNORATE", "label": "المحافظة"},
             {"value": "CITY", "label": "المدينة"},
             {"value": "AREA", "label": "المنطقة"},
-            {"value": "KINDERGARTEN", "label": "الروضة"},
+            {"value": "KINDERGARTEN", "label": "الحضانة"},
         ]
         size_modes = [
             {"value": "CAPACITY", "label": "حسب السعة"},
@@ -1922,11 +1922,11 @@ def get_parent_kindergarten_quality_band(request: Request,
 
     return ParentQualityBandResponse(
         kindergarten_id=kindergarten.id,
-        kindergarten_name=kindergarten.name_ar or kindergarten.name_en or f"روضة {kindergarten.id}",
+        kindergarten_name=kindergarten.name_ar or kindergarten.name_en or f"حضانة {kindergarten.id}",
         period_start=period_start,
         period_end=period_end,
         governance_score=round(governance_score, 2),
         band_label=band_label,
-        explanation="يعكس هذا التصنيف مستوى جودة الحوكمة والتشغيل في روضة طفلكم خلال الفترة المحددة.",
+        explanation="يعكس هذا التصنيف مستوى جودة الحوكمة والتشغيل في حضانة طفلكم خلال الفترة المحددة.",
     )
 

@@ -1971,7 +1971,7 @@ class TestMissingEndpointsCoverage2:
         """Creating kindergarten with blank license_number is valid"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.post("/api/kindergartens", json={
-            "name_ar": "روضة الاختبار الفارغ",
+            "name_ar": "حضانة الاختبار الفارغ",
             "name_en": "Blank License KG",
             "governorate": "Amman",
             "district": "Amman",
@@ -1988,7 +1988,7 @@ class TestMissingEndpointsCoverage2:
         """Creating kindergarten with blank contact_email treats it as None"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.post("/api/kindergartens", json={
-            "name_ar": "روضة البريد الفارغ",
+            "name_ar": "حضانة البريد الفارغ",
             "name_en": "Blank Email KG",
             "governorate": "Amman",
             "district": "Amman",
@@ -2159,7 +2159,7 @@ class TestMissingEndpointsCoverage2:
     def test_create_kindergarten_duplicate_phone_fails(self, client, admin_user, test_db):
         """Creating a kindergarten with duplicate phone returns 409 or 400"""
         kg = models.Kindergarten(
-            name_ar="روضة فريدة",
+            name_ar="حضانة فريدة",
             name_en="Unique KG",
             governorate="Amman",
             district="Amman",
@@ -2173,7 +2173,7 @@ class TestMissingEndpointsCoverage2:
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.post("/api/kindergartens", json={
-            "name_ar": "روضة أخرى",
+            "name_ar": "حضانة أخرى",
             "name_en": "Another KG",
             "governorate": "Amman",
             "district": "Amman",
@@ -2498,7 +2498,7 @@ class TestMissingEndpointsCoverage3:
     def test_class_supervisors_cross_kg_403(self, client, test_db, sample_class):
         """GET /classes/{id}/supervisors from a manager in a different KG → 403"""
         other_kg = models.Kindergarten(
-            name_ar="روضة أخرى",
+            name_ar="حضانة أخرى",
             name_en="Other KG",
             license_number="OTHER-SUPTEST-001",
             governorate="Zarqa",

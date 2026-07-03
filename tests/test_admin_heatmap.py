@@ -57,7 +57,7 @@ def _reset_kindergarten_heatmap_data():
 def _seed_kindergarten(db, *, kg_id: int, governorate: str, district: str, status, high_score: bool):
     kg = models.Kindergarten(
         id=kg_id,
-        name_ar=f"روضة {kg_id}",
+        name_ar=f"حضانة {kg_id}",
         name_en=f"KG {kg_id}",
         governorate=governorate,
         district=district,

@@ -96,7 +96,7 @@
   }
 
   function emptyRow(colspan) {
-    return `<tr><td colspan="${colspan}" class="text-center py-4 text-muted">${_t('لا توجد بيانات', 'No data available')}</td></tr>`;
+    return `<tr><td colspan="${colspan}" class="text-center py-4 text-muted">${_t('لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.', 'No data available')}</td></tr>`;
   }
 
   function errorRow(colspan) {
@@ -316,7 +316,7 @@
           type: 'scatter',
           data: {
             datasets: [{
-              label: document.documentElement.lang === 'ar' ? 'روضات' : 'Kindergartens',
+              label: document.documentElement.lang === 'ar' ? 'حضانات' : 'Kindergartens',
               data: kgs.map(kg => ({ x: kg.supervisors_count || 0, y: kg.children_count || 0 })),
               backgroundColor: 'rgba(37, 99, 235, 0.7)',
             }],
@@ -392,7 +392,7 @@
         const errorCounts = {
           [document.documentElement.lang === 'ar' ? 'بلا فصل' : 'No class']: data.supervisors_without_class || 0,
           [document.documentElement.lang === 'ar' ? 'فصول متعددة' : 'Multiple classes']: data.supervisors_multiple_classes || 0,
-          [document.documentElement.lang === 'ar' ? 'خارج الروضة' : 'Outside KG']: data.supervisors_outside_kg || 0,
+          [document.documentElement.lang === 'ar' ? 'خارج الحضانة' : 'Outside KG']: data.supervisors_outside_kg || 0,
         };
         supErrorChartInstance = new Chart(errCtx, {
           type: 'bar',

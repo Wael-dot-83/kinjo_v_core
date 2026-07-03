@@ -137,7 +137,7 @@ class TestParentChildrenAPI:
 
         enrollment = child["enrollments"][0]
         assert enrollment["status"] == "ACCEPTED"
-        assert enrollment["kindergarten_name"] == "روضة الأمل"
+        assert enrollment["kindergarten_name"] == "حضانة الأمل"
         assert enrollment["kindergarten_id"] == sample_kindergarten.id
 
     def test_empty_children_list(self, client, auth_headers_parent, parent_user, test_db):
@@ -208,7 +208,7 @@ class TestParentEnrollmentsAPI:
 
         enrollment = data["enrollments"][0]
         assert enrollment["child_name"] == "Layla Al-Rashid"
-        assert enrollment["kindergarten_name"] == "روضة الأمل"
+        assert enrollment["kindergarten_name"] == "حضانة الأمل"
         assert enrollment["status"] == "ACCEPTED"
         assert enrollment["status_ar"] == "مقبول"
         assert enrollment["child_id"] == sample_child.id
@@ -255,13 +255,13 @@ class TestParentEnrollmentsAPI:
 
         # Create 2 kindergartens
         kg1 = models.Kindergarten(
-            name_ar="روضة الأمل", name_en="Hope KG",
+            name_ar="حضانة الأمل", name_en="Hope KG",
             governorate="Amman", district="Amman", area="A",
             address_line="St 1", contact_phone="+962790000001",
             status=models.KindergartenStatus.ACTIVE
         )
         kg2 = models.Kindergarten(
-            name_ar="روضة النور", name_en="Light KG",
+            name_ar="حضانة النور", name_en="Light KG",
             governorate="Amman", district="Amman", area="B",
             address_line="St 2", contact_phone="+962790000002",
             status=models.KindergartenStatus.ACTIVE
@@ -304,7 +304,7 @@ class TestParentEnrollmentsAPI:
         test_db.refresh(child)
 
         kg = models.Kindergarten(
-            name_ar="روضة", name_en="KG",
+            name_ar="حضانة", name_en="KG",
             governorate="Amman", district="Amman", area="A",
             address_line="St", contact_phone="+962790000099",
             status=models.KindergartenStatus.ACTIVE
@@ -408,7 +408,7 @@ class TestParentEnrollmentsAPI:
         test_db.refresh(child_b)
 
         kg = models.Kindergarten(
-            name_ar="روضة خاصة", name_en="Private KG",
+            name_ar="حضانة خاصة", name_en="Private KG",
             governorate="Amman", district="Amman", area="X",
             address_line="St", contact_phone="+962790000012",
             status=models.KindergartenStatus.ACTIVE
@@ -646,7 +646,7 @@ class TestParentEnrollmentViewAccess:
         test_db.refresh(child2)
 
         kg = models.Kindergarten(
-            name_ar="روضة أخرى", name_en="Other KG",
+            name_ar="حضانة أخرى", name_en="Other KG",
             governorate="Amman", district="Amman", area="Z",
             address_line="St", contact_phone="+962790009998",
             status=models.KindergartenStatus.ACTIVE

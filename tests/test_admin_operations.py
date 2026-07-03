@@ -88,7 +88,7 @@ def _make_user(db, username, role=models.UserRole.SUPERVISOR, kg_id=None,
 
 def _make_kg(db, name_en="OpKG", governorate="Amman", license_valid_until=None):
     kg = models.Kindergarten(
-        name_ar=f"روضة {name_en}",
+        name_ar=f"حضانة {name_en}",
         name_en=name_en,
         governorate=governorate,
         district="Amman",
@@ -597,7 +597,7 @@ class TestKGExcelImport:
                          kg_id=sample_kindergarten.id)
         r_login = client.post("/token", data={"username": "kg_mgr_imp", "password": "Pass123!"})
         headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
-        xlsx = self._make_xlsx([["روضة", "Test", "عمان", "عمان", "منطقة", "عنوان", "0777"]])
+        xlsx = self._make_xlsx([["حضانة", "Test", "عمان", "عمان", "منطقة", "عنوان", "0777"]])
         r = client.post("/api/admin/kindergartens/import-excel",
                         headers=headers,
                         files={"file": ("test.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
@@ -617,7 +617,7 @@ class TestKGExcelImport:
         admin = _make_admin(test_db, "kgimp_adm", "2")
         headers = _tok(client, "kgimp_adm2")
         xlsx = self._make_xlsx([
-            ["روضة الأمل", "Hope KG", "عمان", "عمان", "منطقة", "شارع 1", "0777123456"],
+            ["حضانة الأمل", "Hope KG", "عمان", "عمان", "منطقة", "شارع 1", "0777123456"],
         ])
         r = client.post("/api/admin/kindergartens/import-excel?dry_run=true",
                         headers=headers,
@@ -631,7 +631,7 @@ class TestKGExcelImport:
         admin = _make_admin(test_db, "kgimp_adm", "3")
         headers = _tok(client, "kgimp_adm3")
         xlsx = self._make_xlsx([
-            ["روضة النجوم", "Stars KG", "عمان", "عمان", "منطقة", "شارع 2", "0777234567"],
+            ["حضانة النجوم", "Stars KG", "عمان", "عمان", "منطقة", "شارع 2", "0777234567"],
         ])
         r = client.post("/api/admin/kindergartens/import-excel",
                         headers=headers,
@@ -659,14 +659,14 @@ class TestKGExcelImport:
         headers = _tok(client, "kgimp_adm5")
         # First import
         xlsx1 = self._make_xlsx([
-            ["روضة مكررة", "Dup KG", "عمان", "عمان", "منطقة", "شارع 4", "0777456789"],
+            ["حضانة مكررة", "Dup KG", "عمان", "عمان", "منطقة", "شارع 4", "0777456789"],
         ])
         client.post("/api/admin/kindergartens/import-excel",
                     headers=headers,
                     files={"file": ("first.xlsx", xlsx1, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
         # Second import of same row
         xlsx2 = self._make_xlsx([
-            ["روضة مكررة", "Dup KG", "عمان", "عمان", "منطقة", "شارع 4", "0777456789"],
+            ["حضانة مكررة", "Dup KG", "عمان", "عمان", "منطقة", "شارع 4", "0777456789"],
         ])
         r = client.post("/api/admin/kindergartens/import-excel",
                         headers=headers,

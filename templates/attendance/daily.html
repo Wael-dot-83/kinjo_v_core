@@ -28,7 +28,7 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1"
                     type="button" role="tab">
-                    <i class="bi bi-building me-1"></i>1. {% if ui_lang == 'en' %}Select Kindergarten{% else %}اختيار الروضة{% endif %}
+                    <i class="bi bi-building me-1"></i>1. {% if ui_lang == 'en' %}Select Kindergarten{% else %}اختيار الحضانة{% endif %}
                 </button>
             </li>
             {% endif %}
@@ -59,8 +59,8 @@
             <div class="tab-pane fade show active" id="step1" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label" for="kgSearch">{% if ui_lang == 'en' %}Search Kindergarten{% else %}البحث بالروضة{% endif %}</label>
-                        <input type="text" class="form-control" id="kgSearch" placeholder="{% if ui_lang == 'en' %}Kindergarten name...{% else %}اسم الروضة...{% endif %}">
+                        <label class="form-label" for="kgSearch">{% if ui_lang == 'en' %}Search Kindergarten{% else %}البحث بالحضانة{% endif %}</label>
+                        <input type="text" class="form-control" id="kgSearch" placeholder="{% if ui_lang == 'en' %}Kindergarten name...{% else %}اسم الحضانة...{% endif %}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label" for="kgGovernorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
@@ -81,7 +81,7 @@
                 </div>
                 <div class="mt-3">
                     <select class="form-select" id="kindergartenSelect" size="5">
-                        <option value="">{% if ui_lang == 'en' %}Select a kindergarten...{% else %}اختر روضة...{% endif %}</option>
+                        <option value="">{% if ui_lang == 'en' %}Select a kindergarten...{% else %}اختر حضانة...{% endif %}</option>
                     </select>
                 </div>
                 <div class="mt-3 text-end">
@@ -97,7 +97,7 @@
                 <strong>{% if ui_lang == 'en' %}Your assigned kindergarten:{% else %}روضتك المسؤول عنها:{% endif %}</strong>
                 {{ (user_kindergarten.name_en if ui_lang == 'en' and user_kindergarten.name_en else user_kindergarten.name_ar) }} - {{ user_kindergarten.governorate }}
                 <br>
-                <small class="text-muted">{% if ui_lang == 'en' %}All actions will run only for this kindergarten{% else %}ستعمل جميع العمليات على هذه الروضة فقط{% endif %}</small>
+                <small class="text-muted">{% if ui_lang == 'en' %}All actions will run only for this kindergarten{% else %}ستعمل جميع العمليات على هذه الحضانة فقط{% endif %}</small>
             </div>
             {% endif %}
 
@@ -109,7 +109,7 @@
                             <input class="form-check-input" type="radio" name="classSelection" id="allClasses"
                                 value="all" checked>
                             <label class="form-check-label fw-bold" for="allClasses">
-                                {% if ui_lang == 'en' %}All classes in selected kindergarten{% else %}جميع الشعب في الروضة المحددة{% endif %}
+                                {% if ui_lang == 'en' %}All classes in selected kindergarten{% else %}جميع الشعب في الحضانة المحددة{% endif %}
                             </label>
                         </div>
                         <div class="form-check">
@@ -380,7 +380,7 @@
             console.log('API response:', response);
 
             const select = document.getElementById('kindergartenSelect');
-            select.innerHTML = `<option value="">${attendanceText('attendance.select_kindergarten', 'اختر روضة...', 'Select a kindergarten...')}</option>`;
+            select.innerHTML = `<option value="">${attendanceText('attendance.select_kindergarten', 'اختر حضانة...', 'Select a kindergarten...')}</option>`;
 
             if (response.kindergartens && response.kindergartens.length > 0) {
                 response.kindergartens.forEach(kg => {
@@ -390,15 +390,15 @@
                     select.appendChild(option);
                 });
                 showToast(
-                    `${attendanceText('attendance.found', 'تم العثور على', 'Found')} ${response.kindergartens.length} ${attendanceText('attendance.kindergartens', 'روضة', 'kindergartens')}`,
+                    `${attendanceText('attendance.found', 'تم العثور على', 'Found')} ${response.kindergartens.length} ${attendanceText('attendance.kindergartens', 'حضانة', 'kindergartens')}`,
                     'success',
                 );
             } else {
-                showToast(attendanceText('attendance.no_kindergartens_match', 'لم يتم العثور على روضات مطابقة', 'No matching kindergartens found'), 'info');
+                showToast(attendanceText('attendance.no_kindergartens_match', 'لم يتم العثور على حضانات مطابقة', 'No matching kindergartens found'), 'info');
             }
         } catch (error) {
             console.error('Search error:', error);
-            showToast(`${attendanceText('attendance.search_error', 'خطأ في البحث عن الروضات', 'Kindergarten search error')}: ${error.message}`, 'error');
+            showToast(`${attendanceText('attendance.search_error', 'خطأ في البحث عن الحضانات', 'Kindergarten search error')}: ${error.message}`, 'error');
         }
     }
 
@@ -419,7 +419,7 @@
         if (currentStep === 1) {
             const kgId = document.getElementById('kindergartenSelect').value;
             if (!kgId) {
-                showToast(attendanceText('attendance.select_kindergarten_required', 'يرجى اختيار روضة', 'Please select a kindergarten'), 'warning');
+                showToast(attendanceText('attendance.select_kindergarten_required', 'يرجى اختيار حضانة', 'Please select a kindergarten'), 'warning');
                 return;
             }
             selectedKindergarten = kgId;

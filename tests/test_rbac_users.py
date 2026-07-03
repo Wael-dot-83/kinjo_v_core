@@ -6,7 +6,7 @@ import models
 
 def _create_kindergarten(db, name_suffix):
     kg = models.Kindergarten(
-        name_ar=f"روضة اختبار {name_suffix}",
+        name_ar=f"حضانة اختبار {name_suffix}",
         name_en=f"Test KG {name_suffix}",
         license_number=f"LIC-{name_suffix}-001",
         governorate="Amman",

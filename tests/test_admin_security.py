@@ -31,7 +31,7 @@ def _create_kindergarten(db, suffix="A"):
     # Use hash of suffix for unique phone number
     suffix_hash = abs(hash(suffix)) % 100
     kg = models.Kindergarten(
-        name_ar=f"روضة اختبار {suffix}",
+        name_ar=f"حضانة اختبار {suffix}",
         name_en=f"Test KG {suffix}",
         license_number=f"LIC-{suffix}-001",
         governorate="عمان",
@@ -1059,7 +1059,7 @@ def test_admin_import_kindergartens_success_is_audited(client, test_db, admin_us
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.append(["name_ar", "name_en", "governorate", "district", "area", "address", "phone"])
-    ws.append(["روضة التدقيق", "Audit KG", "عمان", "عمان", "عبدون", "شارع 1", "0790000000"])
+    ws.append(["حضانة التدقيق", "Audit KG", "عمان", "عمان", "عبدون", "شارع 1", "0790000000"])
     buf = BytesIO()
     wb.save(buf)
     buf.seek(0)

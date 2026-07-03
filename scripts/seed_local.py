@@ -52,7 +52,7 @@ def run():
         for (_id,) in _corrupt:
             db.execute(_text(
                 "UPDATE kindergartens SET "
-                "name_ar='روضة البراعم', name_en='Al Baraaem Kindergarten', "
+                "name_ar='حضانة البراعم', name_en='Al Baraaem Kindergarten', "
                 "governorate='عمان', district='عمان', area='الرابية', "
                 "address_line='شارع الرابية، عمان', contact_phone='0799000001' "
                 "WHERE id=:id"
@@ -62,10 +62,10 @@ def run():
             db.commit()
 
         # ── Kindergartens ─────────────────────────────────────────────────────
-        kg1 = db.query(Kindergarten).filter(Kindergarten.name_ar == "روضة الأمل").first()
+        kg1 = db.query(Kindergarten).filter(Kindergarten.name_ar == "حضانة الأمل").first()
         if not kg1:
             kg1 = Kindergarten(
-                name_ar="روضة الأمل",
+                name_ar="حضانة الأمل",
                 name_en="Al Amal Kindergarten",
                 governorate="عمان",
                 district="عمان",
@@ -75,10 +75,10 @@ def run():
                 status=KindergartenStatus.ACTIVE,
             )
             db.add(kg1)
-        kg2 = db.query(Kindergarten).filter(Kindergarten.name_ar == "روضة النجوم").first()
+        kg2 = db.query(Kindergarten).filter(Kindergarten.name_ar == "حضانة النجوم").first()
         if not kg2:
             kg2 = Kindergarten(
-                name_ar="روضة النجوم",
+                name_ar="حضانة النجوم",
                 name_en="Al Nujoom Kindergarten",
                 governorate="إربد",
                 district="إربد",

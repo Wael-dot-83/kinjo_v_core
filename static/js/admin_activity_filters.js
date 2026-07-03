@@ -31,7 +31,7 @@
 
   const ROLE_OPTIONS = [
     { value: "ADMIN",      ar: "مدير النظام", en: "Admin" },
-    { value: "MANAGER",    ar: "مدير روضة",   en: "Manager" },
+    { value: "MANAGER",    ar: "مدير حضانة",   en: "Manager" },
     { value: "SUPERVISOR", ar: "مراقب",       en: "Supervisor" },
     { value: "PARENT",     ar: "ولي الأمر",   en: "Parent" },
   ];

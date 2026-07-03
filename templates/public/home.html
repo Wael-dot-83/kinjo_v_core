@@ -2,7 +2,7 @@
 
 {% block title %}{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}{% endblock %}
 {% block meta_description %}
-<meta name="description" content="{% if ui_lang == 'en' %}KinJo - Kindergarten enrollment and management platform for Jordan.{% else %}كينجو - منصة تسجيل وإدارة الروضات في الأردن.{% endif %}" />
+<meta name="description" content="{% if ui_lang == 'en' %}KinJo - Kindergarten enrollment and management platform for Jordan.{% else %}كينجو - منصة تسجيل وإدارة الحضانات في الأردن.{% endif %}" />
 {% endblock %}
 
 {% block content %}
@@ -11,14 +11,14 @@
     <div class="row align-items-center">
       <div class="col-lg-7">
         <h1 class="display-6 fw-bold mb-3">
-          {% if ui_lang == 'en' %}Kindergarten enrollment, made simple{% else %}تسجيل الروضة، بخطوات بسيطة{% endif %}
+          {% if ui_lang == 'en' %}Kindergarten enrollment, made simple{% else %}تسجيل الحضانة، بخطوات بسيطة{% endif %}
         </h1>
         <p class="lead text-muted mb-4">
           {% if ui_lang == 'en' %}
           KinJo connects parents, kindergarten staff, and education supervisors on one platform —
           enroll a child, track attendance, and follow daily reports online.
           {% else %}
-          تجمع كينجو أولياء الأمور والعاملين في الروضات والمشرفين التربويين في منصة واحدة —
+          تجمع كينجو أولياء الأمور والعاملين في الحضانات والمشرفين التربويين في منصة واحدة —
           سجّل طفلك، وتابع الحضور والتقارير اليومية عبر الإنترنت.
           {% endif %}
         </p>
@@ -53,7 +53,7 @@
         <i class="bi bi-clipboard-check fs-1 text-primary mb-2" aria-hidden="true"></i>
         <h3 class="h6">{% if ui_lang == 'en' %}Enroll a child{% else %}تسجيل طفل{% endif %}</h3>
         <p class="text-muted small mb-0">
-          {% if ui_lang == 'en' %}Find a kindergarten and submit an enrollment application online.{% else %}اختر روضة وقدّم طلب التسجيل عبر الإنترنت.{% endif %}
+          {% if ui_lang == 'en' %}Find a kindergarten and submit an enrollment application online.{% else %}اختر حضانة وقدّم طلب التسجيل عبر الإنترنت.{% endif %}
         </p>
       </div>
     </div>
@@ -71,7 +71,7 @@
         <i class="bi bi-chat-dots fs-1 text-primary mb-2" aria-hidden="true"></i>
         <h3 class="h6">{% if ui_lang == 'en' %}Stay in touch{% else %}التواصل المستمر{% endif %}</h3>
         <p class="text-muted small mb-0">
-          {% if ui_lang == 'en' %}Message kindergarten staff directly through the platform.{% else %}تواصل مع كادر الروضة مباشرة عبر المنصة.{% endif %}
+          {% if ui_lang == 'en' %}Message kindergarten staff directly through the platform.{% else %}تواصل مع كادر الحضانة مباشرة عبر المنصة.{% endif %}
         </p>
       </div>
     </div>

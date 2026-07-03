@@ -25,7 +25,7 @@
             {% if ui_lang == 'en' %}KPI Network Dashboard{% else %}لوحة مؤشرات الأداء الرئيسية{% endif %}
         </h1>
         <p class="page-subtitle">
-            {% if ui_lang == 'en' %}Monitor performance indicators across all kindergartens in the network{% else %}رصد مؤشرات الأداء عبر جميع روضات الشبكة{% endif %}
+            {% if ui_lang == 'en' %}Monitor performance indicators across all kindergartens in the network{% else %}رصد مؤشرات الأداء عبر جميع حضانات الشبكة{% endif %}
         </p>
     </div>
     <div class="page-actions">
@@ -115,7 +115,7 @@
                 <div class="card-body">
                     <div class="d-flex align-items-start justify-content-between mb-2">
                         <div class="text-muted small fw-semibold">
-                            {% if ui_lang == 'en' %}Kindergartens{% else %}عدد الروضات{% endif %}
+                            {% if ui_lang == 'en' %}Kindergartens{% else %}عدد الحضانات{% endif %}
                         </div>
                         <div class="rounded-circle d-flex align-items-center justify-content-center"
                              style="width:36px;height:36px;background:#0A5C8E18;">
@@ -212,7 +212,7 @@
                 <div class="card-header py-2">
                     <h6 class="mb-0 fw-600">
                         <i class="bi bi-bar-chart-fill me-2 text-primary" aria-hidden="true"></i>
-                        {% if ui_lang == 'en' %}Attendance Rate by Kindergarten{% else %}معدل الحضور حسب الروضة{% endif %}
+                        {% if ui_lang == 'en' %}Attendance Rate by Kindergarten{% else %}معدل الحضور حسب الحضانة{% endif %}
                     </h6>
                 </div>
                 <div class="card-body">
@@ -242,14 +242,14 @@
         <div class="card-header py-2 d-flex align-items-center justify-content-between">
             <h6 class="mb-0 fw-600">
                 <i class="bi bi-table me-2 text-primary" aria-hidden="true"></i>
-                {% if ui_lang == 'en' %}Per-Kindergarten KPI Breakdown{% else %}تفاصيل مؤشرات الأداء لكل روضة{% endif %}
+                {% if ui_lang == 'en' %}Per-Kindergarten KPI Breakdown{% else %}تفاصيل مؤشرات الأداء لكل حضانة{% endif %}
             </h6>
             <div class="input-group input-group-sm" style="max-width:240px;">
                 <span class="input-group-text">
                     <i class="bi bi-search" aria-hidden="true"></i>
                 </span>
                 <input type="text" class="form-control" id="tableSearch"
-                       placeholder="{% if ui_lang == 'en' %}Search kindergarten...{% else %}بحث في الروضات...{% endif %}"
+                       placeholder="{% if ui_lang == 'en' %}Search kindergarten...{% else %}بحث في الحضانات...{% endif %}"
                        aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}">
             </div>
         </div>
@@ -257,7 +257,7 @@
             <table class="table table-hover align-middle mb-0" id="kpiTable">
                 <thead class="table-light">
                     <tr>
-                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
                         <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
                         <th class="text-center">
                             {% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
@@ -547,7 +547,7 @@
 
         const endNum = Math.min(start + KPI_PAGE_SIZE, kpiSorted.length);
         document.getElementById('tableFooter').textContent =
-            T(`عرض ${start + 1}–${endNum} من ${kpiSorted.length} روضة`,
+            T(`عرض ${start + 1}–${endNum} من ${kpiSorted.length} حضانة`,
               `Showing ${start + 1}–${endNum} of ${kpiSorted.length} kindergartens`);
 
         renderKpiPagination(kpiSorted.length);

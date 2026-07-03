@@ -198,9 +198,9 @@ const Analytics = {
       container.innerHTML =
         '<div class="text-center py-4">' +
         '<div class="spinner-border text-primary" role="status">' +
-        `<span class="visually-hidden">${analyticsText("جاري التحميل...", "Loading...")}</span>` +
+        `<span class="visually-hidden">${analyticsText("جارٍ تحميل البيانات، يرجى الانتظار.", "Loading...")}</span>` +
         "</div>" +
-        `<p class="text-muted mt-2">${analyticsText("جاري التحميل...", "Loading...")}</p>` +
+        `<p class="text-muted mt-2">${analyticsText("جارٍ تحميل البيانات، يرجى الانتظار.", "Loading...")}</p>` +
         "</div>";
     }
   },
@@ -282,7 +282,7 @@ const Analytics = {
     const container = document.getElementById("governorateBreakdown");
 
     if (!governorates || governorates.length === 0) {
-      container.innerHTML = `<p class="text-muted text-center py-4">${analyticsText("لا توجد بيانات", "No data")}</p>`;
+      container.innerHTML = `<p class="text-muted text-center py-4">${analyticsText("لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.", "No data")}</p>`;
       return;
     }
 
@@ -322,7 +322,7 @@ const Analytics = {
         "</div>" +
         '<small class="text-muted">' +
         gov.kindergarten_count +
-        ` ${analyticsText("روضة", "kindergartens")} | ` +
+        ` ${analyticsText("حضانة", "kindergartens")} | ` +
         gov.children_count +
         ` ${analyticsText("طفل", "children")}</small>` +
         "</div>";
@@ -475,7 +475,7 @@ const Analytics = {
       console.error("Error loading top rankings:", error);
       this.showError(
         "topRankings",
-        analyticsText("فشل تحميل أفضل الروضات", "Failed to load top kindergartens")
+        analyticsText("فشل تحميل أفضل الحضانات", "Failed to load top kindergartens")
       );
     }
 
@@ -490,7 +490,7 @@ const Analytics = {
       this.showError(
         "bottomRankings",
         analyticsText(
-          "فشل تحميل الروضات التي تحتاج تحسين",
+          "فشل تحميل الحضانات التي تحتاج تحسين",
           "Failed to load underperforming kindergartens"
         )
       );
@@ -504,7 +504,7 @@ const Analytics = {
     const container = document.getElementById(containerId);
 
     if (!rankings || rankings.length === 0) {
-      container.innerHTML = `<p class="text-muted text-center py-3">${analyticsText("لا توجد بيانات", "No data")}</p>`;
+      container.innerHTML = `<p class="text-muted text-center py-3">${analyticsText("لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.", "No data")}</p>`;
       return;
     }
 
@@ -599,7 +599,7 @@ const Analytics = {
       '<table class="table table-hover">' +
       "<thead>" +
       "<tr>" +
-      `<th>${analyticsText("الروضة", "Kindergarten")}</th>` +
+      `<th>${analyticsText("الحضانة", "Kindergarten")}</th>` +
       `<th>${analyticsText("الأطفال", "Children")}</th>` +
       `<th>${analyticsText("الحضور %", "Attendance %")}</th>` +
       `<th>${analyticsText("الحوكمة", "Governance")}</th>` +

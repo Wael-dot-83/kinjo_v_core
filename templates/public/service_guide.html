@@ -3,7 +3,7 @@
 
 {% block title %}{% if ui_lang == 'en' %}Service Guide{% else %}دليل الخدمة{% endif %}{% endblock %}
 {% block meta_description %}
-<meta name="description" content="{% if ui_lang == 'en' %}Kindergarten enrollment service: requirements, documents, fees, and how to apply on KinJo.{% else %}خدمة تسجيل الروضة: المتطلبات والمستندات والرسوم وطريقة التقديم عبر كينجو.{% endif %}" />
+<meta name="description" content="{% if ui_lang == 'en' %}Kindergarten enrollment service: requirements, documents, fees, and how to apply on KinJo.{% else %}خدمة تسجيل الحضانة: المتطلبات والمستندات والرسوم وطريقة التقديم عبر كينجو.{% endif %}" />
 {% endblock %}
 
 {% block page_header %}
@@ -23,12 +23,12 @@
     <div class="card border-0 shadow-sm">
       <div class="card-body p-4 p-lg-5">
 
-        <h2 class="h4 mb-1">{% if ui_lang == 'en' %}Kindergarten Enrollment{% else %}تسجيل الروضة{% endif %}</h2>
+        <h2 class="h4 mb-1">{% if ui_lang == 'en' %}Kindergarten Enrollment{% else %}تسجيل الحضانة{% endif %}</h2>
         <p class="text-muted">
           {% if ui_lang == 'en' %}
           Register a child at a participating kindergarten and track the application online.
           {% else %}
-          تسجيل طفل في روضة مشاركة، ومتابعة الطلب عبر الإنترنت.
+          تسجيل طفل في حضانة مشاركة، ومتابعة الطلب عبر الإنترنت.
           {% endif %}
         </p>
 
@@ -36,14 +36,14 @@
           <dt class="col-sm-3">{% if ui_lang == 'en' %}Description{% else %}الوصف{% endif %}</dt>
           <dd class="col-sm-9">
             {% if ui_lang == 'en' %}Online enrollment of a child into a participating kindergarten, including
-            application, document submission, and status tracking.{% else %}تسجيل طفل عبر الإنترنت في روضة
+            application, document submission, and status tracking.{% else %}تسجيل طفل عبر الإنترنت في حضانة
             مشاركة، ويشمل تقديم الطلب وإرسال المستندات ومتابعة الحالة.{% endif %}
           </dd>
 
           <dt class="col-sm-3">{% if ui_lang == 'en' %}Department{% else %}الجهة المسؤولة{% endif %}</dt>
           <dd class="col-sm-9">
             {% if ui_lang == 'en' %}The kindergarten selected during enrollment, supervised by its assigned
-            education supervisor on the platform.{% else %}الروضة المختارة عند التسجيل، تحت إشراف المشرف
+            education supervisor on the platform.{% else %}الحضانة المختارة عند التسجيل، تحت إشراف المشرف
             التربوي المخصص لها في المنصة.{% endif %}
           </dd>
 
@@ -75,7 +75,7 @@
           <dd class="col-sm-9">
             <ol class="mb-0">
               <li>{% if ui_lang == 'en' %}Create a parent account or sign in.{% else %}إنشاء حساب ولي أمر أو تسجيل الدخول.{% endif %}</li>
-              <li>{% if ui_lang == 'en' %}Choose a kindergarten by governorate and district.{% else %}اختيار الروضة حسب المحافظة واللواء.{% endif %}</li>
+              <li>{% if ui_lang == 'en' %}Choose a kindergarten by governorate and district.{% else %}اختيار الحضانة حسب المحافظة واللواء.{% endif %}</li>
               <li>{% if ui_lang == 'en' %}Fill in the child's information and upload required documents.{% else %}تعبئة بيانات الطفل وتحميل المستندات المطلوبة.{% endif %}</li>
               <li>{% if ui_lang == 'en' %}Submit the application and track its status from your dashboard.{% else %}تقديم الطلب ومتابعة حالته من لوحة التحكم.{% endif %}</li>
             </ol>
@@ -89,7 +89,7 @@
           <dt class="col-sm-3">{% if ui_lang == 'en' %}Expected completion time{% else %}الوقت المتوقع للإنجاز{% endif %}</dt>
           <dd class="col-sm-9">
             {% if ui_lang == 'en' %}Varies by kindergarten capacity; the application status is updated on
-            your dashboard as it is reviewed.{% else %}يختلف حسب السعة المتوفرة في الروضة؛ تُحدَّث حالة الطلب
+            your dashboard as it is reviewed.{% else %}يختلف حسب السعة المتوفرة في الحضانة؛ تُحدَّث حالة الطلب
             على لوحة التحكم أثناء المراجعة.{% endif %}
           </dd>
 
@@ -97,14 +97,14 @@
           <dd class="col-sm-9">
             {% if ui_lang == 'en' %}Set independently by each kindergarten (public kindergartens may differ
             from private ones). Confirm fees directly with the selected kindergarten before submitting.{% else %}
-            تحدّدها كل روضة بشكل مستقل (قد تختلف الروضات العامة عن الخاصة). يرجى تأكيد الرسوم مباشرة مع الروضة
+            تحدّدها كل حضانة بشكل مستقل (قد تختلف الحضانات العامة عن الخاصة). يرجى تأكيد الرسوم مباشرة مع الحضانة
             المختارة قبل التقديم.{% endif %}
           </dd>
 
           <dt class="col-sm-3">{% if ui_lang == 'en' %}Centers{% else %}المراكز{% endif %}</dt>
           <dd class="col-sm-9">
             {% if ui_lang == 'en' %}All participating kindergartens registered on the platform, across
-            Jordan's governorates.{% else %}جميع الروضات المشاركة المسجّلة في المنصة، في جميع محافظات
+            Jordan's governorates.{% else %}جميع الحضانات المشاركة المسجّلة في المنصة، في جميع محافظات
             الأردن.{% endif %}
           </dd>
 

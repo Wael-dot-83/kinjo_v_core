@@ -12,7 +12,7 @@
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
-                <li class="breadcrumb-item"><a href="/kindergartens">{% if ui_lang == 'en' %}Kindergartens{% else %}معلومات الروضة{% endif %}</a></li>
+                <li class="breadcrumb-item"><a href="/kindergartens">{% if ui_lang == 'en' %}Kindergartens{% else %}معلومات الحضانة{% endif %}</a></li>
                 <li class="breadcrumb-item active">{{ kindergarten.name_en if ui_lang == 'en' and kindergarten.name_en else kindergarten.name_ar }}</li>
             </ol>
         </nav>
@@ -37,7 +37,7 @@
     <div class="col-md-4">
         <div class="glass-card fade-in mb-4">
             <div class="card-header">
-                <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}</h5>
+                <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الحضانة{% endif %}</h5>
             </div>
             <div class="card-body">
                 <div class="mb-3">
@@ -315,8 +315,8 @@
                     <div class="mb-3">
                         <label class="form-label required" for="add_class_level">{% if ui_lang == 'en' %}Level{% else %}المرحلة{% endif %}</label>
                         <select class="form-select" id="add_class_level" name="level">
-                            <option value="kg1">{% if ui_lang == 'en' %}KG1 (Group 1){% else %}روضة أولى (المجموعة 1){% endif %}</option>
-                            <option value="kg2">{% if ui_lang == 'en' %}KG2 (Group 2){% else %}روضة ثانية (المجموعة 2){% endif %}</option>
+                            <option value="kg1">{% if ui_lang == 'en' %}KG1 (Group 1){% else %}حضانة أولى (المجموعة 1){% endif %}</option>
+                            <option value="kg2">{% if ui_lang == 'en' %}KG2 (Group 2){% else %}حضانة ثانية (المجموعة 2){% endif %}</option>
                             <option value="nursery">{% if ui_lang == 'en' %}Nursery{% else %}حضانة{% endif %}</option>
                         </select>
                     </div>
@@ -848,15 +848,15 @@
 
     function formatAgeRange(min, max) {
         if (min === 0 && max <= 36) return T('حضانة', 'Nursery');
-        if (min >= 36 && max <= 48) return T('روضة أولى (المجموعة 1)', 'KG1 (Group 1)');
-        if (min >= 48) return T('روضة ثانية (المجموعة 2)', 'KG2 (Group 2)');
+        if (min >= 36 && max <= 48) return T('حضانة أولى (المجموعة 1)', 'KG1 (Group 1)');
+        if (min >= 48) return T('حضانة ثانية (المجموعة 2)', 'KG2 (Group 2)');
         return `${min}-${max} ${T('شهر', 'months')}`;
     }
 
     function translateRole(role) {
         const roles = {
             'ADMIN': T('مدير النظام', 'System Admin'),
-            'MANAGER': T('مدير الروضة', 'Manager'),
+            'MANAGER': T('مدير الحضانة', 'Manager'),
             'SUPERVISOR': T('مشرف', 'Supervisor'),
             'TEACHER': T('معلم', 'Teacher'),
             'PARENT': T('ولي أمر', 'Parent')
@@ -1145,13 +1145,13 @@
     }
 
     function confirmArchive() {
-        if (confirm(T('هل أنت متأكد من أرشفة هذه الروضة؟ سيتم إخفاؤها من القوائم النشطة ولكن يمكن استعادتها لاحقاً.', 'Are you sure you want to archive this kindergarten? It will be hidden from active lists but can be restored later.'))) {
+        if (confirm(T('هل أنت متأكد من أرشفة هذه الحضانة؟ سيتم إخفاؤها من القوائم النشطة ولكن يمكن استعادتها لاحقاً.', 'Are you sure you want to archive this kindergarten? It will be hidden from active lists but can be restored later.'))) {
             archiveKindergarten();
         }
     }
 
     function confirmDelete() {
-        if (confirm(T('هل أنت متأكد من حذف هذه الروضة نهائياً؟ لا يمكن التراجع عن هذا الإجراء وستفقد جميع البيانات المرتبطة.', 'Are you sure you want to permanently delete this kindergarten? This action cannot be undone and all associated data will be lost.'))) {
+        if (confirm(T('هل أنت متأكد من حذف هذه الحضانة نهائياً؟ لا يمكن التراجع عن هذا الإجراء وستفقد جميع البيانات المرتبطة.', 'Are you sure you want to permanently delete this kindergarten? This action cannot be undone and all associated data will be lost.'))) {
             deleteKindergarten();
         }
     }

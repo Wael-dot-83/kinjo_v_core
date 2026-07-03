@@ -173,7 +173,7 @@ def resolve_announcement_scope(
         scope_ids = [row[0] for row in kg_rows]
         if not scope_ids:
             raise validation_error(
-                "لا توجد روضات نشطة في هذه المحافظة.",
+                "لا توجد حضانات نشطة في هذه المحافظة.",
                 fields={"governorate_id": "empty"}
             )
     elif audience_scope == "kindergarten" and audience_kindergarten_ids:
@@ -194,7 +194,7 @@ def resolve_announcement_scope(
         scope_ids = [row[0] for row in kg_rows]
         if not scope_ids:
             raise validation_error(
-                "لا توجد روضات نشطة في هذه المحافظة.",
+                "لا توجد حضانات نشطة في هذه المحافظة.",
                 fields={"governorate": "empty"}
             )
     scope_ids = [int(x) for x in scope_ids if x]
@@ -731,7 +731,7 @@ def _validate_audience_permissions(db: Session, audience: AudienceDefinition, se
     if sender.role == models.UserRole.MANAGER:
         if not sender.kindergarten_id:
             raise validation_error(
-                "يجب أن يكون المدير مرتبطاً بروضة لإرسال الرسائل",
+                "يجب أن يكون المدير مرتبطاً بحضانة لإرسال الرسائل",
                 fields={"kindergarten_id": "required"},
             )
         # Managers can only use GLOBAL (auto-scoped to their KG) or KINDERGARTEN

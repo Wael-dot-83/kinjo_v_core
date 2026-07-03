@@ -16,11 +16,11 @@ def setup_translator(language: str = "en") -> Callable:
             "Filter Reports": "تصفية التقارير",
             "Scope": "النطاق",
             "All Scopes": "جميع النطاقات",
-            "Specific Kindergarten": "روضة محددة",
+            "Specific Kindergarten": "حضانة محددة",
             "Governorate": "محافظة",
-            "All Kindergartens": "جميع الروضات",
-            "Kindergarten": "الروضة",
-            "Choose Kindergarten": "اختر الروضة",
+            "All Kindergartens": "جميع الحضانات",
+            "Kindergarten": "الحضانة",
+            "Choose Kindergarten": "اختر الحضانة",
             "Choose Governorate": "اختر المحافظة",
             "Search": "بحث",
             "Reset": "إعادة تعيين",
@@ -55,11 +55,11 @@ def setup_translator(language: str = "en") -> Callable:
             "Open Incidents": "حوادث مفتوحة",
             "Incidents by Type": "الحوادث حسب النوع",
             "Incidents by Severity": "الحوادث حسب الخطورة",
-            "Incidents by Kindergarten": "الحوادث حسب الروضة",
+            "Incidents by Kindergarten": "الحوادث حسب الحضانة",
             "Close": "إغلاق",
             "Export CSV": "تصدير CSV",
             "Please fill all required fields": "يرجى ملء جميع الحقول المطلوبة",
-            "Please select a kindergarten": "يرجى اختيار الروضة",
+            "Please select a kindergarten": "يرجى اختيار الحضانة",
             "Please select a governorate": "يرجى اختيار المحافظة",
             "Please select a year": "يرجى اختيار السنة",
             "Report created successfully": "تم إنشاء التقرير بنجاح",
@@ -67,7 +67,7 @@ def setup_translator(language: str = "en") -> Callable:
             "Error loading reports": "حدث خطأ في تحميل التقارير",
             "Error loading report": "حدث خطأ في تحميل التقرير",
             "Error exporting report": "حدث خطأ في التصدير",
-            "Loading...": "جاري التحميل...",
+            "Loading...": "جارٍ تحميل البيانات، يرجى الانتظار.",
             "Unknown": "غير معروف",
         },
         "en": {
@@ -145,3 +145,109 @@ def setup_translator(language: str = "en") -> Callable:
 def get_translation(key: str, language: str = "en") -> str:
     """Get translation for a key, falling back to the key itself when missing."""
     return setup_translator(language)(key)
+
+
+# ---------------------------------------------------------------------------
+# Arabic display labels for enum values and audit constants rendered in
+# server-side templates (profile activity feed, user badges, ...).
+# ---------------------------------------------------------------------------
+
+ROLE_LABELS_AR = {
+    "ADMIN": "مدير النظام",
+    "MANAGER": "مدير حضانة",
+    "SUPERVISOR": "مشرفة",
+    "PARENT": "ولي أمر",
+}
+
+STATUS_LABELS_AR = {
+    "ACTIVE": "نشط",
+    "INACTIVE": "غير نشط",
+    "SUSPENDED": "موقوف",
+    "PENDING": "قيد الانتظار",
+    "DRAFT": "مسودة",
+}
+
+AUDIT_ENTITY_LABELS_AR = {
+    "USER": "مستخدم",
+    "CHILD": "طفل",
+    "KINDERGARTEN": "حضانة",
+    "ENROLLMENT": "تسجيل",
+    "ATTENDANCE": "حضور",
+    "REPORT": "تقرير",
+    "INCIDENT": "حادثة",
+    "TASK": "مهمة",
+    "AUTH": "المصادقة",
+    "SYSTEM": "النظام",
+    "MESSAGE": "رسالة",
+    "CLASS": "شعبة",
+    "ALERT": "تنبيه",
+    "BACKUP": "نسخة احتياطية",
+}
+
+# Token-based translation for AuditAction constants (LOGIN_SUCCESS → دخول ناجح).
+_AUDIT_ACTION_LABELS_AR = {
+    "HTTP_REQUEST": "طلب وصول",
+    "LOGIN_SUCCESS": "دخول ناجح",
+    "LOGIN_FAILED": "دخول فاشل",
+    "LOGIN_LOCKED": "حساب مقفل",
+    "LOGIN": "تسجيل دخول",
+    "LOGOUT": "تسجيل خروج",
+    "REGISTER": "تسجيل حساب",
+    "CREATE": "إنشاء",
+    "UPDATE": "تحديث",
+    "DELETE": "حذف",
+    "VIEW": "عرض",
+    "ACCESS_DENIED": "رفض وصول",
+}
+
+_AUDIT_TOKENS_AR = {
+    "USER": "مستخدم", "USERS": "مستخدمين", "BULK": "جماعي", "ADMIN": "إداري",
+    "EXPORT": "تصدير", "IMPORT": "استيراد", "REPORT": "تقرير", "DAILY": "يومي",
+    "ANALYTICS": "تحليلات", "AUDIT": "تدقيق", "LOG": "سجل", "CLEANUP": "تنظيف",
+    "MESSAGE": "رسالة", "NOTIFICATIONS": "إشعارات", "SENT": "إرسال",
+    "CREATED": "إنشاء", "UPDATED": "تحديث", "DELETED": "حذف", "EDITED": "تعديل",
+    "VIEWED": "عرض", "GENERATED": "توليد", "RESOLVED": "معالجة",
+    "SUBMITTED": "تقديم", "COMPLETED": "اكتمال", "FAILED": "فشل",
+    "SUCCESS": "نجاح", "REQUESTED": "طلب", "DOWNLOADED": "تنزيل",
+    "PASSWORD": "كلمة المرور", "RESET": "إعادة تعيين", "CHANGED": "تغيير",
+    "CHANGE": "تغيير", "PROFILE": "الملف الشخصي", "BACKUP": "نسخة احتياطية",
+    "RESTORED": "استعادة", "ENQUEUED": "جدولة", "ALERT": "تنبيه",
+    "ACKNOWLEDGED": "تأكيد", "KINDERGARTEN": "حضانة", "CHILDREN": "أطفال",
+    "INCIDENT": "حادثة", "ATTENDANCE": "حضور", "OVERRIDE": "تجاوز",
+    "IMPERSONATION": "انتحال صلاحية", "START": "بدء", "END": "إنهاء",
+    "ATTEMPT": "محاولة", "MFA": "التحقق الثنائي", "ENABLED": "تفعيل",
+    "DISABLED": "تعطيل", "BYPASS": "تجاوز", "GOVERNANCE": "حوكمة",
+    "REMINDER": "تذكير", "CONTACT": "تواصل", "STATUS": "حالة",
+    "CLASSIFICATION": "تصنيف", "CACHE": "ذاكرة مؤقتة", "WARM": "تهيئة",
+    "INVALIDATE": "إبطال", "DASHBOARD": "لوحة", "ERROR": "خطأ",
+    "PREVIEW": "معاينة", "QUEUED": "جدولة", "SKIPPED": "تخطي",
+    "READ": "قراءة", "REPLIED": "رد", "ARCHIVED": "أرشفة",
+    "UNARCHIVED": "إلغاء أرشفة", "ATTACHMENT": "مرفق", "ADDED": "إضافة",
+    "ANNOUNCEMENT": "إعلان", "FORCE": "إجباري", "PARENT": "ولي أمر",
+    "TO": "إلى", "SYNC": "متزامن", "JOB": "مهمة",
+    "INITIATED": "بدء", "AUTH": "مصادقة", "LOCKED": "قفل",
+}
+
+
+def audit_action_label_ar(action: str) -> str:
+    """Arabic display label for an AuditAction constant."""
+    if not action:
+        return "—"
+    action = str(action)
+    if action in _AUDIT_ACTION_LABELS_AR:
+        return _AUDIT_ACTION_LABELS_AR[action]
+    return " ".join(_AUDIT_TOKENS_AR.get(t, t) for t in action.split("_"))
+
+
+def audit_entity_label_ar(entity_type: str) -> str:
+    if not entity_type:
+        return "—"
+    return AUDIT_ENTITY_LABELS_AR.get(str(entity_type).upper(), str(entity_type))
+
+
+def role_label_ar(role: str) -> str:
+    return ROLE_LABELS_AR.get(str(role or "").upper(), str(role or "—"))
+
+
+def status_label_ar(status: str) -> str:
+    return STATUS_LABELS_AR.get(str(status or "").upper(), str(status or "—"))

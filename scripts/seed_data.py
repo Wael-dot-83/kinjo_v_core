@@ -37,7 +37,7 @@ def seed_database():
 
         # Create sample kindergartens
         kindergarten1 = models.Kindergarten(
-            name_ar="روضة الأمل",
+            name_ar="حضانة الأمل",
             name_en="Al Amal Kindergarten",
             governorate="عمان",
             city="عمان",
@@ -53,7 +53,7 @@ def seed_database():
         )
 
         kindergarten2 = models.Kindergarten(
-            name_ar="روضة النور",
+            name_ar="حضانة النور",
             name_en="Al Noor Kindergarten",
             governorate="عمان",
             city="عمان",

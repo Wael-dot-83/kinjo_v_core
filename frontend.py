@@ -104,6 +104,14 @@ def status_color(status: str) -> str:
 
 templates.env.filters['status_color'] = status_color
 
+from translations import (  # noqa: E402
+    audit_action_label_ar, audit_entity_label_ar, role_label_ar, status_label_ar,
+)
+templates.env.filters['audit_action_ar'] = audit_action_label_ar
+templates.env.filters['audit_entity_ar'] = audit_entity_label_ar
+templates.env.filters['role_ar'] = role_label_ar
+templates.env.filters['status_ar'] = status_label_ar
+
 router = APIRouter(include_in_schema=False)
 
 # -----------------------------------------------------------------------------
@@ -1872,6 +1880,15 @@ async def admin_settings_page(request: Request, current_user: User = Depends(get
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="admin/settings.html", context={"current_user": current_user})
+
+
+@router.get("/admin/help", response_class=HTMLResponse)
+async def admin_help_center_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin help center — full Arabic user guide, FAQ, and glossary."""
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/help_center.html", context={"current_user": current_user})
 
 
 @router.get("/admin/observability", response_class=HTMLResponse)

@@ -482,7 +482,7 @@
               <label class="profile-field-label">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</label>
               <div>
                 <span class="badge" style="background:var(--color-primary);font-size:.78rem;">
-                  {{ current_user.role.value if current_user.role else '—' }}
+                  {% if current_user.role %}{{ current_user.role.value if ui_lang == 'en' else current_user.role.value | role_ar }}{% else %}—{% endif %}
                 </span>
               </div>
             </div>
@@ -490,7 +490,7 @@
               <label class="profile-field-label">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
               <div>
                 <span class="badge bg-success" style="font-size:.78rem;">
-                  {{ current_user.status.value if current_user.status else '—' }}
+                  {% if current_user.status %}{{ current_user.status.value if ui_lang == 'en' else current_user.status.value | status_ar }}{% else %}—{% endif %}
                 </span>
               </div>
             </div>
@@ -765,10 +765,10 @@
           <tr class="audit-row">
             <td class="ps-3">
               <span class="audit-action-pill level-{{ event.sensitivity_level or 1 }}">
-                {{ event.action }}
+                {{ event.action if ui_lang == 'en' else event.action | audit_action_ar }}
               </span>
             </td>
-            <td>{{ event.entity_type }}</td>
+            <td>{{ event.entity_type if ui_lang == 'en' else event.entity_type | audit_entity_ar }}</td>
             <td style="font-family:monospace;font-size:.78rem;">{{ event.ip_address or '—' }}</td>
             <td class="pe-3 text-muted" style="white-space:nowrap;font-size:.8rem;">
               {% if event.created_at %}{{ event.created_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}

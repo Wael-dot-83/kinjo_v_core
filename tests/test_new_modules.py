@@ -403,7 +403,7 @@ class TestManagerClassCRUD:
     ):
         """Assigning a supervisor from a different KG is rejected."""
         other_kg = models.Kindergarten(
-            name_ar="روضة أخرى", name_en="Other KG",
+            name_ar="حضانة أخرى", name_en="Other KG",
             governorate="Irbid", district="Irbid", area="Test", address_line="St 1",
             contact_phone="0700000000", status=models.KindergartenStatus.ACTIVE,
         )
@@ -766,7 +766,7 @@ class TestMessagingRecipients:
     ):
         """Manager cannot send a direct message to a user from a different KG."""
         other_kg = models.Kindergarten(
-            name_ar="روضة غريبة", name_en="Foreign KG",
+            name_ar="حضانة غريبة", name_en="Foreign KG",
             governorate="Aqaba", district="Aqaba", area="South", address_line="St 5",
             contact_phone="0600000001", status=models.KindergartenStatus.ACTIVE,
         )

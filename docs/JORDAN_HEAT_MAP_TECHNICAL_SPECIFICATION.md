@@ -897,13 +897,13 @@ Returns the 6 main indicators with all 22 sub-indicators.
     {
       "key": "nursery_status",
       "name_en": "Nursery Status",
-      "name_ar": "حالة الروضات",
+      "name_ar": "حالة الحضانات",
       "color": "#0E334F",
       "description_en": "Active vs inactive nurseries in the governorate.",
-      "description_ar": "الروضات النشطة مقابل غير النشطة في المحافظة.",
+      "description_ar": "الحضانات النشطة مقابل غير النشطة في المحافظة.",
       "alert_threshold": 70.0,
       "sub_indicators": [
-        {"key": "active_nurseries", "name_en": "Active nurseries", "name_ar": "روضات نشطة", "unit": "count", "threshold_high": 200, "threshold_low": 50, "higher_is_better": true},
+        {"key": "active_nurseries", "name_en": "Active nurseries", "name_ar": "حضانات نشطة", "unit": "count", "threshold_high": 200, "threshold_low": 50, "higher_is_better": true},
         ...
       ]
     },

@@ -225,7 +225,7 @@
                     <!-- Example Note -->
                     <div class="list-group-item">
                         <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1 small fw-bold">{% if ui_lang == 'en' %}Kindergarten Manager{% else %}مدير الروضة{% endif %}</h6>
+                            <h6 class="mb-1 small fw-bold">{% if ui_lang == 'en' %}Kindergarten Manager{% else %}مدير الحضانة{% endif %}</h6>
                             <small class="text-muted">{% if ui_lang == 'en' %}2 days ago{% else %}منذ يومين{% endif %}</small>
                         </div>
                         <p class="mb-1 small">{% if ui_lang == 'en' %}All required documents have been verified.{% else %}تم التأكد من اكتمال جميع الأوراق الثبوتية.{% endif %}</p>
@@ -348,7 +348,7 @@
 
         // Load classes
         try {
-            select.innerHTML = `<option value="" disabled selected>${enrollmentViewText('common.loading', 'جاري التحميل...', 'Loading...')}</option>`;
+            select.innerHTML = `<option value="" disabled selected>${enrollmentViewText('common.loading', 'جارٍ تحميل البيانات، يرجى الانتظار.', 'Loading...')}</option>`;
             const res = await fetch(`/api/classes?kindergarten_id=${kindergartenId}&is_active=true`, {
                 headers: getHeaders()
             });

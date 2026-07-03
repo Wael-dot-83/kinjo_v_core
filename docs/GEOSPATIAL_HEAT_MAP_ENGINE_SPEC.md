@@ -87,7 +87,7 @@ NURSERY_POINTS_GEOJSON = {
             "type": "Feature",
             "properties": {
                 "kindergarten_id": 1,
-                "name_ar": "روضة الأمل",
+                "name_ar": "حضانة الأمل",
                 "name_en": "Al-Amal Kindergarten",
                 "governorate": "عمان",
                 "capacity": 150,
@@ -236,7 +236,7 @@ function createLayerControl(heatMapTypes) {
         div.innerHTML = `
             <div dir="rtl" class="layer-selector">
                 <select id="heatMapType" class="form-select">
-                    <option value="nursery_distribution">توزيع الروضات</option>
+                    <option value="nursery_distribution">توزيع الحضانات</option>
                     <option value="child_population">توزع الأطفال (0-5)</option>
                     <option value="hr_capacity">نسب الموظفين</option>
                     <option value="attendance">معدلات الحضور</option>

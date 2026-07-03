@@ -89,7 +89,7 @@ class ThresholdDefinition:
     red_label_en: str = "Action Required"
     red_label_ar: str = "إجراء فوري مطلوب"
     gray_label_en: str = "No Data"
-    gray_label_ar: str = "لا توجد بيانات"
+    gray_label_ar: str = "لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف."
 
     # Meaning texts per band
     green_meaning_en: str = ""
@@ -180,7 +180,7 @@ _SRC_JORDAN_MOE_VERIFIED = ThresholdSource(
     validation_status=ValidationStatus.OFFICIAL_VERIFIED,
     effective_date="2023-01-01",
     notes_en="License validity requirement is a direct legal obligation under Jordan kindergarten licensing law.",
-    notes_ar="اشتراط صلاحية الترخيص التزام قانوني مباشر بموجب قانون ترخيص رياض الأطفال الأردني.",
+    notes_ar="اشتراط صلاحية الترخيص التزام قانوني مباشر بموجب قانون ترخيص الحضانات الأردني.",
 )
 
 
@@ -633,7 +633,7 @@ STANDARDS: Dict[str, KPIStandard] = {
             unit="%",
             source=_SRC_INTERNAL,
             green_meaning_en="Kindergarten is operating at a healthy enrollment level.",
-            green_meaning_ar="الروضة تعمل بمستوى تسجيل صحي.",
+            green_meaning_ar="الحضانة تعمل بمستوى تسجيل صحي.",
             amber_meaning_en="Underutilized capacity. Review enrollment strategies.",
             amber_meaning_ar="طاقة غير مستغلة. راجع استراتيجيات التسجيل.",
             red_meaning_en="Very low enrollment. Financial and operational sustainability may be at risk.",
@@ -757,7 +757,7 @@ STANDARDS: Dict[str, KPIStandard] = {
             unit="score",
             source=_SRC_INTERNAL,
             green_meaning_en="Kindergarten is performing well across governance and child experience dimensions.",
-            green_meaning_ar="الروضة تؤدي أداءً جيداً في مجالي الحوكمة وتجربة الطفل.",
+            green_meaning_ar="الحضانة تؤدي أداءً جيداً في مجالي الحوكمة وتجربة الطفل.",
             amber_meaning_en="Performance is acceptable but improvements are needed in one or more areas.",
             amber_meaning_ar="الأداء مقبول لكن هناك تحسينات مطلوبة في مجال أو أكثر.",
             red_meaning_en="Performance is below acceptable levels. Comprehensive review and action plan required.",
@@ -783,7 +783,7 @@ HARD_OVERRIDE_RULES: List[HardOverrideRule] = [
     HardOverrideRule(
         rule_id="LICENSE_EXPIRED",
         description_en="If the kindergarten's operating license is expired, the overall status must be RED regardless of other scores.",
-        description_ar="إذا انتهت صلاحية ترخيص الروضة، يجب أن يكون الوضع العام أحمر بصرف النظر عن الدرجات الأخرى.",
+        description_ar="إذا انتهت صلاحية ترخيص الحضانة، يجب أن يكون الوضع العام أحمر بصرف النظر عن الدرجات الأخرى.",
         forces_band=BandColor.RED,
         condition_description_en="license_valid_until < today",
         condition_description_ar="تاريخ انتهاء الترخيص < اليوم",

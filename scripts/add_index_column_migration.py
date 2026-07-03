@@ -53,8 +53,8 @@ INDEX_COLUMN = "kindergarten_index"
 # The pipeline stores the generated index in the last column (originally
 # labeled "رقم الهاتف" / phone number) but repurposes it as the index field.
 CSV_TO_DB_COLUMN_MAP: Dict[str, str] = {
-    "اسم الروضة (عربي)": "name_ar",
-    "اسم الروضة (إنجليزي)": "name_en",
+    "اسم الحضانة (عربي)": "name_ar",
+    "اسم الحضانة (إنجليزي)": "name_en",
     "المحافظة": "governorate",
     "المدينة": "city",
     "المنطقة": "area",

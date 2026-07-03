@@ -78,7 +78,7 @@ def _make_user(db, username, role=models.UserRole.SUPERVISOR, kg_id=None,
 
 def _make_kg(db, name_en="TestKG"):
     kg = models.Kindergarten(
-        name_ar=f"روضة {name_en}",
+        name_ar=f"حضانة {name_en}",
         name_en=name_en,
         governorate="Amman",
         district="Amman",

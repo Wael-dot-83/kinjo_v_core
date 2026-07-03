@@ -23,8 +23,12 @@ logger = logging.getLogger(__name__)
 class KindergartenImportService:
     """Service for importing kindergartens from Excel files."""
 
-    # Header mapping from Arabic to internal fields
+    # Header mapping from Arabic to internal fields.
+    # Both the current "حضانة" headers and the legacy "روضة" headers are
+    # accepted so files exported before the terminology change still import.
     HEADER_MAPPING = {
+        "اسم الحضانة (عربي)": "name_ar",
+        "اسم الحضانة (إنجليزي)": "name_en",
         "اسم الروضة (عربي)": "name_ar",
         "اسم الروضة (إنجليزي)": "name_en",
         "المحافظة": "governorate",

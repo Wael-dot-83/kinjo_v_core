@@ -26,7 +26,7 @@ from dependencies import get_current_user
 def kg_a(test_db):
     """Create kindergarten A"""
     kg = models.Kindergarten(
-        name_ar="روضة أ",
+        name_ar="حضانة أ",
         name_en="Kindergarten A",
         governorate="عمّان",
         district="عمّان",
@@ -46,7 +46,7 @@ def kg_a(test_db):
 def kg_b(test_db):
     """Create kindergarten B"""
     kg = models.Kindergarten(
-        name_ar="روضة ب",
+        name_ar="حضانة ب",
         name_en="Kindergarten B",
         governorate="الزرقاء",
         district="الزرقاء",

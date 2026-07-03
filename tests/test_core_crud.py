@@ -7,7 +7,7 @@ def test_kindergarten_crud_admin(client, test_db, admin_token, admin_user):
     
     # 1. Create Kindergarten
     kg_data = {
-        "name_ar": "روضة المستقبل",
+        "name_ar": "حضانة المستقبل",
         "name_en": "Future KG",
         "governorate": "Irbid",
         "district": "Irbid",
@@ -37,7 +37,7 @@ def test_kindergarten_crud_admin(client, test_db, admin_token, admin_user):
 def test_kindergarten_creation_without_email_or_license(client, test_db, admin_token, admin_user):
     """Admin can create kindergarten without optional email/license fields"""
     kg_data = {
-        "name_ar": "روضة الأمل",
+        "name_ar": "حضانة الأمل",
         "name_en": "Hope KG",
         "governorate": "Amman",
         "district": "Amman",
@@ -60,7 +60,7 @@ def test_kindergarten_creation_without_email_or_license(client, test_db, admin_t
 def test_kindergarten_invalid_email_rejected(client, test_db, admin_token, admin_user):
     """Invalid email format should be rejected with 422"""
     kg_data = {
-        "name_ar": "روضة البريد",
+        "name_ar": "حضانة البريد",
         "name_en": "Email KG",
         "governorate": "Amman",
         "district": "Amman",
@@ -77,7 +77,7 @@ def test_kindergarten_invalid_email_rejected(client, test_db, admin_token, admin
 def test_kindergarten_blank_optional_fields_become_null(client, test_db, admin_token, admin_user):
     """Blank optional strings should be normalized to null on create"""
     kg_data = {
-        "name_ar": "روضة الفراغ",
+        "name_ar": "حضانة الفراغ",
         "name_en": "",
         "governorate": "Amman",
         "district": "Amman",
@@ -100,7 +100,7 @@ def test_kindergarten_duplicate_phone_returns_code(client, test_db, admin_token,
     """Duplicate phone should trigger clear duplicate error code"""
     headers = {"Authorization": f"Bearer {admin_token}"}
     base_payload = {
-        "name_ar": "روضة الهاتف 1",
+        "name_ar": "حضانة الهاتف 1",
         "name_en": "Phone KG 1",
         "governorate": "Amman",
         "district": "Amman",
@@ -112,7 +112,7 @@ def test_kindergarten_duplicate_phone_returns_code(client, test_db, admin_token,
     assert first.status_code == 201
 
     dup_payload = dict(base_payload)
-    dup_payload["name_ar"] = "روضة الهاتف 2"
+    dup_payload["name_ar"] = "حضانة الهاتف 2"
     second = client.post("/api/kindergartens", json=dup_payload, headers=headers)
     assert second.status_code == 400
     detail = second.json().get("detail")
@@ -611,7 +611,7 @@ def test_class_update_rejects_cross_kindergarten_supervisor(
     ensure_supervisor_profile(test_db, supervisor_user, sample_kindergarten.id)
 
     other_kg = models.Kindergarten(
-        name_ar="روضة أخرى",
+        name_ar="حضانة أخرى",
         name_en="Other KG",
         governorate="Amman",
         district="Amman",

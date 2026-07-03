@@ -405,7 +405,7 @@
                     <div class="min-w-0">
                         <h3 class="h6 mb-0 text-truncate" title="${safeUsername}">${safeUsername}</h3>
                         <p class="small text-muted text-truncate mb-0" title="${safeEmail}">${safeEmail}</p>
-                        ${user.kindergarten_id ? `<p class="small text-muted mb-0 mt-1 d-flex align-items-center gap-1"><span class="material-symbols-outlined" style="font-size:12px;" aria-hidden="true">business</span> ${T('روضة رقم', 'KG No.')} ${user.kindergarten_id}</p>` : ''}
+                        ${user.kindergarten_id ? `<p class="small text-muted mb-0 mt-1 d-flex align-items-center gap-1"><span class="material-symbols-outlined" style="font-size:12px;" aria-hidden="true">business</span> ${T('حضانة رقم', 'KG No.')} ${user.kindergarten_id}</p>` : ''}
                     </div>
                 </div>
 
@@ -436,7 +436,7 @@
         const c = b[role] || `bg-secondary bg-opacity-10 text-secondary border-secondary`;
         const l = {
             'ADMIN': T('مدير النظام', 'System Admin'),
-            'MANAGER': T('مدير روضة', 'KG Manager'),
+            'MANAGER': T('مدير حضانة', 'KG Manager'),
             'SUPERVISOR': T('مشرف', 'Supervisor'),
             'PARENT': T('ولي أمر', 'Parent')
         };

@@ -167,11 +167,11 @@
   function resolveKindergartenName(kg) {
     if (isEnglishUi()) {
       return (
-        kg?.name_en || kg?.name_ar || kg?.name || t("روضة غير محددة", "Unspecified kindergarten")
+        kg?.name_en || kg?.name_ar || kg?.name || t("حضانة غير محددة", "Unspecified kindergarten")
       );
     }
     return (
-      kg?.name_ar || kg?.name_en || kg?.name || t("روضة غير محددة", "Unspecified kindergarten")
+      kg?.name_ar || kg?.name_en || kg?.name || t("حضانة غير محددة", "Unspecified kindergarten")
     );
   }
 
@@ -263,7 +263,7 @@
       ? formatDateLocalized(response.date)
       : response.date_ar || formatDateLocalized(response.date);
     selectedDateChip.textContent = `${t("التاريخ", "Date")}: ${dateLabel}`;
-    selectedCountChip.textContent = `${t("عدد الروضات المعروضة", "Displayed kindergartens")}: ${formatNumber(shownCount)}`;
+    selectedCountChip.textContent = `${t("عدد الحضانات المعحضانة", "Displayed kindergartens")}: ${formatNumber(shownCount)}`;
     meta.classList.remove("d-none");
   }
 

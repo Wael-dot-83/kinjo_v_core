@@ -606,7 +606,7 @@ function hideSkeletonLoaders() {
   document.querySelectorAll(".spinner-border").forEach((spinner) => {
     const container = spinner.closest("[aria-live]");
     if (container && container.querySelectorAll(".skeleton-row, .spinner-border").length) {
-      container.innerHTML = `<p class="text-muted text-center small py-2">${adminAnalyticsText("لا توجد بيانات", "No data")}</p>`;
+      container.innerHTML = `<p class="text-muted text-center small py-2">${adminAnalyticsText("لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.", "No data")}</p>`;
     }
   });
 }
@@ -1221,8 +1221,8 @@ async function loadComparativeAnalysis(start, end) {
    const lowList = document.getElementById("lowPerformersList");
    if (!topList || !lowList) return;
 
-   topList.innerHTML = `<div class="list-group-item text-center text-muted small">${adminAnalyticsText("جاري التحميل...", "Loading...")}</div>`;
-   lowList.innerHTML = `<div class="list-group-item text-center text-muted small">${adminAnalyticsText("جاري التحميل...", "Loading...")}</div>`;
+   topList.innerHTML = `<div class="list-group-item text-center text-muted small">${adminAnalyticsText("جارٍ تحميل البيانات، يرجى الانتظار.", "Loading...")}</div>`;
+   lowList.innerHTML = `<div class="list-group-item text-center text-muted small">${adminAnalyticsText("جارٍ تحميل البيانات، يرجى الانتظار.", "Loading...")}</div>`;
 
    try {
      const gov = document.getElementById("governorateFilter")?.value || "";
@@ -1299,7 +1299,7 @@ function renderRankingList(element, rankings, type, seenIds, otherListCount) {
      const noteDiv = document.createElement("div");
      noteDiv.className = "list-group-item text-muted small text-center border-0";
      noteDiv.innerHTML = `<i class="bi bi-info-circle me-1"></i>${adminAnalyticsText(
-       `ملاحظة: عدد الروضات المتاحة أقل من 5، لذا قد تظهر نفس الروضات في أكثر من قائمة.`,
+       `ملاحظة: عدد الحضانات المتاحة أقل من 5، لذا قد تظهر نفس الحضانات في أكثر من قائمة.`,
        `Note: Fewer than 5 kindergartens available, so some may appear in both lists.`
      )}`;
      element.appendChild(noteDiv);
@@ -1336,7 +1336,7 @@ function renderRankingList(element, rankings, type, seenIds, otherListCount) {
                      ${rank}
                  </div>
                  <div class="flex-grow-1">
-                     <a href="/admin/analytics/drilldown/KINDERGARTEN/${item.kindergarten_id}" class="fw-bold text-dark text-decoration-none d-block" title="${adminAnalyticsText("انقر لعرض تفاصيل الروضة", "Click to view kindergarten details")}">
+                     <a href="/admin/analytics/drilldown/KINDERGARTEN/${item.kindergarten_id}" class="fw-bold text-dark text-decoration-none d-block" title="${adminAnalyticsText("انقر لعرض تفاصيل الحضانة", "Click to view kindergarten details")}">
                          ${adminAnalyticsLiteral(safeName)}
                      </a>
                      <small class="text-muted d-block">
@@ -2321,7 +2321,7 @@ function _renderRoleBreakdown(byRole) {
 
   const ROLES = [
     { key: "ADMIN",      ar: "مدير النظام",    en: "Admin",      color: "#4F46E5", icon: "bi-shield-lock" },
-    { key: "MANAGER",    ar: "مدير روضة",      en: "Manager",    color: "#2563EB", icon: "bi-person-workspace" },
+    { key: "MANAGER",    ar: "مدير حضانة",      en: "Manager",    color: "#2563EB", icon: "bi-person-workspace" },
     { key: "SUPERVISOR", ar: "مشرف تربوي",     en: "Supervisor", color: "#7C3AED", icon: "bi-binoculars" },
     { key: "PARENT",     ar: "ولي أمر",        en: "Parent",     color: "#0891B2", icon: "bi-people" },
   ];
@@ -2546,7 +2546,7 @@ async function loadRegistrationTable() {
           </a>
         </td>
       </tr>
-    `).join("") || `<tr><td colspan="9" class="text-center py-4 text-muted">${adminAnalyticsText("لا توجد بيانات", "No data")}</td></tr>`;
+    `).join("") || `<tr><td colspan="9" class="text-center py-4 text-muted">${adminAnalyticsText("لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.", "No data")}</td></tr>`;
 
     if (info) {
       info.textContent = adminAnalyticsText(
@@ -2720,8 +2720,8 @@ function _renderCompletenessPanel(comp) {
   const ITEMS = [
     { key: "parent_profiles",   ar: "ملفات أولياء الأمور",      en: "Parent Profiles",   color: "#2563EB", icon: "bi-person-vcard" },
     { key: "children_profiles", ar: "ملفات الأطفال",            en: "Children Profiles", color: "#0891B2", icon: "bi-emoji-smile" },
-    { key: "kg_licensed",       ar: "الروضات المرخصة",          en: "Licensed KGs",      color: "#4F46E5", icon: "bi-patch-check" },
-    { key: "kg_geolocated",     ar: "الروضات محددة جغرافياً",   en: "Geolocated KGs",   color: "#7C3AED", icon: "bi-geo-alt" },
+    { key: "kg_licensed",       ar: "الحضانات المرخصة",          en: "Licensed KGs",      color: "#4F46E5", icon: "bi-patch-check" },
+    { key: "kg_geolocated",     ar: "الحضانات محددة جغرافياً",   en: "Geolocated KGs",   color: "#7C3AED", icon: "bi-geo-alt" },
     { key: "staff_profiles",    ar: "ملفات الموظفين والمشرفين", en: "Staff Profiles",    color: "#D97706", icon: "bi-person-workspace" },
   ];
 
@@ -2819,7 +2819,7 @@ function _renderMonthlyTrendChart(trends) {
           borderWidth: 2,
         },
         {
-          label: adminAnalyticsText("روضات جديدة", "New KGs"),
+          label: adminAnalyticsText("حضانات جديدة", "New KGs"),
           data: trends.kindergartens || [],
           borderColor: "#4F46E5",
           backgroundColor: "transparent",

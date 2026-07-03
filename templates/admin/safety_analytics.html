@@ -81,7 +81,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
     <i class="bi bi-info-circle-fill flex-shrink-0 fs-5 mt-1" aria-hidden="true"></i>
     <div class="small">
         <strong>{% if ui_lang == 'en' %}Monitoring &amp; Analysis Dashboard — {% else %}لوحة المراقبة والتحليل — {% endif %}</strong>
-        {% if ui_lang == 'en' %}This dashboard is for the system administrator to review incident statistics across all kindergartens. Administrators cannot register new incidents directly.{% else %}هذه اللوحة مخصصة للمشرف العام لمراجعة إحصائيات الحوادث عبر جميع الروضات. لا يمكن للمشرف العام تسجيل حوادث جديدة مباشرةً.{% endif %}
+        {% if ui_lang == 'en' %}This dashboard is for the system administrator to review incident statistics across all kindergartens. Administrators cannot register new incidents directly.{% else %}هذه اللوحة مخصصة للمشرف العام لمراجعة إحصائيات الحوادث عبر جميع الحضانات. لا يمكن للمشرف العام تسجيل حوادث جديدة مباشرةً.{% endif %}
     </div>
 </div>
 
@@ -107,9 +107,9 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
     <div class="card-body">
         <div class="row g-3">
             <div class="col-md-3">
-                <label class="field-label mb-1" for="filterKg">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                <label class="field-label mb-1" for="filterKg">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
                 <select class="form-select form-select-sm" id="filterKg">
-                    <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                    <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الحضانات{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -318,7 +318,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="card-title-sm mb-0">
                     <i class="bi bi-building-fill me-2 text-primary"></i>
-                    {% if ui_lang == 'en' %}Incidents by Kindergarten{% else %}الحوادث حسب الروضة{% endif %}
+                    {% if ui_lang == 'en' %}Incidents by Kindergarten{% else %}الحوادث حسب الحضانة{% endif %}
                 </h6>
                 <span class="badge badge-soft badge-soft-danger" id="highRiskBadge" style="display:none;"></span>
             </div>
@@ -327,7 +327,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
-                                <th class="th-sm">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                                <th class="th-sm">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
                                 <th class="th-sm" style="width:80px;">{% if ui_lang == 'en' %}Incidents{% else %}حوادث{% endif %}</th>
                                 <th class="th-sm" style="width:90px;">{% if ui_lang == 'en' %}Risk Level{% else %}مستوى الخطر{% endif %}</th>
                             </tr>
@@ -426,7 +426,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
                 opt.value = kg.id;
                 opt.textContent = _isEn
                     ? (kg.name_en || kg.name_ar || `Kindergarten #${kg.id}`)
-                    : (kg.name_ar || kg.name_en || `روضة #${kg.id}`);
+                    : (kg.name_ar || kg.name_en || `حضانة #${kg.id}`);
                 sel.appendChild(opt);
             });
         } catch { /* network error — filter still works with empty list */ }
@@ -488,7 +488,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         if (!el) return;
         const entries = Object.entries(dataObj).filter(([, v]) => v > 0);
         if (!entries.length) {
-            el.innerHTML = `<div class="state-box"><i class="bi bi-bar-chart"></i><p>${_t('لا توجد بيانات', 'No data available')}</p></div>`;
+            el.innerHTML = `<div class="state-box"><i class="bi bi-bar-chart"></i><p>${_t('لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.', 'No data available')}</p></div>`;
             return;
         }
         const max = Math.max(...entries.map(([, v]) => v), 1);
@@ -540,7 +540,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         if (!tbody) return;
 
         if (!byKg || !byKg.length) {
-            tbody.innerHTML = `<tr><td colspan="3"><div class="state-box"><i class="bi bi-building"></i><p>${_t('لا توجد بيانات', 'No data available')}</p></div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="3"><div class="state-box"><i class="bi bi-building"></i><p>${_t('لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.', 'No data available')}</p></div></td></tr>`;
             if (badge) badge.style.display = 'none';
             return;
         }
@@ -548,7 +548,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         const highRiskCount = byKg.filter(x => x.is_high_risk).length;
         if (badge) {
             if (highRiskCount > 0) {
-                badge.textContent = `${highRiskCount} ${_t('روضة عالية الخطر', 'High-Risk Kindergartens')}`;
+                badge.textContent = `${highRiskCount} ${_t('حضانة عالية الخطر', 'High-Risk Kindergartens')}`;
                 badge.style.display = '';
             } else {
                 badge.style.display = 'none';

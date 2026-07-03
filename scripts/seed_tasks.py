@@ -33,7 +33,7 @@ def seed_tasks():
         print("\n📍 Creating kindergartens...")
 
         kg1 = models.Kindergarten(
-            name_ar="روضة الأمل",
+            name_ar="حضانة الأمل",
             name_en="Al Amal Kindergarten",
             governorate="Amman",
             city="Amman",
@@ -48,7 +48,7 @@ def seed_tasks():
         db.add(kg1)
 
         kg2 = models.Kindergarten(
-            name_ar="روضة النور",
+            name_ar="حضانة النور",
             name_en="Al Noor Kindergarten",
             governorate="Amman",
             city="Amman",

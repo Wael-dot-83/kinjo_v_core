@@ -25,15 +25,15 @@
                         <label for="scopeFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
                         <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="scopeFilter" aria-label="{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}">
                             <option value="">{% if ui_lang == 'en' %}All Scopes{% else %}جميع النطاقات{% endif %}</option>
-                            <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة معينة{% endif %}</option>
+                            <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}حضانة معينة{% endif %}</option>
                             <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
-                            <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                            <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الحضانات{% endif %}</option>
                         </select>
                     </div>
                     <div>
-                        <label for="kindergartenFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
-                        <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="kindergartenFilter" disabled aria-label="{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}">
-                            <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
+                        <label for="kindergartenFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
+                        <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="kindergartenFilter" disabled aria-label="{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}">
+                            <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الحضانة{% endif %}</option>
                         </select>
                     </div>
                     <div>
@@ -149,7 +149,7 @@
         const paginationContainer = document.getElementById('paginationContainer');
 
         spinner.classList.remove('d-none');
-        container.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">' + T('جاري التحميل...', 'Loading...') + '</span></div></div>';
+        container.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">' + T('جارٍ تحميل البيانات، يرجى الانتظار.', 'Loading...') + '</span></div></div>';
 
         try {
             const params = new URLSearchParams({ page: page, per_page: 20, ...currentFilters });
@@ -364,12 +364,12 @@
 
         ${metrics.per_kindergarten && Object.keys(metrics.per_kindergarten).length > 0 ? `
         <div class="mt-4">
-            <h6>${T('الحوادث لكل روضة', 'Incidents per Kindergarten')}</h6>
+            <h6>${T('الحوادث لكل حضانة', 'Incidents per Kindergarten')}</h6>
             <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-                <table class="table table-sm" aria-label="${T('الحوادث لكل روضة', 'Incidents per kindergarten table')}">
+                <table class="table table-sm" aria-label="${T('الحوادث لكل حضانة', 'Incidents per kindergarten table')}">
                     <thead>
                         <tr>
-                            <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">${T('الروضة', 'Kindergarten')}</th>
+                            <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">${T('الحضانة', 'Kindergarten')}</th>
                             <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">${T('عدد الحوادث', 'Incident Count')}</th>
                         </tr>
                     </thead>

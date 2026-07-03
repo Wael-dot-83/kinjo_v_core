@@ -162,7 +162,7 @@
         // Report scope
         let scopeHtml = `<p><strong>${T('النوع:', 'Type:')}</strong> ${getScopeTypeLabel(reportData.scope_type)}</p>`;
         if (reportData.scope_type === 'KINDERGARTEN' && reportData.kindergarten_name) {
-            scopeHtml += `<p><strong>${T('الروضة:', 'Kindergarten:')}</strong> ${escHtml(reportData.kindergarten_name)}</p>`;
+            scopeHtml += `<p><strong>${T('الحضانة:', 'Kindergarten:')}</strong> ${escHtml(reportData.kindergarten_name)}</p>`;
         } else if (reportData.scope_type === 'GOVERNORATE' && reportData.governorate) {
             scopeHtml += `<p><strong>${T('المحافظة:', 'Governorate:')}</strong> ${escHtml(reportData.governorate)}</p>`;
         }
@@ -263,9 +263,9 @@
 
     function getScopeTypeLabel(scopeType) {
         const labels = {
-            'ALL': T('جميع الروضات', 'All Kindergartens'),
+            'ALL': T('جميع الحضانات', 'All Kindergartens'),
             'GOVERNORATE': T('محافظة', 'Governorate'),
-            'KINDERGARTEN': T('روضة معينة', 'Specific Kindergarten')
+            'KINDERGARTEN': T('حضانة معينة', 'Specific Kindergarten')
         };
         return labels[scopeType] || scopeType;
     }

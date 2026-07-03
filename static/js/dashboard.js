@@ -44,7 +44,7 @@ function dashboardText(key, arText, enText) {
 }
 
 const DASHBOARD_LITERAL_EN = {
-  "لا توجد بيانات متاحة": "No data available",
+  "لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.": "No data available",
   "مراسلة المشرف": "Message supervisor",
   "مراسلة ولي الأمر": "Message parent",
   "لا توجد فصول": "No classes",
@@ -81,12 +81,12 @@ const DASHBOARD_LITERAL_EN = {
   "جيد": "Good",
   "متوسط": "Average",
   "مهدد": "At risk",
-  "لا توجد روضات": "No kindergartens",
+  "لا توجد حضانات": "No kindergartens",
   "ساري": "Valid",
   "قارب على الانتهاء": "Expiring soon",
   "منتهي": "Expired",
-  "عرض الروضة": "View kindergarten",
-  "لا توجد بيانات": "No data",
+  "عرض الحضانة": "View kindergarten",
+  "لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.": "No data",
   "تنبيه": "Alert",
   "انتهاء الترخيص": "License expiry",
   "طلبات تسجيل معلقة": "Pending enrollments",
@@ -117,7 +117,7 @@ const DASHBOARD_LITERAL_EN = {
   "متوسطة": "Medium",
   "منخفضة": "Low",
   "إجراء": "Action",
-  "تعذر تحميل بيانات الروضات": "Unable to load kindergarten data",
+  "تعذر تحميل بيانات الحضانات": "Unable to load kindergarten data",
 };
 
 function dashboardLiteral(text) {
@@ -258,9 +258,9 @@ const KPI_EXPLAIN_META = {
     icon: "bi-speedometer2",
     iconBg: "rgba(31,94,71,.1)",
     iconColor: "#4F46E5",
-    meaning: "مؤشر شامل يقيّم أداء الروضة من خلال دمج عاملين رئيسيين: الحوكمة والإدارة (60%) وتجربة الطفل (40%). كلما ارتفعت الدرجة دلّت على تميّز في جميع الجوانب.",
+    meaning: "مؤشر شامل يقيّم أداء الحضانة من خلال دمج عاملين رئيسيين: الحوكمة والإدارة (60%) وتجربة الطفل (40%). كلما ارتفعت الدرجة دلّت على تميّز في جميع الجوانب.",
     formula: "GCEI = (درجة الحوكمة × 60%) + (درجة تجربة الطفل × 40%)",
-    importance: "هو المرجع الأول لتقييم أي روضة دفعةً واحدة ومقارنة الروضات وتحديد الأولويات الإشرافية.",
+    importance: "هو المرجع الأول لتقييم أي حضانة دفعةً واحدة ومقارنة الحضانات وتحديد الأولويات الإشرافية.",
     thresholds: [
       { cls: "tp-green", label: "ممتاز",         range: "≥ 80"       },
       { cls: "tp-amber", label: "يحتاج تحسين",   range: "60 – 79.9"  },
@@ -288,7 +288,7 @@ const KPI_EXPLAIN_META = {
     icon: "bi-people-fill",
     iconBg: "rgba(13,110,253,.1)",
     iconColor: "#0d6efd",
-    meaning: "نسبة الدقائق التي التزمت فيها الروضة بالنسبة المعتمدة (معلم لكل 10 أطفال) إلى إجمالي دقائق التشغيل خلال الفترة.",
+    meaning: "نسبة الدقائق التي التزمت فيها الحضانة بالنسبة المعتمدة (معلم لكل 10 أطفال) إلى إجمالي دقائق التشغيل خلال الفترة.",
     formula: "(دقائق الامتثال ÷ دقائق التشغيل الكلية) × 100",
     importance: "يضمن سلامة الأطفال وجودة الرعاية الفردية؛ النسبة المنخفضة تُشير إلى نقص في الكوادر.",
     thresholds: [
@@ -333,7 +333,7 @@ const KPI_EXPLAIN_META = {
     icon: "bi-shield-exclamation",
     iconBg: "rgba(255,193,7,.12)",
     iconColor: "#d97706",
-    meaning: "عدد الحوادث (من أي نوع) لكل 1,000 طفل-يوم حضور خلال الفترة. يُوحّد القياس بين الروضات بأحجام مختلفة.",
+    meaning: "عدد الحوادث (من أي نوع) لكل 1,000 طفل-يوم حضور خلال الفترة. يُوحّد القياس بين الحضانات بأحجام مختلفة.",
     formula: "(عدد الحوادث الكلية ÷ أيام الحضور الفعلية للأطفال) × 1,000",
     importance: "يُقيّم مستوى السلامة ويكشف الأنماط المتكررة التي تتطلب تدخلاً وقائياً.",
     thresholds: [
@@ -393,7 +393,7 @@ const KPI_EXPLAIN_META = {
     icon: "bi-building-fill",
     iconBg: "rgba(13,202,240,.1)",
     iconColor: "#0dcaf0",
-    meaning: "نسبة الأطفال المسجلين نشطاً إلى الطاقة الاستيعابية القصوى للروضة. تجاوز 100% يعني اكتظاظاً.",
+    meaning: "نسبة الأطفال المسجلين نشطاً إلى الطاقة الاستيعابية القصوى للحضانة. تجاوز 100% يعني اكتظاظاً.",
     formula: "(الأطفال المسجلون نشطاً ÷ الطاقة الاستيعابية القصوى) × 100",
     importance: "يساعد في التخطيط للنمو والتوسع ويضمن توفير مساحة ورعاية كافية لكل طفل.",
     thresholds: [
@@ -408,7 +408,7 @@ const KPI_EXPLAIN_META = {
     icon: "bi-person-check-fill",
     iconBg: "rgba(47,125,98,.1)",
     iconColor: "#0EA5E9",
-    meaning: "عدد الأطفال المسجّلين حالياً بحالة نشطة (ACTIVE) في الروضة أو مجموعة الروضات المُحدَّدة.",
+    meaning: "عدد الأطفال المسجّلين حالياً بحالة نشطة (ACTIVE) في الحضانة أو مجموعة الحضانات المُحدَّدة.",
     formula: "عدّ سجلات التسجيل ذات الحالة = ACTIVE",
     importance: "يُعطي صورة فورية عن الطلب الحالي ويُستخدم قاسماً في حساب معظم المؤشرات الأخرى.",
     thresholds: [
@@ -1159,7 +1159,7 @@ async function loadDashboard() {
           ok: true,
           message: dashboardText(
             "dashboard.validation.kg_summary_loaded",
-            "تم تحميل بيانات الروضات والملخص.",
+            "تم تحميل بيانات الحضانات والملخص.",
             "Kindergarten and summary data loaded."
           ),
         },
@@ -1415,7 +1415,7 @@ function renderManagerUsersTable(tableId, users, type) {
   if (!Array.isArray(users) || users.length === 0) {
     const colspan = type === "supervisor" ? 4 : 5;
     tableBody.innerHTML = dashboardTemplate(
-      `<tr><td colspan="${colspan}" class="text-center py-4 text-muted">لا توجد بيانات متاحة</td></tr>`
+      `<tr><td colspan="${colspan}" class="text-center py-4 text-muted">لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.</td></tr>`
     );
     return;
   }
@@ -1830,7 +1830,7 @@ function renderAdminSummaryCards(summary) {
     if (attendanceToday === 0) {
       attendanceRateText.innerHTML = `<i class="bi bi-bell me-1"></i>` + (isEn
         ? "No attendance recorded yet today — send reminders to kindergartens."
-        : "لم يُسجَّل حضور اليوم بعد — أرسل تذكيرات للروضات.");
+        : "لم يُسجَّل حضور اليوم بعد — أرسل تذكيرات للحضانات.");
     } else {
       attendanceRateText.textContent = isEn
         ? `${formatOneDecimal(attendanceRate)}% attendance rate today`
@@ -1924,7 +1924,7 @@ function renderAdminKindergartensTable(kindergartens) {
 
   if (!Array.isArray(kindergartens) || kindergartens.length === 0) {
     tableBody.innerHTML = dashboardTemplate(
-      '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد روضات</td></tr>'
+      '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد حضانات</td></tr>'
     );
     return;
   }
@@ -1962,7 +1962,7 @@ function renderAdminKindergartensTable(kindergartens) {
           <td class="${capUtil > 100 ? "text-danger fw-bold" : capUtil > 85 ? "text-warning fw-semibold" : ""}">${formatOneDecimal(capUtil)}%</td>
           <td><span class="badge bg-${licenseClass}">${licenseText}</span></td>
           <td>
-            <a href="/kindergartens/${kg.id}" class="btn btn-sm btn-outline-primary" aria-label="${dashboardLiteral("عرض الروضة")}">
+            <a href="/kindergartens/${kg.id}" class="btn btn-sm btn-outline-primary" aria-label="${dashboardLiteral("عرض الحضانة")}">
               <i class="bi bi-eye"></i>
             </a>
           </td>
@@ -1986,7 +1986,7 @@ function renderPendingReportsList(kindergartens, summary) {
 
   if (!Array.isArray(kindergartens)) {
     list.innerHTML = dashboardTemplate(
-      '<div class="text-center py-4 text-muted">لا توجد بيانات</div>'
+      '<div class="text-center py-4 text-muted">لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.</div>'
     );
     return;
   }
@@ -2220,7 +2220,7 @@ const NO_DATA_CHART_PLUGIN = {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(
-      options?.message || dashboardLiteral("لا توجد بيانات متاحة"),
+      options?.message || dashboardLiteral("لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف."),
       (area.left + area.right) / 2,
       (area.top + area.bottom) / 2
     );
@@ -2283,7 +2283,7 @@ function renderAttendanceChart(series) {
     type: chartType,
     plugins: [NO_DATA_CHART_PLUGIN],
     data: {
-      labels: labels.length > 0 ? labels : [dashboardLiteral("لا توجد بيانات")],
+      labels: labels.length > 0 ? labels : [dashboardLiteral("لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.")],
       datasets: [
         {
           label: dashboardLiteral("الحضور"),
@@ -2403,7 +2403,7 @@ function renderEnrollmentChart(enrollmentMap) {
     type: "doughnut",
     plugins: [NO_DATA_CHART_PLUGIN, DOUGHNUT_SUMMARY_PLUGIN],
     data: {
-      labels: hasData ? labels : [dashboardLiteral("لا توجد بيانات")],
+      labels: hasData ? labels : [dashboardLiteral("لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.")],
       datasets: [
         {
           data: hasData ? values : [0],
@@ -2786,7 +2786,7 @@ function renderKpiExplanations(kpis) {
   explainView.innerHTML = dashboardTemplate(`
     <div class="kpi-explain-intro">
       <strong><i class="bi bi-info-circle-fill me-1"></i>دليل مؤشرات الأداء الرئيسية</strong><br>
-      تساعد مؤشرات الأداء الرئيسية في فهم مستوى أداء الروضات والحضانات من حيث الحضور، الالتزام بالتقارير، السلامة، الإشراف، التدريب، استغلال السعة، وجودة الحوكمة. يتم احتساب هذه المؤشرات بناءً على البيانات المسجلة في النظام خلال الفترة المحددة، وتساعد الإدارة على تحديد الأولويات واتخاذ الإجراءات المناسبة.
+      تساعد مؤشرات الأداء الرئيسية في فهم مستوى أداء الحضانات والحضانات من حيث الحضور، الالتزام بالتقارير، السلامة، الإشراف، التدريب، استغلال السعة، وجودة الحوكمة. يتم احتساب هذه المؤشرات بناءً على البيانات المسجلة في النظام خلال الفترة المحددة، وتساعد الإدارة على تحديد الأولويات واتخاذ الإجراءات المناسبة.
     </div>
     <input
       type="search"
@@ -2928,7 +2928,7 @@ async function loadKindergartensOverview() {
 
     if (!Array.isArray(kindergartens) || kindergartens.length === 0) {
       tableBody.innerHTML = dashboardTemplate(
-        '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد روضات</td></tr>'
+        '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد حضانات</td></tr>'
       );
       return;
     }
@@ -2948,7 +2948,7 @@ async function loadKindergartensOverview() {
             <td>${formatOneDecimal(kg.capacity_utilization || 0)}%</td>
             <td><span class="badge bg-${kg.license_valid ? "success" : "danger"}">${kg.license_valid ? dashboardLiteral("ساري") : dashboardLiteral("منتهي")}</span></td>
             <td>
-              <a href="/kindergartens/${kg.id}" class="btn btn-sm btn-outline-primary" aria-label="${dashboardLiteral("عرض الروضة")}">
+              <a href="/kindergartens/${kg.id}" class="btn btn-sm btn-outline-primary" aria-label="${dashboardLiteral("عرض الحضانة")}">
                 <i class="bi bi-eye"></i>
               </a>
             </td>
@@ -2960,7 +2960,7 @@ async function loadKindergartensOverview() {
   } catch (error) {
     console.error("Error loading kindergartens:", error);
     tableBody.innerHTML = dashboardTemplate(
-      '<tr><td colspan="8" class="text-center py-4 text-danger">تعذر تحميل بيانات الروضات</td></tr>'
+      '<tr><td colspan="8" class="text-center py-4 text-danger">تعذر تحميل بيانات الحضانات</td></tr>'
     );
   }
 }

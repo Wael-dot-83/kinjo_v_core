@@ -178,7 +178,7 @@ endblock %} {% block extra_css %}
     <p class="text-muted small">
       {% if ui_lang == 'en' %}Comprehensive analysis of kindergarten
       performance, quality standards, safety and compliance rates.{% else
-      %}تحليل شامل لأداء الروضة، معايير الجودة، ومعدلات السلامة والالتزام.{%
+      %}تحليل شامل لأداء الحضانة، معايير الجودة، ومعدلات السلامة والالتزام.{%
       endif %}
     </p>
   </div>
@@ -266,7 +266,7 @@ endblock %} {% block extra_css %}
               <p class="text-muted small mb-4">
                 {% if ui_lang == 'en' %}Overview of excellence level in
                 kindergarten management.{% else %}نظرة عامة على مستوى التميز في
-                إدارة الروضة.{% endif %}
+                إدارة الحضانة.{% endif %}
               </p>
 
               <div class="d-flex align-items-baseline gap-3 mb-2">
@@ -391,7 +391,7 @@ endblock %} {% block extra_css %}
                     <i
                       class="bi bi-info-circle tooltip-icon ms-2"
                       data-bs-toggle="tooltip"
-                      title="{% if ui_lang == 'en' %}Percentage of currently enrolled children compared to maximum licensed capacity.{% else %}نسبة الأطفال المسجلين حالياً مقارنة بالسعة القصوى المرخصة للروضة.{% endif %}"
+                      title="{% if ui_lang == 'en' %}Percentage of currently enrolled children compared to maximum licensed capacity.{% else %}نسبة الأطفال المسجلين حالياً مقارنة بالسعة القصوى المرخصة للحضانة.{% endif %}"
                     ></i>
                   </div>
                   <div
@@ -418,7 +418,7 @@ endblock %} {% block extra_css %}
                 <p class="text-muted x-small mb-0 mt-2">
                   {% if ui_lang == 'en' %}This indicator shows how well
                   available seats in the kindergarten are utilized.{% else
-                  %}يوضح هذا المؤشر مدى استغلال المقاعد المتوفرة في الروضة.{%
+                  %}يوضح هذا المؤشر مدى استغلال المقاعد المتوفرة في الحضانة.{%
                   endif %}
                 </p>
               </div>
@@ -446,7 +446,7 @@ endblock %} {% block extra_css %}
     rate of mandatory training courses for teaching staff.')),
     ('report_submission_rate', ('إرسال التقارير' if ui_lang != 'en' else 'Report
     Submission'), 'AMBER','bi-file-earmark-arrow-up', ('مدى الانتظام في إرسال
-    التقارير اليومية والأسبوعية لرئاسة الروضة.' if ui_lang != 'en' else
+    التقارير اليومية والأسبوعية لرئاسة الحضانة.' if ui_lang != 'en' else
     'Regularity of submitting daily and weekly reports to kindergarten
     management.')) ] %} {% for metric,title,band,icon,desc in ops %}
 <div class="col">
@@ -535,7 +535,7 @@ endblock %} {% block extra_css %}
            >
              <canvas
                id="distributionChart"
-               aria-label="{% if ui_lang == 'en' %}Student distribution chart{% else %}مخطط توزيع الطلاب حسب الروضات{% endif %}"
+               aria-label="{% if ui_lang == 'en' %}Student distribution chart{% else %}مخطط توزيع الطلاب حسب الحضانات{% endif %}"
                role="img"
              ></canvas>
              <div class="no-data-overlay d-none">
@@ -555,7 +555,7 @@ endblock %} {% block extra_css %}
             <div class="card-body d-flex flex-column">
               <h6 class="mb-3 text-success d-flex align-items-center">
                 <i class="bi bi-trophy me-2"></i> {% if ui_lang == 'en' %}Top 5
-                Performing Kindergartens{% else %}أعلى 5 روضات أداءً{% endif %}
+                Performing Kindergartens{% else %}أعلى 5 حضانات أداءً{% endif %}
               </h6>
               <ul
                 class="list-group list-group-flush flex-grow-1"
@@ -571,7 +571,7 @@ endblock %} {% block extra_css %}
             <div class="card-body d-flex flex-column">
               <h6 class="mb-3 text-warning d-flex align-items-center">
                 <i class="bi bi-arrow-down-circle me-2"></i> {% if ui_lang ==
-                'en' %}Kindergartens Most in Need of Support{% else %}الروضات
+                'en' %}Kindergartens Most in Need of Support{% else %}الحضانات
                 الأكثر حاجة للدعم{% endif %}
               </h6>
               <ul
@@ -843,7 +843,7 @@ endblock %} {% block extra_css %}
             if (kgHint)
               kgHint.innerText = kpiText(
                 "kpi.manager.scope_hint",
-                "البيانات مقصورة على الروضة المرتبطة بك.",
+                "البيانات مقصورة على الحضانة المرتبطة بك.",
                 "Data is limited to your linked kindergarten.",
               );
           }
@@ -851,7 +851,7 @@ endblock %} {% block extra_css %}
         setFilterStatus(
           kpiText(
             "kpi.manager.scope_status",
-            "عرض مؤشرات الروضة المرتبطة بالمدير فقط",
+            "عرض مؤشرات الحضانة المرتبطة بالمدير فقط",
             "Showing indicators for manager linked kindergarten only",
           ),
         );
@@ -1004,7 +1004,7 @@ endblock %} {% block extra_css %}
       ),
     ) {
       if (isManagerView) {
-        return `${prefix}: ${kpiText("filters.your_kindergarten", "الروضة الخاصة بك", "Your kindergarten")} | ${formatArabicDate(state.startDate, state.endDate)}`;
+        return `${prefix}: ${kpiText("filters.your_kindergarten", "الحضانة الخاصة بك", "Your kindergarten")} | ${formatArabicDate(state.startDate, state.endDate)}`;
       }
       const parts = [`${formatArabicDate(state.startDate, state.endDate)}`];
       parts.push(
@@ -1017,7 +1017,7 @@ endblock %} {% block extra_css %}
         `${kpiText("common.area", "المنطقة", "Area")}: ${areaLabel(state.area)}`,
       );
       parts.push(
-        `${kpiText("common.kindergartens", "الروضات", "Kindergartens")}: ${state.kindergartenIds.length || kpiText("common.all", "الكل", "All")}`,
+        `${kpiText("common.kindergartens", "الحضانات", "Kindergartens")}: ${state.kindergartenIds.length || kpiText("common.all", "الكل", "All")}`,
       );
       return `${prefix}: ${parts.join(" | ")}`;
     }
@@ -1125,7 +1125,7 @@ endblock %} {% block extra_css %}
           if (kgHint) {
             kgHint.innerText = kpiText(
               "kpi.manager.fixed_kg_hint",
-              "الروضة المرتبطة بالمدير لا يمكن تغييرها.",
+              "الحضانة المرتبطة بالمدير لا يمكن تغييرها.",
               "Manager linked kindergarten cannot be changed.",
             );
           }
@@ -1198,7 +1198,7 @@ endblock %} {% block extra_css %}
         ctx.fillText(
           kpiLiteral(
             options?.message ||
-              kpiText("common.no_data", "لا توجد بيانات", "No data"),
+              kpiText("common.no_data", "لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.", "No data"),
           ),
           (area.left + area.right) / 2,
           (area.top + area.bottom) / 2,
@@ -1684,7 +1684,7 @@ function renderDashboard(data) {
       if (gceiValue) {
         gceiValue.textContent = gceiHasData
           ? gcei.toFixed(1)
-          : kpiText("common.no_data", "لا توجد بيانات", "No data");
+          : kpiText("common.no_data", "لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.", "No data");
         gceiValue.classList.remove("d-none");
       }
       if (gceiValuePlaceholder) gceiValuePlaceholder.classList.add("d-none");
@@ -1751,7 +1751,7 @@ function renderDashboard(data) {
           gv.description ||
           kpiText(
             "kpi.overall.explanation_default",
-            "يعبر هذا المؤشر عن الكفاءة الشاملة للروضة.",
+            "يعبر هذا المؤشر عن الكفاءة الشاملة للحضانة.",
             "This indicator reflects the overall kindergarten operational quality.",
           );
         const coverageText =
@@ -1901,7 +1901,7 @@ function renderRankingList(listId, items, color) {
        const list = document.getElementById(listId);
        if (!list) return;
        if (!items || !items.length) {
-         list.innerHTML = `<li class="list-group-item border-0 text-muted small bg-transparent">${kpiText("common.no_data", "لا توجد بيانات", "No data")}</li>`;
+         list.innerHTML = `<li class="list-group-item border-0 text-muted small bg-transparent">${kpiText("common.no_data", "لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.", "No data")}</li>`;
          return;
        }
 
@@ -1918,7 +1918,7 @@ function renderRankingList(listId, items, color) {
                  <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 bg-transparent py-2">
                      <div class="d-flex align-items-center gap-2" style="max-width: 72%;">
                          <span class="badge bg-light text-secondary">${index + 1}</span>
-                         <span class="small fw-semibold text-truncate" title="${escapeHtml(entry.governorate || '')}">${escapeHtml((entry && entry.name) || kpiText("kpi.kindergarten_fallback", "روضة", "Kindergarten") + ` #${index + 1}`)}</span>
+                         <span class="small fw-semibold text-truncate" title="${escapeHtml(entry.governorate || '')}">${escapeHtml((entry && entry.name) || kpiText("kpi.kindergarten_fallback", "حضانة", "Kindergarten") + ` #${index + 1}`)}</span>
                      </div>
                      <span class="badge bg-${color}-subtle text-${color} rounded-pill">${formatValue(Number(entry.value) || 0)}</span>
                  </li>

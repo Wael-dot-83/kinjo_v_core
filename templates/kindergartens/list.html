@@ -2,9 +2,9 @@
 
 {% block title %}
 {% if current_user.role.value == 'ADMIN' %}
-{% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الروضات{% endif %}
+{% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الحضانات{% endif %}
 {% else %}
-{% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}
+{% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الحضانة{% endif %}
 {% endif %}
 {% endblock %}
 
@@ -14,9 +14,9 @@
         <h1 class="page-header-title">
             <i class="bi bi-building text-primary me-2" aria-hidden="true"></i>
             {% if current_user.role.value == 'ADMIN' %}
-            {% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الروضات{% endif %}
+            {% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الحضانات{% endif %}
             {% else %}
-            {% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}
+            {% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الحضانة{% endif %}
             {% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
@@ -24,9 +24,9 @@
                 <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
                 <li class="breadcrumb-item active">
                     {% if current_user.role.value == 'ADMIN' %}
-                    {% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الروضات{% endif %}
+                    {% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الحضانات{% endif %}
                     {% else %}
-                    {% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}
+                    {% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الحضانة{% endif %}
                     {% endif %}
                 </li>
             </ol>
@@ -35,7 +35,7 @@
     {% if current_user.role.value == 'ADMIN' %}
     <div class="page-header-actions">
         <a href="/kindergartens/create" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة روضة جديدة{% endif %}
+            <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة حضانة جديدة{% endif %}
         </a>
     </div>
     {% elif current_user.role.value == 'MANAGER' and kindergartens %}
@@ -63,7 +63,7 @@
             <div class="card-body">
                 <form method="GET" class="row g-3">
                     <div class="col-md-3">
-                        <label for="name" class="form-label">{% if ui_lang == 'en' %}Kindergarten Name{% else %}اسم الروضة{% endif %}</label>
+                        <label for="name" class="form-label">{% if ui_lang == 'en' %}Kindergarten Name{% else %}اسم الحضانة{% endif %}</label>
                         <input type="text" class="form-control" id="name" name="name" value="{{ filters.name or '' }}"
                             placeholder="{% if ui_lang == 'en' %}Search by name...{% else %}البحث بالاسم...{% endif %}">
                     </div>
@@ -110,7 +110,7 @@
         <!-- Results Summary -->
         <div class="mb-3">
             <p class="text-muted">
-                {% if ui_lang == 'en' %}Showing {{ skip + 1 }} - {{ [skip + limit, total]|min }} of {{ total }} kindergartens{% else %}عرض {{ skip + 1 }} - {{ [skip + limit, total]|min }} من أصل {{ total }} روضة{% endif %}
+                {% if ui_lang == 'en' %}Showing {{ skip + 1 }} - {{ [skip + limit, total]|min }} of {{ total }} kindergartens{% else %}عرض {{ skip + 1 }} - {{ [skip + limit, total]|min }} من أصل {{ total }} حضانة{% endif %}
             </p>
         </div>
 
@@ -118,7 +118,7 @@
         <div class="glass-card fade-in">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="bi bi-list-ul me-2"></i>{% if ui_lang == 'en' %}Kindergartens List{% else %}قائمة الروضات{% endif %}
+                    <i class="bi bi-list-ul me-2"></i>{% if ui_lang == 'en' %}Kindergartens List{% else %}قائمة الحضانات{% endif %}
                 </h5>
             </div>
             <div class="card-body p-0">
@@ -186,7 +186,7 @@
                 <!-- Pagination -->
                 {% if total > limit %}
                 <div class="card-footer">
-                    <nav aria-label="{% if ui_lang == 'en' %}Kindergartens pages{% else %}صفحات الروضات{% endif %}">
+                    <nav aria-label="{% if ui_lang == 'en' %}Kindergartens pages{% else %}صفحات الحضانات{% endif %}">
                         <ul class="pagination justify-content-center mb-0">
                             {% set total_pages = (total / limit)|round(0, 'ceil')|int %}
                             {% set current_page = (skip / limit)|int + 1 %}
@@ -232,8 +232,8 @@
                 {% else %}
                 <div class="text-center py-5">
                     <i class="bi bi-search fs-1 text-muted mb-3"></i>
-                    <h5 class="text-muted">{% if ui_lang == 'en' %}No Kindergartens Found{% else %}لا توجد روضات{% endif %}</h5>
-                    <p class="text-muted">{% if ui_lang == 'en' %}No kindergartens match your search criteria{% else %}لم يتم العثور على أي روضات تطابق معايير البحث{% endif %}</p>
+                    <h5 class="text-muted">{% if ui_lang == 'en' %}No Kindergartens Found{% else %}لا توجد حضانات{% endif %}</h5>
+                    <p class="text-muted">{% if ui_lang == 'en' %}No kindergartens match your search criteria{% else %}لم يتم العثور على أي حضانات تطابق معايير البحث{% endif %}</p>
                     <a href="/kindergartens" class="btn btn-primary">{% if ui_lang == 'en' %}Show All{% else %}عرض الكل{% endif %}</a>
                 </div>
                 {% endif %}
@@ -251,7 +251,7 @@
             <div class="card-body text-center py-5">
                 <i class="bi bi-exclamation-triangle fs-1 text-warning mb-3"></i>
                 <h5 class="text-muted">{% if ui_lang == 'en' %}Unauthorized Access{% else %}غير مصرح لك بالوصول{% endif %}</h5>
-                <p class="text-muted">{% if ui_lang == 'en' %}You cannot access the kindergarten information page{% else %}لا يمكنك الوصول إلى صفحة معلومات الروضة{% endif %}</p>
+                <p class="text-muted">{% if ui_lang == 'en' %}You cannot access the kindergarten information page{% else %}لا يمكنك الوصول إلى صفحة معلومات الحضانة{% endif %}</p>
             </div>
         </div>
     </div>
@@ -340,7 +340,7 @@
         <div class="glass-card fade-in mb-4">
             <div class="card-header">
                 <h6 class="mb-0">
-                    <i class="bi bi-flag me-2"></i>{% if ui_lang == 'en' %}Kindergarten Status{% else %}حالة الروضة{% endif %}
+                    <i class="bi bi-flag me-2"></i>{% if ui_lang == 'en' %}Kindergarten Status{% else %}حالة الحضانة{% endif %}
                 </h6>
             </div>
             <div class="card-body">

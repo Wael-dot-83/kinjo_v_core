@@ -23,8 +23,8 @@ import models
 DATASET_PATH = r"C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Project-Kinjo-seed\DATS"
 
 HEADERS = [
-    "اسم الروضة (عربي)",
-    "اسم الروضة (إنجليزي)",
+    "اسم الحضانة (عربي)",
+    "اسم الحضانة (إنجليزي)",
     "المحافظة",
     "المدينة",
     "المنطقة",
@@ -51,9 +51,9 @@ JORDAN_GOVERNORATE_CENTERS = {
 }
 
 PRIORITY_FILES = [
-    "روضات_وحضانات_محدث.xlsx",
+    "حضانات_وحضانات_محدث.xlsx",
     "merged_all_uploads.xlsx",
-    "_محدث روضات_وحضانات_محدث.xlsx",
+    "_محدث حضانات_وحضانات_محدث.xlsx",
 ]
 
 stats = {
@@ -300,7 +300,7 @@ def collect_from_excel() -> list[dict]:
 
             header_row_idx = None
             for i, row in enumerate(rows[:3]):
-                if row and any(v and "اسم الروضة" in str(v) for v in row):
+                if row and any(v and "اسم الحضانة" in str(v) for v in row):
                     header_row_idx = i
                     break
             if header_row_idx is None:
@@ -314,7 +314,7 @@ def collect_from_excel() -> list[dict]:
                         col_map[wanted] = j
                         break
 
-            if "اسم الروضة (عربي)" not in col_map:
+            if "اسم الحضانة (عربي)" not in col_map:
                 print(f"  [SKIP] {fname}::{sheet_name} - cannot map Arabic name column")
                 wb.close()
                 continue
@@ -334,7 +334,7 @@ def collect_from_excel() -> list[dict]:
                 if not row_data:
                     continue
 
-                idx_ar = col_map["اسم الروضة (عربي)"]
+                idx_ar = col_map["اسم الحضانة (عربي)"]
                 raw_ar = row_data[idx_ar] if idx_ar < len(row_data) else None
                 name_ar = str(raw_ar).strip() if raw_ar and str(raw_ar).strip() != "None" else ""
 
@@ -389,7 +389,7 @@ def collect_from_excel() -> list[dict]:
 
                 all_rows.append({
                     "name_ar": name_ar,
-                    "name_en": get_col(row_data, "اسم الروضة (إنجليزي)") or None,
+                    "name_en": get_col(row_data, "اسم الحضانة (إنجليزي)") or None,
                     "governorate": governorate_val or "غير محدد",
                     "city": city_val or "غير محدد",
                     "area": get_col(row_data, "المنطقة") or "غير محدد",

@@ -26,7 +26,7 @@ from models import TrainingStatus, TrainingModule, StaffTrainingCompletion
 def _mk_kg(test_db, suffix: str, license_valid_until=date(2030, 12, 31)):
     """Create a minimal active kindergarten."""
     obj = models.Kindergarten(
-        name_ar=f"روضة {suffix}",
+        name_ar=f"حضانة {suffix}",
         name_en=f"KG {suffix}",
         license_number=f"LIC-P0-{suffix}",
         governorate="Amman",

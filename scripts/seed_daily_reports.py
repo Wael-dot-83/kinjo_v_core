@@ -59,7 +59,7 @@ def seed(kg_id: int = 1, start: str = "2026-02-01", end: str = "2026-02-09"):
         kg = db.query(models.Kindergarten).filter_by(id=kg_id).first()
         if not kg:
             kg = models.Kindergarten(
-                id=kg_id, name_ar="روضة النور", name_en="Al-Noor KG",
+                id=kg_id, name_ar="حضانة النور", name_en="Al-Noor KG",
                 governorate="Amman", city="Amman", area="Downtown",
                 address_line="شارع الملك فهد",
                 contact_phone="0551234567",

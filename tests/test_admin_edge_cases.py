@@ -61,7 +61,7 @@ def _make_user(db, username, role=models.UserRole.SUPERVISOR, kg_id=None,
     return u
 
 
-def _make_kg(db, name_ar="روضة", name_en="KG", governorate="Amman"):
+def _make_kg(db, name_ar="حضانة", name_en="KG", governorate="Amman"):
     kg = models.Kindergarten(
         name_ar=name_ar,
         name_en=name_en,
@@ -216,7 +216,7 @@ class TestListUsersFilters:
     def test_manager_cross_kg_is_silently_ignored(self, client, test_db, sample_kindergarten):
         """Lines 277-281: manager tries to filter for a different KG → audit logged,
         but response is still 200 (cross-KG filter silently scoped to manager's KG)."""
-        kg2 = _make_kg(test_db, "روضة ثانية", "OtherKG2")
+        kg2 = _make_kg(test_db, "حضانة ثانية", "OtherKG2")
         _make_user(test_db, "cross_mgr", models.UserRole.MANAGER, kg_id=sample_kindergarten.id)
         r_login = client.post("/token", data={"username": "cross_mgr", "password": "Pass123!"})
         assert r_login.status_code == 200
@@ -398,7 +398,7 @@ class TestExportUsersFilters:
 class TestGetUserIdor:
     def test_manager_cannot_access_different_kg_user(self, client, test_db, sample_kindergarten):
         """Line 633: manager from KG-1 tries to GET user from KG-2 → 403."""
-        kg2 = _make_kg(test_db, "روضة ثانية IDOR", "IDOR_KG")
+        kg2 = _make_kg(test_db, "حضانة ثانية IDOR", "IDOR_KG")
         _make_user(test_db, "idor_mgr", models.UserRole.MANAGER, kg_id=sample_kindergarten.id)
         target = _make_user(test_db, "idor_tgt", models.UserRole.SUPERVISOR, kg_id=kg2.id)
         r_login = client.post("/token", data={"username": "idor_mgr", "password": "Pass123!"})

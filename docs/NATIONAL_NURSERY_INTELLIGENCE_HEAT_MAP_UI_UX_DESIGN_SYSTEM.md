@@ -136,7 +136,7 @@
 <!-- Arabic Heat Map Component -->
 <div class="heat-map-container" dir="rtl">
   <div class="map-header">
-    <h4 class="map-title">خريطة الحرارة - توزيع الروضات</h4>
+    <h4 class="map-title">خريطة الحرارة - توزيع الحضانات</h4>
     <div class="map-controls">
       <button class="btn btn-outline-primary" aria-label="تغيير الطبقة">تغيير الطبقة</button>
       <button class="btn btn-outline-primary" aria-label="تصدير">تصدير</button>
@@ -151,15 +151,15 @@
   <div class="map-legend" dir="rtl">
     <div class="legend-item">
       <span class="legend-color red"></span>
-      <span class="legend-label">عالي (أكثر من 50 روضة)</span>
+      <span class="legend-label">عالي (أكثر من 50 حضانة)</span>
     </div>
     <div class="legend-item">
       <span class="legend-color amber"></span>
-      <span class="legend-label">متوسط (20-50 روضة)</span>
+      <span class="legend-label">متوسط (20-50 حضانة)</span>
     </div>
     <div class="legend-item">
       <span class="legend-color green"></span>
-      <span class="legend-label">قليل (أقل من 20 روضة)</span>
+      <span class="legend-label">قليل (أقل من 20 حضانة)</span>
     </div>
   </div>
 </div>
@@ -194,12 +194,12 @@
     <span class="alert-time">منذ 2 ساعة</span>
   </div>
   <div class="alert-body">
-    <p class="alert-description">نسبة الحضور في روضة الأمل أقل من 50% لمدة 3 أيام متتالية</p>
+    <p class="alert-description">نسبة الحضور في حضانة الأمل أقل من 50% لمدة 3 أيام متتالية</p>
     <div class="alert-metrics">
       <span class="metric-label">المحافظة:</span>
       <span class="metric-value">عمان</span>
-      <span class="metric-label">الروضة:</span>
-      <span class="metric-value">روضة الأمل</span>
+      <span class="metric-label">الحضانة:</span>
+      <span class="metric-value">حضانة الأمل</span>
     </div>
   </div>
   <div class="alert-footer">
@@ -350,7 +350,7 @@
 <!-- Admin Dashboard Template -->
 <div class="dashboard-admin" dir="rtl">
   <div class="dashboard-header">
-    <h1 class="dashboard-title">لوحة التحكم الوطنية للروضات</h1>
+    <h1 class="dashboard-title">لوحة التحكم الوطنية للحضانات</h1>
     <div class="dashboard-controls">
       <button class="btn btn-primary" aria-label="تصدير تقرير">تصدير تقرير</button>
       <button class="btn btn-outline-primary" aria-label="تحديث البيانات">تحديث البيانات</button>
@@ -396,9 +396,9 @@
 <!-- Manager Dashboard Template -->
 <div class="dashboard-manager" dir="rtl">
   <div class="dashboard-header">
-    <h1 class="dashboard-title">لوحة التحكم للروضة</h1>
+    <h1 class="dashboard-title">لوحة التحكم للحضانة</h1>
     <div class="dashboard-controls">
-      <button class="btn btn-primary" aria-label="تحليل الروضة">تحليل الروضة</button>
+      <button class="btn btn-primary" aria-label="تحليل الحضانة">تحليل الحضانة</button>
     </div>
   </div>
   
@@ -617,7 +617,7 @@
 <!-- Arabic-first HTML template -->
 <div dir="rtl" lang="ar" class="dashboard-container">
   <header class="dashboard-header" aria-label="رأس لوحة التحكم">
-    <h1 class="dashboard-title">لوحة التحكم الوطنية للروضات</h1>
+    <h1 class="dashboard-title">لوحة التحكم الوطنية للحضانات</h1>
     <nav class="dashboard-nav" aria-label="تنقل لوحة التحكم">
       <!-- Arabic navigation -->
     </nav>

@@ -338,7 +338,7 @@
                                         aria-label="{% if ui_lang == 'en' %}Attendance rate{% else %}نسبة الحضور{% endif %}"></div>
                                 </div>
                                 <small class="text-muted d-block" id="attendanceRateText">
-                                    {% if ui_lang == 'en' %}No attendance recorded yet today — send reminders to kindergartens.{% else %}لم يُسجَّل حضور اليوم بعد — أرسل تذكيرات للروضات.{% endif %}
+                                    {% if ui_lang == 'en' %}No attendance recorded yet today — send reminders to kindergartens.{% else %}لم يُسجَّل حضور اليوم بعد — أرسل تذكيرات للحضانات.{% endif %}
                                 </small>
                             </div>
                             <a href="/attendance" class="btn btn-success w-100 rounded-pill py-2 fw-bold">
@@ -429,13 +429,13 @@
                     <div class="col-6 col-md-3">
                         <div class="system-stat">
                             <div class="system-value text-primary" id="totalKindergartens"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;</span></div>
-                            <div class="system-label">{% if ui_lang == 'en' %}Total Kindergartens{% else %}إجمالي الروضات{% endif %}</div>
+                            <div class="system-label">{% if ui_lang == 'en' %}Total Kindergartens{% else %}إجمالي الحضانات{% endif %}</div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="system-stat">
                             <div class="system-value text-success" id="activeKindergartens"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;</span></div>
-                            <div class="system-label">{% if ui_lang == 'en' %}Active Kindergartens{% else %}الروضات النشطة{% endif %}</div>
+                            <div class="system-label">{% if ui_lang == 'en' %}Active Kindergartens{% else %}الحضانات النشطة{% endif %}</div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
@@ -1121,7 +1121,7 @@
                 <h5 class="card-title mb-0 me-auto">
                     <i class="bi bi-calendar-day me-2"></i>
                     {% if current_user.role.value == 'ADMIN' %}
-                    {% if ui_lang == 'en' %}Kindergarten Overview - {{ today }}{% else %}نظرة عامة على الروضات - {{ today }}{% endif %}
+                    {% if ui_lang == 'en' %}Kindergarten Overview - {{ today }}{% else %}نظرة عامة على الحضانات - {{ today }}{% endif %}
                     {% else %}
                     {% if ui_lang == 'en' %}Today's Overview - {{ today }}{% else %}نظرة عامة على اليوم - {{ today }}{% endif %}
                     {% endif %}
@@ -1153,7 +1153,7 @@
                         {% if current_user.role.value == 'ADMIN' %}
                         <thead>
                             <tr>
-                                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
                                 <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
                                 <th>{% if ui_lang == 'en' %}Enrolled{% else %}المسجلون{% endif %}</th>
                                 <th>{% if ui_lang == 'en' %}Attendance Today{% else %}الحضور اليوم{% endif %}</th>
@@ -1264,7 +1264,7 @@
                             <tr>
                                 <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
                                 <th>{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</th>
-                                <th>{% if ui_lang == 'en' %}KGs{% else %}الروضات{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}KGs{% else %}الحضانات{% endif %}</th>
                                 <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
                                 <th>{% if ui_lang == 'en' %}Enrolled{% else %}المسجلون{% endif %}</th>
                                 <th>{% if ui_lang == 'en' %}Util%{% else %}الاستغلال%{% endif %}</th>
@@ -1371,7 +1371,7 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
                                 <th>{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</th>
                                 <th>{% if ui_lang == 'en' %}Risk Score{% else %}درجة المخاطر{% endif %}</th>
                                 <th>{% if ui_lang == 'en' %}Risk Factors{% else %}عوامل الخطر{% endif %}</th>

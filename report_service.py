@@ -154,7 +154,7 @@ class ReportService:
             # All kindergartens
             scopes.append({
                 "type": "ALL",
-                "name": "جميع الروضات"
+                "name": "جميع الحضانات"
             })
 
             # Governorates

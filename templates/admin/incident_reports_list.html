@@ -38,15 +38,15 @@
             <label for="scopeFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}Scope{% else %}النطاق{% endif %}</label>
             <select id="scopeFilter" class="form-select form-select-sm">
                 <option value="">{% if ui_lang == 'en' %}All Scopes{% else %}جميع النطاقات{% endif %}</option>
-                <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة محددة{% endif %}</option>
+                <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}حضانة محددة{% endif %}</option>
                 <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
-                <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الحضانات{% endif %}</option>
             </select>
         </div>
         <div class="col-12 col-md-3">
-            <label for="kindergartenFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+            <label for="kindergartenFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
             <select id="kindergartenFilter" class="form-select form-select-sm" disabled>
-                <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
+                <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الحضانة{% endif %}</option>
             </select>
         </div>
         <div class="col-12 col-md-3">
@@ -104,15 +104,15 @@
                         <label for="reportScope" class="form-label">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
                         <select id="reportScope" class="form-select" required>
                             <option value="">{% if ui_lang == 'en' %}Select Scope{% else %}اختر النطاق{% endif %}</option>
-                            <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة محددة{% endif %}</option>
+                            <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}حضانة محددة{% endif %}</option>
                             <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
-                            <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                            <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الحضانات{% endif %}</option>
                         </select>
                     </div>
                     <div id="kindergartenSelectDiv" class="mb-3 d-none">
-                        <label for="reportKindergarten" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                        <label for="reportKindergarten" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
                         <select id="reportKindergarten" class="form-select">
-                            <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
+                            <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الحضانة{% endif %}</option>
                         </select>
                     </div>
                     <div id="governorateSelectDiv" class="mb-3 d-none">
@@ -257,7 +257,7 @@
                     kindergartens.forEach(kg => {
                         const option = document.createElement('option');
                         option.value = kg.id;
-                        option.textContent = kg.name_ar || kg.name_en || T('روضة', 'Kindergarten') + ` ${kg.id}`;
+                        option.textContent = kg.name_ar || kg.name_en || T('حضانة', 'Kindergarten') + ` ${kg.id}`;
                         select.appendChild(option);
                     });
                 }
@@ -371,11 +371,11 @@
     function getScopeDisplayName(scopeType, scopeName) {
         switch (scopeType) {
             case 'KINDERGARTEN':
-                return `<span class="small text-primary text-uppercase me-1">${T('روضة:', 'KG:')}</span> ${escHtml(scopeName)}`;
+                return `<span class="small text-primary text-uppercase me-1">${T('حضانة:', 'KG:')}</span> ${escHtml(scopeName)}`;
             case 'GOVERNORATE':
                 return `<span class="small text-info text-uppercase me-1">${T('محافظة:', 'Gov:')}</span> ${escHtml(scopeName)}`;
             case 'ALL':
-                return `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">${T('جميع الروضات', 'All KGs')}</span>`;
+                return `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">${T('جميع الحضانات', 'All KGs')}</span>`;
             default:
                 return escHtml(scopeName || scopeType);
         }
@@ -402,7 +402,7 @@
             return;
         }
         if (scopeType === 'KINDERGARTEN' && !kindergartenId) {
-            alert(T('يرجى اختيار الروضة', 'Please select a kindergarten'));
+            alert(T('يرجى اختيار الحضانة', 'Please select a kindergarten'));
             return;
         }
         if (scopeType === 'GOVERNORATE' && !governorate) {
@@ -511,13 +511,13 @@
         <div class="mt-2">
             <h6 class="small text-uppercase fw-semibold mb-3 d-flex align-items-center gap-2">
                 <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">domain</span>
-                ${T('الحوادث حسب الروضة', 'Incidents by Kindergarten')}
+                ${T('الحوادث حسب الحضانة', 'Incidents by Kindergarten')}
             </h6>
             <div class="table-responsive border rounded">
                 <table class="table table-sm table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>${T('الروضة', 'Kindergarten')}</th>
+                            <th>${T('الحضانة', 'Kindergarten')}</th>
                             <th class="text-center" style="width:8rem">${T('عدد الحوادث', 'Incidents Count')}</th>
                         </tr>
                     </thead>

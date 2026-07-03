@@ -58,7 +58,7 @@ def _seed_second_kindergarten_attendance(test_db, parent_user, supervisor_user):
     ).first()
 
     second_kindergarten = models.Kindergarten(
-        name_ar="روضة المستقبل",
+        name_ar="حضانة المستقبل",
         name_en="Future Kindergarten",
         license_number="LIC-2026-099",
         governorate="Irbid",

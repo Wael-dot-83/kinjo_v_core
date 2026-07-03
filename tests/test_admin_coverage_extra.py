@@ -721,7 +721,7 @@ class TestExcelKGImport:
         """Lines 3900-3902: OSError from openpyxl.load_workbook → caught → 400."""
         admin = _make_admin(test_db, "xki3902a")
         headers = _tok(client, "xki3902a")
-        xlsx = _make_xlsx([["روضة", "KG", "عمان", "عمان", "a", "b", "0777"]])
+        xlsx = _make_xlsx([["حضانة", "KG", "عمان", "عمان", "a", "b", "0777"]])
         with patch("openpyxl.load_workbook", side_effect=OSError("disk read error")):
             r = client.post(
                 "/api/admin/kindergartens/import-excel",
@@ -740,7 +740,7 @@ class TestExcelKGImport:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.append(["اسم_عربي", "اسم_انجليزي"])  # header with only 2 cols
-        ws.append(["روضة", "KG"])                 # data row: also only 2 cols
+        ws.append(["حضانة", "KG"])                 # data row: also only 2 cols
         buf = io.BytesIO(); wb.save(buf); buf.seek(0)
         r = client.post(
             "/api/admin/kindergartens/import-excel",
@@ -757,7 +757,7 @@ class TestExcelKGImport:
         admin = _make_admin(test_db, "xki3968a")
         headers = _tok(client, "xki3968a")
         xlsx = _make_xlsx([
-            ["روضة البستان", "Garden KG", "عمان", "عمان", "منطقة", "شارع", "0777111111"],
+            ["حضانة البستان", "Garden KG", "عمان", "عمان", "منطقة", "شارع", "0777111111"],
         ])
         with patch("sqlalchemy.orm.Session.commit",
                    side_effect=SQLAlchemyError("commit failed")):
@@ -826,7 +826,7 @@ class TestListIncidentReportsScopeNames:
         assert gov_rp.get("scope_name") == "Amman"
 
     def test_all_scope_name_is_arabic_all_phrase(self, client, test_db):
-        """Lines 4392-4393: ALL scope → scope_name = 'جميع الروضات'."""
+        """Lines 4392-4393: ALL scope → scope_name = 'جميع الحضانات'."""
         admin = _make_admin(test_db, "lirs4393a")
         _make_report(test_db, admin.id, models.ReportScopeType.ALL)
         headers = _tok(client, "lirs4393a")
@@ -835,7 +835,7 @@ class TestListIncidentReportsScopeNames:
         reports = r.json().get("reports", [])
         all_rp = next((rp for rp in reports if rp.get("scope_type") == "ALL"), None)
         assert all_rp is not None
-        assert all_rp.get("scope_name") == "جميع الروضات"
+        assert all_rp.get("scope_name") == "جميع الحضانات"
 
     def test_kg_scope_without_kg_relation_empty_scope_name(self, client, test_db):
         """Lines 4387-4389: KINDERGARTEN scope + kg_id=None → scope_name = ''."""
@@ -862,13 +862,13 @@ class TestGetIncidentReportDetail:
         assert r.json().get("scope_name") == "Irbid"
 
     def test_detail_all_scope_name(self, client, test_db):
-        """Lines 4448-4449: ALL scope → scope_name = 'جميع الروضات'."""
+        """Lines 4448-4449: ALL scope → scope_name = 'جميع الحضانات'."""
         admin = _make_admin(test_db, "gird4449a")
         report = _make_report(test_db, admin.id, models.ReportScopeType.ALL)
         headers = _tok(client, "gird4449a")
         r = client.get(f"/api/admin/reports/incidents/{report.id}", headers=headers)
         assert r.status_code == 200
-        assert r.json().get("scope_name") == "جميع الروضات"
+        assert r.json().get("scope_name") == "جميع الحضانات"
 
     def test_detail_sqlalchemy_error_returns_500(self, client, test_db):
         """Lines 4471-4475: SQLAlchemyError in report query → 500."""
@@ -1022,7 +1022,7 @@ class TestHeatmapErrors:
 class TestGovernorateOptionsInvalidGov:
     def _make_active_kg(self, db, name_suffix, gov):
         kg = models.Kindergarten(
-            name_ar=f"روضة_{name_suffix}",
+            name_ar=f"حضانة_{name_suffix}",
             name_en=f"KG_{name_suffix}",
             governorate=gov,
             district="City",
@@ -1264,7 +1264,7 @@ class TestExcelImportKGAddError:
         admin = _make_admin(test_db, "xkiadd3969a")
         headers = _tok(client, "xkiadd3969a")
         xlsx = _make_xlsx([
-            ["روضة الأمل", "Hope KG", "عمان", "عمان", "منطقة", "شارع", "0777222333"],
+            ["حضانة الأمل", "Hope KG", "عمان", "عمان", "منطقة", "شارع", "0777222333"],
         ])
         original_add = sqlalchemy.orm.Session.add
 

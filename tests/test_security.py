@@ -174,7 +174,7 @@ class TestAuthorizationSecurity:
         """Manager cannot access other kindergarten's data"""
         # Create another kindergarten
         other_kg = models.Kindergarten(
-            name_ar="روضة أخرى محمية",
+            name_ar="حضانة أخرى محمية",
             name_en="Protected Other KG",
             license_number="LIC-PROTECT-001",
             governorate="Aqaba",

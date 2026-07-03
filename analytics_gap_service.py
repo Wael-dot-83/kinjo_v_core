@@ -423,7 +423,7 @@ class AnalyticsGapService:
                 layer="governorate",
                 metrics=[MetricResponse(
                     metric="no_data", value=0.0,
-                    chart=_chart("bar", ["No data"], "No data", "لا توجد بيانات", [0.0]),
+                    chart=_chart("bar", ["No data"], "No data", "لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.", [0.0]),
                     locale=locale,
                 )],
                 locale=locale,
@@ -476,7 +476,7 @@ class AnalyticsGapService:
             chart=_chart(
                 "bar",
                 list(kg_rates_by_name.keys()),
-                "KG Attendance Rates (%)", "معدلات حضور الروضات (%)",
+                "KG Attendance Rates (%)", "معدلات حضور الحضانات (%)",
                 rates_list,
                 bg=bar_colors,
                 thresholds={"cv_warning": 15, "cv_critical": 25},
@@ -740,7 +740,7 @@ class AnalyticsGapService:
             chart=_chart(
                 "bar",
                 [n for n, _ in gqi_data] or ["No data"],
-                "GQI per Kindergarten", "مؤشر جودة الحوكمة لكل روضة",
+                "GQI per Kindergarten", "مؤشر جودة الحوكمة لكل حضانة",
                 [v for _, v in gqi_data] or [0.0],
                 bg=[_colour_by_threshold(v, 70, 55) for _, v in gqi_data] or [C_INFO],
                 thresholds={"warning": 70, "critical": 55},
@@ -1050,7 +1050,7 @@ class AnalyticsGapService:
             chart=_chart(
                 "bar",
                 ["Child Profiles" if locale == "en" else "ملفات الأطفال",
-                 "KG Profile" if locale == "en" else "ملف الروضة",
+                 "KG Profile" if locale == "en" else "ملف الحضانة",
                  "Overall" if locale == "en" else "الإجمالي"],
                 "Data Quality Score (%)", "درجة جودة البيانات (%)",
                 [child_score, kg_score, overall_quality],
@@ -1514,7 +1514,7 @@ class AnalyticsGapService:
                 "pie",
                 traj_labels,
                 "KG Performance Trajectory",
-                "مسار أداء الروضات",
+                "مسار أداء الحضانات",
                 [float(improving), float(stable), float(declining)],
                 bg=[C_GOOD, C_WARN, C_CRIT],
             ),

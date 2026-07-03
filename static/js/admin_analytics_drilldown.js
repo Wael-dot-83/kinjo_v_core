@@ -75,7 +75,7 @@ function updateBreadcrumbsAndTitle(name, type) {
   const typeLabel =
     type === "GOVERNORATE"
       ? drilldownText("محافظة", "Governorate")
-      : drilldownText("روضة", "Kindergarten");
+      : drilldownText("حضانة", "Kindergarten");
   const displayName = drilldownLiteral(name);
 
   document.getElementById("drilldownTitle").innerHTML =
@@ -91,7 +91,7 @@ function populateSummaryCards(metrics, type) {
   if (type.toUpperCase() === "GOVERNORATE") {
     cardsHtml = `
             <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("عدد الروضات", "Number of kindergartens")}</h6><h3 class="fw-bold">${metrics.kindergarten_count}</h3>
+                <h6 class="text-muted">${drilldownText("عدد الحضانات", "Number of kindergartens")}</h6><h3 class="fw-bold">${metrics.kindergarten_count}</h3>
             </div></div></div>
             <div class="col-md-4"><div class="card"><div class="card-body">
                 <h6 class="text-muted">${drilldownText("إجمالي الأطفال", "Total children")}</h6><h3 class="fw-bold">${metrics.children_count || "N/A"}</h3>
@@ -131,12 +131,12 @@ function populateTable(children, type) {
 
   if (type.toUpperCase() === "GOVERNORATE") {
     document.getElementById("tableTitle").textContent = drilldownText(
-      "أداء الروضات في المحافظة",
+      "أداء الحضانات في المحافظة",
       "Kindergarten performance in the governorate"
     );
     headers = `
             <tr>
-                <th role="button">${drilldownText("الروضة", "Kindergarten")}</th>
+                <th role="button">${drilldownText("الحضانة", "Kindergarten")}</th>
                 <th class="text-center" role="button" data-sort-method="number">${drilldownText("الأطفال", "Children")}</th>
                 <th class="text-center" role="button" data-sort-method="number">${drilldownText("نسبة الحضور", "Attendance rate")}</th>
                 <th class="text-center" role="button" data-sort-method="number">${drilldownText("معدل الحوادث /1K", "Incident rate /1K")}</th>

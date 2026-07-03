@@ -199,9 +199,9 @@
 
     function getScopeDescription(scope) {
         switch (scope.type) {
-            case 'KINDERGARTEN': return IS_EN ? `Kindergarten ${scope.name}` : `روضة ${scope.name}`;
-            case 'GOVERNORATE': return IS_EN ? `All kindergartens in ${scope.governorate}` : `جميع الروضات في ${scope.governorate}`;
-            case 'ALL': return T('جميع الروضات في النظام', 'All kindergartens in the system');
+            case 'KINDERGARTEN': return IS_EN ? `Kindergarten ${scope.name}` : `حضانة ${scope.name}`;
+            case 'GOVERNORATE': return IS_EN ? `All kindergartens in ${scope.governorate}` : `جميع الحضانات في ${scope.governorate}`;
+            case 'ALL': return T('جميع الحضانات في النظام', 'All kindergartens in the system');
             default: return '';
         }
     }

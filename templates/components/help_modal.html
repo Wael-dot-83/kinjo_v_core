@@ -19,7 +19,12 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer bg-light">
+            <div class="modal-footer bg-light{% if request and request.url.path.startswith('/admin') %} justify-content-between{% endif %}">
+                {% if request and request.url.path.startswith('/admin') %}
+                <a href="/admin/help" class="btn btn-outline-secondary">
+                    <i class="bi bi-life-preserver me-1"></i>{% if ui_lang == 'en' %}Open Help Center{% else %}فتح مركز المساعدة{% endif %}
+                </a>
+                {% endif %}
                 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Understood{% else %}فهمت{% endif %}</button>
             </div>
         </div>

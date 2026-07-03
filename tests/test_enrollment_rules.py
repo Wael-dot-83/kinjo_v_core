@@ -60,7 +60,7 @@ def _make_child(db, parent_profile, suffix="A"):
 def _make_kindergarten(db, suffix="X"):
     """Create and return a persisted Kindergarten."""
     kg = models.Kindergarten(
-        name_ar=f"روضة اختبار {suffix}",
+        name_ar=f"حضانة اختبار {suffix}",
         name_en=f"Test KG {suffix}",
         governorate="Amman",
         district="Amman",

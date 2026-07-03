@@ -108,7 +108,7 @@ def test_supervisors_analytics_detects_errors(client, auth_headers_admin, test_d
     test_db.refresh(supervisor)
 
     another_kg = models.Kindergarten(
-        name_ar="روضة أخرى",
+        name_ar="حضانة أخرى",
         name_en="Another KG",
         governorate="Amman",
         district="Amman",

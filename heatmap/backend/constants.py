@@ -75,10 +75,10 @@ MAIN_INDICATORS: List[Dict] = [
     {
         "key": "nursery_status",
         "name_en": "Nursery Status",
-        "name_ar": "حالة الروضات",
+        "name_ar": "حالة الحضانات",
         "color": "#0E334F",
         "description_en": "Active vs inactive nurseries in the governorate.",
-        "description_ar": "الروضات النشطة مقابل غير النشطة في المحافظة.",
+        "description_ar": "الحضانات النشطة مقابل غير النشطة في المحافظة.",
     },
     {
         "key": "children_registration",
@@ -141,8 +141,8 @@ INDICATOR_ALERT_THRESHOLD: Dict[str, float] = {
 # ---------------------------------------------------------------------------
 SUB_INDICATORS: Dict[str, List[Dict]] = {
     "nursery_status": [
-        {"key": "active_nurseries",      "name_en": "Active nurseries",      "name_ar": "روضات نشطة",          "unit": "count", "threshold_high": 200, "threshold_low": 50,  "higher_is_better": True},
-        {"key": "inactive_nurseries",    "name_en": "Inactive nurseries",    "name_ar": "روضات غير نشطة",       "unit": "count", "threshold_high": 30,  "threshold_low": 10,  "higher_is_better": False},
+        {"key": "active_nurseries",      "name_en": "Active nurseries",      "name_ar": "حضانات نشطة",          "unit": "count", "threshold_high": 200, "threshold_low": 50,  "higher_is_better": True},
+        {"key": "inactive_nurseries",    "name_en": "Inactive nurseries",    "name_ar": "حضانات غير نشطة",       "unit": "count", "threshold_high": 30,  "threshold_low": 10,  "higher_is_better": False},
         {"key": "active_pct",            "name_en": "Active %",              "name_ar": "نسبة النشطة",          "unit": "pct",   "threshold_high": 90,  "threshold_low": 75,  "higher_is_better": True},
         {"key": "inactive_pct",          "name_en": "Inactive %",            "name_ar": "نسبة غير النشطة",      "unit": "pct",   "threshold_high": 25,  "threshold_low": 10,  "higher_is_better": False},
     ],

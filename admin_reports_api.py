@@ -241,7 +241,7 @@ def _interpret_overview(metrics: dict[str, Any], lang: str) -> dict[str, Any]:
         )
 
     summary = _localized(
-        f"يظهر التقرير {metrics.get('total_children', 0)} طفلا نشطا عبر {metrics.get('total_kindergartens', 0)} روضة.",
+        f"يظهر التقرير {metrics.get('total_children', 0)} طفلا نشطا عبر {metrics.get('total_kindergartens', 0)} حضانة.",
         f"The report shows {metrics.get('total_children', 0)} active children across {metrics.get('total_kindergartens', 0)} kindergartens.",
         lang,
     )
@@ -724,7 +724,7 @@ def _kindergarten_detail_rows(
             recommended_action_ar = "إجراء وقائي: تعزيز المشرفين في الموقع."
             recommended_action_en = "Preventive: reinforce supervisors at this site."
         elif classification == "inactive":
-            recommended_action_ar = "تحقق من حالة العمل وتفعيل الروضة أو إيقافها رسميا."
+            recommended_action_ar = "تحقق من حالة العمل وتفعيل الحضانة أو إيقافها رسميا."
             recommended_action_en = "Verify operational status and activate or formally close."
         elif classification == "resource_underuse":
             recommended_action_ar = "استخدم الموارد بشكل أفضل أو أعد توزيعها."
@@ -1219,14 +1219,14 @@ def resolve_kindergarten_detail_report(db: Session, filters: ScopeFilters, date_
         "kindergartens": rows,
         "interpretation": {
             "summary": _localized(
-                f"يوجد {total_kindergartens} روضة نشطة ضمن النطاق المحدد، منها {critical_count} ذات خطورة حرجة.",
+                f"يوجد {total_kindergartens} حضانة نشطة ضمن النطاق المحدد، منها {critical_count} ذات خطورة حرجة.",
                 f"There are {total_kindergartens} active kindergartens in scope, {critical_count} at critical risk.",
                 lang,
             ),
             "severity": "critical" if critical_count > 0 else "warning" if warning_count > 0 else "normal",
             "comparison_baseline": _localized("متوسط الشبكة", "Network average", lang),
             "recommended_action": _localized(
-                "ابدأ بالروضات الحرجة ثم التي تحتاج انتباه.",
+                "ابدأ بالحضانات الحرجة ثم التي تحتاج انتباه.",
                 "Start with critical kindergartens, then those needing attention.",
                 lang,
             ),
@@ -1731,14 +1731,14 @@ def kindergartens_detail(
         "kindergartens": rows,
         "interpretation": {
             "summary": _localized(
-                f"يوجد {total_kindergartens} روضة نشطة ضمن النطاق المحدد، منها {critical_count} ذات خطورة حرجة.",
+                f"يوجد {total_kindergartens} حضانة نشطة ضمن النطاق المحدد، منها {critical_count} ذات خطورة حرجة.",
                 f"There are {total_kindergartens} active kindergartens in scope, {critical_count} at critical risk.",
                 lang,
             ),
             "severity": "critical" if critical_count > 0 else "warning" if warning_count > 0 else "normal",
             "comparison_baseline": _localized("متوسط الشبكة", "Network average", lang),
             "recommended_action": _localized(
-                "ابدأ بالروضات الحرجة ثم التي تحتاج انتباه.",
+                "ابدأ بالحضانات الحرجة ثم التي تحتاج انتباه.",
                 "Start with critical kindergartens, then those needing attention.",
                 lang,
             ),
@@ -1833,7 +1833,7 @@ def classes_detail(
         "classes": rows,
         "interpretation": {
             "summary": _localized(
-                f"يوجد {total_classes} فصل نشط في الروضة المختارة، منها {critical_count} بحالة حرجة.",
+                f"يوجد {total_classes} فصل نشط في الحضانة المختارة، منها {critical_count} بحالة حرجة.",
                 f"There are {total_classes} active classes in the selected kindergarten, {critical_count} at critical risk.",
                 lang,
             ),
@@ -1986,7 +1986,7 @@ def kindergartens_classification(
         "classification_counts": classification_counts,
         "interpretation": {
             "summary": _localized(
-                f"يوجد {len(rows)} روضة مصنفة ضمن النطاق المحدد.",
+                f"يوجد {len(rows)} حضانة مصنفة ضمن النطاق المحدد.",
                 f"There are {len(rows)} classified kindergartens in scope.",
                 lang,
             ),

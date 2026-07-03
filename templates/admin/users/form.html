@@ -60,7 +60,7 @@ breadcrumbs=[
                                 onchange="toggleKindergartenField()">
                                 <option value="">{% if ui_lang == 'en' %}Select role...{% else %}اختر الدور...{% endif %}</option>
                                 <option value="MANAGER"{% if user_obj and user_obj.role.value=='MANAGER' %}selected{%
-                                    endif %}>{% if ui_lang == 'en' %}Kindergarten Manager{% else %}مدير روضة{% endif %}</option>
+                                    endif %}>{% if ui_lang == 'en' %}Kindergarten Manager{% else %}مدير حضانة{% endif %}</option>
                                 <option value="SUPERVISOR"{% if user_obj and user_obj.role.value=='SUPERVISOR'
                                     %}selected{% endif %}>{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
                                 <option value="PARENT"{% if user_obj and user_obj.role.value=='PARENT' %}selected{%
@@ -73,7 +73,7 @@ breadcrumbs=[
 
                     <div id="kindergartenSection"
                         class="mb-4 {% if user_obj and user_obj.role.value == 'ADMIN' %}d-none{% endif %} {% if is_manager_user %}d-none{% endif %}">
-                        <label for="kindergarten_id"class="form-label">{% if ui_lang == 'en' %}Linked Kindergarten{% else %}الروضة المرتبطة{% endif %}</label>
+                        <label for="kindergarten_id"class="form-label">{% if ui_lang == 'en' %}Linked Kindergarten{% else %}الحضانة المرتبطة{% endif %}</label>
                         {% if is_manager_user %}
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
@@ -98,16 +98,16 @@ breadcrumbs=[
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="kgSearch"class="form-label">{% if ui_lang == 'en' %}Search by kindergarten name or phone{% else %}بحث باسم الروضة أو الهاتف{% endif %}</label>
+                                <label for="kgSearch"class="form-label">{% if ui_lang == 'en' %}Search by kindergarten name or phone{% else %}بحث باسم الحضانة أو الهاتف{% endif %}</label>
                                 <input type="text"class="form-control"id="kgSearch"
-                                    placeholder="{% if ui_lang == 'en' %}Search by name or phone{% else %}ابحث باسم الروضة أو الهاتف{% endif %}">
+                                    placeholder="{% if ui_lang == 'en' %}Search by name or phone{% else %}ابحث باسم الحضانة أو الهاتف{% endif %}">
                             </div>
                         </div>
                         <!-- Removed corrupted text, only correct Arabic message remains below -->
                         <small class="text-muted d-block mb-2"id="kgNoResults"style="display: none;">{% if ui_lang == 'en' %}No results found.{% else %}لم يتم العثور على
                             نتائج.{% endif %}</small>
                         <select class="form-select"id="kindergarten_id"name="kindergarten_id">
-                            <option value="">-- {% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %} --</option>
+                            <option value="">-- {% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الحضانة{% endif %} --</option>
                             {% for kg in kindergartens %}
                             <option value="{{ kg.id }}"data-governorate="{{ kg.governorate or '' }}"
                                 data-name="{{ (kg.name_ar or '') }} {{ (kg.name_en or '') }}"
@@ -119,7 +119,7 @@ breadcrumbs=[
                             </option>
                             {% endfor %}
                         </select>
-                        <div class="form-text">{% if ui_lang == 'en' %}Required for managers, supervisors, and parents to link them to a specific kindergarten.{% else %}مطلوب للمدراء والمشرفين وأولياء الأمور لربطهم بروضة محددة.{% endif %}</div>
+                        <div class="form-text">{% if ui_lang == 'en' %}Required for managers, supervisors, and parents to link them to a specific kindergarten.{% else %}مطلوب للمدراء والمشرفين وأولياء الأمور لربطهم بحضانة محددة.{% endif %}</div>
                     </div>
 
                     {% if user_obj %}
@@ -261,10 +261,10 @@ breadcrumbs=[
 
 
         const messages = {
-            MANAGER: T('يجب ربط المدير بروضة محددة لإدارة بياناتها.', 'Manager must be linked to a specific kindergarten to manage its data.'),
-            SUPERVISOR: T('يجب ربط المشرف بروضة محددة لمتابعة تقاريرها.', 'Supervisor must be linked to a specific kindergarten to follow its reports.'),
-            PARENT: T('يجب ربط ولي الأمر بطفل (روضة).', 'Parent must be linked to a child (kindergarten).'),
-            ADMIN: T('مدير النظام له صلاحيات كاملة على جميع الروضات.', 'System admin has full permissions on all kindergartens.')
+            MANAGER: T('يجب ربط المدير بحضانة محددة لإدارة بياناتها.', 'Manager must be linked to a specific kindergarten to manage its data.'),
+            SUPERVISOR: T('يجب ربط المشرف بحضانة محددة لمتابعة تقاريرها.', 'Supervisor must be linked to a specific kindergarten to follow its reports.'),
+            PARENT: T('يجب ربط ولي الأمر بطفل (حضانة).', 'Parent must be linked to a child (kindergarten).'),
+            ADMIN: T('مدير النظام له صلاحيات كاملة على جميع الحضانات.', 'System admin has full permissions on all kindergartens.')
         };
 
         roleHelp.textContent = messages[role] || '';

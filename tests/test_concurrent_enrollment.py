@@ -60,7 +60,7 @@ def full_scenario(test_db, client):
     """
     # Kindergarten
     kg = models.Kindergarten(
-        name_ar="روضة التنافس",
+        name_ar="حضانة التنافس",
         name_en="Competition KG",
         license_number="LIC-CONC-001",
         governorate="عمان",

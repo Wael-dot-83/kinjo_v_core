@@ -9,10 +9,11 @@ ADMIN_CSS = ROOT / "static" / "css" / "admin_design_system.css"
 
 EXPECTED_ARABIC_LABEL_ORDER = [
     "لوحة التحكم",
+    "المساعدة",
     "إدارة النظام",
     "المستخدمون",
     "التواصل",
-    "الروضات",
+    "الحضانات",
     "البيانات",
     "العمليات",
     "سجل الحوادث",
@@ -35,6 +36,7 @@ EXPECTED_ARABIC_LABEL_ORDER = [
 
 EXPECTED_VISIBLE_HREFS = [
     "/admin/dashboard",
+    "/admin/help",
     "/admin/users",
     "/admin/messages",
     "/admin/kg-overview",

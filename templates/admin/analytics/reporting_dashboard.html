@@ -58,13 +58,13 @@
   {"value": "jordan", "label": "الأردن"},
   {"value": "governorate", "label": "المحافظة"},
   {"value": "city", "label": "المدينة"},
-  {"value": "kindergarten", "label": "الروضة"},
+  {"value": "kindergarten", "label": "الحضانة"},
   {"value": "class", "label": "الصف"}
 ] %}
 {% set section_titles = {
   "national": "النظرة الوطنية",
   "children": "تحليلات الأطفال",
-  "kindergartens": "تحليلات الروضات",
+  "kindergartens": "تحليلات الحضانات",
   "supervisors": "تحليلات المشرفين",
   "data_quality": "جودة البيانات",
   "compliance": "الامتثال",
@@ -94,7 +94,7 @@
         <input type="text" class="form-control" id="cityFilter" placeholder="{% if ui_lang == 'en' %}e.g. Amman{% else %}مثال: عمان{% endif %}">
       </div>
       <div class="col-md-3" id="kgContainer" style="display:none;">
-        <label class="form-label fw-bold" for="kindergartenIdFilter">{% if ui_lang == 'en' %}Kindergarten ID{% else %}معرف الروضة{% endif %}</label>
+        <label class="form-label fw-bold" for="kindergartenIdFilter">{% if ui_lang == 'en' %}Kindergarten ID{% else %}معرف الحضانة{% endif %}</label>
         <input type="number" class="form-control" id="kindergartenIdFilter" placeholder="{% if ui_lang == 'en' %}ID{% else %}معرف{% endif %}">
       </div>
       <div class="col-md-3" id="classContainer" style="display:none;">
@@ -139,9 +139,9 @@
       <div class="col-md-6 col-xl-3">
         <div class="card h-100 glass-panel hover-elevate border-start border-4 border-success shadow-sm" role="region">
           <div class="card-body p-card">
-            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</h6>
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}</h6>
             <h3 class="mb-0 fw-bold text-success" id="kpiTotalKindergartens">--</h3>
-            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Active kindergartens{% else %}روضات نشطة{% endif %}</small>
+            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Active kindergartens{% else %}حضانات نشطة{% endif %}</small>
           </div>
         </div>
       </div>
@@ -215,7 +215,7 @@
       <div class="col-md-6 col-xl-3">
         <div class="card h-100 glass-panel hover-elevate border-start border-4 border-danger shadow-sm" role="region">
           <div class="card-body p-card">
-            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Critical Kindergartens{% else %}روضات حرجة{% endif %}</h6>
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Critical Kindergartens{% else %}حضانات حرجة{% endif %}</h6>
             <h3 class="mb-0 fw-bold text-danger" id="kpiCriticalKgs">--</h3>
             <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Requires immediate action{% else %}تتطلب تدخل فوري{% endif %}</small>
           </div>
@@ -334,7 +334,7 @@
       <div class="card-header bg-transparent border-bottom">
         <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
           <i class="bi bi-table me-2 text-primary"></i>
-          {% if ui_lang == 'en' %}Kindergarten Risk Ranking{% else %}ترتيب المخاطر حسب الروضة{% endif %}
+          {% if ui_lang == 'en' %}Kindergarten Risk Ranking{% else %}ترتيب المخاطر حسب الحضانة{% endif %}
         </h5>
       </div>
       <div class="card-body p-0">
@@ -409,7 +409,7 @@
             <thead class="table-light">
               <tr>
                 <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
                 <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
                 <th>{% if ui_lang == 'en' %}Classes{% else %}فصول{% endif %}</th>
                 <th>{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
@@ -452,7 +452,7 @@
       <div class="col-md-6 col-xl-3">
         <div class="card h-100 glass-panel hover-elevate border-start border-4 border-danger shadow-sm" role="region">
           <div class="card-body p-card">
-            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Children Without KG{% else %}أطفال بلا روضة{% endif %}</h6>
+            <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Children Without KG{% else %}أطفال بلا حضانة{% endif %}</h6>
             <h3 class="mb-0 fw-bold text-danger" id="dqWithoutKg">--</h3>
           </div>
         </div>
@@ -566,13 +566,13 @@
   <section class="mb-5 d-none" id="section-kindergarten-detail">
     <h2 class="section-title mb-3">
       <i class="bi bi-building me-2 text-primary"></i>
-      {% if ui_lang == 'en' %}Kindergarten Detail{% else %}تفاصيل الروضات{% endif %}
+      {% if ui_lang == 'en' %}Kindergarten Detail{% else %}تفاصيل الحضانات{% endif %}
     </h2>
     <div class="card mb-4 glass-panel shadow-sm border-0">
       <div class="card-header bg-transparent border-bottom">
         <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
           <i class="bi bi-table me-2 text-primary"></i>
-          {% if ui_lang == 'en' %}Kindergartens in Scope{% else %}الروضات في النطاق{% endif %}
+          {% if ui_lang == 'en' %}Kindergartens in Scope{% else %}الحضانات في النطاق{% endif %}
         </h5>
       </div>
       <div class="card-body p-0">
@@ -613,7 +613,7 @@
       <div class="card-header bg-transparent border-bottom">
         <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
           <i class="bi bi-table me-2 text-primary"></i>
-          {% if ui_lang == 'en' %}Classes in Selected Kindergarten{% else %}الفصول في الروضة المختارة{% endif %}
+          {% if ui_lang == 'en' %}Classes in Selected Kindergarten{% else %}الفصول في الحضانة المختارة{% endif %}
         </h5>
       </div>
       <div class="card-body p-0">

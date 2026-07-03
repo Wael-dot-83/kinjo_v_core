@@ -119,7 +119,7 @@
         var hours = data.hours_since_last_report;
         if (hours === null) {
           el("data-freshness").textContent = "--";
-          setStatus("freshness-status", t("لا توجد بيانات", "No data"), "warn");
+          setStatus("freshness-status", t("لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.", "No data"), "warn");
           return;
         }
         el("data-freshness").textContent = `${hours.toFixed(1)} h`;

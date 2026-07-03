@@ -684,7 +684,7 @@ def validate_kg_has_supervisor(
     count = query.count()
     if count < 1:
         raise ValidationError(
-            "يجب أن تحتفظ الروضة بمشرف نشط واحد على الأقل / "
+            "يجب أن تحتفظ الحضانة بمشرف نشط واحد على الأقل / "
             "Kindergarten must retain at least one active supervisor"
         )
 

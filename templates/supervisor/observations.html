@@ -285,7 +285,7 @@
             return;
         }
 
-        listEl.innerHTML = `<div class="text-center py-3 text-muted">${T('جاري التحميل...', 'Loading...')}</div>`;
+        listEl.innerHTML = `<div class="text-center py-3 text-muted">${T('جارٍ تحميل البيانات، يرجى الانتظار.', 'Loading...')}</div>`;
         try {
             const records = await apiRequest(`/api/children/${encodeURIComponent(childId)}/observations`);
             const list = Array.isArray(records) ? records : [];

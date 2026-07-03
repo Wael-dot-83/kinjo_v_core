@@ -41,7 +41,7 @@ def _auth_headers(token: str) -> dict:
 
 def _make_kindergarten(db, *, gov: str = "عمان", area: str = "ضاحية الرشيد") -> models.Kindergarten:
     kg = models.Kindergarten(
-        name_ar="روضة الأمل",
+        name_ar="حضانة الأمل",
         name_en="Hope Kindergarten",
         license_number="LIC-GOV-001",
         governorate=gov,

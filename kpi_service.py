@@ -183,16 +183,16 @@ KPI_DEFINITIONS = {
     "overall_gcei": {
         "name_ar": "مؤشر الحوكمة وتجربة الطفل",
         "name_en": "Governance & Child Experience Index",
-        "description_ar": "درجة شاملة تقيس جودة أداء الروضة (0-100)",
+        "description_ar": "درجة شاملة تقيس جودة أداء الحضانة (0-100)",
         "description_en": "Comprehensive score measuring kindergarten performance quality (0-100)",
         "formula_ar": "60% إدارة وحوكمة + 40% تجربة الطفل",
         "formula_en": "60% Governance + 40% Child Experience",
         "threshold": KPIThreshold(green_min=80, amber_min=60, amber_max=79.99),
         "explanation": KPIExplanation(
-            ar="""مؤشر شامل يقيم أداء الروضة من خلال دمج عاملين رئيسيين:
+            ar="""مؤشر شامل يقيم أداء الحضانة من خلال دمج عاملين رئيسيين:
 • الحوكمة والإدارة (60%): تشمل الامتثال للمعايير، جودة التقارير، والإجراءات الإدارية
 • تجربة الطفل (40%): تركز على رضا الأطفال، جودة الأنشطة التعليمية، والرعاية اليومية
-الدرجة الأعلى تشير إلى روضة متميزة في جميع الجوانب.""",
+الدرجة الأعلى تشير إلى حضانة متميزة في جميع الجوانب.""",
             en="""A comprehensive index evaluating kindergarten performance through two main factors:
 • Governance & Management (60%): Includes compliance with standards, report quality, and administrative procedures
 • Child Experience (40%): Focuses on child satisfaction, educational activity quality, and daily care
@@ -242,7 +242,7 @@ Higher scores indicate an excellent kindergarten across all aspects."""
         "formula_en": "(Actual Attendance Days ÷ Expected Attendance Days) × 100",
         "threshold": KPIThreshold(green_min=90, amber_min=70, amber_max=89.99),
         "explanation": KPIExplanation(
-            ar="""يُظهر هذا المؤشر مدى التزام الأطفال بالحضور المنتظم في الروضة:
+            ar="""يُظهر هذا المؤشر مدى التزام الأطفال بالحضور المنتظم في الحضانة:
 • يُحسب بناءً على أيام الحضور الفعلية مقارنة بالأيام المتوقعة
 • يعكس جاذبية البرامج التعليمية وجودة الرعاية
 • يؤثر على التعلم والتطور الاجتماعي للأطفال
@@ -378,7 +378,7 @@ Goal: 95% minimum for safe and effective care."""
         "formula_en": "(Number of incidents ÷ attended child-days) × 1,000",
         "threshold": KPIThreshold(green_min=0, amber_min=2.01, amber_max=5.0, red_max=5.0, lower_is_better=True),
         "explanation": KPIExplanation(
-            ar="""يُقيم هذا المؤشر مستوى السلامة في الروضة من خلال تتبع الحوادث:
+            ar="""يُقيم هذا المؤشر مستوى السلامة في الحضانة من خلال تتبع الحوادث:
 • يشمل جميع الحوادث: صغيرة (كدمات، سقوط بسيط) وكبيرة
 • يُحسب لكل 1,000 يوم-طفل للمقارنة العادلة
 • يعكس فعالية إجراءات السلامة والوقاية
@@ -405,7 +405,7 @@ Goal: Approach zero for a completely safe environment."""
             KPIActionItem(
                 action="safety_audit_comprehensive",
                 priority="CRITICAL",
-                ar="إجراء تدقيق شامل للسلامة في جميع مرافق الروضة",
+                ar="إجراء تدقيق شامل للسلامة في جميع مرافق الحضانة",
                 en="Conduct comprehensive safety audit of all kindergarten facilities"
             ),
             KPIActionItem(
@@ -459,7 +459,7 @@ Goal: Approach zero for a completely safe environment."""
 • تشمل الحوادث التي تتطلب تدخلاً طبياً أو إسعافاً
 • قد تتطلب إبلاغ الجهات الرسمية والأهل فوراً
 • تُحقق فيها لتحديد المسؤوليات ومنع التكرار
-• تؤثر على سمعة الروضة وثقة أولياء الأمور
+• تؤثر على سمعة الحضانة وثقة أولياء الأمور
 الهدف: الصفر المطلق لضمان أقصى درجات السلامة.""",
             en="""This indicator monitors serious incidents threatening children's health:
 • Includes incidents requiring medical intervention or ambulance
@@ -607,7 +607,7 @@ Goal: 100% for immediate and effective follow-up."""
 • يُعتبر الغياب مزمناً عند تجاوز 10% من أيام الدراسة
 • قد يكون بسبب مشاكل صحية، اجتماعية، أو تعليمية
 • يؤثر سلباً على التعلم والتطور الاجتماعي
-• يتطلب متابعة خاصة ودعم من الأهل والروضة
+• يتطلب متابعة خاصة ودعم من الأهل والحضانة
 الهدف: أقل من 5% لضمان انتظام تعليمي جيد.""",
             en="""This indicator identifies children with recurrent absences:
 • Absence is considered chronic when exceeding 10% of school days
@@ -674,7 +674,7 @@ Goal: Less than 5% for good educational regularity."""
         "formula_en": "(Enrolled children ÷ Capacity) × 100",
         "threshold": KPIThreshold(green_min=90, amber_min=80, amber_max=100, red_max=100),
         "explanation": KPIExplanation(
-            ar="""يُظهر هذا المؤشر كفاءة استخدام مرافق الروضة:
+            ar="""يُظهر هذا المؤشر كفاءة استخدام مرافق الحضانة:
 • يقارن عدد الأطفال المسجلين بالطاقة الاستيعابية القصوى
 • يساعد في التخطيط للنمو والتوسع المستقبلي
 • يؤثر على الإيرادات والاستدامة المالية
@@ -762,7 +762,7 @@ Goal: 90% to ensure qualified and professional team."""
             ar="""🎓 تدريب ممتاز! هذا يعني فريق عمل مؤهل وملتزم.
 📚 راقب التدريبات المطلوبة وتأكد من إكمالها في الوقت المحدد.
 🎯 الهدف: 90%+ لضمان أعلى مستويات الجودة.
-📖 نصيحة: اجعل التدريب جزءاً من ثقافة الروضة وكافئ المتميزين.""",
+📖 نصيحة: اجعل التدريب جزءاً من ثقافة الحضانة وكافئ المتميزين.""",
             en="""🎓 Excellent training! This means a qualified and committed team.
 📚 Monitor required trainings and ensure completion on time.
 🎯 Goal: 90%+ to ensure highest quality levels.
@@ -820,7 +820,7 @@ Goal: 90% to ensure qualified and professional team."""
 • يشمل التقارير اليومية عن أنشطة وحالة الطفل
 • يعكس مستوى الشفافية والتواصل مع الأهل
 • يساعد في بناء الثقة ومتابعة تطور الطفل
-• يوفر معلومات مهمة عن يوم الطفل في الروضة
+• يوفر معلومات مهمة عن يوم الطفل في الحضانة
 الهدف: 95% لضمان تواصل يومي منتظم مع الأهل.""",
             en="""This indicator evaluates regularity of communication with parents:
 • Includes daily reports about child's activities and condition
@@ -4487,7 +4487,7 @@ def get_enhanced_manager_kpi_dashboard(
             alerts.append(
                 AlertsSummary(
                     type="REGULATORY",
-                    message=f"{kg.name_ar or 'الروضة'} رخصتها منتهية الصلاحية منذ {kg.license_valid_until}",
+                    message=f"{kg.name_ar or 'الحضانة'} رخصتها منتهية الصلاحية منذ {kg.license_valid_until}",
                     priority="high",
                     entity_id=kg.id,
                 )
@@ -4496,7 +4496,7 @@ def get_enhanced_manager_kpi_dashboard(
             alerts.append(
                 AlertsSummary(
                     type="REGULATORY",
-                    message=f"{kg.name_ar or 'الروضة'} رخصتها تنتهي في {kg.license_valid_until}",
+                    message=f"{kg.name_ar or 'الحضانة'} رخصتها تنتهي في {kg.license_valid_until}",
                     priority="medium",
                     entity_id=kg.id,
                 )

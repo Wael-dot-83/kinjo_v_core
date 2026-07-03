@@ -40,7 +40,7 @@ breadcrumbs=[
                     {% if not is_manager_supervisor %}
                     <div class="step-item active" data-step="1">
                         <div class="step-number">1</div>
-                        <div class="step-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</div>
+                        <div class="step-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</div>
                     </div>
                     <div class="step-line"></div>
                     {% endif %}
@@ -72,8 +72,8 @@ breadcrumbs=[
             <div class="enrollment-step" id="step1">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-building me-2"></i>{% if ui_lang == 'en' %}Register Child in Kindergarten{% else %}تسجيل طفل في روضة{% endif %}</h5>
-                        <small class="text-muted d-block mt-1">{% if ui_lang == 'en' %}Select the governorate then the district or search by kindergarten name{% else %}اختر المحافظة ثم اللواء أو ابحث باسم الروضة{% endif %}</small>
+                        <h5 class="mb-0"><i class="bi bi-building me-2"></i>{% if ui_lang == 'en' %}Register Child in Kindergarten{% else %}تسجيل طفل في حضانة{% endif %}</h5>
+                        <small class="text-muted d-block mt-1">{% if ui_lang == 'en' %}Select the governorate then the district or search by kindergarten name{% else %}اختر المحافظة ثم اللواء أو ابحث باسم الحضانة{% endif %}</small>
                     </div>
                     <div class="card-body">
                         <!-- Hidden field that stores the selected kindergarten ID -->
@@ -100,7 +100,7 @@ breadcrumbs=[
                                         <i class="bi bi-info-circle"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger"
-                                        onclick="clearKgSelection()" title="{% if ui_lang == 'en' %}Change Kindergarten{% else %}تغيير الروضة{% endif %}">
+                                        onclick="clearKgSelection()" title="{% if ui_lang == 'en' %}Change Kindergarten{% else %}تغيير الحضانة{% endif %}">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 </div>
@@ -138,8 +138,8 @@ breadcrumbs=[
                                     </label>
                                     <div class="input-group">
                                         <input type="text" class="form-control" id="kgSearchInput"
-                                            placeholder="{% if ui_lang == 'en' %}Type kindergarten name...{% else %}اكتب اسم الروضة...{% endif %}" autocomplete="off"
-                                            aria-label="{% if ui_lang == 'en' %}Search by kindergarten name{% else %}بحث باسم الروضة{% endif %}">
+                                            placeholder="{% if ui_lang == 'en' %}Type kindergarten name...{% else %}اكتب اسم الحضانة...{% endif %}" autocomplete="off"
+                                            aria-label="{% if ui_lang == 'en' %}Search by kindergarten name{% else %}بحث باسم الحضانة{% endif %}">
                                         <span class="input-group-text" id="kgSearchSpinner" style="display:none;">
                                             <span class="spinner-border spinner-border-sm" role="status"></span>
                                         </span>
@@ -161,7 +161,7 @@ breadcrumbs=[
 
                             <!-- Validation message -->
                             <div class="text-danger small mb-2" id="kgValidationMsg" style="display:none;">
-                                <i class="bi bi-exclamation-circle me-1"></i>{% if ui_lang == 'en' %}Please select a kindergarten from the list{% else %}يرجى اختيار الروضة من القائمة{% endif %}
+                                <i class="bi bi-exclamation-circle me-1"></i>{% if ui_lang == 'en' %}Please select a kindergarten from the list{% else %}يرجى اختيار الحضانة من القائمة{% endif %}
                             </div>
 
                             <!-- Loading skeleton -->
@@ -184,7 +184,7 @@ breadcrumbs=[
                             <div id="kgResultsList" class="kg-results-list">
                                 <div class="kg-placeholder text-center text-muted py-4">
                                     <i class="bi bi-building fs-1 d-block mb-2 opacity-50"></i>
-                                    <p class="mb-1">{% if ui_lang == 'en' %}Select a governorate or type a kindergarten name to search{% else %}اختر المحافظة أو اكتب اسم الروضة للبحث{% endif %}</p>
+                                    <p class="mb-1">{% if ui_lang == 'en' %}Select a governorate or type a kindergarten name to search{% else %}اختر المحافظة أو اكتب اسم الحضانة للبحث{% endif %}</p>
                                     <small>{% if ui_lang == 'en' %}You can filter results by governorate, district, and name{% else %}يمكنك تصفية النتائج حسب المحافظة واللواء والاسم{% endif %}</small>
                                 </div>
                             </div>
@@ -368,7 +368,7 @@ breadcrumbs=[
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="kgDetailModalLabel"><i class="bi bi-building me-2"></i>{% if ui_lang == 'en' %}Kindergarten Details{% else %}تفاصيل الروضة{% endif %}</h5>
+                <h5 class="modal-title" id="kgDetailModalLabel"><i class="bi bi-building me-2"></i>{% if ui_lang == 'en' %}Kindergarten Details{% else %}تفاصيل الحضانة{% endif %}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                     aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
@@ -384,7 +384,7 @@ breadcrumbs=[
                     <i class="bi bi-arrow-right me-1"></i>{% if ui_lang == 'en' %}Back to List{% else %}رجوع للقائمة{% endif %}
                 </button>
                 <button type="button" class="btn btn-success" id="confirmKgBtn" onclick="confirmKgFromModal()">
-                    <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Confirm Kindergarten Selection{% else %}تأكيد اختيار الروضة{% endif %}
+                    <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Confirm Kindergarten Selection{% else %}تأكيد اختيار الحضانة{% endif %}
                 </button>
             </div>
         </div>
@@ -746,7 +746,7 @@ breadcrumbs=[
             return;
         }
 
-        countEl.textContent = `${enrollmentText('common.found', 'تم العثور على', 'Found')} ${items.length} ${enrollmentText('common.kindergarten_single', 'روضة', 'kindergartens')}`;
+        countEl.textContent = `${enrollmentText('common.found', 'تم العثور على', 'Found')} ${items.length} ${enrollmentText('common.kindergarten_single', 'حضانة', 'kindergartens')}`;
         countEl.style.display = 'block';
 
         listEl.innerHTML = items.map((kg, idx) => {
@@ -813,7 +813,7 @@ breadcrumbs=[
             return;
         }
 
-        cityFilter.innerHTML = '<option value="">' + enrollmentText('common.loading', 'جاري التحميل...', 'Loading...') + '</option>';
+        cityFilter.innerHTML = '<option value="">' + enrollmentText('common.loading', 'جارٍ تحميل البيانات، يرجى الانتظار.', 'Loading...') + '</option>';
         cityFilter.disabled = true;
 
         try {
@@ -868,7 +868,7 @@ breadcrumbs=[
         const modal = new bootstrap.Modal(modalEl);
         const body = document.getElementById('kgDetailBody');
 
-        body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">' + enrollmentText('common.loading', 'جاري التحميل...', 'Loading...') + '</span></div></div>';
+        body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">' + enrollmentText('common.loading', 'جارٍ تحميل البيانات، يرجى الانتظار.', 'Loading...') + '</span></div></div>';
         modal.show();
 
         try {
@@ -905,7 +905,7 @@ breadcrumbs=[
                 </div>
             `;
         } catch (err) {
-            body.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>' + enrollmentText('common.error_loading_details', 'حدث خطأ في تحميل تفاصيل الروضة', 'Error loading kindergarten details') + '</div>';
+            body.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>' + enrollmentText('common.error_loading_details', 'حدث خطأ في تحميل تفاصيل الحضانة', 'Error loading kindergarten details') + '</div>';
             console.error('KG detail error:', err);
         }
     }
@@ -1002,7 +1002,7 @@ breadcrumbs=[
             const kgInput = document.getElementById('kindergartenId');
             if (!kgInput.value) {
                 document.getElementById('kgValidationMsg').style.display = 'block';
-                showToast(enrollmentText('enrollment.select_kindergarten_required', 'يرجى اختيار الروضة من القائمة', 'Please select a kindergarten from the list'), 'warning');
+                showToast(enrollmentText('enrollment.select_kindergarten_required', 'يرجى اختيار الحضانة من القائمة', 'Please select a kindergarten from the list'), 'warning');
                 return false;
             }
         }
@@ -1044,7 +1044,7 @@ breadcrumbs=[
         const data = Object.fromEntries(formData.entries());
         // Get KG name from selected card or fallback for manager flow
         const selectedKgNameEl = document.getElementById('selectedKgName');
-        let kindergartenName = (selectedKgNameEl && selectedKgNameEl.textContent) || selectedKindergartenName || enrollmentText('enrollment.assigned_kindergarten', 'الروضة المخصصة', 'Assigned kindergarten');
+        let kindergartenName = (selectedKgNameEl && selectedKgNameEl.textContent) || selectedKindergartenName || enrollmentText('enrollment.assigned_kindergarten', 'الحضانة المخصصة', 'Assigned kindergarten');
 
         // Map gender & nationality for display
         const genderDisplay = data.gender === 'MALE'
@@ -1085,7 +1085,7 @@ breadcrumbs=[
         document.getElementById('reviewSummary').innerHTML = `
             <div class="row">
                 <div class="col-md-6">
-                    <h6 class="text-primary"><i class="bi bi-building me-2"></i>${enrollmentText('common.kindergarten', 'الروضة', 'Kindergarten')}</h6>
+                    <h6 class="text-primary"><i class="bi bi-building me-2"></i>${enrollmentText('common.kindergarten', 'الحضانة', 'Kindergarten')}</h6>
                     <p>${escHtml(kindergartenName)}</p>
                 </div>
                 ${sourceHtml ? '<div class="col-md-6">' + sourceHtml + '</div>' : ''}
@@ -1187,9 +1187,9 @@ breadcrumbs=[
         const conflict = await checkEnrollmentConflicts(data);
         if (conflict) {
             if (conflict.type === 'duplicate') {
-                showToast(enrollmentText('enrollment.duplicate_request', 'يوجد طلب تسجيل لهذا الطفل في هذه الروضة بالفعل', 'An enrollment request already exists for this child in this kindergarten'), 'warning');
+                showToast(enrollmentText('enrollment.duplicate_request', 'يوجد طلب تسجيل لهذا الطفل في هذه الحضانة بالفعل', 'An enrollment request already exists for this child in this kindergarten'), 'warning');
             } else if (conflict.type === 'active') {
-                showToast(enrollmentText('enrollment.already_enrolled_other_kg', 'هذا الطفل مسجل بالفعل في روضة أخرى ولا يمكن تسجيله في أكثر من روضة بنفس الوقت.', 'This child is already enrolled in another kindergarten and cannot be enrolled in more than one at the same time.'), 'error');
+                showToast(enrollmentText('enrollment.already_enrolled_other_kg', 'هذا الطفل مسجل بالفعل في حضانة أخرى ولا يمكن تسجيله في أكثر من حضانة بنفس الوقت.', 'This child is already enrolled in another kindergarten and cannot be enrolled in more than one at the same time.'), 'error');
             }
             return;
         }

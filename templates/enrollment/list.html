@@ -88,7 +88,7 @@
                         <th>#</th>
                         <th>{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %}</th>
                         <th>{% if ui_lang == 'en' %}Parent{% else %}ولي الأمر{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
                         <th>{% if ui_lang == 'en' %}Submission Date{% else %}تاريخ التقديم{% endif %}</th>
                         <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
                         <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
@@ -284,7 +284,7 @@
             document.getElementById('enrollmentDetails').innerHTML = `
                 <div class="mb-2"><strong>${T('الطفل', 'Child')}:</strong> ${enrollment.child_name}</div>
                 <div class="mb-2"><strong>${T('ولي الأمر', 'Parent')}:</strong> ${enrollment.parent_name}</div>
-                <div class="mb-2"><strong>${T('الروضة', 'Kindergarten')}:</strong> ${enrollment.kindergarten_name}</div>
+                <div class="mb-2"><strong>${T('الحضانة', 'Kindergarten')}:</strong> ${enrollment.kindergarten_name}</div>
             `;
         }
         

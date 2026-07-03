@@ -69,17 +69,17 @@ breadcrumbs=[
 
                     <div class="row mb-3">
                         <div class="col-md-6 mb-3 mb-md-0">
-                            <label for="kindergartenId" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %} <span class="text-danger">*</span></label>
+                            <label for="kindergartenId" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %} <span class="text-danger">*</span></label>
                             {% if current_user.role.value == 'ADMIN' %}
                             <select class="form-select" id="kindergartenId" name="kindergarten_id" required>
-                                <option value="">{% if ui_lang == 'en' %}Select kindergarten...{% else %}اختر الروضة...{% endif %}</option>
+                                <option value="">{% if ui_lang == 'en' %}Select kindergarten...{% else %}اختر الحضانة...{% endif %}</option>
                                 {% for kg in kindergartens %}
                                 <option value="{{ kg.id }}" {% if class_obj and class_obj.kindergarten_id==kg.id %}selected{% endif %}>
                                     {{ kg.name_ar }}
                                 </option>
                                 {% endfor %}
                             </select>
-                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Kindergarten is required.{% else %}الروضة مطلوبة.{% endif %}</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Kindergarten is required.{% else %}الحضانة مطلوبة.{% endif %}</div>
                             {% else %}
                             <input type="text" class="form-control"
                                 value="{{ kindergartens[0].name_ar if kindergartens else '' }}" readonly>
@@ -197,7 +197,7 @@ breadcrumbs=[
         const supervisorSelect = document.getElementById('supervisorId');
         const kindergartenId = getKindergartenId();
         if (!kindergartenId) {
-            supervisorSelect.innerHTML = `<option value="">${T('اختر الروضة أولاً...', 'Select kindergarten first...')}</option>`;
+            supervisorSelect.innerHTML = `<option value="">${T('اختر الحضانة أولاً...', 'Select kindergarten first...')}</option>`;
             return;
         }
 

@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
-{% block title %}{% if kindergarten %}{% if ui_lang == 'en' %}Edit Kindergarten{% else %}تعديل روضة{% endif %}{% else %}{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة روضة جديدة{% endif %}{% endif %}{% endblock %}
+{% block title %}{% if kindergarten %}{% if ui_lang == 'en' %}Edit Kindergarten{% else %}تعديل حضانة{% endif %}{% else %}{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة حضانة جديدة{% endif %}{% endif %}{% endblock %}
 
 {% block page_header %}
 {{ page_header(
-title=("تعديل روضة" if kindergarten else "إضافة روضة جديدة") if ui_lang != 'en' else ("Edit Kindergarten" if kindergarten else "Add New Kindergarten"),
+title=("تعديل حضانة" if kindergarten else "إضافة حضانة جديدة") if ui_lang != 'en' else ("Edit Kindergarten" if kindergarten else "Add New Kindergarten"),
 icon="bi-building",
 breadcrumbs=[
 {"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
-{"label": "Kindergartens" if ui_lang == 'en' else "معلومات الروضة", "url": "/kindergartens"},
+{"label": "Kindergartens" if ui_lang == 'en' else "معلومات الحضانة", "url": "/kindergartens"},
 {"label": ("Edit" if kindergarten else "Add") if ui_lang == 'en' else ("تعديل" if kindergarten else "إضافة"), "url": None}
 ]
 ) }}
@@ -55,18 +55,18 @@ breadcrumbs=[
 
                     <div class="row mb-3">
                         <div class="col-md-6 mb-3 mb-md-0">
-                            <label for="nameAr" class="form-label required">{% if ui_lang == 'en' %}Kindergarten Name (Arabic){% else %}اسم الروضة (عربي){% endif %} <span
+                            <label for="nameAr" class="form-label required">{% if ui_lang == 'en' %}Kindergarten Name (Arabic){% else %}اسم الحضانة (عربي){% endif %} <span
                                     class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="nameAr" name="name_ar" data-testid="nameAr"
                                 value="{{ kindergarten.name_ar if kindergarten else '' }}" required>
-                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter the kindergarten name in Arabic.{% else %}يرجى إدخال اسم الروضة بالعربية.{% endif %}</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter the kindergarten name in Arabic.{% else %}يرجى إدخال اسم الحضانة بالعربية.{% endif %}</div>
                         </div>
                         <div class="col-md-6">
-                            <label for="nameEn" class="form-label">{% if ui_lang == 'en' %}Kindergarten Name (English){% else %}اسم الروضة (إنجليزي){% endif %} <span
+                            <label for="nameEn" class="form-label">{% if ui_lang == 'en' %}Kindergarten Name (English){% else %}اسم الحضانة (إنجليزي){% endif %} <span
                                     class="field-optional">({% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %})</span></label>
                             <input type="text" class="form-control" id="nameEn" name="name_en" data-testid="nameEn"
                                 value="{{ kindergarten.name_en if kindergarten else '' }}">
-                            <div class="form-text">{% if ui_lang == 'en' %}English name for official reports.{% else %}اسم الروضة باللغة الإنجليزية للتقارير الرسمية.{% endif %}</div>
+                            <div class="form-text">{% if ui_lang == 'en' %}English name for official reports.{% else %}اسم الحضانة باللغة الإنجليزية للتقارير الرسمية.{% endif %}</div>
                         </div>
                     </div>
 
@@ -203,7 +203,7 @@ breadcrumbs=[
                         <button type="submit" class="btn btn-primary" id="submitBtn" data-testid="submitKindergarten">
                             <span class="btn-text">
                                 <i class="bi bi-check-circle icon-inline"></i>
-                                {% if kindergarten %}{% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}{% else %}{% if ui_lang == 'en' %}Add Kindergarten{% else %}إضافة الروضة{% endif %}{% endif %}
+                                {% if kindergarten %}{% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}{% else %}{% if ui_lang == 'en' %}Add Kindergarten{% else %}إضافة الحضانة{% endif %}{% endif %}
                             </span>
                             <span class="btn-loading d-none">
                                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -296,10 +296,10 @@ breadcrumbs=[
 
             if (kindergartenId) {
                 await api.updateKindergarten(kindergartenId, data);
-                showToast(T('تم تحديث الروضة بنجاح', 'Kindergarten updated successfully'), 'success');
+                showToast(T('تم تحديث الحضانة بنجاح', 'Kindergarten updated successfully'), 'success');
             } else {
                 await api.createKindergarten(data);
-                showToast(T('تم إضافة الروضة بنجاح', 'Kindergarten added successfully'), 'success');
+                showToast(T('تم إضافة الحضانة بنجاح', 'Kindergarten added successfully'), 'success');
             }
 
             setTimeout(() => {
@@ -311,8 +311,8 @@ breadcrumbs=[
             submitBtn.querySelector('.btn-loading').classList.add('d-none');
             submitBtn.disabled = false;
 
-            if (error && error.message && error.message.includes('روضة بنفس الاسم')) {
-                showToast(T('يوجد روضة بنفس الاسم أو رقم الهاتف أو البريد الإلكتروني.', 'A kindergarten with the same name, phone, or email already exists.'), 'error');
+            if (error && error.message && error.message.includes('حضانة بنفس الاسم')) {
+                showToast(T('يوجد حضانة بنفس الاسم أو رقم الهاتف أو البريد الإلكتروني.', 'A kindergarten with the same name, phone, or email already exists.'), 'error');
                 const fields = ['nameAr', 'nameEn', 'contactPhone', 'contactEmail'];
                 for (const f of fields) {
                     const el = document.getElementById(f);

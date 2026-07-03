@@ -27,7 +27,7 @@ const IND_RISK_GETTER = {
 };
 
 const IND_LABELS = {
-  nursery_status:        { ar: 'حالة الحضانات ورياض الأطفال', color: '#0E334F' },
+  nursery_status:        { ar: 'حالة الحضانات والحضانات', color: '#0E334F' },
   children_registration: { ar: 'الأطفال المسجلون',            color: '#28A745' },
   staff_classrooms:      { ar: 'الموظفون والفصول',            color: '#155ECF' },
   safety_incidents:      { ar: 'السلامة والحوادث',            color: '#FFC107' },
@@ -345,7 +345,7 @@ function retryFetchMapData() {
 async function fetchKgPins() {
   try {
     const res = await fetch(API_KG_MAPDATA, { credentials: 'include' });
-    if (!res.ok) { addWarning('تعذر تحميل بيانات الحضانات ورياض الأطفال على الخريطة.'); return; }
+    if (!res.ok) { addWarning('تعذر تحميل بيانات الحضانات والحضانات على الخريطة.'); return; }
     const geojson  = await res.json();
     const features = geojson.features || [];
     const kgs = features.map(f => ({
@@ -362,7 +362,7 @@ async function fetchKgPins() {
     addKgPins(kgs);
     CsApp.kgLoaded = true;
   } catch {
-    addWarning('تعذر تحميل مواقع الحضانات ورياض الأطفال.');
+    addWarning('تعذر تحميل مواقع الحضانات والحضانات.');
     renderWarnings();
   }
 }
@@ -727,9 +727,7 @@ function renderIntelPanel(d) {
       </div>
       <div id="cityTableBody">
         <div class="intel-loading-inline">
-          <span class="intel-loading-spinner" style="width:14px;height:14px;border-width:1.5px" aria-hidden="true"></span>
-          جاري التحميل…
-        </div>
+          <span class="intel-loading-spinner" style="width:14px;height:14px;border-width:1.5px" aria-hidden="true"></span>جارٍ تحميل البيانات، يرجى الانتظار.</div>
       </div>
     </div>
 

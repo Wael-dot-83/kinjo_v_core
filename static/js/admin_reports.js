@@ -141,6 +141,102 @@
     return lang === "en" ? en : ar;
   }
 
+  /* Arabic/English labels for report sample_data column keys.
+     Fallback humanizes unknown keys instead of showing raw snake_case. */
+  const COLUMN_LABELS = {
+    governorate: ["المحافظة", "Governorate"],
+    city: ["المدينة", "City"],
+    district: ["اللواء", "District"],
+    kindergarten: ["الحضانة", "Kindergarten"],
+    kindergartens: ["الحضانات", "Kindergartens"],
+    kindergarten_name: ["اسم الحضانة", "Kindergarten name"],
+    kindergarten_count: ["عدد الحضانات", "Kindergartens"],
+    class: ["الشعبة", "Class"],
+    classes: ["الشعب", "Classes"],
+    class_count: ["عدد الشعب", "Classes"],
+    children: ["الأطفال", "Children"],
+    children_count: ["عدد الأطفال", "Children"],
+    total_children: ["إجمالي الأطفال", "Total children"],
+    supervisor: ["المشرفة", "Supervisor"],
+    supervisors: ["المشرفات", "Supervisors"],
+    supervisor_count: ["عدد المشرفات", "Supervisors"],
+    total_supervisors: ["إجمالي المشرفات", "Total supervisors"],
+    required_supervisors: ["المشرفات المطلوبات", "Required supervisors"],
+    actual_supervisors: ["المشرفات الفعليات", "Actual supervisors"],
+    supervisor_gap: ["فجوة الإشراف", "Supervisor gap"],
+    capacity: ["الطاقة الاستيعابية", "Capacity"],
+    capacity_total: ["إجمالي الطاقة الاستيعابية", "Total capacity"],
+    capacity_utilization_pct: ["نسبة الإشغال %", "Utilization %"],
+    utilization: ["الإشغال", "Utilization"],
+    utilization_pct: ["نسبة الإشغال %", "Utilization %"],
+    status: ["الحالة", "Status"],
+    score: ["الدرجة", "Score"],
+    risk: ["المخاطر", "Risk"],
+    risk_score: ["درجة المخاطر", "Risk score"],
+    pct: ["النسبة %", "Pct"],
+    per: ["لكل", "Per"],
+    total: ["الإجمالي", "Total"],
+    month: ["الشهر", "Month"],
+    date: ["التاريخ", "Date"],
+    period: ["الفترة", "Period"],
+    from: ["من", "From"],
+    to: ["إلى", "To"],
+    compliance: ["الامتثال", "Compliance"],
+    compliance_score: ["درجة الامتثال", "Compliance score"],
+    quality: ["الجودة", "Quality"],
+    data_quality_score: ["درجة جودة البيانات", "Data quality score"],
+    gap: ["الفجوة", "Gap"],
+    data: ["البيانات", "Data"],
+    actual: ["الفعلي", "Actual"],
+    required: ["المطلوب", "Required"],
+    normal: ["طبيعي", "Normal"],
+    name: ["الاسم", "Name"],
+    count: ["العدد", "Count"],
+    value: ["القيمة", "Value"],
+    rate: ["المعدل", "Rate"],
+    average: ["المتوسط", "Average"],
+    attendance: ["الحضور", "Attendance"],
+    attendance_rate: ["معدل الحضور", "Attendance rate"],
+    incidents: ["الحوادث", "Incidents"],
+    incident_count: ["عدد الحوادث", "Incidents"],
+    enrollment: ["التسجيل", "Enrollment"],
+    age_group: ["الفئة العمرية", "Age group"],
+    children_per_kindergarten: ["أطفال لكل حضانة", "Children per kindergarten"],
+    children_per_supervisor: ["أطفال لكل مشرفة", "Children per supervisor"],
+    children_per_class: ["أطفال لكل شعبة", "Children per class"],
+  };
+
+  function columnLabel(col) {
+    const key = String(col).toLowerCase();
+    const hit = COLUMN_LABELS[key];
+    if (hit) return reportsText(hit[0], hit[1]);
+    // humanize unknown keys; try word-by-word translation of compound keys
+    const words = key.split(/[_\s]+/).map((w) => {
+      const wHit = COLUMN_LABELS[w];
+      return wHit ? reportsText(wHit[0], wHit[1]) : w;
+    });
+    return words.join(" ");
+  }
+
+  function formatCellValue(val) {
+    if (val === null || val === undefined) return "-";
+    if (Array.isArray(val)) return val.map(formatCellValue).join("، ");
+    if (typeof val === "object") {
+      // bilingual {ar, en} payloads → pick by language; other objects →
+      // readable key: value pairs instead of [object Object]
+      const lang = document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+      if (val[lang] !== undefined) return String(val[lang]);
+      if (val.ar !== undefined || val.en !== undefined) return String(val.ar ?? val.en);
+      return Object.entries(val)
+        .map(([k, v]) => `${columnLabel(k)}: ${formatCellValue(v)}`)
+        .join("، ");
+    }
+    if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+      return formatDateSafe(val);
+    }
+    return String(val);
+  }
+
   function getEl(id) {
     return document.getElementById(id);
   }
@@ -474,8 +570,12 @@
       while (select.options.length > 1) select.remove(1);
       list.forEach((g) => {
         const opt = document.createElement("option");
-        opt.value = g.value || g;
-        opt.textContent = g.label || g;
+        // API returns {id, name_ar, name_en}; keep supporting {value, label}
+        opt.value = g.value ?? g.id ?? g;
+        opt.textContent =
+          g.label ||
+          reportsText(g.name_ar || g.name_en, g.name_en || g.name_ar) ||
+          String(g);
         select.appendChild(opt);
       });
     } catch (e) {
@@ -737,7 +837,7 @@
 
     if (!previewItems.length) {
       thead.innerHTML = `<tr><th colspan="5" class="text-center text-muted">${reportsText("لا تتوفر معاينة للتقرير", "No preview data")}</th></tr>`;
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("لا توجد بيانات", "No data")}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.", "No data")}</td></tr>`;
       if (pag) pag.classList.add("d-none");
       return;
     }
@@ -778,7 +878,7 @@
             ? ' <i class="bi bi-caret-up-fill"></i>'
             : ' <i class="bi bi-caret-down-fill"></i>'
           : "";
-        return `<th style="cursor: pointer" class="sortable-header" data-col="${escapeHtml(col)}">${escapeHtml(col)}${caret}</th>`;
+        return `<th style="cursor: pointer" class="sortable-header" data-col="${escapeHtml(col)}">${escapeHtml(columnLabel(col))}${caret}</th>`;
       })
       .join("")}</tr>`;
 
@@ -802,15 +902,7 @@
       .map(
         (row) => `
       <tr>${previewColumns
-        .map((col) => {
-          let val = row[col];
-          if (val === null || val === undefined) val = "-";
-          // Try to format if it looks like ISO date
-          if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) {
-            val = formatDateSafe(val);
-          }
-          return `<td>${escapeHtml(String(val))}</td>`;
-        })
+        .map((col) => `<td>${escapeHtml(formatCellValue(row[col]))}</td>`)
         .join("")}</tr>`,
       )
       .join("");
@@ -818,7 +910,7 @@
     // Update pagination controls
     setText(
       "previewPaginationInfo",
-      `${startIdx + 1}-${endIdx} of ${sorted.length}`,
+      `${startIdx + 1}-${endIdx} ${reportsText("من", "of")} ${sorted.length}`,
     );
     const prevBtn = getEl("prevPreviewPageBtn");
     const nextBtn = getEl("nextPreviewPageBtn");
@@ -1119,7 +1211,7 @@
   async function loadRecentHistory() {
     const tbody = getEl("reportsHistoryBody");
     if (!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("جاري التحميل...", "Loading...")}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("جارٍ تحميل البيانات، يرجى الانتظار.", "Loading...")}</td></tr>`;
 
     try {
       const res = await fetchWithAuth(`${API_BASE}/reports/history?limit=100`);
@@ -1423,7 +1515,7 @@
   async function loadRecentHistory() {
     const tbody = getEl("reportsHistoryBody");
     if (!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("جاري التحميل...", "Loading...")}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("جارٍ تحميل البيانات، يرجى الانتظار.", "Loading...")}</td></tr>`;
 
     try {
       const res = await fetchWithAuth(`${API_BASE}/reports/history?limit=20`);

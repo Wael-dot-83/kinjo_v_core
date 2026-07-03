@@ -30,15 +30,15 @@ class AppI18n {
         "هذا الشهر": "This month",
         "هذا الربع": "This quarter",
         "تاريخ مخصص": "Custom date range",
-        "جاري التحميل": "Loading",
+        "جارٍ تحميل البيانات، يرجى الانتظار.": "Loading",
         "الحضور والغياب": "Attendance and absence",
         "تقارير الحضور": "Attendance reports",
-        "اختيار الروضة": "Select kindergarten",
+        "اختيار الحضانة": "Select kindergarten",
         "اختيار الشعب": "Select classes",
         "اختيار الأطفال": "Select children",
         "تحديد الفترة": "Select period",
-        "البحث بالروضة": "Search kindergarten",
-        "اسم الروضة": "Kindergarten name",
+        "البحث بالحضانة": "Search kindergarten",
+        "اسم الحضانة": "Kindergarten name",
         "جميع المحافظات": "All governorates",
         المحافظة: "Governorate",
         عمان: "Amman",
@@ -55,8 +55,8 @@ class AppI18n {
         المفرق: "Mafraq",
         المدينة: "City",
         "رقم الهاتف": "Phone number",
-        "اختر روضة": "Select a kindergarten",
-        "جميع الشعب في الروضة المحددة": "All classes in selected kindergarten",
+        "اختر حضانة": "Select a kindergarten",
+        "جميع الشعب في الحضانة المحددة": "All classes in selected kindergarten",
         "اختيار شعب محددة": "Select specific classes",
         "جميع الأطفال في الشعب المحددة": "All children in selected classes",
         "اختيار أطفال محددين": "Select specific children",
@@ -85,22 +85,22 @@ class AppI18n {
         الشعبة: "Class",
         الطفل: "Child",
         "تسجيل طفل جديد": "Register new child",
-        الروضة: "Kindergarten",
+        الحضانة: "Kindergarten",
         "بيانات الطفل": "Child information",
         "بيانات الأم": "Mother information",
         "مراجعة البيانات": "Review data",
-        "تسجيل طفل في روضة": "Register child in kindergarten",
-        "اختر المحافظة ثم المدينة أو ابحث باسم الروضة":
+        "تسجيل طفل في حضانة": "Register child in kindergarten",
+        "اختر المحافظة ثم المدينة أو ابحث باسم الحضانة":
           "Choose governorate then city or search by kindergarten name",
         "عرض التفاصيل": "View details",
-        "تغيير الروضة": "Change kindergarten",
+        "تغيير الحضانة": "Change kindergarten",
         "اختر المحافظة أولاً": "Select governorate first",
         "بحث بالاسم": "Search by name",
-        "اكتب اسم الروضة": "Type kindergarten name",
+        "اكتب اسم الحضانة": "Type kindergarten name",
         "مسح عوامل التصفية": "Clear filters",
-        "يرجى اختيار الروضة من القائمة":
+        "يرجى اختيار الحضانة من القائمة":
           "Please select a kindergarten from the list",
-        "اختر المحافظة أو اكتب اسم الروضة للبحث":
+        "اختر المحافظة أو اكتب اسم الحضانة للبحث":
           "Select governorate or type kindergarten name to search",
         "يمكنك تصفية النتائج حسب المحافظة والمدينة والاسم":
           "You can filter results by governorate, city, and name",
@@ -126,40 +126,40 @@ class AppI18n {
           "I confirm all entered data is correct",
         "إرسال الطلب": "Submit request",
         "جاري الإرسال": "Submitting",
-        "تفاصيل الروضة": "Kindergarten details",
+        "تفاصيل الحضانة": "Kindergarten details",
         "رجوع للقائمة": "Back to list",
-        "تأكيد اختيار الروضة": "Confirm kindergarten selection",
+        "تأكيد اختيار الحضانة": "Confirm kindergarten selection",
         نعم: "Yes",
         ذكر: "Male",
         أنثى: "Female",
         أردني: "Jordanian",
         أخرى: "Other",
-        "الروضة المخصصة": "Assigned kindergarten",
+        "الحضانة المخصصة": "Assigned kindergarten",
         "يرجى ملء جميع الحقول المطلوبة": "Please fill all required fields",
         "يرجى تأكيد صحة البيانات": "Please confirm data accuracy",
         "عمر الطفل غير مؤهل للتسجيل":
           "Child age is not eligible for enrollment",
         "لا يمكن إرسال الطلب: عمر الطفل غير مؤهل":
           "Cannot submit request: child age is not eligible",
-        "يوجد طلب تسجيل لهذا الطفل في هذه الروضة بالفعل":
+        "يوجد طلب تسجيل لهذا الطفل في هذه الحضانة بالفعل":
           "An enrollment request already exists for this child in this kindergarten",
-        "هذا الطفل مسجل بالفعل في روضة أخرى ولا يمكن تسجيله في أكثر من روضة بنفس الوقت":
+        "هذا الطفل مسجل بالفعل في حضانة أخرى ولا يمكن تسجيله في أكثر من حضانة بنفس الوقت":
           "This child is already enrolled in another kindergarten and cannot be enrolled in more than one at the same time",
-        "معلومات الروضة": "Kindergarten information",
-        "إدارة الروضات": "Kindergarten management",
+        "معلومات الحضانة": "Kindergarten information",
+        "إدارة الحضانات": "Kindergarten management",
         "تعديل المعلومات": "Edit information",
         "البحث والتصفية": "Search and filters",
-        "قائمة الروضات": "Kindergarten list",
+        "قائمة الحضانات": "Kindergarten list",
         الاسم: "Name",
         الموقع: "Location",
         الهاتف: "Phone",
-        "صفحات الروضات": "Kindergarten pages",
-        "لا توجد روضات": "No kindergartens",
-        "لم يتم العثور على أي روضات تطابق معايير البحث":
+        "صفحات الحضانات": "Kindergarten pages",
+        "لا توجد حضانات": "No kindergartens",
+        "لم يتم العثور على أي حضانات تطابق معايير البحث":
           "No kindergartens matched the search criteria",
         "عرض الكل": "Show all",
         "غير مصرح لك بالوصول": "Access denied",
-        "لا يمكنك الوصول إلى صفحة معلومات الروضة":
+        "لا يمكنك الوصول إلى صفحة معلومات الحضانة":
           "You cannot access the kindergarten information page",
         "الاسم بالإنجليزية": "English name",
         العنوان: "Address",
@@ -184,8 +184,8 @@ class AppI18n {
         "اسم الشعبة بالعربية": "Class name (Arabic)",
         "اسم الشعبة بالإنجليزية": "Class name (English)",
         المرحلة: "Level",
-        "روضة أولى (المجموعة 1)": "KG1 (Group 1)",
-        "روضة ثانية (المجموعة 2)": "KG2 (Group 2)",
+        "حضانة أولى (المجموعة 1)": "KG1 (Group 1)",
+        "حضانة ثانية (المجموعة 2)": "KG2 (Group 2)",
         حضانة: "Nursery",
         السعة: "Capacity",
         "السعة القصوى": "Maximum capacity",
@@ -197,7 +197,7 @@ class AppI18n {
         "مدير النظام": "System admin",
         "مدير نظام": "System admin",
         مدير: "Manager",
-        "مدير الروضة": "Kindergarten manager",
+        "مدير الحضانة": "Kindergarten manager",
         مشرف: "Supervisor",
         "مشرف رئيسي": "Lead supervisor",
         معلم: "Teacher",
@@ -245,9 +245,9 @@ class AppI18n {
         "فشل في إعادة تعيين كلمة المرور": "Failed to reset password",
         "نهائياً؟ لا يمكن التراجع عن هذا الإجراء":
           "Permanently? This action cannot be undone",
-        "هل أنت متأكد من حذف هذه الروضة نهائياً؟ لا يمكن التراجع عن هذا الإجراء وستفقد جميع البيانات المرتبطة":
+        "هل أنت متأكد من حذف هذه الحضانة نهائياً؟ لا يمكن التراجع عن هذا الإجراء وستفقد جميع البيانات المرتبطة":
           "Are you sure you want to permanently delete this kindergarten? This cannot be undone and all related data will be lost",
-        "هل أنت متأكد من أرشفة هذه الروضة؟ سيتم إخفاؤها من القوائم النشطة ولكن يمكن استعادتها لاحقاً":
+        "هل أنت متأكد من أرشفة هذه الحضانة؟ سيتم إخفاؤها من القوائم النشطة ولكن يمكن استعادتها لاحقاً":
           "Are you sure you want to archive this kindergarten? It will be hidden from active lists but can be restored later",
         "هل أنت متأكد من حذف الخدمة/المرفق":
           "Are you sure you want to delete this service/facility",
@@ -323,7 +323,7 @@ class AppI18n {
         "الحوادث المبلغ عنها": "Reported incidents",
         التواصل: "Communication",
         "النشاط الأخير": "Recent activity",
-        "إجمالي الروضات": "Total kindergartens",
+        "إجمالي الحضانات": "Total kindergartens",
         "إجمالي الفصول": "Total classes",
         "إجمالي المستخدمين": "Total users",
         "حالة النظام": "System health",
@@ -369,7 +369,7 @@ class AppI18n {
         "إعادة تعيين كلمة المرور": "Reset password",
         "اختر الأطفال": "Select children",
         "اختر الشعب": "Select classes",
-        "إضافة روضة جديدة": "Add new kindergarten",
+        "إضافة حضانة جديدة": "Add new kindergarten",
         الجنس: "Gender",
         "إنشاء تقرير يومي": "Create daily report",
         "تاريخ البداية يجب أن يكون قبل تاريخ النهاية":
@@ -377,7 +377,7 @@ class AppI18n {
         تعديل: "Edit",
         "تعديل الخدمة/المرفق": "Edit service/facility",
         "تعديل الموظف": "Edit staff",
-        روضة: "Kindergarten",
+        حضانة: "Kindergarten",
         "فصل جديد": "New class",
         "قيد المراجعة": "Under review",
         مراجعة: "Review",
@@ -391,7 +391,7 @@ class AppI18n {
         "مؤشرات حرجة": "Critical indicators",
         "مؤشرات ممتازة": "Excellent indicators",
         موقوف: "Suspended",
-        "نظرة عامة على الروضات": "Kindergartens overview",
+        "نظرة عامة على الحضانات": "Kindergartens overview",
         "نظرة عامة على الفصول": "Classes overview",
         "نظرة عامة على النظام": "System overview",
         "هناك 5 طلبات تنتظر المراجعة منذ أكثر من يومين":
@@ -399,7 +399,7 @@ class AppI18n {
         "والد جديد": "New parent",
         "وصول سريع": "Quick access",
         "يحتاج تحسين": "Needs improvement",
-        "يرجى اختيار روضة": "Please select a kindergarten",
+        "يرجى اختيار حضانة": "Please select a kindergarten",
         "يرجى اختيار شعبة واحدة على الأقل": "Please select at least one class",
         "يرجى تحديد تاريخ البداية والنهاية":
           "Please select start and end dates",
@@ -423,7 +423,7 @@ class AppI18n {
         "الحالة التقديرية": "Estimated status",
         "الحضور اليوم": "Today's attendance",
         "الحضور اليومي": "Daily attendance",
-        "الروضات النشطة": "Active kindergartens",
+        "الحضانات النشطة": "Active kindergartens",
         الغائبون: "Absent",
         المشرفون: "Supervisors",
         "المشرفون النشطون": "Active supervisors",
@@ -436,7 +436,7 @@ class AppI18n {
         "تم رصد تراجع في حضور الأطفال هذا الأسبوع بنسبة 4%.":
           "A 4% decline in child attendance was detected this week.",
         "جاري التحقق...": "Verifying...",
-        "جاري التحميل...": "Loading...",
+        "جارٍ تحميل البيانات، يرجى الانتظار.": "Loading...",
         "جاري تحميل الإحصائيات...": "Loading statistics...",
         "جاري تحميل التقارير...": "Loading reports...",
         "جاري تحميل الفصول...": "Loading classes...",
@@ -465,7 +465,7 @@ class AppI18n {
           "Custom date feature is under development",
         "نسبة الحضور": "Attendance rate",
         "نسبة الحضور الأسبوعية": "Weekly attendance rate",
-        "نظرة عامة على الروضات -": "Kindergartens overview -",
+        "نظرة عامة على الحضانات -": "Kindergartens overview -",
         "نظرة عامة على اليوم -": "Today's overview -",
         "هناك 5 طلبات تنتظر المراجعة منذ أكثر من يومين.":
           "There are 5 requests pending review for more than two days.",
@@ -475,27 +475,27 @@ class AppI18n {
           "Please select start and end dates.",
         "اختر الأطفال:": "Select children:",
         "اختر الشعب:": "Select classes:",
-        "اختر روضة...": "Select a kindergarten...",
-        "اسم الروضة...": "Kindergarten name...",
+        "اختر حضانة...": "Select a kindergarten...",
+        "اسم الحضانة...": "Kindergarten name...",
         "التالي: اختيار الأطفال": "Next: select children",
         "التالي: اختيار الشعب": "Next: select classes",
         "التالي: تحديد الفترة": "Next: select period",
         "تقرير الحضور -": "Attendance report -",
         "جاري إنشاء التقرير...": "Generating report...",
         "خطأ في إنشاء التقرير": "Error generating report",
-        "خطأ في البحث عن الروضات": "Error searching kindergartens",
+        "خطأ في البحث عن الحضانات": "Error searching kindergartens",
         "خطأ في تحميل الأطفال": "Error loading children",
         "خطأ في تحميل الشعب": "Error loading classes",
         "رقم الهاتف...": "Phone number...",
         "روضتك المسؤول عنها:": "Your assigned kindergarten:",
-        "ستعمل جميع العمليات على هذه الروضة فقط":
+        "ستعمل جميع العمليات على هذه الحضانة فقط":
           "All actions will run only for this kindergarten",
         "لا يوجد لديك شعب مخصصة. تواصل مع المدير.":
           "You have no assigned classes. Contact the manager.",
-        "لم يتم العثور على روضات مطابقة": "No matching kindergartens found",
+        "لم يتم العثور على حضانات مطابقة": "No matching kindergartens found",
         "أدخل سبب القرار...": "Enter decision reason...",
         "اسم الطفل": "Child name",
-        "الروضة:": "Kindergarten:",
+        "الحضانة:": "Kindergarten:",
         السبب: "Reason",
         "الطفل:": "Child:",
         القرار: "Decision",
@@ -519,7 +519,7 @@ class AppI18n {
         "يجب تسجيل الدخول أولاً": "Sign-in required first",
         "البحث بالاسم...": "Search by name...",
         "البحث بالمدينة...": "Search by city...",
-        "حالة الروضة": "Kindergarten status",
+        "حالة الحضانة": "Kindergarten status",
         "رقم الترخيص": "License number",
         "عرض التفاصيل الكاملة": "View full details",
         "؟ سيتم إخفاؤها من القوائم النشطة.":
@@ -545,18 +545,18 @@ class AppI18n {
         "لا يوجد مشرفين متاحين": "No supervisors available",
         "نهائياً؟ لا يمكن التراجع عن هذا الإجراء.":
           "Permanently? This action cannot be undone.",
-        "هل أنت متأكد من أرشفة هذه الروضة؟ سيتم إخفاؤها من القوائم النشطة ولكن يمكن استعادتها لاحقاً.":
+        "هل أنت متأكد من أرشفة هذه الحضانة؟ سيتم إخفاؤها من القوائم النشطة ولكن يمكن استعادتها لاحقاً.":
           "Are you sure you want to archive this kindergarten? It will be hidden from active lists but can be restored later.",
         "هل أنت متأكد من حذف الشعبة":
           "Are you sure you want to delete the class",
         "هل أنت متأكد من حذف الموظف":
           "Are you sure you want to delete the staff member",
-        "هل أنت متأكد من حذف هذه الروضة نهائياً؟ لا يمكن التراجع عن هذا الإجراء وستفقد جميع البيانات المرتبطة.":
+        "هل أنت متأكد من حذف هذه الحضانة نهائياً؟ لا يمكن التراجع عن هذا الإجراء وستفقد جميع البيانات المرتبطة.":
           "Are you sure you want to permanently delete this kindergarten? This cannot be undone and all related data will be lost.",
         "والنص التالي يوضح الشعبة المعينة.":
           "The following text indicates the assigned class.",
         "ينتهي في:": "Expires on:",
-        "أعلى 5 روضات أداءً": "Top 5 performing kindergartens",
+        "أعلى 5 حضانات أداءً": "Top 5 performing kindergartens",
         "إجراءات مقترحة للتحسين:": "Suggested improvement actions:",
         "إرسال التقارير": "Report submission",
         "إعادة المحاولة": "Retry",
@@ -568,15 +568,15 @@ class AppI18n {
         "الاستيعاب والتحققات": "Capacity and validations",
         "البيانات المستلمة غير صالحة للعرض.":
           "Received data is not valid for display.",
-        "البيانات مقصورة على الروضة المرتبطة بك.":
+        "البيانات مقصورة على الحضانة المرتبطة بك.":
           "Data is limited to your assigned kindergarten.",
         "التصنيف والمقارنات": "Classification and benchmarking",
         التغطية: "Coverage",
         "الحوادث الخطرة": "Serious incidents",
-        الروضات: "Kindergartens",
-        "الروضات الأكثر حاجة للدعم": "Kindergartens most in need of support",
-        "الروضة الخاصة بك": "Your kindergarten",
-        "الروضة المرتبطة بالمدير لا يمكن تغييرها.":
+        الحضانات: "Kindergartens",
+        "الحضانات الأكثر حاجة للدعم": "Kindergartens most in need of support",
+        "الحضانة الخاصة بك": "Your kindergarten",
+        "الحضانة المرتبطة بالمدير لا يمكن تغييرها.":
           "The manager-linked kindergarten cannot be changed.",
         العدد: "Count",
         "الغياب المزمن": "Chronic absence",
@@ -590,7 +590,7 @@ class AppI18n {
           "Start date must be before or equal to end date.",
         "تحسين التواصل مع أولياء الأمور": "Improve communication with parents",
         "تحسين معدل الالتزام بالتقارير": "Improve report compliance rate",
-        "تحليل شامل لأداء الروضة، معايير الجودة، ومعدلات السلامة والالتزام.":
+        "تحليل شامل لأداء الحضانة، معايير الجودة، ومعدلات السلامة والالتزام.":
           "Comprehensive analysis of kindergarten performance, quality standards, and safety/compliance rates.",
         "تسجيلات جديدة": "New enrollments",
         "تعذر التواصل مع الخادم.": "Unable to reach server.",
@@ -622,11 +622,11 @@ class AppI18n {
           "Number of minor incidents per 100 children per day.",
         "عدد الحوادث الجسيمة التي تتطلب تدخل إجراء فورياً.":
           "Number of severe incidents requiring immediate action.",
-        "عرض مؤشرات الروضة المرتبطة بالمدير فقط":
+        "عرض مؤشرات الحضانة المرتبطة بالمدير فقط":
           "Show metrics for manager-linked kindergarten only",
         "فشل في تصدير البيانات": "Data export failed",
         "كفاءة الطاقة الاستيعابية": "Capacity efficiency",
-        "لا توجد بيانات": "No data",
+        "لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.": "No data",
         "لا توجد بيانات ضمن الفترة المحددة": "No data for the selected period",
         "لا يوجد توزيع متاح حالياً": "No distribution currently available",
         "لوحة مؤشرات الأداء": "KPI dashboard",
@@ -636,11 +636,11 @@ class AppI18n {
         "مؤشرات السلامة والمخاطر": "Safety and risk indicators",
         "مؤشرات العمليات والجودة": "Operations and quality indicators",
         "متابعة الحوادث": "Incident follow-up",
-        "مخطط توزيع الطلاب حسب الروضات":
+        "مخطط توزيع الطلاب حسب الحضانات":
           "Student distribution by kindergarten chart",
         "مدى الالتزام بنسبة (معلم لكل عدد معين من الطلاب) حسب المعايير.":
           "Compliance with ratio standards (teacher per defined number of students).",
-        "مدى الانتظام في إرسال التقارير اليومية والأسبوعية لرئاسة الروضة.":
+        "مدى الانتظام في إرسال التقارير اليومية والأسبوعية لرئاسة الحضانة.":
           "Consistency in submitting daily and weekly reports to management.",
         "مدى سرعة إغلاق ومتابعة البلاغات خلال الوقت المتفق عليه.":
           "Speed of closing and following up reports within agreed time.",
@@ -654,16 +654,16 @@ class AppI18n {
           "Completion rate of mandatory training for teaching staff.",
         "نسبة الأطفال الذين غابوا أكثر من 10% من إجمالي أيام الدراسة.":
           "Percentage of children absent more than 10% of total school days.",
-        "نسبة الأطفال المسجلين حالياً مقارنة بالسعة القصوى المرخصة للروضة.":
+        "نسبة الأطفال المسجلين حالياً مقارنة بالسعة القصوى المرخصة للحضانة.":
           "Percentage of currently enrolled children relative to licensed maximum capacity.",
         "نسبة الالتزام": "Compliance rate",
         "نسبة التغطية": "Coverage rate",
-        "نظرة عامة على مستوى التميز في إدارة الروضة.":
+        "نظرة عامة على مستوى التميز في إدارة الحضانة.":
           "Overview of excellence level in kindergarten management.",
         "يرجى اختيار تاريخ بداية ونهاية.": "Please select start and end dates.",
-        "يعبر هذا المؤشر عن الكفاءة الشاملة للروضة.":
+        "يعبر هذا المؤشر عن الكفاءة الشاملة للحضانة.":
           "This indicator reflects overall kindergarten efficiency.",
-        "يوضح هذا المؤشر مدى استغلال المقاعد المتوفرة في الروضة.":
+        "يوضح هذا المؤشر مدى استغلال المقاعد المتوفرة في الحضانة.":
           "This indicator shows how effectively available seats are utilized.",
         "يوم - 4 سنوات و 8 أشهر)": "day - 4 years and 8 months)",
       },

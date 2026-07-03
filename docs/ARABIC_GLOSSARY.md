@@ -13,7 +13,7 @@
 
 ## Roles
 - Admin: مدير النظام
-- Manager: مدير الروضة
+- Manager: مدير الحضانة
 - Supervisor: مشرف
 - Parent: ولي أمر
 
@@ -23,7 +23,7 @@
 - Governorate: المحافظة
 - City: المدينة
 - Area: المنطقة
-- Kindergarten: الروضة
+- Kindergarten: الحضانة
 
 ## Trend and status
 - Upward trend: صاعد

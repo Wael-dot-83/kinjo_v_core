@@ -83,7 +83,7 @@ def test_dashboard_access(test_client):
 def test_kindergartens_list(test_client):
     response = test_client.get("/kindergartens")
     assert response.status_code == 200
-    assert "الروضات" in response.text
+    assert "الحضانات" in response.text
 
 
 def test_enrollment_list(test_client):

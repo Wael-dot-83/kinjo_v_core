@@ -97,7 +97,7 @@ def sample_kindergarten(test_db):
     Create a sample kindergarten for testing
     """
     kindergarten = models.Kindergarten(
-        name_ar="روضة الأمل",
+        name_ar="حضانة الأمل",
         name_en="Hope Kindergarten",
         license_number="LIC-2026-001",
         governorate="Amman",

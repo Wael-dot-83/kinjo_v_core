@@ -1,6 +1,6 @@
 {% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Imported Kindergartens — KinJo{% else %}الروضات المستوردة — KinJo{% endif %}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Imported Kindergartens — KinJo{% else %}الحضانات المستوردة — KinJo{% endif %}{% endblock %}
 
 
 {% block content %}
@@ -14,10 +14,10 @@
       </div>
       <div>
         <h1 class="page-title mb-0">
-          {% if ui_lang == 'en' %}Imported Kindergartens{% else %}الروضات المستوردة{% endif %}
+          {% if ui_lang == 'en' %}Imported Kindergartens{% else %}الحضانات المستوردة{% endif %}
         </h1>
         <p class="text-muted small mb-0 mt-1">
-          {% if ui_lang == 'en' %}Manage all imported kindergarten records from external databases.{% else %}إدارة جميع سجلات الروضات المستوردة من قواعد البيانات الخارجية.{% endif %}
+          {% if ui_lang == 'en' %}Manage all imported kindergarten records from external databases.{% else %}إدارة جميع سجلات الحضانات المستوردة من قواعد البيانات الخارجية.{% endif %}
         </p>
       </div>
     </div>
@@ -31,7 +31,7 @@
   <div class="glass-card fade-in mb-4">
     <div class="card-header d-flex align-items-center gap-2">
       <span class="material-symbols-outlined text-muted" style="font-size:1rem;" aria-hidden="true">filter_alt</span>
-      <h5 class="h6 mb-0">{% if ui_lang == 'en' %}Filter Kindergartens{% else %}تصفية الروضات{% endif %}</h5>
+      <h5 class="h6 mb-0">{% if ui_lang == 'en' %}Filter Kindergartens{% else %}تصفية الحضانات{% endif %}</h5>
     </div>
     <div class="card-body">
       <form id="filterForm" class="row g-3">
@@ -77,7 +77,7 @@
   <!-- Table -->
   <div class="glass-card fade-in delay-100">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <h5 class="h6 mb-0">{% if ui_lang == 'en' %}Kindergartens List{% else %}قائمة الروضات{% endif %}</h5>
+      <h5 class="h6 mb-0">{% if ui_lang == 'en' %}Kindergartens List{% else %}قائمة الحضانات{% endif %}</h5>
       <div id="loadingSpinner" class="d-none">
         <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
       </div>
@@ -108,7 +108,7 @@
       </div>
       <div id="emptyState" class="text-center py-5 d-none">
         <span class="material-symbols-outlined d-block text-muted opacity-50 mb-3" style="font-size:3.5rem;" aria-hidden="true">apartment</span>
-        <h5 class="mb-1">{% if ui_lang == 'en' %}No kindergartens found{% else %}لا توجد روضات{% endif %}</h5>
+        <h5 class="mb-1">{% if ui_lang == 'en' %}No kindergartens found{% else %}لا توجد حضانات{% endif %}</h5>
         <p class="text-muted small">{% if ui_lang == 'en' %}Try adjusting your filter criteria.{% else %}حاول تعديل معايير البحث الخاصة بك.{% endif %}</p>
       </div>
     </div>
@@ -123,12 +123,12 @@
 <script>
 (function () {
     const _isEn = document.documentElement.lang === 'en';
-    const _loading  = _isEn ? 'Loading...' : 'جاري التحميل...';
+    const _loading  = _isEn ? 'Loading...' : 'جارٍ تحميل البيانات، يرجى الانتظار.';
     const _errLoad  = _isEn ? 'Error loading data' : 'خطأ في تحميل البيانات';
-    const _noData   = _isEn ? 'No kindergartens found' : 'لا توجد روضات';
+    const _noData   = _isEn ? 'No kindergartens found' : 'لا توجد حضانات';
     const _showing  = _isEn ? 'Showing' : 'عرض';
     const _of       = _isEn ? 'of' : 'من';
-    const _kgs      = _isEn ? 'kindergartens' : 'روضة';
+    const _kgs      = _isEn ? 'kindergartens' : 'حضانة';
     const _prev     = _isEn ? 'Previous' : 'السابق';
     const _next     = _isEn ? 'Next' : 'التالي';
 

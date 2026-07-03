@@ -113,7 +113,7 @@ def seeded_scenario(db_sessionmaker):
     suffix = os.urandom(4).hex()
 
     kg = models.Kindergarten(
-        name_ar="روضة التنافس",
+        name_ar="حضانة التنافس",
         name_en=f"Concurrency Test KG {suffix}",
         license_number=f"LIC-CONC-{suffix}",
         governorate="عمان",

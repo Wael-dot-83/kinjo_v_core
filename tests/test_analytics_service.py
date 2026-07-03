@@ -55,7 +55,7 @@ def manager_user(test_db):
     """
     # Create kindergarten first
     kg = models.Kindergarten(
-        name_ar="روضة تجريبية",
+        name_ar="حضانة تجريبية",
         name_en="Test Kindergarten",
         governorate="Test Governorate",
         district="Test City",
@@ -88,7 +88,7 @@ def sample_data(test_db):
     """
     # Create kindergarten
     kg = models.Kindergarten(
-        name_ar="روضة الاختبار",
+        name_ar="حضانة الاختبار",
         name_en="Test Kindergarten",
         governorate="عمان",
         district="عمان",

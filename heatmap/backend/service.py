@@ -950,7 +950,7 @@ def get_city_summary(db: Session, slug: str) -> Dict:
             "cities": [],
             "city_count": 0,
             "data_status": "empty",
-            "warnings": ["لا توجد روضات مسجلة في هذه المحافظة."],
+            "warnings": ["لا توجد حضانات مسجلة في هذه المحافظة."],
             "last_update": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
         }
 

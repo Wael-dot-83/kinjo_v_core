@@ -34,7 +34,7 @@ from analytics_gap_service import (
 
 # ─── Seed helpers ─────────────────────────────────────────────────────────────
 
-def _make_kg(db, name_ar="روضة تجريبية", name_en="Test KG", gov="عمّان"):
+def _make_kg(db, name_ar="حضانة تجريبية", name_en="Test KG", gov="عمّان"):
     kg = models.Kindergarten(
         name_ar=name_ar,
         name_en=name_en,

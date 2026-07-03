@@ -140,7 +140,7 @@ async def get_report_types():
             {
                 "id": "incidents",
                 "name": "تقرير الحوادث",
-                "description": "حوادث الروضة والإصابات"
+                "description": "حوادث الحضانة والإصابات"
             },
             {
                 "id": "enrollment",

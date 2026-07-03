@@ -278,7 +278,7 @@
       </div>
       <div class="cc-titles">
         <h1 class="cc-title">
-          {% if ui_lang == 'ar' %}الخريطة الحرارية التفاعلية — الحضانات ورياض الأطفال{% else %}Interactive Risk Heatmap — Kindergartens & Nurseries{% endif %}
+          {% if ui_lang == 'ar' %}الخريطة الحرارية التفاعلية — الحضانات والحضانات{% else %}Interactive Risk Heatmap — Kindergartens & Nurseries{% endif %}
         </h1>
         <div class="cc-subtitle">
           {% if ui_lang == 'ar' %}مصدر البيانات: قاعدة بيانات كينجو المركزية • خرائط جوجل • تحديث مباشر{% else %}Data source: KinJo Central Database • Google Maps Satellite • Live updates{% endif %}
@@ -306,7 +306,7 @@
   {# ── PAGE DESCRIPTION ──────────────────────────────────────── #}
   <div class="page-desc" role="note" aria-label="{% if ui_lang == 'ar' %}وصف الصفحة{% else %}Page description{% endif %}">
     {% if ui_lang == 'ar' %}
-    تعرض هذه الصفحة خريطة حرارية تفاعلية لمؤشرات الخطر في الحضانات ورياض الأطفال على مستوى محافظات المملكة، مع إمكانية تحليل كل محافظة ومقارنة المؤشرات الرئيسية.
+    تعرض هذه الصفحة خريطة حرارية تفاعلية لمؤشرات الخطر في الحضانات والحضانات على مستوى محافظات المملكة، مع إمكانية تحليل كل محافظة ومقارنة المؤشرات الرئيسية.
     {% else %}
     This page displays an interactive risk heatmap for kindergartens and nurseries at the governorate level across Jordan, with drill-down analysis and comparative key indicators for each region.
     {% endif %}
@@ -324,7 +324,7 @@
     <select id="indicatorViewSelect" class="cc-select"
             aria-label="{% if ui_lang == 'ar' %}اختر المؤشر{% else %}Select indicator{% endif %}">
       <option value="overall_risk">{% if ui_lang == 'ar' %}مؤشر الخطر العام{% else %}Overall Risk{% endif %}</option>
-      <option value="nursery_status">{% if ui_lang == 'ar' %}حالة الحضانات ورياض الأطفال{% else %}Nursery Status{% endif %}</option>
+      <option value="nursery_status">{% if ui_lang == 'ar' %}حالة الحضانات والحضانات{% else %}Nursery Status{% endif %}</option>
       <option value="children_registration">{% if ui_lang == 'ar' %}الأطفال المسجلون{% else %}Children & Registration{% endif %}</option>
       <option value="staff_classrooms">{% if ui_lang == 'ar' %}الموظفون والفصول{% else %}Staff & Classrooms{% endif %}</option>
       <option value="safety_incidents">{% if ui_lang == 'ar' %}السلامة والحوادث{% else %}Safety & Incidents{% endif %}</option>
@@ -396,10 +396,10 @@
       <div class="kpi-value" id="kpiCritical">--</div>
       <div class="kpi-sub">{% if ui_lang == 'ar' %}خطر ≥ 75{% else %}Risk ≥ 75{% endif %}</div>
     </div>
-    <div class="kpi-card" title="{% if ui_lang == 'ar' %}إجمالي الحضانات ورياض الأطفال المسجلة{% else %}Total registered kindergartens and nurseries{% endif %}">
+    <div class="kpi-card" title="{% if ui_lang == 'ar' %}إجمالي الحضانات والحضانات المسجلة{% else %}Total registered kindergartens and nurseries{% endif %}">
       <div class="kpi-label">{% if ui_lang == 'ar' %}إجمالي المنشآت{% else %}Total Facilities{% endif %}</div>
       <div class="kpi-value" id="kpiInstitutions">--</div>
-      <div class="kpi-sub">{% if ui_lang == 'ar' %}حضانة وروضة{% else %}KGs & nurseries{% endif %}</div>
+      <div class="kpi-sub">{% if ui_lang == 'ar' %}حضانة وحضانة{% else %}KGs & nurseries{% endif %}</div>
     </div>
     <div class="kpi-card" title="{% if ui_lang == 'ar' %}إجمالي الأطفال النشطين المسجلين{% else %}Total active enrolled children{% endif %}">
       <div class="kpi-label">{% if ui_lang == 'ar' %}الأطفال النشطون{% else %}Active Children{% endif %}</div>
@@ -457,7 +457,7 @@
       {# Layer toggles beneath the list #}
       <div class="cs-layer-toggles">
         <label class="cs-toggle-label">
-          <input type="checkbox" id="kgToggle" checked aria-label="{% if ui_lang == 'ar' %}إظهار الروضات{% else %}Show kindergartens{% endif %}">
+          <input type="checkbox" id="kgToggle" checked aria-label="{% if ui_lang == 'ar' %}إظهار الحضانات{% else %}Show kindergartens{% endif %}">
           <i class="bi bi-pin-map-fill" style="color:#f59e0b" aria-hidden="true"></i>
           {% if ui_lang == 'ar' %}المنشآت{% else %}KGs{% endif %}
           <span id="kgCountBadge" style="background:#1F5E47;color:#fff;border-radius:9999px;padding:0.1rem 0.4rem;font-size:0.7rem;font-weight:700">0</span>
@@ -478,7 +478,7 @@
     {# ── CENTER: GOOGLE MAPS SATELLITE ──────────────────────── #}
     <div id="googleMapContainer"
          role="region"
-         aria-label="{% if ui_lang == 'ar' %}خريطة الأردن بالقمر الاصطناعي — الحضانات ورياض الأطفال{% else %}Jordan satellite map — Kindergartens and nurseries{% endif %}">
+         aria-label="{% if ui_lang == 'ar' %}خريطة الأردن بالقمر الاصطناعي — الحضانات والحضانات{% else %}Jordan satellite map — Kindergartens and nurseries{% endif %}">
     </div>
 
     {# ── RIGHT: INTELLIGENCE PANEL ──────────────────────────── #}

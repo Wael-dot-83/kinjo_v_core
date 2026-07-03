@@ -55,7 +55,7 @@
       <div class="exec-banner__content">
         <p class="exec-banner__title">{% if ui_lang == 'en' %}EXECUTIVE SUMMARY{% else %}الملخص التنفيذي{% endif %}</p>
         <h2 class="exec-banner__heading mb-4">
-          {% if ui_lang == 'en' %}Jordan Kindergarten Network{% else %}شبكة رياض الأطفال في الأردن{% endif %}
+          {% if ui_lang == 'en' %}Jordan Kindergarten Network{% else %}شبكة الحضانات في الأردن{% endif %}
         </h2>
         <div class="exec-banner__insights hero-insights" id="execInsights" role="list" aria-label="{% if ui_lang == 'en' %}Key insights{% else %}رؤى رئيسية{% endif %}">
           {# JS-populated — skeleton micro-cards #}
@@ -115,9 +115,9 @@
           <div class="filter-dropdown-glass">
             <select aria-label="{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}" class="form-select form-select-sm" id="regSourceFilter">
               <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
-              <option value="WEB">Web</option>
-              <option value="MOBILE">Mobile</option>
-              <option value="OFFICE">Office</option>
+              <option value="WEB">{% if ui_lang == 'en' %}Web{% else %}الموقع الإلكتروني{% endif %}</option>
+              <option value="MOBILE">{% if ui_lang == 'en' %}Mobile{% else %}تطبيق الهاتف{% endif %}</option>
+              <option value="OFFICE">{% if ui_lang == 'en' %}Office{% else %}المكتب{% endif %}</option>
             </select>
           </div>
           <div class="filter-dropdown-glass">
@@ -183,12 +183,12 @@
 
           {# Card 1: Kindergartens #}
           <article class="kpi-card-v2" style="--kpi-accent:var(--kpi-accent-kg);--kpi-icon-bg:var(--kpi-icon-bg-kg);"
-                   aria-label="{% if ui_lang == 'ar' %}عدد الروضات{% else %}Kindergartens{% endif %}">
+                   aria-label="{% if ui_lang == 'ar' %}عدد الحضانات{% else %}Kindergartens{% endif %}">
             <div class="kpi-card-v2__header">
-              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Kindergartens{% else %}رياض الأطفال{% endif %}</p>
+              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}</p>
               <span class="kpi-card-v2__icon" aria-hidden="true"><i class="bi bi-building"></i></span>
             </div>
-            <p class="kpi-card-v2__value" id="totalKg" aria-live="polite" aria-label="{% if ui_lang == 'en' %}Total kindergartens{% else %}إجمالي الروضات{% endif %}">
+            <p class="kpi-card-v2__value" id="totalKg" aria-live="polite" aria-label="{% if ui_lang == 'en' %}Total kindergartens{% else %}إجمالي الحضانات{% endif %}">
               <span class="skel skel-value" aria-hidden="true"></span>
             </p>
             <div class="kpi-card-v2__footer">
@@ -680,7 +680,7 @@
               <tr>
                 <th scope="col">{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
                 <th scope="col">{% if ui_lang == 'en' %}Parent{% else %}الوالد{% endif %}</th>
-                <th scope="col">{% if ui_lang == 'en' %}Facility{% else %}الروضة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Facility{% else %}الحضانة{% endif %}</th>
                 <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
                 <th scope="col">{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</th>
                 <th scope="col">{% if ui_lang == 'en' %}Submitted{% else %}تاريخ التقديم{% endif %}</th>

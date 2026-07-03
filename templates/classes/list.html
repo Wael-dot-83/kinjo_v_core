@@ -40,9 +40,9 @@ breadcrumbs=[
         <div class="row g-3 align-items-end">
             {% if current_user.role.value == 'ADMIN' %}
             <div class="col-md-3">
-                <label class="form-label small text-muted">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                <label class="form-label small text-muted">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
                 <select id="filterKindergarten" class="form-select form-select-sm" onchange="loadClasses()">
-                    <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                    <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الحضانات{% endif %}</option>
                 </select>
             </div>
             {% endif %}
@@ -78,7 +78,7 @@ breadcrumbs=[
                         <th>#</th>
                         <th>{% if ui_lang == 'en' %}Class Name{% else %}اسم الشعبة{% endif %}</th>
                         {% if current_user.role.value == 'ADMIN' %}
-                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
                         {% endif %}
                         <th>{% if ui_lang == 'en' %}Age Group{% else %}الفئة العمرية{% endif %}</th>
                         <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
@@ -150,7 +150,7 @@ breadcrumbs=[
         const emptyState = document.getElementById('emptyState');
         tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">
         <div class="spinner-border spinner-border-sm text-primary"></div>
-        <span class="ms-2">${T('جاري التحميل...', 'Loading...')}</span></td></tr>`;
+        <span class="ms-2">${T('جارٍ تحميل البيانات، يرجى الانتظار.', 'Loading...')}</span></td></tr>`;
         emptyState.classList.add('d-none');
 
         try {

@@ -357,7 +357,7 @@ function buildPageGuide() {
     steps.push(
       appText(
         "guide.steps.browse_info",
-        "استعرض المعلومات المعروضة في الصفحة",
+        "استعرض المعلومات المعحضانة في الصفحة",
         "Browse the information shown on this page",
       ),
     );

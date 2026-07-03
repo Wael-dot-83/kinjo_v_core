@@ -1,6 +1,6 @@
 ﻿{% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %} — KinJo{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الحضانات{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
 <a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
@@ -8,7 +8,7 @@
 </a>
 <span class="breadcrumb-separator">/</span>
 <span class="breadcrumb-item active">
-  {% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}
+  {% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الحضانات{% endif %}
 </span>
 {% endblock %}
 
@@ -38,7 +38,7 @@
         <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:rgba(37,99,235,.1);color:#2563eb;">
           <i class="bi bi-buildings-fill"></i>
         </span>
-        {% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}
+        {% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الحضانات{% endif %}
       </h1>
       <p style="font-size:.8rem;color:var(--ko-text-muted);margin:.25rem 0 0;display:flex;align-items:center;gap:.5rem;">
         <span class="ko-rt-dot"></span>

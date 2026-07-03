@@ -44,7 +44,7 @@ def _login(client, username, password):
 
 def _make_kg(db, suffix="1"):
     kg = models.Kindergarten(
-        name_ar=f"روضة {suffix}",
+        name_ar=f"حضانة {suffix}",
         name_en=f"KG {suffix}",
         license_number=f"LIC-{suffix}",
         governorate="Amman",

@@ -192,7 +192,7 @@ def get_analytics_metadata(lang: str = Query("ar", pattern="^(ar|en)$")):
     """Return static analytics metadata (datasets/dimensions/metrics/time grains)."""
     dims = [
         {"id": "date.day", "label_ar": "اليوم", "label_en": "Day", "allowed_filters": ["between", "eq", "gte", "lte"], "drill_targets": ["date.week", "date.month"]},
-        {"id": "org.kindergarten", "label_ar": "الروضة", "label_en": "Kindergarten", "allowed_filters": ["eq", "in"], "drill_targets": ["org.class"]},
+        {"id": "org.kindergarten", "label_ar": "الحضانة", "label_en": "Kindergarten", "allowed_filters": ["eq", "in"], "drill_targets": ["org.class"]},
         {"id": "org.class", "label_ar": "الصف", "label_en": "Class", "allowed_filters": ["eq", "in"]},
         {"id": "geo.governorate", "label_ar": "المحافظة", "label_en": "Governorate", "allowed_filters": ["eq", "in"]},
     ]
@@ -2966,8 +2966,8 @@ def get_registration_entity_summary(
     if kg_draft:
         actions.append({
             "type": "draft_kindergartens", "count": kg_draft, "priority": "medium",
-            "label_ar": "روضات لا تزال في مرحلة المسودة",
-            "action_ar": "مراجعة الروضات المعلقة",
+            "label_ar": "حضانات لا تزال في مرحلة المسودة",
+            "action_ar": "مراجعة الحضانات المعلقة",
             "url": "/admin/kindergartens?status=DRAFT",
         })
     if users_suspended:
@@ -3733,7 +3733,7 @@ def get_kg_overview_summary(
             delta_percent=attendance_delta,
             delta_dir="up" if (attendance_delta or 0) >= 0 else "down",
             target=70.0,
-            risk_label_ar=f"{below_target} روضات أقل من الحد الأدنى",
+            risk_label_ar=f"{below_target} حضانات أقل من الحد الأدنى",
             risk_label_en=f"{below_target} kindergartens below target",
             risk_count=below_target,
         ),
@@ -3962,7 +3962,7 @@ def get_kg_overview_alerts(
         rec_ar = "مراجعة الحالة وتحديد الإجراء المناسب"
         rec_en = "Review status and determine appropriate action"
         if alert.metric_type == "attendance_rate":
-            rec_ar = "مراجعة سياسات الحضور والغياب للروضة"
+            rec_ar = "مراجعة سياسات الحضور والغياب للحضانة"
             rec_en = "Review attendance policies for this kindergarten"
         elif alert.metric_type == "incident_rate":
             rec_ar = "التحقيق في الحوادث وتطبيق إجراءات السلامة"
@@ -4084,7 +4084,7 @@ _REPORT_TYPES = [
         id="attendance",
         name_ar="تقرير الحضور والغياب",
         name_en="Attendance & Absence Report",
-        description_ar="ملخص الحضور والغياب لجميع الروضات",
+        description_ar="ملخص الحضور والغياب لجميع الحضانات",
         description_en="Attendance and absence summary for all kindergartens",
         required_filters=["period_start", "period_end"],
         optional_filters=["governorate", "kindergarten_id", "child_id"],
@@ -4097,11 +4097,11 @@ _REPORT_TYPES = [
         ],
         charts=[
             {"id": "attendance_trend", "type": "line", "label_ar": "اتجاه الحضور", "label_en": "Attendance Trend"},
-            {"id": "absence_by_kg", "type": "bar", "label_ar": "الغياب حسب الروضة", "label_en": "Absence by Kindergarten"},
+            {"id": "absence_by_kg", "type": "bar", "label_ar": "الغياب حسب الحضانة", "label_en": "Absence by Kindergarten"},
         ],
         columns=[
             {"key": "date", "label_ar": "التاريخ", "label_en": "Date"},
-            {"key": "kindergarten", "label_ar": "الروضة", "label_en": "Kindergarten"},
+            {"key": "kindergarten", "label_ar": "الحضانة", "label_en": "Kindergarten"},
             {"key": "child_name", "label_ar": "الطفل", "label_en": "Child"},
             {"key": "status", "label_ar": "الحالة", "label_en": "Status"},
             {"key": "check_in", "label_ar": "وقت الدخول", "label_en": "Check In"},
@@ -4130,7 +4130,7 @@ _REPORT_TYPES = [
         ],
         columns=[
             {"key": "date", "label_ar": "التاريخ", "label_en": "Date"},
-            {"key": "kindergarten", "label_ar": "الروضة", "label_en": "Kindergarten"},
+            {"key": "kindergarten", "label_ar": "الحضانة", "label_en": "Kindergarten"},
             {"key": "type", "label_ar": "النوع", "label_en": "Type"},
             {"key": "severity", "label_ar": "الخطورة", "label_en": "Severity"},
             {"key": "status", "label_ar": "الحالة", "label_en": "Status"},
@@ -4156,7 +4156,7 @@ _REPORT_TYPES = [
             {"id": "compliance_by_governorate", "type": "bar", "label_ar": "الامتثال حسب المحافظة", "label_en": "Compliance by Governorate"},
         ],
         columns=[
-            {"key": "kindergarten", "label_ar": "الروضة", "label_en": "Kindergarten"},
+            {"key": "kindergarten", "label_ar": "الحضانة", "label_en": "Kindergarten"},
             {"key": "governorate", "label_ar": "المحافظة", "label_en": "Governorate"},
             {"key": "compliance_score", "label_ar": "درجة الامتثال", "label_en": "Compliance Score"},
             {"key": "governance_score", "label_ar": "درجة الحوكمة", "label_en": "Governance Score"},
@@ -4184,7 +4184,7 @@ _REPORT_TYPES = [
         columns=[
             {"key": "child_name", "label_ar": "الطفل", "label_en": "Child"},
             {"key": "parent_name", "label_ar": "الوصي", "label_en": "Parent"},
-            {"key": "kindergarten", "label_ar": "الروضة", "label_en": "Kindergarten"},
+            {"key": "kindergarten", "label_ar": "الحضانة", "label_en": "Kindergarten"},
             {"key": "status", "label_ar": "الحالة", "label_en": "Status"},
             {"key": "source", "label_ar": "المصدر", "label_en": "Source"},
             {"key": "submitted_at", "label_ar": "تاريخ التقديم", "label_en": "Submitted At"},
@@ -4564,12 +4564,12 @@ def preview_report(
         kpis = [
             {"id": "trained_count", "label_ar": "موظفون مدرَّبون", "label_en": "Trained Staff", "value": 0, "unit": ""},
             {"id": "training_rate", "label_ar": "معدل التدريب", "label_en": "Training Rate", "value": 0, "unit": "%"},
-            {"id": "ratio_compliant", "label_ar": "روضات ملتزمة بالنسب", "label_en": "Ratio-Compliant KGs", "value": 0, "unit": ""},
+            {"id": "ratio_compliant", "label_ar": "حضانات ملتزمة بالنسب", "label_en": "Ratio-Compliant KGs", "value": 0, "unit": ""},
             {"id": "ratio_violations", "label_ar": "مخالفات النسب", "label_en": "Ratio Violations", "value": 0, "unit": ""},
             {"id": "avg_compliance_score", "label_ar": "متوسط درجة الامتثال", "label_en": "Avg Compliance Score", "value": 0, "unit": "%"},
         ]
         charts = [
-            {"id": "training_by_kg", "type": "bar", "label_ar": "التدريب حسب الروضة", "label_en": "Training by KG"},
+            {"id": "training_by_kg", "type": "bar", "label_ar": "التدريب حسب الحضانة", "label_en": "Training by KG"},
             {"id": "ratio_compliance_dist", "type": "doughnut", "label_ar": "توزيع امتثال النسب", "label_en": "Ratio Compliance Distribution"},
         ]
         try:
@@ -4919,7 +4919,7 @@ def preview_report(
 
     elif report_type == "data_quality":
         kpis = [
-            {"id": "active_kgs", "label_ar": "الروضات الفعّالة", "label_en": "Active KGs", "value": 0, "unit": ""},
+            {"id": "active_kgs", "label_ar": "الحضانات الفعّالة", "label_en": "Active KGs", "value": 0, "unit": ""},
             {"id": "submission_rate", "label_ar": "نسبة تقديم التقارير", "label_en": "Report Submission Rate", "value": 0, "unit": "%"},
             {"id": "missing_reports", "label_ar": "تقارير مفقودة", "label_en": "Missing Reports", "value": 0, "unit": ""},
             {"id": "zero_attendance_days", "label_ar": "أيام بدون حضور", "label_en": "Zero-Attendance Days", "value": 0, "unit": ""},

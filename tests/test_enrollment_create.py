@@ -32,7 +32,7 @@ class TestCitiesEndpoint:
         headers = {"Authorization": f"Bearer {admin_token}"}
         # Create a KG in عمان
         kg = models.Kindergarten(
-            name_ar="روضة اختبار", name_en="Test KG",
+            name_ar="حضانة اختبار", name_en="Test KG",
             governorate="عمان", district="الجبيهة", area="منطقة",
             address_line="عنوان", contact_phone="+962791110001",
             status=models.KindergartenStatus.ACTIVE
@@ -69,7 +69,7 @@ class TestKindergartenFilteringWithCity:
         # Create KGs in different cities
         for i, city in enumerate(["عمان", "الجبيهة", "القويسمة"]):
             kg = models.Kindergarten(
-                name_ar=f"روضة {city}", name_en=f"KG {city}",
+                name_ar=f"حضانة {city}", name_en=f"KG {city}",
                 governorate="عمان", district=city, area="test",
                 address_line="test", contact_phone=f"+96279111000{i}",
                 status=models.KindergartenStatus.ACTIVE
@@ -89,7 +89,7 @@ class TestKindergartenFilteringWithCity:
         """Should filter by both governorate and city"""
         headers = {"Authorization": f"Bearer {admin_token}"}
         kg = models.Kindergarten(
-            name_ar="روضة إربد", name_en="Irbid KG",
+            name_ar="حضانة إربد", name_en="Irbid KG",
             governorate="إربد", district="الحصن", area="test",
             address_line="test", contact_phone="+962791112222",
             status=models.KindergartenStatus.ACTIVE
@@ -106,7 +106,7 @@ class TestKindergartenFilteringWithCity:
         """Parents should be able to filter by city"""
         headers = {"Authorization": f"Bearer {parent_token}"}
         kg = models.Kindergarten(
-            name_ar="روضة الزرقاء", name_en="Zarqa KG",
+            name_ar="حضانة الزرقاء", name_en="Zarqa KG",
             governorate="الزرقاء", district="الزرقاء", area="test",
             address_line="test", contact_phone="+962791113333",
             status=models.KindergartenStatus.ACTIVE
@@ -133,7 +133,7 @@ class TestParentKindergartenDetails:
         """Parent should NOT be able to view INACTIVE kindergartens"""
         headers = {"Authorization": f"Bearer {parent_token}"}
         kg = models.Kindergarten(
-            name_ar="روضة غير نشطة", name_en="Inactive KG",
+            name_ar="حضانة غير نشطة", name_en="Inactive KG",
             governorate="عمان", district="عمان", area="test",
             address_line="test", contact_phone="+962791114444",
             status=models.KindergartenStatus.INACTIVE
@@ -148,7 +148,7 @@ class TestParentKindergartenDetails:
         """Parent should NOT be able to view DRAFT kindergartens"""
         headers = {"Authorization": f"Bearer {parent_token}"}
         kg = models.Kindergarten(
-            name_ar="روضة مسودة", name_en="Draft KG",
+            name_ar="حضانة مسودة", name_en="Draft KG",
             governorate="عمان", district="عمان", area="test",
             address_line="test", contact_phone="+962791115555",
             status=models.KindergartenStatus.DRAFT
@@ -209,7 +209,7 @@ class TestDuplicateEnrollmentPrevention:
 
         # Create second kindergarten
         kg2 = models.Kindergarten(
-            name_ar="روضة ثانية", name_en="Second KG",
+            name_ar="حضانة ثانية", name_en="Second KG",
             governorate="عمان", district="عمان", area="test",
             address_line="test", contact_phone="+962791116666",
             status=models.KindergartenStatus.ACTIVE
@@ -272,7 +272,7 @@ class TestDuplicateEnrollmentPrevention:
 
         # Create second KG
         kg2 = models.Kindergarten(
-            name_ar="روضة ثانية", name_en="Second KG",
+            name_ar="حضانة ثانية", name_en="Second KG",
             governorate="Amman", district="Amman", area="test",
             address_line="test", contact_phone="+962791116777",
             status=models.KindergartenStatus.ACTIVE
@@ -328,7 +328,7 @@ class TestDuplicateEnrollmentPrevention:
         test_db.commit()
 
         kg2 = models.Kindergarten(
-            name_ar="روضة ثالثة", name_en="Third KG",
+            name_ar="حضانة ثالثة", name_en="Third KG",
             governorate="Amman", district="Amman", area="test",
             address_line="test", contact_phone="+962791116888",
             status=models.KindergartenStatus.ACTIVE
@@ -452,8 +452,8 @@ class TestEnrollmentCreatePage:
         response = client.get("/enrollments/create")
         html = response.text
         assert "kgDetailModal" in html
-        assert "تفاصيل الروضة" in html
-        assert "تأكيد اختيار الروضة" in html
+        assert "تفاصيل الحضانة" in html
+        assert "تأكيد اختيار الحضانة" in html
 
     def test_page_has_clear_filters(self, client, parent_token, test_db, sample_kindergarten):
         """Page should include clear filters button"""

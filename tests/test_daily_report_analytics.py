@@ -53,7 +53,7 @@ def dr_client(dr_db):
 @pytest.fixture
 def dr_kindergarten(dr_db):
     kg = models.Kindergarten(
-        name_ar="روضة التحليلات",
+        name_ar="حضانة التحليلات",
         name_en="Analytics KG",
         governorate="Amman",
         district="Amman",
@@ -506,7 +506,7 @@ class TestRBAC:
     def test_manager_cannot_see_other_kg(self, dr_client, dr_db, dr_manager, dr_kindergarten):
         # Create another KG
         kg2 = models.Kindergarten(
-            name_ar="روضة أخرى",
+            name_ar="حضانة أخرى",
             governorate="Zarqa",
             district="Zarqa",
             area="Center",

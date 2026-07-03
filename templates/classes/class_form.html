@@ -21,7 +21,7 @@
         <form id="classForm" class="needs-validation" novalidate>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label for="kindergartenId" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                    <label for="kindergartenId" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
                     <select
                         class="form-select"
                         id="kindergartenId"
@@ -46,7 +46,7 @@
                         value="{{ class_obj.kindergarten_id if class_obj else current_user.kindergarten_id }}"
                     >
                     {% endif %}
-                    <div class="invalid-feedback">{% if ui_lang == 'en' %}Please select a kindergarten.{% else %}يرجى اختيار الروضة.{% endif %}</div>
+                    <div class="invalid-feedback">{% if ui_lang == 'en' %}Please select a kindergarten.{% else %}يرجى اختيار الحضانة.{% endif %}</div>
                 </div>
 
                 <div class="col-md-6">
@@ -54,7 +54,7 @@
                     <select class="form-select" id="supervisorId" name="supervisor_id" required>
                         <option value="">{% if ui_lang == 'en' %}Select supervisor...{% else %}اختر المشرف...{% endif %}</option>
                     </select>
-                    <div class="form-text">{% if ui_lang == 'en' %}Eligible supervisors are loaded from the selected kindergarten.{% else %}يتم تحميل المشرفين المؤهلين من الروضة المحددة.{% endif %}</div>
+                    <div class="form-text">{% if ui_lang == 'en' %}Eligible supervisors are loaded from the selected kindergarten.{% else %}يتم تحميل المشرفين المؤهلين من الحضانة المحددة.{% endif %}</div>
                     <div class="invalid-feedback">{% if ui_lang == 'en' %}Please select a supervisor.{% else %}يرجى اختيار مشرف مسؤول للفصل.{% endif %}</div>
                 </div>
 
@@ -301,7 +301,7 @@
         select.innerHTML = '<option value="">' + T('جارٍ تحميل المشرفين...', 'Loading supervisors...') + '</option>';
 
         if (!kindergartenId) {
-            select.innerHTML = '<option value="">' + T('اختر الروضة أولًا', 'Select kindergarten first') + '</option>';
+            select.innerHTML = '<option value="">' + T('اختر الحضانة أولًا', 'Select kindergarten first') + '</option>';
             return;
         }
 

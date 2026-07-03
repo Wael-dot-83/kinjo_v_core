@@ -2,7 +2,7 @@ import sys, os, openpyxl, unicodedata
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 DATASET = r"C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Dataset"
-COL_AR = "اسم الروضة (عربي)"
+COL_AR = "اسم الحضانة (عربي)"
 
 def norm(s):
     if not s: return ""

@@ -440,7 +440,7 @@ class DailyReportAnalytics:
                 alerts.append({
                     "type": "high_rejection",
                     "severity": "medium",
-                    "message": f"روضة #{kg_id} نسبة رفض عالية {rate}%",
+                    "message": f"حضانة #{kg_id} نسبة رفض عالية {rate}%",
                     "message_en": f"Kindergarten #{kg_id} has {rate}% rejection rate",
                     "kindergarten_id": int(kg_id),
                 })
@@ -453,7 +453,7 @@ class DailyReportAnalytics:
                     alerts.append({
                         "type": "low_meal",
                         "severity": "medium",
-                        "message": f"روضة #{kg_id} نسبة الإفطار منخفضة {round(bf_rate, 1)}% — يُقترح تغيير قائمة الطعام",
+                        "message": f"حضانة #{kg_id} نسبة الإفطار منخفضة {round(bf_rate, 1)}% — يُقترح تغيير قائمة الطعام",
                         "message_en": f"Kindergarten #{kg_id} has {round(bf_rate, 1)}% breakfast rate—suggest menu change",
                         "kindergarten_id": int(kg_id),
                     })

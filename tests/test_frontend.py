@@ -671,7 +671,7 @@ class TestFrontendRoutes:
         assert 'id="granularitySelect"' in page
         assert 'id="filterStatus"' in page
         assert 'id="filterError"' in page
-        assert "\u062c\u0645\u064a\u0639 \u0627\u0644\u0631\u0648\u0636\u0627\u062a" in page
+        assert "\u062c\u0645\u064a\u0639 \u0627\u0644\u062d\u0636\u0627\u0646\u0627\u062a" in page
         assert page.count("function renderRankingList(") == 1
         assert page.count("function escapeHtml(") == 1
         assert page.count("requestWithAuth(") >= 1
@@ -1249,7 +1249,7 @@ class TestFrontendRoutes:
         page = response.text
 
         assert "Al-Amal Kindergarten" not in page
-        assert "روضة الأمل" not in page
+        assert "حضانة الأمل" not in page
         assert "92% Risk" not in page
         assert "92% خطر" not in page
 
@@ -1872,7 +1872,7 @@ class TestFrontendRoutes:
     def test_view_kindergarten_manager_wrong_kg(self, client, test_db, manager_user, sample_kindergarten):
         """Manager cannot view a kindergarten they don't own"""
         other_kg = models.Kindergarten(
-            name_ar="روضة أخرى",
+            name_ar="حضانة أخرى",
             name_en="Other KG",
             license_number="OTHER001",
             governorate="Irbid",
@@ -1908,7 +1908,7 @@ class TestFrontendRoutes:
     def test_edit_kindergarten_manager_wrong_kg_403(self, client, test_db, manager_user, sample_kindergarten):
         """Manager cannot edit a kindergarten they don't own"""
         other_kg = models.Kindergarten(
-            name_ar="روضة أخرى 2",
+            name_ar="حضانة أخرى 2",
             name_en="Other KG 2",
             license_number="OTHER002",
             governorate="Zarqa",
@@ -1976,7 +1976,7 @@ class TestFrontendRoutes:
     def test_edit_class_manager_wrong_kg_403(self, client, manager_user, test_db, sample_kindergarten):
         """Manager gets 403 for class in another kindergarten"""
         other_kg = models.Kindergarten(
-            name_ar="روضة ثالثة",
+            name_ar="حضانة ثالثة",
             name_en="Third KG",
             license_number="THIRD001",
             governorate="Amman",
@@ -2255,7 +2255,7 @@ class TestFrontendRoutes:
     def test_view_class_manager_wrong_kg_403(self, client, test_db, manager_user, sample_kindergarten):
         """Manager gets 403 for class in another kindergarten"""
         other_kg = models.Kindergarten(
-            name_ar="روضة رابعة",
+            name_ar="حضانة رابعة",
             name_en="Fourth KG",
             license_number="FOUR001",
             governorate="Amman",

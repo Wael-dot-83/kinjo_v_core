@@ -429,7 +429,7 @@ class TestPermissionsAndSecurity:
         """Sad path: Supervisor cannot access children from other kindergartens"""
         # Create another kindergarten
         other_kg = models.Kindergarten(
-            name_ar="روضة أخرى",
+            name_ar="حضانة أخرى",
             name_en="Other KG",
             license_number="LIC-OTHER",
             governorate="Zarqa",

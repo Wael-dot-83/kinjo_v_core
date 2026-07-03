@@ -900,7 +900,7 @@ class TestKindergartenExcelImportCoverage:
     def test_import_excel_non_admin_rejected(self, client, test_db, sample_kindergarten):
         mgr = _make_user(test_db, "xlx_mgr1", models.UserRole.MANAGER, kg_id=sample_kindergarten.id)
         headers = _tok(client, "xlx_mgr1", "Pass123!")
-        content = self._make_xlsx_bytes([["روضة 1", "KG1", "Amman", "Amman", "Abdoun", "St 1", "0790000000"]])
+        content = self._make_xlsx_bytes([["حضانة 1", "KG1", "Amman", "Amman", "Abdoun", "St 1", "0790000000"]])
         r = client.post(
             "/api/admin/kindergartens/import-excel",
             headers=headers,
@@ -922,7 +922,7 @@ class TestKindergartenExcelImportCoverage:
         _make_admin(test_db, "xlx_admin", "2")
         headers = _tok(client, "xlx_admin2")
         content = self._make_xlsx_bytes([
-            ["روضة الأمل الجديدة", "New Hope KG", "Amman", "Amman", "Abdoun", "Street 1", "0790000001"],
+            ["حضانة الأمل الجديدة", "New Hope KG", "Amman", "Amman", "Abdoun", "Street 1", "0790000001"],
         ])
         r = client.post(
             "/api/admin/kindergartens/import-excel",
@@ -938,7 +938,7 @@ class TestKindergartenExcelImportCoverage:
         _make_admin(test_db, "xlx_admin", "3")
         headers = _tok(client, "xlx_admin3")
         content = self._make_xlsx_bytes([
-            ["روضة تجريبية", "Dry Run KG", "Zarqa", "Zarqa", "Center", "Street 2", "0790000002"],
+            ["حضانة تجريبية", "Dry Run KG", "Zarqa", "Zarqa", "Center", "Street 2", "0790000002"],
         ])
         r = client.post(
             "/api/admin/kindergartens/import-excel?dry_run=true",
@@ -969,7 +969,7 @@ class TestKindergartenExcelImportCoverage:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.append(["name_ar", "name_en", "governorate"])
-        ws.append(["روضة قصيرة", "Short", "Amman"])
+        ws.append(["حضانة قصيرة", "Short", "Amman"])
         buf = BytesIO()
         wb.save(buf)
         buf.seek(0)
@@ -984,7 +984,7 @@ class TestKindergartenExcelImportCoverage:
     def test_import_excel_duplicate_skipped(self, client, test_db):
         _make_admin(test_db, "xlx_admin", "6")
         headers = _tok(client, "xlx_admin6")
-        row = ["روضة مكررة", "Dup KG", "Irbid", "Irbid", "Center", "Street 4", "0790000004"]
+        row = ["حضانة مكررة", "Dup KG", "Irbid", "Irbid", "Center", "Street 4", "0790000004"]
         content = self._make_xlsx_bytes([row])
         r1 = client.post(
             "/api/admin/kindergartens/import-excel",
@@ -1325,7 +1325,7 @@ class TestKindergartenExcelImportErrorsCoverage:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.append(["name_ar", "name_en", "governorate", "district", "area", "address", "phone"])
-        ws.append(["روضة خطأ", "Error KG", "Amman", "Amman", "Abdoun", "Street 5", "0790000005"])
+        ws.append(["حضانة خطأ", "Error KG", "Amman", "Amman", "Abdoun", "Street 5", "0790000005"])
         buf = BytesIO()
         wb.save(buf)
         buf.seek(0)
@@ -1356,7 +1356,7 @@ class TestKindergartenExcelImportErrorsCoverage:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.append(["name_ar", "name_en", "governorate", "district", "area", "address", "phone"])
-        ws.append(["روضة فشل الحفظ", "Commit Fail KG", "Amman", "Amman", "Abdoun", "Street 6", "0790000006"])
+        ws.append(["حضانة فشل الحفظ", "Commit Fail KG", "Amman", "Amman", "Abdoun", "Street 6", "0790000006"])
         buf = BytesIO()
         wb.save(buf)
         buf.seek(0)

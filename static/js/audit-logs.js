@@ -136,7 +136,11 @@ class AuditLogsManager {
         (log) => `
             <tr>
                 <td>${this.formatDateTime(log.created_at)}</td>
-                <td>${this.escapeHtml(auditLiteral(log.user_name || auditText("غير محدد", "Not specified")))}</td>
+                <td>${this.escapeHtml(auditLiteral(
+                  log.user_name === "System/Deleted"
+                    ? auditText("النظام/محذوف", "System/Deleted")
+                    : (log.user_name || auditText("غير محدد", "Not specified"))
+                ))}</td>
                 <td>
                     <span class="badge ${this.getActionBadgeClass(log.action)}">
                         ${this.getActionLabel(log.action)}
@@ -227,7 +231,7 @@ class AuditLogsManager {
             <tr>
                 <td colspan="7" class="text-center py-4">
                     <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">${auditText("جاري التحميل...", "Loading...")}</span>
+                        <span class="visually-hidden">${auditText("جارٍ تحميل البيانات، يرجى الانتظار.", "Loading...")}</span>
                     </div>
                 </td>
             </tr>
@@ -279,20 +283,67 @@ class AuditLogsManager {
       LOGIN: auditText("تسجيل دخول", "Sign in"),
       LOGOUT: auditText("تسجيل خروج", "Sign out"),
       VIEW: auditText("عرض", "View"),
+      HTTP_REQUEST: auditText("طلب وصول", "HTTP request"),
+      LOGIN_SUCCESS: auditText("دخول ناجح", "Login success"),
+      LOGIN_FAILED: auditText("دخول فاشل", "Login failed"),
+      LOGIN_LOCKED: auditText("حساب مقفل", "Login locked"),
+      REGISTER: auditText("تسجيل حساب", "Register"),
+      ACCESS_DENIED: auditText("رفض وصول", "Access denied"),
     };
-    return labels[action] || action;
+    if (labels[action]) return labels[action];
+    if (document.documentElement.getAttribute("lang") === "en") return action;
+    // Token-based Arabic fallback for the long tail of AuditAction constants
+    const tokens = {
+      USER: "مستخدم", USERS: "مستخدمين", BULK: "جماعي", ADMIN: "إداري",
+      EXPORT: "تصدير", IMPORT: "استيراد", REPORT: "تقرير", DAILY: "يومي",
+      ANALYTICS: "تحليلات", AUDIT: "تدقيق", LOG: "سجل", CLEANUP: "تنظيف",
+      MESSAGE: "رسالة", NOTIFICATIONS: "إشعارات", SENT: "إرسال",
+      CREATED: "إنشاء", UPDATED: "تحديث", DELETED: "حذف", EDITED: "تعديل",
+      VIEWED: "عرض", GENERATED: "توليد", RESOLVED: "معالجة",
+      SUBMITTED: "تقديم", COMPLETED: "اكتمال", FAILED: "فشل",
+      SUCCESS: "نجاح", REQUESTED: "طلب", DOWNLOADED: "تنزيل",
+      PASSWORD: "كلمة المرور", RESET: "إعادة تعيين", CHANGED: "تغيير",
+      CHANGE: "تغيير", PROFILE: "الملف الشخصي", BACKUP: "نسخة احتياطية",
+      RESTORED: "استعادة", ENQUEUED: "جدولة", ALERT: "تنبيه",
+      ACKNOWLEDGED: "تأكيد", KINDERGARTEN: "حضانة", CHILDREN: "أطفال",
+      INCIDENT: "حادثة", ATTENDANCE: "حضور", OVERRIDE: "تجاوز",
+      IMPERSONATION: "انتحال صلاحية", START: "بدء", END: "إنهاء",
+      ATTEMPT: "محاولة", MFA: "التحقق الثنائي", ENABLED: "تفعيل",
+      DISABLED: "تعطيل", BYPASS: "تجاوز", GOVERNANCE: "حوكمة",
+      REMINDER: "تذكير", CONTACT: "تواصل", STATUS: "حالة",
+      CLASSIFICATION: "تصنيف", CACHE: "ذاكرة مؤقتة", WARM: "تهيئة",
+      INVALIDATE: "إبطال", DASHBOARD: "لوحة", ERROR: "خطأ",
+      PREVIEW: "معاينة", QUEUED: "جدولة", SKIPPED: "تخطي",
+      READ: "قراءة", REPLIED: "رد", ARCHIVED: "أرشفة",
+      UNARCHIVED: "إلغاء أرشفة", ATTACHMENT: "مرفق", ADDED: "إضافة",
+      ANNOUNCEMENT: "إعلان", FORCE: "إجباري", PARENT: "ولي أمر",
+      TO: "إلى", CSV: "CSV", SYNC: "متزامن", JOB: "مهمة",
+      INITIATED: "بدء", AUTH: "مصادقة", LOCKED: "قفل",
+    };
+    const translated = String(action)
+      .split("_")
+      .map((t) => tokens[t] || t)
+      .join(" ");
+    return translated;
   }
 
   getEntityTypeLabel(entityType) {
     const labels = {
       USER: auditText("مستخدم", "User"),
       CHILD: auditText("طفل", "Child"),
-      KINDERGARTEN: auditText("روضة", "Kindergarten"),
+      KINDERGARTEN: auditText("حضانة", "Kindergarten"),
       ENROLLMENT: auditText("تسجيل", "Enrollment"),
       ATTENDANCE: auditText("حضور", "Attendance"),
       REPORT: auditText("تقرير", "Report"),
       INCIDENT: auditText("حادثة", "Incident"),
       TASK: auditText("مهمة", "Task"),
+      Auth: auditText("المصادقة", "Auth"),
+      AUTH: auditText("المصادقة", "Auth"),
+      SYSTEM: auditText("النظام", "System"),
+      MESSAGE: auditText("رسالة", "Message"),
+      CLASS: auditText("شعبة", "Class"),
+      ALERT: auditText("تنبيه", "Alert"),
+      BACKUP: auditText("نسخة احتياطية", "Backup"),
     };
     return labels[entityType] || entityType;
   }

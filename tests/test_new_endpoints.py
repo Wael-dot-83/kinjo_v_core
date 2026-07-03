@@ -235,7 +235,7 @@ class TestManagerSupervisors:
         manager_token,
     ):
         other_kg = models.Kindergarten(
-            name_ar="روضة أخرى", name_en="Other KG",
+            name_ar="حضانة أخرى", name_en="Other KG",
             governorate="Irbid", district="Irbid", area="Center", address_line="St 1",
             contact_phone="0600000002", status=models.KindergartenStatus.ACTIVE,
         )
@@ -347,7 +347,7 @@ class TestManagerChildren:
         manager_token,
     ):
         other_kg = models.Kindergarten(
-            name_ar="روضة غريبة2", name_en="Foreign KG2",
+            name_ar="حضانة غريبة2", name_en="Foreign KG2",
             governorate="Zarqa", district="Zarqa", area="West", address_line="St 7",
             contact_phone="0600000003", status=models.KindergartenStatus.ACTIVE,
         )
@@ -428,7 +428,7 @@ class TestMessagesBroadcast:
         manager_token,
     ):
         other_kg = models.Kindergarten(
-            name_ar="روضة خارجية", name_en="Ext KG",
+            name_ar="حضانة خارجية", name_en="Ext KG",
             governorate="Aqaba", district="Aqaba", area="East", address_line="St 3",
             contact_phone="0600000004", status=models.KindergartenStatus.ACTIVE,
         )
@@ -555,7 +555,7 @@ class TestManagerReportEdit:
         sample_child,
     ):
         other_kg = models.Kindergarten(
-            name_ar="روضة أخرى", name_en="Other KG",
+            name_ar="حضانة أخرى", name_en="Other KG",
             governorate="Zarqa", district="Zarqa", area="West", address_line="St 5",
             contact_phone="0600000099", status=models.KindergartenStatus.ACTIVE,
         )
@@ -724,7 +724,7 @@ class TestManagerChildMove:
         sample_enrollment,
     ):
         other_kg = models.Kindergarten(
-            name_ar="روضة مختلفة", name_en="Other KG",
+            name_ar="حضانة مختلفة", name_en="Other KG",
             governorate="Zarqa", district="Zarqa", area="West", address_line="St 1",
             contact_phone="0600000042", status=models.KindergartenStatus.ACTIVE,
         )

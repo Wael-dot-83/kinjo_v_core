@@ -92,7 +92,7 @@ def run():
         )
         if not kg:
             kg = Kindergarten(
-                name_ar="روضة الأمل",
+                name_ar="حضانة الأمل",
                 name_en="Al Amal Kindergarten",
                 governorate="عمان",
                 district="عمان",

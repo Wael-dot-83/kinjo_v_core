@@ -2,7 +2,7 @@
 {% if ui_lang == 'en' %}
   {% set band_label = 'Good' if band == 'GREEN' else 'Needs Attention' if band == 'AMBER' else 'Action Required' if band == 'RED' else 'No Data' %}
 {% else %}
-  {% set band_label = 'جيد' if band == 'GREEN' else 'يحتاج مراجعة' if band == 'AMBER' else 'إجراء مطلوب' if band == 'RED' else 'لا توجد بيانات' %}
+  {% set band_label = 'جيد' if band == 'GREEN' else 'يحتاج مراجعة' if band == 'AMBER' else 'إجراء مطلوب' if band == 'RED' else 'لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.' %}
 {% endif %}
 {% set band_css = 'band-green' if band == 'GREEN' else 'band-amber' if band == 'AMBER' else 'band-red' if band == 'RED' else 'band-gray' %}
 {% set badge_variant = 'success' if band == 'GREEN' else 'warning' if band == 'AMBER' else 'danger' if band == 'RED' else 'secondary' %}

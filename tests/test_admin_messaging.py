@@ -67,7 +67,7 @@ def _make_user(db, username, role=models.UserRole.SUPERVISOR, kg_id=None,
 
 def _make_kg(db, name_en="MsgKG", governorate="Amman"):
     kg = models.Kindergarten(
-        name_ar=f"روضة {name_en}",
+        name_ar=f"حضانة {name_en}",
         name_en=name_en,
         governorate=governorate,
         district="Amman",
@@ -546,7 +546,7 @@ class TestPostMessagePreview:
 
 def create_kindergarten(test_db, name_suffix, governorate, phone_suffix):
     kindergarten = models.Kindergarten(
-        name_ar=f"روضة {name_suffix}",
+        name_ar=f"حضانة {name_suffix}",
         name_en=f"KG {name_suffix}",
         governorate=governorate,
         district="City",

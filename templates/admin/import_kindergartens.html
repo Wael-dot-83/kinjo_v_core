@@ -1,6 +1,6 @@
 {% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Import Kindergartens — KinJo{% else %}استيراد الروضات — KinJo{% endif %}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Import Kindergartens — KinJo{% else %}استيراد الحضانات — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
 <a href="/admin/dashboard" class="breadcrumb-item">
@@ -11,7 +11,7 @@
     {% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}
 </a>
 <span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الروضات{% endif %}</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الحضانات{% endif %}</span>
 {% endblock %}
 
 {% block content %}
@@ -19,10 +19,10 @@
     <div>
         <h1 class="page-title">
             <i class="bi bi-upload" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الروضات{% endif %}
+            {% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الحضانات{% endif %}
         </h1>
         <p class="page-subtitle">
-            {% if ui_lang == 'en' %}Upload an Excel file to import kindergarten records into the system.{% else %}ارفع ملف Excel لاستيراد بيانات الروضات إلى النظام.{% endif %}
+            {% if ui_lang == 'en' %}Upload an Excel file to import kindergarten records into the system.{% else %}ارفع ملف Excel لاستيراد بيانات الحضانات إلى النظام.{% endif %}
         </p>
     </div>
     <div class="page-actions">
@@ -40,8 +40,8 @@
             <div>
                 <strong>{% if ui_lang == 'en' %}Required columns (exact Arabic headers):{% else %}الأعمدة المطلوبة (بالعناوين العربية الدقيقة):{% endif %}</strong>
                 <ul class="mb-1 mt-1">
-                    <li>اسم الروضة (عربي) — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
-                    <li>اسم الروضة (إنجليزي) — {% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %}</li>
+                    <li>اسم الحضانة (عربي) — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
+                    <li>اسم الحضانة (إنجليزي) — {% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %}</li>
                     <li>المحافظة — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
                     <li>اللواء — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
                     <li>المنطقة — {% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %}</li>
@@ -66,7 +66,7 @@
             </div>
             <button type="submit" class="btn btn-primary" id="importBtn">
                 <i class="bi bi-upload me-1"></i>
-                {% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الروضات{% endif %}
+                {% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الحضانات{% endif %}
             </button>
         </form>
 

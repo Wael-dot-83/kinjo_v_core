@@ -115,7 +115,7 @@ async function loadGovernanceData() {
   try {
     if (refreshBtn) {
       refreshBtn.disabled = true;
-      refreshBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${governanceText("جاري التحميل...", "Loading...")}`;
+      refreshBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${governanceText("جارٍ تحميل البيانات، يرجى الانتظار.", "Loading...")}`;
     }
     const query = new URLSearchParams({ start_date: start, end_date: end }).toString();
 
@@ -485,7 +485,7 @@ function renderReminders(items) {
     .map(
       (r) => `
         <tr>
-            <td>${r.target_type === "kindergarten" ? governanceText("روضة", "Kindergarten") : governanceText("مشرف", "Supervisor")}</td>
+            <td>${r.target_type === "kindergarten" ? governanceText("حضانة", "Kindergarten") : governanceText("مشرف", "Supervisor")}</td>
             <td>#${r.target_id}</td>
             <td>${escapeHtml(formatReminderType(r.reminder_type))}</td>
             <td>${r.sent_at ? new Date(r.sent_at).toLocaleString(governanceLocale()) : "--"}</td>
