@@ -165,3 +165,59 @@ with the right field name.
   `_renderRiskCards` and executive-banner critical-count fixed to match.
 - `tests/test_analytics_dashboard_perf_fixes.py` (new),
   `tests/test_dashboard_frontend_contract.py` (extended).
+
+---
+
+## Follow-up round (same day): alerts empty state, DQ helper text, activity feed, auto-refresh
+
+A second, narrower pass implemented four low-effort UX items and, in the course of
+verifying them live, surfaced two more real bugs blocking the same load chain. Commit
+`baff213`; full write-up and rationale in that commit's message. Summary:
+
+- **Alerts empty state** — `loadAlerts()` now shows "لا توجد تنبيهات نشطة حالياً."
+  (same `az-empty` styling as Risk Intelligence) instead of leaving `#alertList` blank.
+- **Data Quality helper text** — added a bilingual `<details>` explaining completeness/
+  accuracy/freshness and that accuracy/freshness are synthetic estimates derived from
+  completeness, not independently measured (matches `evaluate_data_quality`'s actual
+  formula). Also wired the three health bars to real API values — they were previously
+  hardcoded template defaults `loadDataQuality()` never touched.
+- **Activity feed loading/error states** — spinner while fetching, error banner +
+  retry button on failure, on `/admin/dashboard`'s `ActivityFilterBar`.
+- **Auto-refresh toggle** — `AdminDashboard` already ran an unconditional 5-minute
+  auto-refresh timer with no UI control; exposed it as a checkbox, persisted via
+  `localStorage`, defaulting to "on" to match prior behavior.
+- **Duplicate table headers** — checked audit-logs, users list, and the CSV-import
+  preview table; none found. Not fixed (nothing to fix).
+
+**Two more real bugs found while verifying the above, both fixed:**
+- `/api/kpi/alerts` (kpi_service.py) scanned every active kindergarten with
+  `compute_kpi_bundle` — same expensive aggregator as the governance-score bug above —
+  with **zero caching**, unlike sibling `dashboard-data`. ~13s every call, and since
+  it's awaited directly in the sequential chain, made data-quality/targets/benchmarks/
+  registration-analytics look permanently stuck. Fixed with the same `dashboard_cache`
+  60s-TTL pattern used elsewhere, plus removed a redundant per-kindergarten re-query.
+- `buildTrendChartData` (admin_analytics.js) computed `new Array(dataSeries.length - 1)`,
+  which throws `RangeError` when a date range has zero attendance/incident data (a
+  reachable production case) — silently aborting every widget queued after
+  `updateTrendCharts()` in the same try block. Fixed with `Math.max(0, ...)`.
+- Also removed a dead `window.loadDataQuality` wrapper that called the function a
+  second time via a broken `.then(pct => ...)` for zero benefit.
+
+Tests: 8 new (6 frontend-contract, 2 backend — the cache test uses an in-memory fake,
+not live Redis). Full suite: 2604/2604 pass.
+
+### Deferred (explicitly out of scope, by user decision)
+
+| Item | Why deferred |
+|---|---|
+| **Visual/UI redesign** (color system, card styling) | Cosmetic, needs its own design conversation (palette, card system) before any code — not a quick add. |
+| **Leaderboard cross-request cache** (`/api/analytics/rankings/governance_score`) | Same architecture as the `/api/kpi/alerts` fix above (request-scoped memoization doesn't help across separate HTTP requests), but the TTL tradeoff — how stale governance scores can be for an admin doing real-time incident review — is a product decision, not a technical one. Recommended starting point if picked up: 5-minute TTL via the same `dashboard_cache` pattern, keyed by `(metric, period_start, period_end, governorate, bottom)`. |
+| Performance-monitoring endpoint for slow calls | Nice-to-have, not urgent; not scoped or estimated. |
+
+**Note on i18n:** the Data Quality helper text is bilingual (`{% if ui_lang == 'en' %}`),
+matching CLAUDE.md's non-negotiable convention that every UI string ships both `_ar`
+and `_en` variants. It was suggested this be made Arabic-only to match the earlier
+Arabization audit's "fully Arabic" requirement — that requirement was about eliminating
+English *leaking through in Arabic mode*, not removing the English variant entirely.
+Converting to Arabic-only was correctly not done, since it would break the English UI
+and make this the one inconsistent string on the page.
