@@ -18,6 +18,13 @@
       <span id="last-updated-time" style="font-size: 14px; color: #6B7280; font-weight: 500;">
         {% if ui_lang == 'en' %}Last updated: --:--{% else %}آخر تحديث: --:--{% endif %}
       </span>
+      <div class="form-check form-check-inline" style="margin:0">
+        <input class="form-check-input" type="checkbox" id="autoRefreshCheck">
+        <label class="form-check-label small" for="autoRefreshCheck" style="cursor:pointer">
+          <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Auto-refresh{% else %}تحديث تلقائي{% endif %}
+        </label>
+      </div>
       <button class="admin-btn-enterprise-refresh" id="refresh-dashboard">
         <i class="bi bi-arrow-clockwise refresh-icon" aria-hidden="true"></i>
         <span class="refresh-text">{% if ui_lang == 'en' %}Update Data{% else %}تحديث البيانات{% endif %}</span>

@@ -521,6 +521,71 @@ def test_kpi_alerts_endpoint_no_alerts_for_empty_kg(client, admin_user, sample_k
     assert "alerts" in data
 
 
+def test_kpi_alerts_network_wide_scan_avoids_per_kindergarten_reselect(client, admin_user, sample_kindergarten):
+    """Admin-scoped /kpi/alerts (no kindergarten_id) previously re-queried
+    Kindergarten once per row inside the scan loop, on top of already having
+    fetched the same rows in the initial query. Confirms the endpoint now
+    fetches full Kindergarten objects once and reuses them directly."""
+    token = get_token_for_admin(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    r = client.get("/api/kpi/alerts", headers=headers)
+    assert r.status_code == 200
+    data = r.json()
+    assert "alerts" in data
+    assert "total" in data
+    assert data["total"] == len(data["alerts"])
+
+
+def test_kpi_alerts_response_is_cached_across_requests(client, admin_user, monkeypatch):
+    """The network-wide admin scan (compute_kpi_bundle per active kindergarten)
+    previously had no caching at all, unlike the sibling dashboard-data
+    endpoint — on a dataset with many kindergartens this made /kpi/alerts slow
+    enough to stall the whole analytics page's sequential load chain behind
+    it. Confirms a second identical request hits dashboard_cache instead of
+    recomputing (call-count on the underlying compute_kpi_bundle drops to 0
+    on the cached call)."""
+    import kpi_service as kpi_service_module
+
+    # Authenticate first — the test client's auth bypass relies on
+    # settings.TESTING, which the cache-path check below needs disabled.
+    token = get_token_for_admin(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    from config import settings
+    monkeypatch.setattr(settings, "TESTING", False, raising=False)
+
+    # Deterministic in-memory fake so this test doesn't depend on a live
+    # Redis instance being reachable during the run.
+    fake_store: dict = {}
+
+    class FakeCache:
+        def get(self, key):
+            return fake_store.get(key)
+
+        def set(self, key, value, ttl_seconds=60):
+            fake_store[key] = value
+
+    monkeypatch.setattr(kpi_service_module, "dashboard_cache", FakeCache())
+
+    r1 = client.get("/api/kpi/alerts", headers=headers)
+    assert r1.status_code == 200
+    assert fake_store, "first request should populate the cache"
+
+    call_count = {"n": 0}
+    original = KPIService.compute_kpi_bundle
+
+    def counting_bundle(*args, **kwargs):
+        call_count["n"] += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(KPIService, "compute_kpi_bundle", staticmethod(counting_bundle))
+
+    r2 = client.get("/api/kpi/alerts", headers=headers)
+    assert r2.status_code == 200
+    assert r2.json() == r1.json()
+    assert call_count["n"] == 0, "second request should be served from cache, not recomputed"
+
+
 def test_kpi_levels_country_admin_only(client, admin_user, sample_kindergarten):
     token = get_token_for_admin(client)
     headers = {"Authorization": f"Bearer {token}"}

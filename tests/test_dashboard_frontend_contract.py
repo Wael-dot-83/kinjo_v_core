@@ -9,6 +9,9 @@ DECISION_SUPPORT_JS = ROOT / "static" / "js" / "decision_support.js"
 ANALYTICS_V2_CSS = ROOT / "static" / "css" / "admin_analytics_v2.css"
 ANALYTICS_TEMPLATE = ROOT / "templates" / "admin" / "analytics" / "dashboard.html"
 ADMIN_ANALYTICS_JS = ROOT / "static" / "js" / "admin_analytics.js"
+ADMIN_DASHBOARD_TEMPLATE = ROOT / "templates" / "admin_dashboard.html"
+ADMIN_DASHBOARD_JS = ROOT / "static" / "js" / "admin_dashboard.js"
+ADMIN_ACTIVITY_FILTERS_JS = ROOT / "static" / "js" / "admin_activity_filters.js"
 
 
 def test_kpi_cards_expose_status_attribute_used_by_filter_layer():
@@ -87,3 +90,74 @@ def test_risk_intelligence_cards_use_real_backend_field_names():
     stale_body = stale_filter_pattern.group(0)
     assert "item.risk_score" not in stale_body
     assert 'item.name === "string"' not in stale_body
+
+
+def test_trend_chart_padding_guards_against_negative_array_length():
+    """new Array(dataSeries.length - 1) throws RangeError when dataSeries is
+    empty (length 0 -> -1), which is a real, reachable case (any date range
+    with no attendance/incident data), not just a test artifact. This
+    silently aborted every widget still queued after updateTrendCharts() in
+    loadAdminAnalytics's shared try block — alerts, data quality, targets,
+    benchmarks, recommendations, registration analytics, and the
+    risk-radar/executive-banner event never ran. Confirmed via live
+    investigation on 2026-07-04.
+    """
+    source = ADMIN_ANALYTICS_JS.read_text(encoding="utf-8")
+    assert "const paddingLength = Math.max(0, dataSeries.length - 1);" in source
+    assert "new Array(dataSeries.length - 1)" not in source
+    assert source.count("new Array(paddingLength)") == 3
+
+
+def test_alerts_card_has_empty_state():
+    """loadAlerts() previously left #alertList blank (just cleared innerHTML)
+    when combinedAlerts was empty instead of showing a message, unlike the
+    Risk Intelligence card's #noRiskData fallback."""
+    source = ADMIN_ANALYTICS_JS.read_text(encoding="utf-8")
+    assert "لا توجد تنبيهات نشطة حالياً" in source
+    assert re.search(r"if \(combinedAlerts\.length === 0\) \{", source)
+
+
+def test_data_quality_card_has_helper_text_and_wired_bars():
+    """The three health bars (Completeness/Accuracy/Freshness) were rendered
+    with hardcoded template defaults and never actually updated by
+    loadDataQuality(); only the headline score/badge were wired. Also checks
+    the explanatory <details> element required for the Data Quality card."""
+    template = ANALYTICS_TEMPLATE.read_text(encoding="utf-8")
+    assert 'class="dq-info' in template
+    assert "معلومات عن مؤشر جودة البيانات" in template
+
+    source = ADMIN_ANALYTICS_JS.read_text(encoding="utf-8")
+    assert 'setBar("dqCompBar", "dqCompVal", data.completeness_percent);' in source
+    assert 'setBar("dqAccBar", "dqAccVal", data.accuracy_score);' in source
+    assert 'setBar("dqFreshBar", "dqFreshVal", data.timeliness_score);' in source
+
+
+def test_data_quality_ring_wrapper_does_not_double_fetch():
+    """dashboard.html used to wrap window.loadDataQuality in a patch that
+    called the (async, void-returning) original function a second time via
+    .then(pct => ...), silently doing nothing useful (loadDataQuality never
+    returns a value, and already updates the ring itself) while doubling the
+    /api/analytics/data-quality request cost on every call."""
+    template = ANALYTICS_TEMPLATE.read_text(encoding="utf-8")
+    assert "const origDQ = window.loadDataQuality;" not in template
+    assert "origDQ.apply(this, arguments).then" not in template
+
+
+def test_activity_feed_has_loading_and_error_states():
+    source = ADMIN_ACTIVITY_FILTERS_JS.read_text(encoding="utf-8")
+    assert "جاري تحميل النشاطات" in source
+    assert "تعذر تحميل النشاطات" in source
+    assert "activityRetryBtn" in source
+    assert "spinner-border" in source
+
+
+def test_auto_refresh_toggle_present_and_wired():
+    template = ADMIN_DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
+    assert 'id="autoRefreshCheck"' in template
+
+    source = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
+    assert "isAutoRefreshEnabled()" in source
+    assert 'localStorage.getItem("autoRefreshEnabled")' in source
+    assert 'localStorage.setItem("autoRefreshEnabled"' in source
+    # Must not unconditionally auto-start regardless of saved preference
+    assert "if (this.isAutoRefreshEnabled()) this.startAutoRefresh();" in source

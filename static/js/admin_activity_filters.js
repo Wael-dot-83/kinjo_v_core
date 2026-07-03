@@ -337,6 +337,15 @@
       params.set("page", String(this.state.page || 1));
       params.set("page_size", "20");
 
+      const feed = document.getElementById("activity-feed");
+      if (feed) {
+        feed.innerHTML =
+          '<div class="text-center text-muted small py-4">' +
+          '<div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>' +
+          t("dashboard.activity_loading", lang() === "en" ? "Loading activities..." : "جاري تحميل النشاطات...") +
+          "</div>";
+      }
+
       try {
         const response = await fetch(`${ENDPOINT}?${params.toString()}`, {
           method: "GET",
@@ -352,6 +361,20 @@
         this.renderPagination(data);
       } catch (error) {
         console.error("[ActivityFilterBar] load error:", error);
+        if (feed) {
+          const retryLabel = t("dashboard.activity_retry", lang() === "en" ? "Retry" : "إعادة المحاولة");
+          const errorLabel = t(
+            "dashboard.activity_load_error",
+            lang() === "en" ? "Unable to load activities. Please try again." : "تعذر تحميل النشاطات. يرجى المحاولة مرة أخرى."
+          );
+          feed.innerHTML =
+            '<div class="text-center text-danger small py-4">' +
+            '<i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>' +
+            `<span>${errorLabel}</span><br>` +
+            `<button type="button" class="btn btn-sm btn-outline-danger mt-2" id="activityRetryBtn">${retryLabel}</button>` +
+            "</div>";
+          document.getElementById("activityRetryBtn")?.addEventListener("click", () => this.load());
+        }
       }
     }
 

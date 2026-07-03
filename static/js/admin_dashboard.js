@@ -84,17 +84,39 @@ class AdminDashboard {
     this.initEventListeners();
     this.initChartDefaults();
     this.loadDashboardData();
-    this.startAutoRefresh();
+    // Auto-refresh existed unconditionally before (5-minute interval, no way
+    // to disable); autoRefreshEnabled persists the user's choice to keep
+    // that same default (on) when no preference has been saved yet.
+    if (this.isAutoRefreshEnabled()) this.startAutoRefresh();
+  }
+
+  isAutoRefreshEnabled() {
+    const stored = localStorage.getItem("autoRefreshEnabled");
+    return stored === null ? true : stored === "true";
   }
 
   initEventListeners() {
     this._listeners.refresh    = () => this.loadDashboardData();
     this._listeners.retry      = () => this.loadDashboardData();
-    this._listeners.visibility = () => { document.hidden ? this.stopAutoRefresh() : this.startAutoRefresh(); };
+    this._listeners.visibility = () => {
+      if (document.hidden) { this.stopAutoRefresh(); return; }
+      if (this.isAutoRefreshEnabled()) this.startAutoRefresh();
+    };
+    this._listeners.autoRefreshToggle = (event) => {
+      localStorage.setItem("autoRefreshEnabled", event.target.checked ? "true" : "false");
+      if (event.target.checked) this.startAutoRefresh();
+      else this.stopAutoRefresh();
+    };
 
     document.getElementById("refresh-dashboard")?.addEventListener("click", this._listeners.refresh);
     document.getElementById("retry-dashboard")?.addEventListener("click",   this._listeners.retry);
     document.addEventListener("visibilitychange", this._listeners.visibility);
+
+    const autoRefreshCheck = document.getElementById("autoRefreshCheck");
+    if (autoRefreshCheck) {
+      autoRefreshCheck.checked = this.isAutoRefreshEnabled();
+      autoRefreshCheck.addEventListener("change", this._listeners.autoRefreshToggle);
+    }
   }
 
   initChartDefaults() {
@@ -845,6 +867,7 @@ class AdminDashboard {
     this.stopAutoRefresh();
     document.getElementById("refresh-dashboard")?.removeEventListener("click", this._listeners.refresh);
     document.getElementById("retry-dashboard")?.removeEventListener("click",   this._listeners.retry);
+    document.getElementById("autoRefreshCheck")?.removeEventListener("change", this._listeners.autoRefreshToggle);
     document.removeEventListener("visibilitychange", this._listeners.visibility);
     Object.values(this.charts).forEach((c) => c?.destroy());
     this.charts = {};

@@ -4880,24 +4880,43 @@ def get_kpi_alerts(
         target_kg_id = current_user.kindergarten_id
         if not target_kg_id:
             return {"alerts": []}
-        kg_ids = [target_kg_id]
+        kg_query = db.query(models.Kindergarten).filter(models.Kindergarten.id == target_kg_id)
     elif current_user.role == models.UserRole.ADMIN:
         if kindergarten_id:
-            kg_ids = [kindergarten_id]
+            kg_query = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id)
         else:
-            kg_ids = [row[0] for row in db.query(models.Kindergarten.id).filter(
+            kg_query = db.query(models.Kindergarten).filter(
                 models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-            ).all()]
+            )
     else:
-        kg_ids = []
+        kg_query = None
+
+    kindergartens = kg_query.all() if kg_query is not None else []
+
+    # This scans every kindergarten in scope with compute_kpi_bundle (the same
+    # multi-query-per-kindergarten aggregator used by governance scoring) —
+    # for an admin with no kindergarten filter that's all active kindergartens
+    # (629 in this dataset), which previously took 15s+ and had no caching at
+    # all, unlike the sibling dashboard-data endpoint. Reuse that exact cache
+    # pattern (60s TTL, bypassed under TESTING) instead of rewriting the
+    # underlying per-kindergarten computation.
+    cache_key = (
+        f"kpi:alerts:{period_start}:{period_end}:"
+        f"{kindergarten_id or 'all'}:{current_user.role.value}"
+    )
+    if not getattr(settings, "TESTING", False):
+        try:
+            cached = dashboard_cache.get(cache_key)
+        except Exception:
+            cached = None
+        if cached is not None:
+            return cached
 
     alerts = []
     today = _today_jordan()
 
-    for kg_id in kg_ids:
-        kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kg_id).first()
-        if not kg:
-            continue
+    for kg in kindergartens:
+        kg_id = kg.id
         kg_name = kg.name_ar or kg.name_en or f"KG #{kg_id}"
 
         # License expiry
@@ -4978,12 +4997,18 @@ def get_kpi_alerts(
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
     alerts.sort(key=lambda a: priority_order.get(a.get("priority", "low"), 3))
 
-    return {
+    result = {
         "period_start": period_start.isoformat(),
         "period_end": period_end.isoformat(),
         "alerts": alerts,
         "total": len(alerts),
     }
+    if not getattr(settings, "TESTING", False):
+        try:
+            dashboard_cache.set(cache_key, result, ttl_seconds=60)
+        except Exception:
+            pass
+    return result
 
 
 @router.get("/kpi/recommended-actions")

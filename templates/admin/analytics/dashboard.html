@@ -355,6 +355,31 @@
               <div id="ohDataQuality" style="display:none"></div>{# preserve ID for JS #}
               <!-- hidden SVG for backwards compatibility with JS -->
               <svg style="display:none" width="0" height="0"><circle id="dqRingFill"></circle></svg>
+
+              <details class="dq-info mt-2">
+                <summary class="small text-muted" style="cursor:pointer;user-select:none">
+                  <i class="bi bi-info-circle me-1" aria-hidden="true"></i>{% if ui_lang == 'en' %}About this indicator{% else %}معلومات عن مؤشر جودة البيانات{% endif %}
+                </summary>
+                <div class="small text-muted mt-2" style="line-height:1.7">
+                  {% if ui_lang == 'en' %}
+                  <p class="mb-2">Data Quality is calculated from three components:</p>
+                  <ul class="ps-3 mb-2">
+                    <li><strong>Completeness:</strong> the share of kindergartens with all core fields filled in (name, governorate, district, area, address, phone) averaged with the share of children with core fields filled in (name, date of birth, gender).</li>
+                    <li><strong>Accuracy:</strong> an estimate derived from completeness (completeness + 5%, capped at 100%) — not an independently measured metric.</li>
+                    <li><strong>Freshness:</strong> currently a fixed value (90%), assuming data is updated regularly.</li>
+                  </ul>
+                  <p class="mb-0">The badge and large number above show the Completeness score specifically — Accuracy and Freshness are supplementary detail, not blended into that headline figure.</p>
+                  {% else %}
+                  <p class="mb-2">يُحسب مؤشر جودة البيانات من ثلاثة مكونات رئيسية:</p>
+                  <ul class="ps-3 mb-2">
+                    <li><strong>الاكتمال:</strong> نسبة الحضانات التي تحتوي على جميع الحقول الأساسية (الاسم، المحافظة، المنطقة، العنوان، الهاتف) ونسبة الأطفال المستوفين للحقول الأساسية (الاسم، تاريخ الميلاد، الجنس).</li>
+                    <li><strong>الدقة:</strong> تقدير مستمد من الاكتمال (يُضاف 5% مع حد أقصى 100%)، وليس مقياساً مستقلاً.</li>
+                    <li><strong>الحداثة:</strong> قيمة ثابتة حالياً (90%)، تعكس افتراض تحديث البيانات بانتظام.</li>
+                  </ul>
+                  <p class="mb-0">الشارة والرقم الكبير أعلاه يعرضان درجة الاكتمال تحديداً — أما الدقة والحداثة فهما تفصيل إضافي ولا يدخلان في حساب هذا الرقم.</p>
+                  {% endif %}
+                </div>
+              </details>
             </div>
           </div>
 
@@ -1332,16 +1357,13 @@
         if (dist) window._updateGovBars(dist.green, dist.amber, dist.red);
       };
     }
-    const origDQ = window.loadDataQuality;
-    if (typeof origDQ === 'function') {
-      window.loadDataQuality = function () {
-        return origDQ.apply(this, arguments).then
-          ? origDQ.apply(this, arguments).then(function (pct) {
-              if (pct != null) window._updateDQRing(pct);
-            })
-          : origDQ.apply(this, arguments);
-      };
-    }
+    /* No wrapper needed here: loadDataQuality() already calls
+       window._updateDQRing() internally. A previous version of this patch
+       called the (async, void-returning) function a second time via
+       .then(pct => ...) hoping to receive the percentage, which loadDataQuality
+       never returns — so the ring update in that branch was always a no-op,
+       while still doubling the /api/analytics/data-quality request cost on
+       every call for no benefit. */
     /* Funnel steps */
     const origFunnel = window.renderFunnelChart;
     if (typeof origFunnel === 'function') {

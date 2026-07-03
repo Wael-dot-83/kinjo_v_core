@@ -842,6 +842,15 @@ function buildTrendChartData(type) {
   const forecastLabels = forecastPoints.map((d) => formatDateForDisplay(d.date));
   const fullLabels = labels.concat(forecastLabels);
 
+  // new Array(n) throws RangeError for negative n — dataSeries.length - 1 is
+  // -1 whenever there's no attendance/incident data for the selected range
+  // (a real, reachable case, not just a test artifact), which previously
+  // crashed here and silently aborted every widget load still queued after
+  // updateTrendCharts() in loadAdminAnalytics's shared try block (alerts,
+  // data quality, targets, benchmarks, recommendations, registration
+  // analytics, and the risk-radar/executive-banner event never ran).
+  const paddingLength = Math.max(0, dataSeries.length - 1);
+
   const lineColor = type === "attendance" ? "#2563EB" : "#DC2626";
   const lineLabel =
     type === "attendance"
@@ -877,7 +886,7 @@ function buildTrendChartData(type) {
         },
         {
           label: adminAnalyticsText("توقعات", "Forecast"),
-          data: new Array(dataSeries.length - 1)
+          data: new Array(paddingLength)
             .fill(null)
             .concat(forecastPoints.map((d) => d.value)),
           borderColor: "#0EA5E9",
@@ -887,7 +896,7 @@ function buildTrendChartData(type) {
         },
         {
           label: adminAnalyticsText("حد أدنى", "Lower bound"),
-          data: new Array(dataSeries.length - 1)
+          data: new Array(paddingLength)
             .fill(null)
             .concat((confidence.lower || []).map((d) => d.value)),
           borderColor: "rgba(31,94,71,0.2)",
@@ -897,7 +906,7 @@ function buildTrendChartData(type) {
         },
         {
           label: adminAnalyticsText("حد أعلى", "Upper bound"),
-          data: new Array(dataSeries.length - 1)
+          data: new Array(paddingLength)
             .fill(null)
             .concat((confidence.upper || []).map((d) => d.value)),
           borderColor: "rgba(31,94,71,0.2)",
@@ -1895,6 +1904,16 @@ async function loadAlerts() {
     banner.classList.add("d-none");
   }
 
+  if (combinedAlerts.length === 0) {
+    alertList.innerHTML =
+      '<div class="az-empty" style="padding:16px 0">' +
+      '<i class="bi bi-bell-slash"></i>' +
+      '<span class="az-empty__text">' +
+      adminAnalyticsText("لا توجد تنبيهات نشطة حالياً.", "No active alerts at this time.") +
+      "</span></div>";
+    return;
+  }
+
   combinedAlerts.slice(0, 8).forEach((alert) => {
     const row = document.createElement("div");
     row.className = "list-group-item border-0 py-2";
@@ -1929,6 +1948,19 @@ async function loadDataQuality() {
     const statusEl = document.getElementById("dataQualityStatus");
     const pct = (data.completeness_percent ?? 0);
     if (scoreEl) scoreEl.textContent = `${pct.toFixed(1)}%`;
+
+    // The three health bars were previously never updated by this function —
+    // they stayed at whatever static value the template happened to render.
+    const setBar = (barId, valId, value) => {
+      const bar = document.getElementById(barId);
+      const val = document.getElementById(valId);
+      const v = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+      if (bar) bar.style.width = `${v}%`;
+      if (val) val.textContent = `${v.toFixed(0)}%`;
+    };
+    setBar("dqCompBar", "dqCompVal", data.completeness_percent);
+    setBar("dqAccBar", "dqAccVal", data.accuracy_score);
+    setBar("dqFreshBar", "dqFreshVal", data.timeliness_score);
     const dqCls = pct >= 85 ? "az-badge--green" : pct >= 60 ? "az-badge--amber" : "az-badge--red";
     if (statusEl) {
       statusEl.textContent = pct >= 85
