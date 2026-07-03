@@ -5,7 +5,7 @@
 {% block title %}{% if ui_lang == 'en' %}Analytics Intelligence Center{% else %}مركز الذكاء التحليلي{% endif %} — KinJo{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=2.0">
+<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=2.1">
 <style>
   /* Suppress Bootstrap's default card styling where we use az-card */
   .kpi-grid, .kpi-card { display: none !important; }
@@ -1060,6 +1060,26 @@
     document.getElementById('analyticsTabsNav')?.addEventListener('shown.bs.tab', function (e) {
       sessionStorage.setItem(STORAGE_KEY, e.target.getAttribute('data-bs-target'));
     });
+  }());
+
+  /* Sticky filter bar: elevate styling while pinned to the scrollport top.
+     A scroll listener (not an IntersectionObserver sentinel) because the
+     page container is a flex column with gap — an inserted sentinel would
+     add visual gap slots. */
+  (function () {
+    const bar = document.querySelector('.glass-filter-bar');
+    const scroller = document.querySelector('.admin-content');
+    if (!bar || !scroller) return;
+    let ticking = false;
+    const update = function () {
+      ticking = false;
+      const stuck = bar.getBoundingClientRect().top <= scroller.getBoundingClientRect().top + 1;
+      bar.classList.toggle('is-stuck', stuck);
+    };
+    scroller.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    }, { passive: true });
+    update();
   }());
 
   /* Governorate table in-page search */
