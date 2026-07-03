@@ -4,7 +4,7 @@ Implements drill-down analytics from Network → Governorate → Kindergarten �
 """
 from fastapi import APIRouter, Depends, Query, HTTPException, status, BackgroundTasks, Response
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from datetime import date, datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, case, desc, asc
@@ -1080,8 +1080,19 @@ def get_consolidated_dashboard_data(
         previous_period_bounds = _previous_period_bounds(period_start, period_end)
         if previous_period_bounds:
             previous_start, previous_end = previous_period_bounds
-            previous_summary = AnalyticsService.get_network_summary(db, previous_start, previous_end, kg_filter)
-            previous_summary.total_kindergartens = _count_active_kindergartens_at(db, kg_filter, previous_end)
+            # Only attendance_rate, incident_rate, and total_kindergartens from the
+            # previous period feed into `deltas` below — the full get_network_summary()
+            # call also computes governance_avg_score (a ~11s network-wide scan over
+            # every kindergarten), enrollment_rate, and report submission/approval
+            # rates, none of which are used here. Compute just the three cheap
+            # aggregate values that are actually read instead of the full summary.
+            previous_attendance_rate = AnalyticsService._compute_network_attendance_rate(
+                db, previous_start, previous_end, kg_filter
+            )
+            previous_incident_rate = AnalyticsService._compute_network_incident_rate(
+                db, previous_start, previous_end, kg_filter
+            )
+            previous_total_kindergartens = _count_active_kindergartens_at(db, kg_filter, previous_end)
             previous_expected_child_days = _network_expected_child_days(db, previous_start, previous_end, kg_filter)
             previous_attended_child_days = _network_attended_child_days(db, previous_start, previous_end, kg_filter)
             previous_period = {
@@ -1092,7 +1103,7 @@ def get_consolidated_dashboard_data(
                 "total_kindergartens": MetricDelta(
                     **_build_metric_delta(
                         network_summary.total_kindergartens,
-                        previous_summary.total_kindergartens,
+                        previous_total_kindergartens,
                         True,
                         available=True,
                     )
@@ -1100,7 +1111,7 @@ def get_consolidated_dashboard_data(
                 "attendance_rate": MetricDelta(
                     **_build_metric_delta(
                         network_summary.attendance_rate,
-                        previous_summary.attendance_rate,
+                        previous_attendance_rate,
                         True,
                         available=previous_expected_child_days > 0,
                     )
@@ -1108,7 +1119,7 @@ def get_consolidated_dashboard_data(
                 "incident_rate": MetricDelta(
                     **_build_metric_delta(
                         network_summary.incident_rate,
-                        previous_summary.incident_rate,
+                        previous_incident_rate,
                         False,
                         available=previous_attended_child_days > 0,
                     )
@@ -5436,7 +5447,7 @@ class AnalyticsService:
 
         green = amber = red = 0
         for kg in kindergartens:
-            _, band = KPIService.compute_governance_score(db, kg.id, period_start, period_end)
+            _, band = AnalyticsService._kg_governance_score_and_band(db, kg.id, period_start, period_end)
             # Band is returned as "GREEN", "AMBER", or "RED" (uppercase)
             if band == "GREEN":
                 green += 1
@@ -5645,6 +5656,7 @@ class AnalyticsService:
             attendance_rate = (attendance_days / 30.0) * 100
             risk_children.append({
                 "child_id": child.id,
+                "kindergarten_id": kg_id,
                 "child_name": f"{child.first_name} {child.last_name}",
                 "kindergarten_name": kg_name_map.get(kg_id, "Unknown"),
                 "risk_type": "Low Attendance",
@@ -5654,6 +5666,7 @@ class AnalyticsService:
         for child, incident_count, kg_id in recent_incidents:
             risk_children.append({
                 "child_id": child.id,
+                "kindergarten_id": kg_id,
                 "child_name": f"{child.first_name} {child.last_name}",
                 "kindergarten_name": kg_name_map.get(kg_id, "Unknown"),
                 "risk_type": "Multiple Incidents",
@@ -5911,41 +5924,41 @@ class AnalyticsService:
         return round(total_score / count, 2) if count > 0 else 0.0
 
     @staticmethod
-    def _compute_kindergarten_governance_score(db: Session, kindergarten_id: int, period_start: date, period_end: date) -> float:
-        """Compute governance score (GCEI) for a specific kindergarten"""
+    def _kg_governance_score_and_band(db: Session, kindergarten_id: int, period_start: date, period_end: date) -> Tuple[float, str]:
+        """Canonical (score, band) for one kindergarten/period.
+
+        Delegates to KPIService.compute_governance_score — the single source
+        of truth per project convention (KPI computations belong in
+        kpi_service.py). Memoized on the request's db.info so repeated
+        lookups for the same (kg, period) within one dashboard-data request
+        — network summary, governorate breakdown, and governance distribution
+        all need it — compute the score once instead of up to three times
+        per kindergarten. This previously caused ~35s cold-cache dashboard
+        loads and, since a separate "simplified GCEI" formula used to live
+        here duplicating kpi_service.py's logic, could show materially
+        different governance scores in different dashboard sections for the
+        same kindergarten/period (e.g. 60.0 vs 40.0/RED).
+        """
         from kpi_service import KPIService
+        memo = db.info.setdefault("_governance_score_memo", {})
+        key = (kindergarten_id, period_start, period_end)
+        if key not in memo:
+            try:
+                score, band = KPIService.compute_governance_score(db, kindergarten_id, period_start, period_end)
+                memo[key] = (float(score), str(band))
+            except SQLAlchemyError:
+                logger.exception("Failed to compute kindergarten governance score due to database error")
+                memo[key] = (0.0, "RED")
+            except (ZeroDivisionError, TypeError, ValueError):
+                logger.exception("Failed to compute kindergarten governance score due to invalid analytics data")
+                memo[key] = (0.0, "RED")
+        return memo[key]
 
-        try:
-            # Get individual KPI scores
-            attendance_rate = KPIService.compute_attendance_rate(db, kindergarten_id, period_start, period_end)
-            incident_rate = KPIService.compute_incident_rate(db, kindergarten_id, period_start, period_end)
-            serious_incident_rate = KPIService.compute_serious_incident_rate(db, kindergarten_id, period_start, period_end)
-            ratio_compliance = KPIService.compute_ratio_compliance(db, kindergarten_id, period_start, period_end)
-
-            # Normalize and weight the scores (simplified GCEI calculation)
-            # Higher attendance = better score
-            attendance_score = min(attendance_rate, 100) * 0.4
-
-            # Lower incident rates = better score
-            # compute_incident_rate() returns per-1,000 child-days; divide by 10 to
-            # restore per-100 equivalent before applying the original multiplier.
-            incident_score = max(0, 100 - (incident_rate / 10) * 10) * 0.3
-
-            # Lower serious incident rates = better score
-            serious_incident_score = max(0, 100 - (serious_incident_rate / 10) * 20) * 0.2
-
-            # Higher ratio compliance = better score
-            ratio_score = ratio_compliance * 0.1
-
-            total_score = attendance_score + incident_score + serious_incident_score + ratio_score
-
-            return round(total_score, 2)
-        except SQLAlchemyError:
-            logger.exception("Failed to compute kindergarten governance score due to database error")
-            return 0.0
-        except (ZeroDivisionError, TypeError, ValueError):
-            logger.exception("Failed to compute kindergarten governance score due to invalid analytics data")
-            return 0.0
+    @staticmethod
+    def _compute_kindergarten_governance_score(db: Session, kindergarten_id: int, period_start: date, period_end: date) -> float:
+        """Governance score only. See _kg_governance_score_and_band for the memoized (score, band) pair."""
+        score, _band = AnalyticsService._kg_governance_score_and_band(db, kindergarten_id, period_start, period_end)
+        return score
 
     @staticmethod
     def _compute_report_submission_rate(db: Session, period_start: date, period_end: date) -> float:

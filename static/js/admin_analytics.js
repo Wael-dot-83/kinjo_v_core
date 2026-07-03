@@ -1033,11 +1033,16 @@ function updateRiskRadar(riskData) {
     return;
   }
 
+  // get_high_risk_children() returns {child_id, kindergarten_id, child_name,
+  // kindergarten_name, risk_type, risk_value, description} — not the
+  // {name, kindergarten, reason, risk_score} shape this filter used to
+  // check, which discarded every real entry and always fell through to the
+  // "no risk data" empty state regardless of actual risk data.
   const validRiskItems = riskData.filter(function (item) {
     if (!item) return false;
-    const name = typeof item.name === "string" ? item.name.trim() : "";
-    const kindergarten = typeof item.kindergarten === "string" ? item.kindergarten.trim() : "";
-    const reason = typeof item.reason === "string" ? item.reason.trim() : "";
+    const name = typeof item.child_name === "string" ? item.child_name.trim() : "";
+    const kindergarten = typeof item.kindergarten_name === "string" ? item.kindergarten_name.trim() : "";
+    const reason = typeof item.description === "string" ? item.description.trim() : "";
     const placeholderValues = new Set([
       "غير محدد",
       "غير متاح",
@@ -1045,15 +1050,16 @@ function updateRiskRadar(riskData) {
       "Not specified",
       "Unavailable",
       "Unspecified reason",
+      "Unknown",
     ]);
     const hasValidName = name.length > 0 && !placeholderValues.has(name);
     const hasValidKindergarten = kindergarten.length > 0 && !placeholderValues.has(kindergarten);
-    const hasValidScore = Number.isFinite(Number(item.risk_score)) && item.risk_score >= 0 && item.risk_score <= 100;
+    const hasValidScore = Number.isFinite(Number(item.risk_value)) && item.risk_value >= 0;
     const hasValidReason = reason.length > 0 && !placeholderValues.has(reason);
     const noCorruptedText = window.KpiValidation
-      ? !window.KpiValidation.containsCorruptedArabic(item.name) &&
-        !window.KpiValidation.containsCorruptedArabic(item.kindergarten) &&
-        !window.KpiValidation.containsCorruptedArabic(item.reason)
+      ? !window.KpiValidation.containsCorruptedArabic(item.child_name) &&
+        !window.KpiValidation.containsCorruptedArabic(item.kindergarten_name) &&
+        !window.KpiValidation.containsCorruptedArabic(item.description)
       : true;
     const isNotPlaceholder = hasValidName && hasValidKindergarten && hasValidScore && hasValidReason && noCorruptedText;
     return isNotPlaceholder;
@@ -1069,8 +1075,16 @@ function updateRiskRadar(riskData) {
   container.classList.remove("d-none");
   noData.classList.add("d-none");
 
-  // Sort by risk score descending
-  validRiskItems.sort(function (a, b) { return (b.risk_score || 0) - (a.risk_score || 0); });
+  // Sort by risk severity descending (see window._classifyRisk — risk_value's
+  // scale/direction depends on risk_type, so rank by classified severity
+  // tier first, then by raw risk_value within a tier).
+  const severityRank = { critical: 3, high: 2, medium: 1 };
+  validRiskItems.sort(function (a, b) {
+    const rankA = window._classifyRisk ? severityRank[window._classifyRisk(a)] : 0;
+    const rankB = window._classifyRisk ? severityRank[window._classifyRisk(b)] : 0;
+    if (rankA !== rankB) return rankB - rankA;
+    return (b.risk_value || 0) - (a.risk_value || 0);
+  });
 
   // Use v2 renderer if available, otherwise fall back to legacy
   if (typeof window._renderRiskCards === 'function') {
@@ -1081,11 +1095,11 @@ function updateRiskRadar(riskData) {
   validRiskItems.forEach(function (item) {
     const li = document.createElement("li");
     li.className = "list-group-item d-flex justify-content-between align-items-center border-0 py-3";
-    const riskScore = item.risk_score || 0;
+    const riskScore = item.risk_value || 0;
     const riskColor = riskScore >= 70 ? "danger" : riskScore >= 40 ? "warning" : "success";
-    const safeName = item.name || "غير متاح";
-    const safeKindergarten = item.kindergarten || "غير محدد";
-    const safeReason = item.reason || "سبب غير محدد";
+    const safeName = item.child_name || "غير متاح";
+    const safeKindergarten = item.kindergarten_name || "غير محدد";
+    const safeReason = item.description || "سبب غير محدد";
     li.innerHTML = `<div class="flex-grow-1">
       <div class="d-flex align-items-center mb-1">
         <span class="fw-bold text-dark me-2">${adminAnalyticsLiteral(safeName)}</span>

@@ -61,12 +61,18 @@ def test_legacy_kindergarten_term_absent_from_ui_sources():
         encoding="utf-8",
     ).stdout.splitlines()
     offenders = []
+    self_path = Path(__file__).resolve()
     for rel in tracked:
         if not (rel.startswith(("templates/", "static/")) or rel.endswith(".py")):
             continue
         if rel.startswith(("static/vendor/", "docs/", "GWS/")):
             continue
         path = ROOT / rel
+        if path.resolve() == self_path:
+            # This test's own source contains the banned string as a literal
+            # to check against — excluding anything else would silently
+            # narrow coverage, so only this file is skipped.
+            continue
         if path.suffix.lower() not in {".py", ".html", ".js", ".json", ".css"}:
             continue
         try:

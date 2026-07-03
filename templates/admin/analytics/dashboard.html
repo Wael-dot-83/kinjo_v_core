@@ -1090,6 +1090,30 @@
     });
   });
 
+  /* ── Risk radar entry classification ──────────────────────────────────────
+     get_high_risk_children() returns entries whose "risk_value" scale and
+     direction depend on "risk_type": for "Low Attendance" it's an attendance
+     percentage (lower = worse; the backend only includes entries under 80%),
+     for "Multiple Incidents" it's a raw incident count (higher = worse; the
+     backend only includes entries with 2+). A single "score >= 7" threshold
+     can't classify both, so branch on risk_type explicitly. */
+  window._classifyRisk = function (r) {
+    if (r.risk_type === 'Multiple Incidents') {
+      const n = r.risk_value || 0;
+      return n >= 4 ? 'critical' : n >= 3 ? 'high' : 'medium';
+    }
+    const pct = r.risk_value != null ? r.risk_value : 100;
+    return pct < 20 ? 'critical' : pct < 50 ? 'high' : 'medium';
+  };
+
+  window._riskReasonText = function (r, isAr) {
+    if (r.risk_type === 'Multiple Incidents') {
+      return isAr ? ((r.risk_value || 0) + ' حوادث جسيمة خلال آخر 30 يوماً') : (r.description || '');
+    }
+    const pct = r.risk_value != null ? r.risk_value : 0;
+    return isAr ? ('نسبة الحضور: ' + pct + '%') : (r.description || '');
+  };
+
   /* ── Executive Banner updater ───────────────────────────────────────────── */
   window._updateExecutiveBanner = function (dashData, period) {
     if (!dashData) return;
@@ -1138,7 +1162,7 @@
     }
 
     /* Risk count */
-    const criticalCount = riskArr.filter(function (r) { return (r.risk_score || 0) >= 7; }).length;
+    const criticalCount = riskArr.filter(function (r) { return window._classifyRisk(r) === 'critical'; }).length;
     if (criticalCount > 0) {
       addChip('exclamation-triangle-fill', criticalCount + (isAr ? ' مرفق بحاجة لمراجعة' : ' facilities need review'), 'danger');
     } else {
@@ -1210,24 +1234,24 @@
     const isAr = (window.KINJO_LANG || 'ar') === 'ar';
     const MAX = 5;
     container.innerHTML = riskArr.slice(0, MAX).map(function (r) {
-      const score  = r.risk_score || 0;
-      const lvl    = score >= 7 ? 'critical' : score >= 4 ? 'high' : 'medium';
+      const lvl    = window._classifyRisk(r);
       const icon   = lvl === 'critical' ? 'exclamation-octagon-fill' : lvl === 'high' ? 'exclamation-triangle-fill' : 'info-circle-fill';
       const label  = lvl === 'critical' ? (isAr ? 'حرج' : 'Critical') : lvl === 'high' ? (isAr ? 'مرتفع' : 'High') : (isAr ? 'متوسط' : 'Medium');
       const action = isAr ? 'عرض تفاصيل المرفق' : 'View facility details';
+      const scoreDisplay = r.risk_value != null ? r.risk_value.toFixed(1) : '—';
       return [
         '<div class="risk-card risk-card--' + lvl + '" role="article">',
         '  <div class="risk-card__icon"><i class="bi bi-' + icon + '"></i></div>',
         '  <div class="risk-card__body">',
-        '    <div class="risk-card__name">' + esc(r.name || r.kindergarten || '—') + '</div>',
-        '    <div class="risk-card__reason">' + esc(r.reason || '—') + '</div>',
+        '    <div class="risk-card__name">' + esc(r.child_name || r.kindergarten_name || '—') + '</div>',
+        '    <div class="risk-card__reason">' + esc(window._riskReasonText(r, isAr)) + '</div>',
         `    <a href="/kindergartens/${encodeURIComponent(r.kindergarten_id || '')}" class="risk-card__action">`,
         '      <i class="bi bi-arrow-up-right-circle"></i>' + action,
         '    </a>',
         '  </div>',
         '  <div class="risk-card__score">',
         '    <span class="az-badge az-badge--' + (lvl === 'critical' ? 'red' : lvl === 'high' ? 'amber' : 'blue') + '">' + label + '</span>',
-        '    <div style="text-align:center;font:700 1rem/1 var(--font-ar);color:var(--slate-700);margin-top:4px">' + score.toFixed(1) + '</div>',
+        '    <div style="text-align:center;font:700 1rem/1 var(--font-ar);color:var(--slate-700);margin-top:4px">' + scoreDisplay + '</div>',
         '  </div>',
         '</div>'
       ].join('');

@@ -8,6 +8,7 @@ DASHBOARD_FILTERS_JS = ROOT / "static" / "js" / "dashboard_filters.js"
 DECISION_SUPPORT_JS = ROOT / "static" / "js" / "decision_support.js"
 ANALYTICS_V2_CSS = ROOT / "static" / "css" / "admin_analytics_v2.css"
 ANALYTICS_TEMPLATE = ROOT / "templates" / "admin" / "analytics" / "dashboard.html"
+ADMIN_ANALYTICS_JS = ROOT / "static" / "js" / "admin_analytics.js"
 
 
 def test_kpi_cards_expose_status_attribute_used_by_filter_layer():
@@ -59,3 +60,30 @@ def test_analytics_filter_bar_sticks_to_scrollport_top():
     template = ANALYTICS_TEMPLATE.read_text(encoding="utf-8")
     assert "classList.toggle('is-stuck'" in template
     assert re.search(r"scroller\.addEventListener\('scroll'", template)
+
+
+def test_risk_intelligence_cards_use_real_backend_field_names():
+    """get_high_risk_children() returns {child_name, kindergarten_name,
+    risk_type, risk_value, description, kindergarten_id} — not the
+    {name, kindergarten, reason, risk_score} shape both risk-card renderers
+    used to read, which discarded every real entry and always showed "no
+    risk alerts" regardless of actual data (confirmed via live investigation
+    of /admin/analytics on 2026-07-04).
+    """
+    dashboard = ANALYTICS_TEMPLATE.read_text(encoding="utf-8")
+    assert "r.child_name || r.kindergarten_name" in dashboard
+    assert "window._classifyRisk" in dashboard
+    assert "r.risk_score" not in dashboard
+
+    admin_analytics = ADMIN_ANALYTICS_JS.read_text(encoding="utf-8")
+    assert "item.child_name" in admin_analytics
+    assert "item.kindergarten_name" in admin_analytics
+    assert "item.risk_value" in admin_analytics
+    # The stale shape must not reappear in updateRiskRadar's validation filter
+    stale_filter_pattern = re.search(
+        r"function updateRiskRadar.*?(?=\nfunction )", admin_analytics, re.S
+    )
+    assert stale_filter_pattern is not None
+    stale_body = stale_filter_pattern.group(0)
+    assert "item.risk_score" not in stale_body
+    assert 'item.name === "string"' not in stale_body
