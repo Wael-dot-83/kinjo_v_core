@@ -1,0 +1,30 @@
+=== CSS INCLUDES ===
+  /static/vendor/bootstrap/{% if ui_dir == 'ltr' %}bootstrap.min.css{% else %}bootstrap.rtl.min.css{% endif %}
+  /static/vendor/bootstrap-icons/bootstrap-icons.min.css
+  /static/css/admin_design_system.css?v=3.0
+  /static/css/top-menu.css?v=1.0
+  /static/css/design-tokens.css?v=1
+  /static/css/layout.css?v=1.1
+  /static/css/components.css?v=1.2
+  /static/css/utilities.css?v=1
+  /static/css/kinjo.css?v=20260703
+  /static/css/rtl.css
+  /static/vendor/sweetalert2/sweetalert2.min.css
+  /static/vendor/odometer/odometer-theme-default.css
+
+=== JS INCLUDES ===
+  /static/js/sanitize.js
+  /static/js/page_load_timer.js
+  /static/vendor/chartjs/chart.umd.min.js
+  /static/vendor/sweetalert2/sweetalert2.all.min.js
+  /static/vendor/odometer/odometer.min.js
+  /static/vendor/bootstrap/bootstrap.bundle.min.js
+  /static/js/auth.js?v=2.1
+  /static/js/kinjo-api.js?v=2.0
+  /static/js/core/dataFetcher.js
+  /static/js/core/i18n.js
+  /static/js/admin_components.js?v=2.2
+  /static/js/admin_i18n.js?v=2.3
+
+=== DUPLICATE CHECK ===
+No duplicate CSS or JS includes found in admin_base.html

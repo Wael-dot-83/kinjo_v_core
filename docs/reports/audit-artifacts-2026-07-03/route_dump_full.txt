@@ -1,0 +1,26 @@
+('GET',) /api/analytics/insights
+('GET',) /api/analytics/predict/attendance
+('GET',) /api/analytics/predict/capacity
+('GET',) /api/analytics/predict/enrollment
+('GET',) /api/analytics/predict/incidents
+('GET',) /api/analytics/trends/{metric_type}
+('GET',) /api/dev/auto-login
+('GET',) /api/health
+('GET',) /api/metrics
+('GET',) /api/scaling/history
+('GET',) /health
+('GET', 'HEAD') /docs
+('GET', 'HEAD') /docs/oauth2-redirect
+('GET', 'HEAD') /openapi.json
+('GET', 'HEAD') /redoc
+('HEAD',) /api/health
+('POST',) /api/auth/login
+('POST',) /api/auth/logout
+('POST',) /api/auth/mfa/setup
+('POST',) /api/auth/mfa/verify
+('POST',) /api/auth/refresh
+('POST',) /api/auth/register
+('POST',) /token
+('WS',) /ws/dashboard
+('WS',) /ws/heatmap
+('WS',) /ws/notify

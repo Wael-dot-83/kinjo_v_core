@@ -115,6 +115,71 @@
     }
   }
 
+  function canRenderChart() {
+    return typeof Chart !== "undefined";
+  }
+
+  function showCanvasFallback(canvas, message) {
+    if (!canvas) return;
+    destroyChart(canvas.dataset.dsChartKey || "");
+    canvas.style.display = "none";
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    let fallback = parent.querySelector(".ds-chart-fallback");
+    if (!fallback) {
+      fallback = document.createElement("p");
+      fallback.className = "ds-chart-fallback text-muted text-center py-4 mb-0";
+      parent.appendChild(fallback);
+    }
+    fallback.textContent = message || dsText("ds.no_data");
+  }
+
+  function prepareCanvas(canvas, chartKey) {
+    if (!canvas) return false;
+    canvas.dataset.dsChartKey = chartKey;
+    const fallback = canvas.parentElement?.querySelector(".ds-chart-fallback");
+    if (fallback) fallback.remove();
+    canvas.style.display = "";
+    if (canRenderChart()) return true;
+    showCanvasFallback(canvas, dsText("ds.no_data"));
+    return false;
+  }
+
+  function renderDecisionSupportFallback() {
+    [
+      "dsGeoChart",
+      "dsClassificationChart",
+      "dsCapacityChart",
+      "dsFunnelChart",
+      "dsAgeChart",
+    ].forEach(function (id) {
+      showCanvasFallback(document.getElementById(id), dsText("ds.no_data"));
+    });
+
+    const tableFallbacks = [
+      ["dsGeoTable", 8],
+      ["dsRiskTable", 4],
+    ];
+    tableFallbacks.forEach(function (entry) {
+      const el = document.getElementById(entry[0]);
+      if (el) {
+        el.innerHTML =
+          '<tr><td colspan="' +
+          entry[1] +
+          '" class="text-center text-muted py-3">' +
+          esc(dsText("ds.no_data")) +
+          "</td></tr>";
+      }
+    });
+
+    ["dsClassificationDetail", "dsPredictions"].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.innerHTML = '<p class="text-muted text-center py-4 mb-0">' + esc(dsText("ds.no_data")) + "</p>";
+      }
+    });
+  }
+
   // -----------------------------------------------------------------------
   // Render functions
   // -----------------------------------------------------------------------
@@ -184,9 +249,7 @@
     const chartEl = document.getElementById("dsGeoChart");
     const tableEl = document.getElementById("dsGeoTable");
     if (!items || items.length === 0) {
-      if (chartEl)
-        chartEl.closest(".card-body").innerHTML =
-          '<p class="text-muted text-center py-4">' + esc(dsText("ds.no_data")) + "</p>";
+      showCanvasFallback(chartEl, dsText("ds.no_data"));
       if (tableEl)
         tableEl.innerHTML =
           '<tr><td colspan="8" class="text-center text-muted py-3">' +
@@ -196,7 +259,7 @@
     }
 
     // Bar chart: kindergartens by governorate
-    if (chartEl) {
+    if (chartEl && prepareCanvas(chartEl, "geo")) {
       const govMap = {};
       items.forEach(function (g) {
         var gov = g.governorate || "—";
@@ -302,15 +365,13 @@
     const chartEl = document.getElementById("dsClassificationChart");
     const detailEl = document.getElementById("dsClassificationDetail");
     if (!bands || bands.length === 0) {
-      if (chartEl)
-        chartEl.closest(".card-body").innerHTML =
-          '<p class="text-muted text-center py-4">' + esc(dsText("ds.no_data")) + "</p>";
+      showCanvasFallback(chartEl, dsText("ds.no_data"));
       if (detailEl) detailEl.innerHTML = "";
       return;
     }
 
     // Doughnut chart
-    if (chartEl) {
+    if (chartEl && prepareCanvas(chartEl, "classification")) {
       const labels = bands.map(function (b) {
         return dsText("ds.band." + b.band);
       });
@@ -404,12 +465,10 @@
   function renderCapacityTiers(tiers) {
     const chartEl = document.getElementById("dsCapacityChart");
     if (!tiers || tiers.length === 0) {
-      if (chartEl)
-        chartEl.closest(".card-body").innerHTML =
-          '<p class="text-muted text-center py-4">' + esc(dsText("ds.no_data")) + "</p>";
+      showCanvasFallback(chartEl, dsText("ds.no_data"));
       return;
     }
-    if (!chartEl) return;
+    if (!prepareCanvas(chartEl, "capacity")) return;
     const labels = tiers.map(function (t) {
       return dsText("ds.tier." + t.tier);
     });
@@ -579,7 +638,10 @@
 
   function renderEnrollmentFunnel(funnel) {
     const chartEl = document.getElementById("dsFunnelChart");
-    if (!funnel || !chartEl) return;
+    if (!funnel || !chartEl) {
+      showCanvasFallback(chartEl, dsText("ds.no_data"));
+      return;
+    }
 
     const stages = [
       { key: "submitted", value: funnel.submitted, color: "#6c757d" },
@@ -591,6 +653,7 @@
       { key: "withdrawn", value: funnel.withdrawn, color: "#6f42c1" },
     ];
 
+    if (!prepareCanvas(chartEl, "funnel")) return;
     destroyChart("funnel");
     chartInstances["funnel"] = new Chart(chartEl, {
       type: "bar",
@@ -639,7 +702,10 @@
 
   function renderAgeDistribution(items) {
     const chartEl = document.getElementById("dsAgeChart");
-    if (!items || items.length === 0 || !chartEl) return;
+    if (!items || items.length === 0 || !chartEl) {
+      showCanvasFallback(chartEl, dsText("ds.no_data"));
+      return;
+    }
     const labels = items.map(function (a) {
       return a.age_group;
     });
@@ -648,6 +714,7 @@
     });
     const colors = ["#0d6efd", "#198754", "#ffc107", "#dc3545", "#6f42c1", "#0dcaf0"];
     const hoverColors = ["#0b5ed7", "#157347", "#e0a800", "#bb2d3b", "#59359a", "#0aa6c9"];
+    if (!prepareCanvas(chartEl, "age")) return;
     destroyChart("age");
     chartInstances["age"] = new Chart(chartEl, {
       type: "doughnut",
@@ -714,6 +781,7 @@
       renderAgeDistribution(data.age_group_distribution);
     } catch (err) {
       console.error("Decision support load error:", err);
+      renderDecisionSupportFallback();
     } finally {
       container.querySelectorAll(".ds-loading").forEach(function (el) {
         el.style.display = "none";

@@ -2571,7 +2571,7 @@ function renderKpiCards(kpis) {
 
         return `
         <div class="col-md-6 col-lg-4">
-          <div class="kpi-card card border-0 shadow-sm h-100" data-status="${kpi.band}" style="border-radius: 16px;">
+          <div class="kpi-card card border-0 shadow-sm h-100" data-status="${kpi.band}" data-kpi-status="${kpi.band}" style="border-radius: 16px;">
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <h6 class="text-muted mb-0">${escapeHtml(kpi.label)}</h6>

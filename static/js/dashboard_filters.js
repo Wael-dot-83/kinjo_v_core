@@ -249,10 +249,12 @@ async function updateDashboard() {
     const headers = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const res = await fetch("/api/dashboard/summary", {
+    const fetcher = typeof window.fetchWithAuth === "function" ? window.fetchWithAuth : fetch;
+    const res = await fetcher("/api/dashboard/summary", {
       method: "POST",
       headers,
       body: JSON.stringify({ range, period_start: start, period_end: end }),
+      credentials: "same-origin",
     });
     if (!res.ok) return;
     const data = await res.json();

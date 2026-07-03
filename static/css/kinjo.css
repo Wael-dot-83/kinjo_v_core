@@ -1568,7 +1568,7 @@ body.sidebar-open .sidebar-backdrop {
    Animation Classes
    ============================================================================ */
 .fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.3s ease-out both;
 }
 
 @keyframes fadeIn {

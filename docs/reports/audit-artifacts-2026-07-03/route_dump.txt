@@ -1,0 +1,14 @@
+﻿python : 2026-07-03 03:38:31,204 INFO cache_service Redis cache initialized successfully
+At line:1 char:1
++ python -c "
++ ~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (2026-07-03 03:3...ed successfully:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+2026-07-03 03:38:37,017 INFO main Static files mounted successfully from 'static' directory
+Traceback (most recent call last):
+  File "<string>", line 12, in <module>
+    for m, p in sorted(set(routes)):
+                       ~~~^^^^^^^^
+TypeError: unhashable type: 'list'
+

@@ -1,0 +1,23 @@
+('GET', 'HEAD') /openapi.json
+('GET', 'HEAD') /docs
+('GET', 'HEAD') /docs/oauth2-redirect
+('GET', 'HEAD') /redoc
+('POST',) /token
+('POST',) /api/auth/login
+('POST',) /api/auth/logout
+('POST',) /api/auth/mfa/setup
+('POST',) /api/auth/mfa/verify
+('POST',) /api/auth/refresh
+('POST',) /api/auth/register
+('GET',) /health
+('HEAD',) /api/health
+('GET',) /api/health
+('GET',) /api/metrics
+('GET',) /api/scaling/history
+('GET',) /api/analytics/predict/attendance
+('GET',) /api/analytics/predict/incidents
+('GET',) /api/analytics/predict/capacity
+('GET',) /api/analytics/predict/enrollment
+('GET',) /api/analytics/trends/{metric_type}
+('GET',) /api/analytics/insights
+('GET',) /api/dev/auto-login

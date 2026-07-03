@@ -8,7 +8,7 @@
 title=("Edit User: "if ui_lang == 'en' else "تعديل المستخدم: ") ~ user_obj.username if user_obj else ("Add New User"if ui_lang == 'en' else "إضافة مستخدم جديد"),
 icon="bi-person",
 breadcrumbs=[
-{"label": "Dashboard"if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Dashboard"if ui_lang == 'en' else "لوحة التحكم", "url": "/admin/dashboard"},
 {"label": "Users"if ui_lang == 'en' else "المستخدمين", "url": "/admin/users"},
 {"label": ("Edit"if ui_lang == 'en' else "تعديل") if user_obj else ("Add"if ui_lang == 'en' else "إضافة"), "url": None}
 ]
@@ -522,3 +522,4 @@ breadcrumbs=[
     });
 </script>
 {% endblock %}
+

@@ -1,0 +1,1 @@
+All internal admin links appear to point to registered routes.

@@ -13,6 +13,7 @@ FIRST_PARTY_ADMIN_JS = [
     for path in (ROOT / "static" / "js").glob("*.js")
     if path.name.startswith("admin_") or path.name in {"audit-logs.js", "kg_overview.js"}
 ]
+LEGACY_KINJO_CSS = ROOT / "static" / "css" / "kinjo.css"
 
 
 def _iter_effective_routes(route, prefix=""):
@@ -115,6 +116,14 @@ def test_premium_admin_base_delegates_to_canonical_shell():
     assert "tailwind.config" not in source
     assert "/auth/logout" not in source
     assert "WebGL Background" not in source
+
+
+def test_legacy_fade_in_keeps_dashboard_content_visible():
+    source = LEGACY_KINJO_CSS.read_text(encoding="utf-8")
+    match = re.search(r"\.fade-in\s*\{(?P<body>[^}]+)\}", source)
+    assert match is not None
+    body = match.group("body")
+    assert re.search(r"animation\s*:[^;]*(?:\bboth\b|\bforwards\b)", body)
 
 
 def test_admin_alerts_use_english_labels_without_language_branches():

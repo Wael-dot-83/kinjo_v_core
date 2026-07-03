@@ -1,0 +1,144 @@
+PATH DUPLICATE: /api/absence-requests (2x)
+    ('GET',) /api/absence-requests
+    ('POST',) /api/absence-requests
+PATH DUPLICATE: /api/admin/governance/reminders (2x)
+    ('GET',) /api/admin/governance/reminders
+    ('POST',) /api/admin/governance/reminders
+PATH DUPLICATE: /api/admin/users (2x)
+    ('GET',) /api/admin/users
+    ('POST',) /api/admin/users
+PATH DUPLICATE: /api/admin/users/{user_id:int} (3x)
+    ('DELETE',) /api/admin/users/{user_id:int}
+    ('GET',) /api/admin/users/{user_id:int}
+    ('PUT',) /api/admin/users/{user_id:int}
+PATH DUPLICATE: /api/analytics/reports/schedules (2x)
+    ('GET',) /api/analytics/reports/schedules
+    ('POST',) /api/analytics/reports/schedules
+PATH DUPLICATE: /api/analytics/reports/templates (2x)
+    ('GET',) /api/analytics/reports/templates
+    ('POST',) /api/analytics/reports/templates
+PATH DUPLICATE: /api/analytics/targets (2x)
+    ('GET',) /api/analytics/targets
+    ('PUT',) /api/analytics/targets
+PATH DUPLICATE: /api/attendance (2x)
+    ('GET',) /api/attendance
+    ('POST',) /api/attendance
+PATH DUPLICATE: /api/children/{child_id}/documents (2x)
+    ('GET',) /api/children/{child_id}/documents
+    ('POST',) /api/children/{child_id}/documents
+PATH DUPLICATE: /api/children/{child_id}/health-alerts (2x)
+    ('GET',) /api/children/{child_id}/health-alerts
+    ('POST',) /api/children/{child_id}/health-alerts
+PATH DUPLICATE: /api/classes (2x)
+    ('GET',) /api/classes
+    ('POST',) /api/classes
+PATH DUPLICATE: /api/classes/{class_id} (3x)
+    ('DELETE',) /api/classes/{class_id}
+    ('GET',) /api/classes/{class_id}
+    ('PUT',) /api/classes/{class_id}
+PATH DUPLICATE: /api/dashboard/widgets (2x)
+    ('GET',) /api/dashboard/widgets
+    ('PUT',) /api/dashboard/widgets
+PATH DUPLICATE: /api/filters/preferences (2x)
+    ('GET',) /api/filters/preferences
+    ('PUT',) /api/filters/preferences
+PATH DUPLICATE: /api/health (2x)
+    ('GET',) /api/health
+    ('HEAD',) /api/health
+PATH DUPLICATE: /api/incidents (2x)
+    ('GET',) /api/incidents
+    ('POST',) /api/incidents
+PATH DUPLICATE: /api/kindergartens (2x)
+    ('GET',) /api/kindergartens
+    ('POST',) /api/kindergartens
+PATH DUPLICATE: /api/kindergartens/{kindergarten_id} (3x)
+    ('DELETE',) /api/kindergartens/{kindergarten_id}
+    ('GET',) /api/kindergartens/{kindergarten_id}
+    ('PUT',) /api/kindergartens/{kindergarten_id}
+PATH DUPLICATE: /api/kindergartens/{kindergarten_id}/services (2x)
+    ('GET',) /api/kindergartens/{kindergarten_id}/services
+    ('POST',) /api/kindergartens/{kindergarten_id}/services
+PATH DUPLICATE: /api/kindergartens/{kindergarten_id}/services/{service_id} (2x)
+    ('DELETE',) /api/kindergartens/{kindergarten_id}/services/{service_id}
+    ('PUT',) /api/kindergartens/{kindergarten_id}/services/{service_id}
+PATH DUPLICATE: /api/manager/classes (2x)
+    ('GET',) /api/manager/classes
+    ('POST',) /api/manager/classes
+PATH DUPLICATE: /api/manager/classes/{class_id} (2x)
+    ('DELETE',) /api/manager/classes/{class_id}
+    ('PUT',) /api/manager/classes/{class_id}
+PATH DUPLICATE: /api/manager/daily-reports/{report_id} (2x)
+    ('DELETE',) /api/manager/daily-reports/{report_id}
+    ('PUT',) /api/manager/daily-reports/{report_id}
+PATH DUPLICATE: /api/messages (2x)
+    ('GET',) /api/messages
+    ('POST',) /api/messages
+PATH DUPLICATE: /api/parent/profile (2x)
+    ('GET',) /api/parent/profile
+    ('PUT',) /api/parent/profile
+PATH DUPLICATE: /api/portfolios (2x)
+    ('GET',) /api/portfolios
+    ('POST',) /api/portfolios
+PATH DUPLICATE: /api/supervisor/attendance (2x)
+    ('GET',) /api/supervisor/attendance
+    ('POST',) /api/supervisor/attendance
+PATH DUPLICATE: /api/supervisor/children/{child_id}/daily-reports (2x)
+    ('GET',) /api/supervisor/children/{child_id}/daily-reports
+    ('POST',) /api/supervisor/children/{child_id}/daily-reports
+PATH DUPLICATE: /api/supervisor/daily-reports (2x)
+    ('GET',) /api/supervisor/daily-reports
+    ('POST',) /api/supervisor/daily-reports
+PATH DUPLICATE: /api/supervisor/daily-reports/{report_id} (3x)
+    ('DELETE',) /api/supervisor/daily-reports/{report_id}
+    ('GET',) /api/supervisor/daily-reports/{report_id}
+    ('PUT',) /api/supervisor/daily-reports/{report_id}
+PATH DUPLICATE: /api/supervisor/messages (2x)
+    ('GET',) /api/supervisor/messages
+    ('POST',) /api/supervisor/messages
+PATH DUPLICATE: /api/supervisor/notification-preferences (2x)
+    ('GET',) /api/supervisor/notification-preferences
+    ('PUT',) /api/supervisor/notification-preferences
+PATH DUPLICATE: /api/supervisor/safety-incidents (2x)
+    ('GET',) /api/supervisor/safety-incidents
+    ('POST',) /api/supervisor/safety-incidents
+PATH DUPLICATE: /api/supervisor/safety-incidents/{incident_id}/resolve (2x)
+    ('POST',) /api/supervisor/safety-incidents/{incident_id}/resolve
+    ('PUT',) /api/supervisor/safety-incidents/{incident_id}/resolve
+PATH DUPLICATE: /api/tasks (2x)
+    ('GET',) /api/tasks
+    ('POST',) /api/tasks
+PATH DUPLICATE: /api/tasks/{task_id} (3x)
+    ('DELETE',) /api/tasks/{task_id}
+    ('GET',) /api/tasks/{task_id}
+    ('PUT',) /api/tasks/{task_id}
+PATH DUPLICATE: /api/users (2x)
+    ('GET',) /api/users
+    ('POST',) /api/users
+PATH DUPLICATE: /api/users/me (2x)
+    ('GET',) /api/users/me
+    ('PUT',) /api/users/me
+PATH DUPLICATE: /api/users/me/language (2x)
+    ('GET',) /api/users/me/language
+    ('PUT',) /api/users/me/language
+PATH DUPLICATE: /api/users/{user_id} (3x)
+    ('DELETE',) /api/users/{user_id}
+    ('GET',) /api/users/{user_id}
+    ('PUT',) /api/users/{user_id}
+PATH DUPLICATE: /comm/events (2x)
+    ('GET',) /comm/events
+    ('POST',) /comm/events
+PATH DUPLICATE: /comm/messages (2x)
+    ('GET',) /comm/messages
+    ('POST',) /comm/messages
+PATH DUPLICATE: /comm/messages/{message_id:int} (2x)
+    ('DELETE',) /comm/messages/{message_id:int}
+    ('GET',) /comm/messages/{message_id:int}
+PATH DUPLICATE: /comm/messages/{message_id:int}/attachments (2x)
+    ('GET',) /comm/messages/{message_id:int}/attachments
+    ('POST',) /comm/messages/{message_id:int}/attachments
+PATH DUPLICATE: /comm/messages/{message_id:int}/replies (2x)
+    ('GET',) /comm/messages/{message_id:int}/replies
+    ('POST',) /comm/messages/{message_id:int}/replies
+PATH DUPLICATE: /comm/surveys (2x)
+    ('GET',) /comm/surveys
+    ('POST',) /comm/surveys
