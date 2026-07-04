@@ -284,3 +284,42 @@ class TestRiskRadarIsolation:
         assert data["risk_radar"] == []
         assert "governance_avg_score" in data["network_summary"]
         assert "governance_distribution" in data
+
+
+class TestDataQualitySubIndicatorsAreReal:
+    """accuracy_score and timeliness_score used to be arbitrary offsets of
+    completeness_percent (completeness + 5%, and a hardcoded 90.0) rather
+    than independently measured. Now they come from
+    EnhancedDataQualityService's real validity/freshness checks. These tests
+    fail loudly if that regresses back to a derived-from-completeness
+    formula."""
+
+    def test_accuracy_reflects_real_validity_not_completeness_offset(self, test_db, kg_with_risk_data):
+        # kg_with_risk_data's fields are all filled in -> completeness_percent
+        # will be 100.0. A negative-capacity class is a real validity defect
+        # that must lower accuracy_score below completeness, and specifically
+        # NOT equal completeness + 5% (the old fake formula, which would have
+        # been 100.0 since it's capped there).
+        cls = test_db.query(models.Class).filter_by(kindergarten_id=kg_with_risk_data["kindergarten"].id).first()
+        cls.capacity_total = -1
+        test_db.commit()
+
+        AnalyticsService.evaluate_data_quality(test_db, user_id=1)
+        latest = test_db.query(models.DataQualityMetric).order_by(
+            models.DataQualityMetric.evaluated_at.desc()
+        ).first()
+
+        assert latest.completeness_percent == pytest.approx(100.0)
+        assert latest.accuracy_score < latest.completeness_percent
+        assert latest.details["accuracy_issues"], "negative capacity should be a reported validity issue"
+
+    def test_timeliness_reflects_real_report_freshness_not_hardcoded_90(self, test_db, kg_with_risk_data):
+        # No DailyReport rows exist anywhere in this fixture -> freshness_latency
+        # returns the "no_data" case (score 50.0), not the old hardcoded 90.0.
+        AnalyticsService.evaluate_data_quality(test_db, user_id=1)
+        latest = test_db.query(models.DataQualityMetric).order_by(
+            models.DataQualityMetric.evaluated_at.desc()
+        ).first()
+
+        assert latest.timeliness_score == pytest.approx(50.0)
+        assert latest.details["timeliness_hours_since_last_report"] is None

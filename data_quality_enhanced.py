@@ -51,6 +51,7 @@ class EnhancedDataQualityService:
                 "hours_since_last_report": None,
                 "status": "no_data",
                 "threshold": {"warning": 6, "critical": 12},
+                "score": 50.0,
             }
 
         if latest.tzinfo is None:
@@ -61,18 +62,23 @@ class EnhancedDataQualityService:
 
         if delta_hours <= 2:
             status = "fresh"
+            score = 100.0
         elif delta_hours <= 6:
             status = "stale"
+            score = 80.0
         elif delta_hours <= 12:
             status = "warning"
+            score = 60.0
         else:
             status = "critical"
+            score = 30.0
 
         return {
             "hours_since_last_report": round(delta_hours, 2),
             "last_report_at": latest.isoformat(),
             "status": status,
             "threshold": {"warning": 6, "critical": 12},
+            "score": score,
         }
 
     def completeness_per_kg(
@@ -317,19 +323,7 @@ class EnhancedDataQualityService:
                 row["completeness_percent"] for row in kg_completeness
             ) / len(kg_completeness)
 
-        freshness_score = 100.0
-        if freshness["hours_since_last_report"] is not None:
-            h = freshness["hours_since_last_report"]
-            if h <= 2:
-                freshness_score = 100.0
-            elif h <= 6:
-                freshness_score = 80.0
-            elif h <= 12:
-                freshness_score = 60.0
-            else:
-                freshness_score = 30.0
-        else:
-            freshness_score = 50.0
+        freshness_score = freshness["score"]
 
         overall = (
             freshness_score * 0.20

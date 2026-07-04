@@ -26,6 +26,7 @@ import models
 from database import get_db, SessionLocal
 from dependencies import get_current_user, get_current_user_or_redirect
 from kpi_service import KPIService
+from data_quality_enhanced import enhanced_data_quality_service
 import validators
 from audit_actions import AuditAction
 from admin_security import log_audit_event
@@ -6742,9 +6743,21 @@ class AnalyticsService:
         child_completeness = (complete_children / total_children * 100) if total_children else 100.0
 
         completeness_percent = round((kg_completeness + child_completeness) / 2, 2)
-        accuracy_score = round(min(100.0, completeness_percent + 5.0), 2)
-        timeliness_score = 90.0
-        consistency_score = round(min(100.0, completeness_percent + 3.0), 2)
+
+        # Accuracy, timeliness, and consistency were previously derived as
+        # arbitrary offsets of completeness_percent (+5%, hardcoded 90.0, +3%)
+        # rather than independently measured. EnhancedDataQualityService
+        # already computes real signals for each from distinct data sources
+        # (report-recency for timeliness, record-validity checks for
+        # accuracy, cross-entity duplicate/overflow checks for consistency)
+        # and is already relied on by observability_endpoints.py — reuse it
+        # here instead of maintaining a second, fake formula.
+        validity = enhanced_data_quality_service.validity_check(db)
+        freshness = enhanced_data_quality_service.freshness_latency(db)
+        consistency = enhanced_data_quality_service.cross_entity_consistency(db)
+        accuracy_score = validity["validity_score"]
+        timeliness_score = freshness["score"]
+        consistency_score = consistency["consistency_score"]
 
         metric = models.DataQualityMetric(
             entity_type="NETWORK",
@@ -6759,6 +6772,9 @@ class AnalyticsService:
                 "child_completeness": child_completeness,
                 "total_kindergartens": total_kgs,
                 "total_children": total_children,
+                "accuracy_issues": validity["issues"],
+                "timeliness_hours_since_last_report": freshness["hours_since_last_report"],
+                "consistency_issues": consistency["issues"],
             },
         )
         db.add(metric)

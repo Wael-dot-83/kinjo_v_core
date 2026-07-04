@@ -362,19 +362,19 @@
                 </summary>
                 <div class="small text-muted mt-2" style="line-height:1.7">
                   {% if ui_lang == 'en' %}
-                  <p class="mb-2">Data Quality is calculated from three components:</p>
+                  <p class="mb-2">Data Quality is calculated from three independently measured components:</p>
                   <ul class="ps-3 mb-2">
                     <li><strong>Completeness:</strong> the share of kindergartens with all core fields filled in (name, governorate, district, area, address, phone) averaged with the share of children with core fields filled in (name, date of birth, gender).</li>
-                    <li><strong>Accuracy:</strong> an estimate derived from completeness (completeness + 5%, capped at 100%) — not an independently measured metric.</li>
-                    <li><strong>Freshness:</strong> currently a fixed value (90%), assuming data is updated regularly.</li>
+                    <li><strong>Accuracy:</strong> a validity check score — deducts for attendance records with an invalid status, classes with negative capacity, and children with a future date of birth.</li>
+                    <li><strong>Freshness:</strong> based on hours since the most recent daily report network-wide (100% within 2h, 80% within 6h, 60% within 12h, 30% beyond that).</li>
                   </ul>
                   <p class="mb-0">The badge and large number above show the Completeness score specifically — Accuracy and Freshness are supplementary detail, not blended into that headline figure.</p>
                   {% else %}
-                  <p class="mb-2">يُحسب مؤشر جودة البيانات من ثلاثة مكونات رئيسية:</p>
+                  <p class="mb-2">يُحسب مؤشر جودة البيانات من ثلاثة مكونات مُقاسة بشكل مستقل:</p>
                   <ul class="ps-3 mb-2">
                     <li><strong>الاكتمال:</strong> نسبة الحضانات التي تحتوي على جميع الحقول الأساسية (الاسم، المحافظة، المنطقة، العنوان، الهاتف) ونسبة الأطفال المستوفين للحقول الأساسية (الاسم، تاريخ الميلاد، الجنس).</li>
-                    <li><strong>الدقة:</strong> تقدير مستمد من الاكتمال (يُضاف 5% مع حد أقصى 100%)، وليس مقياساً مستقلاً.</li>
-                    <li><strong>الحداثة:</strong> قيمة ثابتة حالياً (90%)، تعكس افتراض تحديث البيانات بانتظام.</li>
+                    <li><strong>الدقة:</strong> درجة فحص صحة البيانات — تُخصم عند وجود سجلات حضور بحالة غير صالحة، أو صفوف بسعة سالبة، أو أطفال بتاريخ ميلاد مستقبلي.</li>
+                    <li><strong>الحداثة:</strong> تُحسب من عدد الساعات منذ آخر تقرير يومي على مستوى الشبكة (100% خلال ساعتين، 80% خلال 6 ساعات، 60% خلال 12 ساعة، 30% بعد ذلك).</li>
                   </ul>
                   <p class="mb-0">الشارة والرقم الكبير أعلاه يعرضان درجة الاكتمال تحديداً — أما الدقة والحداثة فهما تفصيل إضافي ولا يدخلان في حساب هذا الرقم.</p>
                   {% endif %}
