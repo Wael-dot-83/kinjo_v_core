@@ -16,7 +16,7 @@
         <span class="text-on-surface-variant" aria-hidden="true">-</span>
         <label for="endDate" class="visually-hidden">{% if ui_lang == 'en' %}End Date{% else %}تاريخ الانتهاء{% endif %}</label>
         <input type="date" id="endDate" class="form-control form-control-sm w-auto">
-        <button id="refreshBtn" class="btn cyberlume-btn cyberlume-btn-primary btn-sm" onclick="loadGovernanceData()">
+        <button id="refreshBtn" class="btn btn-primary btn-sm" onclick="loadGovernanceData()">
             <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
         </button>
     </div>
@@ -24,8 +24,8 @@
 
 <!-- KPI Cards Row -->
 <div class="row g-3 mb-4" id="kpiCards">
-    <div>
-        <div class="cyberlume-card kpi-cyberlume-card border-0 ">
+    <div class="col-6 col-md-3">
+        <div class="admin-card border-0 ">
             <div class="card-body text-center">
                 <div class="kpi-value text-primary" id="kpiSubmissionRate">--</div>
                 <div class="kpi-label">{% if ui_lang == 'en' %}Submission Rate{% else %}نسبة التقديم{% endif %}</div>
@@ -33,8 +33,8 @@
             </div>
         </div>
     </div>
-    <div>
-        <div class="cyberlume-card kpi-cyberlume-card border-0 ">
+    <div class="col-6 col-md-3">
+        <div class="admin-card border-0 ">
             <div class="card-body text-center">
                 <div class="kpi-value text-success" id="kpiDeliveryRate">--</div>
                 <div class="kpi-label">{% if ui_lang == 'en' %}Delivery Rate{% else %}نسبة التسليم{% endif %}</div>
@@ -42,8 +42,8 @@
             </div>
         </div>
     </div>
-    <div>
-        <div class="cyberlume-card kpi-cyberlume-card border-0 ">
+    <div class="col-6 col-md-3">
+        <div class="admin-card border-0 ">
             <div class="card-body text-center">
                 <div class="kpi-value text-info" id="kpiViewRate">--</div>
                 <div class="kpi-label">{% if ui_lang == 'en' %}View Rate{% else %}نسبة المشاهدة{% endif %}</div>
@@ -51,8 +51,8 @@
             </div>
         </div>
     </div>
-    <div>
-        <div class="cyberlume-card kpi-cyberlume-card border-0 ">
+    <div class="col-6 col-md-3">
+        <div class="admin-card border-0 ">
             <div class="card-body text-center">
                 <div class="kpi-value text-warning" id="kpiQualityRate">--</div>
                 <div class="kpi-label">{% if ui_lang == 'en' %}First-Time Acceptance Rate{% else %}معدل القبول من أول مرة{% endif %}</div>
@@ -63,7 +63,7 @@
 </div>
 
 <!-- GQI Section -->
-<div class="cyberlume-card border-0 mb-4">
+<div class="admin-card border-0 mb-4">
     <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
         <h6 class="mb-0">
             <i class="bi bi-shield-check me-2 text-success"></i>
@@ -124,22 +124,22 @@
 
 <!-- Funnel Chart + Consistency -->
 <div class="row g-3 mb-4">
-    <div>
-        <div class="cyberlume-card border-0 ">
+    <div class="col-md-6">
+        <div class="admin-card border-0 ">
             <div class="card-header bg-transparent border-0">
                 <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>{% if ui_lang == 'en' %}Daily Reports Funnel{% else %}قمع التقارير اليومية{% endif %}</h6>
             </div>
-            <div class="relative z-10">
-                <canvas id="funnelChart" height="250"></canvas>
+            <div class="position-relative">
+                <canvas id="funnelChart" height="250" role="img" aria-label="{% if ui_lang == 'en' %}Daily reports funnel: required, submitted, delivered, and viewed counts{% else %}قمع التقارير اليومية: أعداد التقارير المطلوبة والمقدمة والمُسلَّمة والمُشاهدة{% endif %}"></canvas>
             </div>
         </div>
     </div>
-    <div>
-        <div class="cyberlume-card border-0  h-100">
+    <div class="col-md-6">
+        <div class="admin-card border-0  h-100">
             <div class="card-header bg-transparent border-0">
                 <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>{% if ui_lang == 'en' %}Time Metrics{% else %}مقاييس الوقت{% endif %}</h6>
             </div>
-            <div class="relative z-10">
+            <div class="position-relative">
                 <div class="mb-3">
                     <span class="text-on-surface-variant small">{% if ui_lang == 'en' %}Median Submission Time{% else %}متوسط وقت التقديم{% endif %}</span>
                     <div class="fs-4 fw-bold" id="medianTimeliness">--</div>
@@ -159,18 +159,18 @@
 </div>
 
 <!-- 30-Day Submission Trend -->
-<div class="cyberlume-card border-0 mb-4">
+<div class="admin-card border-0 mb-4">
     <div class="card-header bg-transparent border-0">
         <h6 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>{% if ui_lang == 'en' %}30-Day Submission Rate Trend{% else %}اتجاه نسبة التقديم (30 يوم){% endif %}</h6>
     </div>
     <div class="card-body">
-        <canvas id="trendChart" height="120"></canvas>
+        <canvas id="trendChart" height="120" role="img" aria-label="{% if ui_lang == 'en' %}30-day submission rate trend line chart{% else %}الرسم البياني لاتجاه نسبة التقديم خلال 30 يوماً{% endif %}"></canvas>
     </div>
 </div>
 
 <!-- Safeguarding Overlap Panel -->
 <div id="safeguardingSection" class="mb-4 d-none">
-    <div class="cyberlume-card border-danger border-0">
+    <div class="admin-card border-danger border-0">
         <div class="card-header bg-danger bg-opacity-10 border-0 d-flex justify-content-between align-items-center">
             <h6 class="mb-0 text-danger">
                 <i class="bi bi-shield-exclamation me-2"></i>
@@ -186,41 +186,42 @@
 
 <!-- Low Performers Alert -->
 <div id="lowPerformersSection" class="mb-4 d-none">
-    <div class="cyberlume-card border-warning border-0 ">
+    <div class="admin-card border-warning border-0 ">
         <div class="card-header bg-warning bg-opacity-10 border-0">
             <h6 class="mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>{% if ui_lang == 'en' %}Kindergartens Needing Improvement{% else %}حضانات تحتاج إلى تحسين{% endif %}</h6>
         </div>
-        <div class="relative z-10">
+        <div class="position-relative">
             <div id="lowPerformersList" class="row g-2"></div>
         </div>
     </div>
 </div>
 
 <!-- Leaderboard Table -->
-<div class="cyberlume-card border-0  mb-4">
+<div class="admin-card border-0  mb-4">
     <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
         <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>{% if ui_lang == 'en' %}Kindergarten Ranking (Weighted){% else %}ترتيب الحضانات (ترجيحي){% endif %}</h6>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-dark table-hover cyberlume-table align-middle mb-0">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <caption class="visually-hidden">{% if ui_lang == 'en' %}Kindergarten governance ranking, weighted by submission, delivery, view, and quality rates{% else %}ترتيب الحضانات في الحوكمة، مرجّح حسب نسب التقديم والتسليم والمشاهدة والجودة{% endif %}</caption>
                 <thead class="table-light">
                     <tr>
-                        <th style="width:50px">#</th>
-                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Req{% else %}مطلوب{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Sub{% else %}مقدم{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Del{% else %}مسلم{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}View{% else %}مشاهد{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Raw%{% else %}خام%{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Score{% else %}النتيجة{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Reject%{% else %}رفض%{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Morning%{% else %}صباح%{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Consist.{% else %}اتساق{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Avg Approv.{% else %}متوسط موافقة{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Last Report{% else %}آخر تقرير{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Remind.{% else %}تذكيرات{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                        <th scope="col" style="width:50px">#</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Req{% else %}مطلوب{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Sub{% else %}مقدم{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Del{% else %}مسلم{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}View{% else %}مشاهد{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Raw%{% else %}خام%{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Score{% else %}النتيجة{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Reject%{% else %}رفض%{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Morning%{% else %}صباح%{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Consist.{% else %}اتساق{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Avg Approv.{% else %}متوسط موافقة{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Last Report{% else %}آخر تقرير{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Remind.{% else %}تذكيرات{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboardBody">
@@ -234,20 +235,21 @@
 </div>
 
 <!-- Reminder History -->
-<div class="cyberlume-card border-0  mb-4">
+<div class="admin-card border-0  mb-4">
     <div class="card-header bg-transparent border-0">
         <h6 class="mb-0"><i class="bi bi-bell me-2"></i>{% if ui_lang == 'en' %}Reminders Log{% else %}سجل التذكيرات{% endif %}</h6>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-dark table-hover cyberlume-table align-middle mb-0">
+            <table class="table table-dark table-hover align-middle mb-0">
+                <caption class="visually-hidden">{% if ui_lang == 'en' %}Recent governance reminders sent to kindergartens{% else %}سجل التذكيرات الأخيرة المُرسلة إلى الحضانات{% endif %}</caption>
                 <thead class="table-light">
                     <tr>
-                        <th>{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Target{% else %}الهدف{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Reminder Type{% else %}نوع التذكير{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Sent Date{% else %}تاريخ الإرسال{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Cooldown Expiry{% else %}انتهاء التبريد{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Target{% else %}الهدف{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Reminder Type{% else %}نوع التذكير{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Sent Date{% else %}تاريخ الإرسال{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Cooldown Expiry{% else %}انتهاء التبريد{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="remindersBody">
@@ -257,6 +259,7 @@
                 </tbody>
             </table>
         </div>
+        <div class="d-flex justify-content-center align-items-center py-2" id="remindersPagination"></div>
     </div>
 </div>
 

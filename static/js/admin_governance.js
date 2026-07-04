@@ -5,6 +5,15 @@
 let funnelChart = null;
 let trendChart = null;
 let _reminderTarget = null;
+// GET /api/admin/governance/reminders has always supported page/page_size and
+// returned {total, page, page_size, items} — this page called it with a
+// hardcoded page=1&page_size=10 on every refresh and never read `total`, so
+// only the 10 most recent reminders were ever visible with no indication
+// more existed, even though the backend already fully supports paging
+// through them (same bug class as the Users page's dead pagination).
+let remindersPage = 1;
+const REMINDERS_PAGE_SIZE = 10;
+let remindersTotal = 0;
 
 function governanceLangCode() {
   return (
@@ -119,10 +128,11 @@ async function loadGovernanceData() {
     }
     const query = new URLSearchParams({ start_date: start, end_date: end }).toString();
 
+    remindersPage = 1;
     const [kpis, board, reminders, trend, safeguarding] = await Promise.all([
       governanceFetch(`/api/admin/governance/kpis?${query}`),
       governanceFetch(`/api/admin/governance/leaderboard?${query}`),
-      governanceFetch(`/api/admin/governance/reminders?page=1&page_size=10`),
+      governanceFetch(`/api/admin/governance/reminders?page=${remindersPage}&page_size=${REMINDERS_PAGE_SIZE}`),
       governanceFetch(`/api/admin/governance/trend?days=30`),
       governanceFetch(`/api/admin/governance/safeguarding`),
     ]);
@@ -135,7 +145,9 @@ async function loadGovernanceData() {
     renderSafeguarding(safeguarding);
     renderLeaderboard(board.leaderboard);
     renderLowPerformers(board.low_performers);
+    remindersTotal = reminders.total || 0;
     renderReminders(reminders.items);
+    renderRemindersPagination();
   } catch (err) {
     console.error("Failed to load governance data", err);
     const detail = err?.body?.detail;
@@ -431,8 +443,8 @@ function renderLeaderboard(entries) {
                       data-target-type="kindergarten"
                       data-target-id="${e.kindergarten_id}"
                       data-target-name="${kgName}"
-                      title="${governanceText('إرسال تذكير', 'Send reminder')}">
-                  <i class="bi bi-bell"></i>
+                      title="${governanceText('إرسال تذكير إلى', 'Send reminder to')} ${kgName}">
+                  <i class="bi bi-bell" aria-hidden="true"></i>
               </button>
           </td>
       </tr>`;
@@ -494,6 +506,51 @@ function renderReminders(items) {
     `
     )
     .join("");
+}
+
+async function loadReminders() {
+  try {
+    const reminders = await governanceFetch(
+      `/api/admin/governance/reminders?page=${remindersPage}&page_size=${REMINDERS_PAGE_SIZE}`
+    );
+    remindersTotal = reminders.total || 0;
+    renderReminders(reminders.items);
+    renderRemindersPagination();
+  } catch (err) {
+    console.error("Failed to load reminders", err);
+  }
+}
+
+function renderRemindersPagination() {
+  const nav = document.getElementById("remindersPagination");
+  if (!nav) return;
+  const totalPages = Math.max(1, Math.ceil(remindersTotal / REMINDERS_PAGE_SIZE));
+  if (totalPages <= 1) {
+    nav.innerHTML = "";
+    return;
+  }
+  nav.innerHTML = `
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="remindersPrevBtn"
+            aria-label="${governanceText('الصفحة السابقة', 'Previous page')}" ${remindersPage <= 1 ? "disabled" : ""}>
+      <i class="bi bi-chevron-left icon-directional" aria-hidden="true"></i>
+    </button>
+    <span class="small text-muted mx-3">${governanceText(`صفحة ${remindersPage} من ${totalPages}`, `Page ${remindersPage} of ${totalPages}`)}</span>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="remindersNextBtn"
+            aria-label="${governanceText('الصفحة التالية', 'Next page')}" ${remindersPage >= totalPages ? "disabled" : ""}>
+      <i class="bi bi-chevron-right icon-directional" aria-hidden="true"></i>
+    </button>`;
+  document.getElementById("remindersPrevBtn")?.addEventListener("click", () => {
+    if (remindersPage > 1) {
+      remindersPage--;
+      loadReminders();
+    }
+  });
+  document.getElementById("remindersNextBtn")?.addEventListener("click", () => {
+    if (remindersPage < totalPages) {
+      remindersPage++;
+      loadReminders();
+    }
+  });
 }
 
 // ─── Reminder Modal ──────────────────────────────────────────────────────
