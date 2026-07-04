@@ -92,7 +92,8 @@
 
     <div class="d-flex align-items-center gap-2">
         <span class="small text-muted text-uppercase">{% if ui_lang == 'en' %}Sort by:{% else %}ترتيب حسب:{% endif %}</span>
-        <button class="btn btn-sm btn-link text-decoration-none p-0 d-inline-flex align-items-center gap-1" onclick="sortTable('created_at')" id="sortDateBtn">
+        <button class="btn btn-sm btn-link text-decoration-none p-0 d-inline-flex align-items-center gap-1" onclick="sortTable('created_at')" id="sortDateBtn"
+                aria-label="{% if ui_lang == 'en' %}Registration Date, sorted descending{% else %}تاريخ التسجيل، ترتيب تنازلي{% endif %}">
             {% if ui_lang == 'en' %}Registration Date{% else %}تاريخ التسجيل{% endif %} <span class="material-symbols-outlined" style="font-size:1rem;" id="sortDateIcon" aria-hidden="true">expand_more</span>
         </button>
     </div>
@@ -197,19 +198,24 @@
     let allUsers = [];
     let currentSort = { field: 'created_at', direction: 'desc' };
     const currentUserRole = "{{ current_user.role.value }}";
+    const PAGE_SIZE = 25;
+    let currentPage = 1;
+    let lastPagination = null;
 
     document.addEventListener('DOMContentLoaded', () => {
         loadUsers();
 
-        // Event listeners
-        document.getElementById('searchUser').addEventListener('input', debounce(loadUsers, 500));
-        document.getElementById('roleFilter').addEventListener('change', loadUsers);
-        document.getElementById('statusFilter').addEventListener('change', loadUsers);
+        // Event listeners — any change to search/filters restarts at page 1,
+        // since the previous page number may no longer exist in the new result set.
+        const reloadFromPage1 = () => { currentPage = 1; loadUsers(); };
+        document.getElementById('searchUser').addEventListener('input', debounce(reloadFromPage1, 500));
+        document.getElementById('roleFilter').addEventListener('change', reloadFromPage1);
+        document.getElementById('statusFilter').addEventListener('change', reloadFromPage1);
         document.getElementById('resetFilters').addEventListener('click', () => {
             document.getElementById('searchUser').value = '';
             document.getElementById('roleFilter').value = '';
             document.getElementById('statusFilter').value = '';
-            loadUsers();
+            reloadFromPage1();
         });
 
         const importBtn = document.getElementById('importBtn');
@@ -253,6 +259,15 @@
         if(icon) {
             icon.textContent = currentSort.direction === 'asc' ? 'expand_less' : 'expand_more';
         }
+        // The icon glyph is aria-hidden, so a screen-reader user got zero
+        // feedback that clicking toggled the sort order — only the visible
+        // icon shape changed. Keep the button's accessible name in sync too.
+        const sortBtn = document.getElementById('sortDateBtn');
+        if (sortBtn && field === 'created_at') {
+            sortBtn.setAttribute('aria-label', currentSort.direction === 'asc'
+                ? T('تاريخ التسجيل، ترتيب تصاعدي', 'Registration Date, sorted ascending')
+                : T('تاريخ التسجيل، ترتيب تنازلي', 'Registration Date, sorted descending'));
+        }
 
         allUsers.sort((a, b) => {
             let valA = a[field] || '';
@@ -288,7 +303,16 @@
             const role = document.getElementById('roleFilter').value;
             const status = document.getElementById('statusFilter').value;
 
-            const params = { limit: 100 };
+            // GET /api/admin/users only ever understood page/page_size — it
+            // has no "limit" parameter, so { limit: 100 } was silently
+            // ignored by FastAPI and every load fell back to the endpoint's
+            // real default (page=1, page_size=25). With more than 25 users
+            // in the system, everyone past the first page was completely
+            // unreachable from this screen: no error, no indication, no way
+            // to page forward. The endpoint has always returned a full
+            // { pagination: { page, page_size, total, total_pages, has_next,
+            // has_prev } } object — this screen just never read it.
+            const params = { page: currentPage, page_size: PAGE_SIZE };
             if (search) params.search = search;
             if (role) params.role = role;
             if (status) params.status = status;
@@ -297,12 +321,14 @@
             const users = await api.get('/api/admin/users', params);
 
             allUsers = users.data || [];
+            lastPagination = users.pagination || null;
 
             if (currentSort.field) {
                 sortTable(currentSort.field);
             } else {
                 renderUsers(allUsers);
             }
+            renderPaginationControls();
 
         } catch (error) {
             console.error('Error loading users:', error);
@@ -346,7 +372,8 @@
 
         const resultCount = document.getElementById('resultCount');
         if (resultCount) {
-            resultCount.textContent = T(`عرض ${users.length} مستخدم`, `Showing ${users.length} user(s)`);
+            const total = lastPagination ? lastPagination.total : users.length;
+            resultCount.textContent = T(`عرض ${users.length} من ${total} مستخدم`, `Showing ${users.length} of ${total} user(s)`);
         }
 
         container.innerHTML = users.map((user, idx) => {
@@ -378,18 +405,22 @@
                            aria-label="${T('تحديد المستخدم', 'Select user')} ${safeUsername}">
                 </div>
 
-                <!-- Actions Menu -->
+                <!-- Actions Menu — title text includes the username (matching the
+                     checkbox's aria-label pattern below) so a screen reader user
+                     tabbing through many rows hears which user each button acts
+                     on, instead of "Edit… Edit… Edit…" repeated with no way to
+                     tell rows apart except by navigating back to the heading. -->
                 <div class="position-absolute top-0 end-0 m-2 d-flex gap-1">
-                    <a href="/admin/users/${user.id}/edit" class="btn btn-sm btn-outline-secondary border-0 d-inline-flex p-1" title="${T('تعديل', 'Edit')}">
+                    <a href="/admin/users/${user.id}/edit" class="btn btn-sm btn-outline-secondary border-0 d-inline-flex p-1" title="${T('تعديل بيانات المستخدم', 'Edit user')} ${safeUsername}">
                         <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">edit</span>
                     </a>
                     ${currentUserRole === 'ADMIN' ? `
-                    <button data-action="reset-password" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-warning border-0 d-inline-flex p-1" title="${T('إعادة تعيين كلمة المرور', 'Reset password')}">
+                    <button data-action="reset-password" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-warning border-0 d-inline-flex p-1" title="${T('إعادة تعيين كلمة مرور', 'Reset password for')} ${safeUsername}">
                         <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">key</span>
                     </button>
                     ` : ''}
                     ${currentUserRole === 'ADMIN' && user.role !== 'ADMIN' ? `
-                    <button data-action="delete-user" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-danger border-0 d-inline-flex p-1" title="${T('حذف', 'Delete')}">
+                    <button data-action="delete-user" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-danger border-0 d-inline-flex p-1" title="${T('حذف المستخدم', 'Delete user')} ${safeUsername}">
                         <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">delete</span>
                     </button>
                     ` : ''}
@@ -424,6 +455,48 @@
             </div>
             `;
         }).join('');
+    }
+
+    // The <nav id="pagination"> container has existed since this page was
+    // built but was never populated by any script — GET /api/admin/users
+    // always returned a full pagination object that nothing here read.
+    function renderPaginationControls() {
+        const nav = document.getElementById('pagination');
+        if (!nav) return;
+        nav.innerHTML = '';
+        if (!lastPagination || lastPagination.total_pages <= 1) return;
+
+        const { page, total_pages, has_prev, has_next } = lastPagination;
+
+        const makeBtn = (dir, enabled, label) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-outline-secondary d-inline-flex align-items-center';
+            btn.disabled = !enabled;
+            btn.setAttribute('aria-label', label);
+            const icon = document.createElement('span');
+            icon.className = 'material-symbols-outlined icon-directional';
+            icon.setAttribute('aria-hidden', 'true');
+            icon.style.fontSize = '18px';
+            icon.textContent = dir === 'prev' ? 'chevron_left' : 'chevron_right';
+            btn.appendChild(icon);
+            btn.addEventListener('click', () => {
+                currentPage = dir === 'prev' ? currentPage - 1 : currentPage + 1;
+                loadUsers();
+            });
+            return btn;
+        };
+
+        const status = document.createElement('span');
+        status.className = 'small text-muted mx-3';
+        status.textContent = T(`صفحة ${page} من ${total_pages}`, `Page ${page} of ${total_pages}`);
+
+        const wrap = document.createElement('div');
+        wrap.className = 'd-flex align-items-center';
+        wrap.appendChild(makeBtn('prev', has_prev, T('الصفحة السابقة', 'Previous page')));
+        wrap.appendChild(status);
+        wrap.appendChild(makeBtn('next', has_next, T('الصفحة التالية', 'Next page')));
+        nav.appendChild(wrap);
     }
 
     function getRoleBadge(role) {
@@ -507,9 +580,9 @@
         }
 
         const previewRows = lines.slice(1, 6);
-        let previewHTML = '<table class="table table-sm mb-0"><thead><tr>';
+        let previewHTML = `<table class="table table-sm mb-0"><caption class="visually-hidden">${T('معاينة بيانات ملف CSV المستورد', 'Preview of imported CSV data')}</caption><thead><tr>`;
         headers.forEach(header => {
-            previewHTML += `<th class="small">${escapeHtml(header)}</th>`;
+            previewHTML += `<th class="small" scope="col">${escapeHtml(header)}</th>`;
         });
         previewHTML += '</tr></thead><tbody>';
 
