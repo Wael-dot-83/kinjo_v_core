@@ -175,6 +175,17 @@ body.admin-container {
   padding: var(--kinjo-spacing-6);
 }
 
+/* Page title — shared across admin pages (analytics, dashboard, help
+   center, reporting). Several templates set this class (some also
+   reference an undefined --type-page-title var) with no CSS backing
+   anywhere in the loaded stylesheet chain, so it rendered as a bare,
+   unstyled <h1>. */
+.admin-page-title {
+  font: var(--kinjo-font-weight-bold) var(--kinjo-font-size-2xl) / 1.3 var(--kinjo-font-family);
+  color: var(--kinjo-color-text-primary);
+  margin: 0;
+}
+
 /* Page Containers */
 .admin-page-container {
   max-width: 1440px;

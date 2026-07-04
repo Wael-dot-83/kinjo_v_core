@@ -8,6 +8,7 @@
 :root {
   /* Brand */
   --az-primary:       #2563EB;
+  --az-primary-hover: #1D4ED8;
   --az-primary-light: #EFF6FF;
   --az-primary-mid:   #BFDBFE;
   --az-success:       #16A34A;
@@ -72,8 +73,11 @@
   --kpi-icon-bg-governance: rgba(91,33,182,.10);
   --kpi-icon-bg-occupancy:  rgba(14,116,144,.10);
 
-  /* Typography */
-  --font-ar: 'Tajawal', 'Cairo', system-ui, sans-serif;
+  /* Typography — Noto Sans Arabic is the only Arabic webfont actually
+     loaded (admin_base.html); Tajawal/Cairo were never fetched anywhere
+     in the codebase, so this token was silently falling back to the OS
+     system font, out of step with the rest of the admin panel. */
+  --font-ar: 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --type-display: 700 2rem/1.25 var(--font-ar);
   --type-heading: 600 1.125rem/1.4 var(--font-ar);
   --type-label:   500 0.8125rem/1.5 var(--font-ar);
