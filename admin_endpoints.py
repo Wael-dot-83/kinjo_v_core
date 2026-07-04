@@ -3221,7 +3221,6 @@ class DashboardCharts(BaseModel):
     attendance: List[DashboardChartPoint] = []
     enrollment: Dict[str, Any] = {}
     incidents: List[DashboardChartPoint] = []
-    gcei: List[DashboardChartPoint] = []
 
 class DashboardAlert(BaseModel):
     """System alert for dashboard — bilingual title/message fields are canonical; title/message are Arabic fallbacks."""
@@ -3563,25 +3562,10 @@ def get_admin_dashboard(
         day_count = daily_incident_counts.get(day_value, 0)
         incidents_trend.append(DashboardChartPoint(date=day_value.isoformat(), value=day_count))
 
-    # GCEI: per-day governance score using total active enrollments as the stable denominator.
-    # Defaults to 0 (unknown) when denominator is zero, not 100 (artificially perfect).
-    gcei_denominator = active_enrollments if active_enrollments > 0 else 1
-    gcei_chart: List[DashboardChartPoint] = []
-    for i in range(chart_days):
-        day_value = today - timedelta(days=(chart_days - 1 - i))
-        day_incidents = daily_incident_counts.get(day_value, 0)
-        if active_enrollments > 0:
-            incident_rate = (day_incidents / gcei_denominator) * 100
-            gcei_score = round(max(0.0, min(100.0, 100.0 - incident_rate * 10)), 1)
-        else:
-            gcei_score = 0.0
-        gcei_chart.append(DashboardChartPoint(date=day_value.isoformat(), value=gcei_score))
-
     charts = DashboardCharts(
         attendance=attendance_chart,
         enrollment=enrollment_pie,
         incidents=incidents_trend,
-        gcei=gcei_chart,
     )
 
     alerts: List[DashboardAlert] = []

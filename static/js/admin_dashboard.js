@@ -250,7 +250,18 @@ class AdminDashboard {
     const normalized = this.normalizePayload(data || {});
     this.renderKPICards(normalized.kpis, normalized.kpi_trends, normalized.data_quality_reasons);
     this.renderCharts(normalized.charts);
-    this.renderActivityFeed(normalized.recent_activity);
+    // Skip when an ActivityFilterBar owns #activity-feed (admin_activity_filters.js):
+    // both scripts render into the same container on admin_dashboard.html, and
+    // this unfiltered/unpaginated top-10 payload used to win the race on every
+    // load AND on every 5-minute auto-refresh, silently discarding any filter
+    // or page the user had applied while the pagination footer below it (which
+    // only ActivityFilterBar updates) kept claiming the filtered view was
+    // still active. ActivityFilterBar.load() is this container's sole owner
+    // whenever it's present; renderActivityFeed remains here as the shared
+    // rendering primitive it calls into (window.adminDashboard.renderActivityFeed).
+    if (!document.getElementById("activity-filter-bar")) {
+      this.renderActivityFeed(normalized.recent_activity);
+    }
     this.renderAlerts(normalized.alerts);
     // Translate any data-i18n elements injected dynamically by this script
     window.AdminI18n?.translatePage?.();
@@ -626,9 +637,18 @@ class AdminDashboard {
   createActivityItem(activity) {
     const lang = window.KINJO_LANG === "en" ? "en" : "ar";
     let message = activity[`message_${lang}`] || activity.message || "";
-    
-    // Elevate low-value repetitive messages to professional event titles
-    if (message.includes("تسجيل دخول") || message.includes("User login") || message.includes("login")) {
+
+    // Elevate low-value repetitive messages to professional event titles.
+    // Gated on status === "success": the substring check alone also matches
+    // LOGIN_FAILED's message ("Failed login attempt" / "محاولة تسجيل دخول
+    // فاشلة", both contain "login"/"تسجيل دخول"), which silently relabeled
+    // failed login attempts as "Successful Authentication" while the status
+    // badge next to it still correctly said "Failed" — hiding a
+    // security-relevant signal behind a contradictory, success-sounding title.
+    if (
+      activity.status === "success" &&
+      (message.includes("تسجيل دخول") || message.includes("User login") || message.includes("login"))
+    ) {
       message = lang === "en" ? "Successful Authentication" : "دخول ناجح";
     }
 

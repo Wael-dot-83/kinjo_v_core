@@ -222,3 +222,39 @@ def test_auto_refresh_toggle_present_and_wired():
     assert 'localStorage.setItem("autoRefreshEnabled"' in source
     # Must not unconditionally auto-start regardless of saved preference
     assert "if (this.isAutoRefreshEnabled()) this.startAutoRefresh();" in source
+
+
+def test_failed_login_is_not_relabeled_as_successful_authentication():
+    """createActivityItem used to rewrite any activity whose message contained
+    "login"/"تسجيل دخول" to "Successful Authentication"/"دخول ناجح" — a
+    substring check broad enough to also match LOGIN_FAILED's own message
+    ("Failed login attempt" / "محاولة تسجيل دخول فاشلة"), so a failed login
+    rendered with a success-sounding title next to a "Failed" status badge.
+    The rewrite must be gated on activity.status === "success", which the
+    backend already computes correctly from _FAILURE_ACTIONS."""
+    source = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
+    match = re.search(
+        r'if\s*\(\s*(.*?)\s*\)\s*\{\s*message = lang === "en" \? "Successful Authentication"',
+        source,
+        re.DOTALL,
+    )
+    assert match, "could not find the login-message elevation guard in admin_dashboard.js"
+    condition = match.group(1)
+    assert 'activity.status === "success"' in condition
+
+
+def test_activity_filter_bar_is_sole_owner_of_activity_feed_when_present():
+    """AdminDashboard.renderDashboard() and ActivityFilterBar.load() both used
+    to render into the same #activity-feed container independently — on
+    admin_dashboard.html (which has an #activity-filter-bar), the unfiltered/
+    unpaginated top-10 payload from /api/admin/dashboard would win the race on
+    every load AND on every 5-minute auto-refresh, silently discarding any
+    filter or page the user had applied while the pagination footer (which
+    only ActivityFilterBar updates) kept claiming the filtered view was still
+    active. AdminDashboard must defer to ActivityFilterBar whenever it's
+    present on the page."""
+    source = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
+    assert 'if (!document.getElementById("activity-filter-bar")) {' in source
+    guard_index = source.index('if (!document.getElementById("activity-filter-bar")) {')
+    call_index = source.index("this.renderActivityFeed(normalized.recent_activity);")
+    assert guard_index < call_index < guard_index + 200
