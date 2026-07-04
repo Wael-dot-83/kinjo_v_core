@@ -869,7 +869,10 @@
     const endIdx = Math.min(startIdx + previewPageSize, sorted.length);
     const paginated = sorted.slice(startIdx, endIdx);
 
-    // Render Headers with sort icons
+    // Render Headers with sort icons. Sort state used to be conveyed only by
+    // the caret icon's visible shape (no aria-sort), and the header only
+    // responded to a mouse click — no tabindex/keydown, so keyboard and
+    // screen-reader users could not sort this table at all.
     thead.innerHTML = `<tr>${previewColumns
       .map((col) => {
         const isSorted = previewSortColumn === col;
@@ -878,22 +881,33 @@
             ? ' <i class="bi bi-caret-up-fill"></i>'
             : ' <i class="bi bi-caret-down-fill"></i>'
           : "";
-        return `<th style="cursor: pointer" class="sortable-header" data-col="${escapeHtml(col)}">${escapeHtml(columnLabel(col))}${caret}</th>`;
+        const ariaSort = isSorted
+          ? (previewSortDirection === "asc" ? "ascending" : "descending")
+          : "none";
+        return `<th scope="col" style="cursor: pointer" class="sortable-header" data-col="${escapeHtml(col)}" tabindex="0" role="button" aria-sort="${ariaSort}">${escapeHtml(columnLabel(col))}${caret}</th>`;
       })
       .join("")}</tr>`;
 
     // Add sort listeners
+    const applySort = (col) => {
+      if (previewSortColumn === col) {
+        previewSortDirection =
+          previewSortDirection === "asc" ? "desc" : "asc";
+      } else {
+        previewSortColumn = col;
+        previewSortDirection = "asc";
+      }
+      renderPreviewTable();
+    };
     thead.querySelectorAll(".sortable-header").forEach((th) => {
       th.addEventListener("click", (e) => {
-        const col = e.currentTarget.getAttribute("data-col");
-        if (previewSortColumn === col) {
-          previewSortDirection =
-            previewSortDirection === "asc" ? "desc" : "asc";
-        } else {
-          previewSortColumn = col;
-          previewSortDirection = "asc";
+        applySort(e.currentTarget.getAttribute("data-col"));
+      });
+      th.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          applySort(e.currentTarget.getAttribute("data-col"));
         }
-        renderPreviewTable();
       });
     });
 
@@ -1541,13 +1555,18 @@
       tbody.innerHTML = items
         .map((item) => {
           const isFailed = item.status === "FAILED";
+          // Interpolated into every action button's title below so a screen
+          // reader user tabbing through many rows can tell which report each
+          // download/regenerate/view-logs control acts on, instead of hearing
+          // the same generic name repeated for every row.
+          const reportLabel = escapeHtml(item.report_name || item.report_type);
           const errorDetail =
             isFailed && item.error
               ? `<div class="small text-danger mt-1"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>${escapeHtml(item.error)}</div>`
               : "";
           const traceLink =
             isFailed && item.trace_url
-              ? `<a href="${escapeHtml(item.trace_url)}" class="btn btn-sm btn-outline-secondary ms-1" title="${reportsText("عرض السجلات", "View Logs")}"><i class="bi bi-journal-text"></i></a>`
+              ? `<a href="${escapeHtml(item.trace_url)}" class="btn btn-sm btn-outline-secondary ms-1" title="${reportsText("عرض سجلات", "View logs for")} ${reportLabel}"><i class="bi bi-journal-text" aria-hidden="true"></i></a>`
               : "";
           return `
         <tr>
@@ -1559,8 +1578,8 @@
             ${errorDetail}
           </td>
           <td class="text-center">
-            ${item.status === "COMPLETED" && item.id ? `<a href="/api/analytics/export/${item.id}/file" class="btn btn-sm btn-outline-primary" title="${reportsText("تنزيل", "Download")}"><i class="bi bi-download"></i></a>` : ""}
-            <button class="btn btn-sm btn-outline-secondary" data-action="rerun" data-id="${item.id}" title="${reportsText("إعادة إنشاء", "Regenerate")}"><i class="bi bi-arrow-clockwise"></i></button>
+            ${item.status === "COMPLETED" && item.id ? `<a href="/api/analytics/export/${item.id}/file" class="btn btn-sm btn-outline-primary" title="${reportsText("تنزيل", "Download")} ${reportLabel}"><i class="bi bi-download" aria-hidden="true"></i></a>` : ""}
+            <button class="btn btn-sm btn-outline-secondary" data-action="rerun" data-id="${item.id}" title="${reportsText("إعادة إنشاء", "Regenerate")} ${reportLabel}"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i></button>
             ${traceLink}
           </td>
         </tr>

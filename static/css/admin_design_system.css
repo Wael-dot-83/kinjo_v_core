@@ -4804,6 +4804,40 @@ html[dir="rtl"] .submenu .nav-link {
     border-bottom: 1px solid rgba(196, 197, 213, 0.3) !important;
 }
 
+/* .glass-panel is an alias for .glass-card — templates/admin/analytics/reports.html
+   uses "glass-panel" on every card on the page (stat cards, Report Builder,
+   preview, history, both modals), but no CSS anywhere ever defined that name;
+   every one of those cards silently fell back to plain Bootstrap .card
+   styling instead of the intended glass/blur treatment. */
+.glass-panel {
+    --bs-card-spacer-y: 1rem;
+    --bs-card-spacer-x: 1rem;
+    --bs-card-title-spacer-y: 0.5rem;
+    --bs-card-border-width: 1px;
+    --bs-card-border-color: rgba(255, 255, 255, 0.5);
+    --bs-card-border-radius: 0.5rem;
+    --bs-card-inner-border-radius: calc(0.5rem - 1px);
+    --bs-card-cap-padding-y: 0.5rem;
+    --bs-card-cap-padding-x: 1rem;
+    --bs-card-cap-bg: rgba(248, 249, 255, 0.65);
+    --bs-card-bg: transparent;
+    --bs-card-img-overlay-padding: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background-clip: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 20px rgba(0, 40, 142, 0.05);
+    border-radius: 0.5rem;
+}
+
+/* .hover-elevate mirrors the existing .hover-float:hover lift, under the
+   name reports.html actually uses (also undefined until now). */
+.hover-elevate:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 24px rgba(0, 40, 142, 0.1);
+}
+
 .admin-card {
     background: rgba(255, 255, 255, 0.9) !important;
     backdrop-filter: blur(10px);
