@@ -391,19 +391,28 @@ async function loadAdminAnalytics(retryCount = 0) {
     const dist = data.governance_distribution || {};
     updateGovernanceChart(dist.green || 0, dist.amber || 0, dist.red || 0);
 
-    // Load comparative analysis
-    await loadComparativeAnalysis(start, end);
-
     const scopeType = gov ? "GOVERNORATE" : "NETWORK";
     const scopeId = gov || null;
-    await loadPredictiveInsights(start, end, scopeType, scopeId);
-    await loadAnomalies(start, end, scopeType, scopeId);
-    await loadAlerts();
-    await loadDataQuality();
-    await loadTargets();
-    await loadBenchmarks();
-    await loadRecommendations();
-    await loadRegistrationAnalytics();
+
+    // These 9 widgets are independent of the primary KPIs above and of each
+    // other -- each fetches its own data, owns its own DOM subtree, and
+    // already has its own internal try/catch. Awaiting them one at a time
+    // meant a single slow call (e.g. the leaderboard scan inside
+    // loadComparativeAnalysis) gated every widget queued behind it, even
+    // ones that resolve in milliseconds once reached. allSettled (not
+    // Promise.all) so one widget's unexpected rejection can't affect the
+    // others' already-in-flight requests.
+    await Promise.allSettled([
+      loadComparativeAnalysis(start, end),
+      loadPredictiveInsights(start, end, scopeType, scopeId),
+      loadAnomalies(start, end, scopeType, scopeId),
+      loadAlerts(),
+      loadDataQuality(),
+      loadTargets(),
+      loadBenchmarks(),
+      loadRecommendations(),
+      loadRegistrationAnalytics(),
+    ]);
 
     showToast(
       adminAnalyticsText("تم تحديث البيانات بنجاح", "Data refreshed successfully"),

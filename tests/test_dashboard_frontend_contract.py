@@ -117,6 +117,45 @@ def test_alerts_card_has_empty_state():
     assert re.search(r"if \(combinedAlerts\.length === 0\) \{", source)
 
 
+def test_secondary_widgets_load_in_parallel_not_sequentially():
+    """The 9 independent secondary widgets (comparative analysis, predictive
+    insights, anomalies, alerts, data quality, targets, benchmarks,
+    recommendations, registration analytics) were previously awaited one at
+    a time in loadAdminAnalytics, so a single slow call anywhere in the
+    chain (e.g. the leaderboard scan inside loadComparativeAnalysis, or the
+    uncached kpi/alerts scan) gated every widget queued behind it — even
+    ones that resolve in milliseconds once reached. Confirmed live: before
+    this fix, widgets settled 13-90s after page load; after, 8 of 9 settle
+    within ~2.6s regardless of how slow the remaining one (the still-uncached
+    leaderboard, deferred separately) is.
+    """
+    source = ADMIN_ANALYTICS_JS.read_text(encoding="utf-8")
+    match = re.search(
+        r"await Promise\.allSettled\(\[(?P<body>.*?)\]\);", source, re.S
+    )
+    assert match is not None, "secondary widget loaders must be dispatched via Promise.allSettled"
+    body = match.group("body")
+    for call in (
+        "loadComparativeAnalysis(start, end)",
+        "loadPredictiveInsights(start, end, scopeType, scopeId)",
+        "loadAnomalies(start, end, scopeType, scopeId)",
+        "loadAlerts()",
+        "loadDataQuality()",
+        "loadTargets()",
+        "loadBenchmarks()",
+        "loadRecommendations()",
+        "loadRegistrationAnalytics()",
+    ):
+        assert call in body, f"missing from parallel batch: {call}"
+
+    # The old sequential form must not reappear elsewhere in the file.
+    for stale in (
+        "await loadComparativeAnalysis(start, end);\n",
+        "await loadAlerts();\n    await loadDataQuality();",
+    ):
+        assert stale not in source
+
+
 def test_data_quality_card_has_helper_text_and_wired_bars():
     """The three health bars (Completeness/Accuracy/Freshness) were rendered
     with hardcoded template defaults and never actually updated by
