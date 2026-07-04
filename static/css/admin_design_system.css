@@ -1794,12 +1794,16 @@ html[dir="rtl"] .submenu .nav-link {
   gap: var(--space-6);
 }
 
-/* KPI Cards */
+/* KPI Cards — now a <ul> (see admin_dashboard.html) so screen readers can
+   enumerate the collection; cancel the browser's default list styling so
+   the grid layout is unaffected. */
 .admin-dashboard-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--space-3); /* 24px */
   margin-bottom: var(--space-4); /* 32px */
+  list-style: none;
+  padding-inline-start: 0;
 }
 
 @media (max-width: 1024px) {
@@ -1853,7 +1857,10 @@ html[dir="rtl"] .submenu .nav-link {
 }
 
 .admin-kpi-card-warning {
-  background: var(--color-warning);
+  /* --color-warning (#F59E0B) gives a white glyph only 2.15:1 contrast —
+     fails WCAG 1.4.11 non-text contrast (3:1 minimum). --color-warning-dark
+     (#B45309) gives 5.02:1, comfortably passing. */
+  background: var(--color-warning-dark);
 }
 
 .admin-kpi-card-danger {
@@ -1881,6 +1888,10 @@ html[dir="rtl"] .submenu .nav-link {
 }
 
 .admin-kpi-card-title {
+  /* Now an <h3> (see admin_dashboard.js createKPICard) — cancel the
+     browser's default heading margin so the tight card layout is
+     unaffected by the tag-name change. */
+  margin: 0;
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-gray-700);
@@ -2039,6 +2050,14 @@ html[dir="rtl"] .submenu .nav-link {
   text-align: start;
 }
 
+/* Chrome/Edge's default placeholder gray (#757575) gives only 4.4:1 against
+   --color-primary-surface (#F8FAFC) — just under the 4.5:1 WCAG AA minimum.
+   --color-gray-500 gives 4.62:1. */
+.admin-activity-filter-input::placeholder {
+  color: var(--color-gray-500);
+  opacity: 1; /* Firefox lowers placeholder opacity by default, undoing the fix */
+}
+
 .admin-activity-filter-input {
   width: 8rem;
 }
@@ -2179,7 +2198,17 @@ html[dir="rtl"] .submenu .nav-link {
   overflow-y: auto;
 }
 
-.alert-item {
+/* Renamed from a bare .alert-* prefix: admin_dashboard.js's createAlertItem/
+   _createFeedItem has always emitted admin-alert-item/admin-alert-{severity}/
+   admin-alert-icon/admin-alert-content/admin-alert-message/admin-alert-time —
+   this whole block never matched anything it rendered. Verified live: every
+   alert on the System Alerts card computed to a fully transparent background
+   and zero padding, regardless of severity. Also added an "error" variant
+   (mapped to the same red/error tokens as "critical") since
+   get_admin_dashboard's alert builders emit severity="error" for expired
+   licenses and >5 incidents/week — a real value this mapping never had a
+   rule for at all, on top of the prefix mismatch. */
+.admin-alert-item {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
@@ -2189,74 +2218,83 @@ html[dir="rtl"] .submenu .nav-link {
   border-inline-start: 4px solid transparent;
 }
 
-.alert-item:last-child {
+.admin-alert-item:last-child {
   margin-bottom: 0;
 }
 
-.alert-item.alert-critical {
+.admin-alert-item.admin-alert-critical,
+.admin-alert-item.admin-alert-error {
   background: var(--color-error-light);
   border-inline-start-color: var(--color-error);
 }
 
-.alert-item.alert-warning {
+.admin-alert-item.admin-alert-warning {
   background: var(--color-warning-light);
   border-inline-start-color: var(--color-warning);
 }
 
-.alert-item.alert-info {
+.admin-alert-item.admin-alert-info {
   background: var(--color-info-light);
   border-inline-start-color: var(--color-info);
 }
 
-.alert-item.alert-success {
+.admin-alert-item.admin-alert-success {
   background: var(--color-success-light);
   border-inline-start-color: var(--color-success);
 }
 
-.alert-item .alert-icon {
+.admin-alert-item .admin-alert-icon {
   font-size: var(--text-lg);
   flex-shrink: 0;
   margin-top: var(--space-1);
 }
 
-.alert-item.alert-critical .alert-icon {
+.admin-alert-item.admin-alert-critical .admin-alert-icon,
+.admin-alert-item.admin-alert-error .admin-alert-icon {
   color: var(--color-error);
 }
 
-.alert-item.alert-warning .alert-icon {
-  color: var(--color-warning);
+.admin-alert-item.admin-alert-warning .admin-alert-icon {
+  color: var(--color-warning-dark); /* --color-warning fails 3:1 as an icon-only glyph on white/light backgrounds */
 }
 
-.alert-item.alert-info .alert-icon {
+.admin-alert-item.admin-alert-info .admin-alert-icon {
   color: var(--color-info);
 }
 
-.alert-item.alert-success .alert-icon {
+.admin-alert-item.admin-alert-success .admin-alert-icon {
   color: var(--color-success);
 }
 
-.alert-content {
+.admin-alert-content {
   flex: 1;
   min-width: 0;
 }
 
-.alert-message {
+.admin-alert-message {
   font-size: var(--text-sm);
   color: var(--color-gray-900);
   margin-bottom: var(--space-1);
   line-height: var(--line-height-normal);
 }
 
-.alert-time {
+.admin-alert-time {
   font-size: var(--text-xs);
   color: var(--color-gray-500);
 }
 
-/* Quick Actions */
+/* Quick Actions — now a <ul> (see admin_dashboard.html) so screen readers
+   can enumerate the 4 actions; each <li> is display:contents so the grid
+   still applies directly to .admin-quick-action-card as before. */
 .admin-quick-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
+  list-style: none;
+  padding-inline-start: 0;
+}
+.admin-quick-actions > li {
+  display: contents;
 }
 
 .admin-quick-action-card-icon--primary { background: var(--color-primary-light); color: var(--color-primary); }
@@ -2355,7 +2393,7 @@ html[dir="rtl"] .submenu .nav-link {
   direction: rtl;
 }
 
-[dir="rtl"] .alert-item {
+[dir="rtl"] .admin-alert-item {
   direction: rtl;
 }
 

@@ -294,7 +294,11 @@
       input.className = "admin-activity-filter-input";
       input.setAttribute("dir", "auto");
       input.placeholder = t("dashboard.activity_search_placeholder", "Search recent activity…");
-      input.setAttribute("aria-label", t("dashboard.activity_search_placeholder", "Search recent activity…"));
+      // No aria-label here: the visually-hidden <label for="activity-filter-search">
+      // above already provides the accessible name via its for/id association —
+      // an aria-label with the same text is redundant (aria-label wins over the
+      // <label> in the accessible-name computation, so it wasn't a double
+      // announcement, just dead duplication of the same string in two places).
       input.value = this.state.search;
 
       let debounceTimer = null;

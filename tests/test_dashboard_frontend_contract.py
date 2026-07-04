@@ -12,6 +12,8 @@ ADMIN_ANALYTICS_JS = ROOT / "static" / "js" / "admin_analytics.js"
 ADMIN_DASHBOARD_TEMPLATE = ROOT / "templates" / "admin_dashboard.html"
 ADMIN_DASHBOARD_JS = ROOT / "static" / "js" / "admin_dashboard.js"
 ADMIN_ACTIVITY_FILTERS_JS = ROOT / "static" / "js" / "admin_activity_filters.js"
+ADMIN_DESIGN_SYSTEM_CSS = ROOT / "static" / "css" / "admin_design_system.css"
+COMPONENTS_CSS = ROOT / "static" / "css" / "components.css"
 
 
 def test_kpi_cards_expose_status_attribute_used_by_filter_layer():
@@ -258,3 +260,86 @@ def test_activity_filter_bar_is_sole_owner_of_activity_feed_when_present():
     guard_index = source.index('if (!document.getElementById("activity-filter-bar")) {')
     call_index = source.index("this.renderActivityFeed(normalized.recent_activity);")
     assert guard_index < call_index < guard_index + 200
+
+
+def test_dashboard_card_collections_are_enumerable_lists_with_real_headings():
+    """USWDS card component rules: repeated/similar cards must be grouped in
+    a <ul> with each card as an <li> so screen readers can enumerate the
+    collection, and each card needs a real heading in logical outline order
+    (not a plain <div> standing in for one). Covers both card collections on
+    /admin/dashboard: the 7 KPI cards and the 4 Quick Action cards."""
+    template = ADMIN_DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
+    assert re.search(r'<ul\s+class="admin-dashboard-cards"\s+id="kpi-cards"[^>]*role="list"', template)
+    assert re.search(r'<ul\s+class="admin-quick-actions"\s+role="list"', template)
+    # Each quick-action <a> must be wrapped in its own <li>
+    assert template.count("<li><a") >= 4
+
+    source = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
+    assert 'const card = document.createElement("li");' in source
+    assert 'const titleEl = document.createElement("h3");' in source
+    # The old role="region"/aria-label duplicate-of-heading pattern must not
+    # come back once the card has a real heading providing its accessible name.
+    assert 'card.setAttribute("role", "region")' not in source
+
+
+def test_system_alerts_css_classes_match_what_the_js_actually_renders():
+    """admin_dashboard.js's createAlertItem/_createFeedItem has always
+    emitted admin-alert-item/admin-alert-{severity}/admin-alert-icon/
+    admin-alert-content/admin-alert-message/admin-alert-time, but
+    admin_design_system.css defined a bare .alert-item/.alert-{severity}/
+    .alert-icon/.alert-content/.alert-message/.alert-time block that never
+    matched anything — every System Alerts card rendered with a fully
+    transparent background and zero padding regardless of severity
+    (verified live: computed background was rgba(0,0,0,0)). Also covers the
+    "error" severity gap: get_admin_dashboard emits severity="error" for
+    expired licenses and high incident counts, but neither the old nor a
+    naively-renamed mapping had an admin-alert-error rule or icon at all."""
+    css = ADMIN_DESIGN_SYSTEM_CSS.read_text(encoding="utf-8")
+    for cls in (
+        ".admin-alert-item", ".admin-alert-critical", ".admin-alert-error",
+        ".admin-alert-warning", ".admin-alert-info", ".admin-alert-success",
+        ".admin-alert-icon", ".admin-alert-content", ".admin-alert-message",
+        ".admin-alert-time",
+    ):
+        assert cls in css, f"missing CSS rule for {cls}"
+    # The stale bare-prefix rules must not silently come back as dead weight.
+    assert not re.search(r"(?<!-)\.alert-item\b", css)
+
+    source = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
+    assert '"bi bi-exclamation-triangle-fill"' in source
+    match = re.search(r"getAlertIcon\(severity\)\s*\{(?P<body>.*?)\n  \}", source, re.DOTALL)
+    assert match, "could not find getAlertIcon()"
+    assert "error:" in match.group("body"), "getAlertIcon must handle severity='error'"
+
+
+def test_failed_status_badge_has_a_color_rule():
+    """activity-status-badge.badge-failed had no CSS rule at all (only
+    badge-success/-warning/-danger/-info existed), even though
+    _activity_item_from_log sets status="failed" (not "danger") for
+    LOGIN_FAILED/ACCESS_DENIED/etc. Verified live: a failed-login badge
+    computed to a fully transparent background — no color coding at all
+    next to a correctly-styled green "success" badge."""
+    css = COMPONENTS_CSS.read_text(encoding="utf-8")
+    assert ".activity-status-badge.badge-failed" in css
+
+
+def test_kpi_warning_icon_meets_non_text_contrast_minimum():
+    """--color-warning (#F59E0B) gives a white icon glyph only 2.15:1
+    contrast, failing WCAG 1.4.11 non-text contrast (3:1 minimum) for the
+    KPI card that uses color: "warning". --color-warning-dark (#B45309)
+    gives 5.02:1."""
+    css = ADMIN_DESIGN_SYSTEM_CSS.read_text(encoding="utf-8")
+    match = re.search(r"\.admin-kpi-card-warning\s*\{(?P<body>[^}]+)\}", css)
+    assert match
+    assert "var(--color-warning-dark)" in match.group("body")
+
+
+def test_activity_search_placeholder_meets_contrast_minimum():
+    """Chrome/Edge's default placeholder gray (#757575) computed to only
+    4.4:1 against .admin-activity-filter-input's background (#F8FAFC),
+    just under the 4.5:1 WCAG AA minimum for normal text — verified live via
+    getComputedStyle(el, '::placeholder'). --color-gray-500 gives 4.62:1."""
+    css = ADMIN_DESIGN_SYSTEM_CSS.read_text(encoding="utf-8")
+    match = re.search(r"\.admin-activity-filter-input::placeholder\s*\{(?P<body>[^}]+)\}", css)
+    assert match, "no explicit ::placeholder rule for .admin-activity-filter-input"
+    assert "var(--color-gray-500)" in match.group("body")

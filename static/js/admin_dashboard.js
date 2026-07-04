@@ -337,10 +337,12 @@ class AdminDashboard {
   }
 
   createKPICard(config, value, trendMeta, dataQualityReasons) {
-    const card = document.createElement("div");
+    // <li>, not <div>: #kpi-cards is a <ul> so screen readers can enumerate
+    // the collection (USWDS card component). No role="region"/aria-label
+    // here anymore — the card now carries a real heading (see titleEl
+    // below), which is the correct accessible name source for a list item.
+    const card = document.createElement("li");
     card.className = "admin-kpi-card";
-    card.setAttribute("role", "region");
-    card.setAttribute("aria-label", this.t(`dashboard.${config.key}`, KPI_LABEL_FALLBACK[config.key]));
 
     const { formattedValue, badgeHtml } = this.formatKPIValue(config, value);
 
@@ -367,11 +369,15 @@ class AdminDashboard {
       contentDiv.appendChild(badgeWrap);
     }
 
-    const titleDiv = document.createElement("div");
-    titleDiv.className = "admin-kpi-card-title";
-    titleDiv.setAttribute("data-i18n", `dashboard.${config.key}`);
-    titleDiv.textContent = this.t(`dashboard.${config.key}`, KPI_LABEL_FALLBACK[config.key] || config.key);
-    contentDiv.appendChild(titleDiv);
+    // <h3>, not <div>: a real heading gives the card an accessible name and
+    // keeps it in logical outline order (USWDS card component) — every
+    // sibling card on this page (Alerts, Charts, Activity, Quick Actions)
+    // already titles itself with <h3 class="admin-card-title">.
+    const titleEl = document.createElement("h3");
+    titleEl.className = "admin-kpi-card-title";
+    titleEl.setAttribute("data-i18n", `dashboard.${config.key}`);
+    titleEl.textContent = this.t(`dashboard.${config.key}`, KPI_LABEL_FALLBACK[config.key] || config.key);
+    contentDiv.appendChild(titleEl);
 
     if (trendMeta && value !== null) {
       contentDiv.appendChild(this.createKPITrendRow(trendMeta));
@@ -861,8 +867,13 @@ class AdminDashboard {
   }
 
   getAlertIcon(severity) {
+    // get_admin_dashboard's alert builders emit severity="error" (expired
+    // licenses, >5 incidents/week) — this map had no "error" key at all, so
+    // those alerts silently fell through to the generic info-circle icon
+    // instead of a severity-appropriate one.
     return {
       critical: "bi bi-exclamation-triangle-fill",
+      error:    "bi bi-exclamation-triangle-fill",
       warning:  "bi bi-exclamation-circle-fill",
       info:     "bi bi-info-circle-fill",
       success:  "bi bi-check-circle-fill",

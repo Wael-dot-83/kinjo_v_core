@@ -166,6 +166,13 @@
 .activity-status-badge.badge-warning { background-color: #FEF3C7; color: #92400E; }
 .activity-status-badge.badge-danger  { background-color: #FEE2E2; color: #991B1B; }
 .activity-status-badge.badge-info    { background-color: #DBEAFE; color: #1E40AF; }
+/* admin_endpoints.py's _activity_item_from_log sets status="failed" (not
+   "danger") for LOGIN_FAILED/ACCESS_DENIED/etc. — this class had no rule at
+   all, so a failed-login badge rendered with a transparent background and
+   no color coding whatsoever (verified: computed background was
+   rgba(0,0,0,0)), the exact opposite of what a security-relevant failure
+   status should look like next to a "ناجح"/"Success" success badge. */
+.activity-status-badge.badge-failed  { background-color: #FEE2E2; color: #991B1B; }
 
 .activity-meta-row {
   display: flex;
