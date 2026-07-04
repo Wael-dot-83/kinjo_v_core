@@ -248,3 +248,39 @@ class TestHighRiskChildrenSchema:
         entry = results[0]
         for stale_key in ("name", "kindergarten", "reason", "risk_score"):
             assert stale_key not in entry
+
+
+class TestRiskRadarIsolation:
+    """A failing risk-radar computation must degrade to an empty list, not
+    take down the whole dashboard-data payload. network_summary,
+    governorate_breakdown, trends, and governance_distribution have nothing
+    to do with Risk Intelligence and should still be served."""
+
+    def test_risk_radar_failure_does_not_500_the_dashboard(
+        self, client, admin_user, kg_with_risk_data, monkeypatch
+    ):
+        from sqlalchemy.exc import SQLAlchemyError
+
+        def _boom(*args, **kwargs):
+            raise SQLAlchemyError("simulated risk-radar failure")
+
+        monkeypatch.setattr(AnalyticsService, "get_high_risk_children", staticmethod(_boom))
+
+        response = client.post(
+            "/token", data={"username": "perfadmin", "password": "Admin123!"}
+        )
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+
+        period_start = date.today() - timedelta(days=6)
+        period_end = date.today()
+        response = client.get(
+            "/api/analytics/dashboard-data"
+            f"?period_start={period_start.isoformat()}&period_end={period_end.isoformat()}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["risk_radar"] == []
+        assert "governance_avg_score" in data["network_summary"]
+        assert "governance_distribution" in data

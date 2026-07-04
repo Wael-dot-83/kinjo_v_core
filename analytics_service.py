@@ -1156,7 +1156,15 @@ def get_consolidated_dashboard_data(
         )
         attendance_trend = AnalyticsService.get_network_trends(db, "attendance", period_start, period_end, kg_filter)
         incident_trend = AnalyticsService.get_network_trends(db, "incidents", period_start, period_end, kg_filter)
-        risk_radar = AnalyticsService.get_high_risk_children(db, kg_filter)
+        try:
+            risk_radar = AnalyticsService.get_high_risk_children(db, kg_filter)
+        except SQLAlchemyError as e:
+            # Isolated on purpose: Risk Intelligence is one field in this payload,
+            # not the reason for the request. A failure here should degrade to an
+            # empty radar rather than 500 the whole dashboard (network_summary,
+            # governorate_breakdown, trends, governance_distribution are unrelated).
+            logger.error("Risk radar computation failed, degrading to empty list: %s", str(e), exc_info=True)
+            risk_radar = []
         governance_distribution = AnalyticsService.get_governance_distribution(db, period_start, period_end, kg_filter)
 
         logger.info("Successfully retrieved analytics data")
