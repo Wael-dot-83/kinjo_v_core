@@ -8,6 +8,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
+    {# admin_components.js's session-timeout timer has always read this exact
+       meta tag (with a documented "falls back to 30 if not present" comment)
+       but it was never emitted anywhere — so the client-side auto-logout
+       warning/redirect silently hardcoded 30 minutes regardless of the real
+       configured SESSION_TIMEOUT_MINUTES, disagreeing with server-side
+       enforcement (dependencies.py) whenever an operator changes it. #}
+    <meta name="session-timeout-minutes" content="{{ session_timeout_minutes | default(30) }}" />
     <meta
       name="description"
       content="{% if ui_lang == 'en' %}KinJo Admin - Professional Kindergarten Management System{% else %}KinJo - إدارة احترافية للحضانات{% endif %}"
