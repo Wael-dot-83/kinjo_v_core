@@ -1067,8 +1067,19 @@ def get_consolidated_dashboard_data(
         elif allowed_kgs is not None:
             kg_filter = allowed_kgs
 
-        # Cache keyed by date range + gov filter + user scope
-        cache_key = f"analytics:dashboard:{period_start}:{period_end}:{gov_filter}:{current_user.role.value}"
+        # Cache keyed by date range + gov filter + user scope.
+        #
+        # Scope key must NOT be current_user.role alone: a MANAGER's or
+        # SUPERVISOR's actual data scope is their own kindergarten
+        # assignment, which differs per user and is not fully captured by
+        # gov_filter (two managers can share a governorate while managing
+        # different kindergartens). Keying on role alone would let two such
+        # users share one cache entry within the TTL window, each silently
+        # seeing the other's kindergarten's dashboard. ADMINs share a scope
+        # key since every admin sees the identical (optionally
+        # governorate-filtered) network-wide view.
+        scope_key = "ADMIN" if current_user.role == models.UserRole.ADMIN else f"user:{current_user.id}"
+        cache_key = f"analytics:dashboard:{period_start}:{period_end}:{gov_filter}:{scope_key}"
         cached = _analytics_cache_get(cache_key)
         if cached is not None:
             logger.info("Returning cached analytics dashboard response")
@@ -2074,17 +2085,41 @@ def get_metric_rankings(
     elif allowed_kgs is not None:
         kg_filter = allowed_kgs
 
+    # get_rankings scores every kindergarten in scope with the KPI engine's
+    # per-kindergarten aggregator just to return the top/bottom N -- the same
+    # cost pattern already fixed on dashboard-data and kpi/alerts (~13-33s
+    # for the full network, uncached). This endpoint had no caching at all.
+    # 5-minute TTL (vs. the 60s used elsewhere): a leaderboard is inherently
+    # a slower-changing view than live alerts/KPIs, and the longer window
+    # meaningfully cuts how often the expensive scan re-runs for a page most
+    # admins check periodically rather than continuously.
+    #
+    # Scope key: ADMINs share one entry per (metric, filters, period) since
+    # every admin sees the identical view; non-admins are keyed by user id,
+    # since two managers/supervisors can share a governorate while managing
+    # different kindergartens and must never share a cached result.
+    scope_key = "ADMIN" if current_user.role == models.UserRole.ADMIN else f"user:{current_user.id}"
+    cache_key = (
+        f"analytics:rankings:{metric}:{top_n}:{bottom}:"
+        f"{period_start}:{period_end}:{governorate or 'all'}:{scope_key}"
+    )
+    cached = _analytics_cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     rankings = AnalyticsService.get_rankings(
         db, metric, period_start, period_end, top_n, bottom, kg_filter
     )
 
-    return {
+    result = {
         "metric": metric,
         "period_start": period_start.isoformat(),
         "period_end": period_end.isoformat(),
         "order": "bottom" if bottom else "top",
         "rankings": [r.model_dump() for r in rankings]
     }
+    _analytics_cache_set(cache_key, result, ttl=300)
+    return result
 
 
 @router.get("/governance-distribution", response_model=GovernanceDistribution)

@@ -183,11 +183,33 @@ def test_data_quality_ring_wrapper_does_not_double_fetch():
 
 
 def test_activity_feed_has_loading_and_error_states():
+    """ActivityFilterBar delegates its loading/error markup to the shared
+    AdminComponents.renderAsyncState helper (see test_shared_async_state_helper),
+    passing an onRetry callback rather than wiring a fixed button id itself."""
     source = ADMIN_ACTIVITY_FILTERS_JS.read_text(encoding="utf-8")
     assert "جاري تحميل النشاطات" in source
     assert "تعذر تحميل النشاطات" in source
-    assert "activityRetryBtn" in source
-    assert "spinner-border" in source
+    assert 'renderAsyncState(feed, "loading"' in source
+    assert 'renderAsyncState(feed, "error"' in source
+    assert "onRetry: () => this.load()" in source
+
+
+def test_shared_async_state_helper_exists_and_is_reused():
+    """ROOT-006 follow-up: Alerts, Activity Feed, and Risk Intelligence each
+    used to hand-roll their own loading/empty/error markup. Consolidated
+    into AdminComponents.renderAsyncState (admin_components.js), loaded on
+    every admin page before any page-specific script (see admin_base.html),
+    so widgets share one implementation and one visual language."""
+    components_source = (ROOT / "static" / "js" / "admin_components.js").read_text(encoding="utf-8")
+    assert "renderAsyncState(container, state, options = {})" in components_source
+    for branch in ('state === "loading"', 'state === "empty"', 'state === "error"'):
+        assert branch in components_source
+
+    admin_analytics = ADMIN_ANALYTICS_JS.read_text(encoding="utf-8")
+    assert 'window.AdminComponents.renderAsyncState(alertList, "empty"' in admin_analytics
+
+    activity_filters = ADMIN_ACTIVITY_FILTERS_JS.read_text(encoding="utf-8")
+    assert "window.AdminComponents.renderAsyncState(feed," in activity_filters
 
 
 def test_auto_refresh_toggle_present_and_wired():

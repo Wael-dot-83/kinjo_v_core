@@ -4900,9 +4900,19 @@ def get_kpi_alerts(
     # all, unlike the sibling dashboard-data endpoint. Reuse that exact cache
     # pattern (60s TTL, bypassed under TESTING) instead of rewriting the
     # underlying per-kindergarten computation.
+    #
+    # Scope key must NOT be current_user.role alone: a MANAGER's actual scope
+    # is their own kindergarten_id, which differs per manager and is never
+    # reflected in the `kindergarten_id` query param (managers don't pass it —
+    # the code above resolves their scope from current_user.kindergarten_id
+    # instead). Keying on role alone would let two different managers share
+    # one cache entry within the same 60s window, each silently seeing the
+    # other's kindergarten's alerts. ADMINs share a scope key since every
+    # admin sees the identical (optionally kindergarten_id-filtered) view.
+    scope_key = "ADMIN" if current_user.role == models.UserRole.ADMIN else f"user:{current_user.id}"
     cache_key = (
         f"kpi:alerts:{period_start}:{period_end}:"
-        f"{kindergarten_id or 'all'}:{current_user.role.value}"
+        f"{kindergarten_id or 'all'}:{scope_key}"
     )
     if not getattr(settings, "TESTING", False):
         try:

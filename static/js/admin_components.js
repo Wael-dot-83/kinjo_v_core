@@ -277,6 +277,74 @@ class AdminComponents {
   }
 
   // ============================================================================
+  // ASYNC WIDGET STATE
+  // ============================================================================
+
+  /**
+   * Render a standard loading / empty / error state into a widget's
+   * container. Widgets that fetch their own data independently (Alerts,
+   * Activity Feed, Risk Intelligence) each used to hand-roll near-identical
+   * loading/empty/error markup; this consolidates it into one place so a
+   * fourth widget doesn't reimplement it a fourth way.
+   *
+   * @param {HTMLElement} container
+   * @param {"loading"|"empty"|"error"} state
+   * @param {object} [options]
+   * @param {string} [options.loadingText]
+   * @param {string} [options.emptyText]
+   * @param {string} [options.errorText]
+   * @param {string} [options.retryText]
+   * @param {string} [options.icon] - bootstrap-icons class for the empty state, e.g. "bi-inbox"
+   * @param {() => void} [options.onRetry] - if provided on an error state, renders a retry button
+   */
+  renderAsyncState(container, state, options = {}) {
+    if (!container) return;
+    const isAr = document.documentElement.lang !== "en";
+    const esc = typeof window.escapeHtml === "function" ? window.escapeHtml : (v) => String(v ?? "");
+    const {
+      loadingText = isAr ? "جاري التحميل..." : "Loading...",
+      emptyText = isAr ? "لا توجد بيانات." : "No data.",
+      errorText = isAr ? "تعذر تحميل البيانات. يرجى المحاولة مرة أخرى." : "Failed to load data. Please try again.",
+      retryText = isAr ? "إعادة المحاولة" : "Retry",
+      icon = "bi-inbox",
+      onRetry = null,
+    } = options;
+
+    if (state === "loading") {
+      container.innerHTML =
+        '<div class="text-center text-muted small py-4">' +
+        '<div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>' +
+        esc(loadingText) +
+        "</div>";
+      return;
+    }
+
+    if (state === "empty") {
+      container.innerHTML =
+        '<div class="az-empty" style="padding:16px 0">' +
+        `<i class="bi ${icon}" aria-hidden="true"></i>` +
+        `<span class="az-empty__text">${esc(emptyText)}</span>` +
+        "</div>";
+      return;
+    }
+
+    if (state === "error") {
+      const retryId = `async-state-retry-${Math.random().toString(36).slice(2, 9)}`;
+      container.innerHTML =
+        '<div class="text-center text-danger small py-4">' +
+        '<i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>' +
+        `<span>${esc(errorText)}</span>` +
+        (onRetry
+          ? `<br><button type="button" class="btn btn-sm btn-outline-danger mt-2" id="${retryId}">${esc(retryText)}</button>`
+          : "") +
+        "</div>";
+      if (onRetry) {
+        document.getElementById(retryId)?.addEventListener("click", onRetry);
+      }
+    }
+  }
+
+  // ============================================================================
   // NOTIFICATION SYSTEM
   // ============================================================================
 

@@ -1914,12 +1914,10 @@ async function loadAlerts() {
   }
 
   if (combinedAlerts.length === 0) {
-    alertList.innerHTML =
-      '<div class="az-empty" style="padding:16px 0">' +
-      '<i class="bi bi-bell-slash"></i>' +
-      '<span class="az-empty__text">' +
-      adminAnalyticsText("لا توجد تنبيهات نشطة حالياً.", "No active alerts at this time.") +
-      "</span></div>";
+    window.AdminComponents.renderAsyncState(alertList, "empty", {
+      emptyText: adminAnalyticsText("لا توجد تنبيهات نشطة حالياً.", "No active alerts at this time."),
+      icon: "bi-bell-slash",
+    });
     return;
   }
 
