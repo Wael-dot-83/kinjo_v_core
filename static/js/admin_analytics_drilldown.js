@@ -72,15 +72,18 @@ async function loadDrilldownData() {
 }
 
 function updateBreadcrumbsAndTitle(name, type) {
-  const typeLabel =
-    type === "GOVERNORATE"
-      ? drilldownText("محافظة", "Governorate")
-      : drilldownText("حضانة", "Kindergarten");
+  const typeLabelMap = {
+    GOVERNORATE: drilldownText("محافظة", "Governorate"),
+    KINDERGARTEN: drilldownText("حضانة", "Kindergarten"),
+    CLASS: drilldownText("صف", "Class"),
+  };
+  const typeLabel = typeLabelMap[type.toUpperCase()] || typeLabelMap.KINDERGARTEN;
   const displayName = drilldownLiteral(name);
 
   document.getElementById("drilldownTitle").innerHTML =
     `<i class="bi bi-graph-up-arrow me-2 text-primary"></i> ${drilldownText("تحليل", "Analysis")} ${typeLabel}: ${displayName}`;
-  document.getElementById("breadcrumbDimension").textContent = displayName;
+  const breadcrumbEl = document.getElementById("breadcrumbDimension");
+  if (breadcrumbEl) breadcrumbEl.textContent = displayName;
 }
 
 function populateSummaryCards(metrics, type) {
@@ -98,6 +101,18 @@ function populateSummaryCards(metrics, type) {
             </div></div></div>
             <div class="col-md-4"><div class="card"><div class="card-body">
                 <h6 class="text-muted">${drilldownText("متوسط الحوكمة", "Average governance")}</h6><h3 class="fw-bold">${metrics.governance_score ? metrics.governance_score.toFixed(1) : "N/A"}</h3>
+            </div></div></div>
+        `;
+  } else if (type.toUpperCase() === "CLASS") {
+    cardsHtml = `
+            <div class="col-md-4"><div class="card"><div class="card-body">
+                <h6 class="text-muted">${drilldownText("الأطفال", "Children")}</h6><h3 class="fw-bold">${metrics.children_count}</h3>
+            </div></div></div>
+            <div class="col-md-4"><div class="card"><div class="card-body">
+                <h6 class="text-muted">${drilldownText("السعة", "Capacity")}</h6><h3 class="fw-bold">${metrics.capacity}</h3>
+            </div></div></div>
+            <div class="col-md-4"><div class="card"><div class="card-body">
+                <h6 class="text-muted">${drilldownText("الفئة العمرية", "Age group")}</h6><h3 class="fw-bold">${drilldownLiteral(metrics.age_group)}</h3>
             </div></div></div>
         `;
   } else {
@@ -136,11 +151,11 @@ function populateTable(children, type) {
     );
     headers = `
             <tr>
-                <th role="button">${drilldownText("الحضانة", "Kindergarten")}</th>
-                <th class="text-center" role="button" data-sort-method="number">${drilldownText("الأطفال", "Children")}</th>
-                <th class="text-center" role="button" data-sort-method="number">${drilldownText("نسبة الحضور", "Attendance rate")}</th>
-                <th class="text-center" role="button" data-sort-method="number">${drilldownText("معدل الحوادث /1K", "Incident rate /1K")}</th>
-                <th class="text-center" role="button" data-sort-method="number">${drilldownText("الحوكمة", "Governance")}</th>
+                <th scope="col" role="button">${drilldownText("الحضانة", "Kindergarten")}</th>
+                <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("الأطفال", "Children")}</th>
+                <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("نسبة الحضور", "Attendance rate")}</th>
+                <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("معدل الحوادث /1K", "Incident rate /1K")}</th>
+                <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("الحوكمة", "Governance")}</th>
             </tr>
         `;
     rows = children
@@ -159,8 +174,55 @@ function populateTable(children, type) {
         `
       )
       .join("");
+  } else if (type.toUpperCase() === "KINDERGARTEN") {
+    document.getElementById("tableTitle").textContent = drilldownText(
+      "الصفوف في الحضانة",
+      "Classes in the kindergarten"
+    );
+    headers = `
+            <tr>
+                <th scope="col" role="button">${drilldownText("الصف", "Class")}</th>
+                <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("الأطفال", "Children")}</th>
+                <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("السعة", "Capacity")}</th>
+                <th scope="col" role="button">${drilldownText("الفئة العمرية", "Age group")}</th>
+            </tr>
+        `;
+    rows = children
+      .map(
+        (cls) => `
+            <tr data-class-id="${cls.id}" style="cursor:pointer;" onclick="window.location.href='/admin/analytics/drilldown/CLASS/${cls.id}'">
+                <td class="fw-bold">${drilldownLiteral(cls.name)}</td>
+                <td class="text-center" data-sort="${cls.children_count}">${cls.children_count}</td>
+                <td class="text-center" data-sort="${cls.capacity}">${cls.capacity}</td>
+                <td>${drilldownLiteral(cls.age_group)}</td>
+            </tr>
+        `
+      )
+      .join("");
+  } else if (type.toUpperCase() === "CLASS") {
+    document.getElementById("tableTitle").textContent = drilldownText(
+      "الأطفال في الصف",
+      "Children in the class"
+    );
+    headers = `
+            <tr>
+                <th scope="col" role="button">${drilldownText("الطفل", "Child")}</th>
+                <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("نسبة الحضور", "Attendance rate")}</th>
+                <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("أيام الحضور", "Attendance days")}</th>
+            </tr>
+        `;
+    rows = children
+      .map(
+        (child) => `
+            <tr>
+                <td class="fw-bold">${drilldownLiteral(child.name)}</td>
+                <td class="text-center" data-sort="${child.attendance_rate}"><span class="badge ${getScoreColor(child.attendance_rate, true)}">${(child.attendance_rate ?? 0).toFixed(1)}%</span></td>
+                <td class="text-center">${child.attendance_days}</td>
+            </tr>
+        `
+      )
+      .join("");
   }
-  // Add logic for KINDERGARTEN -> CLASS drilldown if needed later
 
   thead.innerHTML = headers;
   tbody.innerHTML = rows;
@@ -181,6 +243,13 @@ function getScoreColor(score, isAttendance = false) {
 }
 
 // fetchWithAuth is now defined in auth.js
+
+// The shared date-range-filter macro's "Last Month"/"Clear Filters"
+// buttons look for a global applyDateFilter() to trigger a reload after
+// updating the date inputs -- without this alias they silently updated
+// the date pickers with no visible effect (only the explicit Refresh
+// button, wired via on_refresh="loadDrilldownData", actually reloaded).
+window.applyDateFilter = loadDrilldownData;
 
 window.addEventListener("languageChanged", () => {
   if (!document.getElementById("content")?.classList.contains("d-none")) {

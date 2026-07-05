@@ -358,6 +358,61 @@ class TestAnalyticsService:
         )
         assert response.status_code == 200
 
+    def test_drilldown_governorate_metrics_include_aggregates(self, client, admin_user, sample_data):
+        """GOVERNORATE metrics previously only ever returned
+        {"kindergarten_count": N} -- the frontend's summary cards also read
+        metrics.children_count and metrics.governance_score, which were
+        always undefined ("N/A" on every load), even though the same
+        per-kindergarten data used to build those aggregates was already
+        being fetched into `children` for the table."""
+        response = client.post("/token", data={"username": "admin", "password": "Admin123!"})
+        token = response.json()["access_token"]
+
+        gov = sample_data['kindergarten'].governorate
+        response = client.get(
+            f"/api/analytics/drilldown/GOVERNORATE/{gov}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        assert response.status_code == 200
+        metrics = response.json()["metrics"]
+        assert "children_count" in metrics
+        assert "governance_score" in metrics
+
+    def test_drilldown_class_dimension_works(self, client, admin_user, sample_data):
+        """The CLASS dimension type is fully implemented server-side
+        (children_list with per-child attendance) but was never reachable
+        from the KINDERGARTEN table UI at all -- confirm the endpoint
+        itself works correctly given a real class id."""
+        response = client.post("/token", data={"username": "admin", "password": "Admin123!"})
+        token = response.json()["access_token"]
+
+        cls_id = sample_data['class'].id
+        response = client.get(
+            f"/api/analytics/drilldown/CLASS/{cls_id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["dimension_type"] == "CLASS"
+        assert "capacity" in body["metrics"]
+        assert "age_group" in body["metrics"]
+
+    def test_drilldown_non_numeric_dimension_id_returns_400_not_500(self, client, admin_user, sample_data):
+        """int(dimension_id) was called with no validation for both
+        KINDERGARTEN and CLASS dimension types -- a non-numeric id (e.g. a
+        typo'd URL) raised an uncaught ValueError, falling through to the
+        app-wide catch-all exception handler as a generic 500 instead of a
+        clean 400."""
+        response = client.post("/token", data={"username": "admin", "password": "Admin123!"})
+        token = response.json()["access_token"]
+
+        for dimension_type in ("KINDERGARTEN", "CLASS"):
+            response = client.get(
+                f"/api/analytics/drilldown/{dimension_type}/not-a-number",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            assert response.status_code == 400, f"{dimension_type} returned {response.status_code}"
+
     def test_time_series_endpoint(self, client, admin_user, sample_data):
         """Test time series endpoint"""
         # Login first

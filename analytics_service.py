@@ -1851,6 +1851,9 @@ def get_drilldown(
 
     period_start, period_end = get_date_range(start_date, end_date)
 
+    if dimension_type.upper() in {"KINDERGARTEN", "CLASS"} and not dimension_id.isdigit():
+        raise HTTPException(status_code=400, detail="dimension_id must be numeric for this dimension_type")
+
     if dimension_type.upper() == "GOVERNORATE":
         if current_user.role != models.UserRole.ADMIN and allowed_govs and dimension_id not in allowed_govs:
             raise HTTPException(status_code=403, detail="Governorate not allowed")
@@ -1874,13 +1877,26 @@ def get_drilldown(
             )
             children_list.append(metrics.model_dump())
 
+        total_children = sum(c["children_count"] for c in children_list)
+        governance_scores = [
+            c["governance_score"] for c in children_list
+            if c.get("governance_score") is not None
+        ]
+        avg_governance = (
+            sum(governance_scores) / len(governance_scores) if governance_scores else None
+        )
+
         return DrilldownResponse(
             dimension_type="GOVERNORATE",
             dimension_id=dimension_id,
             dimension_name=dimension_id,
             period_start=period_start,
             period_end=period_end,
-            metrics={"kindergarten_count": len(kindergartens)},
+            metrics={
+                "kindergarten_count": len(kindergartens),
+                "children_count": total_children,
+                "governance_score": avg_governance,
+            },
             children=children_list
         )
 
