@@ -33,12 +33,6 @@
 </style>
 {% endblock %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="لوحة التحكم"><i class="bi bi-house" aria-hidden="true"></i></a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">مركز المساعدة</span>
-{% endblock %}
-
 {% block content %}
 <div class="admin-page-container" dir="rtl">
 
@@ -387,7 +381,8 @@
         <h2><i class="bi bi-book text-primary"></i>دليل المصطلحات</h2>
         <div class="table-responsive">
           <table class="table glossary-table mb-0">
-            <thead><tr><th>المصطلح</th><th>التعريف</th></tr></thead>
+            <caption class="visually-hidden">قائمة المصطلحات</caption>
+            <thead><tr><th scope="col">المصطلح</th><th scope="col">التعريف</th></tr></thead>
             <tbody>
               <tr><td><strong>الحضانة</strong></td><td>منشأة مرخصة لرعاية الأطفال في مرحلة الطفولة المبكرة، وهي الوحدة الأساسية في المنصة.</td></tr>
               <tr><td><strong>الشعبة</strong></td><td>مجموعة أطفال داخل الحضانة تجمعهم فئة عمرية واحدة وتشرف عليهم مشرفة محددة.</td></tr>
