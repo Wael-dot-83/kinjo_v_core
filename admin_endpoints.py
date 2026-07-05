@@ -5554,6 +5554,7 @@ def generate_incident_report(
     kindergarten_id: Optional[int] = Form(None),
     governorate: Optional[str] = Form(None),
     period_type: str = Form(...),
+    year: Optional[int] = Form(None),
     current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
@@ -5567,7 +5568,8 @@ def generate_incident_report(
 
         # Calculate date range
         from report_service import ReportService
-        start_date, end_date = ReportService.calculate_date_range(period_type)
+        reference_date = date(year, 1, 1) if period_type == "annual" and year else None
+        start_date, end_date = ReportService.calculate_date_range(period_type, reference_date)
 
         # Generate metrics
         metrics = ReportService.generate_incident_report(
@@ -5628,7 +5630,10 @@ def list_incident_reports(
 ):
     """List incident reports with filtering"""
     try:
-        query = db.query(models.Report).filter(
+        query = db.query(models.Report).options(
+            selectinload(models.Report.kindergarten),
+            selectinload(models.Report.creator),
+        ).filter(
             models.Report.report_type == models.ReportType.INCIDENT_SUMMARY
         )
 

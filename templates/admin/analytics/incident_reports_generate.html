@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="page-header mb-4">
-  <h1 class="page-title" cyberlume-glow-text>
+  <h1 class="page-title">
     <i class="bi bi-file-earmark-plus me-2"></i>
     {% if ui_lang == 'en' %}Generate Incident Report{% else %}إنشاء تقرير الحوادث{% endif %}
   </h1>
@@ -14,9 +14,9 @@
 
 <div class="row justify-content-center">
     <div class="col-lg-8">
-        <div class="cyberlume-card ">
+        <div class="admin-card">
             <div class="card-header bg-white py-3">
-                <h5 class="cyberlume-card-title mb-0">{% if ui_lang == 'en' %}Generate New Incident Report{% else %}إنشاء تقرير جديد للحوادث{% endif %}</h5>
+                <h5 class="mb-0">{% if ui_lang == 'en' %}Generate New Incident Report{% else %}إنشاء تقرير جديد للحوادث{% endif %}</h5>
             </div>
             <div class="card-body p-4">
                 <form id="generateReportForm" onsubmit="generateReport(event)">
@@ -33,7 +33,7 @@
                         <label class="form-label fw-bold">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
                         <div class="row g-3">
                             <div>
-                                <div class="form-check custom-cyberlume-card-check">
+                                <div class="form-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="periodWeek"
                                         value="week" checked>
                                     <label class="form-check-label w-100" for="periodWeek">
@@ -46,7 +46,7 @@
                                 </div>
                             </div>
                             <div>
-                                <div class="form-check custom-cyberlume-card-check">
+                                <div class="form-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="periodMonth"
                                         value="month">
                                     <label class="form-check-label w-100" for="periodMonth">
@@ -59,7 +59,7 @@
                                 </div>
                             </div>
                             <div>
-                                <div class="form-check custom-cyberlume-card-check">
+                                <div class="form-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="period3Years"
                                         value="3years">
                                     <label class="form-check-label w-100" for="period3Years">
@@ -72,7 +72,7 @@
                                 </div>
                             </div>
                             <div>
-                                <div class="form-check custom-cyberlume-card-check">
+                                <div class="form-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="periodAnnual"
                                         value="annual">
                                     <label class="form-check-label w-100" for="periodAnnual">
@@ -89,7 +89,7 @@
 
                     <!-- Submit Button -->
                     <div class="d-grid">
-                        <button type="submit" class="btn cyberlume-btn cyberlume-btn-primary btn-lg" id="generateBtn">
+                        <button type="submit" class="btn btn-primary btn-lg" id="generateBtn">
                             <i class="bi bi-file-earmark-plus me-2"></i>
                             {% if ui_lang == 'en' %}Generate Report{% else %}إنشاء التقرير{% endif %}
                         </button>
@@ -97,6 +97,7 @@
                 </form>
             </div>
         </div>
+    </div>
 </div>
 
 <!-- Success Modal -->
@@ -111,10 +112,11 @@
                 <p>{% if ui_lang == 'en' %}The incident report has been generated successfully. You can now view the report or create another one.{% else %}تم إنشاء تقرير الحوادث بنجاح. يمكنك الآن عرض التقرير أو إنشاء تقرير آخر.{% endif %}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Generate Another Report{% else %}إنشاء تقرير آخر{% endif %}</button>
-                <a href="/admin/reports/incidents" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]">{% if ui_lang == 'en' %}View Reports{% else %}عرض التقارير{% endif %}</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Generate Another Report{% else %}إنشاء تقرير آخر{% endif %}</button>
+                <a href="/admin/reports/incidents" class="btn btn-primary">{% if ui_lang == 'en' %}View Reports{% else %}عرض التقارير{% endif %}</a>
             </div>
         </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -136,7 +138,7 @@
                 col.className = 'col-md-6';
 
                 const formCheck = document.createElement('div');
-                formCheck.className = 'form-check custom-cyberlume-card-check';
+                formCheck.className = 'form-check';
 
                 const input = document.createElement('input');
                 input.className = 'form-check-input';
@@ -150,8 +152,8 @@
                 label.className = 'form-check-label w-100';
                 label.htmlFor = input.id;
 
-                const cyberlume-card = document.createElement('div');
-                cyberlume-card.className = 'p-3 border rounded';
+                const scopeCard = document.createElement('div');
+                scopeCard.className = 'p-3 border rounded';
 
                 const icon = document.createElement('i');
                 icon.className = getScopeIcon(scope.type) + ' fs-4 mb-2 d-block';
@@ -164,10 +166,10 @@
                 subtitle.className = 'small text-on-surface-variant';
                 subtitle.textContent = getScopeDescription(scope);
 
-                cyberlume-card.appendChild(icon);
-                cyberlume-card.appendChild(title);
-                cyberlume-card.appendChild(subtitle);
-                label.appendChild(cyberlume-card);
+                scopeCard.appendChild(icon);
+                scopeCard.appendChild(title);
+                scopeCard.appendChild(subtitle);
+                label.appendChild(scopeCard);
                 formCheck.appendChild(input);
                 formCheck.appendChild(label);
                 col.appendChild(formCheck);

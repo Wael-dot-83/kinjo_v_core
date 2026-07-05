@@ -896,6 +896,24 @@ class TestIncidentReports:
                             data={"scope_type": "ALL", "period_type": "weekly"})
         assert r.status_code in [200, 201, 400]
 
+    def test_generate_annual_report_uses_selected_year(self, client, test_db):
+        """The "Create New Report" modal's Year select sent a `year` form
+        field the endpoint's signature never declared at all -- whatever
+        year the admin picked was silently discarded and the server always
+        generated the report for the current year instead."""
+        admin = _make_admin(test_db, "inc_adm", "8")
+        headers = _tok(client, "inc_adm8")
+        r = client.post(
+            "/api/admin/reports/incidents/generate",
+            headers=headers,
+            data={"scope_type": "ALL", "period_type": "annual", "year": "2023"},
+        )
+        assert r.status_code == 200
+        report_id = r.json()["report_id"]
+        detail = client.get(f"/api/admin/reports/incidents/{report_id}", headers=headers)
+        assert detail.json()["start_date"] == "2023-01-01"
+        assert detail.json()["end_date"] == "2023-12-31"
+
 
 # ---------------------------------------------------------------------------
 # List managers for impersonation

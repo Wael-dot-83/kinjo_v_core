@@ -87,6 +87,9 @@
               <p class="text-muted small">{% if ui_lang == 'en' %}Try adjusting your filter criteria.{% else %}حاول تعديل معايير البحث الخاصة بك.{% endif %}</p>
           </div>
       </div>
+      <nav aria-label="{% if ui_lang == 'en' %}Pagination{% else %}التنقل بين الصفحات{% endif %}" id="reportsPaginationNav" class="d-none border-top py-2">
+          <ul class="pagination justify-content-center mb-0" id="reportsPagination"></ul>
+      </nav>
   </div>
 </div>
 
@@ -199,6 +202,13 @@
     });
 
     function setupFormHandlers() {
+        document.getElementById('reportsPagination').addEventListener('click', function (e) {
+            const link = e.target.closest('a[data-page]');
+            if (!link) return;
+            e.preventDefault();
+            loadReports(parseInt(link.dataset.page, 10));
+        });
+
         document.getElementById('reportScope').addEventListener('change', function () {
             const scope = this.value;
             document.getElementById('kindergartenSelectDiv').classList.toggle('d-none', scope !== 'KINDERGARTEN');
@@ -226,7 +236,12 @@
 
     async function loadGovernorates() {
         try {
-            const governorates = ['عمان', 'إربد', 'الزرقاء', 'المفرق', 'جرش', 'عجلون', 'الكرك', 'الطفيلة', 'معان', 'العقبة', 'مادبا', 'البلقاء'];
+            const GOV_LABEL_EN = {
+                'عمان': 'Amman', 'إربد': 'Irbid', 'الزرقاء': 'Zarqa', 'المفرق': 'Mafraq',
+                'جرش': 'Jerash', 'عجلون': 'Ajloun', 'الكرك': 'Karak', 'الطفيلة': 'Tafilah',
+                'معان': "Ma'an", 'العقبة': 'Aqaba', 'مادبا': 'Madaba', 'البلقاء': 'Balqa',
+            };
+            const governorates = Object.keys(GOV_LABEL_EN);
             const selects = ['reportGovernorate', 'governorateFilter'];
             selects.forEach(selectId => {
                 const select = document.getElementById(selectId);
@@ -234,7 +249,7 @@
                     governorates.forEach(gov => {
                         const option = document.createElement('option');
                         option.value = gov;
-                        option.textContent = gov;
+                        option.textContent = IS_EN ? GOV_LABEL_EN[gov] : gov;
                         select.appendChild(option);
                     });
                 }
@@ -279,7 +294,10 @@
         }
     }
 
-    async function loadReports() {
+    let currentReportsPage = 1;
+
+    async function loadReports(page) {
+        currentReportsPage = page || 1;
         const loadingSpinner = document.getElementById('loadingSpinner');
         const reportsContainer = document.getElementById('reportsTableContainer');
         const emptyState = document.getElementById('emptyState');
@@ -296,6 +314,7 @@
             if (scopeFilter) params.append('scope_filter', scopeFilter);
             if (kindergartenFilter) params.append('kindergarten_id', kindergartenFilter);
             if (governorateFilter) params.append('governorate', governorateFilter);
+            params.append('page', currentReportsPage);
 
             const response = await fetch(`/api/admin/reports/incidents?${params.toString()}`);
             if (!response.ok) throw new Error('Failed to load reports');
@@ -305,11 +324,13 @@
 
             if (reports.length === 0) {
                 emptyState.classList.remove('d-none');
+                document.getElementById('reportsPaginationNav').classList.add('d-none');
                 return;
             }
 
             emptyState.classList.add('d-none');
             renderReportsTable(reports);
+            renderReportsPagination(data.pagination || {});
 
         } catch (error) {
             console.error('Error loading reports:', error);
@@ -323,15 +344,16 @@
         const container = document.getElementById('reportsTableContainer');
         let html = `
         <table class="table table-hover align-middle mb-0">
+            <caption class="visually-hidden">${T('تقارير الحوادث', 'Incident Reports')}</caption>
             <thead class="table-light">
                 <tr>
-                    <th>${T('العنوان', 'Title')}</th>
-                    <th>${T('النطاق', 'Scope')}</th>
-                    <th>${T('الفترة الزمنية', 'Time Period')}</th>
-                    <th>${T('تاريخ الإنشاء', 'Created Date')}</th>
-                    <th>${T('المولد', 'Created By')}</th>
-                    <th class="text-center">${T('عدد الحوادث', 'Incidents Count')}</th>
-                    <th>${T('الإجراءات', 'Actions')}</th>
+                    <th scope="col">${T('العنوان', 'Title')}</th>
+                    <th scope="col">${T('النطاق', 'Scope')}</th>
+                    <th scope="col">${T('الفترة الزمنية', 'Time Period')}</th>
+                    <th scope="col">${T('تاريخ الإنشاء', 'Created Date')}</th>
+                    <th scope="col">${T('المولد', 'Created By')}</th>
+                    <th scope="col" class="text-center">${T('عدد الحوادث', 'Incidents Count')}</th>
+                    <th scope="col">${T('الإجراءات', 'Actions')}</th>
                 </tr>
             </thead>
             <tbody>
@@ -352,10 +374,10 @@
                 </td>
                 <td>
                     <div class="d-flex align-items-center gap-1">
-                        <button class="btn btn-sm btn-outline-secondary border-0 d-inline-flex p-1" onclick="viewReport(${report.id})" title="${T('عرض', 'View')}">
+                        <button class="btn btn-sm btn-outline-secondary border-0 d-inline-flex p-1" onclick="viewReport(${report.id})" title="${T('عرض', 'View')}" aria-label="${T('عرض تقرير', 'View report')}: ${escHtml(report.title)}">
                             <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">visibility</span>
                         </button>
-                        <button class="btn btn-sm btn-outline-secondary border-0 d-inline-flex p-1" onclick="exportReport(${report.id})" title="${T('تصدير', 'Export')}">
+                        <button class="btn btn-sm btn-outline-secondary border-0 d-inline-flex p-1" onclick="exportReport(${report.id})" title="${T('تصدير', 'Export')}" aria-label="${T('تصدير تقرير', 'Export report')}: ${escHtml(report.title)}">
                             <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">download</span>
                         </button>
                     </div>
@@ -366,6 +388,26 @@
 
         html += `</tbody></table>`;
         container.innerHTML = html;
+    }
+
+    function renderReportsPagination(pagination) {
+        const nav = document.getElementById('reportsPaginationNav');
+        const list = document.getElementById('reportsPagination');
+        const page = pagination.page || 1;
+        const pages = pagination.pages || 1;
+        if (pages <= 1) { nav.classList.add('d-none'); return; }
+        nav.classList.remove('d-none');
+        let html = '';
+        if (page > 1) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${page - 1}">${T('السابق', 'Previous')}</a></li>`;
+        }
+        for (let i = Math.max(1, page - 2); i <= Math.min(pages, page + 2); i++) {
+            html += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" href="#" data-page="${i}"${i === page ? ' aria-current="page"' : ''}>${i}</a></li>`;
+        }
+        if (page < pages) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${page + 1}">${T('التالي', 'Next')}</a></li>`;
+        }
+        list.innerHTML = html;
     }
 
     function getScopeDisplayName(scopeType, scopeName) {
@@ -458,7 +500,7 @@
 
     function renderReportDetail(report) {
         const container = document.getElementById('reportDetailContent');
-        const metrics = report.metrics_json || {};
+        const metrics = report.metrics || {};
 
         let html = `
         <div class="row g-4 mb-4">
@@ -468,7 +510,7 @@
                     <div class="small">
                         <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
                             <span class="text-muted">${T('النطاق:', 'Scope:')}</span>
-                            <span class="fw-semibold">${getScopeDisplayName(report.scope_type, report.governorate || report.kindergarten?.name_ar)}</span>
+                            <span class="fw-semibold">${getScopeDisplayName(report.scope_type, report.scope_name)}</span>
                         </div>
                         <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
                             <span class="text-muted">${T('الفترة:', 'Period:')}</span>
@@ -480,7 +522,7 @@
                         </div>
                         <div class="d-flex justify-content-between">
                             <span class="text-muted">${T('المولد:', 'Created By:')}</span>
-                            <span class="fw-semibold">${escHtml(report.creator?.username || T('غير معروف', 'Unknown'))}</span>
+                            <span class="fw-semibold">${escHtml(report.created_by || T('غير معروف', 'Unknown'))}</span>
                         </div>
                     </div>
                 </div>
@@ -515,10 +557,11 @@
             </h6>
             <div class="table-responsive border rounded">
                 <table class="table table-sm table-hover align-middle mb-0">
+                    <caption class="visually-hidden">${T('الحوادث حسب الحضانة', 'Incidents by Kindergarten')}</caption>
                     <thead class="table-light">
                         <tr>
-                            <th>${T('الحضانة', 'Kindergarten')}</th>
-                            <th class="text-center" style="width:8rem">${T('عدد الحوادث', 'Incidents Count')}</th>
+                            <th scope="col">${T('الحضانة', 'Kindergarten')}</th>
+                            <th scope="col" class="text-center" style="width:8rem">${T('عدد الحوادث', 'Incidents Count')}</th>
                         </tr>
                     </thead>
                     <tbody>

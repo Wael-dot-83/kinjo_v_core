@@ -2,14 +2,6 @@
 
 {% block title %}{% if ui_lang == 'en' %}Incident Report Details{% else %}تفاصيل تقرير الحوادث{% endif %} — KinJo{% endblock %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house" aria-hidden="true"></i></a>
-<span class="breadcrumb-separator">/</span>
-<a href="/admin/reports/incidents" class="breadcrumb-item">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</a>
-<span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Report Details{% else %}تفاصيل التقرير{% endif %}</span>
-{% endblock %}
-
 {% block content %}
 <div class="page-header mb-4">
   <h1 class="page-title">
@@ -155,16 +147,16 @@
         const detailsHtml = `
         <p><strong>${T('تاريخ الإنشاء:', 'Created Date:')}</strong> ${new Date(reportData.created_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-EG')}</p>
         <p><strong>${T('الفترة الزمنية:', 'Time Period:')}</strong> ${escHtml(reportData.start_date)} - ${escHtml(reportData.end_date)}</p>
-        <p><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong> ${escHtml(reportData.creator_name || T('غير محدد', 'Unknown'))}</p>
+        <p><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong> ${escHtml(reportData.created_by || T('غير محدد', 'Unknown'))}</p>
     `;
         document.getElementById('reportDetails').innerHTML = detailsHtml;
 
         // Report scope
         let scopeHtml = `<p><strong>${T('النوع:', 'Type:')}</strong> ${getScopeTypeLabel(reportData.scope_type)}</p>`;
-        if (reportData.scope_type === 'KINDERGARTEN' && reportData.kindergarten_name) {
-            scopeHtml += `<p><strong>${T('الحضانة:', 'Kindergarten:')}</strong> ${escHtml(reportData.kindergarten_name)}</p>`;
-        } else if (reportData.scope_type === 'GOVERNORATE' && reportData.governorate) {
-            scopeHtml += `<p><strong>${T('المحافظة:', 'Governorate:')}</strong> ${escHtml(reportData.governorate)}</p>`;
+        if (reportData.scope_type === 'KINDERGARTEN' && reportData.scope_name) {
+            scopeHtml += `<p><strong>${T('الحضانة:', 'Kindergarten:')}</strong> ${escHtml(reportData.scope_name)}</p>`;
+        } else if (reportData.scope_type === 'GOVERNORATE' && reportData.scope_name) {
+            scopeHtml += `<p><strong>${T('المحافظة:', 'Governorate:')}</strong> ${escHtml(reportData.scope_name)}</p>`;
         }
         document.getElementById('reportScope').innerHTML = scopeHtml;
 
