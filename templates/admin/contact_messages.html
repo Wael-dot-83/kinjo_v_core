@@ -43,15 +43,16 @@
     {% if contact_messages %}
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
+            <caption class="visually-hidden">{% if ui_lang == 'en' %}Contact Messages{% else %}رسائل التواصل{% endif %}</caption>
             <thead class="table-light">
                 <tr>
-                    <th>#</th>
-                    <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Email{% else %}البريد{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                    <th><span class="visually-hidden">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</span></th>
+                    <th scope="col">#</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Email{% else %}البريد{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                    <th scope="col"><span class="visually-hidden">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -60,7 +61,7 @@
                     <td class="text-muted small">{{ msg.id }}</td>
                     <td class="fw-600">{{ msg.name }}</td>
                     <td class="text-muted small">{{ msg.email }}</td>
-                    <td>{{ msg.subject }}</td>
+                    <td>{{ msg.subject or '—' }}</td>
                     <td class="text-muted small text-nowrap">
                         {{ msg.submitted_at.strftime('%Y-%m-%d') if msg.submitted_at else '—' }}
                     </td>
@@ -76,14 +77,16 @@
                         <button type="button"
                                 class="btn btn-ghost btn-sm text-success"
                                 data-resolve-url="/api/admin/contact-messages/{{ msg.id }}/resolve"
-                                title="{% if ui_lang == 'en' %}Close message{% else %}إغلاق الرسالة{% endif %}">
+                                title="{% if ui_lang == 'en' %}Close message{% else %}إغلاق الرسالة{% endif %}"
+                                aria-label="{% if ui_lang == 'en' %}Close message from {{ msg.name }}{% else %}إغلاق رسالة من {{ msg.name }}{% endif %}">
                             <i class="bi bi-check-circle" aria-hidden="true"></i>
                         </button>
                         {% endif %}
                         <button class="btn btn-ghost btn-sm" data-bs-toggle="modal"
                                 data-bs-target="#msgModal{{ msg.id }}"
-                                title="{% if ui_lang == 'en' %}View message{% else %}عرض الرسالة{% endif %}">
-                            <i class="bi bi-eye"></i>
+                                title="{% if ui_lang == 'en' %}View message{% else %}عرض الرسالة{% endif %}"
+                                aria-label="{% if ui_lang == 'en' %}View message from {{ msg.name }}{% else %}عرض رسالة من {{ msg.name }}{% endif %}">
+                            <i class="bi bi-eye" aria-hidden="true"></i>
                         </button>
                     </td>
                 </tr>
@@ -105,7 +108,7 @@
     <ul class="pagination justify-content-center">
         {% for p in range(1, pagination.total_pages + 1) %}
         <li class="page-item {% if p == pagination.page %}active{% endif %}">
-            <a class="page-link" href="?q={{ filters.q or '' }}&status_filter={{ filters.status_filter or '' }}&page={{ p }}">{{ p }}</a>
+            <a class="page-link" href="?q={{ (filters.q or '') | urlencode }}&status_filter={{ (filters.status_filter or '') | urlencode }}&page={{ p }}">{{ p }}</a>
         </li>
         {% endfor %}
     </ul>
@@ -114,11 +117,12 @@
 
 <!-- View modals -->
 {% for msg in contact_messages %}
-<div class="modal fade" id="msgModal{{ msg.id }}" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="msgModal{{ msg.id }}" tabindex="-1" aria-hidden="true"
+     aria-labelledby="msgModalLabel{{ msg.id }}" aria-modal="true" role="dialog">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{{ msg.subject }}</h5>
+                <h5 class="modal-title" id="msgModalLabel{{ msg.id }}">{{ msg.subject or '—' }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"
                         aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
@@ -126,7 +130,7 @@
                 <dl class="row mb-3">
                     <dt class="col-sm-3">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</dt><dd class="col-sm-9">{{ msg.name }}</dd>
                     <dt class="col-sm-3">{% if ui_lang == 'en' %}Email{% else %}البريد{% endif %}</dt><dd class="col-sm-9">{{ msg.email }}</dd>
-                    <dt class="col-sm-3">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</dt><dd class="col-sm-9">{{ msg.phone }}</dd>
+                    <dt class="col-sm-3">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</dt><dd class="col-sm-9">{{ msg.phone or '—' }}</dd>
                 </dl>
                 <p style="white-space:pre-line;">{{ msg.message }}</p>
             </div>
@@ -150,7 +154,7 @@ document.querySelectorAll('[data-resolve-url]').forEach((button) => {
       const response = await fetchWithAuth(button.dataset.resolveUrl, { method: 'POST', headers: { 'X-CSRF-Token': csrfToken } });
       if (!response || !response.ok) {
         const payload = await (response ? response.json().catch(() => ({})) : Promise.resolve({}));
-        throw new Error(payload.detail || '{% if ui_lang == "en" %}Failed to resolve contact message.{% else %}فشل إغلاق الرسالة.{% endif %}');
+        throw new Error(payload.error?.message || payload.detail || '{% if ui_lang == "en" %}Failed to resolve contact message.{% else %}فشل إغلاق الرسالة.{% endif %}');
       }
       window.location.reload();
     } catch (error) {
