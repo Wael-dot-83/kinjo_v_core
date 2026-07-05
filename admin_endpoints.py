@@ -5414,6 +5414,34 @@ async def list_governance_reminders(
     total = q.count()
     items = q.offset((page - 1) * page_size).limit(page_size).all()
 
+    # Batch-resolve governorate for both target types (no N+1): kindergarten
+    # reminders resolve directly; supervisor reminders resolve via the
+    # supervisor's own assigned kindergarten.
+    kg_ids = {r.target_id for r in items if r.target_type == "kindergarten"}
+    supervisor_ids = {r.target_id for r in items if r.target_type == "supervisor"}
+    if supervisor_ids:
+        supervisor_kg_by_id = dict(
+            db.query(models.User.id, models.User.kindergarten_id)
+            .filter(models.User.id.in_(supervisor_ids))
+            .all()
+        )
+        kg_ids |= {kg_id for kg_id in supervisor_kg_by_id.values() if kg_id is not None}
+    else:
+        supervisor_kg_by_id = {}
+    governorate_by_kg_id = dict(
+        db.query(models.Kindergarten.id, models.Kindergarten.governorate)
+        .filter(models.Kindergarten.id.in_(kg_ids))
+        .all()
+    ) if kg_ids else {}
+
+    def _resolve_governorate(r):
+        if r.target_type == "kindergarten":
+            return governorate_by_kg_id.get(r.target_id)
+        if r.target_type == "supervisor":
+            kg_id = supervisor_kg_by_id.get(r.target_id)
+            return governorate_by_kg_id.get(kg_id) if kg_id else None
+        return None
+
     return {
         "total": total,
         "page": page,
@@ -5428,6 +5456,7 @@ async def list_governance_reminders(
                 "sent_at": r.sent_at.isoformat() if r.sent_at else None,
                 "cooldown_expires_at": r.cooldown_expires_at.isoformat() if r.cooldown_expires_at else None,
                 "payload": r.payload,
+                "governorate": _resolve_governorate(r),
             }
             for r in items
         ],

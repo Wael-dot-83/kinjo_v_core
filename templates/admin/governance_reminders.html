@@ -2,18 +2,6 @@
 
 {% block title %}{% if ui_lang == 'en' %}Compliance Reminders — KinJo{% else %}تذكيرات الامتثال — KinJo{% endif %}{% endblock %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item">
-  <i class="bi bi-house"></i> {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
-</a>
-<span class="breadcrumb-separator">/</span>
-<a href="/admin/governance-reports" class="breadcrumb-item">
-  {% if ui_lang == 'en' %}Governance &amp; Compliance{% else %}الحوكمة والامتثال{% endif %}
-</a>
-<span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Reminders{% else %}التذكيرات{% endif %}</span>
-{% endblock %}
-
 {% block content %}
 <div class="page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
   <div>
@@ -102,19 +90,21 @@
     </div>
     <div class="table-responsive" id="logsTableWrap" style="display:none;">
       <table class="table table-hover mb-0">
+        <caption class="visually-hidden">{% if ui_lang == 'en' %}Compliance reminder history{% else %}سجل تذكيرات الامتثال{% endif %}</caption>
         <thead class="table-light">
           <tr>
-            <th class="ps-4">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
-            <th>{% if ui_lang == 'en' %}Sent To{% else %}أُرسِل إلى{% endif %}</th>
-            <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-            <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
-            <th>{% if ui_lang == 'en' %}Missing Reports{% else %}التقارير المفقودة{% endif %}</th>
-            <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+            <th scope="col" class="ps-4">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+            <th scope="col">{% if ui_lang == 'en' %}Sent To{% else %}أُرسِل إلى{% endif %}</th>
+            <th scope="col">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+            <th scope="col">{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
+            <th scope="col">{% if ui_lang == 'en' %}Missing Reports{% else %}التقارير المفقودة{% endif %}</th>
+            <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
           </tr>
         </thead>
         <tbody id="logsTableBody"></tbody>
       </table>
     </div>
+    <div class="d-flex justify-content-center align-items-center py-3" id="logsPagination" style="display:none;"></div>
   </div>
 </div>
 
@@ -133,6 +123,16 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  const LOGS_PAGE_SIZE = 25;
+  let logsPage = 1;
+  let logsTotal = 0;
+
+  function missingReportsFor(r) {
+    const p = r.payload;
+    if (!p || typeof p.required !== 'number' || typeof p.submitted !== 'number') return '—';
+    return Math.max(0, p.required - p.submitted);
+  }
+
   async function loadStats() {
     try {
       const res = await fetch('/api/admin/governance/reminders/stats');
@@ -149,12 +149,14 @@
     document.getElementById('logsLoading').style.display = '';
     document.getElementById('logsEmpty').style.display = 'none';
     document.getElementById('logsTableWrap').style.display = 'none';
+    document.getElementById('logsPagination').style.display = 'none';
 
     try {
-      const res = await fetch('/api/admin/governance/reminders');
+      const res = await fetch(`/api/admin/governance/reminders?page=${logsPage}&page_size=${LOGS_PAGE_SIZE}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const logs = data.items || [];
+      logsTotal = data.total || 0;
       document.getElementById('logsLoading').style.display = 'none';
       if (!logs.length) {
         document.getElementById('logsEmpty').style.display = '';
@@ -164,13 +166,14 @@
         <tr>
           <td class="ps-4 small text-muted">${r.sent_at ? new Date(r.sent_at).toLocaleString(_isEn ? 'en-GB' : 'ar-SA') : '—'}</td>
           <td>${escHtml(r.target_type || '—')} #${escHtml(r.target_id || '—')}</td>
-          <td>—</td>
+          <td>${escHtml(r.governorate || '—')}</td>
           <td>${escHtml(r.reminder_type || '—')}</td>
-          <td>—</td>
+          <td>${escHtml(missingReportsFor(r))}</td>
           <td><span class="badge bg-success">${_isEn ? 'SENT' : 'مُرسَل'}</span></td>
         </tr>
       `).join('');
       document.getElementById('logsTableWrap').style.display = '';
+      renderLogsPagination();
     } catch (err) {
       document.getElementById('logsLoading').style.display = 'none';
       const emptyEl = document.getElementById('logsEmpty');
@@ -179,7 +182,35 @@
     }
   }
 
+  function renderLogsPagination() {
+    const nav = document.getElementById('logsPagination');
+    const totalPages = Math.max(1, Math.ceil(logsTotal / LOGS_PAGE_SIZE));
+    if (totalPages <= 1) {
+      nav.style.display = 'none';
+      nav.innerHTML = '';
+      return;
+    }
+    nav.style.display = '';
+    nav.innerHTML = `
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="logsPrevBtn"
+              aria-label="${_isEn ? 'Previous page' : 'الصفحة السابقة'}" ${logsPage <= 1 ? 'disabled' : ''}>
+        <i class="bi bi-chevron-left icon-directional" aria-hidden="true"></i>
+      </button>
+      <span class="small text-muted mx-3">${_isEn ? `Page ${logsPage} of ${totalPages}` : `صفحة ${logsPage} من ${totalPages}`}</span>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="logsNextBtn"
+              aria-label="${_isEn ? 'Next page' : 'الصفحة التالية'}" ${logsPage >= totalPages ? 'disabled' : ''}>
+        <i class="bi bi-chevron-right icon-directional" aria-hidden="true"></i>
+      </button>`;
+    document.getElementById('logsPrevBtn')?.addEventListener('click', () => {
+      if (logsPage > 1) { logsPage--; loadLogs(); }
+    });
+    document.getElementById('logsNextBtn')?.addEventListener('click', () => {
+      if (logsPage < totalPages) { logsPage++; loadLogs(); }
+    });
+  }
+
   document.getElementById('refreshBtn').addEventListener('click', function () {
+    logsPage = 1;
     loadStats();
     loadLogs();
   });

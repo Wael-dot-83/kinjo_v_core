@@ -6,6 +6,8 @@ Verifies:
 - Admin can access KPIs, leaderboard, and reminders
 - Reminder POST requires a valid kindergarten
 """
+from datetime import datetime, timezone
+
 import pytest
 from auth import get_password_hash
 import models
@@ -127,6 +129,72 @@ class TestGovernanceReminders:
         data = r.json()
         assert "sent_today" in data
         assert "total_sent" in data
+
+    def test_reminder_list_resolves_kindergarten_governorate(self, client, test_db, sample_kindergarten):
+        """The dedicated /admin/governance/reminders page's "Governorate"
+        column was permanently rendered as a literal "-" placeholder --
+        the list endpoint never returned a governorate field at all, even
+        though it's trivially resolvable from target_id for
+        target_type="kindergarten" reminders."""
+        admin = _create_admin(test_db)
+        db_reminder = models.GovernanceReminder(
+            target_type="kindergarten",
+            target_id=sample_kindergarten.id,
+            reminder_type="low_submission_rate",
+            sent_by=admin.id,
+            cooldown_expires_at=datetime.now(timezone.utc),
+        )
+        test_db.add(db_reminder)
+        test_db.commit()
+
+        token = _get_token(client, "govadmin")
+        r = client.get(
+            "/api/admin/governance/reminders",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        items = r.json()["items"]
+        assert len(items) == 1
+        assert items[0]["governorate"] == "Amman"
+
+    def test_reminder_list_resolves_supervisor_governorate_via_their_kindergarten(
+        self, client, test_db, sample_kindergarten
+    ):
+        """Supervisor-targeted reminders should resolve governorate via the
+        supervisor's own assigned kindergarten, not just kindergarten-
+        targeted reminders."""
+        admin = _create_admin(test_db)
+        supervisor = models.User(
+            username="gov_sup_reminder_test",
+            email="gov_sup_reminder_test@test.com",
+            hashed_password=get_password_hash("Supervisor123!"),
+            role=models.UserRole.SUPERVISOR,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=sample_kindergarten.id,
+        )
+        test_db.add(supervisor)
+        test_db.commit()
+        test_db.refresh(supervisor)
+
+        db_reminder = models.GovernanceReminder(
+            target_type="supervisor",
+            target_id=supervisor.id,
+            reminder_type="low_submission_rate",
+            sent_by=admin.id,
+            cooldown_expires_at=datetime.now(timezone.utc),
+        )
+        test_db.add(db_reminder)
+        test_db.commit()
+
+        token = _get_token(client, "govadmin")
+        r = client.get(
+            "/api/admin/governance/reminders",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        items = r.json()["items"]
+        assert len(items) == 1
+        assert items[0]["governorate"] == "Amman"
 
     def test_reminder_stats_requires_admin(self, client, test_db, sample_kindergarten):
         _create_manager(test_db, sample_kindergarten.id)
