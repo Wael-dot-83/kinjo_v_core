@@ -3,12 +3,6 @@
 
 {% block title %}{% if ui_lang == 'en' %}Decision Support Reports{% else %}تقارير الدعم القرارى{% endif %} — KinJo{% endblock %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house" aria-hidden="true"></i></a>
-<span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Decision Support Reports{% else %}تقارير الدعم القرارى{% endif %}</span>
-{% endblock %}
-
 {% block content %}
 <div class="admin-page-header reports-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
   <div class="reports-page-titleblock">
@@ -101,10 +95,23 @@
         <label class="form-label fw-bold" for="classIdFilter">{% if ui_lang == 'en' %}Class ID{% else %}معرف الفصل{% endif %}</label>
         <input type="number" class="form-control" id="classIdFilter" placeholder="{% if ui_lang == 'en' %}ID{% else %}معرف{% endif %}">
       </div>
+      <div class="col-md-3">
+        <label class="form-label fw-bold" for="exportReportType">{% if ui_lang == 'en' %}Export Section{% else %}قسم التصدير{% endif %}</label>
+        <select class="form-select" id="exportReportType">
+          <option value="overview">{{ section_titles.national }}</option>
+          <option value="children_summary">{{ section_titles.children }}</option>
+          <option value="kindergartens_summary">{{ section_titles.kindergartens }}</option>
+          <option value="supervisors_analytics">{{ section_titles.supervisors }}</option>
+          <option value="data_quality">{{ section_titles.data_quality }}</option>
+          <option value="compliance">{{ section_titles.compliance }}</option>
+          <option value="risk_ranking">{{ section_titles.risk }}</option>
+          <option value="drilldown">{{ section_titles.drilldown }}</option>
+        </select>
+      </div>
       <div class="col-md-auto">
-        <button class="btn btn-primary" onclick="loadAllReports()" id="refreshReportBtn">
-          <i class="bi bi-arrow-clockwise me-1"></i>
-          {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+        <button class="btn btn-outline-primary" onclick="exportReport()" id="exportReportBtn">
+          <i class="bi bi-download me-1"></i>
+          {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
         </button>
       </div>
     </div>
@@ -340,17 +347,18 @@
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0" id="kindergartenRiskTable">
+            <caption class="visually-hidden">{% if ui_lang == 'en' %}Kindergarten Risk Ranking{% else %}ترتيب المخاطر حسب الحضانة{% endif %}</caption>
             <thead class="table-light">
               <tr>
-                <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Utilization{% else %}الاستخدام{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Risk{% else %}المخاطرة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Utilization{% else %}الاستخدام{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Risk{% else %}المخاطرة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
               </tr>
             </thead>
             <tbody id="kindergartenRiskTableBody">
@@ -406,14 +414,15 @@
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0" id="supervisorErrorsTable">
+            <caption class="visually-hidden">{% if ui_lang == 'en' %}Supervisor Assignment Errors{% else %}أخطاء تعيين المشرفين{% endif %}</caption>
             <thead class="table-light">
               <tr>
-                <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Classes{% else %}فصول{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Errors{% else %}أخطاء{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Classes{% else %}فصول{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Errors{% else %}أخطاء{% endif %}</th>
               </tr>
             </thead>
             <tbody id="supervisorErrorsTableBody">
@@ -543,14 +552,15 @@
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0" id="riskRankingTable">
+            <caption class="visually-hidden">{% if ui_lang == 'en' %}Risk Ranking{% else %}ترتيب المخاطر{% endif %}</caption>
             <thead class="table-light">
               <tr>
-                <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Risk Score{% else %}درجة المخاطرة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Children/Supervisor{% else %}أطفال/مشرف{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Risk Score{% else %}درجة المخاطرة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Children/Supervisor{% else %}أطفال/مشرف{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
               </tr>
             </thead>
             <tbody id="riskRankingTableBody">
@@ -578,20 +588,21 @@
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0" id="kindergartenDetailTable">
+            <caption class="visually-hidden">{% if ui_lang == 'en' %}Kindergartens in Scope{% else %}الحضانات في النطاق{% endif %}</caption>
             <thead class="table-light">
               <tr>
-                <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Classes{% else %}فصول{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Utilization{% else %}الاستخدام{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Supervisor Gap{% else %}فجوة المشرفين{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Risk{% else %}المخاطرة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Classification{% else %}التصنيف{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Classes{% else %}فصول{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Utilization{% else %}الاستخدام{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Supervisor Gap{% else %}فجوة المشرفين{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Risk{% else %}المخاطرة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Classification{% else %}التصنيف{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
               </tr>
             </thead>
             <tbody id="kindergartenDetailTableBody">
@@ -619,18 +630,19 @@
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0" id="classDetailTable">
+            <caption class="visually-hidden">{% if ui_lang == 'en' %}Classes in Selected Kindergarten{% else %}الفصول في الحضانة المختارة{% endif %}</caption>
             <thead class="table-light">
               <tr>
-                <th>{% if ui_lang == 'en' %}Class Code{% else %}رمز الفصل{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Age Group{% else %}الفئة العمرية{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Required Sup{% else %}مطلوب{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Gap{% else %}فجوة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Risk{% else %}المخاطرة{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Class Code{% else %}رمز الفصل{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Age Group{% else %}الفئة العمرية{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Children{% else %}أطفال{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Required Sup{% else %}مطلوب{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Gap{% else %}فجوة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Risk{% else %}المخاطرة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
               </tr>
             </thead>
             <tbody id="classDetailTableBody">

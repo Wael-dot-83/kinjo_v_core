@@ -631,6 +631,38 @@
     }
   }
 
+  function exportReport() {
+    const reportType = document.getElementById('exportReportType')?.value || 'overview';
+    const filters = getFilters();
+    const params = new URLSearchParams({
+      report_type: reportType,
+      export_format: 'csv',
+      level: filters.level,
+      lang: _isAr() ? 'ar' : 'en',
+    });
+    if (filters.governorate) params.set('governorate', filters.governorate);
+    if (filters.city) params.set('city', filters.city);
+    if (filters.kindergarten_id) params.set('kindergarten_id', filters.kindergarten_id);
+    if (filters.class_id) params.set('class_id', filters.class_id);
+    if (filters.date_from) params.set('date_from', filters.date_from);
+    if (filters.date_to) params.set('date_to', filters.date_to);
+    if (filters.period) params.set('period', filters.period);
+    window.location.href = `/api/admin/reports/export?${params.toString()}`;
+  }
+
+  // Exposed to the global scope: this whole file is wrapped in an IIFE, but
+  // the template wires these up via global inline onclick/onchange handlers
+  // (onLevelChange(), loadAllReports(), exportReport()), and the shared
+  // date-range-filter macro's "Last Month"/"Clear Filters" buttons look for
+  // a global applyDateFilter() to trigger a reload. Without these, every
+  // interactive control on this page (level switch, manual refresh, date
+  // presets, export) throws a silent ReferenceError and does nothing --
+  // only the initial default (Jordan/this-month) view ever loads.
+  window.loadAllReports = loadAllReports;
+  window.onLevelChange = onLevelChange;
+  window.applyDateFilter = loadAllReports;
+  window.exportReport = exportReport;
+
   document.addEventListener('DOMContentLoaded', function () {
     onLevelChange();
     loadAllReports();
