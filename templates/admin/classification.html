@@ -13,7 +13,7 @@
         </p>
     </div>
     <div class="col-md-4 text-md-end mt-2 mt-md-0 d-flex justify-content-md-end align-items-center gap-2">
-        <button id="exportClassificationBtn" class="btn btn-sm cyberlume-btn cyberlume-btn-outline"
+        <button id="exportClassificationBtn" class="btn btn-sm btn-outline-primary"
             aria-label="{% if ui_lang == 'en' %}Export data as CSV{% else %}تصدير البيانات كملف CSV{% endif %}"
             data-bs-toggle="tooltip"
             title="{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}">
@@ -26,7 +26,7 @@
                 {% if ui_lang == 'en' %}Auto{% else %}تلقائي{% endif %}
             </label>
         </div>
-        <button id="refreshClassificationBtn" class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10 transition-colors">
+        <button id="refreshClassificationBtn" class="btn btn-sm btn-outline-primary">
             <i class="bi bi-arrow-clockwise ms-1"></i>
             {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
         </button>
@@ -34,62 +34,62 @@
 </div>
 
 <div id="classificationRoot" class="classification-page mb-4">
-    <div class="cyberlume-card  border-0 mb-3">
-        <div class="relative z-10">
+    <div class="admin-card border-0 mb-3">
+        <div class="position-relative">
             <div class="row g-3 align-items-end" role="search">
                 <div class="col-lg-2 col-md-4">
-                    <label for="periodStart" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}</label>
-                    <input id="periodStart" type="date" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none">
+                    <label for="periodStart" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}</label>
+                    <input id="periodStart" type="date" class="form-control">
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="periodEnd" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}</label>
-                    <input id="periodEnd" type="date" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none">
+                    <label for="periodEnd" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}</label>
+                    <input id="periodEnd" type="date" class="form-control">
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="levelSelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Comparison Level{% else %}مستوى المقارنة{% endif %}</label>
-                    <select id="levelSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none"></select>
+                    <label for="levelSelect" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Comparison Level{% else %}مستوى المقارنة{% endif %}</label>
+                    <select id="levelSelect" class="form-select"></select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="sizeModeSelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Segment Type{% else %}نوع الشريحة{% endif %}</label>
-                    <select id="sizeModeSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}Segment Type{% else %}نوع الشريحة{% endif %}"></select>
+                    <label for="sizeModeSelect" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Segment Type{% else %}نوع الشريحة{% endif %}</label>
+                    <select id="sizeModeSelect" class="form-select" aria-label="{% if ui_lang == 'en' %}Segment Type{% else %}نوع الشريحة{% endif %}"></select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="sizeBandSelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Segment Size{% else %}حجم الشريحة{% endif %}</label>
-                    <select id="sizeBandSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}Segment Size{% else %}حجم الشريحة{% endif %}"></select>
+                    <label for="sizeBandSelect" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Segment Size{% else %}حجم الشريحة{% endif %}</label>
+                    <select id="sizeBandSelect" class="form-select" aria-label="{% if ui_lang == 'en' %}Segment Size{% else %}حجم الشريحة{% endif %}"></select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="countrySelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Country{% else %}الدولة{% endif %}</label>
-                    <select id="countrySelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}Country{% else %}الدولة{% endif %}">
+                    <label for="countrySelect" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Country{% else %}الدولة{% endif %}</label>
+                    <select id="countrySelect" class="form-select" aria-label="{% if ui_lang == 'en' %}Country{% else %}الدولة{% endif %}">
                         <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
                     </select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="governorateSelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-                    <select id="governorateSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}">
+                    <label for="governorateSelect" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                    <select id="governorateSelect" class="form-select" aria-label="{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}">
                         <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
                     </select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="citySelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</label>
-                    <select id="citySelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}">
+                    <label for="citySelect" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</label>
+                    <select id="citySelect" class="form-select" aria-label="{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}">
                         <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
                     </select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label for="areaSelect" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</label>
-                    <select id="areaSelect" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" aria-label="{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}">
+                    <label for="areaSelect" class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</label>
+                    <select id="areaSelect" class="form-select" aria-label="{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}">
                         <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
                     </select>
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Min Sample Days{% else %}الحد الأدنى للعينة{% endif %}</label>
-                    <input id="minSampleDays" type="number" min="1" max="365" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" value="30">
+                    <label class="form-label small fw-semibold mb-1">{% if ui_lang == 'en' %}Min Sample Days{% else %}الحد الأدنى للعينة{% endif %}</label>
+                    <input id="minSampleDays" type="number" min="1" max="365" class="form-control" value="30">
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <button id="applyClassificationFiltersBtn" class="btn cyberlume-btn cyberlume-btn-primary w-100" aria-label="{% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}">
+                    <button id="applyClassificationFiltersBtn" class="btn btn-primary w-100" aria-label="{% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}">
                         <i class="bi bi-funnel ms-1"></i>
                         {% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}
-                        <span id="activeFilterCount" class="badge bg-light text-cyber-light ms-1 d-none">0</span>
+                        <span id="activeFilterCount" class="badge bg-light text-dark ms-1 d-none">0</span>
                     </button>
                 </div>
                 <div class="col-auto d-flex align-items-end mb-0">
@@ -199,7 +199,7 @@
         </div>
     </div>
 
-    <div class="cyberlume-card  border-0">
+    <div class="admin-card border-0">
         <div class="card-header bg-white">
             <ul class="nav nav-tabs card-header-tabs" id="classificationTabs">
                 <li class="nav-item">
@@ -213,7 +213,7 @@
                 </li>
             </ul>
         </div>
-        <div class="relative z-10">
+        <div class="position-relative">
             <div id="classificationLoading" class="d-none text-on-surface-variant py-2" role="status" aria-live="polite" aria-atomic="true" data-i18n-container="classification.loading">
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <div class="spinner-border spinner-border-sm" role="status">
@@ -226,8 +226,9 @@
             <div id="classificationEmpty" class="d-none alert alert-warning py-2" role="status" aria-live="polite" aria-atomic="true" data-i18n-container="classification.empty">{% if ui_lang == 'en' %}Not enough data within the current filters.{% else %}لا توجد بيانات كافية ضمن الفلاتر
                 الحالية.{% endif %}</div>
 
-            <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-                <table class="table table-dark table-hover cyberlume-table align-middle table-striped table-hover align-middle" id="classificationTable" role="table" aria-label="{% if ui_lang == 'en' %}Classification results{% else %}نتائج التصنيف{% endif %}">
+            <div class="table-responsive rounded-xl">
+                <table class="table table-dark table-hover align-middle" id="classificationTable" role="table" aria-label="{% if ui_lang == 'en' %}Classification results{% else %}نتائج التصنيف{% endif %}">
+                    <caption class="visually-hidden">{% if ui_lang == 'en' %}Classification results{% else %}نتائج التصنيف{% endif %}</caption>
                     <thead>
                         <tr>
                             <th scope="col" aria-sort="ascending" data-label="{% if ui_lang == 'en' %}Rank{% else %}الترتيب{% endif %}" data-i18n="classification.table.rank">{% if ui_lang == 'en' %}Rank{% else %}الترتيب{% endif %}</th>
@@ -251,31 +252,34 @@
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="classificationDetailModalLabel">{% if ui_lang == 'en' %}Indicator Details{% else %}تفاصيل المؤشر{% endif %}</h5>
+                    <div>
+                        <h5 class="modal-title" id="classificationDetailModalLabel">{% if ui_lang == 'en' %}Indicator Details{% else %}تفاصيل المؤشر{% endif %}</h5>
+                        <div id="classificationDetailTitle" class="text-muted small"></div>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
                 </div>
                 <div class="modal-body">
                     <div id="classificationDetailSummary" class="mb-3"></div>
                     <div class="row g-3">
                         <div class="col-lg-6">
-                            <div class="cyberlume-card h-100">
-                                <div class="relative z-10">
+                            <div class="admin-card h-100">
+                                <div class="position-relative">
                                     <h6 class="fw-bold">{% if ui_lang == 'en' %}Aspect Distribution{% else %}توزيع الجوانب{% endif %}</h6>
                                     <ul class="list-group list-group-flush" id="classificationAspectsList"></ul>
                                 </div>
                             </div>
                         </div>
                         <div class="col-lg-6">
-                            <div class="cyberlume-card h-100">
-                                <div class="relative z-10">
+                            <div class="admin-card h-100">
+                                <div class="position-relative">
                                     <h6 class="fw-bold">{% if ui_lang == 'en' %}Suggested Actions{% else %}إجراءات مقترحة{% endif %}</h6>
                                     <ul id="classificationActionsList" class="mb-0"></ul>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="cyberlume-card mt-3">
-                        <div class="relative z-10">
+                    <div class="admin-card mt-3">
+                        <div class="position-relative">
                             <h6 class="fw-bold">{% if ui_lang == 'en' %}Score Trend Across Periods{% else %}اتجاه الدرجة عبر الفترات{% endif %}</h6>
                             <canvas id="classificationTrendChart" height="100"></canvas>
                             <p class="text-on-surface-variant small mt-2 mb-0">{% if ui_lang == 'en' %}The chart shows the final score evolution across consecutive periods of the same duration.{% else %}يوضح الرسم تطور الدرجة النهائية خلال فترات متتالية
@@ -284,10 +288,11 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
                 </div>
             </div>
         </div>
+    </div>
 </div>
 {% endblock %}
 

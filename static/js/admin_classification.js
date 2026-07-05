@@ -49,6 +49,7 @@
     green: isEn ? "Green" : "\u0623\u062e\u0636\u0631",
     amber: isEn ? "Amber" : "\u0643\u0647\u0631\u0645\u0627\u0646\u064a",
     red: isEn ? "Red" : "\u0623\u062d\u0645\u0631",
+    chartLibMissing: isEn ? "Chart library not loaded. Please check your internet connection." : "\u0644\u0645 \u064a\u062a\u0645 \u062a\u062d\u0645\u064a\u0644 \u0645\u0643\u062a\u0628\u0629 \u0627\u0644\u0631\u0633\u0648\u0645. \u064a\u0631\u062c\u0649 \u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u062a\u0635\u0627\u0644\u0643 \u0628\u0627\u0644\u0625\u0646\u062a\u0631\u0646\u062a.",
   };
 
   const BAND_META = {
@@ -178,7 +179,7 @@
       ["size_band", "sizeBandSelect"],
       ["country", "countrySelect"],
       ["governorate", "governorateSelect"],
-      ["city", "citySelect"],
+      ["district", "citySelect"],
       ["area", "areaSelect"],
       ["min_sample_days", "minSampleDays"],
     ];
@@ -218,7 +219,7 @@
     toast.className = `classification-toast alert alert-${type === "error" ? "danger" : "info"} alert-dismissible fade show position-fixed bottom-0 end-0 m-3`;
     toast.style.zIndex = "9999";
     toast.style.maxWidth = "400px";
-    toast.innerHTML = `${escapeValue(message)}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+    toast.innerHTML = `${escapeValue(message)}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="${escapeValue(isEn ? "Close" : "إغلاق")}"></button>`;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 8000);
   }
@@ -231,7 +232,7 @@
         period_start: "periodStart", period_end: "periodEnd",
         level: "levelSelect", size_mode: "sizeModeSelect",
         size_band: "sizeBandSelect", country: "countrySelect",
-        governorate: "governorateSelect", city: "citySelect",
+        governorate: "governorateSelect", district: "citySelect",
         area: "areaSelect", min_sample_days: "minSampleDays",
       };
       for (const [param, elementId] of Object.entries(elementMap)) {
@@ -789,12 +790,47 @@
     });
   }
 
+  function csvCell(value) {
+    const str = value === null || value === undefined ? "" : String(value);
+    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  }
+
+  function exportClassificationCsv() {
+    if (!allClassRows.length) return;
+    const headers = ["rank", "display_name", "final_score", "percentile", "classification", "trend", "coverage_pct", "governorate"];
+    const lines = [headers.join(",")];
+    allClassRows.forEach((row) => {
+      lines.push([
+        row.rank ?? "",
+        row.display_name ?? "",
+        row.final_score ?? "",
+        row.percentile ?? "",
+        bandLabel(row),
+        trendText(row),
+        row.coverage_pct ?? "",
+        (row.geography && row.geography.governorate) || "",
+      ].map(csvCell).join(","));
+    });
+    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `classification-${state.entityType.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function bindEvents() {
     document.getElementById("applyClassificationFiltersBtn")?.addEventListener("click", () => {
       loadLeaderboard();
     });
     document.getElementById("refreshClassificationBtn")?.addEventListener("click", () => {
       loadLeaderboard();
+    });
+    document.getElementById("exportClassificationBtn")?.addEventListener("click", () => {
+      exportClassificationCsv();
     });
 
     document.getElementById("autoRefreshCheck")?.addEventListener("change", (event) => {
