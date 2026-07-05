@@ -16,35 +16,35 @@
 <div>
         <!-- Filters -->
         <div class="card mb-4">
-            <div class="mb-6 border-b border-white/5 pb-4 relative z-10">
+            <div class="card-header">
                 <h6 class="mb-0">{% if ui_lang == 'en' %}Filter Reports{% else %}تصفية التقارير{% endif %}</h6>
             </div>
-            <div class="relative z-10">
+            <div class="card-body">
                 <div class="row g-3">
-                    <div>
-                        <label for="scopeFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
-                        <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="scopeFilter" aria-label="{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}">
+                    <div class="col-md-4">
+                        <label for="scopeFilter" class="form-label small">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
+                        <select class="form-select" id="scopeFilter" aria-label="{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}">
                             <option value="">{% if ui_lang == 'en' %}All Scopes{% else %}جميع النطاقات{% endif %}</option>
                             <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}حضانة معينة{% endif %}</option>
                             <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
                             <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الحضانات{% endif %}</option>
                         </select>
                     </div>
-                    <div>
-                        <label for="kindergartenFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
-                        <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="kindergartenFilter" disabled aria-label="{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}">
+                    <div class="col-md-4">
+                        <label for="kindergartenFilter" class="form-label small">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
+                        <select class="form-select" id="kindergartenFilter" disabled aria-label="{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}">
                             <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الحضانة{% endif %}</option>
                         </select>
                     </div>
-                    <div>
-                        <label for="governorateFilter" class="block font-label-sm text-on-surface-variant mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-                        <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="governorateFilter" disabled aria-label="{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}">
+                    <div class="col-md-4">
+                        <label for="governorateFilter" class="form-label small">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                        <select class="form-select" id="governorateFilter" disabled aria-label="{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}">
                             <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
                         </select>
                     </div>
                 </div>
                 <div class="mt-3">
-                    <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]" onclick="applyFilters()">
+                    <button class="btn btn-primary" onclick="applyFilters()">
                         <i class="bi bi-funnel me-2"></i>{% if ui_lang == 'en' %}Apply Filter{% else %}تطبيق التصفية{% endif %}
                     </button>
                     <button class="btn btn-outline-secondary ms-2" onclick="clearFilters()">
@@ -58,15 +58,14 @@
         </div>
 
         <!-- Reports List -->
-        <div class="glass-panel border border-white/10 rounded-2xl p-6 relative overflow-hidden group mb-6">
-                <div class="absolute -top-32 -right-32 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500"></div>
-            <div class="flex items-center justify-between mb-8 border-b border-white/5 pb-4 relative z-10">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">{% if ui_lang == 'en' %}Reports List{% else %}قائمة التقارير{% endif %}</h6>
                 <div id="loadingSpinner" class="spinner-border spinner-border-sm d-none" role="status">
                     <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                 </div>
             </div>
-            <div class="relative z-10">
+            <div class="card-body">
                 <div id="reportsContainer">
                     <!-- Reports will be loaded here -->
                 </div>
@@ -94,12 +93,13 @@
                 <!-- Report details will be loaded here -->
             </div>
             <div class="modal-footer">
-                <button type="button" class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
-                <button type="button" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]" id="exportBtn" onclick="exportReport()">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                <button type="button" class="btn btn-primary" id="exportBtn" onclick="exportReport()">
                     <i class="bi bi-download me-2"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
                 </button>
             </div>
         </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -160,10 +160,10 @@
             if (!data.reports || data.reports.length === 0) {
                 container.innerHTML = `
                 <div class="text-center py-5">
-                    <i class="bi bi-file-earmark-x text-on-surface-variant fs-1" aria-hidden="true"></i>
-                    <h5 class="mt-3 text-on-surface-variant">${T('لا توجد تقارير', 'No Reports')}</h5>
-                    <p class="text-on-surface-variant">${T('لم يتم إنشاء أي تقارير بعد. يمكنك إنشاء تقرير جديد.', 'No reports have been created yet. You can create a new report.')}</p>
-                    <a href="/admin/reports/incidents/generate" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]">
+                    <i class="bi bi-file-earmark-x text-muted fs-1" aria-hidden="true"></i>
+                    <h5 class="mt-3 text-muted">${T('لا توجد تقارير', 'No Reports')}</h5>
+                    <p class="text-muted">${T('لم يتم إنشاء أي تقارير بعد. يمكنك إنشاء تقرير جديد.', 'No reports have been created yet. You can create a new report.')}</p>
+                    <a href="/admin/reports/incidents/generate" class="btn btn-primary">
                         <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>${T('إنشاء تقرير جديد', 'Create New Report')}
                     </a>
                 </div>`;
@@ -195,18 +195,18 @@
             const reportCard = document.createElement('div');
             reportCard.className = 'card mb-3';
             reportCard.innerHTML = `
-            <div class="relative z-10">
-                <div class="row align-items-center">
-                    <div>
+            <div class="card-body">
+                <div class="row align-items-center g-2">
+                    <div class="col-md-5">
                         <h6 class="card-title mb-1">${escHtml(report.title)}</h6>
-                        <p class="card-text small text-on-surface-variant mb-0">
+                        <p class="card-text small text-muted mb-0">
                             ${T('النطاق:', 'Scope:')} ${escHtml(report.scope_name)} |
                             ${T('الفترة:', 'Period:')} ${formatDate(report.start_date)} – ${formatDate(report.end_date)}
                         </p>
                     </div>
-                    <div>
-                        <small class="text-on-surface-variant d-block">${T('أنشئ بواسطة:', 'Created By:')} ${escHtml(report.created_by)}</small>
-                        <small class="text-on-surface-variant d-block">${T('تاريخ الإنشاء:', 'Created Date:')} ${formatDateTime(report.created_at)}</small>
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">${T('أنشئ بواسطة:', 'Created By:')} ${escHtml(report.created_by)}</small>
+                        <small class="text-muted d-block">${T('تاريخ الإنشاء:', 'Created Date:')} ${formatDateTime(report.created_at)}</small>
                     </div>
                     <div class="col-md-3 d-flex justify-content-end align-items-center gap-2">
                         <span class="badge bg-info-subtle text-info-emphasis">${report.total_incidents ?? 0} ${T('حادثة', 'incidents')}</span>
@@ -248,6 +248,43 @@
     function changePage(page) {
         currentPage = page;
         loadReports(page);
+    }
+
+    async function loadGovernorates() {
+        try {
+            const GOV_LABEL_EN = {
+                'عمان': 'Amman', 'إربد': 'Irbid', 'الزرقاء': 'Zarqa', 'المفرق': 'Mafraq',
+                'جرش': 'Jerash', 'عجلون': 'Ajloun', 'الكرك': 'Karak', 'الطفيلة': 'Tafilah',
+                'معان': "Ma'an", 'العقبة': 'Aqaba', 'مادبا': 'Madaba', 'البلقاء': 'Balqa',
+            };
+            const select = document.getElementById('governorateFilter');
+            Object.keys(GOV_LABEL_EN).forEach(gov => {
+                const option = document.createElement('option');
+                option.value = gov;
+                option.textContent = IS_EN ? GOV_LABEL_EN[gov] : gov;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading governorates:', error);
+        }
+    }
+
+    async function loadKindergartens() {
+        try {
+            const response = await fetch('/api/kindergartens?limit=200');
+            if (!response.ok) return;
+            const data = await response.json();
+            const kindergartens = Array.isArray(data) ? data : (data.kindergartens || []);
+            const select = document.getElementById('kindergartenFilter');
+            kindergartens.forEach(kg => {
+                const option = document.createElement('option');
+                option.value = kg.id;
+                option.textContent = kg.name_ar || kg.name_en || T('حضانة', 'Kindergarten') + ` ${kg.id}`;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading kindergartens:', error);
+        }
     }
 
     function applyFilters() {
@@ -304,30 +341,25 @@
         const closedInc = metrics.closed_incidents ?? 0;
 
         return `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+        <div class="row g-4">
+            <div class="col-md-6">
                 <h6>${T('معلومات التقرير', 'Report Information')}</h6>
                 <table class="table table-sm" aria-label="${T('معلومات التقرير', 'Report information table')}">
-                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td class="px-4 py-3 text-body-md text-on-surface"><strong>${T('النطاق:', 'Scope:')}</strong></td><td class="px-4 py-3 text-body-md text-on-surface">${escHtml(report.scope_name)}</td></tr>
-                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td class="px-4 py-3 text-body-md text-on-surface"><strong>${T('تاريخ البداية:', 'Start Date:')}</strong></td><td class="px-4 py-3 text-body-md text-on-surface">${formatDate(report.start_date)}</td></tr>
-                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td class="px-4 py-3 text-body-md text-on-surface"><strong>${T('تاريخ النهاية:', 'End Date:')}</strong></td><td class="px-4 py-3 text-body-md text-on-surface">${formatDate(report.end_date)}</td></tr>
-                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td class="px-4 py-3 text-body-md text-on-surface"><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong></td><td class="px-4 py-3 text-body-md text-on-surface">${escHtml(report.created_by)}</td></tr>
-                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td class="px-4 py-3 text-body-md text-on-surface"><strong>${T('تاريخ الإنشاء:', 'Created Date:')}</strong></td><td class="px-4 py-3 text-body-md text-on-surface">${formatDateTime(report.created_at)}</td></tr>
+                    <tr><td><strong>${T('النطاق:', 'Scope:')}</strong></td><td>${escHtml(report.scope_name)}</td></tr>
+                    <tr><td><strong>${T('تاريخ البداية:', 'Start Date:')}</strong></td><td>${formatDate(report.start_date)}</td></tr>
+                    <tr><td><strong>${T('تاريخ النهاية:', 'End Date:')}</strong></td><td>${formatDate(report.end_date)}</td></tr>
+                    <tr><td><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong></td><td>${escHtml(report.created_by)}</td></tr>
+                    <tr><td><strong>${T('تاريخ الإنشاء:', 'Created Date:')}</strong></td><td>${formatDateTime(report.created_at)}</td></tr>
                 </table>
             </div>
-            <div>
+            <div class="col-md-6">
                 <h6>${T('الإحصائيات العامة', 'General Statistics')}</h6>
                 <div class="row g-3">
                     <div class="col-4">
                         <div class="card text-center">
                             <div class="card-body py-2">
                                 <h4 class="text-primary mb-0">${totalInc}</h4>
-                                <small class="text-on-surface-variant">${T('إجمالي الحوادث', 'Total Incidents')}</small>
+                                <small class="text-muted">${T('إجمالي الحوادث', 'Total Incidents')}</small>
                             </div>
                         </div>
                     </div>
@@ -335,7 +367,7 @@
                         <div class="card text-center">
                             <div class="card-body py-2">
                                 <h4 class="text-success mb-0">${openInc}</h4>
-                                <small class="text-on-surface-variant">${T('حوادث مفتوحة', 'Open Incidents')}</small>
+                                <small class="text-muted">${T('حوادث مفتوحة', 'Open Incidents')}</small>
                             </div>
                         </div>
                     </div>
@@ -343,7 +375,7 @@
                         <div class="card text-center">
                             <div class="card-body py-2">
                                 <h4 class="text-danger mb-0">${closedInc}</h4>
-                                <small class="text-on-surface-variant">${T('حوادث مغلقة', 'Closed Incidents')}</small>
+                                <small class="text-muted">${T('حوادث مغلقة', 'Closed Incidents')}</small>
                             </div>
                         </div>
                     </div>
@@ -351,12 +383,12 @@
             </div>
         </div>
 
-        <div class="row mt-4">
-            <div>
+        <div class="row mt-4 g-4">
+            <div class="col-md-6">
                 <h6>${T('الحوادث حسب النوع', 'Incidents by Type')}</h6>
                 <canvas id="typeChart" width="300" height="200" role="img" aria-label="${T('مخطط الحوادث حسب النوع', 'Chart of incidents by type')}"></canvas>
             </div>
-            <div>
+            <div class="col-md-6">
                 <h6>${T('الحوادث حسب الخطورة', 'Incidents by Severity')}</h6>
                 <canvas id="severityChart" width="300" height="200" role="img" aria-label="${T('مخطط الحوادث حسب الخطورة', 'Chart of incidents by severity')}"></canvas>
             </div>
@@ -365,18 +397,18 @@
         ${metrics.per_kindergarten && Object.keys(metrics.per_kindergarten).length > 0 ? `
         <div class="mt-4">
             <h6>${T('الحوادث لكل حضانة', 'Incidents per Kindergarten')}</h6>
-            <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-                <table class="table table-sm" aria-label="${T('الحوادث لكل حضانة', 'Incidents per kindergarten table')}">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover" aria-label="${T('الحوادث لكل حضانة', 'Incidents per kindergarten table')}">
+                    <caption class="visually-hidden">${T('الحوادث لكل حضانة', 'Incidents per kindergarten')}</caption>
                     <thead>
                         <tr>
-                            <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">${T('الحضانة', 'Kindergarten')}</th>
-                            <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">${T('عدد الحوادث', 'Incident Count')}</th>
+                            <th scope="col">${T('الحضانة', 'Kindergarten')}</th>
+                            <th scope="col">${T('عدد الحوادث', 'Incident Count')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${Object.entries(metrics.per_kindergarten).map(([kg, count]) =>
-                            `<tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg)}</td><td class="px-4 py-3 text-body-md text-on-surface">${Number(count)}</td></tr>`
+                            `<tr><td>${escHtml(kg)}</td><td>${Number(count)}</td></tr>`
                         ).join('')}
                     </tbody>
                 </table>
@@ -404,7 +436,7 @@
         const severityCanvas = document.getElementById('severityChart');
 
         // --- Incidents by type ---
-        const byType = metrics.by_type || {};
+        const byType = metrics.incidents_by_type || {};
         const typeLabels = Object.keys(byType);
         const typeData = Object.values(byType).map(Number);
         if (typeCanvas && typeLabels.length > 0) {
@@ -429,7 +461,7 @@
         }
 
         // --- Incidents by severity ---
-        const bySeverity = metrics.by_severity || {};
+        const bySeverity = metrics.incidents_by_severity || {};
         const sevLabels = Object.keys(bySeverity);
         const sevData = Object.values(bySeverity).map(Number);
         const severityColors = {
@@ -485,6 +517,17 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         loadReports();
+        loadGovernorates();
+        loadKindergartens();
+        document.getElementById('scopeFilter').addEventListener('change', function () {
+            const scope = this.value;
+            const kgFilter = document.getElementById('kindergartenFilter');
+            const govFilter = document.getElementById('governorateFilter');
+            kgFilter.disabled = scope !== 'KINDERGARTEN';
+            govFilter.disabled = scope !== 'GOVERNORATE';
+            if (scope !== 'KINDERGARTEN') kgFilter.value = '';
+            if (scope !== 'GOVERNORATE') govFilter.value = '';
+        });
     });
 </script>
 {% endblock %}
