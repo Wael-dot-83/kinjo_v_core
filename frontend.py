@@ -1545,10 +1545,16 @@ async def admin_charts_explorer(request: Request, current_user: User = Depends(g
     """Admin AI-assisted chart explorer page"""
     if current_user.role != UserRole.ADMIN:
         return RedirectResponse("/dashboard")
+    from charts.schemas import ChartSource, ChartType
     return templates.TemplateResponse(
         request=request,
         name="admin/analytics/charts_dashboard.html",
-        context={"current_user": current_user, "today": _today()}
+        context={
+            "current_user": current_user,
+            "today": _today(),
+            "sources": [s.value for s in ChartSource],
+            "chart_types": [t.value for t in ChartType],
+        }
     )
 
 

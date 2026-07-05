@@ -2,23 +2,14 @@
 
 {% block title %}{% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{% endif %} — KinJo{% endblock %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house" aria-hidden="true"></i></a>
-<span class="breadcrumb-separator">/</span>
-<a href="/admin/analytics" class="breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
-<span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Charts{% else %}الرسوم البيانية{% endif %}</span>
-{% endblock %}
-
 {% block extra_head %}
-<script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"
-  integrity="sha384-cCVCZkAjYNxaYKbM8lsArLznDF/SvMFr1jcZrvOpSTCa0W40ZAdLzHCEulnUa5i7"
+<!-- cdn.plot.ly is not in this site's CSP script-src allowlist (middleware/security.py
+     only permits jsdelivr/cdnjs/unpkg), so a CDN attempt would always be blocked and
+     always fall back to this local copy -- load it directly instead of generating a
+     CSP violation + failed network request on every single page load. -->
+<script defer src="/static/vendor/plotly-2.35.2.min.js"
+  integrity="sha384-ymzmAVk+3V1std11H4NbH/o85BHnBJTNzz3SjtDbixaVMkt2qOIcV3dzOUSuONeA"
   crossorigin="anonymous"></script>
-<script>
-  if (typeof Plotly === 'undefined') {
-    document.write('<script defer src="/static/vendor/plotly-2.35.2.min.js" integrity="sha384-ymzmAVk+3V1std11H4NbH/o85BHnBJTNzz3SjtDbixaVMkt2qOIcV3dzOUSuONeA" crossorigin="anonymous"><\/script>');
-  }
-</script>
 <style>
   .charts-panel { background: var(--admin-card-bg,#fff); border: 1px solid var(--admin-border,#e2e8f0); border-radius: 12px; padding: 1.5rem; }
   .charts-sidebar { min-width: 260px; max-width: 320px; }
