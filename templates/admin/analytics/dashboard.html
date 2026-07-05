@@ -12,14 +12,6 @@
 </style>
 {% endblock %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
-  <i class="bi bi-house" aria-hidden="true"></i>
-</a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</span>
-{% endblock %}
-
 {% block content %}
 <div class="az-analytics-page" id="azAnalyticsPage">
 
@@ -86,7 +78,7 @@
   </div>
   {% endif %}
 
-  <div class="az-filter-bar glass-filter-bar" role="search" aria-label="{% if ui_lang == 'en' %}Analytics filters{% else %}مرشحات التحليلات{% endif %}">
+  <div class="glass-filter-bar" role="search" aria-label="{% if ui_lang == 'en' %}Analytics filters{% else %}مرشحات التحليلات{% endif %}">
     <div class="row g-3 align-items-center">
       <div class="col-12 col-xl-auto flex-grow-1">
         {{ date_range_filter(
@@ -197,7 +189,7 @@
               </span>
               <span class="text-muted" style="font:.4rem/1 sans-serif"> </span>
             </div>
-            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="total_kg" aria-hidden="true"></div>
+            <div class="kpi-sparkline-v2" data-metric="total_kg" aria-hidden="true"></div>
           </article>
 
           {# Card 2: Total Children #}
@@ -217,7 +209,7 @@
                  role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
               <div id="enrollmentRateBar" style="height:100%;width:0%;background:var(--kpi-accent-children);border-radius:var(--r-full);transition:width .6s ease"></div>
             </div>
-            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="total_children" aria-hidden="true"></div>
+            <div class="kpi-sparkline-v2" data-metric="total_children" aria-hidden="true"></div>
           </article>
 
           {# Card 3: Attendance Rate #}
@@ -235,7 +227,7 @@
                 <span class="skel skel-chip" aria-hidden="true"></span>
               </span>
             </div>
-            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="attendance_rate" aria-hidden="true"></div>
+            <div class="kpi-sparkline-v2" data-metric="attendance_rate" aria-hidden="true"></div>
           </article>
 
           {# Card 4: Incident Rate #}
@@ -254,7 +246,7 @@
               </span>
               <span class="text-muted" style="font-size:.75rem">{% if ui_lang == 'en' %}per 1k days{% else %}لكل ألف يوم{% endif %}</span>
             </div>
-            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="incident_rate" aria-hidden="true"></div>
+            <div class="kpi-sparkline-v2" data-metric="incident_rate" aria-hidden="true"></div>
           </article>
 
           {# Card 5: Governance Score #}
@@ -270,7 +262,7 @@
             <div class="kpi-card-v2__footer">
               <span class="kpi-delta kpi-delta--flat" id="govScoreTrend" aria-live="polite">—</span>
             </div>
-            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="governance_score" aria-hidden="true"></div>
+            <div class="kpi-sparkline-v2" data-metric="governance_score" aria-hidden="true"></div>
           </article>
 
           {# Card 6: Registration Conversion #}
@@ -286,7 +278,7 @@
             <div class="kpi-card-v2__footer">
               <span class="text-muted" style="font-size:.8rem" id="ohFunnelLabel">{% if ui_lang == 'en' %}of applications approved{% else %}من الطلبات مُوافق عليها{% endif %}</span>
             </div>
-            <div class="kpi-sparkline kpi-sparkline-v2" data-metric="conversion_rate" aria-hidden="true"></div>
+            <div class="kpi-sparkline-v2" data-metric="conversion_rate" aria-hidden="true"></div>
           </article>
 
         </div>{# /kpi-grid-v2 #}
@@ -560,7 +552,7 @@
       </div>{# /row entity cards #}
 
       {# Actions queue alert #}
-      <div class="az-card mb-section" id="regStatusMatrix">
+      <div class="az-card mb-section">
         <div class="az-card__header">
           <h3 class="az-card__title"><i class="bi bi-list-task text-warning-az"></i>
             {% if ui_lang == 'en' %}Actions Required{% else %}إجراءات مطلوبة{% endif %}
@@ -568,6 +560,18 @@
           <span class="az-badge az-badge--amber" id="regActionsBadge">0</span>
         </div>
         <div class="az-card__body--compact" id="regActionQueue">
+          <div class="skel skel-row"></div>
+        </div>
+      </div>
+
+      {# Registration status distribution #}
+      <div class="az-card mb-section">
+        <div class="az-card__header">
+          <h3 class="az-card__title"><i class="bi bi-bar-chart-steps text-primary-az"></i>
+            {% if ui_lang == 'en' %}Registration Status Distribution{% else %}توزيع حالات التسجيل{% endif %}
+          </h3>
+        </div>
+        <div class="az-card__body--compact" id="regStatusMatrix">
           <div class="skel skel-row"></div>
         </div>
       </div>
@@ -701,21 +705,24 @@
         </div>
         <div class="az-table-scroll">
           <table class="az-table" id="registrationTable" aria-label="{% if ui_lang == 'en' %}Registration applications{% else %}طلبات التسجيل{% endif %}">
+            <caption class="visually-hidden">{% if ui_lang == 'en' %}Registration applications{% else %}طلبات التسجيل{% endif %}</caption>
             <thead>
               <tr>
                 <th scope="col">{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
                 <th scope="col">{% if ui_lang == 'en' %}Parent{% else %}الوالد{% endif %}</th>
                 <th scope="col">{% if ui_lang == 'en' %}Facility{% else %}الحضانة{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
                 <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
                 <th scope="col">{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</th>
                 <th scope="col">{% if ui_lang == 'en' %}Submitted{% else %}تاريخ التقديم{% endif %}</th>
                 <th scope="col">{% if ui_lang == 'en' %}Reviewer{% else %}المراجع{% endif %}</th>
+                <th scope="col"><span class="visually-hidden">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</span></th>
               </tr>
             </thead>
             <tbody id="registrationTableBody">
-              <tr><td colspan="7"><div class="skel skel-row"></div></td></tr>
-              <tr><td colspan="7"><div class="skel skel-row" style="width:90%"></div></td></tr>
-              <tr><td colspan="7"><div class="skel skel-row" style="width:80%"></div></td></tr>
+              <tr><td colspan="9"><div class="skel skel-row"></div></td></tr>
+              <tr><td colspan="9"><div class="skel skel-row" style="width:90%"></div></td></tr>
+              <tr><td colspan="9"><div class="skel skel-row" style="width:80%"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -755,6 +762,7 @@
             <div class="az-table-scroll" style="max-height:380px">
               <table class="az-table" id="governorateTable"
                      aria-label="{% if ui_lang == 'en' %}Governorate performance table{% else %}جدول أداء المحافظات{% endif %}">
+                <caption class="visually-hidden">{% if ui_lang == 'en' %}Governorate performance table{% else %}جدول أداء المحافظات{% endif %}</caption>
                 <thead>
                   <tr>
                     <th scope="col">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
@@ -1046,7 +1054,14 @@
 {% include 'components/help_modal.html' %}
 
 {# Export Modal #}
-{{ export_modal() }}
+{% set report_types = [
+  {"value": "attendance",  "label": "Attendance"      if ui_lang == 'en' else "الحضور"},
+  {"value": "incidents",   "label": "Incidents"       if ui_lang == 'en' else "الحوادث"},
+  {"value": "compliance",  "label": "Compliance"      if ui_lang == 'en' else "الامتثال"},
+  {"value": "governorate", "label": "By Governorate"  if ui_lang == 'en' else "حسب المحافظة"},
+  {"value": "full_audit",  "label": "Full Audit Log"  if ui_lang == 'en' else "سجل التدقيق الكامل"},
+] %}
+{{ export_modal(report_types=report_types) }}
 
 {# Export FAB #}
 <button class="az-export-fab" id="exportFab" type="button"
@@ -1058,6 +1073,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>window.KINJO_LANG = "{{ ui_lang }}";</script>
 <script src="/static/vendor/chartjs/chart.umd.min.js"></script>
 <script defer src="/static/js/chart_utils.js?v=2.1" charset="utf-8"></script>
 <script defer src="/static/js/kpi-validation.js?v=2.1" charset="utf-8"></script>
@@ -1243,34 +1259,47 @@
   };
 
   /* ── Risk card renderer ─────────────────────────────────────────────────── */
+  let _lastRiskArr = [];
+  let _riskShowAll = false;
+
   window._renderRiskCards = function (riskArr) {
     const container = document.getElementById('riskList');
     const empty     = document.getElementById('noRiskData');
     const viewAll   = document.getElementById('riskViewAllBtn');
     if (!container) return;
+    _lastRiskArr = riskArr || [];
     if (!riskArr || !riskArr.length) {
       container.innerHTML = '';
       empty?.classList.remove('d-none');
       return;
     }
     empty?.classList.add('d-none');
-    if (viewAll && riskArr.length > 5) viewAll.style.display = '';
+    if (viewAll && riskArr.length > 5) {
+      viewAll.style.display = '';
+      const isAr = (window.KINJO_LANG || 'ar') === 'ar';
+      viewAll.textContent = _riskShowAll
+        ? (isAr ? 'عرض أقل' : 'Show Less')
+        : (isAr ? 'عرض كل المخاطر' : 'View All Risks');
+    } else if (viewAll) {
+      viewAll.style.display = 'none';
+    }
 
     const isAr = (window.KINJO_LANG || 'ar') === 'ar';
-    const MAX = 5;
+    const MAX = _riskShowAll ? riskArr.length : 5;
     container.innerHTML = riskArr.slice(0, MAX).map(function (r) {
       const lvl    = window._classifyRisk(r);
       const icon   = lvl === 'critical' ? 'exclamation-octagon-fill' : lvl === 'high' ? 'exclamation-triangle-fill' : 'info-circle-fill';
       const label  = lvl === 'critical' ? (isAr ? 'حرج' : 'Critical') : lvl === 'high' ? (isAr ? 'مرتفع' : 'High') : (isAr ? 'متوسط' : 'Medium');
       const action = isAr ? 'عرض تفاصيل المرفق' : 'View facility details';
+      const entityName = r.child_name || r.kindergarten_name || '—';
       const scoreDisplay = r.risk_value != null ? r.risk_value.toFixed(1) : '—';
       return [
         '<div class="risk-card risk-card--' + lvl + '" role="article">',
         '  <div class="risk-card__icon"><i class="bi bi-' + icon + '"></i></div>',
         '  <div class="risk-card__body">',
-        '    <div class="risk-card__name">' + esc(r.child_name || r.kindergarten_name || '—') + '</div>',
+        '    <div class="risk-card__name">' + esc(entityName) + '</div>',
         '    <div class="risk-card__reason">' + esc(window._riskReasonText(r, isAr)) + '</div>',
-        `    <a href="/kindergartens/${encodeURIComponent(r.kindergarten_id || '')}" class="risk-card__action">`,
+        `    <a href="/kindergartens/${encodeURIComponent(r.kindergarten_id || '')}" class="risk-card__action" aria-label="${esc(action)}: ${esc(entityName)}">`,
         '      <i class="bi bi-arrow-up-right-circle"></i>' + action,
         '    </a>',
         '  </div>',
@@ -1372,6 +1401,12 @@
         window._renderFunnelSteps(funnelData);
       };
     }
+
+    /* "View All Risks" toggle -- previously had no click handler at all */
+    document.getElementById('riskViewAllBtn')?.addEventListener('click', function () {
+      _riskShowAll = !_riskShowAll;
+      window._renderRiskCards(_lastRiskArr);
+    });
   });
 
 }());

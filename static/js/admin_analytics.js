@@ -2594,8 +2594,8 @@ async function loadRegistrationTable() {
         <td>${item.submitted_at ? new Date(item.submitted_at).toLocaleDateString(adminAnalyticsLocale()) : "-"}</td>
         <td>${escapeHtml(item.reviewer_name || "-")}</td>
         <td class="text-center">
-          <a href="/enrollments/${item.id}" class="btn btn-sm btn-outline-primary" title="{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}">
-            <i class="bi bi-eye"></i>
+          <a href="/enrollments/${item.id}" class="btn btn-sm btn-outline-primary" title="${adminAnalyticsText('عرض', 'View')}" aria-label="${adminAnalyticsText('عرض طلب', 'View application')}: ${escapeHtml(item.child_name || '')}">
+            <i class="bi bi-eye" aria-hidden="true"></i>
           </a>
         </td>
       </tr>
@@ -2947,26 +2947,27 @@ function exportTableToCSV(tableId, filename) {
 // CYBERLUME Export Modal Integration
 document.addEventListener('exportData', async function(e) {
     const { format, range } = e.detail;
-    
+
     // Determine date range based on 'range'
-    let startDate = document.getElementById("startDate")?.value;
-    let endDate = document.getElementById("endDate")?.value;
-    
+    let startDate = document.getElementById("periodStart")?.value;
+    let endDate = document.getElementById("periodEnd")?.value;
+
     if (range === 'all') {
         // Fallback or explicit 'all time' if backend supports it. For now, we pass empty dates
         // to let backend decide, or set a wide range. We'll set empty strings.
         startDate = "";
         endDate = "";
     }
-    
-    // Default report type is overview/full_audit if not specified
-    const reportType = document.querySelector('input[name="reportType"]:checked')?.value || "full_audit";
-    
+
+    // Report type comes from the #exportReportType <select> populated by export_modal(report_types=...)
+    const reportType = document.getElementById("exportReportType")?.value || "full_audit";
+
     showToast(adminAnalyticsText("جاري تحضير الملف...", "Preparing export..."), "info");
-    
+
     try {
         const response = await fetchWithAuth("/api/analytics/export/sync", {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 report_type: reportType,
                 export_format: format.toUpperCase(),
