@@ -707,7 +707,44 @@ async function fetchWithAuth(url, options = {}) {
     return null;
   }
   if (!response.ok) {
-    throw new Error(response.statusText || "Request failed");
+    // Read the real backend error detail (e.g. "Username already exists")
+    // before throwing -- previously this threw response.statusText only
+    // ("Conflict", "Bad Request"), discarding the JSON body entirely, so
+    // every admin page showed a meaningless generic error on every failed
+    // POST/PUT/PATCH/DELETE regardless of what the backend actually said.
+    let message = response.statusText || "Request failed";
+    let fields = null;
+    try {
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await response.json();
+        if (data.error && typeof data.error.message === "string") {
+          // Standardized APIError envelope (admin_security.py's
+          // create_error_response): {"error": {"code","message","fields",...}}
+          message = data.error.message;
+          fields = data.error.fields || null;
+        } else if (typeof data.detail === "string") {
+          // Plain FastAPI HTTPException(detail="...")
+          message = data.detail;
+        } else if (Array.isArray(data.detail) && data.detail.length) {
+          // Pydantic 422 validation error array
+          message = data.detail
+            .map((item) => (item && typeof item === "object" ? item.msg : item))
+            .filter(Boolean)
+            .join("; ") || message;
+        } else if (typeof data.message === "string") {
+          message = data.message;
+        }
+      }
+    } catch (e) {
+      // Body unreadable/not JSON -- fall back to statusText set above.
+    }
+    const error = new Error(message);
+    error.status = response.status;
+    if (fields) {
+      error.fields = fields;
+    }
+    throw error;
   }
   return response;
 }

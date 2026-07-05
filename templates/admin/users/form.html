@@ -29,9 +29,9 @@ breadcrumbs=[
                             <label for="username"class="form-label required">{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</label>
                             <input type="text"class="form-control"id="username"name="username"
                                 value="{{ user_obj.username if user_obj else '' }}"{% if user_obj %}disabled{% else
-                                %}required{% endif %} pattern="[a-zA-Z0-9_]+"minlength="3">
-                            <div class="form-text">{% if ui_lang == 'en' %}English letters, numbers, and underscores only, no spaces.{% else %}أحرف إنجليزية وأرقام وشرطة سفلية فقط، بدون مسافات.{% endif %}</div>
-                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Required (English letters, numbers, and underscores only){% else %}مطلوب (أحرف إنجليزية وأرقام وشرطة سفلية فقط){% endif %}</div>
+                                %}required{% endif %} pattern="[a-zA-Z0-9_\-]+"minlength="3"maxlength="50">
+                            <div class="form-text">{% if ui_lang == 'en' %}English letters, numbers, underscores, and hyphens only, no spaces.{% else %}أحرف إنجليزية وأرقام وشرطة سفلية وشرطة فقط، بدون مسافات.{% endif %}</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Required (English letters, numbers, underscores, and hyphens only){% else %}مطلوب (أحرف إنجليزية وأرقام وشرطة سفلية وشرطة فقط){% endif %}</div>
                         </div>
 
                         <div class="col-md-6">
