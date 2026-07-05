@@ -2,18 +2,6 @@
 
 {% block title %}{% if ui_lang == 'en' %}Import Kindergartens — KinJo{% else %}استيراد الحضانات — KinJo{% endif %}{% endblock %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item">
-    <i class="bi bi-house" aria-hidden="true"></i>
-</a>
-<span class="breadcrumb-separator">/</span>
-<a href="/admin/import-kindergartens" class="breadcrumb-item">
-    {% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}
-</a>
-<span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الحضانات{% endif %}</span>
-{% endblock %}
-
 {% block content %}
 <div class="page-header">
     <div>
@@ -86,7 +74,7 @@
         {% if ui_lang == 'en' %}Import Results{% else %}نتائج الاستيراد{% endif %}
     </h2>
     <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
+        <div class="col-4">
             <div class="card text-center">
                 <div class="card-body">
                     <div class="fs-2 fw-bold text-success" id="importedCount">0</div>
@@ -94,15 +82,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-6 col-md-3">
-            <div class="card text-center">
-                <div class="card-body">
-                    <div class="fs-2 fw-bold text-warning" id="updatedCount">0</div>
-                    <div class="text-muted small">{% if ui_lang == 'en' %}Updated{% else %}مُحدَّث{% endif %}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
+        <div class="col-4">
             <div class="card text-center">
                 <div class="card-body">
                     <div class="fs-2 fw-bold text-secondary" id="skippedCount">0</div>
@@ -110,7 +90,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-4">
             <div class="card text-center">
                 <div class="card-body">
                     <div class="fs-2 fw-bold text-danger" id="errorCount">0</div>
@@ -127,15 +107,16 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0" id="resultsTable">
+                    <caption class="visually-hidden">{% if ui_lang == 'en' %}Newly imported kindergarten records{% else %}سجلات الحضانات المستوردة حديثًا{% endif %}</caption>
                     <thead class="table-light">
                         <tr>
-                            <th>{% if ui_lang == 'en' %}Name (AR){% else %}الاسم (عربي){% endif %}</th>
-                            <th>{% if ui_lang == 'en' %}Name (EN){% else %}الاسم (إنجليزي){% endif %}</th>
-                            <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-                            <th>{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</th>
-                            <th>{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</th>
-                            <th>{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
-                            <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}Name (AR){% else %}الاسم (عربي){% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}Name (EN){% else %}الاسم (إنجليزي){% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
                         </tr>
                     </thead>
                     <tbody id="resultsBody"></tbody>
@@ -191,40 +172,30 @@
 
             const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(data.detail || (_isEn ? 'Import failed' : 'فشل الاستيراد'));
-            }
-
             progress.style.display = 'none';
             results.style.display  = 'block';
 
             document.getElementById('importedCount').textContent = data.inserted || 0;
-            document.getElementById('updatedCount').textContent  = 0;
             document.getElementById('skippedCount').textContent  = (data.skipped_duplicate || 0) + (data.skipped_empty || 0);
             document.getElementById('errorCount').textContent    = data.errors ? data.errors.length : 0;
 
-            if (data.inserted > 0) {
-                const recordsResponse = await fetch('/api/admin/kindergartens/imported?page=1&per_page=100');
-                const recordsData     = await recordsResponse.json();
-
-                if (recordsData.kindergartens && recordsData.kindergartens.length > 0) {
-                    const tbody = document.getElementById('resultsBody');
-                    tbody.innerHTML = '';
-                    recordsData.kindergartens.slice(0, 50).forEach(kg => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${escHtml(kg.name_ar)}</td>
-                            <td>${escHtml(kg.name_en || '')}</td>
-                            <td>${escHtml(kg.governorate)}</td>
-                            <td>${escHtml(kg.district)}</td>
-                            <td>${escHtml(kg.area || '')}</td>
-                            <td>${escHtml(kg.phone)}</td>
-                            <td><span class="badge bg-success text-white">${_isEn ? 'Imported' : 'مستورد'}</span></td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                    document.getElementById('importedTable').style.display = 'block';
-                }
+            if (data.inserted_records && data.inserted_records.length > 0) {
+                const tbody = document.getElementById('resultsBody');
+                tbody.innerHTML = '';
+                data.inserted_records.slice(0, 50).forEach(kg => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${escHtml(kg.name_ar)}</td>
+                        <td>${escHtml(kg.name_en || '')}</td>
+                        <td>${escHtml(kg.governorate)}</td>
+                        <td>${escHtml(kg.district)}</td>
+                        <td>${escHtml(kg.area || '')}</td>
+                        <td>${escHtml(kg.phone)}</td>
+                        <td><span class="badge bg-success text-white">${_isEn ? 'Imported' : 'مستورد'}</span></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                document.getElementById('importedTable').style.display = 'block';
             }
 
             if (data.errors && data.errors.length > 0) {

@@ -4838,6 +4838,7 @@ class KindergartenImportResult(BaseModel):
     skipped_empty: int = 0
     errors: List[Dict[str, Any]] = []
     total_rows: int = 0
+    inserted_records: List[Dict[str, Any]] = []
 
 
 @router.post("/admin/kindergartens/import-excel", response_model=KindergartenImportResult)
@@ -4856,7 +4857,7 @@ def import_kindergartens_from_excel(
       - Column A: اسم الحضانة (عربي)  → name_ar
       - Column B: اسم الحضانة (إنجليزي) → name_en
       - Column C: المحافظة           → governorate
-      - Column D: المدينة            → district
+      - Column D: اللواء             → district
       - Column E: المنطقة            → area
       - Column F: العنوان التفصيلي    → address_line
       - Column G: رقم الهاتف         → contact_phone
@@ -4908,13 +4909,19 @@ def import_kindergartens_from_excel(
 
         name_ar = _clean(row[0])
         name_en = _clean(row[1])
-        governorate = _clean(row[2]) or "غير محدد"
-        district = _clean(row[3]) or "غير محدد"
+        governorate = _clean(row[2])
+        district = _clean(row[3])
         area = _clean(row[4]) or "غير محدد"
         address_line = _clean(row[5]) or "غير محدد"
-        phone = _clean(row[6]) or "غير متوفر"
+        phone = _clean(row[6])
 
-        if not name_ar:
+        # name_ar, governorate, district, and phone are marked "Required" in
+        # the admin UI's column guide -- previously only name_ar was actually
+        # enforced, and blank governorate/district/phone were silently
+        # replaced with placeholder values ("غير محدد"/"غير متوفر") and
+        # inserted into production data anyway, contradicting what the UI
+        # told admins.
+        if not name_ar or not governorate or not district or not phone:
             result.skipped_empty += 1
             continue
 
@@ -4943,6 +4950,14 @@ def import_kindergartens_from_excel(
 
         existing.add(key)
         result.inserted += 1
+        result.inserted_records.append({
+            "name_ar": name_ar,
+            "name_en": name_en or None,
+            "governorate": governorate,
+            "district": district,
+            "area": area,
+            "phone": phone,
+        })
 
     if not dry_run:
         try:

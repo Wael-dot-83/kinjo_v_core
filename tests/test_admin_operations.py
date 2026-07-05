@@ -713,6 +713,55 @@ class TestKGExcelImport:
         ).first()
         assert log is None
 
+    def test_import_response_includes_inserted_records(self, client, test_db):
+        """The frontend's "Imported / Updated Records" table used to fetch
+        GET /api/admin/kindergartens/imported to display what was just
+        imported -- but that endpoint reads the unrelated ImportedKindergarten
+        table (only ever populated by an unreachable CLI helper), never the
+        real Kindergarten rows this endpoint actually inserts. Fixed by
+        having this endpoint return the inserted rows directly."""
+        admin = _make_admin(test_db, "kgimp_adm", "8")
+        headers = _tok(client, "kgimp_adm8")
+        xlsx = self._make_xlsx([
+            ["حضانة السجلات", "Records KG", "إربد", "إربد", "منطقة", "شارع 7", "0777789012"],
+        ])
+        r = client.post("/api/admin/kindergartens/import-excel",
+                        headers=headers,
+                        files={"file": ("records.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+        assert r.status_code == 200
+        body = r.json()
+        assert "inserted_records" in body
+        assert len(body["inserted_records"]) == 1
+        record = body["inserted_records"][0]
+        assert record["name_ar"] == "حضانة السجلات"
+        assert record["governorate"] == "إربد"
+        assert record["district"] == "إربد"
+        assert record["phone"] == "0777789012"
+
+    def test_import_requires_governorate_district_and_phone(self, client, test_db):
+        """The admin UI marks governorate/district/phone as "Required" in
+        its column guide, but the backend previously only enforced name_ar
+        -- blank governorate/district/phone were silently replaced with
+        placeholder values ("غير محدد"/"غير متوفر") and written into
+        production Kindergarten data anyway, contradicting the UI and
+        polluting governorate-based filters/dashboards with unmatched
+        values. Now these rows are skipped like an empty name_ar row."""
+        admin = _make_admin(test_db, "kgimp_adm", "9")
+        headers = _tok(client, "kgimp_adm9")
+        xlsx = self._make_xlsx([
+            ["حضانة بدون محافظة", "No Gov KG", "", "إربد", "منطقة", "شارع 8", "0777890123"],
+            ["حضانة بدون لواء", "No District KG", "إربد", "", "منطقة", "شارع 9", "0777901234"],
+            ["حضانة بدون هاتف", "No Phone KG", "إربد", "إربد", "منطقة", "شارع 10", ""],
+        ])
+        r = client.post("/api/admin/kindergartens/import-excel",
+                        headers=headers,
+                        files={"file": ("missing_required.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["inserted"] == 0
+        assert body["skipped_empty"] == 3
+        assert body["inserted_records"] == []
+
 
 # ---------------------------------------------------------------------------
 # Governance endpoints

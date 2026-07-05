@@ -1161,8 +1161,13 @@ class TestFrontendRoutes:
         response = client.get("/admin/import-kindergartens")
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
-        assert "/api/admin/kindergartens/import" in response.text
-        assert "/api/admin/kindergartens/imported" in response.text
+        assert "/api/admin/kindergartens/import-excel" in response.text
+        # The page used to also call /api/admin/kindergartens/imported to
+        # populate its results table, but that endpoint reads a disjoint
+        # CLI-only table (ImportedKindergarten), never the rows this page's
+        # own upload actually inserted. Fixed to read inserted_records
+        # directly from the import-excel response instead.
+        assert "/api/admin/kindergartens/imported" not in response.text
 
         app.dependency_overrides.clear()
 
