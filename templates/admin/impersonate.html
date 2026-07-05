@@ -1,15 +1,6 @@
 {% extends 'admin_base.html' %}
 {% block title %}{% if ui_lang == 'en' %}Impersonation — KinJo{% else %}انتحال الهوية — KinJo{% endif %}{% endblock %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item">
-    <i class="bi bi-house"></i>
-    <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
-</a>
-<span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Impersonation{% else %}انتحال الهوية{% endif %}</span>
-{% endblock %}
-
 {% block extra_head %}{% endblock %}
 
 {% block content %}

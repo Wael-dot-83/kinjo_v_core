@@ -204,7 +204,7 @@ def impersonation_audit(
 ):
     rows = (
         db.query(AuditLog)
-        .filter(AuditLog.action.in_(["IMPERSONATION_START", "IMPERSONATION_END"]))
+        .filter(AuditLog.action.in_([AuditAction.IMPERSONATION_START, AuditAction.IMPERSONATION_END]))
         .order_by(AuditLog.created_at.desc())
         .limit(limit)
         .all()
