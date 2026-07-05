@@ -1,6 +1,5 @@
 {% extends "admin_base.html" %}
 {% from 'components/filter-row.html' import filter_row_labeled %}
-{% from 'components/data-table.html' import loading_state, pagination %}
 
 {% block title %}{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %} — KinJo{% endblock %}
 
@@ -8,7 +7,7 @@
 
 {% block content %}
 <div class="page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
-  <h1 class="page-title mb-0" cyberlume-glow-text>
+  <h1 class="page-title mb-0">
     <i class="bi bi-clock-history me-2"></i>
     {% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}
   </h1>
@@ -22,8 +21,8 @@
   </div>
 </div>
 
-<div class="cyberlume-card  mb-4">
-    <div class="relative z-10">
+<div class="admin-card mb-4">
+    <div class="position-relative">
         <!-- Filters -->
         <div class="row g-3 mb-4">
             <div class="col-sm-6 col-lg-3">
@@ -71,26 +70,28 @@
             </button>
             <div class="text-on-surface-variant" id="resultsCount" aria-live="polite" aria-atomic="true">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
         </div>
+    </div>
 </div>
 
 <!-- Audit Logs Table -->
-<div class="cyberlume-card ">
-    <div class="relative z-10">
-        <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-            <table class="table table-dark table-hover cyberlume-table align-middle table-hover" id="auditLogsTable" aria-label="{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}">
+<div class="admin-card">
+    <div class="position-relative">
+        <div class="table-responsive rounded-xl">
+            <table class="table table-dark table-hover align-middle" id="auditLogsTable" aria-label="{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}">
+                <caption class="visually-hidden">{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}</caption>
                 <thead class="table-light">
                     <tr>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Date & Time{% else %}التاريخ والوقت{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}User{% else %}المستخدم{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Entity Type{% else %}نوع الكيان{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Entity ID{% else %}معرف الكيان{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Details{% else %}التفاصيل{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}IP Address{% else %}عنوان بروتوكول الإنترنت (IP){% endif %}</th>
+                        <th scope="col" class="text-label-sm font-label-sm text-on-surface-variant text-start">{% if ui_lang == 'en' %}Date & Time{% else %}التاريخ والوقت{% endif %}</th>
+                        <th scope="col" class="text-label-sm font-label-sm text-on-surface-variant text-start">{% if ui_lang == 'en' %}User{% else %}المستخدم{% endif %}</th>
+                        <th scope="col" class="text-label-sm font-label-sm text-on-surface-variant text-start">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</th>
+                        <th scope="col" class="text-label-sm font-label-sm text-on-surface-variant text-start">{% if ui_lang == 'en' %}Entity Type{% else %}نوع الكيان{% endif %}</th>
+                        <th scope="col" class="text-label-sm font-label-sm text-on-surface-variant text-start">{% if ui_lang == 'en' %}Entity ID{% else %}معرف الكيان{% endif %}</th>
+                        <th scope="col" class="text-label-sm font-label-sm text-on-surface-variant text-start">{% if ui_lang == 'en' %}Details{% else %}التفاصيل{% endif %}</th>
+                        <th scope="col" class="text-label-sm font-label-sm text-on-surface-variant text-start">{% if ui_lang == 'en' %}IP Address{% else %}عنوان بروتوكول الإنترنت (IP){% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="auditLogsBody">
-                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <tr>
 <td colspan="7" class="text-center py-4">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
@@ -118,16 +119,15 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="block font-label-sm text-on-surface-variant mb-1" for="exportFormat">{% if ui_lang == 'en' %}File Format{% else %}تنسيق الملف{% endif %}</label>
-                    <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="exportFormat">
+                    <label class="form-label" for="exportFormat">{% if ui_lang == 'en' %}File Format{% else %}تنسيق الملف{% endif %}</label>
+                    <select class="form-select" id="exportFormat">
                         <option value="csv">{% if ui_lang == 'en' %}CSV (Spreadsheet){% else %}CSV (ملف جدولي){% endif %}</option>
                         <option value="json">{% if ui_lang == 'en' %}JSON (Data format){% else %}JSON (صيغة بيانات){% endif %}</option>
-                        <option value="pdf">{% if ui_lang == 'en' %}PDF (Document){% else %}PDF (ملف){% endif %}</option>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="block font-label-sm text-on-surface-variant mb-1" for="exportPeriod">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
-                    <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="exportPeriod">
+                    <label class="form-label" for="exportPeriod">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
+                    <select class="form-select" id="exportPeriod">
                         <option value="7">{% if ui_lang == 'en' %}Last 7 days{% else %}آخر 7 أيام{% endif %}</option>
                         <option value="30">{% if ui_lang == 'en' %}Last 30 days{% else %}آخر 30 يوم{% endif %}</option>
                         <option value="90">{% if ui_lang == 'en' %}Last 3 months{% else %}آخر 3 أشهر{% endif %}</option>
@@ -137,10 +137,11 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]" onclick="doExport()">{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="doExport()">{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}</button>
             </div>
         </div>
+    </div>
 </div>
 {% endblock %}
 

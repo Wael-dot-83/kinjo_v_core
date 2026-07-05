@@ -264,15 +264,42 @@ class AuditLogsManager {
   }
 
   getActionBadgeClass(action) {
-    const classes = {
-      CREATE: "bg-success",
-      UPDATE: "bg-warning",
-      DELETE: "bg-danger",
-      LOGIN: "bg-info",
-      LOGOUT: "bg-secondary",
-      VIEW: "bg-light text-dark",
+    const a = String(action || "").toUpperCase();
+
+    // CREATE/UPDATE/DELETE/LOGIN/VIEW are not real AuditAction values (the
+    // taxonomy in audit_actions.py uses ~100 compound constants like
+    // USER_CREATED, LOGIN_FAILED, BACKUP_DELETED). This exact-match map
+    // matched almost nothing in the live database: ~83%+ of real rows
+    // (dominated by the generic HTTP_POST/etc. catch-all logger in
+    // middleware/security.py) plus most named actions all silently fell
+    // through to the same default gray badge — BACKUP_DELETED and LOGOUT
+    // rendered visually identical. Kept below for any residual caller
+    // still using the old simple keys.
+    const exact = {
+      CREATE: "bg-success", UPDATE: "bg-warning text-dark", DELETE: "bg-danger",
+      LOGIN: "bg-info", LOGOUT: "bg-secondary", VIEW: "bg-light text-dark",
     };
-    return classes[action] || "bg-secondary";
+    if (exact[a]) return exact[a];
+
+    // Mirrors admin_endpoints.py's _CRITICAL_SEVERITY_ACTIONS — actions
+    // with no CREATED/UPDATED/DELETED-style suffix to pattern-match below,
+    // but that the rest of this codebase already treats as its most
+    // sensitive tier.
+    const critical = new Set([
+      "IMPERSONATION_START", "AUDIT_LOG_CLEANUP", "AUDIT_LOG_EXPORT",
+      "ANALYTICS_EXPORT_DOWNLOADED",
+    ]);
+    if (critical.has(a)) return "bg-danger";
+
+    // Pattern classification over the real taxonomy's naming convention —
+    // same idea as getActionLabel()'s token-based Arabic fallback below,
+    // applied to severity instead of translation.
+    if (["DENIED", "FAILED", "LOCKED", "BYPASS", "DELETED"].some((t) => a.includes(t))) return "bg-danger";
+    if (["CREATED", "SUCCESS", "RESOLVED", "COMPLETED", "ACKNOWLEDGED", "RESTORED", "VERIFIED"].some((t) => a.includes(t))) return "bg-success";
+    if (["UPDATED", "CHANGED", "RESET", "EDITED", "OVERRIDE", "CORRECTED"].some((t) => a.includes(t))) return "bg-warning text-dark";
+    if (a === "HTTP_GET" || ["VIEWED", "READ"].some((t) => a.includes(t))) return "bg-light text-dark";
+    if (a.startsWith("HTTP_")) return "bg-info text-dark";
+    return "bg-secondary";
   }
 
   getActionLabel(action) {
