@@ -23,24 +23,59 @@
             {% if messages %}
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
+                    <caption class="visually-hidden">{% if ui_lang == 'en' %}Sent Messages{% else %}الرسائل المرسلة{% endif %}</caption>
                     <thead class="table-light">
                         <tr>
-                            <th>{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %}</th>
-                            <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
-                            <th>{% if ui_lang == 'en' %}Recipients{% else %}المستلمون{% endif %}</th>
-                            <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                            <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}Recipients{% else %}المستلمون{% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                            <th scope="col">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for message in messages %}
+                        {% set status = message.queue_status or 'SENT' %}
+                        {% if status == 'FAILED' %}
+                            {% set status_cls, status_label_en, status_label_ar = 'danger', 'Failed', 'فشلت' %}
+                        {% elif status == 'QUEUED' %}
+                            {% set status_cls, status_label_en, status_label_ar = 'info', 'Queued', 'قيد الإرسال' %}
+                        {% elif status == 'SCHEDULED' %}
+                            {% set status_cls, status_label_en, status_label_ar = 'warning', 'Scheduled', 'مجدولة' %}
+                        {% elif status == 'DRAFT' %}
+                            {% set status_cls, status_label_en, status_label_ar = 'secondary', 'Draft', 'مسودة' %}
+                        {% elif status == 'CANCELLED' %}
+                            {% set status_cls, status_label_en, status_label_ar = 'dark', 'Cancelled', 'ملغاة' %}
+                        {% else %}
+                            {% set status_cls, status_label_en, status_label_ar = 'success', 'Sent', 'مرسلة' %}
+                        {% endif %}
+                        {% set thread_type = message.thread_type %}
+                        {% if thread_type == 'ANNOUNCEMENT' %}
+                            {% set type_label_en, type_label_ar = 'Announcement', 'إعلان' %}
+                        {% elif thread_type == 'BROADCAST' %}
+                            {% set type_label_en, type_label_ar = 'Broadcast', 'بث عام' %}
+                        {% elif thread_type == 'CLASS' %}
+                            {% set type_label_en, type_label_ar = 'Class', 'صف' %}
+                        {% else %}
+                            {% set type_label_en, type_label_ar = 'Direct', 'مباشرة' %}
+                        {% endif %}
                         <tr>
                             <td>{{ message.subject }}</td>
                             <td class="text-muted small text-nowrap">{{ message.created_at.strftime('%Y-%m-%d') }}</td>
                             <td>{{ message.recipient_count }}</td>
-                            <td><span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">{% if ui_lang == 'en' %}Sent{% else %}مرسلة{% endif %}</span></td>
+                            <td><span class="badge bg-{{ status_cls }} bg-opacity-10 text-{{ status_cls }} border border-{{ status_cls }} border-opacity-25">{% if ui_lang == 'en' %}{{ status_label_en }}{% else %}{{ status_label_ar }}{% endif %}</span></td>
                             <td>
-                                <button class="btn btn-sm btn-outline-primary">{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#messageDetailModal"
+                                        data-subject="{{ message.subject }}"
+                                        data-date="{{ message.created_at.strftime('%Y-%m-%d %H:%M') }}"
+                                        data-recipients="{{ message.recipient_count }}"
+                                        data-status="{% if ui_lang == 'en' %}{{ status_label_en }}{% else %}{{ status_label_ar }}{% endif %}"
+                                        data-type="{% if ui_lang == 'en' %}{{ type_label_en }}{% else %}{{ type_label_ar }}{% endif %}"
+                                        data-replies="{% if message.allow_replies %}{% if ui_lang == 'en' %}Yes{% else %}نعم{% endif %}{% else %}{% if ui_lang == 'en' %}No{% else %}لا{% endif %}{% endif %}"
+                                        data-body="{{ message.message_body }}"
+                                        aria-label="{% if ui_lang == 'en' %}View message: {{ message.subject }}{% else %}عرض الرسالة: {{ message.subject }}{% endif %}">
+                                    {% if ui_lang == 'en' %}View{% else %}عرض{% endif %}
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -60,4 +95,47 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="messageDetailModal" tabindex="-1" aria-labelledby="messageDetailSubject" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageDetailSubject"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row mb-3 small">
+                    <dt class="col-sm-4">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</dt>
+                    <dd class="col-sm-8" id="messageDetailDate"></dd>
+                    <dt class="col-sm-4">{% if ui_lang == 'en' %}Recipients{% else %}المستلمون{% endif %}</dt>
+                    <dd class="col-sm-8" id="messageDetailRecipients"></dd>
+                    <dt class="col-sm-4">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</dt>
+                    <dd class="col-sm-8" id="messageDetailStatus"></dd>
+                    <dt class="col-sm-4">{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</dt>
+                    <dd class="col-sm-8" id="messageDetailType"></dd>
+                    <dt class="col-sm-4">{% if ui_lang == 'en' %}Replies Allowed{% else %}السماح بالردود{% endif %}</dt>
+                    <dd class="col-sm-8" id="messageDetailReplies"></dd>
+                </dl>
+                <hr>
+                <p id="messageDetailBody" class="mb-0" style="white-space: pre-wrap;"></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('messageDetailModal')?.addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    if (!btn) return;
+    document.getElementById('messageDetailSubject').textContent = btn.dataset.subject || '';
+    document.getElementById('messageDetailDate').textContent = btn.dataset.date || '';
+    document.getElementById('messageDetailRecipients').textContent = btn.dataset.recipients || '';
+    document.getElementById('messageDetailStatus').textContent = btn.dataset.status || '';
+    document.getElementById('messageDetailType').textContent = btn.dataset.type || '';
+    document.getElementById('messageDetailReplies').textContent = btn.dataset.replies || '';
+    document.getElementById('messageDetailBody').textContent = btn.dataset.body || '';
+});
+</script>
 {% endblock %}

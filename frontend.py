@@ -1522,9 +1522,11 @@ async def admin_messages_list(
         {
             "id": msg.id,
             "subject": msg.subject or "Ø¨Ø¯ÙˆÙ† ÙˆØµÙˆÙ„",
+            "message_body": msg.message_body,
             "created_at": msg.created_at,
             "recipient_count": msg.recipient_count or 0,
             "thread_type": msg.thread_type.value,
+            "queue_status": msg.queue_status.value if msg.queue_status else "SENT",
             "allow_replies": msg.allow_replies,
             "target_mode": msg.target_mode,
             "target_roles": msg.target_roles,
