@@ -141,7 +141,9 @@
                     </div>
                     <div class="display-6 fw-800" id="netAttRate" style="color:#10b981;">—</div>
                     <div class="progress mt-2" style="height:4px;">
-                        <div class="progress-bar bg-success" id="netAttBar" style="width:0%;transition:width 1s;"></div>
+                        <div class="progress-bar bg-success" id="netAttBar" role="progressbar"
+                             aria-label="{% if ui_lang == 'en' %}Average Attendance{% else %}متوسط الحضور{% endif %}"
+                             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="width:0%;transition:width 1s;"></div>
                     </div>
                 </div>
             </div>
@@ -160,7 +162,9 @@
                     </div>
                     <div class="display-6 fw-800" id="netRatioRate" style="color:#8b5cf6;">—</div>
                     <div class="progress mt-2" style="height:4px;">
-                        <div class="progress-bar" id="netRatioBar" style="width:0%;background:#8b5cf6;transition:width 1s;"></div>
+                        <div class="progress-bar" id="netRatioBar" role="progressbar"
+                             aria-label="{% if ui_lang == 'en' %}Average Ratio Compliance{% else %}متوسط التوافق النسبي{% endif %}"
+                             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="width:0%;background:#8b5cf6;transition:width 1s;"></div>
                     </div>
                 </div>
             </div>
@@ -179,7 +183,9 @@
                     </div>
                     <div class="display-6 fw-800 text-primary" id="netGqiScore">—</div>
                     <div class="progress mt-2" style="height:4px;">
-                        <div class="progress-bar bg-primary" id="netGqiBar" style="width:0%;transition:width 1s;"></div>
+                        <div class="progress-bar bg-primary" id="netGqiBar" role="progressbar"
+                             aria-label="{% if ui_lang == 'en' %}Average Governance Score{% else %}متوسط مؤشر الحوكمة{% endif %}"
+                             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="width:0%;transition:width 1s;"></div>
                     </div>
                 </div>
             </div>
@@ -255,23 +261,24 @@
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" id="kpiTable">
+                <caption class="visually-hidden">{% if ui_lang == 'en' %}Per-Kindergarten KPI Breakdown{% else %}تفصيل مؤشرات الأداء لكل حضانة{% endif %}</caption>
                 <thead class="table-light">
                     <tr>
-                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-                        <th class="text-center">
+                        <th scope="col">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                        <th scope="col" class="text-center">
                             {% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
                         </th>
-                        <th class="text-center">
+                        <th scope="col" class="text-center">
                             {% if ui_lang == 'en' %}Ratio{% else %}التناسب{% endif %}
                         </th>
-                        <th class="text-center">
+                        <th scope="col" class="text-center">
                             {% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
                         </th>
-                        <th class="text-center">
+                        <th scope="col" class="text-center">
                             {% if ui_lang == 'en' %}Gov. Score{% else %}الحوكمة{% endif %}
                         </th>
-                        <th class="text-center">
+                        <th scope="col" class="text-center">
                             {% if ui_lang == 'en' %}Band{% else %}المستوى{% endif %}
                         </th>
                     </tr>
@@ -389,9 +396,18 @@
         document.getElementById('netRatioRate').textContent     = fmt(d.avg_ratio_compliance) + '%';
         document.getElementById('netGqiScore').textContent      = fmt(d.avg_gqi_score) + '%';
         document.getElementById('netIncidentRate').textContent  = fmt(d.avg_incident_rate);
-        document.getElementById('netAttBar').style.width   = Math.min(d.avg_attendance_rate || 0, 100) + '%';
-        document.getElementById('netRatioBar').style.width = Math.min(d.avg_ratio_compliance || 0, 100) + '%';
-        document.getElementById('netGqiBar').style.width   = Math.min(d.avg_gqi_score || 0, 100) + '%';
+        const attPct   = Math.min(d.avg_attendance_rate || 0, 100);
+        const ratioPct = Math.min(d.avg_ratio_compliance || 0, 100);
+        const gqiPct   = Math.min(d.avg_gqi_score || 0, 100);
+        const attBar   = document.getElementById('netAttBar');
+        const ratioBar = document.getElementById('netRatioBar');
+        const gqiBar   = document.getElementById('netGqiBar');
+        attBar.style.width   = attPct + '%';
+        attBar.setAttribute('aria-valuenow', attPct);
+        ratioBar.style.width = ratioPct + '%';
+        ratioBar.setAttribute('aria-valuenow', ratioPct);
+        gqiBar.style.width   = gqiPct + '%';
+        gqiBar.setAttribute('aria-valuenow', gqiPct);
     }
 
     /* ── charts ────────────────────────────────────────────────────── */

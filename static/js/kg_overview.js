@@ -398,6 +398,15 @@ class KgOverview {
     this.#dnd.enable('.ko-kpi-grid');
     this.#startRealtime();
     this.#renderLastUpdated();
+    this.#openDeepLinkedKG();
+  }
+
+  /* ── Deep link (e.g. /admin/kg-overview?id=42 from the KPI dashboard) ── */
+  #openDeepLinkedKG() {
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (!id) return;
+    const kg = this.#store.get('kgs').find(k => String(k.id) === String(id));
+    if (kg) this.#openKGPanel(kg);
   }
 
   async #loadOverviewData() {

@@ -215,3 +215,29 @@ class TestKPINetworkSummary:
             assert "attendance_rate" in kg
             assert "governance_band" in kg
             assert kg["governance_band"] in ("RED", "AMBER", "GREEN", "INSUFFICIENT")
+            # kindergarten_name/governorate were missing entirely -- the
+            # /admin/kpi table, chart labels, and search box all read these
+            # fields and rendered/matched nothing without them.
+            assert "kindergarten_name" in kg
+            assert kg["kindergarten_name"]
+            assert "governorate" in kg
+            assert kg["governorate"]
+
+    def test_kpi_network_summary_governorate_filter(
+        self, client, auth_headers_admin, sample_kindergarten
+    ):
+        """The frontend's governorate dropdown sent a `governorate` query
+        param that the endpoint silently ignored (no such parameter
+        existed), so selecting a governorate never filtered anything."""
+        resp = client.get("/api/kpi/network-summary", headers=auth_headers_admin)
+        body = resp.json()
+        if not body["per_kindergarten"]:
+            return
+        gov = body["per_kindergarten"][0]["governorate"]
+        filtered = client.get(
+            "/api/kpi/network-summary",
+            params={"governorate": gov},
+            headers=auth_headers_admin,
+        ).json()
+        assert filtered["kindergarten_count"] <= body["kindergarten_count"]
+        assert all(kg["governorate"] == gov for kg in filtered["per_kindergarten"])

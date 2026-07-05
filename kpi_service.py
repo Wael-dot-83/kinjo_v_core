@@ -5155,6 +5155,7 @@ def get_kpi_recommended_actions(
 def get_kpi_network_summary(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
+    governorate: Optional[str] = Query(None),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -5166,9 +5167,12 @@ def get_kpi_network_summary(
     if start_date is None:
         start_date = end_date - timedelta(days=30)
 
-    kindergartens = db.query(models.Kindergarten).filter(
+    kg_query = db.query(models.Kindergarten).filter(
         models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-    ).all()
+    )
+    if governorate:
+        kg_query = kg_query.filter(models.Kindergarten.governorate == governorate)
+    kindergartens = kg_query.all()
 
     per_kg = []
     attendance_rates = []
@@ -5180,9 +5184,7 @@ def get_kpi_network_summary(
         ar = KPIService.compute_attendance_rate(db, kg.id, start_date, end_date)
         ir = KPIService.compute_incident_rate(db, kg.id, start_date, end_date)
         rc = KPIService.compute_ratio_compliance(db, kg.id, start_date, end_date)
-        gs_tuple = KPIService.compute_governance_score(db, kg.id, start_date, end_date)
-        gs = gs_tuple[0] if isinstance(gs_tuple, tuple) else float(gs_tuple)
-        band = gs_tuple[1] if isinstance(gs_tuple, tuple) else ("GREEN" if gs >= 70 else ("AMBER" if gs >= 40 else "RED"))
+        gs, band = KPIService.compute_governance_score(db, kg.id, start_date, end_date)
 
         attendance_rates.append(ar)
         incident_rates.append(ir)
@@ -5191,6 +5193,8 @@ def get_kpi_network_summary(
 
         per_kg.append({
             "kindergarten_id": kg.id,
+            "kindergarten_name": kg.name_ar or kg.name_en,
+            "governorate": kg.governorate,
             "attendance_rate": ar,
             "incident_rate": ir,
             "ratio_compliance": rc,
