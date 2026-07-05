@@ -1624,6 +1624,46 @@ class TestFrontendRoutes:
 
         app.dependency_overrides.clear()
 
+    def test_admin_profile_days_active_treats_naive_created_at_as_utc(self, client, admin_user):
+        """days_active previously treated a naive created_at as already
+        being Jordan-local time (created.replace(tzinfo=_JORDAN_TZ)),
+        unlike every other timestamp-handling call site in this codebase
+        (e.g. admin_endpoints.py's audit-log formatter), which treats a
+        naive DB timestamp as UTC and converts to Jordan time -- a 3-hour
+        skew that can flip the reported day count near local midnight.
+
+        Fixture: "now" is Jordan midnight; created_at (stored naive, as
+        this DB always stores it) sits 1 day 23 hours before that point
+        when correctly interpreted as UTC-then-converted (-> 1 full day
+        active). The old buggy interpretation adds an extra 3 hours of
+        apparent age, pushing the same row to 2 days active -- a real,
+        reproducible boundary case, not just an arbitrary date pair."""
+        from datetime import datetime, timezone, timedelta
+        import frontend as frontend_module
+
+        _JORDAN_TZ = timezone(timedelta(hours=3))
+        fixed_now_jordan = datetime(2026, 7, 5, 0, 0, 0, tzinfo=_JORDAN_TZ)
+        correct_created_jordan = fixed_now_jordan - timedelta(days=1, hours=23)
+        created_naive_utc = correct_created_jordan.astimezone(timezone.utc).replace(tzinfo=None)
+        admin_user.created_at = created_naive_utc
+
+        class _FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return fixed_now_jordan if tz is not None else fixed_now_jordan.replace(tzinfo=None)
+
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        original_datetime = frontend_module.datetime
+        frontend_module.datetime = _FixedDateTime
+        try:
+            response = client.get("/admin/profile")
+            assert response.status_code == 200
+            assert '<div class="profile-stat-value">1</div>' in response.text
+            assert '<div class="profile-stat-value">2</div>' not in response.text
+        finally:
+            frontend_module.datetime = original_datetime
+            app.dependency_overrides.clear()
+
     # ------------------------------------------------------------------
     # Admin Settings page
     # ------------------------------------------------------------------

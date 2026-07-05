@@ -284,20 +284,10 @@
 </style>
 {% endblock extra_head %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
-  <i class="bi bi-house" aria-hidden="true"></i>
-</a>
-<span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">
-  {% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %}
-</span>
-{% endblock %}
-
 {% block content %}
 
 <!-- ── Profile Hero ── -->
-<div class="profile-hero" role="banner">
+<div class="profile-hero">
   <div class="profile-hero-avatar" aria-hidden="true">
     <img
       src="/static/img/admin_avatar.png"
@@ -561,7 +551,7 @@
                   style="padding-inline-end:2.25rem;"
                 />
                 <button type="button" class="pw-toggle" data-target="field-current-pw"
-                        aria-label="{% if ui_lang == 'en' %}Show/hide password{% else %}إظهار/إخفاء{% endif %}"
+                        aria-label="{% if ui_lang == 'en' %}Show/hide current password{% else %}إظهار/إخفاء كلمة المرور الحالية{% endif %}"
                         style="position:absolute;top:50%;right:.6rem;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;padding:.2rem;">
                   <i class="bi bi-eye" aria-hidden="true"></i>
                 </button>
@@ -582,7 +572,7 @@
                   style="padding-inline-end:2.25rem;"
                 />
                 <button type="button" class="pw-toggle" data-target="field-new-pw"
-                        aria-label="{% if ui_lang == 'en' %}Show/hide password{% else %}إظهار/إخفاء{% endif %}"
+                        aria-label="{% if ui_lang == 'en' %}Show/hide new password{% else %}إظهار/إخفاء كلمة المرور الجديدة{% endif %}"
                         style="position:absolute;top:50%;right:.6rem;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;padding:.2rem;">
                   <i class="bi bi-eye" aria-hidden="true"></i>
                 </button>
@@ -608,7 +598,7 @@
                   style="padding-inline-end:2.25rem;"
                 />
                 <button type="button" class="pw-toggle" data-target="field-confirm-pw"
-                        aria-label="{% if ui_lang == 'en' %}Show/hide password{% else %}إظهار/إخفاء{% endif %}"
+                        aria-label="{% if ui_lang == 'en' %}Show/hide confirm password{% else %}إظهار/إخفاء تأكيد كلمة المرور{% endif %}"
                         style="position:absolute;top:50%;right:.6rem;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;padding:.2rem;">
                   <i class="bi bi-eye" aria-hidden="true"></i>
                 </button>
@@ -657,19 +647,6 @@
             </div>
             <label class="toggle-switch" aria-label="{% if ui_lang == 'en' %}Verbose audit{% else %}سجل تفصيلي{% endif %}">
               <input type="checkbox" id="qs-verbose-audit" checked>
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <hr class="my-0" style="opacity:.1;">
-
-          <div class="d-flex align-items-center justify-content-between gap-3">
-            <div>
-              <div style="font-size:.88rem;font-weight:600;">{% if ui_lang == 'en' %}Allow Impersonation{% else %}السماح بانتحال الهوية{% endif %}</div>
-              <div style="font-size:.75rem;color:#6b7280;">{% if ui_lang == 'en' %}Allow support staff to access this account{% else %}السماح لطاقم الدعم بالوصول لهذا الحساب{% endif %}</div>
-            </div>
-            <label class="toggle-switch" aria-label="{% if ui_lang == 'en' %}Allow impersonation{% else %}السماح بانتحال الهوية{% endif %}">
-              <input type="checkbox" id="qs-impersonation">
               <span class="toggle-slider"></span>
             </label>
           </div>
@@ -754,10 +731,10 @@
       <table class="table table-hover mb-0" aria-label="{% if ui_lang == 'en' %}Recent activity{% else %}النشاط الأخير{% endif %}">
         <thead>
           <tr style="font-size:.76rem;color:#6b7280;background:#f9fafb;">
-            <th class="ps-3 py-2 fw-semibold">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</th>
-            <th class="py-2 fw-semibold">{% if ui_lang == 'en' %}Entity{% else %}الكيان{% endif %}</th>
-            <th class="py-2 fw-semibold">{% if ui_lang == 'en' %}IP Address{% else %}عنوان IP{% endif %}</th>
-            <th class="pe-3 py-2 fw-semibold">{% if ui_lang == 'en' %}Time{% else %}الوقت{% endif %}</th>
+            <th scope="col" class="ps-3 py-2 fw-semibold">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</th>
+            <th scope="col" class="py-2 fw-semibold">{% if ui_lang == 'en' %}Entity{% else %}الكيان{% endif %}</th>
+            <th scope="col" class="py-2 fw-semibold">{% if ui_lang == 'en' %}IP Address{% else %}عنوان IP{% endif %}</th>
+            <th scope="col" class="pe-3 py-2 fw-semibold">{% if ui_lang == 'en' %}Time{% else %}الوقت{% endif %}</th>
           </tr>
         </thead>
         <tbody>
@@ -795,6 +772,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>window.KINJO_LANG = "{{ ui_lang }}";</script>
 <script>
 (function () {
   'use strict';
@@ -952,25 +930,31 @@
   });
 
   // ── Password visibility toggles ────────────────────────────────────────────
+  const PW_FIELD_LABEL = {
+    'field-current-pw': LANG === 'en' ? 'current password' : 'كلمة المرور الحالية',
+    'field-new-pw': LANG === 'en' ? 'new password' : 'كلمة المرور الجديدة',
+    'field-confirm-pw': LANG === 'en' ? 'confirm password' : 'تأكيد كلمة المرور',
+  };
   document.querySelectorAll('.pw-toggle').forEach((btn) => {
     btn.addEventListener('click', () => {
       const input = document.getElementById(btn.dataset.target);
       if (!input) return;
       const icon = btn.querySelector('i');
+      const fieldLabel = PW_FIELD_LABEL[btn.dataset.target] || (LANG === 'en' ? 'password' : 'كلمة المرور');
       if (input.type === 'password') {
         input.type = 'text';
         icon.className = 'bi bi-eye-slash';
-        btn.setAttribute('aria-label', LANG === 'en' ? 'Hide password' : 'إخفاء كلمة المرور');
+        btn.setAttribute('aria-label', LANG === 'en' ? `Hide ${fieldLabel}` : `إخفاء ${fieldLabel}`);
       } else {
         input.type = 'password';
         icon.className = 'bi bi-eye';
-        btn.setAttribute('aria-label', LANG === 'en' ? 'Show password' : 'إظهار كلمة المرور');
+        btn.setAttribute('aria-label', LANG === 'en' ? `Show ${fieldLabel}` : `إظهار ${fieldLabel}`);
       }
     });
   });
 
   // ── Quick Settings (localStorage) ─────────────────────────────────────────
-  ['qs-bilingual', 'qs-verbose-audit', 'qs-impersonation'].forEach((id) => {
+  ['qs-bilingual', 'qs-verbose-audit'].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     const saved = localStorage.getItem('kinjo_' + id);

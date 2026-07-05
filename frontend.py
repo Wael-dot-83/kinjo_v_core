@@ -1831,7 +1831,7 @@ async def admin_profile_page(
     current_user: User = Depends(get_current_user_or_redirect),
     db: Session = Depends(get_db),
 ):
-    """Admin profile page â€” view account details and change password"""
+    """Admin profile page — view account details and change password"""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
@@ -1850,7 +1850,9 @@ async def admin_profile_page(
     if current_user.created_at:
         created = current_user.created_at
         if created.tzinfo is None:
-            created = created.replace(tzinfo=_JORDAN_TZ)
+            created = created.replace(tzinfo=timezone.utc).astimezone(_JORDAN_TZ)
+        else:
+            created = created.astimezone(_JORDAN_TZ)
         days_active = max(0, (now_jordan - created).days)
 
     # Recent audit events (last 10) for the activity feed
