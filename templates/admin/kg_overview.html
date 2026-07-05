@@ -138,7 +138,7 @@ if (!window.Chart) {
 </script>
 <script>
   /* Pass server-side lang to JS before kg_overview.js boots */
-  window.KINJO_LANG = {{ '"en"' if ui_lang == 'en' else '"ar"' }};
+  window.KINJO_LANG = {{ ('"en"' if ui_lang == 'en' else '"ar"') | safe }};
 </script>
 <script defer src="/static/js/kg_overview.js?v=1.0"></script>
 {% endblock %}

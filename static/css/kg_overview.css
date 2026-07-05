@@ -301,6 +301,13 @@
 .ko-data-panel.ko-hidden {
   display: none;
 }
+/* kg_overview.js also toggles .ko-hidden on .ko-kpi-card from the "Customize
+   Components" drawer (persisted to localStorage via KoPersist) — this rule
+   was scoped only to .ko-data-panel, so hiding a KPI card there was a
+   silent no-op: the preference was saved but the card never disappeared. */
+.ko-kpi-card.ko-hidden {
+  display: none;
+}
 .ko-chart-wrap {
   padding: 1.25rem;
   position: relative;
@@ -749,6 +756,12 @@
   align-items: center;
   justify-content: center;
 }
-.ko-pg-btn:hover:not([disabled]) { background: var(--ko-surface-alt); border-color: var(--ko-primary); }
-.ko-pg-btn.active { background: var(--ko-primary); border-color: var(--ko-primary); color: #fff; font-weight: 700; }
+/* --ko-primary/--ko-surface-alt were never defined anywhere in this file's
+   own token block or any globally-loaded stylesheet — the active/hover
+   pagination states rendered with no background or border color at all,
+   making the current-page indicator visually indistinguishable from the
+   others. --ko-blue is this file's actual primary accent; --ko-surface2 is
+   its existing "alternate surface" shade. */
+.ko-pg-btn:hover:not([disabled]) { background: var(--ko-surface2); border-color: var(--ko-blue); }
+.ko-pg-btn.active { background: var(--ko-blue); border-color: var(--ko-blue); color: #fff; font-weight: 700; }
 .ko-pg-btn[disabled] { opacity: .4; cursor: default; }

@@ -75,7 +75,14 @@ function mapOverviewPayload(payload) {
   const kindergartens = Array.isArray(payload?.kindergartens) ? payload.kindergartens : [];
   const kgs = kindergartens.map((kg) => {
     const children = Number(kg.children_count ?? kg.active_children ?? kg.children ?? 0);
-    const occupancy = Number(kg.occupancy_rate ?? 0);
+    // GET /api/admin/kg-overview has never sent occupancy_rate/capacity/total_capacity —
+    // only capacity_utilization (a real, already-computed percentage; see
+    // admin_endpoints.py's cap_util = enrolled/total_capacity*100). Reading the
+    // wrong field names meant `occupancy` was always 0, so `capacity` always
+    // fell through to `children` itself, and every kindergarten's downstream
+    // occupancy display computed as children/children = 100%, regardless of
+    // its real enrollment vs. real capacity.
+    const occupancy = Number(kg.capacity_utilization ?? kg.occupancy_rate ?? 0);
     const capacity = Number(kg.capacity ?? kg.total_capacity ?? (occupancy > 0 ? Math.ceil(children / (occupancy / 100)) : children));
     const name = window.KINJO_LANG === 'en'
       ? (kg.name_en || kg.name_ar || kg.name || `KG ${kg.id}`)
@@ -459,21 +466,26 @@ class KgOverview {
         <span class="ko-live-badge" id="ko-live-badge">
           <span class="ko-rt-dot"></span>${isAr ? 'مباشر' : 'Live'}
         </span>
-        <button class="ko-icon-btn" id="ko-refresh-btn" title="${isAr ? 'تحديث' : 'Refresh'}">
-          <i class="bi bi-arrow-clockwise"></i>
+        <button class="ko-icon-btn" id="ko-refresh-btn" title="${isAr ? 'تحديث' : 'Refresh'}" aria-label="${isAr ? 'تحديث' : 'Refresh'}">
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
         </button>
-        <button class="ko-icon-btn" id="ko-customise-btn" title="${isAr ? 'تخصيص' : 'Customize'}">
-          <i class="bi bi-sliders"></i>
+        <button class="ko-icon-btn" id="ko-customise-btn" title="${isAr ? 'تخصيص' : 'Customize'}" aria-label="${isAr ? 'تخصيص العناصر' : 'Customize components'}">
+          <i class="bi bi-sliders" aria-hidden="true"></i>
         </button>
-        <button class="ko-icon-btn" id="ko-theme-btn" title="${isAr ? 'الوضع الليلي' : 'Dark mode'}">
-          <i class="bi ${this.#store.get('theme') === 'dark' ? 'bi-sun-fill' : 'bi-moon-fill'}"></i>
+        <button class="ko-icon-btn" id="ko-theme-btn" title="${isAr ? 'الوضع الليلي' : 'Dark mode'}" aria-label="${isAr ? 'تبديل الوضع الليلي' : 'Toggle dark mode'}">
+          <i class="bi ${this.#store.get('theme') === 'dark' ? 'bi-sun-fill' : 'bi-moon-fill'}" aria-hidden="true"></i>
         </button>
-        <button class="ko-icon-btn" id="ko-export-btn" title="${isAr ? 'تصدير' : 'Export'}">
-          <i class="bi bi-download"></i>
+        <button class="ko-icon-btn" id="ko-export-btn" title="${isAr ? 'تصدير' : 'Export'}" aria-label="${isAr ? 'تصدير البيانات كملف CSV' : 'Export data as CSV'}">
+          <i class="bi bi-download" aria-hidden="true"></i>
         </button>
       </div>`;
 
-    /* Period buttons */
+    /* Period buttons — unlike governorate/kg (client-side-only filters over
+       an already-fetched full dataset), `period` genuinely changes the
+       server-side attendance date window (admin_endpoints.py), so choosing
+       "Today"/"Week"/"Month" used to have no visible effect until the next
+       manual refresh or the 60s auto-poll: #onFilterChange() only re-rendered
+       already-fetched data, it never called #loadOverviewData() again. */
     bar.querySelectorAll('.ko-period-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const p = btn.dataset.period;
@@ -482,7 +494,7 @@ class KgOverview {
         const dateWrap = document.getElementById('ko-date-range-wrap');
         dateWrap.style.display = p === 'custom' ? '' : 'none';
         this.#store.set({ period: p });
-        this.#onFilterChange();
+        this.#onPeriodChange();
       });
     });
 
@@ -671,6 +683,7 @@ class KgOverview {
       <div class="ko-data-panel ${this.#currentView !== 'table' ? 'ko-hidden' : ''}" id="ko-view-table">
         <div style="overflow-x:auto;">
           <table class="ko-table" id="ko-kg-table">
+            <caption class="visually-hidden">${isAr ? 'قائمة الحضانات مع مؤشرات الأداء' : 'Kindergarten list with performance indicators'}</caption>
             <thead>
               <tr>
                 ${[
@@ -681,7 +694,7 @@ class KgOverview {
                   { k:'attendance', ar:'الحضور %',  en:'Attendance %'  },
                   { k:'alerts', ar:'التنبيهات',     en:'Alerts'        },
                   { k:'status', ar:'الحالة',        en:'Status'        },
-                ].map(c => `<th data-sort="${c.k}">${isAr ? c.ar : c.en} <i class="bi bi-arrow-down-up" style="opacity:.4;font-size:.7em"></i></th>`).join('')}
+                ].map(c => `<th scope="col" data-sort="${c.k}" tabindex="0" role="button" aria-sort="none">${isAr ? c.ar : c.en} <i class="bi bi-arrow-down-up" style="opacity:.4;font-size:.7em" aria-hidden="true"></i></th>`).join('')}
               </tr>
             </thead>
             <tbody id="ko-table-body"></tbody>
@@ -717,9 +730,17 @@ class KgOverview {
       });
     });
 
-    /* Table sort */
+    /* Table sort — was mouse-only (no tabindex/keydown), and the `th`
+       argument was never used inside #sortTable, so there was no aria-sort
+       or icon-direction feedback for any sort state either. */
     sec.querySelectorAll('[data-sort]').forEach(th => {
       th.addEventListener('click', () => this.#sortTable(th.dataset.sort, th));
+      th.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.#sortTable(th.dataset.sort, th);
+        }
+      });
     });
 
     this.#renderActiveView();
@@ -765,7 +786,8 @@ class KgOverview {
       const cap     = Math.max(0, Math.min(100, Math.round((kg.children / kg.capacity) * 100)));
       const safeId  = koEscape(kg.id);
       return `
-        <div class="ko-kg-card" data-kg-id="${safeId}">
+        <div class="ko-kg-card" data-kg-id="${safeId}" role="button" tabindex="0"
+             aria-label="${koEscape(kg.name)} — ${isAr ? 'عرض التفاصيل' : 'View details'}">
           <div class="ko-kg-card-name">${koEscape(kg.name)}</div>
           <div class="ko-kg-card-meta">${koEscape(kg.gov)} · ${kg.children} ${isAr ? 'طفل' : 'children'}</div>
           <div class="ko-kg-bar-wrap">
@@ -789,9 +811,13 @@ class KgOverview {
     }).join('');
 
     wrap.querySelectorAll('.ko-kg-card').forEach(card => {
-      card.addEventListener('click', () => {
+      const open = () => {
         const kg = kgs.find(k => String(k.id) === card.dataset.kgId);
         if (kg) this.#openKGPanel(kg);
+      };
+      card.addEventListener('click', open);
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
       });
     });
 
@@ -854,6 +880,18 @@ class KgOverview {
       if (dir === 'asc') return va > vb ? 1 : -1;
       return va < vb ? 1 : -1;
     });
+    if (th) {
+      const row = th.closest('tr');
+      row?.querySelectorAll('[data-sort]').forEach(otherTh => {
+        if (otherTh === th) return;
+        otherTh.setAttribute('aria-sort', 'none');
+        const icon = otherTh.querySelector('i');
+        if (icon) icon.className = 'bi bi-arrow-down-up';
+      });
+      th.setAttribute('aria-sort', dir === 'asc' ? 'ascending' : 'descending');
+      const icon = th.querySelector('i');
+      if (icon) icon.className = dir === 'asc' ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
+    }
     this.#renderTable(kgs);
   }
 
@@ -885,7 +923,8 @@ class KgOverview {
       const alCls  = kg.alerts === 0 ? 'green' : kg.alerts <= 2 ? 'amber' : 'red';
       const safeId = koEscape(kg.id);
       return `
-        <tr style="cursor:pointer" data-kg-id="${safeId}">
+        <tr style="cursor:pointer" data-kg-id="${safeId}" tabindex="0" role="button"
+            aria-label="${koEscape(kg.name)} — ${isAr ? 'عرض التفاصيل' : 'View details'}">
           <td><strong>${koEscape(kg.name)}</strong></td>
           <td>${koEscape(kg.gov)}</td>
           <td>${kg.children}</td>
@@ -897,9 +936,13 @@ class KgOverview {
     }).join('');
 
     tbody.querySelectorAll('tr[data-kg-id]').forEach(row => {
-      row.addEventListener('click', () => {
+      const open = () => {
         const kg = kgs.find(k => String(k.id) === row.dataset.kgId);
         if (kg) this.#openKGPanel(kg);
+      };
+      row.addEventListener('click', open);
+      row.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
       });
     });
 
@@ -1033,11 +1076,13 @@ class KgOverview {
           </div>
         </div>
         <div class="ko-alert-actions">
-          <button class="ko-alert-btn view" data-action="view-alert" data-id="${koEscape(a.id)}">
-            <i class="bi bi-eye me-1"></i>${isAr ? 'عرض' : 'View'}
+          <button class="ko-alert-btn view" data-action="view-alert" data-id="${koEscape(a.id)}"
+                  aria-label="${isAr ? 'عرض' : 'View'} — ${koEscape(a.title)} (${koEscape(a.kg)})">
+            <i class="bi bi-eye me-1" aria-hidden="true"></i>${isAr ? 'عرض' : 'View'}
           </button>
-          <button class="ko-alert-btn dismiss" data-action="dismiss-alert" data-id="${koEscape(a.id)}">
-            <i class="bi bi-x me-1"></i>${isAr ? 'تجاهل' : 'Dismiss'}
+          <button class="ko-alert-btn dismiss" data-action="dismiss-alert" data-id="${koEscape(a.id)}"
+                  aria-label="${isAr ? 'تجاهل' : 'Dismiss'} — ${koEscape(a.title)} (${koEscape(a.kg)})">
+            <i class="bi bi-x me-1" aria-hidden="true"></i>${isAr ? 'تجاهل' : 'Dismiss'}
           </button>
         </div>
       </div>`).join('');
@@ -1281,6 +1326,19 @@ class KgOverview {
   #onFilterChange() {
     this.#renderActiveView();
     this.#savePrefs();
+  }
+
+  async #onPeriodChange() {
+    this.#savePrefs();
+    try {
+      await this.#loadOverviewData();
+      this.#updateKPIValues();
+      this.#renderActiveView();
+      this.#renderAlertItems();
+      this.#renderLastUpdated();
+    } catch (error) {
+      console.error('[KgOverview] period change refetch failed', error);
+    }
   }
 
   async #refresh({ silent = false } = {}) {
