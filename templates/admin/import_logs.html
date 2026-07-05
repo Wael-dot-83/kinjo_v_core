@@ -28,7 +28,6 @@
         <label for="typeFilter" class="form-label small fw-semibold">{% if ui_lang == 'en' %}Import Type{% else %}نوع الاستيراد{% endif %}</label>
         <select id="typeFilter" class="form-select form-select-sm" aria-label="{% if ui_lang == 'en' %}Import Type{% else %}نوع الاستيراد{% endif %}">
           <option value="">{% if ui_lang == 'en' %}All Types{% else %}جميع الأنواع{% endif %}</option>
-          <option value="CSV_USERS">{% if ui_lang == 'en' %}CSV — Users{% else %}CSV — مستخدمون{% endif %}</option>
           <option value="EXCEL_KINDERGARTENS">{% if ui_lang == 'en' %}Excel — Kindergartens{% else %}Excel — حضانات{% endif %}</option>
         </select>
       </div>
@@ -81,17 +80,18 @@
       </div>
       <div class="table-responsive" id="logsTableWrap" style="display:none;">
         <table class="table table-hover mb-0">
+          <caption class="visually-hidden">{% if ui_lang == 'en' %}Import History{% else %}سجل الاستيراد{% endif %}</caption>
           <thead class="table-light">
             <tr>
-              <th class="ps-4">{% if ui_lang == 'en' %}ID{% else %}الرقم{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}File{% else %}الملف{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Imported By{% else %}بواسطة{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Rows{% else %}الصفوف{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Errors{% else %}الأخطاء{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
-              <th><span class="visually-hidden">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</span></th>
+              <th scope="col" class="ps-4">{% if ui_lang == 'en' %}ID{% else %}الرقم{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}File{% else %}الملف{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Imported By{% else %}بواسطة{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Rows{% else %}الصفوف{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Errors{% else %}الأخطاء{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+              <th scope="col"><span class="visually-hidden">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</span></th>
             </tr>
           </thead>
           <tbody id="logsTableBody"></tbody>
@@ -99,6 +99,9 @@
       </div>
     </div>
   </div>
+  <nav aria-label="{% if ui_lang == 'en' %}Pagination{% else %}التنقل بين الصفحات{% endif %}" id="logsPaginationNav" class="d-none border-top py-2">
+    <ul class="pagination justify-content-center mb-0" id="logsPagination"></ul>
+  </nav>
 </div>
 
 <!-- Detail Modal -->
@@ -120,6 +123,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>window.KINJO_LANG = "{{ ui_lang }}";</script>
 <script>
 (function () {
   'use strict';
@@ -138,7 +142,10 @@
     return `<span class="badge bg-${BADGE[s] || 'secondary'}">${s}</span>`;
   }
 
-  async function loadLogs() {
+  let currentPage = 1;
+
+  async function loadLogs(page) {
+    currentPage = page || 1;
     document.getElementById('logsLoading').style.display = '';
     document.getElementById('logsEmpty').style.display = 'none';
     document.getElementById('logsTableWrap').style.display = 'none';
@@ -152,6 +159,7 @@
     if (statusVal) params.set('status', statusVal);
     if (fromVal) params.set('from', fromVal);
     if (toVal) params.set('to', toVal);
+    params.set('page', currentPage);
 
     try {
       const res = await fetch(`/api/admin/imports/logs?${params}`);
@@ -161,6 +169,7 @@
       document.getElementById('logsLoading').style.display = 'none';
       if (!logs.length) {
         document.getElementById('logsEmpty').style.display = '';
+        document.getElementById('logsPaginationNav').classList.add('d-none');
         return;
       }
       const tbody = document.getElementById('logsTableBody');
@@ -174,16 +183,36 @@
           <td>${log.error_count ? `<span class="text-danger fw-semibold">${Number(log.error_count)}</span>` : '<span class="text-muted">0</span>'}</td>
           <td>${statusBadge(log.status)}</td>
           <td class="small text-muted">${log.created_at ? new Date(log.created_at).toLocaleString(_isEn ? 'en-GB' : 'ar-SA') : '—'}</td>
-          <td><button class="btn btn-sm btn-link p-0" data-log-id="${Number(log.id)}" aria-label="${_isEn ? 'View details' : 'عرض التفاصيل'}"><i class="bi bi-eye" aria-hidden="true"></i></button></td>
+          <td><button class="btn btn-sm btn-link p-0" data-log-id="${Number(log.id)}" aria-label="${_isEn ? `View details for import #${log.id}` : `عرض تفاصيل الاستيراد رقم ${log.id}`}"><i class="bi bi-eye" aria-hidden="true"></i></button></td>
         </tr>
       `).join('');
       document.getElementById('logsTableWrap').style.display = '';
+      renderPagination(data.page || 1, data.pages || 1);
     } catch (err) {
       document.getElementById('logsLoading').style.display = 'none';
       const emptyEl = document.getElementById('logsEmpty');
       emptyEl.innerHTML = `<i class="bi bi-exclamation-circle fs-1 mb-3 d-block text-danger opacity-75"></i>${_isEn ? 'Failed to load logs: ' : 'فشل التحميل: '}${escHtml(err.message)}`;
       emptyEl.style.display = '';
+      document.getElementById('logsPaginationNav').classList.add('d-none');
     }
+  }
+
+  function renderPagination(page, pages) {
+    const nav = document.getElementById('logsPaginationNav');
+    const list = document.getElementById('logsPagination');
+    if (pages <= 1) { nav.classList.add('d-none'); return; }
+    nav.classList.remove('d-none');
+    let html = '';
+    if (page > 1) {
+      html += `<li class="page-item"><a class="page-link" href="#" data-page="${page - 1}">${_isEn ? 'Previous' : 'السابق'}</a></li>`;
+    }
+    for (let i = Math.max(1, page - 2); i <= Math.min(pages, page + 2); i++) {
+      html += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+    }
+    if (page < pages) {
+      html += `<li class="page-item"><a class="page-link" href="#" data-page="${page + 1}">${_isEn ? 'Next' : 'التالي'}</a></li>`;
+    }
+    list.innerHTML = html;
   }
 
   async function showDetail(id) {
@@ -209,7 +238,8 @@
         </dl>
         ${errRows ? `<hr><h6 class="fw-semibold">${_isEn ? 'Error Details' : 'تفاصيل الأخطاء'}</h6>
           <div class="table-responsive"><table class="table table-sm table-bordered">
-            <thead><tr><th>${_isEn ? 'Row' : 'صف'}</th><th>${_isEn ? 'Field' : 'حقل'}</th><th>${_isEn ? 'Error' : 'خطأ'}</th></tr></thead>
+            <caption class="visually-hidden">${_isEn ? 'Error Details' : 'تفاصيل الأخطاء'}</caption>
+            <thead><tr><th scope="col">${_isEn ? 'Row' : 'صف'}</th><th scope="col">${_isEn ? 'Field' : 'حقل'}</th><th scope="col">${_isEn ? 'Error' : 'خطأ'}</th></tr></thead>
             <tbody>${errRows}</tbody>
           </table></div>` : ''}
       `;
@@ -223,15 +253,22 @@
     if (btn) showDetail(btn.dataset.logId);
   });
 
-  document.getElementById('applyFiltersBtn').addEventListener('click', loadLogs);
+  document.getElementById('logsPagination').addEventListener('click', function (e) {
+    const link = e.target.closest('a[data-page]');
+    if (!link) return;
+    e.preventDefault();
+    loadLogs(parseInt(link.dataset.page, 10));
+  });
+
+  document.getElementById('applyFiltersBtn').addEventListener('click', () => loadLogs(1));
   document.getElementById('resetFiltersBtn').addEventListener('click', function () {
     document.getElementById('typeFilter').value = '';
     document.getElementById('statusFilter').value = '';
     document.getElementById('dateFrom').value = '';
     document.getElementById('dateTo').value = '';
-    loadLogs();
+    loadLogs(1);
   });
-  document.getElementById('refreshBtn').addEventListener('click', loadLogs);
+  document.getElementById('refreshBtn').addEventListener('click', () => loadLogs(currentPage));
 
   loadLogs();
 })();

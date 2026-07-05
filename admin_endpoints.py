@@ -4969,6 +4969,14 @@ def import_kindergartens_from_excel(
             metadata={"imported_count": result.inserted, "errors": len(row_errors)},
             sensitivity_level=2,
         )
+        db.add(models.ImportLog(
+            file_name=file.filename,
+            total_rows=len(rows),
+            imported_count=result.inserted,
+            skipped_count=result.skipped_duplicate + result.skipped_empty,
+            errors_json=row_errors or None,
+        ))
+        db.commit()
 
     return result
 
@@ -5448,19 +5456,51 @@ async def list_import_logs(
     request: Request,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
+    type: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None, alias="from"),
+    date_to: Optional[str] = Query(None, alias="to"),
     current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """List import logs with pagination."""
+    """List import logs with pagination.
+
+    `status` (SUCCESS/PARTIAL/FAILED) is derived at serialization time from
+    imported_count/errors_json rather than being a stored column, so it is
+    filtered in Python after fetching the SQL-filterable subset (date range
+    only); ImportLog rows are periodic admin actions, not a high-volume
+    table, so this stays a single query with no N+1.
+    """
     query = db.query(models.ImportLog).order_by(models.ImportLog.created_at.desc())
-    total = query.count()
-    logs = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    if date_from:
+        try:
+            query = query.filter(models.ImportLog.created_at >= datetime.fromisoformat(date_from))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            query = query.filter(models.ImportLog.created_at <= datetime.fromisoformat(date_to))
+        except ValueError:
+            pass
+
+    serialized = [_serialize_import_log(lg) for lg in query.all()]
+
+    if type:
+        serialized = [lg for lg in serialized if lg["import_type"] == type]
+    if status:
+        serialized = [lg for lg in serialized if lg["status"] == status]
+
+    total = len(serialized)
+    start = (page - 1) * per_page
+    page_items = serialized[start:start + per_page]
+
     return {
-        "logs": [_serialize_import_log(lg) for lg in logs],
+        "logs": page_items,
         "total": total,
         "page": page,
         "per_page": per_page,
-        "pages": (total + per_page - 1) // per_page,
+        "pages": (total + per_page - 1) // per_page if total else 0,
     }
 
 

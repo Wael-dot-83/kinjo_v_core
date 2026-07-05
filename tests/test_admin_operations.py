@@ -674,6 +674,45 @@ class TestKGExcelImport:
         assert r.status_code == 200
         assert r.json().get("skipped_duplicate", 0) >= 1
 
+    def test_import_writes_an_import_log_row(self, client, test_db):
+        """This is the only web-facing kindergarten import route (the CLI
+        helper in kindergarten_import_service.py is unreachable from any
+        route), but it never wrote to ImportLog -- so /admin/import-logs
+        would stay permanently empty for any real admin-driven import.
+        A non-dry-run import must create a matching ImportLog row."""
+        admin = _make_admin(test_db, "kgimp_adm", "6")
+        headers = _tok(client, "kgimp_adm6")
+        xlsx = self._make_xlsx([
+            ["حضانة السجل", "Log KG", "عمان", "عمان", "منطقة", "شارع 5", "0777567890"],
+        ])
+        r = client.post("/api/admin/kindergartens/import-excel",
+                        headers=headers,
+                        files={"file": ("logged.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+        assert r.status_code == 200
+
+        log = test_db.query(models.ImportLog).filter(
+            models.ImportLog.file_name == "logged.xlsx"
+        ).first()
+        assert log is not None
+        assert log.total_rows == 1
+        assert log.imported_count == 1
+
+    def test_dry_run_import_does_not_write_an_import_log_row(self, client, test_db):
+        """A preview (dry_run=true) must not create a permanent log entry."""
+        admin = _make_admin(test_db, "kgimp_adm", "7")
+        headers = _tok(client, "kgimp_adm7")
+        xlsx = self._make_xlsx([
+            ["حضانة معاينة", "Preview KG", "عمان", "عمان", "منطقة", "شارع 6", "0777678901"],
+        ])
+        r = client.post("/api/admin/kindergartens/import-excel?dry_run=true",
+                        headers=headers,
+                        files={"file": ("preview.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
+        assert r.status_code == 200
+        log = test_db.query(models.ImportLog).filter(
+            models.ImportLog.file_name == "preview.xlsx"
+        ).first()
+        assert log is None
+
 
 # ---------------------------------------------------------------------------
 # Governance endpoints

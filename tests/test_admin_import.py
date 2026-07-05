@@ -197,6 +197,82 @@ class TestImportLogs:
         assert r.status_code == 200
         assert r.json()["status"] == "FAILED"
 
+    def test_list_import_logs_status_filter_actually_filters(self, client, test_db):
+        """The frontend's Status filter sent a `status` query param the
+        endpoint's signature never declared -- selecting a status always
+        returned the same unfiltered first page."""
+        from models import ImportLog
+        _create_admin(test_db)
+        token = _get_admin_token(client)
+        success_log = ImportLog(file_name="ok.xlsx", total_rows=1, imported_count=1,
+                                 updated_count=0, skipped_count=0, errors_json=None)
+        failed_log = ImportLog(file_name="bad.xlsx", total_rows=1, imported_count=0,
+                                updated_count=0, skipped_count=0,
+                                errors_json=[{"row": 1, "error": "x"}])
+        test_db.add_all([success_log, failed_log])
+        test_db.commit()
+
+        r = client.get(
+            "/api/admin/imports/logs?status=FAILED",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert all(log["status"] == "FAILED" for log in data["logs"])
+        assert any(log["filename"] == "bad.xlsx" for log in data["logs"])
+        assert not any(log["filename"] == "ok.xlsx" for log in data["logs"])
+
+    def test_list_import_logs_type_filter_actually_filters(self, client, test_db):
+        """The Type filter offered a "CSV — Users" option that could never
+        match anything (no CSV-user import ever writes to ImportLog, and
+        import_type is always hardcoded to EXCEL_KINDERGARTENS) -- the
+        dead option was removed from the template, but the `type` param
+        itself must still work for the one real value."""
+        from models import ImportLog
+        _create_admin(test_db)
+        token = _get_admin_token(client)
+        test_db.add(ImportLog(file_name="a.xlsx", total_rows=1, imported_count=1,
+                               updated_count=0, skipped_count=0))
+        test_db.commit()
+
+        r = client.get(
+            "/api/admin/imports/logs?type=EXCEL_KINDERGARTENS",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        assert r.json()["total"] >= 1
+
+        r2 = client.get(
+            "/api/admin/imports/logs?type=NONEXISTENT_TYPE",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r2.status_code == 200
+        assert r2.json()["total"] == 0
+
+    def test_list_import_logs_date_range_filter(self, client, test_db):
+        """The Date From/To filters sent `from`/`to` params the endpoint
+        never declared at all."""
+        from models import ImportLog
+        _create_admin(test_db)
+        token = _get_admin_token(client)
+        test_db.add(ImportLog(file_name="dated.xlsx", total_rows=1, imported_count=1,
+                               updated_count=0, skipped_count=0))
+        test_db.commit()
+
+        r = client.get(
+            "/api/admin/imports/logs?from=2000-01-01",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        assert r.json()["total"] >= 1
+
+        r2 = client.get(
+            "/api/admin/imports/logs?to=2000-01-01",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r2.status_code == 200
+        assert not any(log["filename"] == "dated.xlsx" for log in r2.json()["logs"])
+
 
 class TestImportErrorReport:
     def test_error_report_endpoint_uses_post(self, client, test_db):
