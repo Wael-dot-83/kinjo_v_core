@@ -2637,6 +2637,175 @@ class TestMissingEndpointsCoverage3:
         assert data["total"] >= 1
         assert "by_severity" in data
         assert "by_type" in data
+
+        # These fields were missing entirely -- the admin safety-analytics
+        # page's KPI cards, charts, and tables all read them and rendered
+        # blank/empty regardless of real data.
+        for field in ("by_classification", "open", "closed", "parent_informed",
+                      "parent_not_informed", "trend", "by_kindergarten",
+                      "repeated_children"):
+            assert field in data, f"missing field: {field}"
+        assert data["open"] + data["closed"] == data["total"]
+        assert data["parent_informed"] + data["parent_not_informed"] == data["total"]
+        assert any(row["kindergarten_id"] == sample_kindergarten.id for row in data["by_kindergarten"])
+        kg_row = next(row for row in data["by_kindergarten"] if row["kindergarten_id"] == sample_kindergarten.id)
+        assert "is_high_risk" in kg_row
+        assert "name_ar" in kg_row and "name_en" in kg_row
+
+    def test_safety_analytics_classification_filter_matches_only_that_class(
+        self, client, test_db, admin_user, sample_kindergarten
+    ):
+        """classification was accepted by the frontend but silently dropped
+        by the endpoint (no such parameter existed), so the dropdown had no
+        effect. Also regression-guards the null-classification bucket: it
+        must be labelled "UNKNOWN", not "OTHER" (a real, distinct
+        classification value) -- conflating the two meant filtering by the
+        real "OTHER" value matched zero rows even when OTHER-classified
+        incidents existed."""
+        par_user = models.User(
+            username="inc_parent_cls",
+            email="inc_parent_cls@test.com",
+            hashed_password=get_password_hash("Test123!"),
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
+        )
+        test_db.add(par_user)
+        test_db.commit()
+        test_db.refresh(par_user)
+        par_profile = models.ParentProfile(
+            user_id=par_user.id,
+            first_name="Cls",
+            last_name="Parent",
+            phone_number="+962799000034",
+            gender=models.Gender.MALE,
+            nationality="Jordanian",
+            national_id="INC0000034",
+            home_governorate="Amman",
+            home_district="Amman",
+            home_area="Test",
+            home_address_line="Test",
+        )
+        test_db.add(par_profile)
+        test_db.commit()
+        test_db.refresh(par_profile)
+        child = models.Child(
+            parent_id=par_profile.id,
+            first_name="ClsChild",
+            last_name="Test",
+            gender=models.Gender.MALE,
+            date_of_birth=date(2024, 3, 1),
+            father_name="Father Cls",
+            mother_first_name="Mother",
+            mother_last_name="Cls",
+            mother_nationality="Jordanian",
+            mother_national_id="INCM0034",
+        )
+        test_db.add(child)
+        test_db.commit()
+        test_db.refresh(child)
+        classified = models.Incident(
+            child_id=child.id,
+            kindergarten_id=sample_kindergarten.id,
+            type=models.IncidentType.OTHER,
+            severity_level=models.SeverityLevel.LOW,
+            classification="OTHER",
+            description="Classified as OTHER",
+            occurred_at=datetime(2026, 5, 3, 10, 30),
+            followup_required_flag=False,
+        )
+        unclassified = models.Incident(
+            child_id=child.id,
+            kindergarten_id=sample_kindergarten.id,
+            type=models.IncidentType.OTHER,
+            severity_level=models.SeverityLevel.LOW,
+            classification=None,
+            description="No classification set",
+            occurred_at=datetime(2026, 5, 4, 10, 30),
+            followup_required_flag=False,
+        )
+        test_db.add_all([classified, unclassified])
+        test_db.commit()
+
+        app.dependency_overrides[get_current_user] = lambda: admin_user
+        resp_all = client.get(
+            f"/api/safety/analytics?child_id={child.id}"
+        ).json()
+        assert resp_all["by_classification"].get("OTHER") == 1
+        assert resp_all["by_classification"].get("UNKNOWN") == 1
+
+        resp_filtered = client.get(
+            f"/api/safety/analytics?child_id={child.id}&classification=OTHER"
+        ).json()
+        assert resp_filtered["total"] == 1
+        assert resp_filtered["by_classification"] == {"OTHER": 1}
+        app.dependency_overrides.clear()
+
+    def test_safety_analytics_repeated_children(
+        self, client, test_db, admin_user, sample_kindergarten
+    ):
+        """repeated_children was read by the frontend but never computed --
+        a child with multiple incidents must be surfaced with a count."""
+        par_user = models.User(
+            username="inc_parent_rep",
+            email="inc_parent_rep@test.com",
+            hashed_password=get_password_hash("Test123!"),
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
+        )
+        test_db.add(par_user)
+        test_db.commit()
+        test_db.refresh(par_user)
+        par_profile = models.ParentProfile(
+            user_id=par_user.id,
+            first_name="Rep",
+            last_name="Parent",
+            phone_number="+962799000035",
+            gender=models.Gender.MALE,
+            nationality="Jordanian",
+            national_id="INC0000035",
+            home_governorate="Amman",
+            home_district="Amman",
+            home_area="Test",
+            home_address_line="Test",
+        )
+        test_db.add(par_profile)
+        test_db.commit()
+        test_db.refresh(par_profile)
+        child = models.Child(
+            parent_id=par_profile.id,
+            first_name="RepeatedChild",
+            last_name="Test",
+            gender=models.Gender.MALE,
+            date_of_birth=date(2024, 3, 1),
+            father_name="Father Rep",
+            mother_first_name="Mother",
+            mother_last_name="Rep",
+            mother_nationality="Jordanian",
+            mother_national_id="INCM0035",
+        )
+        test_db.add(child)
+        test_db.commit()
+        test_db.refresh(child)
+        for i in range(2):
+            test_db.add(models.Incident(
+                child_id=child.id,
+                kindergarten_id=sample_kindergarten.id,
+                type=models.IncidentType.OTHER,
+                severity_level=models.SeverityLevel.LOW,
+                description=f"Incident {i}",
+                occurred_at=datetime(2026, 5, 5 + i, 10, 30),
+                followup_required_flag=False,
+            ))
+        test_db.commit()
+
+        app.dependency_overrides[get_current_user] = lambda: admin_user
+        data = client.get(f"/api/safety/analytics?child_id={child.id}").json()
+        assert len(data["repeated_children"]) == 1
+        entry = data["repeated_children"][0]
+        assert entry["id"] == child.id
+        assert entry["count"] == 2
+        assert "RepeatedChild" in entry["name_ar"]
+        app.dependency_overrides.clear()
         app.dependency_overrides.clear()
 
     # ------------------------------------------------------------------

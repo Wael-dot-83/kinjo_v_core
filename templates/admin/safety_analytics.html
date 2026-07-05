@@ -23,7 +23,7 @@
 .mini-bar-row    { display: flex; align-items: center; gap: .75rem; }
 .mini-bar-label  { min-width: 110px; font-size: .78rem; font-weight: 600;
                    color: var(--kinjo-text-secondary); text-align: end; }
-.mini-bar-track  { flex: 1; background: var(--kinjo-border); border-radius: 50px;
+.mini-bar-track  { flex: 1; background: var(--kinjo-border-color); border-radius: 50px;
                    height: 10px; overflow: hidden; }
 .mini-bar-fill   { height: 100%; border-radius: 50px; transition: width .45s ease; }
 .mini-bar-count  { min-width: 28px; font-size: .78rem; font-weight: 700;
@@ -325,11 +325,12 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
+                        <caption class="visually-hidden">{% if ui_lang == 'en' %}Incidents by Kindergarten{% else %}الحوادث حسب الحضانة{% endif %}</caption>
                         <thead>
                             <tr>
-                                <th class="th-sm">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
-                                <th class="th-sm" style="width:80px;">{% if ui_lang == 'en' %}Incidents{% else %}حوادث{% endif %}</th>
-                                <th class="th-sm" style="width:90px;">{% if ui_lang == 'en' %}Risk Level{% else %}مستوى الخطر{% endif %}</th>
+                                <th scope="col" class="th-sm">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
+                                <th scope="col" class="th-sm" style="width:80px;">{% if ui_lang == 'en' %}Incidents{% else %}حوادث{% endif %}</th>
+                                <th scope="col" class="th-sm" style="width:90px;">{% if ui_lang == 'en' %}Risk Level{% else %}مستوى الخطر{% endif %}</th>
                             </tr>
                         </thead>
                         <tbody id="kgTable">
@@ -355,12 +356,13 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
+                        <caption class="visually-hidden">{% if ui_lang == 'en' %}Children with Repeated Incidents{% else %}أطفال بحوادث متكررة{% endif %}</caption>
                         <thead>
                             <tr>
-                                <th class="th-sm">#</th>
-                                <th class="th-sm">{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %}</th>
-                                <th class="th-sm" style="width:110px;">{% if ui_lang == 'en' %}Incident Count{% else %}عدد الحوادث{% endif %}</th>
-                                <th class="th-sm" style="width:110px;">{% if ui_lang == 'en' %}Actions{% else %}الإجراء{% endif %}</th>
+                                <th scope="col" class="th-sm">#</th>
+                                <th scope="col" class="th-sm">{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %}</th>
+                                <th scope="col" class="th-sm" style="width:110px;">{% if ui_lang == 'en' %}Incident Count{% else %}عدد الحوادث{% endif %}</th>
+                                <th scope="col" class="th-sm" style="width:110px;">{% if ui_lang == 'en' %}Actions{% else %}الإجراء{% endif %}</th>
                             </tr>
                         </thead>
                         <tbody id="repeatedTable">
