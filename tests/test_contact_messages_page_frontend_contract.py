@@ -61,3 +61,13 @@ def test_resolve_error_handler_reads_the_real_error_schema():
     message regardless of the real failure reason."""
     html = TEMPLATE.read_text(encoding="utf-8")
     assert "payload.error?.message" in html
+
+
+def test_active_pagination_link_has_aria_current():
+    """The active page's pagination link had no aria-current="page" --
+    the CSS "active" class conveyed the current page visually, but nothing
+    told assistive-tech users which page they're on. This gap exists
+    across every pagination implementation in the admin panel; fixed here
+    since this is the page under audit."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert 'aria-current="page"' in html

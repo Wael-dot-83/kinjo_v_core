@@ -108,7 +108,7 @@
     <ul class="pagination justify-content-center">
         {% for p in range(1, pagination.total_pages + 1) %}
         <li class="page-item {% if p == pagination.page %}active{% endif %}">
-            <a class="page-link" href="?q={{ (filters.q or '') | urlencode }}&status_filter={{ (filters.status_filter or '') | urlencode }}&page={{ p }}">{{ p }}</a>
+            <a class="page-link" href="?q={{ (filters.q or '') | urlencode }}&status_filter={{ (filters.status_filter or '') | urlencode }}&page={{ p }}"{% if p == pagination.page %} aria-current="page"{% endif %}>{{ p }}</a>
         </li>
         {% endfor %}
     </ul>
