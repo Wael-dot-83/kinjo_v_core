@@ -107,17 +107,18 @@
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0" id="alertsTable">
+          <caption class="visually-hidden">{% if ui_lang == 'en' %}System alerts requiring admin attention{% else %}تنبيهات النظام التي تتطلب انتباه المدير{% endif %}</caption>
           <thead class="table-light">
             <tr>
-              <th class="ps-4">{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Metric{% else %}المؤشر{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Current Value{% else %}القيمة الحالية{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Threshold{% else %}الحد{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Triggered{% else %}وقت الإنشاء{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-              <th>{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</th>
+              <th scope="col" class="ps-4">{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Metric{% else %}المؤشر{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Current Value{% else %}القيمة الحالية{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Threshold{% else %}الحد{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Triggered{% else %}وقت الإنشاء{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+              <th scope="col">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</th>
             </tr>
           </thead>
           <tbody id="alertsTableBody"></tbody>

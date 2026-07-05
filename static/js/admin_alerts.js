@@ -133,7 +133,8 @@
                 <td>${formatDate(a.triggered_at)}</td>
                 <td>${statusBadge(a.status)}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary" data-action="view" data-alert-id="${a.id}">
+                    <button class="btn btn-sm btn-outline-primary" data-action="view" data-alert-id="${a.id}"
+                            aria-label="View alert: ${escapeHtml(a.metric || "alert")} — ${escapeHtml(a.kindergarten_name || a.governorate || `#${a.id}`)}">
                         View
                     </button>
                 </td>

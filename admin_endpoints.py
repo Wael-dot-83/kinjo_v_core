@@ -5899,7 +5899,13 @@ def get_admin_alerts(
     request: Request,
     severity: Optional[str] = Query(None),
     governorate: Optional[str] = Query(None),
-    status: Optional[str] = Query("ACTIVE"),
+    # Was Query("ACTIVE") — the frontend's "All Statuses" option (value="")
+    # omits this param entirely to mean "no filter", exactly like severity/
+    # governorate below, but a non-None default silently forced every
+    # "All Statuses" request back to ACTIVE-only. RESOLVED/ACKNOWLEDGED
+    # alerts could never be shown through that control despite the option
+    # text promising otherwise.
+    status: Optional[str] = Query(None),
     date_from: Optional[str] = Query(None, description="ISO date — lower bound on triggered_at"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
