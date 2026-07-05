@@ -106,6 +106,8 @@ class MetricsCollector:
         self.cache_hits = 0
         self.realtime_updates = 0
         self.active_dashboard_sessions = 0
+        self.endpoint_response_times: Dict[str, List[float]] = {}
+        self._max_per_endpoint = 200
         self._lock = threading.Lock()
 
     def collect_system_metrics(self) -> SystemMetric:
@@ -169,7 +171,7 @@ class MetricsCollector:
             logger.error(f"Error collecting system metrics: {e}")
             return SystemMetric(timestamp=datetime.now(timezone.utc))
 
-    def record_request(self, response_time: float, is_error: bool = False):
+    def record_request(self, response_time: float, is_error: bool = False, path: Optional[str] = None):
         """Record a request for metrics calculation"""
         with self._lock:
             self.request_count += 1
@@ -178,6 +180,32 @@ class MetricsCollector:
             self.response_times.append(response_time)
             if len(self.response_times) > 1000:
                 self.response_times.pop(0)
+            if path:
+                times = self.endpoint_response_times.setdefault(path, [])
+                times.append(response_time)
+                if len(times) > self._max_per_endpoint:
+                    times.pop(0)
+
+    @staticmethod
+    def _percentile_of(values: List[float], percentile: float) -> float:
+        if not values:
+            return 0.0
+        ordered = sorted(values)
+        rank = max(0, min(len(ordered) - 1, int(round(percentile / 100 * (len(ordered) - 1)))))
+        return ordered[rank]
+
+    def get_percentile(self, percentile: float) -> float:
+        """Return the given percentile of recorded response times, in milliseconds."""
+        with self._lock:
+            return round(self._percentile_of(self.response_times, percentile) * 1000, 2)
+
+    def get_endpoint_p95(self) -> Dict[str, float]:
+        """Return p95 response time in milliseconds per endpoint path."""
+        with self._lock:
+            return {
+                path: round(self._percentile_of(times, 95) * 1000, 2)
+                for path, times in self.endpoint_response_times.items()
+            }
 
     def record_websocket_connection(self, connected: bool = True):
         """Record WebSocket connection change"""
@@ -298,9 +326,9 @@ class PerformanceMonitor:
         """Get recent metrics"""
         return self.collector.get_recent_metrics(minutes)
 
-    def record_request(self, response_time: float, is_error: bool = False):
+    def record_request(self, response_time: float, is_error: bool = False, path: Optional[str] = None):
         """Record request metrics"""
-        self.collector.record_request(response_time, is_error)
+        self.collector.record_request(response_time, is_error, path=path)
 
 
 class HealthChecker:

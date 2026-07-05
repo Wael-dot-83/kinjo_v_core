@@ -216,7 +216,8 @@
 
   function renderTableChart(endpoints, latencies) {
     var html = "<table class='table table-sm table-hover'>";
-    html += "<thead><tr><th>" + t("المسار", "Endpoint") + "</th><th>p95 (ms)</th></tr></thead><tbody>";
+    html += "<caption class='visually-hidden'>" + t("زمن استجابة p95 حسب المسار", "Endpoint p95 latency") + "</caption>";
+    html += "<thead><tr><th scope='col'>" + t("المسار", "Endpoint") + "</th><th scope='col'>p95 (ms)</th></tr></thead><tbody>";
     endpoints.forEach(function (ep) {
       var val = latencies[ep] || 0;
       var badge = val <= 300 ? "badge bg-success" :
@@ -228,34 +229,37 @@
     el("endpoint-latency-chart").innerHTML = html;
   }
 
+  var GOOD_STATUSES = ["fresh", "consistent", "unique", "valid", "excellent", "good"];
+  function isGoodStatus(status) {
+    return GOOD_STATUSES.indexOf(status) >= 0;
+  }
+
   function loadDataQuality() {
     fetchJSON(API_BASE + "/data-quality")
       .then(function (data) {
         var rows = [
-          { label: t("الحداثة", "Freshness"), value: data.freshness ? data.freshness.status : "--", },
-          { label: t("الاكتمال", "Completeness"), value: data.completeness ? data.completeness.score + "%" : "--", },
-          { label: t("الاتساق", "Consistency"), value: data.consistency ? data.consistency.consistency_score + "% (" + data.consistency.status + ")" : "--", },
-          { label: t("التفرد", "Uniqueness"), value: data.uniqueness ? data.uniqueness.uniqueness_score + "% (" + data.uniqueness.status + ")" : "--", },
-          { label: t("الصلاحية", "Validity"), value: data.validity ? data.validity.validity_score + "% (" + data.validity.status + ")" : "--", },
+          { label: t("الحداثة", "Freshness"), value: data.freshness ? data.freshness.status : "--",
+            ok: data.freshness ? isGoodStatus(data.freshness.status) : null },
+          { label: t("الاكتمال", "Completeness"), value: data.completeness ? data.completeness.score + "%" : "--",
+            ok: data.completeness ? data.completeness.score >= 90 : null },
+          { label: t("الاتساق", "Consistency"), value: data.consistency ? data.consistency.consistency_score + "% (" + data.consistency.status + ")" : "--",
+            ok: data.consistency ? isGoodStatus(data.consistency.status) : null },
+          { label: t("التفرد", "Uniqueness"), value: data.uniqueness ? data.uniqueness.uniqueness_score + "% (" + data.uniqueness.status + ")" : "--",
+            ok: data.uniqueness ? isGoodStatus(data.uniqueness.status) : null },
+          { label: t("الصلاحية", "Validity"), value: data.validity ? data.validity.validity_score + "% (" + data.validity.status + ")" : "--",
+            ok: data.validity ? isGoodStatus(data.validity.status) : null },
         ];
 
         var html = "";
         rows.forEach(function (row) {
           html += "<tr><td>" + row.label + "</td>";
           html += "<td>" + row.value + "</td>";
-          var statusLevel = row.value;
-          if (typeof statusLevel === "string") {
-            if (statusLevel.indexOf("good") >= 0 || statusLevel.indexOf("excellent") >= 0 ||
-                statusLevel.indexOf("unique") >= 0 || statusLevel.indexOf("valid") >= 0 ||
-                statusLevel.indexOf("consistent") >= 0) {
-              html += "<td><span class='badge bg-success'>" + t("نعم", "OK") + "</span></td>";
-            } else if (row.value.indexOf("--") >= 0) {
-              html += "<td><span class='badge bg-secondary'>--</span></td>";
-            } else {
-              html += "<td><span class='badge bg-warning'>" + t("تنبيه", "Warning") + "</span></td>";
-            }
+          if (row.ok === null) {
+            html += "<td><span class='badge bg-secondary'>--</span></td>";
+          } else if (row.ok) {
+            html += "<td><span class='badge bg-success'>" + t("نعم", "OK") + "</span></td>";
           } else {
-            html += "<td>--</td>";
+            html += "<td><span class='badge bg-warning'>" + t("تنبيه", "Warning") + "</span></td>";
           }
           html += "</tr>";
         });

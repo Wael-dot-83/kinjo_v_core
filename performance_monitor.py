@@ -124,7 +124,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             is_error = self._should_count_as_error(response.status_code)
 
             # Record the request metrics
-            performance_monitor.record_request(response_time, is_error)
+            performance_monitor.record_request(response_time, is_error, path=request.url.path)
 
             # Log slow requests
             if response_time > 1.0:  # More than 1 second
@@ -153,7 +153,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         except (RuntimeError, TypeError, ValueError, AttributeError) as e:
             # Record failed request
             response_time = time.time() - start_time
-            performance_monitor.record_request(response_time, is_error=True)
+            performance_monitor.record_request(response_time, is_error=True, path=request.url.path)
 
             logger.error(
                 f"Request exception: {request.method} {request.url.path} "

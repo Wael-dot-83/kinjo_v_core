@@ -361,3 +361,68 @@ class TestCeleryTaskStats:
         assert "avg_duration_ms" in stats
         assert "p50_duration_ms" in stats
         assert "p95_duration_ms" in stats
+
+
+class TestMetricsCollectorPercentiles:
+    """observability_endpoints.py's /summary and /latency routes called
+    collector.get_percentile()/get_endpoint_p95() on the real, live
+    MetricsCollector used by PerformanceMiddleware -- but those methods
+    only ever existed on a separate, never-instantiated-for-real-traffic
+    RequestMetricsCollector class. Every call crashed with AttributeError,
+    returning HTTP 500 on both routes."""
+
+    def test_get_percentile_empty(self):
+        from monitoring_service import MetricsCollector
+        collector = MetricsCollector()
+        assert collector.get_percentile(95) == 0.0
+
+    def test_get_percentile_computes_correctly(self):
+        from monitoring_service import MetricsCollector
+        collector = MetricsCollector()
+        for i in range(1, 101):
+            collector.record_request(i / 1000.0)  # 0.001s .. 0.100s
+        p50 = collector.get_percentile(50)
+        p95 = collector.get_percentile(95)
+        assert 40 <= p50 <= 60
+        assert 90 <= p95 <= 100
+
+    def test_get_endpoint_p95_tracks_per_path(self):
+        from monitoring_service import MetricsCollector
+        collector = MetricsCollector()
+        collector.record_request(0.1, path="/api/a")
+        collector.record_request(0.2, path="/api/a")
+        collector.record_request(0.5, path="/api/b")
+        result = collector.get_endpoint_p95()
+        assert "/api/a" in result
+        assert "/api/b" in result
+        assert result["/api/b"] == pytest.approx(500.0, abs=1)
+
+    def test_get_endpoint_p95_empty_when_no_path_recorded(self):
+        from monitoring_service import MetricsCollector
+        collector = MetricsCollector()
+        collector.record_request(0.1)  # no path
+        assert collector.get_endpoint_p95() == {}
+
+
+class TestObservabilityRoutes:
+    """No existing test hit these routes at the HTTP level -- only the
+    underlying services were unit-tested directly, which is exactly why
+    the AttributeError crash above went unnoticed."""
+
+    def test_summary_endpoint_returns_200_not_500(self, client, auth_headers_admin):
+        resp = client.get("/api/observability/summary", headers=auth_headers_admin)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "backend" in data
+        assert "p95_ms" in data["backend"]
+        assert "cache" in data
+        assert "alerts" in data
+        assert "data_quality" in data
+
+    def test_latency_endpoint_returns_200_not_500(self, client, auth_headers_admin):
+        resp = client.get("/api/observability/latency", headers=auth_headers_admin)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "overall" in data
+        assert "p95_ms" in data["overall"]
+        assert "per_endpoint_p95" in data
