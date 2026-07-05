@@ -2,14 +2,6 @@
 
 {% block title %}{% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %} — KinJo{% endblock %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house" aria-hidden="true"></i></a>
-<span class="breadcrumb-separator">/</span>
-<a href="/admin/messages" class="breadcrumb-item">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</a>
-<span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Compose{% else %}إنشاء رسالة{% endif %}</span>
-{% endblock %}
-
 {% block content %}
 <div class="page-header mb-4">
   <h1 class="page-title">
@@ -86,7 +78,7 @@
                             {% for gov in governorates %}
                             <div class="form-check">
                                 <input class="form-check-input gov-checkbox" type="checkbox" value="{{ gov }}" id="gov_{{ loop.index }}">
-                                <label class="form-check-label" for="gov_{{ loop.index }}">{{ gov }}</label>
+                                <label class="form-check-label" for="gov_{{ loop.index }}">{{ gov if ui_lang != 'en' else governorates_en[loop.index0] }}</label>
                             </div>
                             {% endfor %}
                         </div>
@@ -111,7 +103,7 @@
                     </div>
 
                     <!-- Additional Roles Filter (Optional) -->
-                    <div id="rolesFilter" class="mb-3">
+                    <div id="rolesFilter" class="mb-3 d-none">
                         <label class="form-label d-block">{% if ui_lang == 'en' %}Target Roles{% else %}الأدوار المستهدفة{% endif %}</label>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="checkbox" id="roleManager" value="MANAGER" checked
@@ -142,7 +134,7 @@
                 <!-- Preview Actions -->
                 <div class="d-grid gap-2">
                     <button type="button" class="btn btn-outline-primary" onclick="previewRecipients()">
-                        <i class="bi bi-eye me-2"></i> {% if ui_lang == 'en' %}Preview Recipients{% else %}معاينة المستلمين{% endif %}
+                        <i class="bi bi-eye me-2" aria-hidden="true"></i> {% if ui_lang == 'en' %}Preview Recipients{% else %}معاينة المستلمين{% endif %}
                     </button>
                 </div>
             </div>
@@ -178,7 +170,7 @@
             <div class="card-body d-flex justify-content-end gap-2">
                 <a href="/admin/messages" class="btn btn-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
                 <button type="button" class="btn btn-primary px-4" onclick="sendMessage()" id="sendBtn">
-                    <i class="bi bi-send me-2"></i> {% if ui_lang == 'en' %}Send Message{% else %}إرسال الرسالة{% endif %}
+                    <i class="bi bi-send me-2" aria-hidden="true"></i> {% if ui_lang == 'en' %}Send Message{% else %}إرسال الرسالة{% endif %}
                 </button>
             </div>
         </div>
@@ -221,15 +213,19 @@
         const filtersContainer = document.getElementById('filtersContainer');
         const govFilter = document.getElementById('governorateFilter');
         const kgFilter = document.getElementById('kindergartenFilter');
+        const rolesFilter = document.getElementById('rolesFilter');
 
         filtersContainer.classList.remove('d-none');
         govFilter.classList.add('d-none');
         kgFilter.classList.add('d-none');
+        rolesFilter.classList.add('d-none');
 
         if (mode === 'GOVERNORATE') {
             govFilter.classList.remove('d-none');
+            rolesFilter.classList.remove('d-none');
         } else if (mode === 'KINDERGARTENS') {
             kgFilter.classList.remove('d-none');
+            rolesFilter.classList.remove('d-none');
             if (!kindergartensLoaded && !kgLoading) {
                 await loadKindergartens();
             }
@@ -430,7 +426,7 @@
         }
         sampleList.innerHTML = samples.map(u => `
         <li class="mb-1 text-truncate" title="${escHtml(u.display_name)}">
-            <i class="bi bi-person text-secondary me-1"></i>
+            <i class="bi bi-person text-secondary me-1" aria-hidden="true"></i>
             ${escHtml(u.display_name)}
             <span class="text-muted opacity-75">(${escHtml(u.role)})</span>
         </li>
