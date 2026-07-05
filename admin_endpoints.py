@@ -1641,6 +1641,16 @@ async def import_users_csv(
             failed.append(row_num)
             continue
 
+        if user_data.role == models.UserRole.SUPERVISOR and not user_data.kindergarten_id:
+            errors.append(CSVRowError(
+                row_number=row_num,
+                field='kindergarten_id',
+                error_code='VALIDATION_ERROR',
+                message="Supervisor must belong to a kindergarten",
+            ))
+            failed.append(row_num)
+            continue
+
         if user_data.role == models.UserRole.MANAGER:
             if user_data.kindergarten_id in manager_kgs_in_csv:
                 errors.append(CSVRowError(
@@ -1685,7 +1695,10 @@ async def import_users_csv(
                 hashed_password=get_password_hash(user_data.password),
                 role=user_data.role,
                 kindergarten_id=user_data.kindergarten_id,
-                status=models.UserStatus.ACTIVE
+                status=models.UserStatus.ACTIVE,
+                must_change_password=(user_data.role in [
+                    models.UserRole.MANAGER, models.UserRole.SUPERVISOR
+                ]),
             )
             db.add(new_user)
             db.flush()

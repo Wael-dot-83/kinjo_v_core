@@ -1197,6 +1197,56 @@ class TestCSVImportManagerConflictCoverage:
         assert body["succeeded"] == 1
         assert len(body["created_ids"]) == 1
 
+    def test_csv_import_creates_manager_with_must_change_password(self, test_db, client, sample_kindergarten):
+        """The single-user admin-create endpoint sets must_change_password=
+        True for MANAGER/SUPERVISOR, but the CSV import path built the User
+        object without ever touching that field, so it silently defaulted
+        to False -- bulk-imported manager/supervisor accounts (created from
+        a CSV file containing their plaintext password) never got forced to
+        rotate their password, unlike accounts created one at a time."""
+        _make_admin(test_db, "csvc_admin", "5")
+        headers = _tok(client, "csvc_admin5")
+        csv_content = (
+            "username,email,password,role,kindergarten_id\n"
+            f"mgr_pwtest,mgr_pwtest@example.com,Pass1234!,MANAGER,{sample_kindergarten.id}\n"
+        )
+        r = client.post(
+            "/api/admin/users/import-csv",
+            headers=headers,
+            files={"file": ("users.csv", csv_content.encode(), "text/csv")},
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["succeeded"] == 1
+        new_user = test_db.query(models.User).filter(models.User.username == "mgr_pwtest").first()
+        assert new_user.must_change_password is True
+
+    def test_csv_import_rejects_supervisor_without_kindergarten(self, test_db, client):
+        """The single-user admin-create endpoint rejects a SUPERVISOR with
+        no kindergarten_id ("Supervisor must belong to a kindergarten"),
+        but the CSV import path only had the equivalent guard for MANAGER
+        -- a CSV row with role=SUPERVISOR and a blank kindergarten_id
+        column was silently accepted and counted as succeeded, producing
+        an orphaned supervisor account tied to no kindergarten."""
+        _make_admin(test_db, "csvc_admin", "6")
+        headers = _tok(client, "csvc_admin6")
+        csv_content = (
+            "username,email,password,role,kindergarten_id\n"
+            "sup_no_kg,sup_no_kg@example.com,Pass1234!,SUPERVISOR,\n"
+        )
+        r = client.post(
+            "/api/admin/users/import-csv",
+            headers=headers,
+            files={"file": ("users.csv", csv_content.encode(), "text/csv")},
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["succeeded"] == 0
+        assert body["failed"] == 1
+        assert body["errors"][0]["field"] == "kindergarten_id"
+        orphan = test_db.query(models.User).filter(models.User.username == "sup_no_kg").first()
+        assert orphan is None
+
     def test_create_parent_user_with_children(self, client, test_db):
         _make_admin(test_db, "csvc_admin", "4")
         headers = _tok(client, "csvc_admin4")

@@ -2,16 +2,6 @@
 
 {% block title %}{% if ui_lang == 'en' %}Import Users — KinJo{% else %}استيراد المستخدمين — KinJo{% endif %}{% endblock %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
-  <i class="bi bi-house" aria-hidden="true"></i>
-</a>
-<span class="breadcrumb-separator">/</span>
-<a href="/admin/users" class="breadcrumb-item">{% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}</a>
-<span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Import Users{% else %}استيراد مستخدمين{% endif %}</span>
-{% endblock %}
-
 {% block content %}
 <div class="page-header mb-4">
   <h1 class="page-title">
@@ -95,11 +85,12 @@
         <h6 class="fw-semibold text-danger mb-2">{% if ui_lang == 'en' %}Rows with errors{% else %}صفوف تحتوي أخطاء{% endif %}</h6>
         <div class="table-responsive">
           <table class="table table-sm table-bordered">
+            <caption class="visually-hidden">{% if ui_lang == 'en' %}CSV rows that failed to import{% else %}صفوف CSV التي فشل استيرادها{% endif %}</caption>
             <thead class="table-light">
               <tr>
-                <th>{% if ui_lang == 'en' %}Row{% else %}صف{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Field{% else %}حقل{% endif %}</th>
-                <th>{% if ui_lang == 'en' %}Error{% else %}خطأ{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Row{% else %}صف{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Field{% else %}حقل{% endif %}</th>
+                <th scope="col">{% if ui_lang == 'en' %}Error{% else %}خطأ{% endif %}</th>
               </tr>
             </thead>
             <tbody id="errorsTableBody"></tbody>
@@ -112,6 +103,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>window.KINJO_LANG = "{{ ui_lang }}";</script>
 <script>
 (function () {
   'use strict';
@@ -148,6 +140,7 @@
 
     try {
       const res = await fetchWithAuth('/api/admin/users/import-csv', { method: 'POST', body: formData });
+      if (!res) return;
       const data = await res.json();
       showResults(data);
     } catch (err) {
@@ -162,9 +155,9 @@
     const section = document.getElementById('resultsSection');
     section.style.display = '';
 
-    const imported = data.imported ?? 0;
+    const imported = data.succeeded ?? 0;
     const errors = data.errors ?? [];
-    const total = data.total ?? (imported + errors.length);
+    const total = data.total_rows ?? (imported + errors.length);
 
     document.getElementById('resultsSummary').innerHTML = `
       <div class="row g-3">
@@ -192,7 +185,7 @@
     if (errors.length) {
       document.getElementById('errorsWrap').style.display = '';
       document.getElementById('errorsTableBody').innerHTML = errors.map(e =>
-        `<tr><td>${escHtml(e.row ?? '—')}</td><td>${escHtml(e.field || '—')}</td><td class="text-danger small">${escHtml(e.error || e.message || '—')}</td></tr>`
+        `<tr><td>${escHtml(e.row_number ?? '—')}</td><td>${escHtml(e.field || '—')}</td><td class="text-danger small">${escHtml(e.message || '—')}</td></tr>`
       ).join('');
     } else {
       document.getElementById('errorsWrap').style.display = 'none';
