@@ -43,24 +43,22 @@
         </div>
         <div class="col-12 col-md-3">
           <label for="governorateFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-          <select class="form-select form-select-sm" id="governorateFilter"
-                  aria-label="{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}">
+          <select class="form-select form-select-sm" id="governorateFilter">
             <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
           </select>
         </div>
         <div class="col-12 col-md-3">
           <label for="cityFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
-          <select class="form-select form-select-sm" id="cityFilter"
-                  aria-label="{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}">
+          <select class="form-select form-select-sm" id="cityFilter">
             <option value="">{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}</option>
           </select>
         </div>
         <div class="col-12 col-md-3 d-flex align-items-end gap-2">
-          <button type="button" class="btn btn-primary btn-sm flex-grow-1 d-inline-flex align-items-center justify-content-center gap-1" onclick="applyFilters()">
+          <button type="button" class="btn btn-primary btn-sm flex-grow-1 d-inline-flex align-items-center justify-content-center gap-1" id="searchBtn">
             <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">search</span>
             {% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
           </button>
-          <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center" onclick="clearFilters()"
+          <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center" id="clearFiltersBtn"
                   aria-label="{% if ui_lang == 'en' %}Clear filters{% else %}مسح الفلاتر{% endif %}">
             <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">close</span>
           </button>
@@ -85,16 +83,17 @@
     <div class="card-body p-0">
       <div id="tableContainer" class="table-responsive">
         <table class="table table-hover align-middle mb-0" id="kindergartensTable">
+          <caption class="visually-hidden">{% if ui_lang == 'en' %}Imported Kindergartens{% else %}الحضانات المستوردة{% endif %}</caption>
           <thead class="table-light">
             <tr>
-              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Name (AR){% else %}الاسم (عربي){% endif %}</th>
-              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Name (EN){% else %}الاسم (إنجليزي){% endif %}</th>
-              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</th>
-              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</th>
-              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
-              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %}</th>
-              <th class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Imported At{% else %}تاريخ الاستيراد{% endif %}</th>
+              <th scope="col" class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Name (AR){% else %}الاسم (عربي){% endif %}</th>
+              <th scope="col" class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Name (EN){% else %}الاسم (إنجليزي){% endif %}</th>
+              <th scope="col" class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+              <th scope="col" class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</th>
+              <th scope="col" class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</th>
+              <th scope="col" class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
+              <th scope="col" class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %}</th>
+              <th scope="col" class="text-uppercase small fw-medium text-muted">{% if ui_lang == 'en' %}Imported At{% else %}تاريخ الاستيراد{% endif %}</th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -164,6 +163,8 @@
             document.getElementById('resultsInfo').textContent =
                 `${_showing} ${data.kindergartens.length} ${_of} ${data.total} ${_kgs}`;
 
+            populateFilterOptions(data.governorates || [], data.districts || []);
+
             if (data.kindergartens.length === 0) {
                 tbody.innerHTML = '';
                 emptyState.classList.remove('d-none');
@@ -200,16 +201,36 @@
         pagination.innerHTML = '';
 
         if (currentPg > 1) {
-            pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadKindergartens(${currentPg - 1})">${_prev}</a></li>`;
+            pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPg - 1}">${_prev}</a></li>`;
         }
 
         for (let i = Math.max(1, currentPg - 2); i <= Math.min(totalPages, currentPg + 2); i++) {
-            pagination.innerHTML += `<li class="page-item ${i === currentPg ? 'active' : ''}"><a class="page-link" href="#" onclick="loadKindergartens(${i})">${i}</a></li>`;
+            pagination.innerHTML += `<li class="page-item ${i === currentPg ? 'active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
         }
 
         if (currentPg < totalPages) {
-            pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadKindergartens(${currentPg + 1})">${_next}</a></li>`;
+            pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPg + 1}">${_next}</a></li>`;
         }
+    }
+
+    let filterOptionsPopulated = false;
+    function populateFilterOptions(governorates, districts) {
+        if (filterOptionsPopulated) return;
+        const govSelect = document.getElementById('governorateFilter');
+        const districtSelect = document.getElementById('cityFilter');
+        governorates.forEach(gov => {
+            const opt = document.createElement('option');
+            opt.value = gov;
+            opt.textContent = gov;
+            govSelect.appendChild(opt);
+        });
+        districts.forEach(district => {
+            const opt = document.createElement('option');
+            opt.value = district;
+            opt.textContent = district;
+            districtSelect.appendChild(opt);
+        });
+        if (governorates.length || districts.length) filterOptionsPopulated = true;
     }
 
     function applyFilters() {
@@ -227,9 +248,21 @@
         loadKindergartens(1);
     }
 
-    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    let searchDebounce = null;
+    document.getElementById('searchInput').addEventListener('input', () => {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(applyFilters, 300);
+    });
     document.getElementById('governorateFilter').addEventListener('change', applyFilters);
     document.getElementById('cityFilter').addEventListener('change', applyFilters);
+    document.getElementById('searchBtn').addEventListener('click', applyFilters);
+    document.getElementById('clearFiltersBtn').addEventListener('click', clearFilters);
+    document.getElementById('pagination').addEventListener('click', (event) => {
+        const link = event.target.closest('a[data-page]');
+        if (!link) return;
+        event.preventDefault();
+        loadKindergartens(parseInt(link.dataset.page, 10));
+    });
 
     loadKindergartens();
 })();

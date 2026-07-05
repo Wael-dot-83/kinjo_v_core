@@ -235,12 +235,21 @@ class KindergartenImportService:
         total = query.count()
         kindergartens = query.offset((page - 1) * per_page).limit(per_page).all()
 
+        governorates = sorted({
+            row[0] for row in self.db.query(ImportedKindergarten.governorate).distinct().all() if row[0]
+        })
+        districts = sorted({
+            row[0] for row in self.db.query(ImportedKindergarten.district).distinct().all() if row[0]
+        })
+
         return {
             "kindergartens": kindergartens,
             "total": total,
             "page": page,
             "per_page": per_page,
-            "pages": (total + per_page - 1) // per_page
+            "pages": (total + per_page - 1) // per_page,
+            "governorates": governorates,
+            "districts": districts,
         }
 
     def get_import_logs(self, page: int = 1, per_page: int = 20) -> Dict[str, Any]:

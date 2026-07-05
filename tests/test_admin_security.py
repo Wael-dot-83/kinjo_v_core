@@ -1051,6 +1051,22 @@ def test_imported_kindergartens_list_access_control(client, auth_headers_admin, 
     assert parent_response.status_code == 403
 
 
+def test_imported_kindergartens_list_returns_filter_options(client, auth_headers_admin):
+    """The Governorate/City filter dropdowns on /admin/imported-kindergartens
+    only ever rendered a single static "All ___" option -- nothing in the
+    response supplied real values to populate them with. The list endpoint
+    must return the distinct governorate/district values actually present
+    in the imported staging table (not the live Kindergarten table, which
+    is a different dataset)."""
+    response = client.get("/api/admin/kindergartens/imported", headers=auth_headers_admin)
+    assert response.status_code == 200
+    data = response.json()
+    assert "governorates" in data
+    assert "districts" in data
+    assert isinstance(data["governorates"], list)
+    assert isinstance(data["districts"], list)
+
+
 def test_admin_import_kindergartens_success_is_audited(client, test_db, admin_user, auth_headers_admin):
     """Successful kindergarten import should write an audit entry."""
     import openpyxl
