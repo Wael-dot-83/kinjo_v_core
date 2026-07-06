@@ -9,13 +9,16 @@
   <!-- USWDS Init JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/uswds/3.8.1/js/uswds-init.min.js"></script>
   <!-- USWDS CSS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uswds/3.8.1/css/uswds.min.css" integrity="sha512-..." crossorigin="anonymous">
-  <!-- Bootstrap Icons for familiarity -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uswds/3.8.1/css/uswds.min.css">
+  <!-- Bootstrap Icons (vendored) -->
+  <link rel="stylesheet" href="/static/vendor/bootstrap-icons/bootstrap-icons.min.css">
+
   <style>
-    /* Custom adjustments for RTL support if necessary */
     body { font-family: 'Cairo', 'Inter', sans-serif; }
+    /* USWDS ships LTR-only utilities; flip the spacing ones this layout uses. */
+    [dir="rtl"] .margin-right-1 { margin-right: 0 !important; margin-left: .5rem !important; }
+    [dir="rtl"] .margin-right-2 { margin-right: 0 !important; margin-left: 1rem !important; }
+    [dir="rtl"] .usa-sidenav .usa-current::after { right: 0; left: auto; }
   </style>
 
   {% block extra_css %}{% endblock %}

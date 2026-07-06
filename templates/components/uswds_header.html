@@ -8,7 +8,7 @@
           </a>
         </em>
       </div>
-      <button type="button" class="usa-menu-btn">Menu</button>
+      <button type="button" class="usa-menu-btn">{% if ui_lang == 'en' %}Menu{% else %}القائمة{% endif %}</button>
     </div>
     <nav aria-label="Primary navigation" class="usa-nav">
       <button type="button" class="usa-nav__close">
@@ -28,8 +28,8 @@
             <span class="text-bold margin-right-2">{{ current_user.username }}</span>
           </li>
           <li class="usa-nav__secondary-item">
-            <button onclick="toggleLanguage()" class="usa-button usa-button--unstyled" style="cursor: pointer;">
-              <i class="bi bi-translate"></i> {% if ui_lang == 'en' %}العربية{% else %}English{% endif %}
+            <button onclick="window.AppI18n && AppI18n.toggleLanguage()" class="usa-button usa-button--unstyled" style="cursor: pointer;">
+              <i class="bi bi-translate" aria-hidden="true"></i> {% if ui_lang == 'en' %}العربية{% else %}English{% endif %}
             </button>
           </li>
           <li class="usa-nav__secondary-item">

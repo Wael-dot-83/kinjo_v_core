@@ -505,6 +505,206 @@ class TestManagerWorkflows:
 
 
 # =============================================================================
+# MANAGER HARDENING (2026-07: NULL-KG guard, dashboard, audit, absence scope)
+# =============================================================================
+
+
+@pytest.fixture
+def manager_no_kg():
+    """A manager with no kindergarten association.
+
+    The DB CHECK constraint (manager_must_have_kindergarten) blocks
+    persisting such a row, so this is an unpersisted object injected via
+    dependency_overrides — it exercises the API-level defense-in-depth
+    guard for data that predates the constraint or arrives via other DBs.
+    """
+    return models.User(
+        id=999901,
+        username="manager_no_kg",
+        email="manager_no_kg@example.com",
+        hashed_password="x",
+        full_name="مدير بلا حضانة",
+        role=models.UserRole.MANAGER,
+        kindergarten_id=None,
+        status=models.UserStatus.ACTIVE,
+    )
+
+
+@pytest.fixture
+def absence_kg_a(test_db, kg_a, parent_kg_a, child_kg_a, class_kg_a):
+    """A submitted absence request for a child in kindergarten A."""
+    parent_profile = test_db.query(models.ParentProfile).filter(
+        models.ParentProfile.user_id == parent_kg_a.id
+    ).first()
+    req = models.AbsenceRequest(
+        parent_id=parent_profile.id,
+        child_id=child_kg_a.id,
+        kindergarten_id=kg_a.id,
+        class_id=class_kg_a.id,
+        start_date=date.today() + timedelta(days=3),
+        end_date=date.today() + timedelta(days=4),
+        reason="سفر عائلي",
+        status=models.AbsenceRequestStatus.SUBMITTED,
+    )
+    test_db.add(req)
+    test_db.commit()
+    test_db.refresh(req)
+    return req
+
+
+class TestManagerNullKindergartenGuard:
+    """A manager without a kindergarten has no operational scope."""
+
+    def test_null_kg_manager_rejected_on_classes(self, client, manager_no_kg):
+        app.dependency_overrides[get_current_user] = lambda: manager_no_kg
+        r = client.get("/api/manager/classes")
+        assert r.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_null_kg_manager_rejected_on_dashboard(self, client, manager_no_kg):
+        app.dependency_overrides[get_current_user] = lambda: manager_no_kg
+        r = client.get("/api/manager/dashboard")
+        assert r.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_null_kg_manager_rejected_on_absence_list(self, client, manager_no_kg):
+        app.dependency_overrides[get_current_user] = lambda: manager_no_kg
+        r = client.get("/api/absence-requests")
+        assert r.status_code == 403
+        app.dependency_overrides.clear()
+
+
+class TestManagerDashboard:
+    """GET /api/manager/dashboard is own-kindergarten only."""
+
+    def test_dashboard_counts_own_kg_only(
+        self, client, test_db, manager_kg_a, kg_a, kg_b,
+        class_kg_a, class_kg_b, enrollment_kg_a, supervisor_kg_a, supervisor_kg_b,
+    ):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.get("/api/manager/dashboard")
+        assert r.status_code == 200
+        d = r.json()
+        assert d["kindergarten"]["id"] == kg_a.id
+        # KG B's class/supervisor/enrollment must not be counted.
+        assert len(d["classes"]) == 1
+        assert d["summary"]["active_enrollments"] == 1
+        assert d["summary"]["supervisors_count"] == 1
+        # Structural keys the manager dashboard frontend relies on.
+        assert "classes_without_supervisor" in d
+        assert "classes_near_capacity" in d
+        for key in ("pending_absence_requests", "reports_sent_today",
+                    "pending_daily_reports", "pending_applications"):
+            assert key in d["summary"]
+        app.dependency_overrides.clear()
+
+    def test_dashboard_forbidden_for_supervisor(self, client, supervisor_kg_a):
+        app.dependency_overrides[get_current_user] = lambda: supervisor_kg_a
+        r = client.get("/api/manager/dashboard")
+        assert r.status_code == 403
+        app.dependency_overrides.clear()
+
+
+class TestManagerMutationAudit:
+    """Every manager mutation writes an AuditLog row."""
+
+    def _audit_count(self, test_db, action):
+        return test_db.query(models.AuditLog).filter(
+            models.AuditLog.action == action
+        ).count()
+
+    def test_assign_supervisor_writes_audit(
+        self, client, test_db, manager_kg_a, class_kg_a, supervisor_kg_a
+    ):
+        before = self._audit_count(test_db, "SUPERVISOR_ASSIGNED")
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.post("/api/manager/classes/assign-supervisor", json={
+            "class_id": class_kg_a.id,
+            "supervisor_id": supervisor_kg_a.id,
+            "is_primary": False,
+        })
+        assert r.status_code in (200, 201), r.text
+        if not r.json().get("already_exists"):
+            assert self._audit_count(test_db, "SUPERVISOR_ASSIGNED") == before + 1
+        app.dependency_overrides.clear()
+
+    def test_move_child_full_class_blocked_and_audited(
+        self, client, test_db, manager_kg_a, kg_a, child_kg_a, class_kg_a, enrollment_kg_a, supervisor_kg_a
+    ):
+        # A second class with capacity 0 -> move must be blocked with 409.
+        full_class = models.Class(
+            kindergarten_id=kg_a.id,
+            name_ar="صف ممتلئ", name_en="Full Class",
+            class_code="FULL-01", age_group="AGE_2_4",
+            capacity_total=0, min_age_months=24, max_age_months=72,
+            supervisor_id=None, is_active=True,
+        )
+        test_db.add(full_class)
+        test_db.commit()
+        test_db.refresh(full_class)
+
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.post("/api/manager/children/move-class", json={
+            "child_id": child_kg_a.id,
+            "from_class_id": class_kg_a.id,
+            "to_class_id": full_class.id,
+        })
+        assert r.status_code == 409
+
+        # Raise capacity; the move now succeeds and is audited.
+        full_class.capacity_total = 5
+        test_db.commit()
+        before = self._audit_count(test_db, "CHILD_MOVED_CLASS")
+        r = client.post("/api/manager/children/move-class", json={
+            "child_id": child_kg_a.id,
+            "from_class_id": class_kg_a.id,
+            "to_class_id": full_class.id,
+        })
+        assert r.status_code == 200, r.text
+        assert self._audit_count(test_db, "CHILD_MOVED_CLASS") == before + 1
+        app.dependency_overrides.clear()
+
+
+class TestAbsenceDecisionScope:
+    """Absence approve/reject is manager-only, own-KG only, SUBMITTED-only."""
+
+    def test_supervisor_cannot_approve(self, client, supervisor_kg_a, absence_kg_a):
+        app.dependency_overrides[get_current_user] = lambda: supervisor_kg_a
+        r = client.post(f"/api/absence-requests/{absence_kg_a.id}/approve", json={})
+        assert r.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_foreign_manager_cannot_approve(self, client, manager_kg_b, absence_kg_a):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_b
+        r = client.post(f"/api/absence-requests/{absence_kg_a.id}/approve", json={})
+        assert r.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_foreign_manager_cannot_reject(self, client, manager_kg_b, absence_kg_a):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_b
+        r = client.post(f"/api/absence-requests/{absence_kg_a.id}/reject", json={})
+        assert r.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_own_manager_approve_writes_audit(
+        self, client, test_db, manager_kg_a, absence_kg_a
+    ):
+        before = test_db.query(models.AuditLog).filter(
+            models.AuditLog.action == "ABSENCE_REQUEST_APPROVED").count()
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.post(f"/api/absence-requests/{absence_kg_a.id}/approve", json={})
+        assert r.status_code == 200, r.text
+        after = test_db.query(models.AuditLog).filter(
+            models.AuditLog.action == "ABSENCE_REQUEST_APPROVED").count()
+        assert after == before + 1
+
+        # A decided request cannot be re-decided.
+        r = client.post(f"/api/absence-requests/{absence_kg_a.id}/reject", json={})
+        assert r.status_code == 400
+        app.dependency_overrides.clear()
+
+
+# =============================================================================
 # RUN TESTS
 # =============================================================================
 

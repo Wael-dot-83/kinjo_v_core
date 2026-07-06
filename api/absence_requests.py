@@ -13,8 +13,23 @@ from pydantic import BaseModel, field_validator
 import models
 from database import get_db
 from dependencies import get_current_user
+from audit_actions import AuditAction
 
 router = APIRouter(tags=["Absence Requests"])
+
+
+def _require_scoped_manager(current_user: models.User) -> None:
+    """Absence decisions are a manager-only operation on their own KG.
+
+    Admins are deliberately excluded: RBAC policy blocks Admin from
+    operational entry (approving creates attendance records). A manager
+    without a kindergarten has no scope and must not fall through to an
+    unscoped query.
+    """
+    if current_user.role != models.UserRole.MANAGER:
+        raise HTTPException(status_code=403, detail="Only managers can decide absence requests")
+    if current_user.kindergarten_id is None:
+        raise HTTPException(status_code=403, detail="No kindergarten is associated with this manager account")
 
 
 class CreateAbsenceRequest(BaseModel):
@@ -142,9 +157,12 @@ def list_absence_requests(
         ).order_by(models.AbsenceRequest.created_at.desc()).all()
         return [_serialize_request(r) for r in requests]
     else:
-        # Manager / admin: see requests for their kindergarten
+        # Manager: own kindergarten only (no silent unscoped fallback).
+        # Admin: read-only national view.
         query = db.query(models.AbsenceRequest)
-        if current_user.kindergarten_id:
+        if current_user.role != models.UserRole.ADMIN:
+            if current_user.kindergarten_id is None:
+                raise HTTPException(status_code=403, detail="No kindergarten is associated with this account")
             query = query.filter(
                 models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id
             )
@@ -214,8 +232,7 @@ def approve_absence_request(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role == models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Only managers can approve")
+    _require_scoped_manager(current_user)
 
     absence = db.query(models.AbsenceRequest).filter(
         models.AbsenceRequest.id == request_id,
@@ -224,16 +241,25 @@ def approve_absence_request(
         raise HTTPException(status_code=404, detail="Not found")
 
     # Cross-KG check
-    if current_user.kindergarten_id and absence.kindergarten_id != current_user.kindergarten_id:
+    if absence.kindergarten_id != current_user.kindergarten_id:
         raise HTTPException(status_code=403, detail="Not in your kindergarten scope")
 
     if absence.status == models.AbsenceRequestStatus.APPROVED:
         raise HTTPException(status_code=400, detail="Already approved")
+    if absence.status != models.AbsenceRequestStatus.SUBMITTED:
+        raise HTTPException(status_code=400, detail="Only submitted requests can be approved")
 
     absence.status = models.AbsenceRequestStatus.APPROVED
     absence.manager_id = current_user.id
     absence.decision_note = payload.decision_note
-    absence.decided_at = datetime.now(UTC)
+    absence.decided_at = datetime.now(_JORDAN_TZ)
+    db.add(models.AuditLog(
+        user_id=current_user.id,
+        action=AuditAction.ABSENCE_REQUEST_APPROVED,
+        entity_type="absence_request",
+        entity_id=absence.id,
+        details=f"Manager approved absence request {absence.id} for child {absence.child_id} ({absence.start_date}..{absence.end_date})",
+    ))
     db.flush()
 
     # Create attendance records for each day in range
@@ -275,8 +301,7 @@ def reject_absence_request(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role == models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Only managers can reject")
+    _require_scoped_manager(current_user)
 
     absence = db.query(models.AbsenceRequest).filter(
         models.AbsenceRequest.id == request_id,
@@ -284,10 +309,26 @@ def reject_absence_request(
     if not absence:
         raise HTTPException(status_code=404, detail="Not found")
 
+    # Cross-KG check
+    if absence.kindergarten_id != current_user.kindergarten_id:
+        raise HTTPException(status_code=403, detail="Not in your kindergarten scope")
+
+    if absence.status != models.AbsenceRequestStatus.SUBMITTED:
+        # Rejecting an APPROVED request would strand the attendance
+        # records approval created; only pending requests are decidable.
+        raise HTTPException(status_code=400, detail="Only submitted requests can be rejected")
+
     absence.status = models.AbsenceRequestStatus.REJECTED
     absence.manager_id = current_user.id
     absence.decision_note = payload.decision_note
-    absence.decided_at = datetime.now(UTC)
+    absence.decided_at = datetime.now(_JORDAN_TZ)
+    db.add(models.AuditLog(
+        user_id=current_user.id,
+        action=AuditAction.ABSENCE_REQUEST_REJECTED,
+        entity_type="absence_request",
+        entity_id=absence.id,
+        details=f"Manager rejected absence request {absence.id} for child {absence.child_id}",
+    ))
     db.commit()
     db.refresh(absence)
 

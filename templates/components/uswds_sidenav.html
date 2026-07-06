@@ -26,19 +26,24 @@
   <!-- Reports and Requests -->
   <li class="usa-sidenav__item">
     <a href="/enrollments" class="{% if '/enrollments' in request.url.path %}usa-current{% endif %}">
-      <i class="bi bi-person-plus margin-right-1"></i> {% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}
+      <i class="bi bi-person-plus margin-right-1" aria-hidden="true"></i> {% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}
+    </a>
+  </li>
+  <li class="usa-sidenav__item">
+    <a href="/manager/absence-requests" class="{% if '/manager/absence-requests' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-calendar-x margin-right-1" aria-hidden="true"></i> {% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الغياب{% endif %}
     </a>
   </li>
   <li class="usa-sidenav__item">
     <a href="/daily-reports" class="{% if '/daily-reports' in request.url.path or '/reports' in request.url.path %}usa-current{% endif %}">
-      <i class="bi bi-file-earmark-text margin-right-1"></i> {% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}
+      <i class="bi bi-file-earmark-text margin-right-1" aria-hidden="true"></i> {% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}
     </a>
   </li>
-  
+
   <!-- Management -->
   <li class="usa-sidenav__item">
-    <a href="/kpi" class="{% if '/kpi' in request.url.path %}usa-current{% endif %}">
-      <i class="bi bi-bar-chart-line margin-right-1"></i> {% if ui_lang == 'en' %}KPI{% else %}مؤشرات الأداء الرئيسية{% endif %}
+    <a href="/manager/kpi" class="{% if '/manager/kpi' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-bar-chart-line margin-right-1" aria-hidden="true"></i> {% if ui_lang == 'en' %}KPI{% else %}مؤشرات الأداء الرئيسية{% endif %}
     </a>
   </li>
   <li class="usa-sidenav__item">

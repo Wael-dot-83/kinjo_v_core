@@ -1,0 +1,210 @@
+{% extends "manager_base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}Manager Dashboard — KinJo{% else %}لوحة تحكم المدير — كنجو{% endif %}{% endblock %}
+
+{% block page_header %}
+<h1 class="font-heading-xl margin-top-0 margin-bottom-1">
+  {% if ui_lang == 'en' %}Manager Dashboard{% else %}لوحة تحكم المدير{% endif %}
+</h1>
+<p class="usa-intro margin-top-0" id="kgNameLine">
+  <span id="kgName">…</span>
+  <span class="text-base-dark">— <span id="todayDate"></span></span>
+</p>
+{% endblock %}
+
+{% block content %}
+<!-- Loading state -->
+<div id="dashLoading" class="usa-alert usa-alert--info usa-alert--slim" role="status">
+  <div class="usa-alert__body">
+    <p class="usa-alert__text">{% if ui_lang == 'en' %}Loading dashboard…{% else %}جارٍ تحميل لوحة التحكم…{% endif %}</p>
+  </div>
+</div>
+
+<!-- Error state -->
+<div id="dashError" class="usa-alert usa-alert--error" role="alert" hidden>
+  <div class="usa-alert__body">
+    <p class="usa-alert__text">
+      {% if ui_lang == 'en' %}Could not load the dashboard. {% else %}تعذّر تحميل لوحة التحكم. {% endif %}
+      <button type="button" class="usa-button usa-button--unstyled" onclick="loadDashboard()">
+        {% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}
+      </button>
+    </p>
+  </div>
+</div>
+
+<div id="dashContent" hidden>
+
+  <!-- Pending actions -->
+  <section aria-labelledby="pendingHeading" class="margin-bottom-4">
+    <h2 id="pendingHeading" class="font-heading-lg margin-bottom-2">
+      {% if ui_lang == 'en' %}Needs your action today{% else %}بانتظار إجراءاتك اليوم{% endif %}
+    </h2>
+    <ul class="usa-card-group">
+      <li class="usa-card tablet:grid-col-3">
+        <div class="usa-card__container">
+          <div class="usa-card__body">
+            <p class="font-heading-2xl margin-0 text-primary-dark" id="statReportsPending">0</p>
+            <p class="margin-0">{% if ui_lang == 'en' %}Daily reports awaiting review{% else %}تقارير يومية بانتظار المراجعة{% endif %}</p>
+          </div>
+          <div class="usa-card__footer">
+            <a href="/daily-reports" class="usa-button usa-button--outline width-full">{% if ui_lang == 'en' %}Review{% else %}مراجعة{% endif %}</a>
+          </div>
+        </div>
+      </li>
+      <li class="usa-card tablet:grid-col-3">
+        <div class="usa-card__container">
+          <div class="usa-card__body">
+            <p class="font-heading-2xl margin-0 text-primary-dark" id="statAbsencePending">0</p>
+            <p class="margin-0">{% if ui_lang == 'en' %}Pending absence requests{% else %}طلبات غياب معلّقة{% endif %}</p>
+          </div>
+          <div class="usa-card__footer">
+            <a href="/manager/absence-requests" class="usa-button usa-button--outline width-full">{% if ui_lang == 'en' %}Decide{% else %}اتخاذ قرار{% endif %}</a>
+          </div>
+        </div>
+      </li>
+      <li class="usa-card tablet:grid-col-3">
+        <div class="usa-card__container">
+          <div class="usa-card__body">
+            <p class="font-heading-2xl margin-0 text-primary-dark" id="statEnrollmentPending">0</p>
+            <p class="margin-0">{% if ui_lang == 'en' %}Pending enrollment requests{% else %}طلبات تسجيل معلّقة{% endif %}</p>
+          </div>
+          <div class="usa-card__footer">
+            <a href="/enrollments" class="usa-button usa-button--outline width-full">{% if ui_lang == 'en' %}Review{% else %}مراجعة{% endif %}</a>
+          </div>
+        </div>
+      </li>
+      <li class="usa-card tablet:grid-col-3">
+        <div class="usa-card__container">
+          <div class="usa-card__body">
+            <p class="font-heading-2xl margin-0 text-primary-dark" id="statReportsSentToday">0</p>
+            <p class="margin-0">{% if ui_lang == 'en' %}Reports sent to parents today{% else %}تقارير أُرسلت لأولياء الأمور اليوم{% endif %}</p>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <!-- Kindergarten snapshot -->
+  <section aria-labelledby="snapshotHeading" class="margin-bottom-4">
+    <h2 id="snapshotHeading" class="font-heading-lg margin-bottom-2">
+      {% if ui_lang == 'en' %}Kindergarten snapshot{% else %}نظرة عامة على الحضانة{% endif %}
+    </h2>
+    <ul class="usa-card-group">
+      <li class="usa-card tablet:grid-col-4">
+        <div class="usa-card__container">
+          <div class="usa-card__body">
+            <p class="font-heading-2xl margin-0" id="statClasses">0</p>
+            <p class="margin-0">{% if ui_lang == 'en' %}Active classes{% else %}شعب صفية نشطة{% endif %}</p>
+          </div>
+          <div class="usa-card__footer">
+            <a href="/classes" class="usa-link">{% if ui_lang == 'en' %}Manage classes{% else %}إدارة الشعب الصفية{% endif %}</a>
+          </div>
+        </div>
+      </li>
+      <li class="usa-card tablet:grid-col-4">
+        <div class="usa-card__container">
+          <div class="usa-card__body">
+            <p class="font-heading-2xl margin-0" id="statChildren">0</p>
+            <p class="margin-0">{% if ui_lang == 'en' %}Enrolled children{% else %}أطفال مسجّلون{% endif %}</p>
+          </div>
+          <div class="usa-card__footer">
+            <a href="/children" class="usa-link">{% if ui_lang == 'en' %}View children{% else %}عرض الأطفال{% endif %}</a>
+          </div>
+        </div>
+      </li>
+      <li class="usa-card tablet:grid-col-4">
+        <div class="usa-card__container">
+          <div class="usa-card__body">
+            <p class="font-heading-2xl margin-0" id="statSupervisors">0</p>
+            <p class="margin-0">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</p>
+          </div>
+          <div class="usa-card__footer">
+            <a href="/manager/supervisors" class="usa-link">{% if ui_lang == 'en' %}View coverage{% else %}عرض التغطية{% endif %}</a>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <!-- Operational alerts -->
+  <section aria-labelledby="alertsHeading">
+    <h2 id="alertsHeading" class="font-heading-lg margin-bottom-2">
+      {% if ui_lang == 'en' %}Operational alerts{% else %}تنبيهات تشغيلية{% endif %}
+    </h2>
+    <div id="alertNoSupervisor" class="usa-alert usa-alert--warning" hidden>
+      <div class="usa-alert__body">
+        <h3 class="usa-alert__heading">{% if ui_lang == 'en' %}Classes without a supervisor{% else %}شعب صفية بلا مشرف{% endif %}</h3>
+        <p class="usa-alert__text" id="alertNoSupervisorList"></p>
+      </div>
+    </div>
+    <div id="alertNearCapacity" class="usa-alert usa-alert--warning" hidden>
+      <div class="usa-alert__body">
+        <h3 class="usa-alert__heading">{% if ui_lang == 'en' %}Classes at or near capacity{% else %}شعب صفية ممتلئة أو شبه ممتلئة{% endif %}</h3>
+        <p class="usa-alert__text" id="alertNearCapacityList"></p>
+      </div>
+    </div>
+    <div id="alertsAllClear" class="usa-alert usa-alert--success usa-alert--slim" hidden>
+      <div class="usa-alert__body">
+        <p class="usa-alert__text">{% if ui_lang == 'en' %}No operational alerts — everything looks good.{% else %}لا توجد تنبيهات تشغيلية — كل شيء على ما يرام.{% endif %}</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const UI_EN = {{ 'true' if ui_lang == 'en' else 'false' }};
+const h = () => {
+    const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+    return { 'Content-Type': 'application/json', ...(t ? { 'Authorization': `Bearer ${t}` } : {}) };
+};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function nameOf(item) { return UI_EN ? (item.name_en || item.name_ar) : (item.name_ar || item.name_en); }
+
+async function loadDashboard() {
+    const loading = document.getElementById('dashLoading');
+    const error = document.getElementById('dashError');
+    const content = document.getElementById('dashContent');
+    loading.hidden = false; error.hidden = true;
+    try {
+        const res = await fetch('/api/manager/dashboard', { headers: h() });
+        if (!res.ok) throw new Error();
+        const d = await res.json();
+
+        const s = d.summary || {};
+        document.getElementById('kgName').textContent = UI_EN ? (d.kindergarten.name_en || d.kindergarten.name_ar) : (d.kindergarten.name_ar || d.kindergarten.name_en);
+        document.getElementById('todayDate').textContent = new Date().toLocaleDateString(UI_EN ? 'en-JO' : 'ar-JO');
+        document.getElementById('statReportsPending').textContent = s.pending_daily_reports ?? 0;
+        document.getElementById('statAbsencePending').textContent = s.pending_absence_requests ?? 0;
+        document.getElementById('statEnrollmentPending').textContent = s.pending_applications ?? 0;
+        document.getElementById('statReportsSentToday').textContent = s.reports_sent_today ?? 0;
+        document.getElementById('statClasses').textContent = (d.classes || []).length;
+        document.getElementById('statChildren').textContent = s.active_enrollments ?? 0;
+        document.getElementById('statSupervisors').textContent = s.supervisors_count ?? 0;
+
+        const noSup = d.classes_without_supervisor || [];
+        if (noSup.length) {
+            document.getElementById('alertNoSupervisorList').textContent = noSup.map(nameOf).join('، ');
+            document.getElementById('alertNoSupervisor').hidden = false;
+        }
+        const nearCap = d.classes_near_capacity || [];
+        if (nearCap.length) {
+            document.getElementById('alertNearCapacityList').textContent =
+                nearCap.map(c => `${nameOf(c)} (${c.occupied}/${c.capacity})`).join('، ');
+            document.getElementById('alertNearCapacity').hidden = false;
+        }
+        document.getElementById('alertsAllClear').hidden = Boolean(noSup.length || nearCap.length);
+
+        loading.hidden = true;
+        content.hidden = false;
+    } catch {
+        loading.hidden = true;
+        error.hidden = false;
+    }
+}
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+{% endblock %}

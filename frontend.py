@@ -299,8 +299,11 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
         return templates.TemplateResponse(request=request, name="dashboard/parent.html", context={"current_user": current_user, "today": _today()})
     elif user_role == "ADMIN":
         return templates.TemplateResponse(request=request, name="admin_dashboard.html", context={"current_user": current_user, "today": _today()})
+    elif user_role == "MANAGER":
+        # Operational, own-kindergarten-only dashboard (dashboard/index.html
+        # showed national totals, which managers must not see).
+        return templates.TemplateResponse(request=request, name="manager/dashboard.html", context={"current_user": current_user, "today": _today()})
     else:
-        # Manager
         return templates.TemplateResponse(request=request, name="dashboard/index.html", context={"current_user": current_user, "today": _today()})
 
 

@@ -358,37 +358,49 @@ class TestManagerClassCRUD:
         assert sample_class.id in ids
 
     def test_create_class(self, client, manager_user, sample_kindergarten, supervisor_user, manager_token):
+        # Class create/update/delete live on the shared, audited
+        # /api/classes API (validate_manager_role + validate_kindergarten_scope).
         payload = {
+            "kindergarten_id": sample_kindergarten.id,
             "name_ar": "صف جديد",
             "name_en": "New Class",
+            "class_code": "NEW-01",
+            "age_group": "AGE_2_4",
             "capacity_total": 10,
             "min_age_months": 36,
             "max_age_months": 60,
             "supervisor_id": supervisor_user.id,
         }
-        r = client.post("/api/manager/classes", json=payload, headers=_hdr(manager_token))
+        r = client.post("/api/classes", json=payload, headers=_hdr(manager_token))
         assert r.status_code in (200, 201), r.text
         assert r.json()["kindergarten_id"] == sample_kindergarten.id
 
-    def test_supervisor_cannot_create_class(self, client, supervisor_user, supervisor_token):
-        payload = {"name_ar": "فئة", "name_en": "Cat", "capacity_total": 10,
-                   "min_age_months": 24, "max_age_months": 48}
-        r = client.post("/api/manager/classes", json=payload, headers=_hdr(supervisor_token))
+    def test_supervisor_cannot_create_class(self, client, supervisor_user, sample_kindergarten, supervisor_token):
+        payload = {"kindergarten_id": sample_kindergarten.id, "name_ar": "فئة", "name_en": "Cat",
+                   "class_code": "CAT-01", "age_group": "AGE_2_4", "capacity_total": 10,
+                   "min_age_months": 24, "max_age_months": 48, "supervisor_id": supervisor_user.id}
+        r = client.post("/api/classes", json=payload, headers=_hdr(supervisor_token))
         assert r.status_code == 403
 
     def test_update_class(self, client, manager_user, sample_class, manager_token):
         payload = {"name_ar": "اسم محدّث", "name_en": "Updated", "capacity_total": 10,
                    "min_age_months": 24, "max_age_months": 60, "is_active": False}
-        r = client.put(f"/api/manager/classes/{sample_class.id}", json=payload, headers=_hdr(manager_token))
-        assert r.status_code == 200
+        r = client.put(f"/api/classes/{sample_class.id}", json=payload, headers=_hdr(manager_token))
+        assert r.status_code == 200, r.text
         assert r.json()["name_en"] == "Updated"
 
     def test_delete_class_with_active_enrollment_blocked(
         self, client, manager_user, sample_class, sample_enrollment, manager_token
     ):
-        """Cannot delete a class that has active enrollments."""
-        r = client.delete(f"/api/manager/classes/{sample_class.id}", headers=_hdr(manager_token))
-        assert r.status_code == 409
+        """Managers retire classes via deactivate (hard delete is admin-only);
+        deactivation is blocked while active enrollments exist."""
+        r = client.put(f"/api/classes/{sample_class.id}/deactivate", headers=_hdr(manager_token))
+        assert r.status_code == 400
+        assert "active enrollment" in r.json()["detail"]
+
+    def test_manager_cannot_hard_delete_class(self, client, manager_user, sample_class, manager_token):
+        r = client.delete(f"/api/classes/{sample_class.id}", headers=_hdr(manager_token))
+        assert r.status_code == 403
 
     def test_assign_supervisor(
         self, client, test_db, manager_user, sample_class, sample_kindergarten, manager_token
@@ -1056,5 +1068,7 @@ class TestRegression:
     def test_supervisor_cannot_delete_class(
         self, client, supervisor_user, sample_class, supervisor_token
     ):
-        r = client.delete(f"/api/manager/classes/{sample_class.id}", headers=_hdr(supervisor_token))
+        r = client.put(f"/api/classes/{sample_class.id}/deactivate", headers=_hdr(supervisor_token))
+        assert r.status_code == 403
+        r = client.delete(f"/api/classes/{sample_class.id}", headers=_hdr(supervisor_token))
         assert r.status_code == 403

@@ -6,7 +6,6 @@ the manager's own kindergarten(s).
 """
 from __future__ import annotations
 
-import uuid
 from datetime import date, datetime, timezone, timedelta
 _JORDAN_TZ = timezone(timedelta(hours=3))
 from utils.time_utils import today_amman as _today
@@ -43,6 +42,11 @@ router = APIRouter(prefix="/api/manager", tags=["manager"])
 def _require_manager(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != UserRole.MANAGER:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager access only.")
+    if current_user.kindergarten_id is None:
+        # A manager without a kindergarten has no operational scope; letting
+        # them through would make kindergarten_id == None filters silently
+        # match nothing (reads) or create orphan records (writes).
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No kindergarten is associated with this manager account.")
     return current_user
 
 
@@ -90,74 +94,10 @@ def list_classes(
     return {"classes": result}
 
 
-class ClassIn(BaseModel):
-    name_ar: str
-    name_en: Optional[str] = None
-    age_group: str = "AGE_2_4"
-    capacity_total: int = 20
-    min_age_months: int = 24
-    max_age_months: int = 72
-    is_active: bool = True
-
-
-@router.post("/classes", status_code=201)
-def create_class(
-    body: ClassIn,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_manager),
-):
-    cls = Class(
-        kindergarten_id=current_user.kindergarten_id,
-        name_ar=body.name_ar,
-        name_en=body.name_en,
-        class_code=str(uuid.uuid4())[:8].upper(),
-        age_group=body.age_group,
-        capacity_total=body.capacity_total,
-        min_age_months=body.min_age_months,
-        max_age_months=body.max_age_months,
-        is_active=body.is_active,
-    )
-    db.add(cls)
-    db.commit()
-    db.refresh(cls)
-    return {"id": cls.id, "name_ar": cls.name_ar, "name_en": cls.name_en, "kindergarten_id": cls.kindergarten_id}
-
-
-@router.put("/classes/{class_id}")
-def update_class(
-    class_id: int,
-    body: ClassIn,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_manager),
-):
-    cls = _get_class_or_403(class_id, current_user, db)
-    cls.name_ar = body.name_ar
-    cls.name_en = body.name_en
-    cls.capacity_total = body.capacity_total
-    cls.min_age_months = body.min_age_months
-    cls.max_age_months = body.max_age_months
-    cls.is_active = body.is_active
-    db.commit()
-    return {"id": cls.id, "name_ar": cls.name_ar, "name_en": cls.name_en, "kindergarten_id": cls.kindergarten_id}
-
-
-@router.delete("/classes/{class_id}", status_code=204)
-def delete_class(
-    class_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_manager),
-):
-    cls = _get_class_or_403(class_id, current_user, db)
-    # Only soft-delete if no active enrollments
-    active_count = (
-        db.query(EnrollmentApplication)
-        .filter(EnrollmentApplication.class_id == class_id, EnrollmentApplication.status == EnrollmentStatus.ACTIVE)
-        .count()
-    )
-    if active_count:
-        raise HTTPException(status_code=409, detail=f"Cannot delete class with {active_count} active enrollment(s).")
-    cls.deleted_at = datetime.now(_JORDAN_TZ)
-    db.commit()
+# NOTE: class create/update/delete intentionally live in api/classes.py
+# (validate_manager_role + validate_kindergarten_scope + log_audit_action).
+# This router only adds the manager-specific workflows that the shared
+# classes API does not cover.
 
 
 # ---------------------------------------------------------------------------
@@ -210,6 +150,13 @@ def assign_supervisor_to_class(
         start_date=_today(),
     )
     db.add(assignment)
+    db.add(AuditLog(
+        user_id=current_user.id,
+        action=AuditAction.SUPERVISOR_ASSIGNED,
+        entity_type="class",
+        entity_id=body.class_id,
+        details=f"Manager assigned supervisor {body.supervisor_id} to class {body.class_id} (primary={body.is_primary})",
+    ))
     db.commit()
     db.refresh(assignment)
 
@@ -253,6 +200,13 @@ def unassign_supervisor_from_class(
     if assignment.is_primary and cls.supervisor_id == supervisor_id:
         validators.set_class_primary_supervisor_id(db, class_id, None)
 
+    db.add(AuditLog(
+        user_id=current_user.id,
+        action=AuditAction.SUPERVISOR_UNASSIGNED,
+        entity_type="class",
+        entity_id=class_id,
+        details=f"Manager removed supervisor {supervisor_id} from class {class_id}",
+    ))
     db.commit()
 
 
@@ -279,6 +233,13 @@ def swap_supervisor(
     a = SupervisorAssignment(class_id=class_id, supervisor_id=body.supervisor_id, is_primary=True, start_date=_today())
     db.add(a)
     validators.set_class_primary_supervisor_id(db, class_id, body.supervisor_id)
+    db.add(AuditLog(
+        user_id=current_user.id,
+        action=AuditAction.REPLACEMENT_SUPERVISOR_ASSIGNED,
+        entity_type="class",
+        entity_id=class_id,
+        details=f"Manager swapped class {class_id} supervisors to new primary {body.supervisor_id}",
+    ))
     db.commit()
     return {"class_id": class_id, "new_supervisor_id": body.supervisor_id}
 
@@ -315,7 +276,29 @@ def move_child_between_classes(
     if not enrollment:
         raise HTTPException(status_code=404, detail="Active enrollment for child in source class not found.")
 
+    # Respect the target class capacity.
+    occupied = (
+        db.query(EnrollmentApplication)
+        .filter(
+            EnrollmentApplication.class_id == body.to_class_id,
+            EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+        )
+        .count()
+    )
+    if to_cls.capacity_total is not None and occupied >= to_cls.capacity_total:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Target class is full ({occupied}/{to_cls.capacity_total}).",
+        )
+
     enrollment.class_id = body.to_class_id
+    db.add(AuditLog(
+        user_id=current_user.id,
+        action=AuditAction.CHILD_MOVED_CLASS,
+        entity_type="enrollment",
+        entity_id=enrollment.id,
+        details=f"Manager moved child {body.child_id} from class {body.from_class_id} to class {body.to_class_id}",
+    ))
     db.commit()
     return {"child_id": body.child_id, "new_class_id": body.to_class_id}
 
@@ -648,3 +631,6 @@ def list_children(
         })
     return {"children": result, "total": len(result)}
 
+
+# NOTE: the manager dashboard endpoint lives in api/manager.py
+# (GET /api/manager/dashboard) -- do not add a second one here.

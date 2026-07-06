@@ -28,11 +28,19 @@ def get_manager_dashboard(
     validators.validate_manager_role(current_user)
 
     kindergarten_id = current_user.kindergarten_id
+    if kindergarten_id is None:
+        # validate_manager_role also admits ADMIN; this dashboard is
+        # per-kindergarten and unscoped users have nothing to see here.
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No kindergarten is associated with this account")
 
     # Get kindergarten info
     kindergarten = db.query(models.Kindergarten).filter(
         models.Kindergarten.id == kindergarten_id
     ).first()
+    if kindergarten is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Associated kindergarten not found")
 
     # Pending enrollment applications
     pending_applications = db.query(func.count(models.EnrollmentApplication.id)).filter(
@@ -173,6 +181,8 @@ def get_manager_dashboard(
         {
             "id": c.id,
             "name": c.name_ar or c.name_en,
+            "name_ar": c.name_ar,
+            "name_en": c.name_en,
             "capacity": c.capacity_total,
             "enrolled": enrolled_by_class.get(c.id, 0),
             "present": present_by_class.get(c.id, 0),
@@ -180,6 +190,54 @@ def get_manager_dashboard(
         }
         for c in classes
     ]
+
+    # Supervisor coverage: classes with at least one active assignment.
+    covered_class_ids = {
+        row[0]
+        for row in db.query(models.SupervisorAssignment.class_id)
+        .filter(
+            models.SupervisorAssignment.class_id.in_(class_ids),
+            models.SupervisorAssignment.deleted_at.is_(None),
+        )
+        .distinct()
+        .all()
+    } if class_ids else set()
+    classes_without_supervisor = [
+        {"id": c.id, "name_ar": c.name_ar, "name_en": c.name_en}
+        for c in classes if c.id not in covered_class_ids
+    ]
+    classes_near_capacity = [
+        {
+            "id": c.id,
+            "name_ar": c.name_ar,
+            "name_en": c.name_en,
+            "occupied": enrolled_by_class.get(c.id, 0),
+            "capacity": c.capacity_total,
+        }
+        for c in classes
+        if c.capacity_total and enrolled_by_class.get(c.id, 0) >= 0.9 * c.capacity_total
+    ]
+
+    supervisors_count = db.query(func.count(models.User.id)).filter(
+        models.User.role == models.UserRole.SUPERVISOR,
+        models.User.kindergarten_id == kindergarten_id,
+        models.User.deleted_at.is_(None),
+    ).scalar() or 0
+
+    pending_absence_requests = db.query(func.count(models.AbsenceRequest.id)).filter(
+        models.AbsenceRequest.kindergarten_id == kindergarten_id,
+        models.AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED,
+    ).scalar() or 0
+
+    reports_sent_today = db.query(func.count(models.DailyReport.id)).join(
+        models.Child
+    ).join(
+        models.EnrollmentApplication
+    ).filter(
+        models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+        models.DailyReport.status == models.DailyReportStatus.SENT_TO_PARENT,
+        models.DailyReport.date == today,
+    ).scalar() or 0
 
     dashboard = {
         "kindergarten": {
@@ -195,13 +253,18 @@ def get_manager_dashboard(
             "waitlisted_children": waitlisted,
             "attendance_today": attendance_today,
             "pending_daily_reports": pending_reports,
-            "recent_incidents": recent_incidents
+            "recent_incidents": recent_incidents,
+            "pending_absence_requests": pending_absence_requests,
+            "reports_sent_today": reports_sent_today,
+            "supervisors_count": supervisors_count,
         },
         "charts": {
             "attendance": attendance_trend,
             "enrollment": enrollment_breakdown
         },
         "classes": classes_data,
+        "classes_without_supervisor": classes_without_supervisor,
+        "classes_near_capacity": classes_near_capacity,
         "alerts": []
     }
 
