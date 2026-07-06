@@ -14,7 +14,7 @@ from analytics_gap_service import AnalyticsGapService
 from schemas.chart_dto import LayerMetricsResponse
 from cache_service import dashboard_cache
 
-router = APIRouter(prefix="/api/admin/analytics", tags=["Advanced Analytics"])
+router = APIRouter(prefix="/analytics", tags=["Advanced Analytics"])
 
 
 @router.get(

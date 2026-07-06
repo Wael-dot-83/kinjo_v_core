@@ -994,67 +994,6 @@ def create_safety_incident(
     return {"id": incident.id, "status": "created"}
 
 
-@router.get("/safety-incidents")
-def get_safety_incidents(
-    severity: Optional[str] = Query(None),
-    type_filter: Optional[str] = Query(None, alias="type"),
-    status_filter: Optional[str] = Query(None, alias="status"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_supervisor),
-):
-    child_ids = get_supervisor_child_ids(current_user.id, db)
-    if not child_ids:
-        return {"incidents": [], "stats": {"open": 0, "high_severity": 0, "closed": 0}}
-
-    q = db.query(Incident).filter(Incident.child_id.in_(child_ids), Incident.deleted_at.is_(None))
-    if severity:
-        try:
-            q = q.filter(Incident.severity_level == SeverityLevel(severity.upper()))
-        except ValueError:
-            pass
-    if type_filter:
-        try:
-            q = q.filter(Incident.type == IncidentType(type_filter.upper()))
-        except ValueError:
-            pass
-
-    incidents = q.order_by(Incident.occurred_at.desc()).all()
-    from models import Child
-    child_map = {c.id: c for c in db.query(Child).filter(Child.id.in_(child_ids)).all()}
-
-    def _incident_status(i: Incident) -> str:
-        return "CLOSED" if i.closed_at else "OPEN"
-
-    if status_filter:
-        incidents = [i for i in incidents if _incident_status(i) == status_filter.upper()]
-
-    result = [
-        {
-            "id": i.id,
-            "child_name": f"{child_map[i.child_id].first_name} {child_map[i.child_id].last_name}" if i.child_id in child_map else "",
-            "type": i.type.value if i.type else None,
-            "severity_level": i.severity_level.value if i.severity_level else None,
-            "status": _incident_status(i),
-            "occurred_at": i.occurred_at.isoformat() if i.occurred_at else None,
-            "description": i.description,
-            "parent_informed": i.parent_informed,
-            "resolution_notes": i.resolution_notes,
-            "attachment_url": i.attachment_url,
-        }
-        for i in incidents
-    ]
-
-    # Stats use all incidents for this supervisor (pre-type/severity filter for stats accuracy)
-    all_incidents = db.query(Incident).filter(Incident.child_id.in_(child_ids), Incident.deleted_at.is_(None)).all()
-    stats = {
-        "open": sum(1 for i in all_incidents if not i.closed_at),
-        "high_severity": sum(1 for i in all_incidents if i.severity_level in (SeverityLevel.HIGH, SeverityLevel.CRITICAL)),
-        "closed": sum(1 for i in all_incidents if i.closed_at),
-    }
-
-    return {"incidents": result, "stats": stats}
-
-
 @router.put("/safety-incidents/{incident_id}/resolve")
 @router.post("/safety-incidents/{incident_id}/resolve")
 def resolve_safety_incident(

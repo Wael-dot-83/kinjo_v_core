@@ -1,0 +1,44 @@
+<header class="usa-header usa-header--basic">
+  <div class="usa-nav-container">
+    <div class="usa-navbar">
+      <div class="usa-logo" id="basic-logo">
+        <em class="usa-logo__text">
+          <a href="/dashboard" title="Home" aria-label="Home">
+            <i class="bi bi-building"></i> KinJo Manager
+          </a>
+        </em>
+      </div>
+      <button type="button" class="usa-menu-btn">Menu</button>
+    </div>
+    <nav aria-label="Primary navigation" class="usa-nav">
+      <button type="button" class="usa-nav__close">
+        <i class="bi bi-x-lg"></i>
+      </button>
+      <ul class="usa-nav__primary usa-accordion">
+        <li class="usa-nav__primary-item">
+          <a href="/dashboard" class="usa-nav__link"><span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span></a>
+        </li>
+        <li class="usa-nav__primary-item">
+          <a href="/profile" class="usa-nav__link"><span>{% if ui_lang == 'en' %}Profile{% else %}الملف الشخصي{% endif %}</span></a>
+        </li>
+      </ul>
+      <div class="usa-nav__secondary">
+        <ul class="usa-nav__secondary-links">
+          <li class="usa-nav__secondary-item">
+            <span class="text-bold margin-right-2">{{ current_user.username }}</span>
+          </li>
+          <li class="usa-nav__secondary-item">
+            <button onclick="toggleLanguage()" class="usa-button usa-button--unstyled" style="cursor: pointer;">
+              <i class="bi bi-translate"></i> {% if ui_lang == 'en' %}العربية{% else %}English{% endif %}
+            </button>
+          </li>
+          <li class="usa-nav__secondary-item">
+            <a href="#" onclick="handleLogout(event)" class="text-secondary-dark">
+              {% if ui_lang == 'en' %}Log out{% else %}تسجيل الخروج{% endif %}
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+  </div>
+</header>

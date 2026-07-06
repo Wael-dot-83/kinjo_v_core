@@ -613,7 +613,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             `<tr><td colspan="4"><div class="state-box"><div class="spinner-border spinner-border-sm text-muted"></div></div></td></tr>`;
 
         try {
-            const r = await fetch(`/api/safety/analytics?${buildParams().toString()}`);
+            const r = await fetch(`/api/admin/safety/analytics?${buildParams().toString()}`);
             if (!r.ok) {
                 const detail = await r.json().catch(() => ({}));
                 showError(detail.detail || _t('فشل تحميل البيانات', 'Failed to load data'));

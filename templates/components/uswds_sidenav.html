@@ -1,0 +1,70 @@
+<ul class="usa-sidenav">
+  <li class="usa-sidenav__item">
+    <a href="/dashboard" class="{% if request.url.path == '/dashboard' %}usa-current{% endif %}">
+      <i class="bi bi-grid-1x2-fill margin-right-1"></i> {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
+    </a>
+  </li>
+
+  {% if current_user.role.value == 'MANAGER' %}
+  <!-- Daily Operations -->
+  <li class="usa-sidenav__item">
+    <a href="/attendance/daily" class="{% if '/attendance' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-calendar-check margin-right-1"></i> {% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}
+    </a>
+  </li>
+  <li class="usa-sidenav__item">
+    <a href="/safety" class="{% if '/safety' in request.url.path or '/incidents' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-shield-lock margin-right-1"></i> {% if ui_lang == 'en' %}Safety and Incidents{% else %}السلامة والحوادث{% endif %}
+    </a>
+  </li>
+  <li class="usa-sidenav__item">
+    <a href="/messages" class="{% if '/messages' in request.url.path or '/communication' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-chat-left-dots margin-right-1"></i> {% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}
+    </a>
+  </li>
+
+  <!-- Reports and Requests -->
+  <li class="usa-sidenav__item">
+    <a href="/enrollments" class="{% if '/enrollments' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-person-plus margin-right-1"></i> {% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}
+    </a>
+  </li>
+  <li class="usa-sidenav__item">
+    <a href="/daily-reports" class="{% if '/daily-reports' in request.url.path or '/reports' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-file-earmark-text margin-right-1"></i> {% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}
+    </a>
+  </li>
+  
+  <!-- Management -->
+  <li class="usa-sidenav__item">
+    <a href="/kpi" class="{% if '/kpi' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-bar-chart-line margin-right-1"></i> {% if ui_lang == 'en' %}KPI{% else %}مؤشرات الأداء الرئيسية{% endif %}
+    </a>
+  </li>
+  <li class="usa-sidenav__item">
+    <a href="/manager/benchmarking" class="{% if '/manager/benchmarking' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-percent margin-right-1"></i> {% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %}
+    </a>
+  </li>
+  <li class="usa-sidenav__item">
+    <a href="/kindergartens" class="{% if '/kindergartens' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-building-gear margin-right-1"></i> {% if ui_lang == 'en' %}Kindergarten Info{% else %}معلومات الحضانة{% endif %}
+    </a>
+  </li>
+  <li class="usa-sidenav__item">
+    <a href="/classes" class="{% if '/classes' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-people-fill margin-right-1"></i> {% if ui_lang == 'en' %}Classes{% else %}الشعب الصفية{% endif %}
+    </a>
+  </li>
+  <li class="usa-sidenav__item">
+    <a href="/children" class="{% if request.url.path == '/children' %}usa-current{% endif %}">
+      <i class="bi bi-emoji-smile margin-right-1"></i> {% if ui_lang == 'en' %}Children{% else %}الأطفال{% endif %}
+    </a>
+  </li>
+  <li class="usa-sidenav__item">
+    <a href="/manager/supervisors" class="{% if '/manager/supervisors' in request.url.path %}usa-current{% endif %}">
+      <i class="bi bi-person-badge-fill margin-right-1"></i> {% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}
+    </a>
+  </li>
+  {% endif %}
+</ul>

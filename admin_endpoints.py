@@ -211,7 +211,7 @@ def validate_bulk_manager_assignments(
 # Router Definition
 # =============================================================================
 
-router = APIRouter(prefix="/admin", tags=["Admin"])
+router = APIRouter(tags=["Admin"])
 
 
 # =============================================================================
@@ -1895,7 +1895,164 @@ def resolve_contact_message(
             sensitivity_level=1,
         )
 
-    return {"message": "Resolved", "id": message_id}
+    return {"message": "Success"}
+
+
+# ---------------------------------------------------------------------------
+# Safety analytics
+# ---------------------------------------------------------------------------
+
+@router.get("/safety/analytics")
+def safety_analytics(
+    incident_type: Optional[str] = None,
+    severity: Optional[str] = None,
+    classification: Optional[str] = None,
+    parent_informed: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    kindergarten_id: Optional[int] = None,
+    child_id: Optional[int] = None,
+    governorate: Optional[str] = None,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    validators.validate_admin_role(current_user)
+
+    q = db.query(models.Incident)
+
+    if kindergarten_id:
+        q = q.filter(models.Incident.kindergarten_id == kindergarten_id)
+    if child_id:
+        q = q.filter(models.Incident.child_id == child_id)
+    if governorate:
+        q = q.join(
+            models.Kindergarten, models.Kindergarten.id == models.Incident.kindergarten_id
+        ).filter(models.Kindergarten.governorate == governorate)
+
+    if incident_type:
+        try:
+            type_val = models.IncidentType(incident_type)
+            q = q.filter(models.Incident.type == type_val)
+        except ValueError:
+            pass
+
+    if severity:
+        try:
+            sev_val = models.SeverityLevel(severity)
+            q = q.filter(models.Incident.severity_level == sev_val)
+        except ValueError:
+            pass
+
+    if classification:
+        q = q.filter(models.Incident.classification == classification)
+
+    if parent_informed is not None and parent_informed != "":
+        q = q.filter(models.Incident.parent_informed == (parent_informed.lower() == "true"))
+
+    from_dt = None
+    if date_from:
+        try:
+            from_dt = datetime.fromisoformat(date_from)
+            q = q.filter(models.Incident.occurred_at >= from_dt)
+        except ValueError:
+            pass
+
+    if date_to:
+        try:
+            to_dt = datetime.fromisoformat(date_to)
+            q = q.filter(models.Incident.occurred_at <= to_dt)
+        except ValueError:
+            pass
+
+    incidents = q.all()
+    total = len(incidents)
+
+    by_severity: dict[str, int] = {}
+    by_type: dict[str, int] = {}
+    by_classification: dict[str, int] = {}
+    open_count = 0
+    closed_count = 0
+    parent_informed_count = 0
+    parent_not_informed_count = 0
+    by_month: dict[str, int] = {}
+    kg_incident_ids: dict[int, list[int]] = {}
+    child_incident_counts: dict[int, int] = {}
+
+    for inc in incidents:
+        sev_key = inc.severity_level.value if inc.severity_level else "UNKNOWN"
+        by_severity[sev_key] = by_severity.get(sev_key, 0) + 1
+        type_key = inc.type.value if inc.type else "UNKNOWN"
+        by_type[type_key] = by_type.get(type_key, 0) + 1
+        cls_key = inc.classification or "UNKNOWN"
+        by_classification[cls_key] = by_classification.get(cls_key, 0) + 1
+
+        if inc.closed_at is not None:
+            closed_count += 1
+        else:
+            open_count += 1
+
+        if inc.parent_informed:
+            parent_informed_count += 1
+        else:
+            parent_not_informed_count += 1
+
+        month_key = inc.occurred_at.strftime("%Y-%m-01")
+        by_month[month_key] = by_month.get(month_key, 0) + 1
+
+        kg_incident_ids.setdefault(inc.kindergarten_id, []).append(inc.id)
+        child_incident_counts[inc.child_id] = child_incident_counts.get(inc.child_id, 0) + 1
+
+    trend = [{"month": month, "count": count} for month, count in sorted(by_month.items())]
+
+    by_kindergarten: list[dict[str, Any]] = []
+    if kg_incident_ids:
+        kgs = db.query(models.Kindergarten).filter(
+            models.Kindergarten.id.in_(kg_incident_ids.keys())
+        ).all()
+        kg_counts = {kg_id: len(ids) for kg_id, ids in kg_incident_ids.items()}
+        avg_per_kg = sum(kg_counts.values()) / len(kg_counts)
+        critical_kg_ids = {
+            inc.kindergarten_id for inc in incidents
+            if inc.severity_level == models.SeverityLevel.CRITICAL
+        }
+        for kg in kgs:
+            count = kg_counts.get(kg.id, 0)
+            by_kindergarten.append({
+                "kindergarten_id": kg.id,
+                "name_ar": kg.name_ar,
+                "name_en": kg.name_en,
+                "count": count,
+                "is_high_risk": count > avg_per_kg or kg.id in critical_kg_ids,
+            })
+        by_kindergarten.sort(key=lambda x: x["count"], reverse=True)
+
+    repeated_children: list[dict[str, Any]] = []
+    repeated_ids = [cid for cid, count in child_incident_counts.items() if count > 1]
+    if repeated_ids:
+        children = db.query(models.Child).filter(models.Child.id.in_(repeated_ids)).all()
+        for child in children:
+            full_name = f"{child.first_name} {child.last_name}".strip()
+            repeated_children.append({
+                "id": child.id,
+                "name_ar": full_name,
+                "name_en": full_name,
+                "count": child_incident_counts[child.id],
+            })
+        repeated_children.sort(key=lambda x: x["count"], reverse=True)
+
+    return {
+        "total": total,
+        "by_severity": by_severity,
+        "by_type": by_type,
+        "by_classification": by_classification,
+        "open": open_count,
+        "closed": closed_count,
+        "parent_informed": parent_informed_count,
+        "parent_not_informed": parent_not_informed_count,
+        "trend": trend,
+        "by_kindergarten": by_kindergarten,
+        "repeated_children": repeated_children,
+    }
 
 
 # =============================================================================

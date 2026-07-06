@@ -35,7 +35,7 @@ from admin_security import get_correlation_id
 
 
 
-router = APIRouter(prefix="/api/admin/reports", tags=["Admin Reports"])
+router = APIRouter(prefix="/reports", tags=["Admin Reports"])
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 _ACTIVE_STATUSES = {models.EnrollmentStatus.ACTIVE, models.EnrollmentStatus.ACCEPTED}

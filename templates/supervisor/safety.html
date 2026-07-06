@@ -215,7 +215,7 @@
         document.getElementById('tableError').classList.add('d-none');
         document.getElementById('tableWrap').classList.add('d-none');
 
-        let url = '/api/supervisor/safety-incidents?';
+        let url = '/api/incidents?';
         if (severity) url += `severity=${severity}&`;
         if (type)     url += `type=${type}&`;
         if (status)   url += `status=${status}&`;
@@ -224,8 +224,19 @@
             const r = await fetch(url, { headers: getHeaders() });
             if (!r.ok) throw new Error();
             const data = await r.json();
-            const incidents = data.incidents || [];
-            const stats = data.stats || {};
+            const incidents = data.items || [];
+            
+            // Also fetch summary
+            const sr = await fetch('/api/incidents/summary', { headers: getHeaders() });
+            let stats = {};
+            if (sr.ok) {
+                const sdata = await sr.json();
+                stats = {
+                    open: sdata.total_open,
+                    high_severity: sdata.high_severity,
+                    closed: sdata.closed
+                };
+            }
 
             document.getElementById('statOpen').textContent        = stats.open         ?? '—';
             document.getElementById('statHighSeverity').textContent = stats.high_severity ?? '—';

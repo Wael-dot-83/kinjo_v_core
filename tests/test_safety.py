@@ -55,8 +55,8 @@ def test_incident_reporting(client, test_db, manager_token, manager_user, sample
     response = client.get(f"/api/incidents?child_id={child.id}", headers=headers)
     assert response.status_code == 200
     data = response.json()
-    assert len(data) >= 1
-    assert data[0]["type"] == "INJURY"
+    assert len(data["items"]) >= 1
+    assert data["items"][0]["type"] == "INJURY"
 
     # 3. Add Health Alert
     alert_data = {

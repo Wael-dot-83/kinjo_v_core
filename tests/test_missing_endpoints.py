@@ -1291,8 +1291,8 @@ class TestSafetyEndpoints:
         response = client.get("/api/incidents")
         assert response.status_code == 200
         data = response.json()
-        # API returns a list directly
-        assert isinstance(data, list)
+        # API returns {"items": [...], "total_count": int}
+        assert isinstance(data["items"], list)
 
         app.dependency_overrides.clear()
 
@@ -1405,8 +1405,8 @@ class TestSafetyEndpoints:
         response = client.get("/api/incidents")
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
-        assert any(i["id"] == incident.id for i in data)
+        assert isinstance(data["items"], list)
+        assert any(i["id"] == incident.id for i in data["items"])
 
         app.dependency_overrides.clear()
 
@@ -1860,13 +1860,13 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides.clear()
 
     # ------------------------------------------------------------------
-    # GET /api/safety/analytics (lines 756-827)
+    # GET /api/admin/safety/analytics (lines 756-827)
     # ------------------------------------------------------------------
 
     def test_safety_analytics_admin(self, client, admin_user):
         """GET /safety/analytics returns incident stats for admin"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.get("/api/safety/analytics")
+        response = client.get("/api/admin/safety/analytics")
         assert response.status_code == 200
         data = response.json()
         assert "total" in data
@@ -1876,14 +1876,14 @@ class TestMissingEndpointsCoverage2:
     def test_safety_analytics_with_filters(self, client, admin_user):
         """GET /safety/analytics accepts optional filters"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.get("/api/safety/analytics?incident_type=FALL&severity=LOW")
+        response = client.get("/api/admin/safety/analytics?incident_type=FALL&severity=LOW")
         assert response.status_code == 200
         app.dependency_overrides.clear()
 
     def test_safety_analytics_non_admin_403(self, client, manager_user):
         """GET /safety/analytics returns 403 for non-admin"""
         app.dependency_overrides[get_current_user] = lambda: manager_user
-        response = client.get("/api/safety/analytics")
+        response = client.get("/api/admin/safety/analytics")
         assert response.status_code == 403
         app.dependency_overrides.clear()
 
@@ -2083,14 +2083,14 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides.clear()
 
     # ------------------------------------------------------------------
-    # GET /api/safety/analytics — incidents exist + date filters (lines 761-813)
+    # GET /api/admin/safety/analytics — incidents exist + date filters (lines 761-813)
     # ------------------------------------------------------------------
 
     def test_safety_analytics_with_date_filters(self, client, admin_user):
         """GET /safety/analytics with date_from and date_to filters"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get(
-            "/api/safety/analytics?date_from=2025-01-01&date_to=2026-12-31"
+            "/api/admin/safety/analytics?date_from=2025-01-01&date_to=2026-12-31"
         )
         assert response.status_code == 200
         data = response.json()
@@ -2100,14 +2100,14 @@ class TestMissingEndpointsCoverage2:
     def test_safety_analytics_with_invalid_dates_ignored(self, client, admin_user):
         """GET /safety/analytics ignores invalid date strings gracefully"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.get("/api/safety/analytics?date_from=not-a-date")
+        response = client.get("/api/admin/safety/analytics?date_from=not-a-date")
         assert response.status_code == 200
         app.dependency_overrides.clear()
 
     def test_safety_analytics_with_invalid_type_ignored(self, client, admin_user):
         """GET /safety/analytics ignores invalid incident_type values"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.get("/api/safety/analytics?incident_type=NOT_VALID&severity=NOT_VALID")
+        response = client.get("/api/admin/safety/analytics?incident_type=NOT_VALID&severity=NOT_VALID")
         assert response.status_code == 200
         app.dependency_overrides.clear()
 
@@ -2555,7 +2555,7 @@ class TestMissingEndpointsCoverage3:
         """GET /safety/analytics with kg/child/date/governorate filters → covers filter branches"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get(
-            f"/api/safety/analytics"
+            f"/api/admin/safety/analytics"
             f"?kindergarten_id={sample_kindergarten.id}"
             f"&child_id=9999"
             f"&date_from=2026-01-01T00:00:00"
@@ -2631,7 +2631,7 @@ class TestMissingEndpointsCoverage3:
         test_db.commit()
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.get("/api/safety/analytics")
+        response = client.get("/api/admin/safety/analytics")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] >= 1
@@ -2728,13 +2728,13 @@ class TestMissingEndpointsCoverage3:
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
         resp_all = client.get(
-            f"/api/safety/analytics?child_id={child.id}"
+            f"/api/admin/safety/analytics?child_id={child.id}"
         ).json()
         assert resp_all["by_classification"].get("OTHER") == 1
         assert resp_all["by_classification"].get("UNKNOWN") == 1
 
         resp_filtered = client.get(
-            f"/api/safety/analytics?child_id={child.id}&classification=OTHER"
+            f"/api/admin/safety/analytics?child_id={child.id}&classification=OTHER"
         ).json()
         assert resp_filtered["total"] == 1
         assert resp_filtered["by_classification"] == {"OTHER": 1}
@@ -2799,7 +2799,7 @@ class TestMissingEndpointsCoverage3:
         test_db.commit()
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        data = client.get(f"/api/safety/analytics?child_id={child.id}").json()
+        data = client.get(f"/api/admin/safety/analytics?child_id={child.id}").json()
         assert len(data["repeated_children"]) == 1
         entry = data["repeated_children"][0]
         assert entry["id"] == child.id
@@ -3496,7 +3496,7 @@ class TestMissingEndpointsCoverage5:
     def test_safety_analytics_invalid_date_to(self, client, admin_user):
         """GET /safety/analytics?date_to=bad covers except ValueError at line 784"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.get("/api/safety/analytics?date_to=not-a-date")
+        response = client.get("/api/admin/safety/analytics?date_to=not-a-date")
         assert response.status_code == 200
         app.dependency_overrides.clear()
 

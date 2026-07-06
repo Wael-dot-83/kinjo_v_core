@@ -3,7 +3,7 @@
 {% block title %}{% if ui_lang == 'en' %}Health and Safety{% else %}الصحة والسلامة{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="page-header-wrap d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
         <h1 class="page-header-title">
             <i class="bi bi-shield-check text-danger me-2" aria-hidden="true"></i>
@@ -16,7 +16,9 @@
             </ol>
         </nav>
     </div>
-    <div class="page-header-actions">
+    <div class="page-header-actions d-flex gap-2">
+        <button class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i> {% if ui_lang == 'en' %}Print{% else %}طباعة{% endif %}</button>
+        <button class="btn btn-outline-success" onclick="exportCSV()"><i class="bi bi-file-earmark-excel me-1"></i> {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}</button>
         <a href="/safety/incidents/new" class="btn btn-danger">
             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Report Incident{% else %}تسجيل حادث{% endif %}
@@ -26,57 +28,152 @@
 {% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>{% if ui_lang == 'en' %}Incident Log{% else %}سجل الحوادث{% endif %}</h5>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="unresolvedOnly" onchange="loadIncidents()">
-                    <label class="form-check-label" for="unresolvedOnly">{% if ui_lang == 'en' %}Unresolved Only{% else %}غير المعالجة فقط{% endif %}</label>
+<!-- Dashboard Cards -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3 mb-md-0">
+        <div class="card shadow-sm border-0 border-start border-warning border-4 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-1">{% if ui_lang == 'en' %}Total Open Incidents{% else %}الحوادث المفتوحة{% endif %}</p>
+                        <h3 class="mb-0 text-warning" id="statOpenIncidents">-</h3>
+                    </div>
+                    <div class="fs-1 text-warning opacity-50"><i class="bi bi-folder2-open"></i></div>
                 </div>
             </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3 mb-md-0">
+        <div class="card shadow-sm border-0 border-start border-danger border-4 h-100">
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
-                                <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
-                                <th>{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
-                                <th>{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</th>
-                                <th>{% if ui_lang == 'en' %}Description{% else %}الوصف{% endif %}</th>
-                                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                                <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
-                            </tr>
-                        </thead>
-                        <tbody id="incidentsTableBody">
-                            <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
-                                    <div class="spinner-border spinner-border-sm text-secondary" role="status"><span class="visually-hidden">Loading...</span></div>
-                                    {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-1">{% if ui_lang == 'en' %}High-Severity Incidents{% else %}حوادث عالية الخطورة{% endif %}</p>
+                        <h3 class="mb-0 text-danger" id="statHighSeverity">-</h3>
+                    </div>
+                    <div class="fs-1 text-danger opacity-50"><i class="bi bi-exclamation-octagon"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 border-start border-success border-4 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted mb-1">{% if ui_lang == 'en' %}Resolved Incidents{% else %}الحوادث المعالجة{% endif %}</p>
+                        <h3 class="mb-0 text-success" id="statResolved">-</h3>
+                    </div>
+                    <div class="fs-1 text-success opacity-50"><i class="bi bi-check-circle"></i></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6">
-        <div class="card shadow-sm mb-4">
+<!-- Health Alerts Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0 border-start border-info border-4">
             <div class="card-header bg-white py-3">
                 <h5 class="mb-0 text-info"><i class="bi bi-heart-pulse me-2"></i>{% if ui_lang == 'en' %}Health Alerts{% else %}تنبيهات صحية{% endif %}</h5>
             </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    {% if ui_lang == 'en' %}Health alerts (such as allergies) can be added directly from the child's profile.{% else %}يمكن إضافة التنبيهات الصحية (مثل الحساسية) من ملف الطفل مباشرة.{% endif %}
+            <div class="card-body bg-light">
+                <div id="healthAlertsContainer" class="row g-3">
+                    <div class="col-12 text-center py-3 text-muted" id="healthAlertsLoading">
+                        <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                        {% if ui_lang == 'en' %}Loading alerts...{% else %}جاري تحميل التنبيهات...{% endif %}
+                    </div>
                 </div>
-                <!-- Placeholder for health alerts list if needed -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Incidents Filter & Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>{% if ui_lang == 'en' %}Incident Log{% else %}سجل الحوادث{% endif %}</h5>
+            </div>
+            
+            <div class="card-body bg-light border-bottom">
+                <form id="filterForm" class="row g-3" onsubmit="event.preventDefault(); applyFilters();">
+                    <div class="col-md-3">
+                        <label class="form-label">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</label>
+                        <input type="text" id="filterSearch" class="form-control" placeholder="{% if ui_lang == 'en' %}Description or child name...{% else %}ابحث في الوصف أو الطفل...{% endif %}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+                        <select id="filterStatus" class="form-select">
+                            <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                            <option value="Open">{% if ui_lang == 'en' %}Open{% else %}مفتوح{% endif %}</option>
+                            <option value="Under Investigation">{% if ui_lang == 'en' %}Under Investigation{% else %}قيد التحقيق{% endif %}</option>
+                            <option value="Action Required">{% if ui_lang == 'en' %}Action Required{% else %}يتطلب إجراء{% endif %}</option>
+                            <option value="Resolved">{% if ui_lang == 'en' %}Resolved{% else %}معالج{% endif %}</option>
+                            <option value="Closed">{% if ui_lang == 'en' %}Closed{% else %}مغلق{% endif %}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</label>
+                        <select id="filterSeverity" class="form-select">
+                            <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                            <option value="LOW">{% if ui_lang == 'en' %}Low{% else %}منخفضة{% endif %}</option>
+                            <option value="MEDIUM">{% if ui_lang == 'en' %}Medium{% else %}متوسطة{% endif %}</option>
+                            <option value="HIGH">{% if ui_lang == 'en' %}High{% else %}عالية{% endif %}</option>
+                            <option value="CRITICAL">{% if ui_lang == 'en' %}Critical{% else %}حرجة{% endif %}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">{% if ui_lang == 'en' %}Date Range{% else %}نطاق التاريخ{% endif %}</label>
+                        <div class="input-group">
+                            <input type="date" id="filterDateFrom" class="form-control">
+                            <span class="input-group-text">-</span>
+                            <input type="date" id="filterDateTo" class="form-control">
+                        </div>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button type="button" class="btn btn-primary w-100" onclick="applyFilters()">
+                            <i class="bi bi-funnel"></i> {% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                            <i class="bi bi-x-circle"></i> {% if ui_lang == 'en' %}Reset{% else %}مسح{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="incidentsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="sortable user-select-none" data-sort="occurred_at" style="cursor: pointer;">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %} <i class="bi bi-arrow-down-up small text-muted ms-1"></i></th>
+                                <th class="sortable user-select-none" data-sort="child_name" style="cursor: pointer;">{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %} <i class="bi bi-arrow-down-up small text-muted ms-1"></i></th>
+                                <th>{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
+                                <th class="sortable user-select-none" data-sort="severity_level" style="cursor: pointer;">{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %} <i class="bi bi-arrow-down-up small text-muted ms-1"></i></th>
+                                <th>{% if ui_lang == 'en' %}Description{% else %}الوصف{% endif %}</th>
+                                <th class="sortable user-select-none" data-sort="status" style="cursor: pointer;">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %} <i class="bi bi-arrow-down-up small text-muted ms-1"></i></th>
+                                <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incidentsTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted" id="incidentsLoading">
+                                    <div class="spinner-border spinner-border-sm text-secondary me-2" role="status"></div>
+                                    {% if ui_lang == 'en' %}Loading incidents...{% else %}جاري تحميل الحوادث...{% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap">
+                <span id="paginationInfo" class="text-muted small mb-2 mb-md-0"></span>
+                <ul class="pagination pagination-sm mb-0" id="paginationControls">
+                    <!-- Pagination generated by JS -->
+                </ul>
             </div>
         </div>
     </div>
@@ -87,38 +184,290 @@
 <script>
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
+    
+    let allIncidents = [];
+    let filteredIncidents = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    
+    let sortColumn = 'occurred_at';
+    let sortAsc = false;
 
     document.addEventListener('DOMContentLoaded', function () {
+        loadDashboardStats();
+        loadHealthAlerts();
+        
+        // Restore filters from localStorage if exist
+        restoreFilters();
+        
         loadIncidents();
+        
+        // Attach sort listeners
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.getAttribute('data-sort');
+                if (sortColumn === col) {
+                    sortAsc = !sortAsc;
+                } else {
+                    sortColumn = col;
+                    sortAsc = true;
+                }
+                applySorting();
+                renderTable(0); // This just re-sorts current page, full sorting needs server
+            });
+        });
     });
 
-    function renderIncidents(incidents) {
+    async function loadDashboardStats() {
+        try {
+            const data = await window.api.get('/api/incidents/summary');
+            if (data) {
+                document.getElementById('statOpenIncidents').textContent = data.total_open;
+                document.getElementById('statHighSeverity').textContent = data.high_severity;
+                document.getElementById('statResolved').textContent = data.resolved;
+            }
+        } catch (err) {
+            console.error('Failed to load incident stats', err);
+        }
+    }
+
+    async function loadHealthAlerts() {
+        try {
+            const data = await window.api.get('/api/health-alerts/summary');
+            const container = document.getElementById('healthAlertsContainer');
+            if (!data || data.length === 0) {
+                container.innerHTML = `<div class="col-12"><div class="alert alert-light border text-center text-muted mb-0"><i class="bi bi-shield-check fs-4 d-block mb-2"></i> ${T('لا توجد تنبيهات صحية حالياً', 'No health alerts currently')}</div></div>`;
+                return;
+            }
+            
+            container.innerHTML = data.map(child => `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <h6 class="card-title fw-bold">
+                                <a href="/children/${child.child_id}" class="text-decoration-none text-dark">
+                                    <i class="bi bi-person-badge text-info me-1"></i> ${escHtml(child.child_name)}
+                                </a>
+                            </h6>
+                            <ul class="list-unstyled mb-0 mt-3">
+                                ${child.alerts.map(a => `
+                                    <li class="mb-2 pb-2 border-bottom border-light last-child-no-border">
+                                        <div class="d-flex align-items-start">
+                                            <span class="badge ${a.severity === 'HIGH' || a.severity === 'CRITICAL' ? 'bg-danger' : 'bg-warning text-dark'} me-2 mt-1">
+                                                ${escHtml(a.type)}
+                                            </span>
+                                            <span class="small text-secondary">${escHtml(a.description)}</span>
+                                        </div>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (err) {
+            console.error('Failed to load health alerts', err);
+            document.getElementById('healthAlertsContainer').innerHTML = `<div class="col-12 text-danger text-center py-3"><i class="bi bi-exclamation-triangle"></i> ${T('حدث خطأ أثناء تحميل التنبيهات', 'Error loading alerts')}</div>`;
+        }
+    }
+
+    async function loadIncidents() {
+        try {
+            const search = document.getElementById('filterSearch').value;
+            const status = document.getElementById('filterStatus').value;
+            const severity = document.getElementById('filterSeverity').value;
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+
+            const skip = (currentPage - 1) * itemsPerPage;
+            
+            let url = `/api/incidents?skip=${skip}&limit=${itemsPerPage}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            if (status) url += `&status=${encodeURIComponent(status)}`;
+            if (severity) url += `&severity=${encodeURIComponent(severity)}`;
+            if (dateFrom) url += `&date_from=${encodeURIComponent(dateFrom)}`;
+            if (dateTo) url += `&date_to=${encodeURIComponent(dateTo)}`;
+
+            const data = await window.api.get(url);
+            if (!data) return;
+            
+            filteredIncidents = data.items || [];
+            const totalCount = data.total_count || 0;
+            
+            applySorting();
+            renderTable(totalCount);
+        } catch (error) {
+            console.error(error);
+            document.getElementById('incidentsTableBody').innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle"></i> ${T('حدث خطأ أثناء تحميل البيانات', 'Error loading data')}</td></tr>`;
+        }
+    }
+    
+    function saveFilters() {
+        const filters = {
+            search: document.getElementById('filterSearch').value,
+            status: document.getElementById('filterStatus').value,
+            severity: document.getElementById('filterSeverity').value,
+            dateFrom: document.getElementById('filterDateFrom').value,
+            dateTo: document.getElementById('filterDateTo').value
+        };
+        localStorage.setItem('safetyIncidentsFilters', JSON.stringify(filters));
+    }
+    
+    function restoreFilters() {
+        const saved = localStorage.getItem('safetyIncidentsFilters');
+        if (saved) {
+            try {
+                const filters = JSON.parse(saved);
+                document.getElementById('filterSearch').value = filters.search || '';
+                document.getElementById('filterStatus').value = filters.status || '';
+                document.getElementById('filterSeverity').value = filters.severity || '';
+                document.getElementById('filterDateFrom').value = filters.dateFrom || '';
+                document.getElementById('filterDateTo').value = filters.dateTo || '';
+            } catch (e) {}
+        }
+    }
+
+    function applyFilters() {
+        saveFilters();
+        currentPage = 1;
+        loadIncidents();
+    }
+
+    function resetFilters() {
+        document.getElementById('filterForm').reset();
+        localStorage.removeItem('safetyIncidentsFilters');
+        applyFilters();
+    }
+
+    function applySorting() {
+        filteredIncidents.sort((a, b) => {
+            let valA = a[sortColumn];
+            let valB = b[sortColumn];
+            
+            if (valA == null) valA = '';
+            if (valB == null) valB = '';
+            
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+            
+            if (valA < valB) return sortAsc ? -1 : 1;
+            if (valA > valB) return sortAsc ? 1 : -1;
+            return 0;
+        });
+        
+        // Update header icons
+        document.querySelectorAll('th.sortable i').forEach(i => {
+            i.className = 'bi bi-arrow-down-up small text-muted ms-1 opacity-25';
+        });
+        const activeTh = document.querySelector(`th[data-sort="${sortColumn}"]`);
+        if (activeTh) {
+            const icon = activeTh.querySelector('i');
+            icon.className = sortAsc ? 'bi bi-arrow-up small text-primary ms-1' : 'bi bi-arrow-down small text-primary ms-1';
+        }
+    }
+
+    function renderTable(totalCount = 0) {
         const tbody = document.getElementById('incidentsTableBody');
-        if (incidents.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state py-5"><i class="bi bi-shield-check fs-1 text-muted d-block mb-3"></i><p class="text-muted mb-0">${T('لا توجد حوادث مسجلة', 'No incidents recorded')}</p></div></td></tr>`;
+        
+        if (filteredIncidents.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state py-5 text-center"><i class="bi bi-shield-check fs-1 text-muted d-block mb-3"></i><p class="text-muted mb-0">${T('لا توجد حوادث تطابق البحث', 'No incidents match the criteria')}</p></div></td></tr>`;
+            document.getElementById('paginationInfo').textContent = '';
+            document.getElementById('paginationControls').innerHTML = '';
             return;
         }
 
-        tbody.innerHTML = incidents.map(inc => `
+        const totalPages = Math.ceil(totalCount / itemsPerPage);
+        
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        const endIdx = Math.min(startIdx + itemsPerPage, totalCount);
+        const pageData = filteredIncidents;
+
+        tbody.innerHTML = pageData.map(inc => `
             <tr>
-                <td>${new Date(inc.occurred_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}</td>
-                <td><a href="/children/${inc.child_id}" class="text-decoration-none fw-bold">${T('الطفل', 'Child')} #${inc.child_id}</a></td>
+                <td><span title="${escHtml(inc.occurred_at)}">${new Date(inc.occurred_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}</span></td>
+                <td><a href="/children/${inc.child_id}" class="text-decoration-none fw-bold">${escHtml(inc.child_name || T('الطفل', 'Child') + ' #' + inc.child_id)}</a></td>
                 <td><span class="badge badge-soft badge-soft-secondary">${escHtml(inc.type)}</span></td>
                 <td>
                     <span class="badge ${getSeverityClass(inc.severity_level)}">
                         ${escHtml(inc.severity_level)}
                     </span>
                 </td>
-                <td>${escHtml(inc.description.substring(0, 50))}...</td>
+                <td><span title="${escHtml(inc.description)}">${escHtml(inc.description.length > 40 ? inc.description.substring(0, 40) + '...' : inc.description)}</span></td>
                 <td>
-                    ${inc.closed_at ? `<span class="badge badge-soft badge-soft-success">${T('مغلق', 'Closed')}</span>` : `<span class="badge badge-soft badge-soft-warning">${T('مفتوح', 'Open')}</span>`}
+                    <span class="badge badge-soft badge-soft-${getStatusClass(inc.status)}">${T(getStatusNameAr(inc.status), inc.status)}</span>
                 </td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary">${T('التفاصيل', 'Details')}</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(${inc.id})">${T('التفاصيل', 'Details')}</button>
                 </td>
             </tr>
         `).join('');
+        
+        renderPagination(totalPages, startIdx, endIdx, totalCount);
     }
+    
+    function renderPagination(totalPages, startIdx, endIdx, totalCount) {
+        const info = document.getElementById('paginationInfo');
+        info.textContent = T(`عرض ${startIdx + 1} إلى ${endIdx} من ${totalCount} حوادث`, `Showing ${startIdx + 1} to ${endIdx} of ${totalCount} incidents`);
+        
+        const ul = document.getElementById('paginationControls');
+        let html = '';
+        
+        html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <button class="page-link" onclick="goToPage(${currentPage - 1})">${T('السابق', 'Prev')}</button>
+        </li>`;
+        
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                    <button class="page-link" onclick="goToPage(${i})">${i}</button>
+                </li>`;
+            } else if (i === currentPage - 2 || i === currentPage + 2) {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+        
+        html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <button class="page-link" onclick="goToPage(${currentPage + 1})">${T('التالي', 'Next')}</button>
+        </li>`;
+        
+        ul.innerHTML = html;
+    }
+    
+    window.goToPage = function(page) {
+        currentPage = page;
+        loadIncidents();
+    };
+
+    window.exportCSV = function() {
+        if (filteredIncidents.length === 0) return;
+        
+        const headers = ['Date', 'Child Name', 'Type', 'Severity', 'Description', 'Status'];
+        const csvRows = [];
+        csvRows.push(headers.join(','));
+        
+        for (const inc of filteredIncidents) {
+            const row = [
+                inc.occurred_at ? inc.occurred_at.split('T')[0] : '',
+                `"${(inc.child_name || '').replace(/"/g, '""')}"`,
+                inc.type || '',
+                inc.severity_level || '',
+                `"${(inc.description || '').replace(/"/g, '""')}"`,
+                inc.status || ''
+            ];
+            csvRows.push(row.join(','));
+        }
+        
+        const csvString = '\uFEFF' + csvRows.join('\n'); // Add BOM for Excel Arabic support
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `incidents_export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     function getSeverityClass(level) {
         switch (level) {
@@ -130,22 +479,46 @@
         }
     }
 
-    window.loadIncidents = async function () {
-        const unresolved = document.getElementById('unresolvedOnly').checked;
-        const url = `/api/incidents?unresolved_only=${unresolved}`;
-
-        try {
-            const data = await window.api.get(url);
-            if (!data) return;
-
-            renderIncidents(Array.isArray(data) ? data : (data.incidents || []));
-        } catch (error) {
-            console.error(error);
+    function getStatusClass(status) {
+        switch (status) {
+            case 'Open': return 'warning';
+            case 'Under Investigation': return 'info';
+            case 'Action Required': return 'danger';
+            case 'Resolved': return 'success';
+            case 'Closed': return 'secondary';
+            default: return 'secondary';
         }
-    };
+    }
+
+    function getStatusNameAr(status) {
+        switch (status) {
+            case 'Open': return 'مفتوح';
+            case 'Under Investigation': return 'قيد التحقيق';
+            case 'Action Required': return 'يتطلب إجراء';
+            case 'Resolved': return 'معالج';
+            case 'Closed': return 'مغلق';
+            default: return status;
+        }
+    }
 
     function escHtml(s) {
         return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
+<style>
+    .last-child-no-border:last-child {
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
+    }
+    @media print {
+        .page-header-actions, #filterForm, .pagination {
+            display: none !important;
+        }
+        .card {
+            border: 1px solid #ddd !important;
+            box-shadow: none !important;
+        }
+    }
+</style>
 {% endblock %}

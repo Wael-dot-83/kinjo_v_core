@@ -1151,8 +1151,8 @@ async def refresh_token(
 
 
 # Include routers AFTER auth endpoints
-app.include_router(admin_router, prefix="/api", tags=["Admin"])
-app.include_router(admin_advanced_analytics_router)
+app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
+app.include_router(admin_advanced_analytics_router, prefix="/api/admin")
 
 
 # Jordan Heat Map admin-facing endpoints (canonical route is /api/admin/heat-map/*)
@@ -1174,7 +1174,7 @@ app.include_router(manager_analytics_router, prefix="/api", tags=["Manager Analy
 app.include_router(classification_router, prefix="/api", tags=["Classification"])
 app.include_router(dashboard_router)
 app.include_router(decision_support_router)
-app.include_router(admin_reports_router)
+app.include_router(admin_reports_router, prefix="/api/admin")
 app.include_router(filter_router)
 app.include_router(export_router)
 app.include_router(audit_service.router, prefix="/api", tags=["Audit"])
@@ -1200,7 +1200,7 @@ app.include_router(manager_router, prefix="/api", tags=["Manager"])
 app.include_router(supervisor_router, prefix="/api", tags=["Supervisor"])
 app.include_router(supervisor_scoped_router)        # prefix /api/supervisor already in router
 app.include_router(manager_scoped_router)           # prefix /api/manager already in router
-app.include_router(admin_impersonation_router, prefix="/api", tags=["Admin"])
+app.include_router(admin_impersonation_router, prefix="/api/admin", tags=["Admin"])
 app.include_router(messaging_router, prefix="/api", tags=["Messaging"])
 app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
 app.include_router(government_api_router, prefix="/api", tags=["Government API"])

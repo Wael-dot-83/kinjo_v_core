@@ -181,7 +181,6 @@ def _export_audit_logs(
     )
 
 
-@router.get("/audit-logs")
 def list_audit_logs(
     page: int = Query(1, ge=1),
     limit: int = Query(25, ge=1, le=100),
@@ -204,7 +203,6 @@ def list_audit_logs(
     )
 
 
-@router.get("/audit-logs/export")
 def export_audit_logs(
     format: str = Query("csv", pattern="^(csv|json)$"),
     period: str = Query("7"),
@@ -223,7 +221,6 @@ def export_audit_logs(
         current_user=current_user,
         db=db,
     )
-
 
 admin_router.add_api_route("/audit-logs", list_audit_logs, methods=["GET"])
 admin_router.add_api_route("/audit-logs/export", export_audit_logs, methods=["GET"])

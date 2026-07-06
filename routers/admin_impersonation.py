@@ -88,7 +88,7 @@ def _write_audit(
 # ---------------------------------------------------------------------------
 
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
-@router.post("/admin/impersonate", status_code=status.HTTP_200_OK)
+@router.post("/impersonate", status_code=status.HTTP_200_OK)
 def start_impersonation(
     payload: ImpersonateRequest,
     request: Request,
@@ -164,7 +164,7 @@ def start_impersonation(
 # ---------------------------------------------------------------------------
 
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
-@router.post("/admin/exit-impersonation", status_code=status.HTTP_200_OK)
+@router.post("/exit-impersonation", status_code=status.HTTP_200_OK)
 def exit_impersonation(
     request: Request,
     current_admin: User = Depends(_require_admin),
@@ -196,7 +196,7 @@ def exit_impersonation(
 # Audit log (last N impersonation events)
 # ---------------------------------------------------------------------------
 
-@router.get("/admin/impersonate/audit")
+@router.get("/impersonate/audit")
 def impersonation_audit(
     limit: int = Query(20, ge=1, le=100),
     _admin: User = Depends(_require_admin),

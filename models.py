@@ -141,6 +141,15 @@ class DailyChecklistStatus(str, enum.Enum):
     NOT_REQUIRED = "NOT_REQUIRED"
 
 
+class IncidentStatus(str, enum.Enum):
+    OPEN = "Open"
+    UNDER_INVESTIGATION = "Under Investigation"
+    ACTION_REQUIRED = "Action Required"
+    RESOLVED = "Resolved"
+    CLOSED = "Closed"
+
+
+
 class IncidentType(str, enum.Enum):
     INJURY = "INJURY"
     BEHAVIOR = "BEHAVIOR"
@@ -860,6 +869,8 @@ class Incident(Base):
     parent_not_informed_reason = Column(Text, nullable=True)
     resolution_notes = Column(Text, nullable=True)
     attachment_url = Column(String(500), nullable=True)
+    status = Column(Enum(IncidentStatus), nullable=False, default=IncidentStatus.OPEN)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -873,6 +884,31 @@ class Incident(Base):
     # Relationships
     child = relationship("Child", back_populates="incidents")
     kindergarten = relationship("Kindergarten", back_populates="incidents")
+    owner = relationship("User", foreign_keys=[owner_id])
+    reported_by_user = relationship("User", foreign_keys=[reported_by])
+
+
+class IncidentHistory(Base):
+    __tablename__ = "incident_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False)
+    changed_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status_from = Column(Enum(IncidentStatus), nullable=True)
+    status_to = Column(Enum(IncidentStatus), nullable=True)
+    owner_from_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    owner_to_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    notes = Column(Text, nullable=True)
+
+    __table_args__ = (
+        Index("ix_incident_history_incident_id", "incident_id"),
+    )
+
+    incident = relationship("Incident", backref="history")
+    changer = relationship("User", foreign_keys=[changed_by])
+    owner_from = relationship("User", foreign_keys=[owner_from_id])
+    owner_to = relationship("User", foreign_keys=[owner_to_id])
 
 
 class Report(Base):

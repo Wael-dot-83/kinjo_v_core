@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="{% if ui_lang == 'en' %}en{% else %}ar{% endif %}" dir="{{ ui_dir | default('rtl') }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1F5E47">
+  <title>{% block title %}KinJo Manager{% endblock %}</title>
+
+  <!-- USWDS Init JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/uswds/3.8.1/js/uswds-init.min.js"></script>
+  <!-- USWDS CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uswds/3.8.1/css/uswds.min.css" integrity="sha512-..." crossorigin="anonymous">
+  <!-- Bootstrap Icons for familiarity -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  
+  <style>
+    /* Custom adjustments for RTL support if necessary */
+    body { font-family: 'Cairo', 'Inter', sans-serif; }
+  </style>
+
+  {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+  <!-- USWDS Skipnav -->
+  <a class="usa-skipnav" href="#main-content">
+    {% if ui_lang == 'en' %}Skip to main content{% else %}تخطي إلى المحتوى الرئيسي{% endif %}
+  </a>
+
+  <!-- Header -->
+  {% include 'components/uswds_header.html' %}
+
+  <!-- Main Layout -->
+  <div class="grid-container padding-y-4">
+    <div class="grid-row grid-gap">
+      
+      <!-- Side Navigation -->
+      <aside class="usa-layout-docs__sidenav display-none desktop:display-block desktop:grid-col-3">
+        {% include 'components/uswds_sidenav.html' %}
+      </aside>
+
+      <!-- Main Content -->
+      <main class="usa-layout-docs__main desktop:grid-col-9" id="main-content">
+        <!-- Flash Messages -->
+        {% if messages %}
+          <div class="margin-bottom-3">
+            {% for category, message in messages %}
+              {% set alert_type = 'error' if category in ['danger', 'error'] else ('success' if category == 'success' else 'info') %}
+              <div class="usa-alert usa-alert--{{ alert_type }}" role="alert">
+                <div class="usa-alert__body">
+                  <p class="usa-alert__text">{{ message }}</p>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% block page_header %}{% endblock %}
+        {% block content %}{% endblock %}
+      </main>
+
+    </div>
+  </div>
+
+  <!-- USWDS JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/uswds/3.8.1/js/uswds.min.js"></script>
+
+  <!-- KinJo Logic Scripts -->
+  <script src="/static/js/auth.js?v=2.1"></script>
+  <script src="/static/js/kinjo-api.js?v=2.1"></script>
+  <script src="/static/js/app_i18n.js?v=2.1"></script>
+
+  {% block extra_js %}{% endblock %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>
