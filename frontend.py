@@ -1464,6 +1464,18 @@ async def admin_classification(request: Request, current_user: User = Depends(ge
     )
 
 
+@router.get("/manager/supervisors", response_class=HTMLResponse)
+async def manager_supervisors_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Manager supervisors list page (assign classes, view assignments)."""
+    if current_user.role != UserRole.MANAGER:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="manager/supervisors.html",
+        context={"current_user": current_user},
+    )
+
+
 @router.get("/manager/benchmarking", response_class=HTMLResponse)
 async def manager_benchmarking(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Manager anonymized benchmarking page"""

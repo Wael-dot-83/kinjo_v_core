@@ -2363,6 +2363,38 @@ class TestFrontendRoutes:
         assert "/api/manager/children" in response.text
         app.dependency_overrides.clear()
 
+    def test_manager_supervisors_page_renders(self, client, manager_user):
+        """manager/supervisors.html was fully built (assign-class modal,
+        stat cards) and its API contract already matched GET /api/manager/
+        supervisors exactly, but had no route at all -- not even a redirect,
+        just a 404."""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/manager/supervisors")
+        assert response.status_code == 200
+        assert "/api/manager/supervisors" in response.text
+        app.dependency_overrides.clear()
+
+    def test_manager_supervisors_page_blocks_non_manager(self, client, admin_user):
+        """Non-manager roles are redirected away, matching every other
+        /manager/* page's convention."""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/manager/supervisors", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/dashboard" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    def test_manager_sidebar_links_to_children_and_supervisors_pages(self, client, manager_user):
+        """Both manager/children.html and manager/supervisors.html were
+        reachable-by-URL after being wired up, but neither had a sidebar
+        entry -- a manager had no way to discover either page without
+        already knowing the exact URL."""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/dashboard")
+        assert response.status_code == 200
+        assert 'href="/children"' in response.text
+        assert 'href="/manager/supervisors"' in response.text
+        app.dependency_overrides.clear()
+
     # ------------------------------------------------------------------
     # View child — 404, PARENT access control, MANAGER scoped (lines 970-984)
     # ------------------------------------------------------------------

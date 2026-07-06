@@ -203,6 +203,18 @@
                     <span data-i18n="sidebar.classes">{% if ui_lang == 'en' %}Classes{% else %}الشعب الصفية{% endif %}</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.url.path == '/children' %}active{% endif %}" href="/children" data-tooltip="{% if ui_lang == 'en' %}Children{% else %}الأطفال{% endif %}">
+                    <i class="bi bi-emoji-smile" aria-hidden="true"></i>
+                    <span data-i18n="sidebar.children">{% if ui_lang == 'en' %}Children{% else %}الأطفال{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/manager/supervisors' in request.url.path %}active{% endif %}" href="/manager/supervisors" data-tooltip="{% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}">
+                    <i class="bi bi-person-badge-fill" aria-hidden="true"></i>
+                    <span data-i18n="sidebar.supervisors">{% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}</span>
+                </a>
+            </li>
             {% endif %}
 
             {% if current_user.role.value == 'ADMIN' %}

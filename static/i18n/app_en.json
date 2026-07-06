@@ -51,6 +51,7 @@
   "sidebar.admin_users": "User management",
   "sidebar.attendance_daily": "Daily attendance",
   "sidebar.audit_logs": "Audit and activity log",
+  "sidebar.children": "Children",
   "sidebar.classes": "Classrooms",
   "sidebar.daily_reports": "Daily reports",
   "sidebar.dashboard": "Dashboard",
@@ -70,5 +71,6 @@
   "sidebar.section.reports_requests": "Reports and requests",
   "sidebar.supervisor_observations": "My pedagogical observations",
   "sidebar.supervisor_performance": "My professional performance",
+  "sidebar.supervisors": "Supervisors",
   "sidebar.tasks": "Task list"
 }
