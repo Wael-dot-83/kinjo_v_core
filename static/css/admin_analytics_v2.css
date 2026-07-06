@@ -684,6 +684,27 @@
 .gov-bar-fill--amber { background: var(--az-warning); }
 .gov-bar-fill--red   { background: var(--az-danger); }
 
+/* ── 13b. Risk Heatmap ────────────────────────────────────────────────────── */
+.risk-legend {
+  padding: 0 var(--sp-4) var(--sp-2);
+  font-size: 0.8125rem;
+}
+.risk-legend .gov-legend-label { gap: var(--sp-2); }
+.risk-cell {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: var(--r-md, 8px);
+  padding: var(--sp-2) var(--sp-3);
+  text-align: start;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.risk-cell:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+.risk-cell:focus-visible { outline: 3px solid var(--az-primary, #2563eb); outline-offset: 2px; }
+.risk-cell__name { display: block; font-size: 0.8125rem; font-weight: 600; }
+.risk-cell__score { display: block; font-size: 0.8125rem; }
+
 /* ── 14. Ranking Lists ─────────────────────────────────────────────────────── */
 .rank-list { display: flex; flex-direction: column; gap: var(--sp-2); }
 .rank-item {

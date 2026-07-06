@@ -137,3 +137,67 @@ def test_export_request_sets_json_content_type():
     end = js.index("\n});", start)
     block = js[start:end]
     assert '"Content-Type": "application/json"' in block
+
+
+def test_risk_heatmap_cells_wrapped_in_row_for_grid_layout():
+    """updateRiskHeatmap() appended bare .col-6.col-md-4 <div>s directly into
+    #riskHeatmap with no .row ancestor. Bootstrap's grid columns need a flex
+    .row parent to actually sit side-by-side -- without one each "column"
+    div is still a plain block element and takes its own full-width line,
+    so all 12 governorates rendered as a single stack of full-width bars
+    instead of a 3-4 column heatmap grid. Confirmed live via Playwright
+    (screenshot showed one solid red column, not a grid)."""
+    js = JS_FILE.read_text(encoding="utf-8")
+    start = js.index("function updateRiskHeatmap")
+    end = js.index("\nfunction ", start + 1)
+    block = js[start:end]
+    assert 'list.className = "row g-2 list-unstyled mb-0";' in block
+    assert 'item.className = "col-6 col-md-4 col-lg-3";' in block
+
+
+def test_risk_heatmap_cells_are_keyboard_accessible_buttons():
+    """Cells were plain <div>s with only a mouse click listener -- no
+    tabindex, no role, no keyboard handler, so a keyboard-only or
+    screen-reader user could never reach or activate them (WCAG 2.1.1).
+    A native <button> gets focus and Enter/Space activation for free."""
+    js = JS_FILE.read_text(encoding="utf-8")
+    start = js.index("function updateRiskHeatmap")
+    end = js.index("\nfunction ", start + 1)
+    block = js[start:end]
+    assert 'btn.type = "button";' in block
+    assert 'btn.className = `risk-cell' in block
+    assert 'btn.setAttribute(\n      "aria-label",' in block
+
+
+def test_risk_heatmap_sorted_highest_risk_first():
+    """Governorates rendered in whatever order the API happened to return
+    them, so the most at-risk governorates could be scrolled past unseen.
+    Sorting ascending by governance_score surfaces the worst first."""
+    js = JS_FILE.read_text(encoding="utf-8")
+    start = js.index("function updateRiskHeatmap")
+    end = js.index("\nfunction ", start + 1)
+    block = js[start:end]
+    assert "const sorted = rows.slice().sort((a, b) => {" in block
+    assert "return scoreA - scoreB;" in block
+
+
+def test_risk_heatmap_has_a_threshold_legend():
+    """The red/amber/green cells encoded risk purely by color with no key
+    explaining what the thresholds mean -- added a legend using the same
+    gov-legend-dot classes already used by the Governance Distribution
+    card on this same page, for visual consistency."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert 'class="d-flex flex-wrap gap-3 risk-legend"' in html
+    assert "gov-legend-dot--red" in html
+    assert "gov-legend-dot--amber" in html
+    assert "gov-legend-dot--green" in html
+
+
+def test_dead_advanced_metrics_container_removed():
+    """#advancedMetricsContainer was a permanently d-none placeholder div
+    with zero references anywhere in admin_analytics.js -- dead markup
+    left over from a feature that was never wired up."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    js = JS_FILE.read_text(encoding="utf-8")
+    assert "advancedMetricsContainer" not in html
+    assert "advancedMetricsContainer" not in js

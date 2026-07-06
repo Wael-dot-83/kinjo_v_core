@@ -1230,22 +1230,53 @@ function updateRiskHeatmap(breakdownData) {
     container.innerHTML = `<div class="analytics-empty-state">${adminAnalyticsNoDataText()}</div>`;
     return;
   }
-  rows.slice(0, 12).forEach((row) => {
+
+  // Highest-risk (lowest score) governorates surface first.
+  const sorted = rows.slice().sort((a, b) => {
+    const scoreA = Number.isFinite(Number(a.governance_score)) ? Number(a.governance_score) : 0;
+    const scoreB = Number.isFinite(Number(b.governance_score)) ? Number(b.governance_score) : 0;
+    return scoreA - scoreB;
+  });
+
+  const list = document.createElement("ul");
+  list.className = "row g-2 list-unstyled mb-0";
+  list.setAttribute("role", "list");
+
+  sorted.slice(0, 12).forEach((row) => {
     const score = Number.isFinite(Number(row.governance_score)) ? Number(row.governance_score) : 0;
-    const colorClass = score >= 80 ? "bg-success" : score >= 60 ? "bg-warning" : "bg-danger";
-    const cell = document.createElement("div");
-    cell.className = "col-6 col-md-4";
-    cell.innerHTML = `
-      <div class="p-2 rounded text-white ${colorClass}" style="cursor:pointer;">
-        <div class="small fw-semibold">${adminAnalyticsLiteral(row.governorate)}</div>
-        <div class="small">${score.toFixed(1)}%</div>
-      </div>
+    const level =
+      score >= 80
+        ? { color: "bg-success", label: adminAnalyticsText("منخفضة", "Low risk") }
+        : score >= 60
+        ? { color: "bg-warning", label: adminAnalyticsText("متوسطة", "Moderate risk") }
+        : { color: "bg-danger", label: adminAnalyticsText("مرتفعة", "High risk") };
+
+    const item = document.createElement("li");
+    item.className = "col-6 col-md-4 col-lg-3";
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `risk-cell text-white ${level.color}`;
+    btn.setAttribute(
+      "aria-label",
+      adminAnalyticsText(
+        `${row.governorate}: ${level.label}، ${score.toFixed(1)}٪. عرض التفاصيل`,
+        `${row.governorate}: ${level.label}, ${score.toFixed(1)}%. View details`
+      )
+    );
+    btn.innerHTML = `
+      <span class="risk-cell__name">${adminAnalyticsLiteral(row.governorate)}</span>
+      <span class="risk-cell__score">${score.toFixed(1)}%</span>
     `;
-    cell.addEventListener("click", () => {
+    btn.addEventListener("click", () => {
       window.location.href = `/admin/analytics/drilldown/GOVERNORATE/${row.governorate}`;
     });
-    container.appendChild(cell);
+
+    item.appendChild(btn);
+    list.appendChild(item);
   });
+
+  container.appendChild(list);
 }
 
 async function loadComparativeAnalysis(start, end) {

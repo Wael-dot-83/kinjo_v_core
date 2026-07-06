@@ -1032,17 +1032,22 @@
         </div>
       </div>
 
-      {# Risk Heatmap + Advanced Metrics #}
+      {# Risk Heatmap #}
       <div class="az-card">
         <div class="az-card__header">
           <h3 class="az-card__title"><i class="bi bi-grid-fill"></i>
             {% if ui_lang == 'en' %}Risk Heatmap{% else %}خريطة المخاطر الحرارية{% endif %}
           </h3>
         </div>
+        <div class="d-flex flex-wrap gap-3 risk-legend" role="list"
+             aria-label="{% if ui_lang == 'en' %}Risk level key{% else %}مفتاح مستوى المخاطر{% endif %}">
+          <span class="gov-legend-label" role="listitem"><span class="gov-legend-dot gov-legend-dot--red"></span>{% if ui_lang == 'en' %}High risk (&lt;60%){% else %}مرتفعة (أقل من 60٪){% endif %}</span>
+          <span class="gov-legend-label" role="listitem"><span class="gov-legend-dot gov-legend-dot--amber"></span>{% if ui_lang == 'en' %}Moderate (60–79%){% else %}متوسطة (60–79٪){% endif %}</span>
+          <span class="gov-legend-label" role="listitem"><span class="gov-legend-dot gov-legend-dot--green"></span>{% if ui_lang == 'en' %}Low risk (≥80%){% else %}منخفضة (80٪ فأعلى){% endif %}</span>
+        </div>
         <div class="az-card__body--compact" id="riskHeatmap">
           <div class="skel skel-chart skel-chart--sm"></div>
         </div>
-        <div class="d-none" id="advancedMetricsContainer"></div>
       </div>
 
     </div>{# /tabAI #}
