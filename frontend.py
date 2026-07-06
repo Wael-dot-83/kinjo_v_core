@@ -1113,7 +1113,17 @@ async def children_list_redirect(request: Request, current_user: User = Depends(
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role == 'PARENT':
         return RedirectResponse(url="/parent/children")
-    # For manager/admin/supervisor, redirect to dashboard (no staff children list page exists)
+    if user_role == 'MANAGER':
+        # manager/children.html was fully built against GET /api/manager/children
+        # (already correctly scoped to the manager's own kindergarten) but had
+        # no route -- managers were redirected to the dashboard with no
+        # children list page at all.
+        return templates.TemplateResponse(
+            request=request,
+            name="manager/children.html",
+            context={"current_user": current_user},
+        )
+    # For admin/supervisor, redirect to dashboard (no staff children list page exists)
     return RedirectResponse(url="/dashboard")
 
 

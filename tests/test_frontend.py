@@ -2352,12 +2352,15 @@ class TestFrontendRoutes:
         assert "/parent/children" in response.headers.get("location", "")
         app.dependency_overrides.clear()
 
-    def test_children_list_manager_redirect(self, client, manager_user):
-        """Manager redirected to /dashboard from /children"""
+    def test_children_list_manager_gets_children_page(self, client, manager_user):
+        """Manager now gets the manager/children.html page directly -- it was
+        fully built against the already-correctly-scoped GET /api/manager/
+        children endpoint, but had no route and managers were redirected to
+        the dashboard with no children list page at all."""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
         response = client.get("/children", follow_redirects=False)
-        assert response.status_code in (302, 307)
-        assert "/dashboard" in response.headers.get("location", "")
+        assert response.status_code == 200
+        assert "/api/manager/children" in response.text
         app.dependency_overrides.clear()
 
     # ------------------------------------------------------------------
