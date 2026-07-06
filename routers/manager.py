@@ -346,8 +346,8 @@ def list_daily_reports_for_review(
             raise HTTPException(status_code=403, detail="Class not in your kindergarten.")
         class_ids = {class_id}
 
-    child_ids = {
-        e.child_id
+    child_class_map = {
+        e.child_id: e.class_id
         for e in db.query(EnrollmentApplication)
         .filter(
             EnrollmentApplication.class_id.in_(class_ids),
@@ -355,6 +355,8 @@ def list_daily_reports_for_review(
         )
         .all()
     }
+    child_ids = set(child_class_map.keys())
+    class_name_by_id = {c.id: c.name_ar for c in classes}
 
     q = db.query(DailyReport).filter(DailyReport.child_id.in_(child_ids))
 
@@ -378,6 +380,12 @@ def list_daily_reports_for_review(
     reports = q.order_by(DailyReport.date.desc()).limit(200).all()
     child_map = {c.id: c for c in db.query(Child).filter(Child.id.in_(child_ids)).all()}
 
+    submitter_ids = {r.submitted_by for r in reports if r.submitted_by is not None}
+    supervisor_name_by_id = {}
+    if submitter_ids:
+        for u in db.query(User).filter(User.id.in_(submitter_ids)).all():
+            supervisor_name_by_id[u.id] = u.full_name or u.username
+
     return [
         {
             "id": r.id,
@@ -386,6 +394,8 @@ def list_daily_reports_for_review(
             "date": str(r.date),
             "status": r.status.value,
             "submitted_by": r.submitted_by,
+            "supervisor_name": supervisor_name_by_id.get(r.submitted_by, ""),
+            "class_name": class_name_by_id.get(child_class_map.get(r.child_id), ""),
             "notes": r.notes,
         }
         for r in reports

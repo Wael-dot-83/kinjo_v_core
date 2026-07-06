@@ -964,6 +964,16 @@ async def daily_reports_list(request: Request, current_user: User = Depends(get_
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role == "ADMIN":
         return RedirectResponse(url="/admin/daily-reports-organization", status_code=302)
+    if user_role == "MANAGER":
+        # reports/list.html's manager view is read-only (view-details link
+        # only) even though the full approve/edit/send-to-parent/delete
+        # workflow already exists end-to-end in routers/manager.py -- this
+        # dedicated template was fully built for it but had no route.
+        return templates.TemplateResponse(
+            request=request,
+            name="manager/daily_reports_review.html",
+            context={"current_user": current_user},
+        )
     return templates.TemplateResponse(
         request=request,
         name="reports/list.html",

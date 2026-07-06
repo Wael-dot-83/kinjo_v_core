@@ -652,6 +652,33 @@ class TestDailyReportWorkflow:
         )
         assert r.status_code == 403
 
+    def test_list_daily_reports_includes_class_and_supervisor_name(
+        self,
+        client,
+        test_db,
+        manager_user,
+        supervisor_user,
+        sample_class,
+        sample_child,
+        sample_enrollment,
+        sample_daily_report,
+        manager_token,
+    ):
+        """GET /api/manager/daily-reports previously returned only submitted_by
+        (a raw user id) and no class_name at all, while the manager review
+        page's table renders r.supervisor_name / r.class_name -- both columns
+        always showed the placeholder dash regardless of real data."""
+        r = client.get(
+            "/api/manager/daily-reports?report_status=SUBMITTED",
+            headers=_hdr(manager_token),
+        )
+        assert r.status_code == 200, r.text
+        reports = r.json()
+        assert len(reports) >= 1
+        report = next(x for x in reports if x["id"] == sample_daily_report.id)
+        assert report["class_name"] == sample_class.name_ar
+        assert report["supervisor_name"] in (supervisor_user.full_name, supervisor_user.username)
+
     def test_old_create_endpoint_restricts_to_supervisor(
         self, client, manager_user, sample_child, sample_enrollment, manager_token
     ):

@@ -2256,11 +2256,18 @@ class TestFrontendRoutes:
     # Daily reports — non-ADMIN gets reports/list, daily-reports/create MANAGER (lines 843, 856)
     # ------------------------------------------------------------------
 
-    def test_daily_reports_manager_gets_list(self, client, manager_user):
-        """Non-admin (manager) gets reports/list template"""
+    def test_daily_reports_manager_gets_review_template(self, client, manager_user):
+        """Manager gets the dedicated review template (manager/daily_reports_
+        review.html), not the read-only reports/list.html -- the latter's
+        manager view only linked to a static, control-free detail page,
+        despite a full approve/edit/send-to-parent/delete workflow already
+        existing end-to-end in routers/manager.py with no route pointing at
+        the template built for it."""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
         response = client.get("/daily-reports")
         assert response.status_code == 200
+        assert "مراجعة التقارير اليومية" in response.text
+        assert "/api/manager/daily-reports" in response.text
         app.dependency_overrides.clear()
 
     def test_create_daily_report_manager(self, client, manager_user):

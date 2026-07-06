@@ -262,7 +262,7 @@
                 const d = await supRes.json();
                 const sel = document.getElementById('filterSupervisor');
                 (d.supervisors || []).forEach(s => {
-                    sel.innerHTML += `<option value="${s.id}">${escHtml(s.name || s.username)}</option>`;
+                    sel.innerHTML += `<option value="${s.id}">${escHtml(s.full_name || s.username)}</option>`;
                 });
             }
         } catch {}
