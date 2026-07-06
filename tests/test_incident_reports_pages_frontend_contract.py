@@ -80,8 +80,10 @@ def test_annual_report_year_field_is_sent_and_accepted():
     assert "year: year || ''" in html
 
     import inspect
-    import admin_endpoints
-    sig = inspect.signature(admin_endpoints.generate_incident_report)
+    # generate_incident_report moved from admin_endpoints to admin_reports_api
+    # in the perf refactor (719ff39).
+    import admin_reports_api
+    sig = inspect.signature(admin_reports_api.generate_incident_report)
     assert "year" in sig.parameters
 
 
@@ -96,9 +98,9 @@ def test_list_query_batches_kindergarten_and_creator_lookups():
     report.creator.username per row with no eager-loading option -- an
     N+1 query pattern (up to 2 extra queries per row, up to per_page=100
     rows)."""
-    import admin_endpoints
+    import admin_reports_api
     import inspect
-    source = inspect.getsource(admin_endpoints.list_incident_reports)
+    source = inspect.getsource(admin_reports_api.list_incident_reports)
     assert "selectinload(models.Report.kindergarten)" in source
     assert "selectinload(models.Report.creator)" in source
 

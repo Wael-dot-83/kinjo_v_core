@@ -247,20 +247,26 @@ class TestFrontendRoutes:
         app.dependency_overrides.clear()
 
     def test_dashboard_manager_arabic_sections(self, client, manager_user):
-        """Manager dashboard should render manager-focused Arabic sections."""
+        """Manager dashboard renders the operational, own-KG Arabic page
+        (manager/dashboard.html — replaced the global-stats index page)."""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
 
         response = client.get("/dashboard")
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
         page = response.text
-        assert 'id="managerSummaryClasses"' in page
-        assert 'id="managerSummaryPendingReports"' in page
-        assert 'id="managerSummarySupervisors"' in page
-        assert 'id="managerSummaryParents"' in page
-        assert "إدارة التقارير اليومية" in page
-        assert "إدارة الحسابات" in page
-        assert "function showCreateUserModal(role)" in page
+        # Operational stat cards
+        assert 'id="statReportsPending"' in page
+        assert 'id="statAbsencePending"' in page
+        assert 'id="statEnrollmentPending"' in page
+        assert 'id="statSupervisors"' in page
+        # Arabic section headings
+        assert "لوحة تحكم المدير" in page
+        assert "بانتظار إجراءاتك اليوم" in page
+        assert "تنبيهات تشغيلية" in page
+        # National/global totals must NOT appear on a manager page
+        assert "إجمالي الحضانات" not in page
+        assert "إجمالي المستخدمين" not in page
 
         app.dependency_overrides.clear()
 

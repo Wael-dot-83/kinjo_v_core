@@ -54,8 +54,10 @@ def create_incident(
     db: Session = Depends(get_db)
 ):
     """Create incident report with JSON body"""
-    if current_user.role not in (models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN):
-        raise HTTPException(status_code=403, detail="Only staff can report incidents")
+    # RBAC policy: Admin is blocked from operational entry (incidents are
+    # created by the kindergarten's own staff; admin oversees, never enters).
+    if current_user.role not in (models.UserRole.SUPERVISOR, models.UserRole.MANAGER):
+        raise HTTPException(status_code=403, detail="Only kindergarten staff can report incidents")
 
     # If parent was not informed, a reason is required
     if not incident_data.parent_informed and not (incident_data.parent_not_informed_reason or "").strip():
@@ -195,8 +197,8 @@ def list_incidents(
             "description": i.description,
             "occurred_at": i.occurred_at.isoformat() if i.occurred_at else None,
             "followup_required_flag": i.followup_required_flag,
-            "reported_by_name": f"{i.reported_by_user.first_name} {i.reported_by_user.last_name}" if i.reported_by_user else None,
-            "owner_name": f"{i.owner.first_name} {i.owner.last_name}" if i.owner else None,
+            "reported_by_name": (i.reported_by_user.full_name or i.reported_by_user.username) if i.reported_by_user else None,
+            "owner_name": (i.owner.full_name or i.owner.username) if i.owner else None,
             "attachment_url": i.attachment_url,
         }
         for i in incidents

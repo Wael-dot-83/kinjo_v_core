@@ -224,3 +224,8 @@ def export_audit_logs(
 
 admin_router.add_api_route("/audit-logs", list_audit_logs, methods=["GET"])
 admin_router.add_api_route("/audit-logs/export", export_audit_logs, methods=["GET"])
+
+# Legacy aliases at /api/audit-logs — part of the public API contract
+# (test_gws_round3 asserts both alias sets stay registered).
+router.add_api_route("/audit-logs", list_audit_logs, methods=["GET"])
+router.add_api_route("/audit-logs/export", export_audit_logs, methods=["GET"])

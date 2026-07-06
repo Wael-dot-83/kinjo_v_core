@@ -587,23 +587,24 @@ class TestSafetyIncidentsIntegration:
         test_db.add(enrollment)
         test_db.commit()
 
+        # The legacy query-param /api/incidents/create endpoint was removed;
+        # POST /api/incidents (JSON body, IncidentCreate schema) is canonical.
         incident_data = {
-            "kindergarten_id": sample_kindergarten.id,
             "child_id": sample_child.id,
-            "incident_type": "injury",
-            "severity_level": "medium",
+            "type": "INJURY",
+            "severity_level": "MEDIUM",
             "description": "سقط الطفل أثناء اللعب وأصيب بكدمة في الركبة",
             "occurred_at": datetime.now().isoformat(),
-            "followup_required": True,
+            "followup_required_flag": True,
             "parent_informed": True,
         }
 
         response = client.post(
-            "/api/incidents/create",
+            "/api/incidents",
             headers=auth_headers_manager,
-            params=incident_data
+            json=incident_data
         )
-        assert response.status_code == 201
+        assert response.status_code == 201, response.text
 
 
 # ============================================================================
