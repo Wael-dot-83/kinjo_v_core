@@ -1,5 +1,30 @@
 /* static/css/utilities.css */
 
+/* Sticky offset utilities for filter bars and panels */
+.admin-sticky-top {
+  position: sticky;
+  top: var(--admin-header-height);
+  z-index: var(--z-filter-bar);
+}
+
+.admin-sticky-offset {
+  position: sticky;
+  top: var(--filter-bar-offset);
+  z-index: var(--z-filter-bar);
+}
+
+/* Ensure content below sticky elements is properly offset via padding */
+.admin-content-offset {
+  padding-top: var(--kinjo-spacing-4);
+}
+
+/* Explicit stacking context modifiers */
+.z-header { z-index: var(--z-header); }
+.z-filter-bar { z-index: var(--z-filter-bar); }
+.z-dropdown { z-index: var(--z-dropdown); }
+.z-modal { z-index: var(--z-modal); }
+.z-toast { z-index: var(--z-toast); }
+
 .k-text-primary { color: var(--kinjo-color-primary) !important; }
 .k-text-success { color: var(--kinjo-color-success) !important; }
 .k-text-warning { color: var(--kinjo-color-warning) !important; }

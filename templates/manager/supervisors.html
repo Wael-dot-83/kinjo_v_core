@@ -1,24 +1,17 @@
-{% extends 'base.html' %}
+{% extends 'manager_base.html' %}
 {% block title %}{{ _('المشرفون') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-person-badge-fill"></i>
-            {{ _('المدير') }}
-        </div>
-        <h1 class="page-header-title">{{ _('المشرفون') }}</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0 breadcrumb-sm">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
-                <li class="breadcrumb-item active">{{ _('المشرفون') }}</li>
-            </ol>
-        </nav>
+<div class="margin-bottom-4">
+    <div class="usa-prose">
+        <h1 class="font-heading-xl margin-top-0 margin-bottom-1">
+            <i class="bi bi-person-badge-fill text-primary"></i> {{ _('المشرفون') }}
+        </h1>
+        <p class="usa-intro margin-top-0">{{ _('إدارة المشرفين وتعيينهم للشعب') }}</p>
     </div>
-    <div class="page-header-actions">
-        <button class="btn btn-ghost" onclick="loadSupervisors()">
-            <i class="bi bi-arrow-clockwise me-1"></i>{{ _('تحديث') }}
+    <div class="margin-top-2">
+        <button class="usa-button usa-button--outline" onclick="loadSupervisors()">
+            <i class="bi bi-arrow-clockwise margin-right-1"></i>{{ _('تحديث') }}
         </button>
     </div>
 </div>
@@ -27,81 +20,90 @@
 {% block content %}
 
 <!-- Stats -->
-<div class="row g-3 mb-4 stagger-children">
-    <div class="col-6 col-md-4">
-        <div class="stat-card card">
-            <div class="card-body">
-                <div class="stat-info">
-                    <div class="stat-label">{{ _('إجمالي المشرفين') }}</div>
-                    <div class="stat-value" id="statTotal">—</div>
+<div class="grid-row grid-gap margin-bottom-4">
+    <div class="tablet:grid-col-4 margin-bottom-2 tablet:margin-bottom-0">
+        <ul class="usa-card-group">
+            <li class="usa-card tablet:grid-col-12">
+                <div class="usa-card__container">
+                    <header class="usa-card__header">
+                        <h2 class="usa-card__heading font-heading-md">{{ _('إجمالي المشرفين') }}</h2>
+                    </header>
+                    <div class="usa-card__body">
+                        <p class="font-sans-2xl text-bold text-primary" id="statTotal">—</p>
+                    </div>
                 </div>
-                <div class="stat-icon-wrap stat-icon-primary">
-                    <i class="bi bi-person-badge-fill"></i>
-                </div>
-            </div>
-        </div>
+            </li>
+        </ul>
     </div>
-    <div class="col-6 col-md-4">
-        <div class="stat-card success card">
-            <div class="card-body">
-                <div class="stat-info">
-                    <div class="stat-label">{{ _('مُعيَّنون لشعب') }}</div>
-                    <div class="stat-value" id="statAssigned">—</div>
+    <div class="tablet:grid-col-4 margin-bottom-2 tablet:margin-bottom-0">
+        <ul class="usa-card-group">
+            <li class="usa-card tablet:grid-col-12">
+                <div class="usa-card__container">
+                    <header class="usa-card__header">
+                        <h2 class="usa-card__heading font-heading-md">{{ _('مُعيَّنون لشعب') }}</h2>
+                    </header>
+                    <div class="usa-card__body">
+                        <p class="font-sans-2xl text-bold text-green" id="statAssigned">—</p>
+                    </div>
                 </div>
-                <div class="stat-icon-wrap stat-icon-success">
-                    <i class="bi bi-check-circle-fill"></i>
-                </div>
-            </div>
-        </div>
+            </li>
+        </ul>
     </div>
-    <div class="col-6 col-md-4">
-        <div class="stat-card warning card">
-            <div class="card-body">
-                <div class="stat-info">
-                    <div class="stat-label">{{ _('بدون تعيين') }}</div>
-                    <div class="stat-value" id="statUnassigned">—</div>
+    <div class="tablet:grid-col-4">
+        <ul class="usa-card-group">
+            <li class="usa-card tablet:grid-col-12">
+                <div class="usa-card__container">
+                    <header class="usa-card__header">
+                        <h2 class="usa-card__heading font-heading-md">{{ _('بدون تعيين') }}</h2>
+                    </header>
+                    <div class="usa-card__body">
+                        <p class="font-sans-2xl text-bold text-secondary-dark" id="statUnassigned">—</p>
+                    </div>
                 </div>
-                <div class="stat-icon-wrap stat-icon-warning">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                </div>
-            </div>
-        </div>
+            </li>
+        </ul>
     </div>
 </div>
 
 <!-- Supervisor Cards -->
-<div class="row g-3" id="supervisorsContainer">
-    <div class="col-12 text-center py-5 text-muted" id="loadingState">
-        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
-        <p class="mt-2">{{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}</p>
+<div class="grid-row grid-gap" id="supervisorsContainer">
+    <div class="grid-col-12 text-center padding-y-5 text-base" id="loadingState">
+        <p class="margin-top-2">{{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}</p>
     </div>
 </div>
 
-<!-- Assign class modal -->
-<div class="modal fade" id="assignClassModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{{ _('تعيين شعبة') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="assignSupId">
-                <div class="mb-3">
-                    <label class="form-label">{{ _('الشعبة') }}</label>
-                    <select class="form-select" id="assignClassSelect"></select>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="assignIsPrimary">
-                    <label class="form-check-label" for="assignIsPrimary">{{ _('المشرف الأساسي') }}</label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
-                <button class="btn btn-primary" onclick="confirmAssignClass()">{{ _('تعيين') }}</button>
-            </div>
+<!-- Assign class modal (USWDS Modal) -->
+<div class="usa-modal" id="assignClassModal" aria-labelledby="modal-heading" aria-describedby="modal-description">
+  <div class="usa-modal__content">
+    <div class="usa-modal__main">
+      <h2 class="usa-modal__heading" id="modal-heading">{{ _('تعيين شعبة') }}</h2>
+      <div class="usa-prose">
+        <p id="modal-description">{{ _('اختر الشعبة لتعيين المشرف فيها.') }}</p>
+      </div>
+      <input type="hidden" id="assignSupId">
+      <form class="usa-form" onsubmit="event.preventDefault(); confirmAssignClass();">
+        <label class="usa-label" for="assignClassSelect">{{ _('الشعبة') }}</label>
+        <select class="usa-select" id="assignClassSelect" name="assignClassSelect"></select>
+        
+        <div class="usa-checkbox margin-top-3">
+          <input class="usa-checkbox__input" id="assignIsPrimary" type="checkbox" name="assignIsPrimary" value="true">
+          <label class="usa-checkbox__label" for="assignIsPrimary">{{ _('المشرف الأساسي') }}</label>
         </div>
+        
+        <ul class="usa-button-group margin-top-4">
+          <li class="usa-button-group__item">
+            <button type="submit" class="usa-button">{{ _('تعيين') }}</button>
+          </li>
+          <li class="usa-button-group__item">
+            <button type="button" class="usa-button usa-button--unstyled padding-105 text-center" data-close-modal>{{ _('إلغاء') }}</button>
+          </li>
+        </ul>
+      </form>
     </div>
+    <button class="usa-button usa-modal__close" aria-label="Close this window" data-close-modal>
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
 </div>
 
 {% endblock %}
@@ -127,7 +129,7 @@ async function loadSupervisors() {
         _classes = clsData.classes || [];
         renderSupervisors(supData.supervisors || []);
     } catch {
-        showToast('تعذّر تحميل البيانات', 'error');
+        alert('تعذّر تحميل البيانات');
     }
 }
 
@@ -140,51 +142,51 @@ function renderSupervisors(supervisors) {
 
     const container = document.getElementById('supervisorsContainer');
     if (!supervisors.length) {
-        container.innerHTML = `<div class="col-12 text-center py-5 text-muted">
-            <i class="bi bi-person-badge fs-1 opacity-25 d-block mb-2"></i>
+        container.innerHTML = `<div class="grid-col-12 text-center padding-y-5 text-base">
             <span>لا يوجد مشرفون</span>
         </div>`;
         return;
     }
-    container.innerHTML = supervisors.map(sup => {
+    
+    // Using USWDS Card layout
+    container.innerHTML = `<ul class="usa-card-group">` + supervisors.map(sup => {
         const classBadges = sup.classes && sup.classes.length
-            ? sup.classes.map(c => `<span class="badge badge-soft badge-soft-primary rounded-pill me-1">${escHtml(c.name_ar)}${c.is_primary ? ' ★' : ''}</span>`).join('')
-            : `<span class="text-muted small">بدون تعيين</span>`;
+            ? sup.classes.map(c => `<span class="usa-tag margin-right-1">${escHtml(c.name_ar)}${c.is_primary ? ' ★' : ''}</span>`).join('')
+            : `<span class="usa-tag usa-tag--new">بدون تعيين</span>`;
+            
+        const statusTag = sup.status === 'ACTIVE' 
+            ? `<span class="usa-tag margin-top-1 bg-green">نشط</span>` 
+            : `<span class="usa-tag margin-top-1 bg-base-light text-base-dark">غير نشط</span>`;
+
         return `
-        <div class="col-12 col-md-6 col-xl-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-start gap-3 mb-3">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                             style="width:48px;height:48px;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);font-size:1.3rem;">
-                            <i class="bi bi-person-fill"></i>
-                        </div>
-                        <div class="flex-grow-1 min-w-0">
-                            <div class="fw-semibold text-truncate">${escHtml(sup.full_name)}</div>
-                            <div class="text-muted small">@${escHtml(sup.username)}</div>
-                            <span class="badge ${sup.status === 'ACTIVE' ? 'badge-soft badge-soft-success' : 'badge-soft badge-soft-secondary'} rounded-pill mt-1">${sup.status === 'ACTIVE' ? 'نشط' : 'غير نشط'}</span>
-                        </div>
-                    </div>
-                    <div class="mb-2 small"><i class="bi bi-envelope me-1 text-muted"></i>${escHtml(sup.email || '—')}</div>
-                    <div class="mb-3 small"><i class="bi bi-telephone me-1 text-muted"></i>${escHtml(sup.phone_number || '—')}</div>
-                    <div class="mb-3">${classBadges}</div>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-sm btn-outline-primary" onclick="openAssignModal(${sup.id})">
-                            <i class="bi bi-plus-circle me-1"></i>تعيين شعبة
-                        </button>
-                    </div>
+        <li class="usa-card tablet:grid-col-6 desktop:grid-col-4">
+            <div class="usa-card__container">
+                <header class="usa-card__header">
+                    <h2 class="usa-card__heading">${escHtml(sup.full_name)}</h2>
+                    <p class="usa-card__subhead margin-bottom-0">@${escHtml(sup.username)}</p>
+                    ${statusTag}
+                </header>
+                <div class="usa-card__body">
+                    <p class="margin-bottom-1"><i class="bi bi-envelope margin-right-1 text-base"></i>${escHtml(sup.email || '—')}</p>
+                    <p class="margin-bottom-2"><i class="bi bi-telephone margin-right-1 text-base"></i>${escHtml(sup.phone_number || '—')}</p>
+                    <div class="margin-bottom-2">${classBadges}</div>
+                </div>
+                <div class="usa-card__footer">
+                    <a href="#assignClassModal" class="usa-button usa-button--outline" aria-controls="assignClassModal" data-open-modal onclick="setupAssignModal(${sup.id})">
+                        <i class="bi bi-plus-circle margin-right-1"></i>تعيين شعبة
+                    </a>
                 </div>
             </div>
-        </div>`;
-    }).join('');
+        </li>`;
+    }).join('') + `</ul>`;
+    
     document.getElementById('loadingState')?.remove();
 }
 
-function openAssignModal(supId) {
+function setupAssignModal(supId) {
     document.getElementById('assignSupId').value = supId;
     const sel = document.getElementById('assignClassSelect');
     sel.innerHTML = _classes.map(c => `<option value="${c.id}">${escHtml(c.name_ar)}</option>`).join('');
-    new bootstrap.Modal(document.getElementById('assignClassModal')).show();
 }
 
 async function confirmAssignClass() {
@@ -197,14 +199,15 @@ async function confirmAssignClass() {
             body: JSON.stringify({ supervisor_id: supId, class_id: classId, is_primary: primary }),
         });
         if (res.ok) {
-            showToast('تم التعيين بنجاح', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('assignClassModal')).hide();
+            alert('تم التعيين بنجاح');
+            // Close USWDS modal manually via JS if needed, or reload
+            document.querySelector('#assignClassModal .usa-modal__close').click();
             loadSupervisors();
         } else {
             const err = await res.json().catch(() => ({}));
-            showToast(err.detail || 'فشل التعيين', 'error');
+            alert(err.detail || 'فشل التعيين');
         }
-    } catch { showToast('خطأ في الشبكة', 'error'); }
+    } catch { alert('خطأ في الشبكة'); }
 }
 
 document.addEventListener('DOMContentLoaded', loadSupervisors);

@@ -88,10 +88,10 @@ class ChartAdvisor:
         if p.has_categories:
             max_card = max(p.cardinality.values(), default=0) if p.cardinality else 0
 
-            if max_card <= 6:
+            if max_card <= 4:
                 scores.append((0.92, ChartType.PIE,
                     f"Low cardinality ({max_card} categories) → pie chart shows part-to-whole clearly."))
-                scores.append((0.82, ChartType.BAR,
+                scores.append((0.85, ChartType.BAR,
                     "Bar chart is an alternative for precise comparison across few categories."))
             elif max_card <= 15:
                 scores.append((0.88, ChartType.BAR,

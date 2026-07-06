@@ -29,8 +29,18 @@ class LineBuilder(ChartBuilder):
 
 
 def _first_col(df: pd.DataFrame, hint: str) -> str | None:
+    if hint in ("date", "time"):
+        for c in df.columns:
+            if pd.api.types.is_datetime64_any_dtype(df[c]):
+                return c
+            is_str = pd.api.types.is_object_dtype(df[c]) or pd.api.types.is_string_dtype(df[c])
+            if is_str and not pd.api.types.is_numeric_dtype(df[c]):
+                sample = df[c].dropna().head(5).astype(str)
+                if len(sample) > 0 and sample.str.match(r"^\d{4}-\d{2}-\d{2}").all():
+                    return c
+
     for c in df.columns:
-        if hint in c.lower():
+        if hint in str(c).lower():
             return c
     return None
 

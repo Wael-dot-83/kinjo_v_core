@@ -149,9 +149,8 @@
 document.querySelectorAll('[data-resolve-url]').forEach((button) => {
   button.addEventListener('click', async () => {
     button.disabled = true;
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    try {
-      const response = await fetchWithAuth(button.dataset.resolveUrl, { method: 'POST', headers: { 'X-CSRF-Token': csrfToken } });
+        try {
+      const response = await fetchWithAuth(button.dataset.resolveUrl, { method: 'POST' });
       if (!response || !response.ok) {
         const payload = await (response ? response.json().catch(() => ({})) : Promise.resolve({}));
         throw new Error(payload.error?.message || payload.detail || '{% if ui_lang == "en" %}Failed to resolve contact message.{% else %}فشل إغلاق الرسالة.{% endif %}');

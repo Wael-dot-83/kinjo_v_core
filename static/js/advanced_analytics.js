@@ -237,28 +237,46 @@ function renderAgeChart(ageData) {
     
     // Maintain strict ordering matching Jordan Reporting Rules
     const labels = [
-        "B1: 70 days - <6 mo",
-        "B2: 6 - <12 mo",
-        "B3: 12 - <18 mo",
-        "B4: 18 - <24 mo",
-        "B5: 24 - <30 mo",
-        "B6: 30 - <36 mo",
-        "B7: 36 - <42 mo",
-        "B8: 42 - <48 mo",
-        "B9: 48 - <54 mo",
-        "B10: 54 - 56 mo"
+        "1 day to 3 months",
+        "3 to 6 months",
+        "6 to 9 months",
+        "9 to 12 months",
+        "12 to 15 months",
+        "15 to 18 months",
+        "18 to 21 months",
+        "21 to 24 months",
+        "24 to 27 months",
+        "27 to 30 months",
+        "30 to 33 months",
+        "33 to 36 months",
+        "36 to 39 months",
+        "39 to 42 months",
+        "42 to 45 months",
+        "45 to 48 months",
+        "48 to 51 months",
+        "51 to 54 months",
+        "54 to 57 months"
     ];
     const arLabels = [
-        "B1: 70 يوم - <6 شهر",
-        "B2: 6 - <12 شهر",
-        "B3: 12 - <18 شهر",
-        "B4: 18 - <24 شهر",
-        "B5: 24 - <30 شهر",
-        "B6: 30 - <36 شهر",
-        "B7: 36 - <42 شهر",
-        "B8: 42 - <48 شهر",
-        "B9: 48 - <54 شهر",
-        "B10: 54 - 56 شهر"
+        "يوم إلى 3 أشهر",
+        "3 إلى 6 أشهر",
+        "6 إلى 9 أشهر",
+        "9 إلى 12 شهر",
+        "12 إلى 15 شهر",
+        "15 إلى 18 شهر",
+        "18 إلى 21 شهر",
+        "21 إلى 24 شهر",
+        "24 إلى 27 شهر",
+        "27 إلى 30 شهر",
+        "30 إلى 33 شهر",
+        "33 إلى 36 شهر",
+        "36 إلى 39 شهر",
+        "39 إلى 42 شهر",
+        "42 إلى 45 شهر",
+        "45 إلى 48 شهر",
+        "48 إلى 51 شهر",
+        "51 إلى 54 شهر",
+        "54 إلى 57 شهر"
     ];
     
     const values = labels.map(l => ageData[l] || 0);

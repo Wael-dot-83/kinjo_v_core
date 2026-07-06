@@ -119,6 +119,7 @@ async function initGoogleMap() {
     center:                JORDAN_CENTER,
     zoom:                  JORDAN_ZOOM,
     mapTypeId:             'satellite',
+    mapId:                 'kinjo_admin_heatmap',
     mapTypeControl:        false,
     streetViewControl:     false,
     fullscreenControl:     false,
@@ -267,7 +268,7 @@ function colorGovPolygons(govs) {
 
 // ── Governorate Labels ────────────────────────────────────────────────────────
 function updateGovLabels(govs) {
-  CsApp.labelMarkers.forEach(m => m.setMap(null));
+  CsApp.labelMarkers.forEach(m => { m.map = null; });
   CsApp.labelMarkers = [];
 
   const showLabels = document.getElementById('govBadgeToggle')?.checked ?? true;
@@ -276,23 +277,19 @@ function updateGovLabels(govs) {
     const center = gov.center; // [lon, lat]
     if (!center || center.length < 2) return;
 
-    const marker = new google.maps.Marker({
+    const labelDiv = document.createElement("div");
+    labelDiv.textContent = gov.name_ar || gov.name_en || '';
+    labelDiv.style.color = '#ffffff';
+    labelDiv.style.fontSize = '11px';
+    labelDiv.style.fontWeight = 'bold';
+    labelDiv.style.fontFamily = 'system-ui, sans-serif';
+    labelDiv.style.textShadow = '0px 1px 3px rgba(0,0,0,0.8)';
+    labelDiv.style.transform = 'translate(-50%, -50%)';
+
+    const marker = new google.maps.marker.AdvancedMarkerElement({
       position:  { lat: center[1], lng: center[0] },
       map:       showLabels ? CsApp.map : null,
-      label: {
-        text:       gov.name_ar || gov.name_en || '',
-        color:      '#ffffff',
-        fontSize:   '11px',
-        fontWeight: 'bold',
-        fontFamily: 'system-ui, sans-serif',
-      },
-      icon: {
-        path:         google.maps.SymbolPath.CIRCLE,
-        scale:        0,
-        fillOpacity:  0,
-        strokeOpacity: 0,
-      },
-      clickable: false,
+      content:   labelDiv,
       zIndex:    10,
     });
     CsApp.labelMarkers.push(marker);
@@ -383,7 +380,7 @@ function renderWarnings() {
 
 // ── Kindergarten Markers ──────────────────────────────────────────────────────
 function addKgPins(kgs) {
-  CsApp.kgMarkers.forEach(m => m.setMap(null));
+  CsApp.kgMarkers.forEach(m => { m.map = null; });
   CsApp.kgMarkers = [];
 
   const kgOn = document.getElementById('kgToggle')?.checked ?? true;
@@ -396,26 +393,31 @@ function addKgPins(kgs) {
     const pixelSize = isCrit ? 9 : isHigh ? 7 : riskSc >= 25 ? 5 : 4;
     const hexClr   = riskHex(riskSc);
 
-    const marker = new google.maps.Marker({
+    const pinDiv = document.createElement("div");
+    pinDiv.style.width = (pixelSize * 2) + "px";
+    pinDiv.style.height = (pixelSize * 2) + "px";
+    pinDiv.style.borderRadius = "50%";
+    pinDiv.style.backgroundColor = hexClr;
+    pinDiv.style.opacity = isCrit ? "1.0" : isHigh ? "0.95" : "0.88";
+    pinDiv.style.border = (isCrit ? 2 : 1.5) + "px solid rgba(255,255,255," + (isCrit ? 1.0 : 0.75) + ")";
+    pinDiv.style.transform = 'translate(-50%, -50%)';
+    pinDiv.title = kg.name_ar || kg.name_en || '';
+
+    const marker = new google.maps.marker.AdvancedMarkerElement({
       position: { lat: kg.latitude, lng: kg.longitude },
       map:      kgOn ? CsApp.map : null,
       title:    kg.name_ar || kg.name_en || '',
-      icon: {
-        path:         google.maps.SymbolPath.CIRCLE,
-        scale:        pixelSize,
-        fillColor:    hexClr,
-        fillOpacity:  isCrit ? 1.0 : isHigh ? 0.95 : 0.88,
-        strokeColor:  '#ffffff',
-        strokeWeight: isCrit ? 2 : 1.5,
-        strokeOpacity: isCrit ? 1.0 : 0.75,
-      },
+      content:  pinDiv,
       zIndex: isCrit ? 20 : isHigh ? 15 : 10,
     });
     marker._kgData = kg;
 
-    marker.addListener('click', () => { hideTooltip(); showKgDetail(kg); });
-    marker.addListener('mouseover', () => showKgTooltip(kg));
-    marker.addListener('mouseout', hideTooltip);
+    // Use gmp-click for AdvancedMarkerElement
+    marker.addListener('gmp-click', () => { hideTooltip(); showKgDetail(kg); });
+    
+    // Add hover directly on the DOM element for tooltip
+    pinDiv.addEventListener('mouseenter', () => showKgTooltip(kg));
+    pinDiv.addEventListener('mouseleave', hideTooltip);
 
     CsApp.kgMarkers.push(marker);
   });
@@ -428,7 +430,7 @@ function _applyKgVisibility() {
   CsApp.kgMarkers.forEach(m => {
     const kg     = m._kgData;
     const cityOk = !CsApp.selectedCity || kg?.city === CsApp.selectedCity;
-    m.setVisible(kgOn && cityOk);
+    m.map = (kgOn && cityOk) ? CsApp.map : null;
   });
 }
 
@@ -929,7 +931,7 @@ function populateGovList(govs) {
            tabindex="0" role="button"
            aria-label="${esc(g.name_ar || g.name_en)} — ${riskAr(score)}"
            onclick="selectGovernorate(${govJson})"
-           onkeydown="if(event.key==='Enter'||event.key===' ')selectGovernorate(${govJson})">
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); selectGovernorate(${govJson})}">
         <div>
           <div class="cs-gov-name">${esc(g.name_ar || g.name_en)}</div>
           ${kgLabel}
@@ -1058,7 +1060,10 @@ function populateRankings(govs) {
     const tr = document.createElement('tr');
     tr.dataset.slug = g.slug;
     if (CsApp.selectedGov?.slug === g.slug) tr.classList.add('rank-selected');
+    tr.tabIndex = 0;
+    tr.setAttribute('role', 'button');
     tr.onclick = () => selectGovernorate(g);
+    tr.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectGovernorate(g); } };
 
     tr.innerHTML = `
       <td><span class="rank-num ${numCls}">${rank}</span></td>
@@ -1252,9 +1257,9 @@ function bindUiEvents() {
 
   _on('kgToggle', 'change', _applyKgVisibility);
 
-  _on('govBadgeToggle', 'change', () => {
-    const show = document.getElementById('govBadgeToggle')?.checked ?? true;
-    CsApp.labelMarkers.forEach(m => m.setMap(show ? CsApp.map : null));
+  _on('govBadgeToggle', 'change', e => {
+    const show = e.target.checked;
+    CsApp.labelMarkers.forEach(m => { m.map = show ? CsApp.map : null; });
   });
 
   _on('govOverlayToggle', 'change', () => {

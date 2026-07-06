@@ -806,10 +806,7 @@
   const t = (k) => (MSGS[LANG] || MSGS.ar)[k] || k;
 
   // ── CSRF helper ────────────────────────────────────────────────────────────
-  function getCsrfToken() {
-    const m = document.cookie.match(/(?:^|;\s*)kinjo_csrf_token=([^;]+)/);
-    return m ? decodeURIComponent(m[1]) : '';
-  }
+  
 
   // ── Toast ──────────────────────────────────────────────────────────────────
   function showToast(msg, isError) {
@@ -839,7 +836,7 @@
     };
 
     try {
-      const res = await fetch('/api/admin/profile', {
+      const res = await fetchWithAuth('/api/admin/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
         body: JSON.stringify(payload),
@@ -906,7 +903,7 @@
     savePwBtn.innerHTML = `<i class="bi bi-hourglass-split" aria-hidden="true"></i> ${t('saving')}`;
 
     try {
-      const res = await fetch('/api/admin/profile/password', {
+      const res = await fetchWithAuth('/api/admin/profile/password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
         body: JSON.stringify({ current_password: currentPw, new_password: newPw, confirm_password: confirmPw }),

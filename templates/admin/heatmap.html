@@ -45,7 +45,7 @@
 .cc-select option { background:#163d2e; color:#f1f5f9; }
 .cc-btn { padding:0.375rem 0.875rem; border-radius:0.5rem; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.08); color:#e2e8f0; font-size:0.875rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.375rem; transition:background 0.12s; }
 .cc-btn:hover { background:rgba(255,255,255,0.14); }
-.cc-btn:focus-visible { outline:2px solid #2F7D62; outline-offset:2px; }
+.cc-btn:focus-visible { outline:0.25rem solid #24a1ff; outline-offset:2px; }
 .cc-btn.spinning i { animation:spin 0.7s linear infinite; }
 .cc-btn-export { border-color:rgba(47,125,98,0.3); }
 .cc-btn-export:hover { background:rgba(47,125,98,0.18); }
@@ -73,7 +73,7 @@
 .cs-left-body { flex:1; overflow-y:auto; }
 .cs-gov-item { padding:0.5rem 0.875rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.1s; }
 .cs-gov-item:hover { background:rgba(255,255,255,0.06); }
-.cs-gov-item:focus-visible { outline:2px solid #2F7D62; outline-offset:-2px; }
+.cs-gov-item:focus-visible { outline:0.25rem solid #24a1ff; outline-offset:-2px; }
 .cs-gov-item.selected { background:rgba(47,125,98,0.20); border-inline-start:3px solid #2F7D62; }
 .cs-gov-name { font-size:0.8125rem; color:#e2e8f0; }
 
@@ -154,6 +154,7 @@
 #rankingsTable td { padding:0.45rem 0.75rem; border-top:1px solid rgba(255,255,255,0.04); }
 #rankingsTable tbody tr { cursor:pointer; }
 #rankingsTable tbody tr:hover { background:rgba(255,255,255,0.03); }
+#rankingsTable tbody tr:focus-visible { outline:0.25rem solid #24a1ff; outline-offset:-2px; }
 #rankingsTable tbody tr.rank-selected { background:rgba(47,125,98,0.15); }
 .rank-num { font-weight:700; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.08); color:#f1f5f9; font-size:0.8rem; }
 .top-1 { background:#f59e0b; color:#fff; }
@@ -163,7 +164,7 @@
 .rank-code { font-size:0.75rem; color:#64748b; }
 .rank-drill { background:transparent; border:none; color:#64748b; cursor:pointer; padding:0.25rem; border-radius:0.25rem; transition:color 0.1s, background 0.1s; }
 .rank-drill:hover { background:rgba(255,255,255,0.08); color:#f1f5f9; }
-.rank-drill:focus-visible { outline:2px solid #2F7D62; }
+.rank-drill:focus-visible { outline:0.25rem solid #24a1ff; }
 .mini-bar-track { flex:1; background:rgba(255,255,255,0.08); border-radius:9999px; height:6px; overflow:hidden; }
 .mini-bar-fill  { height:100%; border-radius:9999px; }
 .skeleton { background:rgba(255,255,255,0.06); border-radius:0.25rem; }
@@ -184,7 +185,7 @@
 /* ── DISTRICT ROWS ───────────────────────────────────────────────────── */
 .district-row { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; padding:0.45rem 0.5rem; border-radius:0.375rem; cursor:pointer; transition:background 0.1s; border:1px solid transparent; }
 .district-row:hover  { background:rgba(255,255,255,0.05); }
-.district-row:focus-visible { outline:2px solid #2F7D62; }
+.district-row:focus-visible { outline:0.25rem solid #24a1ff; }
 .district-row.selected { background:rgba(47,125,98,0.15); border-color:rgba(47,125,98,0.35); }
 .district-row-name { flex:1; min-width:0; font-size:0.8125rem; color:#e2e8f0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .district-row-score { display:flex; align-items:center; gap:0.375rem; flex-shrink:0; }
@@ -318,9 +319,9 @@
   <div class="cc-filters" role="toolbar"
        aria-label="{% if ui_lang == 'ar' %}فلاتر الخريطة والتصدير{% else %}Map filters and export{% endif %}">
 
-    <span class="filter-label">
+    <label for="indicatorViewSelect" class="filter-label">
       {% if ui_lang == 'ar' %}المؤشر:{% else %}Indicator:{% endif %}
-    </span>
+    </label>
     <select id="indicatorViewSelect" class="cc-select"
             aria-label="{% if ui_lang == 'ar' %}اختر المؤشر{% else %}Select indicator{% endif %}">
       <option value="overall_risk">{% if ui_lang == 'ar' %}مؤشر الخطر العام{% else %}Overall Risk{% endif %}</option>
@@ -332,7 +333,7 @@
       <option value="tasks_governance">{% if ui_lang == 'ar' %}المهام والحوكمة{% else %}Tasks & Governance{% endif %}</option>
     </select>
 
-    <span class="filter-label">{% if ui_lang == 'ar' %}المحافظة:{% else %}Governorate:{% endif %}</span>
+    <label for="govSelect" class="filter-label">{% if ui_lang == 'ar' %}المحافظة:{% else %}Governorate:{% endif %}</label>
     <select id="govSelect" class="cc-select"
             aria-label="{% if ui_lang == 'ar' %}اختر محافظة{% else %}Select governorate{% endif %}">
       <option value="">{% if ui_lang == 'ar' %}الكل{% else %}All{% endif %}</option>
@@ -599,5 +600,5 @@
 <script defer src="/static/js/jordan_cesium_map.js?v=6" charset="utf-8"></script>
 {# ── Google Maps JavaScript API — satellite imagery ───────────────────── #}
 <script async defer
-  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key | default('') }}&callback=_gmapsLoaded&v=weekly"></script>
+  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key | default('') }}&loading=async&libraries=marker&callback=_gmapsLoaded&v=weekly"></script>
 {% endblock %}

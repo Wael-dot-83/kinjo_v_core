@@ -31,7 +31,8 @@
     }
   }
 
-  function updateFilterVisibility(reportType) {
+  function updateFilterVisibility() {
+    const reportType = getReportType();
     const allFilters = [
       "filterGovContainer",
       "filterKgContainer",
@@ -144,6 +145,25 @@
   /* Arabic/English labels for report sample_data column keys.
      Fallback humanizes unknown keys instead of showing raw snake_case. */
   const COLUMN_LABELS = {
+    b1: ["يوم إلى 3 أشهر", "1 day to 3 months"],
+    b2: ["3 إلى 6 أشهر", "3 to 6 months"],
+    b3: ["6 إلى 9 أشهر", "6 to 9 months"],
+    b4: ["9 إلى 12 شهر", "9 to 12 months"],
+    b5: ["12 إلى 15 شهر", "12 to 15 months"],
+    b6: ["15 إلى 18 شهر", "15 to 18 months"],
+    b7: ["18 إلى 21 شهر", "18 to 21 months"],
+    b8: ["21 إلى 24 شهر", "21 to 24 months"],
+    b9: ["24 إلى 27 شهر", "24 to 27 months"],
+    b10: ["27 إلى 30 شهر", "27 to 30 months"],
+    b11: ["30 إلى 33 شهر", "30 to 33 months"],
+    b12: ["33 إلى 36 شهر", "33 to 36 months"],
+    b13: ["36 إلى 39 شهر", "36 to 39 months"],
+    b14: ["39 إلى 42 شهر", "39 to 42 months"],
+    b15: ["42 إلى 45 شهر", "42 to 45 months"],
+    b16: ["45 إلى 48 شهر", "45 to 48 months"],
+    b17: ["48 إلى 51 شهر", "48 to 51 months"],
+    b18: ["51 إلى 54 شهر", "51 to 54 months"],
+    b19: ["54 إلى 57 شهر", "54 to 57 months"],
     governorate: ["المحافظة", "Governorate"],
     city: ["المدينة", "City"],
     district: ["اللواء", "District"],
@@ -157,6 +177,8 @@
     children: ["الأطفال", "Children"],
     children_count: ["عدد الأطفال", "Children"],
     total_children: ["إجمالي الأطفال", "Total children"],
+    total_kindergartens: ["إجمالي الحضانات", "Total kindergartens"],
+    total_classes: ["إجمالي الشعب", "Total classes"],
     supervisor: ["المشرفة", "Supervisor"],
     supervisors: ["المشرفات", "Supervisors"],
     supervisor_count: ["عدد المشرفات", "Supervisors"],
@@ -358,9 +380,10 @@
   function buildStrategicQuery() {
     const period = getPeriod();
     const params = new URLSearchParams();
+    const reportLang = getEl("reportLang")?.value;
     params.set(
       "lang",
-      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar",
+      reportLang || (document.documentElement.getAttribute("lang") === "en" ? "en" : "ar"),
     );
     params.set("level", getReportLevel());
     if (period.start) params.set("date_from", period.start);
@@ -381,9 +404,12 @@
     if (data.kpis) {
       Object.entries(data.kpis).forEach(([key, value]) => {
         if (typeof value === "number") {
+          const hit = COLUMN_LABELS[key.toLowerCase()];
+          const labelAr = hit ? hit[0] : key;
+          const labelEn = hit ? hit[1] : key;
           kpis.push({
-            label_ar: key,
-            label_en: key,
+            label_ar: labelAr,
+            label_en: labelEn,
             value,
             unit: key.includes("pct") || key.includes("score") ? "%" : "",
           });
@@ -420,15 +446,21 @@
       });
     }
 
-    const sample_data =
-      data.tables?.risk_ranking ||
-      data.tables?.city_breakdown ||
-      data.tables?.governorate_breakdown ||
-      data.ranking ||
-      data.cities ||
-      data.governorates ||
-      data.age_buckets ||
-      [];
+    let sample_data = [];
+    if (Array.isArray(data)) {
+      sample_data = data;
+    } else {
+      sample_data =
+        data.tables?.risk_ranking ||
+        data.tables?.city_breakdown ||
+        data.tables?.governorate_breakdown ||
+        data.supervisors ||
+        data.ranking ||
+        data.cities ||
+        data.governorates ||
+        data.age_buckets ||
+        [];
+    }
 
     const insights = [];
     if (data.interpretation?.summary)
@@ -561,26 +593,47 @@
   async function loadGovernorates() {
     const select = getEl("governorateFilter");
     if (!select) return;
+    const fallbackGovs = [
+      { id: "عمان", name_ar: "عمان", name_en: "Amman" },
+      { id: "إربد", name_ar: "إربد", name_en: "Irbid" },
+      { id: "الزرقاء", name_ar: "الزرقاء", name_en: "Zarqa" },
+      { id: "البلقاء", name_ar: "البلقاء", name_en: "Balqa" },
+      { id: "العقبة", name_ar: "العقبة", name_en: "Aqaba" },
+      { id: "مأدبا", name_ar: "مأدبا", name_en: "Madaba" },
+      { id: "المفرق", name_ar: "المفرق", name_en: "Mafraq" },
+      { id: "جرش", name_ar: "جرش", name_en: "Jerash" },
+      { id: "عجلون", name_ar: "عجلون", name_en: "Ajloun" },
+      { id: "الكرك", name_ar: "الكرك", name_en: "Karak" },
+      { id: "الطفيلة", name_ar: "الطفيلة", name_en: "Tafileh" },
+      { id: "معان", name_ar: "معان", name_en: "Ma'an" }
+    ];
+
+    let list = [];
     try {
       const res = await fetchWithAuth("/api/admin/options/governorates");
-      if (!res) return;
-      const data = await res.json();
-      const list = data.governorates || [];
-      // keep first option
-      while (select.options.length > 1) select.remove(1);
-      list.forEach((g) => {
-        const opt = document.createElement("option");
-        // API returns {id, name_ar, name_en}; keep supporting {value, label}
-        opt.value = g.value ?? g.id ?? g;
-        opt.textContent =
-          g.label ||
-          reportsText(g.name_ar || g.name_en, g.name_en || g.name_ar) ||
-          String(g);
-        select.appendChild(opt);
-      });
+      if (res) {
+        const data = await res.json();
+        list = data.governorates || [];
+      }
     } catch (e) {
-      console.error("Failed to load governorates", e);
+      console.error("Failed to load governorates from API, using fallback", e);
     }
+
+    if (!list.length) {
+      list = fallbackGovs;
+    }
+
+    // keep first option
+    while (select.options.length > 1) select.remove(1);
+    list.forEach((g) => {
+      const opt = document.createElement("option");
+      opt.value = g.value ?? g.id ?? g;
+      opt.textContent =
+        g.label ||
+        reportsText(g.name_ar || g.name_en, g.name_en || g.name_ar) ||
+        String(g);
+      select.appendChild(opt);
+    });
   }
 
   async function loadKindergartens() {
@@ -1242,6 +1295,7 @@
 
   function renderRecentHistory() {
     const tbody = getEl("reportsHistoryBody");
+    const pag = getEl("historyTablePagination");
     if (!tbody) return;
 
     // Filter
@@ -1258,8 +1312,11 @@
     if (!filtered.length) {
       tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("لا توجد نتائج مطابقة", "No matching reports")}</td></tr>`;
       setText("historyPaginationInfo", "0-0 of 0");
+      if (pag) pag.classList.add("d-none");
       return;
     }
+
+    if (pag) pag.classList.remove("d-none");
 
     const totalPages = Math.ceil(filtered.length / historyPageSize);
     if (historyCurrentPage > totalPages) historyCurrentPage = totalPages;
@@ -1279,333 +1336,88 @@
       return map[status] || "bg-secondary";
     };
 
+    const statusLabels = {
+      PENDING: ["قيد الانتظار", "PENDING"],
+      PROCESSING: ["جاري المعالجة", "PROCESSING"],
+      COMPLETED: ["مكتمل", "COMPLETED"],
+      FAILED: ["فاشل", "FAILED"]
+    };
+
+    const getStatusText = (status) => {
+      const hit = statusLabels[status];
+      return hit ? reportsText(hit[0], hit[1]) : status;
+    };
+
     tbody.innerHTML = paginated
-      .map(
-        (item) => `
+      .map((item) => {
+        const isFailed = item.status === "FAILED";
+        const reportLabel = escapeHtml(item.report_name || item.report_type);
+        const errorDetail =
+          isFailed && item.error
+            ? `<div class="small text-danger mt-1"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>${escapeHtml(item.error)}</div>`
+            : "";
+        const traceLink =
+          isFailed && item.trace_url
+            ? `<a href="${escapeHtml(item.trace_url)}" class="btn btn-sm btn-outline-secondary ms-1" title="${reportsText("عرض سجلات", "View logs for")} ${reportLabel}"><i class="bi bi-journal-text" aria-hidden="true"></i></a>`
+            : "";
+        return `
       <tr>
         <td class="fw-medium">${escapeHtml(item.report_name || item.report_type)}</td>
         <td>${escapeHtml(item.format)}</td>
-        <td>${item.generated_at ? new Date(item.generated_at).toLocaleString() : "-"}</td>
-        <td><span class="badge ${statusBadge(item.status)}">${escapeHtml(item.status)}</span></td>
-        <td class="text-center">
-          ${item.status === "COMPLETED" && item.id ? `<a href="/api/analytics/export/${item.id}/file" class="btn btn-sm btn-outline-primary" aria-label="Download report"><i class="bi bi-download"></i></a>` : ""}
-          ${item.status === "FAILED" ? `<button class="btn btn-sm btn-outline-danger retry-export-btn" data-job-id="${item.id}" aria-label="Retry export"><i class="bi bi-arrow-counterclockwise"></i></button>` : ""}
+        <td>${formatDateSafe(item.generated_at, { time: true })}</td>
+        <td>
+          <span class="badge ${statusBadge(item.status)}">${escapeHtml(getStatusText(item.status))}</span>
+          ${errorDetail}
         </td>
-      </tr>`,
-      )
+        <td class="text-center">
+          ${item.status === "COMPLETED" && item.id ? `<a href="/api/analytics/export/${item.id}/file" class="btn btn-sm btn-outline-primary" title="${reportsText("تنزيل", "Download")} ${reportLabel}"><i class="bi bi-download" aria-hidden="true"></i></a>` : ""}
+          <button class="btn btn-sm btn-outline-secondary retry-export-btn" data-action="rerun" data-id="${item.id}" title="${reportsText("إعادة إنشاء", "Regenerate")} ${reportLabel}"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i></button>
+          ${traceLink}
+        </td>
+      </tr>
+    `;
+      })
       .join("");
 
-    // Wire up retry buttons
-    tbody.querySelectorAll(".retry-export-btn").forEach((btn) => {
-      btn.addEventListener("click", async (e) => {
-        const jobId = e.currentTarget.getAttribute("data-job-id");
-        await retryExportJob(jobId);
+    // Wire rerun buttons
+    tbody.querySelectorAll("[data-action='rerun']").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
+        if (!id) return;
+        await retryExportJob(id);
       });
     });
+
+    async function retryExportJob(jobId) {
+      showToast(
+        reportsText("جاري إعادة محاولة التصدير...", "Retrying export..."),
+      );
+      try {
+        const res = await fetchWithAuth(`${API_BASE}/export`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ retry_job_id: Number(jobId) }),
+        });
+        if (res) {
+          showToast(reportsText("تم بدء تصدير التقرير", "Export job started"));
+          await loadRecentHistory();
+        }
+      } catch (e) {
+        showToast(
+          reportsText("تعذر إعادة محاولة التصدير", "Failed to retry export"),
+        );
+      }
+    }
 
     // Update pagination elements
     setText(
       "historyPaginationInfo",
-      `${startIdx + 1}-${endIdx} of ${filtered.length}`,
+      `${startIdx + 1}-${endIdx} ${reportsText("من", "of")} ${filtered.length}`,
     );
     const prevBtn = getEl("prevHistoryPageBtn");
     const nextBtn = getEl("nextHistoryPageBtn");
     if (prevBtn) prevBtn.disabled = historyCurrentPage === 1;
     if (nextBtn) nextBtn.disabled = historyCurrentPage === totalPages;
-  }
-
-  async function retryExportJob(jobId) {
-    showToast(
-      reportsText("جاري إعادة محاولة التصدير...", "Retrying export..."),
-    );
-    try {
-      const res = await fetchWithAuth(`${API_BASE}/export`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ retry_job_id: Number(jobId) }),
-      });
-      if (res) {
-        showToast(reportsText("تم بدء تصدير التقرير", "Export job started"));
-        await loadRecentHistory();
-      }
-    } catch (e) {
-      showToast(
-        reportsText("تعذر إعادة محاولة التصدير", "Failed to retry export"),
-      );
-    }
-  }
-
-  async function loadSavedTemplates() {
-    const list = getEl("templateList");
-    if (!list) return;
-    try {
-      const res = await fetchWithAuth(`${API_BASE}/reports/templates`);
-      if (!res) return;
-      loadedTemplates = await res.json();
-
-      if (!loadedTemplates.length) {
-        list.innerHTML = `<li><span class="dropdown-item-text text-muted small">${reportsText("لا توجد قوالب محفوظة", "No saved templates")}</span></li>`;
-        return;
-      }
-
-      list.innerHTML = loadedTemplates
-        .map((t) => {
-          return `<li><a class="dropdown-item" href="#" data-template-id="${t.id}">${escapeHtml(t.name)}</a></li>`;
-        })
-        .join("");
-
-      list.querySelectorAll(".dropdown-item").forEach((item) => {
-        item.addEventListener("click", (e) => {
-          e.preventDefault();
-          const tid = e.target.getAttribute("data-template-id");
-          applyTemplate(tid);
-        });
-      });
-    } catch (e) {
-      console.error("Failed to load templates", e);
-      list.innerHTML = `<li><span class="dropdown-item-text text-danger small">${reportsText("تعذر التحميل", "Failed to load")}</span></li>`;
-    }
-  }
-
-  function applyTemplate(id) {
-    const t = loadedTemplates.find((x) => String(x.id) === String(id));
-    if (!t) return;
-
-    // switch tab
-    const tabMap = {
-      attendance: "#tab-attendance",
-      incidents: "#tab-incidents",
-      compliance: "#tab-compliance",
-      enrollment: "#tab-enrollment",
-      full_audit: "#tab-audit",
-      staff_training: "#tab-staff",
-      welfare: "#tab-welfare",
-      trends: "#tab-trends",
-      capacity: "#tab-capacity",
-      parent_engagement: "#tab-parent",
-      data_quality: "#tab-dataquality",
-    };
-    const tabId = tabMap[t.report_type];
-    if (tabId) {
-      const tabEl = document.querySelector(tabId);
-      if (tabEl) {
-        const tab = new window.bootstrap.Tab(tabEl);
-        tab.show();
-      }
-    }
-
-    // Wait a moment for tab switch to update visibility
-    setTimeout(() => {
-      if (t.filters) {
-        const setMultiValues = (id, vals) => {
-          const select = getEl(id);
-          if (!select || !vals) return;
-          const arr = Array.isArray(vals) ? vals : [vals];
-          Array.from(select.options).forEach((opt) => {
-            opt.selected = arr.map(String).includes(String(opt.value));
-          });
-        };
-        setMultiValues(
-          "governorateFilter",
-          t.filters.governorates || t.filters.governorate,
-        );
-        setMultiValues(
-          "kindergartenFilter",
-          t.filters.kindergarten_ids || t.filters.kindergarten_id,
-        );
-        setMultiValues("statusFilter", t.filters.statuses || t.filters.status);
-        setMultiValues(
-          "severityFilter",
-          t.filters.severities || t.filters.severity,
-        );
-        setMultiValues("sourceFilter", t.filters.sources || t.filters.source);
-        setMultiValues(
-          "reviewerFilter",
-          t.filters.reviewer_ids || t.filters.reviewer_id,
-        );
-      }
-      if (getEl("exportFormat"))
-        getEl("exportFormat").value = t.export_format || "CSV";
-      if (getEl("includeCharts"))
-        getEl("includeCharts").checked = t.include_charts;
-      if (getEl("includeSummary"))
-        getEl("includeSummary").checked = t.include_summary;
-
-      loadReportPreview();
-    }, 100);
-  }
-
-  async function saveAsTemplate() {
-    const name = getEl("templateName")?.value?.trim();
-    if (!name) {
-      alert(
-        reportsText("يرجى إدخال اسم القالب", "Please enter a template name"),
-      );
-      return;
-    }
-
-    const payload = {
-      name,
-      report_type: getReportType(),
-      filters: getFilters(),
-      export_format: getEl("exportFormat")?.value || "CSV",
-      include_charts: getEl("includeCharts")?.checked ?? true,
-      include_summary: getEl("includeSummary")?.checked ?? true,
-    };
-
-    try {
-      const res = await fetchWithAuth(`${API_BASE}/reports/templates`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res) return;
-      await res.json();
-      const modal = window.bootstrap?.Modal?.getInstance(
-        getEl("saveTemplateModal"),
-      );
-      if (modal) modal.hide();
-      showToast(
-        reportsText("تم حفظ القالب بنجاح", "Template saved successfully"),
-      );
-      loadSavedTemplates();
-    } catch (e) {
-      console.error("Save template failed", e);
-      alert(reportsText("فشل حفظ القالب", "Failed to save template"));
-    }
-  }
-
-  // ===========================================================================
-  // Scheduling
-  // ===========================================================================
-  async function scheduleReport() {
-    const name = getEl("scheduleName")?.value?.trim();
-    if (!name) {
-      alert(
-        reportsText("يرجى إدخال اسم الجدولة", "Please enter a schedule name"),
-      );
-      return;
-    }
-
-    const frequency = getEl("scheduleFrequency")?.value || "monthly";
-    const recipientsRaw = getEl("scheduleRecipients")?.value || "";
-    const recipients = recipientsRaw
-      .split(",")
-      .map((r) => r.trim())
-      .filter((r) => r.length > 0);
-
-    const payload = {
-      name,
-      report_type: getReportType(),
-      filters: getFilters(),
-      export_format: getEl("exportFormat")?.value || "CSV",
-      frequency,
-      recipients,
-    };
-
-    try {
-      const res = await fetchWithAuth(`${API_BASE}/reports/schedules`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res) return;
-      await res.json();
-      const modal = window.bootstrap?.Modal?.getInstance(
-        getEl("scheduleModal"),
-      );
-      if (modal) modal.hide();
-      alert(reportsText("تمت الجدولة بنجاح", "Report scheduled successfully"));
-      loadRecentHistory();
-    } catch (e) {
-      console.error("Schedule failed", e);
-      alert(reportsText("فشل جدولة التقرير", "Failed to schedule report"));
-    }
-  }
-
-  // ===========================================================================
-  // Recent History
-  // ===========================================================================
-  async function loadRecentHistory() {
-    const tbody = getEl("reportsHistoryBody");
-    if (!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("جارٍ تحميل البيانات، يرجى الانتظار.", "Loading...")}</td></tr>`;
-
-    try {
-      const res = await fetchWithAuth(`${API_BASE}/reports/history?limit=20`);
-      if (!res) return;
-      const data = await res.json();
-      const items = Array.isArray(data) ? data : [];
-
-      if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("لا توجد تقارير سابقة", "No previous reports")}</td></tr>`;
-        return;
-      }
-
-      const statusBadge = (status) => {
-        const map = {
-          PENDING: "bg-warning",
-          PROCESSING: "bg-info",
-          COMPLETED: "bg-success",
-          FAILED: "bg-danger",
-        };
-        return map[status] || "bg-secondary";
-      };
-
-      tbody.innerHTML = items
-        .map((item) => {
-          const isFailed = item.status === "FAILED";
-          // Interpolated into every action button's title below so a screen
-          // reader user tabbing through many rows can tell which report each
-          // download/regenerate/view-logs control acts on, instead of hearing
-          // the same generic name repeated for every row.
-          const reportLabel = escapeHtml(item.report_name || item.report_type);
-          const errorDetail =
-            isFailed && item.error
-              ? `<div class="small text-danger mt-1"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>${escapeHtml(item.error)}</div>`
-              : "";
-          const traceLink =
-            isFailed && item.trace_url
-              ? `<a href="${escapeHtml(item.trace_url)}" class="btn btn-sm btn-outline-secondary ms-1" title="${reportsText("عرض سجلات", "View logs for")} ${reportLabel}"><i class="bi bi-journal-text" aria-hidden="true"></i></a>`
-              : "";
-          return `
-        <tr>
-          <td class="fw-medium">${escapeHtml(item.report_name || item.report_type)}</td>
-          <td>${escapeHtml(item.format)}</td>
-          <td>${formatDateSafe(item.generated_at, { time: true })}</td>
-          <td>
-            <span class="badge ${statusBadge(item.status)}">${escapeHtml(item.status)}</span>
-            ${errorDetail}
-          </td>
-          <td class="text-center">
-            ${item.status === "COMPLETED" && item.id ? `<a href="/api/analytics/export/${item.id}/file" class="btn btn-sm btn-outline-primary" title="${reportsText("تنزيل", "Download")} ${reportLabel}"><i class="bi bi-download" aria-hidden="true"></i></a>` : ""}
-            <button class="btn btn-sm btn-outline-secondary" data-action="rerun" data-id="${item.id}" title="${reportsText("إعادة إنشاء", "Regenerate")} ${reportLabel}"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i></button>
-            ${traceLink}
-          </td>
-        </tr>
-      `;
-        })
-        .join("");
-
-      // Wire rerun buttons
-      tbody.querySelectorAll("[data-action='rerun']").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const id = btn.getAttribute("data-id");
-          if (!id) return;
-          try {
-            await fetchWithAuth(`${API_BASE}/export/${id}/file`, {
-              method: "GET",
-            });
-            window.location.href = `${API_BASE}/export/${id}/file`;
-          } catch (e) {
-            console.error("Rerun failed", e);
-          }
-        });
-      });
-    } catch (e) {
-      console.error("History load failed", e);
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${reportsText("تعذر تحميل السجل", "Failed to load history")}</td></tr>`;
-    }
   }
 
   // ===========================================================================
@@ -1674,17 +1486,7 @@
     await loadSavedTemplates();
 
     // Wire events
-    const initialType = getReportType();
-    updateFilterVisibility(initialType);
-
-    document
-      .querySelectorAll("#reportCategoryTabs .nav-link")
-      .forEach((tab) => {
-        tab.addEventListener("shown.bs.tab", (e) => {
-          const reportType = getReportType();
-          updateFilterVisibility(reportType);
-        });
-      });
+    updateFilterVisibility();
 
     // History search input
     getEl("searchHistoryInput")?.addEventListener("input", (e) => {
@@ -1752,8 +1554,11 @@
       }, 100);
     });
 
-    // Governorate -> kindergarten cascade
-    getEl("governorateFilter")?.addEventListener("change", loadKindergartens);
+    // Governorate -> kindergarten cascade & reload preview
+    getEl("governorateFilter")?.addEventListener("change", async () => {
+      await loadKindergartens();
+      loadReportPreview();
+    });
 
     // Tab change -> update hidden reportType and refresh preview (silent — no alert if dates not set yet)
     document
@@ -1774,27 +1579,7 @@
     loadReportPreview({ silent: true });
   }
 
-  function updateFilterVisibility() {
-    const type = getReportType();
-    const showStatus = ["enrollment", "full_audit"].includes(type);
-    const showSeverity = type === "incidents";
-    const showSource = type === "enrollment";
-    const showReviewer = type === "enrollment";
 
-    toggleFilterVisibility("statusFilter", showStatus);
-    toggleFilterVisibility("severityFilter", showSeverity);
-    toggleFilterVisibility("sourceFilter", showSource);
-    toggleFilterVisibility("reviewerFilter", showReviewer);
-  }
-
-  function toggleFilterVisibility(id, visible) {
-    const el = getEl(id);
-    if (!el) return;
-    const wrapper = el.closest(".mb-3");
-    if (wrapper) {
-      wrapper.style.display = visible ? "" : "none";
-    }
-  }
 
   document.addEventListener("DOMContentLoaded", init);
 
@@ -1803,4 +1588,5 @@
   window.AdminReports.formatDateSafe = formatDateSafe;
   window.AdminReports.formatToAmman = formatDateSafe;
   window.AdminReports.debounce = debounce;
+  window.AdminReports.loadReportPreview = loadReportPreview;
 })();

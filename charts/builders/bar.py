@@ -26,7 +26,9 @@ class BarBuilder(ChartBuilder):
             title=req.title,
             text_auto=True,
         )
-        fig.update_traces(textposition="outside")
+        fig.update_traces(textposition="auto")
+        if len(df) > 6:
+            fig.update_xaxes(tickangle=-45)
         return fig
 
 

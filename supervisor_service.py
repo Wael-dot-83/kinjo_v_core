@@ -67,7 +67,7 @@ class SupervisorService:
 
         # Restrict strictly to active enrollments in supervisor assigned classes.
         enrollments = db.query(models.EnrollmentApplication).options(
-            joinedload(models.EnrollmentApplication.child)
+            joinedload(models.EnrollmentApplication.child).joinedload(models.Child.parent)
         ).filter(
             models.EnrollmentApplication.class_id.in_(class_ids),
             models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE

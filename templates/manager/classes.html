@@ -1,24 +1,17 @@
-{% extends 'base.html' %}
+{% extends 'manager_base.html' %}
 {% block title %}{{ _('الشعب الدراسية') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-door-open-fill"></i>
-            {{ _('المدير') }}
-        </div>
-        <h1 class="page-header-title">{{ _('الشعب الدراسية') }}</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0 breadcrumb-sm">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
-                <li class="breadcrumb-item active">{{ _('الشعب') }}</li>
-            </ol>
-        </nav>
+<div class="margin-bottom-4">
+    <div class="usa-prose">
+        <h1 class="font-heading-xl margin-top-0 margin-bottom-1">
+            <i class="bi bi-door-open-fill text-primary"></i> {{ _('الشعب الدراسية') }}
+        </h1>
+        <p class="usa-intro margin-top-0">{{ _('إدارة الشعب وتوزيع الأطفال والمشرفين') }}</p>
     </div>
-    <div class="page-header-actions">
-        <a href="/classes/create" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>{{ _('إنشاء شعبة') }}
+    <div class="margin-top-2">
+        <a href="/classes/create" class="usa-button">
+            <i class="bi bi-plus-circle margin-right-1"></i>{{ _('إنشاء شعبة') }}
         </a>
     </div>
 </div>
@@ -27,175 +20,185 @@
 {% block content %}
 
 <!-- Stats row -->
-<div class="row g-3 mb-4 stagger-children">
-    <div class="col-6 col-md-3">
-        <div class="stat-card card">
-            <div class="card-body">
-                <div class="stat-info">
-                    <div class="stat-label">{{ _('إجمالي الشعب') }}</div>
-                    <div class="stat-value" id="statTotal">—</div>
+<div class="grid-row grid-gap margin-bottom-4">
+    <div class="tablet:grid-col-3 margin-bottom-2 tablet:margin-bottom-0">
+        <ul class="usa-card-group">
+            <li class="usa-card tablet:grid-col-12">
+                <div class="usa-card__container">
+                    <header class="usa-card__header">
+                        <h2 class="usa-card__heading font-heading-sm">{{ _('إجمالي الشعب') }}</h2>
+                    </header>
+                    <div class="usa-card__body">
+                        <p class="font-sans-xl text-bold text-primary" id="statTotal">—</p>
+                    </div>
                 </div>
-                <div class="stat-icon-wrap stat-icon-primary">
-                    <i class="bi bi-door-open-fill"></i>
-                </div>
-            </div>
-        </div>
+            </li>
+        </ul>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card success card">
-            <div class="card-body">
-                <div class="stat-info">
-                    <div class="stat-label">{{ _('شعب نشطة') }}</div>
-                    <div class="stat-value" id="statActive">—</div>
+    <div class="tablet:grid-col-3 margin-bottom-2 tablet:margin-bottom-0">
+        <ul class="usa-card-group">
+            <li class="usa-card tablet:grid-col-12">
+                <div class="usa-card__container">
+                    <header class="usa-card__header">
+                        <h2 class="usa-card__heading font-heading-sm">{{ _('شعب نشطة') }}</h2>
+                    </header>
+                    <div class="usa-card__body">
+                        <p class="font-sans-xl text-bold text-green" id="statActive">—</p>
+                    </div>
                 </div>
-                <div class="stat-icon-wrap stat-icon-success">
-                    <i class="bi bi-check-circle-fill"></i>
-                </div>
-            </div>
-        </div>
+            </li>
+        </ul>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card card">
-            <div class="card-body">
-                <div class="stat-info">
-                    <div class="stat-label">{{ _('إجمالي الأطفال') }}</div>
-                    <div class="stat-value" id="statChildren">—</div>
+    <div class="tablet:grid-col-3 margin-bottom-2 tablet:margin-bottom-0">
+        <ul class="usa-card-group">
+            <li class="usa-card tablet:grid-col-12">
+                <div class="usa-card__container">
+                    <header class="usa-card__header">
+                        <h2 class="usa-card__heading font-heading-sm">{{ _('إجمالي الأطفال') }}</h2>
+                    </header>
+                    <div class="usa-card__body">
+                        <p class="font-sans-xl text-bold text-base-dark" id="statChildren">—</p>
+                    </div>
                 </div>
-                <div class="stat-icon-wrap stat-icon-info">
-                    <i class="bi bi-people-fill"></i>
-                </div>
-            </div>
-        </div>
+            </li>
+        </ul>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card card">
-            <div class="card-body">
-                <div class="stat-info">
-                    <div class="stat-label">{{ _('إجمالي المشرفين') }}</div>
-                    <div class="stat-value" id="statSupervisors">—</div>
+    <div class="tablet:grid-col-3">
+        <ul class="usa-card-group">
+            <li class="usa-card tablet:grid-col-12">
+                <div class="usa-card__container">
+                    <header class="usa-card__header">
+                        <h2 class="usa-card__heading font-heading-sm">{{ _('إجمالي المشرفين') }}</h2>
+                    </header>
+                    <div class="usa-card__body">
+                        <p class="font-sans-xl text-bold text-secondary-dark" id="statSupervisors">—</p>
+                    </div>
                 </div>
-                <div class="stat-icon-wrap stat-icon-warning">
-                    <i class="bi bi-person-badge-fill"></i>
-                </div>
-            </div>
-        </div>
+            </li>
+        </ul>
     </div>
 </div>
 
-<!-- Classes Table -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="card-title-sm mb-0">
-            <i class="bi bi-table me-2 text-primary"></i>
-            {{ _('قائمة الشعب') }}
-        </h6>
-        <input type="search" class="form-control form-control-sm w-100 w-md-auto" style="max-width: 260px;"
-               id="classSearch" placeholder="{{ _('بحث...') }}"
-               aria-label="{{ _('بحث في الشعب') }}" oninput="filterTable(this.value)">
+<!-- Classes Table Section -->
+<div class="usa-card padding-3 margin-bottom-4 bg-white border border-base-lighter">
+    <div class="grid-row margin-bottom-2 flex-justify flex-align-center">
+        <div class="grid-col-auto">
+            <h3 class="font-heading-md margin-y-0">
+                <i class="bi bi-table margin-right-1 text-primary"></i>
+                {{ _('قائمة الشعب') }}
+            </h3>
+        </div>
+        <div class="grid-col-auto">
+            <form class="usa-search usa-search--small" role="search" onsubmit="event.preventDefault();">
+              <label class="usa-sr-only" for="classSearch">{{ _('بحث...') }}</label>
+              <input class="usa-input" id="classSearch" type="search" name="search" oninput="filterTable(this.value)" placeholder="{{ _('بحث...') }}">
+              <button class="usa-button" type="submit">
+                <span class="usa-sr-only">Search</span>
+              </button>
+            </form>
+        </div>
     </div>
 
-    <div id="tableLoading" class="card-body text-center py-5 text-muted">
-        <div class="spinner-border mb-3" role="status" aria-label="{{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}"></div>
-        <div>{{ _('جاري تحميل الشعب...') }}</div>
+    <div id="tableLoading" class="text-center padding-y-5 text-base">
+        <p>{{ _('جاري تحميل الشعب...') }}</p>
     </div>
 
-    <div id="tableEmpty" class="card-body text-center py-5 text-muted d-none">
-        <i class="bi bi-door-open d-block fs-1 mb-3 opacity-25"></i>
-        <p class="fw-600">{{ _('لا توجد شعب مسجلة') }}</p>
-        <a href="/classes/create" class="btn btn-primary btn-sm mt-2">
-            <i class="bi bi-plus-circle me-2"></i>{{ _('إنشاء أول شعبة') }}
+    <div id="tableEmpty" class="text-center padding-y-5 text-base display-none">
+        <p class="text-bold">{{ _('لا توجد شعب مسجلة') }}</p>
+        <a href="/classes/create" class="usa-button usa-button--outline margin-top-2">
+            <i class="bi bi-plus-circle margin-right-1"></i>{{ _('إنشاء أول شعبة') }}
         </a>
     </div>
 
-    <div id="tableError" class="card-body text-center py-5 d-none">
-        <i class="bi bi-exclamation-circle d-block fs-1 mb-3 text-danger opacity-50"></i>
-        <p class="text-muted">{{ _('تعذّر تحميل البيانات') }}</p>
-        <button class="btn btn-ghost btn-sm" onclick="loadClasses()">
-            <i class="bi bi-arrow-clockwise me-1"></i>{{ _('إعادة المحاولة') }}
+    <div id="tableError" class="text-center padding-y-5 display-none">
+        <p class="text-secondary-dark">{{ _('تعذّر تحميل البيانات') }}</p>
+        <button class="usa-button usa-button--unstyled" onclick="loadClasses()">
+            <i class="bi bi-arrow-clockwise margin-right-1"></i>{{ _('إعادة المحاولة') }}
         </button>
     </div>
 
-    <div id="tableWrap" class="d-none">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="classesTable" aria-label="{{ _('جدول الشعب الدراسية') }}">
-                <thead class="table-light">
-                    <tr>
-                        <th scope="col">{{ _('اسم الشعبة') }}</th>
-                        <th scope="col" class="text-center">{{ _('الطاقة') }}</th>
-                        <th scope="col" class="text-center">{{ _('الفئة العمرية') }}</th>
-                        <th scope="col" class="text-center">{{ _('المشرفون') }}</th>
-                        <th scope="col" class="text-center">{{ _('الأطفال') }}</th>
-                        <th scope="col" class="text-center">{{ _('الحالة') }}</th>
-                        <th scope="col" class="text-center">{{ _('الإجراءات') }}</th>
-                    </tr>
-                </thead>
-                <tbody id="classesTableBody">
-                </tbody>
-            </table>
-        </div>
+    <div id="tableWrap" class="display-none">
+        <table class="usa-table usa-table--striped width-full" id="classesTable">
+            <thead>
+                <tr>
+                    <th scope="col">{{ _('اسم الشعبة') }}</th>
+                    <th scope="col" class="text-center">{{ _('الطاقة') }}</th>
+                    <th scope="col" class="text-center">{{ _('الفئة العمرية') }}</th>
+                    <th scope="col" class="text-center">{{ _('المشرفون') }}</th>
+                    <th scope="col" class="text-center">{{ _('الأطفال') }}</th>
+                    <th scope="col" class="text-center">{{ _('الحالة') }}</th>
+                    <th scope="col" class="text-center">{{ _('الإجراءات') }}</th>
+                </tr>
+            </thead>
+            <tbody id="classesTableBody">
+            </tbody>
+        </table>
     </div>
 </div>
 
 <!-- Delete Confirm Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-modal="true" role="dialog">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title fw-700 text-danger" id="deleteModalLabel">
-                    <i class="bi bi-trash3-fill me-2"></i>{{ _('حذف الشعبة') }}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
-            </div>
-            <div class="modal-body">
-                <p>{{ _('هل أنت متأكد من حذف شعبة') }} <strong id="deleteClassName"></strong>؟</p>
-                <div class="alert alert-warning py-2 small">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    {{ _('سيؤدي الحذف إلى إزالة جميع بيانات الشعبة بشكل دائم.') }}
-                </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDelete()">
-                    <span class="btn-text"><i class="bi bi-trash3 me-2"></i>{{ _('نعم، حذف') }}</span>
-                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}</span>
-                </button>
-            </div>
+<div class="usa-modal" id="deleteModal" aria-labelledby="deleteModalLabel" aria-describedby="deleteModalDesc">
+  <div class="usa-modal__content">
+    <div class="usa-modal__main">
+      <h2 class="usa-modal__heading text-secondary-dark" id="deleteModalLabel">
+        <i class="bi bi-trash3-fill margin-right-1"></i>{{ _('حذف الشعبة') }}
+      </h2>
+      <div class="usa-prose">
+        <p id="deleteModalDesc">{{ _('هل أنت متأكد من حذف شعبة') }} <strong id="deleteClassName"></strong>؟</p>
+        <div class="usa-alert usa-alert--warning usa-alert--slim margin-top-2" role="alert">
+          <div class="usa-alert__body">
+            <p class="usa-alert__text">{{ _('سيؤدي الحذف إلى إزالة جميع بيانات الشعبة بشكل دائم.') }}</p>
+          </div>
         </div>
+      </div>
+      <ul class="usa-button-group margin-top-4">
+        <li class="usa-button-group__item">
+          <button type="button" class="usa-button usa-button--secondary" id="confirmDeleteBtn" onclick="confirmDelete()">
+              {{ _('نعم، حذف') }}
+          </button>
+        </li>
+        <li class="usa-button-group__item">
+          <button type="button" class="usa-button usa-button--unstyled padding-105 text-center" data-close-modal>{{ _('إلغاء') }}</button>
+        </li>
+      </ul>
     </div>
+    <button class="usa-button usa-modal__close" aria-label="Close this window" data-close-modal>
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
 </div>
 
 <!-- Swap Supervisor Modal -->
-<div class="modal fade" id="swapSupervisorModal" tabindex="-1" aria-labelledby="swapModalLabel" aria-modal="true" role="dialog">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title fw-700" id="swapModalLabel">
-                    <i class="bi bi-arrow-left-right me-2 text-primary"></i>
-                    {{ _('تغيير المشرف') }}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted small mb-3">{{ _('اختر المشرف الجديد للشعبة') }} <strong id="swapClassName"></strong></p>
-                <label class="field-label mb-2" for="supervisorSelector">{{ _('المشرف') }}</label>
-                <select class="form-select" id="supervisorSelector" aria-label="{{ _('اختر مشرفاً') }}">
-                    <option value="">{{ _('— جاري التحميل... —') }}</option>
-                </select>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
-                <button type="button" class="btn btn-primary" id="confirmSwapBtn" onclick="confirmSwap()">
-                    <span class="btn-text"><i class="bi bi-check2 me-2"></i>{{ _('تطبيق') }}</span>
-                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}</span>
-                </button>
-            </div>
-        </div>
+<div class="usa-modal" id="swapSupervisorModal" aria-labelledby="swapModalLabel">
+  <div class="usa-modal__content">
+    <div class="usa-modal__main">
+      <h2 class="usa-modal__heading" id="swapModalLabel">
+        <i class="bi bi-arrow-left-right margin-right-1 text-primary"></i>{{ _('تغيير المشرف') }}
+      </h2>
+      <div class="usa-prose">
+        <p>{{ _('اختر المشرف الجديد للشعبة') }} <strong id="swapClassName"></strong></p>
+      </div>
+      <form class="usa-form" onsubmit="event.preventDefault(); confirmSwap();">
+        <label class="usa-label" for="supervisorSelector">{{ _('المشرف') }}</label>
+        <select class="usa-select" id="supervisorSelector" aria-label="{{ _('اختر مشرفاً') }}">
+            <option value="">{{ _('— جاري التحميل... —') }}</option>
+        </select>
+        <ul class="usa-button-group margin-top-4">
+          <li class="usa-button-group__item">
+            <button type="submit" class="usa-button" id="confirmSwapBtn">{{ _('تطبيق') }}</button>
+          </li>
+          <li class="usa-button-group__item">
+            <button type="button" class="usa-button usa-button--unstyled padding-105 text-center" data-close-modal>{{ _('إلغاء') }}</button>
+          </li>
+        </ul>
+      </form>
     </div>
+    <button class="usa-button usa-modal__close" aria-label="Close this window" data-close-modal>
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
 </div>
 
-<style>
-.field-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block; }
-</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -203,8 +206,6 @@
 (function () {
     'use strict';
 
-    let deleteModal = null;
-    let swapModal   = null;
     let pendingDeleteId  = null;
     let pendingSwapId    = null;
     let allClasses = [];
@@ -217,16 +218,14 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-        swapModal   = new bootstrap.Modal(document.getElementById('swapSupervisorModal'));
         loadClasses();
     });
 
     window.loadClasses = async function () {
-        document.getElementById('tableLoading').classList.remove('d-none');
-        document.getElementById('tableEmpty').classList.add('d-none');
-        document.getElementById('tableError').classList.add('d-none');
-        document.getElementById('tableWrap').classList.add('d-none');
+        document.getElementById('tableLoading').classList.remove('display-none');
+        document.getElementById('tableEmpty').classList.add('display-none');
+        document.getElementById('tableError').classList.add('display-none');
+        document.getElementById('tableWrap').classList.add('display-none');
 
         try {
             const r = await fetch('/api/classes', { headers: getHeaders() });
@@ -243,19 +242,19 @@
             document.getElementById('statChildren').textContent    = totalCh;
             document.getElementById('statSupervisors').textContent = totalSu;
 
-            document.getElementById('tableLoading').classList.add('d-none');
+            document.getElementById('tableLoading').classList.add('display-none');
 
             if (!allClasses.length) {
-                document.getElementById('tableEmpty').classList.remove('d-none');
+                document.getElementById('tableEmpty').classList.remove('display-none');
                 return;
             }
 
             renderTable(allClasses);
-            document.getElementById('tableWrap').classList.remove('d-none');
+            document.getElementById('tableWrap').classList.remove('display-none');
 
         } catch {
-            document.getElementById('tableLoading').classList.add('d-none');
-            document.getElementById('tableError').classList.remove('d-none');
+            document.getElementById('tableLoading').classList.add('display-none');
+            document.getElementById('tableError').classList.remove('display-none');
         }
     };
 
@@ -266,43 +265,45 @@
                 ? `${cls.min_age_months}–${cls.max_age_months} {{ _("شهر") }}`
                 : '—';
             const activeBadge = cls.is_active
-                ? `<span class="badge badge-soft badge-soft-success">{{ _('نشطة') }}</span>`
-                : `<span class="badge bg-light text-muted border">{{ _('موقوفة') }}</span>`;
+                ? `<span class="usa-tag bg-green">{{ _('نشطة') }}</span>`
+                : `<span class="usa-tag usa-tag--new text-base">{{ _('موقوفة') }}</span>`;
             return `
             <tr>
                 <td>
-                    <div class="fw-700">${escHtml(cls.name_ar)}</div>
-                    ${cls.name_en ? `<div class="text-muted small">${escHtml(cls.name_en)}</div>` : ''}
+                    <div class="text-bold">${escHtml(cls.name_ar)}</div>
+                    ${cls.name_en ? `<div class="text-base text-sm">${escHtml(cls.name_en)}</div>` : ''}
                 </td>
                 <td class="text-center">
-                    <span class="fw-600">${cls.capacity_total || '—'}</span>
+                    <span class="text-bold">${cls.capacity_total || '—'}</span>
                 </td>
-                <td class="text-center small text-muted">${ageRange}</td>
+                <td class="text-center text-sm text-base">${ageRange}</td>
                 <td class="text-center">
-                    <span class="badge badge-soft badge-soft-warning">
+                    <span class="usa-tag bg-primary-light text-primary-dark">
                         ${cls.supervisors_count || 0}
                     </span>
                 </td>
                 <td class="text-center">
-                    <span class="badge badge-soft badge-soft-info">
+                    <span class="usa-tag bg-accent-cool-light text-accent-cool-darker">
                         ${cls.children_count || 0}
                     </span>
                 </td>
                 <td class="text-center">${activeBadge}</td>
-                <td>
-                    <div class="d-flex gap-1 justify-content-center flex-wrap">
-                        <a href="/classes/${cls.id}/edit" class="btn btn-sm btn-ghost"
+                <td class="text-center">
+                    <div class="display-flex flex-wrap flex-justify-center grid-gap-1">
+                        <a href="/classes/${cls.id}/edit" class="usa-button usa-button--unstyled padding-1"
                            aria-label="{{ _('تعديل') }} ${escHtml(cls.name_ar)}">
-                            <i class="bi bi-pencil me-1"></i>{{ _('تعديل') }}
+                            <i class="bi bi-pencil"></i> {{ _('تعديل') }}
                         </a>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="openSwapModal(${cls.id},${escHtml(JSON.stringify(cls.name_ar))})"
-                                aria-label="{{ _('تغيير المشرف') }}">
-                            <i class="bi bi-arrow-left-right me-1"></i>{{ _('مشرف') }}
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="openDeleteModal(${cls.id},${escHtml(JSON.stringify(cls.name_ar))})"
-                                aria-label="{{ _('حذف') }} ${escHtml(cls.name_ar)}">
-                            <i class="bi bi-trash3 me-1"></i>{{ _('حذف') }}
-                        </button>
+                        <a href="#swapSupervisorModal" class="usa-button usa-button--unstyled padding-1 text-primary-dark" 
+                           data-open-modal aria-controls="swapSupervisorModal"
+                           onclick="setupSwapModal(${cls.id}, '${escHtml(cls.name_ar)}')">
+                            <i class="bi bi-arrow-left-right"></i> {{ _('مشرف') }}
+                        </a>
+                        <a href="#deleteModal" class="usa-button usa-button--unstyled padding-1 text-secondary-dark"
+                           data-open-modal aria-controls="deleteModal"
+                           onclick="setupDeleteModal(${cls.id}, '${escHtml(cls.name_ar)}')">
+                            <i class="bi bi-trash3"></i> {{ _('حذف') }}
+                        </a>
                     </div>
                 </td>
             </tr>`;
@@ -318,39 +319,37 @@
         renderTable(filtered);
     };
 
-    window.openDeleteModal = function (id, name) {
+    window.setupDeleteModal = function (id, name) {
         pendingDeleteId = id;
         document.getElementById('deleteClassName').textContent = name;
-        deleteModal.show();
     };
 
     window.confirmDelete = async function () {
         if (!pendingDeleteId) return;
         const btn = document.getElementById('confirmDeleteBtn');
-        setLoading(btn, true);
+        btn.disabled = true;
         try {
             const r = await fetch(`/api/manager/classes/${pendingDeleteId}`, {
                 method: 'DELETE',
                 headers: getHeaders()
             });
             if (!r.ok) throw new Error();
-            showToast('{{ _("تم حذف الشعبة بنجاح") }}', 'success');
-            deleteModal.hide();
+            alert('{{ _("تم حذف الشعبة بنجاح") }}');
+            document.querySelector('#deleteModal .usa-modal__close').click();
             await loadClasses();
         } catch {
-            showToast('{{ _("حدث خطأ في الحذف") }}', 'error');
+            alert('{{ _("حدث خطأ في الحذف") }}');
         } finally {
-            setLoading(btn, false);
+            btn.disabled = false;
             pendingDeleteId = null;
         }
     };
 
-    window.openSwapModal = async function (classId, className) {
+    window.setupSwapModal = async function (classId, className) {
         pendingSwapId = classId;
         document.getElementById('swapClassName').textContent = className;
         const sel = document.getElementById('supervisorSelector');
         sel.innerHTML = `<option value="">{{ _('— جاري التحميل... —') }}</option>`;
-        swapModal.show();
 
         try {
             const r = await fetch('/api/manager/supervisors', { headers: getHeaders() });
@@ -365,9 +364,9 @@
 
     window.confirmSwap = async function () {
         const supId = document.getElementById('supervisorSelector').value;
-        if (!supId) { showToast('{{ _("يجب اختيار مشرف") }}', 'warning'); return; }
+        if (!supId) { alert('{{ _("يجب اختيار مشرف") }}'); return; }
         const btn = document.getElementById('confirmSwapBtn');
-        setLoading(btn, true);
+        btn.disabled = true;
         try {
             const r = await fetch(`/api/manager/classes/${pendingSwapId}/swap-supervisor`, {
                 method: 'PUT',
@@ -375,22 +374,16 @@
                 body: JSON.stringify({ supervisor_id: parseInt(supId), class_id: pendingSwapId, is_primary: true })
             });
             if (!r.ok) throw new Error();
-            showToast('{{ _("تم تغيير المشرف بنجاح") }}', 'success');
-            swapModal.hide();
+            alert('{{ _("تم تغيير المشرف بنجاح") }}');
+            document.querySelector('#swapSupervisorModal .usa-modal__close').click();
             await loadClasses();
         } catch {
-            showToast('{{ _("حدث خطأ في تغيير المشرف") }}', 'error');
+            alert('{{ _("حدث خطأ في تغيير المشرف") }}');
         } finally {
-            setLoading(btn, false);
+            btn.disabled = false;
             pendingSwapId = null;
         }
     };
-
-    function setLoading(btn, on) {
-        btn.querySelector('.btn-text').classList.toggle('d-none', on);
-        btn.querySelector('.btn-loading').classList.toggle('d-none', !on);
-        btn.disabled = on;
-    }
 
     function escHtml(s) {
         return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

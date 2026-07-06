@@ -192,7 +192,7 @@
 
     async function loadManagers() {
         try {
-            const r = await fetch('/api/admin/managers', { headers: getHeaders() });
+            const r = await fetchWithAuth('/api/admin/managers', { headers: getHeaders() });
             if (!r.ok) throw new Error();
             const data = await r.json();
             allManagers = data.managers || [];
@@ -299,7 +299,7 @@
 
     async function loadAuditLog() {
         try {
-            const r = await fetch('/api/admin/impersonate/audit?limit=10', { headers: getHeaders() });
+            const r = await fetchWithAuth('/api/admin/impersonate/audit?limit=10', { headers: getHeaders() });
             if (!r.ok) throw new Error();
             const data = await r.json();
             const events = data.events || [];

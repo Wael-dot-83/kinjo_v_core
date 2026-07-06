@@ -19,10 +19,14 @@ class PieBuilder(ChartBuilder):
             df,
             names=name_col,
             values=val_col,
-            hole=0.35,  # donut style
+            hole=0.45,  # cleaner donut style
             title=req.title,
         )
-        fig.update_traces(textposition="inside", textinfo="percent+label")
+        fig.update_traces(
+            textposition="inside", 
+            textinfo="percent+label",
+            insidetextorientation="radial"
+        )
         return fig
 
 

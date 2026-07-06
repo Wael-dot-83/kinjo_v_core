@@ -21,10 +21,9 @@
     {{ date_range_filter(
       start_id="periodStart",
       end_id="periodEnd",
-      governorate_id="governorateFilter",
-      show_governorate=(current_user.role in ["ADMIN","SUPERVISOR"]),
+      show_governorate=False,
       refresh_btn_id="refreshReportBtn",
-      on_refresh="loadReportPreview",
+      on_refresh="AdminReports.loadReportPreview",
       show_export=False,
       user_role=current_user.role
     ) }}
@@ -164,13 +163,10 @@
 
           <!-- Dynamic Filters -->
           <div class="mb-3" id="filterGovContainer">
-            {# Not a <label for="governorateFilter">: the real, only #governorateFilter
-               control lives in the toolbar above (rendered by the date_range_filter
-               macro), which already has its own correctly-associated label. A second
-               <label for> pointing at the same id from an unrelated part of the page
-               was a confusing duplicate accessible-name binding, not a real label. #}
-            <span class="form-label fw-bold d-block">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</span>
-            <p class="small text-muted">{% if ui_lang == 'en' %}Select from the filter above{% else %}اختر من الفلتر أعلاه{% endif %}</p>
+            <label class="form-label fw-bold" for="governorateFilter">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+            <select class="form-select" id="governorateFilter">
+              <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
+            </select>
           </div>
 
           <div class="mb-3" id="filterKgContainer">
@@ -202,7 +198,7 @@
             <label class="form-label fw-bold" for="sourceFilter">{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</label>
             <select class="form-select" id="sourceFilter" multiple size="3">
               <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
-              <option value="WEB">Web</option>
+              <option value="WEB">{% if ui_lang == 'en' %}Web{% else %}ويب{% endif %}</option>
               <option value="MOBILE">{% if ui_lang == 'en' %}Mobile{% else %}موبايل{% endif %}</option>
               <option value="OFFICE">{% if ui_lang == 'en' %}Office{% else %}مكتب{% endif %}</option>
             </select>
@@ -305,7 +301,7 @@
             <label class="form-label fw-bold" for="actorRoleFilter">{% if ui_lang == 'en' %}Actor Role{% else %}دور المستخدم{% endif %}</label>
             <select class="form-select" id="actorRoleFilter">
               <option value="">{% if ui_lang == 'en' %}All Roles{% else %}كل الأدوار{% endif %}</option>
-              <option value="ADMIN">Admin</option>
+              <option value="ADMIN">{% if ui_lang == 'en' %}Admin{% else %}مدير{% endif %}</option>
               <option value="SUPERVISOR">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
               <option value="PARENT">{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</option>
             </select>
@@ -437,13 +433,16 @@
 
     <!-- Recent Reports History -->
     <div class="card glass-panel shadow-sm border-0 hover-elevate">
-      <div class="card-header bg-transparent border-bottom border-light d-flex justify-content-between align-items-center">
+      <div class="card-header bg-transparent border-bottom border-light d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 class="card-title mb-0 fw-bold"style="font: var(--type-section-title)">
           <i class="bi bi-clock-history me-2 text-info"></i>{% if ui_lang == 'en' %}Recent Reports{% else %}التقارير الأخيرة{% endif %}
         </h5>
-        <button type="button" class="btn btn-sm btn-outline-primary" id="refreshHistoryBtn" aria-label="{% if ui_lang == 'en' %}Refresh recent reports{% else %}تحديث التقارير الأخيرة{% endif %}">
-          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
-        </button>
+        <div class="d-flex align-items-center gap-2">
+          <input type="text" class="form-control form-control-sm" id="searchHistoryInput" style="max-width: 200px;" placeholder="{% if ui_lang == 'en' %}Search history...{% else %}بحث في السجل...{% endif %}" aria-label="{% if ui_lang == 'en' %}Search history{% else %}بحث في السجل{% endif %}">
+          <button type="button" class="btn btn-sm btn-outline-primary" id="refreshHistoryBtn" aria-label="{% if ui_lang == 'en' %}Refresh recent reports{% else %}تحديث التقارير الأخيرة{% endif %}">
+            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+          </button>
+        </div>
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
@@ -463,6 +462,17 @@
 <td colspan="5"class="text-center py-4 text-on-surface-variant">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr>
             </tbody>
           </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center p-3 border-top d-none" id="historyTablePagination">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="prevHistoryPageBtn"
+                  aria-label="{% if ui_lang == 'en' %}Previous page{% else %}الصفحة السابقة{% endif %}">
+            <i class="bi bi-chevron-left icon-directional" aria-hidden="true"></i>
+          </button>
+          <small class="text-muted" id="historyPaginationInfo"></small>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="nextHistoryPageBtn"
+                  aria-label="{% if ui_lang == 'en' %}Next page{% else %}الصفحة التالية{% endif %}">
+            <i class="bi bi-chevron-right icon-directional" aria-hidden="true"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -546,5 +556,5 @@
 {% block extra_scripts %}
 <script defer src="/static/js/chart_utils.js?v=2.1"charset="utf-8"></script>
 <script defer src="/static/js/admin_analytics.js?v=2.1"charset="utf-8"></script>
-<script defer src="/static/js/admin_reports.js?v=1.1"charset="utf-8"></script>
+<script defer src="/static/js/admin_reports.js?v=1.3"charset="utf-8"></script>
 {% endblock %}

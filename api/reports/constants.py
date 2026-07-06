@@ -13,7 +13,7 @@ REPORT_STATUS_UI_METADATA = {
         "label": "تم استلامه من قبل الوالدين",
         "color_class": "text-success",
         "bg_class": "bg-success-subtle",
-        "icon": "fas fa-check-circle",
+        "icon": "bi bi-check-circle-fill",
         "sort_priority": 1,
         "color": "#4CAF50"
     },
@@ -21,7 +21,7 @@ REPORT_STATUS_UI_METADATA = {
         "label": "بانتظار مراجعة المدير",
         "color_class": "text-warning",
         "bg_class": "bg-warning-subtle",
-        "icon": "fas fa-clock",
+        "icon": "bi bi-clock-fill",
         "sort_priority": 2,
         "color": "#FFC107"
     },
@@ -29,7 +29,7 @@ REPORT_STATUS_UI_METADATA = {
         "label": "غير مكتمل",
         "color_class": "text-info",
         "bg_class": "bg-info-subtle",
-        "icon": "fas fa-exclamation-triangle",
+        "icon": "bi bi-exclamation-triangle-fill",
         "sort_priority": 3,
         "color": "#EF5350"
     },
@@ -37,7 +37,7 @@ REPORT_STATUS_UI_METADATA = {
         "label": "غير مملوء – غياب الطفل",
         "color_class": "text-danger",
         "bg_class": "bg-danger-subtle",
-        "icon": "fas fa-user-slash",
+        "icon": "bi bi-person-x-fill",
         "sort_priority": 4,
         "color": "#D32F2F"
     },
@@ -45,7 +45,7 @@ REPORT_STATUS_UI_METADATA = {
         "label": "غير مملوء – لم يقدم المشرف/المعلم",
         "color_class": "text-secondary",
         "bg_class": "bg-secondary-subtle",
-        "icon": "fas fa-file-excel",
+        "icon": "bi bi-file-earmark-x-fill",
         "sort_priority": 5,
         "color": "#C62828"
     }

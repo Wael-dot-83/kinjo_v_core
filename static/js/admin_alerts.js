@@ -2,22 +2,11 @@
     "use strict";
 
     // Read kinjo_csrf_token cookie (JS-visible, set by server)
-    function getCsrfToken() {
-        const match = document.cookie.match(/(?:^|;\s*)kinjo_csrf_token=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : "";
-    }
+    
 
     async function apiRequest(url, options = {}) {
-        const method = (options.method || "GET").toUpperCase();
         const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
-        if (method !== "GET" && method !== "HEAD") {
-            headers["X-CSRF-Token"] = getCsrfToken();
-        }
-        const resp = await fetch(url, { ...options, headers, credentials: "same-origin" });
-        if (!resp.ok) {
-            const text = await resp.text().catch(() => "");
-            throw new Error(text || `HTTP ${resp.status}`);
-        }
+        const resp = await window.fetchWithAuth(url, { ...options, headers, credentials: "same-origin" });
         return resp.json();
     }
 

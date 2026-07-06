@@ -1,18 +1,16 @@
-{% extends 'base.html' %}
+{% extends 'manager_base.html' %}
 {% block title %}{{ _('رسالة جديدة') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-chat-dots-fill"></i>
-            {{ _('المدير') }}
-        </div>
-        <h1 class="page-header-title">{{ _('إنشاء رسالة') }}</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0 breadcrumb-sm">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
-                <li class="breadcrumb-item active">{{ _('رسالة جديدة') }}</li>
+<div class="margin-bottom-4 display-flex flex-justify flex-align-start flex-wrap grid-gap-2">
+    <div class="usa-prose">
+        <h1 class="font-heading-xl margin-top-0 margin-bottom-1">
+            <i class="bi bi-chat-dots-fill text-primary"></i> {{ _('إنشاء رسالة') }}
+        </h1>
+        <nav aria-label="Breadcrumb" class="usa-breadcrumb usa-breadcrumb--wrap">
+            <ol class="usa-breadcrumb__list">
+                <li class="usa-breadcrumb__list-item"><a href="/dashboard" class="usa-breadcrumb__link">{{ _('لوحة التحكم') }}</a></li>
+                <li class="usa-breadcrumb__list-item usa-current" aria-current="page">{{ _('رسالة جديدة') }}</li>
             </ol>
         </nav>
     </div>
@@ -21,66 +19,74 @@
 
 {% block content %}
 
-<div class="row g-4 justify-content-center">
-    <div class="col-12 col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-header fw-semibold">
-                <i class="bi bi-send-fill me-2 text-primary"></i>{{ _('إرسال رسالة') }}
+<div class="grid-row flex-justify-center">
+    <div class="desktop:grid-col-8">
+        <div class="usa-card bg-white border border-base-lighter">
+            <div class="padding-3 border-bottom-1 border-base-lighter">
+                <h2 class="font-heading-md margin-y-0 text-bold">
+                    <i class="bi bi-send-fill margin-right-1 text-primary"></i>{{ _('إرسال رسالة') }}
+                </h2>
             </div>
-            <div class="card-body">
-                <form id="messageForm" novalidate>
+            <div class="padding-3">
+                <form class="usa-form usa-form--large width-full" id="messageForm" novalidate>
                     <!-- Recipient type -->
-                    <div class="mb-3">
-                        <label class="form-label">{{ _('المستلمون') }}</label>
-                        <select class="form-select" id="recipientType" onchange="onRecipientTypeChange()">
-                            <option value="supervisor">مشرف محدد</option>
-                            <option value="all_supervisors">كل المشرفين</option>
-                            <option value="parents_class">أولياء شعبة</option>
-                            <option value="all_parents">كل أولياء الأمور</option>
+                    <div class="margin-bottom-3">
+                        <label class="usa-label margin-top-0" for="recipientType">{{ _('المستلمون') }}</label>
+                        <select class="usa-select" id="recipientType" onchange="onRecipientTypeChange()">
+                            <option value="supervisor">{{ _('مشرف محدد') }}</option>
+                            <option value="all_supervisors">{{ _('كل المشرفين') }}</option>
+                            <option value="parents_class">{{ _('أولياء شعبة') }}</option>
+                            <option value="all_parents">{{ _('كل أولياء الأمور') }}</option>
                         </select>
                     </div>
 
                     <!-- Supervisor selector (shown when type=supervisor) -->
-                    <div class="mb-3" id="supervisorSelectorGroup">
-                        <label class="form-label">{{ _('اختر المشرف') }}</label>
-                        <select class="form-select" id="supervisorSelector">
-                            <option value="">— جاري التحميل —</option>
+                    <div class="margin-bottom-3" id="supervisorSelectorGroup">
+                        <label class="usa-label margin-top-0" for="supervisorSelector">{{ _('اختر المشرف') }}</label>
+                        <select class="usa-select" id="supervisorSelector">
+                            <option value="">{{ _('— جاري التحميل —') }}</option>
                         </select>
                     </div>
 
                     <!-- Class selector (shown when type=parents_class) -->
-                    <div class="mb-3 d-none" id="classSelectorGroup">
-                        <label class="form-label">{{ _('اختر الشعبة') }}</label>
-                        <select class="form-select" id="classSelector">
-                            <option value="">— جاري التحميل —</option>
+                    <div class="margin-bottom-3 display-none" id="classSelectorGroup">
+                        <label class="usa-label margin-top-0" for="classSelector">{{ _('اختر الشعبة') }}</label>
+                        <select class="usa-select" id="classSelector">
+                            <option value="">{{ _('— جاري التحميل —') }}</option>
                         </select>
                     </div>
 
                     <!-- Recipient preview -->
-                    <div class="mb-3 d-none" id="recipientPreview">
-                        <div class="alert alert-info small py-2 mb-0">
-                            <i class="bi bi-people-fill me-1"></i>
-                            <span id="previewText"></span>
+                    <div class="margin-bottom-3 display-none" id="recipientPreview">
+                        <div class="usa-alert usa-alert--info usa-alert--slim">
+                            <div class="usa-alert__body">
+                                <p class="usa-alert__text font-sans-xs">
+                                    <i class="bi bi-people-fill margin-right-1"></i>
+                                    <span id="previewText"></span>
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label" for="msgSubject">{{ _('الموضوع') }}</label>
-                        <input type="text" class="form-control" id="msgSubject" placeholder="{{ _('اكتب موضوع الرسالة') }}">
+                    <div class="margin-bottom-3">
+                        <label class="usa-label margin-top-0" for="msgSubject">{{ _('الموضوع') }}</label>
+                        <input type="text" class="usa-input" id="msgSubject" placeholder="{{ _('اكتب موضوع الرسالة') }}">
                     </div>
-                    <div class="mb-4">
-                        <label class="form-label" for="msgBody">{{ _('الرسالة') }} <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="msgBody" rows="6"
-                                  placeholder="{{ _('اكتب محتوى الرسالة هنا…') }}" required></textarea>
+                    <div class="margin-bottom-4">
+                        <label class="usa-label margin-top-0" for="msgBody">{{ _('الرسالة') }} <abbr title="required" class="usa-hint usa-hint--required">*</abbr></label>
+                        <textarea class="usa-textarea" id="msgBody" rows="6" placeholder="{{ _('اكتب محتوى الرسالة هنا…') }}" required></textarea>
                     </div>
 
-                    <div class="d-flex gap-3">
-                        <button type="submit" class="btn btn-primary" id="sendBtn">
-                            <span id="sendSpinner" class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
-                            <i class="bi bi-send-fill me-2" id="sendIcon"></i>{{ _('إرسال') }}
-                        </button>
-                        <a href="/dashboard" class="btn btn-ghost">{{ _('إلغاء') }}</a>
-                    </div>
+                    <ul class="usa-button-group">
+                        <li class="usa-button-group__item">
+                            <button type="submit" class="usa-button" id="sendBtn">
+                                <i class="bi bi-send-fill margin-right-1" id="sendIcon"></i>{{ _('إرسال') }}
+                            </button>
+                        </li>
+                        <li class="usa-button-group__item">
+                            <a href="/manager/messages" class="usa-button usa-button--outline">{{ _('إلغاء') }}</a>
+                        </li>
+                    </ul>
                 </form>
             </div>
         </div>
@@ -121,8 +127,22 @@ async function init() {
 
 function onRecipientTypeChange() {
     const type = document.getElementById('recipientType').value;
-    document.getElementById('supervisorSelectorGroup').classList.toggle('d-none', type !== 'supervisor');
-    document.getElementById('classSelectorGroup').classList.toggle('d-none', type !== 'parents_class');
+    
+    const supGroup = document.getElementById('supervisorSelectorGroup');
+    const clsGroup = document.getElementById('classSelectorGroup');
+    
+    if (type === 'supervisor') {
+        supGroup.classList.remove('display-none');
+    } else {
+        supGroup.classList.add('display-none');
+    }
+    
+    if (type === 'parents_class') {
+        clsGroup.classList.remove('display-none');
+    } else {
+        clsGroup.classList.add('display-none');
+    }
+    
     updatePreview();
 }
 
@@ -134,8 +154,8 @@ function updatePreview() {
     if (type === 'all_supervisors')  msg = `سيتم إرسال الرسالة إلى ${_supervisors.length} مشرف`;
     else if (type === 'all_parents') msg = 'سيتم إرسال الرسالة إلى كل أولياء الأمور';
     else if (type === 'parents_class') msg = 'سيتم إرسال الرسالة إلى أولياء أمور الشعبة المختارة';
-    if (msg) { text.textContent = msg; preview.classList.remove('d-none'); }
-    else preview.classList.add('d-none');
+    if (msg) { text.textContent = msg; preview.classList.remove('display-none'); }
+    else preview.classList.add('display-none');
 }
 
 document.getElementById('supervisorSelector').addEventListener('change', updatePreview);
@@ -144,14 +164,13 @@ document.getElementById('classSelector').addEventListener('change', updatePrevie
 document.getElementById('messageForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = document.getElementById('msgBody').value.trim();
-    if (!body) { showToast('الرجاء كتابة محتوى الرسالة', 'warning'); return; }
+    if (!body) { alert('الرجاء كتابة محتوى الرسالة'); return; }
 
     const type    = document.getElementById('recipientType').value;
     const subject = document.getElementById('msgSubject').value.trim();
     const btn     = document.getElementById('sendBtn');
-    const spinner = document.getElementById('sendSpinner');
     const icon    = document.getElementById('sendIcon');
-    btn.disabled = true; spinner.classList.remove('d-none'); icon.classList.add('d-none');
+    btn.disabled = true; icon.classList.add('display-none');
 
     try {
         let recipients = [];
@@ -172,14 +191,14 @@ document.getElementById('messageForm').addEventListener('submit', async (e) => {
             body: JSON.stringify({ subject, body, recipients }),
         });
         if (res.ok) {
-            showToast('تم إرسال الرسالة بنجاح', 'success');
-            setTimeout(() => window.location.href = '/dashboard', 1200);
+            alert('تم إرسال الرسالة بنجاح');
+            setTimeout(() => window.location.href = '/manager/messages', 100);
         } else {
             const err = await res.json().catch(() => ({}));
-            showToast(err.detail || 'فشل الإرسال', 'error');
+            alert(err.detail || 'فشل الإرسال');
         }
-    } catch { showToast('خطأ في الشبكة', 'error'); }
-    finally { btn.disabled = false; spinner.classList.add('d-none'); icon.classList.remove('d-none'); }
+    } catch { alert('خطأ في الشبكة'); }
+    finally { btn.disabled = false; icon.classList.remove('display-none'); }
 });
 
 document.addEventListener('DOMContentLoaded', init);

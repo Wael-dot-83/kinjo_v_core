@@ -12,31 +12,37 @@ from database import get_db
 from dependencies import require_admin
 from analytics_gap_service import AnalyticsGapService
 from schemas.chart_dto import LayerMetricsResponse
+from cache_service import dashboard_cache
 
 router = APIRouter(prefix="/api/admin/analytics", tags=["Advanced Analytics"])
 
 
 @router.get(
     "/network",
-    response_model=LayerMetricsResponse,
+    response_model=dict,
     summary="Network-level analytics (Metrics 1–7)",
 )
 async def get_network_analytics(
     locale: str = Query("ar", description="Response locale: 'ar' or 'en'"),
     db: Session = Depends(get_db),
     _: dict = Depends(require_admin),
-) -> LayerMetricsResponse:
+) -> dict:
     """
     Returns 7 network-wide metrics: equity index, capacity pressure,
     digital engagement, license expiry distribution, attendance rate,
     staff attrition proxy, and improvement velocity trend.
     """
-    return AnalyticsGapService(db).get_network_metrics(locale)
+    cache_key = f"adv_analytics:network:{locale}"
+    return dashboard_cache.get_or_set(
+        cache_key,
+        lambda: AnalyticsGapService(db).get_network_metrics(locale).model_dump(mode="json"),
+        ttl_seconds=1800
+    )
 
 
 @router.get(
     "/governorate/{gov_name}",
-    response_model=LayerMetricsResponse,
+    response_model=dict,
     summary="Governorate-level analytics (Metrics 8–14)",
 )
 async def get_governorate_analytics(
@@ -44,18 +50,23 @@ async def get_governorate_analytics(
     locale: str = Query("ar"),
     db: Session = Depends(get_db),
     _: dict = Depends(require_admin),
-) -> LayerMetricsResponse:
+) -> dict:
     """
     Returns 7 governorate-level metrics: inter-KG variance, chronic
     absenteeism, NPS, incident density, report submission rate,
     enrollment growth, and average GQI.
     """
-    return AnalyticsGapService(db).get_governorate_metrics(gov_name, locale)
+    cache_key = f"adv_analytics:governorate:{gov_name}:{locale}"
+    return dashboard_cache.get_or_set(
+        cache_key,
+        lambda: AnalyticsGapService(db).get_governorate_metrics(gov_name, locale).model_dump(mode="json"),
+        ttl_seconds=1800
+    )
 
 
 @router.get(
     "/kg/{kg_id}",
-    response_model=LayerMetricsResponse,
+    response_model=dict,
     summary="Kindergarten-level analytics (Metrics 15–22)",
 )
 async def get_kg_analytics(
@@ -63,18 +74,23 @@ async def get_kg_analytics(
     locale: str = Query("ar"),
     db: Session = Depends(get_db),
     _: dict = Depends(require_admin),
-) -> LayerMetricsResponse:
+) -> dict:
     """
     Returns 8 KG-level metrics: child risk composite, parent engagement,
     teacher timeliness, meal compliance, health alert density,
     data quality, age appropriateness, and safeguarding resolution rate.
     """
-    return AnalyticsGapService(db).get_kg_metrics(kg_id, locale)
+    cache_key = f"adv_analytics:kg:{kg_id}:{locale}"
+    return dashboard_cache.get_or_set(
+        cache_key,
+        lambda: AnalyticsGapService(db).get_kg_metrics(kg_id, locale).model_dump(mode="json"),
+        ttl_seconds=1800
+    )
 
 
 @router.get(
     "/child/{child_id}",
-    response_model=LayerMetricsResponse,
+    response_model=dict,
     summary="Child-level analytics (Metrics 23–27)",
 )
 async def get_child_analytics(
@@ -82,47 +98,62 @@ async def get_child_analytics(
     locale: str = Query("ar"),
     db: Session = Depends(get_db),
     _: dict = Depends(require_admin),
-) -> LayerMetricsResponse:
+) -> dict:
     """
     Returns 5 child-level metrics: attendance pattern, development
     profile (radar), engagement score, incident history, and health alerts.
     """
-    return AnalyticsGapService(db).get_child_metrics(child_id, locale)
+    cache_key = f"adv_analytics:child:{child_id}:{locale}"
+    return dashboard_cache.get_or_set(
+        cache_key,
+        lambda: AnalyticsGapService(db).get_child_metrics(child_id, locale).model_dump(mode="json"),
+        ttl_seconds=1800
+    )
 
 
 @router.get(
     "/predictive",
-    response_model=LayerMetricsResponse,
+    response_model=dict,
     summary="Predictive analytics (Metrics 28–31)",
 )
 async def get_predictive_analytics(
     locale: str = Query("ar"),
     db: Session = Depends(get_db),
     _: dict = Depends(require_admin),
-) -> LayerMetricsResponse:
+) -> dict:
     """
     Returns 4 predictive metrics: dropout risk per KG, performance
     trajectory classification, 3-month enrollment forecast, and
     attendance–incident cross-correlation.
     """
-    return AnalyticsGapService(db).get_predictive_metrics(locale)
+    cache_key = f"adv_analytics:predictive:{locale}"
+    return dashboard_cache.get_or_set(
+        cache_key,
+        lambda: AnalyticsGapService(db).get_predictive_metrics(locale).model_dump(mode="json"),
+        ttl_seconds=3600
+    )
 
 
 @router.get(
     "/governance",
-    response_model=LayerMetricsResponse,
+    response_model=dict,
     summary="Governance analytics (Metrics 32–33)",
 )
 async def get_governance_analytics(
     locale: str = Query("ar"),
     db: Session = Depends(get_db),
     _: dict = Depends(require_admin),
-) -> LayerMetricsResponse:
+) -> dict:
     """
     Returns 2 governance metrics: enhanced GQI radar (6 sub-indicators
     including wired DataQualityMetric) and network health composite bar.
     """
-    return AnalyticsGapService(db).get_governance_metrics(locale)
+    cache_key = f"adv_analytics:governance:{locale}"
+    return dashboard_cache.get_or_set(
+        cache_key,
+        lambda: AnalyticsGapService(db).get_governance_metrics(locale).model_dump(mode="json"),
+        ttl_seconds=3600
+    )
 
 
 @router.get(

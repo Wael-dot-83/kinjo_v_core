@@ -13,12 +13,26 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 import models
-from admin_security import log_audit_event
+from admin_security import log_audit_event, validation_error, not_found_error
 from audit_actions import AuditAction
 from child_age_policy import calculate_age_days, calculate_age_months
 from database import get_db
+from export_service import export_service
 from dependencies import require_admin
 from validators import calculate_required_supervisors
+from config import settings
+
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from fastapi import Request, Form
+from fastapi.responses import JSONResponse
+from rate_limiter import limiter
+import logging
+logger = logging.getLogger(__name__)
+from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import SQLAlchemyError
+from admin_security import get_correlation_id
+
 
 
 router = APIRouter(prefix="/api/admin/reports", tags=["Admin Reports"])
@@ -163,6 +177,7 @@ def _kg_filter_expr(filters: ScopeFilters):
 def _base_enrollment_query(db: Session, filters: ScopeFilters):
     q = (
         db.query(models.EnrollmentApplication)
+        .execution_options(include_out_of_range_children=True)
         .join(models.Kindergarten, models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id)
         .outerjoin(models.Class, models.EnrollmentApplication.class_id == models.Class.id)
         .join(models.Child, models.EnrollmentApplication.child_id == models.Child.id)
@@ -184,30 +199,30 @@ def _age_bucket_key(dob: Optional[date]) -> tuple[str, Optional[str]]:
     age_days = calculate_age_days(dob, today)
     age_months = calculate_age_months(dob, today)
 
-    if age_days < 70:
+    if age_days < 1:
         return "invalid", "too_young"
-    if age_months > 56:
+    if age_months > 57:
         return "invalid", "too_old"
 
-    if age_months < 6:
-        return "B1", None
-    if age_months < 12:
-        return "B2", None
-    if age_months < 18:
-        return "B3", None
-    if age_months < 24:
-        return "B4", None
-    if age_months < 30:
-        return "B5", None
-    if age_months < 36:
-        return "B6", None
-    if age_months < 42:
-        return "B7", None
-    if age_months < 48:
-        return "B8", None
-    if age_months < 54:
-        return "B9", None
-    return "B10", None
+    if age_months < 3: return "B1", None
+    if age_months < 6: return "B2", None
+    if age_months < 9: return "B3", None
+    if age_months < 12: return "B4", None
+    if age_months < 15: return "B5", None
+    if age_months < 18: return "B6", None
+    if age_months < 21: return "B7", None
+    if age_months < 24: return "B8", None
+    if age_months < 27: return "B9", None
+    if age_months < 30: return "B10", None
+    if age_months < 33: return "B11", None
+    if age_months < 36: return "B12", None
+    if age_months < 39: return "B13", None
+    if age_months < 42: return "B14", None
+    if age_months < 45: return "B15", None
+    if age_months < 48: return "B16", None
+    if age_months < 51: return "B17", None
+    if age_months < 54: return "B18", None
+    return "B19", None
 
 
 def _interpret_overview(metrics: dict[str, Any], lang: str) -> dict[str, Any]:
@@ -263,6 +278,7 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
     child_ids = {r.child_id for r in official_rows}
     official_children = (
         db.query(models.Child)
+        .execution_options(include_out_of_range_children=True)
         .filter(models.Child.id.in_(list(child_ids)))
         .all()
         if child_ids
@@ -334,7 +350,7 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         enrollment_status_counts[k] = enrollment_status_counts.get(k, 0) + 1
 
     # Age buckets and invalid-age/data issues
-    age_buckets = {f"B{i}": 0 for i in range(1, 11)}
+    age_buckets = {f"B{i}": 0 for i in range(1, 20)}
     age_invalid_reasons = {
         "missing_dob": 0,
         "future_dob": 0,
@@ -947,9 +963,32 @@ def _build_response(report_type: str, filters: ScopeFilters, metrics: dict[str, 
     interpretation = _interpret_overview(metrics, lang)
     risk_rows = _risk_rows(metrics)
 
+    age_labels_map = {
+        "B1": {"ar": "يوم إلى 3 أشهر", "en": "1 day to 3 months"},
+        "B2": {"ar": "3 إلى 6 أشهر", "en": "3 to 6 months"},
+        "B3": {"ar": "6 إلى 9 أشهر", "en": "6 to 9 months"},
+        "B4": {"ar": "9 إلى 12 شهر", "en": "9 to 12 months"},
+        "B5": {"ar": "12 إلى 15 شهر", "en": "12 to 15 months"},
+        "B6": {"ar": "15 إلى 18 شهر", "en": "15 to 18 months"},
+        "B7": {"ar": "18 إلى 21 شهر", "en": "18 to 21 months"},
+        "B8": {"ar": "21 إلى 24 شهر", "en": "21 to 24 months"},
+        "B9": {"ar": "24 إلى 27 شهر", "en": "24 to 27 months"},
+        "B10": {"ar": "27 إلى 30 شهر", "en": "27 to 30 months"},
+        "B11": {"ar": "30 إلى 33 شهر", "en": "30 to 33 months"},
+        "B12": {"ar": "33 إلى 36 شهر", "en": "33 to 36 months"},
+        "B13": {"ar": "36 إلى 39 شهر", "en": "36 to 39 months"},
+        "B14": {"ar": "39 إلى 42 شهر", "en": "39 to 42 months"},
+        "B15": {"ar": "42 إلى 45 شهر", "en": "42 to 45 months"},
+        "B16": {"ar": "45 إلى 48 شهر", "en": "45 to 48 months"},
+        "B17": {"ar": "48 إلى 51 شهر", "en": "48 to 51 months"},
+        "B18": {"ar": "51 إلى 54 شهر", "en": "51 to 54 months"},
+        "B19": {"ar": "54 إلى 57 شهر", "en": "54 to 57 months"}
+    }
+    mapped_labels = [age_labels_map.get(k, {"ar": k, "en": k}) for k in metrics["age_buckets"].keys()]
+
     age_total = sum(metrics["age_buckets"].values())
     age_dataset = {
-        "labels": list(metrics["age_buckets"].keys()),
+        "labels": mapped_labels,
         "datasets": [
             {
                 "label": _localized("عدد الأطفال", "Children", lang),
@@ -957,6 +996,15 @@ def _build_response(report_type: str, filters: ScopeFilters, metrics: dict[str, 
             }
         ],
     }
+
+    def _gov_en(gov: str) -> str:
+        if not gov:
+            return ""
+        if gov in settings.JORDAN_GOVERNORATES:
+            idx = settings.JORDAN_GOVERNORATES.index(gov)
+            if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
+                return settings.JORDAN_GOVERNORATES_ENGLISH[idx]
+        return gov
 
     return {
         "report_type": report_type,
@@ -1013,11 +1061,11 @@ def _build_response(report_type: str, filters: ScopeFilters, metrics: dict[str, 
         "charts": {
             "age_distribution": age_dataset,
             "children_by_governorate": {
-                "labels": [r["governorate"] for r in metrics["by_governorate"]],
+                "labels": [{"ar": r["governorate"], "en": _gov_en(r["governorate"])} for r in metrics["by_governorate"]],
                 "datasets": [{"label": _localized("الأطفال", "Children", lang), "data": [r["children_count"] for r in metrics["by_governorate"]]}],
             },
             "children_by_city": {
-                "labels": [r["city"] for r in metrics["by_city"]],
+                "labels": [{"ar": r["city"], "en": r["city"]} for r in metrics["by_city"]],
                 "datasets": [{"label": _localized("الأطفال", "Children", lang), "data": [r["children_count"] for r in metrics["by_city"]]}],
             },
             "risk_ranking": risk_rows,
@@ -1105,9 +1153,38 @@ def _resolve_report_payload(
         }
     if report_type == "children_age_buckets":
         total = max(1, sum(metrics["age_buckets"].values()))
+        age_labels_map = {
+            "B1": {"ar": "يوم إلى 3 أشهر", "en": "1 day to 3 months"},
+            "B2": {"ar": "3 إلى 6 أشهر", "en": "3 to 6 months"},
+            "B3": {"ar": "6 إلى 9 أشهر", "en": "6 to 9 months"},
+            "B4": {"ar": "9 إلى 12 شهر", "en": "9 to 12 months"},
+            "B5": {"ar": "12 إلى 15 شهر", "en": "12 to 15 months"},
+            "B6": {"ar": "15 إلى 18 شهر", "en": "15 to 18 months"},
+            "B7": {"ar": "18 إلى 21 شهر", "en": "18 to 21 months"},
+            "B8": {"ar": "21 إلى 24 شهر", "en": "21 to 24 months"},
+            "B9": {"ar": "24 إلى 27 شهر", "en": "24 to 27 months"},
+            "B10": {"ar": "27 إلى 30 شهر", "en": "27 to 30 months"},
+            "B11": {"ar": "30 إلى 33 شهر", "en": "30 to 33 months"},
+            "B12": {"ar": "33 إلى 36 شهر", "en": "33 to 36 months"},
+            "B13": {"ar": "36 إلى 39 شهر", "en": "36 to 39 months"},
+            "B14": {"ar": "39 إلى 42 شهر", "en": "39 to 42 months"},
+            "B15": {"ar": "42 إلى 45 شهر", "en": "42 to 45 months"},
+            "B16": {"ar": "45 إلى 48 شهر", "en": "45 to 48 months"},
+            "B17": {"ar": "48 إلى 51 شهر", "en": "48 to 51 months"},
+            "B18": {"ar": "51 إلى 54 شهر", "en": "51 to 54 months"},
+            "B19": {"ar": "54 إلى 57 شهر", "en": "54 to 57 months"}
+        }
         return {
             "age_buckets": [
-                {"bucket": k, "count": v, "percentage": _pct(v, total)}
+                {
+                    "bucket": _localized(
+                        age_labels_map.get(k, {"ar": k, "en": k})["ar"],
+                        age_labels_map.get(k, {"ar": k, "en": k})["en"],
+                        lang
+                    ),
+                    "count": v,
+                    "percentage": _pct(v, total)
+                }
                 for k, v in metrics["age_buckets"].items()
             ],
             "invalid_reasons": metrics["age_invalid_reasons"],
@@ -1366,16 +1443,55 @@ def children_age_buckets(
     metrics = _collect_core_metrics(db, filters, start, end)
     total = max(1, sum(metrics["age_buckets"].values()))
     dominant_bucket = max(metrics["age_buckets"], key=lambda k: metrics["age_buckets"][k])
+
+    age_labels_map = {
+        "B1": {"ar": "يوم إلى 3 أشهر", "en": "1 day to 3 months"},
+        "B2": {"ar": "3 إلى 6 أشهر", "en": "3 to 6 months"},
+        "B3": {"ar": "6 إلى 9 أشهر", "en": "6 to 9 months"},
+        "B4": {"ar": "9 إلى 12 شهر", "en": "9 to 12 months"},
+        "B5": {"ar": "12 إلى 15 شهر", "en": "12 to 15 months"},
+        "B6": {"ar": "15 إلى 18 شهر", "en": "15 to 18 months"},
+        "B7": {"ar": "18 إلى 21 شهر", "en": "18 to 21 months"},
+        "B8": {"ar": "21 إلى 24 شهر", "en": "21 to 24 months"},
+        "B9": {"ar": "24 إلى 27 شهر", "en": "24 to 27 months"},
+        "B10": {"ar": "27 إلى 30 شهر", "en": "27 to 30 months"},
+        "B11": {"ar": "30 إلى 33 شهر", "en": "30 to 33 months"},
+        "B12": {"ar": "33 إلى 36 شهر", "en": "33 to 36 months"},
+        "B13": {"ar": "36 إلى 39 شهر", "en": "36 to 39 months"},
+        "B14": {"ar": "39 إلى 42 شهر", "en": "39 to 42 months"},
+        "B15": {"ar": "42 إلى 45 شهر", "en": "42 to 45 months"},
+        "B16": {"ar": "45 إلى 48 شهر", "en": "45 to 48 months"},
+        "B17": {"ar": "48 إلى 51 شهر", "en": "48 to 51 months"},
+        "B18": {"ar": "51 إلى 54 شهر", "en": "51 to 54 months"},
+        "B19": {"ar": "54 إلى 57 شهر", "en": "54 to 57 months"}
+    }
+
+    dom_lbl = age_labels_map.get(dominant_bucket, {"ar": dominant_bucket, "en": dominant_bucket})
+    summary_ar = f"الفئة العمرية الأعلى هي {dom_lbl['ar']}."
+    summary_en = f"Top age bucket is {dom_lbl['en']}."
+
     return {
         "level": level.value,
         "age_buckets": [
-            {"bucket": k, "count": v, "percentage": _pct(v, total)}
+            {
+                "bucket": _localized(
+                    age_labels_map.get(k, {"ar": k, "en": k})["ar"],
+                    age_labels_map.get(k, {"ar": k, "en": k})["en"],
+                    lang
+                ),
+                "count": v,
+                "percentage": _pct(v, total)
+            }
             for k, v in metrics["age_buckets"].items()
         ],
         "invalid_reasons": metrics["age_invalid_reasons"],
-        "dominant_bucket": dominant_bucket,
+        "dominant_bucket": _localized(
+            age_labels_map.get(dominant_bucket, {"ar": dominant_bucket, "en": dominant_bucket})["ar"],
+            age_labels_map.get(dominant_bucket, {"ar": dominant_bucket, "en": dominant_bucket})["en"],
+            lang
+        ),
         "interpretation": {
-            "summary": _localized(f"الفئة العمرية الأعلى هي {dominant_bucket}.", f"Top age bucket is {dominant_bucket}.", lang),
+            "summary": _localized(summary_ar, summary_en, lang),
             "severity": "warning" if metrics["age_invalid_reasons"]["too_old"] + metrics["age_invalid_reasons"]["too_young"] > 0 else "normal",
             "comparison_baseline": _localized("توزيع الفئات العمرية", "Age bucket distribution", lang),
             "recommended_action": _localized("تحقق من صلاحية أعمار الأطفال غير المطابقة للسياسة.", "Review children with out-of-policy ages.", lang),
@@ -2047,21 +2163,408 @@ def export_report(
         return payload
 
     rows = _rows_for_export(payload)
-    output = io.StringIO()
     if rows:
-        headers = list(rows[0].keys())
-        writer = csv.DictWriter(output, fieldnames=headers)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({k: _safe_csv_cell(row.get(k)) for k in headers})
-    else:
-        output.write("message\n")
-        output.write(_safe_csv_cell("No rows available for export"))
+        csv_header_map = {
+            "total_children": _localized("إجمالي الأطفال", "Total Children", lang),
+            "total_kindergartens": _localized("إجمالي الحضانات", "Total Kindergartens", lang),
+            "total_supervisors": _localized("إجمالي المشرفات", "Total Supervisors", lang),
+            "total_classes": _localized("إجمالي الشعب", "Total Classes", lang),
+            "governorate": _localized("المحافظة", "Governorate", lang),
+            "city": _localized("المدينة", "City", lang),
+            "district": _localized("اللواء", "District", lang),
+            "kindergarten": _localized("الحضانة", "Kindergarten", lang),
+            "kindergartens": _localized("الحضانات", "Kindergartens", lang),
+            "kindergarten_name": _localized("اسم الحضانة", "Kindergarten Name", lang),
+            "kindergarten_count": _localized("عدد الحضانات", "Kindergartens", lang),
+            "class": _localized("الشعبة", "Class", lang),
+            "classes": _localized("الشعب", "Classes", lang),
+            "class_count": _localized("عدد الشعب", "Classes", lang),
+            "children": _localized("الأطفال", "Children", lang),
+            "children_count": _localized("عدد الأطفال", "Children", lang),
+            "supervisor": _localized("المشرفة", "Supervisor", lang),
+            "supervisors": _localized("المشرفات", "Supervisors", lang),
+            "supervisor_count": _localized("عدد المشرفات", "Supervisors", lang),
+            "required_supervisors": _localized("المشرفات المطلوبات", "Required Supervisors", lang),
+            "actual_supervisors": _localized("المشرفات الفعليات", "Actual Supervisors", lang),
+            "supervisor_gap": _localized("فجوة الإشراف", "Supervisor Gap", lang),
+            "capacity": _localized("الطاقة الاستيعابية", "Capacity", lang),
+            "capacity_utilization_pct": _localized("نسبة إشغال الطاقة", "Capacity Utilization %", lang),
+            "data_quality_score": _localized("مؤشر جودة البيانات", "Data Quality Score", lang),
+            "compliance_score": _localized("مؤشر الامتثال", "Compliance Score", lang),
+            "attendance_rate": _localized("نسبة الحضور", "Attendance Rate", lang),
+            "absent_count": _localized("عدد الغياب", "Absent Count", lang),
+            "present_count": _localized("عدد الحضور", "Present Count", lang),
+            "B1": _localized("يوم إلى 3 أشهر", "1 day to 3 months", lang),
+            "B2": _localized("3 إلى 6 أشهر", "3 to 6 months", lang),
+            "B3": _localized("6 إلى 9 أشهر", "6 to 9 months", lang),
+            "B4": _localized("9 إلى 12 شهر", "9 to 12 months", lang),
+            "B5": _localized("12 إلى 15 شهر", "12 to 15 months", lang),
+            "B6": _localized("15 إلى 18 شهر", "15 to 18 months", lang),
+            "B7": _localized("18 إلى 21 شهر", "18 to 21 months", lang),
+            "B8": _localized("21 إلى 24 شهر", "21 to 24 months", lang),
+            "B9": _localized("24 إلى 27 شهر", "24 to 27 months", lang),
+            "B10": _localized("27 إلى 30 شهر", "27 to 30 months", lang),
+            "B11": _localized("30 إلى 33 شهر", "30 to 33 months", lang),
+            "B12": _localized("33 إلى 36 شهر", "33 to 36 months", lang),
+            "B13": _localized("36 إلى 39 شهر", "36 to 39 months", lang),
+            "B14": _localized("39 إلى 42 شهر", "39 to 42 months", lang),
+            "B15": _localized("42 إلى 45 شهر", "42 to 45 months", lang),
+            "B16": _localized("45 إلى 48 شهر", "45 to 48 months", lang),
+            "B17": _localized("48 إلى 51 شهر", "48 to 51 months", lang),
+            "B18": _localized("51 إلى 54 شهر", "51 to 54 months", lang),
+            "B19": _localized("54 إلى 57 شهر", "54 to 57 months", lang),
+        }
 
-    csv_text = "\ufeff" + output.getvalue()
+        original_keys = list(rows[0].keys())
+        translated_headers = [csv_header_map.get(k, k.replace("_", " ").title()) for k in original_keys]
+
+        data = []
+        for row in rows:
+            data.append([row.get(k) for k in original_keys])
+    else:
+        translated_headers = ["message"]
+        data = [["No rows available for export"]]
+
     filename = f"{report_type}_{level.value}_{_today().isoformat()}.csv"
-    return Response(
-        content=csv_text,
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
-    )
+    return export_service.generate_csv_response(translated_headers, data, filename)
+
+
+# Admin Incident Reporting Endpoints
+# =============================================================================
+
+@router.post("/incidents/generate")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+def generate_incident_report(
+    request: Request,
+    scope_type: str = Form(...),
+    kindergarten_id: Optional[int] = Form(None),
+    governorate: Optional[str] = Form(None),
+    period_type: str = Form(...),
+    year: Optional[int] = Form(None),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Generate and save an incident report"""
+    try:
+        # Validate scope
+        try:
+            scope_enum = models.ReportScopeType(scope_type)
+        except ValueError:
+            raise validation_error("Invalid scope type")
+
+        # Calculate date range
+        from report_service import ReportService
+        reference_date = date(year, 1, 1) if period_type == "annual" and year else None
+        start_date, end_date = ReportService.calculate_date_range(period_type, reference_date)
+
+        # Generate metrics
+        metrics = ReportService.generate_incident_report(
+            scope_enum, start_date, end_date, kindergarten_id, governorate, db
+        )
+
+        # Create report record
+        report = models.Report(
+            report_type=models.ReportType.INCIDENT_SUMMARY,
+            scope_type=scope_enum,
+            kindergarten_id=kindergarten_id,
+            governorate=governorate,
+            start_date=start_date,
+            end_date=end_date,
+            metrics_json=metrics,
+            created_by=current_user.id
+        )
+
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+
+        log_audit_event(
+            db, AuditAction.REPORT_GENERATED, current_user, "report",
+            target_ids=report.id,
+            metadata={
+                "description": f"Generated incident report ID {report.id} for scope {scope_type}",
+                "correlation_id": get_correlation_id()
+            }
+        )
+
+        return JSONResponse({
+            "success": True,
+            "report_id": report.id,
+            "message": "تم إنشاء التقرير بنجاح"
+        })
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
+        logger.error(f"Failed to generate incident report: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/incidents")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def list_incident_reports(
+    request: Request,
+    scope_filter: Optional[str] = Query(None, description="Filter by scope type: KINDERGARTEN, GOVERNORATE, ALL"),
+    kindergarten_id: Optional[int] = Query(None),
+    governorate: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List incident reports with filtering"""
+    try:
+        query = db.query(models.Report).options(
+            selectinload(models.Report.kindergarten),
+            selectinload(models.Report.creator),
+        ).filter(
+            models.Report.report_type == models.ReportType.INCIDENT_SUMMARY
+        )
+
+        # Apply scope filters
+        if scope_filter:
+            try:
+                scope_enum = models.ReportScopeType(scope_filter)
+                query = query.filter(models.Report.scope_type == scope_enum)
+            except ValueError:
+                raise validation_error("Invalid scope filter")
+
+        if kindergarten_id:
+            query = query.filter(models.Report.kindergarten_id == kindergarten_id)
+
+        if governorate:
+            query = query.filter(models.Report.governorate == governorate)
+
+        # Pagination
+        total = query.count()
+        reports = query.order_by(models.Report.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+
+        # Format response
+        report_list = []
+        for report in reports:
+            scope_name = ""
+            if report.scope_type == models.ReportScopeType.KINDERGARTEN and report.kindergarten:
+                scope_name = report.kindergarten.name_ar
+            elif report.scope_type == models.ReportScopeType.GOVERNORATE:
+                scope_name = report.governorate
+            elif report.scope_type == models.ReportScopeType.ALL:
+                scope_name = "جميع الحضانات"
+
+            report_list.append({
+                "id": report.id,
+                "title": f"تقرير الحوادث - {scope_name} ({report.start_date} - {report.end_date})",
+                "scope_type": report.scope_type.value,
+                "scope_name": scope_name,
+                "start_date": report.start_date.isoformat(),
+                "end_date": report.end_date.isoformat(),
+                "created_at": report.created_at.isoformat(),
+                "created_by": report.creator.username if report.creator else "غير معروف",
+                "total_incidents": report.metrics_json.get("total_incidents", 0)
+            })
+
+        return {
+            "reports": report_list,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total": total,
+                "pages": (total + per_page - 1) // per_page
+            }
+        }
+
+    except HTTPException:
+        raise
+    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
+        logger.error(f"Failed to list incident reports: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/incidents/{report_id}")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_incident_report_detail(
+    report_id: int,
+    request: Request,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get detailed incident report"""
+    try:
+        report = db.query(models.Report).filter(
+            models.Report.id == report_id,
+            models.Report.report_type == models.ReportType.INCIDENT_SUMMARY
+        ).first()
+
+        if not report:
+            raise not_found_error("Report not found")
+
+        # Format scope name
+        scope_name = ""
+        if report.scope_type == models.ReportScopeType.KINDERGARTEN and report.kindergarten:
+            scope_name = report.kindergarten.name_ar
+        elif report.scope_type == models.ReportScopeType.GOVERNORATE:
+            scope_name = report.governorate
+        elif report.scope_type == models.ReportScopeType.ALL:
+            scope_name = "جميع الحضانات"
+
+        return {
+            "id": report.id,
+            "title": f"تقرير الحوادث - {scope_name} ({report.start_date} - {report.end_date})",
+            "scope_type": report.scope_type.value,
+            "scope_name": scope_name,
+            "start_date": report.start_date.isoformat(),
+            "end_date": report.end_date.isoformat(),
+            "created_at": report.created_at.isoformat(),
+            "created_by": report.creator.username if report.creator else "غير معروف",
+            "metrics": report.metrics_json
+        }
+
+    except HTTPException:
+        raise
+    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
+        logger.error(f"Failed to get incident report detail: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/incidents/{report_id}/export")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def export_incident_report_csv(
+    report_id: int,
+    request: Request,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Export incident report as CSV"""
+    try:
+        report = db.query(models.Report).filter(
+            models.Report.id == report_id,
+            models.Report.report_type == models.ReportType.INCIDENT_SUMMARY
+        ).first()
+
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+
+        report_title = f"{report.report_type.value.replace('_', ' ').title()} - {report.scope_type.value.title()}"
+        
+        rows = []
+        rows.append(['Report Title', report_title])
+        rows.append(['Scope', report.scope_type.value])
+        rows.append(['Start Date', report.start_date.isoformat()])
+        rows.append(['End Date', report.end_date.isoformat()])
+        rows.append(['Generated By', report.creator.username if report.creator else 'Unknown'])
+        rows.append(['Generated At', report.created_at.isoformat()])
+        rows.append([])
+
+        # Write metrics
+        metrics = report.metrics_json
+        rows.append(['Metric', 'Value'])
+        rows.append(['Total Incidents', metrics.get('total_incidents', 0)])
+        rows.append(['Open Incidents', metrics.get('open_incidents', 0)])
+        rows.append(['Closed Incidents', metrics.get('closed_incidents', 0)])
+        rows.append([])
+
+        # Incidents by type
+        rows.append(['Incidents by Type'])
+        rows.append(['Type', 'Count'])
+        for type_name, count in metrics.get('incidents_by_type', {}).items():
+            rows.append([type_name, count])
+        rows.append([])
+
+        # Incidents by severity
+        rows.append(['Incidents by Severity'])
+        rows.append(['Severity', 'Count'])
+        for severity, count in metrics.get('incidents_by_severity', {}).items():
+            rows.append([severity, count])
+        rows.append([])
+
+        # Per kindergarten (if applicable)
+        per_kg = metrics.get('per_kindergarten', {})
+        if per_kg:
+            rows.append(['Incidents by Kindergarten'])
+            rows.append(['Kindergarten', 'Count'])
+            for kg, count in per_kg.items():
+                rows.append([kg, count])
+
+        log_audit_event(
+            db=db,
+            action=AuditAction.INCIDENT_REPORT_EXPORT,
+            actor=current_user,
+            target_type="Report",
+            target_ids=report.id,
+            metadata={
+                "format": "csv",
+                "report_type": report.report_type.value,
+                "scope_type": report.scope_type.value,
+                "start_date": report.start_date.isoformat(),
+                "end_date": report.end_date.isoformat(),
+            },
+            sensitivity_level=2,
+        )
+
+        # Return CSV file
+        filename = f"incident_report_{report_id}_{report.created_at.date().isoformat()}.csv"
+        return export_service.generate_raw_csv_response(rows, filename)
+
+    except HTTPException:
+        raise
+    except (SQLAlchemyError, ValueError, IOError, OSError) as e:
+        log_audit_event(
+            db=db,
+            action=AuditAction.INCIDENT_REPORT_EXPORT_FAILED,
+            actor=current_user,
+            target_type="Report",
+            target_ids=report_id,
+            metadata={"format": "csv", "error_message": str(e)},
+            sensitivity_level=3,
+        )
+        logger.error(f"Failed to export incident report: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/scopes")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_available_scopes(
+    request: Request,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get available report scopes for the current user"""
+    try:
+        from report_service import ReportService
+        scopes = ReportService.get_available_scopes(current_user, db)
+        return {"scopes": scopes}
+
+    except HTTPException:
+        raise
+    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
+        logger.error(f"Failed to get available scopes: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# =============================================================================
+# Admin Alerts API
+# =============================================================================
+
+class AdminAlertResponse(BaseModel):
+    id: int
+    severity: str
+    governorate: Optional[str] = None
+    kindergarten_name: Optional[str] = None
+    metric: str
+    current_value: float
+    threshold: Optional[float] = None
+    triggered_at: str
+    acknowledged_at: Optional[str] = None
+    acknowledged_by_id: Optional[int] = None
+    status: str
+    message: Optional[str] = None
+    scope_type: Optional[str] = None
+    scope_id: Optional[str] = None
+
+
+class AdminAlertsListResponse(BaseModel):
+    alerts: List[AdminAlertResponse]
+    total: int
+    page: int
+    page_size: int

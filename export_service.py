@@ -2,6 +2,9 @@
 Export and reporting service for dashboard data
 """
 import csv
+from csv_utils import escape_csv_formula
+from fastapi.responses import Response, StreamingResponse
+
 import io
 import json
 import logging
@@ -18,6 +21,32 @@ logger = logging.getLogger(__name__)
 
 
 class ExportService:
+
+    def generate_raw_csv_response(self, data: List[List[Any]], filename: str) -> Response:
+        output = io.StringIO()
+        writer = csv.writer(output)
+        for row in data:
+            writer.writerow([escape_csv_formula(val) for val in row])
+        
+        return Response(
+            content="\ufeff" + output.getvalue(),
+            media_type='text/csv; charset=utf-8',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+
+    def generate_csv_response(self, headers: List[str], data: List[List[Any]], filename: str) -> Response:
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(headers)
+        for row in data:
+            writer.writerow([escape_csv_formula(val) for val in row])
+        
+        return Response(
+            content="\ufeff" + output.getvalue(),
+            media_type='text/csv; charset=utf-8',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+
     """Service for exporting dashboard data in various formats"""
 
     def __init__(self):
@@ -281,7 +310,7 @@ class ExportService:
 
         # Write data
         for record in report_data:
-            row = [record.get(header, "") for header in headers]
+            row = [escape_csv_formula(record.get(header, "")) for header in headers]
             writer.writerow(row)
 
         return {

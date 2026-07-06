@@ -81,6 +81,7 @@ def get_chart_data(
     granularity: str = Query("month"),
     group_by: Optional[str] = Query(None),
     top_n: Optional[int] = Query(None),
+    lang: str = Query("ar", pattern="^(ar|en)$"),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     req = ChartRequest(
@@ -92,6 +93,7 @@ def get_chart_data(
         granularity=Granularity(granularity) if granularity else Granularity.MONTH,
         group_by=group_by,
         top_n=top_n,
+        lang=lang,
     )
     df = _svc.get_data(db, req)
     return {
@@ -122,6 +124,7 @@ def render_chart(
     group_by: Optional[str] = Query(None),
     top_n: Optional[int] = Query(None),
     title: Optional[str] = Query(None),
+    lang: str = Query("ar", pattern="^(ar|en)$"),
     db: Session = Depends(get_db),
 ) -> ChartResponse:
     req = ChartRequest(
@@ -135,6 +138,7 @@ def render_chart(
         group_by=group_by,
         top_n=top_n,
         title=title,
+        lang=lang,
     )
     try:
         return _svc.render(db, req)
@@ -241,6 +245,7 @@ def get_admin_chart_data(
     granularity: str = Query("month"),
     group_by: Optional[str] = Query(None),
     top_n: Optional[int] = Query(None),
+    lang: str = Query("ar", pattern="^(ar|en)$"),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     return get_chart_data(
@@ -252,6 +257,7 @@ def get_admin_chart_data(
         granularity=granularity,
         group_by=group_by,
         top_n=top_n,
+        lang=lang,
         db=db,
     )
 
@@ -273,6 +279,7 @@ def render_admin_chart(
     group_by: Optional[str] = Query(None),
     top_n: Optional[int] = Query(None),
     title: Optional[str] = Query(None),
+    lang: str = Query("ar", pattern="^(ar|en)$"),
     db: Session = Depends(get_db),
 ) -> ChartResponse:
     return render_chart(
@@ -286,6 +293,7 @@ def render_admin_chart(
         group_by=group_by,
         top_n=top_n,
         title=title,
+        lang=lang,
         db=db,
     )
 

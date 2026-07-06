@@ -17,6 +17,7 @@ from models import UserRole
 from audit_actions import AuditAction
 from admin_security import log_audit_event
 from csv_utils import escape_csv_formula
+from export_service import export_service
 
 router = APIRouter()
 admin_router = APIRouter()
@@ -161,24 +162,22 @@ def _export_audit_logs(
             headers={"Content-Disposition": f"attachment; filename=audit_logs_{_today()}.json"}
         )
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Timestamp", "User", "Action", "Entity Type", "Details", "IP Address"])
-
+    headers = ["Timestamp", "User", "Action", "Entity Type", "Details", "IP Address"]
+    rows = []
     for log, username in data:
-        writer.writerow([
-            escape_csv_formula(log.created_at),
-            escape_csv_formula(username or "Unknown"),
-            escape_csv_formula(log.action),
-            escape_csv_formula(log.entity_type),
-            escape_csv_formula(log.details),
-            escape_csv_formula(log.ip_address)
+        rows.append([
+            log.created_at,
+            username or "Unknown",
+            log.action,
+            log.entity_type,
+            log.details,
+            log.ip_address
         ])
 
-    return Response(
-        content=output.getvalue(),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=audit_logs_{_today()}.csv"}
+    return export_service.generate_csv_response(
+        headers=headers, 
+        data=rows, 
+        filename=f"audit_logs_{_today()}.csv"
     )
 
 

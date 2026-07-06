@@ -1,4 +1,24 @@
 /* static/css/layout.css */
+/* ── Layout Tokens ─────────────────────────────────────────────────────────── */
+:root {
+  /* Header Heights — used for sticky offset calculations */
+  --admin-header-height: 64px;
+  --admin-header-height-mobile: 56px;
+
+  /* Filter Bar Offset — total height for sticky elements to avoid overlap */
+  --filter-bar-offset: calc(var(--admin-header-height) + var(--kinjo-spacing-6));
+
+  /* Z-Index Layer System — explicit stacking context for admin components */
+  --z-header: 1000;
+  --z-filter-bar: 990;
+  --z-dropdown: 1050;
+  --z-modal: 1060;
+  --z-toast: 1080;
+
+  /* Scroll padding for fragment navigation */
+  --scroll-padding-sticky: var(--admin-header-height);
+}
+
 body.admin-container {
   margin: 0;
   padding: 0;
@@ -26,7 +46,7 @@ body.admin-container {
 
 /* Header */
 .admin-header {
-  height: 64px;
+  height: var(--admin-header-height);
   background-color: var(--kinjo-color-bg-surface);
   border-block-end: 1px solid var(--kinjo-color-border);
   display: flex;
@@ -34,6 +54,8 @@ body.admin-container {
   justify-content: space-between;
   padding: 0 var(--kinjo-spacing-6);
   flex-shrink: 0;
+  /* Explicit stacking context */
+  z-index: var(--z-header);
 }
 
 .admin-header-left,
@@ -173,6 +195,12 @@ body.admin-container {
   flex-grow: 1;
   overflow-y: auto;
   padding: var(--kinjo-spacing-6);
+  /* Scroll padding ensures fragment identifiers account for sticky header */
+  scroll-padding-top: var(--scroll-padding-sticky);
+  scroll-behavior: smooth;
+  /* Establish a stacking context for child sticky elements */
+  position: relative;
+  z-index: 1;
 }
 
 /* Page title — shared across admin pages (analytics, dashboard, help

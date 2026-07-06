@@ -242,7 +242,7 @@
         try {
             while (true) {
                 const params = new URLSearchParams({ page, page_size: KG_PAGE_SIZE });
-                const response = await fetch(`/api/admin/options/kindergartens?${params}`);
+                const response = await fetchWithAuth(`/api/admin/options/kindergartens?${params}`);
                 if (!response.ok) throw new Error(T('فشل في تحميل الحضانات', 'Failed to load kindergartens'));
                 const data = await response.json();
                 accumulated.push(...(data.kindergartens || []));
@@ -324,14 +324,13 @@
         const method = (options.method || 'GET').toString().toUpperCase();
         const isStateChanging = !['GET', 'HEAD', 'OPTIONS'].includes(method);
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
-        for (let attempt = 0; attempt <= retries; attempt++) {
+                for (let attempt = 0; attempt <= retries; attempt++) {
             try {
                 const headers = { ...options.headers };
                 if (isStateChanging && csrfToken) {
                     headers['X-CSRF-Token'] = csrfToken;
                 }
-                const response = await fetch(url, { ...options, headers });
+                const response = await fetchWithAuth(url, { ...options, headers });
                 const payload = await response.json().catch(() => null);
                 if (!response.ok) {
                     const message = payload?.detail || payload?.message || T(`خطأ ${response.status}`, `Error ${response.status}`);

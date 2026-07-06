@@ -29,6 +29,8 @@ _JORDAN_TZ = timezone(timedelta(hours=3))
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, UploadFile, File, Form
 from fastapi.responses import Response, JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
+from admin_reports_api import AdminAlertResponse, AdminAlertsListResponse
+
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_, func, and_, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -36,6 +38,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import models
 import validators
 from database import get_db
+from export_service import export_service
 from dependencies import get_current_user
 from rate_limiter import limiter
 from config import settings
@@ -208,7 +211,7 @@ def validate_bulk_manager_assignments(
 # Router Definition
 # =============================================================================
 
-router = APIRouter(tags=["Admin"])
+router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 # =============================================================================
@@ -238,7 +241,7 @@ def get_client_ip(request: Request) -> str:
 # User Management Endpoints (Hardened)
 # =============================================================================
 
-@router.get("/admin/users")
+@router.get("/users")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def list_users(
     request: Request,
@@ -340,7 +343,7 @@ def list_users(
     }
 
 
-@router.post("/admin/users", status_code=status.HTTP_201_CREATED)
+@router.post("/users", status_code=status.HTTP_201_CREATED)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def create_user(
     request: Request,
@@ -530,7 +533,7 @@ def create_user(
 # User Export
 # =============================================================================
 
-@router.get("/admin/users/export")
+@router.get("/users/export")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def export_users(
     request: Request,
@@ -595,12 +598,10 @@ def export_users(
         )
 
     # CSV export
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["ID", "Username", "Email", "Role", "Status", "Kindergarten ID", "Created At"])
-
+    headers = ["ID", "Username", "Email", "Role", "Status", "Kindergarten ID", "Created At"]
+    rows = []
     for u in users:
-        writer.writerow([
+        rows.append([
             u.id,
             u.username,
             u.email,
@@ -610,14 +611,14 @@ def export_users(
             u.created_at.isoformat() if u.created_at else ""
         ])
 
-    return Response(
-        content=output.getvalue(),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=users_export_{datetime.now(_JORDAN_TZ).date()}.csv"}
+    return export_service.generate_csv_response(
+        headers=headers,
+        data=rows,
+        filename=f"users_export_{datetime.now(_JORDAN_TZ).date()}.csv"
     )
 
 
-@router.get("/admin/users/{user_id:int}")
+@router.get("/users/{user_id:int}")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_user(
     request: Request,
@@ -661,7 +662,7 @@ def get_user(
     }
 
 
-@router.put("/admin/users/{user_id:int}")
+@router.put("/users/{user_id:int}")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def update_user(
     request: Request,
@@ -794,7 +795,7 @@ def update_user(
     }
 
 
-@router.delete("/admin/users/{user_id:int}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/users/{user_id:int}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def delete_user(
     request: Request,
@@ -841,7 +842,7 @@ def delete_user(
 # Password Reset Endpoints (Hardened with Rate Limiting)
 # =============================================================================
 
-@router.post("/admin/users/{user_id:int}/admin-reset-password")
+@router.post("/users/{user_id:int}/admin-reset-password")
 @limiter.limit(settings.RATE_LIMIT_PASSWORD_RESET)
 def admin_reset_password(
     request: Request,
@@ -892,7 +893,7 @@ def admin_reset_password(
     }
 
 
-@router.post("/admin/password-reset-request")
+@router.post("/password-reset-request")
 @limiter.limit(settings.RATE_LIMIT_PASSWORD_RESET_REQUEST)
 def request_password_reset(
     request: Request,
@@ -933,7 +934,7 @@ def request_password_reset(
     }
 
 
-@router.post("/admin/password-reset-confirm")
+@router.post("/password-reset-confirm")
 @limiter.limit(settings.RATE_LIMIT_PASSWORD_RESET)
 def confirm_password_reset(
     request: Request,
@@ -986,7 +987,7 @@ class MFABypassSchema(BaseModel):
     })
 
 
-@router.post("/admin/users/{user_id:int}/mfa-bypass")
+@router.post("/users/{user_id:int}/mfa-bypass")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def admin_mfa_bypass(
     request: Request,
@@ -1045,7 +1046,7 @@ def admin_mfa_bypass(
     }
 
 
-@router.get("/admin/users/{user_id:int}/mfa-status")
+@router.get("/users/{user_id:int}/mfa-status")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_user_mfa_status(
     request: Request,
@@ -1073,7 +1074,7 @@ def get_user_mfa_status(
 # Bulk Operations (Hardened with Guardrails)
 # =============================================================================
 
-@router.post("/admin/users/bulk-status-update")
+@router.post("/users/bulk-status-update")
 @limiter.limit(settings.RATE_LIMIT_BULK_UPDATE)
 def bulk_update_status(
     request: Request,
@@ -1242,7 +1243,7 @@ def bulk_update_status(
     }
 
 
-@router.post("/admin/users/bulk-delete")
+@router.post("/users/bulk-delete")
 @limiter.limit(settings.RATE_LIMIT_BULK_DELETE)
 def bulk_delete_users(
     request: Request,
@@ -1345,7 +1346,7 @@ def bulk_delete_users(
     }
 
 
-@router.post("/admin/users/bulk-create")
+@router.post("/users/bulk-create")
 @limiter.limit(settings.RATE_LIMIT_BULK_CREATE)
 def bulk_create_users(
     request: Request,
@@ -1480,7 +1481,7 @@ def bulk_create_users(
 # CSV Import with Per-Row Validation
 # =============================================================================
 
-@router.post("/admin/users/import-csv")
+@router.post("/users/import-csv")
 @limiter.limit(settings.RATE_LIMIT_CSV_IMPORT)
 async def import_users_csv(
     request: Request,
@@ -1750,7 +1751,7 @@ class _CSVErrorReportBody(BaseModel):
     errors: List[Dict[str, Any]] = Field(..., description="Error list from CSV import response")
 
 
-@router.post("/admin/users/import-csv/error-report")
+@router.post("/users/import-csv/error-report")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def download_csv_error_report(
     request: Request,
@@ -1759,28 +1760,17 @@ def download_csv_error_report(
 ):
     _validate_csrf_token(request)
     error_list = body.errors
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['Row Number', 'Field', 'Error Code', 'Message'])
-
+    headers = ['Row Number', 'Field', 'Error Code', 'Message']
+    rows = []
     for err in error_list:
-        writer.writerow([
-            _escape_csv_formula(err.get('row_number', '')),
-            _escape_csv_formula(err.get('field', '')),
-            _escape_csv_formula(err.get('error_code', '')),
-            _escape_csv_formula(err.get('message', '')),
+        rows.append([
+            err.get('row_number', ''),
+            err.get('field', ''),
+            err.get('error_code', ''),
+            err.get('message', ''),
         ])
 
-    output.seek(0)
-
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={
-            "Content-Disposition": f"attachment; filename=import_errors_{datetime.now(_JORDAN_TZ).date()}.csv"
-        }
-    )
+    return export_service.generate_csv_response(headers, rows, f"import_errors_{datetime.now(_JORDAN_TZ).date()}.csv")
 
 
 # =============================================================================
@@ -1808,7 +1798,7 @@ class ContactMessagesListResponse(BaseModel):
     total_pages: int
 
 
-@router.get("/admin/contact-messages", response_model=ContactMessagesListResponse)
+@router.get("/contact-messages", response_model=ContactMessagesListResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def list_contact_messages(
     request: Request,
@@ -1872,7 +1862,7 @@ def list_contact_messages(
     )
 
 
-@router.post("/admin/contact-messages/{message_id}/resolve",
+@router.post("/contact-messages/{message_id}/resolve",
              status_code=status.HTTP_200_OK)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def resolve_contact_message(
@@ -2533,7 +2523,7 @@ def _fetch_admin_recipient_summaries(db: Session, user_ids: List[int]) -> List[A
     return summaries
 
 
-@router.get("/admin/message-recipients", response_model=AdminRecipientListResponse)
+@router.get("/message-recipients", response_model=AdminRecipientListResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def list_message_recipients(
     request: Request,
@@ -2592,7 +2582,7 @@ def list_message_recipients(
     )
 
 
-@router.post("/admin/messages", status_code=status.HTTP_201_CREATED, response_model=AdminMessageResponse)
+@router.post("/messages", status_code=status.HTTP_201_CREATED, response_model=AdminMessageResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def create_admin_message(
     request: Request,
@@ -2801,7 +2791,7 @@ class GovernorateOptionsResponse(BaseModel):
     governorates: List[GovernorateOption]
 
 
-@router.get("/admin/options/governorates", response_model=GovernorateOptionsResponse)
+@router.get("/options/governorates", response_model=GovernorateOptionsResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def list_governorate_options(
     request: Request,
@@ -2812,42 +2802,20 @@ def list_governorate_options(
     Get list of available governorates for message targeting.
     Admin only endpoint.
     """
-    # Get unique governorates from active kindergartens
-    governorate_rows = db.query(
-        models.Kindergarten.governorate
-    ).filter(
-        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-    ).distinct().all()
-
-    normalized_govs: Set[str] = set()
-    for row in governorate_rows:
-        gov = row[0]
-        if not gov:
-            continue
-        try:
-            normalized = validators.validate_jordan_governorate(gov)
-        except validators.ValidationError:
-            continue
-        normalized_govs.add(normalized)
-
-    sorted_govs = sorted(normalized_govs)
     options = []
-    for gov in sorted_govs:
-        english_label = None
-        if gov in settings.JORDAN_GOVERNORATES:
-            idx = settings.JORDAN_GOVERNORATES.index(gov)
-            if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
-                english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx]
+    for idx, gov in enumerate(settings.JORDAN_GOVERNORATES):
+        english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx] if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH) else gov
         options.append(GovernorateOption(
             id=gov,
             name_ar=gov,
-            name_en=english_label or gov
+            name_en=english_label
         ))
 
+    options.sort(key=lambda opt: opt.name_ar)
     return GovernorateOptionsResponse(governorates=options)
 
 
-@router.get("/admin/message-recipients/preview", response_model=AdminRecipientPreviewResponse)
+@router.get("/message-recipients/preview", response_model=AdminRecipientPreviewResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def preview_message_recipients(
     request: Request,
@@ -2945,7 +2913,7 @@ def preview_message_recipients(
     )
 
 
-@router.post("/admin/messages/preview", response_model=AdminRecipientListResponse)
+@router.post("/messages/preview", response_model=AdminRecipientListResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def preview_admin_message_post(
     request: Request,
@@ -3023,7 +2991,7 @@ def preview_admin_message_post(
     )
 
 
-@router.get("/admin/options/kindergartens")
+@router.get("/options/kindergartens")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def list_kindergarten_options(
     request: Request,
@@ -3098,7 +3066,7 @@ def list_kindergarten_options(
 # Performance Monitoring Endpoints
 # =============================================================================
 
-@router.get("/admin/performance/metrics")
+@router.get("/performance/metrics")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_performance_metrics(
     request: Request,
@@ -3115,7 +3083,7 @@ def get_performance_metrics(
         raise HTTPException(status_code=500, detail="Failed to retrieve performance metrics")
 
 
-@router.get("/admin/performance/requests")
+@router.get("/performance/requests")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_request_metrics(
     request: Request,
@@ -3132,7 +3100,7 @@ def get_request_metrics(
         raise HTTPException(status_code=500, detail="Failed to retrieve request metrics")
 
 
-@router.get("/admin/performance/database")
+@router.get("/performance/database")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_database_metrics(
     request: Request,
@@ -3153,7 +3121,7 @@ def get_database_metrics(
         raise HTTPException(status_code=500, detail="Failed to retrieve database metrics")
 
 
-@router.get("/admin/performance/system")
+@router.get("/performance/system")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_system_metrics(
     request: Request,
@@ -3405,7 +3373,7 @@ def _activity_item_from_log(log: "models.AuditLog", actor_username: Optional[str
 # Admin Health Endpoint
 # =============================================================================
 
-@router.get("/admin/health")
+@router.get("/health")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def admin_health_check(
     request: Request,
@@ -3444,7 +3412,7 @@ def admin_health_check(
 # Admin Dashboard Endpoint
 # =============================================================================
 
-@router.get("/admin/dashboard", response_model=AdminDashboardResponse)
+@router.get("/dashboard", response_model=AdminDashboardResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_admin_dashboard(
     request: Request,
@@ -3849,7 +3817,7 @@ class DashboardActivityResponse(BaseModel):
     page_size: int
 
 
-@router.get("/admin/dashboard/activity", response_model=DashboardActivityResponse)
+@router.get("/dashboard/activity", response_model=DashboardActivityResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_admin_dashboard_activity(
     request: Request,
@@ -4092,7 +4060,7 @@ _OCCUPANCY_MONITOR = 85.0
 _OCCUPANCY_NEAR = 95.0
 
 
-@router.get("/admin/kg-overview", response_model=KgOverviewResponse)
+@router.get("/kg-overview", response_model=KgOverviewResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_kg_overview(
     request: Request,
@@ -4559,7 +4527,7 @@ def _period_trend(period: str) -> str:
 # Backup Management Endpoints
 # =============================================================================
 
-@router.post("/admin/backup/create")
+@router.post("/backup/create")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def create_backup(
     request: Request,
@@ -4597,7 +4565,7 @@ def create_backup(
         raise HTTPException(status_code=500, detail="Failed to enqueue backup")
 
 
-@router.get("/admin/backup/list")
+@router.get("/backup/list")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def list_backups(
     request: Request,
@@ -4619,7 +4587,7 @@ class _RestoreConfirmBody(BaseModel):
     confirmation_token: Optional[str] = None
 
 
-@router.post("/admin/backup/restore/{backup_name}")
+@router.post("/backup/restore/{backup_name}")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def restore_backup(
     request: Request,
@@ -4698,7 +4666,7 @@ def restore_backup(
         raise HTTPException(status_code=500, detail="Restore failed due to an internal error")
 
 
-@router.delete("/admin/backup/{backup_name}")
+@router.delete("/backup/{backup_name}")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def delete_backup(
     request: Request,
@@ -4744,7 +4712,7 @@ def delete_backup(
         raise HTTPException(status_code=500, detail="Deletion failed")
 
 
-@router.get("/admin/backup/info/{backup_name}")
+@router.get("/backup/info/{backup_name}")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_backup_info(
     request: Request,
@@ -4778,7 +4746,7 @@ def get_backup_info(
         raise HTTPException(status_code=500, detail="Failed to retrieve backup info")
 
 
-@router.post("/admin/backup/cleanup")
+@router.post("/backup/cleanup")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def cleanup_old_backups(
     request: Request,
@@ -4807,7 +4775,7 @@ def cleanup_old_backups(
         raise HTTPException(status_code=500, detail="Cleanup failed")
 
 
-@router.post("/admin/backup/validate/{backup_name}")
+@router.post("/backup/validate/{backup_name}")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def validate_backup(
     request: Request,
@@ -4854,7 +4822,7 @@ class KindergartenImportResult(BaseModel):
     inserted_records: List[Dict[str, Any]] = []
 
 
-@router.post("/admin/kindergartens/import-excel", response_model=KindergartenImportResult)
+@router.post("/kindergartens/import-excel", response_model=KindergartenImportResult)
 @limiter.limit(settings.RATE_LIMIT_CSV_IMPORT)
 def import_kindergartens_from_excel(
     request: Request,
@@ -5033,7 +5001,7 @@ class GovernanceReminderRequest(BaseModel):
     reminder_type: str = "low_submission_rate"
 
 
-@router.get("/admin/governance/kpis")
+@router.get("/governance/kpis")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 async def get_governance_kpis(
     request: Request,
@@ -5070,7 +5038,7 @@ async def get_governance_kpis(
     }
 
 
-@router.get("/admin/governance/leaderboard")
+@router.get("/governance/leaderboard")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 async def get_governance_leaderboard(
     request: Request,
@@ -5220,7 +5188,7 @@ async def get_governance_leaderboard(
     }
 
 
-@router.get("/admin/governance/trend")
+@router.get("/governance/trend")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 async def get_governance_trend(
     request: Request,
@@ -5263,7 +5231,7 @@ async def get_governance_trend(
     return {"trend": trend, "days": days}
 
 
-@router.get("/admin/governance/safeguarding")
+@router.get("/governance/safeguarding")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 async def get_governance_safeguarding(
     request: Request,
@@ -5330,7 +5298,7 @@ async def get_governance_safeguarding(
     }
 
 
-@router.post("/admin/governance/reminders")
+@router.post("/governance/reminders")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 async def send_governance_reminder_endpoint(
     request: Request,
@@ -5392,7 +5360,7 @@ async def send_governance_reminder_endpoint(
     }
 
 
-@router.get("/admin/governance/reminders")
+@router.get("/governance/reminders")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 async def list_governance_reminders(
     request: Request,
@@ -5466,7 +5434,7 @@ async def list_governance_reminders(
 # (Duplicated import endpoint removed in favor of canonical /import-excel)
 
 
-@router.get("/admin/kindergartens/imported")
+@router.get("/kindergartens/imported")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 async def list_imported_kindergartens(
     request: Request,
@@ -5507,7 +5475,7 @@ def _serialize_import_log(log: models.ImportLog) -> dict:
     }
 
 
-@router.get("/admin/imports/logs")
+@router.get("/imports/logs")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 async def list_import_logs(
     request: Request,
@@ -5561,7 +5529,7 @@ async def list_import_logs(
     }
 
 
-@router.get("/admin/imports/logs/{log_id}")
+@router.get("/imports/logs/{log_id}")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 async def get_import_log_detail(
     request: Request,
@@ -5578,7 +5546,7 @@ async def get_import_log_detail(
     return data
 
 
-@router.get("/admin/governance/reminders/stats")
+@router.get("/governance/reminders/stats")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 async def get_governance_reminder_stats(
     request: Request,
@@ -5600,313 +5568,9 @@ async def get_governance_reminder_stats(
 
 
 # =============================================================================
-# Admin Incident Reporting Endpoints
-# =============================================================================
-
-@router.post("/admin/reports/incidents/generate")
-@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
-def generate_incident_report(
-    request: Request,
-    scope_type: str = Form(...),
-    kindergarten_id: Optional[int] = Form(None),
-    governorate: Optional[str] = Form(None),
-    period_type: str = Form(...),
-    year: Optional[int] = Form(None),
-    current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
-):
-    """Generate and save an incident report"""
-    try:
-        # Validate scope
-        try:
-            scope_enum = models.ReportScopeType(scope_type)
-        except ValueError:
-            raise validation_error("Invalid scope type")
-
-        # Calculate date range
-        from report_service import ReportService
-        reference_date = date(year, 1, 1) if period_type == "annual" and year else None
-        start_date, end_date = ReportService.calculate_date_range(period_type, reference_date)
-
-        # Generate metrics
-        metrics = ReportService.generate_incident_report(
-            scope_enum, start_date, end_date, kindergarten_id, governorate, db
-        )
-
-        # Create report record
-        report = models.Report(
-            report_type=models.ReportType.INCIDENT_SUMMARY,
-            scope_type=scope_enum,
-            kindergarten_id=kindergarten_id,
-            governorate=governorate,
-            start_date=start_date,
-            end_date=end_date,
-            metrics_json=metrics,
-            created_by=current_user.id
-        )
-
-        db.add(report)
-        db.commit()
-        db.refresh(report)
-
-        log_audit_event(
-            db, AuditAction.REPORT_GENERATED, current_user, "report",
-            target_ids=report.id,
-            metadata={
-                "description": f"Generated incident report ID {report.id} for scope {scope_type}",
-                "correlation_id": get_correlation_id()
-            }
-        )
-
-        return JSONResponse({
-            "success": True,
-            "report_id": report.id,
-            "message": "تم إنشاء التقرير بنجاح"
-        })
-
-    except HTTPException:
-        db.rollback()
-        raise
-    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
-        logger.error(f"Failed to generate incident report: {e}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/admin/reports/incidents")
-@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
-def list_incident_reports(
-    request: Request,
-    scope_filter: Optional[str] = Query(None, description="Filter by scope type: KINDERGARTEN, GOVERNORATE, ALL"),
-    kindergarten_id: Optional[int] = Query(None),
-    governorate: Optional[str] = Query(None),
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
-    current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
-):
-    """List incident reports with filtering"""
-    try:
-        query = db.query(models.Report).options(
-            selectinload(models.Report.kindergarten),
-            selectinload(models.Report.creator),
-        ).filter(
-            models.Report.report_type == models.ReportType.INCIDENT_SUMMARY
-        )
-
-        # Apply scope filters
-        if scope_filter:
-            try:
-                scope_enum = models.ReportScopeType(scope_filter)
-                query = query.filter(models.Report.scope_type == scope_enum)
-            except ValueError:
-                raise validation_error("Invalid scope filter")
-
-        if kindergarten_id:
-            query = query.filter(models.Report.kindergarten_id == kindergarten_id)
-
-        if governorate:
-            query = query.filter(models.Report.governorate == governorate)
-
-        # Pagination
-        total = query.count()
-        reports = query.order_by(models.Report.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
-
-        # Format response
-        report_list = []
-        for report in reports:
-            scope_name = ""
-            if report.scope_type == models.ReportScopeType.KINDERGARTEN and report.kindergarten:
-                scope_name = report.kindergarten.name_ar
-            elif report.scope_type == models.ReportScopeType.GOVERNORATE:
-                scope_name = report.governorate
-            elif report.scope_type == models.ReportScopeType.ALL:
-                scope_name = "جميع الحضانات"
-
-            report_list.append({
-                "id": report.id,
-                "title": f"تقرير الحوادث - {scope_name} ({report.start_date} - {report.end_date})",
-                "scope_type": report.scope_type.value,
-                "scope_name": scope_name,
-                "start_date": report.start_date.isoformat(),
-                "end_date": report.end_date.isoformat(),
-                "created_at": report.created_at.isoformat(),
-                "created_by": report.creator.username if report.creator else "غير معروف",
-                "total_incidents": report.metrics_json.get("total_incidents", 0)
-            })
-
-        return {
-            "reports": report_list,
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": total,
-                "pages": (total + per_page - 1) // per_page
-            }
-        }
-
-    except HTTPException:
-        raise
-    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
-        logger.error(f"Failed to list incident reports: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.get("/admin/reports/incidents/{report_id}")
-@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
-def get_incident_report_detail(
-    report_id: int,
-    request: Request,
-    current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
-):
-    """Get detailed incident report"""
-    try:
-        report = db.query(models.Report).filter(
-            models.Report.id == report_id,
-            models.Report.report_type == models.ReportType.INCIDENT_SUMMARY
-        ).first()
-
-        if not report:
-            raise not_found_error("Report not found")
-
-        # Format scope name
-        scope_name = ""
-        if report.scope_type == models.ReportScopeType.KINDERGARTEN and report.kindergarten:
-            scope_name = report.kindergarten.name_ar
-        elif report.scope_type == models.ReportScopeType.GOVERNORATE:
-            scope_name = report.governorate
-        elif report.scope_type == models.ReportScopeType.ALL:
-            scope_name = "جميع الحضانات"
-
-        return {
-            "id": report.id,
-            "title": f"تقرير الحوادث - {scope_name} ({report.start_date} - {report.end_date})",
-            "scope_type": report.scope_type.value,
-            "scope_name": scope_name,
-            "start_date": report.start_date.isoformat(),
-            "end_date": report.end_date.isoformat(),
-            "created_at": report.created_at.isoformat(),
-            "created_by": report.creator.username if report.creator else "غير معروف",
-            "metrics": report.metrics_json
-        }
-
-    except HTTPException:
-        raise
-    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
-        logger.error(f"Failed to get incident report detail: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.get("/admin/reports/incidents/{report_id}/export")
-@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
-def export_incident_report_csv(
-    report_id: int,
-    request: Request,
-    current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
-):
-    """Export incident report as CSV"""
-    try:
-        report = db.query(models.Report).filter(
-            models.Report.id == report_id,
-            models.Report.report_type == models.ReportType.INCIDENT_SUMMARY
-        ).first()
-
-        if not report:
-            raise not_found_error("Report not found")
-
-        # Generate CSV content
-        import io
-        import csv
-
-        output = io.StringIO()
-        writer = csv.writer(output)
-
-        # Write header
-        report_title = f"{report.report_type.value.replace('_', ' ').title()} - {report.scope_type.value.title()}"
-        writer.writerow(['Report Title', report_title])
-        writer.writerow(['Scope', report.scope_type.value])
-        writer.writerow(['Start Date', report.start_date.isoformat()])
-        writer.writerow(['End Date', report.end_date.isoformat()])
-        writer.writerow(['Generated By', report.creator.username if report.creator else 'Unknown'])
-        writer.writerow(['Generated At', report.created_at.isoformat()])
-        writer.writerow([])
-
-        # Write metrics
-        metrics = report.metrics_json
-        writer.writerow(['Metric', 'Value'])
-        writer.writerow(['Total Incidents', metrics.get('total_incidents', 0)])
-        writer.writerow(['Open Incidents', metrics.get('open_incidents', 0)])
-        writer.writerow(['Closed Incidents', metrics.get('closed_incidents', 0)])
-        writer.writerow([])
-
-        # Incidents by type
-        writer.writerow(['Incidents by Type'])
-        writer.writerow(['Type', 'Count'])
-        for type_name, count in metrics.get('incidents_by_type', {}).items():
-            writer.writerow([type_name, count])
-        writer.writerow([])
-
-        # Incidents by severity
-        writer.writerow(['Incidents by Severity'])
-        writer.writerow(['Severity', 'Count'])
-        for severity, count in metrics.get('incidents_by_severity', {}).items():
-            writer.writerow([severity, count])
-        writer.writerow([])
-
-        # Per kindergarten (if applicable)
-        per_kg = metrics.get('per_kindergarten', {})
-        if per_kg:
-            writer.writerow(['Incidents by Kindergarten'])
-            writer.writerow(['Kindergarten', 'Count'])
-            for kg, count in per_kg.items():
-                writer.writerow([kg, count])
-
-        csv_content = output.getvalue()
-        output.close()
-
-        log_audit_event(
-            db=db,
-            action=AuditAction.INCIDENT_REPORT_EXPORT,
-            actor=current_user,
-            target_type="Report",
-            target_ids=report.id,
-            metadata={
-                "format": "csv",
-                "report_type": report.report_type.value,
-                "scope_type": report.scope_type.value,
-                "start_date": report.start_date.isoformat(),
-                "end_date": report.end_date.isoformat(),
-            },
-            sensitivity_level=2,
-        )
-
-        # Return CSV file
-        filename = f"incident_report_{report_id}_{report.created_at.date().isoformat()}.csv"
-        return Response(
-            csv_content,
-            media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
-
-    except HTTPException:
-        raise
-    except (SQLAlchemyError, ValueError, IOError, OSError) as e:
-        log_audit_event(
-            db=db,
-            action=AuditAction.INCIDENT_REPORT_EXPORT_FAILED,
-            actor=current_user,
-            target_type="Report",
-            target_ids=report_id,
-            metadata={"format": "csv", "error_message": str(e)},
-            sensitivity_level=3,
-        )
-        logger.error(f"Failed to export incident report: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.get("/admin/managers")
+@router.get("/managers")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def list_managers_for_impersonation(
     request: Request,
@@ -5943,59 +5607,13 @@ def list_managers_for_impersonation(
     return {"managers": result}
 
 
-@router.get("/admin/reports/scopes")
-@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
-def get_available_scopes(
-    request: Request,
-    current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
-):
-    """Get available report scopes for the current user"""
-    try:
-        from report_service import ReportService
-        scopes = ReportService.get_available_scopes(current_user, db)
-        return {"scopes": scopes}
-
-    except HTTPException:
-        raise
-    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
-        logger.error(f"Failed to get available scopes: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-# =============================================================================
-# Admin Alerts API
-# =============================================================================
-
-class AdminAlertResponse(BaseModel):
-    id: int
-    severity: str
-    governorate: Optional[str] = None
-    kindergarten_name: Optional[str] = None
-    metric: str
-    current_value: float
-    threshold: Optional[float] = None
-    triggered_at: str
-    acknowledged_at: Optional[str] = None
-    acknowledged_by_id: Optional[int] = None
-    status: str
-    message: Optional[str] = None
-    scope_type: Optional[str] = None
-    scope_id: Optional[str] = None
-
-
-class AdminAlertsListResponse(BaseModel):
-    alerts: List[AdminAlertResponse]
-    total: int
-    page: int
-    page_size: int
 
 
 _VALID_SEVERITIES = {s.value for s in models.SeverityLevel}
 _VALID_STATUSES   = {s.value for s in models.AlertStatus}
 
 
-@router.get("/admin/alerts", response_model=AdminAlertsListResponse)
+@router.get("/alerts", response_model=AdminAlertsListResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_admin_alerts(
     request: Request,
@@ -6150,7 +5768,7 @@ def get_admin_alerts(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.patch("/admin/alerts/{alert_id}/acknowledge", response_model=AdminAlertResponse)
+@router.patch("/alerts/{alert_id}/acknowledge", response_model=AdminAlertResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def acknowledge_alert(
     request: Request,
@@ -6266,7 +5884,7 @@ INDICATOR_LABELS = {
 }
 
 
-@router.get("/admin/heatmap-data", response_model=HeatmapResponse)
+@router.get("/heatmap-data", response_model=HeatmapResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_heatmap_data(
     request: Request,
@@ -6480,7 +6098,7 @@ class AdminPasswordChangeSchema(BaseModel):
     confirm_password: str = Field(..., min_length=8)
 
 
-@router.put("/admin/profile")
+@router.put("/profile")
 @limiter.limit("10/minute")
 def update_admin_profile(
     request: Request,
@@ -6525,7 +6143,7 @@ def update_admin_profile(
     }
 
 
-@router.post("/admin/profile/password")
+@router.post("/profile/password")
 @limiter.limit("5/minute")
 def change_admin_password(
     request: Request,
@@ -6559,7 +6177,7 @@ def change_admin_password(
     return {"message": "Password changed successfully", "correlation_id": get_correlation_id()}
 
 
-@router.get("/admin/profile/audit-log")
+@router.get("/profile/audit-logs")
 @limiter.limit("30/minute")
 def get_admin_own_audit_log(
     request: Request,
@@ -6602,7 +6220,7 @@ def get_admin_own_audit_log(
     return {"total": total, "events": events}
 
 
-@router.post("/admin/audit-log/cleanup")
+@router.post("/audit-logs/cleanup")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def cleanup_audit_logs(
     request: Request,

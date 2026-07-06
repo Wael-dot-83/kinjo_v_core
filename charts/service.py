@@ -232,7 +232,7 @@ class ChartService:
     HEAVY_ROW_THRESHOLD = 10_000
 
     def get_data(self, db: Session, req: ChartRequest) -> pd.DataFrame:
-        """Load raw data for the given source, with Redis caching."""
+        """Load raw data for the given source, with Redis caching and localization."""
         import io as _io
         cache_params = req.model_dump()
         cached = chart_cache.get_raw(cache_params)
@@ -243,6 +243,25 @@ class ChartService:
         if loader is None:
             raise ValueError(f"Unknown chart source: {req.source}")
         df = loader(db, req)
+        
+        # Localize column names
+        def _localized(ar: str, en: str) -> str:
+            return ar if req.lang == "ar" else en
+            
+        column_translations = {
+            "count": _localized("العدد", "Count"),
+            "incident_type": _localized("نوع الحادث", "Incident Type"),
+            "severity": _localized("الخطورة", "Severity"),
+            "status": _localized("الحالة", "Status"),
+            "date": _localized("التاريخ", "Date"),
+            "mood": _localized("المزاج", "Mood"),
+            "kindergarten": _localized("الحضانة", "Kindergarten"),
+            "governorate": _localized("المحافظة", "Governorate"),
+            "capacity": _localized("الطاقة الاستيعابية", "Capacity"),
+            "enrolled": _localized("المسجلين", "Enrolled"),
+            "month": _localized("الشهر", "Month"),
+        }
+        df = df.rename(columns=column_translations)
 
         chart_cache.set_raw(cache_params, df.to_json(orient="split", date_format="iso"))
         return df
@@ -314,7 +333,27 @@ class ChartService:
         return suggestions[0].chart_type if suggestions else ChartType.BAR
 
     def _build_html(self, df: pd.DataFrame, req: ChartRequest, chart_type: ChartType) -> str:
-        patched_req = req.model_copy(update={"chart_type": chart_type})
+        group_by = req.group_by
+        if group_by:
+            def _localized(ar: str, en: str) -> str:
+                return ar if req.lang == "ar" else en
+                
+            column_translations = {
+                "count": _localized("العدد", "Count"),
+                "incident_type": _localized("نوع الحادث", "Incident Type"),
+                "severity": _localized("الخطورة", "Severity"),
+                "status": _localized("الحالة", "Status"),
+                "date": _localized("التاريخ", "Date"),
+                "mood": _localized("المزاج", "Mood"),
+                "kindergarten": _localized("الحضانة", "Kindergarten"),
+                "governorate": _localized("المحافظة", "Governorate"),
+                "capacity": _localized("الطاقة الاستيعابية", "Capacity"),
+                "enrolled": _localized("المسجلين", "Enrolled"),
+                "month": _localized("الشهر", "Month"),
+            }
+            group_by = column_translations.get(group_by, group_by)
+
+        patched_req = req.model_copy(update={"chart_type": chart_type, "group_by": group_by})
         builder = get_builder(chart_type)
         return builder.render(df, patched_req)
 

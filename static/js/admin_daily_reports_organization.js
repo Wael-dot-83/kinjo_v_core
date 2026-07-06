@@ -17,35 +17,35 @@
     received: {
       labelAr: "تم استلامه من قبل الوالدين",
       labelEn: "Received by parents",
-      icon: "fas fa-check-circle",
+      icon: "bi bi-check-circle-fill",
       colorClass: "text-success",
       bgClass: "bg-success-subtle",
     },
     pending: {
       labelAr: "بانتظار مراجعة المدير",
       labelEn: "Pending manager review",
-      icon: "fas fa-clock",
+      icon: "bi bi-clock-fill",
       colorClass: "text-warning",
       bgClass: "bg-warning-subtle",
     },
     incomplete: {
       labelAr: "غير مكتمل",
       labelEn: "Incomplete",
-      icon: "fas fa-exclamation-triangle",
+      icon: "bi bi-exclamation-triangle-fill",
       colorClass: "text-info",
       bgClass: "bg-info-subtle",
     },
     absent: {
       labelAr: "غير مملوء - غياب الطفل",
       labelEn: "Not filled - child absent",
-      icon: "fas fa-user-slash",
+      icon: "bi bi-person-x-fill",
       colorClass: "text-danger",
       bgClass: "bg-danger-subtle",
     },
     not_submitted: {
       labelAr: "غير مملوء - لم يقدم المشرف/المعلم",
       labelEn: "Not filled - supervisor or teacher did not submit",
-      icon: "fas fa-file-excel",
+      icon: "bi bi-file-earmark-x-fill",
       colorClass: "text-secondary",
       bgClass: "bg-secondary-subtle",
     },
@@ -203,9 +203,9 @@
   function buildChildLabel(row) {
     const childName = resolveChildName(row) || t("غير متاح", "Unavailable");
     if (isEnglishUi()) {
-      return `${childName} (ID: ${row.child_id})`;
+      return `${childName} (<bdi>ID: ${row.child_id}</bdi>)`;
     }
-    return row?.child_label_ar || `اسم الطفل: ${childName} (المعرف: ${row.child_id})`;
+    return row?.child_label_ar || `اسم الطفل: ${childName} (<bdi>المعرف: ${row.child_id}</bdi>)`;
   }
 
   function setLoading(isLoading) {
@@ -238,10 +238,18 @@
     }
 
     if (message) {
-      emptyBox.textContent = localizeServerMessage(message) || message;
+      const msg = localizeServerMessage(message) || message;
+      emptyBox.innerHTML = `
+        <div class="empty-state p-4 text-center border rounded-3 bg-light text-dark" role="status">
+          <h3 class="h5 mb-2">${escapeHtml(msg)}</h3>
+          <p class="text-muted mb-0 small">
+            ${t("يرجى مراجعة المعلم أو التحقق من سجل الحضور لمعرفة حالة الحضور والتقارير.", "Please consult the teacher or check the attendance register to verify reporting and attendance status.")}
+          </p>
+        </div>
+      `;
       emptyBox.classList.remove("d-none");
     } else {
-      emptyBox.textContent = "";
+      emptyBox.innerHTML = "";
       emptyBox.classList.add("d-none");
     }
   }
@@ -263,17 +271,17 @@
       ? formatDateLocalized(response.date)
       : response.date_ar || formatDateLocalized(response.date);
     selectedDateChip.textContent = `${t("التاريخ", "Date")}: ${dateLabel}`;
-    selectedCountChip.textContent = `${t("عدد الحضانات المعحضانة", "Displayed kindergartens")}: ${formatNumber(shownCount)}`;
+    selectedCountChip.textContent = `${t("عدد الحضانات المعروضة", "Displayed kindergartens")}: ${formatNumber(shownCount)}`;
     meta.classList.remove("d-none");
   }
 
   function getSelectedKindergartenIds() {
-    const select = document.getElementById("kindergartenSelect");
-    if (!select) {
+    const container = document.getElementById("kindergartenCheckboxGroup");
+    if (!container) {
       return [];
     }
-    return Array.from(select.selectedOptions)
-      .map((option) => Number(option.value))
+    return Array.from(container.querySelectorAll(".kg-checkbox:checked"))
+      .map((input) => Number(input.value))
       .filter((value) => Number.isInteger(value) && value > 0);
   }
 
@@ -300,8 +308,8 @@
   }
 
   function renderKindergartensByGovernorate(governorateValue) {
-    const select = document.getElementById("kindergartenSelect");
-    if (!select) {
+    const container = document.getElementById("kindergartenCheckboxGroup");
+    if (!container) {
       return;
     }
 
@@ -319,32 +327,52 @@
       )
     );
 
-    const options = items.map((kg) => {
+    const checkboxes = items.map((kg) => {
       const name = resolveKindergartenName(kg);
       const governorate = resolveGovernorateLabel(kg.governorate);
-      return `<option value="${kg.id}">${escapeHtml(name)} - ${escapeHtml(governorate)}</option>`;
+      return `
+        <div class="form-check mb-1">
+          <input class="form-check-input kg-checkbox" type="checkbox" value="${kg.id}" id="kg_chk_${kg.id}">
+          <label class="form-check-label small" for="kg_chk_${kg.id}">
+            ${escapeHtml(name)} - <span class="text-muted"><bdi>${escapeHtml(governorate)}</bdi></span>
+          </label>
+        </div>
+      `;
     });
-    select.innerHTML = options.join("");
+    container.innerHTML = checkboxes.join("");
 
     const allChecked = Boolean(document.getElementById("allKindergartens")?.checked);
     if (!allChecked && governorateValue) {
-      Array.from(select.options).forEach((option) => {
-        option.selected = true;
+      container.querySelectorAll(".kg-checkbox").forEach((input) => {
+        input.checked = true;
       });
     }
+
+    // Bind checkbox change events
+    container.querySelectorAll(".kg-checkbox").forEach((input) => {
+      input.addEventListener("change", () => {
+        if (state.selectedResponse) {
+          renderGroups(state.selectedResponse);
+        }
+      });
+    });
+
+    toggleScopeControls();
   }
 
   function toggleScopeControls() {
     const allCheckbox = document.getElementById("allKindergartens");
     const governorateSelect = document.getElementById("governorateSelect");
-    const kindergartenSelect = document.getElementById("kindergartenSelect");
-    if (!allCheckbox || !governorateSelect || !kindergartenSelect) {
+    const container = document.getElementById("kindergartenCheckboxGroup");
+    if (!allCheckbox || !governorateSelect || !container) {
       return;
     }
 
     const disabled = allCheckbox.checked;
     governorateSelect.disabled = disabled;
-    kindergartenSelect.disabled = disabled;
+    container.querySelectorAll(".kg-checkbox").forEach((input) => {
+      input.disabled = disabled;
+    });
   }
 
   function buildQueryParams() {
@@ -439,10 +467,15 @@
     return Object.keys(STATUS_UI_CONFIG)
       .map((key) => {
         const value = Number(statusCounts[key] || 0);
-        const label = getStatusDisplay(key).label;
-        return `<span class="summary-chip">${escapeHtml(label)}: ${formatNumber(value)}</span>`;
+        const cfg = getStatusDisplay(key);
+        return `
+          <li class="summary-chip badge ${cfg.bgClass} text-dark p-2 border">
+            <span class="fw-semibold">${escapeHtml(cfg.label)}:</span>
+            <strong class="mx-1"><bdi>${formatNumber(value)}</bdi></strong>
+          </li>
+        `;
       })
-      .join(" ");
+      .join("");
   }
 
   function renderTableRows(rows) {
@@ -457,19 +490,22 @@
     return rows
       .map((row) => {
         const cfg = getStatusDisplay(row.status);
+        const teacherName = resolveTeacherName(row);
+        const displayTeacher = teacherName ? escapeHtml(teacherName) : `<span aria-label="${t("غير متاح", "Unavailable")}">—</span>`;
+        const displayNotes = row.notes ? escapeHtml(row.notes) : `<span aria-label="${t("لا توجد ملاحظات", "No notes")}">—</span>`;
         return `
         <tr>
           <td>
             <div class="fw-semibold">${escapeHtml(buildChildLabel(row))}</div>
           </td>
-          <td>${escapeHtml(resolveTeacherName(row) || t("غير متاح", "Unavailable"))}</td>
+          <td>${displayTeacher}</td>
           <td>
             <span class="status-pill ${cfg.bgClass}">
               <i class="${cfg.icon} ${cfg.colorClass}"></i>
               ${escapeHtml(cfg.label)}
             </span>
           </td>
-          <td>${escapeHtml(row.notes || "-")}</td>
+          <td>${displayNotes}</td>
         </tr>
       `;
       })
@@ -522,25 +558,28 @@
           : kg.report_date_ar || formatDateLocalized(kg.report_date);
 
         return `
-          <div class="accordion-item mb-3 border rounded-3 overflow-hidden">
+          <section class="accordion-item mb-3 border rounded-3 overflow-hidden" aria-labelledby="${headingId}">
             <h2 class="accordion-header" id="${headingId}">
               <button class="accordion-button ${index === 0 ? "" : "collapsed"}" type="button"
                 data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="${expanded}" aria-controls="${collapseId}">
                 <div class="w-100">
                   <div class="fw-bold">${escapeHtml(resolveKindergartenName(kg))}</div>
                   <div class="kg-meta mt-1">
-                    ${t("المدير", "Manager")}: ${escapeHtml(managerName)} |
-                    ${t("التاريخ", "Date")}: ${escapeHtml(reportDate)}
+                    ${t("المدير", "Manager")}: <bdi>${escapeHtml(managerName)}</bdi> |
+                    ${t("التاريخ", "Date")}: <bdi>${escapeHtml(reportDate)}</bdi>
                   </div>
                 </div>
               </button>
             </h2>
             <div id="${collapseId}" class="accordion-collapse collapse ${showClass}" aria-labelledby="${headingId}" data-bs-parent="#dailyReportsAccordion">
               <div class="accordion-body">
-                <div class="d-flex flex-wrap gap-2 mb-3">${statusSummaryHtml(kg.status_counts)}</div>
+                <ul class="status-summary d-flex flex-wrap gap-2 mb-3 list-unstyled" aria-label="${t(`ملخص حالة التقارير في ${resolveKindergartenName(kg)}`, `Report status summary in ${resolveKindergartenName(kg)}`)}">
+                  ${statusSummaryHtml(kg.status_counts)}
+                </ul>
                 ${noReportsNote}
                 <div class="table-responsive">
-                  <table class="table table-hover report-table align-middle" aria-label="${t("جدول التقارير اليومية", "Daily reports table")}">
+                  <table class="table table-hover report-table align-middle">
+                    <caption class="visually-hidden">${t(`جدول التقارير اليومية لـ ${resolveKindergartenName(kg)}`, `Daily reports table for ${resolveKindergartenName(kg)}`)}</caption>
                     <thead class="table-light">
                       <tr>
                         <th scope="col">${t("الطفل", "Child")}</th>
@@ -556,7 +595,7 @@
                 </div>
               </div>
             </div>
-          </div>
+          </section>
         `;
       })
       .join("");
@@ -588,7 +627,7 @@
     } catch (error) {
       console.error(error);
       setError(
-        error?.message ||
+         error?.message ||
           t("خطأ في التحميل. يرجى إعادة المحاولة.", "Loading failed. Please try again.")
       );
       document.getElementById("dailyReportsAccordion").innerHTML = "";
@@ -599,6 +638,12 @@
   }
 
   function attachEvents() {
+    const filterForm = document.getElementById("dailyReportsFilterForm");
+    filterForm?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      fetchAndRenderReports();
+    });
+
     const searchBtn = document.getElementById("searchDailyReportsBtn");
     const allCheckbox = document.getElementById("allKindergartens");
     const governorateSelect = document.getElementById("governorateSelect");
@@ -609,7 +654,10 @@
     const sortField = document.getElementById("sortField");
     const sortDir = document.getElementById("sortDir");
 
-    searchBtn?.addEventListener("click", fetchAndRenderReports);
+    searchBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      fetchAndRenderReports();
+    });
 
     allCheckbox?.addEventListener("change", () => {
       toggleScopeControls();

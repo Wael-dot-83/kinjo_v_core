@@ -45,6 +45,7 @@ class ChartRequest(BaseModel):
     group_by: Optional[str] = Field(default=None, description="Column to group by")
     top_n: Optional[int] = Field(default=None, ge=1, le=50)
     title: Optional[str] = None
+    lang: str = "ar"
 
     @field_validator("date_from", "date_to", mode="before")
     @classmethod

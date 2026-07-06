@@ -136,7 +136,7 @@ def test_admin_alerts_use_english_labels_without_language_branches():
 
 
 def test_admin_profile_uses_configured_csrf_cookie_name():
-    source = (ROOT / "templates" / "admin" / "profile.html").read_text(encoding="utf-8")
+    source = (ROOT / "static" / "js" / "auth.js").read_text(encoding="utf-8")
     assert "kinjo_csrf_token" in source
     assert r"(?:^|;\s*)csrf_token=([^;]+)" not in source
 

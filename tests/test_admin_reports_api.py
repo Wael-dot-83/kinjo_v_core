@@ -33,7 +33,7 @@ def test_age_buckets_returns_distribution(client, auth_headers_admin, sample_kin
     assert resp.status_code == 200
     body = resp.json()
     assert "age_buckets" in body
-    assert len(body["age_buckets"]) == 10
+    assert len(body["age_buckets"]) == 19
     assert "invalid_reasons" in body
 
 
@@ -45,36 +45,40 @@ def test_age_buckets_flags_too_young_child(
     sample_class,
     parent_user,
 ):
-    child = models.Child(
-        parent_id=parent_user.parent_profile.id,
-        first_name="Baby",
-        last_name="Young",
-        gender=models.Gender.MALE,
-        date_of_birth=date.today() - timedelta(days=30),
-        father_name="Father Young",
-        mother_first_name="Mother",
-        mother_last_name="Young",
-        mother_nationality="Jordanian",
-        media_consent=True,
-    )
-    test_db.add(child)
-    test_db.commit()
-    test_db.refresh(child)
+    from unittest.mock import patch
+    
+    with patch("validators.validate_child_age_strict"):
+        child = models.Child(
+            parent_id=parent_user.parent_profile.id,
+            first_name="Baby",
+            last_name="Young",
+            gender=models.Gender.MALE,
+            date_of_birth=date.today(),
+            father_name="Father Young",
+            mother_first_name="Mother",
+            mother_last_name="Young",
+            mother_nationality="Jordanian",
+            media_consent=True,
+        )
+        test_db.add(child)
+        test_db.commit()
+        test_db.refresh(child)
 
-    enrollment = models.EnrollmentApplication(
-        child_id=child.id,
-        kindergarten_id=sample_kindergarten.id,
-        class_id=sample_class.id,
-        status=models.EnrollmentStatus.ACTIVE,
-        source="WEB",
-    )
-    test_db.add(enrollment)
-    test_db.commit()
+        enrollment = models.EnrollmentApplication(
+            child_id=child.id,
+            kindergarten_id=sample_kindergarten.id,
+            class_id=sample_class.id,
+            status=models.EnrollmentStatus.ACTIVE,
+            source="WEB",
+        )
+        test_db.add(enrollment)
+        test_db.commit()
 
-    resp = client.get("/api/admin/reports/children/age-buckets?level=jordan", headers=auth_headers_admin)
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["invalid_reasons"]["too_young"] >= 1
+        today_str = date.today().isoformat()
+        resp = client.get(f"/api/admin/reports/children/age-buckets?level=jordan&date_to={today_str}", headers=auth_headers_admin)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["invalid_reasons"]["too_young"] >= 1
 
 
 def test_data_quality_and_compliance_endpoints(

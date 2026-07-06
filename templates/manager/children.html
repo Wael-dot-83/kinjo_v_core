@@ -1,92 +1,109 @@
-{% extends 'base.html' %}
+{% extends 'manager_base.html' %}
 {% block title %}{{ _('الأطفال') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-people-fill"></i>
-            {{ _('المدير') }}
-        </div>
-        <h1 class="page-header-title">{{ _('الأطفال') }}</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0 breadcrumb-sm">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
-                <li class="breadcrumb-item active">{{ _('الأطفال') }}</li>
+<div class="margin-bottom-4 display-flex flex-justify flex-align-start flex-wrap grid-gap-2">
+    <div class="usa-prose">
+        <h1 class="font-heading-xl margin-top-0 margin-bottom-1">
+            <i class="bi bi-people-fill text-primary"></i> {{ _('الأطفال') }}
+        </h1>
+        <nav aria-label="Breadcrumb" class="usa-breadcrumb usa-breadcrumb--wrap">
+            <ol class="usa-breadcrumb__list">
+                <li class="usa-breadcrumb__list-item"><a href="/dashboard" class="usa-breadcrumb__link">{{ _('لوحة التحكم') }}</a></li>
+                <li class="usa-breadcrumb__list-item usa-current" aria-current="page">{{ _('الأطفال') }}</li>
             </ol>
         </nav>
     </div>
-    <div class="page-header-actions">
-        <select class="form-select form-select-sm w-auto" id="classFilter" onchange="loadChildren()">
-            <option value="">كل الشعب</option>
-        </select>
+    <div class="margin-top-1">
+        <form class="usa-form" onsubmit="event.preventDefault();">
+            <label class="usa-sr-only" for="classFilter">تصفية بالشعبة</label>
+            <select class="usa-select margin-top-0" id="classFilter" name="classFilter" onchange="loadChildren()">
+                <option value="">{{ _('كل الشعب') }}</option>
+            </select>
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 
-<div class="card shadow-sm">
-    <div class="card-header d-flex align-items-center justify-content-between">
-        <span class="fw-semibold">
-            <i class="bi bi-list-ul me-2 text-primary"></i>قائمة الأطفال
-            <span class="badge badge-soft badge-soft-primary rounded-pill ms-2" id="totalBadge">—</span>
-        </span>
-        <div class="d-flex gap-2 w-100 flex-column flex-sm-row">
-            <input type="search" class="form-control form-control-sm w-100" id="searchInput"
-                   placeholder="بحث باسم الطفل…" oninput="filterTable()">
+<div class="usa-card padding-3 margin-bottom-4 bg-white border border-base-lighter">
+    <div class="grid-row margin-bottom-2 flex-justify flex-align-center grid-gap-2">
+        <div class="grid-col-auto">
+            <h3 class="font-heading-md margin-y-0">
+                <i class="bi bi-list-ul margin-right-1 text-primary"></i> {{ _('قائمة الأطفال') }}
+                <span class="usa-tag margin-left-1" id="totalBadge">—</span>
+            </h3>
+        </div>
+        <div class="grid-col-auto tablet:grid-col-4">
+            <form class="usa-search usa-search--small" role="search" onsubmit="event.preventDefault();">
+              <label class="usa-sr-only" for="searchInput">{{ _('بحث باسم الطفل…') }}</label>
+              <input class="usa-input" id="searchInput" type="search" name="search" oninput="filterTable()" placeholder="{{ _('بحث باسم الطفل…') }}">
+              <button class="usa-button" type="submit">
+                <span class="usa-sr-only">Search</span>
+              </button>
+            </form>
         </div>
     </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>{{ _('اسم الطفل') }}</th>
-                        <th>{{ _('الجنس') }}</th>
-                        <th>{{ _('تاريخ الميلاد') }}</th>
-                        <th>{{ _('الشعبة') }}</th>
-                        <th class="text-center">{{ _('الإجراءات') }}</th>
-                    </tr>
-                </thead>
-                <tbody id="childrenTableBody">
-                    <tr><td colspan="5" class="text-center py-4 text-muted">
-                        <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">Loading...</span></div>جارٍ تحميل البيانات، يرجى الانتظار.</td></tr>
-                </tbody>
-            </table>
-        </div>
+    
+    <div class="overflow-x-auto">
+        <table class="usa-table usa-table--striped width-full">
+            <thead>
+                <tr>
+                    <th>{{ _('اسم الطفل') }}</th>
+                    <th>{{ _('الجنس') }}</th>
+                    <th>{{ _('تاريخ الميلاد') }}</th>
+                    <th>{{ _('الشعبة') }}</th>
+                    <th class="text-center">{{ _('الإجراءات') }}</th>
+                </tr>
+            </thead>
+            <tbody id="childrenTableBody">
+                <tr><td colspan="5" class="text-center padding-y-5 text-base">
+                    {{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}
+                </td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
 
-<!-- Move child modal -->
-<div class="modal fade" id="moveChildModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{{ _('نقل طفل إلى شعبة أخرى') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
-            </div>
-            <div class="modal-body">
-                <p id="moveChildName" class="fw-semibold mb-3"></p>
-                <input type="hidden" id="moveChildId">
-                <input type="hidden" id="moveFromClassId">
-                <div class="mb-3">
-                    <label class="form-label">{{ _('الشعبة الحالية') }}</label>
-                    <p id="moveFromClassName" class="text-muted mb-0"></p>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">{{ _('الشعبة الجديدة') }}</label>
-                    <select class="form-select" id="moveToClassSelect"></select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
-                <button class="btn btn-primary" onclick="confirmMoveChild()">
-                    <i class="bi bi-arrow-left-right me-2"></i>{{ _('نقل') }}
-                </button>
-            </div>
-        </div>
+<!-- Move child modal (USWDS) -->
+<div class="usa-modal" id="moveChildModal" aria-labelledby="moveModalLabel">
+  <div class="usa-modal__content">
+    <div class="usa-modal__main">
+      <h2 class="usa-modal__heading" id="moveModalLabel">
+        <i class="bi bi-arrow-left-right margin-right-1 text-primary"></i> {{ _('نقل طفل إلى شعبة أخرى') }}
+      </h2>
+      <div class="usa-prose">
+        <p id="moveChildName" class="text-bold margin-bottom-3"></p>
+      </div>
+      <input type="hidden" id="moveChildId">
+      <input type="hidden" id="moveFromClassId">
+      
+      <div class="margin-bottom-3">
+          <label class="text-bold text-uppercase font-sans-3xs text-base-dark">{{ _('الشعبة الحالية') }}</label>
+          <p id="moveFromClassName" class="text-base margin-top-05"></p>
+      </div>
+      
+      <form class="usa-form" onsubmit="event.preventDefault(); confirmMoveChild();">
+        <label class="usa-label" for="moveToClassSelect">{{ _('الشعبة الجديدة') }}</label>
+        <select class="usa-select" id="moveToClassSelect" name="moveToClassSelect"></select>
+        
+        <ul class="usa-button-group margin-top-4">
+          <li class="usa-button-group__item">
+            <button type="submit" class="usa-button" id="confirmMoveBtn">
+                <i class="bi bi-arrow-left-right margin-right-1"></i>{{ _('نقل') }}
+            </button>
+          </li>
+          <li class="usa-button-group__item">
+            <button type="button" class="usa-button usa-button--unstyled padding-105 text-center" data-close-modal>{{ _('إلغاء') }}</button>
+          </li>
+        </ul>
+      </form>
     </div>
+    <button class="usa-button usa-modal__close" aria-label="Close this window" data-close-modal>
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
 </div>
 
 {% endblock %}
@@ -128,7 +145,7 @@ async function loadChildren() {
         document.getElementById('totalBadge').textContent = data.total || 0;
         renderTable(_allChildren);
     } catch {
-        showToast('تعذّر تحميل الأطفال', 'error');
+        alert('تعذّر تحميل الأطفال');
     }
 }
 
@@ -143,7 +160,7 @@ function filterTable() {
 function renderTable(children) {
     const tbody = document.getElementById('childrenTableBody');
     if (!children.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted">لا يوجد أطفال</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center padding-y-5 text-base">لا يوجد أطفال</td></tr>`;
         return;
     }
     tbody.innerHTML = children.map(c => {
@@ -154,21 +171,22 @@ function renderTable(children) {
         const nameJson = JSON.stringify(c.first_name + ' ' + c.last_name);
         const classJson = JSON.stringify(c.class_name_ar || '');
         return `<tr>
-            <td class="fw-semibold">${fullName}</td>
+            <td class="text-bold">${fullName}</td>
             <td>${gender}</td>
             <td>${dob}</td>
             <td>${className}</td>
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary"
-                        onclick="openMoveModal(${c.id},${nameJson},${c.class_id},${classJson})">
-                    <i class="bi bi-arrow-left-right me-1"></i>نقل
-                </button>
+                <a href="#moveChildModal" class="usa-button usa-button--outline padding-y-1"
+                        data-open-modal aria-controls="moveChildModal"
+                        onclick="setupMoveModal(${c.id},${nameJson},${c.class_id},${classJson})">
+                    <i class="bi bi-arrow-left-right margin-right-1"></i>نقل
+                </a>
             </td>
         </tr>`;
     }).join('');
 }
 
-function openMoveModal(childId, childName, fromClassId, fromClassName) {
+function setupMoveModal(childId, childName, fromClassId, fromClassName) {
     document.getElementById('moveChildId').value     = childId;
     document.getElementById('moveFromClassId').value = fromClassId;
     document.getElementById('moveChildName').textContent    = childName;
@@ -178,27 +196,35 @@ function openMoveModal(childId, childName, fromClassId, fromClassName) {
         .filter(c => c.id !== fromClassId)
         .map(c => `<option value="${c.id}">${esc(c.name_ar)}</option>`)
         .join('');
-    new bootstrap.Modal(document.getElementById('moveChildModal')).show();
 }
 
 async function confirmMoveChild() {
     const childId     = parseInt(document.getElementById('moveChildId').value);
     const fromClassId = parseInt(document.getElementById('moveFromClassId').value);
     const toClassId   = parseInt(document.getElementById('moveToClassSelect').value);
+    
+    if (!toClassId) {
+        alert('يجب اختيار شعبة');
+        return;
+    }
+    
+    const btn = document.getElementById('confirmMoveBtn');
+    btn.disabled = true;
     try {
         const res = await fetch('/api/manager/children/move-class', {
             method: 'POST', headers: h(),
             body: JSON.stringify({ child_id: childId, from_class_id: fromClassId, to_class_id: toClassId }),
         });
         if (res.ok) {
-            showToast('تم نقل الطفل بنجاح', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('moveChildModal')).hide();
+            alert('تم نقل الطفل بنجاح');
+            document.querySelector('#moveChildModal .usa-modal__close').click();
             loadChildren();
         } else {
             const err = await res.json().catch(() => ({}));
-            showToast(err.detail || 'فشل النقل', 'error');
+            alert(err.detail || 'فشل النقل');
         }
-    } catch { showToast('خطأ في الشبكة', 'error'); }
+    } catch { alert('خطأ في الشبكة'); }
+    finally { btn.disabled = false; }
 }
 
 document.addEventListener('DOMContentLoaded', init);

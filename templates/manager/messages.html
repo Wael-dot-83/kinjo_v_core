@@ -1,15 +1,22 @@
-{% extends 'base.html' %}
+{% extends 'manager_base.html' %}
 {% block title %}{{ _('الرسائل') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow"><i class="bi bi-chat-dots-fill"></i> {{ _('المدير') }}</div>
-        <h1 class="page-header-title">{{ _('الرسائل') }}</h1>
+<div class="margin-bottom-4 display-flex flex-justify flex-align-start flex-wrap grid-gap-2">
+    <div class="usa-prose">
+        <h1 class="font-heading-xl margin-top-0 margin-bottom-1">
+            <i class="bi bi-chat-dots-fill text-primary"></i> {{ _('الرسائل') }}
+        </h1>
+        <nav aria-label="Breadcrumb" class="usa-breadcrumb usa-breadcrumb--wrap">
+            <ol class="usa-breadcrumb__list">
+                <li class="usa-breadcrumb__list-item"><a href="/dashboard" class="usa-breadcrumb__link">{{ _('لوحة التحكم') }}</a></li>
+                <li class="usa-breadcrumb__list-item usa-current" aria-current="page">{{ _('الرسائل') }}</li>
+            </ol>
+        </nav>
     </div>
-    <div class="page-header-actions">
-        <a href="/messages/new" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-lg me-1"></i>{{ _('رسالة جديدة') }}
+    <div class="margin-top-1">
+        <a href="/messages/new" class="usa-button">
+            <i class="bi bi-plus-lg margin-right-1"></i>{{ _('رسالة جديدة') }}
         </a>
     </div>
 </div>
@@ -17,63 +24,66 @@
 
 {% block content %}
 <!-- Tabs -->
-<ul class="nav nav-tabs-pill mb-4" id="msgTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" data-folder="inbox" onclick="loadMessages('inbox')">
-            <i class="bi bi-inbox me-1"></i>{{ _('الوارد') }}
-            <span class="badge badge-soft badge-soft-danger ms-1 d-none" id="inboxBadge">0</span>
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" data-folder="sent" onclick="loadMessages('sent')">
-            <i class="bi bi-send me-1"></i>{{ _('المُرسل') }}
-        </button>
-    </li>
-</ul>
+<div class="margin-bottom-4">
+    <ul class="usa-button-group" id="msgTabs" role="tablist">
+        <li class="usa-button-group__item" role="presentation">
+            <button class="usa-button tab-btn" data-folder="inbox" onclick="loadMessages('inbox')">
+                <i class="bi bi-inbox margin-right-1"></i>{{ _('الوارد') }}
+                <span class="usa-tag bg-secondary-dark margin-left-1 display-none" id="inboxBadge">0</span>
+            </button>
+        </li>
+        <li class="usa-button-group__item" role="presentation">
+            <button class="usa-button usa-button--outline tab-btn" data-folder="sent" onclick="loadMessages('sent')">
+                <i class="bi bi-send margin-right-1"></i>{{ _('المُرسل') }}
+            </button>
+        </li>
+    </ul>
+</div>
 
 <!-- Loading -->
-<div id="msgLoading" class="text-center py-5 text-muted">
-    <div class="spinner-border mb-3" role="status"><span class="visually-hidden">Loading...</span></div>
-    <div>{{ _('جاري تحميل الرسائل...') }}</div>
+<div id="msgLoading" class="text-center padding-y-5 text-base">
+    <p>{{ _('جاري تحميل الرسائل...') }}</p>
 </div>
 
 <!-- Empty state -->
-<div id="msgEmpty" class="card d-none">
-    <div class="card-body text-center py-5">
-        <i class="bi bi-chat d-block fs-1 mb-3 opacity-25"></i>
-        <p class="text-muted mb-0">{{ _('لا توجد رسائل') }}</p>
-    </div>
+<div id="msgEmpty" class="usa-card padding-5 margin-bottom-4 bg-white border border-base-lighter text-center display-none">
+    <i class="bi bi-chat display-block font-sans-3xl margin-bottom-3 text-base-light"></i>
+    <p class="text-base margin-bottom-0">{{ _('لا توجد رسائل') }}</p>
 </div>
 
 <!-- Message list -->
-<div id="msgList" class="card d-none">
-    <div class="list-group list-group-flush" id="msgItems"></div>
+<div id="msgList" class="usa-card margin-bottom-4 bg-white border border-base-lighter display-none">
+    <div id="msgItems"></div>
 </div>
 
-<!-- Message Detail Modal -->
-<div class="modal fade" id="msgDetailModal" tabindex="-1" aria-labelledby="msgDetailModalLabel" aria-modal="true" role="dialog">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-700" id="msgDetailModalLabel">{{ _('تفاصيل الرسالة') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
+<!-- Message Detail Modal (USWDS) -->
+<div class="usa-modal usa-modal--lg" id="msgDetailModal" aria-labelledby="msgDetailModalLabel">
+  <div class="usa-modal__content">
+    <div class="usa-modal__main">
+      <h2 class="usa-modal__heading" id="msgDetailModalLabel">
+        {{ _('تفاصيل الرسالة') }}
+      </h2>
+      <div class="usa-prose">
+        <div class="display-flex flex-align-center grid-gap-2 margin-bottom-3 padding-bottom-3 border-bottom-1 border-base-lighter">
+            <div class="radius-pill bg-base-lighter text-base display-flex flex-align-center flex-justify-center" style="width: 48px; height: 48px;">
+                <i class="bi bi-person-fill font-sans-md"></i>
             </div>
-            <div class="modal-body">
-                <div class="d-flex align-items-center gap-3 mb-3 pb-3 border-bottom">
-                    <div class="msg-avatar"><i class="bi bi-person-fill"></i></div>
-                    <div>
-                        <div class="fw-700" id="modalSender">—</div>
-                        <div class="small text-muted" id="modalDate">—</div>
-                    </div>
-                </div>
-                <div class="fw-700 mb-3 fs-6" id="modalSubject" aria-live="polite"></div>
-                <div id="modalBody" class="text-secondary" style="white-space:pre-wrap;line-height:1.7;"></div>
-            </div>
-            <div class="modal-footer border-0 bg-white justify-content-start">
-                <span class="small text-muted" id="modalReceiver"></span>
+            <div>
+                <div class="text-bold" id="modalSender">—</div>
+                <div class="text-base font-sans-3xs" id="modalDate">—</div>
             </div>
         </div>
+        <div class="text-bold margin-bottom-3 font-heading-md" id="modalSubject" aria-live="polite"></div>
+        <div id="modalBody" class="text-base line-height-sans-4" style="white-space:pre-wrap;"></div>
+        <div class="margin-top-4">
+            <span class="text-base font-sans-3xs" id="modalReceiver"></span>
+        </div>
+      </div>
     </div>
+    <button class="usa-button usa-modal__close" aria-label="Close this window" data-close-modal>
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
 </div>
 
 {% endblock %}
@@ -82,7 +92,6 @@
 <script>
 (function () {
     let currentFolder = 'inbox';
-    let msgDetailModal = null;
 
     function getHeaders() {
         const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
@@ -90,37 +99,39 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        msgDetailModal = new bootstrap.Modal(document.getElementById('msgDetailModal'));
         loadMessages('inbox');
     });
 
     window.loadMessages = async function(folder) {
         currentFolder = folder;
-        document.querySelectorAll('[data-folder]').forEach(b => b.classList.remove('active'));
-        document.querySelector(`[data-folder="${folder}"]`)?.classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            b.classList.add('usa-button--outline');
+        });
+        const activeBtn = document.querySelector(`[data-folder="${folder}"]`);
+        if(activeBtn) activeBtn.classList.remove('usa-button--outline');
 
-        document.getElementById('msgLoading').classList.remove('d-none');
-        document.getElementById('msgEmpty').classList.add('d-none');
-        document.getElementById('msgList').classList.add('d-none');
+        document.getElementById('msgLoading').classList.remove('display-none');
+        document.getElementById('msgEmpty').classList.add('display-none');
+        document.getElementById('msgList').classList.add('display-none');
 
         try {
             const r = await fetch(`/api/messages?folder=${folder}&limit=50`, { headers: getHeaders() });
             if (!r.ok) throw new Error();
             const data = await r.json();
 
-            document.getElementById('msgLoading').classList.add('d-none');
+            document.getElementById('msgLoading').classList.add('display-none');
 
             if (!data.messages || !data.messages.length) {
-                document.getElementById('msgEmpty').classList.remove('d-none');
+                document.getElementById('msgEmpty').classList.remove('display-none');
                 return;
             }
 
             renderMessages(data.messages);
-            document.getElementById('msgList').classList.remove('d-none');
+            document.getElementById('msgList').classList.remove('display-none');
 
         } catch {
-            document.getElementById('msgLoading').classList.add('d-none');
-            document.getElementById('msgEmpty').classList.remove('d-none');
+            document.getElementById('msgLoading').classList.add('display-none');
+            document.getElementById('msgEmpty').classList.remove('display-none');
         }
     };
 
@@ -131,18 +142,23 @@
             const subj = escHtml(m.subject || '{{ _("بدون موضوع") }}');
             const preview = escHtml((m.message_body || '').slice(0, 90));
             const sender = escHtml(m.sender_name || '');
-            const unreadClass = m.is_read === false ? ' unread' : '';
-            return `<div class="msg-item list-group-item${unreadClass}" role="button"
+            const unreadClass = m.is_read === false ? ' bg-primary-light text-primary-darker' : ' text-base';
+            const fontWeight = m.is_read === false ? 'text-bold' : '';
+            return `<div class="padding-3 border-bottom-1 border-base-lighter cursor-pointer hover:bg-base-lightest${unreadClass}" role="button"
                         tabindex="0"
                         onclick="openMessage(${m.id}, ${JSON.stringify(m).replace(/"/g, '&quot;')})"
                         onkeydown="if(event.key==='Enter'||event.key===' ')openMessage(${m.id}, ${JSON.stringify(m).replace(/"/g, '&quot;')})">
-                <div class="msg-avatar"><i class="bi bi-person-fill"></i></div>
-                <div class="flex-grow-1 overflow-hidden">
-                    <div class="d-flex justify-content-between align-items-start gap-2">
-                        <div class="msg-subject">${subj}</div>
-                        <span class="msg-meta flex-shrink-0">${dt}</span>
+                <div class="display-flex flex-align-start grid-gap-3">
+                    <div class="radius-pill bg-base-lighter text-base display-flex flex-align-center flex-justify-center flex-shrink-0" style="width: 40px; height: 40px;">
+                        <i class="bi bi-person-fill font-sans-sm"></i>
                     </div>
-                    <div class="msg-preview">${sender ? sender + ': ' : ''}${preview}</div>
+                    <div class="flex-1">
+                        <div class="display-flex flex-justify flex-align-start grid-gap-2">
+                            <div class="font-sans-sm ${fontWeight}">${subj}</div>
+                            <span class="font-sans-3xs flex-shrink-0">${dt}</span>
+                        </div>
+                        <div class="font-sans-xs margin-top-05 text-truncate">${sender ? sender + ': ' : ''}${preview}</div>
+                    </div>
                 </div>
             </div>`;
         }).join('');
@@ -158,14 +174,23 @@
         document.getElementById('modalSubject').textContent  = msg.subject || '{{ _("بدون موضوع") }}';
         document.getElementById('modalBody').textContent     = msg.message_body || '';
         document.getElementById('modalReceiver').textContent = msg.receiver_name ? '{{ _("إلى:") }} ' + msg.receiver_name : '';
-        msgDetailModal.show();
+        
+        // Show Modal via USWDS
+        const modalEl = document.getElementById('msgDetailModal');
+        modalEl.classList.add('is-visible');
+        document.body.classList.add('usa-js-modal--active');
+
         // Mark as read silently
         if (currentFolder === 'inbox') {
             fetch(`/api/messages/${id}/read`, { method: 'POST', headers: getHeaders() }).catch(() => {});
             // Remove unread style from the clicked row
-            document.querySelectorAll('.msg-item.unread').forEach(el => {
+            const rows = document.querySelectorAll('.cursor-pointer');
+            rows.forEach(el => {
                 if (el.getAttribute('onclick') && el.getAttribute('onclick').includes(`openMessage(${id},`)) {
-                    el.classList.remove('unread');
+                    el.classList.remove('bg-primary-light', 'text-primary-darker');
+                    el.classList.add('text-base');
+                    const subj = el.querySelector('.font-sans-sm');
+                    if(subj) subj.classList.remove('text-bold');
                 }
             });
         }

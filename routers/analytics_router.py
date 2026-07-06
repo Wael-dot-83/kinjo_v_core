@@ -220,16 +220,25 @@ def get_demographics(
     # Process distributions in memory (fast enough for 10-50k rows)
     gender_counts = {"MALE": 0, "FEMALE": 0}
     age_bands = {
-        "B1: 70 days - <6 mo": 0,
-        "B2: 6 - <12 mo": 0,
-        "B3: 12 - <18 mo": 0,
-        "B4: 18 - <24 mo": 0,
-        "B5: 24 - <30 mo": 0,
-        "B6: 30 - <36 mo": 0,
-        "B7: 36 - <42 mo": 0,
-        "B8: 42 - <48 mo": 0,
-        "B9: 48 - <54 mo": 0,
-        "B10: 54 - 56 mo": 0
+        "1 day to 3 months": 0,
+        "3 to 6 months": 0,
+        "6 to 9 months": 0,
+        "9 to 12 months": 0,
+        "12 to 15 months": 0,
+        "15 to 18 months": 0,
+        "18 to 21 months": 0,
+        "21 to 24 months": 0,
+        "24 to 27 months": 0,
+        "27 to 30 months": 0,
+        "30 to 33 months": 0,
+        "33 to 36 months": 0,
+        "36 to 39 months": 0,
+        "39 to 42 months": 0,
+        "42 to 45 months": 0,
+        "45 to 48 months": 0,
+        "48 to 51 months": 0,
+        "51 to 54 months": 0,
+        "54 to 57 months": 0
     }
     data_quality = {
         "missing_dob": 0,
@@ -255,29 +264,28 @@ def get_demographics(
             age_days = (today - dob).days
             age_months = age_days / 30.4375  # approximate months
             
-            if age_days < 70 or age_months > 56:
+            if age_days < 1 or age_months > 57:
                 data_quality["invalid_age"] += 1
             else:
-                if age_months < 6:
-                    age_bands["B1: 70 days - <6 mo"] += 1
-                elif age_months < 12:
-                    age_bands["B2: 6 - <12 mo"] += 1
-                elif age_months < 18:
-                    age_bands["B3: 12 - <18 mo"] += 1
-                elif age_months < 24:
-                    age_bands["B4: 18 - <24 mo"] += 1
-                elif age_months < 30:
-                    age_bands["B5: 24 - <30 mo"] += 1
-                elif age_months < 36:
-                    age_bands["B6: 30 - <36 mo"] += 1
-                elif age_months < 42:
-                    age_bands["B7: 36 - <42 mo"] += 1
-                elif age_months < 48:
-                    age_bands["B8: 42 - <48 mo"] += 1
-                elif age_months < 54:
-                    age_bands["B9: 48 - <54 mo"] += 1
-                else:
-                    age_bands["B10: 54 - 56 mo"] += 1
+                if age_months < 3: age_bands["1 day to 3 months"] += 1
+                elif age_months < 6: age_bands["3 to 6 months"] += 1
+                elif age_months < 9: age_bands["6 to 9 months"] += 1
+                elif age_months < 12: age_bands["9 to 12 months"] += 1
+                elif age_months < 15: age_bands["12 to 15 months"] += 1
+                elif age_months < 18: age_bands["15 to 18 months"] += 1
+                elif age_months < 21: age_bands["18 to 21 months"] += 1
+                elif age_months < 24: age_bands["21 to 24 months"] += 1
+                elif age_months < 27: age_bands["24 to 27 months"] += 1
+                elif age_months < 30: age_bands["27 to 30 months"] += 1
+                elif age_months < 33: age_bands["30 to 33 months"] += 1
+                elif age_months < 36: age_bands["33 to 36 months"] += 1
+                elif age_months < 39: age_bands["36 to 39 months"] += 1
+                elif age_months < 42: age_bands["39 to 42 months"] += 1
+                elif age_months < 45: age_bands["42 to 45 months"] += 1
+                elif age_months < 48: age_bands["45 to 48 months"] += 1
+                elif age_months < 51: age_bands["48 to 51 months"] += 1
+                elif age_months < 54: age_bands["51 to 54 months"] += 1
+                else: age_bands["54 to 57 months"] += 1
 
     # Bucket KG densities (Histogram)
     density_histogram = {"<20": 0, "20-50": 0, "50-100": 0, "100+": 0}
