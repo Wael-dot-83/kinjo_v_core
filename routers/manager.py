@@ -35,6 +35,7 @@ from models import (
 )
 from rbac import assert_manager_owns_kindergarten
 from audit_actions import AuditAction
+import validators
 
 router = APIRouter(prefix="/api/manager", tags=["manager"])
 
@@ -197,6 +198,11 @@ def assign_supervisor_to_class(
     if existing:
         return {"id": existing.id, "already_exists": True}
 
+    # A class has at most one primary -- retire the current one first so
+    # this insert doesn't create two simultaneously-active primaries.
+    if body.is_primary:
+        validators.retire_active_primary_assignment(db, body.class_id)
+
     assignment = SupervisorAssignment(
         class_id=body.class_id,
         supervisor_id=body.supervisor_id,
@@ -206,6 +212,15 @@ def assign_supervisor_to_class(
     db.add(assignment)
     db.commit()
     db.refresh(assignment)
+
+    if body.is_primary:
+        # Keep the legacy Class.supervisor_id column in sync so
+        # manager_analytics.py / admin_reports_api.py (which still read
+        # it directly) agree with GET /api/classes (which reads
+        # SupervisorAssignment).
+        validators.set_class_primary_supervisor_id(db, body.class_id, body.supervisor_id)
+        db.commit()
+
     return {"id": assignment.id}
 
 
@@ -216,7 +231,7 @@ def unassign_supervisor_from_class(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
-    _get_class_or_403(class_id, current_user, db)
+    cls = _get_class_or_403(class_id, current_user, db)
     assignment = (
         db.query(SupervisorAssignment)
         .filter(
@@ -228,7 +243,16 @@ def unassign_supervisor_from_class(
     )
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found.")
-    assignment.deleted_at = datetime.now(_JORDAN_TZ)
+    now = datetime.now(_JORDAN_TZ)
+    assignment.deleted_at = now
+    assignment.end_date = now.date()
+
+    # Only clear the legacy column if this removed assignment was the one
+    # it was pointing at -- unassigning a non-primary/secondary supervisor
+    # must not touch the class's primary.
+    if assignment.is_primary and cls.supervisor_id == supervisor_id:
+        validators.set_class_primary_supervisor_id(db, class_id, None)
+
     db.commit()
 
 
@@ -246,7 +270,7 @@ def swap_supervisor(
     db.query(SupervisorAssignment).filter(
         SupervisorAssignment.class_id == class_id,
         SupervisorAssignment.deleted_at.is_(None),
-    ).update({"deleted_at": now})
+    ).update({"deleted_at": now, "end_date": now.date()})
 
     new_sup = db.query(User).filter(User.id == body.supervisor_id, User.deleted_at.is_(None)).first()
     if not new_sup or new_sup.role != UserRole.SUPERVISOR or new_sup.kindergarten_id != current_user.kindergarten_id:
@@ -254,6 +278,7 @@ def swap_supervisor(
 
     a = SupervisorAssignment(class_id=class_id, supervisor_id=body.supervisor_id, is_primary=True, start_date=_today())
     db.add(a)
+    validators.set_class_primary_supervisor_id(db, class_id, body.supervisor_id)
     db.commit()
     return {"class_id": class_id, "new_supervisor_id": body.supervisor_id}
 

@@ -322,12 +322,31 @@ def update_class(
         if supervisor.kindergarten_id != class_obj.kindergarten_id:
             raise HTTPException(status_code=400, detail="Supervisor must belong to the same kindergarten as the class")
 
-    # Update fields
+    # Update fields. supervisor_id is handled separately below so the
+    # legacy Class.supervisor_id column and the SupervisorAssignment
+    # table it's supposed to mirror don't drift apart (see
+    # validators.set_class_primary_supervisor_id docstring).
     update_data = class_data.model_dump(exclude_unset=True)
+    supervisor_id_changed = "supervisor_id" in update_data
+    new_supervisor_id = update_data.pop("supervisor_id", None)
     for field, value in update_data.items():
         setattr(class_obj, field, value)
 
     db.commit()
+
+    if supervisor_id_changed and new_supervisor_id != class_obj.supervisor_id:
+        validators.retire_active_primary_assignment(db, class_obj.id)
+        if new_supervisor_id is not None:
+            db.add(models.SupervisorAssignment(
+                class_id=class_obj.id,
+                supervisor_id=new_supervisor_id,
+                is_primary=True,
+                full_time_dedication=True,
+                start_date=datetime.now(_JORDAN_TZ).date(),
+            ))
+        validators.set_class_primary_supervisor_id(db, class_obj.id, new_supervisor_id)
+        db.commit()
+
     db.refresh(class_obj)
 
     validators.log_audit_action(

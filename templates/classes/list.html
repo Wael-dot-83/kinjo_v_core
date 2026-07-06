@@ -111,7 +111,13 @@ breadcrumbs=[
 </div>
 
 <script>
-    const api = new KinJoAPI();
+    // kinjo-api.js itself instantiates its own top-level KinJoAPI client
+    // and assigns it to a global `api` (and window.api) -- this page must
+    // NOT redeclare a local `api`, or parsing kinjo-api.js's own top-level
+    // declaration throws "Identifier 'api' has already been declared"
+    // (both share one lexical scope across classic <script> tags), which
+    // aborts that whole script and leaves the KinJoAPI class itself
+    // undefined too. Just use the global `api`.
     let allClasses = [];
     const isAdmin = '{{ current_user.role.value }}' === 'ADMIN';
     const IS_EN = document.documentElement.lang === 'en';
@@ -215,8 +221,8 @@ breadcrumbs=[
                     <a href="/classes/${c.id}/edit" class="btn btn-outline-warning" title="${T('تعديل', 'Edit')}">
                         <i class="bi bi-pencil"></i>
                     </a>
-                    <button class="btn btn-outline-danger" title="${T('حذف', 'Delete')}" onclick="deleteClass(${c.id}, ${JSON.stringify(c.name_ar || '')})">
-                        <i class="bi bi-trash"></i>
+                    <button class="btn btn-outline-danger" title="${isAdmin ? T('حذف', 'Delete') : T('إلغاء تفعيل', 'Deactivate')}" onclick="deleteClass(${c.id}, ${JSON.stringify(c.name_ar || '')})">
+                        <i class="bi ${isAdmin ? 'bi-trash' : 'bi-pause-circle'}"></i>
                     </button>
                 </div>
             </td>
@@ -238,24 +244,36 @@ breadcrumbs=[
     }
 
     async function deleteClass(id, name) {
+        // Admins get the real (admin-only) permanent delete. Managers can
+        // never call that endpoint -- it always 403s for them -- so they
+        // get the manager-permitted soft-deactivate instead, which already
+        // blocks on active enrollments the same way.
         const result = await Swal.fire({
-            title: T('حذف الشعبة', 'Delete Classroom'),
-            text: T(`هل أنت متأكد من حذف "${name}"؟`, `Are you sure you want to delete "${name}"?`),
+            title: isAdmin ? T('حذف الشعبة', 'Delete Classroom') : T('إلغاء تفعيل الشعبة', 'Deactivate Classroom'),
+            text: isAdmin
+                ? T(`هل أنت متأكد من حذف "${name}"؟`, `Are you sure you want to delete "${name}"?`)
+                : T(`هل أنت متأكد من إلغاء تفعيل "${name}"؟`, `Are you sure you want to deactivate "${name}"?`),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: T('نعم، احذف', 'Yes, Delete'),
+            confirmButtonText: isAdmin ? T('نعم، احذف', 'Yes, Delete') : T('نعم، ألغِ التفعيل', 'Yes, Deactivate'),
             cancelButtonText: T('إلغاء', 'Cancel')
         });
         if (!result.isConfirmed) return;
 
         try {
-            await api.delete(`/api/classes/${id}`);
+            if (isAdmin) {
+                await api.delete(`/api/classes/${id}`);
+            } else {
+                await api.deactivateClass(id);
+            }
             Swal.fire({
                 icon: 'success',
-                title: T('تم الحذف', 'Deleted'),
-                text: T('تم حذف الشعبة بنجاح', 'Classroom deleted successfully'),
+                title: isAdmin ? T('تم الحذف', 'Deleted') : T('تم إلغاء التفعيل', 'Deactivated'),
+                text: isAdmin
+                    ? T('تم حذف الشعبة بنجاح', 'Classroom deleted successfully')
+                    : T('تم إلغاء تفعيل الشعبة بنجاح', 'Classroom deactivated successfully'),
                 timer: 1500,
                 showConfirmButton: false
             });
@@ -264,7 +282,7 @@ breadcrumbs=[
             Swal.fire({
                 icon: 'error',
                 title: T('خطأ', 'Error'),
-                text: e.message || T('حدث خطأ أثناء الحذف', 'An error occurred while deleting')
+                text: e.message || T('حدث خطأ أثناء العملية', 'An error occurred')
             });
         }
     }

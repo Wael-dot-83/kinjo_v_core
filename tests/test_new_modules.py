@@ -416,6 +416,110 @@ class TestManagerClassCRUD:
         r = client.post("/api/manager/classes/assign-supervisor", json=payload, headers=_hdr(manager_token))
         assert r.status_code in (400, 403, 422), f"Expected rejection, got {r.status_code}: {r.text}"
 
+    def test_assign_primary_supervisor_syncs_legacy_class_supervisor_id(
+        self, client, test_db, manager_user, sample_class, sample_kindergarten, manager_token
+    ):
+        """manager_analytics.py and admin_reports_api.py still read
+        Class.supervisor_id directly, while GET /api/classes reads only
+        SupervisorAssignment -- assigning a primary supervisor must keep
+        both in agreement (previously Class.supervisor_id was never
+        touched by this endpoint at all)."""
+        sup = _make_supervisor(test_db, sample_kindergarten.id, "primarySup1", "primarysup1@test.com")
+        payload = {"class_id": sample_class.id, "supervisor_id": sup.id, "is_primary": True}
+        r = client.post("/api/manager/classes/assign-supervisor", json=payload, headers=_hdr(manager_token))
+        assert r.status_code in (200, 201), r.text
+
+        test_db.expire_all()
+        cls = test_db.query(models.Class).filter(models.Class.id == sample_class.id).first()
+        assert cls.supervisor_id == sup.id
+
+    def test_swap_supervisor_syncs_legacy_class_supervisor_id_and_retires_old_assignment(
+        self, client, test_db, manager_user, sample_class, sample_kindergarten, manager_token
+    ):
+        sup1 = _make_supervisor(test_db, sample_kindergarten.id, "swapSup1", "swapsup1@test.com")
+        sup2 = _make_supervisor(test_db, sample_kindergarten.id, "swapSup2", "swapsup2@test.com")
+
+        r = client.post(
+            "/api/manager/classes/assign-supervisor",
+            json={"class_id": sample_class.id, "supervisor_id": sup1.id, "is_primary": True},
+            headers=_hdr(manager_token),
+        )
+        assert r.status_code in (200, 201), r.text
+
+        r = client.put(
+            f"/api/manager/classes/{sample_class.id}/swap-supervisor",
+            json={"class_id": sample_class.id, "supervisor_id": sup2.id, "is_primary": True},
+            headers=_hdr(manager_token),
+        )
+        assert r.status_code == 200, r.text
+
+        test_db.expire_all()
+        cls = test_db.query(models.Class).filter(models.Class.id == sample_class.id).first()
+        assert cls.supervisor_id == sup2.id
+
+        old_assignment = (
+            test_db.query(models.SupervisorAssignment)
+            .filter(
+                models.SupervisorAssignment.class_id == sample_class.id,
+                models.SupervisorAssignment.supervisor_id == sup1.id,
+            )
+            .first()
+        )
+        assert old_assignment.deleted_at is not None
+        assert old_assignment.end_date is not None
+
+    def test_unassign_primary_supervisor_clears_legacy_class_supervisor_id(
+        self, client, test_db, manager_user, sample_class, sample_kindergarten, manager_token
+    ):
+        sup = _make_supervisor(test_db, sample_kindergarten.id, "unassignSup", "unassignsup@test.com")
+        r = client.post(
+            "/api/manager/classes/assign-supervisor",
+            json={"class_id": sample_class.id, "supervisor_id": sup.id, "is_primary": True},
+            headers=_hdr(manager_token),
+        )
+        assert r.status_code in (200, 201), r.text
+
+        r = client.delete(
+            f"/api/manager/classes/{sample_class.id}/supervisors/{sup.id}",
+            headers=_hdr(manager_token),
+        )
+        assert r.status_code == 204, r.text
+
+        test_db.expire_all()
+        cls = test_db.query(models.Class).filter(models.Class.id == sample_class.id).first()
+        assert cls.supervisor_id is None
+
+    def test_edit_class_form_endpoint_syncs_supervisor_assignment(
+        self, client, test_db, manager_user, sample_class, sample_kindergarten, manager_token
+    ):
+        """PUT /api/classes/{id} (the endpoint the real Edit Class form
+        calls) used to write only Class.supervisor_id and never touch
+        SupervisorAssignment at all, so GET /api/classes (which reads
+        only SupervisorAssignment) would never reflect a supervisor
+        change made through the edit form."""
+        sup = _make_supervisor(test_db, sample_kindergarten.id, "editFormSup", "editformsup@test.com")
+        payload = {
+            "name_ar": sample_class.name_ar, "name_en": sample_class.name_en,
+            "capacity_total": sample_class.capacity_total,
+            "min_age_months": sample_class.min_age_months, "max_age_months": sample_class.max_age_months,
+            "supervisor_id": sup.id,
+        }
+        r = client.put(f"/api/classes/{sample_class.id}", json=payload, headers=_hdr(manager_token))
+        assert r.status_code == 200, r.text
+
+        test_db.expire_all()
+        assignment = (
+            test_db.query(models.SupervisorAssignment)
+            .filter(
+                models.SupervisorAssignment.class_id == sample_class.id,
+                models.SupervisorAssignment.supervisor_id == sup.id,
+                models.SupervisorAssignment.is_primary == True,
+                models.SupervisorAssignment.deleted_at.is_(None),
+            )
+            .first()
+        )
+        assert assignment is not None
+
 
 # ===========================================================================
 # 3. Daily-Report Workflow

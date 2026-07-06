@@ -689,6 +689,50 @@ def validate_kg_has_supervisor(
         )
 
 
+def retire_active_primary_assignment(db: Session, class_id: int) -> None:
+    """Soft-delete AND end-date any currently-active primary
+    SupervisorAssignment row(s) for a class.
+
+    Two different retirement markers exist on this model (deleted_at,
+    end_date) and different readers across the codebase check one or the
+    other -- e.g. api/classes.py's GET /classes only checks end_date,
+    while assign_supervisor_to_class's own duplicate-check only checks
+    deleted_at. Setting both together means a retired row reads as
+    retired no matter which convention the caller uses.
+    """
+    now = datetime.now(_JORDAN_TZ)
+    db.query(models.SupervisorAssignment).filter(
+        models.SupervisorAssignment.class_id == class_id,
+        models.SupervisorAssignment.is_primary == True,
+        models.SupervisorAssignment.deleted_at.is_(None),
+    ).update({"deleted_at": now, "end_date": now.date()})
+
+
+def set_class_primary_supervisor_id(
+    db: Session, class_id: int, new_supervisor_id: Optional[int]
+) -> None:
+    """Keep the legacy Class.supervisor_id column aligned with whichever
+    supervisor is currently primary.
+
+    manager_analytics.py and admin_reports_api.py still read this column
+    directly, while GET /api/classes and the manager assign/swap/unassign
+    endpoints read/write only SupervisorAssignment -- call this from
+    every write path that changes who is primary for a class so the two
+    representations never silently disagree.
+    """
+    if new_supervisor_id is not None:
+        # Class.supervisor_id carries a UNIQUE constraint: a supervisor
+        # can be the legacy "primary" of at most one class at a time --
+        # clear it from wherever else it currently points first.
+        db.query(models.Class).filter(
+            models.Class.supervisor_id == new_supervisor_id,
+            models.Class.id != class_id,
+        ).update({"supervisor_id": None})
+    db.query(models.Class).filter(models.Class.id == class_id).update(
+        {"supervisor_id": new_supervisor_id}
+    )
+
+
 def log_audit_action(
     db: Session,
     user_id: Optional[int],

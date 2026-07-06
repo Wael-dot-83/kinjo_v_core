@@ -177,7 +177,13 @@ breadcrumbs=[
 </div>
 
 <script>
-    const api = new KinJoAPI();
+    // kinjo-api.js itself instantiates its own top-level KinJoAPI client
+    // and assigns it to a global `api` (and window.api) -- this page must
+    // NOT redeclare a local `api`, or parsing kinjo-api.js's own top-level
+    // declaration throws "Identifier 'api' has already been declared"
+    // (both share one lexical scope across classic <script> tags), which
+    // aborts that whole script and leaves the KinJoAPI class itself
+    // undefined too. Just use the global `api`.
     const classId = {{ class_obj.id if class_obj else 'null' }};
     const isEdit = classId !== null;
     const initialSupervisorId = {{ class_obj.supervisor_id if class_obj and class_obj.supervisor_id else 'null' }};
