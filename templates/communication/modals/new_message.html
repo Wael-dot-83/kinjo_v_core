@@ -77,7 +77,7 @@
                             <div class="admin-targeting-section" id="adminTargetingSection" style="display:none;">
                                 <!-- Target Mode Selection -->
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Recipient Scope:{% else %}نطاق الاستلام:{% endif %}</label>
+                                    <label for="adminTargetMode" class="form-label fw-semibold">{% if ui_lang == 'en' %}Recipient Scope:{% else %}نطاق الاستلام:{% endif %}</label>
                                     <select class="form-select" id="adminTargetMode"
                                         onchange="updateAdminTargetingUI()">
                                         <option value="ALL_USERS">📢 {% if ui_lang == 'en' %}All Users (Managers + Supervisors + Parents){% else %}جميع المستخدمين (مدراء + مشرفين + أولياء أمور){% endif %}
@@ -197,13 +197,15 @@
                                     <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Search Recipients (optional):{% else %}البحث عن المستلمين (اختياري):{% endif %}</label>
                                     <div class="input-group">
                                         <input type="text" class="form-control" id="adminSearchInput"
+                                            aria-label="{% if ui_lang == 'en' %}Search by name or email{% else %}ابحث بالاسم أو البريد الإلكتروني{% endif %}"
                                             placeholder="{% if ui_lang == 'en' %}Search by name or email…{% else %}ابحث بالاسم أو البريد الإلكتروني…{% endif %}">
-                                        <button class="btn btn-outline-secondary" type="button" id="adminSearchBtn">
-                                            <i class="bi bi-search"></i>
+                                        <button class="btn btn-outline-secondary" type="button" id="adminSearchBtn" aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}">
+                                            <i class="bi bi-search" aria-hidden="true"></i>
                                         </button>
                                         <button class="btn btn-outline-secondary" type="button" id="adminClearBtn"
+                                            aria-label="{% if ui_lang == 'en' %}Clear search{% else %}مسح البحث{% endif %}"
                                             onclick="document.getElementById('adminSearchInput').value='';previewRecipients();">
-                                            <i class="bi bi-x"></i>
+                                            <i class="bi bi-x" aria-hidden="true"></i>
                                         </button>
                                     </div>
                                 </div>

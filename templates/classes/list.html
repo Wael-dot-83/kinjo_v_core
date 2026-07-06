@@ -40,14 +40,14 @@ breadcrumbs=[
         <div class="row g-3 align-items-end">
             {% if current_user.role.value == 'ADMIN' %}
             <div class="col-md-3">
-                <label class="form-label small text-muted">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
+                <label for="filterKindergarten" class="form-label small text-muted">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
                 <select id="filterKindergarten" class="form-select form-select-sm" onchange="loadClasses()">
                     <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الحضانات{% endif %}</option>
                 </select>
             </div>
             {% endif %}
             <div class="col-md-3">
-                <label class="form-label small text-muted">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+                <label for="filterStatus" class="form-label small text-muted">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
                 <select id="filterStatus" class="form-select form-select-sm" onchange="loadClasses()">
                     <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
                     <option value="true" selected>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>

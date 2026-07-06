@@ -11,8 +11,8 @@
       <button type="button" class="usa-menu-btn">{% if ui_lang == 'en' %}Menu{% else %}القائمة{% endif %}</button>
     </div>
     <nav aria-label="Primary navigation" class="usa-nav">
-      <button type="button" class="usa-nav__close">
-        <i class="bi bi-x-lg"></i>
+      <button type="button" class="usa-nav__close" aria-label="{% if ui_lang == 'en' %}Close menu{% else %}إغلاق القائمة{% endif %}">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
       </button>
       <ul class="usa-nav__primary usa-accordion">
         <li class="usa-nav__primary-item">

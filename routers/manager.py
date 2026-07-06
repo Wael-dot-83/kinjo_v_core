@@ -14,7 +14,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from database import get_db
 from dependencies import get_current_user
@@ -70,6 +70,7 @@ def list_classes(
 ):
     classes = (
         db.query(Class)
+        .options(selectinload(Class.supervisor_assignments))
         .filter(Class.kindergarten_id == current_user.kindergarten_id, Class.deleted_at.is_(None))
         .order_by(Class.name_ar)
         .all()
@@ -554,6 +555,7 @@ def list_supervisors(
 ):
     supervisors = (
         db.query(User)
+        .options(selectinload(User.supervisor_assignments).selectinload(SupervisorAssignment.class_))
         .filter(
             User.role == UserRole.SUPERVISOR,
             User.kindergarten_id == current_user.kindergarten_id,

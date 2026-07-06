@@ -33,7 +33,7 @@
             <div class="col-md-4">
                 <div class="input-group input-group-icon">
                     <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
-                    <input type="text" class="form-control" id="msgSearch" placeholder="{% if ui_lang == 'en' %}Search messages...{% else %}ابحث في الرسائل...{% endif %}">
+                    <input type="text" class="form-control" id="msgSearch" aria-label="{% if ui_lang == 'en' %}Search messages{% else %}ابحث في الرسائل{% endif %}" placeholder="{% if ui_lang == 'en' %}Search messages...{% else %}ابحث في الرسائل...{% endif %}">
                     <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</button>
                 </div>
             </div>
