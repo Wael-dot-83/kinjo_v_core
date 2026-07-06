@@ -270,6 +270,23 @@ class TestCreateUserBranches:
         })
         assert r.status_code == 400
 
+    def test_second_active_manager_for_same_kg_rejected(self, client, test_db, sample_kindergarten):
+        """The 'one active manager per kindergarten' rule (validators.
+        validate_manager_rules) is already covered for the bulk-JSON and
+        CSV import paths, but not for the single-create endpoint most
+        admin actions actually go through -- this closes that gap."""
+        admin = _make_admin(test_db, "cu_adm", "3b")
+        _make_user(test_db, "existing_mgr_single", models.UserRole.MANAGER,
+                   kg_id=sample_kindergarten.id)
+        headers = _tok(client, "cu_adm3b")
+        r = client.post("/api/admin/users", headers=headers, json={
+            "username": "second_mgr_single",
+            "password": "Pass123!",
+            "role": "MANAGER",
+            "kindergarten_id": sample_kindergarten.id,
+        })
+        assert r.status_code == 409
+
     def test_duplicate_username_returns_409(self, client, test_db, sample_kindergarten):
         """Line 401: username already exists → 409."""
         admin = _make_admin(test_db, "cu_adm", "3")

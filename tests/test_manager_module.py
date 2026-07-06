@@ -381,6 +381,51 @@ class TestManagerDataIsolation:
 
         app.dependency_overrides.clear()
 
+    def test_manager_cannot_see_other_kg_children(
+        self, client, test_db, manager_kg_b, enrollment_kg_a, child_kg_a
+    ):
+        """GET /api/manager/children had no dedicated cross-tenant test --
+        manager_kg_b must never see child_kg_a (enrolled in kg_a's class)."""
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_b
+
+        response = client.get("/api/manager/children")
+        assert response.status_code == 200
+        returned_ids = {c["id"] for c in response.json()["children"]}
+        assert child_kg_a.id not in returned_ids
+
+        app.dependency_overrides.clear()
+
+    def test_manager_cannot_see_other_kg_supervisors(
+        self, client, test_db, manager_kg_b, supervisor_kg_a
+    ):
+        """GET /api/manager/supervisors had no dedicated cross-tenant test
+        -- manager_kg_b must never see supervisor_kg_a."""
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_b
+
+        response = client.get("/api/manager/supervisors")
+        assert response.status_code == 200
+        returned_ids = {s["id"] for s in response.json()["supervisors"]}
+        assert supervisor_kg_a.id not in returned_ids
+
+        app.dependency_overrides.clear()
+
+    def test_manager_cannot_assign_foreign_supervisor_to_own_class(
+        self, client, test_db, manager_kg_a, class_kg_a, supervisor_kg_b
+    ):
+        """routers/manager.py's assign_supervisor_to_class already guards
+        against this (checks sup.kindergarten_id != current_user.
+        kindergarten_id) but the negative case was never exercised by a
+        test -- assigning a kg_b supervisor onto a kg_a class must fail."""
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+
+        response = client.post(
+            "/api/manager/classes/assign-supervisor",
+            json={"supervisor_id": supervisor_kg_b.id, "class_id": class_kg_a.id, "is_primary": False},
+        )
+        assert response.status_code in (403, 404)
+
+        app.dependency_overrides.clear()
+
 
 class TestManagerAnalytics:
     """Test analytics endpoints accessible to manager/admin"""
