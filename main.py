@@ -1520,10 +1520,13 @@ async def api_health_check_head(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """HEAD health check endpoint for monitoring systems"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    # HEAD request just checks if authenticated - return empty body
+    """HEAD reachability probe used by the front-end connectivity heartbeat.
+
+    Any authenticated user (admin, manager, supervisor, ...) may call this — it
+    only confirms the backend is reachable and the session is still valid, and
+    returns no body. The comprehensive GET /api/health below stays admin-only.
+    """
+    # HEAD request just checks reachability + valid session - return empty body
     return Response(status_code=200, headers={"X-Health": "OK"})
 
 
