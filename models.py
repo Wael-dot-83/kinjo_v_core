@@ -9,7 +9,7 @@ from typing import Optional, List
 from sqlalchemy import (
     Column, Integer, BigInteger, String, Text, Boolean, Float, Date, DateTime,
     ForeignKey, Enum, CheckConstraint, UniqueConstraint, Index, JSON,
-    ForeignKeyConstraint
+    ForeignKeyConstraint, text
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column, validates
 from sqlalchemy.sql import func
@@ -621,6 +621,17 @@ class SupervisorAssignment(Base):
         # — see routers/manager.py. Composite indexes keep those O(log n) (D2).
         Index("ix_supervisor_assignments_class_deleted", "class_id", "deleted_at"),
         Index("ix_supervisor_assignments_supervisor_deleted", "supervisor_id", "deleted_at"),
+        # At most one *active* primary supervisor per class. The retired legacy
+        # Class.supervisor_id column used to enforce this via app logic; this
+        # partial unique index enforces it at the DB level so a race/bug can't
+        # create two active primaries (which would double-count workload metrics).
+        Index(
+            "uq_supervisor_assignments_primary_per_class",
+            "class_id",
+            unique=True,
+            sqlite_where=text("is_primary = 1 AND deleted_at IS NULL"),
+            postgresql_where=text("is_primary AND deleted_at IS NULL"),
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)
