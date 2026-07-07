@@ -20,6 +20,40 @@ router = APIRouter(tags=["manager_analytics"])
 
 
 # =============================================================================
+# CSV export safety (S1 — formula injection)
+# =============================================================================
+
+# Characters that make a spreadsheet treat a *text* cell as a formula when it
+# appears first. Neutralized by prefixing a single quote (Excel/LibreOffice
+# convention). csv.writer already handles RFC 4180 quoting/escaping.
+_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value):
+    """Neutralize CSV/formula injection for text cells.
+
+    Only strings can be interpreted as formulas; numeric cells are returned
+    unchanged so real numbers are not mangled into text.
+    """
+    if not isinstance(value, str):
+        return "" if value is None else value
+    if value and value[0] in _CSV_FORMULA_PREFIXES:
+        return "'" + value
+    return value
+
+
+class _SafeCsvWriter:
+    """csv.writer wrapper that runs every cell through _csv_safe, so no export
+    field can be forgotten."""
+
+    def __init__(self, writer):
+        self._writer = writer
+
+    def writerow(self, row):
+        self._writer.writerow([_csv_safe(c) for c in row])
+
+
+# =============================================================================
 # Request/Response Models
 # =============================================================================
 
@@ -399,9 +433,10 @@ def export_analytics_csv(
     today = _today()
     start_date = today - timedelta(days=period_days)
 
-    # Create CSV content based on report type
+    # Create CSV content based on report type. Wrap the writer so every cell is
+    # neutralized against formula injection (S1).
     output = io.StringIO()
-    writer = csv.writer(output)
+    writer = _SafeCsvWriter(csv.writer(output))
 
     if report_type == "kpis":
         writer.writerow(["Manager Analytics - KPI Report"])
