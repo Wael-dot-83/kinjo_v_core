@@ -24,12 +24,12 @@
     <div class="col-md-4 mb-2 mb-md-0">
         <ul class="row g-4">
             <li class="col-12 col-md-12">
-                <div class="col-12__container d-flex flex-row align-items-center p-2 bg-primary-subtle border-primary border-opacity-25">
+                <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-primary-subtle border-primary border-opacity-25">
                     <div class="p-2 bg-primary text-white rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 56px; height: 56px; border-radius: 50%;">
                         <i class="bi bi-people-fill h3 fw-bold"></i>
                     </div>
-                    <div class="col-12__body p-0">
-                        <h2 class="col-12__heading text-uppercase m-0">{% if ui_lang == 'en' %}Total Supervisors{% else %}إجمالي المشرفين{% endif %}</h2>
+                    <div class="card-body p-0">
+                        <h2 class="card-title text-uppercase m-0">{% if ui_lang == 'en' %}Total Supervisors{% else %}إجمالي المشرفين{% endif %}</h2>
                         <p class="fs-1 fw-bold text-primary m-0" id="statTotal">—</p>
                     </div>
                 </div>
@@ -39,12 +39,12 @@
     <div class="col-md-4 mb-2 mb-md-0">
         <ul class="row g-4">
             <li class="col-12 col-md-12">
-                <div class="col-12__container d-flex flex-row align-items-center p-2 bg-success-subtleer border-success border-opacity-25">
+                <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-success-subtle border-success border-opacity-25">
                     <div class="p-2 text-bg-success text-white rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 56px; height: 56px; border-radius: 50%;">
                         <i class="bi bi-person-check-fill h3 fw-bold"></i>
                     </div>
-                    <div class="col-12__body p-0">
-                        <h2 class="col-12__heading text-uppercase m-0">{% if ui_lang == 'en' %}Assigned to Classes{% else %}مُعيَّنون لشعب{% endif %}</h2>
+                    <div class="card-body p-0">
+                        <h2 class="card-title text-uppercase m-0">{% if ui_lang == 'en' %}Assigned to Classes{% else %}مُعيَّنون لشعب{% endif %}</h2>
                         <p class="fs-1 fw-bold text-success-dark m-0" id="statAssigned">—</p>
                     </div>
                 </div>
@@ -54,13 +54,13 @@
     <div class="col-md-4">
         <ul class="row g-4">
             <li class="col-12 col-md-12">
-                <div class="col-12__container d-flex flex-row align-items-center p-2 bg-gold-lighter border-gold-light">
+                <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-warning-subtle border-gold">
                     <div class="p-2 bg-gold text-white rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 56px; height: 56px; border-radius: 50%;">
                         <i class="bi bi-person-dash-fill h3 fw-bold"></i>
                     </div>
-                    <div class="col-12__body p-0">
-                        <h2 class="col-12__heading text-uppercase m-0">{% if ui_lang == 'en' %}Unassigned{% else %}بدون تعيين{% endif %}</h2>
-                        <p class="fs-1 fw-bold text-gold-dark m-0" id="statUnassigned">—</p>
+                    <div class="card-body p-0">
+                        <h2 class="card-title text-uppercase m-0">{% if ui_lang == 'en' %}Unassigned{% else %}بدون تعيين{% endif %}</h2>
+                        <p class="fs-1 fw-bold text-gold m-0" id="statUnassigned">—</p>
                     </div>
                 </div>
             </li>
@@ -159,18 +159,18 @@ function renderSupervisors(supervisors) {
 
         return `
         <li class="col-12 col-md-6 col-lg-4">
-            <div class="col-12__container">
-                <header class="col-12__header">
-                    <h2 class="col-12__heading">${escHtml(sup.full_name)}</h2>
-                    <p class="col-12__subhead mb-0">@${escHtml(sup.username)}</p>
+            <div class="card h-100 shadow-sm">
+                <header class="card-header">
+                    <h2 class="card-title">${escHtml(sup.full_name)}</h2>
+                    <p class="card-subtitle text-muted mb-0">@${escHtml(sup.username)}</p>
                     ${statusTag}
                 </header>
-                <div class="col-12__body">
+                <div class="card-body">
                     <p class="mb-1"><i class="bi bi-envelope me-2 text-secondary"></i>${escHtml(sup.email || '—')}</p>
                     <p class="mb-2"><i class="bi bi-telephone me-2 text-secondary"></i>${escHtml(sup.phone_number || '—')}</p>
                     <div class="mb-2">${classBadges}</div>
                 </div>
-                <div class="col-12__footer">
+                <div class="card-footer bg-transparent border-0">
                     <a href="#assignClassModal" class="btn btn-outline-primary" role="button" aria-controls="assignClassModal" data-bs-toggle="modal" data-bs-target="#assignClassModal" onclick="setupAssignModal(${sup.id})">
                         <i class="bi bi-plus-circle me-2"></i>تعيين شعبة
                     </a>

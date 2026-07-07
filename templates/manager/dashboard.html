@@ -13,11 +13,14 @@
 {% endblock %}
 
 {% block content %}
-<!-- Loading state -->
-<div id="dashLoading" class="alert alert-info d-flex align-items-center" role="status">
-  <div>
-    <p class="mb-0">{% if ui_lang == 'en' %}Loading dashboard…{% else %}جارٍ تحميل لوحة التحكم…{% endif %}</p>
-  </div>
+<!-- Loading state.
+     NOTE: do not add a `d-flex` (or any `d-*`) utility here. Those set
+     `display: … !important`, which overrides the `hidden` attribute, so the
+     spinner would stay visible even after the data loads. The JS toggles
+     `hidden`, so this element must not carry a conflicting display utility. -->
+<div id="dashLoading" class="alert alert-info" role="status">
+  <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+  <span>{% if ui_lang == 'en' %}Loading dashboard…{% else %}جارٍ تحميل لوحة التحكم…{% endif %}</span>
 </div>
 
 <!-- Error state -->
@@ -42,13 +45,13 @@
     </h2>
     <ul class="row g-4">
       <li class="col-12 col-md-6 col-lg-3">
-        <div class="col-12__container bg-primary-subtle border-primary border-opacity-25">
-          <div class="col-12__body text-center">
+        <div class="card h-100 shadow-sm bg-primary-subtle border-primary border-opacity-25">
+          <div class="card-body text-center">
             <i class="bi bi-file-earmark-text text-primary fs-1 mb-1"></i>
             <p class="fs-1 fw-bolder display-5 m-0 text-primary fw-bold" id="statReportsPending">0</p>
             <p class="m-0 text-primary fw-bold">{% if ui_lang == 'en' %}Daily reports to review{% else %}تقارير يومية للمراجعة{% endif %}</p>
           </div>
-          <div class="col-12__footer pt-0">
+          <div class="card-footer bg-transparent border-0 pt-0">
             <a href="/daily-reports" class="btn btn-primary w-100 d-flex justify-content-center align-items-center">
               {% if ui_lang == 'en' %}Review Now{% else %}راجع الآن{% endif %}
               <i class="bi bi-arrow-right ms-2"></i>
@@ -57,32 +60,32 @@
         </div>
       </li>
       <li class="col-12 col-md-6 col-lg-3">
-        <div class="col-12__container">
-          <div class="col-12__body text-center">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
             <i class="bi bi-calendar-x text-muted fs-1 mb-1"></i>
             <p class="fs-1 fw-bolder display-5 m-0 text-primary" id="statAbsencePending">0</p>
             <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Absence requests{% else %}طلبات غياب معلّقة{% endif %}</p>
           </div>
-          <div class="col-12__footer pt-0">
+          <div class="card-footer bg-transparent border-0 pt-0">
             <a href="/manager/absence-requests" class="btn btn-outline-primary w-100">{% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %}</a>
           </div>
         </div>
       </li>
       <li class="col-12 col-md-6 col-lg-3">
-        <div class="col-12__container">
-          <div class="col-12__body text-center">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
             <i class="bi bi-person-plus text-muted fs-1 mb-1"></i>
             <p class="fs-1 fw-bolder display-5 m-0 text-primary" id="statEnrollmentPending">0</p>
             <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Enrollment requests{% else %}طلبات تسجيل معلّقة{% endif %}</p>
           </div>
-          <div class="col-12__footer pt-0">
+          <div class="card-footer bg-transparent border-0 pt-0">
             <a href="/enrollments" class="btn btn-outline-primary w-100">{% if ui_lang == 'en' %}Review{% else %}مراجعة{% endif %}</a>
           </div>
         </div>
       </li>
       <li class="col-12 col-md-6 col-lg-3">
-        <div class="col-12__container bg-success-subtle border-success border-opacity-25">
-          <div class="col-12__body text-center">
+        <div class="card h-100 shadow-sm bg-success-subtle border-success border-opacity-25">
+          <div class="card-body text-center">
             <i class="bi bi-send-check text-success fs-1 mb-1"></i>
             <p class="fs-1 fw-bolder display-5 m-0 text-success fw-bold" id="statReportsSentToday">0</p>
             <p class="m-0 text-success fw-bold">{% if ui_lang == 'en' %}Reports sent today{% else %}تقارير أُرسلت اليوم{% endif %}</p>
@@ -100,11 +103,11 @@
     </h2>
     <ul class="row g-4">
       <li class="col-12 col-md-6 col-lg-4">
-        <div class="col-12__container d-flex flex-row align-items-center p-2">
+        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2">
           <div class="p-2 bg-primary-subtle text-primary rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
             <i class="bi bi-diagram-3 fs-1 fw-bold"></i>
           </div>
-          <div class="col-12__body p-0">
+          <div class="card-body p-0">
             <p class="m-0 text-secondary text-uppercase small fw-bold">{% if ui_lang == 'en' %}Active Classes{% else %}شعب صفية نشطة{% endif %}</p>
             <p class="fs-1 fw-bold m-0" id="statClasses">0</p>
             <a href="/classes" class="link-secondary mt-2 d-inline-block">{% if ui_lang == 'en' %}Manage classes →{% else %}إدارة الشعب الصفية ←{% endif %}</a>
@@ -112,11 +115,11 @@
         </div>
       </li>
       <li class="col-12 col-md-6 col-lg-4">
-        <div class="col-12__container d-flex flex-row align-items-center p-2">
-          <div class="p-2 bg-success-subtleer text-success-dark rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
+        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2">
+          <div class="p-2 bg-success-subtle text-success-dark rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
             <i class="bi bi-emoji-smile fs-1 fw-bold"></i>
           </div>
-          <div class="col-12__body p-0">
+          <div class="card-body p-0">
             <p class="m-0 text-secondary text-uppercase small fw-bold">{% if ui_lang == 'en' %}Enrolled Children{% else %}أطفال مسجّلون{% endif %}</p>
             <p class="fs-1 fw-bold m-0" id="statChildren">0</p>
             <a href="/children" class="link-secondary mt-2 d-inline-block">{% if ui_lang == 'en' %}View children →{% else %}عرض الأطفال ←{% endif %}</a>
@@ -124,11 +127,11 @@
         </div>
       </li>
       <li class="col-12 col-md-6 col-lg-4">
-        <div class="col-12__container d-flex flex-row align-items-center p-2">
-          <div class="p-2 bg-gold-lighter text-gold-dark rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
+        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2">
+          <div class="p-2 bg-warning-subtle text-gold rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
             <i class="bi bi-person-badge-fill fs-1 fw-bold"></i>
           </div>
-          <div class="col-12__body p-0">
+          <div class="card-body p-0">
             <p class="m-0 text-secondary text-uppercase small fw-bold">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</p>
             <p class="fs-1 fw-bold m-0" id="statSupervisors">0</p>
             <a href="/manager/supervisors" class="link-secondary mt-2 d-inline-block">{% if ui_lang == 'en' %}View coverage →{% else %}عرض التغطية ←{% endif %}</a>
@@ -145,13 +148,13 @@
     </h2>
     <div id="alertNoSupervisor" class="alert alert-warning" hidden>
       <div>
-        <h3 class="alert alert-heading">{% if ui_lang == 'en' %}Classes without a supervisor{% else %}شعب صفية بلا مشرف{% endif %}</h3>
+        <h3 class="alert-heading">{% if ui_lang == 'en' %}Classes without a supervisor{% else %}شعب صفية بلا مشرف{% endif %}</h3>
         <p class="mb-0" id="alertNoSupervisorList"></p>
       </div>
     </div>
     <div id="alertNearCapacity" class="alert alert-warning" hidden>
       <div>
-        <h3 class="alert alert-heading">{% if ui_lang == 'en' %}Classes at or near capacity{% else %}شعب صفية ممتلئة أو شبه ممتلئة{% endif %}</h3>
+        <h3 class="alert-heading">{% if ui_lang == 'en' %}Classes at or near capacity{% else %}شعب صفية ممتلئة أو شبه ممتلئة{% endif %}</h3>
         <p class="mb-0" id="alertNearCapacityList"></p>
       </div>
     </div>
@@ -165,29 +168,48 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_scripts %}
 <script>
 const UI_EN = {{ 'true' if ui_lang == 'en' else 'false' }};
+// Cookie auth is sent automatically (same-origin); the Bearer header is an
+// extra fallback for token-based sessions.
 const h = () => {
     const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
     return { 'Content-Type': 'application/json', ...(t ? { 'Authorization': `Bearer ${t}` } : {}) };
 };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function nameOf(item) { return UI_EN ? (item.name_en || item.name_ar) : (item.name_ar || item.name_en); }
+function nameOf(item) { item = item || {}; return UI_EN ? (item.name_en || item.name_ar || '') : (item.name_ar || item.name_en || ''); }
+
+// Hard ceiling on the loading state: even if the request hangs or the network
+// stalls, the spinner is replaced by the error/retry card after this timeout,
+// so the dashboard can never sit on "Loading…" forever.
+const DASH_TIMEOUT_MS = 15000;
 
 async function loadDashboard() {
     const loading = document.getElementById('dashLoading');
     const error = document.getElementById('dashError');
     const content = document.getElementById('dashContent');
-    loading.hidden = false; error.hidden = true;
+    loading.hidden = false; error.hidden = true; content.hidden = true;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), DASH_TIMEOUT_MS);
     try {
-        const res = await fetch('/api/manager/dashboard', { headers: h() });
-        if (!res.ok) throw new Error();
+        const res = await fetch('/api/manager/dashboard', { headers: h(), signal: controller.signal });
+        if (res.status === 401) {
+            // Session expired — send the user to log in rather than showing a
+            // generic error or looping forever.
+            window.location.href = '/login';
+            return;
+        }
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const d = await res.json();
 
         const s = d.summary || {};
-        document.getElementById('kgName').textContent = UI_EN ? (d.kindergarten.name_en || d.kindergarten.name_ar) : (d.kindergarten.name_ar || d.kindergarten.name_en);
+        const kg = d.kindergarten || {};
+        document.getElementById('kgName').textContent =
+            (UI_EN ? (kg.name_en || kg.name_ar) : (kg.name_ar || kg.name_en))
+            || (UI_EN ? 'My Kindergarten' : 'حضانتي');
         document.getElementById('todayDate').textContent = new Date().toLocaleDateString(UI_EN ? 'en-JO' : 'ar-JO');
         document.getElementById('statReportsPending').textContent = s.pending_daily_reports ?? 0;
         document.getElementById('statAbsencePending').textContent = s.pending_absence_requests ?? 0;
@@ -212,9 +234,12 @@ async function loadDashboard() {
 
         loading.hidden = true;
         content.hidden = false;
-    } catch {
+    } catch (err) {
+        console.error('Dashboard load failed:', err);
         loading.hidden = true;
         error.hidden = false;
+    } finally {
+        clearTimeout(timer);
     }
 }
 document.addEventListener('DOMContentLoaded', loadDashboard);
