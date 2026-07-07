@@ -137,6 +137,10 @@
     }
     defaultPeriod();
     document.getElementById("managerBenchmarkLoadBtn")?.addEventListener("click", loadSummary);
+    // Replaces inline onsubmit="event.preventDefault()" (F1/CSP).
+    document.querySelectorAll("form.js-noreload").forEach(function (f) {
+      f.addEventListener("submit", function (e) { e.preventDefault(); });
+    });
     loadSummary();
   }
 

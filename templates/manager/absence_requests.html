@@ -83,7 +83,7 @@
               </div>
           </div>
 
-          <form onsubmit="event.preventDefault();">
+          <form class="js-noreload">
               <label class="form-label" for="decisionNote">{% if ui_lang == 'en' %}Notes{% else %}ملاحظات{% endif %}</label>
               <textarea class="form-control" id="decisionNote" name="decisionNote" placeholder="{% if ui_lang == 'en' %}Optional notes...{% else %}ملاحظات اختيارية...{% endif %}"></textarea>
           </form>
@@ -102,6 +102,9 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // Replaces the inline submit-preventDefault handlers (F1/CSP).
+        document.querySelectorAll('form.js-noreload').forEach(f =>
+            f.addEventListener('submit', e => e.preventDefault()));
         let currentFilter = 'SUBMITTED';
         const isEnglishUi = (document.documentElement.lang || '').toLowerCase() === 'en';
 

@@ -15,9 +15,9 @@
         </nav>
     </div>
     <div class="mt-1">
-        <form onsubmit="event.preventDefault();">
+        <form class="js-noreload">
             <label class="visually-hidden" for="classFilter">تصفية بالشعبة</label>
-            <select class="form-select mt-0" id="classFilter" name="classFilter" onchange="loadChildren()">
+            <select class="form-select mt-0" id="classFilter" name="classFilter">
                 <option value="">{{ _('كل الشعب') }}</option>
             </select>
         </form>
@@ -36,9 +36,9 @@
             </h2>
         </div>
         <div class="col-auto col-md-5">
-            <form class="d-flex gap-2" role="search" onsubmit="event.preventDefault();">
+            <form class="d-flex gap-2 js-noreload" role="search">
               <label class="visually-hidden" for="searchInput">{{ _('بحث باسم الطفل…') }}</label>
-              <input class="form-control border-base-lighter" id="searchInput" type="search" name="search" oninput="filterTable()" placeholder="{{ _('بحث باسم الطفل…') }}">
+              <input class="form-control border-base-lighter" id="searchInput" type="search" name="search" placeholder="{{ _('بحث باسم الطفل…') }}">
               <button class="btn btn-primary bg-primary hover:bg-primary-dark" type="submit">
                 <span class="visually-hidden">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</span>
               </button>
@@ -87,7 +87,7 @@
             <p id="moveFromClassName" class="text-secondary mt-2"></p>
         </div>
 
-        <form onsubmit="event.preventDefault(); confirmMoveChild();">
+        <form id="moveChildForm">
           <label class="form-label" for="moveToClassSelect">{{ _('الشعبة الجديدة') }}</label>
           <select class="form-select" id="moveToClassSelect" name="moveToClassSelect"></select>
 
@@ -162,21 +162,25 @@ function renderTable(children) {
     }
     tbody.innerHTML = children.map(c => {
         const gender = c.gender === 'MALE' ? 'ذكر' : (c.gender === 'FEMALE' ? 'أنثى' : '—');
-        const fullName = esc(c.first_name + ' ' + c.last_name);
+        const rawName = c.first_name + ' ' + c.last_name;
+        const rawClass = c.class_name_ar || '';
+        const fullName = esc(rawName);
         const className = esc(c.class_name_ar || '—');
         const dob = esc(c.date_of_birth || '—');
-        const nameJson = JSON.stringify(c.first_name + ' ' + c.last_name);
-        const classJson = JSON.stringify(c.class_name_ar || '');
+        // User-supplied values go into data-* attributes via esc() (HTML-attribute
+        // safe); the delegated listener reads them back through dataset. With no
+        // inline handler, an injected event-handler payload in a name cannot execute.
         return `<tr>
             <td class="fw-bold">${fullName}</td>
             <td>${gender}</td>
             <td>${dob}</td>
             <td>${className}</td>
             <td class="text-center">
-                <a href="#moveChildModal" class="btn btn-outline-primary py-2"
+                <a href="#moveChildModal" class="btn btn-outline-primary py-2 js-move-child"
                         role="button" aria-controls="moveChildModal"
                         data-bs-toggle="modal" data-bs-target="#moveChildModal"
-                        onclick="setupMoveModal(${c.id},${nameJson},${c.class_id},${classJson})">
+                        data-child-id="${c.id}" data-child-name="${fullName}"
+                        data-from-class-id="${c.class_id}" data-from-class-name="${esc(rawClass)}">
                     <i class="bi bi-arrow-left-right me-2"></i>نقل
                 </a>
             </td>
@@ -225,6 +229,34 @@ async function confirmMoveChild() {
     finally { btn.disabled = false; }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// Delegated event wiring (replaces inline on* handlers — F1/CSP).
+function wireEvents() {
+    document.querySelectorAll('form.js-noreload').forEach(f =>
+        f.addEventListener('submit', e => e.preventDefault()));
+
+    const classFilter = document.getElementById('classFilter');
+    if (classFilter) classFilter.addEventListener('change', loadChildren);
+
+    const search = document.getElementById('searchInput');
+    if (search) search.addEventListener('input', filterTable);
+
+    const moveForm = document.getElementById('moveChildForm');
+    if (moveForm) moveForm.addEventListener('submit', e => { e.preventDefault(); confirmMoveChild(); });
+
+    // Delegated: the move button is re-rendered with each table refresh.
+    const tbody = document.getElementById('childrenTableBody');
+    if (tbody) tbody.addEventListener('click', e => {
+        const btn = e.target.closest('.js-move-child');
+        if (!btn) return;
+        setupMoveModal(
+            parseInt(btn.dataset.childId, 10),
+            btn.dataset.childName,
+            parseInt(btn.dataset.fromClassId, 10),
+            btn.dataset.fromClassName
+        );
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => { wireEvents(); init(); });
 </script>
 {% endblock %}

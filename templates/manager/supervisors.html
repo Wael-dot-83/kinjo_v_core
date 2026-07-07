@@ -10,7 +10,7 @@
         <p class="lead text-muted mt-0">{{ _('إدارة المشرفين وتعيينهم للشعب') }}</p>
     </div>
     <div class="mt-2">
-        <button class="btn btn-outline-primary" onclick="loadSupervisors()">
+        <button class="btn btn-outline-primary js-load-supervisors">
             <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
         </button>
     </div>
@@ -86,7 +86,7 @@
       <div class="modal-body">
         <p id="modal-description" class="text-secondary mb-3">{{ _('اختر الشعبة لتعيين المشرف فيها.') }}</p>
         <input type="hidden" id="assignSupId">
-        <form onsubmit="event.preventDefault(); confirmAssignClass();">
+        <form id="assignClassForm">
           <label class="form-label" for="assignClassSelect">{{ _('الشعبة') }}</label>
           <select class="form-select" id="assignClassSelect" name="assignClassSelect"></select>
 
@@ -171,7 +171,7 @@ function renderSupervisors(supervisors) {
                     <div class="mb-2">${classBadges}</div>
                 </div>
                 <div class="card-footer bg-transparent border-0">
-                    <a href="#assignClassModal" class="btn btn-outline-primary" role="button" aria-controls="assignClassModal" data-bs-toggle="modal" data-bs-target="#assignClassModal" onclick="setupAssignModal(${sup.id})">
+                    <a href="#assignClassModal" class="btn btn-outline-primary js-assign-class" role="button" aria-controls="assignClassModal" data-bs-toggle="modal" data-bs-target="#assignClassModal" data-sup-id="${sup.id}">
                         <i class="bi bi-plus-circle me-2"></i>تعيين شعبة
                     </a>
                 </div>
@@ -209,7 +209,20 @@ async function confirmAssignClass() {
     } catch { alert('خطأ في الشبكة'); }
 }
 
-document.addEventListener('DOMContentLoaded', loadSupervisors);
+document.addEventListener('DOMContentLoaded', () => {
+    // Delegated wiring (replaces inline on* handlers — F1/CSP).
+    document.querySelectorAll('.js-load-supervisors').forEach(b =>
+        b.addEventListener('click', loadSupervisors));
+    const assignForm = document.getElementById('assignClassForm');
+    if (assignForm) assignForm.addEventListener('submit', e => { e.preventDefault(); confirmAssignClass(); });
+    const container = document.getElementById('supervisorsContainer');
+    if (container) container.addEventListener('click', e => {
+        const btn = e.target.closest('.js-assign-class');
+        if (!btn) return;
+        setupAssignModal(parseInt(btn.dataset.supId, 10));
+    });
+    loadSupervisors();
+});
 
 function escHtml(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

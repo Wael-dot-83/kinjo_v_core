@@ -28,7 +28,7 @@
   <div>
     <p class="mb-0">
       {% if ui_lang == 'en' %}Could not load the dashboard. {% else %}تعذّر تحميل لوحة التحكم. {% endif %}
-      <button type="button" class="btn btn-link text-decoration-none" onclick="loadDashboard()">
+      <button type="button" class="btn btn-link text-decoration-none" id="dashRetryBtn">
         {% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}
       </button>
     </p>
@@ -242,6 +242,10 @@ async function loadDashboard() {
         clearTimeout(timer);
     }
 }
-document.addEventListener('DOMContentLoaded', loadDashboard);
+document.addEventListener('DOMContentLoaded', () => {
+    const retry = document.getElementById('dashRetryBtn');
+    if (retry) retry.addEventListener('click', loadDashboard);
+    loadDashboard();
+});
 </script>
 {% endblock %}

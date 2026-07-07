@@ -15,7 +15,7 @@
         </nav>
     </div>
     <div class="mt-1">
-        <button class="btn btn-outline-primary" onclick="loadKPI()">
+        <button class="btn btn-outline-primary js-load-kpi">
             <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
         </button>
     </div>
@@ -26,7 +26,7 @@
 
 <!-- Date Range Picker -->
 <div class="col-12 p-3 mb-4 bg-white border border-base-lighter">
-    <form class="--large w-100" onsubmit="event.preventDefault(); loadKPI();">
+    <form class="--large w-100" id="kpiFilterForm">
         <div class="row g-2 align-items-end">
             <div class="col-auto">
                 <label class="form-label mt-0 fw-bold" for="dateFrom">{{ _('الفترة:') }} {{ _('من تاريخ') }}</label>
@@ -42,9 +42,9 @@
                 </button>
             </div>
             <div class="col-auto d-flex g-1 mt-1">
-                <button type="button" class="btn btn-link text-decoration-none text-secondary p-1" onclick="setRange(7)">{{ _('7 أيام') }}</button>
-                <button type="button" class="btn btn-link text-decoration-none text-secondary p-1" onclick="setRange(30)">{{ _('30 يوم') }}</button>
-                <button type="button" class="btn btn-link text-decoration-none text-secondary p-1" onclick="setRange(90)">{{ _('90 يوم') }}</button>
+                <button type="button" class="btn btn-link text-decoration-none text-secondary p-1 js-set-range" data-range="7">{{ _('7 أيام') }}</button>
+                <button type="button" class="btn btn-link text-decoration-none text-secondary p-1 js-set-range" data-range="30">{{ _('30 يوم') }}</button>
+                <button type="button" class="btn btn-link text-decoration-none text-secondary p-1 js-set-range" data-range="90">{{ _('90 يوم') }}</button>
             </div>
         </div>
     </form>
@@ -58,7 +58,7 @@
 <!-- Error -->
 <div id="kpiError" class="col-12 p-5 mb-4 bg-white border border-secondary-dark text-center d-none" role="alert" aria-live="assertive">
     <p class="text-secondary fw-bold">{{ _('تعذّر تحميل البيانات') }}</p>
-    <button class="btn btn-link text-decoration-none" onclick="loadKPI()">
+    <button class="btn btn-link text-decoration-none js-load-kpi">
         <i class="bi bi-arrow-clockwise me-2"></i>{{ _('إعادة المحاولة') }}
     </button>
 </div>
@@ -191,7 +191,15 @@
         loadKPI();
     };
 
-    document.addEventListener('DOMContentLoaded', () => setRange(30));
+    document.addEventListener('DOMContentLoaded', () => {
+        // Delegated wiring (replaces inline on* handlers — F1/CSP).
+        document.querySelectorAll('.js-load-kpi').forEach(b => b.addEventListener('click', loadKPI));
+        document.querySelectorAll('.js-set-range').forEach(b =>
+            b.addEventListener('click', () => setRange(parseInt(b.dataset.range, 10))));
+        const form = document.getElementById('kpiFilterForm');
+        if (form) form.addEventListener('submit', e => { e.preventDefault(); loadKPI(); });
+        setRange(30);
+    });
 
     window.loadKPI = async function() {
         const from  = document.getElementById('dateFrom').value;

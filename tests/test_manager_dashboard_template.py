@@ -19,6 +19,22 @@ TEMPLATES = Path(__file__).resolve().parents[1] / "templates"
 MANAGER_TEMPLATES = sorted((TEMPLATES / "manager").glob("*.html"))
 
 
+def test_no_inline_event_handlers_in_manager_templates():
+    """F1 — no inline on* event handlers in manager templates. They are an XSS
+    surface (user data interpolated into an executable attribute) and block CSP
+    from dropping 'unsafe-inline'. Handlers must be delegated listeners bound to
+    data-* attributes instead."""
+    # match on<event>= as an HTML attribute, not substrings like "button="
+    handler = re.compile(r'\son(click|change|input|submit|mouseover|mouseout|'
+                         r'keyup|keydown|load|focus|blur|error)\s*=')
+    offenders = []
+    for t in MANAGER_TEMPLATES:
+        for i, line in enumerate(t.read_text(encoding="utf-8").splitlines(), 1):
+            if handler.search(line):
+                offenders.append(f"{t.name}:{i}: {line.strip()[:80]}")
+    assert not offenders, "inline event handlers found:\n" + "\n".join(offenders)
+
+
 def test_dashboard_script_uses_block_rendered_by_base():
     base = (TEMPLATES / "manager_base.html").read_text(encoding="utf-8")
     dash = (TEMPLATES / "manager" / "dashboard.html").read_text(encoding="utf-8")
