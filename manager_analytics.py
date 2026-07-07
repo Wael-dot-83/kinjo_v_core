@@ -68,6 +68,71 @@ class ManagerAnalyticsService:
         return count
 
     @staticmethod
+    def _compute_daily_attendance_rates(
+        db: Session,
+        kindergarten_id: int,
+        start_date: date,
+        end_date: date,
+    ) -> Dict[date, float]:
+        """Per-day attendance rate (%) for every day in [start_date, end_date].
+
+        Equivalent to calling compute_attendance_rate(db, kg, d, d) for each day
+        but with a fixed small number of queries instead of one set per day (B3):
+        one for active enrollments, one grouped attended-count query, one for the
+        calendar. Closed days and days with no active enrollments are 0.0, and
+        every day in the range is present (missing attendance => 0.0).
+        """
+        result: Dict[date, float] = {}
+        if end_date < start_date:
+            return result
+
+        active = db.query(
+            func.count(models.EnrollmentApplication.id)
+        ).filter(
+            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).scalar() or 0
+
+        attended_by_day = {}
+        if active:
+            rows = db.query(
+                models.AttendanceLog.date,
+                func.count(models.AttendanceLog.id),
+            ).join(
+                models.Child
+            ).join(
+                models.EnrollmentApplication
+            ).filter(
+                models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+                models.AttendanceLog.date >= start_date,
+                models.AttendanceLog.date <= end_date,
+                models.AttendanceLog.status.in_(_ATTENDED_STATUSES),
+            ).group_by(models.AttendanceLog.date).all()
+            attended_by_day = {row[0]: row[1] for row in rows}
+
+        cal = db.query(
+            models.OperatingCalendar.date,
+            models.OperatingCalendar.is_open,
+        ).filter(
+            models.OperatingCalendar.kindergarten_id == kindergarten_id,
+            models.OperatingCalendar.date >= start_date,
+            models.OperatingCalendar.date <= end_date,
+        ).all()
+        explicit = {row[0]: bool(row[1]) for row in cal}
+
+        cursor = start_date
+        while cursor <= end_date:
+            is_open = explicit[cursor] if cursor in explicit else cursor.weekday() not in (4, 5)
+            if active == 0 or not is_open:
+                result[cursor] = 0.0
+            else:
+                fraction = attended_by_day.get(cursor, 0) / active
+                fraction = max(0.0, min(1.0, fraction))
+                result[cursor] = round(fraction * 100, 2)
+            cursor += timedelta(days=1)
+        return result
+
+    @staticmethod
     def compute_enrollment_trend(
         db: Session,
         kindergarten_id: int,
@@ -373,15 +438,16 @@ class ManagerAnalyticsService:
         today = _today()
         start_date = today - timedelta(days=lookback_days)
 
-        # Get historical attendance rates
+        # Get historical attendance rates — one batched query set, not one per
+        # day (B3).
+        daily = ManagerAnalyticsService._compute_daily_attendance_rates(
+            db, kindergarten_id, start_date, today
+        )
         historical = []
         current = start_date
         rates = []
-
         while current <= today:
-            rate = ManagerAnalyticsService.compute_attendance_rate(
-                db, kindergarten_id, current, current
-            )
+            rate = daily.get(current, 0.0)
             historical.append({"date": current.isoformat(), "rate": rate})
             rates.append(rate)
             current += timedelta(days=1)
@@ -457,15 +523,14 @@ class ManagerAnalyticsService:
         today = _today()
         start_date = today - timedelta(days=lookback_days)
 
-        # Collect attendance rates
+        # Collect attendance rates — one batched query set, not one per day (B3).
+        daily = ManagerAnalyticsService._compute_daily_attendance_rates(
+            db, kindergarten_id, start_date, today
+        )
         current = start_date
         rates = []
-
         while current <= today:
-            rate = ManagerAnalyticsService.compute_attendance_rate(
-                db, kindergarten_id, current, current
-            )
-            rates.append({"date": current, "rate": rate})
+            rates.append({"date": current, "rate": daily.get(current, 0.0)})
             current += timedelta(days=1)
 
         if len(rates) < 3:
