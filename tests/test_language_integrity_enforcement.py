@@ -68,7 +68,8 @@ def test_manager_absence_requests_page_renders_english_shell_when_cookie_is_en(c
     assert response.status_code == 200
     assert 'lang="en"' in response.text
     assert "Review Absence Requests" in response.text
-    assert "Under Review" in response.text
+    # Tab label for SUBMITTED requests (template renders "Awaiting Manager Review")
+    assert "Awaiting Manager Review" in response.text
 
 
 def test_change_password_page_renders_english_when_cookie_is_en(client, admin_token):
