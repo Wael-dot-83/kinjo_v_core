@@ -63,6 +63,7 @@ class UserStatus(str, enum.Enum):
 class KindergartenStatus(str, enum.Enum):
     DRAFT = "DRAFT"
     ACTIVE = "ACTIVE"
+    FROZEN = "FROZEN"  # Reversible operational suspension (distinct from INACTIVE/archived)
     INACTIVE = "INACTIVE"
 
 
@@ -289,6 +290,10 @@ class Kindergarten(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     status = Column(Enum(KindergartenStatus), nullable=False, default=KindergartenStatus.DRAFT)
+    # Freeze = reversible operational hold. frozen_at is the marker of record;
+    # frozen_reason is an optional admin-supplied justification.
+    frozen_at = Column(DateTime(timezone=True), nullable=True)
+    frozen_reason = Column(String(255), nullable=True)
     operating_hours_start = Column(String(5), nullable=True)
     operating_hours_end = Column(String(5), nullable=True)
     license_number = Column(String(100), nullable=True)
@@ -611,6 +616,12 @@ class Class(Base):
 
 class SupervisorAssignment(Base):
     __tablename__ = "supervisor_assignments"
+    __table_args__ = (
+        # Active-assignment lookups filter on (class_id|supervisor_id, deleted_at)
+        # — see routers/manager.py. Composite indexes keep those O(log n) (D2).
+        Index("ix_supervisor_assignments_class_deleted", "class_id", "deleted_at"),
+        Index("ix_supervisor_assignments_supervisor_deleted", "supervisor_id", "deleted_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     class_id = Column(Integer, ForeignKey("classes.id"), nullable=False)
