@@ -198,9 +198,16 @@
     }
     
     function updateCounts(data) {
-        // Update badge counts
-        document.getElementById('countAll').textContent = data.total || 0;
-        // These would come from the API response
+        // status_counts is keyed by the UPPERCASE enum value and is computed
+        // unfiltered, so every badge shows its true total regardless of the
+        // active tab. Fall back to data.total only if the API omits it.
+        const sc = data.status_counts || {};
+        const sum = Object.values(sc).reduce((a, b) => a + (b || 0), 0);
+        document.getElementById('countAll').textContent = sum || data.total || 0;
+        document.getElementById('countPending').textContent = sc.PENDING_REVIEW || 0;
+        document.getElementById('countAccepted').textContent = sc.ACCEPTED || 0;
+        document.getElementById('countRejected').textContent = sc.REJECTED || 0;
+        document.getElementById('countWaitlist').textContent = sc.WAITLISTED || 0;
     }
     
     function renderEnrollments(data) {
@@ -241,7 +248,7 @@
                         <button class="btn btn-outline-primary" onclick="viewEnrollment(${e.id})" title="عرض">
                             <i class="bi bi-eye"></i>
                         </button>
-                        ${e.status === 'pending_review' || e.status === 'submitted' ? `
+                        ${['PENDING_REVIEW', 'SUBMITTED'].includes(String(e.status).toUpperCase()) ? `
                             <button class="btn btn-outline-success" onclick="openReviewModal(${e.id})" title="مراجعة">
                                 <i class="bi bi-check-square"></i>
                             </button>

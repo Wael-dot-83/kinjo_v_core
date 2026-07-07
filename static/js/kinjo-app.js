@@ -209,7 +209,10 @@ function getStatusBadge(status) {
     },
   };
 
-  const info = statusMap[status] || { class: "bg-secondary", text: status };
+  // Status values arrive from the API in UPPERCASE (e.g. "PENDING_REVIEW",
+  // "ACTIVE"); the map keys are lowercase, so normalise before lookup.
+  const key = String(status ?? "").toLowerCase();
+  const info = statusMap[key] || { class: "bg-secondary", text: status };
   return `<span class="badge ${info.class}">${info.text}</span>`;
 }
 

@@ -101,6 +101,28 @@ def list_enrollments(
     # Get total count
     total = query.count()
 
+    # Per-status counts for the tab badges. Computed on the same role/kindergarten
+    # scope but WITHOUT the status filter, so every tab shows its true total
+    # regardless of which tab is active. Single GROUP BY query — no N+1.
+    count_q = db.query(
+        models.EnrollmentApplication.status,
+        func.count(models.EnrollmentApplication.id),
+    )
+    if current_user.role == models.UserRole.ADMIN:
+        if kindergarten_id:
+            count_q = count_q.filter(
+                models.EnrollmentApplication.kindergarten_id == kindergarten_id
+            )
+    else:
+        # MANAGER / SUPERVISOR are already scoped to their kindergarten above
+        count_q = count_q.filter(
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id
+        )
+    status_counts = {
+        (s.value if hasattr(s, "value") else str(s)): c
+        for s, c in count_q.group_by(models.EnrollmentApplication.status).all()
+    }
+
     # Apply pagination
     results = query.offset(skip).limit(limit).all()
 
@@ -122,6 +144,7 @@ def list_enrollments(
     return {
         "enrollments": enrollments,
         "total": total,
+        "status_counts": status_counts,
         "skip": skip,
         "limit": limit
     }
