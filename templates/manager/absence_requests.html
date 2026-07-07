@@ -113,11 +113,13 @@
         }
 
         function authHeaders() {
+            // Auth is the httpOnly session cookie; add the CSRF double-submit
+            // token for the review POST (F2).
             const headers = { 'Content-Type': 'application/json' };
-            const token = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-            }
+            try {
+                const csrf = AuthStorage.getCookie(CSRF_CONFIG.cookieName);
+                if (csrf) headers['X-CSRF-Token'] = csrf;
+            } catch (e) {}
             return headers;
         }
 

@@ -109,10 +109,12 @@
 
 {% block extra_js %}
 <script>
+// Auth is the httpOnly session cookie (kinjo_session); add the CSRF
+// double-submit token for the assign-class POST (F2).
 const h = () => {
-    const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-    return t ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }
-             : { 'Content-Type': 'application/json' };
+    let csrf = '';
+    try { csrf = AuthStorage.getCookie(CSRF_CONFIG.cookieName) || ''; } catch (e) {}
+    return { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) };
 };
 
 let _classes = [];

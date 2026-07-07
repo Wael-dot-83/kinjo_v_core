@@ -35,6 +35,19 @@ def test_no_inline_event_handlers_in_manager_templates():
     assert not offenders, "inline event handlers found:\n" + "\n".join(offenders)
 
 
+def test_no_localstorage_token_or_bearer_in_manager_templates():
+    """F2 — manager pages must authenticate via the httpOnly session cookie, not
+    a JWT read from localStorage/sessionStorage or injected as a Bearer header."""
+    bad = re.compile(r"(localStorage|sessionStorage)\.getItem\(\s*['\"]kinjo_token"
+                     r"|Authorization['\"]?\s*[:=].*Bearer|Bearer \$\{")
+    offenders = []
+    for t in MANAGER_TEMPLATES:
+        for i, line in enumerate(t.read_text(encoding="utf-8").splitlines(), 1):
+            if bad.search(line):
+                offenders.append(f"{t.name}:{i}: {line.strip()[:80]}")
+    assert not offenders, "localStorage/Bearer auth found in manager templates:\n" + "\n".join(offenders)
+
+
 def test_dashboard_script_uses_block_rendered_by_base():
     base = (TEMPLATES / "manager_base.html").read_text(encoding="utf-8")
     dash = (TEMPLATES / "manager" / "dashboard.html").read_text(encoding="utf-8")

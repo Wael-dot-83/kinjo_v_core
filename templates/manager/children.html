@@ -107,9 +107,13 @@
 
 {% block extra_js %}
 <script>
+// Auth is the httpOnly session cookie (kinjo_session), sent automatically on
+// same-origin fetch. For state-changing requests we add the CSRF double-submit
+// token read from the JS-readable kinjo_csrf_token cookie (F2).
 const h = () => {
-    const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-    return { 'Content-Type': 'application/json', ...(t ? { 'Authorization': `Bearer ${t}` } : {}) };
+    let csrf = '';
+    try { csrf = AuthStorage.getCookie(CSRF_CONFIG.cookieName) || ''; } catch (e) {}
+    return { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) };
 };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 

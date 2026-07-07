@@ -240,9 +240,13 @@
     };
 
     function getHeaders() {
-        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+        // Auth is the httpOnly session cookie; add the CSRF double-submit token
+        // for the send/delete PUT/DELETE requests (F2).
         const h = { 'Content-Type': 'application/json' };
-        if (t) h['Authorization'] = `Bearer ${t}`;
+        try {
+            const csrf = AuthStorage.getCookie(CSRF_CONFIG.cookieName);
+            if (csrf) h['X-CSRF-Token'] = csrf;
+        } catch (e) {}
         return h;
     }
 

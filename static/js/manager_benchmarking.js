@@ -1,14 +1,8 @@
 (function () {
-  function tokenValue() {
-    return localStorage.getItem("kinjo_token") || sessionStorage.getItem("kinjo_token") || "";
-  }
-
   async function apiRequest(url) {
+    // Auth is the httpOnly session cookie (kinjo_session), sent automatically
+    // on same-origin fetch. Benchmarking is read-only, so no CSRF token needed (F2).
     const headers = { "Content-Type": "application/json" };
-    const token = tokenValue();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
 
     let response = null;
     if (typeof window.fetchWithAuth === "function") {

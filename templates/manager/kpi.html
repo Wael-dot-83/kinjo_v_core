@@ -178,10 +178,6 @@
         report_submission_rate:    'bi-journal-check',
     };
 
-    function getToken() {
-        return localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token') || '';
-    }
-
     window.setRange = function(days) {
         const to   = new Date();
         const from = new Date();
@@ -211,7 +207,8 @@
 
         try {
             const url  = `/api/manager/dashboard/enhanced?period_start=${from}&period_end=${to}&locale=${LOCALE}`;
-            const resp = await fetch(url, { headers: { Authorization: `Bearer ${getToken()}` } });
+            // Auth is the httpOnly session cookie, sent automatically (F2).
+            const resp = await fetch(url);
             if (!resp.ok) throw new Error(resp.statusText);
             const data = await resp.json();
 
