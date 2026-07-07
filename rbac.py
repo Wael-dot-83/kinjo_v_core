@@ -101,12 +101,13 @@ def assert_supervisor_owns_class(supervisor_id: int, class_id: int, db: Session)
 # ---------------------------------------------------------------------------
 
 def assert_manager_owns_kindergarten(manager: User, kindergarten_id: int) -> None:
-    """Raise 403 if the manager is not assigned to this kindergarten."""
-    if manager.kindergarten_id != kindergarten_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Kindergarten is outside your management scope.",
-        )
+    """Authorize a manager's access to a kindergarten.
+
+    Delegates to the canonical scope check (S2): a cross-tenant target returns
+    404 (not 403) so we never reveal that another kindergarten's resource exists.
+    """
+    from dependencies import ManagerScope
+    ManagerScope.assert_kindergarten_access(manager, kindergarten_id)
 
 
 # ---------------------------------------------------------------------------

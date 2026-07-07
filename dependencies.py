@@ -267,6 +267,83 @@ require_admin_or_manager = require_role(models.UserRole.ADMIN, models.UserRole.M
 require_supervisor = require_role(models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR)
 
 
+# ---------------------------------------------------------------------------
+# Manager / supervisor kindergarten scoping — single source of truth (S2)
+# ---------------------------------------------------------------------------
+
+class ManagerScope:
+    """Canonical kindergarten-scope checks for manager/supervisor endpoints.
+
+    Consolidates the previously-overlapping helpers (manager_scope.ManagerScope,
+    rbac.assert_manager_owns_kindergarten, routers.manager._require_manager) into
+    one place with one policy:
+
+    - ADMIN may access any kindergarten.
+    - MANAGER/SUPERVISOR are restricted to their own kindergarten; a cross-tenant
+      target returns 404 (never 403 — do not leak that the resource exists).
+    - A non-admin with no kindergarten association is a misconfigured account: 400.
+    """
+
+    _SCOPED_ROLES = (models.UserRole.MANAGER, models.UserRole.SUPERVISOR)
+
+    @staticmethod
+    def validate_manager(user: models.User) -> None:
+        """Require MANAGER role with a kindergarten assigned."""
+        if user.role != models.UserRole.MANAGER:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="This operation requires manager role")
+        if not user.kindergarten_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Manager must be assigned to a kindergarten")
+
+    @staticmethod
+    def get_manager_kindergarten_id(user: models.User) -> int:
+        """Return the caller's own kindergarten id (manager/supervisor)."""
+        if user.role == models.UserRole.ADMIN:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Admins do not have a single assigned kindergarten")
+        if not user.kindergarten_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="User must be assigned to a kindergarten")
+        return user.kindergarten_id
+
+    @staticmethod
+    def assert_kindergarten_access(user: models.User, target_kindergarten_id: int) -> None:
+        """Authorize access to a specific kindergarten (IDOR guard)."""
+        if user.role == models.UserRole.ADMIN:
+            return
+        if user.role in ManagerScope._SCOPED_ROLES:
+            if not user.kindergarten_id:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                    detail="User must be assigned to a kindergarten")
+            if user.kindergarten_id != target_kindergarten_id:
+                # 404, not 403 — do not reveal that another tenant's resource exists.
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                    detail="Resource not found")
+            return
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Insufficient permissions")
+
+
+def require_manager(current_user: models.User = Depends(get_current_user)) -> models.User:
+    """FastAPI dependency for manager-only endpoints: MANAGER role + own KG.
+
+    Returns 403 for a non-manager and 403 for a manager with no kindergarten
+    association (a NULL-scoped account has nothing in scope). 403 (rather than
+    the spec's suggested 400) is kept here so all manager routes agree with the
+    existing /api/manager/dashboard and /api/absence-requests guards; moving the
+    whole app to 400 would require touching the app-wide validators.validate_
+    manager_role callers, which is outside this change.
+    """
+    if current_user.role != models.UserRole.MANAGER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Manager access only.")
+    if current_user.kindergarten_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No kindergarten is associated with this account.")
+    return current_user
+
+
 class RedirectToLogin(Exception):
     """Exception to trigger redirect to login page"""
     def __init__(self, redirect_url: str = "/login"):

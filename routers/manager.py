@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, require_manager as _require_manager
 from models import (
     AuditLog,
     Class,
@@ -37,20 +37,6 @@ from audit_actions import AuditAction
 import validators
 
 router = APIRouter(prefix="/api/manager", tags=["manager"])
-
-
-def _require_manager(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.MANAGER:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager access only.")
-    if current_user.kindergarten_id is None:
-        # Managers are permanently bound to one kindergarten. An account
-        # without a kindergarten has nothing in scope and must be rejected
-        # (never produce a 500 from a NULL-scoped query).
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No kindergarten is associated with this account.",
-        )
-    return current_user
 
 
 def _get_class_or_403(class_id: int, manager: User, db: Session) -> Class:

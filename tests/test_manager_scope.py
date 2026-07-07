@@ -47,9 +47,19 @@ class TestValidateKindergartenAccess:
             ManagerScope.validate_kindergarten_access(_user(models.UserRole.MANAGER, kindergarten_id=1), 2)
         assert exc.value.status_code == 404
 
-    def test_non_manager_non_admin_rejected(self):
+    def test_supervisor_scoped_to_own_kindergarten(self):
+        # Per the unified S2 policy, MANAGER/SUPERVISOR are scoped: a supervisor
+        # may access their own kindergarten ...
+        ManagerScope.validate_kindergarten_access(_user(models.UserRole.SUPERVISOR, kindergarten_id=1), 1)
+        # ... but a cross-tenant target is 404 (no existence leak).
         with pytest.raises(HTTPException) as exc:
-            ManagerScope.validate_kindergarten_access(_user(models.UserRole.SUPERVISOR, kindergarten_id=1), 1)
+            ManagerScope.validate_kindergarten_access(_user(models.UserRole.SUPERVISOR, kindergarten_id=1), 2)
+        assert exc.value.status_code == 404
+
+    def test_unscoped_role_rejected(self):
+        # A role that is neither admin nor manager/supervisor is forbidden.
+        with pytest.raises(HTTPException) as exc:
+            ManagerScope.validate_kindergarten_access(_user(models.UserRole.PARENT, kindergarten_id=1), 1)
         assert exc.value.status_code == 403
 
 
@@ -83,3 +93,35 @@ class TestDeadCodeRemoved:
         ]
         for name in dead_methods:
             assert not hasattr(ManagerScope, name), f"{name} should have been removed as dead code"
+
+
+class TestS2Consolidation:
+    """S2 — one canonical scope implementation, and the old helpers delegate to it."""
+
+    def test_manager_scope_is_the_dependencies_one(self):
+        from dependencies import ManagerScope as CanonicalScope
+        from manager_scope import ManagerScope as ReexportedScope
+        assert ReexportedScope is CanonicalScope
+
+    def test_rbac_ownership_check_returns_404_cross_tenant(self):
+        import rbac
+        # own kindergarten -> allowed
+        rbac.assert_manager_owns_kindergarten(_user(models.UserRole.MANAGER, kindergarten_id=1), 1)
+        # cross-tenant -> 404 (no existence leak), not 403
+        with pytest.raises(HTTPException) as exc:
+            rbac.assert_manager_owns_kindergarten(_user(models.UserRole.MANAGER, kindergarten_id=1), 2)
+        assert exc.value.status_code == 404
+
+    def test_require_manager_dependency_gates_role_and_kg(self):
+        from dependencies import require_manager
+        # manager with kg -> returns the user
+        u = _user(models.UserRole.MANAGER, kindergarten_id=1)
+        assert require_manager(u) is u
+        # non-manager -> 403
+        with pytest.raises(HTTPException) as exc:
+            require_manager(_user(models.UserRole.SUPERVISOR, kindergarten_id=1))
+        assert exc.value.status_code == 403
+        # manager with no kg -> 403
+        with pytest.raises(HTTPException) as exc:
+            require_manager(_user(models.UserRole.MANAGER, kindergarten_id=None))
+        assert exc.value.status_code == 403

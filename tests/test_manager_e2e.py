@@ -299,12 +299,13 @@ class TestManagerWorkflowE2E:
             )
             assert r.status_code in (403, 404), r.text
 
-            # Assigning a supervisor to a KG B class is rejected.
+            # Assigning a supervisor to a KG B class is rejected. Cross-tenant
+            # access returns 404 (no existence leak) after the S2 scope unification.
             r = client.post(
                 "/api/manager/classes/assign-supervisor",
                 json={"class_id": scenario["class_b"].id, "supervisor_id": scenario["sup_b"].id},
             )
-            assert r.status_code in (400, 403, 422), r.text
+            assert r.status_code in (400, 403, 404, 422), r.text
 
             # KG B child must not appear in Manager A's children list.
             r = client.get("/api/manager/children")

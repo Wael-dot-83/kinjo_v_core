@@ -243,25 +243,29 @@ class TestManagerE2EWorkflow:
                          "ABSENCE_REQUEST_APPROVED"):
             assert expected in actions, f"missing audit event {expected}"
 
-        # 12. Isolation: every route used above rejects KG B resources.
+        # 12. Isolation: every route used above rejects KG B resources. After the
+        # S2 scope unification, cross-tenant access to a class/child resource
+        # returns 404 (no existence leak); other guards still return 403. Both are
+        # valid denials, so accept either.
+        _DENIED = (403, 404)
         r = client.get(f"/api/classes/{B['cls'].id}")
-        assert r.status_code == 403
+        assert r.status_code in _DENIED
         r = client.post("/api/manager/classes/assign-supervisor", json={
             "class_id": B["cls"].id, "supervisor_id": A["supervisor"].id,
         })
-        assert r.status_code == 403
+        assert r.status_code in _DENIED
         r = client.post("/api/manager/children/move-class", json={
             "child_id": B["child"].id, "from_class_id": B["cls"].id,
             "to_class_id": new_class_id,
         })
-        assert r.status_code == 403
+        assert r.status_code in _DENIED
         r = client.put(f"/api/manager/daily-reports/{B['report'].id}",
                        json={"notes": "تسلل"})
-        assert r.status_code == 403
+        assert r.status_code in _DENIED
         r = client.put(f"/api/manager/daily-reports/{B['report'].id}/send-to-parents")
-        assert r.status_code == 403
+        assert r.status_code in _DENIED
         r = client.post(f"/api/absence-requests/{B['absence'].id}/approve", json={})
-        assert r.status_code == 403
+        assert r.status_code in _DENIED
         r = client.get("/api/manager/daily-reports")
         assert all(rep["id"] != B["report"].id for rep in r.json())
 
