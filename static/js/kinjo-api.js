@@ -528,10 +528,6 @@ class KinJoAPI {
     return this.post(`/api/manager/reports/${reportId}/reject`, { reason });
   }
 
-  async deleteClass(classId) {
-    return this.delete(`/api/manager/classes/${classId}`);
-  }
-
   // =========================================================================
   // Admin Endpoints
   // =========================================================================

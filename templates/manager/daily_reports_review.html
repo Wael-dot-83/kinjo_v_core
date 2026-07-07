@@ -112,8 +112,8 @@
                 <label class="usa-label margin-top-0" for="filterStatus">{{ _('الحالة') }}</label>
                 <select id="filterStatus" class="usa-select margin-top-1">
                     <option value="">{{ _('— جميع الحالات —') }}</option>
-                    <option value="SUBMITTED">{{ _('بانتظار المراجعة') }}</option>
-                    <option value="SENT_TO_PARENT">{{ _('أُرسل للوالدين') }}</option>
+                    <option value="SUBMITTED">{{ _('بانتظار مراجعة المدير') }}</option>
+                    <option value="SENT_TO_PARENT">{{ _('تم الإرسال إلى ولي الأمر') }}</option>
                 </select>
             </div>
             <div class="tablet:grid-col-2 display-flex grid-gap-1">
@@ -147,7 +147,7 @@
         <p class="text-bold">{{ _('لا توجد تقارير تطابق الفلاتر المحددة') }}</p>
     </div>
 
-    <div id="tableError" class="text-center padding-y-5 display-none">
+    <div id="tableError" class="text-center padding-y-5 display-none" role="alert" aria-live="assertive">
         <p class="text-secondary-dark">{{ _('تعذّر تحميل التقارير') }}</p>
         <button class="usa-button usa-button--unstyled" onclick="loadReports()">
             <i class="bi bi-arrow-clockwise margin-right-1"></i>{{ _('إعادة المحاولة') }}
@@ -156,6 +156,7 @@
 
     <div id="tableWrap" class="display-none overflow-x-auto">
         <table class="usa-table usa-table--striped width-full" aria-label="{{ _('جدول التقارير اليومية') }}">
+            <caption class="usa-sr-only">{{ _('جدول التقارير اليومية') }}</caption>
             <thead>
                 <tr>
                     <th scope="col">{{ _('التاريخ') }}</th>
@@ -173,7 +174,7 @@
 </div>
 
 <!-- Send to Parents Confirm Modal (USWDS) -->
-<div class="usa-modal" id="sendParentsModal" aria-labelledby="sendParentsModalLabel">
+<div class="usa-modal" id="sendParentsModal" aria-labelledby="sendParentsModalLabel" aria-modal="true">
   <div class="usa-modal__content">
     <div class="usa-modal__main">
       <h2 class="usa-modal__heading" id="sendParentsModalLabel">
@@ -201,7 +202,7 @@
 </div>
 
 <!-- Delete Confirm Modal (USWDS) -->
-<div class="usa-modal" id="deleteReportModal" aria-labelledby="deleteReportModalLabel">
+<div class="usa-modal" id="deleteReportModal" aria-labelledby="deleteReportModalLabel" aria-modal="true">
   <div class="usa-modal__content">
     <div class="usa-modal__main">
       <h2 class="usa-modal__heading text-secondary-dark" id="deleteReportModalLabel">
@@ -238,10 +239,10 @@
     let pendingDeleteId  = null;
 
     const STATUS_BADGE = {
-        'SUBMITTED':      `<span class="usa-tag bg-primary-light text-primary-dark">{{ _('بانتظار المراجعة') }}</span>`,
-        'SENT_TO_PARENT': `<span class="usa-tag bg-green">{{ _('أُرسل للوالدين') }}</span>`,
+        'SUBMITTED':      `<span class="usa-tag bg-primary-light text-primary-dark">{{ _('بانتظار مراجعة المدير') }}</span>`,
+        'SENT_TO_PARENT': `<span class="usa-tag bg-green">{{ _('تم الإرسال إلى ولي الأمر') }}</span>`,
         'DRAFT':          `<span class="usa-tag bg-gold">{{ _('مسودة') }}</span>`,
-        'APPROVED':       `<span class="usa-tag bg-primary">{{ _('مُوافق عليه') }}</span>`,
+        'APPROVED':       `<span class="usa-tag bg-primary">{{ _('معتمد') }}</span>`,
         'REJECTED':       `<span class="usa-tag bg-secondary-dark">{{ _('مرفوض') }}</span>`,
         'RETURNED':       `<span class="usa-tag bg-secondary-dark">{{ _('أُعيد للمشرف') }}</span>`,
     };
@@ -357,7 +358,7 @@
         const tbody = document.getElementById('reportsTableBody');
         tbody.innerHTML = reports.map(r => {
             const date  = r.date ? new Date(r.date).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'}) : '—';
-            const badge = STATUS_BADGE[r.status] || escHtml(r.status);
+            const badge = STATUS_BADGE[r.status] || `<span class="usa-tag bg-secondary-dark">{{ _('حالة غير معروفة') }}</span>`;
             const canSend = r.status === 'SUBMITTED';
             return `
             <tr>
@@ -378,14 +379,14 @@
                         </a>
                         ${canSend ? `
                         <a href="#sendParentsModal" class="usa-button usa-button--unstyled padding-1 text-green" 
-                           data-open-modal aria-controls="sendParentsModal"
+                           data-open-modal aria-controls="sendParentsModal" aria-label="{{ _('إرسال التقرير للوالدين') }}"
                            onclick="window.pendingSendId = ${r.id}">
-                            <i class="bi bi-send"></i>
+                            <i class="bi bi-send" aria-hidden="true"></i>
                         </a>` : ''}
                         <a href="#deleteReportModal" class="usa-button usa-button--unstyled padding-1 text-secondary-dark"
-                           data-open-modal aria-controls="deleteReportModal"
+                           data-open-modal aria-controls="deleteReportModal" aria-label="{{ _('حذف التقرير') }}"
                            onclick="window.pendingDeleteId = ${r.id}">
-                            <i class="bi bi-trash3"></i>
+                            <i class="bi bi-trash3" aria-hidden="true"></i>
                         </a>
                     </div>
                 </td>

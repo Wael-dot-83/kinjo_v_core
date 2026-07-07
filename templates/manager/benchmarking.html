@@ -57,7 +57,7 @@
         </form>
     </div>
 
-    <div id="managerBenchmarkError" class="usa-alert usa-alert--error margin-bottom-4 display-none">
+    <div id="managerBenchmarkError" class="usa-alert usa-alert--error margin-bottom-4 display-none" role="alert" aria-live="assertive">
         <div class="usa-alert__body">
             <p class="usa-alert__text"></p>
         </div>
@@ -129,16 +129,17 @@
             </h3>
         </div>
         <div class="padding-0 overflow-x-auto">
-            <table class="usa-table usa-table--striped width-full margin-y-0 border-0">
-                <thead>
-                    <tr>
-                        <th class="border-left-0">{% if ui_lang == 'en' %}Peer Code{% else %}رمز الند{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Rank{% else %}الترتيب{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Percentile{% else %}النسبة المئوية{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Band{% else %}المجال{% endif %}</th>
-                        <th class="border-right-0">{% if ui_lang == 'en' %}Score{% else %}الدرجة{% endif %}</th>
-                    </tr>
-                </thead>
+        <table class="usa-table usa-table--striped width-full margin-y-0 border-0" aria-label="{{ _('مقارنة الأداء مع الحضانات الندية') }}">
+            <caption class="usa-sr-only">{{ _('مقارنة ندية مجهولة الهوية') }}</caption>
+            <thead>
+                <tr>
+                    <th scope="col" class="border-left-0">{% if ui_lang == 'en' %}Peer Code{% else %}رمز الند{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Rank{% else %}الترتيب{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Percentile{% else %}النسبة المئوية{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Band{% else %}المجال{% endif %}</th>
+                    <th scope="col" class="border-right-0">{% if ui_lang == 'en' %}Score{% else %}الدرجة{% endif %}</th>
+                </tr>
+            </thead>
                 <tbody id="managerPeersTableBody"></tbody>
             </table>
         </div>

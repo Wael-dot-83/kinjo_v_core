@@ -25,10 +25,10 @@
 <div class="margin-bottom-4">
     <ul class="usa-button-group" id="statusTabs">
         <li class="usa-button-group__item">
-            <button class="usa-button tab-btn" data-status="SUBMITTED">{% if ui_lang == 'en' %}Under Review{% else %}قيد المراجعة{% endif %}</button>
+            <button class="usa-button tab-btn" data-status="SUBMITTED">{% if ui_lang == 'en' %}Awaiting Manager Review{% else %}بانتظار مراجعة المدير{% endif %}</button>
         </li>
         <li class="usa-button-group__item">
-            <button class="usa-button usa-button--outline tab-btn" data-status="APPROVED">{% if ui_lang == 'en' %}Approved{% else %}مقبول{% endif %}</button>
+            <button class="usa-button usa-button--outline tab-btn" data-status="APPROVED">{% if ui_lang == 'en' %}Approved{% else %}معتمد{% endif %}</button>
         </li>
         <li class="usa-button-group__item">
             <button class="usa-button usa-button--outline tab-btn" data-status="REJECTED">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</button>
@@ -42,17 +42,17 @@
 <!-- Requests Table -->
 <div class="usa-card padding-3 margin-bottom-4 bg-white border border-base-lighter">
     <div class="overflow-x-auto">
-        <table class="usa-table usa-table--striped width-full" id="requestsTable">
+        <table class="usa-table usa-table--striped width-full" id="requestsTable" aria-label="{{ _('قائمة طلبات الغياب') }}">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Parent{% else %}ولي الأمر{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}From{% else %}من{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Reason{% else %}السبب{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                    <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                    <th scope="col">#</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Parent{% else %}ولي الأمر{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}From{% else %}من{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Reason{% else %}السبب{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
                 </tr>
             </thead>
             <tbody id="requestsBody">
@@ -67,7 +67,7 @@
 </div>
 
 <!-- Decision Modal (USWDS) -->
-<div class="usa-modal" id="decisionModal" aria-labelledby="decisionTitle">
+<div class="usa-modal" id="decisionModal" aria-labelledby="decisionTitle" aria-modal="true">
   <div class="usa-modal__content">
     <div class="usa-modal__main">
       <h2 class="usa-modal__heading" id="decisionTitle">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</h2>
@@ -166,12 +166,12 @@
 
         function statusBadge(s) {
             const map = {
-                'SUBMITTED': `<span class="usa-tag bg-gold">${tr('قيد المراجعة', 'Under review')}</span>`,
-                'APPROVED': `<span class="usa-tag bg-green">${tr('مقبول', 'Approved')}</span>`,
+                'SUBMITTED': `<span class="usa-tag bg-gold">${tr('بانتظار مراجعة المدير', 'Awaiting manager review')}</span>`,
+                'APPROVED': `<span class="usa-tag bg-green">${tr('معتمد', 'Approved')}</span>`,
                 'REJECTED': `<span class="usa-tag bg-secondary-dark">${tr('مرفوض', 'Rejected')}</span>`,
                 'CANCELLED': `<span class="usa-tag bg-base-light">${tr('ملغى', 'Cancelled')}</span>`,
             };
-            return map[s] || `<span class="usa-tag bg-base-light">${s}</span>`;
+            return map[s] || `<span class="usa-tag bg-base-light">${tr('حالة غير معروفة', 'Unknown status')}</span>`;
         }
 
         function loadRequests() {

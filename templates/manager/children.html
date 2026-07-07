@@ -30,31 +30,32 @@
 <div class="usa-card padding-3 margin-bottom-4 bg-white border border-base-lighter">
     <div class="grid-row margin-bottom-2 flex-justify flex-align-center grid-gap-2">
         <div class="grid-col-auto">
-            <h3 class="font-heading-md margin-y-0">
+            <h2 class="font-heading-md margin-y-0">
                 <i class="bi bi-list-ul margin-right-1 text-primary"></i> {{ _('قائمة الأطفال') }}
                 <span class="usa-tag margin-left-1" id="totalBadge">—</span>
-            </h3>
+            </h2>
         </div>
         <div class="grid-col-auto tablet:grid-col-4">
             <form class="usa-search usa-search--small" role="search" onsubmit="event.preventDefault();">
               <label class="usa-sr-only" for="searchInput">{{ _('بحث باسم الطفل…') }}</label>
               <input class="usa-input" id="searchInput" type="search" name="search" oninput="filterTable()" placeholder="{{ _('بحث باسم الطفل…') }}">
               <button class="usa-button" type="submit">
-                <span class="usa-sr-only">Search</span>
+                <span class="usa-sr-only">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</span>
               </button>
             </form>
         </div>
     </div>
     
     <div class="overflow-x-auto">
-        <table class="usa-table usa-table--striped width-full">
+        <table class="usa-table usa-table--striped width-full" aria-label="{{ _('قائمة الأطفال في الحضانة') }}">
+            <caption class="usa-sr-only">{{ _('قائمة الأطفال') }}</caption>
             <thead>
                 <tr>
-                    <th>{{ _('اسم الطفل') }}</th>
-                    <th>{{ _('الجنس') }}</th>
-                    <th>{{ _('تاريخ الميلاد') }}</th>
-                    <th>{{ _('الشعبة') }}</th>
-                    <th class="text-center">{{ _('الإجراءات') }}</th>
+                    <th scope="col">{{ _('اسم الطفل') }}</th>
+                    <th scope="col">{{ _('الجنس') }}</th>
+                    <th scope="col">{{ _('تاريخ الميلاد') }}</th>
+                    <th scope="col">{{ _('الشعبة') }}</th>
+                    <th scope="col" class="text-center">{{ _('الإجراءات') }}</th>
                 </tr>
             </thead>
             <tbody id="childrenTableBody">
@@ -67,7 +68,7 @@
 </div>
 
 <!-- Move child modal (USWDS) -->
-<div class="usa-modal" id="moveChildModal" aria-labelledby="moveModalLabel">
+<div class="usa-modal" id="moveChildModal" aria-labelledby="moveModalLabel" aria-modal="true">
   <div class="usa-modal__content">
     <div class="usa-modal__main">
       <h2 class="usa-modal__heading" id="moveModalLabel">

@@ -1,4 +1,5 @@
-<ul class="usa-sidenav">
+<nav aria-label="{% if ui_lang == 'en' %}Side navigation{% else %}التنقل الجانبي{% endif %}">
+  <ul class="usa-sidenav">
   <li class="usa-sidenav__item">
     <a href="/dashboard" class="{% if request.url.path == '/dashboard' %}usa-current{% endif %}">
       <i class="bi bi-grid-1x2-fill margin-right-1"></i> {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
@@ -72,4 +73,5 @@
     </a>
   </li>
   {% endif %}
-</ul>
+  </ul>
+</nav>

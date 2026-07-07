@@ -43,10 +43,13 @@ def _require_manager(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != UserRole.MANAGER:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager access only.")
     if current_user.kindergarten_id is None:
-        # A manager without a kindergarten has no operational scope; letting
-        # them through would make kindergarten_id == None filters silently
-        # match nothing (reads) or create orphan records (writes).
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No kindergarten is associated with this manager account.")
+        # Managers are permanently bound to one kindergarten. An account
+        # without a kindergarten has nothing in scope and must be rejected
+        # (never produce a 500 from a NULL-scoped query).
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No kindergarten is associated with this account.",
+        )
     return current_user
 
 
@@ -501,6 +504,14 @@ def send_report_to_parents(
             message_body=f"تم إرسال تقرير يومي جديد لطفلك {child.first_name} بتاريخ {report.date}.",
         )
         db.add(notification)
+        db.flush()  # assign notification.id before the audit row references it
+        db.add(AuditLog(
+            user_id=current_user.id,
+            action=AuditAction.MESSAGE_SENT,
+            entity_type="message",
+            entity_id=notification.id,
+            details=f"Manager sent daily-report notification to parent {parent_user_id} for child {report.child_id}",
+        ))
         db.commit()
 
     return {"id": report.id, "status": report.status.value}
