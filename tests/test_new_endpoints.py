@@ -745,7 +745,9 @@ class TestManagerChildMove:
             json={"child_id": sample_child.id, "from_class_id": sample_class.id, "to_class_id": foreign_class.id},
             headers=_hdr(manager_token),
         )
-        assert r.status_code == 403
+        # Cross-tenant target returns 404 (no existence leak) after the S2 scope
+        # unification; both 403 and 404 are valid denials.
+        assert r.status_code in (403, 404)
 
 
 # ===========================================================================

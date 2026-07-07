@@ -49,6 +49,17 @@ class ClassUpdate(BaseModel):
     is_active: Optional[bool] = None
     supervisor_id: Optional[int] = None
 
+
+def _class_response(db: Session, class_obj: models.Class) -> "ClassResponse":
+    """Serialize a Class, sourcing supervisor_id from the active primary
+    SupervisorAssignment rather than the retired Class.supervisor_id column (D1/B5)."""
+    resp = ClassResponse.model_validate(class_obj)
+    resp.supervisor_id = validators.active_primary_supervisor_map(
+        db, [class_obj.id]
+    ).get(class_obj.id)
+    return resp
+
+
 @router.post("/classes", status_code=status.HTTP_201_CREATED, response_model=ClassResponse)
 def create_class(
     class_data: ClassCreate,
@@ -104,7 +115,9 @@ def create_class(
         sensitivity_level=2
     )
 
-    return class_obj
+    # Response supervisor_id comes from the SupervisorAssignment just created,
+    # not the retired Class.supervisor_id column (D1/B5).
+    return _class_response(db, class_obj)
 
 
 @router.get("/classes")
@@ -286,7 +299,7 @@ def get_class(
         if class_obj.kindergarten_id != current_user.kindergarten_id:
             raise HTTPException(status_code=403, detail="Access denied")
 
-    return class_obj
+    return _class_response(db, class_obj)
 
 
 @router.put("/classes/{class_id}", response_model=ClassResponse)
@@ -359,7 +372,7 @@ def update_class(
         sensitivity_level=2
     )
 
-    return class_obj
+    return _class_response(db, class_obj)
 
 
 @router.put("/classes/{class_id}/deactivate")

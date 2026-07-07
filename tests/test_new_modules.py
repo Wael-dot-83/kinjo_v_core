@@ -428,26 +428,30 @@ class TestManagerClassCRUD:
         r = client.post("/api/manager/classes/assign-supervisor", json=payload, headers=_hdr(manager_token))
         assert r.status_code in (400, 403, 422), f"Expected rejection, got {r.status_code}: {r.text}"
 
-    def test_assign_primary_supervisor_syncs_legacy_class_supervisor_id(
+    def test_assign_primary_supervisor_records_assignment(
         self, client, test_db, manager_user, sample_class, sample_kindergarten, manager_token
     ):
-        """manager_analytics.py and admin_reports_api.py still read
-        Class.supervisor_id directly, while GET /api/classes reads only
-        SupervisorAssignment -- assigning a primary supervisor must keep
-        both in agreement (previously Class.supervisor_id was never
-        touched by this endpoint at all)."""
+        """Assigning a primary supervisor records it as the active primary
+        SupervisorAssignment (the single source of truth). The legacy
+        Class.supervisor_id column is no longer written (D1/B5)."""
+        import validators
         sup = _make_supervisor(test_db, sample_kindergarten.id, "primarySup1", "primarysup1@test.com")
         payload = {"class_id": sample_class.id, "supervisor_id": sup.id, "is_primary": True}
         r = client.post("/api/manager/classes/assign-supervisor", json=payload, headers=_hdr(manager_token))
         assert r.status_code in (200, 201), r.text
 
         test_db.expire_all()
+        assert validators.active_primary_supervisor_map(
+            test_db, [sample_class.id]
+        ).get(sample_class.id) == sup.id
+        # the retired legacy column stays unwritten
         cls = test_db.query(models.Class).filter(models.Class.id == sample_class.id).first()
-        assert cls.supervisor_id == sup.id
+        assert cls.supervisor_id is None
 
-    def test_swap_supervisor_syncs_legacy_class_supervisor_id_and_retires_old_assignment(
+    def test_swap_supervisor_records_new_primary_and_retires_old_assignment(
         self, client, test_db, manager_user, sample_class, sample_kindergarten, manager_token
     ):
+        import validators
         sup1 = _make_supervisor(test_db, sample_kindergarten.id, "swapSup1", "swapsup1@test.com")
         sup2 = _make_supervisor(test_db, sample_kindergarten.id, "swapSup2", "swapsup2@test.com")
 
@@ -466,8 +470,9 @@ class TestManagerClassCRUD:
         assert r.status_code == 200, r.text
 
         test_db.expire_all()
-        cls = test_db.query(models.Class).filter(models.Class.id == sample_class.id).first()
-        assert cls.supervisor_id == sup2.id
+        assert validators.active_primary_supervisor_map(
+            test_db, [sample_class.id]
+        ).get(sample_class.id) == sup2.id
 
         old_assignment = (
             test_db.query(models.SupervisorAssignment)
@@ -480,9 +485,10 @@ class TestManagerClassCRUD:
         assert old_assignment.deleted_at is not None
         assert old_assignment.end_date is not None
 
-    def test_unassign_primary_supervisor_clears_legacy_class_supervisor_id(
+    def test_unassign_primary_supervisor_retires_assignment(
         self, client, test_db, manager_user, sample_class, sample_kindergarten, manager_token
     ):
+        import validators
         sup = _make_supervisor(test_db, sample_kindergarten.id, "unassignSup", "unassignsup@test.com")
         r = client.post(
             "/api/manager/classes/assign-supervisor",
@@ -498,8 +504,8 @@ class TestManagerClassCRUD:
         assert r.status_code == 204, r.text
 
         test_db.expire_all()
-        cls = test_db.query(models.Class).filter(models.Class.id == sample_class.id).first()
-        assert cls.supervisor_id is None
+        # No active primary assignment remains (the source of truth).
+        assert validators.active_primary_supervisor_map(test_db, [sample_class.id]) == {}
 
     def test_edit_class_form_endpoint_syncs_supervisor_assignment(
         self, client, test_db, manager_user, sample_class, sample_kindergarten, manager_token
