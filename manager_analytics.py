@@ -12,9 +12,15 @@ from datetime import date, datetime, timedelta
 from utils.time_utils import today_amman as _today
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
+import logging
 import math
 
 import models
+
+logger = logging.getLogger(__name__)
+
+# Attendance statuses that count as the child having attended (B1).
+_ATTENDED_STATUSES = (models.AttendanceStatus.PRESENT, models.AttendanceStatus.LATE)
 
 
 class ManagerAnalyticsService:
@@ -22,6 +28,44 @@ class ManagerAnalyticsService:
     Provides analytics calculations scoped to a manager's kindergarten.
     All metrics are computed for a single kindergarten only.
     """
+
+    @staticmethod
+    def _count_operating_days(
+        db: Session,
+        kindergarten_id: int,
+        start_date: date,
+        end_date: date,
+    ) -> int:
+        """Number of *operating* days in [start_date, end_date] for a kindergarten (B2).
+
+        A day is operating when OperatingCalendar says so explicitly; otherwise
+        it defaults to open on the Jordan school week (Sun–Thu) and closed on
+        Friday (weekday 4) and Saturday (weekday 5). This mirrors the KPI engine
+        so manager and admin analytics agree.
+        """
+        if end_date < start_date:
+            return 0
+        rows = db.query(
+            models.OperatingCalendar.date,
+            models.OperatingCalendar.is_open,
+        ).filter(
+            models.OperatingCalendar.kindergarten_id == kindergarten_id,
+            models.OperatingCalendar.date >= start_date,
+            models.OperatingCalendar.date <= end_date,
+        ).all()
+        explicit = {row[0]: bool(row[1]) for row in rows}
+
+        count = 0
+        cursor = start_date
+        while cursor <= end_date:
+            if cursor in explicit:
+                is_open = explicit[cursor]
+            else:
+                is_open = cursor.weekday() not in (4, 5)
+            if is_open:
+                count += 1
+            cursor += timedelta(days=1)
+        return count
 
     @staticmethod
     def compute_enrollment_trend(
@@ -97,8 +141,9 @@ class ManagerAnalyticsService:
         if active_enrollments == 0:
             return 0.0
 
-        # Count attendance logs in date range
-        attendance_logs = db.query(
+        # Numerator: only PRESENT/LATE count as attended. ABSENT and EXCUSED must
+        # not inflate the rate (B1).
+        attended = db.query(
             func.count(models.AttendanceLog.id)
         ).join(
             models.Child
@@ -107,20 +152,31 @@ class ManagerAnalyticsService:
         ).filter(
             models.EnrollmentApplication.kindergarten_id == kindergarten_id,
             models.AttendanceLog.date >= start_date,
-            models.AttendanceLog.date <= end_date
+            models.AttendanceLog.date <= end_date,
+            models.AttendanceLog.status.in_(_ATTENDED_STATUSES),
         ).scalar() or 0
 
-        # Count operating days (calendar days in range)
-        operating_days = (end_date - start_date).days + 1
-
-        # Expected attendance = active_enrollments * operating_days
+        # Denominator: active enrollments * *operating* days (open days from
+        # OperatingCalendar, not raw calendar days). Closed days are excluded (B2).
+        operating_days = ManagerAnalyticsService._count_operating_days(
+            db, kindergarten_id, start_date, end_date
+        )
         expected_attendance = active_enrollments * operating_days
-
         if expected_attendance == 0:
             return 0.0
 
-        attendance_rate = (attendance_logs / expected_attendance) * 100
-        return round(attendance_rate, 2)
+        # Validate/clamp the underlying fraction to [0, 1]; log anomalies (e.g.
+        # duplicate logs) rather than returning an impossible >100% rate.
+        fraction = attended / expected_attendance
+        if fraction < 0.0 or fraction > 1.0:
+            logger.warning(
+                "Attendance rate out of range for kg=%s [%s..%s]: "
+                "attended=%s expected=%s fraction=%.3f",
+                kindergarten_id, start_date, end_date,
+                attended, expected_attendance, fraction,
+            )
+            fraction = max(0.0, min(1.0, fraction))
+        return round(fraction * 100, 2)
 
     @staticmethod
     def compute_incident_rate(
