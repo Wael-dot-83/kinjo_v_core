@@ -318,7 +318,12 @@
     <!-- Admin Internationalization (Legacy) -->
     <script src="/static/js/admin_i18n.js?v=2.3"></script>
 
+    {# Render both script block names so a child page's JS is never silently
+       dropped: manager pages historically used `extra_js` while a few use
+       `extra_scripts`. Both are emitted here, after the core JS, mirroring
+       base.html. #}
     {% block extra_scripts %}{% endblock %}
+    {% block extra_js %}{% endblock %}
 
     <!-- Admin Initialization -->
     <script>

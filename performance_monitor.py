@@ -172,9 +172,18 @@ def setup_database_monitoring(engine):
         import threading
 
         def log_pool_stats():
+            pool = engine.pool
+            # NullPool (used with SQLite / TESTING) exposes no size/checkedout
+            # metrics — there is nothing to monitor, so skip cleanly instead of
+            # logging an AttributeError every minute forever.
+            if not all(hasattr(pool, a) for a in ("size", "checkedin", "checkedout", "overflow")):
+                logger.info(
+                    "DB pool stats unavailable for %s (no connection pooling) — pool monitor disabled",
+                    type(pool).__name__,
+                )
+                return
             while True:
                 try:
-                    pool = engine.pool
                     logger.info(
                         f"DB Pool - size: {pool.size()}, checked_in: {pool.checkedin()}, "
                         f"checked_out: {pool.checkedout()}, overflow: {pool.overflow()}"

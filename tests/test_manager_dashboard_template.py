@@ -30,6 +30,32 @@ def test_dashboard_script_uses_block_rendered_by_base():
     assert "{% block scripts %}" not in dash
 
 
+def test_manager_base_renders_both_script_blocks():
+    """manager_base.html must render both `extra_scripts` and `extra_js` so a
+    child page's inline JS is never silently dropped (the bug that made several
+    manager pages non-functional)."""
+    base = (TEMPLATES / "manager_base.html").read_text(encoding="utf-8")
+    assert "{% block extra_scripts %}" in base
+    assert "{% block extra_js %}" in base
+
+
+def test_every_manager_child_script_block_is_rendered_by_base():
+    """Every template extending manager_base.html must put its JS in a block the
+    base actually renders — otherwise the script is discarded and the page can't
+    fetch its data."""
+    rendered = {"extra_scripts", "extra_js"}  # what manager_base.html emits
+    offenders = []
+    for t in MANAGER_TEMPLATES:
+        text = t.read_text(encoding="utf-8")
+        if "manager_base.html" not in text:
+            continue
+        used = set(re.findall(r"\{%\s*block\s+(scripts|extra_scripts|extra_js|js)\s*%\}", text))
+        stray = used - rendered
+        if stray:
+            offenders.append(f"{t.name}: {sorted(stray)}")
+    assert not offenders, f"manager pages using a non-rendered script block: {offenders}"
+
+
 def test_no_corrupted_migration_card_classes():
     corrupted = re.compile(
         r"col-12__|bg-success-subtleer|bg-gold-lighter|border-gold-light|"
