@@ -1,4 +1,5 @@
-{% extends 'base.html' %}
+{% set _base = 'manager_base.html' if current_user and current_user.role.value == 'MANAGER' else 'admin_base.html' if current_user and current_user.role.value == 'ADMIN' else 'base.html' %}
+{% extends _base %}
 
 {% block title %}{% if ui_lang == 'en' %}Messages Inbox{% else %}صندوق الرسائل{% endif %}{% endblock %}
 

@@ -3,8 +3,9 @@
     <div class="usa-navbar">
       <div class="usa-logo" id="basic-logo">
         <em class="usa-logo__text">
-          <a href="/dashboard" title="Home" aria-label="Home">
-            <i class="bi bi-building"></i> KinJo Manager
+          <a href="/dashboard" title="Home" aria-label="Home" class="display-flex flex-align-center text-primary-darker text-no-underline">
+            <i class="bi bi-building margin-right-1 font-heading-lg"></i>
+            <span class="font-heading-md">KinJo Manager</span>
           </a>
         </em>
       </div>
@@ -16,25 +17,28 @@
       </button>
       <ul class="usa-nav__primary usa-accordion">
         <li class="usa-nav__primary-item">
-          <a href="/dashboard" class="usa-nav__link"><span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span></a>
-        </li>
-        <li class="usa-nav__primary-item">
-          <a href="/profile" class="usa-nav__link"><span>{% if ui_lang == 'en' %}Profile{% else %}الملف الشخصي{% endif %}</span></a>
+          <a href="/dashboard" class="usa-nav__link {% if request.url.path == '/dashboard' %}usa-current{% endif %}"><span><i class="bi bi-speedometer2 margin-right-1"></i> {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span></a>
         </li>
       </ul>
       <div class="usa-nav__secondary">
         <ul class="usa-nav__secondary-links">
-          <li class="usa-nav__secondary-item">
-            <span class="text-bold margin-right-2">{{ current_user.username }}</span>
+          <li class="usa-nav__secondary-item display-flex flex-align-center">
+            <i class="bi bi-person-circle margin-right-1 text-base"></i>
+            <span class="text-bold">{{ current_user.username }}</span>
           </li>
           <li class="usa-nav__secondary-item">
-            <button onclick="window.AppI18n && AppI18n.toggleLanguage()" class="usa-button usa-button--unstyled" style="cursor: pointer;">
-              <i class="bi bi-translate" aria-hidden="true"></i> {% if ui_lang == 'en' %}العربية{% else %}English{% endif %}
+            <a href="/profile" class="text-no-underline text-base-darker hover:text-primary">
+              <i class="bi bi-gear margin-right-05"></i> {% if ui_lang == 'en' %}Profile{% else %}الملف الشخصي{% endif %}
+            </a>
+          </li>
+          <li class="usa-nav__secondary-item">
+            <button onclick="window.AppI18n && AppI18n.toggleLanguage()" class="usa-button usa-button--unstyled text-base-darker hover:text-primary" style="cursor: pointer;">
+              <i class="bi bi-translate margin-right-05" aria-hidden="true"></i> {% if ui_lang == 'en' %}العربية{% else %}English{% endif %}
             </button>
           </li>
           <li class="usa-nav__secondary-item">
-            <a href="#" onclick="handleLogout(event)" class="text-secondary-dark">
-              {% if ui_lang == 'en' %}Log out{% else %}تسجيل الخروج{% endif %}
+            <a href="#" onclick="handleLogout(event)" class="text-secondary-dark hover:text-secondary-vivid">
+              <i class="bi bi-box-arrow-right margin-right-05"></i> {% if ui_lang == 'en' %}Log out{% else %}تسجيل الخروج{% endif %}
             </a>
           </li>
         </ul>

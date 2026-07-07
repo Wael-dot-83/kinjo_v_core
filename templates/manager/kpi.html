@@ -2,21 +2,21 @@
 {% block title %}{{ _('مؤشرات الأداء الرئيسية') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="margin-bottom-4 display-flex flex-justify flex-align-start flex-wrap grid-gap-2">
-    <div class="usa-prose">
-        <h1 class="font-heading-xl margin-top-0 margin-bottom-1">
+<div class="mb-4 d-flex flex-justify align-items-start flex-wrap g-2">
+    <div class="mb-3">
+        <h1 class="fs-1 fw-bold mt-0 mb-1">
             <i class="bi bi-graph-up-arrow text-primary"></i> {{ _('مؤشرات الأداء الرئيسية') }}
         </h1>
-        <nav aria-label="Breadcrumb" class="usa-breadcrumb usa-breadcrumb--wrap">
-            <ol class="usa-breadcrumb__list">
-                <li class="usa-breadcrumb__list-item"><a href="/dashboard" class="usa-breadcrumb__link">{{ _('لوحة التحكم') }}</a></li>
-                <li class="usa-breadcrumb__list-item usa-current" aria-current="page">{{ _('مؤشرات الأداء') }}</li>
+        <nav aria-label="Breadcrumb" class="admin-breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard" class="">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ _('مؤشرات الأداء') }}</li>
             </ol>
         </nav>
     </div>
-    <div class="margin-top-1">
-        <button class="usa-button usa-button--outline" onclick="loadKPI()">
-            <i class="bi bi-arrow-clockwise margin-right-1"></i>{{ _('تحديث') }}
+    <div class="mt-1">
+        <button class="btn btn-outline-primary" onclick="loadKPI()">
+            <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
         </button>
     </div>
 </div>
@@ -25,114 +25,114 @@
 {% block content %}
 
 <!-- Date Range Picker -->
-<div class="usa-card padding-3 margin-bottom-4 bg-white border border-base-lighter">
-    <form class="usa-form usa-form--large width-full" onsubmit="event.preventDefault(); loadKPI();">
-        <div class="grid-row grid-gap-2 flex-align-end">
-            <div class="grid-col-auto">
-                <label class="usa-label margin-top-0 text-bold" for="dateFrom">{{ _('الفترة:') }} {{ _('من تاريخ') }}</label>
-                <input type="date" id="dateFrom" class="usa-input margin-top-1">
+<div class="col-12 p-3 mb-4 bg-white border border-base-lighter">
+    <form class="--large w-100" onsubmit="event.preventDefault(); loadKPI();">
+        <div class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label class="form-label mt-0 fw-bold" for="dateFrom">{{ _('الفترة:') }} {{ _('من تاريخ') }}</label>
+                <input type="date" id="dateFrom" class="form-control mt-1">
             </div>
-            <div class="grid-col-auto">
-                <label class="usa-label margin-top-0" for="dateTo">{{ _('إلى تاريخ') }}</label>
-                <input type="date" id="dateTo" class="usa-input margin-top-1">
+            <div class="col-auto">
+                <label class="form-label mt-0" for="dateTo">{{ _('إلى تاريخ') }}</label>
+                <input type="date" id="dateTo" class="form-control mt-1">
             </div>
-            <div class="grid-col-auto display-flex grid-gap-1">
-                <button type="submit" class="usa-button margin-top-1">
-                    <i class="bi bi-bar-chart margin-right-1"></i>{{ _('عرض') }}
+            <div class="col-auto d-flex g-1">
+                <button type="submit" class="btn btn-primary mt-1">
+                    <i class="bi bi-bar-chart me-2"></i>{{ _('عرض') }}
                 </button>
             </div>
-            <div class="grid-col-auto display-flex grid-gap-1 margin-top-1">
-                <button type="button" class="usa-button usa-button--unstyled text-secondary-dark padding-1" onclick="setRange(7)">{{ _('7 أيام') }}</button>
-                <button type="button" class="usa-button usa-button--unstyled text-secondary-dark padding-1" onclick="setRange(30)">{{ _('30 يوم') }}</button>
-                <button type="button" class="usa-button usa-button--unstyled text-secondary-dark padding-1" onclick="setRange(90)">{{ _('90 يوم') }}</button>
+            <div class="col-auto d-flex g-1 mt-1">
+                <button type="button" class="btn btn-link text-decoration-none text-secondary p-1" onclick="setRange(7)">{{ _('7 أيام') }}</button>
+                <button type="button" class="btn btn-link text-decoration-none text-secondary p-1" onclick="setRange(30)">{{ _('30 يوم') }}</button>
+                <button type="button" class="btn btn-link text-decoration-none text-secondary p-1" onclick="setRange(90)">{{ _('90 يوم') }}</button>
             </div>
         </div>
     </form>
 </div>
 
 <!-- Loading -->
-<div id="kpiLoading" class="text-center padding-y-5 text-base">
+<div id="kpiLoading" class="text-center py-5 text-secondary">
     <p>{{ _('جاري تحميل المؤشرات...') }}</p>
 </div>
 
 <!-- Error -->
-<div id="kpiError" class="usa-card padding-5 margin-bottom-4 bg-white border border-secondary-dark text-center display-none" role="alert" aria-live="assertive">
-    <p class="text-secondary-dark text-bold">{{ _('تعذّر تحميل البيانات') }}</p>
-    <button class="usa-button usa-button--unstyled" onclick="loadKPI()">
-        <i class="bi bi-arrow-clockwise margin-right-1"></i>{{ _('إعادة المحاولة') }}
+<div id="kpiError" class="col-12 p-5 mb-4 bg-white border border-secondary-dark text-center d-none" role="alert" aria-live="assertive">
+    <p class="text-secondary fw-bold">{{ _('تعذّر تحميل البيانات') }}</p>
+    <button class="btn btn-link text-decoration-none" onclick="loadKPI()">
+        <i class="bi bi-arrow-clockwise me-2"></i>{{ _('إعادة المحاولة') }}
     </button>
 </div>
 
 <!-- Main Content -->
-<div id="kpiContent" class="display-none">
+<div id="kpiContent" class="d-none">
 
     <!-- GCEI Hero -->
-    <div class="margin-bottom-4">
-        <div class="kpi-hero-card padding-4 border border-base-lighter radius-md">
-            <div class="grid-row grid-gap-3 flex-align-center">
-                <div class="tablet:grid-col-4 text-center">
-                    <div class="text-base-light text-bold font-sans-xs margin-bottom-1">{{ _('مؤشر حوكمة الحضانة الشامل') }}</div>
-                    <div class="font-sans-3xl text-bold line-height-sans-1" id="gceiValue">—</div>
-                    <div class="text-base-light font-sans-xs">{{ _('من 100 نقطة') }}</div>
-                    <div class="margin-top-2">
-                        <span class="usa-tag" id="gceiStatusBadge">—</span>
+    <div class="mb-4">
+        <div class="kpi-hero-card p-4 border border-base-lighter rounded-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4 text-center">
+                    <div class="text-secondary fw-bold mb-1">{{ _('مؤشر حوكمة الحضانة الشامل') }}</div>
+                    <div class="fs-1 fw-bold lh-1" id="gceiValue">—</div>
+                    <div class="text-secondary">{{ _('من 100 نقطة') }}</div>
+                    <div class="mt-2">
+                        <span class="badge" id="gceiStatusBadge">—</span>
                     </div>
                 </div>
-                <div class="tablet:grid-col-4 text-center">
-                    <div class="text-base-light text-bold font-sans-xs margin-bottom-1">{{ _('الاتجاه') }}</div>
-                    <div class="font-sans-2xl text-bold line-height-sans-1" id="gceiTrendIcon">—</div>
-                    <div class="text-base-light font-sans-xs" id="gceiTrendValue">—</div>
+                <div class="col-md-4 text-center">
+                    <div class="text-secondary fw-bold mb-1">{{ _('الاتجاه') }}</div>
+                    <div class="fs-1 fw-bold lh-1" id="gceiTrendIcon">—</div>
+                    <div class="text-secondary" id="gceiTrendValue">—</div>
                 </div>
-                <div class="tablet:grid-col-4">
-                    <div class="text-base-light text-bold font-sans-xs margin-bottom-1">{{ _('ملاحظة المدير') }}</div>
-                    <div class="text-white font-sans-xs line-height-sans-4" id="gceiNote"></div>
+                <div class="col-md-4">
+                    <div class="text-secondary fw-bold mb-1">{{ _('ملاحظة المدير') }}</div>
+                    <div class="text-white lh-sm" id="gceiNote"></div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Active Alerts -->
-    <div id="alertsSection" class="display-none margin-bottom-4">
-        <div class="border border-secondary-dark radius-md">
-            <div class="bg-secondary-dark text-white padding-2 display-flex flex-align-center grid-gap-2">
+    <div id="alertsSection" class="d-none mb-4">
+        <div class="border border-secondary-dark rounded-3">
+            <div class="text-bg-secondary text-white p-2 d-flex align-items-center g-2">
                 <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-                <strong class="font-sans-sm">{{ _('التنبيهات النشطة') }}</strong>
-                <span class="usa-tag bg-white text-secondary-dark margin-left-auto" id="alertsCount">0</span>
+                <strong class="">{{ _('التنبيهات النشطة') }}</strong>
+                <span class="badge bg-white text-dark text-secondary ms-auto" id="alertsCount">0</span>
             </div>
-            <div class="padding-2 bg-white" id="alertsList"></div>
+            <div class="p-2 bg-white" id="alertsList"></div>
         </div>
     </div>
 
     <!-- KPI Cards Grid -->
-    <div class="grid-row grid-gap margin-bottom-4" id="kpiCardsGrid" role="list" aria-label="{{ _('مؤشرات الأداء الرئيسية') }}"></div>
+    <div class="row g-3 mb-4" id="kpiCardsGrid" role="list" aria-label="{{ _('مؤشرات الأداء الرئيسية') }}"></div>
 
     <!-- Action Items -->
-    <div id="actionItemsSection" class="display-none margin-bottom-4">
-        <div class="usa-card bg-white border border-base-lighter">
-            <div class="padding-2 border-bottom-1 border-base-lighter">
-                <h2 class="margin-y-0 text-bold font-heading-sm display-flex flex-align-center grid-gap-1">
+    <div id="actionItemsSection" class="d-none mb-4">
+        <div class="col-12 bg-white border border-base-lighter">
+            <div class="p-2 border-bottom-1 border-base-lighter">
+                <h2 class="my-0 fw-bold font-heading-sm d-flex align-items-center g-1">
                     <i class="bi bi-clipboard-check text-primary" aria-hidden="true"></i>
                     {{ _('بنود العمل المطلوبة') }}
                 </h2>
             </div>
-            <div class="padding-0" id="actionItemsList"></div>
+            <div class="p-0" id="actionItemsList"></div>
         </div>
     </div>
 
     <!-- KPI Comparison Chart -->
-    <div class="usa-card margin-bottom-4 bg-white border border-base-lighter">
-        <div class="padding-2 border-bottom-1 border-base-lighter">
-            <h2 class="margin-y-0 text-bold font-heading-sm display-flex flex-align-center grid-gap-1">
+    <div class="col-12 mb-4 bg-white border border-base-lighter">
+        <div class="p-2 border-bottom-1 border-base-lighter">
+            <h2 class="my-0 fw-bold font-heading-sm d-flex align-items-center g-1">
                 <i class="bi bi-bar-chart-fill text-primary" aria-hidden="true"></i>
                 {{ _('مقارنة المؤشرات') }}
             </h2>
         </div>
-        <div class="padding-3">
+        <div class="p-3">
             <canvas id="kpiComparisonChart" style="max-height:300px;" aria-label="{{ _('مخطط مقارنة مؤشرات الأداء') }}"></canvas>
         </div>
     </div>
 
-    <div class="text-base text-center font-sans-xs padding-bottom-4" id="freshnessInfo"></div>
+    <div class="text-secondary text-center pb-4" id="freshnessInfo"></div>
 
 </div><!-- /kpiContent -->
 
@@ -196,8 +196,8 @@
     window.loadKPI = async function() {
         const from  = document.getElementById('dateFrom').value;
         const to    = document.getElementById('dateTo').value;
-        const show  = id => document.getElementById(id).classList.remove('display-none');
-        const hide  = id => document.getElementById(id).classList.add('display-none');
+        const show  = id => document.getElementById(id).classList.remove('d-none');
+        const hide  = id => document.getElementById(id).classList.add('d-none');
 
         show('kpiLoading'); hide('kpiError'); hide('kpiContent');
 
@@ -227,7 +227,7 @@
         return { green: '#10b981', amber: '#f59e0b', red: '#ef4444' }[s] || '#6b7280';
     }
     function statusBadgeCls(s) {
-        return { green: 'bg-green text-white', amber: 'bg-gold text-base-darker', red: 'bg-secondary-dark text-white' }[s] || 'bg-base-light text-base-darker';
+        return { green: 'text-bg-success text-white', amber: 'bg-gold text-dark', red: 'text-bg-secondary text-white' }[s] || 'text-bg-light text-dark';
     }
     function statusLabel(s) {
         if (IS_AR) return { green: 'جيد', amber: 'تحذير', red: 'تنبيه' }[s] || s;
@@ -237,9 +237,9 @@
     function trendCls(t, lowerIsBetter) {
         const good = lowerIsBetter ? 'down' : 'up';
         const bad  = lowerIsBetter ? 'up'   : 'down';
-        if (t === good) return 'text-green';
-        if (t === bad)  return 'text-secondary-dark';
-        return 'text-base';
+        if (t === good) return 'text-success';
+        if (t === bad)  return 'text-secondary';
+        return 'text-secondary';
     }
     function esc(s) {
         return String(s ?? '').replace(/[&<>"']/g,
@@ -253,7 +253,7 @@
 
         const badge = document.getElementById('gceiStatusBadge');
         badge.textContent = statusLabel(c.status);
-        badge.className   = `usa-tag ${statusBadgeCls(c.status)}`;
+        badge.className   = `badge ${statusBadgeCls(c.status)}`;
 
         const li   = c.threshold.lower_is_better;
         const icon = document.getElementById('gceiTrendIcon');
@@ -268,14 +268,14 @@
     function renderAlerts(alerts) {
         const section = document.getElementById('alertsSection');
         const list    = document.getElementById('alertsList');
-        if (!alerts.length) { section.classList.add('display-none'); return; }
-        section.classList.remove('display-none');
+        if (!alerts.length) { section.classList.add('d-none'); return; }
+        section.classList.remove('d-none');
         document.getElementById('alertsCount').textContent = alerts.length;
-        const cls = { high: 'usa-alert--error', medium: 'usa-alert--warning', low: 'usa-alert--info' };
+        const cls = { high: 'alert-danger', medium: 'alert-warning', low: 'alert-info' };
         list.innerHTML = alerts.map(a => `
-            <div class="usa-alert ${cls[a.priority] || 'usa-alert--info'} margin-bottom-1">
-                <div class="usa-alert__body">
-                    <p class="usa-alert__text">${esc(a.message)}</p>
+            <div class="alert ${cls[a.priority] || 'alert-info'} mb-1">
+                <div>
+                    <p class="mb-0">${esc(a.message)}</p>
                 </div>
             </div>`).join('');
     }
@@ -294,33 +294,33 @@
             const color = statusColor(c.status);
 
             return `
-            <div class="tablet:grid-col-6 desktop:grid-col-4 margin-bottom-2 tablet:margin-bottom-0" role="listitem">
-                <div class="kpi-card usa-card height-full bg-white border border-base-lighter kpi-status-bar-${c.status}">
-                    <div class="padding-3">
-                        <div class="display-flex flex-align-start flex-justify margin-bottom-3">
-                            <div class="display-flex flex-align-center grid-gap-2">
-                                <div class="radius-pill display-flex flex-align-center flex-justify-center"
+            <div class="col-md-6 col-lg-4 mb-2 mb-md-0" role="listitem">
+                <div class="kpi-card col-12 height-full bg-white border border-base-lighter kpi-status-bar-${c.status}">
+                    <div class="p-3">
+                        <div class="d-flex align-items-start flex-justify mb-3">
+                            <div class="d-flex align-items-center g-2">
+                                <div class="rounded-pill d-flex align-items-center justify-content-center"
                                      style="width:40px;height:40px;background:${color}22;"
                                      aria-hidden="true">
                                     <i class="bi ${icon}" style="color:${color};font-size:1.2rem;"></i>
                                 </div>
-                                <div class="text-bold font-sans-xs">${esc(name)}</div>
+                                <div class="fw-bold">${esc(name)}</div>
                             </div>
-                            <span class="usa-tag ${statusBadgeCls(c.status)}" aria-label="${statusLabel(c.status)}">${statusLabel(c.status)}</span>
+                            <span class="badge ${statusBadgeCls(c.status)}" aria-label="${statusLabel(c.status)}">${statusLabel(c.status)}</span>
                         </div>
-                        <div class="display-flex flex-align-end grid-gap-2 margin-bottom-2">
-                            <div class="font-sans-xl text-bold line-height-sans-1" style="color:${color};">${c.value.toFixed(1)}</div>
-                            <div class="text-base font-sans-3xs margin-bottom-05">${esc(c.unit)}</div>
+                        <div class="d-flex align-items-end g-2 mb-2">
+                            <div class="fw-bold lh-1" style="color:${color};">${c.value.toFixed(1)}</div>
+                            <div class="text-secondary small fw-bold mb-05">${esc(c.unit)}</div>
                         </div>
-                        <div class="display-flex flex-align-center grid-gap-2 margin-bottom-3">
-                            <span class="${tc} text-bold font-sans-xs" aria-label="${IS_AR ? 'الاتجاه' : 'Trend'}">
+                        <div class="d-flex align-items-center g-2 mb-3">
+                            <span class="${tc} fw-bold" aria-label="${IS_AR ? 'الاتجاه' : 'Trend'}">
                                 ${trendIcon(c.trend)} ${sign}${c.trend_value.toFixed(1)}%
                             </span>
-                            <span class="text-base font-sans-xs">
+                            <span class="text-secondary">
                                 ${c.period_days} ${IS_AR ? 'يوم' : 'days'}
                             </span>
                         </div>
-                        <div class="text-base font-sans-3xs line-height-sans-3">${esc(expl)}</div>
+                        <div class="text-secondary small fw-bold lh-sm">${esc(expl)}</div>
                     </div>
                 </div>
             </div>`;
@@ -345,8 +345,8 @@
             }
         }
 
-        if (!items.length) { section.classList.add('display-none'); return; }
-        section.classList.remove('display-none');
+        if (!items.length) { section.classList.add('d-none'); return; }
+        section.classList.remove('d-none');
 
         const ORDER = { high: 0, medium: 1, low: 2 };
         items.sort((a, b) => (ORDER[a.priority] ?? 9) - (ORDER[b.priority] ?? 9));
@@ -357,14 +357,14 @@
         const PR_COLOR = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' };
 
         list.innerHTML = items.map(it => `
-            <div class="padding-3 border-bottom-1 border-base-lighter kpi-action-${it.priority}">
-                <div class="display-flex flex-align-start grid-gap-2">
-                    <i class="bi bi-arrow-left-circle-fill margin-top-05"
+            <div class="p-3 border-bottom-1 border-base-lighter kpi-action-${it.priority}">
+                <div class="d-flex align-items-start g-2">
+                    <i class="bi bi-arrow-left-circle-fill mt-2"
                        style="color:${PR_COLOR[it.priority] || '#6b7280'}" aria-hidden="true"></i>
                     <div>
-                        <div class="text-base font-sans-3xs">${esc(it.card)}</div>
-                        <div class="font-sans-xs margin-top-1">${esc(it.text)}</div>
-                        <span class="usa-tag bg-base-light text-base-darker margin-top-1 font-sans-3xs">
+                        <div class="text-secondary small fw-bold">${esc(it.card)}</div>
+                        <div class="mt-1">${esc(it.text)}</div>
+                        <span class="badge text-bg-light text-dark mt-1 small fw-bold">
                             ${PR_LABEL[it.priority] || it.priority}
                         </span>
                     </div>

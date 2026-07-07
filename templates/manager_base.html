@@ -1,79 +1,403 @@
-<!DOCTYPE html>
-<html lang="{% if ui_lang == 'en' %}en{% else %}ar{% endif %}" dir="{{ ui_dir | default('rtl') }}">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#1F5E47">
-  <title>{% block title %}KinJo Manager{% endblock %}</title>
+<!doctype html>
+{% if ui_lang == 'en' %}
+<html lang="en" dir="ltr" style="visibility: hidden">
+{% else %}
+<html lang="ar" dir="rtl" style="visibility: hidden">
+{% endif %}
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
+    {# admin_components.js's session-timeout timer has always read this exact
+       meta tag (with a documented "falls back to 30 if not present" comment)
+       but it was never emitted anywhere — so the client-side auto-logout
+       warning/redirect silently hardcoded 30 minutes regardless of the real
+       configured SESSION_TIMEOUT_MINUTES, disagreeing with server-side
+       enforcement (dependencies.py) whenever an operator changes it. #}
+    <meta name="session-timeout-minutes" content="{{ session_timeout_minutes | default(30) }}" />
+    <meta
+      name="description"
+      content="{% if ui_lang == 'en' %}KinJo Admin - Professional Kindergarten Management System{% else %}KinJo - إدارة احترافية للحضانات{% endif %}"
+    />
+    <meta name="author" content="KinJo Team" />
+    <meta name="theme-color" content="#1F5E47" />
+    <meta name="color-scheme" content="light" />
 
-  <!-- USWDS Init JS (vendored 3.8.1) -->
-  <script src="/static/vendor/uswds/js/uswds-init.min.js"></script>
-  <!-- USWDS CSS (vendored 3.8.1) -->
-  <link rel="stylesheet" href="/static/vendor/uswds/css/uswds.min.css">
-  <!-- Bootstrap Icons (vendored) -->
-  <link rel="stylesheet" href="/static/vendor/bootstrap-icons/bootstrap-icons.min.css">
+    <!-- noscript: reveal immediately if JS is disabled -->
+    <noscript><style>html { visibility: visible !important; }</style></noscript>
 
-  <style>
-    body { font-family: 'Cairo', 'Inter', sans-serif; }
-    /* USWDS ships LTR-only utilities; flip the spacing ones this layout uses. */
-    [dir="rtl"] .margin-right-1 { margin-right: 0 !important; margin-left: .5rem !important; }
-    [dir="rtl"] .margin-right-2 { margin-right: 0 !important; margin-left: 1rem !important; }
-    [dir="rtl"] .usa-sidenav .usa-current::after { right: 0; left: auto; }
-  </style>
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
 
-  {% block extra_css %}{% endblock %}
-</head>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
 
-<body>
-  <!-- USWDS Skipnav -->
-  <a class="usa-skipnav" href="#main-content">
-    {% if ui_lang == 'en' %}Skip to main content{% else %}تخطي إلى المحتوى الرئيسي{% endif %}
-  </a>
+    <!-- Bootstrap CSS (direction-aware, self-hosted v5.3.2) -->
+    <link
+      id="bootstrapCss"
+      href="/static/vendor/bootstrap/{% if ui_dir == 'ltr' %}bootstrap.min.css{% else %}bootstrap.rtl.min.css{% endif %}"
+      rel="stylesheet"
+    />
 
-  <!-- Header -->
-  {% include 'components/uswds_header.html' %}
+    <!-- Bootstrap Icons (self-hosted v1.11.3) -->
+    <link
+      rel="stylesheet"
+      href="/static/vendor/bootstrap-icons/bootstrap-icons.min.css"
+    />
 
-  <!-- Main Layout -->
-  <div class="grid-container padding-y-4">
-    <div class="grid-row grid-gap">
-      
-      <!-- Side Navigation -->
-      <aside class="usa-layout-docs__sidenav display-none desktop:display-block desktop:grid-col-3">
-        {% include 'components/uswds_sidenav.html' %}
-      </aside>
+    <!-- Google Material Symbols -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
-      <!-- Main Content -->
-      <main class="usa-layout-docs__main desktop:grid-col-9" id="main-content">
-        <!-- Flash Messages -->
-        {% if messages %}
-          <div class="margin-bottom-3">
-            {% for category, message in messages %}
-              {% set alert_type = 'error' if category in ['danger', 'error'] else ('success' if category == 'success' else 'info') %}
-              <div class="usa-alert usa-alert--{{ alert_type }}" role="alert">
-                <div class="usa-alert__body">
-                  <p class="usa-alert__text">{{ message }}</p>
-                </div>
-              </div>
-            {% endfor %}
+    <!-- Kinjo Admin Design System -->
+    <link rel="stylesheet" href="/static/css/admin_design_system.css?v=3.0" />
+    <link rel="stylesheet" href="/static/css/top-menu.css?v=1.0" />
+    <link rel="stylesheet" href="/static/css/design-tokens.css?v=1" />
+    <link rel="stylesheet" href="/static/css/layout.css?v=1.1" />
+    <link rel="stylesheet" href="/static/css/components.css?v=1.2" />
+    <link rel="stylesheet" href="/static/css/utilities.css?v=1" />
+
+    <!-- Legacy compatibility -->
+    <link rel="stylesheet" href="/static/css/kinjo.css?v=20260703" />
+    {% if ui_dir == 'rtl' %}
+    <link rel="stylesheet" href="/static/css/rtl.css" />
+    {% endif %}
+
+    <!-- SweetAlert2 (self-hosted v11.14.5) -->
+    <link rel="stylesheet" href="/static/vendor/sweetalert2/sweetalert2.min.css" />
+    <!-- Odometer (self-hosted v0.4.8) -->
+    <link rel="stylesheet" href="/static/vendor/odometer/odometer-theme-default.css" />
+
+    <script src="/static/js/sanitize.js"></script>
+    <script src="/static/js/page_load_timer.js"></script>
+
+    <title>
+      {% block title %}{% if ui_lang == 'en' %}KinJo Manager{% else %}إدارة الحضانة{% endif %}{% endblock %}
+    </title>
+
+    {% block extra_head %}{% endblock %}
+  </head>
+
+  <body class="admin-container">
+    <!-- Skip navigation link (accessibility) -->
+    <a href="#admin-main-content" class="admin-skip-link">
+      {% if ui_lang == 'en' %}Skip to main content{% else %}تخطي إلى المحتوى الرئيسي{% endif %}
+    </a>
+
+    {% include 'components/impersonation_banner.html' %}
+
+    <div class="admin-layout" id="admin-layout">
+      <!-- Main Content Area -->
+      <main class="admin-main" id="admin-main-content">
+        <!-- Header (Tier 1) -->
+        <header class="admin-header">
+          <div class="admin-header-left">
+              <a href="/dashboard" class="header-logo" style="display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; color: #1F5E47; text-decoration: none;">
+              <img src="/static/favicon.svg" width="32" height="32" alt="" class="header-logo-icon" aria-hidden="true" loading="eager" />
+              <span data-i18n="nav.brand">KinJo Manager</span>
+            </a>
           </div>
-        {% endif %}
 
+          <div class="admin-header-right">
+            <!-- Language Switcher Component -->
+            <div class="dropdown header-lang-dropdown">
+              <button
+                class="btn-header-action dropdown-toggle"
+                type="button"
+                id="languageDropdown"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                aria-label="{% if ui_lang == 'en' %}Language{% else %}اللغة{% endif %}"
+              >
+                <i class="bi bi-globe fs-5" aria-hidden="true"></i>
+                <span class="d-none d-md-inline ms-2 me-1 fw-medium small">
+                  {% if ui_lang == 'en' %}English{% else %}العربية{% endif %}
+                </span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="languageDropdown">
+                <li>
+                  <button class="dropdown-item d-flex align-items-center justify-content-between {% if ui_lang == 'en' %}active{% endif %}" onclick="setAdminLanguage('en')">
+                    English
+                    {% if ui_lang == 'en' %}<i class="bi bi-check2 ms-2"></i>{% endif %}
+                  </button>
+                </li>
+                <li>
+                  <button class="dropdown-item d-flex align-items-center justify-content-between {% if ui_lang == 'ar' %}active{% endif %}" onclick="setAdminLanguage('ar')">
+                    العربية
+                    {% if ui_lang == 'ar' %}<i class="bi bi-check2 ms-2"></i>{% endif %}
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Vertical Divider -->
+            <div class="header-divider d-none d-md-block"></div>
+
+            <!-- User Profile Component -->
+            <div class="dropdown header-user-dropdown">
+              <button
+                class="btn-header-user dropdown-toggle"
+                type="button"
+                id="userProfileDropdown"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                aria-label="{% if ui_lang == 'en' %}User menu{% else %}قائمة المستخدم{% endif %}"
+              >
+                <div class="header-user-avatar" aria-hidden="true">
+                  {{ current_user.full_name[:2] | upper if current_user and current_user.full_name else (current_user.username[:2] | upper if current_user else 'AD') }}
+                </div>
+                <div class="header-user-details d-none d-md-flex">
+                  <span class="header-user-name">
+                    {{ current_user.full_name if current_user and current_user.full_name else (current_user.username if current_user else 'System Admin') }}
+                  </span>
+                  <span class="header-user-role">
+                    {% if ui_lang == 'en' %}{{ current_user.role | title if current_user and current_user.role else 'Administrator' }}{% else %}{{ current_user.role.value | role_ar if current_user and current_user.role else 'مدير النظام' }}{% endif %}
+                  </span>
+                </div>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userProfileDropdown">
+                <li>
+                  <a class="dropdown-item py-2" href="/profile">
+                    <i class="bi bi-person-circle me-2 text-muted" aria-hidden="true"></i>
+                    {% if ui_lang == 'en' %}Profile Settings{% else %}إعدادات الملف الشخصي{% endif %}
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <a class="dropdown-item py-2 text-danger" href="#" data-action="logout">
+                    <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>
+                    {% if ui_lang == 'en' %}Sign Out{% else %}تسجيل الخروج{% endif %}
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </header>
+
+        <!-- Main Navigation Bar (Tier 2) -->
+        <aside id="admin-sidebar">
+        <nav class="admin-top-nav" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
+          {% set current_path = request.url.path %}
+          {% set top_level_items = [
+            {"href": "/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم", "label_en": "Dashboard", "active_paths": ["/dashboard"]}
+          ] %}
+          {% set sidebar_sections = [
+            {
+              "id": "daily_ops",
+              "icon": "bi-calendar-check",
+              "label_ar": "العمليات اليومية",
+              "label_en": "Daily Operations",
+              "items": [
+                {"href": "/attendance/daily", "icon": "bi-calendar2-check", "label_ar": "الحضور اليومي", "label_en": "Daily Attendance", "active_paths": ["/attendance/daily"], "active_prefixes": ["/attendance/"]},
+                {"href": "/safety", "icon": "bi-shield-lock", "label_ar": "السلامة والحوادث", "label_en": "Safety & Incidents", "active_paths": ["/safety"], "active_prefixes": ["/safety", "/incidents"]},
+                {"href": "/messages", "icon": "bi-chat-dots", "label_ar": "الرسائل", "label_en": "Messages", "active_paths": ["/messages"], "active_prefixes": ["/messages", "/communication"]}
+              ]
+            },
+            {
+              "id": "requests_reports",
+              "icon": "bi-file-earmark-text",
+              "label_ar": "الطلبات والتقارير",
+              "label_en": "Requests & Reports",
+              "items": [
+                {"href": "/enrollments", "icon": "bi-person-plus", "label_ar": "طلبات التسجيل", "label_en": "Enrollment Requests", "active_paths": ["/enrollments"], "active_prefixes": ["/enrollments"]},
+                {"href": "/manager/absence-requests", "icon": "bi-calendar-x", "label_ar": "طلبات الغياب", "label_en": "Absence Requests", "active_paths": ["/manager/absence-requests"]},
+                {"href": "/daily-reports", "icon": "bi-journal-check", "label_ar": "التقارير اليومية", "label_en": "Daily Reports", "active_paths": ["/daily-reports"], "active_prefixes": ["/daily-reports", "/reports"]}
+              ]
+            },
+            {
+              "id": "management",
+              "icon": "bi-sliders",
+              "label_ar": "الإدارة",
+              "label_en": "Management",
+              "items": [
+                {"href": "/manager/kpi", "icon": "bi-bar-chart-line", "label_ar": "مؤشرات الأداء", "label_en": "KPIs", "active_paths": ["/manager/kpi"]},
+                {"href": "/manager/benchmarking", "icon": "bi-percent", "label_ar": "المقارنة المعيارية", "label_en": "Benchmarking", "active_paths": ["/manager/benchmarking"]},
+                {"href": "/manager/supervisors", "icon": "bi-person-badge", "label_ar": "المشرفات", "label_en": "Supervisors", "active_paths": ["/manager/supervisors"]},
+                {"href": "/manager/children", "icon": "bi-people", "label_ar": "الأطفال", "label_en": "Children", "active_paths": ["/manager/children"]}
+              ]
+            }
+          ] %}
+          
+          <div class="top-nav-container">
+            <ul class="top-menu" role="menubar">
+              {% for item in top_level_items %}
+                {% set item_state = namespace(active=current_path in item.active_paths) %}
+                <li class="top-menu-item" role="presentation">
+                  <a href="{{ item.href }}" class="top-menu-link{% if item_state.active %} active{% endif %}" role="menuitem">
+                    <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                    <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
+                  </a>
+                </li>
+              {% endfor %}
+
+              {% for section in sidebar_sections %}
+                {% set section_state = namespace(active=false) %}
+                {% for item in section["items"] %}
+                  {% set item_state = namespace(active=current_path in item.active_paths) %}
+                  {% if item.active_prefixes is defined %}
+                    {% for prefix in item.active_prefixes %}
+                      {% if current_path.startswith(prefix) %}{% set item_state.active = true %}{% endif %}
+                    {% endfor %}
+                  {% endif %}
+                  {% if item_state.active %}{% set section_state.active = true %}{% endif %}
+                {% endfor %}
+
+                <li class="top-menu-item has-dropdown" role="presentation">
+                  <button class="top-menu-link dropdown-toggle{% if section_state.active %} active{% endif %}" type="button" aria-expanded="false" role="menuitem">
+                    <i class="bi {{ section.icon }}" aria-hidden="true"></i>
+                    <span>{% if ui_lang == 'en' %}{{ section.label_en }}{% else %}{{ section.label_ar }}{% endif %}</span>
+                  </button>
+                  <ul class="top-menu-dropdown shadow-sm" role="menu">
+                    {% set ns = namespace(current_group=none) %}
+                    {% for item in section["items"] %}
+                      {% set item_state = namespace(active=current_path in item.active_paths) %}
+                      {% if item.active_prefixes is defined %}
+                        {% for prefix in item.active_prefixes %}
+                          {% if current_path.startswith(prefix) %}{% set item_state.active = true %}{% endif %}
+                        {% endfor %}
+                      {% endif %}
+                      
+                      {% if item.group_label_ar is defined and item.group_label_ar != ns.current_group %}
+                        {% set ns.current_group = item.group_label_ar %}
+                        <li class="dropdown-group-label" role="presentation">
+                          {% if ui_lang == 'en' %}{{ item.group_label_en }}{% else %}{{ item.group_label_ar }}{% endif %}
+                        </li>
+                      {% endif %}
+                      
+                      <li role="presentation">
+                        <a href="{{ item.href }}" class="dropdown-item{% if item_state.active %} active{% endif %}" role="menuitem"{% if item_state.active %} aria-current="page"{% endif %}>
+                          <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                          <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
+                        </a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </nav>
+        </aside>
+
+        <!-- Page Header block (for page-specific headers) -->
         {% block page_header %}{% endblock %}
-        {% block content %}{% endblock %}
+
+        <!-- Page Content -->
+        <div class="admin-content" id="admin-content">{% block content %}{% endblock %}</div>
       </main>
-
     </div>
-  </div>
 
-  <!-- USWDS JS (vendored 3.8.1) -->
-  <script src="/static/vendor/uswds/js/uswds.min.js"></script>
+    <!-- Chart.js (global Chart constructor required by analytics/kpi pages, self-hosted v4.4.1) -->
+    <script src="/static/vendor/chartjs/chart.umd.min.js"></script>
 
-  <!-- KinJo Logic Scripts -->
-  <script src="/static/js/auth.js?v=2.1"></script>
-  <script src="/static/js/kinjo-api.js?v=2.1"></script>
-  <script src="/static/js/app_i18n.js?v=2.1"></script>
+    <!-- SweetAlert2 (self-hosted v11.14.5) -->
+    <script src="/static/vendor/sweetalert2/sweetalert2.all.min.js"></script>
 
-  {% block extra_js %}{% endblock %}
-  {% block scripts %}{% endblock %}
-</body>
+    <!-- Odometer (animated counters, self-hosted v0.4.8) -->
+    <script src="/static/vendor/odometer/odometer.min.js"></script>
+
+    <!-- Bootstrap JavaScript (self-hosted v5.3.2) -->
+    <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+
+    <!-- Auth & API (must load before other JS) -->
+    <script src="/static/js/auth.js?v=2.1"></script>
+    <script src="/static/js/app_i18n.js"></script>
+    <script src="/static/js/kinjo-api.js?v=2.0"></script>
+
+    <!-- Core Infrastructure -->
+    <script src="/static/js/core/dataFetcher.js"></script>
+    <script src="/static/js/core/i18n.js"></script>
+
+    <!-- Admin Component Library -->
+    <script src="/static/js/admin_components.js?v=2.2"></script>
+
+    <!-- Admin Internationalization (Legacy) -->
+    <script src="/static/js/admin_i18n.js?v=2.3"></script>
+
+    {% block extra_scripts %}{% endblock %}
+
+    <!-- Admin Initialization -->
+    <script>
+      (function () {
+        "use strict";
+
+        /* â"€â"€ Language switcher â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */
+        window.setAdminLanguage = function (lang) {
+          if (lang !== "ar" && lang !== "en") return;
+          document.cookie =
+            "kinjo_lang=" + lang + "; path=/; max-age=31536000; SameSite=Lax";
+          window.location.reload();
+        };
+
+        /* â"€â"€ Global error handler â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */
+        window.addEventListener("error", function (e) {
+          console.error("Admin interface error:", e.error);
+          if (!e.error) return;
+          if (window.AdminComponents && window.AdminI18n) {
+            var _i = window.AdminI18n;
+            window.AdminComponents.showNotification({
+              type: "error",
+              title: _i.translate("components.error_title", "Error"),
+              message: _i.translate("components.unexpected_error", "An unexpected error occurred."),
+            });
+          }
+        });
+        window.addEventListener("unhandledrejection", function (e) {
+          if (window.AdminComponents && window.AdminI18n) {
+            var _i = window.AdminI18n;
+            window.AdminComponents.showNotification({
+              type: "error",
+              title: _i.translate("components.error_title", "Error"),
+              message: _i.translate("components.background_error", "A background operation failed."),
+            });
+          }
+        });
+        window.AdminUtils = window.AdminUtils || {};
+        window.AdminUtils.confirm = function (options) {
+          var _i = window.AdminI18n;
+          var opts = Object.assign({
+            title: _i ? _i.translate("components.confirm_action", "Confirm Action") : "Confirm Action",
+            confirmText: _i ? _i.translate("components.confirm_text", "Confirm") : "Confirm",
+          }, options || {});
+          return Promise.resolve(window.confirm(opts.title));
+        };
+
+        /* â"€â"€ Nav group collapsible â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */
+        function setupNavGroups() {
+          document.querySelectorAll(".admin-nav-group").forEach(function (group) {
+            var btn   = group.querySelector(".admin-nav-group-title");
+            if (!btn) return;
+            // Auto-expand if a child link is currently active
+            var hasActive = !!group.querySelector(".admin-nav-item.active");
+            if (hasActive || group.classList.contains("open")) {
+              group.classList.add("open");
+              btn.setAttribute("aria-expanded", "true");
+            }
+            btn.addEventListener("click", function () {
+              var isOpen = group.classList.toggle("open");
+              btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            });
+            btn.addEventListener("keydown", function (e) {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                btn.click();
+              }
+            });
+          });
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+          setupNavGroups();
+        });
+
+        /* â"€â"€ Anti-FOUC: reveal page â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */
+        document.documentElement.style.visibility = "";
+      })();
+    </script>
+  </body>
 </html>
+

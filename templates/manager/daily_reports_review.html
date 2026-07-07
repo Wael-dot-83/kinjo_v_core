@@ -2,21 +2,21 @@
 {% block title %}{{ _('مراجعة التقارير اليومية') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="margin-bottom-4 display-flex flex-justify flex-align-start flex-wrap grid-gap-2">
-    <div class="usa-prose">
-        <h1 class="font-heading-xl margin-top-0 margin-bottom-1">
+<div class="mb-4 d-flex flex-justify align-items-start flex-wrap g-2">
+    <div class="mb-3">
+        <h1 class="fs-1 fw-bold mt-0 mb-1">
             <i class="bi bi-journal-richtext text-primary"></i> {{ _('مراجعة التقارير اليومية') }}
         </h1>
-        <nav aria-label="Breadcrumb" class="usa-breadcrumb usa-breadcrumb--wrap">
-            <ol class="usa-breadcrumb__list">
-                <li class="usa-breadcrumb__list-item"><a href="/dashboard" class="usa-breadcrumb__link">{{ _('لوحة التحكم') }}</a></li>
-                <li class="usa-breadcrumb__list-item usa-current" aria-current="page">{{ _('مراجعة التقارير') }}</li>
+        <nav aria-label="Breadcrumb" class="admin-breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard" class="">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ _('مراجعة التقارير') }}</li>
             </ol>
         </nav>
     </div>
-    <div class="margin-top-1">
-        <button class="usa-button usa-button--outline" onclick="loadReports()">
-            <i class="bi bi-arrow-clockwise margin-right-1"></i>{{ _('تحديث') }}
+    <div class="mt-1">
+        <button class="btn btn-outline-primary" onclick="loadReports()">
+            <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
         </button>
     </div>
 </div>
@@ -25,58 +25,58 @@
 {% block content %}
 
 <!-- Stat Cards -->
-<div class="grid-row grid-gap margin-bottom-4">
-    <div class="tablet:grid-col-3 margin-bottom-2 tablet:margin-bottom-0">
-        <ul class="usa-card-group">
-            <li class="usa-card tablet:grid-col-12">
-                <div class="usa-card__container border-top-1 border-gold">
-                    <header class="usa-card__header">
-                        <h2 class="usa-card__heading font-heading-sm">{{ _('بانتظار المراجعة') }}</h2>
+<div class="row g-3 mb-4">
+    <div class="col-md-3 mb-2 mb-md-0">
+        <ul class="row g-4">
+            <li class="col-12 col-md-12">
+                <div class="col-12__container border-top-1 border-gold">
+                    <header class="col-12__header">
+                        <h2 class="col-12__heading font-heading-sm">{{ _('بانتظار المراجعة') }}</h2>
                     </header>
-                    <div class="usa-card__body">
-                        <p class="font-sans-xl text-bold text-gold" id="statPending">—</p>
+                    <div class="col-12__body">
+                        <p class="fw-bold text-gold" id="statPending">—</p>
                     </div>
                 </div>
             </li>
         </ul>
     </div>
-    <div class="tablet:grid-col-3 margin-bottom-2 tablet:margin-bottom-0">
-        <ul class="usa-card-group">
-            <li class="usa-card tablet:grid-col-12">
-                <div class="usa-card__container border-top-1 border-green">
-                    <header class="usa-card__header">
-                        <h2 class="usa-card__heading font-heading-sm">{{ _('أُرسلت للوالدين') }}</h2>
+    <div class="col-md-3 mb-2 mb-md-0">
+        <ul class="row g-4">
+            <li class="col-12 col-md-12">
+                <div class="col-12__container border-top-1 border-green">
+                    <header class="col-12__header">
+                        <h2 class="col-12__heading font-heading-sm">{{ _('أُرسلت للوالدين') }}</h2>
                     </header>
-                    <div class="usa-card__body">
-                        <p class="font-sans-xl text-bold text-green" id="statSent">—</p>
+                    <div class="col-12__body">
+                        <p class="fw-bold text-success" id="statSent">—</p>
                     </div>
                 </div>
             </li>
         </ul>
     </div>
-    <div class="tablet:grid-col-3 margin-bottom-2 tablet:margin-bottom-0">
-        <ul class="usa-card-group">
-            <li class="usa-card tablet:grid-col-12">
-                <div class="usa-card__container border-top-1 border-primary">
-                    <header class="usa-card__header">
-                        <h2 class="usa-card__heading font-heading-sm">{{ _('تقارير اليوم') }}</h2>
+    <div class="col-md-3 mb-2 mb-md-0">
+        <ul class="row g-4">
+            <li class="col-12 col-md-12">
+                <div class="col-12__container border-top-1 border-primary">
+                    <header class="col-12__header">
+                        <h2 class="col-12__heading font-heading-sm">{{ _('تقارير اليوم') }}</h2>
                     </header>
-                    <div class="usa-card__body">
-                        <p class="font-sans-xl text-bold text-primary" id="statToday">—</p>
+                    <div class="col-12__body">
+                        <p class="fw-bold text-primary" id="statToday">—</p>
                     </div>
                 </div>
             </li>
         </ul>
     </div>
-    <div class="tablet:grid-col-3">
-        <ul class="usa-card-group">
-            <li class="usa-card tablet:grid-col-12">
-                <div class="usa-card__container">
-                    <header class="usa-card__header">
-                        <h2 class="usa-card__heading font-heading-sm">{{ _('إجمالي هذا الأسبوع') }}</h2>
+    <div class="col-md-3">
+        <ul class="row g-4">
+            <li class="col-12 col-md-12">
+                <div class="col-12__container">
+                    <header class="col-12__header">
+                        <h2 class="col-12__heading font-heading-sm">{{ _('إجمالي هذا الأسبوع') }}</h2>
                     </header>
-                    <div class="usa-card__body">
-                        <p class="font-sans-xl text-bold text-secondary-dark" id="statWeek">—</p>
+                    <div class="col-12__body">
+                        <p class="fw-bold text-secondary" id="statWeek">—</p>
                     </div>
                 </div>
             </li>
@@ -85,42 +85,42 @@
 </div>
 
 <!-- Filter Bar -->
-<div class="usa-card padding-3 margin-bottom-4 bg-white border border-base-lighter">
-    <form class="usa-form usa-form--large width-full" onsubmit="event.preventDefault(); loadReports();">
-        <div class="grid-row grid-gap-2 flex-align-end">
-            <div class="tablet:grid-col-2">
-                <label class="usa-label margin-top-0" for="filterClass">{{ _('الشعبة') }}</label>
-                <select id="filterClass" class="usa-select margin-top-1">
+<div class="col-12 p-3 mb-4 bg-white border border-base-lighter">
+    <form class="--large w-100" onsubmit="event.preventDefault(); loadReports();">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label mt-0" for="filterClass">{{ _('الشعبة') }}</label>
+                <select id="filterClass" class="form-select mt-1">
                     <option value="">{{ _('— جميع الشعب —') }}</option>
                 </select>
             </div>
-            <div class="tablet:grid-col-2">
-                <label class="usa-label margin-top-0" for="filterSupervisor">{{ _('المشرف') }}</label>
-                <select id="filterSupervisor" class="usa-select margin-top-1">
+            <div class="col-md-2">
+                <label class="form-label mt-0" for="filterSupervisor">{{ _('المشرف') }}</label>
+                <select id="filterSupervisor" class="form-select mt-1">
                     <option value="">{{ _('— جميع المشرفين —') }}</option>
                 </select>
             </div>
-            <div class="tablet:grid-col-2">
-                <label class="usa-label margin-top-0" for="filterFrom">{{ _('من تاريخ') }}</label>
-                <input type="date" id="filterFrom" class="usa-input margin-top-1">
+            <div class="col-md-2">
+                <label class="form-label mt-0" for="filterFrom">{{ _('من تاريخ') }}</label>
+                <input type="date" id="filterFrom" class="form-control mt-1">
             </div>
-            <div class="tablet:grid-col-2">
-                <label class="usa-label margin-top-0" for="filterTo">{{ _('إلى تاريخ') }}</label>
-                <input type="date" id="filterTo" class="usa-input margin-top-1">
+            <div class="col-md-2">
+                <label class="form-label mt-0" for="filterTo">{{ _('إلى تاريخ') }}</label>
+                <input type="date" id="filterTo" class="form-control mt-1">
             </div>
-            <div class="tablet:grid-col-2">
-                <label class="usa-label margin-top-0" for="filterStatus">{{ _('الحالة') }}</label>
-                <select id="filterStatus" class="usa-select margin-top-1">
+            <div class="col-md-2">
+                <label class="form-label mt-0" for="filterStatus">{{ _('الحالة') }}</label>
+                <select id="filterStatus" class="form-select mt-1">
                     <option value="">{{ _('— جميع الحالات —') }}</option>
                     <option value="SUBMITTED">{{ _('بانتظار مراجعة المدير') }}</option>
                     <option value="SENT_TO_PARENT">{{ _('تم الإرسال إلى ولي الأمر') }}</option>
                 </select>
             </div>
-            <div class="tablet:grid-col-2 display-flex grid-gap-1">
-                <button type="submit" class="usa-button margin-top-1">
+            <div class="col-md-2 d-flex g-1">
+                <button type="submit" class="btn btn-primary mt-1">
                     {{ _('تطبيق') }}
                 </button>
-                <button type="button" class="usa-button usa-button--unstyled text-secondary-dark margin-top-1" onclick="resetFilters()">
+                <button type="button" class="btn btn-link text-decoration-none text-secondary mt-1" onclick="resetFilters()">
                     {{ _('إعادة ضبط') }}
                 </button>
             </div>
@@ -129,34 +129,34 @@
 </div>
 
 <!-- Reports Table Section -->
-<div class="usa-card padding-3 margin-bottom-4 bg-white border border-base-lighter">
-    <div class="grid-row margin-bottom-2 flex-justify flex-align-center">
-        <div class="grid-col-auto">
-            <h3 class="font-heading-md margin-y-0">
-                <i class="bi bi-table margin-right-1 text-primary"></i>
-                {{ _('التقارير') }} <span class="text-base text-sm margin-left-1" id="reportsCount"></span>
+<div class="col-12 p-3 mb-4 bg-white border border-base-lighter">
+    <div class="row mb-2 flex-justify align-items-center">
+        <div class="col-auto">
+            <h3 class="h4 my-0">
+                <i class="bi bi-table me-2 text-primary"></i>
+                {{ _('التقارير') }} <span class="text-secondary text-sm ms-2" id="reportsCount"></span>
             </h3>
         </div>
     </div>
 
-    <div id="tableLoading" class="text-center padding-y-5 text-base">
+    <div id="tableLoading" class="text-center py-5 text-secondary">
         <p>{{ _('جاري تحميل التقارير...') }}</p>
     </div>
 
-    <div id="tableEmpty" class="text-center padding-y-5 text-base display-none">
-        <p class="text-bold">{{ _('لا توجد تقارير تطابق الفلاتر المحددة') }}</p>
+    <div id="tableEmpty" class="text-center py-5 text-secondary d-none">
+        <p class="fw-bold">{{ _('لا توجد تقارير تطابق الفلاتر المحددة') }}</p>
     </div>
 
-    <div id="tableError" class="text-center padding-y-5 display-none" role="alert" aria-live="assertive">
-        <p class="text-secondary-dark">{{ _('تعذّر تحميل التقارير') }}</p>
-        <button class="usa-button usa-button--unstyled" onclick="loadReports()">
-            <i class="bi bi-arrow-clockwise margin-right-1"></i>{{ _('إعادة المحاولة') }}
+    <div id="tableError" class="text-center py-5 d-none" role="alert" aria-live="assertive">
+        <p class="text-secondary">{{ _('تعذّر تحميل التقارير') }}</p>
+        <button class="btn btn-link text-decoration-none" onclick="loadReports()">
+            <i class="bi bi-arrow-clockwise me-2"></i>{{ _('إعادة المحاولة') }}
         </button>
     </div>
 
-    <div id="tableWrap" class="display-none overflow-x-auto">
-        <table class="usa-table usa-table--striped width-full" aria-label="{{ _('جدول التقارير اليومية') }}">
-            <caption class="usa-sr-only">{{ _('جدول التقارير اليومية') }}</caption>
+    <div id="tableWrap" class="d-none overflow-x-auto">
+        <table class="table table-hover align-middle align-middle--striped w-100" aria-label="{{ _('جدول التقارير اليومية') }}">
+            <caption class="visually-hidden">{{ _('جدول التقارير اليومية') }}</caption>
             <thead>
                 <tr>
                     <th scope="col">{{ _('التاريخ') }}</th>
@@ -173,58 +173,50 @@
     </div>
 </div>
 
-<!-- Send to Parents Confirm Modal (USWDS) -->
-<div class="usa-modal" id="sendParentsModal" aria-labelledby="sendParentsModalLabel" aria-modal="true">
-  <div class="usa-modal__content">
-    <div class="usa-modal__main">
-      <h2 class="usa-modal__heading" id="sendParentsModalLabel">
-        <i class="bi bi-send-fill margin-right-1 text-green"></i> {{ _('إرسال التقرير للوالدين') }}
-      </h2>
-      <div class="usa-prose">
-        <p class="text-bold">{{ _('هل أنت متأكد من إرسال هذا التقرير للوالدين؟') }}</p>
-        <p>{{ _('سيتمكن الوالدان من رؤية التقرير في تطبيقهم.') }}</p>
+<!-- Send to Parents Confirm Modal -->
+<div class="modal fade" id="sendParentsModal" tabindex="-1" aria-labelledby="sendParentsModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="sendParentsModalLabel">
+          <i class="bi bi-send-fill me-2 text-success"></i> {{ _('إرسال التقرير للوالدين') }}
+        </h2>
+        <button type="button" class="btn-close usa-modal__close" aria-label="Close" data-bs-dismiss="modal"></button>
       </div>
-      <ul class="usa-button-group margin-top-4">
-        <li class="usa-button-group__item">
-          <button type="button" class="usa-button bg-green" id="confirmSendParentsBtn" onclick="confirmSendToParents()">
+      <div class="modal-body">
+        <p class="fw-bold">{{ _('هل أنت متأكد من إرسال هذا التقرير للوالدين؟') }}</p>
+        <p>{{ _('سيتمكن الوالدان من رؤية التقرير في تطبيقهم.') }}</p>
+        <div class="d-flex gap-2 mt-4">
+          <button type="button" class="btn btn-primary text-bg-success" id="confirmSendParentsBtn" onclick="confirmSendToParents()">
               {{ _('إرسال') }}
           </button>
-        </li>
-        <li class="usa-button-group__item">
-          <button type="button" class="usa-button usa-button--unstyled padding-105 text-center" data-close-modal>{{ _('إلغاء') }}</button>
-        </li>
-      </ul>
+          <button type="button" class="btn btn-link text-decoration-none px-3 text-center" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+        </div>
+      </div>
     </div>
-    <button class="usa-button usa-modal__close" aria-label="Close this window" data-close-modal>
-      <i class="bi bi-x-lg"></i>
-    </button>
   </div>
 </div>
 
-<!-- Delete Confirm Modal (USWDS) -->
-<div class="usa-modal" id="deleteReportModal" aria-labelledby="deleteReportModalLabel" aria-modal="true">
-  <div class="usa-modal__content">
-    <div class="usa-modal__main">
-      <h2 class="usa-modal__heading text-secondary-dark" id="deleteReportModalLabel">
-        <i class="bi bi-trash3-fill margin-right-1"></i> {{ _('حذف التقرير') }}
-      </h2>
-      <div class="usa-prose">
-        <p>{{ _('هل أنت متأكد من حذف هذا التقرير؟ لا يمكن التراجع عن هذا الإجراء.') }}</p>
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteReportModal" tabindex="-1" aria-labelledby="deleteReportModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title text-secondary" id="deleteReportModalLabel">
+          <i class="bi bi-trash3-fill me-2"></i> {{ _('حذف التقرير') }}
+        </h2>
+        <button type="button" class="btn-close usa-modal__close" aria-label="Close" data-bs-dismiss="modal"></button>
       </div>
-      <ul class="usa-button-group margin-top-4">
-        <li class="usa-button-group__item">
-          <button type="button" class="usa-button usa-button--secondary" id="confirmDeleteReportBtn" onclick="confirmDeleteReport()">
+      <div class="modal-body">
+        <p>{{ _('هل أنت متأكد من حذف هذا التقرير؟ لا يمكن التراجع عن هذا الإجراء.') }}</p>
+        <div class="d-flex gap-2 mt-4">
+          <button type="button" class="btn btn-secondary" id="confirmDeleteReportBtn" onclick="confirmDeleteReport()">
               {{ _('حذف') }}
           </button>
-        </li>
-        <li class="usa-button-group__item">
-          <button type="button" class="usa-button usa-button--unstyled padding-105 text-center" data-close-modal>{{ _('إلغاء') }}</button>
-        </li>
-      </ul>
+          <button type="button" class="btn btn-link text-decoration-none px-3 text-center" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+        </div>
+      </div>
     </div>
-    <button class="usa-button usa-modal__close" aria-label="Close this window" data-close-modal>
-      <i class="bi bi-x-lg"></i>
-    </button>
   </div>
 </div>
 
@@ -239,12 +231,12 @@
     let pendingDeleteId  = null;
 
     const STATUS_BADGE = {
-        'SUBMITTED':      `<span class="usa-tag bg-primary-light text-primary-dark">{{ _('بانتظار مراجعة المدير') }}</span>`,
-        'SENT_TO_PARENT': `<span class="usa-tag bg-green">{{ _('تم الإرسال إلى ولي الأمر') }}</span>`,
-        'DRAFT':          `<span class="usa-tag bg-gold">{{ _('مسودة') }}</span>`,
-        'APPROVED':       `<span class="usa-tag bg-primary">{{ _('معتمد') }}</span>`,
-        'REJECTED':       `<span class="usa-tag bg-secondary-dark">{{ _('مرفوض') }}</span>`,
-        'RETURNED':       `<span class="usa-tag bg-secondary-dark">{{ _('أُعيد للمشرف') }}</span>`,
+        'SUBMITTED':      `<span class="badge text-bg-primary text-primary">{{ _('بانتظار مراجعة المدير') }}</span>`,
+        'SENT_TO_PARENT': `<span class="badge text-bg-success">{{ _('تم الإرسال إلى ولي الأمر') }}</span>`,
+        'DRAFT':          `<span class="badge text-bg-warning">{{ _('مسودة') }}</span>`,
+        'APPROVED':       `<span class="badge text-bg-primary">{{ _('معتمد') }}</span>`,
+        'REJECTED':       `<span class="badge text-bg-secondary">{{ _('مرفوض') }}</span>`,
+        'RETURNED':       `<span class="badge text-bg-secondary">{{ _('أُعيد للمشرف') }}</span>`,
     };
 
     function getHeaders() {
@@ -305,10 +297,10 @@
         const to         = document.getElementById('filterTo').value;
         const status     = document.getElementById('filterStatus').value;
 
-        document.getElementById('tableLoading').classList.remove('display-none');
-        document.getElementById('tableEmpty').classList.add('display-none');
-        document.getElementById('tableError').classList.add('display-none');
-        document.getElementById('tableWrap').classList.add('display-none');
+        document.getElementById('tableLoading').classList.remove('d-none');
+        document.getElementById('tableEmpty').classList.add('d-none');
+        document.getElementById('tableError').classList.add('d-none');
+        document.getElementById('tableWrap').classList.add('d-none');
 
         let url = '/api/manager/daily-reports?';
         if (classId) url += `class_id=${classId}&`;
@@ -338,19 +330,19 @@
             const cnt = document.getElementById('reportsCount');
             if (cnt) cnt.textContent = `(${Array.isArray(reports) ? reports.length : 0} {{ _('تقرير') }})`;
 
-            document.getElementById('tableLoading').classList.add('display-none');
+            document.getElementById('tableLoading').classList.add('d-none');
 
             if (!reports.length) {
-                document.getElementById('tableEmpty').classList.remove('display-none');
+                document.getElementById('tableEmpty').classList.remove('d-none');
                 return;
             }
 
             renderTable(reports);
-            document.getElementById('tableWrap').classList.remove('display-none');
+            document.getElementById('tableWrap').classList.remove('d-none');
 
         } catch {
-            document.getElementById('tableLoading').classList.add('display-none');
-            document.getElementById('tableError').classList.remove('display-none');
+            document.getElementById('tableLoading').classList.add('d-none');
+            document.getElementById('tableError').classList.remove('d-none');
         }
     };
 
@@ -358,36 +350,36 @@
         const tbody = document.getElementById('reportsTableBody');
         tbody.innerHTML = reports.map(r => {
             const date  = r.date ? new Date(r.date).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'}) : '—';
-            const badge = STATUS_BADGE[r.status] || `<span class="usa-tag bg-secondary-dark">{{ _('حالة غير معروفة') }}</span>`;
+            const badge = STATUS_BADGE[r.status] || `<span class="badge text-bg-secondary">{{ _('حالة غير معروفة') }}</span>`;
             const canSend = r.status === 'SUBMITTED';
             return `
             <tr>
-                <td class="text-sm text-base">${date}</td>
+                <td class="text-sm text-secondary">${date}</td>
                 <td>
-                    <div class="display-flex flex-align-center grid-gap-1">
+                    <div class="d-flex align-items-center g-1">
                         <i class="bi bi-emoji-smile-fill text-primary"></i>
-                        <span class="text-bold">${escHtml(r.child_name || '—')}</span>
+                        <span class="fw-bold">${escHtml(r.child_name || '—')}</span>
                     </div>
                 </td>
                 <td class="text-sm">${escHtml(r.supervisor_name || '—')}</td>
-                <td class="text-sm text-base">${escHtml(r.class_name || '—')}</td>
+                <td class="text-sm text-secondary">${escHtml(r.class_name || '—')}</td>
                 <td>${badge}</td>
                 <td class="text-center">
-                    <div class="display-flex flex-wrap flex-justify-center grid-gap-1">
-                        <a href="/reports/${r.id}" class="usa-button usa-button--unstyled padding-1">
-                            <i class="bi bi-eye margin-right-1"></i>{{ _('عرض') }}
+                    <div class="d-flex flex-wrap justify-content-center g-1">
+                        <a href="/reports/${r.id}" class="btn btn-link text-decoration-none p-1">
+                            <i class="bi bi-eye me-2"></i>{{ _('عرض') }}
                         </a>
                         ${canSend ? `
-                        <a href="#sendParentsModal" class="usa-button usa-button--unstyled padding-1 text-green" 
-                           data-open-modal aria-controls="sendParentsModal" aria-label="{{ _('إرسال التقرير للوالدين') }}"
-                           onclick="window.pendingSendId = ${r.id}">
-                            <i class="bi bi-send" aria-hidden="true"></i>
-                        </a>` : ''}
-                        <a href="#deleteReportModal" class="usa-button usa-button--unstyled padding-1 text-secondary-dark"
-                           data-open-modal aria-controls="deleteReportModal" aria-label="{{ _('حذف التقرير') }}"
-                           onclick="window.pendingDeleteId = ${r.id}">
+                         <button type="button" class="btn btn-link text-decoration-none p-1 text-success" 
+                            data-bs-toggle="modal" data-bs-target="#sendParentsModal" aria-label="{{ _('إرسال التقرير للوالدين') }}"
+                            onclick="window.pendingSendId = ${r.id}">
+                             <i class="bi bi-send" aria-hidden="true"></i>
+                         </button>
+                         <button type="button" class="btn btn-link text-decoration-none p-1 text-secondary"
+                            data-bs-toggle="modal" data-bs-target="#deleteReportModal" aria-label="{{ _('حذف التقرير') }}"
+                            onclick="window.pendingDeleteId = ${r.id}">
                             <i class="bi bi-trash3" aria-hidden="true"></i>
-                        </a>
+                         </button>
                     </div>
                 </td>
             </tr>`;

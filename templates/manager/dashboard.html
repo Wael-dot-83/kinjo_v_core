@@ -3,29 +3,29 @@
 {% block title %}{% if ui_lang == 'en' %}Manager Dashboard — KinJo{% else %}لوحة تحكم المدير — كنجو{% endif %}{% endblock %}
 
 {% block page_header %}
-<h1 class="font-heading-xl margin-top-0 margin-bottom-1">
+<h1 class="fs-1 fw-bold mt-0 mb-1">
   {% if ui_lang == 'en' %}Manager Dashboard{% else %}لوحة تحكم المدير{% endif %}
 </h1>
-<p class="usa-intro margin-top-0" id="kgNameLine">
+<p class="lead text-muted mt-0" id="kgNameLine">
   <span id="kgName">…</span>
-  <span class="text-base-dark">— <span id="todayDate"></span></span>
+  <span class="text-muted">— <span id="todayDate"></span></span>
 </p>
 {% endblock %}
 
 {% block content %}
 <!-- Loading state -->
-<div id="dashLoading" class="usa-alert usa-alert--info usa-alert--slim" role="status">
-  <div class="usa-alert__body">
-    <p class="usa-alert__text">{% if ui_lang == 'en' %}Loading dashboard…{% else %}جارٍ تحميل لوحة التحكم…{% endif %}</p>
+<div id="dashLoading" class="alert alert-info d-flex align-items-center" role="status">
+  <div>
+    <p class="mb-0">{% if ui_lang == 'en' %}Loading dashboard…{% else %}جارٍ تحميل لوحة التحكم…{% endif %}</p>
   </div>
 </div>
 
 <!-- Error state -->
-<div id="dashError" class="usa-alert usa-alert--error" role="alert" hidden>
-  <div class="usa-alert__body">
-    <p class="usa-alert__text">
+<div id="dashError" class="alert alert-danger" role="alert" hidden>
+  <div>
+    <p class="mb-0">
       {% if ui_lang == 'en' %}Could not load the dashboard. {% else %}تعذّر تحميل لوحة التحكم. {% endif %}
-      <button type="button" class="usa-button usa-button--unstyled" onclick="loadDashboard()">
+      <button type="button" class="btn btn-link text-decoration-none" onclick="loadDashboard()">
         {% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}
       </button>
     </p>
@@ -35,49 +35,57 @@
 <div id="dashContent" hidden>
 
   <!-- Pending actions -->
-  <section aria-labelledby="pendingHeading" class="margin-bottom-4">
-    <h2 id="pendingHeading" class="font-heading-lg margin-bottom-2">
+  <section aria-labelledby="pendingHeading" class="mb-5">
+    <h2 id="pendingHeading" class="h3 fw-bold mb-3 text-primary d-flex align-items-center">
+      <i class="bi bi-bell-fill text-gold me-2"></i>
       {% if ui_lang == 'en' %}Needs your action today{% else %}بانتظار إجراءاتك اليوم{% endif %}
     </h2>
-    <ul class="usa-card-group">
-      <li class="usa-card tablet:grid-col-3">
-        <div class="usa-card__container">
-          <div class="usa-card__body">
-            <p class="font-heading-2xl margin-0 text-primary-dark" id="statReportsPending">0</p>
-            <p class="margin-0">{% if ui_lang == 'en' %}Daily reports awaiting review{% else %}تقارير يومية بانتظار المراجعة{% endif %}</p>
+    <ul class="row g-4">
+      <li class="col-12 col-md-6 col-lg-3">
+        <div class="col-12__container bg-primary-subtle border-primary border-opacity-25">
+          <div class="col-12__body text-center">
+            <i class="bi bi-file-earmark-text text-primary fs-1 mb-1"></i>
+            <p class="fs-1 fw-bolder display-5 m-0 text-primary fw-bold" id="statReportsPending">0</p>
+            <p class="m-0 text-primary fw-bold">{% if ui_lang == 'en' %}Daily reports to review{% else %}تقارير يومية للمراجعة{% endif %}</p>
           </div>
-          <div class="usa-card__footer">
-            <a href="/daily-reports" class="usa-button usa-button--outline width-full">{% if ui_lang == 'en' %}Review{% else %}مراجعة{% endif %}</a>
-          </div>
-        </div>
-      </li>
-      <li class="usa-card tablet:grid-col-3">
-        <div class="usa-card__container">
-          <div class="usa-card__body">
-            <p class="font-heading-2xl margin-0 text-primary-dark" id="statAbsencePending">0</p>
-            <p class="margin-0">{% if ui_lang == 'en' %}Pending absence requests{% else %}طلبات غياب معلّقة{% endif %}</p>
-          </div>
-          <div class="usa-card__footer">
-            <a href="/manager/absence-requests" class="usa-button usa-button--outline width-full">{% if ui_lang == 'en' %}Decide{% else %}اتخاذ قرار{% endif %}</a>
+          <div class="col-12__footer pt-0">
+            <a href="/daily-reports" class="btn btn-primary w-100 d-flex justify-content-center align-items-center">
+              {% if ui_lang == 'en' %}Review Now{% else %}راجع الآن{% endif %}
+              <i class="bi bi-arrow-right ms-2"></i>
+            </a>
           </div>
         </div>
       </li>
-      <li class="usa-card tablet:grid-col-3">
-        <div class="usa-card__container">
-          <div class="usa-card__body">
-            <p class="font-heading-2xl margin-0 text-primary-dark" id="statEnrollmentPending">0</p>
-            <p class="margin-0">{% if ui_lang == 'en' %}Pending enrollment requests{% else %}طلبات تسجيل معلّقة{% endif %}</p>
+      <li class="col-12 col-md-6 col-lg-3">
+        <div class="col-12__container">
+          <div class="col-12__body text-center">
+            <i class="bi bi-calendar-x text-muted fs-1 mb-1"></i>
+            <p class="fs-1 fw-bolder display-5 m-0 text-primary" id="statAbsencePending">0</p>
+            <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Absence requests{% else %}طلبات غياب معلّقة{% endif %}</p>
           </div>
-          <div class="usa-card__footer">
-            <a href="/enrollments" class="usa-button usa-button--outline width-full">{% if ui_lang == 'en' %}Review{% else %}مراجعة{% endif %}</a>
+          <div class="col-12__footer pt-0">
+            <a href="/manager/absence-requests" class="btn btn-outline-primary w-100">{% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %}</a>
           </div>
         </div>
       </li>
-      <li class="usa-card tablet:grid-col-3">
-        <div class="usa-card__container">
-          <div class="usa-card__body">
-            <p class="font-heading-2xl margin-0 text-primary-dark" id="statReportsSentToday">0</p>
-            <p class="margin-0">{% if ui_lang == 'en' %}Reports sent to parents today{% else %}تقارير أُرسلت لأولياء الأمور اليوم{% endif %}</p>
+      <li class="col-12 col-md-6 col-lg-3">
+        <div class="col-12__container">
+          <div class="col-12__body text-center">
+            <i class="bi bi-person-plus text-muted fs-1 mb-1"></i>
+            <p class="fs-1 fw-bolder display-5 m-0 text-primary" id="statEnrollmentPending">0</p>
+            <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Enrollment requests{% else %}طلبات تسجيل معلّقة{% endif %}</p>
+          </div>
+          <div class="col-12__footer pt-0">
+            <a href="/enrollments" class="btn btn-outline-primary w-100">{% if ui_lang == 'en' %}Review{% else %}مراجعة{% endif %}</a>
+          </div>
+        </div>
+      </li>
+      <li class="col-12 col-md-6 col-lg-3">
+        <div class="col-12__container bg-success-subtle border-success border-opacity-25">
+          <div class="col-12__body text-center">
+            <i class="bi bi-send-check text-success fs-1 mb-1"></i>
+            <p class="fs-1 fw-bolder display-5 m-0 text-success fw-bold" id="statReportsSentToday">0</p>
+            <p class="m-0 text-success fw-bold">{% if ui_lang == 'en' %}Reports sent today{% else %}تقارير أُرسلت اليوم{% endif %}</p>
           </div>
         </div>
       </li>
@@ -85,41 +93,45 @@
   </section>
 
   <!-- Kindergarten snapshot -->
-  <section aria-labelledby="snapshotHeading" class="margin-bottom-4">
-    <h2 id="snapshotHeading" class="font-heading-lg margin-bottom-2">
-      {% if ui_lang == 'en' %}Kindergarten snapshot{% else %}نظرة عامة على الحضانة{% endif %}
+  <section aria-labelledby="snapshotHeading" class="mb-5">
+    <h2 id="snapshotHeading" class="h3 fw-bold mb-3 text-primary d-flex align-items-center">
+      <i class="bi bi-building me-2"></i>
+      {% if ui_lang == 'en' %}Kindergarten Snapshot{% else %}نظرة عامة على الحضانة{% endif %}
     </h2>
-    <ul class="usa-card-group">
-      <li class="usa-card tablet:grid-col-4">
-        <div class="usa-card__container">
-          <div class="usa-card__body">
-            <p class="font-heading-2xl margin-0" id="statClasses">0</p>
-            <p class="margin-0">{% if ui_lang == 'en' %}Active classes{% else %}شعب صفية نشطة{% endif %}</p>
+    <ul class="row g-4">
+      <li class="col-12 col-md-6 col-lg-4">
+        <div class="col-12__container d-flex flex-row align-items-center p-2">
+          <div class="p-2 bg-primary-subtle text-primary rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
+            <i class="bi bi-diagram-3 fs-1 fw-bold"></i>
           </div>
-          <div class="usa-card__footer">
-            <a href="/classes" class="usa-link">{% if ui_lang == 'en' %}Manage classes{% else %}إدارة الشعب الصفية{% endif %}</a>
-          </div>
-        </div>
-      </li>
-      <li class="usa-card tablet:grid-col-4">
-        <div class="usa-card__container">
-          <div class="usa-card__body">
-            <p class="font-heading-2xl margin-0" id="statChildren">0</p>
-            <p class="margin-0">{% if ui_lang == 'en' %}Enrolled children{% else %}أطفال مسجّلون{% endif %}</p>
-          </div>
-          <div class="usa-card__footer">
-            <a href="/children" class="usa-link">{% if ui_lang == 'en' %}View children{% else %}عرض الأطفال{% endif %}</a>
+          <div class="col-12__body p-0">
+            <p class="m-0 text-secondary text-uppercase small fw-bold">{% if ui_lang == 'en' %}Active Classes{% else %}شعب صفية نشطة{% endif %}</p>
+            <p class="fs-1 fw-bold m-0" id="statClasses">0</p>
+            <a href="/classes" class="link-secondary mt-2 d-inline-block">{% if ui_lang == 'en' %}Manage classes →{% else %}إدارة الشعب الصفية ←{% endif %}</a>
           </div>
         </div>
       </li>
-      <li class="usa-card tablet:grid-col-4">
-        <div class="usa-card__container">
-          <div class="usa-card__body">
-            <p class="font-heading-2xl margin-0" id="statSupervisors">0</p>
-            <p class="margin-0">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</p>
+      <li class="col-12 col-md-6 col-lg-4">
+        <div class="col-12__container d-flex flex-row align-items-center p-2">
+          <div class="p-2 bg-success-subtleer text-success-dark rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
+            <i class="bi bi-emoji-smile fs-1 fw-bold"></i>
           </div>
-          <div class="usa-card__footer">
-            <a href="/manager/supervisors" class="usa-link">{% if ui_lang == 'en' %}View coverage{% else %}عرض التغطية{% endif %}</a>
+          <div class="col-12__body p-0">
+            <p class="m-0 text-secondary text-uppercase small fw-bold">{% if ui_lang == 'en' %}Enrolled Children{% else %}أطفال مسجّلون{% endif %}</p>
+            <p class="fs-1 fw-bold m-0" id="statChildren">0</p>
+            <a href="/children" class="link-secondary mt-2 d-inline-block">{% if ui_lang == 'en' %}View children →{% else %}عرض الأطفال ←{% endif %}</a>
+          </div>
+        </div>
+      </li>
+      <li class="col-12 col-md-6 col-lg-4">
+        <div class="col-12__container d-flex flex-row align-items-center p-2">
+          <div class="p-2 bg-gold-lighter text-gold-dark rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
+            <i class="bi bi-person-badge-fill fs-1 fw-bold"></i>
+          </div>
+          <div class="col-12__body p-0">
+            <p class="m-0 text-secondary text-uppercase small fw-bold">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</p>
+            <p class="fs-1 fw-bold m-0" id="statSupervisors">0</p>
+            <a href="/manager/supervisors" class="link-secondary mt-2 d-inline-block">{% if ui_lang == 'en' %}View coverage →{% else %}عرض التغطية ←{% endif %}</a>
           </div>
         </div>
       </li>
@@ -128,24 +140,24 @@
 
   <!-- Operational alerts -->
   <section aria-labelledby="alertsHeading">
-    <h2 id="alertsHeading" class="font-heading-lg margin-bottom-2">
+    <h2 id="alertsHeading" class="h3 fw-bold mb-2">
       {% if ui_lang == 'en' %}Operational alerts{% else %}تنبيهات تشغيلية{% endif %}
     </h2>
-    <div id="alertNoSupervisor" class="usa-alert usa-alert--warning" hidden>
-      <div class="usa-alert__body">
-        <h3 class="usa-alert__heading">{% if ui_lang == 'en' %}Classes without a supervisor{% else %}شعب صفية بلا مشرف{% endif %}</h3>
-        <p class="usa-alert__text" id="alertNoSupervisorList"></p>
+    <div id="alertNoSupervisor" class="alert alert-warning" hidden>
+      <div>
+        <h3 class="alert alert-heading">{% if ui_lang == 'en' %}Classes without a supervisor{% else %}شعب صفية بلا مشرف{% endif %}</h3>
+        <p class="mb-0" id="alertNoSupervisorList"></p>
       </div>
     </div>
-    <div id="alertNearCapacity" class="usa-alert usa-alert--warning" hidden>
-      <div class="usa-alert__body">
-        <h3 class="usa-alert__heading">{% if ui_lang == 'en' %}Classes at or near capacity{% else %}شعب صفية ممتلئة أو شبه ممتلئة{% endif %}</h3>
-        <p class="usa-alert__text" id="alertNearCapacityList"></p>
+    <div id="alertNearCapacity" class="alert alert-warning" hidden>
+      <div>
+        <h3 class="alert alert-heading">{% if ui_lang == 'en' %}Classes at or near capacity{% else %}شعب صفية ممتلئة أو شبه ممتلئة{% endif %}</h3>
+        <p class="mb-0" id="alertNearCapacityList"></p>
       </div>
     </div>
-    <div id="alertsAllClear" class="usa-alert usa-alert--success usa-alert--slim" hidden>
-      <div class="usa-alert__body">
-        <p class="usa-alert__text">{% if ui_lang == 'en' %}No operational alerts — everything looks good.{% else %}لا توجد تنبيهات تشغيلية — كل شيء على ما يرام.{% endif %}</p>
+    <div id="alertsAllClear" class="alert py-2 alert-success" hidden>
+      <div>
+        <p class="mb-0">{% if ui_lang == 'en' %}No operational alerts — everything looks good.{% else %}لا توجد تنبيهات تشغيلية — كل شيء على ما يرام.{% endif %}</p>
       </div>
     </div>
   </section>

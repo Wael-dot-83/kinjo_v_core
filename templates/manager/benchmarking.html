@@ -3,18 +3,18 @@
 {% block title %}{% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="margin-bottom-4 display-flex flex-justify flex-align-start flex-wrap grid-gap-2">
-    <div class="usa-prose">
-        <h1 class="font-heading-xl margin-top-0 margin-bottom-1">
+<div class="mb-4 d-flex flex-justify align-items-start flex-wrap g-2">
+    <div class="mb-3">
+        <h1 class="fs-1 fw-bold mt-0 mb-1">
             {% if ui_lang == 'en' %}Manager Benchmarking{% else %}مقارنة معيارية لمدير الحضانة{% endif %}
         </h1>
-        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}" class="usa-breadcrumb usa-breadcrumb--wrap">
-            <ol class="usa-breadcrumb__list">
-                <li class="usa-breadcrumb__list-item"><a href="/dashboard" class="usa-breadcrumb__link">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
-                <li class="usa-breadcrumb__list-item usa-current" aria-current="page">{% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %}</li>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}" class="admin-breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard" class="">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %}</li>
             </ol>
         </nav>
-        <p class="text-base font-sans-xs margin-top-2">
+        <p class="text-secondary mt-2">
             {% if ui_lang == 'en' %}Shows percentile and band within a similar peer group with anonymized names.{% else %}تظهر النسبة المئوية والمجال ضمن مجموعة ندية مماثلة مع إخفاء أسماء الجهات الأخرى.{% endif %}
         </p>
     </div>
@@ -23,33 +23,33 @@
 
 {% block content %}
 <div id="managerBenchmarkRoot">
-    <div class="usa-card padding-3 margin-bottom-4 bg-white border border-base-lighter">
-        <form class="usa-form usa-form--large width-full" onsubmit="event.preventDefault();">
-            <div class="grid-row grid-gap-2 flex-align-end">
-                <div class="tablet:grid-col-3">
-                    <label class="usa-label margin-top-0" for="managerPeriodStart">{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}</label>
-                    <input id="managerPeriodStart" name="managerPeriodStart" type="date" class="usa-input margin-top-1">
+    <div class="col-12 p-3 mb-4 bg-white border border-base-lighter">
+        <form class="--large w-100" onsubmit="event.preventDefault();">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label mt-0" for="managerPeriodStart">{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}</label>
+                    <input id="managerPeriodStart" name="managerPeriodStart" type="date" class="form-control mt-1">
                 </div>
-                <div class="tablet:grid-col-3">
-                    <label class="usa-label margin-top-0" for="managerPeriodEnd">{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}</label>
-                    <input id="managerPeriodEnd" name="managerPeriodEnd" type="date" class="usa-input margin-top-1">
+                <div class="col-md-3">
+                    <label class="form-label mt-0" for="managerPeriodEnd">{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}</label>
+                    <input id="managerPeriodEnd" name="managerPeriodEnd" type="date" class="form-control mt-1">
                 </div>
-                <div class="tablet:grid-col-3">
-                    <label class="usa-label margin-top-0" for="managerSizeMode">{% if ui_lang == 'en' %}Segment Type{% else %}نوع الشريحة{% endif %}</label>
-                    <select id="managerSizeMode" name="managerSizeMode" class="usa-select margin-top-1">
+                <div class="col-md-3">
+                    <label class="form-label mt-0" for="managerSizeMode">{% if ui_lang == 'en' %}Segment Type{% else %}نوع الشريحة{% endif %}</label>
+                    <select id="managerSizeMode" name="managerSizeMode" class="form-select mt-1">
                         <option value="ENROLLMENT">{% if ui_lang == 'en' %}By Enrollment{% else %}حسب عدد الملتحقين{% endif %}</option>
                         <option value="CAPACITY">{% if ui_lang == 'en' %}By Capacity{% else %}حسب السعة{% endif %}</option>
                         <option value="CLASS_COUNT">{% if ui_lang == 'en' %}By Class Count{% else %}حسب عدد الصفوف{% endif %}</option>
                     </select>
                 </div>
-                <div class="tablet:grid-col-3">
-                    <button id="managerBenchmarkLoadBtn" class="usa-button width-full margin-top-1">{% if ui_lang == 'en' %}Show Comparison{% else %}عرض المقارنة{% endif %}</button>
+                <div class="col-md-3">
+                    <button id="managerBenchmarkLoadBtn" class="btn btn-primary w-100 mt-1">{% if ui_lang == 'en' %}Show Comparison{% else %}عرض المقارنة{% endif %}</button>
                 </div>
             </div>
             
-            <div class="usa-alert usa-alert--info usa-alert--slim margin-top-3">
-                <div class="usa-alert__body">
-                    <p class="usa-alert__text font-sans-3xs">
+            <div class="alert alert-info d-flex align-items-center mt-3">
+                <div>
+                    <p class="mb-0 small fw-bold">
                         {% if ui_lang == 'en' %}The arrow and percentage reflect performance compared to the previous period and peer group only.{% else %}السهم والنسبة المئوية تعبران عن الأداء مقارنة بالفترة السابقة والمجموعة الندية فقط.{% endif %}
                     </p>
                 </div>
@@ -57,64 +57,64 @@
         </form>
     </div>
 
-    <div id="managerBenchmarkError" class="usa-alert usa-alert--error margin-bottom-4 display-none" role="alert" aria-live="assertive">
-        <div class="usa-alert__body">
-            <p class="usa-alert__text"></p>
+    <div id="managerBenchmarkError" class="alert alert-danger mb-4 d-none" role="alert" aria-live="assertive">
+        <div>
+            <p class="mb-0"></p>
         </div>
     </div>
 
-    <div class="grid-row grid-gap margin-bottom-4">
-        <div class="tablet:grid-col-3 margin-bottom-2 tablet:margin-bottom-0">
-            <ul class="usa-card-group">
-                <li class="usa-card tablet:grid-col-12 bg-white">
-                    <div class="usa-card__container border border-base-lighter">
-                        <header class="usa-card__header padding-bottom-0">
-                            <h2 class="usa-card__heading text-base font-sans-xs text-normal">{% if ui_lang == 'en' %}Final Score{% else %}الدرجة النهائية{% endif %}</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 mb-2 mb-md-0">
+            <ul class="row g-4">
+                <li class="col-12 col-md-12 bg-white">
+                    <div class="col-12__container border border-base-lighter">
+                        <header class="col-12__header pb-0">
+                            <h2 class="col-12__heading text-secondary text-normal">{% if ui_lang == 'en' %}Final Score{% else %}الدرجة النهائية{% endif %}</h2>
                         </header>
-                        <div class="usa-card__body">
-                            <div id="managerFinalScore" class="font-sans-2xl text-bold">--</div>
+                        <div class="col-12__body">
+                            <div id="managerFinalScore" class="fs-1 fw-bold">--</div>
                         </div>
                     </div>
                 </li>
             </ul>
         </div>
-        <div class="tablet:grid-col-3 margin-bottom-2 tablet:margin-bottom-0">
-            <ul class="usa-card-group">
-                <li class="usa-card tablet:grid-col-12 bg-white">
-                    <div class="usa-card__container border border-base-lighter">
-                        <header class="usa-card__header padding-bottom-0">
-                            <h2 class="usa-card__heading text-base font-sans-xs text-normal">{% if ui_lang == 'en' %}Percentile{% else %}النسبة المئوية{% endif %}</h2>
+        <div class="col-md-3 mb-2 mb-md-0">
+            <ul class="row g-4">
+                <li class="col-12 col-md-12 bg-white">
+                    <div class="col-12__container border border-base-lighter">
+                        <header class="col-12__header pb-0">
+                            <h2 class="col-12__heading text-secondary text-normal">{% if ui_lang == 'en' %}Percentile{% else %}النسبة المئوية{% endif %}</h2>
                         </header>
-                        <div class="usa-card__body">
-                            <div id="managerPercentile" class="font-sans-2xl text-bold">--</div>
+                        <div class="col-12__body">
+                            <div id="managerPercentile" class="fs-1 fw-bold">--</div>
                         </div>
                     </div>
                 </li>
             </ul>
         </div>
-        <div class="tablet:grid-col-3 margin-bottom-2 tablet:margin-bottom-0">
-            <ul class="usa-card-group">
-                <li class="usa-card tablet:grid-col-12 bg-white">
-                    <div class="usa-card__container border border-base-lighter">
-                        <header class="usa-card__header padding-bottom-0">
-                            <h2 class="usa-card__heading text-base font-sans-xs text-normal">{% if ui_lang == 'en' %}Performance Band{% else %}مجال الأداء{% endif %}</h2>
+        <div class="col-md-3 mb-2 mb-md-0">
+            <ul class="row g-4">
+                <li class="col-12 col-md-12 bg-white">
+                    <div class="col-12__container border border-base-lighter">
+                        <header class="col-12__header pb-0">
+                            <h2 class="col-12__heading text-secondary text-normal">{% if ui_lang == 'en' %}Performance Band{% else %}مجال الأداء{% endif %}</h2>
                         </header>
-                        <div class="usa-card__body">
-                            <div id="managerBand" class="font-sans-2xl text-bold">--</div>
+                        <div class="col-12__body">
+                            <div id="managerBand" class="fs-1 fw-bold">--</div>
                         </div>
                     </div>
                 </li>
             </ul>
         </div>
-        <div class="tablet:grid-col-3">
-            <ul class="usa-card-group">
-                <li class="usa-card tablet:grid-col-12 bg-white">
-                    <div class="usa-card__container border border-base-lighter">
-                        <header class="usa-card__header padding-bottom-0">
-                            <h2 class="usa-card__heading text-base font-sans-xs text-normal">{% if ui_lang == 'en' %}Peer Group Size{% else %}حجم المجموعة الندية{% endif %}</h2>
+        <div class="col-md-3">
+            <ul class="row g-4">
+                <li class="col-12 col-md-12 bg-white">
+                    <div class="col-12__container border border-base-lighter">
+                        <header class="col-12__header pb-0">
+                            <h2 class="col-12__heading text-secondary text-normal">{% if ui_lang == 'en' %}Peer Group Size{% else %}حجم المجموعة الندية{% endif %}</h2>
                         </header>
-                        <div class="usa-card__body">
-                            <div id="managerPeerSize" class="font-sans-2xl text-bold">--</div>
+                        <div class="col-12__body">
+                            <div id="managerPeerSize" class="fs-1 fw-bold">--</div>
                         </div>
                     </div>
                 </li>
@@ -122,15 +122,15 @@
         </div>
     </div>
 
-    <div class="usa-card bg-white border border-base-lighter">
-        <div class="padding-3 border-bottom-1 border-base-lighter">
-            <h3 class="margin-y-0 text-bold font-heading-sm">
+    <div class="col-12 bg-white border border-base-lighter">
+        <div class="p-3 border-bottom-1 border-base-lighter">
+            <h3 class="my-0 fw-bold font-heading-sm">
                 {% if ui_lang == 'en' %}Anonymous Peer Comparison{% else %}مقارنة ندية مجهولة الهوية{% endif %}
             </h3>
         </div>
-        <div class="padding-0 overflow-x-auto">
-        <table class="usa-table usa-table--striped width-full margin-y-0 border-0" aria-label="{{ _('مقارنة الأداء مع الحضانات الندية') }}">
-            <caption class="usa-sr-only">{{ _('مقارنة ندية مجهولة الهوية') }}</caption>
+        <div class="p-0 overflow-x-auto">
+        <table class="table table-hover align-middle align-middle--striped w-100 my-0 border-0" aria-label="{{ _('مقارنة الأداء مع الحضانات الندية') }}">
+            <caption class="visually-hidden">{{ _('مقارنة ندية مجهولة الهوية') }}</caption>
             <thead>
                 <tr>
                     <th scope="col" class="border-left-0">{% if ui_lang == 'en' %}Peer Code{% else %}رمز الند{% endif %}</th>

@@ -2,22 +2,22 @@
 {% block title %}{{ _('الأطفال') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="margin-bottom-4 display-flex flex-justify flex-align-start flex-wrap grid-gap-2">
-    <div class="usa-prose">
-        <h1 class="font-heading-xl margin-top-0 margin-bottom-1">
+<div class="mb-4 d-flex flex-justify align-items-start flex-wrap g-2">
+    <div class="mb-3">
+        <h1 class="fs-1 fw-bold mt-0 mb-1">
             <i class="bi bi-people-fill text-primary"></i> {{ _('الأطفال') }}
         </h1>
-        <nav aria-label="Breadcrumb" class="usa-breadcrumb usa-breadcrumb--wrap">
-            <ol class="usa-breadcrumb__list">
-                <li class="usa-breadcrumb__list-item"><a href="/dashboard" class="usa-breadcrumb__link">{{ _('لوحة التحكم') }}</a></li>
-                <li class="usa-breadcrumb__list-item usa-current" aria-current="page">{{ _('الأطفال') }}</li>
+        <nav aria-label="Breadcrumb" class="admin-breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard" class="">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ _('الأطفال') }}</li>
             </ol>
         </nav>
     </div>
-    <div class="margin-top-1">
-        <form class="usa-form" onsubmit="event.preventDefault();">
-            <label class="usa-sr-only" for="classFilter">تصفية بالشعبة</label>
-            <select class="usa-select margin-top-0" id="classFilter" name="classFilter" onchange="loadChildren()">
+    <div class="mt-1">
+        <form onsubmit="event.preventDefault();">
+            <label class="visually-hidden" for="classFilter">تصفية بالشعبة</label>
+            <select class="form-select mt-0" id="classFilter" name="classFilter" onchange="loadChildren()">
                 <option value="">{{ _('كل الشعب') }}</option>
             </select>
         </form>
@@ -27,39 +27,39 @@
 
 {% block content %}
 
-<div class="usa-card padding-3 margin-bottom-4 bg-white border border-base-lighter">
-    <div class="grid-row margin-bottom-2 flex-justify flex-align-center grid-gap-2">
-        <div class="grid-col-auto">
-            <h2 class="font-heading-md margin-y-0">
-                <i class="bi bi-list-ul margin-right-1 text-primary"></i> {{ _('قائمة الأطفال') }}
-                <span class="usa-tag margin-left-1" id="totalBadge">—</span>
+<div class="col-12__container p-3 mb-4 bg-white border border-base-lighter shadow-2">
+    <div class="row mb-3 flex-justify align-items-center g-2">
+        <div class="col-auto">
+            <h2 class="h3 fw-bold my-0 text-primary d-flex align-items-center">
+                <i class="bi bi-list-ul me-2 text-primary"></i> {{ _('قائمة الأطفال') }}
+                <span class="badge text-bg-primary text-white ms-3 px-3 border-radius-pill" id="totalBadge">—</span>
             </h2>
         </div>
-        <div class="grid-col-auto tablet:grid-col-4">
-            <form class="usa-search usa-search--small" role="search" onsubmit="event.preventDefault();">
-              <label class="usa-sr-only" for="searchInput">{{ _('بحث باسم الطفل…') }}</label>
-              <input class="usa-input" id="searchInput" type="search" name="search" oninput="filterTable()" placeholder="{{ _('بحث باسم الطفل…') }}">
-              <button class="usa-button" type="submit">
-                <span class="usa-sr-only">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</span>
+        <div class="col-auto col-md-5">
+            <form class="d-flex gap-2" role="search" onsubmit="event.preventDefault();">
+              <label class="visually-hidden" for="searchInput">{{ _('بحث باسم الطفل…') }}</label>
+              <input class="form-control border-base-lighter" id="searchInput" type="search" name="search" oninput="filterTable()" placeholder="{{ _('بحث باسم الطفل…') }}">
+              <button class="btn btn-primary bg-primary hover:bg-primary-dark" type="submit">
+                <span class="visually-hidden">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</span>
               </button>
             </form>
         </div>
     </div>
     
     <div class="overflow-x-auto">
-        <table class="usa-table usa-table--striped width-full" aria-label="{{ _('قائمة الأطفال في الحضانة') }}">
-            <caption class="usa-sr-only">{{ _('قائمة الأطفال') }}</caption>
-            <thead>
+        <table class="table table-hover align-middle align-middle--striped w-100 border-base-lighter border-1px" aria-label="{{ _('قائمة الأطفال في الحضانة') }}">
+            <caption class="visually-hidden">{{ _('قائمة الأطفال') }}</caption>
+            <thead class="bg-primary-subtle text-primary">
                 <tr>
-                    <th scope="col">{{ _('اسم الطفل') }}</th>
-                    <th scope="col">{{ _('الجنس') }}</th>
-                    <th scope="col">{{ _('تاريخ الميلاد') }}</th>
-                    <th scope="col">{{ _('الشعبة') }}</th>
-                    <th scope="col" class="text-center">{{ _('الإجراءات') }}</th>
+                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('اسم الطفل') }}</th>
+                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('الجنس') }}</th>
+                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('تاريخ الميلاد') }}</th>
+                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('الشعبة') }}</th>
+                    <th scope="col" class="text-center border-bottom-2px border-primary border-opacity-25">{{ _('الإجراءات') }}</th>
                 </tr>
             </thead>
             <tbody id="childrenTableBody">
-                <tr><td colspan="5" class="text-center padding-y-5 text-base">
+                <tr><td colspan="5" class="text-center py-5 text-secondary">
                     {{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}
                 </td></tr>
             </tbody>
@@ -67,43 +67,39 @@
     </div>
 </div>
 
-<!-- Move child modal (USWDS) -->
-<div class="usa-modal" id="moveChildModal" aria-labelledby="moveModalLabel" aria-modal="true">
-  <div class="usa-modal__content">
-    <div class="usa-modal__main">
-      <h2 class="usa-modal__heading" id="moveModalLabel">
-        <i class="bi bi-arrow-left-right margin-right-1 text-primary"></i> {{ _('نقل طفل إلى شعبة أخرى') }}
-      </h2>
-      <div class="usa-prose">
-        <p id="moveChildName" class="text-bold margin-bottom-3"></p>
+<!-- Move child modal -->
+<div class="modal fade" id="moveChildModal" tabindex="-1" aria-labelledby="moveModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="moveModalLabel">
+          <i class="bi bi-arrow-left-right me-2 text-primary"></i> {{ _('نقل طفل إلى شعبة أخرى') }}
+        </h2>
+        <button type="button" class="btn-close usa-modal__close" aria-label="Close" data-bs-dismiss="modal"></button>
       </div>
-      <input type="hidden" id="moveChildId">
-      <input type="hidden" id="moveFromClassId">
-      
-      <div class="margin-bottom-3">
-          <label class="text-bold text-uppercase font-sans-3xs text-base-dark">{{ _('الشعبة الحالية') }}</label>
-          <p id="moveFromClassName" class="text-base margin-top-05"></p>
-      </div>
-      
-      <form class="usa-form" onsubmit="event.preventDefault(); confirmMoveChild();">
-        <label class="usa-label" for="moveToClassSelect">{{ _('الشعبة الجديدة') }}</label>
-        <select class="usa-select" id="moveToClassSelect" name="moveToClassSelect"></select>
-        
-        <ul class="usa-button-group margin-top-4">
-          <li class="usa-button-group__item">
-            <button type="submit" class="usa-button" id="confirmMoveBtn">
-                <i class="bi bi-arrow-left-right margin-right-1"></i>{{ _('نقل') }}
+      <div class="modal-body">
+        <p id="moveChildName" class="fw-bold mb-3"></p>
+        <input type="hidden" id="moveChildId">
+        <input type="hidden" id="moveFromClassId">
+
+        <div class="mb-3">
+            <label class="fw-bold text-uppercase small text-muted">{{ _('الشعبة الحالية') }}</label>
+            <p id="moveFromClassName" class="text-secondary mt-2"></p>
+        </div>
+
+        <form onsubmit="event.preventDefault(); confirmMoveChild();">
+          <label class="form-label" for="moveToClassSelect">{{ _('الشعبة الجديدة') }}</label>
+          <select class="form-select" id="moveToClassSelect" name="moveToClassSelect"></select>
+
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary" id="confirmMoveBtn">
+                <i class="bi bi-arrow-left-right me-2"></i>{{ _('نقل') }}
             </button>
-          </li>
-          <li class="usa-button-group__item">
-            <button type="button" class="usa-button usa-button--unstyled padding-105 text-center" data-close-modal>{{ _('إلغاء') }}</button>
-          </li>
-        </ul>
-      </form>
+            <button type="button" class="btn btn-link text-decoration-none px-3 text-center" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+          </div>
+        </form>
+      </div>
     </div>
-    <button class="usa-button usa-modal__close" aria-label="Close this window" data-close-modal>
-      <i class="bi bi-x-lg"></i>
-    </button>
   </div>
 </div>
 
@@ -161,7 +157,7 @@ function filterTable() {
 function renderTable(children) {
     const tbody = document.getElementById('childrenTableBody');
     if (!children.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center padding-y-5 text-base">لا يوجد أطفال</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-secondary">لا يوجد أطفال</td></tr>`;
         return;
     }
     tbody.innerHTML = children.map(c => {
@@ -172,15 +168,16 @@ function renderTable(children) {
         const nameJson = JSON.stringify(c.first_name + ' ' + c.last_name);
         const classJson = JSON.stringify(c.class_name_ar || '');
         return `<tr>
-            <td class="text-bold">${fullName}</td>
+            <td class="fw-bold">${fullName}</td>
             <td>${gender}</td>
             <td>${dob}</td>
             <td>${className}</td>
             <td class="text-center">
-                <a href="#moveChildModal" class="usa-button usa-button--outline padding-y-1"
-                        data-open-modal aria-controls="moveChildModal"
+                <a href="#moveChildModal" class="btn btn-outline-primary py-2"
+                        role="button" aria-controls="moveChildModal"
+                        data-bs-toggle="modal" data-bs-target="#moveChildModal"
                         onclick="setupMoveModal(${c.id},${nameJson},${c.class_id},${classJson})">
-                    <i class="bi bi-arrow-left-right margin-right-1"></i>نقل
+                    <i class="bi bi-arrow-left-right me-2"></i>نقل
                 </a>
             </td>
         </tr>`;
