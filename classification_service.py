@@ -678,19 +678,10 @@ class BenchmarkingService:
         if not supervisor_ids:
             return out
 
-        direct_rows = db.query(
-            models.Class.id,
-            models.Class.supervisor_id,
-            models.Class.kindergarten_id,
-        ).filter(
-            models.Class.supervisor_id.in_(supervisor_ids),
-            models.Class.is_active == True,
-        ).all()
-        for class_id, supervisor_id, kindergarten_id in direct_rows:
-            out.setdefault(supervisor_id, {"classes": set(), "kindergarten_id": None})
-            out[supervisor_id]["classes"].add(class_id)
-            out[supervisor_id]["kindergarten_id"] = kindergarten_id
-
+        # Supervisor -> class membership comes solely from SupervisorAssignment
+        # now; the legacy Class.supervisor_id read was removed (D1/B5). The
+        # primary assignment is itself a SupervisorAssignment row, so it is still
+        # captured by the query below.
         assignment_rows = db.query(
             models.SupervisorAssignment.supervisor_id,
             models.SupervisorAssignment.class_id,

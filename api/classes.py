@@ -76,8 +76,8 @@ def create_class(
         **class_dict,
         is_active=True
     )
-    if class_data.supervisor_id is not None:
-        class_obj.supervisor_id = class_data.supervisor_id
+    # The retired legacy Class.supervisor_id column is no longer written; the
+    # primary supervisor is recorded only as a SupervisorAssignment below (D1/B5).
 
     db.add(class_obj)
     db.commit()
@@ -322,10 +322,8 @@ def update_class(
         if supervisor.kindergarten_id != class_obj.kindergarten_id:
             raise HTTPException(status_code=400, detail="Supervisor must belong to the same kindergarten as the class")
 
-    # Update fields. supervisor_id is handled separately below so the
-    # legacy Class.supervisor_id column and the SupervisorAssignment
-    # table it's supposed to mirror don't drift apart (see
-    # validators.set_class_primary_supervisor_id docstring).
+    # supervisor_id is handled separately: the primary supervisor lives only in
+    # SupervisorAssignment now (the legacy Class.supervisor_id column is retired).
     update_data = class_data.model_dump(exclude_unset=True)
     supervisor_id_changed = "supervisor_id" in update_data
     new_supervisor_id = update_data.pop("supervisor_id", None)
@@ -334,18 +332,21 @@ def update_class(
 
     db.commit()
 
-    if supervisor_id_changed and new_supervisor_id != class_obj.supervisor_id:
-        validators.retire_active_primary_assignment(db, class_obj.id)
-        if new_supervisor_id is not None:
-            db.add(models.SupervisorAssignment(
-                class_id=class_obj.id,
-                supervisor_id=new_supervisor_id,
-                is_primary=True,
-                full_time_dedication=True,
-                start_date=datetime.now(_JORDAN_TZ).date(),
-            ))
-        validators.set_class_primary_supervisor_id(db, class_obj.id, new_supervisor_id)
-        db.commit()
+    if supervisor_id_changed:
+        current_primary = validators.active_primary_supervisor_map(
+            db, [class_obj.id]
+        ).get(class_obj.id)
+        if new_supervisor_id != current_primary:
+            validators.retire_active_primary_assignment(db, class_obj.id)
+            if new_supervisor_id is not None:
+                db.add(models.SupervisorAssignment(
+                    class_id=class_obj.id,
+                    supervisor_id=new_supervisor_id,
+                    is_primary=True,
+                    full_time_dedication=True,
+                    start_date=datetime.now(_JORDAN_TZ).date(),
+                ))
+            db.commit()
 
     db.refresh(class_obj)
 

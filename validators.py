@@ -708,29 +708,25 @@ def retire_active_primary_assignment(db: Session, class_id: int) -> None:
     ).update({"deleted_at": now, "end_date": now.date()})
 
 
-def set_class_primary_supervisor_id(
-    db: Session, class_id: int, new_supervisor_id: Optional[int]
-) -> None:
-    """Keep the legacy Class.supervisor_id column aligned with whichever
-    supervisor is currently primary.
+def active_primary_supervisor_map(db: Session, class_ids) -> dict:
+    """Map class_id -> current primary supervisor_id from SupervisorAssignment.
 
-    manager_analytics.py and admin_reports_api.py still read this column
-    directly, while GET /api/classes and the manager assign/swap/unassign
-    endpoints read/write only SupervisorAssignment -- call this from
-    every write path that changes who is primary for a class so the two
-    representations never silently disagree.
+    Single source of truth for "who is the primary supervisor of a class" (D1/B5):
+    the active (is_primary, not soft-deleted) assignment row. Replaces direct
+    reads of the retired legacy Class.supervisor_id column.
     """
-    if new_supervisor_id is not None:
-        # Class.supervisor_id carries a UNIQUE constraint: a supervisor
-        # can be the legacy "primary" of at most one class at a time --
-        # clear it from wherever else it currently points first.
-        db.query(models.Class).filter(
-            models.Class.supervisor_id == new_supervisor_id,
-            models.Class.id != class_id,
-        ).update({"supervisor_id": None})
-    db.query(models.Class).filter(models.Class.id == class_id).update(
-        {"supervisor_id": new_supervisor_id}
-    )
+    ids = list(class_ids)
+    if not ids:
+        return {}
+    rows = db.query(
+        models.SupervisorAssignment.class_id,
+        models.SupervisorAssignment.supervisor_id,
+    ).filter(
+        models.SupervisorAssignment.class_id.in_(ids),
+        models.SupervisorAssignment.is_primary.is_(True),
+        models.SupervisorAssignment.deleted_at.is_(None),
+    ).all()
+    return {class_id: supervisor_id for class_id, supervisor_id in rows}
 
 
 def log_audit_action(

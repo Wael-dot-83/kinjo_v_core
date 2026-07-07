@@ -150,13 +150,8 @@ def assign_supervisor_to_class(
     db.commit()
     db.refresh(assignment)
 
-    if body.is_primary:
-        # Keep the legacy Class.supervisor_id column in sync so
-        # manager_analytics.py / admin_reports_api.py (which still read
-        # it directly) agree with GET /api/classes (which reads
-        # SupervisorAssignment).
-        validators.set_class_primary_supervisor_id(db, body.class_id, body.supervisor_id)
-        db.commit()
+    # The primary supervisor is recorded solely by this SupervisorAssignment row
+    # now; the legacy Class.supervisor_id column is no longer written (D1/B5).
 
     return {"id": assignment.id}
 
@@ -183,12 +178,8 @@ def unassign_supervisor_from_class(
     now = datetime.now(_JORDAN_TZ)
     assignment.deleted_at = now
     assignment.end_date = now.date()
-
-    # Only clear the legacy column if this removed assignment was the one
-    # it was pointing at -- unassigning a non-primary/secondary supervisor
-    # must not touch the class's primary.
-    if assignment.is_primary and cls.supervisor_id == supervisor_id:
-        validators.set_class_primary_supervisor_id(db, class_id, None)
+    # Soft-deleting the assignment above is sufficient; the retired legacy
+    # Class.supervisor_id column is no longer maintained (D1/B5).
 
     db.add(AuditLog(
         user_id=current_user.id,
@@ -222,7 +213,6 @@ def swap_supervisor(
 
     a = SupervisorAssignment(class_id=class_id, supervisor_id=body.supervisor_id, is_primary=True, start_date=_today())
     db.add(a)
-    validators.set_class_primary_supervisor_id(db, class_id, body.supervisor_id)
     db.add(AuditLog(
         user_id=current_user.id,
         action=AuditAction.REPLACEMENT_SUPERVISOR_ASSIGNED,

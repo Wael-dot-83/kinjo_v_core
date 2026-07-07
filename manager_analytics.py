@@ -371,25 +371,34 @@ class ManagerAnalyticsService:
         if not sup_ids:
             return []
 
+        # Supervisor -> class mapping now comes from the active primary
+        # SupervisorAssignment rows, not the retired Class.supervisor_id (D1/B5).
+        SA = models.SupervisorAssignment
         children_by_sup = dict(
-            db.query(models.Class.supervisor_id, func.count(models.Child.id))
+            db.query(SA.supervisor_id, func.count(models.Child.id))
+            .join(models.Class, models.Class.id == SA.class_id)
             .join(models.EnrollmentApplication, models.EnrollmentApplication.class_id == models.Class.id)
             .join(models.Child, models.Child.id == models.EnrollmentApplication.child_id)
             .filter(
-                models.Class.supervisor_id.in_(sup_ids),
+                SA.supervisor_id.in_(sup_ids),
+                SA.is_primary.is_(True),
+                SA.deleted_at.is_(None),
                 models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
             )
-            .group_by(models.Class.supervisor_id)
+            .group_by(SA.supervisor_id)
             .all()
         )
 
         classes_by_sup = dict(
-            db.query(models.Class.supervisor_id, func.count(models.Class.id))
+            db.query(SA.supervisor_id, func.count(models.Class.id))
+            .join(models.Class, models.Class.id == SA.class_id)
             .filter(
-                models.Class.supervisor_id.in_(sup_ids),
+                SA.supervisor_id.in_(sup_ids),
+                SA.is_primary.is_(True),
+                SA.deleted_at.is_(None),
                 models.Class.is_active == True,
             )
-            .group_by(models.Class.supervisor_id)
+            .group_by(SA.supervisor_id)
             .all()
         )
 
@@ -597,7 +606,10 @@ class ManagerAnalyticsService:
         if not class_ids:
             return []
 
-        sup_id_set = {c.supervisor_id for c in classes if c.supervisor_id}
+        # class_id -> primary supervisor_id from SupervisorAssignment (D1/B5).
+        import validators
+        primary_by_class = validators.active_primary_supervisor_map(db, class_ids)
+        sup_id_set = set(primary_by_class.values())
         supervisors_by_id = {
             u.id: u for u in db.query(models.User).filter(models.User.id.in_(sup_id_set)).all()
         } if sup_id_set else {}
@@ -641,7 +653,7 @@ class ManagerAnalyticsService:
 
         result = []
         for class_obj in classes:
-            supervisor = supervisors_by_id.get(class_obj.supervisor_id)
+            supervisor = supervisors_by_id.get(primary_by_class.get(class_obj.id))
             enrolled_count = enrolled_by_class.get(class_obj.id, 0)
             attendance_logs = attendance_by_class.get(class_obj.id, 0)
             incidents = incidents_by_class.get(class_obj.id, 0)
@@ -688,25 +700,30 @@ class ManagerAnalyticsService:
         if not sup_ids:
             return []
 
+        # Supervisor -> class mapping from active primary SupervisorAssignment (D1/B5).
+        SA = models.SupervisorAssignment
+        _primary = (SA.is_primary.is_(True), SA.deleted_at.is_(None))
         children_by_sup = dict(
-            db.query(models.Class.supervisor_id, func.count(models.Child.id))
+            db.query(SA.supervisor_id, func.count(models.Child.id))
+            .join(models.Class, models.Class.id == SA.class_id)
             .join(models.EnrollmentApplication, models.EnrollmentApplication.class_id == models.Class.id)
             .join(models.Child, models.Child.id == models.EnrollmentApplication.child_id)
             .filter(
-                models.Class.supervisor_id.in_(sup_ids),
+                SA.supervisor_id.in_(sup_ids), *_primary,
                 models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
             )
-            .group_by(models.Class.supervisor_id)
+            .group_by(SA.supervisor_id)
             .all()
         )
 
         classes_by_sup = dict(
-            db.query(models.Class.supervisor_id, func.count(models.Class.id))
+            db.query(SA.supervisor_id, func.count(models.Class.id))
+            .join(models.Class, models.Class.id == SA.class_id)
             .filter(
-                models.Class.supervisor_id.in_(sup_ids),
+                SA.supervisor_id.in_(sup_ids), *_primary,
                 models.Class.is_active == True,
             )
-            .group_by(models.Class.supervisor_id)
+            .group_by(SA.supervisor_id)
             .all()
         )
 
@@ -722,14 +739,15 @@ class ManagerAnalyticsService:
         )
 
         incidents_by_sup = dict(
-            db.query(models.Class.supervisor_id, func.count(models.Incident.id))
+            db.query(SA.supervisor_id, func.count(models.Incident.id))
+            .join(models.Class, models.Class.id == SA.class_id)
             .join(models.Incident, models.Incident.class_id == models.Class.id)
             .filter(
-                models.Class.supervisor_id.in_(sup_ids),
+                SA.supervisor_id.in_(sup_ids), *_primary,
                 models.Incident.occurred_at >= start_date,
                 models.Incident.occurred_at <= end_date,
             )
-            .group_by(models.Class.supervisor_id)
+            .group_by(SA.supervisor_id)
             .all()
         )
 

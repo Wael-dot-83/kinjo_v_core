@@ -303,6 +303,7 @@ def seed(db: Session):
         ("الصف ب", "Class B", "AGE_1_2", 15, 12, 24),
     ]
     classes = []
+    class_supervisor = {}  # class -> primary supervisor (D1/B5: no legacy column)
     for kg_idx, kg in enumerate(kgs):
         sups_for_kg = [s for s in supervisors if s.kindergarten_id == kg.id]
         for cls_idx, (ar, en, ag, cap, mn, mx) in enumerate(class_templates):
@@ -314,21 +315,21 @@ def seed(db: Session):
                 age_group=ag,
                 capacity_total=cap,
                 min_age_months=mn, max_age_months=mx,
-                supervisor_id=sup_for_class.id if sup_for_class else None,
                 is_active=True,
             )
             db.add(c)
             classes.append(c)
+            if sup_for_class:
+                class_supervisor[c] = sup_for_class
     db.flush()
     print(f"  [OK] {len(classes)} classes")
 
-    # Supervisor assignments
-    for c in classes:
-        if c.supervisor_id:
-            db.add(models.SupervisorAssignment(
-                class_id=c.id, supervisor_id=c.supervisor_id,
-                is_primary=True, start_date=past(60),
-            ))
+    # Supervisor assignments (the source of truth for the primary supervisor).
+    for c, sup in class_supervisor.items():
+        db.add(models.SupervisorAssignment(
+            class_id=c.id, supervisor_id=sup.id,
+            is_primary=True, start_date=past(60),
+        ))
     db.flush()
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

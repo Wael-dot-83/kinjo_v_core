@@ -181,14 +181,10 @@ def _get_supervisor_active_class_ids(db: Session, supervisor_id: int, on_date: d
             models.SupervisorAssignment.end_date >= on_date,
         ),
     ).all()
+    # Class membership comes solely from SupervisorAssignment now; the legacy
+    # Class.supervisor_id read was removed (D1/B5). The primary assignment is a
+    # SupervisorAssignment row, so it is already included above.
     class_ids = {row.class_id for row in rows}
-
-    direct_classes = db.query(models.Class.id).filter(
-        models.Class.supervisor_id == supervisor_id,
-        models.Class.is_active == True,
-    ).all()
-    class_ids.update(cid for (cid,) in direct_classes)
-
     return class_ids
 
 
