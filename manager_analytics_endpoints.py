@@ -5,6 +5,7 @@ Provides manager-scoped operational analytics and predictive indicators
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from datetime import date, timedelta
 from utils.time_utils import today_amman as _today
 from typing import Optional, List, Dict
@@ -179,6 +180,24 @@ def get_manager_kpis(
     today = _today()
     start_date = today - timedelta(days=period_days)
 
+    # Enrollment rate = active enrollments / total class capacity, as a percentage
+    # (consistent with the sibling rate metrics below). Computed directly — the
+    # previous code called compute_enrollment_trend() twice and then used a raw
+    # count as the "rate" (A3). Division by zero is guarded.
+    active_enrollments = db.query(
+        func.count(models.EnrollmentApplication.id)
+    ).filter(
+        models.EnrollmentApplication.kindergarten_id == kg_id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+    ).scalar() or 0
+    total_capacity = db.query(
+        func.sum(models.Class.capacity_total)
+    ).filter(
+        models.Class.kindergarten_id == kg_id,
+        models.Class.is_active == True,
+    ).scalar() or 0
+    enrollment_rate = round(active_enrollments / total_capacity * 100, 2) if total_capacity else 0.0
+
     kpis = {
         "kindergarten_id": kg_id,
         "period": {
@@ -187,11 +206,9 @@ def get_manager_kpis(
             "days": period_days
         },
         "metrics": {
-            "enrollment_rate": ManagerAnalyticsService.compute_enrollment_trend(
-                db, kg_id, start_date, today
-            )[-1]["cumulative_active"] if ManagerAnalyticsService.compute_enrollment_trend(
-                db, kg_id, start_date, today
-            ) else 0,
+            "enrollment_rate": enrollment_rate,
+            "active_enrollments": active_enrollments,
+            "capacity": int(total_capacity),
             "attendance_rate": ManagerAnalyticsService.compute_attendance_rate(
                 db, kg_id, start_date, today
             ),
