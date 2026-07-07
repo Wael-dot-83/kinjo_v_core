@@ -338,7 +338,7 @@ def _stats_subqueries(db: Session):
     attendance = (
         db.query(
             Class.kindergarten_id,
-            func.sum(case((AttendanceLog.status == AttendanceStatus.PRESENT, 1), else_=0)).cast(db.type_coerce),
+            func.sum(case((AttendanceLog.status == AttendanceStatus.PRESENT, 1), else_=0)),
             func.count(AttendanceLog.id),
         )
         .join(Class, Class.id == AttendanceLog.class_id)
