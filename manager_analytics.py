@@ -16,6 +16,7 @@ import logging
 import math
 
 import models
+import validators
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +132,36 @@ class ManagerAnalyticsService:
                 result[cursor] = round(fraction * 100, 2)
             cursor += timedelta(days=1)
         return result
+
+    @staticmethod
+    def _supervisor_class_counts(db: Session, sup_ids):
+        """(children_by_sup, classes_by_sup) for the given supervisors.
+
+        Counts via active primary SupervisorAssignment rows (D1/B5). Shared by
+        both supervisor-workload computations to avoid duplicated JOIN blocks.
+        """
+        SA = models.SupervisorAssignment
+        primary = (SA.is_primary.is_(True), SA.deleted_at.is_(None))
+        children_by_sup = dict(
+            db.query(SA.supervisor_id, func.count(models.Child.id))
+            .join(models.Class, models.Class.id == SA.class_id)
+            .join(models.EnrollmentApplication, models.EnrollmentApplication.class_id == models.Class.id)
+            .join(models.Child, models.Child.id == models.EnrollmentApplication.child_id)
+            .filter(
+                SA.supervisor_id.in_(sup_ids), *primary,
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            )
+            .group_by(SA.supervisor_id)
+            .all()
+        )
+        classes_by_sup = dict(
+            db.query(SA.supervisor_id, func.count(models.Class.id))
+            .join(models.Class, models.Class.id == SA.class_id)
+            .filter(SA.supervisor_id.in_(sup_ids), *primary, models.Class.is_active == True)
+            .group_by(SA.supervisor_id)
+            .all()
+        )
+        return children_by_sup, classes_by_sup
 
     @staticmethod
     def compute_enrollment_trend(
@@ -371,36 +402,9 @@ class ManagerAnalyticsService:
         if not sup_ids:
             return []
 
-        # Supervisor -> class mapping now comes from the active primary
-        # SupervisorAssignment rows, not the retired Class.supervisor_id (D1/B5).
-        SA = models.SupervisorAssignment
-        children_by_sup = dict(
-            db.query(SA.supervisor_id, func.count(models.Child.id))
-            .join(models.Class, models.Class.id == SA.class_id)
-            .join(models.EnrollmentApplication, models.EnrollmentApplication.class_id == models.Class.id)
-            .join(models.Child, models.Child.id == models.EnrollmentApplication.child_id)
-            .filter(
-                SA.supervisor_id.in_(sup_ids),
-                SA.is_primary.is_(True),
-                SA.deleted_at.is_(None),
-                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-            )
-            .group_by(SA.supervisor_id)
-            .all()
-        )
-
-        classes_by_sup = dict(
-            db.query(SA.supervisor_id, func.count(models.Class.id))
-            .join(models.Class, models.Class.id == SA.class_id)
-            .filter(
-                SA.supervisor_id.in_(sup_ids),
-                SA.is_primary.is_(True),
-                SA.deleted_at.is_(None),
-                models.Class.is_active == True,
-            )
-            .group_by(SA.supervisor_id)
-            .all()
-        )
+        # Supervisor -> class counts come from active primary SupervisorAssignment
+        # rows, not the retired Class.supervisor_id (D1/B5).
+        children_by_sup, classes_by_sup = ManagerAnalyticsService._supervisor_class_counts(db, sup_ids)
 
         reports_today_by_sup = dict(
             db.query(models.DailyReport.submitted_by, func.count(models.DailyReport.id))
@@ -607,7 +611,6 @@ class ManagerAnalyticsService:
             return []
 
         # class_id -> primary supervisor_id from SupervisorAssignment (D1/B5).
-        import validators
         primary_by_class = validators.active_primary_supervisor_map(db, class_ids)
         sup_id_set = set(primary_by_class.values())
         supervisors_by_id = {
@@ -700,32 +703,10 @@ class ManagerAnalyticsService:
         if not sup_ids:
             return []
 
-        # Supervisor -> class mapping from active primary SupervisorAssignment (D1/B5).
+        # Supervisor -> class counts from active primary SupervisorAssignment (D1/B5).
         SA = models.SupervisorAssignment
         _primary = (SA.is_primary.is_(True), SA.deleted_at.is_(None))
-        children_by_sup = dict(
-            db.query(SA.supervisor_id, func.count(models.Child.id))
-            .join(models.Class, models.Class.id == SA.class_id)
-            .join(models.EnrollmentApplication, models.EnrollmentApplication.class_id == models.Class.id)
-            .join(models.Child, models.Child.id == models.EnrollmentApplication.child_id)
-            .filter(
-                SA.supervisor_id.in_(sup_ids), *_primary,
-                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-            )
-            .group_by(SA.supervisor_id)
-            .all()
-        )
-
-        classes_by_sup = dict(
-            db.query(SA.supervisor_id, func.count(models.Class.id))
-            .join(models.Class, models.Class.id == SA.class_id)
-            .filter(
-                SA.supervisor_id.in_(sup_ids), *_primary,
-                models.Class.is_active == True,
-            )
-            .group_by(SA.supervisor_id)
-            .all()
-        )
+        children_by_sup, classes_by_sup = ManagerAnalyticsService._supervisor_class_counts(db, sup_ids)
 
         reports_by_sup = dict(
             db.query(models.DailyReport.submitted_by, func.count(models.DailyReport.id))

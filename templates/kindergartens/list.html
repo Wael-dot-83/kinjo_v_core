@@ -91,6 +91,7 @@
                             <option value="DRAFT" {% if filters.status=='DRAFT' %}selected{% endif %}>{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</option>
                             <option value="INACTIVE" {% if filters.status=='INACTIVE' %}selected{% endif %}>{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}
                             </option>
+                            <option value="FROZEN" {% if filters.status=='FROZEN' %}selected{% endif %}>{% if ui_lang == 'en' %}Frozen{% else %}مجمدة{% endif %}</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -162,6 +163,8 @@
                                     <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
                                     {% elif kg.status.value == 'DRAFT' %}
                                     <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
+                                    {% elif kg.status.value == 'FROZEN' %}
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">{% if ui_lang == 'en' %}Frozen{% else %}مجمدة{% endif %}</span>
                                     {% else %}
                                     <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
                                     {% endif %}
@@ -176,6 +179,24 @@
                                             title="{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}">
                                             <i class="bi bi-pencil"></i>
                                         </a>
+                                        {% if kg.status.value == 'FROZEN' %}
+                                        <button type="button" class="btn btn-outline-warning btn-sm kg-unfreeze"
+                                            data-kg-id="{{ kg.id }}"
+                                            title="{% if ui_lang == 'en' %}Unfreeze{% else %}إلغاء التجميد{% endif %}">
+                                            <i class="bi bi-snow"></i>
+                                        </button>
+                                        {% else %}
+                                        <button type="button" class="btn btn-outline-secondary btn-sm kg-freeze"
+                                            data-kg-id="{{ kg.id }}"
+                                            title="{% if ui_lang == 'en' %}Freeze{% else %}تجميد{% endif %}">
+                                            <i class="bi bi-snow"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-outline-danger btn-sm kg-delete"
+                                            data-kg-id="{{ kg.id }}"
+                                            title="{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -379,4 +400,62 @@
 </div>
 {% endif %} {# manager/supervisor content block #}
 {% endif %} {# admin/non-admin page branch #}
+{% endblock %}
+
+{% block extra_js %}
+{% if current_user.role.value == 'ADMIN' %}
+<script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
+    document.querySelectorAll('.kg-freeze').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.kgId;
+            const reason = prompt(T('سبب التجميد (اختياري):', 'Freeze reason (optional):'));
+            if (reason === null) return;
+            btn.disabled = true;
+            try {
+                await window.api.freezeKindergarten(id, reason);
+                showToast(T('تم تجميد الحضانة بنجاح', 'Kindergarten frozen successfully'), 'success');
+                setTimeout(() => location.reload(), 1200);
+            } catch (e) {
+                btn.disabled = false;
+                showToast(e.message || T('تعذر تجميد الحضانة', 'Could not freeze kindergarten'), 'error');
+            }
+        });
+    });
+
+    document.querySelectorAll('.kg-unfreeze').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.kgId;
+            if (!confirm(T('هل تريد إلغاء تجميد الحضانة؟', 'Unfreeze this kindergarten?'))) return;
+            btn.disabled = true;
+            try {
+                await window.api.unfreezeKindergarten(id);
+                showToast(T('تم إلغاء تجميد الحضانة بنجاح', 'Kindergarten unfrozen successfully'), 'success');
+                setTimeout(() => location.reload(), 1200);
+            } catch (e) {
+                btn.disabled = false;
+                showToast(e.message || T('تعذر إلغاء تجميد الحضانة', 'Could not unfreeze kindergarten'), 'error');
+            }
+        });
+    });
+
+    document.querySelectorAll('.kg-delete').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.kgId;
+            if (!confirm(T('حذف الحضانة نهائياً؟ هذا الإجراء قد يؤدي إلى أرشفتها إذا كانت تحتوي على بيانات.', 'Delete this kindergarten? It may be archived if it has data.'))) return;
+            btn.disabled = true;
+            try {
+                await window.api.deleteKindergarten(id);
+                showToast(T('تم حذف/أرشفة الحضانة', 'Kindergarten deleted/archived'), 'success');
+                setTimeout(() => location.reload(), 1200);
+            } catch (e) {
+                btn.disabled = false;
+                showToast(e.message || T('تعذر حذف الحضانة', 'Could not delete kindergarten'), 'error');
+            }
+        });
+    });
+</script>
+{% endif %}
 {% endblock %}

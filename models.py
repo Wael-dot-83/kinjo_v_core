@@ -9,7 +9,7 @@ from typing import Optional, List
 from sqlalchemy import (
     Column, Integer, BigInteger, String, Text, Boolean, Float, Date, DateTime,
     ForeignKey, Enum, CheckConstraint, UniqueConstraint, Index, JSON,
-    ForeignKeyConstraint
+    ForeignKeyConstraint, text
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column, validates
 from sqlalchemy.sql import func
@@ -65,6 +65,7 @@ class KindergartenStatus(str, enum.Enum):
     ACTIVE = "ACTIVE"
     FROZEN = "FROZEN"  # Reversible operational suspension (distinct from INACTIVE/archived)
     INACTIVE = "INACTIVE"
+    DELETED = "DELETED"  # Soft-deleted; retained for audit/data integrity
 
 
 class Gender(str, enum.Enum):
@@ -290,10 +291,36 @@ class Kindergarten(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     status = Column(Enum(KindergartenStatus), nullable=False, default=KindergartenStatus.DRAFT)
-    # Freeze = reversible operational hold. frozen_at is the marker of record;
-    # frozen_reason is an optional admin-supplied justification.
+    # Freeze = reversible operational hold (spec uses lowercase "frozen"). frozen_at
+    # is the marker of record; frozen_reason is an admin-supplied justification;
+    # frozen_by captures the acting admin.
     frozen_at = Column(DateTime(timezone=True), nullable=True)
     frozen_reason = Column(String(255), nullable=True)
+    frozen_by = Column(Integer, nullable=True)
+    # Soft-delete audit trail (spec uses lowercase "deleted").
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, nullable=True)
+    # --- Extended management / ownership fields (Management module) ---
+    legal_name = Column(String(255), nullable=True)        # Legal / trade name
+    type = Column(String(50), nullable=True)               # e.g. private / public / franchise
+    mobile = Column(String(20), nullable=True)
+    website = Column(String(255), nullable=True)
+    manager_name = Column(String(255), nullable=True)
+    manager_id = Column(String(50), nullable=True)
+    manager_phone = Column(String(20), nullable=True)
+    manager_email = Column(String(255), nullable=True)
+    owner_name = Column(String(255), nullable=True)
+    ownership_type = Column(String(50), nullable=True)     # e.g. individual / company
+    total_capacity = Column(Integer, nullable=True)
+    current_child_count = Column(Integer, nullable=True)
+    number_of_classes = Column(Integer, nullable=True)
+    teacher_count = Column(Integer, nullable=True)
+    working_days = Column(String(100), nullable=True)
+    age_group = Column(String(50), nullable=True)
+    registration_fees = Column(Float, nullable=True)
+    monthly_fees = Column(Float, nullable=True)
+    license_status = Column(String(50), nullable=True)
+    administrative_notes = Column(Text, nullable=True)
     operating_hours_start = Column(String(5), nullable=True)
     operating_hours_end = Column(String(5), nullable=True)
     license_number = Column(String(100), nullable=True)
@@ -621,6 +648,17 @@ class SupervisorAssignment(Base):
         # — see routers/manager.py. Composite indexes keep those O(log n) (D2).
         Index("ix_supervisor_assignments_class_deleted", "class_id", "deleted_at"),
         Index("ix_supervisor_assignments_supervisor_deleted", "supervisor_id", "deleted_at"),
+        # At most one *active* primary supervisor per class. The retired legacy
+        # Class.supervisor_id column used to enforce this via app logic; this
+        # partial unique index enforces it at the DB level so a race/bug can't
+        # create two active primaries (which would double-count workload metrics).
+        Index(
+            "uq_supervisor_assignments_primary_per_class",
+            "class_id",
+            unique=True,
+            sqlite_where=text("is_primary = 1 AND deleted_at IS NULL"),
+            postgresql_where=text("is_primary AND deleted_at IS NULL"),
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)

@@ -1,0 +1,295 @@
+{% extends "admin_base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الحضانات{% endif %} — KinJo{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" dir="{{ 'rtl' if ui_lang != 'en' else 'ltr' }}">
+
+    <!-- Header -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">
+                <i class="bi bi-building me-2 text-primary"></i>
+                {% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الحضانات{% endif %}
+            </h1>
+            <p class="text-muted mb-0 small">
+                {% if ui_lang == 'en' %}Add, edit, freeze, activate and delete kindergarten records.{% else %}إضافة، تعديل، تجميد، تفعيل وحذف سجلات الحضانات.{% endif %}
+            </p>
+        </div>
+        <a href="/admin/kindergartens/new" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>
+            {% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة حضانة جديدة{% endif %}
+        </a>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="glass-card card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label class="form-label small">{% if ui_lang == 'en' %}Search by name{% else %}بحث بالاسم{% endif %}</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="filter-q" class="form-control" placeholder="{% if ui_lang == 'en' %}Kindergarten name...{% else %}اسم الحضانة...{% endif %}">
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                    <select id="filter-governorate" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+                    <select id="filter-status" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                        <option value="active">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+                        <option value="frozen">{% if ui_lang == 'en' %}Frozen{% else %}مجمدة{% endif %}</option>
+                        <option value="deleted">{% if ui_lang == 'en' %}Deleted{% else %}محذوفة{% endif %}</option>
+                        <option value="draft">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small">{% if ui_lang == 'en' %}Min Children{% else %}أدنى عدد أطفال{% endif %}</label>
+                    <input type="number" id="filter-min-children" class="form-control" min="0" placeholder="0">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small">{% if ui_lang == 'en' %}Min Occupancy %{% else %}أدنى إشغال %{% endif %}</label>
+                    <input type="number" id="filter-min-occupancy" class="form-control" min="0" max="100" placeholder="0">
+                </div>
+                <div class="col-12 d-flex justify-content-end gap-2">
+                    <button id="btn-reset" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-circle me-1"></i>{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}
+                    </button>
+                    <button id="btn-search" class="btn btn-primary btn-sm">
+                        <i class="bi bi-search me-1"></i>{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- States -->
+    <div id="state-loading" class="text-center py-5 text-muted d-none">
+        <div class="spinner-border text-primary"></div>
+        <div class="mt-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
+    </div>
+    <div id="state-error" class="alert alert-danger d-none">
+        <span id="error-text"></span>
+        <button id="btn-retry" class="btn btn-sm btn-outline-danger ms-2">{% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}</button>
+    </div>
+    <div id="state-empty" class="text-center py-5 text-muted d-none">
+        <i class="bi bi-inbox fs-1"></i>
+        <div class="mt-2">{% if ui_lang == 'en' %}No kindergartens found.{% else %}لا توجد حضانات مطابقة.{% endif %}</div>
+    </div>
+
+    <!-- Table -->
+    <div id="table-wrap" class="glass-card card d-none">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Children{% else %}الأطفال{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Attendance %{% else %}الحضور %{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Occupancy %{% else %}الإشغال %{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Last Update{% else %}آخر تحديث{% endif %}</th>
+                        <th class="text-end">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody id="kg-tbody"></tbody>
+            </table>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <span id="pager-info" class="small text-muted"></span>
+            <div class="btn-group btn-group-sm">
+                <button id="btn-prev" class="btn btn-outline-secondary">{% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}</button>
+                <button id="btn-next" class="btn btn-outline-secondary">{% if ui_lang == 'en' %}Next{% else %}التالي{% endif %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirm-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirm-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button id="confirm-ok" class="btn btn-danger">{% if ui_lang == 'en' %}Confirm{% else %}تأكيد{% endif %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const IS_EN = document.documentElement.lang === 'en';
+const T = (ar, en) => IS_EN ? en : ar;
+const LIMIT = 20;
+let skip = 0;
+let currentItems = [];
+let pendingAction = null;
+
+const statusBadge = (s) => {
+    const map = {
+        active: ['bg-success', T('نشط', 'Active')],
+        frozen: ['bg-info', T('مجمدة', 'Frozen')],
+        deleted: ['bg-secondary', T('محذوفة', 'Deleted')],
+        draft: ['bg-warning', T('مسودة', 'Draft')],
+        inactive: ['bg-secondary', T('غير نشط', 'Inactive')],
+    };
+    const [cls, label] = map[s] || ['bg-secondary', s];
+    return `<span class="badge ${cls} bg-opacity-10 text-${cls.replace('bg-','')} border border-${cls.replace('bg-','')} border-opacity-25">${label}</span>`;
+};
+
+async function loadGovernorates() {
+    try {
+        const json = await api.get('/api/reference/governorates');
+        const sel = document.getElementById('filter-governorate');
+        (json.governorates || []).forEach(g => {
+            const o = document.createElement('option');
+            o.value = g.name_ar; o.textContent = g.name_ar;
+            sel.appendChild(o);
+        });
+    } catch (e) {}
+}
+
+function buildParams() {
+    const p = new URLSearchParams();
+    p.set('limit', LIMIT); p.set('skip', skip);
+    const q = document.getElementById('filter-q').value.trim();
+    const gov = document.getElementById('filter-governorate').value;
+    const st = document.getElementById('filter-status').value;
+    const mc = document.getElementById('filter-min-children').value;
+    const mo = document.getElementById('filter-min-occupancy').value;
+    if (q) p.set('q', q);
+    if (gov) p.set('governorate', gov);
+    if (st) p.set('status', st);
+    if (mc) p.set('min_children', mc);
+    if (mo) p.set('min_occupancy', mo);
+    return p;
+}
+
+async function load() {
+    document.getElementById('state-loading').classList.remove('d-none');
+    document.getElementById('state-error').classList.add('d-none');
+    document.getElementById('state-empty').classList.add('d-none');
+    document.getElementById('table-wrap').classList.add('d-none');
+    try {
+        const json = await api.get('/api/kindergartens', Object.fromEntries(buildParams()));
+        if (!json.success) throw new Error(json.message || 'Error');
+        currentItems = json.data.items || [];
+        render(json.data);
+    } catch (e) {
+        document.getElementById('state-loading').classList.add('d-none');
+        document.getElementById('error-text').textContent = e.message || T('تعذر تحميل البيانات', 'Failed to load data');
+        document.getElementById('state-error').classList.remove('d-none');
+    }
+}
+
+function render(data) {
+    document.getElementById('state-loading').classList.add('d-none');
+    if (!currentItems.length) {
+        document.getElementById('state-empty').classList.remove('d-none');
+        return;
+    }
+    document.getElementById('table-wrap').classList.remove('d-none');
+    const tbody = document.getElementById('kg-tbody');
+    tbody.innerHTML = '';
+    currentItems.forEach(kg => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${kg.name_ar || ''}</strong>${kg.legal_name ? `<br><small class="text-muted">${kg.legal_name}</small>` : ''}</td>
+            <td>${kg.governorate || ''}</td>
+            <td>${kg.child_count ?? 0}</td>
+            <td>${kg.attendance_pct != null ? kg.attendance_pct + '%' : '—'}</td>
+            <td>${kg.occupancy_pct != null ? kg.occupancy_pct + '%' : '—'}</td>
+            <td>${statusBadge(kg.status)}</td>
+            <td><small class="text-muted">${kg.updated_at ? kg.updated_at.slice(0,10) : '—'}</small></td>
+            <td class="text-end">
+                <div class="dropdown d-inline-block">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/admin/kindergartens/${kg.id}"><i class="bi bi-eye me-2"></i>${T('عرض التفاصيل','Details')}</a></li>
+                        <li><a class="dropdown-item" href="/admin/kindergartens/${kg.id}/edit"><i class="bi bi-pencil me-2"></i>${T('تعديل','Edit')}</a></li>
+                        ${kg.status === 'frozen'
+                            ? `<li><a class="dropdown-item" href="#" data-act="activate" data-id="${kg.id}"><i class="bi bi-play-circle me-2"></i>${T('تفعيل','Activate')}</a></li>`
+                            : `<li><a class="dropdown-item" href="#" data-act="freeze" data-id="${kg.id}"><i class="bi bi-snow me-2"></i>${T('تجميد','Freeze')}</a></li>`}
+                        <li><a class="dropdown-item text-danger" href="#" data-act="delete" data-id="${kg.id}"><i class="bi bi-trash me-2"></i>${T('حذف','Delete')}</a></li>
+                    </ul>
+                </div>
+            </td>`;
+        tbody.appendChild(tr);
+    });
+    document.getElementById('pager-info').textContent =
+        `${data.skip + 1}–${data.skip + currentItems.length} / ${data.total}`;
+    document.getElementById('btn-prev').disabled = data.skip <= 0;
+    document.getElementById('btn-next').disabled = (data.skip + currentItems.length) >= data.total;
+}
+
+function showConfirm(title, body, onOk) {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-body').textContent = body;
+    pendingAction = onOk;
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+}
+
+document.getElementById('kg-tbody').addEventListener('click', (e) => {
+    const a = e.target.closest('[data-act]');
+    if (!a) return;
+    e.preventDefault();
+    const id = a.dataset.id, act = a.dataset.act;
+    if (act === 'freeze') {
+        const reason = prompt(T('سبب التجميد:', 'Freeze reason:'));
+        if (reason === null) return;
+        doAction(() => api.freezeKindergarten(id, reason), T('تم تجميد الحضانة', 'Kindergarten frozen'));
+    } else if (act === 'activate') {
+        showConfirm(T('تفعيل الحضانة', 'Activate kindergarten'),
+            T('هل تريد تفعيل هذه الحضانة؟', 'Activate this kindergarten?'),
+            () => doAction(() => api.unfreezeKindergarten(id), T('تم تفعيل الحضانة', 'Kindergarten activated')));
+    } else if (act === 'delete') {
+        showConfirm(T('حذف الحضانة', 'Delete kindergarten'),
+            T('هذا الإجراء لا يمكن التراجع عنه. هل أنت متأكد؟', 'This action cannot be undone. Are you sure?'),
+            () => doAction(() => api.deleteKindergarten(id), T('تم حذف الحضانة', 'Kindergarten deleted')));
+    }
+});
+
+document.getElementById('confirm-ok').addEventListener('click', async () => {
+    const fn = pendingAction; pendingAction = null;
+    bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+    if (fn) await fn();
+});
+
+async function doAction(actionFn, okMsg) {
+    try {
+        const json = await actionFn();
+        if (!json.success) throw new Error(json.message || T('فشل الإجراء', 'Action failed'));
+        alert(okMsg);
+        load();
+    } catch (e) {
+        alert(e.message || T('تعذر تنفيذ الإجراء', 'Could not perform action'));
+    }
+}
+
+document.getElementById('btn-search').addEventListener('click', () => { skip = 0; load(); });
+document.getElementById('btn-reset').addEventListener('click', () => {
+    ['filter-q','filter-governorate','filter-status','filter-min-children','filter-min-occupancy'].forEach(id => document.getElementById(id).value = '');
+    skip = 0; load();
+});
+document.getElementById('btn-retry').addEventListener('click', load);
+document.getElementById('btn-prev').addEventListener('click', () => { if (skip >= LIMIT) { skip -= LIMIT; load(); } });
+document.getElementById('btn-next').addEventListener('click', () => { skip += LIMIT; load(); });
+
+loadGovernorates();
+load();
+</script>
+{% endblock %}

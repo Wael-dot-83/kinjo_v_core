@@ -691,6 +691,9 @@ class BenchmarkingService:
             models.Class.id == models.SupervisorAssignment.class_id,
         ).filter(
             models.SupervisorAssignment.supervisor_id.in_(supervisor_ids),
+            # Exclude retired (soft-deleted) assignments — a retired row whose
+            # date range still overlaps the window must not count as active.
+            models.SupervisorAssignment.deleted_at.is_(None),
             models.SupervisorAssignment.start_date <= period_end,
             or_(
                 models.SupervisorAssignment.end_date.is_(None),

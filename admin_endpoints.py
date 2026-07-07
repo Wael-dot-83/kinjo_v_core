@@ -694,13 +694,29 @@ def update_user(
     target_kindergarten_id = user_data.kindergarten_id if user_data.kindergarten_id is not None else user.kindergarten_id
 
     target_status = user_data.status if user_data.status is not None else user.status
-    validate_manager_assignment(
-        db,
-        target_role,
-        target_kindergarten_id,
-        target_status,
-        user_id
+
+    # Detect a manager assignment/reassignment transition (FRD §4, C3).
+    # This covers: promoting a supervisor/other role to manager, or moving an
+    # existing manager to a different kindergarten. Only admins can change
+    # role/kindergarten, so the cascade only ever runs for admins.
+    is_manager_assignment = (
+        current_user.role == models.UserRole.ADMIN
+        and target_role == models.UserRole.MANAGER
+        and (
+            user.role != models.UserRole.MANAGER
+            or (user_data.kindergarten_id is not None
+                and user_data.kindergarten_id != user.kindergarten_id)
+        )
     )
+
+    if not is_manager_assignment:
+        validate_manager_assignment(
+            db,
+            target_role,
+            target_kindergarten_id,
+            target_status,
+            user_id
+        )
 
     # Capture before state for audit
     before_state = model_to_dict(user)
@@ -738,30 +754,49 @@ def update_user(
 
     # Only admins can change role and status
     if current_user.role == models.UserRole.ADMIN:
-        if user_data.role is not None:
-            # Prevent promotion to admin
-            if user_data.role == models.UserRole.ADMIN:
-                raise forbidden_error("Cannot promote users to admin role")
-            # Prevent demotion of admins
-            if user.role == models.UserRole.ADMIN:
-                raise forbidden_error("Cannot change role of admin users")
-            user.role = user_data.role
+        if is_manager_assignment:
+            # FRD §4 (C1–C5): atomic manager assignment cascade — detaches the
+            # user from any previous kindergarten, strips every supervisor
+            # artifact, optionally vacates the target KG's outgoing manager,
+            # and binds the user as the target KG's active manager.
+            if target_kindergarten_id is None:
+                raise validation_error(
+                    "Manager must be assigned to a kindergarten",
+                    {"kindergarten_id": "Kindergarten is required for manager role"},
+                )
+            from manager_assignment_service import assign_user_as_manager
+            assign_user_as_manager(
+                db,
+                user,
+                target_kindergarten_id,
+                actor_id=current_user.id,
+                allow_replace=bool(user_data.replace_existing_manager),
+            )
+        else:
+            if user_data.role is not None:
+                # Prevent promotion to admin
+                if user_data.role == models.UserRole.ADMIN:
+                    raise forbidden_error("Cannot promote users to admin role")
+                # Prevent demotion of admins
+                if user.role == models.UserRole.ADMIN:
+                    raise forbidden_error("Cannot change role of admin users")
+                user.role = user_data.role
 
-        if user_data.status is not None:
-            # Guard: ensure KG retains at least one supervisor on deactivation
-            if (
-                user_data.status in [models.UserStatus.INACTIVE, models.UserStatus.SUSPENDED]
-                and user.role == models.UserRole.SUPERVISOR
-                and user.kindergarten_id
-            ):
-                try:
-                    validators.validate_kg_has_supervisor(db, user.kindergarten_id, exclude_user_id=user.id)
-                except validators.ValidationError as exc:
-                    raise validation_error(exc.message, {"supervisor": exc.message})
-            user.status = user_data.status
+            if user_data.status is not None:
+                # Guard: ensure KG retains at least one supervisor on deactivation
+                if (
+                    user_data.status in [models.UserStatus.INACTIVE, models.UserStatus.SUSPENDED]
+                    and user.role == models.UserRole.SUPERVISOR
+                    and user.kindergarten_id
+                ):
+                    try:
+                        validators.validate_kg_has_supervisor(db, user.kindergarten_id, exclude_user_id=user.id)
+                    except validators.ValidationError as exc:
+                        raise validation_error(exc.message, {"supervisor": exc.message})
+                user.status = user_data.status
 
-        if user_data.kindergarten_id is not None:
-            user.kindergarten_id = user_data.kindergarten_id
+            if user_data.kindergarten_id is not None:
+                user.kindergarten_id = user_data.kindergarten_id
 
     db.commit()
     db.refresh(user)

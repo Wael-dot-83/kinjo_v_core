@@ -195,6 +195,86 @@ breadcrumbs=[
                         </div>
                     </div>
 
+                    <!-- Management Details & Primary Login (FRD §2.4) -->
+                    {% if not kindergarten %}
+                    <h5 class="border-bottom pb-2 mb-3 mt-4">
+                        <i class="bi bi-person-badge-fill icon-inline"></i>
+                        {% if ui_lang == 'en' %}Management Details & Primary Login{% else %}بيانات الإدارة وإنشاء حساب المدير{% endif %}
+                    </h5>
+
+                    <div class="alert alert-info d-flex align-items-start mb-3" role="alert">
+                        <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+                        <div>
+                            <small>{% if ui_lang == 'en' %}Optional: create the kindergarten's primary manager login now. The kindergarten becomes Active immediately and the manager must change their password on first login.{% else %}اختياري: أنشئ الآن حساب المدير الأساسي للحضانة. تصبح الحضانة نشطة فوراً ويجب على المدير تغيير كلمة المرور عند أول تسجيل دخول.{% endif %}</small>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="mgrFullName" class="form-label">{% if ui_lang == 'en' %}Manager Full Name{% else %}اسم المدير الكامل{% endif %}</label>
+                            <input type="text" class="form-control" id="mgrFullName" name="mgr_full_name"
+                                data-testid="mgrFullName">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="mgrPhone" class="form-label">{% if ui_lang == 'en' %}Manager Phone{% else %}هاتف المدير{% endif %}</label>
+                            <input type="tel" class="form-control" id="mgrPhone" name="mgr_phone_number"
+                                data-testid="mgrPhone" pattern="^(\+962|00962|0)[0-9]{9}$">
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Number must start with 0 or +962 and be 10 digits.{% else %}يجب أن يبدأ الرقم بـ 0 أو +962 ويتكون من 10 أرقام.{% endif %}</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="mgrNationality" class="form-label">{% if ui_lang == 'en' %}Nationality{% else %}الجنسية{% endif %}</label>
+                            <select class="form-select" id="mgrNationality" name="mgr_nationality" data-testid="mgrNationality">
+                                <option value="Jordanian">{% if ui_lang == 'en' %}Jordanian (أردني){% else %}أردني{% endif %}</option>
+                                <option value="Other">{% if ui_lang == 'en' %}Other (أخرى){% else %}أخرى{% endif %}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="mgrNationalIdWrap">
+                            <label for="mgrNationalId" class="form-label">{% if ui_lang == 'en' %}National ID{% else %}الرقم الوطني{% endif %}</label>
+                            <input type="text" class="form-control" id="mgrNationalId" name="mgr_national_id"
+                                data-testid="mgrNationalId" pattern="^[0-9]{10}$">
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}National ID must be 10 digits.{% else %}الرقم الوطني يجب أن يكون 10 أرقام.{% endif %}</div>
+                        </div>
+                        <div class="col-md-6 d-none" id="mgrPassportWrap">
+                            <label for="mgrPassport" class="form-label">{% if ui_lang == 'en' %}Passport Number{% else %}رقم جواز السفر{% endif %}</label>
+                            <input type="text" class="form-control" id="mgrPassport" name="mgr_passport_number"
+                                data-testid="mgrPassport">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="mgrUsername" class="form-label">{% if ui_lang == 'en' %}Username (Login){% else %}اسم المستخدم (دخول){% endif %}</label>
+                            <input type="text" class="form-control" id="mgrUsername" name="mgr_username"
+                                data-testid="mgrUsername" pattern="^[a-zA-Z0-9_-]+$">
+                            <div class="form-text">{% if ui_lang == 'en' %}Letters, numbers, - and _.{% else %}أحرف وأرقام و - و _.{% endif %}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="mgrEmail" class="form-label">{% if ui_lang == 'en' %}Email (Login){% else %}البريد الإلكتروني (دخول){% endif %} <span
+                                    class="field-optional">({% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %})</span></label>
+                            <input type="email" class="form-control" id="mgrEmail" name="mgr_email"
+                                data-testid="mgrEmail">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="mgrPassword" class="form-label">{% if ui_lang == 'en' %}Temporary Password{% else %}كلمة المرور المؤقتة{% endif %}</label>
+                            <input type="password" class="form-control" id="mgrPassword" name="mgr_password"
+                                data-testid="mgrPassword" minlength="8">
+                            <div class="form-text">{% if ui_lang == 'en' %}Minimum 8 characters.{% else %}8 أحرف على الأقل.{% endif %}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="mgrAddress" class="form-label">{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %} <span
+                                    class="field-optional">({% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %})</span></label>
+                            <input type="text" class="form-control" id="mgrAddress" name="mgr_address"
+                                data-testid="mgrAddress">
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- Form Actions -->
                     <div class="d-flex justify-content-between border-top pt-4">
                         <a href="/kindergartens" class="btn btn-outline-secondary">
@@ -298,8 +378,20 @@ breadcrumbs=[
                 await api.updateKindergarten(kindergartenId, data);
                 showToast(T('تم تحديث الحضانة بنجاح', 'Kindergarten updated successfully'), 'success');
             } else {
-                await api.createKindergarten(data);
-                showToast(T('تم إضافة الحضانة بنجاح', 'Kindergarten added successfully'), 'success');
+                // If the primary-manager section is filled, create the KG and
+                // its manager atomically (FRD §2.4); otherwise create the KG only.
+                const managerData = extractManagerPayload(data);
+                if (managerData) {
+                    const payload = {
+                        kindergarten: stripManagerKeys(data),
+                        manager: managerData,
+                    };
+                    await api.createKindergartenWithManager(payload);
+                    showToast(T('تم إضافة الحضانة والمدير بنجاح', 'Kindergarten and manager created successfully'), 'success');
+                } else {
+                    await api.createKindergarten(data);
+                    showToast(T('تم إضافة الحضانة بنجاح', 'Kindergarten added successfully'), 'success');
+                }
             }
 
             setTimeout(() => {
@@ -345,6 +437,52 @@ breadcrumbs=[
         }
 
         return payload;
+    }
+
+    // ---- Primary manager section (FRD §2.4) ----
+    const MGR_FIELDS = {
+        mgr_full_name: 'full_name',
+        mgr_phone_number: 'phone_number',
+        mgr_nationality: 'nationality',
+        mgr_national_id: 'national_id',
+        mgr_passport_number: 'passport_number',
+        mgr_address: 'address',
+        mgr_username: 'username',
+        mgr_email: 'email',
+        mgr_password: 'password',
+    };
+
+    function extractManagerPayload(data) {
+        const hasAny = Object.keys(MGR_FIELDS).some(k => data[k] && String(data[k]).trim() !== '');
+        if (!hasAny) return null;
+        const manager = {};
+        for (const [src, dst] of Object.entries(MGR_FIELDS)) {
+            manager[dst] = (data[src] !== undefined && data[src] !== '') ? data[src] : null;
+        }
+        if (manager.email) manager.email = manager.email.toLowerCase();
+        return manager;
+    }
+
+    function stripManagerKeys(data) {
+        const clone = Object.assign({}, data);
+        Object.keys(MGR_FIELDS).forEach(k => delete clone[k]);
+        return clone;
+    }
+
+    function toggleManagerIdentity() {
+        const nat = document.getElementById('mgrNationality');
+        if (!nat) return;
+        const isJordanian = nat.value.toLowerCase() === 'jordanian';
+        document.getElementById('mgrNationalIdWrap').classList.toggle('d-none', !isJordanian);
+        document.getElementById('mgrPassportWrap').classList.toggle('d-none', isJordanian);
+        document.getElementById('mgrNationalId').required = isJordanian;
+        document.getElementById('mgrPassport').required = !isJordanian;
+    }
+
+    const natSel = document.getElementById('mgrNationality');
+    if (natSel) {
+        natSel.addEventListener('change', toggleManagerIdentity);
+        toggleManagerIdentity();
     }
 </script>
 {% endblock %}

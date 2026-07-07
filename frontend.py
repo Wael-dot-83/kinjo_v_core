@@ -1391,6 +1391,84 @@ async def admin_kg_overview(request: Request, current_user: User = Depends(get_c
     )
 
 
+def _get_kg_or_none(kindergarten_id: int):
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        return db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    finally:
+        db.close()
+
+
+@router.get("/admin/kindergartens", response_class=HTMLResponse)
+async def admin_kindergartens_list(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Kindergarten Management dashboard (list view)."""
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/kindergartens/list.html",
+        context={"current_user": current_user, "ui_lang": _ui_lang(request), "now": _now()},
+    )
+
+
+@router.get("/admin/kindergartens/new", response_class=HTMLResponse)
+async def admin_kindergarten_new(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/kindergartens/form.html",
+        context={"current_user": current_user, "ui_lang": _ui_lang(request), "now": _now(), "kindergarten": None},
+    )
+
+
+@router.get("/admin/kindergartens/{kindergarten_id}/edit", response_class=HTMLResponse)
+async def admin_kindergarten_edit(kindergarten_id: int, request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    kg = _get_kg_or_none(kindergarten_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/kindergartens/form.html",
+        context={"current_user": current_user, "ui_lang": _ui_lang(request), "now": _now(), "kindergarten": kg},
+    )
+
+
+@router.get("/admin/kindergartens/{kindergarten_id}", response_class=HTMLResponse)
+async def admin_kindergarten_detail(kindergarten_id: int, request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    kg = _get_kg_or_none(kindergarten_id)
+    from database import SessionLocal
+    from models import AuditLog
+    db = SessionLocal()
+    try:
+        history = (
+            db.query(AuditLog)
+            .filter(AuditLog.entity_type == "Kindergarten", AuditLog.entity_id == kindergarten_id)
+            .order_by(AuditLog.id.desc())
+            .limit(50)
+            .all()
+        )
+        history_list = [
+            {
+                "action": h.action,
+                "details": h.details,
+                "created_at": h.created_at.isoformat() if h.created_at else None,
+                "actor_role": h.actor_role,
+            }
+            for h in history
+        ]
+    finally:
+        db.close()
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/kindergartens/detail.html",
+        context={"current_user": current_user, "ui_lang": _ui_lang(request), "now": _now(), "kindergarten": kg, "kindergarten_id": kindergarten_id, "history": history_list},
+    )
+
+
 @router.get("/admin/kpi", response_class=HTMLResponse)
 async def admin_kpi_dashboard(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Admin network-level KPI dashboard"""

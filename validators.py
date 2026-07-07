@@ -718,6 +718,7 @@ def active_primary_supervisor_map(db: Session, class_ids) -> dict:
     ids = list(class_ids)
     if not ids:
         return {}
+    today = datetime.now(_JORDAN_TZ).date()
     rows = db.query(
         models.SupervisorAssignment.class_id,
         models.SupervisorAssignment.supervisor_id,
@@ -725,8 +726,24 @@ def active_primary_supervisor_map(db: Session, class_ids) -> dict:
         models.SupervisorAssignment.class_id.in_(ids),
         models.SupervisorAssignment.is_primary.is_(True),
         models.SupervisorAssignment.deleted_at.is_(None),
+        # "Currently in effect": not past its end_date. Consistent with the
+        # date-range definition used in classification_service (finding #2).
+        or_(
+            models.SupervisorAssignment.end_date.is_(None),
+            models.SupervisorAssignment.end_date >= today,
+        ),
+    ).order_by(
+        # Deterministic winner if a class somehow has >1 active primary: newest
+        # assignment wins (finding #1 mitigation on the read side).
+        models.SupervisorAssignment.start_date.desc(),
+        models.SupervisorAssignment.id.desc(),
     ).all()
-    return {class_id: supervisor_id for class_id, supervisor_id in rows}
+    # Dict comprehension keeps the FIRST row per class_id; with the ordering above
+    # that is the most recent active primary.
+    result: dict = {}
+    for class_id, supervisor_id in rows:
+        result.setdefault(class_id, supervisor_id)
+    return result
 
 
 def log_audit_action(

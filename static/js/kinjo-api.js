@@ -244,15 +244,34 @@ class KinJoAPI {
   }
 
   async createKindergarten(data) {
-    return this.post("/api/kindergartens", data);
+    return this.post("/api/admin/kindergartens", data);
+  }
+
+  // Atomic kindergarten + primary manager creation (FRD §2.4).
+  async createKindergartenWithManager(data) {
+    return this.post("/api/admin/kindergartens/with-manager", data);
+  }
+
+  // Freeze / Unfreeze (FRD §1.4).
+  async freezeKindergarten(id, reason) {
+    return this.patch(`/api/admin/kindergartens/${id}/freeze`, reason ? { reason } : {});
+  }
+
+  async unfreezeKindergarten(id) {
+    return this.patch(`/api/admin/kindergartens/${id}/activate`, {});
+  }
+
+  // Assign / replace a kindergarten's manager (FRD §3.3).
+  async assignKindergartenManager(id, userId, replace = false) {
+    return this.post(`/api/admin/kindergartens/${id}/assign-manager`, { user_id: userId, replace });
   }
 
   async updateKindergarten(id, data) {
-    return this.put(`/api/kindergartens/${id}`, data);
+    return this.put(`/api/admin/kindergartens/${id}`, data);
   }
 
   async deleteKindergarten(id) {
-    return this.delete(`/api/kindergartens/${id}`);
+    return this.delete(`/api/admin/kindergartens/${id}`);
   }
 
   // =========================================================================

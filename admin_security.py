@@ -780,6 +780,10 @@ class UserUpdateSchema(BaseModel):
     role: Optional[models.UserRole] = None
     status: Optional[models.UserStatus] = None
     kindergarten_id: Optional[int] = None
+    # When assigning this user as a MANAGER of a kindergarten that already has
+    # an active manager, set True to vacate the outgoing manager and take over
+    # (FRD §3.3 "Replace manager"). Ignored for non-manager updates.
+    replace_existing_manager: Optional[bool] = False
     # Profile fields (manager/supervisor)
     full_name: Optional[str] = None
     phone_number: Optional[str] = None

@@ -163,7 +163,8 @@ def unassign_supervisor_from_class(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
-    cls = _get_class_or_403(class_id, current_user, db)
+    # Authorization side effect only (raises 404/403 if the class is out of scope).
+    _get_class_or_403(class_id, current_user, db)
     assignment = (
         db.query(SupervisorAssignment)
         .filter(

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -16,6 +16,9 @@ from config import settings
 from database import get_db
 from dependencies import get_current_user
 from api.users import DUPLICATE_ERROR_MAP
+from auth import get_password_hash
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 
 router = APIRouter(tags=["Kindergartens"])
 
@@ -83,38 +86,88 @@ def get_districts_by_governorate(
     return {"governorate": gov, "districts": [d[0] for d in districts if d[0]]}
 
 
+
+# ============================================================================
+# Management Module API (spec-compliant: {success,data,message}, admin-only,
+# Arabic messages, soft-delete, freeze/activate).
+# ============================================================================
+
+from fastapi import APIRouter, Depends, HTTPException, status as http_status, Query, Request, Body  # noqa: F401
+from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_, func, case
+from datetime import date, datetime, timedelta, timezone
+from typing import List, Optional
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
+
+import models
+from audit_actions import AuditAction
+import validators
+from database import get_db
+from dependencies import get_current_user
+from api.users import DUPLICATE_ERROR_MAP
+from auth import get_password_hash  # noqa: F401
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
+
+
+# --------------------------------------------------------------------------
+# Schemas
+# --------------------------------------------------------------------------
+
 class KindergartenCreate(BaseModel):
-    name_ar: str
+    name_ar: str = Field(..., min_length=1, max_length=255)
     name_en: Optional[str] = None
+    legal_name: Optional[str] = None
+    type: Optional[str] = None
     governorate: str
     district: str
     area: str
     address_line: str
     contact_phone: str
+    mobile: Optional[str] = None
     contact_email: Optional[EmailStr] = None
-    operating_hours_start: Optional[str] = None
-    operating_hours_end: Optional[str] = None
+    website: Optional[str] = None
+    manager_name: Optional[str] = None
+    manager_id: Optional[str] = None
+    manager_phone: Optional[str] = None
+    manager_email: Optional[EmailStr] = None
+    owner_name: Optional[str] = None
+    ownership_type: Optional[str] = None
+    total_capacity: Optional[int] = Field(None, ge=0)
+    current_child_count: Optional[int] = Field(None, ge=0)
+    number_of_classes: Optional[int] = Field(None, ge=0)
+    teacher_count: Optional[int] = Field(None, ge=0)
+    working_hours_start: Optional[str] = None
+    working_hours_end: Optional[str] = None
+    working_days: Optional[str] = None
+    age_group: Optional[str] = None
+    registration_fees: Optional[float] = Field(None, ge=0)
+    monthly_fees: Optional[float] = Field(None, ge=0)
     license_number: Optional[str] = None
     license_valid_until: Optional[date] = None
+    license_status: Optional[str] = None
+    administrative_notes: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
-    @field_validator("contact_email", mode="before")
+    @field_validator("contact_email", "manager_email", mode="before")
     def normalize_email(cls, value):
         if value is None:
             return None
         if isinstance(value, str):
             value = value.strip()
-            if value == "":
-                return None
-            value = value.lower()
+            return value.lower() if value else None
         return value
 
-    @field_validator("license_number", "license_valid_until", mode="before")
+    @field_validator("license_number", "legal_name", "manager_name", "owner_name",
+                     "working_hours_start", "working_hours_end", "working_days",
+                     "age_group", "license_status", "type", "ownership_type", mode="before")
     def blank_to_none(cls, value):
         if isinstance(value, str) and value.strip() == "":
             return None
         return value
 
-    @field_validator("contact_phone")
+    @field_validator("contact_phone", "mobile", "manager_phone")
     def strip_phone(cls, value):
         return value.strip() if isinstance(value, str) else value
 
@@ -126,501 +179,579 @@ class KindergartenCreate(BaseModel):
             raise ValueError(str(e))
 
 
-def detect_kindergarten_duplicate(db: Session, data: KindergartenCreate, exclude_id: Optional[int] = None) -> Optional[str]:
+class KindergartenUpdate(BaseModel):
+    name_ar: Optional[str] = Field(None, min_length=1, max_length=255)
+    name_en: Optional[str] = None
+    legal_name: Optional[str] = None
+    type: Optional[str] = None
+    governorate: Optional[str] = None
+    district: Optional[str] = None
+    area: Optional[str] = None
+    address_line: Optional[str] = None
+    contact_phone: Optional[str] = None
+    mobile: Optional[str] = None
+    contact_email: Optional[EmailStr] = None
+    website: Optional[str] = None
+    manager_name: Optional[str] = None
+    manager_id: Optional[str] = None
+    manager_phone: Optional[str] = None
+    manager_email: Optional[EmailStr] = None
+    owner_name: Optional[str] = None
+    ownership_type: Optional[str] = None
+    total_capacity: Optional[int] = Field(None, ge=0)
+    current_child_count: Optional[int] = Field(None, ge=0)
+    number_of_classes: Optional[int] = Field(None, ge=0)
+    teacher_count: Optional[int] = Field(None, ge=0)
+    working_hours_start: Optional[str] = None
+    working_hours_end: Optional[str] = None
+    working_days: Optional[str] = None
+    age_group: Optional[str] = None
+    registration_fees: Optional[float] = Field(None, ge=0)
+    monthly_fees: Optional[float] = Field(None, ge=0)
+    license_number: Optional[str] = None
+    license_valid_until: Optional[date] = None
+    license_status: Optional[str] = None
+    administrative_notes: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+    @field_validator("contact_email", "manager_email", mode="before")
+    def normalize_email_u(cls, value):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+            return value.lower() if value else None
+        return value
+
+    @field_validator("license_number", "governorate", "district", "area", "legal_name",
+                     "manager_name", "owner_name", "working_hours_start", "working_hours_end",
+                     "working_days", "age_group", "license_status", "type", "ownership_type",
+                     "name_en", "address_line", "contact_phone", "mobile", "website",
+                     "manager_id", "manager_phone", "administrative_notes", mode="before")
+    def blank_to_none_u(cls, value):
+        if isinstance(value, str) and value.strip() == "":
+            return None
+        return value
+
+    @field_validator("governorate")
+    def validate_governorate_u(cls, value):
+        if value is None:
+            return value
+        try:
+            return validators.validate_jordan_governorate(value)
+        except validators.ValidationError as e:
+            raise ValueError(str(e))
+
+
+class FreezeRequest(BaseModel):
+    reason: str = Field(..., min_length=2, max_length=255)
+
+class ManagerCreateData(BaseModel):
+    full_name: str
+    phone_number: str
+    nationality: Optional[str] = None
+    national_id: Optional[str] = None
+    username: str
+    email: Optional[EmailStr] = None
+    password: str
+
+class KindergartenWithManagerCreate(BaseModel):
+    kindergarten: KindergartenCreate
+    manager: ManagerCreateData
+
+class AssignManagerRequest(BaseModel):
+    user_id: int
+    replace: bool = False
+
+def detect_kindergarten_duplicate(db: Session, data, exclude_id: Optional[int] = None) -> Optional[str]:
     filters = [
         models.Kindergarten.name_ar == data.name_ar,
         models.Kindergarten.contact_phone == data.contact_phone,
     ]
-    if data.name_en:
+    if getattr(data, "name_en", None):
         filters.append(models.Kindergarten.name_en == data.name_en)
-    if data.contact_email:
+    if getattr(data, "contact_email", None):
         filters.append(models.Kindergarten.contact_email == data.contact_email)
-    if data.license_number:
+    if getattr(data, "license_number", None):
         filters.append(models.Kindergarten.license_number == data.license_number)
+    if getattr(data, "legal_name", None):
+        filters.append(models.Kindergarten.legal_name == data.legal_name)
+    if getattr(data, "manager_id", None):
+        filters.append(models.Kindergarten.manager_id == data.manager_id)
 
     if not filters:
         return None
-
     query = db.query(models.Kindergarten).filter(or_(*filters))
     if exclude_id:
         query = query.filter(models.Kindergarten.id != exclude_id)
-
-    duplicate = query.first()
-    if not duplicate:
+    dup = query.first()
+    if not dup:
         return None
-
-    # Return the most relevant conflicting field for a clearer message
-    if duplicate.contact_phone == data.contact_phone:
+    if dup.contact_phone == data.contact_phone:
         return "contact_phone"
-    if data.contact_email and duplicate.contact_email == data.contact_email:
-        return "contact_email"
-    if data.license_number and duplicate.license_number == data.license_number:
+    if getattr(data, "license_number", None) and dup.license_number == data.license_number:
         return "license_number"
-    if duplicate.name_ar == data.name_ar:
+    if getattr(data, "contact_email", None) and dup.contact_email == data.contact_email:
+        return "contact_email"
+    if dup.name_ar == data.name_ar:
         return "name_ar"
-    if data.name_en and duplicate.name_en == data.name_en:
-        return "name_en"
+    if getattr(data, "legal_name", None) and dup.legal_name == data.legal_name:
+        return "legal_name"
     return "name_ar"
 
-class KindergartenResponse(KindergartenCreate):
-    id: int
-    status: models.KindergartenStatus
 
-    model_config = ConfigDict(from_attributes=True)
+# --------------------------------------------------------------------------
+# Helpers
+# --------------------------------------------------------------------------
 
-@router.post("/kindergartens", status_code=status.HTTP_201_CREATED, response_model=KindergartenResponse)
-def create_kindergarten(
-    kindergarten_data: KindergartenCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Create new kindergarten (Admin only)"""
+def _envelope(success: bool, data=None, message: str = "", code: int = 200):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=code, content={"success": success, "data": data, "message": message})
 
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Only admins can create kindergartens")
 
-    duplicate_field = detect_kindergarten_duplicate(db, kindergarten_data)
-    if duplicate_field:
-        raise HTTPException(
-            status_code=400,
-            detail=DUPLICATE_ERROR_MAP.get(duplicate_field, {"code": "error_duplicate_entry", "message": "Duplicate record found."})
+def _normalize_status(value: str) -> models.KindergartenStatus:
+    v = (value or "").strip().upper()
+    mapping = {
+        "ACTIVE": models.KindergartenStatus.ACTIVE,
+        "FROZEN": models.KindergartenStatus.FROZEN,
+        "DELETED": models.KindergartenStatus.DELETED,
+        "INACTIVE": models.KindergartenStatus.INACTIVE,
+        "DRAFT": models.KindergartenStatus.DRAFT,
+    }
+    if v not in mapping:
+        raise ValueError("invalid_status")
+    return mapping[v]
+
+
+def _stats_subqueries(db: Session):
+    from models import EnrollmentApplication, EnrollmentStatus, AttendanceLog, AttendanceStatus, Class
+    child_count = (
+        db.query(
+            EnrollmentApplication.kindergarten_id,
+            func.count(EnrollmentApplication.id),
         )
-
-    kindergarten = models.Kindergarten(
-        **kindergarten_data.model_dump(),
-        status=models.KindergartenStatus.DRAFT
+        .filter(EnrollmentApplication.status == EnrollmentStatus.ACTIVE)
+        .group_by(EnrollmentApplication.kindergarten_id)
+        .subquery()
     )
-
-    db.add(kindergarten)
-    db.commit()
-    db.refresh(kindergarten)
-
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.KINDERGARTEN_CREATED,
-        entity_type="Kindergarten",
-        entity_id=kindergarten.id,
-        sensitivity_level=2
+    attendance = (
+        db.query(
+            Class.kindergarten_id,
+            func.sum(case((AttendanceLog.status == AttendanceStatus.PRESENT, 1), else_=0)).cast(db.type_coerce),
+            func.count(AttendanceLog.id),
+        )
+        .join(Class, Class.id == AttendanceLog.class_id)
+        .group_by(Class.kindergarten_id)
+        .subquery()
     )
+    return child_count, attendance
 
-    return kindergarten
 
+def _serialize(kg: models.Kindergarten, child_count: Optional[int] = None,
+               attendance_present: Optional[int] = None, attendance_total: Optional[int] = None):
+    d = {
+        "id": kg.id,
+        "name_ar": kg.name_ar,
+        "name_en": kg.name_en,
+        "legal_name": kg.legal_name,
+        "type": kg.type,
+        "governorate": kg.governorate,
+        "district": kg.district,
+        "area": kg.area,
+        "address_line": kg.address_line,
+        "contact_phone": kg.contact_phone,
+        "mobile": kg.mobile,
+        "contact_email": kg.contact_email,
+        "website": kg.website,
+        "manager_name": kg.manager_name,
+        "manager_id": kg.manager_id,
+        "manager_phone": kg.manager_phone,
+        "manager_email": kg.manager_email,
+        "owner_name": kg.owner_name,
+        "ownership_type": kg.ownership_type,
+        "total_capacity": kg.total_capacity,
+        "current_child_count": kg.current_child_count,
+        "number_of_classes": kg.number_of_classes,
+        "teacher_count": kg.teacher_count,
+        "working_hours_start": kg.operating_hours_start,
+        "working_hours_end": kg.operating_hours_end,
+        "working_days": kg.working_days,
+        "age_group": kg.age_group,
+        "registration_fees": kg.registration_fees,
+        "monthly_fees": kg.monthly_fees,
+        "license_number": kg.license_number,
+        "license_valid_until": kg.license_valid_until.isoformat() if kg.license_valid_until else None,
+        "license_status": kg.license_status,
+        "administrative_notes": kg.administrative_notes,
+        "latitude": kg.latitude,
+        "longitude": kg.longitude,
+        "status": kg.status.value.lower(),
+        "frozen_at": kg.frozen_at.isoformat() if kg.frozen_at else None,
+        "frozen_reason": kg.frozen_reason,
+        "frozen_by": kg.frozen_by,
+        "deleted_at": kg.deleted_at.isoformat() if kg.deleted_at else None,
+        "created_at": kg.created_at.isoformat() if kg.created_at else None,
+        "updated_at": kg.updated_at.isoformat() if kg.updated_at else None,
+    }
+    active = child_count if child_count is not None else (kg.current_child_count or 0)
+    d["child_count"] = active
+    d["occupancy_pct"] = round((active / kg.total_capacity) * 100, 1) if kg.total_capacity else None
+    if attendance_total:
+        d["attendance_pct"] = round((attendance_present / attendance_total) * 100, 1) if attendance_total else None
+    else:
+        d["attendance_pct"] = None
+    return d
+
+
+def _admin_only(user: models.User):
+    if user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access only")
+
+
+# --------------------------------------------------------------------------
+# Endpoints
+# --------------------------------------------------------------------------
 
 @router.get("/kindergartens")
 def list_kindergartens(
-    status: Optional[str] = None,
+    request: Request,
+    q: Optional[str] = Query(None, description="search by name"),
     governorate: Optional[str] = None,
-    district: Optional[str] = None,
-    phone: Optional[str] = None,
-    name: Optional[str] = None,
-    include_inactive: bool = False,
-    skip: int = 0,
-    limit: int = 100,
+    status: Optional[str] = None,
+    min_children: Optional[int] = None,
+    max_children: Optional[int] = None,
+    min_occupancy: Optional[float] = None,
+    max_occupancy: Optional[float] = None,
+    min_attendance: Optional[float] = None,
+    max_attendance: Optional[float] = None,
+    include_deleted: bool = False,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=200),
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """List kindergartens with filtering"""
     query = db.query(models.Kindergarten)
+    if not include_deleted:
+        query = query.filter(models.Kindergarten.status != models.KindergartenStatus.DELETED)
 
-    if status:
-        query = query.filter(models.Kindergarten.status == models.KindergartenStatus(status))
-    if governorate:
-        normalized_governorate = governorate
-        try:
-            normalized_governorate = validators.validate_jordan_governorate(governorate)
-        except validators.ValidationError:
-            normalized_governorate = governorate
-        query = query.filter(models.Kindergarten.governorate.ilike(f"%{normalized_governorate}%"))
-    if district:
-        query = query.filter(models.Kindergarten.district.ilike(f"%{district}%"))
-    if phone:
-        query = query.filter(models.Kindergarten.contact_phone.ilike(f"%{phone}%"))
-    if name:
+    if q:
         query = query.filter(
             or_(
-                models.Kindergarten.name_ar.ilike(f"%{name}%"),
-                models.Kindergarten.name_en.ilike(f"%{name}%")
+                models.Kindergarten.name_ar.ilike(f"%{q}%"),
+                models.Kindergarten.name_en.ilike(f"%{q}%"),
+                models.Kindergarten.legal_name.ilike(f"%{q}%"),
             )
         )
+    if governorate:
+        query = query.filter(models.Kindergarten.governorate == governorate)
+    if status:
+        try:
+            query = query.filter(models.Kindergarten.status == _normalize_status(status))
+        except ValueError:
+            return _envelope(False, None, "قيمة الحالة غير صالحة / Invalid status value", 400)
 
-    # For non-admins, only show active kindergartens unless explicitly requested
-    if current_user.role != models.UserRole.ADMIN and not include_inactive:
-        query = query.filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
-
-    kindergartens = query.offset(skip).limit(limit).all()
     total = query.count()
+    kgs = query.order_by(models.Kindergarten.id.desc()).offset(skip).limit(limit).all()
 
-    return {
-        "total": total,
-        "skip": skip,
-        "limit": limit,
-        "kindergartens": kindergartens
-    }
+    child_count_sq, attendance_sq = _stats_subqueries(db)
+    cc_map = dict(db.query(child_count_sq.c.kindergarten_id, child_count_sq.c[1]).all())
+    att_map = {r[0]: (r[1], r[2]) for r in db.query(attendance_sq.c.kindergarten_id, attendance_sq.c[1], attendance_sq.c[2]).all()}
+
+    items = []
+    for kg in kgs:
+        cc = cc_map.get(kg.id, kg.current_child_count or 0)
+        pres, tot = att_map.get(kg.id, (0, 0))
+        items.append(_serialize(kg, child_count=cc, attendance_present=pres, attendance_total=tot))
+
+    def within(v, lo, hi):
+        return (lo is None or (v is not None and v >= lo)) and (hi is None or (v is not None and v <= hi))
+
+    items = [
+        it for it in items
+        if within(it["child_count"], min_children, max_children)
+        and within(it["occupancy_pct"], min_occupancy, max_occupancy)
+        and within(it["attendance_pct"], min_attendance, max_attendance)
+    ]
+
+    return _envelope(
+        True,
+        {"items": items, "total": total, "skip": skip, "limit": limit, "returned": len(items)},
+        "تم جلب قائمة الحضانات بنجاح",
+    )
 
 
 @router.get("/kindergartens/{kindergarten_id}")
 def get_kindergarten(
     kindergarten_id: int,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """Get kindergarten details"""
-    kindergarten = db.query(models.Kindergarten).filter(
-        models.Kindergarten.id == kindergarten_id
-    ).first()
-
-    if not kindergarten:
-        raise HTTPException(status_code=404, detail="Kindergarten not found")
-
-    # Role-based access control
-    if current_user.role == models.UserRole.SUPERVISOR:
-        raise HTTPException(status_code=403, detail="Supervisors cannot view kindergarten details")
-    if current_user.role == models.UserRole.PARENT:
-        if kindergarten.status != models.KindergartenStatus.ACTIVE:
-            raise HTTPException(status_code=404, detail="Kindergarten not found")
-
-    return kindergarten
+    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    if not kg or kg.status == models.KindergartenStatus.DELETED:
+        return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
+    child_count_sq, attendance_sq = _stats_subqueries(db)
+    cc = db.query(child_count_sq.c[1]).filter(child_count_sq.c.kindergarten_id == kg.id).scalar() or kg.current_child_count or 0
+    att = db.query(attendance_sq.c[1], attendance_sq.c[2]).filter(attendance_sq.c.kindergarten_id == kg.id).first()
+    pres, tot = (att[0], att[1]) if att else (0, 0)
+    return _envelope(True, _serialize(kg, child_count=cc, attendance_present=pres, attendance_total=tot),
+                     "تم جلب بيانات الحضانة بنجاح")
 
 
-@router.put("/kindergartens/{kindergarten_id}")
+@router.post("/admin/kindergartens", status_code=201)
+def create_kindergarten(
+    data: KindergartenCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _admin_only(current_user)
+    dup = detect_kindergarten_duplicate(db, data)
+    if dup:
+        msg = {
+            "contact_phone": "رقم الهاتف مسجل مسبقاً / Phone number already registered",
+            "license_number": "رقم الترخيص مستخدم مسبقاً / License number already used",
+            "contact_email": "البريد الإلكتروني مستخدم مسبقاً / Email already registered",
+            "name_ar": "يوجد حضانة بنفس الاسم / A kindergarten with this name already exists",
+            "legal_name": "الاسم القانوني مستخدم مسبقاً / Legal name already used",
+            "manager_id": "رقم المدير مستخدم مسبقاً / Manager ID already used",
+        }.get(dup, "سجل مكرر / Duplicate record")
+        return _envelope(False, None, msg, 400)
+
+    kg = models.Kindergarten(**data.model_dump(exclude_none=True), status=models.KindergartenStatus.ACTIVE)
+    db.add(kg)
+    db.flush()
+    validators.log_audit_action(
+        db=db, user_id=current_user.id, action=AuditAction.KINDERGARTEN_CREATED,
+        entity_type="Kindergarten", entity_id=kg.id,
+        details=f"Created kindergarten {kg.name_ar}", sensitivity_level=2,
+    )
+    db.commit()
+    db.refresh(kg)
+    return _envelope(True, _serialize(kg), "تم إنشاء الحضانة بنجاح / Kindergarten created successfully", 201)
+
+
+@router.put("/admin/kindergartens/{kindergarten_id}")
 def update_kindergarten(
     kindergarten_id: int,
-    kindergarten_data: KindergartenCreate,
+    data: KindergartenUpdate,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """Update kindergarten (Admin or Manager)"""
-    kindergarten = db.query(models.Kindergarten).filter(
-        models.Kindergarten.id == kindergarten_id
-    ).first()
+    _admin_only(current_user)
+    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    if not kg or kg.status == models.KindergartenStatus.DELETED:
+        return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
 
-    if not kindergarten:
-        raise HTTPException(status_code=404, detail="Kindergarten not found")
+    dup = detect_kindergarten_duplicate(db, data, exclude_id=kg.id)
+    if dup:
+        msg = {
+            "contact_phone": "رقم الهاتف مسجل مسبقاً / Phone number already registered",
+            "license_number": "رقم الترخيص مستخدم مسبقاً / License number already used",
+            "contact_email": "البريد الإلكتروني مستخدم مسبقاً / Email already registered",
+            "name_ar": "يوجد حضانة بنفس الاسم / A kindergarten with this name already exists",
+            "legal_name": "الاسم القانوني مستخدم مسبقاً / Legal name already used",
+        }.get(dup, "سجل مكرر / Duplicate record")
+        return _envelope(False, None, msg, 400)
 
-    # Check permissions
-    if current_user.role == models.UserRole.MANAGER:
-        if current_user.kindergarten_id != kindergarten_id:
-            raise HTTPException(status_code=403, detail="Can only update own kindergarten")
-    elif current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
-
-    duplicate_field = detect_kindergarten_duplicate(db, kindergarten_data, exclude_id=kindergarten_id)
-    if duplicate_field:
-        raise HTTPException(
-            status_code=400,
-            detail=DUPLICATE_ERROR_MAP.get(duplicate_field, {"code": "error_duplicate_entry", "message": "Duplicate record found."})
-        )
-
-    for field, value in kindergarten_data.model_dump().items():
-        setattr(kindergarten, field, value)
-
-    db.commit()
-    db.refresh(kindergarten)
-
+    for field, value in data.model_dump(exclude_none=True).items():
+        setattr(kg, field, value)
+    kg.updated_at = datetime.now(_JORDAN_TZ)
     validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.KINDERGARTEN_UPDATED,
-        entity_type="Kindergarten",
-        entity_id=kindergarten.id,
-        sensitivity_level=2
+        db=db, user_id=current_user.id, action=AuditAction.KINDERGARTEN_UPDATED,
+        entity_type="Kindergarten", entity_id=kg.id,
+        details=f"Updated kindergarten {kg.name_ar}", sensitivity_level=2,
     )
-
-    return {
-        "id": kindergarten.id,
-        "name_ar": kindergarten.name_ar,
-        "name_en": kindergarten.name_en,
-        "governorate": kindergarten.governorate,
-        "district": kindergarten.district,
-        "area": kindergarten.area,
-        "address_line": kindergarten.address_line,
-        "contact_phone": kindergarten.contact_phone,
-        "contact_email": kindergarten.contact_email,
-        "status": kindergarten.status.value if kindergarten.status else None,
-    }
+    db.commit()
+    db.refresh(kg)
+    return _envelope(True, _serialize(kg), "تم تحديث بيانات الحضانة بنجاح / Kindergarten updated successfully")
 
 
-@router.delete("/kindergartens/{kindergarten_id}")
+@router.patch("/admin/kindergartens/{kindergarten_id}/freeze")
+def freeze_kindergarten(
+    kindergarten_id: int,
+    body: FreezeRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _admin_only(current_user)
+    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    if not kg or kg.status == models.KindergartenStatus.DELETED:
+        return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
+    if kg.status == models.KindergartenStatus.FROZEN:
+        return _envelope(False, None, "الحضانة مجمدة بالفعل / Already frozen", 400)
+
+    kg.status = models.KindergartenStatus.FROZEN
+    kg.frozen_at = datetime.now(_JORDAN_TZ)
+    kg.frozen_reason = body.reason
+    kg.frozen_by = current_user.id
+    suspended = (
+        db.query(models.User)
+        .filter(models.User.kindergarten_id == kg.id,
+                models.User.role.in_([models.UserRole.MANAGER, models.UserRole.SUPERVISOR]),
+                models.User.status == models.UserStatus.ACTIVE)
+        .update({"status": models.UserStatus.SUSPENDED})
+    )
+    validators.log_audit_action(
+        db=db, user_id=current_user.id, action=AuditAction.KINDERGARTEN_FROZEN,
+        entity_type="Kindergarten", entity_id=kg.id,
+        details=f"Frozen (reason={body.reason}); suspended {suspended} staff", sensitivity_level=3,
+    )
+    db.commit()
+    db.refresh(kg)
+    return _envelope(True, _serialize(kg), "تم تجميد الحضانة بنجاح / Kindergarten frozen")
+
+
+@router.patch("/admin/kindergartens/{kindergarten_id}/activate")
+def activate_kindergarten(
+    kindergarten_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _admin_only(current_user)
+    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    if not kg or kg.status == models.KindergartenStatus.DELETED:
+        return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
+    if kg.status != models.KindergartenStatus.FROZEN:
+        return _envelope(False, None, "الحضانة غير مجمدة / Not frozen", 400)
+
+    kg.status = models.KindergartenStatus.ACTIVE
+    kg.frozen_at = None
+    kg.frozen_reason = None
+    kg.frozen_by = None
+    restored = (
+        db.query(models.User)
+        .filter(models.User.kindergarten_id == kg.id,
+                models.User.role.in_([models.UserRole.MANAGER, models.UserRole.SUPERVISOR]),
+                models.User.status == models.UserStatus.SUSPENDED)
+        .update({"status": models.UserStatus.ACTIVE})
+    )
+    validators.log_audit_action(
+        db=db, user_id=current_user.id, action=AuditAction.KINDERGARTEN_UNFROZEN,
+        entity_type="Kindergarten", entity_id=kg.id,
+        details=f"Activated; reactivated {restored} staff", sensitivity_level=3,
+    )
+    db.commit()
+    db.refresh(kg)
+    return _envelope(True, _serialize(kg), "تم تفعيل الحضانة بنجاح / Kindergarten activated")
+
+
+@router.delete("/admin/kindergartens/{kindergarten_id}")
 def delete_kindergarten(
     kindergarten_id: int,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """Delete or archive kindergarten based on dependencies"""
-    kindergarten = db.query(models.Kindergarten).filter(
-        models.Kindergarten.id == kindergarten_id
-    ).first()
+    _admin_only(current_user)
+    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    if not kg or kg.status == models.KindergartenStatus.DELETED:
+        return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
 
-    if not kindergarten:
-        raise HTTPException(status_code=404, detail="Kindergarten not found")
-
-    # Check permissions
-    if current_user.role != models.UserRole.ADMIN:
-        if current_user.role == models.UserRole.MANAGER and current_user.kindergarten_id == kindergarten_id:
-            # Managers can archive their own kindergarten
-            pass
-        else:
-            raise HTTPException(status_code=403, detail="Access denied.")
-
-    # Check for dependent records
-    active_children = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-    ).count()
-    active_classes = db.query(models.Class).filter(
-        models.Class.kindergarten_id == kindergarten_id,
-        models.Class.is_active == True
-    ).count()
-    active_staff = db.query(models.User).filter(
-        models.User.kindergarten_id == kindergarten_id,
-        models.User.status == models.UserStatus.ACTIVE
-    ).count()
-
-    has_dependencies = active_children > 0 or active_classes > 0 or active_staff > 0
-
-    if has_dependencies:
-        if current_user.role != models.UserRole.ADMIN:
-            raise HTTPException(
-                status_code=409,
-                detail="Cannot delete kindergarten with active data. Please archive it instead."
-            )
-        # Admin can force archive even with dependencies
-        kindergarten.status = models.KindergartenStatus.INACTIVE
-        action = "archived"
-        message = "Kindergarten archived successfully"
-        audit_action = AuditAction.KINDERGARTEN_ARCHIVED
-    else:
-        # No dependencies - allow hard delete
-        db.delete(kindergarten)
-        action = "deleted"
-        message = "Kindergarten permanently deleted"
-        audit_action = AuditAction.KINDERGARTEN_DELETED
-
-    db.commit()
-
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=audit_action,
-        entity_type="Kindergarten",
-        entity_id=kindergarten_id,
-        details=f"Action: {action}, Dependencies: children={active_children}, classes={active_classes}, staff={active_staff}",
-        sensitivity_level=3
+    active_enroll = (
+        db.query(models.EnrollmentApplication)
+        .filter(models.EnrollmentApplication.kindergarten_id == kg.id,
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
+        .count()
     )
+    active_staff = (
+        db.query(models.User)
+        .filter(models.User.kindergarten_id == kg.id,
+                models.User.status == models.UserStatus.ACTIVE,
+                models.User.deleted_at.is_(None))
+        .count()
+    )
+    if active_enroll > 0 or active_staff > 0:
+        return _envelope(False, None, f"لا يمكن الحذف. يوجد {active_enroll} طلب تسجيل نشط و {active_staff} موظف نشط / Cannot delete. Has active enrollments or staff", 400)
 
-    return {
-        "action": action,
-        "message": message,
-        "kindergarten_id": kindergarten_id
-    }
+    kg.status = models.KindergartenStatus.DELETED
+    kg.deleted_at = datetime.now(_JORDAN_TZ)
+    kg.deleted_by = current_user.id
+    validators.log_audit_action(
+        db=db, user_id=current_user.id, action=AuditAction.KINDERGARTEN_DELETED,
+        entity_type="Kindergarten", entity_id=kg.id,
+        details="Soft deleted", sensitivity_level=3,
+    )
+    db.commit()
+    return _envelope(True, None, "تم حذف الحضانة بنجاح / Kindergarten deleted successfully")
 
-
-@router.post("/kindergartens/{kindergarten_id}/archive")
-def archive_kindergarten(
-    kindergarten_id: int,
+@router.post("/admin/kindergartens/with-manager", status_code=201)
+def create_kindergarten_with_manager(
+    payload: KindergartenWithManagerCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Archive kindergarten (soft delete)"""
-    kindergarten = db.query(models.Kindergarten).filter(
-        models.Kindergarten.id == kindergarten_id
-    ).first()
+    _admin_only(current_user)
+    
+    dup_kg = detect_kindergarten_duplicate(db, payload.kindergarten)
+    if dup_kg:
+        return _envelope(False, None, f"KG Duplicate: {dup_kg}", 409)
+        
+    filters = [models.User.username == payload.manager.username]
+    if payload.manager.email:
+        filters.append(models.User.email == payload.manager.email)
+    existing = db.query(models.User).filter(or_(*filters)).first()
+    if existing:
+        return _envelope(False, None, "Username or email already exists", 409)
+        
+    try:
+        kg = models.Kindergarten(**payload.kindergarten.model_dump(exclude_none=True), status=models.KindergartenStatus.ACTIVE)
+        db.add(kg)
+        db.flush()
+        
+        mgr = models.User(
+            username=payload.manager.username,
+            email=payload.manager.email,
+            hashed_password=get_password_hash(payload.manager.password),
+            role=models.UserRole.MANAGER,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=kg.id,
+            must_change_password=True,
+            full_name=payload.manager.full_name,
+            phone_number=payload.manager.phone_number,
+            national_id=payload.manager.national_id,
+            nationality=payload.manager.nationality,
+        )
+        db.add(mgr)
+        db.flush()
+        db.commit()
+        db.refresh(kg)
+        db.refresh(mgr)
+        
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=201, content={
+            "kindergarten": _serialize(kg),
+            "manager": {
+                "id": mgr.id,
+                "must_change_password": mgr.must_change_password,
+                "username": mgr.username
+            }
+        })
+        
+    except Exception as e:
+        db.rollback()
+        return _envelope(False, None, str(e), 500)
 
-    if not kindergarten:
-        raise HTTPException(status_code=404, detail="Kindergarten not found")
-
-    # Check permissions
-    if current_user.role != models.UserRole.ADMIN:
-        if current_user.role == models.UserRole.MANAGER and current_user.kindergarten_id == kindergarten_id:
-            # Managers can archive their own kindergarten
-            pass
-        else:
-            raise HTTPException(status_code=403, detail="Access denied.")
-
-    if kindergarten.status == models.KindergartenStatus.INACTIVE:
-        raise HTTPException(status_code=400, detail="Kindergarten is already archived.")
-
-    kindergarten.status = models.KindergartenStatus.INACTIVE
-    db.commit()
-
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.KINDERGARTEN_ARCHIVED,
-        entity_type="Kindergarten",
-        entity_id=kindergarten_id,
-        sensitivity_level=2
-    )
-
-    return {
-        "action": "archived",
-        "message": "Kindergarten archived successfully",
-        "kindergarten_id": kindergarten_id
-    }
-
-
-@router.post("/kindergartens/{kindergarten_id}/restore")
-def restore_kindergarten(
+@router.post("/admin/kindergartens/{kindergarten_id}/assign-manager")
+def assign_manager_to_kg(
     kindergarten_id: int,
+    payload: AssignManagerRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Restore archived kindergarten"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Admin access only")
+    _admin_only(current_user)
+    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    if not kg:
+        raise HTTPException(status_code=404, detail="Not Found")
+    
+    user = db.query(models.User).filter(models.User.id == payload.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    from manager_assignment_service import assign_user_as_manager, ManagerAssignmentError
+    try:
+        assign_user_as_manager(db, user, kg.id, actor_id=current_user.id, allow_replace=payload.replace)
+        db.commit()
+        return {"success": True, "message": "Manager assigned"}
+    except ManagerAssignmentError as e:
+        db.rollback()
+        raise HTTPException(status_code=e.status_code, detail=e.message)
 
-    kindergarten = db.query(models.Kindergarten).filter(
-        models.Kindergarten.id == kindergarten_id
-    ).first()
-
-    if not kindergarten:
-        raise HTTPException(status_code=404, detail="Kindergarten not found")
-
-    if kindergarten.status != models.KindergartenStatus.INACTIVE:
-        raise HTTPException(status_code=400, detail="Kindergarten is not archived.")
-
-    kindergarten.status = models.KindergartenStatus.ACTIVE
-    db.commit()
-
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.KINDERGARTEN_RESTORED,
-        entity_type="Kindergarten",
-        entity_id=kindergarten_id,
-        sensitivity_level=2
-    )
-
-    return {
-        "action": "restored",
-        "message": "Kindergarten restored successfully",
-        "kindergarten_id": kindergarten_id
-    }
-
-
-# ============================================================================
-# Class CRUD Endpoints
-# ============================================================================
-
-# ============================================================================
-# Kindergarten Services/Facilities CRUD Endpoints
-# ============================================================================
-
-class KindergartenServiceCreate(BaseModel):
-    kindergarten_id: int
-    service_name: str
-    description: str
-    enabled_flag: Optional[bool] = True
-
-class KindergartenServiceResponse(KindergartenServiceCreate):
-    id: int
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-class KindergartenServiceUpdate(BaseModel):
-    service_name: Optional[str] = None
-    description: Optional[str] = None
-    enabled_flag: Optional[bool] = None
-
-@router.get("/kindergartens/{kindergarten_id}/services", response_model=List[KindergartenServiceResponse])
-def list_kindergarten_services(
-    kindergarten_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """List all services/facilities for a kindergarten"""
-    validators.validate_kindergarten_scope(current_user, kindergarten_id)
-    services = db.query(models.KindergartenService).filter(models.KindergartenService.kindergarten_id == kindergarten_id).all()
-    return services
-
-@router.post("/kindergartens/{kindergarten_id}/services", status_code=status.HTTP_201_CREATED, response_model=KindergartenServiceResponse)
-def create_kindergarten_service(
-    kindergarten_id: int,
-    service_data: KindergartenServiceCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Create a new service/facility for a kindergarten"""
-    validators.validate_manager_role(current_user)
-    validators.validate_kindergarten_scope(current_user, kindergarten_id)
-    service = models.KindergartenService(
-        kindergarten_id=kindergarten_id,
-        service_name=service_data.service_name,
-        description=service_data.description,
-        enabled_flag=service_data.enabled_flag if service_data.enabled_flag is not None else True
-    )
-    db.add(service)
-    db.commit()
-    db.refresh(service)
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.KINDERGARTEN_SERVICE_CREATED,
-        entity_type="KindergartenService",
-        entity_id=service.id,
-        sensitivity_level=2
-    )
-    from fastapi.responses import JSONResponse
-    return JSONResponse(status_code=201, content=KindergartenServiceResponse.model_validate(service).model_dump())
-
-@router.put("/kindergartens/{kindergarten_id}/services/{service_id}", response_model=KindergartenServiceResponse)
-def update_kindergarten_service(
-    kindergarten_id: int,
-    service_id: int,
-    service_data: KindergartenServiceUpdate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Update a service/facility for a kindergarten"""
-    validators.validate_manager_role(current_user)
-    validators.validate_kindergarten_scope(current_user, kindergarten_id)
-    service = db.query(models.KindergartenService).filter(
-        models.KindergartenService.id == service_id,
-        models.KindergartenService.kindergarten_id == kindergarten_id
-    ).first()
-    if not service:
-        raise HTTPException(status_code=404, detail="Service not found")
-    for field, value in service_data.model_dump(exclude_unset=True).items():
-        setattr(service, field, value)
-    db.commit()
-    db.refresh(service)
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.KINDERGARTEN_SERVICE_UPDATED,
-        entity_type="KindergartenService",
-        entity_id=service.id,
-        sensitivity_level=2
-    )
-    return service
-
-@router.delete("/kindergartens/{kindergarten_id}/services/{service_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_kindergarten_service(
-    kindergarten_id: int,
-    service_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Delete a service/facility from a kindergarten"""
-    validators.validate_manager_role(current_user)
-    validators.validate_kindergarten_scope(current_user, kindergarten_id)
-    service = db.query(models.KindergartenService).filter(
-        models.KindergartenService.id == service_id,
-        models.KindergartenService.kindergarten_id == kindergarten_id
-    ).first()
-    if not service:
-        raise HTTPException(status_code=404, detail="Service not found")
-    db.delete(service)
-    db.commit()
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.KINDERGARTEN_SERVICE_DELETED,
-        entity_type="KindergartenService",
-        entity_id=service_id,
-        sensitivity_level=2
-    )
-    return Response(status_code=204)

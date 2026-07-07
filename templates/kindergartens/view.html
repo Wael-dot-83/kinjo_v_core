@@ -24,6 +24,11 @@
         <button class="btn btn-warning" onclick="confirmArchive()" id="archiveBtn">
             <i class="bi bi-archive me-2"></i>{% if ui_lang == 'en' %}Archive{% else %}أرشفة{% endif %}
         </button>
+        {% if current_user.role.name == 'ADMIN' %}
+        <button class="btn btn-info" onclick="toggleFreeze()" id="freezeBtn">
+            <i class="bi bi-snow me-2"></i><span id="freezeBtnLabel">{% if ui_lang == 'en' %}Freeze{% else %}تجميد{% endif %}</span>
+        </button>
+        {% endif %}
         <button class="btn btn-danger" onclick="confirmDelete()" id="deleteBtn" style="display: none;">
             <i class="bi bi-trash me-2"></i>{% if ui_lang == 'en' %}Delete Permanently{% else %}حذف نهائي{% endif %}
         </button>
@@ -52,6 +57,8 @@
                         <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
                         {% elif kindergarten.status == 'inactive' %}
                         <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
+                        {% elif kindergarten.status == 'frozen' %}
+                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">{% if ui_lang == 'en' %}Frozen{% else %}مجمدة{% endif %}</span>
                         {% elif kindergarten.status == 'suspended' %}
                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}</span>
                         {% elif kindergarten.status == 'pending' %}
@@ -1195,6 +1202,31 @@
         } catch (error) {
             console.error('Delete error:', error);
             showToast(T('حدث خطأ في الحذف', 'Error during deletion'), 'error');
+        }
+    }
+
+    async function toggleFreeze() {
+        const isFrozen = "{{ kindergarten.status }}" === 'frozen';
+        const btn = document.getElementById('freezeBtn');
+        btn.disabled = true;
+        try {
+            if (isFrozen) {
+                if (!confirm(T('هل تريد إلغاء تجميد الحضانة؟', 'Unfreeze this kindergarten?'))) {
+                    btn.disabled = false;
+                    return;
+                }
+                await window.api.unfreezeKindergarten(kindergartenId);
+                showToast(T('تم إلغاء تجميد الحضانة بنجاح', 'Kindergarten unfrozen successfully'), 'success');
+            } else {
+                const reason = prompt(T('سبب التجميد (اختياري):', 'Freeze reason (optional):'));
+                if (reason === null) { btn.disabled = false; return; }
+                await window.api.freezeKindergarten(kindergartenId, reason);
+                showToast(T('تم تجميد الحضانة بنجاح', 'Kindergarten frozen successfully'), 'success');
+            }
+            setTimeout(() => location.reload(), 1200);
+        } catch (error) {
+            btn.disabled = false;
+            showToast(error.message || T('تعذر تنفيذ العملية', 'Operation failed'), 'error');
         }
     }
 
