@@ -1071,14 +1071,10 @@ class KPIService:
     ) -> List[date]:
         if period_start > period_end:
             return []
-        if settings.TESTING:
-            days: List[date] = []
-            cursor = period_start
-            while cursor <= period_end:
-                days.append(cursor)
-                cursor += timedelta(days=1)
-            return days
-
+        # NOTE: working days always respect the Jordan school week (Sun–Thu) and
+        # explicit OperatingCalendar entries — including under tests. There is no
+        # TESTING short-circuit; tests that need specific days open must seed
+        # OperatingCalendar rows so their working-day math matches production.
         calendar_rows = db.query(
             models.OperatingCalendar.date,
             models.OperatingCalendar.is_open,

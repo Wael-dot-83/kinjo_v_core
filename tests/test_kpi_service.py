@@ -199,6 +199,13 @@ def test_compute_attendance_rate_excludes_absent_logs(
     start = date(2026, 1, 1)
     end = date(2026, 1, 2)
 
+    # Mark both days as operating so working-day math is weekday-independent
+    # (KPIService always honors the Jordan week + OperatingCalendar now).
+    test_db.add_all([
+        models.OperatingCalendar(kindergarten_id=sample_kindergarten.id, date=start, is_open=True),
+        models.OperatingCalendar(kindergarten_id=sample_kindergarten.id, date=end, is_open=True),
+    ])
+
     test_db.add_all(
         [
             models.AttendanceLog(
@@ -414,6 +421,13 @@ def test_attendance_rate_excludes_excused(
     """EXCUSED absences must NOT be counted as physical attendance."""
     start = date(2026, 4, 1)
     end = date(2026, 4, 3)  # 3 days
+
+    # Mark all 3 days as operating so the denominator is 3 regardless of weekday.
+    test_db.add_all([
+        models.OperatingCalendar(kindergarten_id=sample_kindergarten.id,
+                                 date=start + timedelta(days=i), is_open=True)
+        for i in range(3)
+    ])
 
     test_db.add_all([
         models.AttendanceLog(child_id=sample_child.id, class_id=sample_class.id,
