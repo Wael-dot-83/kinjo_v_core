@@ -1,9 +1,8 @@
 import asyncio
-import os
-from playwright.async_api import async_playwright
-import sqlite3
-import jwt
 from datetime import datetime, timedelta, timezone
+
+import jwt
+from playwright.async_api import async_playwright
 
 SECRET_KEY = "ci-secret-key"
 
@@ -14,7 +13,7 @@ def create_token(username: str, role: str):
 
 async def run_tests():
     from database import SessionLocal
-    from models import User, UserRole, ParentProfile
+    from models import ParentProfile, User, UserRole
     db = SessionLocal()
     user = db.query(User).filter(User.role == UserRole.PARENT).first()
     if not user:

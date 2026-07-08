@@ -1,22 +1,21 @@
 """
 Kindergartens domain endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
-from fastapi.responses import Response
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta, timezone
-from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
+from typing import Optional
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from sqlalchemy import func, or_
+from sqlalchemy.orm import Session
 
 import models
-from audit_actions import AuditAction
 import validators
+from audit_actions import AuditAction
+from auth import get_password_hash
 from config import settings
 from database import get_db
 from dependencies import get_current_user
-from api.users import DUPLICATE_ERROR_MAP
-from auth import get_password_hash
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
@@ -92,20 +91,20 @@ def get_districts_by_governorate(
 # Arabic messages, soft-delete, freeze/activate).
 # ============================================================================
 
-from fastapi import APIRouter, Depends, HTTPException, status as http_status, Query, Request, Body  # noqa: F401
-from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, func, case
 from datetime import date, datetime, timedelta, timezone
-from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
+from typing import Optional
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request  # noqa: F401
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from sqlalchemy import case, func, or_
+from sqlalchemy.orm import Session
 
 import models
-from audit_actions import AuditAction
 import validators
+from audit_actions import AuditAction
+from auth import get_password_hash  # noqa: F401
 from database import get_db
 from dependencies import get_current_user
-from api.users import DUPLICATE_ERROR_MAP
-from auth import get_password_hash  # noqa: F401
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
@@ -325,7 +324,7 @@ def _normalize_status(value: str) -> models.KindergartenStatus:
 
 
 def _stats_subqueries(db: Session):
-    from models import EnrollmentApplication, EnrollmentStatus, AttendanceLog, AttendanceStatus, Class
+    from models import AttendanceLog, AttendanceStatus, Class, EnrollmentApplication, EnrollmentStatus
     child_count = (
         db.query(
             EnrollmentApplication.kindergarten_id,
@@ -767,7 +766,7 @@ def assign_manager_to_kg(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    from manager_assignment_service import assign_user_as_manager, ManagerAssignmentError
+    from manager_assignment_service import ManagerAssignmentError, assign_user_as_manager
     try:
         assign_user_as_manager(db, user, kg.id, actor_id=current_user.id, allow_replace=payload.replace)
         db.commit()

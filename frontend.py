@@ -1,24 +1,32 @@
-﻿from fastapi import APIRouter, Request, Depends
+import typing
+from datetime import date, datetime, timedelta, timezone
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
-import models
-from i18n import gettext as _i18n_gettext
-from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from datetime import date, timedelta, datetime, timezone
-from utils.time_utils import today_amman as _today
-import typing
-from typing import Optional
+from sqlalchemy.orm import Session
 
+import models
+from config import settings
 from database import get_db
 from dependencies import get_current_user_optional, get_current_user_or_redirect, require_admin
-from models import User, UserRole, Kindergarten, EnrollmentApplication
-from config import settings
+from i18n import gettext as _i18n_gettext
+from models import EnrollmentApplication, Kindergarten, User, UserRole
+from utils.time_utils import today_amman as _today
 from validators import validate_jordan_governorate
 
 SUPPORTED_UI_LANGUAGES = {"ar", "en"}
 
+
+def _ui_lang(request: Request) -> str:
+    return request.cookies.get("ui_lang", "ar")
+
+def _now():
+    from utils.time_utils import today_amman
+    return today_amman()
 
 def normalize_ui_language(value: Optional[str]) -> str:
     if not value:
@@ -105,8 +113,12 @@ def status_color(status: str) -> str:
 templates.env.filters['status_color'] = status_color
 
 from translations import (  # noqa: E402
-    audit_action_label_ar, audit_entity_label_ar, role_label_ar, status_label_ar,
+    audit_action_label_ar,
+    audit_entity_label_ar,
+    role_label_ar,
+    status_label_ar,
 )
+
 templates.env.filters['audit_action_ar'] = audit_action_label_ar
 templates.env.filters['audit_entity_ar'] = audit_entity_label_ar
 templates.env.filters['role_ar'] = role_label_ar
@@ -1133,7 +1145,7 @@ async def children_list_redirect(request: Request, current_user: User = Depends(
 @router.get("/children/{child_id}", response_class=HTMLResponse)
 async def view_child(request: Request, child_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
     """View child details"""
-    from models import Child, ParentProfile, EnrollmentApplication, EnrollmentStatus
+    from models import Child, EnrollmentApplication, EnrollmentStatus, ParentProfile
     child = db.query(Child).filter(Child.id == child_id).first()
     if not child:
         return templates.TemplateResponse(request=request, name="404.html", status_code=404)

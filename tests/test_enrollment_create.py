@@ -6,12 +6,13 @@ Tests for the enrollment creation flow:
 - Duplicate enrollment prevention
 - Frontend page rendering
 """
-import pytest
 from datetime import date, timedelta
-import models
-from auth import get_password_hash
-from sqlalchemy.orm import sessionmaker
+
+import pytest
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import sessionmaker
+
+import models
 
 
 class TestCitiesEndpoint:
