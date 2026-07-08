@@ -49,7 +49,7 @@ def _make_class(test_db, kg_id, name="Class B"):
         name_en=name,
         class_code=str(uuid.uuid4())[:8].upper(),
         age_group="AGE_2_4",
-        capacity_total=15,
+        capacity_total=10,
         min_age_months=24,
         max_age_months=60,
         is_active=True,
@@ -518,7 +518,7 @@ class TestManagerClassCRUD:
         sup = _make_supervisor(test_db, sample_kindergarten.id, "editFormSup", "editformsup@test.com")
         payload = {
             "name_ar": sample_class.name_ar, "name_en": sample_class.name_en,
-            "capacity_total": sample_class.capacity_total,
+            "capacity_total": 10,  # within the enforced 3–10 range
             "min_age_months": sample_class.min_age_months, "max_age_months": sample_class.max_age_months,
             "supervisor_id": sup.id,
         }

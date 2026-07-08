@@ -228,7 +228,7 @@ class TestClassRequiresSupervisor:
             "name_ar": "صف",
             "class_code": "X003",
             "age_group": "AGE_2_4",
-            "capacity_total": 15,
+            "capacity_total": 10,
             "min_age_months": 24,
             "max_age_months": 48,
             "supervisor_id": sv.id,
@@ -378,10 +378,13 @@ class TestManagerAsSupervisor:
         assert r.status_code == 201, r.text
         assert r.json()["supervisor_id"] == mgr.id
 
-    def test_manager_can_create_class_as_own_supervisor(self, client, test_db):
+    def test_manager_cannot_create_class_with_manager_as_supervisor(self, client, test_db):
+        """A class supervisor must have role SUPERVISOR (#3 / FRD C5 — MANAGER and
+        SUPERVISOR are mutually exclusive). A MANAGER, even with a self
+        SupervisorProfile, is rejected as a class supervisor."""
         kg = _make_kg(test_db)
         mgr = _make_user(test_db, models.UserRole.MANAGER, kg, "mgr_own")
-        # Create supervisor profile for manager
+        # A self supervisor-profile does not make a MANAGER a valid class supervisor.
         profile = models.SupervisorProfile(user_id=mgr.id, kindergarten_id=kg.id)
         test_db.add(profile)
         test_db.commit()
@@ -392,13 +395,14 @@ class TestManagerAsSupervisor:
             "name_ar": "صف المدير",
             "class_code": "MG01",
             "age_group": "AGE_2_4",
-            "capacity_total": 15,
+            "capacity_total": 10,
             "min_age_months": 24,
             "max_age_months": 48,
             "supervisor_id": mgr.id,
         }
         r = client.post("/api/classes", json=payload, headers=headers)
-        assert r.status_code == 201, r.text
+        # Rejected: a MANAGER is not a valid class supervisor (#3 / FRD C5).
+        assert r.status_code == 400, r.text
 
 
 # =========================================================================

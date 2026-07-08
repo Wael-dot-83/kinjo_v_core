@@ -81,14 +81,13 @@ def get_manager_dashboard(
         models.AttendanceLog.status.in_(_ATTENDED_STATUSES),
     ).scalar() or 0
 
-    # Pending daily reports (submitted but not approved)
-    pending_reports = db.query(func.count(models.DailyReport.id)).join(
-        models.Child
-    ).join(
-        models.EnrollmentApplication
-    ).filter(
-        models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-        models.DailyReport.status == models.DailyReportStatus.SUBMITTED
+    # Pending daily reports (submitted but not approved). DailyReport stores its
+    # own kindergarten_id, so filter it directly — joining through Child ->
+    # EnrollmentApplication would multiply the count for a child that has more
+    # than one enrollment row in this kindergarten (historical fan-out, #5).
+    pending_reports = db.query(func.count(models.DailyReport.id)).filter(
+        models.DailyReport.kindergarten_id == kindergarten_id,
+        models.DailyReport.status == models.DailyReportStatus.SUBMITTED,
     ).scalar() or 0
 
     # Recent incidents (last 7 days)
@@ -241,12 +240,10 @@ def get_manager_dashboard(
         models.AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED,
     ).scalar() or 0
 
-    reports_sent_today = db.query(func.count(models.DailyReport.id)).join(
-        models.Child
-    ).join(
-        models.EnrollmentApplication
-    ).filter(
-        models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+    # Filter DailyReport by its own kindergarten_id (no Child/enrollment join) so
+    # historical enrollment rows can't inflate the count (#5).
+    reports_sent_today = db.query(func.count(models.DailyReport.id)).filter(
+        models.DailyReport.kindergarten_id == kindergarten_id,
         models.DailyReport.status == models.DailyReportStatus.SENT_TO_PARENT,
         models.DailyReport.date == today,
     ).scalar() or 0
