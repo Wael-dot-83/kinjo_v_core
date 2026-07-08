@@ -31,13 +31,6 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E722"]   # allow bare except in tests
 "manager_scope.py" = ["F821"]  # db is in closure scope, ruff can't see it
-"agency_reports_export.py" = ["E722", "F821"]
-"agency_reports_registry.py" = ["E722", "F821"]
-"agency_reports_service.py" = ["E722", "F821"]
-"api/agency_reports_api.py" = ["E722", "F821"]
-"frontend_agency_reports.py" = ["E722", "F821"]
-"tests/test_admin_agency_reports_contract.py" = ["E722", "F821"]
-"tests/test_admin_agency_reports_registry.py" = ["E722", "F821"]
 
 [tool.ruff.lint.isort]
 known-first-party = [

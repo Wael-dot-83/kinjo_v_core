@@ -1,13 +1,13 @@
 """Data quality and realtime dashboard service layer."""
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
-from utils.time_utils import today_amman as _today
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import models
+from utils.time_utils import today_amman as _today
 
 
 @dataclass
@@ -259,6 +259,3 @@ class DataQualityService:
                 "last_evaluated_at": quality_result.timestamp.isoformat(),
             },
         }
-
-
-data_quality_service = DataQualityService()
