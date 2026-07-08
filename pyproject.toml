@@ -18,6 +18,7 @@ exclude = [
     "node_modules",
     "*.md",
     "nul",
+    "*_orig.py",
 ]
 
 [tool.ruff.lint]
@@ -43,7 +44,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
     "slow: marks tests as slow",
-    "integration: marks integration tests",
+    "integration: marks tests",
     "security: marks security tests",
     "p0: priority 0 – must pass on every commit",
     "p1: priority 1 – should pass before merge",
