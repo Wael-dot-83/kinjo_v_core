@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 import models
 from dependencies import get_current_user_or_redirect
-from frontend_orig import templates
+from frontend import templates
 from utils.time_utils import today_amman as _today
 
 router = APIRouter(include_in_schema=False)

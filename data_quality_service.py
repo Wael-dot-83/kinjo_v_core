@@ -259,3 +259,10 @@ class DataQualityService:
                 "last_evaluated_at": quality_result.timestamp.isoformat(),
             },
         }
+
+
+# Module-level singleton consumed by analytics_ws and other callers.
+# (Restored: dropped during the agency-reports extraction refactor; present on
+# main and other branches. Without it, `from data_quality_service import
+# data_quality_service` fails once the app import gets past the frontend layer.)
+data_quality_service = DataQualityService()

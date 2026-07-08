@@ -13,6 +13,7 @@ migration is safe to run on databases that already have partial indexes.
 """
 
 from alembic import op
+from sqlalchemy import inspect
 
 
 revision = "kpi_p0_idx_001"
@@ -79,20 +80,33 @@ _INDEXES = [
 
 
 def upgrade():
+    # Only create an index when its table and every indexed column actually
+    # exist in the live schema. On PostgreSQL a single failing DDL statement
+    # (e.g. an index on a column that isn't present) aborts the whole
+    # migration transaction, so a bare try/except cannot recover — every
+    # later statement, including Alembic's own version stamp, then fails with
+    # "current transaction is aborted". Pre-checking with the inspector keeps
+    # this migration safe and idempotent across PostgreSQL and SQLite.
+    #
+    # Notably attendance_logs has no kindergarten_id column (attendance is
+    # scoped via class_id -> class -> kindergarten), so its intended index is
+    # skipped rather than crashing the upgrade.
+    inspector = inspect(op.get_bind())
+    existing_tables = set(inspector.get_table_names())
+
     for index_name, table_name, columns in _INDEXES:
-        try:
-            op.execute(
-                f"CREATE INDEX IF NOT EXISTS {index_name} "
-                f"ON {table_name} ({columns})"
-            )
-        except Exception:
-            # Index already exists on databases that don't support IF NOT EXISTS.
-            pass
+        if table_name not in existing_tables:
+            continue
+        table_columns = {col["name"] for col in inspector.get_columns(table_name)}
+        required_columns = [c.strip() for c in columns.split(",")]
+        if not all(col in table_columns for col in required_columns):
+            continue
+        op.execute(
+            f"CREATE INDEX IF NOT EXISTS {index_name} "
+            f"ON {table_name} ({columns})"
+        )
 
 
 def downgrade():
     for index_name, _, _ in _INDEXES:
-        try:
-            op.execute(f"DROP INDEX IF EXISTS {index_name}")
-        except Exception:
-            pass
+        op.execute(f"DROP INDEX IF EXISTS {index_name}")
