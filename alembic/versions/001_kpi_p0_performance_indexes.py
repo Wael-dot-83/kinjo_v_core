@@ -21,11 +21,13 @@ branch_labels = None
 depends_on = None
 
 _INDEXES = [
-    # attendance_logs: used by every KPI bundle and bulk builder
+    # attendance_logs: used by every KPI bundle and bulk builder. The table has
+    # no kindergarten_id (KPI queries reach it via child_id); index the columns
+    # the queries actually filter on.
     (
-        "ix_attendance_kg_date_status",
+        "ix_attendance_child_date_status",
         "attendance_logs",
-        "kindergarten_id, date, status",
+        "child_id, date, status",
     ),
     # incidents: used by incident_rate, followup_sla, hard override check
     (
@@ -78,21 +80,30 @@ _INDEXES = [
 ]
 
 
+def _run_isolated(bind, sql):
+    """Run a DDL statement inside a SAVEPOINT so a failure (e.g. an index on a
+    column/table that isn't present in a given schema) is rolled back on its own
+    without aborting the surrounding migration transaction. On Postgres a bare
+    failed statement poisons the whole transaction, which defeats the
+    best-effort try/except this migration relies on."""
+    try:
+        with bind.begin_nested():
+            bind.exec_driver_sql(sql)
+    except Exception:
+        # Best-effort: index already exists, or its columns aren't present here.
+        pass
+
+
 def upgrade():
+    bind = op.get_bind()
     for index_name, table_name, columns in _INDEXES:
-        try:
-            op.execute(
-                f"CREATE INDEX IF NOT EXISTS {index_name} "
-                f"ON {table_name} ({columns})"
-            )
-        except Exception:
-            # Index already exists on databases that don't support IF NOT EXISTS.
-            pass
+        _run_isolated(
+            bind,
+            f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_name} ({columns})",
+        )
 
 
 def downgrade():
+    bind = op.get_bind()
     for index_name, _, _ in _INDEXES:
-        try:
-            op.execute(f"DROP INDEX IF EXISTS {index_name}")
-        except Exception:
-            pass
+        _run_isolated(bind, f"DROP INDEX IF EXISTS {index_name}")
