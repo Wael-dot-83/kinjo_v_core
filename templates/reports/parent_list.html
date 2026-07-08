@@ -102,15 +102,7 @@ _('Under Review'), 'SENT_TO_PARENT': _('Sent'), 'RETURNED': _('Rejected'), } %}
 </div>
 
 <script>
-  function getHeaders() {
-    if (!window.AuthService || !AuthService.isAuthenticated()) {
-      return { "Content-Type": "application/json" };
-    }
-    const token = AuthService.getToken();
-    const headers = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    return headers;
-  }
+
 
   function loadReports() {
     const date = document.getElementById("dateFilter").value;
@@ -128,11 +120,8 @@ _('Under Review'), 'SENT_TO_PARENT': _('Sent'), 'RETURNED': _('Rejected'), } %}
 
     // Load children for filter dropdown
     try {
-      const resp = await fetch("/api/parent/children-list", {
-        headers: getHeaders(),
-      });
-      if (resp.ok) {
-        const data = await resp.json();
+      const data = await window.api.get("/api/parent/children-list");
+      if (data) {
         const sel = document.getElementById("childFilter");
         (data.children || []).forEach((c) => {
           const opt = document.createElement("option");

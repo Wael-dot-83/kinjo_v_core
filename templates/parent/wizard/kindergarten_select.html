@@ -43,11 +43,7 @@
 (function () {
     async function loadKindergartens() {
         try {
-            const token = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-            const r = await fetch('/api/kindergartens?status=ACTIVE&limit=100', { headers });
-            if (!r.ok) throw new Error();
-            const data = await r.json();
+            const data = await window.api.get('/api/kindergartens?status=ACTIVE&limit=100');
             const kgs = data.kindergartens || data.items || data || [];
 
             document.getElementById('kgLoading').classList.add('d-none');

@@ -106,15 +106,7 @@
         'WAITLISTED': 'badge-soft badge-soft-info', 'ACTIVE': 'badge-soft badge-soft-success'
     };
 
-    function getHeaders() {
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
-        const token = AuthService.getToken();
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        return headers;
-    }
+
 
     function formatDate(dateStr) {
         if (!dateStr) return '—';
@@ -128,10 +120,9 @@
     async function loadEnrollments() {
         const tbody = document.getElementById('enrollmentsTableBody');
         try {
-            const resp = await fetch('/api/parent/enrollments', { headers: getHeaders() });
-            if (!resp.ok) throw new Error('Failed to load enrollments');
+            const data = await window.api.get('/api/parent/enrollments');
+            if (!data) throw new Error('Failed to load enrollments');
 
-            const data = await resp.json();
             const enrollments = data.enrollments || [];
 
             // Update counts

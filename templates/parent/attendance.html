@@ -120,15 +120,7 @@
         'SICK': 'badge-soft badge-soft-secondary'
     };
 
-    function getHeaders() {
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
-        const token = AuthService.getToken();
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        return headers;
-    }
+
 
     function formatDate(dateStr) {
         if (!dateStr) return '—';
@@ -146,9 +138,8 @@
     document.addEventListener('DOMContentLoaded', async () => {
         // Load children dropdown
         try {
-            const resp = await fetch('/api/parent/children-list', { headers: getHeaders() });
-            if (resp.ok) {
-                const data = await resp.json();
+            const data = await window.api.get('/api/parent/children-list');
+            if (data) {
                 const sel = document.getElementById('childFilter');
                 (data.children || []).forEach(c => {
                     const opt = document.createElement('option');
@@ -177,10 +168,9 @@
         if (params.toString()) url += '?' + params.toString();
 
         try {
-            const resp = await fetch(url, { headers: getHeaders() });
-            if (!resp.ok) throw new Error('Failed');
+            const data = await window.api.get(url);
+            if (!data) throw new Error('Failed');
 
-            const data = await resp.json();
             const records = data.attendance || [];
 
             // Update summary

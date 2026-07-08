@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta, timezone
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator, model_validator
 
 import models
 import validators
@@ -38,7 +38,8 @@ def get_parent_dashboard(
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
     parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
+        models.ParentProfile.user_id == current_user.id,
+        models.ParentProfile.deleted_at.is_(None),
     ).first()
 
     if not parent_profile:
@@ -46,7 +47,8 @@ def get_parent_dashboard(
 
     # Get all children
     children = db.query(models.Child).filter(
-        models.Child.parent_id == parent_profile.id
+        models.Child.parent_id == parent_profile.id,
+        models.Child.deleted_at.is_(None),
     ).all()
 
     today = datetime.now(_JORDAN_TZ).date()
@@ -293,7 +295,8 @@ def get_parent_enrollments(
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
     profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
+        models.ParentProfile.user_id == current_user.id,
+        models.ParentProfile.deleted_at.is_(None),
     ).first()
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
@@ -346,6 +349,7 @@ def get_parent_enrollments(
 @router.get("/parent/attendance")
 def get_parent_attendance(
     child_id: Optional[int] = Query(None),
+    date: Optional[str] = Query(None),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     current_user: models.User = Depends(get_current_user),
@@ -356,14 +360,16 @@ def get_parent_attendance(
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
     profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
+        models.ParentProfile.user_id == current_user.id,
+        models.ParentProfile.deleted_at.is_(None),
     ).first()
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     child_ids = [
         cid for (cid,) in db.query(models.Child.id).filter(
-            models.Child.parent_id == profile.id
+            models.Child.parent_id == profile.id,
+            models.Child.deleted_at.is_(None),
         ).all()
     ]
 
@@ -380,17 +386,25 @@ def get_parent_attendance(
     )
 
     # Date filters
-    try:
-        if start_date:
-            query = query.filter(models.AttendanceLog.date >= date.fromisoformat(start_date))
-        if end_date:
-            query = query.filter(models.AttendanceLog.date <= date.fromisoformat(end_date))
-    except ValueError:
-        logger.warning("INVALID_DATE_FILTER start_date=%r end_date=%r ignored — not ISO format", start_date, end_date)
+    import datetime as dt
+    if date:
+        try:
+            exact_date = dt.date.fromisoformat(date)
+            query = query.filter(models.AttendanceLog.date == exact_date)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid format for 'date'. Expected YYYY-MM-DD.")
+    else:
+        try:
+            if start_date:
+                query = query.filter(models.AttendanceLog.date >= dt.date.fromisoformat(start_date))
+            if end_date:
+                query = query.filter(models.AttendanceLog.date <= dt.date.fromisoformat(end_date))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid format for 'start_date' or 'end_date'. Expected YYYY-MM-DD.")
 
-    # Default: last 30 days
-    if not start_date and not end_date:
-        query = query.filter(models.AttendanceLog.date >= datetime.now(_JORDAN_TZ).date() - timedelta(days=30))
+        # Default: last 30 days
+        if not start_date and not end_date:
+            query = query.filter(models.AttendanceLog.date >= dt.datetime.now(_JORDAN_TZ).date() - timedelta(days=30))
 
     records = query.order_by(models.AttendanceLog.date.desc()).all()
 
@@ -427,13 +441,15 @@ def get_parent_children_simple(
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
     profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
+        models.ParentProfile.user_id == current_user.id,
+        models.ParentProfile.deleted_at.is_(None),
     ).first()
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     children = db.query(models.Child).filter(
-        models.Child.parent_id == profile.id
+        models.Child.parent_id == profile.id,
+        models.Child.deleted_at.is_(None),
     ).all()
 
     return {
@@ -468,6 +484,77 @@ class ParentProfileSelfUpdateRequest(BaseModel):
     notification_language: Optional[str] = None
     language: Optional[str] = None  # updates user.preferred_language
 
+    @field_validator(
+        "first_name", "second_name", "last_name", "first_name_en", "last_name_en",
+        "home_district", "home_area", "home_address_line", "work_address",
+        "emergency_contact_name", "emergency_contact_relationship", "relationship_to_child",
+        "national_id", "passport_number", mode="before"
+    )
+    @classmethod
+    def trim_strings(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            return v if v else None
+        return v
+
+    @field_validator("phone_number", "emergency_contact_phone")
+    @classmethod
+    def val_phone(cls, v):
+        if v:
+            v = v.strip()
+            if v:
+                return validators.validate_jordan_phone(v)
+        return v
+
+    @field_validator("home_governorate")
+    @classmethod
+    def val_gov(cls, v):
+        if v:
+            v = v.strip()
+            if v:
+                return validators.validate_jordan_governorate(v)
+        return v
+
+    @field_validator("gender")
+    @classmethod
+    def val_gender(cls, v):
+        if v:
+            v = v.strip()
+            if v:
+                try:
+                    models.Gender(v)
+                except ValueError:
+                    raise ValueError(f"Invalid gender: {v}")
+        return v
+
+    @field_validator("notification_language", "language")
+    @classmethod
+    def val_lang(cls, v):
+        if v:
+            v = v.strip().lower()
+            if v and v not in ("en", "ar"):
+                raise ValueError("Language must be 'en' or 'ar'")
+        return v
+
+    @model_validator(mode="after")
+    def val_identity(self):
+        # Allow checking identity if it is updated alongside nationality or alone.
+        # But if we just update phone, we shouldn't throw identity errors unless identity fields are provided.
+        nid = getattr(self, "national_id", None)
+        pid = getattr(self, "passport_number", None)
+        nat = getattr(self, "nationality", None)
+        
+        if nid or pid or nat:
+            # We don't have the existing DB profile here, so we validate based on what's provided.
+            # If they provide ID without nationality, assume Jordanian to apply some check.
+            assumed_nat = nat or "Jordanian"
+            try:
+                if hasattr(validators, "validate_identity_by_nationality"):
+                    validators.validate_identity_by_nationality(assumed_nat, nid, pid)
+            except Exception as e:
+                raise ValueError(str(e))
+        return self
+
 
 @router.put("/parent/profile")
 def update_parent_profile_self(
@@ -480,7 +567,8 @@ def update_parent_profile_self(
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
     profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
+        models.ParentProfile.user_id == current_user.id,
+        models.ParentProfile.deleted_at.is_(None),
     ).first()
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))

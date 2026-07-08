@@ -489,15 +489,7 @@
 
   let profileData = null;
 
-  function getHeaders() {
-    if (!window.AuthService || !AuthService.isAuthenticated()) {
-      return { "Content-Type": "application/json" };
-    }
-    const token = AuthService.getToken();
-    const headers = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    return headers;
-  }
+
 
   document.addEventListener("DOMContentLoaded", async () => {
     await loadGovernorates();
@@ -506,8 +498,8 @@
 
   async function loadGovernorates() {
     try {
-      const res = await fetch("/api/reference/governorates");
-      const data = await res.json();
+      const data = await window.api.get("/api/reference/governorates");
+      if (!data) return;
       _govData = data.governorates || [];
       _govData.forEach((g) => {
         GOVERNORATE_AR[g.name_ar] = g.name_ar;
@@ -557,28 +549,23 @@
 
   async function loadProfile() {
     try {
-      const resp = await fetch("/api/parent/profile", {
-        headers: getHeaders(),
-      });
-      if (!resp.ok) {
-        if (resp.status === 404) {
-          document.getElementById("profileAlert").classList.remove("d-none");
-          document.getElementById("profileAlert").innerHTML =
-            `<i class="bi bi-exclamation-triangle me-2"></i><strong>${T("لم يتم العثور على ملفك الشخصي.", "Profile not found.")}</strong> ${T("يرجى التواصل مع الإدارة.", "Please contact administration.")}`;
-          return;
-        }
-        throw new Error("Failed to load profile");
-      }
+      profileData = await window.api.get("/api/parent/profile");
+      if (!profileData) throw new Error("Failed to load profile");
 
-      profileData = await resp.json();
       renderProfile(profileData);
     } catch (error) {
       console.error("Error loading profile:", error);
-      Swal.fire({
-        icon: "error",
-        title: T("خطأ", "Error"),
-        text: T("تعذر تحميل الملف الشخصي", "Failed to load profile"),
-      });
+      if (error.message && error.message.includes("404")) {
+          document.getElementById("profileAlert").classList.remove("d-none");
+          document.getElementById("profileAlert").innerHTML =
+            `<i class="bi bi-exclamation-triangle me-2"></i><strong>${T("لم يتم العثور على ملفك الشخصي.", "Profile not found.")}</strong> ${T("يرجى التواصل مع الإدارة.", "Please contact administration.")}`;
+      } else {
+          Swal.fire({
+            icon: "error",
+            title: T("خطأ", "Error"),
+            text: T("تعذر تحميل الملف الشخصي", "Failed to load profile"),
+          });
+      }
     }
   }
 
@@ -770,12 +757,7 @@
     }
 
     try {
-      const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
-        method: "PUT",
-        headers: getHeaders(),
-        body: JSON.stringify(payload),
-      });
-      if (!resp.ok) throw new Error("Update failed");
+      await window.api.put("/api/parent/profile", payload);
 
       Swal.fire({
         icon: "success",
@@ -846,12 +828,7 @@
       }
 
       try {
-        const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
-          method: "PUT",
-          headers: getHeaders(),
-          body: JSON.stringify(payload),
-        });
-        if (!resp.ok) throw new Error("Update failed");
+        await window.api.put("/api/parent/profile", payload);
 
         Swal.fire({
           icon: "success",
@@ -915,12 +892,7 @@
       }
 
       try {
-        const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
-          method: "PUT",
-          headers: getHeaders(),
-          body: JSON.stringify(payload),
-        });
-        if (!resp.ok) throw new Error("Update failed");
+        await window.api.put("/api/parent/profile", payload);
 
         Swal.fire({
           icon: "success",
@@ -953,11 +925,7 @@
     .addEventListener("change", async function () {
       if (!profileData) return;
       try {
-        await fetch(`/api/parent-profiles/${profileData.id}`, {
-          method: "PUT",
-          headers: getHeaders(),
-          body: JSON.stringify({ correspondence_preference: this.checked }),
-        });
+        await window.api.put("/api/parent/profile", { correspondence_preference: this.checked });
       } catch (e) {
         console.error(e);
       }
@@ -967,11 +935,7 @@
   async function switchLanguage(lang) {
     try {
       // Persist to server via new PUT /api/parent/profile endpoint
-      await fetch("/api/parent/profile", {
-        method: "PUT",
-        headers: getHeaders(),
-        body: JSON.stringify({ language: lang }),
-      });
+      await window.api.put("/api/parent/profile", { language: lang });
     } catch (e) {
       console.error("Language switch error:", e);
     }

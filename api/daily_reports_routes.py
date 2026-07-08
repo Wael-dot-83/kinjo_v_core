@@ -226,14 +226,20 @@ def get_child_daily_reports(
     db: Session = Depends(get_db)
 ):
     """Get daily reports for a child (parents only see approved reports)"""
-    # Verify child exists
-    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    # Verify child exists and is not deleted
+    child = db.query(models.Child).filter(
+        models.Child.id == child_id,
+        models.Child.deleted_at.is_(None)
+    ).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
     # If requester is a parent, ensure they own the child
     if current_user.role == models.UserRole.PARENT:
-        parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id,
+            models.ParentProfile.deleted_at.is_(None)
+        ).first()
         if not parent_profile or parent_profile.id != child.parent_id:
             raise HTTPException(status_code=403, detail="Forbidden")
     elif current_user.role != models.UserRole.ADMIN:
@@ -284,15 +290,19 @@ def get_daily_report_by_id(
     if not report:
         raise HTTPException(status_code=404, detail="Daily report not found")
 
-    # Parents can only see approved reports for their own children
+    # Parents can only see approved or sent reports for their own children
     if current_user.role == models.UserRole.PARENT:
-        child = db.query(models.Child).filter(models.Child.id == report.child_id).first()
+        child = db.query(models.Child).filter(
+            models.Child.id == report.child_id,
+            models.Child.deleted_at.is_(None)
+        ).first()
         parent_profile = db.query(models.ParentProfile).filter(
-            models.ParentProfile.user_id == current_user.id
+            models.ParentProfile.user_id == current_user.id,
+            models.ParentProfile.deleted_at.is_(None)
         ).first()
         if not parent_profile or not child or child.parent_id != parent_profile.id:
             raise HTTPException(status_code=403, detail="Forbidden")
-        if report.status != models.DailyReportStatus.APPROVED:
+        if report.status not in (models.DailyReportStatus.APPROVED, models.DailyReportStatus.SENT_TO_PARENT):
             raise HTTPException(status_code=403, detail="Report not available")
 
     return {
@@ -335,12 +345,16 @@ def record_daily_report_view(
         raise HTTPException(status_code=403, detail="Report is not accessible")
 
     # 3. Verify the authenticated parent owns the child referenced in the report
-    child = db.query(models.Child).filter(models.Child.id == report.child_id).first()
+    child = db.query(models.Child).filter(
+        models.Child.id == report.child_id,
+        models.Child.deleted_at.is_(None)
+    ).first()
     if not child:
         raise HTTPException(status_code=404, detail="Report not found")
 
     parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
+        models.ParentProfile.user_id == current_user.id,
+        models.ParentProfile.deleted_at.is_(None)
     ).first()
     if not parent_profile or child.parent_id != parent_profile.id:
         raise HTTPException(status_code=403, detail="Access denied to this report")

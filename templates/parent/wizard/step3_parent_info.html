@@ -95,10 +95,7 @@
     document.getElementById('kgInfo').textContent =
         '{{ _("الحضانة المختارة:") }} ' + (kgName || kgId);
 
-    function getHeaders() {
-        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-        return { 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' };
-    }
+
 
     document.getElementById('enrollForm').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -122,24 +119,18 @@
         btn.disabled = true;
 
         try {
-            const r = await fetch('/api/enrollment/apply', {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify({
-                    kindergarten_id: parseInt(kgId),
-                    child: {
-                        first_name:    firstName,
-                        last_name:     lastName,
-                        date_of_birth: dob,
-                        gender:        gender,
-                        father_name:   document.getElementById('fatherName').value.trim() || null,
-                        mother_first_name: document.getElementById('motherName').value.trim() || null,
-                        medical_notes: document.getElementById('medicalNotes').value.trim() || null,
-                    }
-                }),
+            await window.api.post('/api/enrollment/apply', {
+                kindergarten_id: parseInt(kgId),
+                child: {
+                    first_name:    firstName,
+                    last_name:     lastName,
+                    date_of_birth: dob,
+                    gender:        gender,
+                    father_name:   document.getElementById('fatherName').value.trim() || null,
+                    mother_first_name: document.getElementById('motherName').value.trim() || null,
+                    medical_notes: document.getElementById('medicalNotes').value.trim() || null,
+                }
             });
-            const d = await r.json();
-            if (!r.ok) throw new Error(d.detail || '{{ _("فشل تقديم الطلب") }}');
 
             sessionStorage.removeItem('enroll_kg_id');
             sessionStorage.removeItem('enroll_kg_name');

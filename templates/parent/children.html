@@ -62,15 +62,7 @@
         'ACTIVE': 'badge-soft badge-soft-success'
     };
 
-    function getHeaders() {
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
-        const token = AuthService.getToken();
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        return headers;
-    }
+
 
     function calculateAge(dobStr) {
         if (!dobStr) return '—';
@@ -90,10 +82,9 @@
     async function loadChildren() {
         const container = document.getElementById('childrenContainer');
         try {
-            const resp = await fetch('/api/parent/children', { headers: getHeaders() });
-            if (!resp.ok) throw new Error('Failed to load children');
+            const data = await window.api.get('/api/parent/children');
+            if (!data) throw new Error('Failed to load children');
 
-            const data = await resp.json();
             const children = data.children || [];
 
             if (children.length === 0) {
