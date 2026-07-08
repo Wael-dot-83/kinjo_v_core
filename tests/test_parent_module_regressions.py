@@ -14,7 +14,6 @@ from datetime import date, datetime, timezone
 import models
 from auth import get_password_hash
 
-
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _parent_profile(db, user):

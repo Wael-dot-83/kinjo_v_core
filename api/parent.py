@@ -2,20 +2,18 @@
 Parent domain endpoints
 """
 import logging
-
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
-from fastapi.responses import Response
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta, timezone
 
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy.orm import Session
+
 _JORDAN_TZ = timezone(timedelta(hours=3))
-from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator, model_validator
+from typing import Optional
+
+from pydantic import BaseModel, field_validator, model_validator
 
 import models
 import validators
-from config import settings
 from database import get_db
 from dependencies import get_current_user
 from i18n import gettext as _api

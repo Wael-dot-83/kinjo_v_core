@@ -12,11 +12,10 @@ Comprehensive tests for the Parent Module:
 - /children  (parent redirect)
 - /enrollments/{id}  (parent access control)
 """
-import pytest
 from datetime import date, timedelta
+
 import models
 from auth import get_password_hash
-
 
 # ============================================================================
 # API: GET /api/parent/profile
