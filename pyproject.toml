@@ -33,6 +33,8 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E722"]   # allow bare except in tests
 "manager_scope.py" = ["F821"]  # db is in closure scope, ruff can't see it
+"frontend_orig.py" = ["E722", "F821"]  # preserved compatibility copy; legacy checked at original path
+"api/missing_endpoints_orig.py" = ["E722", "F821"]  # preserved compatibility copy; legacy checked at original path
 
 [tool.ruff.lint.isort]
 known-first-party = [
