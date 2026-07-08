@@ -1,7 +1,6 @@
 """Predictive analytics service backed by historical ORM data."""
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from utils.time_utils import today_amman as _today
 from enum import Enum
 from math import sqrt
 from typing import Dict, List, Sequence, Tuple
@@ -10,6 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import models
+from utils.time_utils import today_amman as _today
 
 
 class PredictionType(Enum):

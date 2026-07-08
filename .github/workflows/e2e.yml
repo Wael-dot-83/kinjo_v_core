@@ -10,19 +10,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    # package.json / package-lock.json are gitignored, so a fresh CI checkout has
+    # no committed Node project. Detect it and skip the (placeholder) Playwright
+    # steps gracefully instead of failing `npm ci` on every PR. When a Node
+    # project is committed, all steps run as normal.
+    - id: detect
+      shell: bash
+      run: |
+        if [ -f package-lock.json ] && [ -f package.json ]; then
+          echo "present=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "present=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::No committed Node project (package.json is gitignored) — skipping Playwright E2E."
+        fi
     - uses: actions/setup-node@v4
+      if: steps.detect.outputs.present == 'true'
       with:
         node-version: 18
     - name: Install dependencies
+      if: steps.detect.outputs.present == 'true'
       run: npm ci
     - name: Install Playwright Browsers
+      if: steps.detect.outputs.present == 'true'
       run: npx playwright install --with-deps chromium
     - name: Run server (placeholder)
+      if: steps.detect.outputs.present == 'true'
       run: echo "Start backend here (e.g. docker-compose up -d)"
     - name: Run Playwright tests
+      if: steps.detect.outputs.present == 'true'
       run: npx playwright test
     - uses: actions/upload-artifact@v4
-      if: always()
+      if: always() && steps.detect.outputs.present == 'true'
       with:
         name: playwright-report
         path: playwright-report/

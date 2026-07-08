@@ -1408,7 +1408,7 @@ async def admin_kindergartens_list(request: Request, current_user: User = Depend
     return templates.TemplateResponse(
         request=request,
         name="admin/kindergartens/list.html",
-        context={"current_user": current_user, "ui_lang": _ui_lang(request), "now": _now()},
+        context={"current_user": current_user},
     )
 
 
@@ -1419,7 +1419,7 @@ async def admin_kindergarten_new(request: Request, current_user: User = Depends(
     return templates.TemplateResponse(
         request=request,
         name="admin/kindergartens/form.html",
-        context={"current_user": current_user, "ui_lang": _ui_lang(request), "now": _now(), "kindergarten": None},
+        context={"current_user": current_user, "kindergarten": None},
     )
 
 
@@ -1431,7 +1431,7 @@ async def admin_kindergarten_edit(kindergarten_id: int, request: Request, curren
     return templates.TemplateResponse(
         request=request,
         name="admin/kindergartens/form.html",
-        context={"current_user": current_user, "ui_lang": _ui_lang(request), "now": _now(), "kindergarten": kg},
+        context={"current_user": current_user, "kindergarten": kg},
     )
 
 
@@ -1465,7 +1465,7 @@ async def admin_kindergarten_detail(kindergarten_id: int, request: Request, curr
     return templates.TemplateResponse(
         request=request,
         name="admin/kindergartens/detail.html",
-        context={"current_user": current_user, "ui_lang": _ui_lang(request), "now": _now(), "kindergarten": kg, "kindergarten_id": kindergarten_id, "history": history_list},
+        context={"current_user": current_user, "kindergarten": kg, "kindergarten_id": kindergarten_id, "history": history_list},
     )
 
 
