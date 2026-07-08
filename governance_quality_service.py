@@ -34,8 +34,8 @@ class GovernanceQualityService:
         kindergarten_id: Optional[int] = None,
         days: int = 30,
     ) -> Dict[str, Any]:
-        cutoff = self._utcnow_naive() - timedelta(days=max(1, days))
-        base_filter = [DailyReport.created_at >= cutoff]
+        cutoff_date = _today() - timedelta(days=max(1, days))
+        base_filter = [DailyReport.date >= cutoff_date]
         if kindergarten_id is not None:
             base_filter.append(DailyReport.kindergarten_id == kindergarten_id)
 
@@ -100,8 +100,8 @@ class GovernanceQualityService:
         kindergarten_id: Optional[int] = None,
         days: int = 30,
     ) -> Dict[str, Any]:
-        cutoff = self._utcnow_naive() - timedelta(days=max(1, days))
-        base_filter = [DailyReport.created_at >= cutoff]
+        cutoff_date = _today() - timedelta(days=max(1, days))
+        base_filter = [DailyReport.date >= cutoff_date]
         if kindergarten_id is not None:
             base_filter.append(DailyReport.kindergarten_id == kindergarten_id)
 
@@ -122,7 +122,7 @@ class GovernanceQualityService:
 
         if total_with_resolution == 0:
             return {
-                "first_pass_rate": 100.0,
+                "first_pass_rate": 0.0,
                 "total_resolved": 0,
                 "approved_first": 0,
                 "classification": "no_data",
@@ -136,6 +136,7 @@ class GovernanceQualityService:
                     DailyReportStatus.APPROVED,
                     DailyReportStatus.SENT_TO_PARENT,
                 ]),
+                DailyReport.rejected_reason.is_(None)
             )
             .scalar()
             or 0
@@ -161,8 +162,8 @@ class GovernanceQualityService:
         kindergarten_id: Optional[int] = None,
         days: int = 7,
     ) -> Dict[str, Any]:
-        cutoff = self._utcnow_naive() - timedelta(days=max(1, days))
-        base_filter = [DailyReport.created_at >= cutoff]
+        cutoff_date = _today() - timedelta(days=max(1, days))
+        base_filter = [DailyReport.date >= cutoff_date]
         if kindergarten_id is not None:
             base_filter.append(DailyReport.kindergarten_id == kindergarten_id)
 
@@ -187,7 +188,9 @@ class GovernanceQualityService:
             if created_at:
                 if created_at.tzinfo is None:
                     created_at = created_at.replace(tzinfo=timezone.utc)
-                hour = created_at.hour
+                jordan_tz = timezone(timedelta(hours=3))
+                dt_jordan = created_at.astimezone(jordan_tz)
+                hour = dt_jordan.hour
                 hour_counts[hour] += 1
 
         distribution = {str(h): c for h, c in sorted(hour_counts.items())}
@@ -247,7 +250,10 @@ class GovernanceQualityService:
             total_reports += 1
             day_counts[d] = day_counts.get(d, 0) + 1
             if created:
-                hour = created.hour if created.tzinfo else created.hour
+                dt_utc = created.replace(tzinfo=timezone.utc) if not created.tzinfo else created
+                from utils.time_utils import _JORDAN_TZ
+                dt_jordan = dt_utc.astimezone(_JORDAN_TZ)
+                hour = dt_jordan.hour
                 if hour < target_hour:
                     morning_count += 1
 
@@ -272,35 +278,28 @@ class GovernanceQualityService:
         db: Session,
         kindergarten_id: Optional[int] = None,
     ) -> Dict[str, Any]:
+        from governance_kpi_service import compute_full_gqi
+
+        end_date = _today()
+        start_date = end_date - timedelta(days=30)
+        
+        gqi_data = compute_full_gqi(db, start_date, end_date, kindergarten_id)
+        
+        # We also need the specific sub-details expected by the observability endpoint
         rejection = self.report_rejection_rate(db, kindergarten_id=kindergarten_id)
         first_pass = self.first_pass_approval_rate(db, kindergarten_id=kindergarten_id)
         timing = self.submission_timing_distribution(db, kindergarten_id=kindergarten_id)
         morning = self.morning_routine_completion(db, kindergarten_id=kindergarten_id)
 
-        rejection_score = max(0, 100.0 - rejection["rejection_rate"] * 2)
-        first_pass_score = first_pass["first_pass_rate"]
-        morning_score = morning["completion_rate"]
-        timing_score = min(100, morning.get("morning_rate", 0) * 1.5)
-
-        overall = (
-            rejection_score * 0.30
-            + first_pass_score * 0.25
-            + morning_score * 0.25
-            + timing_score * 0.20
-        )
-
+        # Mapping the centralized 7-factor GQI directly to this endpoint response
         return {
-            "overall_score": round(overall, 1),
+            "overall_score": gqi_data["gqi"],
             "rejection_rate": rejection,
             "first_pass_approval": first_pass,
             "submission_timing": timing,
             "morning_routine": morning,
-            "status": (
-                "excellent" if overall >= 85
-                else "good" if overall >= 70
-                else "fair" if overall >= 55
-                else "needs_improvement"
-            ),
+            "status": gqi_data["health_status"],
+            "details": gqi_data["sub_indicators"]
         }
 
 

@@ -29,11 +29,11 @@ router = APIRouter(tags=["Enrollment"])
 
 VALID_TRANSITIONS: dict[models.EnrollmentStatus, set[models.EnrollmentStatus]] = {
     models.EnrollmentStatus.DRAFT:          {models.EnrollmentStatus.SUBMITTED, models.EnrollmentStatus.WITHDRAWN},
-    models.EnrollmentStatus.SUBMITTED:      {models.EnrollmentStatus.PENDING_REVIEW, models.EnrollmentStatus.ACCEPTED, models.EnrollmentStatus.REJECTED, models.EnrollmentStatus.WITHDRAWN},
-    models.EnrollmentStatus.PENDING_REVIEW: {models.EnrollmentStatus.ACCEPTED, models.EnrollmentStatus.REJECTED, models.EnrollmentStatus.WITHDRAWN},
+    models.EnrollmentStatus.SUBMITTED:      {models.EnrollmentStatus.PENDING_REVIEW, models.EnrollmentStatus.ACCEPTED, models.EnrollmentStatus.REJECTED, models.EnrollmentStatus.WAITLISTED, models.EnrollmentStatus.WITHDRAWN},
+    models.EnrollmentStatus.PENDING_REVIEW: {models.EnrollmentStatus.ACCEPTED, models.EnrollmentStatus.REJECTED, models.EnrollmentStatus.WAITLISTED, models.EnrollmentStatus.WITHDRAWN},
     models.EnrollmentStatus.ACCEPTED:       {models.EnrollmentStatus.ACTIVE, models.EnrollmentStatus.WITHDRAWN},
     models.EnrollmentStatus.ACTIVE:         {models.EnrollmentStatus.WITHDRAWN},
-    models.EnrollmentStatus.WAITLISTED:     {models.EnrollmentStatus.ACCEPTED, models.EnrollmentStatus.WITHDRAWN},
+    models.EnrollmentStatus.WAITLISTED:     {models.EnrollmentStatus.ACCEPTED, models.EnrollmentStatus.REJECTED, models.EnrollmentStatus.WITHDRAWN},
     models.EnrollmentStatus.REJECTED:       set(),
     models.EnrollmentStatus.WITHDRAWN:      set(),
 }
@@ -366,7 +366,7 @@ def submit_enrollment(
 @router.post("/enrollments/{enrollment_id}/review", include_in_schema=False)
 def review_enrollment(
     enrollment_id: int,
-    decision: str = Query(..., pattern="^(accept|reject)$"),
+    decision: str = Query(..., pattern="^(accept|reject|waitlisted)$"),
     reason: Optional[str] = Query(None),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -379,7 +379,12 @@ def review_enrollment(
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
 
-    target_status = models.EnrollmentStatus.REJECTED if decision == "reject" else models.EnrollmentStatus.ACCEPTED
+    if decision == "reject":
+        target_status = models.EnrollmentStatus.REJECTED
+    elif decision == "waitlisted":
+        target_status = models.EnrollmentStatus.WAITLISTED
+    else:
+        target_status = models.EnrollmentStatus.ACCEPTED
     _assert_valid_transition(enrollment.status, target_status, _ulang(current_user))
 
     before_state = {"status": enrollment.status.value, "class_id": enrollment.class_id}
@@ -398,6 +403,10 @@ def review_enrollment(
         enrollment.rejected_at = datetime.now(_JORDAN_TZ)
         enrollment.status_reason = reason.strip()[:255]
         audit_action = AuditAction.ENROLLMENT_REJECTED
+    elif decision == "waitlisted":
+        enrollment.status = models.EnrollmentStatus.WAITLISTED
+        enrollment.status_reason = reason.strip()[:255] if reason and reason.strip() else None
+        audit_action = AuditAction.ENROLLMENT_WAITLISTED
     else:
         # Verify profile completeness before accepting
         child = enrollment.child

@@ -7,7 +7,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body, UploadFile, File, Response
 from fastapi.responses import Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta, timezone
 
@@ -757,7 +757,9 @@ def list_children(
     db: Session = Depends(get_db)
 ):
     """List children with optional filtering by kindergarten or class"""
-    query = db.query(models.Child).join(
+    query = db.query(models.Child).options(
+        joinedload(models.Child.parent)
+    ).join(
         models.EnrollmentApplication,
         models.Child.id == models.EnrollmentApplication.child_id
     )
@@ -817,7 +819,9 @@ def list_children(
     if child_ids:
         enrollments_by_child = {
             e.child_id: e
-            for e in db.query(models.EnrollmentApplication).filter(
+            for e in db.query(models.EnrollmentApplication).options(
+                joinedload(models.EnrollmentApplication.class_)
+            ).filter(
                 models.EnrollmentApplication.child_id.in_(child_ids),
                 models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
             ).all()
@@ -836,10 +840,21 @@ def list_children(
             "gender": child.gender.value if child.gender else None,
             "date_of_birth": child.date_of_birth.isoformat() if child.date_of_birth else None,
             "photo_url": child.photo_url,
+            "has_medical_condition": child.has_medical_condition,
+            "medical_notes": child.medical_notes,
+            "health_notes": child.health_notes,
+            "parent": {
+                "id": child.parent.id if child.parent else None,
+                "first_name": child.parent.first_name if child.parent else None,
+                "last_name": child.parent.last_name if child.parent else None,
+                "phone_number": child.parent.phone_number if child.parent else None,
+            }
         }
         if enrollment:
             child_info["enrollment_id"] = enrollment.id
             child_info["class_id"] = enrollment.class_id
+            child_info["class_name_ar"] = enrollment.class_.name_ar if enrollment.class_ else None
+            child_info["class_name_en"] = enrollment.class_.name_en if enrollment.class_ else None
             child_info["kindergarten_id"] = enrollment.kindergarten_id
 
         result.append(child_info)

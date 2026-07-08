@@ -3447,7 +3447,7 @@ class AdminDashboardResponse(BaseModel):
 # =============================================================================
 
 _SIDEBAR_MODULE_LABELS: Dict[str, tuple] = {
-    "management":         ("إدارة النظام", "System Management"),
+    "management":         ("إدارة مكونات النظام", "System Management"),
     "operations":         ("العمليات", "Operations"),
     "reports-analytics":  ("التقارير والتحليل", "Reports & Analytics"),
     "governance":         ("الحوكمة", "Governance"),

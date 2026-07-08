@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
@@ -18,6 +18,7 @@ from config import settings
 from validators import validate_jordan_governorate
 
 SUPPORTED_UI_LANGUAGES = {"ar", "en"}
+_JORDAN_TZ = timezone(timedelta(hours=3))
 
 
 def normalize_ui_language(value: Optional[str]) -> str:
@@ -528,10 +529,20 @@ async def edit_class_page(request: Request, class_id: int, db: Session = Depends
     if class_obj.kindergarten_id != current_user.kindergarten_id:
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
+    
+    # Extract assistant supervisors
+    today = datetime.now(_JORDAN_TZ).date()
+    from sqlalchemy import or_ as _or
+    assistant_assignments = [
+        a.supervisor_id for a in class_obj.supervisor_assignments
+        if not a.is_primary and a.start_date <= today and (a.end_date is None or a.end_date >= today)
+    ]
+    
     return templates.TemplateResponse(request=request, name="classes/form.html", context={
         "current_user": current_user,
         "kindergartens": kgs,
-        "class_obj": class_obj
+        "class_obj": class_obj,
+        "assistant_supervisor_ids": assistant_assignments
     })
 
 # -----------------------------------------------------------------------------
@@ -1955,7 +1966,7 @@ async def admin_profile_page(
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
 
-    _JORDAN_TZ = timezone(timedelta(hours=3))
+    # _JORDAN_TZ is globally defined
     now_jordan = datetime.now(_JORDAN_TZ)
 
     # Total audit events for stats widget

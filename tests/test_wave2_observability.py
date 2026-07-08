@@ -108,7 +108,7 @@ class TestGovernanceQualityService:
         mock_query.scalar.return_value = 0
         mock_db.query.return_value = mock_query
         result = service.first_pass_approval_rate(mock_db)
-        assert result["first_pass_rate"] == 100.0
+        assert result["first_pass_rate"] == 0.0
 
     def test_submission_timing_no_data(self):
         service = GovernanceQualityService()

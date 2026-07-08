@@ -473,6 +473,34 @@ class TestManagerAcceptHappyPath:
         assert enrollment.decision_by == manager_user.id
         assert enrollment.is_active is None
 
+    def test_waitlist_sets_waitlisted_status(
+        self, client, test_db, parent_user, sample_kindergarten, manager_user, manager_token
+    ):
+        import secrets
+        csrf_token = secrets.token_hex(32)
+        headers = {
+            "Authorization": f"Bearer {manager_token}",
+            "X-CSRF-Token": csrf_token,
+            "Cookie": f"kinjo_csrf_token={csrf_token}",
+        }
+
+        child = _make_child(test_db, parent_user.parent_profile, suffix="WL")
+        enrollment = _enroll(test_db, child, sample_kindergarten, status=models.EnrollmentStatus.SUBMITTED)
+
+        # Waitlist should work without class assignment
+        response = client.post(
+            f"/api/enrollment/{enrollment.id}/review?decision=waitlisted",
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "waitlisted"
+
+        test_db.refresh(enrollment)
+        assert enrollment.status == models.EnrollmentStatus.WAITLISTED
+        assert enrollment.decision_by == manager_user.id
+        assert enrollment.is_active is None
+
 
 # ===================================================================
 # 7. RBAC: only parents/managers can create, only managers review

@@ -7,14 +7,17 @@
         <h1 class="fs-1 fw-bold mt-0 mb-1">
             <i class="bi bi-people-fill text-primary"></i> {{ _('الأطفال') }}
         </h1>
-        <nav aria-label="Breadcrumb" class="admin-breadcrumb">
+        <nav aria-label="{{ _('مسار التنقل') }}" class="admin-breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/dashboard" class="">{{ _('لوحة التحكم') }}</a></li>
                 <li class="breadcrumb-item active" aria-current="page">{{ _('الأطفال') }}</li>
             </ol>
         </nav>
     </div>
-    <div class="mt-1">
+    <div class="mt-1 d-flex gap-2">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addChildModal">
+            <i class="bi bi-person-plus-fill me-2"></i> {{ _('إضافة طفل') }}
+        </button>
         <form class="js-noreload">
             <label class="visually-hidden" for="classFilter">تصفية بالشعبة</label>
             <select class="form-select mt-0" id="classFilter" name="classFilter">
@@ -26,7 +29,6 @@
 {% endblock %}
 
 {% block content %}
-
 <div class="card h-100 shadow-sm p-3 mb-4 bg-white border border-base-lighter shadow-2">
     <div class="row mb-3 flex-justify align-items-center g-2">
         <div class="col-auto">
@@ -36,11 +38,12 @@
             </h2>
         </div>
         <div class="col-auto col-md-5">
-            <form class="d-flex gap-2 js-noreload" role="search">
+            <form class="d-flex gap-2 js-noreload" role="search" id="searchForm">
               <label class="visually-hidden" for="searchInput">{{ _('بحث باسم الطفل…') }}</label>
               <input class="form-control border-base-lighter" id="searchInput" type="search" name="search" placeholder="{{ _('بحث باسم الطفل…') }}">
               <button class="btn btn-primary bg-primary hover:bg-primary-dark" type="submit">
-                <span class="visually-hidden">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</span>
+                <span class="visually-hidden">{{ _('بحث') }}</span>
+                <i class="bi bi-search"></i>
               </button>
             </form>
         </div>
@@ -52,9 +55,9 @@
             <thead class="bg-primary-subtle text-primary">
                 <tr>
                     <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('اسم الطفل') }}</th>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('الجنس') }}</th>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('تاريخ الميلاد') }}</th>
+                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('العمر (أشهر)') }}</th>
                     <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('الشعبة') }}</th>
+                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('ولي الأمر') }}</th>
                     <th scope="col" class="text-center border-bottom-2px border-primary border-opacity-25">{{ _('الإجراءات') }}</th>
                 </tr>
             </thead>
@@ -65,14 +68,21 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination -->
+    <nav aria-label="{{ _('تصفح صفحات الأطفال') }}" class="d-flex justify-content-between align-items-center mt-3">
+        <button class="btn btn-outline-primary" id="prevPageBtn" disabled aria-label="{{ _('الصفحة السابقة') }}">{{ _('السابق') }}</button>
+        <span class="text-muted small" aria-live="polite" aria-atomic="true">{{ _('صفحة') }} <span id="currentPage">1</span> {{ _('من') }} <span id="totalPages">1</span></span>
+        <button class="btn btn-outline-primary" id="nextPageBtn" disabled aria-label="{{ _('الصفحة التالية') }}">{{ _('التالي') }}</button>
+    </nav>
 </div>
 
 <!-- Move child modal -->
-<div class="modal fade" id="moveChildModal" tabindex="-1" aria-labelledby="moveModalLabel" aria-hidden="true">
+<div class="modal fade" id="moveChildModal" tabindex="-1" aria-labelledby="moveModalLabel" aria-hidden="true" role="dialog" aria-modal="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title" id="moveModalLabel">
+        <h2 class="modal-title h5" id="moveModalLabel">
           <i class="bi bi-arrow-left-right me-2 text-primary"></i> {{ _('نقل طفل إلى شعبة أخرى') }}
         </h2>
         <button type="button" class="btn-close usa-modal__close" aria-label="Close" data-bs-dismiss="modal"></button>
@@ -80,6 +90,7 @@
       <div class="modal-body">
         <p id="moveChildName" class="fw-bold mb-3"></p>
         <input type="hidden" id="moveChildId">
+        <input type="hidden" id="moveEnrollmentId">
         <input type="hidden" id="moveFromClassId">
 
         <div class="mb-3">
@@ -89,7 +100,7 @@
 
         <form id="moveChildForm">
           <label class="form-label" for="moveToClassSelect">{{ _('الشعبة الجديدة') }}</label>
-          <select class="form-select" id="moveToClassSelect" name="moveToClassSelect"></select>
+          <select class="form-select" id="moveToClassSelect" name="moveToClassSelect" required></select>
 
           <div class="d-flex gap-2 mt-4">
             <button type="submit" class="btn btn-primary" id="confirmMoveBtn">
@@ -103,13 +114,80 @@
   </div>
 </div>
 
+<!-- Add Child Modal -->
+<div class="modal fade" id="addChildModal" tabindex="-1" aria-labelledby="addChildModalLabel" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="addChildModalLabel">
+          <i class="bi bi-person-plus-fill me-2 text-primary"></i> {{ _('إضافة طفل جديد') }}
+        </h2>
+        <button type="button" class="btn-close usa-modal__close" aria-label="Close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addChildForm">
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="addFirstName">{{ _('اسم الطفل الأول') }} *</label>
+                    <input type="text" class="form-control" id="addFirstName" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="addLastName">{{ _('العائلة') }} *</label>
+                    <input type="text" class="form-control" id="addLastName" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="addGender">{{ _('الجنس') }} *</label>
+                    <select class="form-select" id="addGender" required>
+                        <option value="MALE">{{ _('ذكر') }}</option>
+                        <option value="FEMALE">{{ _('أنثى') }}</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="addDob">{{ _('تاريخ الميلاد') }} *</label>
+                    <input type="date" class="form-control" id="addDob" required>
+                </div>
+            </div>
+
+            <hr class="my-4">
+            <h5 class="mb-3">{{ _('بيانات ولي الأمر') }}</h5>
+            
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="addParentFirstName">{{ _('الاسم الأول') }} *</label>
+                    <input type="text" class="form-control" id="addParentFirstName" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="addParentLastName">{{ _('العائلة') }} *</label>
+                    <input type="text" class="form-control" id="addParentLastName" required>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label" for="addParentPhone">{{ _('رقم الهاتف') }} *</label>
+                    <input type="text" class="form-control" id="addParentPhone" dir="ltr" required>
+                </div>
+            </div>
+
+            <hr class="my-4">
+            <div class="mb-3">
+                <label class="form-label" for="addClassSelect">{{ _('الشعبة') }} *</label>
+                <select class="form-select" id="addClassSelect" required></select>
+            </div>
+
+            <div class="d-flex gap-2 mt-4 justify-content-end">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                <button type="submit" class="btn btn-primary" id="confirmAddBtn">
+                    <i class="bi bi-check2 me-2"></i>{{ _('حفظ') }}
+                </button>
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Auth is the httpOnly session cookie (kinjo_session), sent automatically on
-// same-origin fetch. For state-changing requests we add the CSRF double-submit
-// token read from the JS-readable kinjo_csrf_token cookie (F2).
 const h = () => {
     let csrf = '';
     try { csrf = AuthStorage.getCookie(CSRF_CONFIG.cookieName) || ''; } catch (e) {}
@@ -117,19 +195,35 @@ const h = () => {
 };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-let _allChildren = [];
 let _classes = [];
+let currentPage = 1;
+const pageSize = 50;
+let currentSearch = '';
+
+function calculateAgeMonths(dobString) {
+    if(!dobString) return '—';
+    const dob = new Date(dobString);
+    if(isNaN(dob)) return '—';
+    const now = new Date();
+    const months = (now.getFullYear() - dob.getFullYear()) * 12 + now.getMonth() - dob.getMonth();
+    return months;
+}
 
 async function init() {
-    const clsRes = await fetch('/api/manager/classes', { headers: h() }).catch(() => null);
+    const clsRes = await fetch('/api/classes?page_size=100', { headers: h() }).catch(() => null);
     if (clsRes && clsRes.ok) {
         const d = await clsRes.json();
         _classes = d.classes || [];
-        const sel = document.getElementById('classFilter');
+        const selFilter = document.getElementById('classFilter');
+        const selAdd = document.getElementById('addClassSelect');
         _classes.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.id; opt.textContent = c.name_ar;
-            sel.appendChild(opt);
+            const opt1 = document.createElement('option');
+            opt1.value = c.id; opt1.textContent = c.name_ar;
+            selFilter.appendChild(opt1);
+
+            const opt2 = document.createElement('option');
+            opt2.value = c.id; opt2.textContent = c.name_ar;
+            selAdd.appendChild(opt2);
         });
     }
     await loadChildren();
@@ -137,127 +231,224 @@ async function init() {
 
 async function loadChildren() {
     const classId = document.getElementById('classFilter').value;
-    const url = classId ? `/api/manager/children?class_id=${classId}` : '/api/manager/children';
+    const tbody = document.getElementById('childrenTableBody');
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-secondary"><div class="spinner-border text-primary" role="status"></div></td></tr>`;
+    
+    let url = `/api/children?page=${currentPage}&page_size=${pageSize}`;
+    if (classId) url += `&class_id=${classId}`;
+    if (currentSearch) url += `&search=${encodeURIComponent(currentSearch)}`;
+
     try {
         const res = await fetch(url, { headers: h() });
         if (!res.ok) throw new Error();
         const data = await res.json();
-        _allChildren = data.children || [];
-        document.getElementById('totalBadge').textContent = data.total || 0;
-        renderTable(_allChildren);
-    } catch {
-        alert('تعذّر تحميل الأطفال');
-    }
-}
+        const children = data.children || [];
+        const pag = data.pagination || { total_count: 0, total_pages: 1 };
+        
+        document.getElementById('totalBadge').textContent = pag.total_count;
+        document.getElementById('currentPage').textContent = currentPage;
+        document.getElementById('totalPages').textContent = pag.total_pages;
+        document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+        document.getElementById('nextPageBtn').disabled = currentPage >= pag.total_pages;
 
-function filterTable() {
-    const q = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = _allChildren.filter(c =>
-        (c.first_name + ' ' + c.last_name).toLowerCase().includes(q)
-    );
-    renderTable(filtered);
+        renderTable(children);
+    } catch {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-danger">تعذّر تحميل الأطفال</td></tr>`;
+    }
 }
 
 function renderTable(children) {
     const tbody = document.getElementById('childrenTableBody');
     if (!children.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-secondary">لا يوجد أطفال</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-secondary">لا يوجد أطفال متطابقون</td></tr>`;
         return;
     }
     tbody.innerHTML = children.map(c => {
-        const gender = c.gender === 'MALE' ? 'ذكر' : (c.gender === 'FEMALE' ? 'أنثى' : '—');
         const rawName = c.first_name + ' ' + c.last_name;
         const rawClass = c.class_name_ar || '';
         const fullName = esc(rawName);
-        const className = esc(c.class_name_ar || '—');
-        const dob = esc(c.date_of_birth || '—');
-        // User-supplied values go into data-* attributes via esc() (HTML-attribute
-        // safe); the delegated listener reads them back through dataset. With no
-        // inline handler, an injected event-handler payload in a name cannot execute.
+        const className = esc(rawClass || '—');
+        const months = calculateAgeMonths(c.date_of_birth);
+        
+        let medBadge = '';
+        if(c.has_medical_condition || c.medical_notes || c.health_notes) {
+            const medText = esc((c.medical_notes || '') + ' ' + (c.health_notes || '')).trim();
+            medBadge = `<span class="badge bg-danger ms-2" title="${medText}"><i class="bi bi-exclamation-triangle-fill"></i> طبي</span>`;
+        }
+
+        const pName = c.parent && c.parent.first_name ? esc(c.parent.first_name + ' ' + c.parent.last_name) : '—';
+        const pPhone = c.parent && c.parent.phone_number ? esc(c.parent.phone_number) : '—';
+        const parentCol = `<div class="small fw-bold">${pName}</div><div class="small text-muted" dir="ltr">${pPhone}</div>`;
+
         return `<tr>
-            <td class="fw-bold">${fullName}</td>
-            <td>${gender}</td>
-            <td>${dob}</td>
+            <th scope="row" class="fw-bold align-middle">${fullName} ${medBadge}</th>
+            <td>${months}</td>
             <td>${className}</td>
+            <td>${parentCol}</td>
             <td class="text-center">
-                <a href="#moveChildModal" class="btn btn-outline-primary py-2 js-move-child"
-                        role="button" aria-controls="moveChildModal"
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    إجراء
+                  </button>
+                  <ul class="dropdown-menu shadow-sm">
+                    <li><a class="dropdown-item js-move-child" href="#"
                         data-bs-toggle="modal" data-bs-target="#moveChildModal"
                         data-child-id="${c.id}" data-child-name="${fullName}"
-                        data-from-class-id="${c.class_id}" data-from-class-name="${esc(rawClass)}">
-                    <i class="bi bi-arrow-left-right me-2"></i>نقل
-                </a>
+                        data-enrollment-id="${c.enrollment_id || ''}"
+                        data-from-class-id="${c.class_id || ''}" data-from-class-name="${esc(rawClass)}">
+                        <i class="bi bi-arrow-left-right me-2 text-primary"></i>نقل
+                    </a></li>
+                    <li><a class="dropdown-item text-danger js-deactivate-child" href="#" data-child-id="${c.id}" data-child-name="${fullName}">
+                        <i class="bi bi-trash me-2"></i>إلغاء تفعيل
+                    </a></li>
+                  </ul>
+                </div>
             </td>
         </tr>`;
     }).join('');
 }
 
-function setupMoveModal(childId, childName, fromClassId, fromClassName) {
-    document.getElementById('moveChildId').value     = childId;
+function setupMoveModal(childId, childName, enrollmentId, fromClassId, fromClassName) {
+    document.getElementById('moveChildId').value = childId;
+    document.getElementById('moveEnrollmentId').value = enrollmentId;
     document.getElementById('moveFromClassId').value = fromClassId;
-    document.getElementById('moveChildName').textContent    = childName;
+    document.getElementById('moveChildName').textContent = childName;
     document.getElementById('moveFromClassName').textContent = fromClassName || '—';
     const sel = document.getElementById('moveToClassSelect');
-    sel.innerHTML = _classes
+    sel.innerHTML = '<option value="">{{ _('اختر شعبة') }}</option>' + _classes
         .filter(c => c.id !== fromClassId)
         .map(c => `<option value="${c.id}">${esc(c.name_ar)}</option>`)
         .join('');
 }
 
 async function confirmMoveChild() {
-    const childId     = parseInt(document.getElementById('moveChildId').value);
-    const fromClassId = parseInt(document.getElementById('moveFromClassId').value);
-    const toClassId   = parseInt(document.getElementById('moveToClassSelect').value);
+    const enrollmentId = parseInt(document.getElementById('moveEnrollmentId').value);
+    const toClassId = parseInt(document.getElementById('moveToClassSelect').value);
     
     if (!toClassId) {
         alert('يجب اختيار شعبة');
+        return;
+    }
+    if (!enrollmentId) {
+        alert('هذا الطفل غير مسجل في شعبة ليتم نقله');
         return;
     }
     
     const btn = document.getElementById('confirmMoveBtn');
     btn.disabled = true;
     try {
-        const res = await fetch('/api/manager/children/move-class', {
-            method: 'POST', headers: h(),
-            body: JSON.stringify({ child_id: childId, from_class_id: fromClassId, to_class_id: toClassId }),
+        const res = await fetch(`/api/classes/${toClassId}/enrollments/${enrollmentId}`, {
+            method: 'POST', headers: h()
         });
         if (res.ok) {
-            alert('تم نقل الطفل بنجاح');
             document.querySelector('#moveChildModal .usa-modal__close').click();
             loadChildren();
         } else {
             const err = await res.json().catch(() => ({}));
-            alert(err.detail || 'فشل النقل');
+            alert(err.detail || 'فشل النقل. قد يكون العمر غير مناسب أو الشعبة ممتلئة.');
         }
     } catch { alert('خطأ في الشبكة'); }
     finally { btn.disabled = false; }
 }
 
-// Delegated event wiring (replaces inline on* handlers — F1/CSP).
+async function deactivateChild(childId, childName) {
+    if (!confirm(`هل أنت متأكد من إلغاء تفعيل حساب الطفل ${childName}؟\nسيتم إزالته من الشعبة الحالية.`)) return;
+    
+    try {
+        const res = await fetch(`/api/children/${childId}/deactivate`, {
+            method: 'DELETE', headers: h()
+        });
+        if (res.ok) {
+            loadChildren();
+        } else {
+            const err = await res.json().catch(() => ({}));
+            alert(err.detail || 'فشل الإلغاء');
+        }
+    } catch { alert('خطأ في الشبكة'); }
+}
+
+async function handleAddChild() {
+    const btn = document.getElementById('confirmAddBtn');
+    btn.disabled = true;
+
+    const payload = {
+        first_name: document.getElementById('addFirstName').value,
+        last_name: document.getElementById('addLastName').value,
+        gender: document.getElementById('addGender').value,
+        date_of_birth: document.getElementById('addDob').value,
+        parent_first_name: document.getElementById('addParentFirstName').value,
+        parent_last_name: document.getElementById('addParentLastName').value,
+        parent_phone_number: document.getElementById('addParentPhone').value,
+        class_id: parseInt(document.getElementById('addClassSelect').value)
+    };
+
+    try {
+        const res = await fetch('/api/children/manager-quick-add', {
+            method: 'POST', headers: h(), body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            document.getElementById('addChildForm').reset();
+            document.querySelector('#addChildModal .usa-modal__close').click();
+            currentPage = 1;
+            loadChildren();
+        } else {
+            const err = await res.json().catch(() => ({}));
+            alert(err.detail || 'فشل الإضافة');
+        }
+    } catch { alert('خطأ في الشبكة'); }
+    finally { btn.disabled = false; }
+}
+
 function wireEvents() {
     document.querySelectorAll('form.js-noreload').forEach(f =>
-        f.addEventListener('submit', e => e.preventDefault()));
+        f.addEventListener('submit', e => {
+            e.preventDefault();
+            if (f.id === 'searchForm') {
+                currentSearch = document.getElementById('searchInput').value;
+                currentPage = 1;
+                loadChildren();
+            }
+        }));
 
     const classFilter = document.getElementById('classFilter');
-    if (classFilter) classFilter.addEventListener('change', loadChildren);
-
-    const search = document.getElementById('searchInput');
-    if (search) search.addEventListener('input', filterTable);
+    if (classFilter) classFilter.addEventListener('change', () => {
+        currentPage = 1;
+        loadChildren();
+    });
 
     const moveForm = document.getElementById('moveChildForm');
     if (moveForm) moveForm.addEventListener('submit', e => { e.preventDefault(); confirmMoveChild(); });
 
-    // Delegated: the move button is re-rendered with each table refresh.
+    const addForm = document.getElementById('addChildForm');
+    if (addForm) addForm.addEventListener('submit', e => { e.preventDefault(); handleAddChild(); });
+
     const tbody = document.getElementById('childrenTableBody');
     if (tbody) tbody.addEventListener('click', e => {
-        const btn = e.target.closest('.js-move-child');
-        if (!btn) return;
-        setupMoveModal(
-            parseInt(btn.dataset.childId, 10),
-            btn.dataset.childName,
-            parseInt(btn.dataset.fromClassId, 10),
-            btn.dataset.fromClassName
-        );
+        const btnMove = e.target.closest('.js-move-child');
+        if (btnMove) {
+            e.preventDefault();
+            setupMoveModal(
+                parseInt(btnMove.dataset.childId, 10),
+                btnMove.dataset.childName,
+                parseInt(btnMove.dataset.enrollmentId, 10) || null,
+                parseInt(btnMove.dataset.fromClassId, 10),
+                btnMove.dataset.fromClassName
+            );
+            return;
+        }
+
+        const btnDeactivate = e.target.closest('.js-deactivate-child');
+        if (btnDeactivate) {
+            e.preventDefault();
+            deactivateChild(parseInt(btnDeactivate.dataset.childId, 10), btnDeactivate.dataset.childName);
+        }
+    });
+
+    document.getElementById('prevPageBtn').addEventListener('click', () => {
+        if (currentPage > 1) { currentPage--; loadChildren(); }
+    });
+    document.getElementById('nextPageBtn').addEventListener('click', () => {
+        currentPage++; loadChildren();
     });
 }
 

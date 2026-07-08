@@ -1657,101 +1657,49 @@ class AnalyticsGapService:
     # ═══════════════════════════════════════════════════════════════════════
 
     def get_governance_metrics(self, locale: str = "ar") -> LayerMetricsResponse:
+        from governance_kpi_service import compute_full_gqi
+
         metrics: List[MetricResponse] = []
         today = _today()
         window_start = today - timedelta(days=30)
-        soon90 = today + timedelta(days=90)
+        
+        # Pull centralized GQI
+        gqi_data = compute_full_gqi(self.db, window_start, today, None)
+        enhanced_gqi = gqi_data["gqi"]
+        sub_indicators = gqi_data["sub_indicators"]
+        
+        si_report = sub_indicators.get("report_submission", 0)
+        si_training = sub_indicators.get("training_coverage", 0)
 
-        kgs = (
-            self.db.query(models.Kindergarten)
-            .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
-            .all()
-        )
-        n_kgs = len(kgs) or 1
+        sub_scores = {
+            "Report Submission" if locale == "en" else "تقديم التقارير":     si_report,
+            "Delivery Compliance" if locale == "en" else "توصيل التقارير":   sub_indicators.get("delivery_compliance", 0),
+            "Approval Quality"  if locale == "en" else "جودة الاعتماد":      sub_indicators.get("approval_quality", 0),
+            "Review Rate"       if locale == "en" else "معدل المشاهدة":      sub_indicators.get("review_rate", 0),
+            "Training Coverage" if locale == "en" else "تغطية التدريب":      si_training,
+            "License Validity"  if locale == "en" else "صلاحية التراخيص":    sub_indicators.get("license_validity", 0),
+            "Incident SLA"      if locale == "en" else "SLA الحوادث":        sub_indicators.get("incident_sla", 0),
+        }
+        
+        gqi_colors = [_colour_by_threshold(v, 80, 60) for v in sub_scores.values()]
 
-        # ── Sub-indicator 1: Report Submission Rate ─────────────────────
-        exp_r = (
-            self.db.query(func.count(models.DailyReport.id))
-            .filter(models.DailyReport.date.between(window_start, today))
-            .scalar()
-        ) or 1
-        sub_r = (
-            self.db.query(func.count(models.DailyReport.id))
-            .filter(
-                models.DailyReport.date.between(window_start, today),
-                models.DailyReport.status.in_(["SUBMITTED", "APPROVED", "SENT_TO_PARENT"]),
-            )
-            .scalar()
-        ) or 0
-        si_report = round(sub_r / exp_r * 100, 1)
+        # 32. ENHANCED GQI — radar over 7 sub-indicators
+        metrics.append(MetricResponse(
+            metric="enhanced_gqi",
+            value=enhanced_gqi,
+            chart=_chart(
+                "radar",
+                list(sub_scores.keys()),
+                "Enhanced Governance Quality Index (7 sub-indicators)",
+                "مؤشر جودة الحوكمة المحسّن (7 مؤشرات فرعية)",
+                list(sub_scores.values()),
+                bg=gqi_colors,
+                thresholds={"warning": 80, "critical": 60},
+            ),
+            locale=locale,
+        ))
 
-        # ── Sub-indicator 2: Ratio Compliance ──────────────────────────
-        ratio_rows = (
-            self.db.query(
-                func.sum(models.RatioCompliance.compliant_minutes),
-                func.sum(models.RatioCompliance.operating_minutes),
-            )
-            .filter(models.RatioCompliance.date.between(window_start, today))
-            .first()
-        )
-        compliant_m = ratio_rows[0] or 0
-        operating_m = ratio_rows[1] or 1
-        si_ratio = round(compliant_m / operating_m * 100, 1)
-
-        # ── Sub-indicator 3: License Validity ──────────────────────────
-        valid_lic = sum(
-            1 for k in kgs
-            if k.license_valid_until and k.license_valid_until >= today
-        )
-        si_license = round(valid_lic / n_kgs * 100, 1)
-
-        # ── Sub-indicator 4: Training Completion ───────────────────────
-        total_modules = (
-            self.db.query(func.count(models.TrainingModule.id))
-            .filter(models.TrainingModule.is_mandatory == True)
-            .scalar()
-        ) or 1
-        staff_count = (
-            self.db.query(func.count(models.User.id))
-            .filter(
-                models.User.role.in_(["MANAGER", "SUPERVISOR"]),
-                models.User.status == "ACTIVE",
-                models.User.deleted_at == None,
-            )
-            .scalar()
-        ) or 1
-        total_required = staff_count * total_modules
-        completed_trainings = (
-            self.db.query(func.count(models.StaffTrainingCompletion.id))
-            .filter(models.StaffTrainingCompletion.status == "COMPLETED")
-            .scalar()
-        ) or 0
-        si_training = round(min(100.0, completed_trainings / total_required * 100), 1)
-
-        # ── Sub-indicator 5: Incident SLA ──────────────────────────────
-        followup_req = (
-            self.db.query(func.count(models.Incident.id))
-            .filter(
-                models.Incident.followup_required_flag == True,
-                models.Incident.occurred_at >= datetime.combine(window_start, datetime.min.time()),
-                models.Incident.deleted_at == None,
-            )
-            .scalar()
-        ) or 1
-        closed_ontime = (
-            self.db.query(func.count(models.Incident.id))
-            .filter(
-                models.Incident.followup_required_flag == True,
-                models.Incident.closed_at != None,
-                models.Incident.occurred_at >= datetime.combine(window_start, datetime.min.time()),
-                models.Incident.deleted_at == None,
-                models.Incident.closed_at <= models.Incident.followup_sla_deadline,
-            )
-            .scalar()
-        ) or 0
-        si_sla = round(closed_ontime / followup_req * 100, 1)
-
-        # ── Sub-indicator 6: Data Quality (wired from DataQualityMetric) ──
+        # ── Data Quality (wired from DataQualityMetric) ──
         dqm_row = (
             self.db.query(
                 func.avg(models.DataQualityMetric.completeness_percent),
@@ -1769,7 +1717,6 @@ class AnalyticsGapService:
                 1,
             )
         else:
-            # Fallback: compute from child profiles
             ch_total = self.db.query(func.count(models.Child.id)).filter(models.Child.deleted_at == None).scalar() or 1
             ch_complete = (
                 self.db.query(func.count(models.Child.id))
@@ -1783,37 +1730,7 @@ class AnalyticsGapService:
             ) or 0
             si_dq = round(ch_complete / ch_total * 100, 1)
 
-        # ── Enhanced GQI: equal-weighted 6 sub-indicators ──────────────
-        sub_scores = {
-            "Report Submission" if locale == "en" else "تقديم التقارير":     si_report,
-            "Ratio Compliance"  if locale == "en" else "الامتثال للنسبة":    si_ratio,
-            "License Validity"  if locale == "en" else "صلاحية التراخيص":    si_license,
-            "Training Coverage" if locale == "en" else "تغطية التدريب":      si_training,
-            "Incident SLA"      if locale == "en" else "SLA الحوادث":        si_sla,
-            "Data Quality"      if locale == "en" else "جودة البيانات":      si_dq,
-        }
-        enhanced_gqi = round(sum(sub_scores.values()) / len(sub_scores), 1)
-        gqi_colors = [_colour_by_threshold(v, 80, 60) for v in sub_scores.values()]
-
-        # 32. ENHANCED GQI — radar over 6 sub-indicators
-        metrics.append(MetricResponse(
-            metric="enhanced_gqi",
-            value=enhanced_gqi,
-            chart=_chart(
-                "radar",
-                list(sub_scores.keys()),
-                "Enhanced Governance Quality Index (6 sub-indicators)",
-                "مؤشر جودة الحوكمة المحسّن (6 مؤشرات فرعية)",
-                list(sub_scores.values()),
-                bg=gqi_colors,
-                thresholds={"warning": 80, "critical": 60},
-            ),
-            locale=locale,
-        ))
-
         # 33. NETWORK HEALTH COMPOSITE — stacked bar of all major KPIs
-        # Aggregated network-level KPIs for holistic view
-        # ─────────────────────────────────────────────────────
         net_att_row = self.db.query(
             func.count(models.AttendanceLog.id).label("tot"),
             func.sum(case((models.AttendanceLog.status.in_(["PRESENT", "LATE"]), 1), else_=0)).label("pres"),

@@ -1,138 +1,173 @@
-{% extends "admin_base.html" %}
-
-{% block title %}{% if ui_lang == 'en' %}Kindergarten Details{% else %}تفاصيل الحضانة{% endif %} — KinJo{% endblock %}
-
+{% extends "admin_base.html" %} {% block title %}{% if ui_lang == 'en'
+%}Kindergarten Details{% else %}تفاصيل الحضانة{% endif %} — KinJo{% endblock %}
 {% block content %}
-<div class="container-fluid py-4" dir="{{ 'rtl' if ui_lang != 'en' else 'ltr' }}">
-    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-        <h1 class="h3 mb-0 fw-bold">
-            <i class="bi bi-building me-2 text-primary"></i>
-            {% if ui_lang == 'en' %}Kindergarten Details{% else %}تفاصيل الحضانة{% endif %}
-        </h1>
-        <div class="d-flex gap-2">
-            <a href="/admin/kindergartens/{{ kindergarten_id }}/edit" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}</a>
-            <a href="/admin/kindergartens" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}</a>
+<div
+  class="container-fluid py-4"
+  dir="{{ 'rtl' if ui_lang != 'en' else 'ltr' }}"
+>
+  <div
+    class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2"
+  >
+    <h1 class="h3 mb-0 fw-bold">
+      <i class="bi bi-building me-2 text-primary"></i>
+      {% if ui_lang == 'en' %}Kindergarten Details{% else %}تفاصيل الحضانة{%
+      endif %}
+    </h1>
+    <div class="d-flex gap-2">
+      <a
+        href="/admin/kindergartens/{{ kindergarten_id }}/edit"
+        class="btn btn-outline-primary btn-sm"
+        ><i class="bi bi-pencil me-1"></i>{% if ui_lang == 'en' %}Edit{% else
+        %}تعديل{% endif %}</a
+      >
+      <a href="/admin/kindergartens" class="btn btn-outline-secondary btn-sm"
+        ><i class="bi bi-arrow-right me-1"></i>{% if ui_lang == 'en' %}Back{%
+        else %}رجوع{% endif %}</a
+      >
+    </div>
+  </div>
+
+  <div id="detail-error" class="alert alert-danger d-none"></div>
+  <div id="detail-loading" class="text-center py-5 text-muted">
+    <div class="spinner-border text-primary"></div>
+    <div class="mt-2">
+      {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
+    </div>
+  </div>
+
+  <div id="detail-content" class="d-none">
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <div class="glass-card card mb-3">
+          <div class="card-header fw-semibold">
+            <i class="bi bi-info-circle me-2"></i>{% if ui_lang == 'en' %}Basic
+            Information{% else %}المعلومات الأساسية{% endif %}
+          </div>
+          <div class="card-body" id="basic-info"></div>
         </div>
+        <div class="glass-card card mb-3">
+          <div class="card-header fw-semibold">
+            <i class="bi bi-people me-2"></i>{% if ui_lang == 'en' %}Management
+            & Ownership{% else %}الإدارة والملكية{% endif %}
+          </div>
+          <div class="card-body" id="mgmt-info"></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="glass-card card mb-3">
+          <div class="card-header fw-semibold">
+            <i class="bi bi-graph-up me-2"></i>{% if ui_lang == 'en'
+            %}Operational Statistics{% else %}الإحصاءات التشغيلية{% endif %}
+          </div>
+          <div class="card-body" id="stats-info"></div>
+        </div>
+        <div class="glass-card card mb-3">
+          <div class="card-header fw-semibold">
+            <i class="bi bi-snow me-2"></i>{% if ui_lang == 'en' %}Status &
+            Freeze{% else %}الحالة والتجميد{% endif %}
+          </div>
+          <div class="card-body" id="status-info"></div>
+        </div>
+      </div>
     </div>
 
-    <div id="detail-error" class="alert alert-danger d-none"></div>
-    <div id="detail-loading" class="text-center py-5 text-muted"><div class="spinner-border text-primary"></div><div class="mt-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div></div>
-
-    <div id="detail-content" class="d-none">
-        <div class="row g-3">
-            <div class="col-lg-8">
-                <div class="glass-card card mb-3">
-                    <div class="card-header fw-semibold"><i class="bi bi-info-circle me-2"></i>{% if ui_lang == 'en' %}Basic Information{% else %}المعلومات الأساسية{% endif %}</div>
-                    <div class="card-body" id="basic-info"></div>
-                </div>
-                <div class="glass-card card mb-3">
-                    <div class="card-header fw-semibold"><i class="bi bi-people me-2"></i>{% if ui_lang == 'en' %}Management & Ownership{% else %}الإدارة والملكية{% endif %}</div>
-                    <div class="card-body" id="mgmt-info"></div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div class="glass-card card mb-3">
-                    <div class="card-header fw-semibold"><i class="bi bi-graph-up me-2"></i>{% if ui_lang == 'en' %}Operational Statistics{% else %}الإحصاءات التشغيلية{% endif %}</div>
-                    <div class="card-body" id="stats-info"></div>
-                </div>
-                <div class="glass-card card mb-3">
-                    <div class="card-header fw-semibold"><i class="bi bi-snow me-2"></i>{% if ui_lang == 'en' %}Status & Freeze{% else %}الحالة والتجميد{% endif %}</div>
-                    <div class="card-body" id="status-info"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="glass-card card">
-            <div class="card-header fw-semibold"><i class="bi bi-clock-history me-2"></i>{% if ui_lang == 'en' %}Activity / Status History{% else %}سجل النشاط والحالة{% endif %}</div>
-            <div class="card-body" id="history-info"><span class="text-muted">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span></div>
-        </div>
+    <div class="glass-card card">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-clock-history me-2"></i>{% if ui_lang == 'en' %}Activity
+        / Status History{% else %}سجل النشاط والحالة{% endif %}
+      </div>
+      <div class="card-body" id="history-info">
+        <span class="text-muted"
+          >{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif
+          %}</span
+        >
+      </div>
     </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
+{% endblock %} {% block extra_scripts %}
 <script>
-const IS_EN = document.documentElement.lang === 'en';
-const T = (ar, en) => IS_EN ? en : ar;
-const KG_ID = {{ kindergarten_id }};
+  const IS_EN = document.documentElement.lang === 'en';
+  const T = (ar, en) => IS_EN ? en : ar;
+  const KG_ID = {{ kindergarten_id }};
 
-// No authHeaders needed anymore
-const row = (k, v) => `<div class="mb-2"><span class="text-muted small d-block">${k}</span><div>${v ?? '—'}</div></div>`;
+  // No authHeaders needed anymore
+  const row = (k, v) => `<div class="mb-2"><span class="text-muted small d-block">${k}</span><div>${v ?? '—'}</div></div>`;
 
-async function load() {
-    try {
-        const j = await api.getKindergarten(KG_ID);
-        if (!j.success) throw new Error(j.message);
-        const kg = j.data;
-        document.getElementById('detail-loading').classList.add('d-none');
-        document.getElementById('detail-content').classList.remove('d-none');
+  async function load() {
+      try {
+          const j = await api.getKindergarten(KG_ID);
+          if (!j.success) throw new Error(j.message);
+          const kg = j.data;
+          document.getElementById('detail-loading').classList.add('d-none');
+          document.getElementById('detail-content').classList.remove('d-none');
 
-        document.getElementById('basic-info').innerHTML =
-            row(T('الاسم','Name'), kg.name_ar) + row(T('الاسم الإنجليزي','English Name'), kg.name_en) +
-            row(T('الاسم القانوني','Legal Name'), kg.legal_name) + row(T('النوع','Type'), kg.type) +
-            row(T('المحافظة','Governorate'), kg.governorate) + row(T('اللواء','District'), kg.district) +
-            row(T('المنطقة','Area'), kg.area) + row(T('العنوان','Address'), kg.address_line) +
-            row(T('الهاتف','Phone'), kg.contact_phone) + row(T('الجوال','Mobile'), kg.mobile) +
-            row(T('البريد','Email'), kg.contact_email) + row(T('الموقع','Website'), kg.website) +
-            row(T('رقم الترخيص','License #'), kg.license_number) + row(T('الترخيص حتى','License Valid Until'), kg.license_valid_until ? kg.license_valid_until.slice(0,10) : null);
+          document.getElementById('basic-info').innerHTML =
+              row(T('الاسم','Name'), kg.name_ar) + row(T('الاسم الإنجليزي','English Name'), kg.name_en) +
+              row(T('الاسم القانوني','Legal Name'), kg.legal_name) + row(T('النوع','Type'), kg.type) +
+              row(T('المحافظة','Governorate'), kg.governorate) + row(T('اللواء','District'), kg.district) +
+              row(T('المنطقة','Area'), kg.area) + row(T('العنوان','Address'), kg.address_line) +
+              row(T('الهاتف','Phone'), kg.contact_phone) + row(T('الجوال','Mobile'), kg.mobile) +
+              row(T('البريد','Email'), kg.contact_email) + row(T('الموقع','Website'), kg.website) +
+              row(T('رقم الترخيص','License #'), kg.license_number) + row(T('الترخيص حتى','License Valid Until'), kg.license_valid_until ? kg.license_valid_until.slice(0,10) : null);
 
-        document.getElementById('mgmt-info').innerHTML =
-            row(T('اسم المدير','Manager Name'), kg.manager_name) + row(T('رقم المدير','Manager ID'), kg.manager_id) +
-            row(T('هاتف المدير','Manager Phone'), kg.manager_phone) + row(T('بريد المدير','Manager Email'), kg.manager_email) +
-            row(T('المالك','Owner'), kg.owner_name) + row(T('نوع الملكية','Ownership Type'), kg.ownership_type);
+          document.getElementById('mgmt-info').innerHTML =
+              row(T('اسم المدير','Manager Name'), kg.manager_name) + row(T('رقم المدير','Manager ID'), kg.manager_id) +
+              row(T('هاتف المدير','Manager Phone'), kg.manager_phone) + row(T('بريد المدير','Manager Email'), kg.manager_email) +
+              row(T('المالك','Owner'), kg.owner_name) + row(T('نوع الملكية','Ownership Type'), kg.ownership_type);
 
-        document.getElementById('stats-info').innerHTML =
-            row(T('عدد الأطفال','Children'), kg.child_count) + row(T('نسبة الحضور','Attendance %'), kg.attendance_pct != null ? kg.attendance_pct + '%' : '—') +
-            row(T('نسبة الإشغال','Occupancy %'), kg.occupancy_pct != null ? kg.occupancy_pct + '%' : '—') +
-            row(T('السعة','Capacity'), kg.total_capacity) + row(T('عدد الشعب','Classes'), kg.number_of_classes) +
-            row(T('عدد المعلمين','Teachers'), kg.teacher_count) + row(T('الفئة العمرية','Age Group'), kg.age_group) +
-            row(T('رسوم التسجيل','Reg. Fees'), kg.registration_fees) + row(T('الرسوم الشهرية','Monthly Fees'), kg.monthly_fees);
+          document.getElementById('stats-info').innerHTML =
+              row(T('عدد الأطفال','Children'), kg.child_count) + row(T('نسبة الحضور','Attendance %'), kg.attendance_pct != null ? kg.attendance_pct + '%' : '—') +
+              row(T('نسبة الإشغال','Occupancy %'), kg.occupancy_pct != null ? kg.occupancy_pct + '%' : '—') +
+              row(T('السعة','Capacity'), kg.total_capacity) + row(T('عدد الشعب','Classes'), kg.number_of_classes) +
+              row(T('عدد المعلمين','Teachers'), kg.teacher_count) + row(T('الفئة العمرية','Age Group'), kg.age_group) +
+              row(T('رسوم التسجيل','Reg. Fees'), kg.registration_fees) + row(T('الرسوم الشهرية','Monthly Fees'), kg.monthly_fees);
 
-        const statusLabel = {active: T('نشط','Active'), frozen: T('مجمدة','Frozen'), deleted: T('محذوفة','Deleted'), draft: T('مسودة','Draft'), inactive: T('غير نشط','Inactive')}[kg.status] || kg.status;
-        document.getElementById('status-info').innerHTML =
-            row(T('الحالة','Status'), statusLabel) +
-            row(T('سبب التجميد','Freeze Reason'), kg.frozen_reason) +
-            row(T('تاريخ التجميد','Frozen At'), kg.frozen_at ? kg.frozen_at.slice(0,16) : null) +
-            row(T('تاريخ الحذف','Deleted At'), kg.deleted_at ? kg.deleted_at.slice(0,16) : null) +
-            (kg.status === 'frozen'
-                ? `<button class="btn btn-sm btn-outline-success w-100" onclick="activate()">${T('تفعيل','Activate')}</button>`
-                : `<button class="btn btn-sm btn-outline-info w-100" onclick="freeze()">${T('تجميد','Freeze')}</button>`);
+          const statusLabel = {active: T('نشط','Active'), frozen: T('مجمدة','Frozen'), deleted: T('محذوفة','Deleted'), draft: T('مسودة','Draft'), inactive: T('غير نشط','Inactive')}[kg.status] || kg.status;
+          document.getElementById('status-info').innerHTML =
+              row(T('الحالة','Status'), statusLabel) +
+              row(T('سبب التجميد','Freeze Reason'), kg.frozen_reason) +
+              row(T('تاريخ التجميد','Frozen At'), kg.frozen_at ? kg.frozen_at.slice(0,16) : null) +
+              row(T('تاريخ الحذف','Deleted At'), kg.deleted_at ? kg.deleted_at.slice(0,16) : null) +
+              (kg.status === 'frozen'
+                  ? `<button class="btn btn-sm btn-outline-success w-100" onclick="activate()">${T('تفعيل','Activate')}</button>`
+                  : `<button class="btn btn-sm btn-outline-info w-100" onclick="freeze()">${T('تجميد','Freeze')}</button>`);
 
-        loadHistory();
-    } catch (e) {
-        document.getElementById('detail-loading').classList.add('d-none');
-        const b = document.getElementById('detail-error');
-        b.textContent = e.message || T('تعذر تحميل التفاصيل', 'Failed to load details');
-        b.classList.remove('d-none');
-    }
-}
+          loadHistory();
+      } catch (e) {
+          document.getElementById('detail-loading').classList.add('d-none');
+          const b = document.getElementById('detail-error');
+          b.textContent = e.message || T('تعذر تحميل التفاصيل', 'Failed to load details');
+          b.classList.remove('d-none');
+      }
+  }
 
-async function loadHistory() {
-    try {
-        const j = await api.get('/api/audit-logs', {entity_type: 'Kindergarten', entity_id: KG_ID, limit: 50});
-        const box = document.getElementById('history-info');
-        const items = (j.items || j.data && j.data.items || []);
-        if (!items.length) { box.innerHTML = `<span class="text-muted">${T('لا يوجد سجل','No history')}</span>`; return; }
-        box.innerHTML = '<ul class="list-group list-group-flush">' + items.map(h =>
-            `<li class="list-group-item d-flex justify-content-between"><span><span class="badge bg-light text-dark">${h.action}</span> ${h.details || ''}</span><small class="text-muted">${h.created_at ? h.created_at.slice(0,16) : ''}</small></li>`
-        ).join('') + '</ul>';
-    } catch (e) {
-        document.getElementById('history-info').innerHTML = `<span class="text-muted">${T('تعذر تحميل السجل','Cannot load history')}</span>`;
-    }
-}
+  async function loadHistory() {
+      try {
+          const j = await api.get('/api/audit-logs', {entity_type: 'Kindergarten', entity_id: KG_ID, limit: 50});
+          const box = document.getElementById('history-info');
+          const items = (j.items || j.data && j.data.items || []);
+          if (!items.length) { box.innerHTML = `<span class="text-muted">${T('لا يوجد سجل','No history')}</span>`; return; }
+          box.innerHTML = '<ul class="list-group list-group-flush">' + items.map(h =>
+              `<li class="list-group-item d-flex justify-content-between"><span><span class="badge bg-light text-dark">${h.action}</span> ${h.details || ''}</span><small class="text-muted">${h.created_at ? h.created_at.slice(0,16) : ''}</small></li>`
+          ).join('') + '</ul>';
+      } catch (e) {
+          document.getElementById('history-info').innerHTML = `<span class="text-muted">${T('تعذر تحميل السجل','Cannot load history')}</span>`;
+      }
+  }
 
-async function freeze() {
-    const reason = prompt(T('سبب التجميد:', 'Freeze reason:'));
-    if (reason === null) return;
-    try { await api.freezeKindergarten(KG_ID, reason); } catch(e){}
-    load();
-}
-async function activate() {
-    if (!confirm(T('تفعيل الحضانة؟','Activate kindergarten?'))) return;
-    try { await api.unfreezeKindergarten(KG_ID); } catch(e){}
-    load();
-}
+  async function freeze() {
+      const reason = prompt(T('سبب التجميد:', 'Freeze reason:'));
+      if (reason === null) return;
+      try { await api.freezeKindergarten(KG_ID, reason); } catch(e){}
+      load();
+  }
+  async function activate() {
+      if (!confirm(T('تفعيل الحضانة؟','Activate kindergarten?'))) return;
+      try { await api.unfreezeKindergarten(KG_ID); } catch(e){}
+      load();
+  }
 
-load();
+  load();
 </script>
 {% endblock %}

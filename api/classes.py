@@ -32,11 +32,14 @@ class ClassCreate(BaseModel):
     min_age_months: int
     max_age_months: int
     supervisor_id: int
+    assistant_supervisor_ids: Optional[List[int]] = []
 
 class ClassResponse(ClassCreate):
     id: int
     is_active: bool
     supervisor_id: Optional[int] = None
+    enrolled_children_count: int = 0
+    assistant_supervisors: List[dict] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -48,15 +51,38 @@ class ClassUpdate(BaseModel):
     max_age_months: Optional[int] = None
     is_active: Optional[bool] = None
     supervisor_id: Optional[int] = None
+    assistant_supervisor_ids: Optional[List[int]] = None
 
 
 def _class_response(db: Session, class_obj: models.Class) -> "ClassResponse":
     """Serialize a Class, sourcing supervisor_id from the active primary
     SupervisorAssignment rather than the retired Class.supervisor_id column (D1/B5)."""
     resp = ClassResponse.model_validate(class_obj)
-    resp.supervisor_id = validators.active_primary_supervisor_map(
-        db, [class_obj.id]
-    ).get(class_obj.id)
+    
+    today = datetime.now(_JORDAN_TZ).date()
+    assignments = db.query(models.SupervisorAssignment).filter(
+        models.SupervisorAssignment.class_id == class_obj.id,
+        models.SupervisorAssignment.start_date <= today,
+        or_(
+            models.SupervisorAssignment.end_date == None,
+            models.SupervisorAssignment.end_date >= today,
+        )
+    ).all()
+    
+    primary_assignment = next((a for a in assignments if a.is_primary), None)
+    resp.supervisor_id = primary_assignment.supervisor_id if primary_assignment else None
+    
+    resp.assistant_supervisors = [
+        {"id": a.supervisor.id, "name": a.supervisor.username} 
+        for a in assignments if not a.is_primary and a.supervisor
+    ]
+    
+    enrolled_count = db.query(func.count(models.EnrollmentApplication.id)).filter(
+        models.EnrollmentApplication.class_id == class_obj.id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    ).scalar() or 0
+    resp.enrolled_children_count = enrolled_count
+    
     return resp
 
 
@@ -82,7 +108,21 @@ def create_class(
     if supervisor.kindergarten_id != class_data.kindergarten_id:
         raise HTTPException(status_code=400, detail="Supervisor must belong to the same kindergarten")
 
-    class_dict = class_data.model_dump(exclude={"supervisor_id"})
+    if class_data.assistant_supervisor_ids:
+        # Validate assistants are in the same kindergarten
+        assistants = db.query(models.User).filter(
+            models.User.id.in_(class_data.assistant_supervisor_ids)
+        ).all()
+        if len(assistants) != len(class_data.assistant_supervisor_ids):
+            raise HTTPException(status_code=400, detail="One or more assistant supervisors not found")
+        for ast in assistants:
+            if ast.kindergarten_id != class_data.kindergarten_id:
+                raise HTTPException(status_code=400, detail="Assistant supervisors must belong to the same kindergarten")
+        
+        if class_data.supervisor_id in class_data.assistant_supervisor_ids:
+            raise HTTPException(status_code=400, detail="Primary supervisor cannot also be an assistant supervisor")
+
+    class_dict = class_data.model_dump(exclude={"supervisor_id", "assistant_supervisor_ids"})
     class_obj = models.Class(
         **class_dict,
         is_active=True
@@ -104,7 +144,19 @@ def create_class(
             start_date=datetime.now(_JORDAN_TZ).date()
         )
         db.add(assignment)
-        db.commit()
+        
+    if class_data.assistant_supervisor_ids:
+        for ast_id in class_data.assistant_supervisor_ids:
+            ast_assignment = models.SupervisorAssignment(
+                class_id=class_obj.id,
+                supervisor_id=ast_id,
+                is_primary=False,
+                full_time_dedication=False,
+                start_date=datetime.now(_JORDAN_TZ).date()
+            )
+            db.add(ast_assignment)
+            
+    db.commit()
 
     validators.log_audit_action(
         db=db,
@@ -124,10 +176,12 @@ def create_class(
 def list_classes(
     kindergarten_id: Optional[int] = None,
     is_active: Optional[bool] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List classes with filtering and current supervisor info"""
+    """List classes with filtering, pagination, and summary statistics"""
     query = db.query(models.Class)
 
     # Filter by kindergarten for non-admins
@@ -142,31 +196,72 @@ def list_classes(
     classes_orm = query.all()
     today = datetime.now(_JORDAN_TZ).date()
 
-    # Batch-fetch active primary supervisor assignments for all classes
+    # Batch-fetch active assignments for all classes
     class_ids = [c.id for c in classes_orm]
     primary_assignments: dict = {}
+    assistant_assignments: dict = {cid: [] for cid in class_ids}
+    
     if class_ids:
         from sqlalchemy import or_ as _or
         for assignment in db.query(models.SupervisorAssignment).filter(
             models.SupervisorAssignment.class_id.in_(class_ids),
-            models.SupervisorAssignment.is_primary == True,
             models.SupervisorAssignment.start_date <= today,
             _or(
                 models.SupervisorAssignment.end_date == None,
                 models.SupervisorAssignment.end_date >= today,
             ),
         ).all():
-            # Keep first (earliest) match per class
-            if assignment.class_id not in primary_assignments:
-                primary_assignments[assignment.class_id] = assignment
+            if assignment.is_primary:
+                # Keep first (earliest) match per class
+                if assignment.class_id not in primary_assignments:
+                    primary_assignments[assignment.class_id] = assignment
+            else:
+                if assignment.class_id in assistant_assignments:
+                    assistant_assignments[assignment.class_id].append(assignment)
+                    
+        # Batch fetch active enrollments counts
+        enrollment_counts = dict(
+            db.query(
+                models.EnrollmentApplication.class_id,
+                func.count(models.EnrollmentApplication.id)
+            ).filter(
+                models.EnrollmentApplication.class_id.in_(class_ids),
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+            ).group_by(models.EnrollmentApplication.class_id).all()
+        )
+    else:
+        enrollment_counts = {}
+
+    summary = {
+        "total_classes": len(classes_orm),
+        "active_classes": sum(1 for c in classes_orm if c.is_active),
+        "total_children": sum(enrollment_counts.get(c.id, 0) for c in classes_orm if c.is_active),
+        "missing_supervisors": 0,
+        "avg_occupancy": 0.0
+    }
+    
+    total_capacity = sum(c.capacity_total for c in classes_orm if c.is_active and c.capacity_total)
+    if total_capacity > 0:
+        summary["avg_occupancy"] = round((summary["total_children"] / total_capacity) * 100, 1)
 
     result = []
-    for c in classes_orm:
+    # Apply pagination to the results
+    paginated_classes = classes_orm[skip:skip + limit]
+    
+    for c in paginated_classes:
         current_supervisor = None
         assignment = primary_assignments.get(c.id)
         if assignment and assignment.supervisor:
             s_user = assignment.supervisor
             current_supervisor = {"id": s_user.id, "name": s_user.username}
+        else:
+            if c.is_active:
+                summary["missing_supervisors"] += 1
+            
+        assistants = []
+        for ast_assignment in assistant_assignments.get(c.id, []):
+            if ast_assignment.supervisor:
+                assistants.append({"id": ast_assignment.supervisor.id, "name": ast_assignment.supervisor.username})
 
         result.append({
             "id": c.id,
@@ -175,11 +270,27 @@ def list_classes(
             "min_age_months": c.min_age_months,
             "max_age_months": c.max_age_months,
             "capacity_total": c.capacity_total,
+            "enrolled_children_count": enrollment_counts.get(c.id, 0),
             "is_active": c.is_active,
             "current_supervisor": current_supervisor,
+            "assistant_supervisors": assistants,
+            "kindergarten_name": c.kindergarten.name_ar if c.kindergarten else None
         })
 
-    return {"classes": result}
+    # Note: missing_supervisors for the summary requires checking all active classes, 
+    # not just paginated ones. So we must do a quick pass over all active classes:
+    summary["missing_supervisors"] = sum(
+        1 for c in classes_orm 
+        if c.is_active and (c.id not in primary_assignments or not primary_assignments[c.id].supervisor)
+    )
+
+    return {
+        "classes": result,
+        "summary": summary,
+        "total": len(classes_orm),
+        "skip": skip,
+        "limit": limit
+    }
 
 
 @router.get("/classes/{class_id}/required-supervisors")
@@ -335,11 +446,41 @@ def update_class(
         if supervisor.kindergarten_id != class_obj.kindergarten_id:
             raise HTTPException(status_code=400, detail="Supervisor must belong to the same kindergarten as the class")
 
-    # supervisor_id is handled separately: the primary supervisor lives only in
-    # SupervisorAssignment now (the legacy Class.supervisor_id column is retired).
+    if class_data.assistant_supervisor_ids is not None:
+        # Validate assistants are in the same kindergarten
+        assistants = db.query(models.User).filter(
+            models.User.id.in_(class_data.assistant_supervisor_ids)
+        ).all()
+        if len(assistants) != len(class_data.assistant_supervisor_ids):
+            raise HTTPException(status_code=400, detail="One or more assistant supervisors not found")
+        for ast in assistants:
+            if ast.kindergarten_id != class_obj.kindergarten_id:
+                raise HTTPException(status_code=400, detail="Assistant supervisors must belong to the same kindergarten as the class")
+                
+        # Primary cannot be an assistant
+        current_primary_id = validators.active_primary_supervisor_map(db, [class_obj.id]).get(class_obj.id)
+        primary_id_to_check = class_data.supervisor_id if "supervisor_id" in class_data.model_dump(exclude_unset=True) else current_primary_id
+        if primary_id_to_check in class_data.assistant_supervisor_ids:
+            raise HTTPException(status_code=400, detail="Primary supervisor cannot also be an assistant supervisor")
+
+    # supervisor_id and assistant_supervisor_ids are handled separately
     update_data = class_data.model_dump(exclude_unset=True)
+    
+    # Capacity validation
+    if "capacity_total" in update_data:
+        enrolled_count = db.query(func.count(models.EnrollmentApplication.id)).filter(
+            models.EnrollmentApplication.class_id == class_id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        ).scalar() or 0
+        if update_data["capacity_total"] < enrolled_count:
+            raise HTTPException(status_code=400, detail=f"Capacity cannot be less than current active enrollments ({enrolled_count})")
+
     supervisor_id_changed = "supervisor_id" in update_data
     new_supervisor_id = update_data.pop("supervisor_id", None)
+    
+    assistant_ids_changed = "assistant_supervisor_ids" in update_data
+    new_assistant_ids = update_data.pop("assistant_supervisor_ids", None)
+    
     for field, value in update_data.items():
         setattr(class_obj, field, value)
 
@@ -360,6 +501,34 @@ def update_class(
                     start_date=datetime.now(_JORDAN_TZ).date(),
                 ))
             db.commit()
+            
+    if assistant_ids_changed:
+        today = datetime.now(_JORDAN_TZ).date()
+        # Retire all current active assistants
+        current_assistants = db.query(models.SupervisorAssignment).filter(
+            models.SupervisorAssignment.class_id == class_obj.id,
+            models.SupervisorAssignment.is_primary == False,
+            models.SupervisorAssignment.start_date <= today,
+            or_(
+                models.SupervisorAssignment.end_date == None,
+                models.SupervisorAssignment.end_date >= today,
+            )
+        ).all()
+        
+        for ast in current_assistants:
+            ast.end_date = today - timedelta(days=1)
+            
+        # Add new assistants
+        if new_assistant_ids:
+            for ast_id in new_assistant_ids:
+                db.add(models.SupervisorAssignment(
+                    class_id=class_obj.id,
+                    supervisor_id=ast_id,
+                    is_primary=False,
+                    full_time_dedication=False,
+                    start_date=today,
+                ))
+        db.commit()
 
     db.refresh(class_obj)
 

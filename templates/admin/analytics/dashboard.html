@@ -203,7 +203,7 @@
               <span class="skel skel-value" aria-hidden="true"></span>
             </p>
             <div class="kpi-card-v2__footer">
-              <span class="text-muted" style="font-size:.8rem">{% if ui_lang == 'en' %}Occupancy:{% else %}الإشغال:{% endif %}&nbsp;<strong id="enrollmentRate">—</strong></span>
+              <span class="text-muted" style="font-size:.8rem">{% if ui_lang == 'en' %}Occupancy:{% else %}الإشغال:{% endif %}&nbsp;<strong id="enrollmentRate">0</strong></span>
             </div>
             <div style="height:6px;background:var(--slate-100);border-radius:var(--r-full);overflow:hidden;margin-top:4px"
                  role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
@@ -260,7 +260,7 @@
               <span class="skel skel-value" aria-hidden="true"></span>
             </p>
             <div class="kpi-card-v2__footer">
-              <span class="kpi-delta kpi-delta--flat" id="govScoreTrend" aria-live="polite">—</span>
+              <span class="kpi-delta kpi-delta--flat" id="govScoreTrend" aria-live="polite">0</span>
             </div>
             <div class="kpi-sparkline-v2" data-metric="governance_score" aria-hidden="true"></div>
           </article>
@@ -341,8 +341,8 @@
                 </div>
               </div>
               <div class="d-flex align-items-center justify-content-between">
-                <div class="az-badge" id="dataQualityStatus" style="margin-bottom:0">—</div>
-                <div style="font:700 1.25rem/1 var(--font-ar);color:var(--slate-800)" id="dataQualityScore">—</div>
+                <div class="az-badge" id="dataQualityStatus" style="margin-bottom:0">N/A</div>
+                <div style="font:700 1.25rem/1 var(--font-ar);color:var(--slate-800)" id="dataQualityScore">0</div>
               </div>
               <div id="ohDataQuality" style="display:none"></div>{# preserve ID for JS #}
               <!-- hidden SVG for backwards compatibility with JS -->
@@ -439,14 +439,14 @@
               <div class="d-flex flex-column gap-2">
                 <div>
                   <div class="d-flex justify-content-between mb-1" style="font-size:.8rem">
-                    <span class="text-success-az">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %} <strong id="regUsersActive">—</strong></span>
+                    <span class="text-success-az">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %} <strong id="regUsersActive">0</strong></span>
                     <span class="text-muted" id="regUsersActiveBar" style="font-size:.75rem">0%</span>
                   </div>
                   <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--green" id="regUsersActivePct" style="width:0%"></div></div>
                 </div>
                 <div>
                   <div class="d-flex justify-content-between mb-1" style="font-size:.8rem">
-                    <span class="text-warning-az">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %} <strong id="regUsersSuspended">—</strong></span>
+                    <span class="text-warning-az">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %} <strong id="regUsersSuspended">0</strong></span>
                     <span class="text-muted" id="regUsersSuspendedBar" style="font-size:.75rem">0%</span>
                   </div>
                   <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--amber" id="regUsersSuspendedPct" style="width:0%"></div></div>
@@ -472,14 +472,14 @@
               <div class="d-flex flex-column gap-2">
                 <div>
                   <div class="d-flex justify-content-between mb-1" style="font-size:.8rem">
-                    <span class="text-success-az">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %} <strong id="regKgActive">—</strong></span>
+                    <span class="text-success-az">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %} <strong id="regKgActive">0</strong></span>
                     <span class="text-muted" id="regKgActiveBar" style="font-size:.75rem">0%</span>
                   </div>
                   <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--green" id="regKgActivePct" style="width:0%"></div></div>
                 </div>
                 <div>
                   <div class="d-flex justify-content-between mb-1" style="font-size:.8rem">
-                    <span class="text-muted">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %} <strong id="regKgDraft">—</strong></span>
+                    <span class="text-muted">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %} <strong id="regKgDraft">0</strong></span>
                     <span class="text-muted" id="regKgDraftBar" style="font-size:.75rem">0%</span>
                   </div>
                   <div class="gov-bar-track"><div class="gov-bar-fill" id="regKgDraftPct" style="width:0%;background:var(--slate-300)"></div></div>
@@ -534,12 +534,12 @@
               <div class="d-flex flex-column gap-2">
                 <div class="d-flex justify-content-between" style="font-size:.8rem">
                   <span class="text-success-az">{% if ui_lang == 'en' %}Enrolled{% else %}مسجل{% endif %}</span>
-                  <strong id="regChildrenEnrolledCount">—</strong>
+                  <strong id="regChildrenEnrolledCount">0</strong>
                 </div>
                 <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--green" id="regChildrenEnrolledBar" style="width:0%"></div></div>
                 <div class="d-flex justify-content-between" style="font-size:.8rem">
                   <span class="text-warning-az">{% if ui_lang == 'en' %}Pending{% else %}انتظار{% endif %}</span>
-                  <strong id="regChildrenPending">—</strong>
+                  <strong id="regChildrenPending">0</strong>
                 </div>
                 <div class="gov-bar-track"><div class="gov-bar-fill gov-bar-fill--amber" id="regChildrenPendingBar" style="width:0%"></div></div>
               </div>
@@ -586,7 +586,7 @@
               </h3>
               <div style="display:flex;align-items:center;gap:8px">
                 <span class="text-muted" style="font-size:.8rem">{% if ui_lang == 'en' %}Conversion:{% else %}التحويل:{% endif %}</span>
-                <strong id="regConversionRate" class="text-success-az">—</strong>
+                <strong id="regConversionRate" class="text-success-az">0%</strong>
                 <span class="d-none" id="regConversionValue"></span>
               </div>
             </div>
@@ -658,7 +658,7 @@
           <h3 class="az-card__title"><i class="bi bi-calendar3"></i>
             {% if ui_lang == 'en' %}Monthly Registration Trend{% else %}الاتجاه الشهري للتسجيل{% endif %}
           </h3>
-          <span class="az-badge az-badge--blue" id="avgCompletenessBadge">—</span>
+          <span class="az-badge az-badge--blue" id="avgCompletenessBadge">N/A</span>
         </div>
         <div class="az-card__body">
           <div class="az-chart-wrap az-chart-wrap--md">
@@ -870,7 +870,7 @@
                       {% if ui_lang == 'en' %}Excellent{% else %}ممتاز{% endif %}
                     </div>
                     <div class="d-flex align-items-baseline gap-2">
-                      <span class="gov-legend-count" id="countGreen">—</span>
+                      <span class="gov-legend-count" id="countGreen">0</span>
                       <span class="gov-legend-pct" id="pctGreen"></span>
                     </div>
                   </div>
@@ -881,7 +881,7 @@
                       {% if ui_lang == 'en' %}Average{% else %}متوسط{% endif %}
                     </div>
                     <div class="d-flex align-items-baseline gap-2">
-                      <span class="gov-legend-count" id="countAmber">—</span>
+                      <span class="gov-legend-count" id="countAmber">0</span>
                       <span class="gov-legend-pct" id="pctAmber"></span>
                     </div>
                   </div>
@@ -892,7 +892,7 @@
                       {% if ui_lang == 'en' %}Critical{% else %}حرج{% endif %}
                     </div>
                     <div class="d-flex align-items-baseline gap-2">
-                      <span class="gov-legend-count" id="countRed">—</span>
+                      <span class="gov-legend-count" id="countRed">0</span>
                       <span class="gov-legend-pct" id="pctRed"></span>
                     </div>
                   </div>
@@ -962,15 +962,15 @@
         </div>
         <div class="model-meta-item" id="modelMeta">
           <span class="model-meta-item__label">{% if ui_lang == 'en' %}Version{% else %}الإصدار{% endif %}</span>
-          <span class="model-meta-item__value">—</span>
+          <span class="model-meta-item__value">N/A</span>
         </div>
         <div class="model-meta-item">
           <span class="model-meta-item__label">{% if ui_lang == 'en' %}Last Trained{% else %}آخر تدريب{% endif %}</span>
-          <span class="model-meta-item__value" id="aiLastTrained">—</span>
+          <span class="model-meta-item__value" id="aiLastTrained">N/A</span>
         </div>
         <div class="model-meta-item">
           <span class="model-meta-item__label">{% if ui_lang == 'en' %}Confidence{% else %}الثقة{% endif %}</span>
-          <span class="model-meta-item__value" id="aiConfidence">—</span>
+          <span class="model-meta-item__value" id="aiConfidence">0%</span>
         </div>
         <div class="model-meta-item">
           <span class="model-meta-item__label" style="font-size:.7rem">{% if ui_lang == 'en' %}Predictions are statistical forecasts based on historical patterns and may not reflect actual outcomes.{% else %}التنبؤات تقديرات إحصائية وقد لا تعكس النتائج الفعلية.{% endif %}</span>
@@ -986,7 +986,7 @@
             <div class="forecast-card__value" id="attendanceForecast">
               <span class="skel skel-value"></span>
             </div>
-            <div class="forecast-card__band" id="attendanceForecastBand">—</div>
+            <div class="forecast-card__band" id="attendanceForecastBand">N/A</div>
             <div class="forecast-card__confidence">
               <i class="bi bi-cpu"></i>{% if ui_lang == 'en' %}AI Prediction{% else %}توقع الذكاء{% endif %}
             </div>
@@ -998,7 +998,7 @@
             <div class="forecast-card__value" id="incidentForecast">
               <span class="skel skel-value"></span>
             </div>
-            <div class="forecast-card__band" id="incidentForecastBand">—</div>
+            <div class="forecast-card__band" id="incidentForecastBand">N/A</div>
             <div class="forecast-card__confidence">
               <i class="bi bi-cpu"></i>{% if ui_lang == 'en' %}AI Prediction{% else %}توقع الذكاء{% endif %}
             </div>
@@ -1010,7 +1010,7 @@
             <div class="forecast-card__value" id="enrollmentForecast">
               <span class="skel skel-value"></span>
             </div>
-            <div class="forecast-card__band" id="enrollmentForecastBand">—</div>
+            <div class="forecast-card__band" id="enrollmentForecastBand">N/A</div>
             <div class="forecast-card__confidence">
               <i class="bi bi-cpu"></i>{% if ui_lang == 'en' %}AI Prediction{% else %}توقع الذكاء{% endif %}
             </div>
@@ -1296,8 +1296,8 @@
       const icon   = lvl === 'critical' ? 'exclamation-octagon-fill' : lvl === 'high' ? 'exclamation-triangle-fill' : 'info-circle-fill';
       const label  = lvl === 'critical' ? (isAr ? 'حرج' : 'Critical') : lvl === 'high' ? (isAr ? 'مرتفع' : 'High') : (isAr ? 'متوسط' : 'Medium');
       const action = isAr ? 'عرض تفاصيل المرفق' : 'View facility details';
-      const entityName = r.child_name || r.kindergarten_name || '—';
-      const scoreDisplay = r.risk_value != null ? r.risk_value.toFixed(1) : '—';
+      const entityName = r.child_name || r.kindergarten_name || 'N/A';
+      const scoreDisplay = r.risk_value != null ? r.risk_value.toFixed(1) : '0';
       return [
         '<div class="risk-card risk-card--' + lvl + '" role="article">',
         '  <div class="risk-card__icon"><i class="bi bi-' + icon + '"></i></div>',

@@ -399,11 +399,24 @@
 .ko-badge-blue   { background: rgba(37,99,235,.1);  color: var(--ko-blue); }
 
 /* ── 11. Quick Actions ──────────────────────────────────── */
+/* Responsive, evenly-distributed grid: every action button gets an equal
+   fraction of the row and they wrap cleanly onto new rows on narrow screens
+   instead of ending up different widths (uneven flex distribution). */
 .ko-actions-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: .75rem;
   padding: 1rem 1.5rem;
-  flex-wrap: wrap;
+  align-items: stretch;
+}
+/* Buttons inside the actions grid: centered, equal height, and allowed to
+   wrap so longer labels stay contained instead of overflowing. */
+.ko-actions-bar .ko-action-btn {
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+  min-height: 46px;
+  line-height: 1.3;
 }
 .ko-action-btn {
   display: flex;

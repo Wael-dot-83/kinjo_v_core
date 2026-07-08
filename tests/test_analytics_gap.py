@@ -584,12 +584,12 @@ class TestGovernanceLayer:
         assert result.layer == "governance"
         assert {m.metric for m in result.metrics} == GOV_LAYER_SLUGS
 
-    def test_gqi_radar_6_sub_indicators(self, test_db):
+    def test_gqi_radar_7_sub_indicators(self, test_db):
         result = AnalyticsGapService(test_db).get_governance_metrics("en")
         gqi = next(m for m in result.metrics if m.metric == "enhanced_gqi")
         assert gqi.chart.type == "radar"
-        assert len(gqi.chart.labels) == 6
-        assert len(gqi.chart.datasets[0].data) == 6
+        assert len(gqi.chart.labels) == 7
+        assert len(gqi.chart.datasets[0].data) == 7
 
     def test_health_composite_bar_6_bars(self, test_db):
         result = AnalyticsGapService(test_db).get_governance_metrics("en")

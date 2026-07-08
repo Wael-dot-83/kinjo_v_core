@@ -2366,7 +2366,7 @@ class TestFrontendRoutes:
         app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
         response = client.get("/children", follow_redirects=False)
         assert response.status_code == 200
-        assert "/api/manager/children" in response.text
+        assert "/api/children" in response.text
         app.dependency_overrides.clear()
 
     def test_manager_supervisors_page_renders(self, client, manager_user):

@@ -520,3 +520,125 @@ def export_children(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=children_export.csv"},
     )
+
+
+class ManagerQuickAddChildRequest(BaseModel):
+    first_name: str
+    last_name: str
+    gender: str
+    date_of_birth: str  # ISO Date
+    parent_first_name: str
+    parent_last_name: str
+    parent_phone_number: str
+    class_id: int
+
+
+@router.post("/children/manager-quick-add")
+def manager_quick_add_child(
+    payload: ManagerQuickAddChildRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from auth import get_password_hash
+    if current_user.role not in (models.UserRole.MANAGER, models.UserRole.ADMIN):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # 1. Resolve or Create Parent
+    parent_profile = db.query(models.ParentProfile).filter(
+        models.ParentProfile.phone_number == payload.parent_phone_number
+    ).first()
+
+    if not parent_profile:
+        # Create Dummy User
+        dummy_email = f"quickadd_{uuid.uuid4().hex[:8]}@kinjo.local"
+        user = models.User(
+            username=dummy_email,
+            email=dummy_email,
+            hashed_password=get_password_hash("QuickAdd123!"),
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE
+        )
+        db.add(user)
+        db.flush()
+        
+        parent_profile = models.ParentProfile(
+            user_id=user.id,
+            first_name=payload.parent_first_name,
+            last_name=payload.parent_last_name,
+            phone_number=payload.parent_phone_number,
+            gender=models.Gender.FEMALE if payload.gender.upper() == "FEMALE" else models.Gender.MALE, # Default guess
+            nationality="Jordanian",
+            home_governorate="Amman",
+            home_district="Quick Add",
+            home_area="Quick Add",
+            home_address_line="Quick Add"
+        )
+        db.add(parent_profile)
+        db.flush()
+
+    # 2. Check class
+    target_class = db.query(models.Class).filter(models.Class.id == payload.class_id).first()
+    if not target_class:
+        raise HTTPException(status_code=404, detail="Target class not found")
+    if target_class.kindergarten_id != current_user.kindergarten_id and current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Class not in your kindergarten")
+
+    # 3. Create Child
+    try:
+        dob = date.fromisoformat(payload.date_of_birth)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date_of_birth")
+
+    child = models.Child(
+        parent_id=parent_profile.id,
+        first_name=payload.first_name,
+        last_name=payload.last_name,
+        gender=models.Gender(payload.gender.upper()),
+        date_of_birth=dob,
+        father_name="-",
+        mother_first_name="-",
+        mother_last_name="-",
+        mother_nationality="-"
+    )
+    db.add(child)
+    db.flush()
+
+    # 4. Create Active Enrollment
+    enrollment = models.EnrollmentApplication(
+        child_id=child.id,
+        kindergarten_id=target_class.kindergarten_id,
+        class_id=target_class.id,
+        status=models.EnrollmentStatus.ACTIVE,
+        submitted_by=current_user.id
+    )
+    db.add(enrollment)
+    db.commit()
+    
+    return {"message": "Child added and enrolled successfully", "child_id": child.id}
+
+
+@router.delete("/children/{child_id}/deactivate")
+def deactivate_child(
+    child_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in (models.UserRole.MANAGER, models.UserRole.ADMIN):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    enrollment = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.child_id == child_id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    ).first()
+
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Active enrollment not found for this child")
+
+    if enrollment.kindergarten_id != current_user.kindergarten_id and current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Child not in your kindergarten")
+
+    enrollment.status = models.EnrollmentStatus.WITHDRAWN
+    # updated_at is auto-updated by SQLAlchemy onupdate trigger
+    db.commit()
+
+    return {"message": "Child deactivated successfully"}

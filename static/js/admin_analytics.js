@@ -603,13 +603,13 @@ function hideSkeletonLoaders() {
   document
     .querySelectorAll("#totalKg, #totalChildren, #avgAttendance, #incidentRate, #enrollmentRate")
     .forEach((el) => {
-      if (el.querySelector(".skeleton-text")) el.textContent = "--";
+      if (el.querySelector(".skeleton-text")) el.textContent = "0";
     });
   // Clear registration KPI skeletons
   document
     .querySelectorAll("#regTotalApplications, #regNewApplications, #regApproved, #regPending, #regRejected")
     .forEach((el) => {
-      if (el.querySelector(".skeleton-text")) el.textContent = "--";
+      if (el.querySelector(".skeleton-text")) el.textContent = "0";
     });
   // Clear loading spinners in containers that were never populated
   document.querySelectorAll(".spinner-border").forEach((spinner) => {
@@ -1173,7 +1173,7 @@ function updateGovernorateBreakdown(breakdownData) {
      // Validate and format values
      const govScore = Number(row.governance_score);
      const govScoreValid = Number.isFinite(govScore) && govScore >= 0 && govScore <= 100;
-     const displayScore = govScoreValid ? govScore.toFixed(1) : "--";
+     const displayScore = govScoreValid ? govScore.toFixed(1) : "0.0";
      const scorePercent = govScoreValid ? govScore : 0;
 
      tr.innerHTML = `
@@ -1777,7 +1777,7 @@ function updatePredictiveCards(attendanceData, incidentsData, enrollmentData) {
   if (attendanceForecast && lastAttendance) {
     if (attValidation.valid) {
       const numericValue = Number(lastAttendance.value);
-      const value = Number.isFinite(numericValue) ? numericValue.toFixed(1) : "--";
+      const value = Number.isFinite(numericValue) ? numericValue.toFixed(1) : "0.0";
       attendanceForecast.textContent = `${value}%`;
       const lower = attendanceData.confidence?.lower?.slice(-1)[0]?.value ?? 0;
       const upper = attendanceData.confidence?.upper?.slice(-1)[0]?.value ?? 0;
@@ -1790,7 +1790,7 @@ function updatePredictiveCards(attendanceData, incidentsData, enrollmentData) {
     } else {
       attendanceForecast.innerHTML = `<span class="text-danger-emphasis">${attValidation.message || "غير متاح"}</span>`;
       if (attendanceBand) {
-        attendanceBand.textContent = "--";
+        attendanceBand.textContent = "N/A";
       }
     }
   }
@@ -1814,7 +1814,7 @@ function updatePredictiveCards(attendanceData, incidentsData, enrollmentData) {
     } else {
       incidentForecast.innerHTML = `<span class="text-danger-emphasis">${incValidation.message || "غير متاح"}</span>`;
       if (incidentBand) {
-        incidentBand.textContent = "--";
+        incidentBand.textContent = "N/A";
       }
     }
   }
@@ -1838,7 +1838,7 @@ function updatePredictiveCards(attendanceData, incidentsData, enrollmentData) {
     } else {
       enrollmentForecast.innerHTML = `<span class="text-danger-emphasis">${enrValidation.message || "غير متاح"}</span>`;
       if (enrollmentBand) {
-        enrollmentBand.textContent = "--";
+        enrollmentBand.textContent = "N/A";
       }
     }
   }
@@ -1847,9 +1847,9 @@ function updatePredictiveCards(attendanceData, incidentsData, enrollmentData) {
 function updateModelMeta(meta) {
   const container = document.getElementById("modelMeta");
   if (!container || !meta) return;
-  const trainedAt = meta.last_trained || meta.trained_at || "--";
+  const trainedAt = meta.last_trained || meta.trained_at || "N/A";
   const version = meta.model_version || "v1";
-  const confidence = meta.confidence ? `${(meta.confidence * 100).toFixed(0)}%` : "--";
+  const confidence = meta.confidence ? `${(meta.confidence * 100).toFixed(0)}%` : "0%";
   const safeTrainedAt = escapeHtml(trainedAt);
   const safeVersion = escapeHtml(version);
   container.innerHTML = `<div class="small text-muted">${adminAnalyticsText(`آخر تدريب: ${safeTrainedAt} | الإصدار: ${safeVersion} | الثقة: ${confidence}`, `Last training: ${safeTrainedAt} | Version: ${safeVersion} | Confidence: ${confidence}`)}</div>`;

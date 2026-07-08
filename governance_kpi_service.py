@@ -56,6 +56,7 @@ def compute_governance_funnel(
             .filter(
                 models.AttendanceLog.date >= start_date,
                 models.AttendanceLog.date <= end_date,
+                models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
             )
         )
         if kindergarten_id:
@@ -71,7 +72,10 @@ def compute_governance_funnel(
             models.DailyReportStatus.APPROVED,
             models.DailyReportStatus.SENT_TO_PARENT,
         ]
-        delivered_statuses = [models.DailyReportStatus.SENT_TO_PARENT]
+        delivered_statuses = [
+            models.DailyReportStatus.APPROVED,
+            models.DailyReportStatus.SENT_TO_PARENT,
+        ]
 
         report_q = (
             db.query(
@@ -115,7 +119,7 @@ def compute_governance_funnel(
                 models.DailyReport.kindergarten_id,
                 func.count(func.distinct(models.DailyReportView.daily_report_id)).label("viewed_count"),
             )
-            .join(models.DailyReportView, models.DailyReportView.daily_report_id == models.DailyReport.id)
+            .outerjoin(models.DailyReportView, models.DailyReportView.daily_report_id == models.DailyReport.id)
             .filter(
                 models.DailyReport.date >= start_date,
                 models.DailyReport.date <= end_date,
@@ -144,9 +148,9 @@ def compute_governance_funnel(
                 "submitted": rr["submitted"],
                 "delivered": rr["delivered"],
                 "viewed": viewed,
-                "submission_rate": round(rr["submitted"] / required, 4) if required else 0,
-                "delivery_rate": round(rr["delivered"] / rr["submitted"], 4) if rr["submitted"] else 0,
-                "view_rate": round(viewed / rr["delivered"], 4) if rr["delivered"] else 0,
+                "submission_rate": min(1.0, round(rr["submitted"] / required, 4)) if required else 0,
+                "delivery_rate": min(1.0, round(rr["delivered"] / rr["submitted"], 4)) if rr["submitted"] else 0,
+                "view_rate": min(1.0, round(viewed / rr["delivered"], 4)) if rr["delivered"] else 0,
             }
             per_kg[kg_id] = entry
             agg["required"] += required
@@ -154,9 +158,9 @@ def compute_governance_funnel(
             agg["delivered"] += rr["delivered"]
             agg["viewed"] += viewed
 
-        agg["submission_rate"] = round(agg["submitted"] / agg["required"], 4) if agg["required"] else 0
-        agg["delivery_rate"] = round(agg["delivered"] / agg["submitted"], 4) if agg["submitted"] else 0
-        agg["view_rate"] = round(agg["viewed"] / agg["delivered"], 4) if agg["delivered"] else 0
+        agg["submission_rate"] = min(1.0, round(agg["submitted"] / agg["required"], 4)) if agg["required"] else 0
+        agg["delivery_rate"] = min(1.0, round(agg["delivered"] / agg["submitted"], 4)) if agg["submitted"] else 0
+        agg["view_rate"] = min(1.0, round(agg["viewed"] / agg["delivered"], 4)) if agg["delivered"] else 0
 
         return {"per_kindergarten": per_kg, "aggregate": agg}
 
@@ -181,6 +185,7 @@ def compute_timeliness_metrics(
     q = (
         db.query(
             models.DailyReport.kindergarten_id,
+            models.DailyReport.date,
             models.DailyReport.created_at,
             models.DailyReport.submitted_at,
             models.DailyReport.sent_to_parent_at,
@@ -196,20 +201,22 @@ def compute_timeliness_metrics(
 
     rows = q.all()
 
-    def _as_naive(dt: Optional[datetime]) -> Optional[datetime]:
-        """Strip tzinfo so that naive and aware datetimes can be subtracted."""
+    from datetime import timezone
+    def _as_utc_naive(dt: Optional[datetime]) -> Optional[datetime]:
         if dt is None:
             return None
-        return dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
+        if dt.tzinfo is not None:
+            return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt
 
     # Group by KG
     kg_deltas: Dict[int, List[float]] = {}
     for row in rows:
         if not row.created_at or not row.submitted_at:
             continue
-        created = _as_naive(row.created_at)
-        submitted = _as_naive(row.submitted_at)
-        delta_hours = (submitted - created).total_seconds() / 3600
+        created = _as_utc_naive(row.created_at)
+        submitted = _as_utc_naive(row.submitted_at)
+        delta_hours = abs((submitted - created).total_seconds() / 3600.0)
         kg_deltas.setdefault(row.kindergarten_id, []).append(delta_hours)
 
     per_kg = {}
@@ -248,23 +255,44 @@ def compute_quality_metrics(
             func.count(models.DailyReport.id).label("total"),
             func.sum(
                 case(
-                    (models.DailyReport.status == models.DailyReportStatus.REJECTED, 1),
+                    (models.DailyReport.status.in_([
+                        models.DailyReportStatus.REJECTED,
+                        models.DailyReportStatus.RETURNED
+                    ]), 1),
                     else_=0,
                 )
             ).label("rejected"),
             func.sum(
                 case(
+                    (
+                        and_(
+                            models.DailyReport.status.in_([
+                                models.DailyReportStatus.APPROVED,
+                                models.DailyReportStatus.SENT_TO_PARENT,
+                            ]),
+                            models.DailyReport.rejected_reason.is_(None)
+                        ),
+                        1
+                    ),
+                    else_=0,
+                )
+            ).label("approved_first"),
+            func.sum(
+                case(
                     (models.DailyReport.status.in_([
                         models.DailyReportStatus.APPROVED,
                         models.DailyReportStatus.SENT_TO_PARENT,
+                        models.DailyReportStatus.REJECTED,
+                        models.DailyReportStatus.RETURNED
                     ]), 1),
                     else_=0,
                 )
-            ).label("approved"),
+            ).label("total_resolved"),
         )
         .filter(
             models.DailyReport.date >= start_date,
             models.DailyReport.date <= end_date,
+            models.DailyReport.status != models.DailyReportStatus.DRAFT,
         )
     )
     if kindergarten_id:
@@ -273,20 +301,39 @@ def compute_quality_metrics(
     q = q.group_by(models.DailyReport.kindergarten_id)
 
     per_kg = {}
+    agg_total = 0
+    agg_rejected = 0
+    agg_approved_first = 0
+    agg_resolved = 0
+
     for row in q.all():
         total = row.total or 0
         rejected = int(row.rejected or 0)
-        approved = int(row.approved or 0)
+        approved_first = int(row.approved_first or 0)
+        total_resolved = int(row.total_resolved or 0)
+        
         per_kg[row.kindergarten_id] = {
             "kindergarten_id": row.kindergarten_id,
             "total": total,
             "rejected": rejected,
-            "approved": approved,
+            "approved": approved_first,
             "rejection_rate": round(rejected / total, 4) if total else 0,
-            "first_pass_rate": round(approved / total, 4) if total else 0,
+            "first_pass_rate": round(approved_first / total_resolved, 4) if total_resolved else 0,
         }
+        agg_total += total
+        agg_rejected += rejected
+        agg_approved_first += approved_first
+        agg_resolved += total_resolved
 
-    return {"per_kindergarten": per_kg}
+    aggregate = {
+        "total": agg_total,
+        "rejected": agg_rejected,
+        "approved": agg_approved_first,
+        "rejection_rate": round(agg_rejected / agg_total, 4) if agg_total else 0,
+        "first_pass_rate": round(agg_approved_first / agg_resolved, 4) if agg_resolved else 0,
+    }
+
+    return {"per_kindergarten": per_kg, "aggregate": aggregate}
 
 
 # ---------------------------------------------------------------------------
@@ -779,51 +826,82 @@ def compute_full_gqi(
     kindergarten_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
-    Governance Quality Index (GQI) — equally-weighted composite of 5 sub-indicators.
+    Governance Quality Index (GQI) — weighted composite of 7 sub-indicators.
 
     Sub-indicators (each in [0, 1]):
-      1. report_submission  — daily report funnel submission rate
-      2. ratio_compliance   — staff-to-child ratio compliance
-      3. license_validity   — active, non-expired licenses
-      4. training_coverage  — mandatory training completion rate
-      5. incident_sla       — follow-up SLA compliance rate
+      1. report_submission  — daily report funnel submission rate (40%)
+      2. delivery_rate      — report delivery compliance (20%)
+      3. approval_quality   — first pass approval rate (15%)
+      4. review_rate        — view rate (10%)
+      5. training_coverage  — mandatory training completion rate (5%)
+      6. license_validity   — active, non-expired licenses (5%)
+      7. incident_sla       — follow-up SLA compliance rate (5%)
 
-    GQI ∈ [0, 100].
+    Guardrails:
+      - submission < 70%: cap GQI at 60
+      - submission < 50%: cap GQI at 40
+      - submission < 30%: cap GQI at 20
     """
     funnel = compute_governance_funnel(db, start_date, end_date, kindergarten_id)
-    agg = funnel.get("aggregate", {})
-    s1 = float(agg.get("submission_rate", 0.0))
+    quality = compute_quality_metrics(db, start_date, end_date, kindergarten_id)
+    
+    funnel_agg = funnel.get("aggregate", {})
+    quality_agg = quality.get("aggregate", {})
+
+    s1 = float(funnel_agg.get("submission_rate", 0.0))
+    s2 = float(funnel_agg.get("delivery_rate", 0.0))
+    s3 = float(quality_agg.get("first_pass_rate", 0.0))
+    s4 = float(funnel_agg.get("view_rate", 0.0))
 
     try:
-        s2 = _ratio_compliance_score(db, kindergarten_id)
-    except Exception:
-        s2 = 0.0
-
-    try:
-        s3 = _license_validity_score(db, kindergarten_id)
-    except Exception:
-        s3 = 0.0
-
-    try:
-        s4 = _training_coverage_score(db, kindergarten_id)
-    except Exception:
-        s4 = 0.0
-
-    try:
-        s5 = _incident_sla_score(db, start_date, end_date, kindergarten_id)
+        s5 = _training_coverage_score(db, kindergarten_id)
     except Exception:
         s5 = 0.0
 
-    gqi = round((s1 + s2 + s3 + s4 + s5) / 5 * 100, 2)
+    try:
+        s6 = _license_validity_score(db, kindergarten_id)
+    except Exception:
+        s6 = 0.0
+
+    try:
+        s7 = _incident_sla_score(db, start_date, end_date, kindergarten_id)
+    except Exception:
+        s7 = 0.0
+
+    # Weighted sum based on proposed weighting
+    weighted_sum = (s1 * 0.40) + (s2 * 0.20) + (s3 * 0.15) + (s4 * 0.10) + (s5 * 0.05) + (s6 * 0.05) + (s7 * 0.05)
+    gqi = round(weighted_sum * 100, 2)
+
+    # Apply Governance Guardrails (Caps based on Submission Compliance)
+    submission_pct = s1 * 100
+    if submission_pct < 30:
+        gqi = min(gqi, 20.0)
+    elif submission_pct < 50:
+        gqi = min(gqi, 40.0)
+    elif submission_pct < 70:
+        gqi = min(gqi, 60.0)
+
+    # Health Classification
+    if gqi >= 80:
+        health_status = "Healthy"
+    elif gqi >= 60:
+        health_status = "Warning"
+    elif gqi >= 40:
+        health_status = "High Risk"
+    else:
+        health_status = "Critical"
 
     return {
         "gqi": gqi,
+        "health_status": health_status,
         "sub_indicators": {
             "report_submission": round(s1 * 100, 2),
-            "ratio_compliance": round(s2 * 100, 2),
-            "license_validity": round(s3 * 100, 2),
-            "training_coverage": round(s4 * 100, 2),
-            "incident_sla": round(s5 * 100, 2),
+            "delivery_compliance": round(s2 * 100, 2),
+            "approval_quality": round(s3 * 100, 2),
+            "review_rate": round(s4 * 100, 2),
+            "training_coverage": round(s5 * 100, 2),
+            "license_validity": round(s6 * 100, 2),
+            "incident_sla": round(s7 * 100, 2),
         },
         "period": {
             "start": start_date.isoformat(),

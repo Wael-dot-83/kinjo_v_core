@@ -37,7 +37,7 @@
   ];
 
   const MODULE_OPTIONS = [
-    { value: "management",        ar: "إدارة النظام",      en: "System Management" },
+    { value: "management",        ar: "إدارة مكونات النظام", en: "System Management" },
     { value: "operations",        ar: "العمليات",          en: "Operations" },
     { value: "reports-analytics", ar: "التقارير والتحليل",  en: "Reports & Analytics" },
     { value: "governance",        ar: "الحوكمة",           en: "Governance" },

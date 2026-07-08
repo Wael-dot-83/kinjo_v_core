@@ -64,6 +64,25 @@ function koCssEscape(value) {
   return text.replace(/["\\]/g, '\\$&');
 }
 
+/* Canonical order of Jordan's 12 governorates, used to sort the governorate
+   filter sensibly. Any value not in this list (e.g. legacy/spelling variants)
+   is kept but ordered after the known ones, alphabetically. */
+const JORDAN_GOV_ORDER = [
+  'عمان', 'إربد', 'الزرقاء', 'البلقاء', 'المفرق',
+  'جرش', 'عجلون', 'مادبا', 'الكرك', 'الطفيلة', 'معان', 'العقبة',
+];
+
+function koSortGovernorates(list) {
+  return [...list].sort((a, b) => {
+    const ia = JORDAN_GOV_ORDER.indexOf(a);
+    const ib = JORDAN_GOV_ORDER.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return a.localeCompare(b, 'ar');
+  });
+}
+
 function normalizeSeverity(severity) {
   const value = String(severity || '').toUpperCase();
   if (value === 'CRITICAL' || value === 'HIGH') return 'high';
@@ -437,7 +456,27 @@ class KgOverview {
     ];
 
     const currentKgs = this.#store.get('kgs');
-    const govs = ['all', ...new Set(currentKgs.map(k => k.gov).filter(Boolean))];
+    // Governorate filter options: trim + dedupe (case/space-insensitive on the
+    // trimmed value) so no duplicate or whitespace-only entries appear, then
+    // order by the canonical Jordan governorate sequence.
+    const uniqueGovs = koSortGovernorates(
+      [...new Set(
+        currentKgs
+          .map(k => (k.gov || '').trim())
+          // Keep only recognised Jordanian governorates; this drops empty
+          // values, stray test tokens, and non-governorate place names so the
+          // list stays accurate and consistent with the rest of the app.
+          .filter(g => JORDAN_GOV_ORDER.includes(g))
+      )]
+    );
+    const govs = ['all', ...uniqueGovs];
+    // If a previously-saved governorate is no longer present in the data, fall
+    // back to "all" so the select and the applied filter stay in sync.
+    let currentGov = this.#store.get('govFilter') || 'all';
+    if (!govs.includes(currentGov)) {
+      currentGov = 'all';
+      this.#store.set({ govFilter: 'all' });
+    }
     const kgNames = ['all', ...currentKgs.map(k => k.name)];
     const lang = window.KINJO_LANG || 'ar';
     const isAr = lang !== 'en';
@@ -464,7 +503,10 @@ class KgOverview {
       </div>
 
       <select class="ko-filter-select" id="ko-gov-filter" aria-label="${isAr ? 'المحافظة' : 'Governorate'}">
-        ${govs.map(g => `<option value="${g}">${g === 'all' ? (isAr ? 'كل المحافظات' : 'All Governorates') : g}</option>`).join('')}
+        ${govs.map(g => {
+          const label = g === 'all' ? (isAr ? 'كل المحافظات' : 'All Governorates') : g;
+          return `<option value="${koEscape(g)}"${g === currentGov ? ' selected' : ''}>${koEscape(label)}</option>`;
+        }).join('')}
       </select>
 
       <select class="ko-filter-select" id="ko-kg-filter" aria-label="${isAr ? 'الحضانة' : 'Kindergarten'}">
@@ -1006,10 +1048,9 @@ class KgOverview {
     const isAr = lang !== 'en';
 
     const actions = [
-      { icon:'bi-person-plus-fill', ar:'إضافة طفل',      en:'Add Child',     accent:'#2563eb', href:'/enroll',         cls:'primary' },
-      { icon:'bi-building-fill',    ar:'إدارة الحضانات',  en:'Manage KGs',    accent:'#7c3aed', href:'/admin/heatmap',  cls:'' },
-      { icon:'bi-bar-chart-fill',   ar:'عرض تقرير',      en:'View Report',   accent:'#16a34a', href:'/admin/analytics',cls:'' },
-      { icon:'bi-bell-fill',        ar:'مراجعة التنبيهات',en:'Review Alerts', accent:'#dc2626', href:'/admin/alerts',   cls:'' },
+      { icon:'bi-thermometer-half', ar:'الخريطة الحرارية للحضانات ومؤشرات القياس', en:'Kindergartens Heatmap & Metrics', accent:'#7c3aed', href:'/admin/heatmap',  cls:'' },
+      { icon:'bi-bar-chart-fill',   ar:'عرض تقرير',        en:'View Report',   accent:'#16a34a', href:'/admin/analytics', cls:'' },
+      { icon:'bi-bell-fill',        ar:'مراجعة التنبيهات', en:'Review Alerts', accent:'#dc2626', href:'/admin/alerts',    cls:'' },
     ];
 
     wrap.innerHTML = actions.map(a => `

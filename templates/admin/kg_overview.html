@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/kg_overview.css">
+<link rel="stylesheet" href="/static/css/kg_overview.css?v=1.1">
 {% endblock %}
 
 {% block content %}
@@ -145,5 +145,5 @@ if (!window.Chart) {
   /* Pass server-side lang to JS before kg_overview.js boots */
   window.KINJO_LANG = {{ ('"en"' if ui_lang == 'en' else '"ar"') | safe }};
 </script>
-<script defer src="/static/js/kg_overview.js?v=1.0"></script>
+<script defer src="/static/js/kg_overview.js?v=1.2"></script>
 {% endblock %}

@@ -27,6 +27,7 @@ from admin_security import log_audit_event
 from audit_actions import AuditAction
 from rate_limiter import limiter
 from config import settings
+import validators
 
 logger = logging.getLogger(__name__)
 
@@ -1399,14 +1400,38 @@ def _load_filters(db: Session) -> ClassificationFiltersResponse:
         else:
             countries = [DEFAULT_COUNTRY_NAME]
 
-        governorates = sorted(
-            {
-                str(row[0]) for row in db.query(models.Kindergarten.governorate).filter(
-                    models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-                ).distinct().all()
-                if row and row[0]
-            }
-        )
+        # Governorate filter options. The raw stored values can contain
+        # whitespace, duplicates and stray non-governorate/test tokens
+        # (e.g. "X", "cols"). Keep only recognised Jordanian governorates,
+        # de-duplicate values that normalise to the same governorate, and order
+        # them by the canonical governorate sequence. The original stored value
+        # is preserved as the option so the exact-match filter still works.
+        gov_raw = {
+            str(row[0]).strip()
+            for row in db.query(models.Kindergarten.governorate).filter(
+                models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+            ).distinct().all()
+            if row and row[0] and str(row[0]).strip()
+        }
+        gov_by_canonical: Dict[str, str] = {}
+        for gov_value in gov_raw:
+            try:
+                canonical = validators.validate_jordan_governorate(gov_value)
+            except validators.ValidationError:
+                continue  # drop junk / non-governorate values
+            # Prefer the canonical spelling if it appears verbatim in the data.
+            if gov_by_canonical.get(canonical) is None or gov_value == canonical:
+                gov_by_canonical[canonical] = gov_value
+        _gov_order = settings.JORDAN_GOVERNORATES
+        governorates = [
+            original
+            for _canonical, original in sorted(
+                gov_by_canonical.items(),
+                key=lambda item: (
+                    _gov_order.index(item[0]) if item[0] in _gov_order else len(_gov_order)
+                ),
+            )
+        ]
         cities = sorted(
             {
                 str(row[0]) for row in db.query(models.Kindergarten.district).filter(

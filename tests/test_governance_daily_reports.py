@@ -188,22 +188,24 @@ class TestGovernanceFunnel:
 
 class TestTimelinessMetrics:
     def test_timeliness_with_data(self, test_db, sample_child, sample_kindergarten, sample_class, supervisor_user):
-        """Timeliness computes median/p90 from created_at to submitted_at."""
+        """Timeliness computes median/p90 from 14:00 anchor to submitted_at."""
         today = date.today()
         _make_attendance(test_db, sample_child, sample_class, today)
 
-        created = datetime.now(timezone.utc) - timedelta(hours=4)
-        submitted = created + timedelta(hours=2)
+        created = datetime.combine(today, datetime.min.time()).replace(hour=14, minute=0, tzinfo=timezone.utc)
+        submitted = datetime.combine(today, datetime.min.time()).replace(hour=16, minute=30, tzinfo=timezone.utc)
+        
         _make_report(test_db, sample_child, sample_kindergarten, today,
                      models.DailyReportStatus.SUBMITTED, supervisor_user.id,
-                     created_at=created, submitted_at=submitted)
+                     created_at=created,
+                     submitted_at=submitted)
         test_db.commit()
 
         result = compute_timeliness_metrics(test_db, today - timedelta(days=1), today)
         assert sample_kindergarten.id in result["per_kindergarten"]
         kg_data = result["per_kindergarten"][sample_kindergarten.id]
         assert kg_data["sample_size"] == 1
-        assert kg_data["median_hours"] >= 1.5  # ~2 hours
+        assert kg_data["median_hours"] >= 2.0  # ~2.5 hours
 
 
 class TestQualityMetrics:

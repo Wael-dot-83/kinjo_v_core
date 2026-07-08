@@ -36,7 +36,7 @@ def test_delete_button_branches_by_role():
     (api.deactivateClass) sitting in kinjo-api.js the whole time."""
     html = TEMPLATE.read_text(encoding="utf-8")
     start = html.index("async function deleteClass")
-    end = html.index("\n    function escHtml", start)
+    end = html.index("</script>", start)
     block = html[start:end]
     assert "if (isAdmin) {" in block
     assert "await api.delete(`/api/classes/${id}`);" in block

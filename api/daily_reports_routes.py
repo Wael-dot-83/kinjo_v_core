@@ -173,7 +173,7 @@ def submit_daily_report(
         raise HTTPException(status_code=400, detail="Only draft reports can be submitted")
     
     report.status = models.DailyReportStatus.SUBMITTED
-    report.submitted_at = datetime.now(_JORDAN_TZ)
+    report.submitted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     db.refresh(report)
     
@@ -208,7 +208,7 @@ def approve_daily_report(
     
     report.status = models.DailyReportStatus.APPROVED
     report.approved_by = current_user.id
-    report.approved_at = datetime.now(_JORDAN_TZ)
+    report.approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     db.refresh(report)
     
@@ -284,7 +284,7 @@ def get_daily_report_by_id(
     if not report:
         raise HTTPException(status_code=404, detail="Daily report not found")
 
-    # Parents can only see approved reports for their own children
+    # Parents can only see approved or sent reports for their own children
     if current_user.role == models.UserRole.PARENT:
         child = db.query(models.Child).filter(models.Child.id == report.child_id).first()
         parent_profile = db.query(models.ParentProfile).filter(
@@ -292,7 +292,7 @@ def get_daily_report_by_id(
         ).first()
         if not parent_profile or not child or child.parent_id != parent_profile.id:
             raise HTTPException(status_code=403, detail="Forbidden")
-        if report.status != models.DailyReportStatus.APPROVED:
+        if report.status not in (models.DailyReportStatus.APPROVED, models.DailyReportStatus.SENT_TO_PARENT):
             raise HTTPException(status_code=403, detail="Report not available")
 
     return {
