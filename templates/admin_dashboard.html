@@ -1,233 +1,43 @@
-{% extends "admin_base.html" %}
+{% extends "admin_dashboard_orig.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}KinJo Admin — Dashboard{% else %}إدارة كينجو — لوحة التحكم{% endif %}{% endblock %}
+{% block extra_head %}
+{{ super() }}
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.0" />
+{% endblock %}
 
 {% block content %}
-<div class="admin-main-content">
-  <!-- Page Header -->
-  <div class="admin-page-header">
-    <div class="admin-page-header-content">
-      <h1 class="admin-page-title" style="font-size: 20px;">
-        {% if ui_lang == 'en' %}Operational Indicators{% else %}المؤشرات التشغيلية{% endif %}
-      </h1>
-      <p class="admin-page-subtitle">
-        {% if ui_lang == 'en' %}Monitor system status, operations, and current activities{% else %}متابعة حالة النظام والعمليات والأنشطة الحالية{% endif %}
-      </p>
-    </div>
-    <div class="admin-page-header-actions" style="display: flex; align-items: center; gap: 16px;">
-      <span id="last-updated-time" style="font-size: 14px; color: #6B7280; font-weight: 500;">
-        {% if ui_lang == 'en' %}Last updated: --:--{% else %}آخر تحديث: --:--{% endif %}
-      </span>
-      <div class="form-check form-check-inline" style="margin:0">
-        <input class="form-check-input" type="checkbox" id="autoRefreshCheck">
-        <label class="form-check-label small" for="autoRefreshCheck" style="cursor:pointer">
-          <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
-          {% if ui_lang == 'en' %}Auto-refresh{% else %}تحديث تلقائي{% endif %}
-        </label>
+{{ super() }}
+<section class="agency-reports-dashboard-section" aria-labelledby="agency-reports-dashboard-title">
+  <div class="admin-card agency-reports-dashboard-card">
+    <div class="admin-card-header agency-reports-card-header">
+      <div class="agency-logo-lockup">
+        <img src="/static/img/official-agencies-logo.svg" width="56" height="56" alt="" aria-hidden="true" class="agency-logo" />
+        <div>
+          <h2 id="agency-reports-dashboard-title" class="admin-card-title">
+            {% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}
+          </h2>
+          <p class="agency-reports-subtitle">
+            {% if ui_lang == 'en' %}Dynamic aggregated reports for official stakeholders, generated from real KinJo data with privacy and data-quality controls.{% else %}تقارير ديناميكية وتجميعية للجهات الرسمية، مبنية على بيانات KinJo الفعلية مع ضوابط الخصوصية وجودة البيانات.{% endif %}
+          </p>
+        </div>
       </div>
-      <button class="admin-btn-enterprise-refresh" id="refresh-dashboard">
-        <i class="bi bi-arrow-clockwise refresh-icon" aria-hidden="true"></i>
-        <span class="refresh-text">{% if ui_lang == 'en' %}Update Data{% else %}تحديث البيانات{% endif %}</span>
-      </button>
+    </div>
+    <div class="admin-card-body">
+      <div class="agency-reports-dashboard-grid" id="agency-reports-summary" role="status" aria-live="polite">
+        <span class="agency-loading-text">{% if ui_lang == 'en' %}Loading official agency reports summary...{% else %}جارٍ تحميل ملخص تقارير الجهات الرسمية...{% endif %}</span>
+      </div>
+      <div class="agency-reports-dashboard-actions">
+        <a href="/admin/agency-reports" class="admin-btn admin-btn-primary" aria-label="{% if ui_lang == 'en' %}Open Official Agency Reports Center{% else %}فتح مركز تقارير الجهات الرسمية{% endif %}">
+          <i class="bi bi-bank" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Open Reports Center{% else %}عرض مركز تقارير الجهات الرسمية{% endif %}
+        </a>
+      </div>
     </div>
   </div>
-
-  <!-- Dashboard Root — initial state is "loading"; JS drives transitions -->
-  <div class="admin-dashboard fade-in" id="admin-dashboard" data-ui-state="loading">
-
-    <!-- Loading State — skeleton loader -->
-    <div class="admin-dashboard-skeleton fade-in delay-100" id="dashboard-loading" aria-busy="true" role="status">
-      <span class="visually-hidden">{% if ui_lang == 'en' %}Loading dashboard data…{% else %}جارٍ تحميل البيانات…{% endif %}</span>
-
-      <!-- Skeleton KPI cards (7 placeholders — matches actual KPI count) -->
-      <div class="admin-skeleton-kpi-row">
-        {% for _ in range(7) %}
-        <div class="admin-skeleton-kpi-card" aria-hidden="true">
-          <div class="admin-skeleton-icon"></div>
-          <div class="admin-skeleton-content">
-            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
-            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-
-      <!-- Skeleton Charts -->
-      <div class="admin-skeleton-chart-row">
-        <div class="admin-skeleton-chart-card" aria-hidden="true"></div>
-        <div class="admin-skeleton-chart-card" aria-hidden="true"></div>
-      </div>
-    </div>
-
-    <!-- Error State -->
-    <div class="admin-dashboard-error fade-in" id="dashboard-error">
-      <div class="admin-error-state">
-        <i class="bi bi-exclamation-triangle"></i>
-        <h3>{% if ui_lang == 'en' %}Error Loading Dashboard{% else %}خطأ في تحميل لوحة التحكم{% endif %}</h3>
-        <p id="error-message">
-          {% if ui_lang == 'en' %}Unable to load dashboard data. Please try again.{% else %}تعذّر تحميل البيانات. يرجى المحاولة مرة أخرى.{% endif %}
-        </p>
-        <button class="admin-btn admin-btn-primary" id="retry-dashboard">
-          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
-          {% if ui_lang == 'en' %}Try Again{% else %}إعادة المحاولة{% endif %}
-        </button>
-      </div>
-    </div>
-
-    <!-- Dashboard Content -->
-    <div class="admin-dashboard-grid fade-in delay-100" id="dashboard-content">
-
-      <!-- KPI Cards — <ul>/<li> so screen readers enumerate the collection
-           (USWDS card component: "Use ul for a card group and an li for
-           each card"); each <li class="admin-kpi-card"> is created directly
-           by admin_dashboard.js's createKPICard(). -->
-      <ul class="admin-dashboard-cards" id="kpi-cards" role="list"
-          aria-label="{% if ui_lang == 'en' %}Key performance indicators{% else %}المؤشرات الرئيسية{% endif %}">
-        <!-- Populated by JavaScript -->
-      </ul>
-
-      <!-- System Alerts -->
-      <div class="admin-dashboard-alerts">
-        <div class="admin-card">
-          <div class="admin-card-header">
-            <h3 class="admin-card-title">
-              {% if ui_lang == 'en' %}System Alerts{% else %}تنبيهات النظام{% endif %}
-            </h3>
-          </div>
-          <div class="admin-card-body">
-            <div class="admin-alerts-list" id="alerts-list" role="list"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Charts -->
-      <div class="admin-dashboard-charts">
-        <div class="admin-dashboard-chart-container">
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}User Activity{% else %}نشاط المستخدمين{% endif %}
-              </h3>
-            </div>
-            <div class="admin-card-body">
-              <canvas id="user-activity-chart" width="400" height="200"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <div class="admin-dashboard-chart-container">
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}Enrollment Status{% else %}حالة التسجيل{% endif %}
-              </h3>
-            </div>
-            <div class="admin-card-body">
-              <canvas id="enrollment-status-chart" width="400" height="200"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Activity & Quick Actions -->
-      <div class="admin-dashboard-bottom">
-        <div class="admin-dashboard-activity">
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title" style="font-size: 20px;">
-                {% if ui_lang == 'en' %}Recent Activities{% else %}النشاطات الحديثة{% endif %}
-              </h3>
-            </div>
-            <div class="admin-card-body">
-              <div id="activity-filter-bar"></div>
-              <div class="admin-activity-feed" id="activity-feed" role="list"></div>
-              <div class="admin-activity-pagination" id="activity-pagination"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="admin-dashboard-quick-actions">
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}Quick Actions{% else %}الإجراءات السريعة{% endif %}
-              </h3>
-            </div>
-            <div class="admin-card-body">
-              <!-- <ul>/<li> so screen readers enumerate the 4 actions (USWDS
-                   card-group rule); each <li> is display:contents so the
-                   grid layout still applies directly to the <a> as before. -->
-              <ul class="admin-quick-actions" role="list">
-
-                <li><a href="/admin/users" class="admin-quick-action-card">
-                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--primary">
-                    <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
-                  </span>
-                  <div class="admin-quick-action-card-content">
-                    <span class="admin-quick-action-card-label">
-                      {% if ui_lang == 'en' %}Manage Users{% else %}إدارة المستخدمين{% endif %}
-                    </span>
-                    <span class="admin-quick-action-card-desc">
-                      {% if ui_lang == 'en' %}Add or modify accounts{% else %}إضافة أو تعديل الحسابات{% endif %}
-                    </span>
-                  </div>
-                </a></li>
-
-                <li><a href="/admin/messages/compose" class="admin-quick-action-card">
-                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--success">
-                    <i class="bi bi-envelope-fill" aria-hidden="true"></i>
-                  </span>
-                  <div class="admin-quick-action-card-content">
-                    <span class="admin-quick-action-card-label">
-                      {% if ui_lang == 'en' %}Send Message{% else %}إرسال رسالة{% endif %}
-                    </span>
-                    <span class="admin-quick-action-card-desc">
-                      {% if ui_lang == 'en' %}Broadcast or direct messages{% else %}رسائل جماعية أو مباشرة{% endif %}
-                    </span>
-                  </div>
-                </a></li>
-
-                <li><a href="/admin/analytics" class="admin-quick-action-card">
-                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--info">
-                    <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
-                  </span>
-                  <div class="admin-quick-action-card-content">
-                    <span class="admin-quick-action-card-label">
-                      {% if ui_lang == 'en' %}View Analytics{% else %}عرض التحليلات{% endif %}
-                    </span>
-                    <span class="admin-quick-action-card-desc">
-                      {% if ui_lang == 'en' %}Detailed system reports{% else %}تقارير نظام مفصلة{% endif %}
-                    </span>
-                  </div>
-                </a></li>
-
-                <li><a href="/admin/imported-kindergartens" class="admin-quick-action-card">
-                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--warning">
-                    <i class="bi bi-database-fill" aria-hidden="true"></i>
-                  </span>
-                  <div class="admin-quick-action-card-content">
-                    <span class="admin-quick-action-card-label">
-                      {% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}
-                    </span>
-                    <span class="admin-quick-action-card-desc">
-                      {% if ui_lang == 'en' %}Review imported records{% else %}مراجعة السجلات المستوردة{% endif %}
-                    </span>
-                  </div>
-                </a></li>
-
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div><!-- /.admin-dashboard-bottom -->
-    </div><!-- /#dashboard-content -->
-  </div><!-- /#admin-dashboard -->
-</div>
+</section>
 {% endblock %}
 
 {% block extra_scripts %}
-<script>window.KINJO_LANG = "{{ ui_lang }}";</script>
-<script src="/static/js/chart_utils.js?v=2.1"></script>
-<script src="/static/js/admin_dashboard.js?v=3.0"></script>
-<script src="/static/js/admin_activity_filters.js?v=1.0"></script>
+{{ super() }}
+<script src="/static/js/admin_agency_reports_dashboard_summary.js?v=1.0"></script>
 {% endblock %}

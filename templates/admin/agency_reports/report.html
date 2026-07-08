@@ -1,0 +1,50 @@
+{% extends "admin_base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}Official Report{% else %}تقرير رسمي{% endif %}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.0" />
+{% endblock %}
+
+{% block content %}
+<section class="agency-reports-page" data-agency-reports-page="report" data-agency-code="{{ agency_code }}" data-report-code="{{ report_code }}" aria-labelledby="agency-report-title">
+  <nav class="agency-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+    <a href="/admin/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a>
+    <span aria-hidden="true">/</span>
+    <a href="/admin/agency-reports">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</a>
+    <span aria-hidden="true">/</span>
+    <a href="/admin/agency-reports/{{ agency_code }}">{{ agency_code }}</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{{ report_code }}</span>
+  </nav>
+  <header class="agency-page-header">
+    <h1 id="agency-report-title">{% if ui_lang == 'en' %}Official Report{% else %}تقرير رسمي{% endif %}</h1>
+    <p id="agency-report-description"></p>
+  </header>
+  <form id="agency-report-filters" class="agency-filter-panel" aria-label="{% if ui_lang == 'en' %}Report filters{% else %}فلاتر التقرير{% endif %}">
+    <div>
+      <label for="filter-governorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+      <input id="filter-governorate" name="governorate" type="text" />
+    </div>
+    <div>
+      <label for="filter-city">{% if ui_lang == 'en' %}City/District{% else %}المدينة / اللواء{% endif %}</label>
+      <input id="filter-city" name="city" type="text" />
+    </div>
+    <div>
+      <label for="filter-aggregation-level">{% if ui_lang == 'en' %}Aggregation level{% else %}مستوى التجميع{% endif %}</label>
+      <select id="filter-aggregation-level" name="aggregation_level">
+        <option value="governorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</option>
+        <option value="city">{% if ui_lang == 'en' %}City/District{% else %}المدينة / اللواء{% endif %}</option>
+      </select>
+    </div>
+    <button type="submit" class="admin-btn admin-btn-primary">{% if ui_lang == 'en' %}Apply filters{% else %}تطبيق الفلاتر{% endif %}</button>
+  </form>
+  <div id="agency-report-root" role="status" aria-live="polite">
+    {% if ui_lang == 'en' %}Loading report...{% else %}جارٍ تحميل التقرير...{% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/admin_agency_reports.js?v=1.0"></script>
+{% endblock %}
