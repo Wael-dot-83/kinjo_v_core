@@ -1447,10 +1447,10 @@ class KPIService:
             models.Kindergarten.id == kindergarten_id
         ).first()
         minutes_per_day = 480
-        if kg and kg.operating_hours_start and kg.operating_hours_end:
+        if kg and kg.working_hours_start and kg.working_hours_end:
             try:
-                start_time = datetime.strptime(kg.operating_hours_start, "%H:%M").time()
-                end_time = datetime.strptime(kg.operating_hours_end, "%H:%M").time()
+                start_time = datetime.strptime(kg.working_hours_start, "%H:%M").time()
+                end_time = datetime.strptime(kg.working_hours_end, "%H:%M").time()
                 start_minutes = start_time.hour * 60 + start_time.minute
                 end_minutes = end_time.hour * 60 + end_time.minute
                 parsed_minutes = end_minutes - start_minutes
@@ -1629,14 +1629,14 @@ class KPIService:
             models.Kindergarten.id == kindergarten_id
         ).first()
 
-        if not kg or not kg.operating_hours_start or not kg.operating_hours_end:
+        if not kg or not kg.working_hours_start or not kg.working_hours_end:
             return  # Cannot calculate without operating hours
 
         # Parse time strings to datetime.time objects
         from datetime import datetime, time
         try:
-            start_time = datetime.strptime(kg.operating_hours_start, '%H:%M').time()
-            end_time = datetime.strptime(kg.operating_hours_end, '%H:%M').time()
+            start_time = datetime.strptime(kg.working_hours_start, '%H:%M').time()
+            end_time = datetime.strptime(kg.working_hours_end, '%H:%M').time()
         except ValueError:
             return  # Invalid time format
 

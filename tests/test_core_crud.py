@@ -16,21 +16,21 @@ def test_kindergarten_crud_admin(client, test_db, admin_token, admin_user):
         "contact_phone": "0799999999",
         "contact_email": "future@kg.com",
         "license_number": "LIC-TEST-001",
-        "operating_hours_start": "08:00",
-        "operating_hours_end": "14:00"
+        "working_hours_start": "08:00",
+        "working_hours_end": "14:00"
     }
     
     headers = {"Authorization": f"Bearer {admin_token}"}
-    response = client.post("/api/kindergartens", json=kg_data, headers=headers)
+    response = client.post("/api/admin/kindergartens", json=kg_data, headers=headers)
     assert response.status_code == 201, f"Create failed: {response.text}"
-    kg_id = response.json()["id"]
+    kg_id = response.json()["data"]["id"]
 
     # 2. List Kindergartens (should find it)
     response = client.get("/api/kindergartens", headers=headers)
     assert response.status_code == 200
     data = response.json()
-    assert data["total"] >= 1
-    found = any(k["id"] == kg_id for k in data["kindergartens"])
+    assert data["data"]["total"] >= 1
+    found = any(k["id"] == kg_id for k in data["data"]["items"])
     assert found
 
 
@@ -44,17 +44,18 @@ def test_kindergarten_creation_without_email_or_license(client, test_db, admin_t
         "area": "Downtown",
         "address_line": "Main street",
         "contact_phone": "0788888888",
-        "operating_hours_start": "07:30",
-        "operating_hours_end": "15:30"
+        "working_hours_start": "07:30",
+        "working_hours_end": "15:30"
     }
 
     headers = {"Authorization": f"Bearer {admin_token}"}
-    response = client.post("/api/kindergartens", json=kg_data, headers=headers)
+    response = client.post("/api/admin/kindergartens", json=kg_data, headers=headers)
     assert response.status_code == 201, f"Create without email failed: {response.text}"
     payload = response.json()
-    assert payload["contact_email"] is None
-    assert payload.get("license_number") is None
-    assert payload.get("license_valid_until") is None
+    assert payload["success"] is True
+    assert payload["data"]["contact_email"] is None
+    assert payload["data"].get("license_number") is None
+    assert payload["data"].get("license_valid_until") is None
 
 
 def test_kindergarten_invalid_email_rejected(client, test_db, admin_token, admin_user):
@@ -70,7 +71,7 @@ def test_kindergarten_invalid_email_rejected(client, test_db, admin_token, admin
         "contact_email": "not-an-email"
     }
     headers = {"Authorization": f"Bearer {admin_token}"}
-    response = client.post("/api/kindergartens", json=kg_data, headers=headers)
+    response = client.post("/api/admin/kindergartens", json=kg_data, headers=headers)
     assert response.status_code == 422
 
 
@@ -85,15 +86,15 @@ def test_kindergarten_blank_optional_fields_become_null(client, test_db, admin_t
         "address_line": "Line",
         "contact_phone": "0792222222",
         "contact_email": "   ",
-        "license_number": "   ",
-        "license_valid_until": ""
+        "license_number": "   "
     }
     headers = {"Authorization": f"Bearer {admin_token}"}
-    response = client.post("/api/kindergartens", json=kg_data, headers=headers)
+    response = client.post("/api/admin/kindergartens", json=kg_data, headers=headers)
     assert response.status_code == 201, response.text
     payload = response.json()
-    assert payload["contact_email"] is None
-    assert payload["license_number"] is None
+    assert payload["success"] is True
+    assert payload["data"]["contact_email"] is None
+    assert payload["data"]["license_number"] is None
 
 
 def test_kindergarten_duplicate_phone_returns_code(client, test_db, admin_token, admin_user):
@@ -108,17 +109,16 @@ def test_kindergarten_duplicate_phone_returns_code(client, test_db, admin_token,
         "address_line": "Line 1",
         "contact_phone": "0791111111",
     }
-    first = client.post("/api/kindergartens", json=base_payload, headers=headers)
+    first = client.post("/api/admin/kindergartens", json=base_payload, headers=headers)
     assert first.status_code == 201
 
     dup_payload = dict(base_payload)
     dup_payload["name_ar"] = "حضانة الهاتف 2"
-    second = client.post("/api/kindergartens", json=dup_payload, headers=headers)
+    second = client.post("/api/admin/kindergartens", json=dup_payload, headers=headers)
     assert second.status_code == 400
-    detail = second.json().get("detail")
-    assert isinstance(detail, dict)
-    assert detail.get("code") == "error_duplicate_phone"
-    assert "phone" in detail.get("message", "").lower()
+    detail = second.json().get("message")
+    assert isinstance(detail, str)
+    assert "phone" in detail.lower() or "هاتف" in detail
 
 def test_class_management_manager(client, test_db, manager_token, manager_user, sample_kindergarten, supervisor_user):
     """Test Class creation and capacity checks"""

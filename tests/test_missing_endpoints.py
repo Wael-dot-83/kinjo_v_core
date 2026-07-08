@@ -579,17 +579,17 @@ class TestKindergartenEndpoints:
             "contact_email": "kg@test.com"
         }
 
-        response = client.post("/api/kindergartens", json=payload)
+        response = client.post("/api/admin/kindergartens", json=payload)
         assert response.status_code == 201
         data = response.json()
-        assert data["name_ar"] == "New Kindergarten"
-        assert data["governorate"] == "عمان"
+        assert data["success"] is True
+        assert data["data"]["name_ar"] == "New Kindergarten"
+        assert data["data"]["governorate"] == "عمان"
 
         app.dependency_overrides.clear()
 
     def test_list_kindergartens_admin(self, client, admin_user, test_db):
         """Test listing kindergartens as admin"""
-        # Create test kindergartens
         kg1 = models.Kindergarten(
             name_ar="KG 1",
             name_en="KG 1",
@@ -618,8 +618,8 @@ class TestKindergartenEndpoints:
         response = client.get("/api/kindergartens")
         assert response.status_code == 200
         data = response.json()
-        assert "kindergartens" in data
-        assert len(data["kindergartens"]) >= 2
+        assert data["success"] is True
+        assert len(data["data"]["items"]) >= 2
 
         app.dependency_overrides.clear()
 
@@ -645,8 +645,9 @@ class TestKindergartenEndpoints:
         response = client.get(f"/api/kindergartens/{kg.id}")
         assert response.status_code == 200
         data = response.json()
-        assert data["id"] == kg.id
-        assert data["name_ar"] == "Get Test KG"
+        assert data["success"] is True
+        assert data["data"]["id"] == kg.id
+        assert data["data"]["name_ar"] == "Get Test KG"
 
         app.dependency_overrides.clear()
 
@@ -679,10 +680,11 @@ class TestKindergartenEndpoints:
             "contact_phone": "+962791234567"
         }
 
-        response = client.put(f"/api/kindergartens/{kg.id}", json=payload)
+        response = client.put(f"/api/admin/kindergartens/{kg.id}", json=payload)
         assert response.status_code == 200
         data = response.json()
-        assert data["name_ar"] == "Updated KG"
+        assert data["success"] is True
+        assert data["data"]["name_ar"] == "Updated KG"
 
         app.dependency_overrides.clear()
 
@@ -705,19 +707,19 @@ class TestKindergartenEndpoints:
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
 
-        response = client.delete(f"/api/kindergartens/{kg.id}")
+        response = client.delete(f"/api/admin/kindergartens/{kg.id}")
         assert response.status_code == 200
         data = response.json()
+        assert data["success"] is True
         assert "message" in data
 
         app.dependency_overrides.clear()
 
-    def test_archive_kindergarten_admin(self, client, admin_user, test_db):
-        """Test archiving kindergarten as admin"""
-        # Create test kindergarten
+    def test_freeze_kindergarten_admin(self, client, admin_user, test_db):
+        """Test freezing kindergarten as admin"""
         kg = models.Kindergarten(
-            name_ar="Archive Test KG",
-            name_en="Archive Test KG",
+            name_ar="Freeze Test KG",
+            name_en="Freeze Test KG",
             governorate="Amman",
             district="Amman",
             area="Test Area",
@@ -731,9 +733,10 @@ class TestKindergartenEndpoints:
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
 
-        response = client.post(f"/api/kindergartens/{kg.id}/archive")
+        response = client.patch(f"/api/admin/kindergartens/{kg.id}/freeze", json={"reason": "Test freeze"})
         assert response.status_code == 200
         data = response.json()
+        assert data["success"] is True
         assert "message" in data
 
         app.dependency_overrides.clear()
@@ -1970,7 +1973,7 @@ class TestMissingEndpointsCoverage2:
     def test_create_kindergarten_blank_license_valid(self, client, admin_user):
         """Creating kindergarten with blank license_number is valid"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.post("/api/kindergartens", json={
+        response = client.post("/api/admin/kindergartens", json={
             "name_ar": "حضانة الاختبار الفارغ",
             "name_en": "Blank License KG",
             "governorate": "Amman",
@@ -1987,7 +1990,7 @@ class TestMissingEndpointsCoverage2:
     def test_create_kindergarten_blank_contact_email_valid(self, client, admin_user):
         """Creating kindergarten with blank contact_email treats it as None"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.post("/api/kindergartens", json={
+        response = client.post("/api/admin/kindergartens", json={
             "name_ar": "حضانة البريد الفارغ",
             "name_en": "Blank Email KG",
             "governorate": "Amman",
@@ -2172,7 +2175,7 @@ class TestMissingEndpointsCoverage2:
         test_db.commit()
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.post("/api/kindergartens", json={
+        response = client.post("/api/admin/kindergartens", json={
             "name_ar": "حضانة أخرى",
             "name_en": "Another KG",
             "governorate": "Amman",

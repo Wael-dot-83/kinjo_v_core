@@ -321,12 +321,16 @@ class Kindergarten(Base):
     monthly_fees = Column(Float, nullable=True)
     license_status = Column(String(50), nullable=True)
     administrative_notes = Column(Text, nullable=True)
-    operating_hours_start = Column(String(5), nullable=True)
-    operating_hours_end = Column(String(5), nullable=True)
+    working_hours_start = Column(String(5), nullable=True)
+    working_hours_end = Column(String(5), nullable=True)
     license_number = Column(String(100), nullable=True)
     license_valid_until = Column(Date, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    @property
+    def name(self) -> str:
+        return self.name_ar or self.name_en or ""
 
     __table_args__ = (
         UniqueConstraint("license_number", name="uq_kindergartens_license_number"),

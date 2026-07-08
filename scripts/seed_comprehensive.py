@@ -105,8 +105,8 @@ def seed(db: Session):
         kg = models.Kindergarten(
             **kd,
             status=models.KindergartenStatus.ACTIVE,
-            operating_hours_start="07:00",
-            operating_hours_end="15:00",
+            working_hours_start="07:00",
+            working_hours_end="15:00",
             license_valid_until=future(365),
         )
         db.add(kg)

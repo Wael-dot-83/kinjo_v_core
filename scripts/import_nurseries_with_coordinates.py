@@ -175,7 +175,7 @@ def prepare_row(row: pd.Series, row_num: int) -> dict[str, Any]:
         errors.append(lng_err)
     
     # Time fields
-    for time_field in ("operating_hours_start", "operating_hours_end"):
+    for time_field in ("working_hours_start", "working_hours_end"):
         value = clean_display_text(row.get(time_field))
         if value:
             payload[time_field] = value

@@ -42,8 +42,8 @@ def seed_tasks():
             contact_phone="+962791111111",
             contact_email="alamal@example.com",
             status=models.KindergartenStatus.ACTIVE,
-            operating_hours_start="07:00",
-            operating_hours_end="16:00"
+            working_hours_start="07:00",
+            working_hours_end="16:00"
         )
         db.add(kg1)
 
@@ -57,8 +57,8 @@ def seed_tasks():
             contact_phone="+962792222222",
             contact_email="alnoor@example.com",
             status=models.KindergartenStatus.ACTIVE,
-            operating_hours_start="07:30",
-            operating_hours_end="15:30"
+            working_hours_start="07:30",
+            working_hours_end="15:30"
         )
         db.add(kg2)
 

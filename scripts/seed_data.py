@@ -46,8 +46,8 @@ def seed_database():
             contact_phone="+962791234567",
             contact_email="info@alamal.jo",
             status=models.KindergartenStatus.ACTIVE,
-            operating_hours_start="07:00",
-            operating_hours_end="15:00",
+            working_hours_start="07:00",
+            working_hours_end="15:00",
             license_number="KG-AMM-2024-001",
             license_valid_until=date.today() + timedelta(days=365)
         )
@@ -62,8 +62,8 @@ def seed_database():
             contact_phone="+962791234568",
             contact_email="info@alnoor.jo",
             status=models.KindergartenStatus.ACTIVE,
-            operating_hours_start="07:30",
-            operating_hours_end="14:30",
+            working_hours_start="07:30",
+            working_hours_end="14:30",
             license_number="KG-AMM-2024-002",
             license_valid_until=date.today() + timedelta(days=365)
         )

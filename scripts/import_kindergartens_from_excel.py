@@ -159,10 +159,10 @@ COLUMN_ALIASES = {
     "تاريخ انتهاء الترخيص": "license_valid_until",
     "status": "status",
     "الحالة": "status",
-    "operating_hours_start": "operating_hours_start",
-    "وقت بدء الدوام": "operating_hours_start",
-    "operating_hours_end": "operating_hours_end",
-    "وقت انتهاء الدوام": "operating_hours_end",
+    "working_hours_start": "working_hours_start",
+    "وقت بدء الدوام": "working_hours_start",
+    "working_hours_end": "working_hours_end",
+    "وقت انتهاء الدوام": "working_hours_end",
     "latitude": "latitude",
     "lat": "latitude",
     "خط العرض": "latitude",
@@ -185,8 +185,8 @@ MODEL_FIELDS = {
     "contact_phone",
     "contact_email",
     "status",
-    "operating_hours_start",
-    "operating_hours_end",
+    "working_hours_start",
+    "working_hours_end",
     "license_number",
     "license_valid_until",
 }
@@ -517,7 +517,7 @@ def prepare_row(row: pd.Series, excel_row: int) -> tuple[PreparedRow | None, dic
         else:
             errors.append(f"invalid email: {email}")
 
-    for time_field in ("operating_hours_start", "operating_hours_end"):
+    for time_field in ("working_hours_start", "working_hours_end"):
         value = clean_display_text(row.get(time_field))
         if value:
             payload[time_field] = value
@@ -582,8 +582,8 @@ def candidate_from_kindergarten(kg: models.Kindergarten) -> Candidate:
         "contact_phone": kg.contact_phone,
         "contact_email": kg.contact_email,
         "status": kg.status,
-        "operating_hours_start": kg.operating_hours_start,
-        "operating_hours_end": kg.operating_hours_end,
+        "working_hours_start": kg.working_hours_start,
+        "working_hours_end": kg.working_hours_end,
         "license_number": kg.license_number,
         "license_valid_until": kg.license_valid_until,
     }
