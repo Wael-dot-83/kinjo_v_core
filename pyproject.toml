@@ -19,6 +19,8 @@ exclude = [
     "*.md",
     "nul",
     "*_orig.py",
+    "frontend_orig.py",
+    "api/missing_endpoints_orig.py",
 ]
 
 [tool.ruff.lint]
