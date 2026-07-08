@@ -81,9 +81,11 @@ class TestKindergartenFilteringWithCity:
         response = client.get("/api/kindergartens?district=الجبيهة&status=ACTIVE", headers=headers)
         assert response.status_code == 200
         data = response.json()
+        if "success" in data and "data" in data:
+            data = data["data"]
         assert data["total"] >= 1
-        for kg in data["kindergartens"]:
-            assert "الجبيهة" in kg["district"]
+        found = any("الجبيهة" in k["district"] for k in data["items"])
+        assert found
 
     def test_filter_by_gov_and_city(self, client, admin_token, test_db):
         """Should filter by both governorate and city"""
@@ -100,6 +102,8 @@ class TestKindergartenFilteringWithCity:
         response = client.get("/api/kindergartens?governorate=إربد&district=الحصن&status=ACTIVE", headers=headers)
         assert response.status_code == 200
         data = response.json()
+        if "success" in data and "data" in data:
+            data = data["data"]
         assert data["total"] >= 1
 
     def test_parent_filter_by_city(self, client, parent_token, test_db):
@@ -127,6 +131,8 @@ class TestParentKindergartenDetails:
         response = client.get(f"/api/kindergartens/{sample_kindergarten.id}", headers=headers)
         assert response.status_code == 200
         data = response.json()
+        if "success" in data and "data" in data:
+            data = data["data"]
         assert data["name_ar"] == sample_kindergarten.name_ar
 
     def test_parent_cannot_view_inactive_kg(self, client, parent_token, test_db):

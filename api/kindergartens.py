@@ -418,6 +418,8 @@ def list_kindergartens(
     request: Request,
     q: Optional[str] = Query(None, description="search by name"),
     governorate: Optional[str] = None,
+    district: Optional[str] = None,
+    city: Optional[str] = None,
     status: Optional[str] = None,
     min_children: Optional[int] = None,
     max_children: Optional[int] = None,
@@ -428,7 +430,7 @@ def list_kindergartens(
     include_deleted: bool = False,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=200),
-    current_user: models.User = Depends(get_current_user),
+    current_user: Optional[models.User] = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     query = db.query(models.Kindergarten)
@@ -445,11 +447,20 @@ def list_kindergartens(
         )
     if governorate:
         query = query.filter(models.Kindergarten.governorate == governorate)
-    if status:
-        try:
-            query = query.filter(models.Kindergarten.status == _normalize_status(status))
-        except ValueError:
-            return _envelope(False, None, "قيمة الحالة غير صالحة / Invalid status value", 400)
+    if district:
+        query = query.filter(models.Kindergarten.district == district)
+    if city:
+        query = query.filter(models.Kindergarten.district == city)
+
+    if current_user and current_user.role == models.UserRole.ADMIN:
+        if status:
+            try:
+                query = query.filter(models.Kindergarten.status == _normalize_status(status))
+            except ValueError:
+                return _envelope(False, None, "قيمة الحالة غير صالحة / Invalid status value", 400)
+    else:
+        # Non-admins only see ACTIVE
+        query = query.filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
 
     total = query.count()
     kgs = query.order_by(models.Kindergarten.id.desc()).offset(skip).limit(limit).all()
@@ -490,6 +501,16 @@ def get_kindergarten(
     kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
     if not kg or kg.status == models.KindergartenStatus.DELETED:
         return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
+        
+    if current_user:
+        if current_user.role == models.UserRole.SUPERVISOR:
+            raise HTTPException(status_code=403, detail="Supervisors cannot view kindergarten details from parent endpoint")
+        if current_user.role != models.UserRole.ADMIN:
+            if kg.status != models.KindergartenStatus.ACTIVE:
+                return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
+    else:
+        if kg.status != models.KindergartenStatus.ACTIVE:
+            return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
     child_count_sq, attendance_sq = _stats_subqueries(db)
     cc = db.query(child_count_sq.c[1]).filter(child_count_sq.c.kindergarten_id == kg.id).scalar() or kg.current_child_count or 0
     att = db.query(attendance_sq.c[1], attendance_sq.c[2]).filter(attendance_sq.c.kindergarten_id == kg.id).first()
