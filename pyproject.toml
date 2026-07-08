@@ -18,9 +18,6 @@ exclude = [
     "node_modules",
     "*.md",
     "nul",
-    "*_orig.py",
-    "frontend_orig.py",
-    "api/missing_endpoints_orig.py",
 ]
 
 [tool.ruff.lint]
@@ -33,13 +30,6 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E722"]   # allow bare except in tests
 "manager_scope.py" = ["F821"]  # db is in closure scope, ruff can't see it
-"**/*_orig.py" = ["E722", "F821"]  # preserved compatibility copies; legacy checked at original paths
-"frontend_orig.py" = ["E722", "F821"]
-"api/missing_endpoints_orig.py" = ["E722", "F821"]
-"agency_reports_*.py" = ["E722", "F821"]
-"api/agency_reports_api.py" = ["E722", "F821"]
-"frontend_agency_reports.py" = ["E722", "F821"]
-"tests/test_admin_agency_reports_*.py" = ["E722", "F821"]
 
 [tool.ruff.lint.isort]
 known-first-party = [
@@ -53,7 +43,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
     "slow: marks tests as slow",
-    "integration: marks tests",
+    "integration: marks integration tests",
     "security: marks security tests",
     "p0: priority 0 – must pass on every commit",
     "p1: priority 1 – should pass before merge",
