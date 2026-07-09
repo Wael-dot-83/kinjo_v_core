@@ -115,10 +115,13 @@ def test_kindergarten_duplicate_phone_returns_code(client, test_db, admin_token,
     dup_payload["name_ar"] = "حضانة الهاتف 2"
     second = client.post("/api/admin/kindergartens", json=dup_payload, headers=headers)
     assert second.status_code == 400
+    # The envelope error carries a human-readable message (no structured
+    # error code), but it still identifies the duplicated field — assert the
+    # message is specifically about the phone number rather than any 400.
+    # API returns: "رقم الهاتف مسجل مسبقاً / Phone number already registered"
     detail = second.json().get("message")
     assert isinstance(detail, str)
-    # removed code assert
-    # removed phone assert
+    assert "phone" in detail.lower()
 
 def test_class_management_manager(client, test_db, manager_token, manager_user, sample_kindergarten, supervisor_user):
     """Test Class creation and capacity checks"""
