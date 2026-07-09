@@ -1,0 +1,39 @@
+{% extends "admin_base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.0" />
+{% endblock %}
+
+{% block content %}
+<section class="agency-reports-page" data-agency-reports-page="index" aria-labelledby="agency-reports-title">
+  <nav class="agency-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+    <a href="/admin/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</span>
+  </nav>
+
+  <header class="agency-page-header">
+    <div class="agency-logo-lockup">
+      <img src="/static/img/official-agencies-logo.svg" width="72" height="72" alt="" aria-hidden="true" class="agency-logo" />
+      <div>
+        <h1 id="agency-reports-title">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</h1>
+        <p>{% if ui_lang == 'en' %}Dynamic, aggregated, privacy-safe reports for official stakeholders.{% else %}مركز تقارير ديناميكي وتجميعي مخصص للجهات الرسمية مع حماية الخصوصية وجودة البيانات.{% endif %}</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="agency-alert" role="note">
+    {% if ui_lang == 'en' %}Reports are aggregated only. Sensitive personal fields are excluded from the API and exports.{% else %}هذه التقارير تجميعية فقط. يتم استبعاد الحقول الشخصية والحساسة من واجهات API والتصدير.{% endif %}
+  </div>
+
+  <div id="agency-reports-root" role="status" aria-live="polite">
+    {% if ui_lang == 'en' %}Loading agencies...{% else %}جارٍ تحميل الجهات الرسمية...{% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/admin_agency_reports.js?v=1.0"></script>
+{% endblock %}

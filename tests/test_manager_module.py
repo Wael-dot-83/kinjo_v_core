@@ -297,8 +297,8 @@ class TestManagerRBACEnforcement:
 
         response = client.get("/api/kindergartens")
         assert response.status_code == 200
-        data = response.json()
-        assert "kindergartens" in data
+        payload = response.json()["data"]  # {success, data, message} envelope
+        assert "items" in payload
 
         app.dependency_overrides.clear()
 
@@ -340,8 +340,7 @@ class TestManagerRBACEnforcement:
 
         response = client.get(f"/api/kindergartens/{kg_a.id}")
         assert response.status_code == 200
-        data = response.json()
-        assert data["id"] == kg_a.id
+        assert response.json()["data"]["id"] == kg_a.id
 
         app.dependency_overrides.clear()
 

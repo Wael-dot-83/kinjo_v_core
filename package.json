@@ -1,0 +1,31 @@
+{
+  "name": "final-version",
+  "version": "1.0.0",
+  "description": "KInJo is a FastAPI-based kindergarten management platform with:\r - Backend APIs and WebSocket endpoints\r - Server-rendered frontend templates (Jinja2)\r - PostgreSQL/SQLite support through SQLAlchemy\r - Alembic database migrations",
+  "main": "playwright.config.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wael-dot-83/kinjo_v_core.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Wael-dot-83/kinjo_v_core/issues"
+  },
+  "homepage": "https://github.com/Wael-dot-83/kinjo_v_core#readme",
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1",
+    "axe-core": "^4.12.1",
+    "axe-playwright": "^2.2.2",
+    "vite": "^8.1.0"
+  }
+}

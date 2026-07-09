@@ -1,13 +1,13 @@
 """Scoped access and date-range helpers for analytics endpoints."""
 from datetime import date, datetime, timedelta, timezone
-
-_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional, Tuple
 
 from fastapi import HTTPException, Query
 from sqlalchemy.orm import Session
 
 import models
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 
 
 def get_date_range(
@@ -122,7 +122,7 @@ def enforce_analytics_rbac(
     current_user: models.User,
     db: Session,
     dimension_type: Optional[str] = None,
-    dimension_id: Optional[str] = None,
+    dimension_id: Optional[str] = None
 ) -> None:
     """Enforce role and scope boundaries for analytics access."""
     if current_user.role not in {

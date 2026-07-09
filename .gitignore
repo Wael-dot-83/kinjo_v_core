@@ -74,8 +74,6 @@ migrate_user_preferences.py
 .prettierignore
 .prettierrc.json
 cspell.json
-package.json
-package-lock.json
 
 # Nested repositories
 cli/

@@ -1,0 +1,30 @@
+{% extends "admin_base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهة الرسمية{% endif %}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.0" />
+{% endblock %}
+
+{% block content %}
+<section class="agency-reports-page" data-agency-reports-page="agency" data-agency-code="{{ agency_code }}" aria-labelledby="agency-reports-title">
+  <nav class="agency-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+    <a href="/admin/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a>
+    <span aria-hidden="true">/</span>
+    <a href="/admin/agency-reports">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page" id="agency-current-name">{{ agency_code }}</span>
+  </nav>
+  <header class="agency-page-header">
+    <h1 id="agency-reports-title">{% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهة الرسمية{% endif %}</h1>
+    <p id="agency-description"></p>
+  </header>
+  <div id="agency-reports-root" role="status" aria-live="polite">
+    {% if ui_lang == 'en' %}Loading reports...{% else %}جارٍ تحميل التقارير...{% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/admin_agency_reports.js?v=1.0"></script>
+{% endblock %}

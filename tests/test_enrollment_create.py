@@ -80,9 +80,9 @@ class TestKindergartenFilteringWithCity:
         # Filter by city
         response = client.get("/api/kindergartens?district=الجبيهة&status=ACTIVE", headers=headers)
         assert response.status_code == 200
-        data = response.json()
-        assert data["total"] >= 1
-        for kg in data["kindergartens"]:
+        payload = response.json()["data"]  # {success, data, message} envelope
+        assert payload["total"] >= 1
+        for kg in payload["items"]:
             assert "الجبيهة" in kg["district"]
 
     def test_filter_by_gov_and_city(self, client, admin_token, test_db):
@@ -99,8 +99,7 @@ class TestKindergartenFilteringWithCity:
 
         response = client.get("/api/kindergartens?governorate=إربد&district=الحصن&status=ACTIVE", headers=headers)
         assert response.status_code == 200
-        data = response.json()
-        assert data["total"] >= 1
+        assert response.json()["data"]["total"] >= 1
 
     def test_parent_filter_by_city(self, client, parent_token, test_db):
         """Parents should be able to filter by city"""
@@ -126,8 +125,7 @@ class TestParentKindergartenDetails:
         headers = {"Authorization": f"Bearer {parent_token}"}
         response = client.get(f"/api/kindergartens/{sample_kindergarten.id}", headers=headers)
         assert response.status_code == 200
-        data = response.json()
-        assert data["name_ar"] == sample_kindergarten.name_ar
+        assert response.json()["data"]["name_ar"] == sample_kindergarten.name_ar
 
     def test_parent_cannot_view_inactive_kg(self, client, parent_token, test_db):
         """Parent should NOT be able to view INACTIVE kindergartens"""

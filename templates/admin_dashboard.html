@@ -2,6 +2,11 @@
 
 {% block title %}{% if ui_lang == 'en' %}KinJo Admin — Dashboard{% else %}إدارة كينجو — لوحة التحكم{% endif %}{% endblock %}
 
+{% block extra_head %}
+{{ super() }}
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.0" />
+{% endblock %}
+
 {% block content %}
 <div class="admin-main-content">
   <!-- Page Header -->
@@ -223,6 +228,34 @@
     </div><!-- /#dashboard-content -->
   </div><!-- /#admin-dashboard -->
 </div>
+<section class="agency-reports-dashboard-section" aria-labelledby="agency-reports-dashboard-title">
+  <div class="admin-card agency-reports-dashboard-card">
+    <div class="admin-card-header agency-reports-card-header">
+      <div class="agency-logo-lockup">
+        <img src="/static/img/official-agencies-logo.svg" width="56" height="56" alt="" aria-hidden="true" class="agency-logo" />
+        <div>
+          <h2 id="agency-reports-dashboard-title" class="admin-card-title">
+            {% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}
+          </h2>
+          <p class="agency-reports-subtitle">
+            {% if ui_lang == 'en' %}Dynamic aggregated reports for official stakeholders, generated from real KinJo data with privacy and data-quality controls.{% else %}تقارير ديناميكية وتجميعية للجهات الرسمية، مبنية على بيانات KinJo الفعلية مع ضوابط الخصوصية وجودة البيانات.{% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="admin-card-body">
+      <div class="agency-reports-dashboard-grid" id="agency-reports-summary" role="status" aria-live="polite">
+        <span class="agency-loading-text">{% if ui_lang == 'en' %}Loading official agency reports summary...{% else %}جارٍ تحميل ملخص تقارير الجهات الرسمية...{% endif %}</span>
+      </div>
+      <div class="agency-reports-dashboard-actions">
+        <a href="/admin/agency-reports" class="admin-btn admin-btn-primary" aria-label="{% if ui_lang == 'en' %}Open Official Agency Reports Center{% else %}فتح مركز تقارير الجهات الرسمية{% endif %}">
+          <i class="bi bi-bank" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Open Reports Center{% else %}عرض مركز تقارير الجهات الرسمية{% endif %}
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -230,4 +263,5 @@
 <script src="/static/js/chart_utils.js?v=2.1"></script>
 <script src="/static/js/admin_dashboard.js?v=3.0"></script>
 <script src="/static/js/admin_activity_filters.js?v=1.0"></script>
+<script src="/static/js/admin_agency_reports_dashboard_summary.js?v=1.0"></script>
 {% endblock %}

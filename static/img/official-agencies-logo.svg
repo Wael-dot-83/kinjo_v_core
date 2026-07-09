@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">تقارير الجهات الرسمية</title>
+  <desc id="desc">شعار داخلي لقسم تقارير الجهات الرسمية في نظام KinJo</desc>
+  <rect width="128" height="128" rx="28" fill="#f8fafc"/>
+  <path d="M20 54h88v12H20z" fill="#1d4ed8"/>
+  <path d="M28 66h12v36H28zM52 66h12v36H52zM76 66h12v36H76zM100 66h12v36h-12z" fill="#0f766e"/>
+  <path d="M16 102h96v10H16z" fill="#0f172a"/>
+  <path d="M64 18 22 46h84L64 18z" fill="#b91c1c"/>
+  <circle cx="64" cy="45" r="10" fill="#fff"/>
+  <path d="M58 45h12M64 39v12" stroke="#1d4ed8" stroke-width="4" stroke-linecap="round"/>
+</svg>
