@@ -2,7 +2,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LIST_TEMPLATE = ROOT / "templates" / "admin" / "messages" / "list.html"
-FRONTEND_PY = ROOT / "frontend.py"
+# The legacy frontend route bodies now live in the compat module that
+# frontend.py re-exports (`from scripts.compat.frontend_orig import *`).
+FRONTEND_PY = ROOT / "scripts" / "compat" / "frontend_orig.py"
 
 
 def test_table_has_caption_and_column_scope():

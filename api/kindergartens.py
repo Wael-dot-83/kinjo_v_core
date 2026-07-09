@@ -58,11 +58,42 @@ def get_governorates(
         if dist:
             gov_map[normalized]["cities"].add(dist)
             
+    # Fallback: when the AdministrativeDivision reference table is empty, derive
+    # the governorate list from distinct values already stored on kindergartens so
+    # the filter dropdown stays usable.
+    if not gov_map:
+        rows = (
+            db.query(models.Kindergarten.governorate)
+            .filter(models.Kindergarten.governorate.isnot(None))
+            .distinct()
+            .all()
+        )
+        for (gov,) in rows:
+            if not gov:
+                continue
+            try:
+                normalized = validators.validate_jordan_governorate(gov)
+            except validators.ValidationError:
+                normalized = gov
+            if normalized in gov_map:
+                continue
+            english_label = None
+            if normalized in settings.JORDAN_GOVERNORATES:
+                idx = settings.JORDAN_GOVERNORATES.index(normalized)
+                if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
+                    english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx]
+            gov_map[normalized] = {
+                "id": normalized,
+                "name_ar": normalized,
+                "name_en": english_label or normalized,
+                "cities": set(),
+            }
+
     govs = []
     for g in gov_map.values():
         g["cities"] = sorted(list(g["cities"]))
         govs.append(g)
-        
+
     return {"governorates": sorted(govs, key=lambda x: x["name_ar"])}
 
 
@@ -418,6 +449,7 @@ def list_kindergartens(
     request: Request,
     q: Optional[str] = Query(None, description="search by name"),
     governorate: Optional[str] = None,
+    district: Optional[str] = None,
     status: Optional[str] = None,
     min_children: Optional[int] = None,
     max_children: Optional[int] = None,
@@ -445,6 +477,8 @@ def list_kindergartens(
         )
     if governorate:
         query = query.filter(models.Kindergarten.governorate == governorate)
+    if district:
+        query = query.filter(models.Kindergarten.district == district)
     if status:
         try:
             query = query.filter(models.Kindergarten.status == _normalize_status(status))
@@ -490,6 +524,25 @@ def get_kindergarten(
     kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
     if not kg or kg.status == models.KindergartenStatus.DELETED:
         return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
+
+    # Access control (the envelope refactor dropped this — restored):
+    #  - ADMIN: any kindergarten.
+    #  - MANAGER: only their own; a cross-tenant id returns 404, never 403, so we
+    #    don't leak that another tenant's kindergarten exists.
+    #  - PARENT: only ACTIVE kindergartens (they browse open KGs for enrollment);
+    #    DRAFT/INACTIVE are hidden as 404.
+    #  - SUPERVISOR: not permitted here — supervisors use their own scoped views.
+    _not_found = _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
+    role = current_user.role
+    if role == models.UserRole.SUPERVISOR:
+        return _envelope(False, None, "غير مصرح بالوصول / Not authorized", 403)
+    if role == models.UserRole.MANAGER:
+        if current_user.kindergarten_id != kg.id:
+            return _not_found
+    elif role == models.UserRole.PARENT:
+        if kg.status != models.KindergartenStatus.ACTIVE:
+            return _not_found
+
     child_count_sq, attendance_sq = _stats_subqueries(db)
     cc = db.query(child_count_sq.c[1]).filter(child_count_sq.c.kindergarten_id == kg.id).scalar() or kg.current_child_count or 0
     att = db.query(attendance_sq.c[1], attendance_sq.c[2]).filter(attendance_sq.c.kindergarten_id == kg.id).first()

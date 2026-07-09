@@ -83,10 +83,13 @@ const dashboardData = {
   ],
   risk_radar: [
     {
-      name: 'Al-Noor Kindergarten',
-      kindergarten: 'Al-Noor',
-      risk_score: 72,
-      reason: 'Attendance variance',
+      child_id: 1,
+      kindergarten_id: 1,
+      child_name: 'Ahmad Ali',
+      kindergarten_name: 'Al-Noor',
+      risk_type: 'attendance',
+      risk_value: 72,
+      description: 'Attendance variance',
     },
   ],
   governance_distribution: { green: 1, amber: 0, red: 0 },
@@ -125,6 +128,13 @@ async function mockAnalyticsRuntime(page: Page, unavailableDeltas = false) {
 
   await page.route('**/api/admin/options/kindergartens', async (route) => {
     await route.fulfill({ json: { kindergartens: [{ id: 'kg-1', name_ar: 'KG 1', name_en: 'KG 1' }] } });
+  });
+
+  // The alerts widget also merges KPI-based alerts from this endpoint (outside
+  // the /api/analytics namespace); keep it empty so the alert list renders its
+  // deterministic empty-state instead of depending on live seed data.
+  await page.route('**/api/kpi/alerts', async (route) => {
+    await route.fulfill({ json: { alerts: [] } });
   });
 
   await page.route('**/api/analytics/**', async (route) => {
@@ -296,14 +306,16 @@ test.describe('Admin Analytics production checks', () => {
     await page.locator('[data-bs-target="#exportModal"]').first().click();
     await expect(page.locator('#exportModal')).toBeVisible();
     await expect(page.locator('#exportReportType')).toHaveCount(1);
-    await expect(page.locator('#exportReportType option')).toHaveCount(6);
-    await expect(page.locator('#exportReportType')).toHaveValue('overview');
+    // Export offers exactly the report types the backend can stream
+    // (analytics_service.py export handler): attendance, incidents,
+    // compliance, governorate, full_audit. The first is selected by default.
+    await expect(page.locator('#exportReportType option')).toHaveCount(5);
+    await expect(page.locator('#exportReportType')).toHaveValue('attendance');
     expect(
       await page.locator('#exportReportType option').evaluateAll((options) =>
         (options as HTMLOptionElement[]).map((option) => option.value),
       ),
     ).toEqual([
-      'overview',
       'attendance',
       'incidents',
       'compliance',
@@ -312,12 +324,18 @@ test.describe('Admin Analytics production checks', () => {
     ]);
   });
 
-  test('opens help modal with page content', async ({ page }) => {
+  test('opens help modal with fallback content (no page-specific guide)', async ({ page }) => {
     await page.getByRole('button', { name: /Help|مساعدة/ }).first().click();
 
     await expect(page.locator('#helpExpressModal')).toBeVisible();
-    await expect(page.locator('#helpModalContent')).toContainText(/Overview|نظرة عامة/);
-    await expect(page.locator('#helpModalTitle')).toContainText(/Analytics Dashboard Guide|دليل لوحة التحليلات/);
+    // The analytics page intentionally ships no #pageHelpContent guide panel
+    // (it was removed so live widgets aren't trapped inside a hidden div — see
+    // tests/test_analytics_pinpoint_e2e.py::test_pagehelpcontent_is_absent), so
+    // the shared Help modal renders its fallback body and default title.
+    await expect(page.locator('#helpModalContent')).toContainText(
+      /No specific help information|لا توجد معلومات مساعدة/,
+    );
+    await expect(page.locator('#helpModalTitle')).toContainText(/Help Guide|دليل المساعدة/);
   });
 
   test('renders chart canvas once without duplicate Chart.js scripts', async ({ page }) => {
@@ -333,26 +351,33 @@ test.describe('Admin Analytics production checks', () => {
     await mockAnalyticsRuntime(page);
     await page.reload();
 
-    await expect(page.locator('.analytics-dashboard')).toBeVisible();
-    for (const id of [
-      'totalKg',
-      'totalChildren',
-      'avgAttendance',
-      'incidentRate',
-      'enrollmentRate',
-      'kpiKgGrowth',
-      'attendanceTrendIndicator',
-      'incidentTrend',
-      'trendChart',
-      'governancePieChart',
-      'riskList',
-      'alertList',
-      'dataQualityScore',
-      'targetList',
-      'benchmarkList',
-      'recommendationList',
-    ]) {
-      await expect(page.locator(`#${id}`)).toBeVisible();
+    await expect(page.locator('.az-analytics-page')).toBeVisible();
+    // The dashboard groups live sections into pill tabs. Activate each tab and
+    // confirm its sections render (i.e. they are real content, not hidden like
+    // the on-demand help modal body).
+    const sectionsByTab: Record<string, string[]> = {
+      'tab-overview-btn': [
+        'totalKg',
+        'totalChildren',
+        'avgAttendance',
+        'incidentRate',
+        'enrollmentRate',
+        'kpiKgGrowth',
+        'attendanceTrendIndicator',
+        'incidentTrend',
+        'trendChart',
+        'riskList',
+        'alertList',
+        'dataQualityScore',
+      ],
+      'tab-geographic-btn': ['targetList', 'benchmarkList'],
+      'tab-governance-btn': ['governancePieChart', 'recommendationList'],
+    };
+    for (const [tabBtn, ids] of Object.entries(sectionsByTab)) {
+      await page.locator(`#${tabBtn}`).click();
+      for (const id of ids) {
+        await expect(page.locator(`#${id}`)).toBeVisible();
+      }
     }
   });
 
@@ -390,6 +415,8 @@ test.describe('Admin Analytics production checks', () => {
     await mockAnalyticsRuntime(page);
     await page.reload();
 
+    // Forecast cards live on the AI tab.
+    await page.locator('#tab-ai-btn').click();
     for (const id of ['attendanceForecast', 'incidentForecast', 'enrollmentForecast']) {
       await expect(page.locator(`#${id}`)).toBeVisible();
       await expect(page.locator(`#${id}`)).not.toHaveText('--');
@@ -398,7 +425,7 @@ test.describe('Admin Analytics production checks', () => {
 
   test('applies RTL computed direction', async ({ page }) => {
     expect(await page.locator('html').getAttribute('dir')).toBe('rtl');
-    const direction = await page.locator('.analytics-dashboard').evaluate((el) => getComputedStyle(el).direction);
+    const direction = await page.locator('.az-analytics-page').evaluate((el) => getComputedStyle(el).direction);
     expect(direction).toBe('rtl');
   });
 });

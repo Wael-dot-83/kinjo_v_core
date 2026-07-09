@@ -439,6 +439,9 @@ async function loadAdminAnalytics(retryCount = 0) {
       if (overlay) overlay.classList.add("d-none");
       if (errorDiv) {
         errorDiv.classList.add("show");
+        // The overlay's base ".hidden" class (opacity:0; pointer-events:none)
+        // must be dropped or the retry button is present but not clickable.
+        errorDiv.classList.remove("hidden");
         errorDiv.innerHTML = `
           <i class="bi bi-exclamation-circle text-danger fs-1"></i>
           <p class="mt-2 text-danger"> فشل تحميل البيانات. </p>
@@ -768,12 +771,16 @@ function updateTrendCharts(attendanceData, incidentData) {
   const overlay = document.getElementById("trendChartOverlay");
   const errorDiv = document.getElementById("trendChartError");
   if (overlay) overlay.classList.remove("d-none");
-  if (errorDiv) errorDiv.classList.remove("show");
+  if (errorDiv) {
+    errorDiv.classList.remove("show");
+    errorDiv.classList.add("hidden");
+  }
 
   if (!adminAnalyticsHasChart()) {
     if (overlay) overlay.classList.add("d-none");
     if (errorDiv) {
       errorDiv.classList.add("show");
+      errorDiv.classList.remove("hidden");
       const message = errorDiv.querySelector("p");
       if (message) {
         message.textContent = adminAnalyticsText(
@@ -1934,14 +1941,13 @@ async function loadAlerts() {
   const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
   combinedAlerts.sort((a, b) => (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3));
 
-  if (combinedAlerts.length && banner) {
+  // Keep the alert section container visible in both states: when there are
+  // alerts the list renders the rows below, and when there are none the list
+  // renders its empty-state. (Previously the whole section was hidden with
+  // d-none when empty, so the alert list vanished entirely instead of showing
+  // "no active alerts".)
+  if (banner) {
     banner.classList.remove("d-none");
-    banner.textContent = adminAnalyticsText(
-      `يوجد ${combinedAlerts.length} تنبيه نشط يتطلب المراجعة.`,
-      `${combinedAlerts.length} active alert(s) require review.`
-    );
-  } else if (banner) {
-    banner.classList.add("d-none");
   }
 
   if (combinedAlerts.length === 0) {

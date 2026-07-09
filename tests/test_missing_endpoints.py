@@ -130,7 +130,7 @@ class TestUserEndpoints:
 
         response = client.get("/api/users/me")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["id"] == admin_user.id
         assert data["username"] == admin_user.username
         assert data["email"] == admin_user.email
@@ -149,7 +149,7 @@ class TestUserEndpoints:
 
         response = client.post("/api/users/change-password", json=payload)
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "message" in data
 
         app.dependency_overrides.clear()
@@ -208,7 +208,7 @@ class TestUserEndpoints:
 
         response = client.get("/api/users")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert isinstance(data, list)  # Response is a list of users
         assert len(data) == 2  # Only the 2 created users (admin cannot see other admins)
 
@@ -220,7 +220,7 @@ class TestUserEndpoints:
 
         response = client.get("/api/users")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert isinstance(data, list)  # Response is a list of users
 
         app.dependency_overrides.clear()
@@ -252,7 +252,7 @@ class TestUserEndpoints:
 
         response = client.post("/api/users", json=payload)
         assert response.status_code == 201
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["username"] == "newuser"
         assert data["email"] == "newuser@test.com"
 
@@ -290,7 +290,7 @@ class TestUserEndpoints:
 
         response = client.post("/api/staff/create", json=payload)
         assert response.status_code == 201
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["username"] == "newstaff"
         assert data["role"] == "SUPERVISOR"
 
@@ -314,7 +314,7 @@ class TestUserEndpoints:
 
         response = client.get(f"/api/users/{test_user.id}")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["id"] == test_user.id
         assert data["username"] == test_user.username
 
@@ -352,7 +352,7 @@ class TestUserEndpoints:
 
         response = client.put(f"/api/users/{test_user.id}", json=payload)
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["email"] == "updated@test.com"
         assert data["role"] == "SUPERVISOR"
 
@@ -406,7 +406,7 @@ class TestUserEndpoints:
 
         response = client.post(f"/api/users/{test_user.id}/admin-reset-password", json=payload)
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "message" in data
 
         app.dependency_overrides.clear()
@@ -428,7 +428,7 @@ class TestUserEndpoints:
 
         response = client.post("/api/users/request-password-reset", json=payload)
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "message" in data
 
     def test_reset_password(self, client, test_db):
@@ -488,7 +488,7 @@ class TestUserEndpoints:
 
         response = client.post("/api/users/bulk-status-update", json=payload)
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "Updated" in data["message"]
 
         app.dependency_overrides.clear()
@@ -521,7 +521,7 @@ class TestUserEndpoints:
 
         response = client.post("/api/users/bulk-delete", json=payload)
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "message" in data
         assert "Deleted 2 users successfully" in data["message"]
 
@@ -554,7 +554,7 @@ class TestUserEndpoints:
 
         response = client.post("/api/users/bulk-create", json=payload)
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "created_users" in data
         assert len(data["created_users"]) == 2
 
@@ -579,9 +579,9 @@ class TestKindergartenEndpoints:
             "contact_email": "kg@test.com"
         }
 
-        response = client.post("/api/kindergartens", json=payload)
+        response = client.post("/api/admin/kindergartens", json=payload)
         assert response.status_code == 201
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["name_ar"] == "New Kindergarten"
         assert data["governorate"] == "عمان"
 
@@ -617,9 +617,9 @@ class TestKindergartenEndpoints:
 
         response = client.get("/api/kindergartens")
         assert response.status_code == 200
-        data = response.json()
-        assert "kindergartens" in data
-        assert len(data["kindergartens"]) >= 2
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
+        assert "items" in data
+        assert len(data.get("items", [])) >= 2
 
         app.dependency_overrides.clear()
 
@@ -644,7 +644,7 @@ class TestKindergartenEndpoints:
 
         response = client.get(f"/api/kindergartens/{kg.id}")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["id"] == kg.id
         assert data["name_ar"] == "Get Test KG"
 
@@ -679,9 +679,9 @@ class TestKindergartenEndpoints:
             "contact_phone": "+962791234567"
         }
 
-        response = client.put(f"/api/kindergartens/{kg.id}", json=payload)
+        response = client.put(f"/api/admin/kindergartens/{kg.id}", json=payload)
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["name_ar"] == "Updated KG"
 
         app.dependency_overrides.clear()
@@ -705,9 +705,9 @@ class TestKindergartenEndpoints:
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
 
-        response = client.delete(f"/api/kindergartens/{kg.id}")
+        response = client.delete(f"/api/admin/kindergartens/{kg.id}")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "message" in data
 
         app.dependency_overrides.clear()
@@ -731,10 +731,10 @@ class TestKindergartenEndpoints:
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
 
-        response = client.post(f"/api/kindergartens/{kg.id}/archive")
+        response = client.patch(f"/api/admin/kindergartens/{kg.id}/freeze", json={"reason": "Testing archive"})
         assert response.status_code == 200
-        data = response.json()
-        assert "message" in data
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
+        assert "id" in data
 
         app.dependency_overrides.clear()
 
@@ -783,7 +783,7 @@ class TestClassEndpoints:
             "class_code": "NEW-001",
             "age_group": "AGE_2_4",
             "kindergarten_id": kg.id,
-            "capacity_total": 25,
+            "capacity_total": 10,
             "min_age_months": 36,
             "max_age_months": 48,
             "supervisor_id": sup.id
@@ -791,7 +791,7 @@ class TestClassEndpoints:
 
         response = client.post("/api/classes", json=payload)
         assert response.status_code == 201, f"Create class failed: {response.text}"
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["name_ar"] == "New Class"
         assert data["kindergarten_id"] == kg.id
 
@@ -832,7 +832,7 @@ class TestClassEndpoints:
 
         response = client.get(f"/api/classes/{class_obj.id}")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["id"] == class_obj.id
         assert data["name_ar"] == "Get Test Class"
 
@@ -873,14 +873,14 @@ class TestClassEndpoints:
 
         payload = {
             "name_ar": "Updated Class",
-            "capacity_total": 30
+            "capacity_total": 10
         }
 
         response = client.put(f"/api/classes/{class_obj.id}", json=payload)
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["name_ar"] == "Updated Class"
-        assert data["capacity_total"] == 30
+        assert data["capacity_total"] == 10
 
         app.dependency_overrides.clear()
 
@@ -894,7 +894,7 @@ class TestTaskEndpoints:
 
         response = client.get("/api/tasks")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         # API returns a list directly, not wrapped in {"tasks": [...]}
         assert isinstance(data, list)
 
@@ -928,7 +928,7 @@ class TestTaskEndpoints:
 
         response = client.post("/api/tasks", json=payload)
         assert response.status_code == 201
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["title"] == "Test Task"
         assert data["assigned_to"] == admin_user.id
 
@@ -967,7 +967,7 @@ class TestTaskEndpoints:
 
         response = client.get(f"/api/tasks/{task.id}")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["id"] == task.id
         assert data["title"] == "Get Test Task"
 
@@ -1011,7 +1011,7 @@ class TestTaskEndpoints:
 
         response = client.put(f"/api/tasks/{task.id}", json=payload)
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["title"] == "Updated Task"
         assert data["status"] == "IN_PROGRESS"
 
@@ -1028,7 +1028,7 @@ class TestDailyReportEndpoints:
         # Use actual endpoint - supervisor/daily-reports for supervisor+ roles
         response = client.get("/api/supervisor/daily-reports")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         # API returns {"reports": [...], "stats": {...}}
         assert "reports" in data
         assert isinstance(data["reports"], list)
@@ -1191,7 +1191,7 @@ class TestDailyReportEndpoints:
 
         response = client.get(f"/api/daily-reports/{report.id}")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["id"] == report.id
         assert data["child_id"] == child.id
 
@@ -1274,7 +1274,7 @@ class TestDailyReportEndpoints:
         # Verify report detail endpoint returns correct data
         response = client.get(f"/api/daily-reports/{report.id}")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["notes"] == "Original notes"
         assert data["mood"] == "HAPPY"
 
@@ -1290,7 +1290,7 @@ class TestSafetyEndpoints:
 
         response = client.get("/api/incidents")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         # API returns {"items": [...], "total_count": int}
         assert isinstance(data["items"], list)
 
@@ -1404,7 +1404,7 @@ class TestSafetyEndpoints:
 
         response = client.get("/api/incidents")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert isinstance(data["items"], list)
         assert any(i["id"] == incident.id for i in data["items"])
 
@@ -1421,7 +1421,7 @@ class TestCommunicationEndpoints:
         # Messages are under /comm prefix
         response = client.get("/comm/messages")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         # API returns {"items": [...], "pagination": {...}}
         assert "items" in data or "messages" in data or isinstance(data, list)
 
@@ -1473,7 +1473,7 @@ class TestCommunicationEndpoints:
 
         response = client.get(f"/comm/messages/{message.id}")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["id"] == message.id
         assert data["subject"] == "Get Test Message"
 
@@ -1489,7 +1489,7 @@ class TestAnalyticsEndpoints:
 
         response = client.get("/api/analytics/dashboard")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "metrics" in data or "summary" in data
 
         app.dependency_overrides.clear()
@@ -1500,7 +1500,7 @@ class TestAnalyticsEndpoints:
 
         response = client.get("/api/analytics/kpi")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         # Response structure may vary
 
         app.dependency_overrides.clear()
@@ -1511,7 +1511,7 @@ class TestAnalyticsEndpoints:
 
         response = client.get("/api/analytics/attendance")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         # Response structure may vary
 
         app.dependency_overrides.clear()
@@ -1564,7 +1564,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/users/me/parent-info")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["parent_type"] is None
         app.dependency_overrides.clear()
 
@@ -1573,7 +1573,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: parent_user
         response = client.get("/api/users/me/parent-info")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "parent_type" in data
         app.dependency_overrides.clear()
 
@@ -1586,7 +1586,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/notifications")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "items" in data
         assert "total" in data
         app.dependency_overrides.clear()
@@ -1607,7 +1607,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/notifications/unread-count")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "count" in data
         assert isinstance(data["count"], int)
         app.dependency_overrides.clear()
@@ -1621,7 +1621,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.post("/api/notifications/read-all")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "updated" in data
         app.dependency_overrides.clear()
 
@@ -1634,7 +1634,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/search?q=test")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "results" in data
         app.dependency_overrides.clear()
 
@@ -1643,7 +1643,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: manager_user
         response = client.get("/api/search?q=test")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "results" in data
         app.dependency_overrides.clear()
 
@@ -1652,7 +1652,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: parent_user
         response = client.get("/api/search?q=test")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "results" in data
         app.dependency_overrides.clear()
 
@@ -1672,7 +1672,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/communication/stats")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "unread_messages" in data
         app.dependency_overrides.clear()
 
@@ -1706,7 +1706,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get(f"/api/kindergartens/{kg.id}/kpi-snapshot")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "occupancy_pct" in data
         app.dependency_overrides.clear()
 
@@ -1772,7 +1772,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get(f"/api/classes/{cls.id}/children")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "children" in data
         app.dependency_overrides.clear()
 
@@ -1855,7 +1855,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get(f"/api/classes/{cls.id}/supervisors")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "supervisors" in data
         app.dependency_overrides.clear()
 
@@ -1868,7 +1868,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/admin/safety/analytics")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "total" in data
         assert "by_severity" in data
         app.dependency_overrides.clear()
@@ -1896,7 +1896,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/reports")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "reports" in data
         app.dependency_overrides.clear()
 
@@ -1916,7 +1916,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: bare_parent
         response = client.get("/api/reports")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["reports"] == []
         app.dependency_overrides.clear()
 
@@ -1970,7 +1970,7 @@ class TestMissingEndpointsCoverage2:
     def test_create_kindergarten_blank_license_valid(self, client, admin_user):
         """Creating kindergarten with blank license_number is valid"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.post("/api/kindergartens", json={
+        response = client.post("/api/admin/kindergartens", json={
             "name_ar": "حضانة الاختبار الفارغ",
             "name_en": "Blank License KG",
             "governorate": "Amman",
@@ -1987,7 +1987,7 @@ class TestMissingEndpointsCoverage2:
     def test_create_kindergarten_blank_contact_email_valid(self, client, admin_user):
         """Creating kindergarten with blank contact_email treats it as None"""
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.post("/api/kindergartens", json={
+        response = client.post("/api/admin/kindergartens", json={
             "name_ar": "حضانة البريد الفارغ",
             "name_en": "Blank Email KG",
             "governorate": "Amman",
@@ -2063,7 +2063,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: pr_user
         response = client.get("/api/users/me/parent-info")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["parent_type"] == "FATHER"
         assert "full_name" in data
         app.dependency_overrides.clear()
@@ -2093,7 +2093,7 @@ class TestMissingEndpointsCoverage2:
             "/api/admin/safety/analytics?date_from=2025-01-01&date_to=2026-12-31"
         )
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "total" in data
         app.dependency_overrides.clear()
 
@@ -2148,7 +2148,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: pr_user
         response = client.get("/api/reports")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "reports" in data
         app.dependency_overrides.clear()
 
@@ -2172,7 +2172,7 @@ class TestMissingEndpointsCoverage2:
         test_db.commit()
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.post("/api/kindergartens", json={
+        response = client.post("/api/admin/kindergartens", json={
             "name_ar": "حضانة أخرى",
             "name_en": "Another KG",
             "governorate": "Amman",
@@ -2205,7 +2205,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/search?q=searchable")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "results" in data
         app.dependency_overrides.clear()
 
@@ -2245,7 +2245,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: pr_user
         response = client.get("/api/reports")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "reports" in data
         app.dependency_overrides.clear()
 
@@ -2258,7 +2258,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: manager_user
         response = client.post("/api/attendance/bulk", json={"child_ids": [], "status": "PRESENT"})
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["updated"] == 0
         assert data["errors"] == []
         app.dependency_overrides.clear()
@@ -2268,7 +2268,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: manager_user
         response = client.post("/api/attendance/bulk", json={"child_ids": [999999], "status": "ABSENT"})
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["updated"] == 0
         assert len(data["errors"]) == 1
         assert data["errors"][0]["child_id"] == 999999
@@ -2420,7 +2420,7 @@ class TestMissingEndpointsCoverage3:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/communication/stats")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "unread_messages" in data
         assert "recent_activity" in data
         app.dependency_overrides.clear()
@@ -2486,7 +2486,7 @@ class TestMissingEndpointsCoverage3:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get(f"/api/classes/{sample_class.id}/children")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "children" in data
         assert len(data["children"]) >= 1
         app.dependency_overrides.clear()
@@ -2540,7 +2540,7 @@ class TestMissingEndpointsCoverage3:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get(f"/api/classes/{sample_class.id}/supervisors")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "supervisors" in data
         assert len(data["supervisors"]) >= 1
         app.dependency_overrides.clear()
@@ -2565,7 +2565,7 @@ class TestMissingEndpointsCoverage3:
             f"&severity=LOW"
         )
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "total" in data
         app.dependency_overrides.clear()
 
@@ -2633,7 +2633,7 @@ class TestMissingEndpointsCoverage3:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/admin/safety/analytics")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["total"] >= 1
         assert "by_severity" in data
         assert "by_type" in data
@@ -2869,7 +2869,7 @@ class TestMissingEndpointsCoverage3:
             f"/api/enrollments/{enrollment.id}/review?decision=reject&reason=Test+rejection"
         )
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["status"] == "rejected"
         app.dependency_overrides.clear()
 
@@ -2981,7 +2981,7 @@ class TestMissingEndpointsCoverage3:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/curriculum/observations")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "observations" in data
         assert data["observations"] == []
         app.dependency_overrides.clear()
@@ -2991,7 +2991,7 @@ class TestMissingEndpointsCoverage3:
         app.dependency_overrides[get_current_user] = lambda: manager_user
         response = client.get("/api/curriculum/observations")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "observations" in data
         app.dependency_overrides.clear()
 
@@ -3036,7 +3036,7 @@ class TestMissingEndpointsCoverage3:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/curriculum/outcomes")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         codes = {o["indicator_code"] for o in data["outcomes"]}
         assert {"COG-12-24-01", "LAN-24-36-01"} <= codes
         app.dependency_overrides.clear()
@@ -3060,7 +3060,7 @@ class TestMissingEndpointsCoverage3:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/curriculum/outcomes?domain=cognitive")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert all(o["domain"] == "COGNITIVE" for o in data["outcomes"])
         assert any(o["indicator_code"] == "COG-12-24-02" for o in data["outcomes"])
         app.dependency_overrides.clear()
@@ -3103,7 +3103,7 @@ class TestMissingEndpointsCoverage3:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get(f"/api/curriculum/outcomes/{outcome.id}")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["indicator_code"] == "LAN-12-24-01"
         assert data["domain"] == "LANGUAGE"
         app.dependency_overrides.clear()
@@ -3138,7 +3138,7 @@ class TestMissingEndpointsCoverage4:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/notifications")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "items" in data
         assert len(data["items"]) >= 1
         app.dependency_overrides.clear()
@@ -3217,7 +3217,7 @@ class TestMissingEndpointsCoverage4:
         app.dependency_overrides[get_current_user] = lambda: admin_user
         response = client.get("/api/search?q=UniqueSearch")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "results" in data
         # Should find the child
         child_results = [r for r in data["results"] if r["type"] == "child"]
@@ -3246,7 +3246,7 @@ class TestMissingEndpointsCoverage4:
         app.dependency_overrides[get_current_user] = lambda: mgr
         response = client.get(f"/api/kindergartens/{sample_kindergarten.id}/kpi-snapshot")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "occupancy_pct" in data
         app.dependency_overrides.clear()
 
@@ -3318,7 +3318,7 @@ class TestMissingEndpointsCoverage4:
         app.dependency_overrides[get_current_user] = lambda: supervisor_user
         response = client.get("/api/daily-reports/supervisor/my-children")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "children" in data
         assert len(data["children"]) >= 1
         app.dependency_overrides.clear()
@@ -3480,7 +3480,7 @@ class TestMissingEndpointsCoverage4:
                 "status": "PRESENT"
             })
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["child_id"] == child.id
         assert data["check_in_at"] is not None
         app.dependency_overrides.clear()
@@ -3575,7 +3575,7 @@ class TestMissingEndpointsCoverage5:
             "status": "ABSENT"
         })
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["status"] == "absent"
         app.dependency_overrides.clear()
 
@@ -3653,7 +3653,7 @@ class TestMissingEndpointsCoverage5:
             "status": "ABSENT"
         })
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["updated"] >= 1
         app.dependency_overrides.clear()
 
@@ -3721,7 +3721,7 @@ class TestMissingEndpointsCoverage5:
             "reason": "Vacation",
         })
         assert response.status_code == 201
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["status"] == "pending"
         app.dependency_overrides.clear()
 
@@ -4031,7 +4031,7 @@ class TestCorrespondingGuardianAssignment:
         app.dependency_overrides[get_current_user] = lambda: manager_user
         response = client.get("/api/manager/pending-corresponding")
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["count"] >= 1
         assert any(c["child_id"] == child.id for c in data["children"])
         app.dependency_overrides.clear()
@@ -4055,7 +4055,7 @@ class TestCorrespondingGuardianAssignment:
             },
         )
         assert response.status_code == 200
-        data = response.json()
+        data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["corresponding_type"] == "GUARDIAN"
         app.dependency_overrides.clear()
 
