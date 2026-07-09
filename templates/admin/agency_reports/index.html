@@ -31,9 +31,42 @@
   <div id="agency-reports-root" role="status" aria-live="polite">
     {% if ui_lang == 'en' %}Loading agencies...{% else %}جارٍ تحميل الجهات الرسمية...{% endif %}
   </div>
+
+  <!-- ===================== Custom Reports / التقارير المخصصة ===================== -->
+  <section class="agency-custom-reports" id="custom-reports" aria-labelledby="custom-reports-title">
+    <header class="agency-section-header">
+      <h2 id="custom-reports-title">
+        {% if ui_lang == 'en' %}Custom Reports{% else %}التقارير المخصصة{% endif %}
+        <span class="agency-section-subtitle">{% if ui_lang == 'en' %}Flexible aggregated decision-support reports{% else %}تقارير تجميعية مرنة لدعم القرار{% endif %}</span>
+      </h2>
+      <p>
+        {% if ui_lang == 'en' %}Build a flexible, aggregated report for an official agency by choosing the level, period, geography and indicators. Aggregated data only — no personal data.{% else %}ابنِ تقريرًا تجميعيًا مرنًا لجهة رسمية باختيار المستوى والفترة والنطاق الجغرافي والمؤشرات. بيانات تجميعية فقط دون أي بيانات شخصية.{% endif %}
+      </p>
+    </header>
+
+    <form id="custom-report-form" class="custom-report-form" novalidate>
+      <div id="custom-report-controls" class="custom-report-controls" aria-busy="true" role="status" aria-live="polite">
+        {% if ui_lang == 'en' %}Loading report options...{% else %}جارٍ تحميل خيارات التقرير...{% endif %}
+      </div>
+      <div id="cr-agency-preview" class="custom-agency-preview" aria-live="polite" hidden></div>
+      <div class="custom-report-actions" hidden id="custom-report-action-bar">
+        <button type="submit" class="admin-btn admin-btn-primary" id="custom-report-run">
+          <i class="bi bi-play-circle" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Generate report{% else %}إنشاء التقرير{% endif %}
+        </button>
+        <button type="button" class="admin-btn admin-btn-secondary" id="custom-report-reset">
+          {% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
+        </button>
+      </div>
+    </form>
+
+    <div id="custom-report-result" class="custom-report-result" role="region" aria-live="polite"
+         aria-label="{% if ui_lang == 'en' %}Custom report result{% else %}نتيجة التقرير المخصص{% endif %}"></div>
+  </section>
 </section>
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="/static/js/admin_agency_reports.js?v=1.0"></script>
+<script src="/static/js/admin_agency_reports_custom.js?v=1.0"></script>
 {% endblock %}

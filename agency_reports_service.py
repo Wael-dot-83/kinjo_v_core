@@ -1,11 +1,11 @@
 """Dynamic, privacy-safe services for official agency reports."""
 from __future__ import annotations
 
-from collections import Counter, defaultdict
+from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Iterable
+from typing import Any
 
-from sqlalchemy import func, or_
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import models
@@ -382,3 +382,469 @@ class AgencyReportsService:
         visit(payload)
         if text_keys:
             raise AgencyReportError(500, f"Sensitive fields blocked from official agency report: {', '.join(text_keys)}")
+
+    # ------------------------------------------------------------------
+    # Custom Reports (التقارير المخصصة)
+    # ------------------------------------------------------------------
+    def custom_report_schema(self) -> dict[str, Any]:
+        from agency_reports_registry import custom_report_schema
+        return custom_report_schema()
+
+    def custom_report(self, scope: dict[str, Any] | None) -> dict[str, Any]:
+        """Build an aggregated custom report from a validated scope.
+
+        Every indicator is computed from real data. Indicators whose data is
+        not structurally available are never fabricated — they are reported in
+        ``data_quality.notes`` instead.
+        """
+        from agency_reports_registry import custom_report_schema
+
+        scope = scope or {}
+        schema = custom_report_schema()
+        agencies = {a["code"]: a for a in schema["agencies"]}
+        levels = {lvl["code"]: lvl for lvl in schema["levels"]}
+        periods = {p["code"]: p for p in schema["periods"]}
+        ind_status: dict[str, str] = {}
+        ind_name: dict[str, str] = {}
+        for domain in schema["domains"]:
+            for ind in domain["indicators"]:
+                ind_status[ind["code"]] = ind["status"]
+                ind_name[ind["code"]] = ind["name_ar"]
+
+        agency = scope.get("agency")
+        level = scope.get("level") or "national"
+        period = scope.get("period") or "month"
+        indicators = scope.get("indicators") or []
+
+        if agency not in agencies:
+            raise AgencyReportError(400, "الجهة المستفيدة غير صالحة / Invalid agency")
+        if level not in levels:
+            raise AgencyReportError(400, "مستوى التقرير غير صالح / Invalid report level")
+        if period not in periods:
+            raise AgencyReportError(400, "الفترة الزمنية غير صالحة / Invalid period")
+        if not isinstance(indicators, list) or not indicators:
+            raise AgencyReportError(400, "اختر مؤشرًا واحدًا على الأقل / Select at least one indicator")
+        unknown = [i for i in indicators if i not in ind_status]
+        if unknown:
+            raise AgencyReportError(400, "مؤشرات غير معروفة / Unknown indicators: " + ", ".join(map(str, unknown)))
+
+        start_date, end_date = self._resolve_custom_period(period, periods, scope)
+        filters = self._clean_custom_geo(scope)
+
+        kpis: list[dict[str, Any]] = []
+        charts: list[dict[str, Any]] = []
+        table: list[dict[str, Any]] = []
+        notes: list[str] = []
+        quality_notes: list[str] = []
+
+        for code in indicators:
+            if ind_status.get(code) != "ready":
+                quality_notes.append(f"{ind_name.get(code, code)}: يتطلب بيانات منظمة غير متوفرة حاليًا.")
+                continue
+            try:
+                result = self._custom_indicator(code, filters, start_date, end_date)
+            except AgencyReportError:
+                raise
+            except Exception:  # noqa: BLE001 - a single broken indicator must not 500 the whole report
+                quality_notes.append(f"{ind_name.get(code, code)}: تعذّر احتساب هذا المؤشر.")
+                continue
+            if result.get("kpi"):
+                kpis.append(result["kpi"])
+            if result.get("chart"):
+                charts.append(result["chart"])
+            table.extend(result.get("rows", []))
+            if result.get("note"):
+                notes.append(result["note"])
+
+        if kpis and not quality_notes:
+            status = "sufficient"
+        elif kpis:
+            status = "limited"
+        else:
+            status = "incomplete"
+
+        scope_out = {
+            "agency": agency,
+            "agency_name_ar": agencies[agency]["name_ar"],
+            "level": level,
+            "level_name_ar": levels[level]["name_ar"],
+            "governorate": filters.get("governorate"),
+            "city": filters.get("city"),
+            "kindergarten_id": filters.get("kindergarten_id"),
+            "period": period,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+        }
+        payload = {
+            "title": "تقرير مخصص",
+            "generated_at": _now_iso(),
+            "scope": scope_out,
+            "kpis": kpis,
+            "table": table,
+            "charts": charts,
+            "summary_ar": self._custom_summary_ar(scope_out, kpis, status),
+            "decision_notes_ar": notes,
+            "data_quality": {"status": status, "notes": quality_notes},
+            "privacy_notice_ar": "يعرض هذا التقرير بيانات تجميعية فقط ولا يتضمن أي بيانات شخصية أو حساسة.",
+            "excluded_sensitive_fields": sorted(SENSITIVE_FIELD_DENYLIST),
+        }
+        self._assert_privacy(payload)
+        return payload
+
+    def _resolve_custom_period(self, period: str, periods: dict[str, Any], scope: dict[str, Any]) -> tuple[date, date]:
+        today = datetime.now(_JORDAN_TZ).date()
+        if period == "custom":
+            raw_start = scope.get("start_date")
+            raw_end = scope.get("end_date")
+            if not raw_start or not raw_end:
+                raise AgencyReportError(400, "حدد تاريخ البداية والنهاية / Provide start_date and end_date")
+            try:
+                start = date.fromisoformat(str(raw_start))
+                end = date.fromisoformat(str(raw_end))
+            except (TypeError, ValueError):
+                raise AgencyReportError(400, "صيغة التاريخ غير صحيحة / Invalid date format (YYYY-MM-DD)")
+            if start > end:
+                raise AgencyReportError(400, "تاريخ البداية يجب أن يسبق تاريخ النهاية / start_date must be <= end_date")
+            return start, end
+        days = periods[period].get("days") or 30
+        return today - timedelta(days=days), today
+
+    def _clean_custom_geo(self, scope: dict[str, Any]) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        gov = scope.get("governorate")
+        city = scope.get("city")
+        kg = scope.get("kindergarten_id")
+        if gov not in (None, "", "null"):
+            out["governorate"] = str(gov)
+        if city not in (None, "", "null"):
+            out["city"] = str(city)
+        if kg not in (None, "", "null"):
+            try:
+                out["kindergarten_id"] = int(kg)
+            except (TypeError, ValueError):
+                raise AgencyReportError(400, "معرف الحضانة غير صالح / Invalid kindergarten_id")
+        return out
+
+    def _custom_kg_ids(self, filters: dict[str, Any]) -> list[int] | None:
+        """KG ids matching the geo scope, or None for national (no restriction)."""
+        if not (filters.get("governorate") or filters.get("city") or filters.get("kindergarten_id")):
+            return None
+        q = self.db.query(models.Kindergarten.id).filter(models.Kindergarten.status != models.KindergartenStatus.DELETED)
+        if filters.get("governorate"):
+            q = q.filter(models.Kindergarten.governorate == filters["governorate"])
+        if filters.get("city"):
+            q = q.filter(models.Kindergarten.district == filters["city"])
+        if filters.get("kindergarten_id"):
+            q = q.filter(models.Kindergarten.id == filters["kindergarten_id"])
+        return [r[0] for r in q.all()]
+
+    @staticmethod
+    def _kpi(code: str, label_ar: str, value: Any, unit_ar: str = "") -> dict[str, Any]:
+        return {"code": code, "label_ar": label_ar, "value": value, "unit_ar": unit_ar}
+
+    def _custom_indicator(self, code: str, filters: dict[str, Any], start: date, end: date) -> dict[str, Any]:
+        kg_ids = self._custom_kg_ids(filters)
+        m = self._custom_dispatch()
+        fn = m.get(code)
+        if not fn:
+            return {}
+        return fn(kg_ids, start, end)
+
+    def _custom_dispatch(self) -> dict[str, Any]:
+        return {
+            "children_count": self._ind_children_count,
+            "gender_distribution": self._ind_gender_distribution,
+            "age_distribution_6mo": self._ind_age_distribution,
+            "enrollment_status": self._ind_enrollment_status,
+            "kindergarten_count": self._ind_kindergarten_count,
+            "kindergarten_status": self._ind_kindergarten_status,
+            "occupancy_rate": self._ind_occupancy_rate,
+            "attendance_rate": self._ind_attendance_rate,
+            "absence_requests": self._ind_absence_requests,
+            "daily_report_completion": self._ind_daily_report_completion,
+            "late_reports": self._ind_late_reports,
+            "critical_incidents": self._ind_critical_incidents,
+            "incidents_by_severity": self._ind_incidents_by_severity,
+            "staff_count": self._ind_staff_count,
+            "unassigned_classes": self._ind_unassigned_classes,
+            "unassigned_children": self._ind_unassigned_children,
+            "data_quality_score": self._ind_data_quality_score,
+            "service_access_ratio": self._ind_service_access_ratio,
+        }
+
+    # -- children / enrollment ----------------------------------------
+    def _enrolled_child_ids_subq(self, kg_ids: list[int] | None):
+        q = self.db.query(models.EnrollmentApplication.child_id).filter(
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        )
+        if kg_ids is not None:
+            q = q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
+        return q
+
+    def _child_base_query(self, kg_ids: list[int] | None):
+        q = self.db.query(models.Child).filter(models.Child.deleted_at.is_(None))
+        if kg_ids is not None:
+            q = q.filter(models.Child.id.in_(self._enrolled_child_ids_subq(kg_ids)))
+        return q
+
+    def _ind_children_count(self, kg_ids, start, end):
+        total = self._child_base_query(kg_ids).count()
+        return {
+            "kpi": self._kpi("children_count", "عدد الأطفال", total, "طفل"),
+            "rows": [{"المؤشر": "عدد الأطفال", "القيمة": total}],
+            "note": f"إجمالي عدد الأطفال ضمن النطاق: {total}.",
+        }
+
+    def _ind_gender_distribution(self, kg_ids, start, end):
+        q = self.db.query(models.Child.gender, func.count(models.Child.id)).filter(models.Child.deleted_at.is_(None))
+        if kg_ids is not None:
+            q = q.filter(models.Child.id.in_(self._enrolled_child_ids_subq(kg_ids)))
+        rows = q.group_by(models.Child.gender).all()
+        series = [{"label": _gender_ar(g), "value": _safe_int(c)} for g, c in rows]
+        total = sum(s["value"] for s in series)
+        males = next((s["value"] for s in series if s["label"] == "ذكر"), 0)
+        return {
+            "kpi": self._kpi("gender_distribution", "نسبة الذكور", _safe_pct(males, total), "%"),
+            "chart": {"type": "pie", "title_ar": "التوزيع حسب الجنس", "series": series},
+            "rows": [{"المؤشر": "التوزيع حسب الجنس", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+        }
+
+    def _ind_age_distribution(self, kg_ids, start, end):
+        today = datetime.now(_JORDAN_TZ).date()
+        buckets: dict[str, int] = defaultdict(int)
+        for (dob,) in self._child_base_query(kg_ids).with_entities(models.Child.date_of_birth).all():
+            if not dob:
+                continue
+            months = (today.year - dob.year) * 12 + (today.month - dob.month)
+            months = max(months, 0)
+            low = (months // 6) * 6
+            buckets[f"{low}-{low + 6} شهر"] += 1
+        series = [{"label": k, "value": v} for k, v in sorted(buckets.items(), key=lambda kv: int(kv[0].split("-")[0]))]
+        return {
+            "kpi": self._kpi("age_distribution_6mo", "عدد الفئات العمرية (كل 6 أشهر)", len(series), "فئة"),
+            "chart": {"type": "bar", "title_ar": "التوزيع العمري كل 6 أشهر", "series": series},
+            "rows": [{"المؤشر": "التوزيع العمري", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+        }
+
+    def _ind_enrollment_status(self, kg_ids, start, end):
+        q = self.db.query(models.EnrollmentApplication.status, func.count(models.EnrollmentApplication.id))
+        if kg_ids is not None:
+            q = q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
+        rows = q.group_by(models.EnrollmentApplication.status).all()
+        series = [{"label": _enum_value(s), "value": _safe_int(c)} for s, c in rows]
+        active = next((s["value"] for s in series if s["label"] == "ACTIVE"), 0)
+        return {
+            "kpi": self._kpi("enrollment_status", "التسجيلات النشطة", active, "تسجيل"),
+            "chart": {"type": "bar", "title_ar": "حالة التسجيل", "series": series},
+            "rows": [{"المؤشر": "حالة التسجيل", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+        }
+
+    # -- kindergartens / capacity -------------------------------------
+    def _kg_query(self, kg_ids: list[int] | None):
+        q = self.db.query(models.Kindergarten).filter(models.Kindergarten.status != models.KindergartenStatus.DELETED)
+        if kg_ids is not None:
+            q = q.filter(models.Kindergarten.id.in_(kg_ids))
+        return q
+
+    def _ind_kindergarten_count(self, kg_ids, start, end):
+        total = self._kg_query(kg_ids).count()
+        return {"kpi": self._kpi("kindergarten_count", "عدد الحضانات", total, "حضانة"),
+                "rows": [{"المؤشر": "عدد الحضانات", "القيمة": total}]}
+
+    def _ind_kindergarten_status(self, kg_ids, start, end):
+        q = self.db.query(models.Kindergarten.status, func.count(models.Kindergarten.id)).filter(
+            models.Kindergarten.status != models.KindergartenStatus.DELETED)
+        if kg_ids is not None:
+            q = q.filter(models.Kindergarten.id.in_(kg_ids))
+        rows = q.group_by(models.Kindergarten.status).all()
+        series = [{"label": _enum_value(s), "value": _safe_int(c)} for s, c in rows]
+        active = next((s["value"] for s in series if s["label"] == "ACTIVE"), 0)
+        return {
+            "kpi": self._kpi("kindergarten_status", "الحضانات النشطة", active, "حضانة"),
+            "chart": {"type": "pie", "title_ar": "حالة الحضانات", "series": series},
+            "rows": [{"المؤشر": "حالة الحضانة", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+        }
+
+    def _ind_occupancy_rate(self, kg_ids, start, end):
+        cap_q = self.db.query(func.coalesce(func.sum(models.Class.capacity_total), 0)).filter(
+            models.Class.is_active.is_(True), models.Class.deleted_at.is_(None))
+        enr_q = self.db.query(func.count(models.EnrollmentApplication.id)).filter(
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
+        if kg_ids is not None:
+            cap_q = cap_q.filter(models.Class.kindergarten_id.in_(kg_ids))
+            enr_q = enr_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
+        capacity = _safe_int(cap_q.scalar())
+        enrolled = _safe_int(enr_q.scalar())
+        pct = _safe_pct(enrolled, capacity)
+        note = None
+        if capacity == 0:
+            note = "لا توجد سعة صفية مسجّلة ضمن النطاق لاحتساب نسبة الإشغال."
+        return {
+            "kpi": self._kpi("occupancy_rate", "نسبة الإشغال", pct, "%"),
+            "rows": [{"المؤشر": "نسبة الإشغال", "المسجلون": enrolled, "السعة": capacity, "النسبة %": pct}],
+            "note": note,
+        }
+
+    # -- attendance ----------------------------------------------------
+    def _ind_attendance_rate(self, kg_ids, start, end):
+        q = self.db.query(models.AttendanceLog.status, func.count(models.AttendanceLog.id)).filter(
+            models.AttendanceLog.date >= start, models.AttendanceLog.date <= end)
+        if kg_ids is not None:
+            q = q.join(models.Class, models.Class.id == models.AttendanceLog.class_id).filter(
+                models.Class.kindergarten_id.in_(kg_ids))
+        rows = dict((_enum_value(s), _safe_int(c)) for s, c in q.group_by(models.AttendanceLog.status).all())
+        total = sum(rows.values())
+        present = rows.get("PRESENT", 0) + rows.get("LATE", 0)
+        pct = _safe_pct(present, total)
+        return {
+            "kpi": self._kpi("attendance_rate", "نسبة الحضور", pct, "%"),
+            "rows": [{"المؤشر": "نسبة الحضور", "سجلات الحضور": total, "حاضر/متأخر": present, "النسبة %": pct}],
+            "note": ("لا توجد سجلات حضور ضمن الفترة المحددة." if total == 0 else None),
+        }
+
+    def _ind_absence_requests(self, kg_ids, start, end):
+        q = self.db.query(func.count(models.AbsenceRequest.id)).filter(
+            models.AbsenceRequest.start_date >= start, models.AbsenceRequest.start_date <= end)
+        if kg_ids is not None:
+            q = q.filter(models.AbsenceRequest.kindergarten_id.in_(kg_ids))
+        total = _safe_int(q.scalar())
+        return {"kpi": self._kpi("absence_requests", "طلبات الغياب", total, "طلب"),
+                "rows": [{"المؤشر": "طلبات الغياب", "القيمة": total}]}
+
+    # -- daily reports -------------------------------------------------
+    def _ind_daily_report_completion(self, kg_ids, start, end):
+        q = self.db.query(models.DailyReport.status, func.count(models.DailyReport.id)).filter(
+            models.DailyReport.date >= start, models.DailyReport.date <= end)
+        if kg_ids is not None:
+            q = q.filter(models.DailyReport.kindergarten_id.in_(kg_ids))
+        rows = dict((_enum_value(s), _safe_int(c)) for s, c in q.group_by(models.DailyReport.status).all())
+        total = sum(rows.values())
+        completed = rows.get("APPROVED", 0) + rows.get("SENT_TO_PARENT", 0)
+        pct = _safe_pct(completed, total)
+        return {
+            "kpi": self._kpi("daily_report_completion", "معدل إنجاز التقارير اليومية", pct, "%"),
+            "rows": [{"المؤشر": "إنجاز التقارير اليومية", "الإجمالي": total, "المكتملة": completed, "النسبة %": pct}],
+            "note": ("لا توجد تقارير يومية ضمن الفترة المحددة." if total == 0 else None),
+        }
+
+    def _ind_late_reports(self, kg_ids, start, end):
+        q = self.db.query(func.count(models.DailyReport.id)).filter(
+            models.DailyReport.date >= start, models.DailyReport.date <= end,
+            models.DailyReport.submitted_at.isnot(None),
+            func.date(models.DailyReport.submitted_at) > models.DailyReport.date)
+        if kg_ids is not None:
+            q = q.filter(models.DailyReport.kindergarten_id.in_(kg_ids))
+        total = _safe_int(q.scalar())
+        return {"kpi": self._kpi("late_reports", "التقارير المتأخرة", total, "تقرير"),
+                "rows": [{"المؤشر": "التقارير المتأخرة", "القيمة": total}]}
+
+    # -- safety / incidents -------------------------------------------
+    def _ind_critical_incidents(self, kg_ids, start, end):
+        q = self.db.query(func.count(models.Incident.id)).filter(
+            models.Incident.deleted_at.is_(None) if hasattr(models.Incident, "deleted_at") else True,
+            func.date(models.Incident.occurred_at) >= start, func.date(models.Incident.occurred_at) <= end,
+            models.Incident.severity_level == models.SeverityLevel.CRITICAL)
+        if kg_ids is not None:
+            q = q.filter(models.Incident.kindergarten_id.in_(kg_ids))
+        total = _safe_int(q.scalar())
+        return {"kpi": self._kpi("critical_incidents", "الحوادث الحرجة", total, "حادثة"),
+                "rows": [{"المؤشر": "الحوادث الحرجة", "القيمة": total}]}
+
+    def _ind_incidents_by_severity(self, kg_ids, start, end):
+        q = self.db.query(models.Incident.severity_level, func.count(models.Incident.id)).filter(
+            func.date(models.Incident.occurred_at) >= start, func.date(models.Incident.occurred_at) <= end)
+        if kg_ids is not None:
+            q = q.filter(models.Incident.kindergarten_id.in_(kg_ids))
+        rows = q.group_by(models.Incident.severity_level).all()
+        series = [{"label": _enum_value(s), "value": _safe_int(c)} for s, c in rows]
+        total = sum(s["value"] for s in series)
+        return {
+            "kpi": self._kpi("incidents_by_severity", "إجمالي الحوادث", total, "حادثة"),
+            "chart": {"type": "bar", "title_ar": "الحوادث حسب الخطورة", "series": series},
+            "rows": [{"المؤشر": "الحوادث حسب الخطورة", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+        }
+
+    # -- staff / governance -------------------------------------------
+    def _ind_staff_count(self, kg_ids, start, end):
+        q = self.db.query(models.User.role, func.count(models.User.id)).filter(
+            models.User.deleted_at.is_(None),
+            models.User.role.in_([models.UserRole.MANAGER, models.UserRole.SUPERVISOR]))
+        if kg_ids is not None:
+            q = q.filter(models.User.kindergarten_id.in_(kg_ids))
+        rows = dict((_enum_value(r), _safe_int(c)) for r, c in q.group_by(models.User.role).all())
+        managers = rows.get("MANAGER", 0)
+        supervisors = rows.get("SUPERVISOR", 0)
+        return {
+            "kpi": self._kpi("staff_count", "عدد الموظفين", managers + supervisors, "موظف"),
+            "rows": [{"المؤشر": "عدد الموظفين", "المدراء": managers, "المشرفون": supervisors, "الإجمالي": managers + supervisors}],
+        }
+
+    def _ind_unassigned_classes(self, kg_ids, start, end):
+        assigned = self.db.query(models.SupervisorAssignment.class_id).filter(
+            models.SupervisorAssignment.deleted_at.is_(None))
+        q = self.db.query(func.count(models.Class.id)).filter(
+            models.Class.is_active.is_(True), models.Class.deleted_at.is_(None),
+            ~models.Class.id.in_(assigned))
+        if kg_ids is not None:
+            q = q.filter(models.Class.kindergarten_id.in_(kg_ids))
+        total = _safe_int(q.scalar())
+        return {"kpi": self._kpi("unassigned_classes", "الفصول غير المسندة لمشرف", total, "صف"),
+                "rows": [{"المؤشر": "الفصول غير المسندة لمشرف", "القيمة": total}]}
+
+    def _ind_unassigned_children(self, kg_ids, start, end):
+        q = self.db.query(func.count(models.EnrollmentApplication.id)).filter(
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            models.EnrollmentApplication.class_id.is_(None))
+        if kg_ids is not None:
+            q = q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
+        total = _safe_int(q.scalar())
+        return {"kpi": self._kpi("unassigned_children", "الأطفال غير المسجلين في صف", total, "طفل"),
+                "rows": [{"المؤشر": "الأطفال غير المسجلين في صف", "القيمة": total}]}
+
+    def _ind_data_quality_score(self, kg_ids, start, end):
+        today = datetime.now(_JORDAN_TZ).date()
+        week_ago = today - timedelta(days=7)
+        kg_q = self.db.query(models.Kindergarten.id).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+        if kg_ids is not None:
+            kg_q = kg_q.filter(models.Kindergarten.id.in_(kg_ids))
+        active_ids = [r[0] for r in kg_q.all()]
+        total = len(active_ids)
+        reported = 0
+        if active_ids:
+            reported = self.db.query(func.count(func.distinct(models.DailyReport.kindergarten_id))).filter(
+                models.DailyReport.kindergarten_id.in_(active_ids),
+                models.DailyReport.date >= week_ago, models.DailyReport.date <= today).scalar() or 0
+        pct = _safe_pct(reported, total)
+        return {
+            "kpi": self._kpi("data_quality_score", "مؤشر جودة البيانات", pct, "%"),
+            "rows": [{"المؤشر": "جودة البيانات (رياض قدّمت تقريرًا خلال 7 أيام)", "النشطة": total, "المُبلِّغة": reported, "النسبة %": pct}],
+            "note": ("لا توجد رياض نشطة ضمن النطاق لاحتساب جودة البيانات." if total == 0 else None),
+        }
+
+    def _ind_service_access_ratio(self, kg_ids, start, end):
+        children = self._child_base_query(kg_ids).count()
+        kg_q = self.db.query(func.count(models.Kindergarten.id)).filter(
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+        if kg_ids is not None:
+            kg_q = kg_q.filter(models.Kindergarten.id.in_(kg_ids))
+        active_kgs = _safe_int(kg_q.scalar())
+        ratio = round(children / active_kgs, 2) if active_kgs else 0.0
+        return {
+            "kpi": self._kpi("service_access_ratio", "أطفال لكل حضانة نشطة", ratio, "طفل/حضانة"),
+            "rows": [{"المؤشر": "أطفال لكل حضانة نشطة", "الأطفال": children, "الحضانات النشطة": active_kgs, "النسبة": ratio}],
+            "note": ("لا توجد رياض نشطة ضمن النطاق." if active_kgs == 0 else None),
+        }
+
+    def _custom_summary_ar(self, scope: dict[str, Any], kpis: list[dict[str, Any]], status: str) -> str:
+        parts = [f"تقرير مخصص للجهة: {scope['agency_name_ar']}، على مستوى {scope['level_name_ar']}"]
+        if scope.get("governorate"):
+            parts.append(f"محافظة {scope['governorate']}")
+        if scope.get("city"):
+            parts.append(f"لواء/مدينة {scope['city']}")
+        parts.append(f"للفترة من {scope['start_date']} إلى {scope['end_date']}")
+        head = "، ".join(parts) + "."
+        if not kpis:
+            return head + " لا توجد مؤشرات محسوبة ضمن هذا النطاق."
+        highlights = "؛ ".join(f"{k['label_ar']}: {k['value']}{(' ' + k['unit_ar']) if k.get('unit_ar') else ''}" for k in kpis[:6])
+        status_ar = {"sufficient": "البيانات كافية", "limited": "البيانات محدودة", "incomplete": "البيانات غير مكتملة"}.get(status, status)
+        return f"{head} أبرز المؤشرات: {highlights}. حالة البيانات: {status_ar}."
