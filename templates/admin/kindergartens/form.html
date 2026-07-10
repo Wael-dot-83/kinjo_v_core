@@ -2,174 +2,287 @@
 
 {% block title %}{% if kindergarten %}{% if ui_lang == 'en' %}Edit Kindergarten{% else %}تعديل حضانة{% endif %}{% else %}{% if ui_lang == 'en' %}New Kindergarten{% else %}حضانة جديدة{% endif %}{% endif %} — KinJo{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/admin_kindergartens.css?v=1.0">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4" dir="{{ 'rtl' if ui_lang != 'en' else 'ltr' }}">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <h1 class="h3 mb-0 fw-bold">
-            <i class="bi bi-building me-2 text-primary"></i>
-            {% if kindergarten %}{% if ui_lang == 'en' %}Edit Kindergarten{% else %}تعديل حضانة{% endif %}{% else %}{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة حضانة جديدة{% endif %}{% endif %}
-        </h1>
-        <a href="/admin/kindergartens" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-right me-1"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
-        </a>
+
+  <nav class="kg-breadcrumb" aria-label="breadcrumb">
+    <a href="/admin/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a>
+    <span class="sep">/</span>
+    <a href="/admin/kindergartens">{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}</a>
+    <span class="sep">/</span>
+    <span aria-current="page">{% if kindergarten %}{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}{% else %}{% if ui_lang == 'en' %}New{% else %}جديدة{% endif %}{% endif %}</span>
+  </nav>
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h3 mb-0 fw-bold">
+      <i class="bi bi-building me-2 text-primary"></i>
+      {% if kindergarten %}{% if ui_lang == 'en' %}Edit Kindergarten{% else %}تعديل حضانة{% endif %}{% else %}{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة حضانة جديدة{% endif %}{% endif %}
+    </h1>
+    <a href="/admin/kindergartens" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-{{ 'left' if ui_lang == 'en' else 'right' }} me-1"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
+    </a>
+  </div>
+
+  <!-- Section progress -->
+  <div class="kg-form-progress" id="form-progress">
+    <span class="kg-form-step" data-target="sec-identity"><span class="kg-step-num">1</span>{% if ui_lang == 'en' %}Identity{% else %}الهوية{% endif %}</span>
+    <span class="kg-form-step" data-target="sec-contact"><span class="kg-step-num">2</span>{% if ui_lang == 'en' %}Contact{% else %}التواصل{% endif %}</span>
+    <span class="kg-form-step" data-target="sec-mgmt"><span class="kg-step-num">3</span>{% if ui_lang == 'en' %}Management{% else %}الإدارة{% endif %}</span>
+    <span class="kg-form-step" data-target="sec-capacity"><span class="kg-step-num">4</span>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</span>
+    <span class="kg-form-step" data-target="sec-compliance"><span class="kg-step-num">5</span>{% if ui_lang == 'en' %}Compliance{% else %}الامتثال{% endif %}</span>
+  </div>
+
+  <div id="form-error" class="alert alert-danger d-none"></div>
+
+  <form id="kg-form" class="needs-validation" novalidate>
+    <!-- Basic Identity -->
+    <div class="glass-card card mb-3" id="sec-identity">
+      <div class="card-header fw-semibold"><i class="bi bi-card-text me-2"></i>{% if ui_lang == 'en' %}Basic Identity{% else %}الهوية الأساسية{% endif %}</div>
+      <div class="card-body row g-3">
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Name (Arabic){% else %}الاسم (عربي){% endif %} *</label><input name="name_ar" class="form-control" required>
+          <div class="invalid-feedback">{% if ui_lang == 'en' %}Name is required.{% else %}الاسم مطلوب.{% endif %}</div>
+          <div class="kg-dup-warning d-none" id="dup-name"><i class="bi bi-exclamation-triangle"></i><span></span></div>
+        </div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Name (English){% else %}الاسم (إنجليزي){% endif %}</label><input name="name_en" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Legal / Trade Name{% else %}الاسم القانوني{% endif %}</label><input name="legal_name" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</label><input name="type" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %} *</label><select name="governorate" id="governorate" class="form-select" required><option value=""></option></select>
+          <div class="invalid-feedback">{% if ui_lang == 'en' %}Governorate is required.{% else %}المحافظة مطلوبة.{% endif %}</div>
+        </div>
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}District / City{% else %}اللواء / المدينة{% endif %} *</label>
+          <input name="district" id="district" class="form-control" list="district-options" autocomplete="off" required>
+          <datalist id="district-options"></datalist>
+          <div class="invalid-feedback">{% if ui_lang == 'en' %}District is required.{% else %}اللواء مطلوب.{% endif %}</div>
+        </div>
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %} *</label><input name="area" class="form-control" required>
+          <div class="invalid-feedback">{% if ui_lang == 'en' %}Area is required.{% else %}المنطقة مطلوبة.{% endif %}</div>
+        </div>
+        <div class="col-12"><label class="form-label">{% if ui_lang == 'en' %}Detailed Address{% else %}العنوان التفصيلي{% endif %} *</label><textarea name="address_line" class="form-control" rows="2" required></textarea>
+          <div class="invalid-feedback">{% if ui_lang == 'en' %}Address is required.{% else %}العنوان مطلوب.{% endif %}</div>
+        </div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Geolocation (lat, lng){% else %}الموقع الجغرافي (خط العرض، الطول){% endif %}</label><div class="input-group"><input name="latitude" class="form-control" placeholder="lat"><input name="longitude" class="form-control" placeholder="lng"></div></div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}License Number{% else %}رقم الترخيص{% endif %}</label><input name="license_number" class="form-control"></div>
+      </div>
     </div>
 
-    <div id="form-error" class="alert alert-danger d-none"></div>
-
-    <form id="kg-form" class="needs-validation" novalidate>
-        <!-- Basic Identity -->
-        <div class="glass-card card mb-3">
-            <div class="card-header fw-semibold"><i class="bi bi-card-text me-2"></i>{% if ui_lang == 'en' %}Basic Identity{% else %}الهوية الأساسية{% endif %}</div>
-            <div class="card-body row g-3">
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Name (Arabic){% else %}الاسم (عربي){% endif %} *</label><input name="name_ar" class="form-control" required></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Name (English){% else %}الاسم (إنجليزي){% endif %}</label><input name="name_en" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Legal / Trade Name{% else %}الاسم القانوني{% endif %}</label><input name="legal_name" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</label><input name="type" class="form-control"></div>
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %} *</label><select name="governorate" id="governorate" class="form-select" required><option value=""></option></select></div>
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}District / City{% else %}اللواء / المدينة{% endif %} *</label><input name="district" class="form-control" required></div>
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %} *</label><input name="area" class="form-control" required></div>
-                <div class="col-12"><label class="form-label">{% if ui_lang == 'en' %}Detailed Address{% else %}العنوان التفصيلي{% endif %} *</label><textarea name="address_line" class="form-control" rows="2" required></textarea></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Geolocation (lat, lng){% else %}الموقع الجغرافي (خط العرض، الطول){% endif %}</label><div class="input-group"><input name="latitude" class="form-control" placeholder="lat"><input name="longitude" class="form-control" placeholder="lng"></div></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}License Number{% else %}رقم الترخيص{% endif %}</label><input name="license_number" class="form-control"></div>
-            </div>
+    <!-- Contact -->
+    <div class="glass-card card mb-3" id="sec-contact">
+      <div class="card-header fw-semibold"><i class="bi bi-telephone me-2"></i>{% if ui_lang == 'en' %}Contact Information{% else %}معلومات التواصل{% endif %}</div>
+      <div class="card-body row g-3">
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %} *</label><input name="contact_phone" class="form-control" required>
+          <div class="invalid-feedback">{% if ui_lang == 'en' %}Phone is required.{% else %}الهاتف مطلوب.{% endif %}</div>
         </div>
-
-        <!-- Contact -->
-        <div class="glass-card card mb-3">
-            <div class="card-header fw-semibold"><i class="bi bi-telephone me-2"></i>{% if ui_lang == 'en' %}Contact Information{% else %}معلومات التواصل{% endif %}</div>
-            <div class="card-body row g-3">
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %} *</label><input name="contact_phone" class="form-control" required></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Mobile{% else %}الجوال{% endif %}</label><input name="mobile" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label><input name="contact_email" type="email" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Website{% else %}الموقع الإلكتروني{% endif %}</label><input name="website" class="form-control"></div>
-            </div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Mobile{% else %}الجوال{% endif %}</label><input name="mobile" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label><input name="contact_email" type="email" class="form-control">
+          <div class="invalid-feedback">{% if ui_lang == 'en' %}Enter a valid email.{% else %}أدخل بريدًا صحيحًا.{% endif %}</div>
         </div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Website{% else %}الموقع الإلكتروني{% endif %}</label><input name="website" class="form-control"></div>
+      </div>
+    </div>
 
-        <!-- Management & Ownership -->
-        <div class="glass-card card mb-3">
-            <div class="card-header fw-semibold"><i class="bi bi-person-badge me-2"></i>{% if ui_lang == 'en' %}Management & Ownership{% else %}الإدارة والملكية{% endif %}</div>
-            <div class="card-body row g-3">
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Manager Name{% else %}اسم المدير{% endif %}</label><input name="manager_name" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Manager ID{% else %}رقم المدير{% endif %}</label><input name="manager_id" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Manager Phone{% else %}هاتف المدير{% endif %}</label><input name="manager_phone" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Manager Email{% else %}بريد المدير{% endif %}</label><input name="manager_email" type="email" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Owner Name{% else %}اسم المالك{% endif %}</label><input name="owner_name" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Ownership Type{% else %}نوع الملكية{% endif %}</label><input name="ownership_type" class="form-control"></div>
-            </div>
-        </div>
+    <!-- Management & Ownership -->
+    <div class="glass-card card mb-3" id="sec-mgmt">
+      <div class="card-header fw-semibold"><i class="bi bi-person-badge me-2"></i>{% if ui_lang == 'en' %}Management & Ownership{% else %}الإدارة والملكية{% endif %}</div>
+      <div class="card-body row g-3">
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Manager Name{% else %}اسم المدير{% endif %}</label><input name="manager_name" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Manager ID{% else %}رقم المدير{% endif %}</label><input name="manager_id" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Manager Phone{% else %}هاتف المدير{% endif %}</label><input name="manager_phone" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Manager Email{% else %}بريد المدير{% endif %}</label><input name="manager_email" type="email" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Owner Name{% else %}اسم المالك{% endif %}</label><input name="owner_name" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Ownership Type{% else %}نوع الملكية{% endif %}</label><input name="ownership_type" class="form-control"></div>
+      </div>
+    </div>
 
-        <!-- Operational Capacity -->
-        <div class="glass-card card mb-3">
-            <div class="card-header fw-semibold"><i class="bi bi-bar-chart me-2"></i>{% if ui_lang == 'en' %}Operational Capacity{% else %}السعة التشغيلية{% endif %}</div>
-            <div class="card-body row g-3">
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Total Capacity{% else %}السعة الإجمالية{% endif %}</label><input name="total_capacity" type="number" min="0" class="form-control"></div>
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Current Children{% else %}عدد الأطفال الحالي{% endif %}</label><input name="current_child_count" type="number" min="0" class="form-control"></div>
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Number of Classes{% else %}عدد الشعب{% endif %}</label><input name="number_of_classes" type="number" min="0" class="form-control"></div>
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Teacher Count{% else %}عدد المعلمين{% endif %}</label><input name="teacher_count" type="number" min="0" class="form-control"></div>
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Working Hours{% else %}ساعات العمل{% endif %}</label><div class="input-group"><input name="working_hours_start" class="form-control" placeholder="HH:MM"><input name="working_hours_end" class="form-control" placeholder="HH:MM"></div></div>
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Working Days{% else %}أيام العمل{% endif %}</label><input name="working_days" class="form-control"></div>
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Age Group{% else %}الفئة العمرية{% endif %}</label><input name="age_group" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Registration Fees{% else %}رسوم التسجيل{% endif %}</label><input name="registration_fees" type="number" min="0" step="0.01" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Monthly Fees{% else %}الرسوم الشهرية{% endif %}</label><input name="monthly_fees" type="number" min="0" step="0.01" class="form-control"></div>
-            </div>
-        </div>
+    <!-- Operational Capacity -->
+    <div class="glass-card card mb-3" id="sec-capacity">
+      <div class="card-header fw-semibold"><i class="bi bi-bar-chart me-2"></i>{% if ui_lang == 'en' %}Operational Capacity{% else %}السعة التشغيلية{% endif %}</div>
+      <div class="card-body row g-3">
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Total Capacity{% else %}السعة الإجمالية{% endif %}</label><input name="total_capacity" type="number" min="0" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Current Children{% else %}عدد الأطفال الحالي{% endif %}</label><input name="current_child_count" type="number" min="0" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Number of Classes{% else %}عدد الشعب{% endif %}</label><input name="number_of_classes" type="number" min="0" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Teacher Count{% else %}عدد المعلمين{% endif %}</label><input name="teacher_count" type="number" min="0" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Working Hours{% else %}ساعات العمل{% endif %}</label><div class="input-group"><input name="working_hours_start" class="form-control" placeholder="HH:MM"><input name="working_hours_end" class="form-control" placeholder="HH:MM"></div></div>
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Working Days{% else %}أيام العمل{% endif %}</label><input name="working_days" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}Age Group{% else %}الفئة العمرية{% endif %}</label><input name="age_group" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Registration Fees{% else %}رسوم التسجيل{% endif %}</label><input name="registration_fees" type="number" min="0" step="0.01" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">{% if ui_lang == 'en' %}Monthly Fees{% else %}الرسوم الشهرية{% endif %}</label><input name="monthly_fees" type="number" min="0" step="0.01" class="form-control"></div>
+      </div>
+    </div>
 
-        <!-- Compliance -->
-        <div class="glass-card card mb-3">
-            <div class="card-header fw-semibold"><i class="bi bi-shield-check me-2"></i>{% if ui_lang == 'en' %}Compliance & Status{% else %}الامتثال والحالة{% endif %}</div>
-            <div class="card-body row g-3">
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}License Valid Until{% else %}صلاحية الترخيص حتى{% endif %}</label><input name="license_valid_until" type="date" class="form-control"></div>
-                <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}License Status{% else %}حالة الترخيص{% endif %}</label><input name="license_status" class="form-control"></div>
-                <div class="col-12"><label class="form-label">{% if ui_lang == 'en' %}Administrative Notes{% else %}ملاحظات إدارية{% endif %}</label><textarea name="administrative_notes" class="form-control" rows="2"></textarea></div>
-                {% if kindergarten and kindergarten.frozen_reason %}
-                <div class="col-12 alert alert-info mb-0">
-                    <strong>{% if ui_lang == 'en' %}Freeze Reason:{% else %}سبب التجميد:{% endif %}</strong> {{ kindergarten.frozen_reason }}
-                </div>
-                {% endif %}
-            </div>
+    <!-- Compliance -->
+    <div class="glass-card card mb-3" id="sec-compliance">
+      <div class="card-header fw-semibold"><i class="bi bi-shield-check me-2"></i>{% if ui_lang == 'en' %}Compliance & Status{% else %}الامتثال والحالة{% endif %}</div>
+      <div class="card-body row g-3">
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}License Valid Until{% else %}صلاحية الترخيص حتى{% endif %}</label><input name="license_valid_until" type="date" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">{% if ui_lang == 'en' %}License Status{% else %}حالة الترخيص{% endif %}</label><input name="license_status" class="form-control"></div>
+        <div class="col-12"><label class="form-label">{% if ui_lang == 'en' %}Administrative Notes{% else %}ملاحظات إدارية{% endif %}</label><textarea name="administrative_notes" class="form-control" rows="2"></textarea></div>
+        {% if kindergarten and kindergarten.frozen_reason %}
+        <div class="col-12 alert alert-info mb-0">
+          <strong>{% if ui_lang == 'en' %}Freeze Reason:{% else %}سبب التجميد:{% endif %}</strong> {{ kindergarten.frozen_reason }}
         </div>
+        {% endif %}
+      </div>
+    </div>
 
-        <div class="d-flex justify-content-end gap-2 mb-4">
-            <a href="/admin/kindergartens" class="btn btn-outline-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
-            <button type="submit" class="btn btn-primary" id="submit-btn">
-                <span class="spinner-border spinner-border-sm d-none me-1" id="spinner"></span>
-                {% if kindergarten %}{% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}{% else %}{% if ui_lang == 'en' %}Create Kindergarten{% else %}إنشاء الحضانة{% endif %}{% endif %}
-            </button>
-        </div>
-    </form>
+    <div class="d-flex justify-content-end gap-2 mb-4">
+      <a href="/admin/kindergartens" class="btn btn-outline-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
+      <button type="submit" class="btn btn-primary" id="submit-btn">
+        <span class="spinner-border spinner-border-sm d-none me-1" id="spinner"></span>
+        {% if kindergarten %}{% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}{% else %}{% if ui_lang == 'en' %}Create Kindergarten{% else %}إنشاء الحضانة{% endif %}{% endif %}
+      </button>
+    </div>
+  </form>
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_scripts %}
 <script>
-const IS_EN = document.documentElement.lang === 'en';
-const T = (ar, en) => IS_EN ? en : ar;
-const KG_ID = {{ kindergarten.id if kindergarten else 'null' }};
+(function () {
+  "use strict";
+  var IS_EN = document.documentElement.lang === 'en';
+  var T = function (ar, en) { return IS_EN ? en : ar; };
+  var KG_ID = {{ kindergarten.id if kindergarten else 'null' }};
+  var form = document.getElementById('kg-form');
+  var NUMERIC = ['total_capacity','current_child_count','number_of_classes','teacher_count','registration_fees','monthly_fees','latitude','longitude'];
 
-async function loadGovernorates() {
-    const j = await api.get('/api/reference/governorates');
-    const sel = document.getElementById('governorate');
-    (j.governorates || []).forEach(g => {
-        const o = document.createElement('option'); o.value = g.name_ar; o.textContent = g.name_ar; sel.appendChild(o);
+  function toast(type,msg){ if(window.AdminComponents&&window.AdminComponents.showNotification){window.AdminComponents.showNotification({type:type,title:'',message:msg});}}
+
+  // ---- governorate + district cascade -----------------------------------
+  function loadGovernorates() {
+    return api.get('/api/reference/governorates').then(function (j) {
+      var sel = document.getElementById('governorate');
+      (j.governorates || []).forEach(function (g) {
+        var o = document.createElement('option'); o.value = g.name_ar; o.textContent = g.name_ar; sel.appendChild(o);
+      });
+    }).catch(function () {});
+  }
+  function loadDistricts(gov, keep) {
+    var dl = document.getElementById('district-options');
+    dl.innerHTML = '';
+    if (!gov) return Promise.resolve();
+    return api.get('/api/governorates/' + encodeURIComponent(gov) + '/districts').then(function (j) {
+      (j.districts || []).forEach(function (d) {
+        var o = document.createElement('option'); o.value = d; dl.appendChild(o);
+      });
+      if (!keep) document.getElementById('district').value = '';
+    }).catch(function () {});
+  }
+  document.getElementById('governorate').addEventListener('change', function () {
+    loadDistricts(this.value, false);
+  });
+
+  // ---- real (non-fake) duplicate name check -----------------------------
+  var dupTimer = null;
+  document.querySelector('[name="name_ar"]').addEventListener('input', function () {
+    var name = this.value.trim();
+    var box = document.getElementById('dup-name');
+    var span = box.querySelector('span');
+    clearTimeout(dupTimer);
+    if (name.length < 3) { box.classList.add('d-none'); return; }
+    dupTimer = setTimeout(function () {
+      api.get('/api/kindergartens', { q: name, limit: 5 }).then(function (j) {
+        var items = (j.data && j.data.items) || [];
+        var hit = items.find(function (k) { return k.name_ar === name && k.id !== KG_ID; });
+        if (hit) {
+          span.textContent = T('توجد حضانة بنفس الاسم بالفعل (' + (hit.governorate || '') + ')',
+                               'A kindergarten with this exact name already exists (' + (hit.governorate || '') + ')');
+          box.classList.remove('d-none');
+        } else { box.classList.add('d-none'); }
+      }).catch(function () {});
+    }, 350);
+  });
+
+  // ---- section progress --------------------------------------------------
+  function requiredFilled(sectionId) {
+    var sec = document.getElementById(sectionId);
+    var reqs = sec.querySelectorAll('[required]');
+    if (!reqs.length) return null; // no required fields -> optional section
+    return Array.prototype.every.call(reqs, function (el) { return String(el.value).trim() !== ''; });
+  }
+  function refreshProgress() {
+    document.querySelectorAll('#form-progress .kg-form-step').forEach(function (step) {
+      var done = requiredFilled(step.getAttribute('data-target'));
+      step.classList.toggle('is-complete', done === true);
     });
-}
+  }
+  form.addEventListener('input', refreshProgress);
+  document.querySelectorAll('#form-progress .kg-form-step').forEach(function (step) {
+    step.addEventListener('click', function () {
+      var sec = document.getElementById(step.getAttribute('data-target'));
+      if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+  form.addEventListener('focusin', function (e) {
+    var card = e.target.closest('.glass-card');
+    if (!card) return;
+    document.querySelectorAll('#form-progress .kg-form-step').forEach(function (s) {
+      s.classList.toggle('is-active', s.getAttribute('data-target') === card.id);
+    });
+  });
 
-function fillForm(kg) {
-    const f = document.getElementById('kg-form');
-    for (const [k, v] of Object.entries(kg)) {
-        const el = f.elements[k];
-        if (el && v !== null && v !== undefined) el.value = (v && v.value) ? v.value : v;
-    }
-}
+  // ---- prefill (edit) ----------------------------------------------------
+  function fillForm(kg) {
+    Object.keys(kg).forEach(function (k) {
+      var el = form.elements[k];
+      var v = kg[k];
+      if (el && v !== null && v !== undefined) el.value = (v && v.value) ? v.value : v;
+    });
+  }
+  function init() {
+    loadGovernorates().then(function () {
+      if (KG_ID) {
+        return api.getKindergarten(KG_ID).then(function (j) {
+          if (j.success) {
+            fillForm(j.data);
+            return loadDistricts(j.data.governorate, true);
+          }
+        });
+      }
+    }).then(refreshProgress);
+  }
 
-async function init() {
-    await loadGovernorates();
-    if (KG_ID) {
-        const j = await api.getKindergarten(KG_ID);
-        if (j.success) fillForm(j.data);
-    } else {
-        document.getElementById('governorate').value = '';
-    }
-}
-
-document.getElementById('kg-form').addEventListener('submit', async (e) => {
+  // ---- submit ------------------------------------------------------------
+  form.addEventListener('submit', function (e) {
     e.preventDefault();
-    const f = e.target;
-    if (!f.checkValidity()) { f.classList.add('was-validated'); return; }
-    const fd = new FormData(f);
-    const payload = {};
-    fd.forEach((v, k) => {
-        if (v === '' || v === null) return;
-        if (['total_capacity','current_child_count','number_of_classes','teacher_count','registration_fees','monthly_fees'].includes(k)) {
-            payload[k] = Number(v);
-        } else payload[k] = v;
+    if (!form.checkValidity()) {
+      form.classList.add('was-validated');
+      var firstInvalid = form.querySelector(':invalid');
+      if (firstInvalid) firstInvalid.focus();
+      return;
+    }
+    var payload = {};
+    new FormData(form).forEach(function (v, k) {
+      if (v === '' || v === null) return;
+      payload[k] = NUMERIC.indexOf(k) !== -1 ? Number(v) : v;
     });
-    const errBox = document.getElementById('form-error');
+    var errBox = document.getElementById('form-error');
     errBox.classList.add('d-none');
     document.getElementById('spinner').classList.remove('d-none');
     document.getElementById('submit-btn').disabled = true;
-    try {
-        let j;
-        if (KG_ID) {
-            j = await api.updateKindergarten(KG_ID, payload);
-        } else {
-            j = await api.createKindergarten(payload);
-        }
-        if (!j.success) {
-            errBox.textContent = j.message || T('تعذر الحفظ', 'Could not save');
-            errBox.classList.remove('d-none');
-        } else {
-            window.location.href = '/admin/kindergartens';
-        }
-    } catch (err) {
-        errBox.textContent = T('حدث خطأ غير متوقع', 'Unexpected error');
+    var req = KG_ID ? api.updateKindergarten(KG_ID, payload) : api.createKindergarten(payload);
+    req.then(function (j) {
+      if (!j || !j.success) {
+        errBox.textContent = (j && j.message) || T('تعذر الحفظ', 'Could not save');
         errBox.classList.remove('d-none');
-    } finally {
-        document.getElementById('spinner').classList.add('d-none');
-        document.getElementById('submit-btn').disabled = false;
-    }
-});
+        errBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        toast('success', KG_ID ? T('تم حفظ التغييرات', 'Changes saved') : T('تم إنشاء الحضانة', 'Kindergarten created'));
+        setTimeout(function () { window.location.href = '/admin/kindergartens'; }, 500);
+      }
+    }).catch(function () {
+      errBox.textContent = T('حدث خطأ غير متوقع', 'Unexpected error');
+      errBox.classList.remove('d-none');
+    }).finally(function () {
+      document.getElementById('spinner').classList.add('d-none');
+      document.getElementById('submit-btn').disabled = false;
+    });
+  });
 
-init();
+  init();
+})();
 </script>
 {% endblock %}

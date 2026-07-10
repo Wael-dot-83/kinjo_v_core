@@ -783,7 +783,7 @@ class TestClassEndpoints:
             "class_code": "NEW-001",
             "age_group": "AGE_2_4",
             "kindergarten_id": kg.id,
-            "capacity_total": 25,
+            "capacity_total": 10,
             "min_age_months": 36,
             "max_age_months": 48,
             "supervisor_id": sup.id
@@ -873,14 +873,14 @@ class TestClassEndpoints:
 
         payload = {
             "name_ar": "Updated Class",
-            "capacity_total": 30
+            "capacity_total": 10
         }
 
         response = client.put(f"/api/classes/{class_obj.id}", json=payload)
         assert response.status_code == 200
         data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["name_ar"] == "Updated Class"
-        assert data["capacity_total"] == 30
+        assert data["capacity_total"] == 10
 
         app.dependency_overrides.clear()
 

@@ -100,7 +100,7 @@ class PredictiveAnalytics:
         q_active = db.query(models.EnrollmentApplication.child_id).filter(models.EnrollmentApplication.is_active.is_(True))
         if kindergarten_id > 0:
             q_active = q_active.filter(models.EnrollmentApplication.kindergarten_id == kindergarten_id)
-        
+
         active_children = q_active.distinct().count()
         if active_children <= 0:
             raise ValueError("No active children for this scope")
@@ -116,7 +116,7 @@ class PredictiveAnalytics:
         )
         if kindergarten_id > 0:
             q_rows = q_rows.filter(models.Class.kindergarten_id == kindergarten_id)
-            
+
         rows = (
             q_rows.group_by(models.AttendanceLog.date)
             .order_by(models.AttendanceLog.date.asc())
@@ -141,7 +141,7 @@ class PredictiveAnalytics:
         )
         if kindergarten_id > 0:
             q_rows = q_rows.filter(models.Incident.kindergarten_id == kindergarten_id)
-            
+
         rows = (
             q_rows.group_by(func.date(models.Incident.occurred_at))
             .order_by(func.date(models.Incident.occurred_at).asc())
@@ -166,7 +166,7 @@ class PredictiveAnalytics:
         q_cap = db.query(func.sum(models.Class.capacity_total)).filter(models.Class.is_active.is_(True))
         if kindergarten_id > 0:
             q_cap = q_cap.filter(models.Class.kindergarten_id == kindergarten_id)
-            
+
         capacity_total = q_cap.scalar() or 0
         if capacity_total <= 0:
             raise ValueError("No class capacity configured for this scope")
@@ -182,7 +182,7 @@ class PredictiveAnalytics:
         )
         if kindergarten_id > 0:
             q_rows = q_rows.filter(models.EnrollmentApplication.kindergarten_id == kindergarten_id)
-            
+
         rows = (
             q_rows.group_by(models.EnrollmentApplication.enrollment_start_date)
             .order_by(models.EnrollmentApplication.enrollment_start_date.asc())
@@ -193,7 +193,7 @@ class PredictiveAnalytics:
         q_base = db.query(func.count(models.EnrollmentApplication.id)).filter(models.EnrollmentApplication.is_active.is_(True))
         if kindergarten_id > 0:
             q_base = q_base.filter(models.EnrollmentApplication.kindergarten_id == kindergarten_id)
-            
+
         baseline_active = q_base.scalar() or 0
 
         cumulative = max(0, int(baseline_active) - sum(by_date.values()))

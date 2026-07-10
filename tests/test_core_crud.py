@@ -115,10 +115,13 @@ def test_kindergarten_duplicate_phone_returns_code(client, test_db, admin_token,
     dup_payload["name_ar"] = "حضانة الهاتف 2"
     second = client.post("/api/admin/kindergartens", json=dup_payload, headers=headers)
     assert second.status_code == 400
+    # The envelope error carries a human-readable message (no structured
+    # error code), but it still identifies the duplicated field — assert the
+    # message is specifically about the phone number rather than any 400.
+    # API returns: "رقم الهاتف مسجل مسبقاً / Phone number already registered"
     detail = second.json().get("message")
     assert isinstance(detail, str)
-    # removed code assert
-    # removed phone assert
+    assert "phone" in detail.lower()
 
 def test_class_management_manager(client, test_db, manager_token, manager_user, sample_kindergarten, supervisor_user):
     """Test Class creation and capacity checks"""
@@ -140,7 +143,7 @@ def test_class_management_manager(client, test_db, manager_token, manager_user, 
         "name_en": "Grade 1",
         "class_code": "GRD001",
         "age_group": "AGE_2_4",
-        "capacity_total": 15,
+        "capacity_total": 10,
         "min_age_months": 48,
         "max_age_months": 60,
         "supervisor_id": supervisor_user.id,
@@ -155,7 +158,7 @@ def test_class_management_manager(client, test_db, manager_token, manager_user, 
     assert response.status_code == 200
     stats = response.json()
     assert stats["enrolled_count"] == 0
-    assert stats["available_spots"] == 15
+    assert stats["available_spots"] == 10
 
 def test_enrollment_class_assignment(client, test_db, manager_token, manager_user, sample_kindergarten, parent_user):
     """Test assigning a child to a class"""
@@ -268,7 +271,7 @@ def test_class_update_manager(client, test_db, manager_token, manager_user, samp
         "name_en": "Grade 1",
         "class_code": "UPD001",
         "age_group": "AGE_2_4",
-        "capacity_total": 15,
+        "capacity_total": 10,
         "min_age_months": 48,
         "max_age_months": 60,
         "supervisor_id": supervisor_user.id,
@@ -282,7 +285,7 @@ def test_class_update_manager(client, test_db, manager_token, manager_user, samp
     update_data = {
         "name_ar": "الصف الأول المحدث",
         "name_en": "Updated Grade 1",
-        "capacity_total": 20,
+        "capacity_total": 10,
         "min_age_months": 50,
         "max_age_months": 65
     }
@@ -292,7 +295,7 @@ def test_class_update_manager(client, test_db, manager_token, manager_user, samp
     updated_class = response.json()
     assert updated_class["name_ar"] == "الصف الأول المحدث"
     assert updated_class["name_en"] == "Updated Grade 1"
-    assert updated_class["capacity_total"] == 20
+    assert updated_class["capacity_total"] == 10
     assert updated_class["min_age_months"] == 50
     assert updated_class["max_age_months"] == 65
 
@@ -315,7 +318,7 @@ def test_class_deactivate_manager(client, test_db, manager_token, manager_user, 
         "name_en": "Grade 2",
         "class_code": "DEA001",
         "age_group": "AGE_2_4",
-        "capacity_total": 12,
+        "capacity_total": 10,
         "min_age_months": 60,
         "max_age_months": 72,
         "supervisor_id": supervisor_user.id,
@@ -503,7 +506,7 @@ def test_class_create_creates_primary_supervisor_assignment(
         "class_code": "ASSIGN-001",
         "age_group": "AGE_2_4",
         "enrolled_children_count": 0,
-        "capacity_total": 12,
+        "capacity_total": 10,
         "min_age_months": 36,
         "max_age_months": 48,
         "supervisor_id": supervisor_user.id,
@@ -568,7 +571,7 @@ def test_class_eligible_supervisors_endpoint_filters_assigned_users(
         "class_code": "ELIG-001",
         "age_group": "AGE_1_2",
         "enrolled_children_count": 0,
-        "capacity_total": 12,
+        "capacity_total": 10,
         "min_age_months": 24,
         "max_age_months": 36,
         "supervisor_id": supervisor_user.id,

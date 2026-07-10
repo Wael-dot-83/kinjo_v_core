@@ -45,11 +45,12 @@ def _recreate_fk(
     on_delete: str,
 ) -> None:
     """Drop (if it exists) and recreate a FK with the desired ON DELETE rule."""
-    # Drop existing constraint — ignore errors if it doesn't exist yet.
-    try:
-        op.drop_constraint(constraint_name, table, type_="foreignkey")
-    except Exception:
-        pass
+    # Drop existing constraint if present. A bare try/except around
+    # op.drop_constraint does NOT work on PostgreSQL: a failed DROP aborts the
+    # whole transaction, so the create_foreign_key below then fails with
+    # "current transaction is aborted". DROP CONSTRAINT IF EXISTS is the
+    # idempotent, transaction-safe form (this migration is PostgreSQL-only).
+    op.execute(f'ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {constraint_name}')
 
     op.create_foreign_key(
         constraint_name,

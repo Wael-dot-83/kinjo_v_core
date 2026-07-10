@@ -1,0 +1,72 @@
+{% extends "admin_base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.0" />
+{% endblock %}
+
+{% block content %}
+<section class="agency-reports-page" data-agency-reports-page="index" aria-labelledby="agency-reports-title">
+  <nav class="agency-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+    <a href="/admin/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</span>
+  </nav>
+
+  <header class="agency-page-header">
+    <div class="agency-logo-lockup">
+      <img src="/static/img/official-agencies-logo.svg" width="72" height="72" alt="" aria-hidden="true" class="agency-logo" />
+      <div>
+        <h1 id="agency-reports-title">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</h1>
+        <p>{% if ui_lang == 'en' %}Dynamic, aggregated, privacy-safe reports for official stakeholders.{% else %}مركز تقارير ديناميكي وتجميعي مخصص للجهات الرسمية مع حماية الخصوصية وجودة البيانات.{% endif %}</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="agency-alert" role="note">
+    {% if ui_lang == 'en' %}Reports are aggregated only. Sensitive personal fields are excluded from the API and exports.{% else %}هذه التقارير تجميعية فقط. يتم استبعاد الحقول الشخصية والحساسة من واجهات API والتصدير.{% endif %}
+  </div>
+
+  <div id="agency-reports-root" role="status" aria-live="polite">
+    {% if ui_lang == 'en' %}Loading agencies...{% else %}جارٍ تحميل الجهات الرسمية...{% endif %}
+  </div>
+
+  <!-- ===================== Custom Reports / التقارير المخصصة ===================== -->
+  <section class="agency-custom-reports" id="custom-reports" aria-labelledby="custom-reports-title">
+    <header class="agency-section-header">
+      <h2 id="custom-reports-title">
+        {% if ui_lang == 'en' %}Custom Reports{% else %}التقارير المخصصة{% endif %}
+        <span class="agency-section-subtitle">{% if ui_lang == 'en' %}Flexible aggregated decision-support reports{% else %}تقارير تجميعية مرنة لدعم القرار{% endif %}</span>
+      </h2>
+      <p>
+        {% if ui_lang == 'en' %}Build a flexible, aggregated report for an official agency by choosing the level, period, geography and indicators. Aggregated data only — no personal data.{% else %}ابنِ تقريرًا تجميعيًا مرنًا لجهة رسمية باختيار المستوى والفترة والنطاق الجغرافي والمؤشرات. بيانات تجميعية فقط دون أي بيانات شخصية.{% endif %}
+      </p>
+    </header>
+
+    <form id="custom-report-form" class="custom-report-form" novalidate>
+      <div id="custom-report-controls" class="custom-report-controls" aria-busy="true" role="status" aria-live="polite">
+        {% if ui_lang == 'en' %}Loading report options...{% else %}جارٍ تحميل خيارات التقرير...{% endif %}
+      </div>
+      <div id="cr-agency-preview" class="custom-agency-preview" aria-live="polite" hidden></div>
+      <div class="custom-report-actions" hidden id="custom-report-action-bar">
+        <button type="submit" class="admin-btn admin-btn-primary" id="custom-report-run">
+          <i class="bi bi-play-circle" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Generate report{% else %}إنشاء التقرير{% endif %}
+        </button>
+        <button type="button" class="admin-btn admin-btn-secondary" id="custom-report-reset">
+          {% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
+        </button>
+      </div>
+    </form>
+
+    <div id="custom-report-result" class="custom-report-result" role="region" aria-live="polite"
+         aria-label="{% if ui_lang == 'en' %}Custom report result{% else %}نتيجة التقرير المخصص{% endif %}"></div>
+  </section>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/admin_agency_reports.js?v=1.0"></script>
+<script src="/static/js/admin_agency_reports_custom.js?v=1.0"></script>
+{% endblock %}

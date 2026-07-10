@@ -13,6 +13,7 @@ migration is safe to run on databases that already have partial indexes.
 """
 
 from alembic import op
+from sqlalchemy import inspect
 
 
 revision = "kpi_p0_idx_001"
@@ -21,13 +22,11 @@ branch_labels = None
 depends_on = None
 
 _INDEXES = [
-    # attendance_logs: used by every KPI bundle and bulk builder. The table has
-    # no kindergarten_id (KPI queries reach it via child_id); index the columns
-    # the queries actually filter on.
+    # attendance_logs: used by every KPI bundle and bulk builder
     (
-        "ix_attendance_child_date_status",
+        "ix_attendance_kg_date_status",
         "attendance_logs",
-        "child_id, date, status",
+        "kindergarten_id, date, status",
     ),
     # incidents: used by incident_rate, followup_sla, hard override check
     (
@@ -80,30 +79,34 @@ _INDEXES = [
 ]
 
 
-def _run_isolated(bind, sql):
-    """Run a DDL statement inside a SAVEPOINT so a failure (e.g. an index on a
-    column/table that isn't present in a given schema) is rolled back on its own
-    without aborting the surrounding migration transaction. On Postgres a bare
-    failed statement poisons the whole transaction, which defeats the
-    best-effort try/except this migration relies on."""
-    try:
-        with bind.begin_nested():
-            bind.exec_driver_sql(sql)
-    except Exception:
-        # Best-effort: index already exists, or its columns aren't present here.
-        pass
-
-
 def upgrade():
-    bind = op.get_bind()
+    # Only create an index when its table and every indexed column actually
+    # exist in the live schema. On PostgreSQL a single failing DDL statement
+    # (e.g. an index on a column that isn't present) aborts the whole
+    # migration transaction, so a bare try/except cannot recover — every
+    # later statement, including Alembic's own version stamp, then fails with
+    # "current transaction is aborted". Pre-checking with the inspector keeps
+    # this migration safe and idempotent across PostgreSQL and SQLite.
+    #
+    # Notably attendance_logs has no kindergarten_id column (attendance is
+    # scoped via class_id -> class -> kindergarten), so its intended index is
+    # skipped rather than crashing the upgrade.
+    inspector = inspect(op.get_bind())
+    existing_tables = set(inspector.get_table_names())
+
     for index_name, table_name, columns in _INDEXES:
-        _run_isolated(
-            bind,
-            f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_name} ({columns})",
+        if table_name not in existing_tables:
+            continue
+        table_columns = {col["name"] for col in inspector.get_columns(table_name)}
+        required_columns = [c.strip() for c in columns.split(",")]
+        if not all(col in table_columns for col in required_columns):
+            continue
+        op.execute(
+            f"CREATE INDEX IF NOT EXISTS {index_name} "
+            f"ON {table_name} ({columns})"
         )
 
 
 def downgrade():
-    bind = op.get_bind()
     for index_name, _, _ in _INDEXES:
-        _run_isolated(bind, f"DROP INDEX IF EXISTS {index_name}")
+        op.execute(f"DROP INDEX IF EXISTS {index_name}")

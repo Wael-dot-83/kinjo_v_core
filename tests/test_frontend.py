@@ -1650,7 +1650,9 @@ class TestFrontendRoutes:
         apparent age, pushing the same row to 2 days active -- a real,
         reproducible boundary case, not just an arbitrary date pair."""
         from datetime import datetime, timezone, timedelta
-        import frontend as frontend_module
+        # The /admin/profile handler now lives in the compat module that
+        # frontend.py re-exports; patch datetime there, not on the wrapper.
+        import scripts.compat.frontend_orig as frontend_module
 
         _JORDAN_TZ = timezone(timedelta(hours=3))
         fixed_now_jordan = datetime(2026, 7, 5, 0, 0, 0, tzinfo=_JORDAN_TZ)
@@ -1801,7 +1803,9 @@ class TestFrontendRoutes:
     def test_register_page_disabled_redirects(self, client):
         """Registration disabled → redirect to login"""
         from unittest.mock import patch
-        with patch("frontend.settings") as mock_settings:
+        # The /register handler now lives in the compat module that frontend.py
+        # re-exports; patch settings there, not on the wrapper.
+        with patch("scripts.compat.frontend_orig.settings") as mock_settings:
             mock_settings.PUBLIC_REGISTRATION_ENABLED = False
             mock_settings.TESTING = False
             mock_settings.CSRF_COOKIE_NAME = "csrftoken"

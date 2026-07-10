@@ -63,7 +63,13 @@ def _is_registered_path_or_prefix(path):
     normalized = path.split("#", 1)[0].split("?", 1)[0]
     if _is_registered_path(normalized):
         return True
-    return any(route_path.startswith(f"{normalized}/") for route_path in _registered_paths())
+    # Strip a trailing slash so a base path used for JS string-concatenation
+    # (e.g. "/api/admin/agency-reports/" + agencyCode + "/reports") is still
+    # recognised as a prefix of registered routes like
+    # "/api/admin/agency-reports/{agency_code}/reports". Without this the
+    # f"{normalized}/" below would produce a double slash and never match.
+    prefix = normalized.rstrip("/")
+    return any(route_path.startswith(f"{prefix}/") for route_path in _registered_paths())
 
 
 def _literal_paths(source):

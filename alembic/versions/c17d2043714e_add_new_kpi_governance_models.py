@@ -189,13 +189,15 @@ def _upgrade_generic() -> None:
         name="financialrecordtype", create_type=False,
     ) if dialect == "postgresql" else sa.String(20)
     if dialect == "postgresql":
-        # Postgres has no `CREATE TYPE IF NOT EXISTS`; guard with a DO block so
-        # this is idempotent and doesn't abort the migration transaction.
+        # PostgreSQL has no "CREATE TYPE IF NOT EXISTS"; guard against a
+        # pre-existing type (e.g. re-runs after a partial migration) with a
+        # DO block that swallows duplicate_object instead.
         op.execute(
             "DO $$ BEGIN "
             "CREATE TYPE financialrecordtype AS ENUM "
             "('TUITION_PAYMENT','OPERATING_EXPENSE','REVENUE','ADJUSTMENT'); "
-            "EXCEPTION WHEN duplicate_object THEN null; END $$;"
+            "EXCEPTION WHEN duplicate_object THEN null; "
+            "END $$;"
         )
 
     op.create_table(

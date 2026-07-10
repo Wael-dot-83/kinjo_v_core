@@ -4,7 +4,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ADMIN_BASE = ROOT / "templates" / "admin_base.html"
-FRONTEND = ROOT / "frontend.py"
+# The @router.get admin page routes now live in the compat module that
+# frontend.py re-exports (`from scripts.compat.frontend_orig import *`).
+FRONTEND = ROOT / "scripts" / "compat" / "frontend_orig.py"
 ADMIN_CSS = ROOT / "static" / "css" / "admin_design_system.css"
 
 EXPECTED_ARABIC_LABEL_ORDER = [
