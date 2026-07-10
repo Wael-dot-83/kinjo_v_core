@@ -1391,6 +1391,20 @@ async def admin_kg_overview(request: Request, current_user: User = Depends(get_c
     )
 
 
+def _ui_lang(request: Request) -> str:
+    """Resolve the UI language ('ar'/'en') for the admin kindergarten routes.
+
+    Mirrors ``language_context_processor`` (which also injects ``ui_lang`` into
+    every template context); passing it explicitly keeps these routes robust.
+    """
+    return language_context_processor(request).get("ui_lang", "ar")
+
+
+def _now() -> str:
+    """Current Jordan (UTC+3) timestamp string for template headers."""
+    return datetime.now(timezone(timedelta(hours=3))).strftime("%d %B %Y, %I:%M %p")
+
+
 def _get_kg_or_none(kindergarten_id: int):
     from database import SessionLocal
     db = SessionLocal()
