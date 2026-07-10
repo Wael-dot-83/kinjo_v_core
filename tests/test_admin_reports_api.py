@@ -46,14 +46,21 @@ def test_age_buckets_flags_too_young_child(
     parent_user,
 ):
     from unittest.mock import patch
-    
-    with patch("validators.validate_child_age_strict"):
+
+    # The report flags "too_young" only when age_days < 1 (born on the report's
+    # "today"). We anchor the report's _today() to a safely-past date and give
+    # the child that exact DOB: the child reads as 0 days old (too_young) while
+    # the DOB stays <= CURRENT_DATE, so it never trips ck_children_dob_not_future
+    # (CURRENT_DATE is UTC in SQLite; local date.today() can be a day ahead).
+    dob = date.today() - timedelta(days=10)
+    with patch("validators.validate_child_age_strict"), \
+         patch("admin_reports_api._today", return_value=dob):
         child = models.Child(
             parent_id=parent_user.parent_profile.id,
             first_name="Baby",
             last_name="Young",
             gender=models.Gender.MALE,
-            date_of_birth=date.today(),
+            date_of_birth=dob,
             father_name="Father Young",
             mother_first_name="Mother",
             mother_last_name="Young",

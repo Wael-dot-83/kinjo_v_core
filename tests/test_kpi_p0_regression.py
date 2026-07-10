@@ -423,7 +423,9 @@ class TestHardOverrideRules:
         active_enrollment, supervisor_user
     ):
         """Open CRITICAL incident → band must be AMBER or RED, not GREEN."""
-        d = date(2026, 6, 5)
+        d = date(2026, 6, 5)  # a Friday — mark it open so it counts as a working day
+        test_db.add(models.OperatingCalendar(
+            kindergarten_id=sample_kindergarten.id, date=d, is_open=True))
         _add_attendance(test_db, sample_child.id, sample_class.id,
                         supervisor_user.id, d, models.AttendanceStatus.PRESENT)
         inc = models.Incident(

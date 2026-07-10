@@ -12,12 +12,25 @@ PERIOD_START = date(2026, 5, 1)
 PERIOD_END = date(2026, 5, 7)  # 7-day test window
 
 
+def _mark_open(test_db, kindergarten_id, start, end):
+    """Explicitly mark every day in [start, end] as an operating day so the
+    working-day math is deterministic regardless of weekday (KPIService now
+    always honors the Jordan Sun–Thu week + OperatingCalendar, with no TESTING
+    short-circuit)."""
+    d = start
+    while d <= end:
+        test_db.add(models.OperatingCalendar(
+            kindergarten_id=kindergarten_id, date=d, is_open=True))
+        d += timedelta(days=1)
+
+
 class TestAttendanceRate:
     def test_perfect_attendance_is_100(
         self, test_db, sample_kindergarten, sample_child, sample_enrollment,
         supervisor_user
     ):
         # 1 child enrolled; seed 7 attendance logs for 7 days
+        _mark_open(test_db, sample_kindergarten.id, PERIOD_START, PERIOD_END)
         for i in range(7):
             d = PERIOD_START + timedelta(days=i)
             test_db.add(models.AttendanceLog(
@@ -48,6 +61,7 @@ class TestAttendanceRate:
         supervisor_user
     ):
         # 1 child; 3 out of 7 days attended → 3/7 * 100 ≈ 42.86%
+        _mark_open(test_db, sample_kindergarten.id, PERIOD_START, PERIOD_END)
         for i in range(3):
             d = PERIOD_START + timedelta(days=i)
             test_db.add(models.AttendanceLog(

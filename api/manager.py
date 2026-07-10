@@ -19,6 +19,11 @@ from dependencies import get_current_user
 
 router = APIRouter(tags=["Manager"])
 
+# Statuses that count as the child having physically attended. ABSENT and
+# EXCUSED must never inflate "present"/attendance figures (B1). Mirrors
+# manager_analytics._ATTENDED_STATUSES and KPIService's physical-attendance rule.
+_ATTENDED_STATUSES = (models.AttendanceStatus.PRESENT, models.AttendanceStatus.LATE)
+
 @router.get("/manager/dashboard")
 def get_manager_dashboard(
     current_user: models.User = Depends(get_current_user),
@@ -62,15 +67,18 @@ def get_manager_dashboard(
         models.WaitlistEntry.status == models.WaitlistStatus.WAITLISTED
     ).scalar() or 0
 
-    # Today's attendance
+    # Today's attendance — only PRESENT/LATE count; distinct + ACTIVE scope so a
+    # child with multiple enrollment rows isn't counted more than once (fan-out).
     today = datetime.now(_JORDAN_TZ).date()
-    attendance_today = db.query(func.count(models.AttendanceLog.id)).join(
+    attendance_today = db.query(func.count(func.distinct(models.AttendanceLog.id))).join(
         models.Child
     ).join(
         models.EnrollmentApplication
     ).filter(
         models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-        models.AttendanceLog.date == today
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.AttendanceLog.date == today,
+        models.AttendanceLog.status.in_(_ATTENDED_STATUSES),
     ).scalar() or 0
 
     # Pending daily reports (submitted but not approved)
@@ -96,14 +104,16 @@ def get_manager_dashboard(
         row[0]: row[1]
         for row in db.query(
             models.AttendanceLog.date,
-            func.count(models.AttendanceLog.id),
+            func.count(func.distinct(models.AttendanceLog.id)),
         )
         .join(models.Child)
         .join(models.EnrollmentApplication)
         .filter(
             models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
             models.AttendanceLog.date >= seven_days_ago,
             models.AttendanceLog.date <= today,
+            models.AttendanceLog.status.in_(_ATTENDED_STATUSES),
         )
         .group_by(models.AttendanceLog.date)
         .all()
@@ -148,13 +158,15 @@ def get_manager_dashboard(
         row[0]: row[1]
         for row in db.query(
             models.EnrollmentApplication.class_id,
-            func.count(models.AttendanceLog.id),
+            func.count(func.distinct(models.AttendanceLog.id)),
         )
         .join(models.Child, models.Child.id == models.EnrollmentApplication.child_id)
         .join(models.AttendanceLog, models.AttendanceLog.child_id == models.Child.id)
         .filter(
             models.EnrollmentApplication.class_id.in_(class_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
             models.AttendanceLog.date == today,
+            models.AttendanceLog.status.in_(_ATTENDED_STATUSES),
         )
         .group_by(models.EnrollmentApplication.class_id)
         .all()
