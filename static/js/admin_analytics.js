@@ -111,7 +111,7 @@ document.addEventListener("DOMContentLoaded", function () {
       govSelect.remove(1);
     }
 
-    fetchWithAuth("/api/admin/options/governorates")
+    fetchWithAuth("/api/locations/jordan/governorates")
       .then((res) => {
         if (!res) return;
         return res.json ? res.json() : res;
@@ -278,7 +278,7 @@ function normalizeGovernorateOption(option, locale) {
   }
 
   const isEnglish = String(locale || "").toLowerCase().startsWith("en");
-  const value = option.id ?? option.value ?? option.name ?? option.label ?? "";
+  const value = option.key ?? option.id ?? option.value ?? option.name ?? option.label ?? "";
   const label = option.name_ar || option.name_en || option.name || option.label || value || "";
 
   if (value == null || label == null || typeof value === "object" || typeof label === "object") {

@@ -16,6 +16,7 @@ from dependencies import get_current_user_optional, get_current_user_or_redirect
 from models import User, UserRole, Kindergarten, EnrollmentApplication
 from config import settings
 from validators import validate_jordan_governorate
+from services.jordan_locations import get_all_governorates
 
 SUPPORTED_UI_LANGUAGES = {"ar", "en"}
 
@@ -1327,8 +1328,8 @@ async def admin_message_compose(request: Request, current_user: User = Depends(g
         name="admin/messages/compose.html",
         context={
             "current_user": current_user,
-            "governorates": settings.JORDAN_GOVERNORATES,
-            "governorates_en": settings.JORDAN_GOVERNORATES_ENGLISH
+            "governorates": [g["name_ar"] for g in get_all_governorates()],
+            "governorates_en": [g["name_en"] for g in get_all_governorates()],
         }
     )
 

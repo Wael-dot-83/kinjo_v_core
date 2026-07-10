@@ -17,6 +17,12 @@ from database import get_db
 from dependencies import get_current_user
 from api.users import DUPLICATE_ERROR_MAP
 from auth import get_password_hash
+from services.jordan_locations import (
+    get_all_governorates,
+    get_areas_for_governorate,
+    get_governorate_by_key,
+    get_governorate_by_name,
+)
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
@@ -24,97 +30,36 @@ router = APIRouter(tags=["Kindergartens"])
 
 
 @router.get("/reference/governorates")
-def get_governorates(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Return list of governorates and their districts from AdministrativeDivision."""
-    divisions = db.query(models.AdministrativeDivision).all()
-    
-    gov_map = {}
-    for div in divisions:
-        gov = div.governorate
-        dist = div.district
-        if not gov:
-            continue
-        try:
-            normalized = validators.validate_jordan_governorate(gov)
-        except validators.ValidationError:
-            normalized = gov
-            
-        if normalized not in gov_map:
-            english_label = None
-            if normalized in settings.JORDAN_GOVERNORATES:
-                idx = settings.JORDAN_GOVERNORATES.index(normalized)
-                if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
-                    english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx]
-            gov_map[normalized] = {
-                "id": normalized,
-                "name_ar": normalized,
-                "name_en": english_label or normalized,
-                "cities": set() # we will use 'cities' for backwards compatibility with frontend
-            }
-        
-        if dist:
-            gov_map[normalized]["cities"].add(dist)
-            
-    # Fallback: when the AdministrativeDivision reference table is empty, derive
-    # the governorate list from distinct values already stored on kindergartens so
-    # the filter dropdown stays usable.
-    if not gov_map:
-        rows = (
-            db.query(models.Kindergarten.governorate)
-            .filter(models.Kindergarten.governorate.isnot(None))
-            .distinct()
-            .all()
-        )
-        for (gov,) in rows:
-            if not gov:
-                continue
-            try:
-                normalized = validators.validate_jordan_governorate(gov)
-            except validators.ValidationError:
-                normalized = gov
-            if normalized in gov_map:
-                continue
-            english_label = None
-            if normalized in settings.JORDAN_GOVERNORATES:
-                idx = settings.JORDAN_GOVERNORATES.index(normalized)
-                if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
-                    english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx]
-            gov_map[normalized] = {
-                "id": normalized,
-                "name_ar": normalized,
-                "name_en": english_label or normalized,
-                "cities": set(),
-            }
-
-    govs = []
-    for g in gov_map.values():
-        g["cities"] = sorted(list(g["cities"]))
-        govs.append(g)
-
-    return {"governorates": sorted(govs, key=lambda x: x["name_ar"])}
+def get_governorates():
+    """Return list of governorates and their areas from canonical source."""
+    governorates = []
+    for gov in get_all_governorates():
+        areas = get_areas_for_governorate(gov["key"])
+        governorates.append({
+            "id": gov["key"],
+            "name_ar": gov["name_ar"],
+            "name_en": gov["name_en"],
+            "cities": [a["name_ar"] for a in areas],
+        })
+    return {"governorates": sorted(governorates, key=lambda x: x["name_ar"])}
 
 
 @router.get("/governorates/{gov}/districts")
-def get_districts_by_governorate(
-    gov: str,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Return distinct districts for a governorate, from DB records."""
-    # Normalise alias
-    alias_map = settings.JORDAN_GOVERNORATE_ALIASES
-    normalised = alias_map.get(gov, alias_map.get(gov.lower(), gov))
-
-    districts = (
-        db.query(models.Kindergarten.district)
-        .filter(models.Kindergarten.governorate == normalised)
-        .distinct()
-        .all()
-    )
-    return {"governorate": gov, "districts": [d[0] for d in districts if d[0]]}
+def get_districts_by_governorate(gov: str):
+    """Return areas for a governorate, from canonical source."""
+    gov_obj = get_governorate_by_key(gov)
+    if not gov_obj:
+        gov_obj = get_governorate_by_name(gov)
+    if not gov_obj:
+        alias_map = settings.JORDAN_GOVERNORATE_ALIASES
+        normalised = alias_map.get(gov, alias_map.get(gov.lower(), gov))
+        gov_obj = get_governorate_by_key(normalised)
+        if not gov_obj:
+            gov_obj = get_governorate_by_name(normalised)
+    if not gov_obj:
+        raise HTTPException(status_code=404, detail="Governorate not found")
+    areas = get_areas_for_governorate(gov_obj["key"])
+    return {"governorate": gov_obj["name_ar"], "districts": [a["name_ar"] for a in areas]}
 
 
 

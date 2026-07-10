@@ -165,7 +165,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
     "ssc": {
         "name_ar": "المؤسسة العامة للضمان الاجتماعي",
         "name_en": "Social Security Corporation",
-        "description_ar": "تقارير الاشتراكات والشمول في الضمان للعاملين في رياض الأطفال عند توفر البيانات المنظمة.",
+        "description_ar": "تقارير الاشتراكات والشمول في الضمان للعاملين في الحضانات عند توفر البيانات المنظمة.",
         "icon": "bi-shield-lock",
         "is_official": True,
         "reports": {
@@ -173,14 +173,14 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
                 "title_ar": "ملخص شمول العاملين في الضمان",
                 "title_en": "Worker social-security coverage summary",
                 "status": "requires_structured_data",
-                "reason_ar": "يتطلب سجل اشتراكات الضمان المنظم لكل موظف في رياض الأطفال.",
+                "reason_ar": "يتطلب سجل اشتراكات الضمان المنظم لكل موظف في الحضانات.",
                 "privacy_level": "aggregated_only",
                 "filters": ["period", "governorate", "city", "kindergarten_id"],
                 "exports": ["json"],
                 "data_sources": ["User", "Kindergarten"],
             },
             "nursery_contributions": {
-                "title_ar": "مساهمات رياض الأطفال في الضمان",
+                "title_ar": "مساهمات الحضانات في الضمان",
                 "title_en": "Kindergarten social-security contributions",
                 "status": "requires_structured_data",
                 "reason_ar": "يتطلب بيانات الاشتراكات والمساهمات الشهرية للمنشأة.",

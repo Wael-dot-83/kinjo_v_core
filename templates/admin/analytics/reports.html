@@ -157,7 +157,9 @@
             </div>
             <div class="col-6">
               <label class="form-label fw-bold" for="cityFilter">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
-              <input type="text" class="form-control" id="cityFilter" placeholder="{% if ui_lang == 'en' %}e.g. Amman{% else %}مثال: عمان{% endif %}">
+              <select class="form-select" id="cityFilter">
+                <option value="">{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}</option>
+              </select>
             </div>
           </div>
 

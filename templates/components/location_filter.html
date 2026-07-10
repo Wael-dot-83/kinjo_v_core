@@ -1,0 +1,74 @@
+{% macro location_filter(governorate_id="governorateFilter", city_id="cityFilter", governorate_label="المحافظة", city_label="المدينة / المنطقة", governorate_name="governorate", city_name="city", required=False) %}
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <label for="{{ governorate_id }}" class="form-label small text-muted mb-1">{{ governorate_label }}</label>
+    <select class="form-select form-select-sm" id="{{ governorate_id }}" name="{{ governorate_name }}" {% if required %}required{% endif %}>
+      <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label for="{{ city_id }}" class="form-label small text-muted mb-1">{{ city_label }}</label>
+    <select class="form-select form-select-sm" id="{{ city_id }}" name="{{ city_name }}" disabled>
+      <option value="">{% if ui_lang == 'en' %}Select Governorate First{% else %}اختر المحافظة أولاً{% endif %}</option>
+    </select>
+  </div>
+</div>
+<script>
+(function() {
+  const govSelect = document.getElementById('{{ governorate_id }}');
+  const citySelect = document.getElementById('{{ city_id }}');
+  if (!govSelect || !citySelect) return;
+
+  async function loadGovernorates() {
+    try {
+      const resp = await fetch('/api/locations/jordan/governorates', { credentials: 'same-origin' });
+      if (!resp.ok) return;
+      const json = await resp.json();
+      const governorates = (json.data && json.data.governorates) || [];
+      governorates.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.key;
+        opt.textContent = g.name_ar;
+        govSelect.appendChild(opt);
+      });
+    } catch (e) {
+      console.error('Failed to load governorates:', e);
+    }
+  }
+
+  govSelect.addEventListener('change', async function() {
+    const val = this.value;
+    citySelect.innerHTML = '<option value="">{% if ui_lang == 'en' %}Loading...{% else %}جارٍ التحميل...{% endif %}</option>';
+    citySelect.disabled = true;
+    if (!val) {
+      citySelect.innerHTML = '<option value="">{% if ui_lang == 'en' %}Select Governorate First{% else %}اختر المحافظة أولاً{% endif %}</option>';
+      citySelect.disabled = true;
+      return;
+    }
+    try {
+      const resp = await fetch('/api/locations/jordan/governorates/' + encodeURIComponent(val) + '/areas', { credentials: 'same-origin' });
+      if (!resp.ok) {
+        citySelect.innerHTML = '<option value="">{% if ui_lang == 'en' %}All Areas{% else %}كل المناطق{% endif %}</option>';
+        citySelect.disabled = false;
+        return;
+      }
+      const json = await resp.json();
+      const areas = (json.data && json.data.areas) || [];
+      citySelect.innerHTML = '<option value="">{% if ui_lang == 'en' %}All Areas{% else %}كل المناطق{% endif %}</option>';
+      areas.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.key;
+        opt.textContent = a.name_ar;
+        citySelect.appendChild(opt);
+      });
+      citySelect.disabled = false;
+    } catch (e) {
+      citySelect.innerHTML = '<option value="">{% if ui_lang == 'en' %}All Areas{% else %}كل المناطق{% endif %}</option>';
+      citySelect.disabled = false;
+    }
+  });
+
+  loadGovernorates();
+})();
+</script>
+{% endmacro %}

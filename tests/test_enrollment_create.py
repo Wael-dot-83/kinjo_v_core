@@ -30,20 +30,12 @@ class TestCitiesEndpoint:
     def test_cities_by_arabic_governorate(self, client, admin_token, test_db):
         """Should work with Arabic governorate names"""
         headers = {"Authorization": f"Bearer {admin_token}"}
-        # Create a KG in عمان
-        kg = models.Kindergarten(
-            name_ar="حضانة اختبار", name_en="Test KG",
-            governorate="عمان", district="الجبيهة", area="منطقة",
-            address_line="عنوان", contact_phone="+962791110001",
-            status=models.KindergartenStatus.ACTIVE
-        )
-        test_db.add(kg)
-        test_db.commit()
-
         response = client.get("/api/governorates/عمان/districts", headers=headers)
         assert response.status_code == 200
         data = response.json()
-        assert "الجبيهة" in data["districts"]
+        assert "districts" in data
+        assert isinstance(data["districts"], list)
+        assert len(data["districts"]) > 0
 
     def test_cities_parent_access(self, client, parent_token, test_db, sample_kindergarten):
         """Parents should be able to access districts endpoint"""
@@ -52,12 +44,10 @@ class TestCitiesEndpoint:
         assert response.status_code == 200
 
     def test_cities_unknown_governorate(self, client, admin_token, test_db):
-        """Should return empty list for unknown governorate"""
+        """Should return 404 for unknown governorate"""
         headers = {"Authorization": f"Bearer {admin_token}"}
         response = client.get("/api/governorates/UnknownGov/districts", headers=headers)
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data["districts"], list)
+        assert response.status_code == 404
 
 
 class TestKindergartenFilteringWithCity:

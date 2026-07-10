@@ -5,7 +5,7 @@ Mounted through api.missing_endpoints wrapper under /api, yielding paths such as
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
@@ -146,6 +146,47 @@ def agency_report_export_csv(
             raise HTTPException(status_code=409, detail="CSV export is not available for this report")
         csv_payload = to_csv(payload)
         filename = f"agency_report_{agency_code}_{report_code}.csv"
+        return Response(
+            content=csv_payload,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except AgencyReportError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+@router.get("/admin/agency-reports/custom/schema")
+def custom_report_schema(
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+):
+    return AgencyReportsService(db).custom_report_schema()
+
+
+@router.post("/admin/agency-reports/custom")
+def custom_report(
+    scope: dict[str, Any],
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        return AgencyReportsService(db).custom_report(scope)
+    except AgencyReportError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+@router.post("/admin/agency-reports/custom/export.csv")
+def custom_report_export_csv(
+    scope: dict[str, Any],
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        payload = AgencyReportsService(db).custom_report(scope)
+        if not payload.get("exports", {}).get("csv"):
+            raise HTTPException(status_code=409, detail="CSV export is not available for this report")
+        csv_payload = to_csv(payload)
+        filename = "custom_agency_report.csv"
         return Response(
             content=csv_payload,
             media_type="text/csv; charset=utf-8",
