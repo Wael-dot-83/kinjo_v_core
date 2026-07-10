@@ -47,6 +47,44 @@ class AgencyReportError(ValueError):
         self.message = message
 
 
+# Arabic labels for the raw summary/column keys emitted by the report
+# generators, so the UI never shows machine field names (e.g. "eligible_children").
+_FIELD_LABELS: dict[str, str] = {
+    # summary fields
+    "admission_year": "سنة القبول",
+    "cutoff_date": "تاريخ القطع (مواليد قبل)",
+    "eligible_children": "الأطفال المؤهلون",
+    "total_children": "إجمالي الأطفال",
+    "total_kindergartens": "إجمالي الحضانات",
+    "active_kindergartens": "الحضانات النشطة",
+    "managers": "المدراء",
+    "supervisors": "المشرفون",
+    "total_staff": "إجمالي الكوادر",
+    "training_records": "سجلات التدريب",
+    "completed": "المكتملة",
+    "completion_rate_pct": "نسبة الإكمال %",
+    "message_count": "عدد الرسائل",
+    "incident_count": "عدد الحوادث",
+    "areas": "عدد المناطق",
+    "children": "الأطفال",
+    # table columns
+    "governorate": "المحافظة",
+    "city": "المدينة/اللواء",
+    "district": "اللواء",
+    "gender": "الجنس",
+    "count": "العدد",
+    "status": "الحالة",
+    "role": "الدور",
+    "severity": "درجة الخطورة",
+    "thread_type": "نوع المحادثة",
+    "children_per_kindergarten": "أطفال لكل حضانة",
+}
+
+
+def _label_map(keys) -> dict[str, str]:
+    return {k: _FIELD_LABELS.get(k, k) for k in keys}
+
+
 class AgencyReportsService:
     """Registry-driven report generator.
 
@@ -359,6 +397,8 @@ class AgencyReportsService:
         return {
             "metadata": self._metadata(agency_code, agency, report_code, report, filters),
             "summary": summary,
+            "summary_labels": _label_map(summary.keys()),
+            "column_labels": _label_map(breakdowns[0].keys() if breakdowns else []),
             "breakdowns": breakdowns,
             "charts": [{"type": "bar", "title_ar": report.get("title_ar"), "data": breakdowns[:20]}],
             "tables": [table],
