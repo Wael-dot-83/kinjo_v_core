@@ -7,6 +7,54 @@
   const api = (path) => fetch(path, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } }).then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
   const t = (ar, en) => lang === "en" ? en : ar;
 
+  async function populateLocationFilters() {
+    const govSelect = document.getElementById("filter-governorate");
+    const citySelect = document.getElementById("filter-city");
+    if (!govSelect) return;
+
+    try {
+      const govJson = await api("/api/locations/jordan/governorates");
+      (govJson.data && govJson.data.governorates || []).forEach(g => {
+        const o = document.createElement("option");
+        o.value = g.key;
+        o.textContent = g.name_ar;
+        govSelect.appendChild(o);
+      });
+    } catch (e) { console.warn("Failed to load governorates:", e); }
+
+    govSelect.addEventListener("change", async function() {
+      if (!citySelect) return;
+      const val = this.value;
+      if (!val) {
+        citySelect.innerHTML = '<option value="">' + t("اختر المحافظة أولاً", "Select governorate first") + '</option>';
+        citySelect.disabled = true;
+        return;
+      }
+      citySelect.innerHTML = '<option value="">' + t("جارٍ التحميل...", "Loading...") + '</option>';
+      citySelect.disabled = true;
+      try {
+        const cityJson = await api("/api/locations/jordan/governorates/" + encodeURIComponent(val) + "/areas");
+        citySelect.innerHTML = '<option value="">' + t("جميع المناطق", "All areas") + '</option>';
+        (cityJson.data && cityJson.data.areas || []).forEach(a => {
+          const o = document.createElement("option");
+          o.value = a.key;
+          o.textContent = a.name_ar;
+          citySelect.appendChild(o);
+        });
+        citySelect.disabled = false;
+      } catch (e) {
+        citySelect.innerHTML = '<option value="">' + t("جميع المناطق", "All areas") + '</option>';
+        citySelect.disabled = false;
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", populateLocationFilters);
+  } else {
+    populateLocationFilters();
+  }
+
   function clear(el) { if (el) el.innerHTML = ""; }
   function pill(text, kind) { const span = document.createElement("span"); span.className = "agency-status agency-status--" + (kind || "default"); span.textContent = text; return span; }
 
@@ -18,20 +66,68 @@
     data.agencies.forEach((agency) => {
       const li = document.createElement("li");
       li.className = "agency-card";
-      const h2 = document.createElement("h2");
-      h2.textContent = lang === "en" ? agency.name_en : agency.name_ar;
-      const p = document.createElement("p");
-      p.textContent = agency.description_ar || "";
+      li.setAttribute("role", "listitem");
+
+      const header = document.createElement("div");
+      header.className = "agency-card__header";
+      if (typeof window.renderAgencyLogo === "function") {
+        header.appendChild(window.renderAgencyLogo(agency, 56));
+      }
+      const titles = document.createElement("div");
+      titles.className = "agency-card__titles";
+      const nameAr = document.createElement("h2");
+      nameAr.className = "agency-card__title-ar";
+      nameAr.textContent = agency.name_ar;
+      titles.appendChild(nameAr);
+      if (agency.name_en) {
+        const nameEn = document.createElement("p");
+        nameEn.className = "agency-card__title-en";
+        nameEn.textContent = agency.name_en;
+        titles.appendChild(nameEn);
+      }
+      header.appendChild(titles);
+      li.appendChild(header);
+
+      if (agency.description_ar) {
+        const purpose = document.createElement("p");
+        purpose.className = "agency-card__purpose";
+        purpose.textContent = agency.description_ar;
+        li.appendChild(purpose);
+      }
+
+      const domains = (agency.reports || []).map((r) => r.title_ar).filter(Boolean);
+      if (domains.length) {
+        const d = document.createElement("p");
+        d.className = "agency-domains";
+        const strong = document.createElement("strong");
+        strong.textContent = t("المجالات: ", "Domains: ");
+        d.appendChild(strong);
+        d.appendChild(document.createTextNode(domains.join("، ")));
+        li.appendChild(d);
+      }
+
       const meta = document.createElement("div");
       meta.className = "agency-card-meta";
       meta.append(pill(t("التقارير: ", "Reports: ") + agency.report_count, "info"));
       meta.append(pill(t("جاهزة: ", "Ready: ") + agency.ready_report_count, "success"));
       if (agency.requires_data_count) meta.append(pill(t("تحتاج بيانات: ", "Needs data: ") + agency.requires_data_count, "warning"));
+      li.appendChild(meta);
+
+      const dq = document.createElement("div");
+      const good = agency.requires_data_count === 0;
+      const dqSpan = document.createElement("span");
+      dqSpan.className = "agency-dq " + (good ? "agency-dq--good" : "agency-dq--partial");
+      dqSpan.textContent = good ? t("جودة البيانات: جيدة", "Data quality: good")
+                                : t("جودة البيانات: جزئية", "Data quality: partial");
+      dq.appendChild(dqSpan);
+      li.appendChild(dq);
+
       const link = document.createElement("a");
       link.className = "admin-btn admin-btn-primary";
       link.href = "/admin/agency-reports/" + encodeURIComponent(agency.code);
-      link.textContent = t("عرض تقارير " + agency.name_ar, "View " + agency.name_en + " reports");
-      li.append(h2, p, meta, link);
+      link.textContent = t("عرض التقرير", "View report");
+      li.appendChild(link);
+
       list.appendChild(li);
     });
     root.appendChild(list);
@@ -43,13 +139,27 @@
     if (title) title.textContent = lang === "en" ? data.agency_name_en : data.agency_name_ar;
     const desc = document.getElementById("agency-description");
     if (desc) desc.textContent = data.description_ar || "";
+    const header = document.querySelector(".agency-page-header");
+    const existing = header ? header.querySelector(".agency-page-header-logo") : null;
+    if (header && !existing && typeof window.renderAgencyLogo === "function") {
+      const logo = window.renderAgencyLogo({
+        code: data.agency_code,
+        name_ar: data.agency_name_ar,
+        name_en: data.agency_name_en,
+        logo: data.logo,
+      }, 64);
+      logo.classList.add("agency-page-header-logo");
+      header.insertBefore(logo, header.firstChild);
+    }
     const list = document.createElement("ul");
     list.className = "agency-card-grid";
     list.setAttribute("role", "list");
     data.reports.forEach((report) => {
       const li = document.createElement("li");
       li.className = "agency-card";
+      li.setAttribute("role", "listitem");
       const h2 = document.createElement("h2");
+      h2.className = "agency-card__title-ar";
       h2.textContent = lang === "en" ? report.title_en : report.title_ar;
       const status = pill(report.status === "ready" ? t("جاهز", "Ready") : t("يتطلب بيانات منظمة", "Requires structured data"), report.status === "ready" ? "success" : "warning");
       const link = document.createElement("a");

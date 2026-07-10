@@ -1,8 +1,38 @@
-from agency_reports_registry import AGENCY_REPORT_REGISTRY, SENSITIVE_FIELD_DENYLIST
+from agency_reports_registry import (
+    AGENCY_REPORT_REGISTRY,
+    AGENCY_LOGOS,
+    OFFICIAL_AGENCY_CODES,
+    SENSITIVE_FIELD_DENYLIST,
+)
+
+REQUIRED_OFFICIAL = {"mosd", "moe", "moh", "mol", "ssc", "dos", "ncfa"}
 
 
-def test_official_agency_registry_contains_required_agencies():
-    assert set(AGENCY_REPORT_REGISTRY) == {"moe", "moh", "dos", "ncfa", "mol", "mosd", "mopic"}
+def test_official_agency_registry_contains_required_codes():
+    # The seven official reporting agencies must all be present.
+    assert REQUIRED_OFFICIAL.issubset(set(AGENCY_REPORT_REGISTRY)), (
+        "Missing official agency codes: " + str(REQUIRED_OFFICIAL - set(AGENCY_REPORT_REGISTRY))
+    )
+
+
+def test_mopic_retained_but_not_official():
+    # mopic (Ministry of Planning) is kept for an existing ready report but is
+    # intentionally NOT part of the official public scope.
+    assert "mopic" in AGENCY_REPORT_REGISTRY
+    assert AGENCY_REPORT_REGISTRY["mopic"].get("is_official") is False
+
+
+def test_all_official_agencies_flagged_is_official():
+    for code in REQUIRED_OFFICIAL:
+        assert AGENCY_REPORT_REGISTRY[code].get("is_official") is True
+
+
+def test_moe_arabic_name_is_canonical():
+    assert AGENCY_REPORT_REGISTRY["moe"]["name_ar"] == "وزارة التربية والتعليم"
+
+
+def test_ssc_arabic_name_is_canonical():
+    assert AGENCY_REPORT_REGISTRY["ssc"]["name_ar"] == "المؤسسة العامة للضمان الاجتماعي"
 
 
 def test_registry_reports_are_aggregated_only():
@@ -12,7 +42,5 @@ def test_registry_reports_are_aggregated_only():
 
 
 def test_sensitive_export_denylist_blocks_personal_fields():
-    assert "national_id" in SENSITIVE_FIELD_DENYLIST
-    assert "phone_number" in SENSITIVE_FIELD_DENYLIST
-    assert "message_body" in SENSITIVE_FIELD_DENYLIST
-    assert "description" in SENSITIVE_FIELD_DENYLIST
+    for field in ("national_id", "phone_number", "message_body", "description"):
+        assert field in SENSITIVE_FIELD_DENYLIST

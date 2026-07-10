@@ -16,8 +16,10 @@
     <span aria-current="page" id="agency-current-name">{{ agency_code }}</span>
   </nav>
   <header class="agency-page-header">
-    <h1 id="agency-reports-title">{% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهة الرسمية{% endif %}</h1>
-    <p id="agency-description"></p>
+    <div class="agency-page-header-text">
+      <h1 id="agency-reports-title">{% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهة الرسمية{% endif %}</h1>
+      <p id="agency-description"></p>
+    </div>
   </header>
   <div id="agency-reports-root" role="status" aria-live="polite">
     {% if ui_lang == 'en' %}Loading reports...{% else %}جارٍ تحميل التقارير...{% endif %}
@@ -26,5 +28,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="/static/js/agency_logo.js?v=1.0"></script>
 <script src="/static/js/admin_agency_reports.js?v=1.0"></script>
 {% endblock %}

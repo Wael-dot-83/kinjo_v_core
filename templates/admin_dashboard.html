@@ -4,7 +4,7 @@
 
 {% block extra_head %}
 {{ super() }}
-<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.0" />
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.1" />
 {% endblock %}
 
 {% block content %}
@@ -13,10 +13,10 @@
   <div class="admin-page-header">
     <div class="admin-page-header-content">
       <h1 class="admin-page-title" style="font-size: 20px;">
-        {% if ui_lang == 'en' %}Operational Indicators{% else %}المؤشرات التشغيلية{% endif %}
+        {% if ui_lang == 'en' %}Operations Dashboard{% else %}لوحة التحكم التشغيلية{% endif %}
       </h1>
       <p class="admin-page-subtitle">
-        {% if ui_lang == 'en' %}Monitor system status, operations, and current activities{% else %}متابعة حالة النظام والعمليات والأنشطة الحالية{% endif %}
+        {% if ui_lang == 'en' %}System status, operations, official reports and current activities{% else %}حالة النظام والعمليات وتقارير الجهات الرسمية والأنشطة الحالية{% endif %}
       </p>
     </div>
     <div class="admin-page-header-actions" style="display: flex; align-items: center; gap: 16px;">
@@ -43,8 +43,6 @@
     <!-- Loading State — skeleton loader -->
     <div class="admin-dashboard-skeleton fade-in delay-100" id="dashboard-loading" aria-busy="true" role="status">
       <span class="visually-hidden">{% if ui_lang == 'en' %}Loading dashboard data…{% else %}جارٍ تحميل البيانات…{% endif %}</span>
-
-      <!-- Skeleton KPI cards (7 placeholders — matches actual KPI count) -->
       <div class="admin-skeleton-kpi-row">
         {% for _ in range(7) %}
         <div class="admin-skeleton-kpi-card" aria-hidden="true">
@@ -55,12 +53,6 @@
           </div>
         </div>
         {% endfor %}
-      </div>
-
-      <!-- Skeleton Charts -->
-      <div class="admin-skeleton-chart-row">
-        <div class="admin-skeleton-chart-card" aria-hidden="true"></div>
-        <div class="admin-skeleton-chart-card" aria-hidden="true"></div>
       </div>
     </div>
 
@@ -82,66 +74,179 @@
     <!-- Dashboard Content -->
     <div class="admin-dashboard-grid fade-in delay-100" id="dashboard-content">
 
-      <!-- KPI Cards — <ul>/<li> so screen readers enumerate the collection
-           (USWDS card component: "Use ul for a card group and an li for
-           each card"); each <li class="admin-kpi-card"> is created directly
-           by admin_dashboard.js's createKPICard(). -->
+      <!-- 1. System Status Banner -->
+      <section class="admin-system-status" id="system-status-banner" aria-labelledby="system-status-title">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-card-title" id="system-status-title">
+              {% if ui_lang == 'en' %}System Status{% else %}شريط حالة النظام{% endif %}
+            </h2>
+          </div>
+          <div class="admin-card-body">
+            <span class="agency-loading-text">{% if ui_lang == 'en' %}Loading system status...{% else %}جارٍ تحميل حالة النظام...{% endif %}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Executive Summary -->
+      <section class="admin-executive-summary" id="executive-summary" aria-labelledby="executive-summary-title">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-card-title" id="executive-summary-title">
+              {% if ui_lang == 'en' %}Executive Summary{% else %}الملخص التنفيذي{% endif %}
+            </h2>
+          </div>
+          <div class="admin-card-body">
+            <span class="agency-loading-text">{% if ui_lang == 'en' %}Loading executive summary...{% else %}جارٍ تحميل الملخص التنفيذي...{% endif %}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Key Performance Indicators -->
       <ul class="admin-dashboard-cards" id="kpi-cards" role="list"
           aria-label="{% if ui_lang == 'en' %}Key performance indicators{% else %}المؤشرات الرئيسية{% endif %}">
         <!-- Populated by JavaScript -->
       </ul>
 
-      <!-- System Alerts -->
-      <div class="admin-dashboard-alerts">
+      <!-- 4. Critical Alerts -->
+      <section class="admin-dashboard-alerts" aria-labelledby="critical-alerts-title">
         <div class="admin-card">
           <div class="admin-card-header">
-            <h3 class="admin-card-title">
-              {% if ui_lang == 'en' %}System Alerts{% else %}تنبيهات النظام{% endif %}
-            </h3>
+            <h2 class="admin-card-title" id="critical-alerts-title">
+              {% if ui_lang == 'en' %}Critical Alerts{% else %}التنبيهات الحرجة{% endif %}
+            </h2>
           </div>
           <div class="admin-card-body">
             <div class="admin-alerts-list" id="alerts-list" role="list"></div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Charts -->
-      <div class="admin-dashboard-charts">
-        <div class="admin-dashboard-chart-container">
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}User Activity{% else %}نشاط المستخدمين{% endif %}
-              </h3>
+      <!-- 5. Official Agency Reports -->
+      <section class="agency-reports-dashboard-section" aria-labelledby="agency-reports-dashboard-title">
+        <div class="admin-card agency-reports-dashboard-card">
+          <div class="admin-card-header agency-reports-card-header">
+            <div class="agency-logo-lockup">
+              <img src="/static/img/official-agencies-logo.svg" width="56" height="56" alt="" aria-hidden="true" class="agency-logo" />
+              <div>
+                <h2 id="agency-reports-dashboard-title" class="admin-card-title">
+                  {% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}
+                </h2>
+                <p class="agency-reports-subtitle">
+                  {% if ui_lang == 'en' %}Dynamic aggregated reports for official stakeholders, generated from real KinJo data with privacy and data-quality controls.{% else %}تقارير ديناميكية وتجميعية للجهات الرسمية، مبنية على بيانات KinJo الفعلية مع ضوابط الخصوصية وجودة البيانات.{% endif %}
+                </p>
+              </div>
             </div>
-            <div class="admin-card-body">
-              <canvas id="user-activity-chart" width="400" height="200"></canvas>
+          </div>
+          <div class="admin-card-body">
+            <div class="official-agency-grid" id="agency-reports-summary" role="status" aria-live="polite">
+              <span class="agency-loading-text">{% if ui_lang == 'en' %}Loading official agency reports...{% else %}جارٍ تحميل تقارير الجهات الرسمية...{% endif %}</span>
+            </div>
+            <div class="agency-reports-dashboard-actions">
+              <a href="/admin/agency-reports" class="admin-btn admin-btn-primary" aria-label="{% if ui_lang == 'en' %}Open Official Agency Reports Center{% else %}فتح مركز تقارير الجهات الرسمية{% endif %}">
+                <i class="bi bi-bank" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}Open Reports Center{% else %}عرض مركز تقارير الجهات الرسمية{% endif %}
+              </a>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="admin-dashboard-chart-container">
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}Enrollment Status{% else %}حالة التسجيل{% endif %}
-              </h3>
-            </div>
-            <div class="admin-card-body">
-              <canvas id="enrollment-status-chart" width="400" height="200"></canvas>
+      <!-- 6. Operational Indicators -->
+      <section class="admin-operational-indicators" aria-labelledby="operational-indicators-title">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-card-title" id="operational-indicators-title">
+              {% if ui_lang == 'en' %}Operational Indicators{% else %}المؤشرات التشغيلية{% endif %}
+            </h2>
+          </div>
+          <div class="admin-card-body">
+            <div class="admin-dashboard-charts">
+              <div class="admin-dashboard-chart-container">
+                <div class="admin-card">
+                  <div class="admin-card-header">
+                    <h3 class="admin-card-title">
+                      {% if ui_lang == 'en' %}User Activity{% else %}نشاط المستخدمين{% endif %}
+                    </h3>
+                  </div>
+                  <div class="admin-card-body">
+                    <canvas id="user-activity-chart" width="400" height="200"></canvas>
+                  </div>
+                </div>
+              </div>
+              <div class="admin-dashboard-chart-container">
+                <div class="admin-card">
+                  <div class="admin-card-header">
+                    <h3 class="admin-card-title">
+                      {% if ui_lang == 'en' %}Enrollment Status{% else %}حالة التسجيل{% endif %}
+                    </h3>
+                  </div>
+                  <div class="admin-card-body">
+                    <canvas id="enrollment-status-chart" width="400" height="200"></canvas>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Activity & Quick Actions -->
+      <!-- 7. Security Overview -->
+      <section class="admin-security-overview" id="security-overview" aria-labelledby="security-overview-title">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-card-title" id="security-overview-title">
+              {% if ui_lang == 'en' %}Security Overview{% else %}نظرة عامة أمنية{% endif %}
+            </h2>
+          </div>
+          <div class="admin-card-body" id="security-overview-body">
+            <p class="agency-card__purpose">
+              {% if ui_lang == 'en' %}Review admin actions, audit logs and active security alerts.{% else %}مراجعة الإجراءات الإدارية وسجلات التدقيق والتنبيهات الأمنية النشطة.{% endif %}
+            </p>
+            <div class="admin-quick-actions-inline">
+              <a href="/admin/audit-logs" class="admin-btn admin-btn-secondary"><i class="bi bi-shield-check" aria-hidden="true"></i> {% if ui_lang == 'en' %}Audit Log{% else %}سجل التدقيق{% endif %}</a>
+              <a href="/admin/alerts" class="admin-btn admin-btn-secondary"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {% if ui_lang == 'en' %}Active Alerts{% else %}التنبيهات النشطة{% endif %}</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. Request Pipeline -->
+      <section class="admin-request-pipeline" id="request-pipeline" aria-labelledby="request-pipeline-title">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-card-title" id="request-pipeline-title">
+              {% if ui_lang == 'en' %}Request Pipeline{% else %}مسار الطلبات{% endif %}
+            </h2>
+          </div>
+          <div class="admin-card-body" id="request-pipeline-body">
+            <span class="agency-loading-text">{% if ui_lang == 'en' %}Loading request pipeline...{% else %}جارٍ تحميل مسار الطلبات...{% endif %}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. Data Quality Center -->
+      <section class="admin-data-quality-center" id="data-quality-center" aria-labelledby="data-quality-title">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-card-title" id="data-quality-title">
+              {% if ui_lang == 'en' %}Data Quality Center{% else %}مركز جودة البيانات{% endif %}
+            </h2>
+          </div>
+          <div class="admin-card-body" id="data-quality-body">
+            <span class="agency-loading-text">{% if ui_lang == 'en' %}Loading data quality...{% else %}جارٍ تحميل جودة البيانات...{% endif %}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10. Recent Activity -->
       <div class="admin-dashboard-bottom">
         <div class="admin-dashboard-activity">
           <div class="admin-card">
             <div class="admin-card-header">
-              <h3 class="admin-card-title" style="font-size: 20px;">
-                {% if ui_lang == 'en' %}Recent Activities{% else %}النشاطات الحديثة{% endif %}
-              </h3>
+              <h2 class="admin-card-title" style="font-size: 20px;">
+                {% if ui_lang == 'en' %}Recent Activities{% else %}النشاطات الأخيرة{% endif %}
+              </h2>
             </div>
             <div class="admin-card-body">
               <div id="activity-filter-bar"></div>
@@ -151,17 +256,15 @@
           </div>
         </div>
 
+        <!-- 11. Quick Actions -->
         <div class="admin-dashboard-quick-actions">
           <div class="admin-card">
             <div class="admin-card-header">
-              <h3 class="admin-card-title">
+              <h2 class="admin-card-title">
                 {% if ui_lang == 'en' %}Quick Actions{% else %}الإجراءات السريعة{% endif %}
-              </h3>
+              </h2>
             </div>
             <div class="admin-card-body">
-              <!-- <ul>/<li> so screen readers enumerate the 4 actions (USWDS
-                   card-group rule); each <li> is display:contents so the
-                   grid layout still applies directly to the <a> as before. -->
               <ul class="admin-quick-actions" role="list">
 
                 <li><a href="/admin/users" class="admin-quick-action-card">
@@ -169,12 +272,8 @@
                     <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
                   </span>
                   <div class="admin-quick-action-card-content">
-                    <span class="admin-quick-action-card-label">
-                      {% if ui_lang == 'en' %}Manage Users{% else %}إدارة المستخدمين{% endif %}
-                    </span>
-                    <span class="admin-quick-action-card-desc">
-                      {% if ui_lang == 'en' %}Add or modify accounts{% else %}إضافة أو تعديل الحسابات{% endif %}
-                    </span>
+                    <span class="admin-quick-action-card-label">{% if ui_lang == 'en' %}Manage Users{% else %}إدارة المستخدمين{% endif %}</span>
+                    <span class="admin-quick-action-card-desc">{% if ui_lang == 'en' %}Add or modify accounts{% else %}إضافة أو تعديل الحسابات{% endif %}</span>
                   </div>
                 </a></li>
 
@@ -183,12 +282,8 @@
                     <i class="bi bi-envelope-fill" aria-hidden="true"></i>
                   </span>
                   <div class="admin-quick-action-card-content">
-                    <span class="admin-quick-action-card-label">
-                      {% if ui_lang == 'en' %}Send Message{% else %}إرسال رسالة{% endif %}
-                    </span>
-                    <span class="admin-quick-action-card-desc">
-                      {% if ui_lang == 'en' %}Broadcast or direct messages{% else %}رسائل جماعية أو مباشرة{% endif %}
-                    </span>
+                    <span class="admin-quick-action-card-label">{% if ui_lang == 'en' %}Message Center{% else %}مركز الرسائل{% endif %}</span>
+                    <span class="admin-quick-action-card-desc">{% if ui_lang == 'en' %}Broadcast or direct messages{% else %}رسائل جماعية أو مباشرة{% endif %}</span>
                   </div>
                 </a></li>
 
@@ -197,12 +292,8 @@
                     <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
                   </span>
                   <div class="admin-quick-action-card-content">
-                    <span class="admin-quick-action-card-label">
-                      {% if ui_lang == 'en' %}View Analytics{% else %}عرض التحليلات{% endif %}
-                    </span>
-                    <span class="admin-quick-action-card-desc">
-                      {% if ui_lang == 'en' %}Detailed system reports{% else %}تقارير نظام مفصلة{% endif %}
-                    </span>
+                    <span class="admin-quick-action-card-label">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</span>
+                    <span class="admin-quick-action-card-desc">{% if ui_lang == 'en' %}Detailed system reports{% else %}تقارير نظام مفصلة{% endif %}</span>
                   </div>
                 </a></li>
 
@@ -211,12 +302,38 @@
                     <i class="bi bi-database-fill" aria-hidden="true"></i>
                   </span>
                   <div class="admin-quick-action-card-content">
-                    <span class="admin-quick-action-card-label">
-                      {% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}
-                    </span>
-                    <span class="admin-quick-action-card-desc">
-                      {% if ui_lang == 'en' %}Review imported records{% else %}مراجعة السجلات المستوردة{% endif %}
-                    </span>
+                    <span class="admin-quick-action-card-label">{% if ui_lang == 'en' %}Review Data{% else %}مراجعة البيانات{% endif %}</span>
+                    <span class="admin-quick-action-card-desc">{% if ui_lang == 'en' %}Review imported records{% else %}مراجعة السجلات المستوردة{% endif %}</span>
+                  </div>
+                </a></li>
+
+                <li><a href="/admin/audit-logs" class="admin-quick-action-card">
+                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--danger">
+                    <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                  </span>
+                  <div class="admin-quick-action-card-content">
+                    <span class="admin-quick-action-card-label">{% if ui_lang == 'en' %}Security Review{% else %}مراجعة الأمان{% endif %}</span>
+                    <span class="admin-quick-action-card-desc">{% if ui_lang == 'en' %}Audit log and access review{% else %}سجل التدقيق ومراجعة الوصول{% endif %}</span>
+                  </div>
+                </a></li>
+
+                <li><a href="/admin/kindergartens" class="admin-quick-action-card">
+                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--primary">
+                    <i class="bi bi-house-heart-fill" aria-hidden="true"></i>
+                  </span>
+                  <div class="admin-quick-action-card-content">
+                    <span class="admin-quick-action-card-label">{% if ui_lang == 'en' %}Kindergartens{% else %}إدارة رياض الأطفال{% endif %}</span>
+                    <span class="admin-quick-action-card-desc">{% if ui_lang == 'en' %}Manage kindergarten records{% else %}إدارة سجلات رياض الأطفال{% endif %}</span>
+                  </div>
+                </a></li>
+
+                <li><a href="/admin/agency-reports" class="admin-quick-action-card">
+                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--info">
+                    <i class="bi bi-bank2" aria-hidden="true"></i>
+                  </span>
+                  <div class="admin-quick-action-card-content">
+                    <span class="admin-quick-action-card-label">{% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</span>
+                    <span class="admin-quick-action-card-desc">{% if ui_lang == 'en' %}Official stakeholder reports{% else %}تقارير الجهات الرسمية{% endif %}</span>
                   </div>
                 </a></li>
 
@@ -228,40 +345,13 @@
     </div><!-- /#dashboard-content -->
   </div><!-- /#admin-dashboard -->
 </div>
-<section class="agency-reports-dashboard-section" aria-labelledby="agency-reports-dashboard-title">
-  <div class="admin-card agency-reports-dashboard-card">
-    <div class="admin-card-header agency-reports-card-header">
-      <div class="agency-logo-lockup">
-        <img src="/static/img/official-agencies-logo.svg" width="56" height="56" alt="" aria-hidden="true" class="agency-logo" />
-        <div>
-          <h2 id="agency-reports-dashboard-title" class="admin-card-title">
-            {% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}
-          </h2>
-          <p class="agency-reports-subtitle">
-            {% if ui_lang == 'en' %}Dynamic aggregated reports for official stakeholders, generated from real KinJo data with privacy and data-quality controls.{% else %}تقارير ديناميكية وتجميعية للجهات الرسمية، مبنية على بيانات KinJo الفعلية مع ضوابط الخصوصية وجودة البيانات.{% endif %}
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="admin-card-body">
-      <div class="agency-reports-dashboard-grid" id="agency-reports-summary" role="status" aria-live="polite">
-        <span class="agency-loading-text">{% if ui_lang == 'en' %}Loading official agency reports summary...{% else %}جارٍ تحميل ملخص تقارير الجهات الرسمية...{% endif %}</span>
-      </div>
-      <div class="agency-reports-dashboard-actions">
-        <a href="/admin/agency-reports" class="admin-btn admin-btn-primary" aria-label="{% if ui_lang == 'en' %}Open Official Agency Reports Center{% else %}فتح مركز تقارير الجهات الرسمية{% endif %}">
-          <i class="bi bi-bank" aria-hidden="true"></i>
-          {% if ui_lang == 'en' %}Open Reports Center{% else %}عرض مركز تقارير الجهات الرسمية{% endif %}
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>window.KINJO_LANG = "{{ ui_lang }}";</script>
 <script src="/static/js/chart_utils.js?v=2.1"></script>
-<script src="/static/js/admin_dashboard.js?v=3.0"></script>
+<script src="/static/js/admin_dashboard.js?v=3.1"></script>
 <script src="/static/js/admin_activity_filters.js?v=1.0"></script>
-<script src="/static/js/admin_agency_reports_dashboard_summary.js?v=1.0"></script>
+<script src="/static/js/agency_logo.js?v=1.0"></script>
+<script src="/static/js/admin_agency_reports_dashboard_summary.js?v=1.1"></script>
 {% endblock %}

@@ -24,11 +24,15 @@
   <form id="agency-report-filters" class="agency-filter-panel" aria-label="{% if ui_lang == 'en' %}Report filters{% else %}فلاتر التقرير{% endif %}">
     <div>
       <label for="filter-governorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-      <input id="filter-governorate" name="governorate" type="text" />
+      <select id="filter-governorate" name="governorate">
+        <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
+      </select>
     </div>
     <div>
       <label for="filter-city">{% if ui_lang == 'en' %}City/District{% else %}المدينة / اللواء{% endif %}</label>
-      <input id="filter-city" name="city" type="text" />
+      <select id="filter-city" name="city" disabled>
+        <option value="">{% if ui_lang == 'en' %}Select Governorate First{% else %}اختر المحافظة أولاً{% endif %}</option>
+      </select>
     </div>
     <div>
       <label for="filter-aggregation-level">{% if ui_lang == 'en' %}Aggregation level{% else %}مستوى التجميع{% endif %}</label>

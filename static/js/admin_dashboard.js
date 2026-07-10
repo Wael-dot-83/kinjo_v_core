@@ -263,6 +263,7 @@ class AdminDashboard {
       this.renderActivityFeed(normalized.recent_activity);
     }
     this.renderAlerts(normalized.alerts);
+    this.renderExecutiveSections(normalized);
     // Translate any data-i18n elements injected dynamically by this script
     window.AdminI18n?.translatePage?.();
   }
@@ -307,6 +308,9 @@ class AdminDashboard {
       charts: { user_activity: userActivityChart, data_submissions: submissionChart },
       recent_activity: recentActivity,
       alerts,
+      system_overview: data.system_overview || {},
+      summary: data.summary || {},
+      generated_at: data.generated_at || null,
     };
   }
 
@@ -892,6 +896,269 @@ class AdminDashboard {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+  }
+
+  // ── Executive decision-support sections (real backend data only) ──────
+
+  renderExecutiveSections(norm) {
+    this.renderSystemStatus(norm);
+    this.renderExecutiveSummary(norm);
+    this.renderRequestPipeline(norm);
+    this.renderDataQualityCenter(norm);
+  }
+
+  _statusFromThresholds(value, warn, critical) {
+    if (value == null) return "unavailable";
+    if (value >= critical) return "good";
+    if (value >= warn) return "warning";
+    return "critical";
+  }
+
+  _statusBadge(status, labelAr) {
+    const span = document.createElement("span");
+    span.className = "admin-status-badge admin-status--" + (status || "info");
+    span.textContent = labelAr;
+    return span;
+  }
+
+  _statChip(label, value, hint) {
+    const chip = document.createElement("div");
+    chip.className = "admin-status-chip";
+    const v = document.createElement("strong");
+    v.className = "admin-status-chip-value";
+    v.textContent = value == null ? "—" : String(value);
+    const l = document.createElement("span");
+    l.className = "admin-status-chip-label";
+    l.textContent = label;
+    chip.append(v, l);
+    if (hint) {
+      const h = document.createElement("span");
+      h.className = "admin-status-chip-hint";
+      h.textContent = hint;
+      chip.appendChild(h);
+    }
+    return chip;
+  }
+
+  renderSystemStatus(norm) {
+    const el = document.getElementById("system-status-banner");
+    if (!el) return;
+    const body = el.querySelector(".admin-card-body");
+    if (!body) return;
+    body.innerHTML = "";
+    const so = norm.system_overview || {};
+    const sum = norm.summary || {};
+    const grid = document.createElement("div");
+    grid.className = "admin-status-chip-grid";
+    grid.append(
+      this._statChip(this.t("dashboard.total_kindergartens", "Kindergartens"), so.total_kindergartens),
+      this._statChip(this.t("dashboard.active_kindergartens", "Active kindergartens"), so.active_kindergartens),
+      this._statChip(this.t("dashboard.total_users", "Users"), so.total_users),
+      this._statChip(this.t("dashboard.pending_applications", "Pending applications"), sum.pending_applications),
+      this._statChip(this.t("dashboard.pending_daily_reports", "Pending reports"), sum.pending_daily_reports),
+      this._statChip(this.t("dashboard.recent_incidents", "Incidents (7d)"), sum.recent_incidents),
+      this._statChip(this.t("dashboard.attendance_rate", "Attendance rate"), (sum.attendance_rate != null ? sum.attendance_rate + "%" : null)),
+    );
+    body.appendChild(grid);
+    if (norm.generated_at) {
+      const fresh = document.createElement("p");
+      fresh.className = "admin-status-freshness";
+      fresh.textContent = (window.KINJO_LANG === "en" ? "Data as of " : "البيانات حتى ") + norm.generated_at;
+      body.appendChild(fresh);
+    }
+  }
+
+  renderExecutiveSummary(norm) {
+    const el = document.getElementById("executive-summary");
+    if (!el) return;
+    const body = el.querySelector(".admin-card-body");
+    if (!body) return;
+    body.innerHTML = "";
+    const so = norm.system_overview || {};
+    const sum = norm.summary || {};
+    const kpis = norm.kpis || {};
+    const dq = kpis.data_quality_score;
+    const serviceAvail = (so.total_kindergartens ? Math.round((so.active_kindergartens / so.total_kindergartens) * 100) : null);
+    const items = [
+      {
+        label: this.t("dashboard.system_health", "System health"),
+        value: sum.attendance_rate != null ? sum.attendance_rate + "%" : null,
+        status: this._statusFromThresholds(sum.attendance_rate, 60, 80),
+        explain: this.t("dashboard.system_health_explain", "Today's attendance rate across active kindergartens."),
+        action: this.t("dashboard.review_operations", "Review operations"),
+        href: "/admin/kg-overview",
+      },
+      {
+        label: this.t("dashboard.data_quality", "Data quality"),
+        value: dq != null ? dq + "%" : null,
+        status: this._statusFromThresholds(dq, 60, 80),
+        explain: this.t("dashboard.data_quality_explain", "Share of active kindergartens that reported in the last 7 days."),
+        action: this.t("dashboard.improve_data", "Improve data"),
+        href: "/admin/imported-kindergartens",
+      },
+      {
+        label: this.t("dashboard.security_index", "Security index"),
+        value: null,
+        status: "info",
+        explain: this.t("dashboard.security_explain", "Review the audit log and active alerts for security posture."),
+        action: this.t("dashboard.review_audit", "Review audit log"),
+        href: "/admin/audit-logs",
+      },
+      {
+        label: this.t("dashboard.service_availability", "Service availability"),
+        value: serviceAvail != null ? serviceAvail + "%" : null,
+        status: this._statusFromThresholds(serviceAvail, 90, 100),
+        explain: this.t("dashboard.service_availability_explain", "Active kindergartens as a share of all registered kindergartens."),
+        action: this.t("dashboard.review_kindergartens", "Review kindergartens"),
+        href: "/admin/kindergartens",
+      },
+      {
+        label: this.t("dashboard.pending_requests", "Pending requests"),
+        value: sum.pending_applications,
+        status: (sum.pending_applications || 0) > 0 ? "warning" : "good",
+        explain: this.t("dashboard.pending_requests_explain", "Enrollment applications awaiting review."),
+        action: this.t("dashboard.review_requests", "Review requests"),
+        href: "/admin/analytics",
+      },
+      {
+        label: this.t("dashboard.user_activity", "User activity"),
+        value: so.total_users,
+        status: "info",
+        explain: this.t("dashboard.user_activity_explain", "Total registered platform users."),
+        action: this.t("dashboard.manage_users", "Manage users"),
+        href: "/admin/users",
+      },
+    ];
+    const list = document.createElement("ul");
+    list.className = "admin-exec-summary-list";
+    list.setAttribute("role", "list");
+    const labels = { good: this.t("dashboard.status_good", "Healthy"), warning: this.t("dashboard.status_warning", "Warning"), critical: this.t("dashboard.status_critical", "Critical"), info: this.t("dashboard.status_info", "Info"), unavailable: this.t("dashboard.status_unavailable", "Unavailable") };
+    items.forEach((it) => {
+      const li = document.createElement("li");
+      li.className = "admin-exec-summary-item";
+      li.setAttribute("role", "listitem");
+      const head = document.createElement("div");
+      head.className = "admin-exec-summary-head";
+      const name = document.createElement("span");
+      name.className = "admin-exec-summary-name";
+      name.textContent = it.label;
+      head.append(name, this._statusBadge(it.status, labels[it.status] || it.status));
+      const val = document.createElement("div");
+      val.className = "admin-exec-summary-value";
+      val.textContent = it.value == null ? this.t("dashboard.not_available", "Not available") : String(it.value);
+      const exp = document.createElement("p");
+      exp.className = "admin-exec-summary-explain";
+      exp.textContent = it.explain;
+      const act = document.createElement("a");
+      act.className = "admin-exec-summary-action";
+      act.href = it.href;
+      act.textContent = it.action;
+      li.append(head, val, exp, act);
+      list.appendChild(li);
+    });
+    body.appendChild(list);
+  }
+
+  renderRequestPipeline(norm) {
+    const el = document.getElementById("request-pipeline");
+    if (!el) return;
+    const body = document.getElementById("request-pipeline-body");
+    if (!body) return;
+    body.innerHTML = "";
+    const sum = norm.summary || {};
+    const pending = sum.pending_applications || 0;
+    const pendingReports = sum.pending_daily_reports || 0;
+
+    const wrap = document.createElement("div");
+    wrap.className = "admin-pipeline";
+
+    const stages = [
+      this.t("dashboard.pipe_new", "New"),
+      this.t("dashboard.pipe_submitted", "Submitted"),
+      this.t("dashboard.pipe_review", "Under Review"),
+      this.t("dashboard.pipe_documents", "Waiting Documents"),
+      this.t("dashboard.pipe_approved", "Approved"),
+      this.t("dashboard.pipe_rejected", "Rejected"),
+    ];
+    const row = document.createElement("ol");
+    row.className = "admin-pipeline-stages";
+    row.setAttribute("role", "list");
+    stages.forEach((st, i) => {
+      const li = document.createElement("li");
+      li.className = "admin-pipeline-stage";
+      li.setAttribute("role", "listitem");
+      if (stages[i] === this.t("dashboard.pipe_review", "Under Review")) li.classList.add("is-current");
+      const span = document.createElement("span");
+      span.textContent = st;
+      li.appendChild(span);
+      row.appendChild(li);
+    });
+    wrap.appendChild(row);
+
+    const meta = document.createElement("div");
+    meta.className = "admin-pipeline-meta";
+    meta.append(
+      this._statChip(this.t("dashboard.pending_review", "Pending review"), pending),
+      this._statChip(this.t("dashboard.pending_reports", "Pending reports"), pendingReports),
+    );
+    wrap.appendChild(meta);
+
+    const cta = document.createElement("a");
+    cta.className = "admin-btn admin-btn-primary";
+    cta.href = "/admin/analytics";
+    cta.textContent = this.t("dashboard.review_pending_requests", "Review pending requests");
+    wrap.appendChild(cta);
+
+    body.appendChild(wrap);
+  }
+
+  renderDataQualityCenter(norm) {
+    const el = document.getElementById("data-quality-center");
+    if (!el) return;
+    const body = document.getElementById("data-quality-body");
+    if (!body) return;
+    body.innerHTML = "";
+    const dq = (norm.kpis || {}).data_quality_score;
+    const reasons = norm.data_quality_reasons || [];
+
+    const scoreWrap = document.createElement("div");
+    scoreWrap.className = "admin-dq-center";
+    const scoreLabel = document.createElement("div");
+    scoreLabel.className = "admin-dq-center-label";
+    scoreLabel.textContent = this.t("dashboard.data_quality_score", "Data quality score");
+    const scoreVal = document.createElement("div");
+    scoreVal.className = "admin-dq-center-value";
+    scoreVal.textContent = dq == null ? this.t("dashboard.not_available", "Not available") : dq + "%";
+    scoreWrap.append(scoreLabel, scoreVal);
+    body.appendChild(scoreWrap);
+
+    if (reasons.length) {
+      const details = document.createElement("details");
+      details.className = "admin-dq-center-issues";
+      const summary = document.createElement("summary");
+      summary.textContent = this.t("dashboard.view_issues", "View data issues");
+      details.appendChild(summary);
+      const ul = document.createElement("ul");
+      reasons.forEach((r) => {
+        const li = document.createElement("li");
+        li.setAttribute("dir", "auto");
+        li.textContent = r.label_ar || r.label_en || "";
+        ul.appendChild(li);
+      });
+      details.appendChild(ul);
+      body.appendChild(details);
+    } else if (dq != null) {
+      const ok = document.createElement("p");
+      ok.className = "admin-dq-center-ok";
+      ok.textContent = this.t("dashboard.data_quality_ok", "No outstanding data-quality issues detected.");
+      body.appendChild(ok);
+    }
+
+    const cta = document.createElement("a");
+    cta.className = "admin-btn admin-btn-secondary";
+    cta.href = "/admin/imported-kindergartens";
+    cta.textContent = this.t("dashboard.improve_data", "Improve data quality");
+    body.appendChild(cta);
   }
 
   destroy() {
