@@ -598,7 +598,33 @@
 {% block extra_scripts %}
 {# ── Heatmap application (must load before Google Maps callback fires) ── #}
 <script defer src="/static/js/jordan_cesium_map.js?v=6" charset="utf-8"></script>
+
+{# ── Graceful degradation: if the Google Maps key is missing or unauthorized,
+     suppress Google's raw error dialog / "for development only" watermarks and
+     show a clean notice — the governorate list, rankings and KPIs in the side
+     panel still load from the API. ─────────────────────────────────────── #}
+<script>
+  window.gm_authFailure = function () {
+    if (typeof showFallback === 'function') {
+      showFallback('مفتاح خرائط Google غير مُفعّل لهذا الموقع. تُعرض بيانات المحافظات والمؤشرات في القائمة الجانبية.');
+    }
+    if (typeof fetchMapData === 'function') { try { fetchMapData(); } catch (e) {} }
+  };
+</script>
+
+{% if google_maps_api_key %}
 {# ── Google Maps JavaScript API — satellite imagery ───────────────────── #}
 <script async defer
-  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key | default('') }}&loading=async&libraries=marker&callback=_gmapsLoaded&v=weekly"></script>
+  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&loading=async&libraries=marker&callback=_gmapsLoaded&v=weekly"></script>
+{% else %}
+{# No key configured — skip Google Maps and render the data-only view. #}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof showFallback === 'function') {
+      showFallback('لم يتم ضبط مفتاح خرائط Google (GOOGLE_MAPS_API_KEY). تُعرض بيانات المحافظات والمؤشرات في القائمة الجانبية.');
+    }
+    if (typeof fetchMapData === 'function') { try { fetchMapData(); } catch (e) {} }
+  });
+</script>
+{% endif %}
 {% endblock %}
