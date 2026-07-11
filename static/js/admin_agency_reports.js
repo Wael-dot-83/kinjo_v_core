@@ -7,11 +7,18 @@
   const api = (path) => fetch(path, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } }).then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
   const t = (ar, en) => lang === "en" ? en : ar;
 
+  const agencyLogoFiles = {
+    moe: "moe.jpg",
+    moh: "moh.jpg",
+    dos: "gsd.jpg",
+    ncfa: "ncfa.png",
+    mol: "mol.png",
+    mosd: "mosd.jpg"
+  };
+
   function clear(el) { if (el) el.innerHTML = ""; }
   function pill(text, kind) { const span = document.createElement("span"); span.className = "agency-status agency-status--" + (kind || "default"); span.textContent = text; return span; }
 
-  // Official-agency logo/branding badge: renders the registry icon inside a
-  // rounded badge; falls back to the agency's initials when no icon is set.
   function logoBadge(agency) {
     const badge = document.createElement("span");
     badge.className = "agency-logo-badge";
@@ -28,6 +35,23 @@
     return badge;
   }
 
+  window.renderAgencyLogo = function renderAgencyLogo(agency, size) {
+    const logoFile = agencyLogoFiles[agency.code];
+    if (logoFile) {
+      const img = document.createElement("img");
+      img.className = "agency-card-logo";
+      img.src = "/static/img/agencies/" + logoFile;
+      img.alt = "";
+      img.setAttribute("aria-hidden", "true");
+      if (size) {
+        img.width = size;
+        img.height = size;
+      }
+      return img;
+    }
+    return logoBadge(agency);
+  };
+
   function renderIndex(data) {
     clear(root);
     const list = document.createElement("ul");
@@ -38,7 +62,7 @@
       li.className = "agency-card";
       const header = document.createElement("div");
       header.className = "agency-card__head";
-      header.appendChild(logoBadge(agency));
+      header.appendChild(window.renderAgencyLogo(agency, 52));
       const h2 = document.createElement("h2");
       h2.textContent = lang === "en" ? agency.name_en : agency.name_ar;
       header.appendChild(h2);
@@ -54,6 +78,16 @@
       link.href = "/admin/agency-reports/" + encodeURIComponent(agency.code);
       link.textContent = t("عرض تقارير " + agency.name_ar, "View " + agency.name_en + " reports");
       li.append(header, p, meta, link);
+
+      li.addEventListener("click", function(e) {
+        e.stopPropagation();
+        window.location.href = "/admin/agency-reports/" + encodeURIComponent(agency.code);
+      });
+
+      link.addEventListener("click", function(e) {
+        e.stopPropagation();
+      });
+
       list.appendChild(li);
     });
     root.appendChild(list);

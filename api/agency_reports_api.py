@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 
 import models
-from agency_reports_export import to_csv
+from agency_reports_export import custom_report_to_csv, to_csv
 from agency_reports_service import AgencyReportError, AgencyReportsService
 from database import get_db
 from dependencies import get_current_user
@@ -160,7 +160,7 @@ def custom_report_schema(
     current_user: models.User = Depends(_require_admin),
     db: Session = Depends(get_db),
 ):
-    return AgencyReportsService(db).custom_report_schema()
+    return {"success": True, "data": AgencyReportsService(db).custom_report_schema()}
 
 
 @router.post("/admin/agency-reports/custom")
@@ -170,7 +170,7 @@ def custom_report(
     db: Session = Depends(get_db),
 ):
     try:
-        return AgencyReportsService(db).custom_report(scope)
+        return {"success": True, "data": AgencyReportsService(db).custom_report(scope)}
     except AgencyReportError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
@@ -183,9 +183,7 @@ def custom_report_export_csv(
 ):
     try:
         payload = AgencyReportsService(db).custom_report(scope)
-        if not payload.get("exports", {}).get("csv"):
-            raise HTTPException(status_code=409, detail="CSV export is not available for this report")
-        csv_payload = to_csv(payload)
+        csv_payload = custom_report_to_csv(payload)
         filename = "custom_agency_report.csv"
         return Response(
             content=csv_payload,

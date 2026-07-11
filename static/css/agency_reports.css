@@ -54,6 +54,7 @@
 /* ===== Official agency logo/branding badge (fallback) ===== */
 .agency-card__head{display:flex;align-items:center;gap:12px;margin-bottom:4px}
 .agency-card__head h2{margin:0}
+.agency-card-logo{flex:0 0 auto;width:52px;height:52px;border-radius:12px;object-fit:contain;background:#fff;border:1px solid #dbeafe;padding:6px}
 .agency-logo-badge{flex:0 0 auto;width:48px;height:48px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:800;background:linear-gradient(135deg,#eff6ff,#dbeafe);color:#1d4ed8;border:1px solid #bfdbfe}
 .agency-logo-badge--text{font-size:1rem;letter-spacing:.02em;text-transform:uppercase}
 .agency-logo-badge i{line-height:1}
