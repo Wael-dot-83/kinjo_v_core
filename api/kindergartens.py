@@ -17,6 +17,12 @@ from database import get_db
 from dependencies import get_current_user
 from api.users import DUPLICATE_ERROR_MAP
 from auth import get_password_hash
+from services.jordan_locations import (
+    get_all_governorates,
+    get_areas_for_governorate,
+    get_governorate_by_key,
+    get_governorate_by_name,
+)
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
@@ -24,103 +30,36 @@ router = APIRouter(tags=["Kindergartens"])
 
 
 @router.get("/reference/governorates")
-def get_governorates(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Return list of governorates and their districts from AdministrativeDivision."""
-    gov_map = {}
-
-    def _ensure(normalized):
-        """Return the gov_map entry for a governorate, creating it if needed."""
-        if normalized not in gov_map:
-            english_label = None
-            if normalized in settings.JORDAN_GOVERNORATES:
-                idx = settings.JORDAN_GOVERNORATES.index(normalized)
-                if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
-                    english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx]
-            gov_map[normalized] = {
-                "id": normalized,
-                "name_ar": normalized,
-                "name_en": english_label or normalized,
-                "cities": set(),  # 'cities' == districts (kept for frontend back-compat)
-            }
-        return gov_map[normalized]
-
-    # Always seed the full canonical list of Jordan governorates so the reference
-    # dropdown is complete even before any AdministrativeDivision/kindergarten
-    # rows exist for a given governorate.
-    for idx, gov_ar in enumerate(settings.JORDAN_GOVERNORATES):
-        english_label = (
-            settings.JORDAN_GOVERNORATES_ENGLISH[idx]
-            if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH)
-            else gov_ar
-        )
-        gov_map[gov_ar] = {
-            "id": gov_ar,
-            "name_ar": gov_ar,
-            "name_en": english_label,
-            "cities": set(),
-        }
-
-    # Augment districts from the AdministrativeDivision reference table.
-    for div in db.query(models.AdministrativeDivision).all():
-        if not div.governorate:
-            continue
-        try:
-            normalized = validators.validate_jordan_governorate(div.governorate)
-        except validators.ValidationError:
-            normalized = div.governorate
-        entry = _ensure(normalized)
-        if div.district:
-            entry["cities"].add(div.district)
-
-    # Also augment districts from distinct values already stored on kindergartens,
-    # so real data (incl. any non-canonical governorate) shows through even when
-    # AdministrativeDivision is unseeded.
-    kg_rows = (
-        db.query(models.Kindergarten.governorate, models.Kindergarten.district)
-        .filter(models.Kindergarten.governorate.isnot(None))
-        .distinct()
-        .all()
-    )
-    for gov, dist in kg_rows:
-        if not gov:
-            continue
-        try:
-            normalized = validators.validate_jordan_governorate(gov)
-        except validators.ValidationError:
-            normalized = gov
-        entry = _ensure(normalized)
-        if dist:
-            entry["cities"].add(dist)
-
-    govs = []
-    for g in gov_map.values():
-        g["cities"] = sorted(list(g["cities"]))
-        govs.append(g)
-
-    return {"governorates": sorted(govs, key=lambda x: x["name_ar"])}
+def get_governorates():
+    """Return list of governorates and their areas from canonical source."""
+    governorates = []
+    for gov in get_all_governorates():
+        areas = get_areas_for_governorate(gov["key"])
+        governorates.append({
+            "id": gov["key"],
+            "name_ar": gov["name_ar"],
+            "name_en": gov["name_en"],
+            "cities": [a["name_ar"] for a in areas],
+        })
+    return {"governorates": sorted(governorates, key=lambda x: x["name_ar"])}
 
 
 @router.get("/governorates/{gov}/districts")
-def get_districts_by_governorate(
-    gov: str,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Return distinct districts for a governorate, from DB records."""
-    # Normalise alias
-    alias_map = settings.JORDAN_GOVERNORATE_ALIASES
-    normalised = alias_map.get(gov, alias_map.get(gov.lower(), gov))
-
-    districts = (
-        db.query(models.Kindergarten.district)
-        .filter(models.Kindergarten.governorate == normalised)
-        .distinct()
-        .all()
-    )
-    return {"governorate": gov, "districts": [d[0] for d in districts if d[0]]}
+def get_districts_by_governorate(gov: str):
+    """Return areas for a governorate, from canonical source."""
+    gov_obj = get_governorate_by_key(gov)
+    if not gov_obj:
+        gov_obj = get_governorate_by_name(gov)
+    if not gov_obj:
+        alias_map = settings.JORDAN_GOVERNORATE_ALIASES
+        normalised = alias_map.get(gov, alias_map.get(gov.lower(), gov))
+        gov_obj = get_governorate_by_key(normalised)
+        if not gov_obj:
+            gov_obj = get_governorate_by_name(normalised)
+    if not gov_obj:
+        raise HTTPException(status_code=404, detail="Governorate not found")
+    areas = get_areas_for_governorate(gov_obj["key"])
+    return {"governorate": gov_obj["name_ar"], "districts": [a["name_ar"] for a in areas]}
 
 
 
@@ -555,67 +494,6 @@ def get_kindergarten(
     pres, tot = (att[0], att[1]) if att else (0, 0)
     return _envelope(True, _serialize(kg, child_count=cc, attendance_present=pres, attendance_total=tot),
                      "تم جلب بيانات الحضانة بنجاح")
-
-
-@router.get("/admin/kindergartens/stats")
-def kindergarten_stats(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Aggregate counts + occupancy for the admin Kindergartens KPI cards.
-
-    Admin-only. Uses batched aggregate queries (no N+1). ``total`` is the active
-    roster (everything except soft-deleted); ``deleted`` is reported separately.
-    """
-    _admin_only(current_user)
-    from models import EnrollmentApplication, EnrollmentStatus
-
-    # One GROUP BY for per-status counts.
-    rows = (
-        db.query(models.Kindergarten.status, func.count(models.Kindergarten.id))
-        .group_by(models.Kindergarten.status)
-        .all()
-    )
-    counts = {status.value.lower(): int(n) for status, n in rows}
-    active = counts.get("active", 0)
-    frozen = counts.get("frozen", 0)
-    draft = counts.get("draft", 0)
-    inactive = counts.get("inactive", 0)
-    deleted = counts.get("deleted", 0)
-    total = active + frozen + draft + inactive  # active roster (excludes deleted)
-
-    # Capacity + active enrollment across the non-deleted roster (2 aggregates).
-    total_capacity = (
-        db.query(func.coalesce(func.sum(models.Kindergarten.total_capacity), 0))
-        .filter(models.Kindergarten.status != models.KindergartenStatus.DELETED)
-        .scalar()
-    ) or 0
-    total_children = (
-        db.query(func.count(EnrollmentApplication.id))
-        .join(models.Kindergarten, models.Kindergarten.id == EnrollmentApplication.kindergarten_id)
-        .filter(
-            EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
-            models.Kindergarten.status != models.KindergartenStatus.DELETED,
-        )
-        .scalar()
-    ) or 0
-    avg_occupancy = round((total_children / total_capacity) * 100, 1) if total_capacity else 0.0
-
-    return _envelope(
-        True,
-        {
-            "total": total,
-            "active": active,
-            "frozen": frozen,
-            "draft": draft,
-            "inactive": inactive,
-            "deleted": deleted,
-            "avg_occupancy": avg_occupancy,
-            "total_children": int(total_children),
-            "total_capacity": int(total_capacity),
-        },
-        "تم جلب إحصائيات الحضانات بنجاح / Kindergarten stats retrieved",
-    )
 
 
 @router.post("/admin/kindergartens", status_code=201)

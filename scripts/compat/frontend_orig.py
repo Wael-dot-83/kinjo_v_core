@@ -16,6 +16,7 @@ from dependencies import get_current_user_optional, get_current_user_or_redirect
 from models import User, UserRole, Kindergarten, EnrollmentApplication
 from config import settings
 from validators import validate_jordan_governorate
+from services.jordan_locations import get_all_governorates
 
 SUPPORTED_UI_LANGUAGES = {"ar", "en"}
 
@@ -1327,8 +1328,8 @@ async def admin_message_compose(request: Request, current_user: User = Depends(g
         name="admin/messages/compose.html",
         context={
             "current_user": current_user,
-            "governorates": settings.JORDAN_GOVERNORATES,
-            "governorates_en": settings.JORDAN_GOVERNORATES_ENGLISH
+            "governorates": [g["name_ar"] for g in get_all_governorates()],
+            "governorates_en": [g["name_en"] for g in get_all_governorates()],
         }
     )
 
@@ -1389,20 +1390,6 @@ async def admin_kg_overview(request: Request, current_user: User = Depends(get_c
         name="admin/kg_overview.html",
         context={"current_user": current_user, "today": _today(), "now": datetime.now(timezone(timedelta(hours=3))).strftime("%d %B %Y, %I:%M %p")}
     )
-
-
-def _ui_lang(request: Request) -> str:
-    """Resolve the UI language ('ar'/'en') for the admin kindergarten routes.
-
-    Mirrors ``language_context_processor`` (which also injects ``ui_lang`` into
-    every template context); passing it explicitly keeps these routes robust.
-    """
-    return language_context_processor(request).get("ui_lang", "ar")
-
-
-def _now() -> str:
-    """Current Jordan (UTC+3) timestamp string for template headers."""
-    return datetime.now(timezone(timedelta(hours=3))).strftime("%d %B %Y, %I:%M %p")
 
 
 def _get_kg_or_none(kindergarten_id: int):

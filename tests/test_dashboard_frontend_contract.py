@@ -269,8 +269,8 @@ def test_dashboard_card_collections_are_enumerable_lists_with_real_headings():
     (not a plain <div> standing in for one). Covers both card collections on
     /admin/dashboard: the 7 KPI cards and the 4 Quick Action cards."""
     template = ADMIN_DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
-    assert re.search(r'<ul\s+class="admin-dashboard-cards"\s+id="kpi-cards"[^>]*role="list"', template)
-    assert re.search(r'<ul\s+class="admin-quick-actions"\s+role="list"', template)
+    assert re.search(r'<ul\s+class="[^"]*\badmin-dashboard-cards\b[^"]*"\s+id="kpi-cards"[^>]*role="list"', template)
+    assert re.search(r'<ul\s+class="[^"]*\badmin-quick-actions\b[^"]*"\s+role="list"', template)
     # Each quick-action <a> must be wrapped in its own <li>
     assert template.count("<li><a") >= 4
 
@@ -280,6 +280,28 @@ def test_dashboard_card_collections_are_enumerable_lists_with_real_headings():
     # The old role="region"/aria-label duplicate-of-heading pattern must not
     # come back once the card has a real heading providing its accessible name.
     assert 'card.setAttribute("role", "region")' not in source
+
+
+def test_admin_dashboard_has_scoped_uswds_redesign_shell_without_losing_hooks():
+    """The USWDS-inspired dashboard shell must stay scoped and preserve JS hooks."""
+    template = ADMIN_DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
+
+    assert "/static/vendor/uswds/css/uswds.min.css" in template
+    assert 'admin-uswds-dashboard usa-section' in template
+    assert 'agency-reports-dashboard-section usa-summary-box' in template
+    assert 'admin-page-header usa-prose' in template
+    assert 'admin-dashboard-cards usa-card-group' in template
+    assert 'admin-quick-actions usa-card-group' in template
+    for hook in (
+        'id="admin-dashboard"',
+        'id="dashboard-loading"',
+        'id="dashboard-error"',
+        'id="dashboard-content"',
+        'id="kpi-cards"',
+        'id="activity-feed"',
+        'id="refresh-dashboard"',
+    ):
+        assert hook in template
 
 
 def test_system_alerts_css_classes_match_what_the_js_actually_renders():

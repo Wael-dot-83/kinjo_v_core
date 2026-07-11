@@ -246,13 +246,18 @@ def validate_jordan_governorate(governorate: str) -> str:
     if not raw:
         raise ValidationError("Governorate is required")
 
-    # Check Arabic names directly
+    try:
+        from services.jordan_locations import normalize_governorate, is_valid_governorate
+        if is_valid_governorate(raw):
+            return normalize_governorate(raw)
+    except Exception:
+        pass
+
     if raw in settings.JORDAN_GOVERNORATES:
         return raw
 
     normalized = _normalize_governorate_input(raw)
 
-    # Build alias map (normalized keys -> Arabic)
     alias_map = {}
     for key, value in settings.JORDAN_GOVERNORATE_ALIASES.items():
         alias_map[_normalize_governorate_input(key)] = value
@@ -262,7 +267,6 @@ def validate_jordan_governorate(governorate: str) -> str:
     if normalized in alias_map:
         return alias_map[normalized]
 
-    # Invalid governorate
     raise ValidationError(
         f"Invalid governorate: {governorate}. Must be one of (Arabic): "
         f"{', '.join(settings.JORDAN_GOVERNORATES)} or (English): "

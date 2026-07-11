@@ -349,7 +349,8 @@
                                 <div class="col-12 col-md-4">
                                     <label for="directUserGovernorate" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
                                     <input type="text" class="form-control" id="directUserGovernorate"
-                                        placeholder="{% if ui_lang == 'en' %}e.g. Damascus{% else %}مثال: دمشق{% endif %}">
+                                        placeholder="{% if ui_lang == 'en' %}e.g. Amman{% else %}مثال: عمان{% endif %}" list="governorateList">
+                                    <datalist id="governorateList"></datalist>
                                 </div>
                                 <div class="col-12 col-md-4">
                                     <label for="directUserPhone" class="form-label">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</label>
@@ -2136,4 +2137,22 @@
     function escHtml(s) {
         return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
+
+    (async function populateGovernorateDatalist() {
+      const datalist = document.getElementById('governorateList');
+      if (!datalist) return;
+      try {
+        const resp = await fetch('/api/locations/jordan/governorates', { credentials: 'same-origin' });
+        if (!resp.ok) return;
+        const json = await resp.json();
+        const governorates = (json.data && json.data.governorates) || [];
+        governorates.forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g.name_ar;
+          datalist.appendChild(opt);
+        });
+      } catch (e) {
+        console.warn('Failed to load governorate datalist:', e);
+      }
+    })();
 </script>

@@ -1,19 +1,15 @@
 """
 Manager domain endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta, timezone
+from sqlalchemy import func
+from datetime import datetime, timedelta, timezone
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
-from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
 import validators
-from config import settings
 from database import get_db
 from dependencies import get_current_user
 

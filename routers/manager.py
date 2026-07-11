@@ -21,6 +21,7 @@ from dependencies import get_current_user, require_manager as _require_manager
 from models import (
     AuditLog,
     Class,
+    Child,
     DailyReport,
     DailyReportStatus,
     EnrollmentApplication,
@@ -114,6 +115,10 @@ class SupervisorAssignIn(BaseModel):
     supervisor_id: int
     class_id: int
     is_primary: bool = False
+
+
+class SupervisorSwapIn(BaseModel):
+    supervisor_id: int
 
 
 @router.post("/classes/assign-supervisor", status_code=201)
@@ -210,7 +215,7 @@ def unassign_supervisor_from_class(
 @router.put("/classes/{class_id}/swap-supervisor")
 def swap_supervisor(
     class_id: int,
-    body: SupervisorAssignIn,
+    body: SupervisorSwapIn,
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
@@ -315,7 +320,6 @@ def list_daily_reports_for_review(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
-    from models import Child
     # Get child IDs in manager's kindergarten
     kg_id = current_user.kindergarten_id
     classes = db.query(Class).filter(Class.kindergarten_id == kg_id, Class.deleted_at.is_(None)).all()
@@ -358,9 +362,15 @@ def list_daily_reports_for_review(
         q = q.filter(DailyReport.status == DailyReportStatus.SUBMITTED)
 
     if from_date:
-        q = q.filter(DailyReport.date >= from_date)
+        try:
+            q = q.filter(DailyReport.date >= date.fromisoformat(from_date))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid from_date format. Use YYYY-MM-DD.")
     if to_date:
-        q = q.filter(DailyReport.date <= to_date)
+        try:
+            q = q.filter(DailyReport.date <= date.fromisoformat(to_date))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid to_date format. Use YYYY-MM-DD.")
 
     if supervisor_id:
         q = q.filter(DailyReport.submitted_by == supervisor_id)
@@ -438,8 +448,6 @@ def send_report_to_parents(
     current_user: User = Depends(_require_manager),
 ):
     report = _get_daily_report_for_manager_or_404(report_id, current_user, db)
-
-    from models import Child
     child = db.query(Child).filter(Child.id == report.child_id).first()
     if not child:
         raise HTTPException(status_code=404, detail="Report not found.")
@@ -566,14 +574,13 @@ def list_children(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
-    from models import Child
     kg_id = current_user.kindergarten_id
     classes = db.query(Class).filter(Class.kindergarten_id == kg_id, Class.deleted_at.is_(None)).all()
     class_ids = {c.id: c for c in classes}
 
     if class_id:
         if class_id not in class_ids:
-            raise HTTPException(status_code=403, detail="Class not in your kindergarten.")
+            raise HTTPException(status_code=404, detail="Class not found.")
         filter_class_ids = {class_id}
     else:
         filter_class_ids = set(class_ids.keys())

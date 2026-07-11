@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Tuple
 from datetime import date, datetime, timedelta
 from utils.time_utils import today_amman as _today
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from sqlalchemy import func
 import logging
 import math
 
@@ -317,6 +317,7 @@ class ManagerAnalyticsService:
             return 0.0
 
         absenteeism_rate = (absences / expected) * 100
+        absenteeism_rate = max(0.0, min(100.0, absenteeism_rate))
         return round(absenteeism_rate, 2)
 
     @staticmethod
@@ -639,12 +640,13 @@ class ManagerAnalyticsService:
         for class_obj in classes:
             supervisor = supervisors_by_id.get(primary_by_class.get(class_obj.id))
             enrolled_count = enrolled_by_class.get(class_obj.id, 0)
-            attendance_logs = attendance_by_class.get(class_obj.id, 0)
+            attended = attendance_by_class.get(class_obj.id, 0)
             incidents = incidents_by_class.get(class_obj.id, 0)
 
             expected = enrolled_count * operating_days
-            attendance_rate = (attendance_logs / expected * 100) if expected > 0 else 0
-            utilization = (enrolled_count / class_obj.capacity_total * 100) if class_obj.capacity_total else 0
+            attendance_rate = (attended / expected * 100) if expected > 0 else 0
+            attendance_rate = max(0.0, min(100.0, attendance_rate))
+            utilization = (enrolled_count / class_obj.capacity_total * 100) if class_obj.capacity_total > 0 else 0
 
             result.append({
                 "class_id": class_obj.id,

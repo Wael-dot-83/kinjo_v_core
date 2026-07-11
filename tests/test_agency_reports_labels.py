@@ -5,9 +5,15 @@ The opened-report UI must never show raw machine field names (e.g.
 ``summary_labels``/``column_labels`` alongside the data, and every agency in
 the catalog exposes an ``icon`` used for its logo/branding badge.
 """
+from pathlib import Path
+
 import models
 from auth import get_password_hash
 from agency_reports_service import AgencyReportsService
+
+ROOT = Path(__file__).resolve().parents[1]
+AGENCY_REPORTS_JS = ROOT / "static" / "js" / "admin_agency_reports.js"
+AGENCY_LOGO_DIR = ROOT / "static" / "img" / "agencies"
 
 
 class _DummyDB:
@@ -49,6 +55,25 @@ def test_every_catalog_agency_exposes_icon_for_logo_badge():
     assert len(catalog["agencies"]) == 7
     # each agency must carry an icon so the UI renders a logo/branding badge
     assert all(a.get("icon") for a in catalog["agencies"])
+
+
+def test_agency_reports_frontend_consumes_backend_labels_and_empty_state():
+    source = AGENCY_REPORTS_JS.read_text(encoding="utf-8")
+    assert not source.startswith("\ufeff")
+    assert "payload.summary_labels || {}" in source
+    assert "summaryLabels[key] || key" in source
+    assert "payload.column_labels || {}" in source
+    assert "columnLabels[h] || h" in source
+    assert "No matching data for this report in the selected scope." in source
+    assert "window.renderAgencyLogo" in source
+
+
+def test_agency_reports_frontend_logo_assets_exist():
+    source = AGENCY_REPORTS_JS.read_text(encoding="utf-8")
+    expected_files = ("moe.jpg", "moh.jpg", "gsd.jpg", "ncfa.png", "mol.png", "mosd.jpg")
+    for filename in expected_files:
+        assert filename in source
+        assert (AGENCY_LOGO_DIR / filename).is_file(), f"missing agency logo asset {filename}"
 
 
 def test_agency_report_payload_ships_arabic_labels(client, test_db):

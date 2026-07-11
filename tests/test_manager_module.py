@@ -703,6 +703,79 @@ class TestAbsenceDecisionScope:
         app.dependency_overrides.clear()
 
 
+class TestManagerAnalyticsDrilldown:
+    """Regression tests for manager analytics math (P1 fixes)."""
+
+    def test_drilldown_class_attendance_excludes_absences_and_uses_operating_days(
+        self, test_db, kg_a, manager_kg_a, class_kg_a, child_kg_a, enrollment_kg_a
+    ):
+        """get_drilldown_by_class must count only PRESENT/LATE as attended and
+        divide by *operating* (not raw calendar) days, never exceeding 100%.
+
+        Deterministic setup: OperatingCalendar forces all 30 window days open,
+        the single enrolled child is PRESENT on 29 of them and ABSENT on one.
+        Rate must be 29/30*100 ≈ 96.7% (absence excluded, under 100%).
+        """
+        from manager_analytics import ManagerAnalyticsService
+        from utils.time_utils import today_amman
+
+        today = today_amman()
+        start = today - timedelta(days=29)
+        for i in range(30):
+            test_db.add(models.OperatingCalendar(
+                kindergarten_id=kg_a.id, date=start + timedelta(days=i), is_open=True,
+            ))
+        test_db.commit()
+
+        # The single active child is ABSENT on the first window day -> must NOT count.
+        test_db.add(models.AttendanceLog(
+            child_id=child_kg_a.id, class_id=class_kg_a.id,
+            recorded_by=manager_kg_a.id,
+            date=start, status=models.AttendanceStatus.ABSENT,
+        ))
+        # PRESENT on the remaining 29 days (start+1 .. start+29).
+        for i in range(1, 30):
+            test_db.add(models.AttendanceLog(
+                child_id=child_kg_a.id, class_id=class_kg_a.id,
+                recorded_by=manager_kg_a.id,
+                date=start + timedelta(days=i), status=models.AttendanceStatus.PRESENT,
+            ))
+        test_db.commit()
+
+        rows = ManagerAnalyticsService.get_drilldown_by_class(
+            test_db, kg_a.id, start, today
+        )
+        assert len(rows) == 1
+        cls = rows[0]
+        assert cls["enrolled"] == 1
+        # denominator = 1 enrolled * 30 operating days; numerator = 29 present.
+        assert round(cls["attendance_rate"], 1) == 96.7
+        assert cls["attendance_rate"] < 100.0
+
+
+    def test_absenteeism_rate_uses_operating_days_and_clamps(
+        self, test_db, kg_a, manager_kg_a, class_kg_a, child_kg_a, enrollment_kg_a
+    ):
+        """compute_absenteeism_rate must use operating days and clamp to [0,100]."""
+        from manager_analytics import ManagerAnalyticsService
+        from utils.time_utils import today_amman
+
+        today = today_amman()
+        start = today - timedelta(days=29)
+        # All 30 logs marked ABSENT -> absenteeism should be capped at 100%, not >100%.
+        for i in range(30):
+            test_db.add(models.AttendanceLog(
+                child_id=child_kg_a.id, class_id=class_kg_a.id,
+                recorded_by=manager_kg_a.id,
+                date=start + timedelta(days=i),
+                status=models.AttendanceStatus.ABSENT,
+            ))
+        test_db.commit()
+
+        rate = ManagerAnalyticsService.compute_absenteeism_rate(test_db, kg_a.id, start, today)
+        assert 0.0 <= rate <= 100.0
+
+
 # =============================================================================
 # HARDENING FIXES — scope/IDOR, capacity rule, report workflow, analytics
 # =============================================================================

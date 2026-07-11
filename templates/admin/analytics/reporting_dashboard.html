@@ -19,8 +19,7 @@
     {{ date_range_filter(
       start_id="periodStart",
       end_id="periodEnd",
-      governorate_id="governorateFilter",
-      show_governorate=(current_user.role in ["ADMIN","SUPERVISOR"]),
+      show_governorate=False,
       refresh_btn_id="refreshReportBtn",
       on_refresh="loadAllReports",
       show_export=True,
@@ -81,11 +80,15 @@
       </div>
       <div class="col-md-3" id="governorateContainer">
         <label class="form-label fw-bold" for="governorateFilter">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-        <input type="text" class="form-control" id="governorateFilter" placeholder="{% if ui_lang == 'en' %}e.g. Amman{% else %}مثال: عمان{% endif %}">
+        <select class="form-select" id="governorateFilter">
+          <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
+        </select>
       </div>
       <div class="col-md-3" id="cityContainer" style="display:none;">
         <label class="form-label fw-bold" for="cityFilter">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
-        <input type="text" class="form-control" id="cityFilter" placeholder="{% if ui_lang == 'en' %}e.g. Amman{% else %}مثال: عمان{% endif %}">
+        <select class="form-select" id="cityFilter">
+          <option value="">{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}</option>
+        </select>
       </div>
       <div class="col-md-3" id="kgContainer" style="display:none;">
         <label class="form-label fw-bold" for="kindergartenIdFilter">{% if ui_lang == 'en' %}Kindergarten ID{% else %}معرف الحضانة{% endif %}</label>
