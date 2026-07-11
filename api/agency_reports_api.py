@@ -5,15 +5,14 @@ Mounted through api.missing_endpoints wrapper under /api, yielding paths such as
 """
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 import models
-from agency_reports_export import custom_report_to_csv, to_csv
+from agency_reports_export import to_csv
 from agency_reports_service import AgencyReportError, AgencyReportsService
 from database import get_db
 from dependencies import get_current_user
@@ -76,65 +75,6 @@ def agency_report_summary(
     db: Session = Depends(get_db),
 ):
     return AgencyReportsService(db).summary()
-
-
-class CustomReportRequest(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    agency: str
-    level: str = "national"
-    period: str = "month"
-    indicators: List[str] = []
-    governorate: Optional[str] = None
-    city: Optional[str] = None
-    kindergarten_id: Optional[int] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
-
-
-# NOTE: the /custom routes are declared before the dynamic /{agency_code}
-# routes so they always take precedence.
-@router.get("/admin/agency-reports/custom/schema")
-def agency_custom_report_schema(
-    current_user: models.User = Depends(_require_admin),
-    db: Session = Depends(get_db),
-):
-    """Declarative schema (agencies/levels/periods/domains/indicators) that
-    drives the Custom Reports builder UI and backend validation."""
-    return {"success": True, "data": AgencyReportsService(db).custom_report_schema()}
-
-
-@router.post("/admin/agency-reports/custom")
-def agency_custom_report_run(
-    payload: CustomReportRequest = Body(...),
-    current_user: models.User = Depends(_require_admin),
-    db: Session = Depends(get_db),
-):
-    """Run an aggregated custom report. All filters are validated server-side."""
-    try:
-        data = AgencyReportsService(db).custom_report(payload.model_dump())
-    except AgencyReportError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    return {"success": True, "data": data}
-
-
-@router.post("/admin/agency-reports/custom/export.csv")
-def agency_custom_report_export_csv(
-    payload: CustomReportRequest = Body(...),
-    current_user: models.User = Depends(_require_admin),
-    db: Session = Depends(get_db),
-):
-    """CSV export of a custom report (aggregated data only)."""
-    try:
-        data = AgencyReportsService(db).custom_report(payload.model_dump())
-    except AgencyReportError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    csv_text = custom_report_to_csv(data)
-    return Response(
-        content=csv_text,
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": "attachment; filename=custom_agency_report.csv"},
-    )
 
 
 @router.get("/admin/agency-reports/{agency_code}/reports")
@@ -206,6 +146,47 @@ def agency_report_export_csv(
             raise HTTPException(status_code=409, detail="CSV export is not available for this report")
         csv_payload = to_csv(payload)
         filename = f"agency_report_{agency_code}_{report_code}.csv"
+        return Response(
+            content=csv_payload,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except AgencyReportError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+@router.get("/admin/agency-reports/custom/schema")
+def custom_report_schema(
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+):
+    return AgencyReportsService(db).custom_report_schema()
+
+
+@router.post("/admin/agency-reports/custom")
+def custom_report(
+    scope: dict[str, Any],
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        return AgencyReportsService(db).custom_report(scope)
+    except AgencyReportError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+@router.post("/admin/agency-reports/custom/export.csv")
+def custom_report_export_csv(
+    scope: dict[str, Any],
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        payload = AgencyReportsService(db).custom_report(scope)
+        if not payload.get("exports", {}).get("csv"):
+            raise HTTPException(status_code=409, detail="CSV export is not available for this report")
+        csv_payload = to_csv(payload)
+        filename = "custom_agency_report.csv"
         return Response(
             content=csv_payload,
             media_type="text/csv; charset=utf-8",

@@ -593,20 +593,6 @@
   async function loadGovernorates() {
     const select = getEl("governorateFilter");
     if (!select) return;
-    const fallbackGovs = [
-      { id: "عمان", name_ar: "عمان", name_en: "Amman" },
-      { id: "إربد", name_ar: "إربد", name_en: "Irbid" },
-      { id: "الزرقاء", name_ar: "الزرقاء", name_en: "Zarqa" },
-      { id: "البلقاء", name_ar: "البلقاء", name_en: "Balqa" },
-      { id: "العقبة", name_ar: "العقبة", name_en: "Aqaba" },
-      { id: "مأدبا", name_ar: "مأدبا", name_en: "Madaba" },
-      { id: "المفرق", name_ar: "المفرق", name_en: "Mafraq" },
-      { id: "جرش", name_ar: "جرش", name_en: "Jerash" },
-      { id: "عجلون", name_ar: "عجلون", name_en: "Ajloun" },
-      { id: "الكرك", name_ar: "الكرك", name_en: "Karak" },
-      { id: "الطفيلة", name_ar: "الطفيلة", name_en: "Tafileh" },
-      { id: "معان", name_ar: "معان", name_en: "Ma'an" }
-    ];
 
     let list = [];
     try {
@@ -616,11 +602,12 @@
         list = data.governorates || [];
       }
     } catch (e) {
-      console.error("Failed to load governorates from API, using fallback", e);
+      console.error("Failed to load governorates from API", e);
     }
 
     if (!list.length) {
-      list = fallbackGovs;
+      console.warn("No governorates returned from API");
+      return;
     }
 
     // keep first option
@@ -634,6 +621,35 @@
         String(g);
       select.appendChild(opt);
     });
+  }
+
+  async function loadCities() {
+    const citySelect = getEl("cityFilter");
+    const govSelect = getEl("governorateFilter");
+    if (!citySelect || !govSelect) return;
+    const gov = (govSelect.value || "").trim();
+    citySelect.innerHTML = '<option value="">{% if ui_lang == "en" %}All Cities{% else %}جميع المدن{% endif %}</option>';
+    if (!gov) {
+      citySelect.disabled = true;
+      return;
+    }
+    citySelect.disabled = true;
+    try {
+      const resp = await fetchWithAuth("/api/locations/jordan/governorates/" + encodeURIComponent(gov) + "/areas");
+      if (!resp) return;
+      const json = await resp.json();
+      const areas = (json.data && json.data.areas) || [];
+      areas.forEach(a => {
+        const opt = document.createElement("option");
+        opt.value = a.key;
+        opt.textContent = a.name_ar;
+        citySelect.appendChild(opt);
+      });
+      citySelect.disabled = false;
+    } catch (e) {
+      console.warn("Failed to load cities:", e);
+      citySelect.disabled = false;
+    }
   }
 
   async function loadKindergartens() {
@@ -1556,6 +1572,7 @@
 
     // Governorate -> kindergarten cascade & reload preview
     getEl("governorateFilter")?.addEventListener("change", async () => {
+      await loadCities();
       await loadKindergartens();
       loadReportPreview();
     });

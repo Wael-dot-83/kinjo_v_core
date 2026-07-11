@@ -252,16 +252,15 @@
 
     async function loadGovernorates() {
         try {
-            const GOV_LABEL_EN = {
-                'عمان': 'Amman', 'إربد': 'Irbid', 'الزرقاء': 'Zarqa', 'المفرق': 'Mafraq',
-                'جرش': 'Jerash', 'عجلون': 'Ajloun', 'الكرك': 'Karak', 'الطفيلة': 'Tafilah',
-                'معان': "Ma'an", 'العقبة': 'Aqaba', 'مادبا': 'Madaba', 'البلقاء': 'Balqa',
-            };
             const select = document.getElementById('governorateFilter');
-            Object.keys(GOV_LABEL_EN).forEach(gov => {
+            const response = await fetch('/api/locations/jordan/governorates', { credentials: 'same-origin' });
+            if (!response.ok) return;
+            const data = await response.json();
+            const governorates = (data.data && data.data.governorates) || [];
+            governorates.forEach(g => {
                 const option = document.createElement('option');
-                option.value = gov;
-                option.textContent = IS_EN ? GOV_LABEL_EN[gov] : gov;
+                option.value = g.key;
+                option.textContent = g.name_ar;
                 select.appendChild(option);
             });
         } catch (error) {

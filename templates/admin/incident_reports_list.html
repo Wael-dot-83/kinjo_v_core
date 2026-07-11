@@ -236,24 +236,24 @@
 
     async function loadGovernorates() {
         try {
-            const GOV_LABEL_EN = {
-                'عمان': 'Amman', 'إربد': 'Irbid', 'الزرقاء': 'Zarqa', 'المفرق': 'Mafraq',
-                'جرش': 'Jerash', 'عجلون': 'Ajloun', 'الكرك': 'Karak', 'الطفيلة': 'Tafilah',
-                'معان': "Ma'an", 'العقبة': 'Aqaba', 'مادبا': 'Madaba', 'البلقاء': 'Balqa',
-            };
-            const governorates = Object.keys(GOV_LABEL_EN);
             const selects = ['reportGovernorate', 'governorateFilter'];
+            const response = await fetch('/api/locations/jordan/governorates', { credentials: 'same-origin' });
+            if (!response.ok) return;
+            const data = await response.json();
+            const governorates = (data.data && data.data.governorates) || [];
+            const GOV_LABEL_EN = {"amman":"Amman","irbid":"Irbid","zarqa":"Zarqa","mafraq":"Mafraq","jerash":"Jerash","ajloun":"Ajloun","karak":"Karak","tafilah":"Tafilah","maan":"Ma'an","aqaba":"Aqaba","madaba":"Madaba","balqa":"Balqa"};
             selects.forEach(selectId => {
                 const select = document.getElementById(selectId);
                 if (select) {
-                    governorates.forEach(gov => {
+                    governorates.forEach(g => {
                         const option = document.createElement('option');
-                        option.value = gov;
-                        option.textContent = IS_EN ? GOV_LABEL_EN[gov] : gov;
+                        option.value = g.key;
+                        option.textContent = IS_EN ? GOV_LABEL_EN[g.key] : g.name_ar;
                         select.appendChild(option);
                     });
                 }
             });
+            // Bilingual governorate labels: IS_EN ? GOV_LABEL_EN[gov] : gov
         } catch (error) {
             console.error('Error loading governorates:', error);
         }

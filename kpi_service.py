@@ -944,7 +944,7 @@ class MonthlySnapshotResponse(BaseModel):
 
 
 class FilterOption(BaseModel):
-    id: int
+    id: str | int
     name: str
 
 
@@ -4248,12 +4248,12 @@ def get_kpi_filters(
         name = kg.name_ar if locale == "ar" else (kg.name_en or kg.name_ar)
         kindergartens.append(FilterOption(id=kg.id, name=name))
 
-    # Get governorates from config with localization
-    from config import settings
+    # Get governorates from canonical source
+    from services.jordan_locations import get_all_governorates
     governorates = []
-    for i, gov_ar in enumerate(settings.JORDAN_GOVERNORATES):
-        name = gov_ar if locale == "ar" else settings.JORDAN_GOVERNORATES_ENGLISH[i]
-        governorates.append(FilterOption(id=i+1, name=name))
+    for i, g in enumerate(get_all_governorates()):
+        name = g["name_ar"] if locale == "ar" else g["name_en"]
+        governorates.append(FilterOption(id=g["key"], name=name))
 
     active_scope_query = db.query(models.Kindergarten).filter(
         models.Kindergarten.status == models.KindergartenStatus.ACTIVE

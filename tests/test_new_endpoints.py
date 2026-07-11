@@ -365,7 +365,8 @@ class TestManagerChildren:
         test_db.refresh(foreign_class)
 
         r = client.get(f"/api/manager/children?class_id={foreign_class.id}", headers=_hdr(manager_token))
-        assert r.status_code == 403
+        # 404 (not 403): a class in another kindergarten must not leak that it exists.
+        assert r.status_code == 404
 
 
 # ===========================================================================
@@ -611,7 +612,9 @@ class TestManagerReportEdit:
             json={"notes": "لا يجب أن يعمل"},
             headers=_hdr(manager_token),
         )
-        assert r.status_code == 403
+        # 404 (not 403): cross-kindergarten reports must not leak that another
+        # tenant's resource exists — consistent with ManagerScope.assert_kindergarten_access.
+        assert r.status_code == 404
 
 
 # ===========================================================================

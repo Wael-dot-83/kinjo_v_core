@@ -21,6 +21,7 @@ from dependencies import get_current_user, require_manager as _require_manager
 from models import (
     AuditLog,
     Class,
+    Child,
     DailyReport,
     DailyReportStatus,
     EnrollmentApplication,
@@ -45,6 +46,29 @@ def _get_class_or_403(class_id: int, manager: User, db: Session) -> Class:
         raise HTTPException(status_code=404, detail="Class not found.")
     assert_manager_owns_kindergarten(manager, cls.kindergarten_id)
     return cls
+
+
+def _get_report_or_404(report_id: int, manager: User, db: Session) -> DailyReport:
+    """Fetch a DailyReport and verify it belongs to the manager's kindergarten.
+
+    Returns 404 (not 403) when the report is absent or belongs to another
+    kindergarten, so cross-tenant existence is never leaked.
+    """
+    report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    enrollment = (
+        db.query(EnrollmentApplication)
+        .join(Class, EnrollmentApplication.class_id == Class.id)
+        .filter(
+            EnrollmentApplication.child_id == report.child_id,
+            Class.kindergarten_id == manager.kindergarten_id,
+        )
+        .first()
+    )
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    return report
 
 
 # ---------------------------------------------------------------------------
@@ -99,6 +123,10 @@ class SupervisorAssignIn(BaseModel):
     supervisor_id: int
     class_id: int
     is_primary: bool = False
+
+
+class SupervisorSwapIn(BaseModel):
+    supervisor_id: int
 
 
 @router.post("/classes/assign-supervisor", status_code=201)
@@ -195,7 +223,7 @@ def unassign_supervisor_from_class(
 @router.put("/classes/{class_id}/swap-supervisor")
 def swap_supervisor(
     class_id: int,
-    body: SupervisorAssignIn,
+    body: SupervisorSwapIn,
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
@@ -299,7 +327,6 @@ def list_daily_reports_for_review(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
-    from models import Child
     # Get child IDs in manager's kindergarten
     kg_id = current_user.kindergarten_id
     classes = db.query(Class).filter(Class.kindergarten_id == kg_id, Class.deleted_at.is_(None)).all()
@@ -307,7 +334,7 @@ def list_daily_reports_for_review(
 
     if class_id:
         if class_id not in class_ids:
-            raise HTTPException(status_code=403, detail="Class not in your kindergarten.")
+            raise HTTPException(status_code=404, detail="Class not found.")
         class_ids = {class_id}
 
     child_class_map = {
@@ -334,9 +361,15 @@ def list_daily_reports_for_review(
         q = q.filter(DailyReport.status == DailyReportStatus.SUBMITTED)
 
     if from_date:
-        q = q.filter(DailyReport.date >= date.fromisoformat(from_date))
+        try:
+            q = q.filter(DailyReport.date >= date.fromisoformat(from_date))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid from_date format. Use YYYY-MM-DD.")
     if to_date:
-        q = q.filter(DailyReport.date <= date.fromisoformat(to_date))
+        try:
+            q = q.filter(DailyReport.date <= date.fromisoformat(to_date))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid to_date format. Use YYYY-MM-DD.")
 
     if supervisor_id:
         q = q.filter(DailyReport.submitted_by == supervisor_id)
@@ -385,26 +418,7 @@ def edit_daily_report(
     current_user: User = Depends(_require_manager),
 ):
     """Manager can edit a submitted report's content before sending to parents."""
-    report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found.")
-
-    # Verify report belongs to manager's kindergarten
-    from models import Child, EnrollmentApplication
-    child = db.query(Child).filter(Child.id == report.child_id).first()
-    if not child:
-        raise HTTPException(status_code=404)
-    enrollment = (
-        db.query(EnrollmentApplication)
-        .join(Class, EnrollmentApplication.class_id == Class.id)
-        .filter(
-            EnrollmentApplication.child_id == report.child_id,
-            Class.kindergarten_id == current_user.kindergarten_id,
-        )
-        .first()
-    )
-    if not enrollment:
-        raise HTTPException(status_code=403, detail="Report is outside your kindergarten.")
+    report = _get_report_or_404(report_id, current_user, db)
 
     if report.status == DailyReportStatus.SENT_TO_PARENT:
         raise HTTPException(status_code=403, detail="Cannot edit a report that has already been sent to parents.")
@@ -432,27 +446,10 @@ def send_report_to_parents(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
-    report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found.")
-
-    # Verify report is in manager's kindergarten
-    from models import Child, EnrollmentApplication
+    report = _get_report_or_404(report_id, current_user, db)
     child = db.query(Child).filter(Child.id == report.child_id).first()
     if not child:
-        raise HTTPException(status_code=404)
-
-    enrollment = (
-        db.query(EnrollmentApplication)
-        .join(Class, EnrollmentApplication.class_id == Class.id)
-        .filter(
-            EnrollmentApplication.child_id == report.child_id,
-            Class.kindergarten_id == current_user.kindergarten_id,
-        )
-        .first()
-    )
-    if not enrollment:
-        raise HTTPException(status_code=403, detail="Report is outside your kindergarten.")
+        raise HTTPException(status_code=404, detail="Report not found.")
 
     if report.status not in (DailyReportStatus.SUBMITTED, DailyReportStatus.APPROVED):
         raise HTTPException(status_code=400, detail="Report must be in SUBMITTED state to send to parents.")
@@ -500,22 +497,7 @@ def delete_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
-    report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
-    if not report:
-        raise HTTPException(status_code=404)
-
-    from models import Child
-    enrollment = (
-        db.query(EnrollmentApplication)
-        .join(Class, EnrollmentApplication.class_id == Class.id)
-        .filter(
-            EnrollmentApplication.child_id == report.child_id,
-            Class.kindergarten_id == current_user.kindergarten_id,
-        )
-        .first()
-    )
-    if not enrollment:
-        raise HTTPException(status_code=403, detail="Report is outside your kindergarten.")
+    report = _get_report_or_404(report_id, current_user, db)
 
     if report.status == DailyReportStatus.SENT_TO_PARENT:
         raise HTTPException(status_code=409, detail="Cannot delete a report that has been sent to parents.")
@@ -580,14 +562,13 @@ def list_children(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
-    from models import Child
     kg_id = current_user.kindergarten_id
     classes = db.query(Class).filter(Class.kindergarten_id == kg_id, Class.deleted_at.is_(None)).all()
     class_ids = {c.id: c for c in classes}
 
     if class_id:
         if class_id not in class_ids:
-            raise HTTPException(status_code=403, detail="Class not in your kindergarten.")
+            raise HTTPException(status_code=404, detail="Class not found.")
         filter_class_ids = {class_id}
     else:
         filter_class_ids = set(class_ids.keys())

@@ -2994,14 +2994,24 @@ def list_governorate_options(
     Get list of available governorates for message targeting.
     Admin only endpoint.
     """
-    options = []
-    for idx, gov in enumerate(settings.JORDAN_GOVERNORATES):
-        english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx] if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH) else gov
-        options.append(GovernorateOption(
-            id=gov,
-            name_ar=gov,
-            name_en=english_label
-        ))
+    try:
+        from services.jordan_locations import get_all_governorates
+        options = []
+        for g in get_all_governorates():
+            options.append(GovernorateOption(
+                id=g["name_ar"],
+                name_ar=g["name_ar"],
+                name_en=g["name_en"]
+            ))
+    except Exception:
+        options = []
+        for idx, gov in enumerate(settings.JORDAN_GOVERNORATES):
+            english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx] if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH) else gov
+            options.append(GovernorateOption(
+                id=gov,
+                name_ar=gov,
+                name_en=english_label
+            ))
 
     options.sort(key=lambda opt: opt.name_ar)
     return GovernorateOptionsResponse(governorates=options)

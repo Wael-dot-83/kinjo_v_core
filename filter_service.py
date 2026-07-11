@@ -253,13 +253,28 @@ class DashboardFilterService:
                 kg_query = kg_query.filter(models.Kindergarten.id == user.kindergarten_id)
 
             kindergartens = kg_query.all()
-            governorates = sorted({kg.governorate for kg in kindergartens if kg.governorate})
-            cities = sorted({kg.district for kg in kindergartens if kg.district})
+            governorates_from_db = sorted({kg.governorate for kg in kindergartens if kg.governorate})
+            cities_from_db = sorted({kg.district for kg in kindergartens if kg.district})
+
+            from services.jordan_locations import get_all_governorates, get_areas_for_governorate
+            canonical_governorates = [
+                {"id": g["key"], "name_ar": g["name_ar"], "name_en": g["name_en"]}
+                for g in get_all_governorates()
+            ]
+            canonical_cities = []
+            for g in get_all_governorates():
+                for area in get_areas_for_governorate(g["key"]):
+                    canonical_cities.append({
+                        "id": area["key"],
+                        "name_ar": area["name_ar"],
+                        "name_en": area["name_en"],
+                        "governorate_id": g["key"],
+                    })
 
             return {
                 "kindergartens": [{"id": kg.id, "name": kg.name_ar or kg.name_en} for kg in kindergartens],
-                "governorates": list(governorates),
-                "cities": list(cities),
+                "governorates": canonical_governorates,
+                "cities": canonical_cities,
                 "statuses": [status.value.lower() for status in models.KindergartenStatus],
             }
         finally:

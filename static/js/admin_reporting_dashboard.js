@@ -663,7 +663,63 @@
   window.applyDateFilter = loadAllReports;
   window.exportReport = exportReport;
 
+  async function populateGovernorateFilter() {
+    const govSelect = document.getElementById('governorateFilter');
+    if (!govSelect) return;
+    try {
+      const resp = await fetch('/api/locations/jordan/governorates', { credentials: 'same-origin' });
+      if (!resp.ok) return;
+      const json = await resp.json();
+      const governorates = (json.data && json.data.governorates) || [];
+      governorates.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.key;
+        opt.textContent = g.name_ar;
+        govSelect.appendChild(opt);
+      });
+    } catch (e) {
+      console.warn('Failed to load governorates:', e);
+    }
+  }
+
+  async function populateCityFilter() {
+    const govSelect = document.getElementById('governorateFilter');
+    const citySelect = document.getElementById('cityFilter');
+    if (!govSelect || !citySelect) return;
+    const gov = govSelect.value;
+    citySelect.innerHTML = '<option value="">{% if ui_lang == "en" %}All Cities{% else %}جميع المدن{% endif %}</option>';
+    if (!gov) {
+      citySelect.disabled = true;
+      return;
+    }
+    citySelect.disabled = true;
+    try {
+      const resp = await fetch('/api/locations/jordan/governorates/' + encodeURIComponent(gov) + '/areas', { credentials: 'same-origin' });
+      if (!resp.ok) {
+        citySelect.disabled = false;
+        return;
+      }
+      const json = await resp.json();
+      const areas = (json.data && json.data.areas) || [];
+      areas.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.key;
+        opt.textContent = a.name_ar;
+        citySelect.appendChild(opt);
+      });
+      citySelect.disabled = false;
+    } catch (e) {
+      console.warn('Failed to load cities:', e);
+      citySelect.disabled = false;
+    }
+  }
+
+  if (document.getElementById('governorateFilter')) {
+    document.getElementById('governorateFilter').addEventListener('change', populateCityFilter);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    populateGovernorateFilter();
     onLevelChange();
     loadAllReports();
   });

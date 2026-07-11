@@ -218,13 +218,13 @@
 
     async function loadGovernorates() {
         try {
-            const resp = await apiRequest("/api/admin/options/governorates");
+            const resp = await apiRequest("/api/locations/jordan/governorates");
             const select = document.getElementById("governorateFilter");
-            if (!select || !resp.governorates) return;
-            resp.governorates.forEach((gov) => {
+            if (!select || !resp.data) return;
+            (resp.data.governorates || []).forEach((gov) => {
                 const opt = document.createElement("option");
-                opt.value = gov.id || gov;
-                opt.textContent = gov.name_ar || gov.name_en || gov.id || gov;
+                opt.value = gov.key;
+                opt.textContent = gov.name_ar;
                 select.appendChild(opt);
             });
         } catch (e) {

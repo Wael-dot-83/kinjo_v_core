@@ -1399,30 +1399,55 @@ def _load_filters(db: Session) -> ClassificationFiltersResponse:
         else:
             countries = [DEFAULT_COUNTRY_NAME]
 
-        governorates = sorted(
-            {
-                str(row[0]) for row in db.query(models.Kindergarten.governorate).filter(
-                    models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-                ).distinct().all()
-                if row and row[0]
-            }
-        )
-        cities = sorted(
-            {
-                str(row[0]) for row in db.query(models.Kindergarten.district).filter(
-                    models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-                ).distinct().all()
-                if row and row[0]
-            }
-        )
-        areas = sorted(
-            {
-                str(row[0]) for row in db.query(models.Kindergarten.area).filter(
-                    models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-                ).distinct().all()
-                if row and row[0]
-            }
-        )
+        try:
+            from services.jordan_locations import get_all_governorates, get_areas_for_governorate
+            governorates = [g["name_ar"] for g in get_all_governorates()]
+            cities = []
+            for g in get_all_governorates():
+                for area in get_areas_for_governorate(g["key"]):
+                    cities.append(area["name_ar"])
+            areas = list(cities)
+        except Exception:
+            governorates = sorted(
+                {
+                    str(row[0]) for row in db.query(models.Kindergarten.governorate).filter(
+                        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+                    ).distinct().all()
+                    if row and row[0]
+                }
+            )
+            cities = sorted(
+                {
+                    str(row[0]) for row in db.query(models.Kindergarten.district).filter(
+                        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+                    ).distinct().all()
+                    if row and row[0]
+                }
+            )
+            areas = sorted(
+                {
+                    str(row[0]) for row in db.query(models.Kindergarten.area).filter(
+                        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+                    ).distinct().all()
+                    if row and row[0]
+                }
+            )
+            cities = sorted(
+                {
+                    str(row[0]) for row in db.query(models.Kindergarten.district).filter(
+                        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+                    ).distinct().all()
+                    if row and row[0]
+                }
+            )
+            areas = sorted(
+                {
+                    str(row[0]) for row in db.query(models.Kindergarten.area).filter(
+                        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+                    ).distinct().all()
+                    if row and row[0]
+                }
+            )
 
         return ClassificationFiltersResponse(
             levels=levels,
