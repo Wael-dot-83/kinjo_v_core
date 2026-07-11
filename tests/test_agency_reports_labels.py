@@ -64,7 +64,7 @@ def test_agency_reports_frontend_consumes_backend_labels_and_empty_state():
     assert "summaryLabels[key] || key" in source
     assert "payload.column_labels || {}" in source
     assert "columnLabels[h] || h" in source
-    assert "No matching data for this report in the selected scope." in source
+    assert "No matching data for the selected filters." in source
     assert "window.renderAgencyLogo" in source
 
 

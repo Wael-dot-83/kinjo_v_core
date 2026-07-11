@@ -3,7 +3,7 @@
 {% block title %}{% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهة الرسمية{% endif %}{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.0" />
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=2.0" />
 {% endblock %}
 
 {% block content %}
@@ -15,16 +15,49 @@
     <span aria-hidden="true">/</span>
     <span aria-current="page" id="agency-current-name">{{ agency_code }}</span>
   </nav>
+
   <header class="agency-page-header">
-    <h1 id="agency-reports-title">{% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهة الرسمية{% endif %}</h1>
-    <p id="agency-description"></p>
+    <div class="agency-logo-lockup">
+      <div id="agency-logo-container"></div>
+      <div>
+        <h1 id="agency-reports-title">{% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهة الرسمية{% endif %}</h1>
+        <p id="agency-description"></p>
+      </div>
+    </div>
+    <div class="agency-privacy-badge" aria-label="{% if ui_lang == 'en' %}Aggregated data only{% else %}بيانات تجميعية فقط{% endif %}">
+      <i class="bi bi-shield-check" aria-hidden="true"></i>
+      {% if ui_lang == 'en' %}Aggregated data only — no personal data{% else %}بيانات تجميعية فقط - لا توجد بيانات شخصية{% endif %}
+    </div>
   </header>
+
+  <!-- Help Panel -->
+  <details class="agency-help-panel" open>
+    <summary class="agency-help-summary">
+      <i class="bi bi-question-circle" aria-hidden="true"></i>
+      {% if ui_lang == 'en' %}How to Use the Reports{% else %}كيفية استخدام التقارير{% endif %}
+    </summary>
+    <div class="agency-help-body">
+      <ol>
+        <li>{% if ui_lang == 'en' %}Select a report card to view its details.{% else %}اختر بطاقة التقرير لعرض تفاصيله.{% endif %}</li>
+        <li>{% if ui_lang == 'en' %}Apply geographic and time filters as needed.{% else %}طبّق فلاتر النطاق الجغرافي والفترة الزمنية حسب الحاجة.{% endif %}</li>
+        <li>{% if ui_lang == 'en' %}Review the summary and chart.{% else %}راجع الملخص والرسم البياني.{% endif %}</li>
+        <li>{% if ui_lang == 'en' %}Use CSV export or chart export when needed.{% else %}استخدم تصدير CSV أو تصدير الرسم البياني عند الحاجة.{% endif %}</li>
+      </ol>
+    </div>
+  </details>
+
   <div id="agency-reports-root" role="status" aria-live="polite">
     {% if ui_lang == 'en' %}Loading reports...{% else %}جارٍ تحميل التقارير...{% endif %}
   </div>
+
+  <!-- Footer Privacy Note -->
+  <footer class="agency-footer-privacy" role="contentinfo">
+    <i class="bi bi-lock-fill" aria-hidden="true"></i>
+    {% if ui_lang == 'en' %}This page displays statistical and aggregated data only to support decision-making. No personal or sensitive data is displayed.{% else %}تعرض هذه الصفحة بيانات إحصائية وتجميعية فقط لدعم القرار، ولا تعرض أي بيانات شخصية أو حساسة.{% endif %}
+  </footer>
 </section>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/admin_agency_reports.js?v=1.0"></script>
+<script src="/static/js/admin_agency_reports.js?v=2.0"></script>
 {% endblock %}

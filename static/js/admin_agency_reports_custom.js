@@ -94,9 +94,9 @@
 
     const row1 = el("div", { class: "custom-report-row" });
     row1.append(
-      labelledSelect("cr-agency", t("الجهة المستفيدة", "Agency"), schema.agencies, "code"),
-      labelledSelect("cr-level", t("مستوى التقرير", "Level"), schema.levels, "code"),
-      labelledSelect("cr-period", t("الفترة الزمنية", "Period"), schema.periods, "code"),
+      labelledSelect("cr-agency", t("الجهة الرسمية المستفيدة من التقرير", "Official Agency"), schema.agencies, "code"),
+      labelledSelect("cr-level", t("النطاق الجغرافي للتقرير", "Geographic Scope"), schema.levels, "code"),
+      labelledSelect("cr-period", t("فترة تجميع البيانات", "Data Aggregation Period"), schema.periods, "code"),
     );
     controls.appendChild(row1);
 
@@ -110,13 +110,13 @@
     const row2 = el("div", { class: "custom-report-row" });
     row2.append(
       textField("cr-governorate", t("المحافظة (اختياري)", "Governorate (optional)")),
-      textField("cr-city", t("المدينة أو اللواء (اختياري)", "City/District (optional)")),
+      textField("cr-city", t("قصبة / لواء (اختياري)", "District (optional)")),
       textField("cr-kindergarten", t("معرف الحضانة (اختياري)", "Kindergarten ID (optional)"), "number"),
     );
     controls.appendChild(row2);
 
     const domainsWrap = el("div", { class: "custom-report-domains" });
-    domainsWrap.appendChild(el("h3", { class: "custom-report-domains-title", text: t("مجالات ومؤشرات التقرير", "Report domains & indicators") }));
+    domainsWrap.appendChild(el("h3", { class: "custom-report-domains-title", text: t("اختر المؤشرات المطلوب تضمينها في التقرير", "Select Indicators to Include in Report") }));
     schema.domains.forEach((domain) => {
       const fs = el("fieldset", { class: "custom-domain" });
       fs.appendChild(el("legend", { text: lang === "en" ? (domain.name_en || domain.name_ar) : domain.name_ar }));
@@ -297,13 +297,12 @@
       resultBox.appendChild(dqn);
     }
 
-    // Export controls — only those supported by the backend, plus browser print.
+    // Export controls — CSV only (no PDF, Excel, Print)
     const exportBar = el("div", { class: "custom-export-bar" });
-    const csvBtn = el("button", { class: "admin-btn admin-btn-secondary", text: t("تصدير CSV", "Export CSV"), attrs: { type: "button" } });
+    const csvBtn = el("button", { class: "admin-btn admin-btn-secondary", attrs: { type: "button" } });
+    csvBtn.innerHTML = '<i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> ' + t("تصدير CSV", "Export CSV");
     csvBtn.addEventListener("click", () => exportCsv());
-    const printBtn = el("button", { class: "admin-btn admin-btn-secondary", text: t("طباعة", "Print"), attrs: { type: "button" } });
-    printBtn.addEventListener("click", () => window.print());
-    exportBar.append(csvBtn, printBtn);
+    exportBar.append(csvBtn);
     resultBox.appendChild(exportBar);
   }
 

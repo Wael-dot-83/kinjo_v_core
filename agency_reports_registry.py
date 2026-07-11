@@ -9,20 +9,20 @@ from typing import Any
 
 AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
     "moe": {
-        "name_ar": "وزارة التربية",
+        "name_ar": "وزارة التربية والتعليم",
         "name_en": "Ministry of Education",
-        "description_ar": "تقدير الأطفال المؤهلين للالتحاق بـ KG2 حسب سكن ولي الأمر والجنس.",
+        "description_ar": "تقدير الأطفال المؤهلين للالتحاق بالمستوى الثاني KG2 حسب سكن ولي الأمر والجنس.",
         "icon": "bi-mortarboard",
         "reports": {
             "kg2_eligibility": {
-                "title_ar": "تقرير الأطفال المؤهلين لـ KG2",
+                "title_ar": "تقرير الأطفال المؤهلين للالتحاق بالمستوى الثاني KG2",
                 "title_en": "KG2 eligibility report",
-                "description_ar": "عدد الأطفال الذين أتموا خمس سنوات حسب تاريخ الحسم، مصنفين حسب محافظة ومدينة سكن ولي الأمر والجنس.",
+                "description_ar": "عدد الأطفال الذين أتموا خمس سنوات حسب تاريخ الحسم، مصنفين حسب محافظة وقصبة/لواء وسكن ولي الأمر والجنس.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "geography_basis": ["parent_residence"],
                 "default_geography_basis": "parent_residence",
-                "filters": ["admission_year", "governorate", "city", "gender", "aggregation_level"],
+                "filters": ["admission_year", "governorate", "district", "area", "gender", "aggregation_level"],
                 "exports": ["csv", "json"],
                 "data_sources": ["Child", "ParentProfile"],
                 "required_fields": [
