@@ -10,6 +10,24 @@
   function clear(el) { if (el) el.innerHTML = ""; }
   function pill(text, kind) { const span = document.createElement("span"); span.className = "agency-status agency-status--" + (kind || "default"); span.textContent = text; return span; }
 
+  // Official-agency logo/branding badge: renders the registry icon inside a
+  // rounded badge; falls back to the agency's initials when no icon is set.
+  function logoBadge(agency) {
+    const badge = document.createElement("span");
+    badge.className = "agency-logo-badge";
+    badge.setAttribute("aria-hidden", "true");
+    if (agency.icon) {
+      const i = document.createElement("i");
+      i.className = "bi " + agency.icon;
+      badge.appendChild(i);
+    } else {
+      const name = (lang === "en" ? agency.name_en : agency.name_ar) || agency.code || "";
+      badge.textContent = name.trim().slice(0, 2);
+      badge.classList.add("agency-logo-badge--text");
+    }
+    return badge;
+  }
+
   function renderIndex(data) {
     clear(root);
     const list = document.createElement("ul");
@@ -18,8 +36,12 @@
     data.agencies.forEach((agency) => {
       const li = document.createElement("li");
       li.className = "agency-card";
+      const header = document.createElement("div");
+      header.className = "agency-card__head";
+      header.appendChild(logoBadge(agency));
       const h2 = document.createElement("h2");
       h2.textContent = lang === "en" ? agency.name_en : agency.name_ar;
+      header.appendChild(h2);
       const p = document.createElement("p");
       p.textContent = agency.description_ar || "";
       const meta = document.createElement("div");
@@ -31,7 +53,7 @@
       link.className = "admin-btn admin-btn-primary";
       link.href = "/admin/agency-reports/" + encodeURIComponent(agency.code);
       link.textContent = t("عرض تقارير " + agency.name_ar, "View " + agency.name_en + " reports");
-      li.append(h2, p, meta, link);
+      li.append(header, p, meta, link);
       list.appendChild(li);
     });
     root.appendChild(list);
@@ -73,7 +95,8 @@
     h2.id = "agency-summary-title";
     h2.textContent = t("الملخص التنفيذي", "Executive summary");
     const dl = document.createElement("dl");
-    Object.entries(payload.summary || {}).forEach(([key, value]) => { const dt = document.createElement("dt"); dt.textContent = key; const dd = document.createElement("dd"); dd.textContent = String(value); dl.append(dt, dd); });
+    const summaryLabels = payload.summary_labels || {};
+    Object.entries(payload.summary || {}).forEach(([key, value]) => { const dt = document.createElement("dt"); dt.textContent = summaryLabels[key] || key; const dd = document.createElement("dd"); dd.textContent = value == null ? "—" : String(value); dl.append(dt, dd); });
     summary.append(h2, dl);
     root.appendChild(summary);
 
@@ -91,17 +114,23 @@
     const caption = document.createElement("caption");
     caption.textContent = payload.metadata.report_title_ar;
     table.appendChild(caption);
+    const columnLabels = payload.column_labels || {};
     if (rows.length) {
       const headers = Object.keys(rows[0]);
       const thead = document.createElement("thead");
       const tr = document.createElement("tr");
-      headers.forEach((h) => { const th = document.createElement("th"); th.scope = "col"; th.textContent = h; tr.appendChild(th); });
+      headers.forEach((h) => { const th = document.createElement("th"); th.scope = "col"; th.textContent = columnLabels[h] || h; tr.appendChild(th); });
       thead.appendChild(tr); table.appendChild(thead);
       const tbody = document.createElement("tbody");
       rows.forEach((row) => { const r = document.createElement("tr"); headers.forEach((h) => { const td = document.createElement("td"); td.textContent = row[h] == null ? "—" : String(row[h]); r.appendChild(td); }); tbody.appendChild(r); });
       table.appendChild(tbody);
+      root.appendChild(table);
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "agency-alert";
+      empty.textContent = t("لا توجد بيانات مطابقة لهذا التقرير ضمن النطاق المحدد.", "No matching data for this report in the selected scope.");
+      root.appendChild(empty);
     }
-    root.appendChild(table);
 
     const exports = document.createElement("div");
     exports.className = "agency-export-actions";

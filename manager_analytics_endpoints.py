@@ -63,7 +63,7 @@ class KPIMetrics(BaseModel):
     enrollment_rate: float
     attendance_rate: float
     absenteeism_rate: float
-    incident_rate: float  # Per 100 children
+    incident_rate: float  # Per 1,000 attended child-days (KPIService canonical)
     capacity_utilization: float
     supervisor_workload_avg: float  # Children per supervisor
 
@@ -170,7 +170,7 @@ def get_manager_kpis(
     - Enrollment rate
     - Attendance rate
     - Absenteeism rate
-    - Incident rate (per 100 children)
+    - Incident rate (per 1,000 attended child-days)
     - Class capacity utilization
     - Supervisor workload
     """
@@ -475,7 +475,7 @@ def export_analytics_csv(
         incident_rate = ManagerAnalyticsService.compute_incident_rate(
             db, kg_id, start_date, today
         )
-        writer.writerow(["Incident Rate (per 100 children)", incident_rate])
+        writer.writerow(["Incident Rate (per 1,000 attended child-days)", incident_rate])
 
         capacity = ManagerAnalyticsService.compute_class_capacity_utilization(
             db, kg_id

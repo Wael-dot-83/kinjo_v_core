@@ -98,6 +98,7 @@ let _rankSearchTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
   const ptEl = document.getElementById('pageLoadTime');
   if (ptEl) ptEl.textContent = new Date().toLocaleTimeString('ar-JO');
+  ensureMapLoadingState();
   bindUiEvents();
   // initGoogleMap() is called by _gmapsLoaded() once the API script loads
 });
@@ -109,6 +110,23 @@ function _gmapsLoaded() {
   });
 }
 window._gmapsLoaded = _gmapsLoaded;
+
+function ensureMapLoadingState() {
+  const mapEl = document.getElementById('googleMapContainer');
+  if (!mapEl || mapEl.querySelector('.map-loading-state')) return;
+  const lang = document.querySelector('.geo-cc')?.getAttribute('lang') || document.documentElement.lang || 'ar';
+  const isEnglish = lang === 'en';
+  mapEl.insertAdjacentHTML('beforeend', `
+    <div class="map-loading-state" role="status" aria-live="polite">
+      <div class="map-loading-card">
+        <div class="map-loading-spinner" aria-hidden="true"></div>
+        <div>
+          <div class="map-loading-title">${isEnglish ? 'Loading map' : 'جاري تحميل الخريطة'}</div>
+          <div class="map-loading-sub">${isEnglish ? 'Preparing governorate layers and risk indicators.' : 'يتم تجهيز طبقات المحافظات ومؤشرات المخاطر.'}</div>
+        </div>
+      </div>
+    </div>`);
+}
 
 // ── Google Maps Initialisation ────────────────────────────────────────────────
 async function initGoogleMap() {
@@ -130,6 +148,7 @@ async function initGoogleMap() {
   });
 
   CsApp.map = map;
+  mapEl.classList.add('map-ready');
 
   // Track cursor position for tooltip placement
   mapEl.addEventListener('mousemove', e => {

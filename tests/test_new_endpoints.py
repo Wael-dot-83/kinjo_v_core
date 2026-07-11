@@ -612,8 +612,8 @@ class TestManagerReportEdit:
             json={"notes": "لا يجب أن يعمل"},
             headers=_hdr(manager_token),
         )
-        # 404 (not 403): cross-kindergarten reports must not leak that another
-        # tenant's resource exists — consistent with ManagerScope.assert_kindergarten_access.
+        # Cross-kindergarten resource access returns 404 (not 403) so we don't
+        # leak that another tenant's report exists (#14).
         assert r.status_code == 404
 
 

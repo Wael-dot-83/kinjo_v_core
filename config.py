@@ -266,6 +266,11 @@ class Settings(BaseSettings):
         "ACTIVE",
     ]
 
+    # Class capacity business rule (KinJo FRD): a class holds 3–10 children.
+    # Override via env if a kindergarten policy differs.
+    CLASS_MIN_CAPACITY: int = 3
+    CLASS_MAX_CAPACITY: int = 10
+
     # Message limits
     MAX_MESSAGE_RECIPIENTS: int = 10000
     DUPLICATE_MESSAGE_CHECK_MINUTES: int = 5
@@ -285,8 +290,11 @@ class Settings(BaseSettings):
     AMMAN_TIMEZONE: str = "Asia/Amman"
 
     # Google Maps API key for the heatmap satellite view
-    # Enable "Maps JavaScript API" in Google Cloud Console and set this key
-    GOOGLE_MAPS_API_KEY: str = ""
+    # Enable "Maps JavaScript API" in Google Cloud Console and set this key.
+    # NOTE: this is a client-side key (exposed in page HTML by design) — keep it
+    # restricted by HTTP referrer in Google Cloud Console. Override via the
+    # GOOGLE_MAPS_API_KEY env var per environment when needed.
+    GOOGLE_MAPS_API_KEY: str = "AIzaSyDC0R-BS4uB4uWNHTpjlGO8hL3Py41bAR8"
 
     # Cesium ion access token (kept for reference — map now uses Google Maps)
     CESIUM_ION_TOKEN: str = ""

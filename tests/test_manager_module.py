@@ -777,6 +777,431 @@ class TestManagerAnalyticsDrilldown:
 
 
 # =============================================================================
+# HARDENING FIXES — scope/IDOR, capacity rule, report workflow, analytics
+# =============================================================================
+
+def _class_payload(kg_id, supervisor_id, **overrides):
+    payload = {
+        "kindergarten_id": kg_id,
+        "name_ar": "صف جديد",
+        "name_en": "New Class",
+        "class_code": "NEWCLS",
+        "age_group": "AGE_2_4",
+        "capacity_total": 10,
+        "min_age_months": 24,
+        "max_age_months": 48,
+        "supervisor_id": supervisor_id,
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _make_report(test_db, kg_id, child_id, submitted_by,
+                 status=models.DailyReportStatus.SUBMITTED):
+    report = models.DailyReport(
+        child_id=child_id,
+        kindergarten_id=kg_id,
+        date=date.today(),
+        status=status,
+        submitted_by=submitted_by,
+        arrival_time="08:00",
+    )
+    test_db.add(report)
+    test_db.commit()
+    test_db.refresh(report)
+    return report
+
+
+class TestClassCapacityStatusIDOR:
+    """#1 — capacity-status must enforce role + kindergarten scope."""
+
+    def test_manager_cannot_access_other_kg_capacity(self, client, manager_kg_a, class_kg_b):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.get(f"/api/classes/{class_kg_b.id}/capacity-status")
+        assert r.status_code == 404  # 404 not 403 — no cross-tenant existence leak
+        app.dependency_overrides.clear()
+
+    def test_manager_can_access_own_capacity(self, client, manager_kg_a, class_kg_a):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.get(f"/api/classes/{class_kg_a.id}/capacity-status")
+        assert r.status_code == 200
+        assert r.json()["class_id"] == class_kg_a.id
+        app.dependency_overrides.clear()
+
+    def test_soft_deleted_class_capacity_is_404(self, client, test_db, manager_kg_a, class_kg_a):
+        class_kg_a.deleted_at = datetime.now()
+        test_db.commit()
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.get(f"/api/classes/{class_kg_a.id}/capacity-status")
+        assert r.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_parent_forbidden(self, client, parent_kg_a, class_kg_a):
+        app.dependency_overrides[get_current_user] = lambda: parent_kg_a
+        r = client.get(f"/api/classes/{class_kg_a.id}/capacity-status")
+        assert r.status_code == 403  # wrong role -> 403
+        app.dependency_overrides.clear()
+
+
+class TestRequiredSupervisorsIDOR:
+    """#2 — required-supervisors must enforce role + kindergarten scope."""
+
+    def test_manager_cannot_access_other_kg(self, client, manager_kg_a, class_kg_b):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.get(f"/api/classes/{class_kg_b.id}/required-supervisors")
+        assert r.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_manager_own_ok(self, client, manager_kg_a, class_kg_a):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.get(f"/api/classes/{class_kg_a.id}/required-supervisors")
+        assert r.status_code == 200
+        app.dependency_overrides.clear()
+
+
+class TestCreateClassSupervisorValidation:
+    """#3 — supervisor must be an ACTIVE, non-deleted SUPERVISOR in the same KG."""
+
+    def test_reject_non_supervisor_role(self, client, manager_kg_a, kg_a):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        # manager_kg_a is a MANAGER, not a SUPERVISOR
+        r = client.post("/api/classes", json=_class_payload(kg_a.id, manager_kg_a.id, class_code="C-ROLE"))
+        assert r.status_code == 400
+        app.dependency_overrides.clear()
+
+    def test_reject_supervisor_from_other_kg(self, client, manager_kg_a, kg_a, supervisor_kg_b):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.post("/api/classes", json=_class_payload(kg_a.id, supervisor_kg_b.id, class_code="C-XKG"))
+        assert r.status_code == 400
+        app.dependency_overrides.clear()
+
+    def test_reject_inactive_supervisor(self, client, test_db, manager_kg_a, kg_a, supervisor_kg_a):
+        supervisor_kg_a.status = models.UserStatus.INACTIVE
+        test_db.commit()
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.post("/api/classes", json=_class_payload(kg_a.id, supervisor_kg_a.id, class_code="C-INACT"))
+        assert r.status_code == 400
+        app.dependency_overrides.clear()
+
+    def test_accept_valid_supervisor(self, client, manager_kg_a, kg_a, supervisor_kg_a):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.post("/api/classes", json=_class_payload(kg_a.id, supervisor_kg_a.id, class_code="C-OK"))
+        assert r.status_code == 201, r.text
+        app.dependency_overrides.clear()
+
+
+class TestClassCapacityRange:
+    """#15 — capacity must be within [CLASS_MIN_CAPACITY, CLASS_MAX_CAPACITY] (3–10)."""
+
+    @pytest.mark.parametrize("cap,expected", [(1, 400), (2, 400), (3, 201), (10, 201), (11, 400)])
+    def test_capacity_range(self, client, manager_kg_a, kg_a, supervisor_kg_a, cap, expected):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.post(
+            "/api/classes",
+            json=_class_payload(kg_a.id, supervisor_kg_a.id, capacity_total=cap, class_code=f"CAP{cap}"),
+        )
+        assert r.status_code == expected, r.text
+        app.dependency_overrides.clear()
+
+
+class TestSoftDeletedClassHidden:
+    """#4 — soft-deleted classes must not surface in normal APIs."""
+
+    def test_list_and_get_exclude_soft_deleted(self, client, test_db, manager_kg_a, class_kg_a):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        listed = client.get("/api/classes").json()["classes"]
+        assert any(c["id"] == class_kg_a.id for c in listed)
+
+        class_kg_a.deleted_at = datetime.now()
+        test_db.commit()
+
+        listed = client.get("/api/classes").json()["classes"]
+        assert all(c["id"] != class_kg_a.id for c in listed)
+        assert client.get(f"/api/classes/{class_kg_a.id}").status_code == 404
+        app.dependency_overrides.clear()
+
+
+class TestEligibleSupervisorsSoftDeleted:
+    """#16 — a soft-deleted assignment must not make a supervisor ineligible."""
+
+    def test_soft_deleted_assignment_keeps_eligible(self, client, test_db, manager_kg_a, kg_a, supervisor_kg_a, class_kg_a):
+        test_db.add(models.SupervisorAssignment(
+            class_id=class_kg_a.id,
+            supervisor_id=supervisor_kg_a.id,
+            is_primary=True,
+            start_date=date.today(),
+            end_date=date.today(),
+            deleted_at=datetime.now(),
+        ))
+        test_db.commit()
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.get(f"/api/classes/eligible-supervisors?kindergarten_id={kg_a.id}")
+        ids = [s["id"] for s in r.json()["supervisors"]]
+        assert supervisor_kg_a.id in ids
+        app.dependency_overrides.clear()
+
+
+class TestDailyReportScope:
+    """#6 / #14 — daily-report actions are scoped to the report's own kindergarten."""
+
+    def test_manager_cannot_edit_other_kg_report(self, client, test_db, manager_kg_a, kg_b, child_kg_a, supervisor_kg_b):
+        report = _make_report(test_db, kg_b.id, child_kg_a.id, supervisor_kg_b.id)
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.put(f"/api/manager/daily-reports/{report.id}", json={"notes": "x"})
+        assert r.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_manager_cannot_send_other_kg_report(self, client, test_db, manager_kg_a, kg_b, child_kg_a, supervisor_kg_b):
+        report = _make_report(test_db, kg_b.id, child_kg_a.id, supervisor_kg_b.id)
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.put(f"/api/manager/daily-reports/{report.id}/send-to-parents")
+        assert r.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_manager_cannot_delete_other_kg_report(self, client, test_db, manager_kg_a, kg_b, child_kg_a, supervisor_kg_b):
+        report = _make_report(test_db, kg_b.id, child_kg_a.id, supervisor_kg_b.id)
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.delete(f"/api/manager/daily-reports/{report.id}")
+        assert r.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_manager_can_edit_own_report(self, client, test_db, manager_kg_a, kg_a, child_kg_a, supervisor_kg_a):
+        report = _make_report(test_db, kg_a.id, child_kg_a.id, supervisor_kg_a.id)
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.put(f"/api/manager/daily-reports/{report.id}", json={"notes": "hello"})
+        assert r.status_code == 200
+        app.dependency_overrides.clear()
+
+
+class TestSendReportAtomic:
+    """#7 — status change and the parent notification commit together."""
+
+    def test_send_creates_report_sent_and_message(self, client, test_db, manager_kg_a, kg_a, child_kg_a, supervisor_kg_a):
+        report = _make_report(test_db, kg_a.id, child_kg_a.id, supervisor_kg_a.id)
+        before = test_db.query(models.Message).count()
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.put(f"/api/manager/daily-reports/{report.id}/send-to-parents")
+        assert r.status_code == 200
+        test_db.expire_all()
+        assert test_db.get(models.DailyReport, report.id).status == models.DailyReportStatus.SENT_TO_PARENT
+        # The parent notification was created in the same transaction as the status change.
+        assert test_db.query(models.Message).count() == before + 1
+        app.dependency_overrides.clear()
+
+
+class TestDailyReportQueryValidation:
+    """#8 / #9 — malformed date -> 422; unknown report_status -> 400."""
+
+    def test_invalid_from_date_returns_422(self, client, manager_kg_a):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.get("/api/manager/daily-reports?from_date=not-a-date")
+        assert r.status_code == 422
+        app.dependency_overrides.clear()
+
+    def test_invalid_report_status_returns_400(self, client, manager_kg_a):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.get("/api/manager/daily-reports?report_status=BOGUS")
+        assert r.status_code == 400
+        app.dependency_overrides.clear()
+
+
+class TestEnrollmentTrendGrouping:
+    """#10 — daily/weekly/monthly aggregation all return populated buckets."""
+
+    def _seed(self, test_db, kg_id, parent_id):
+        # One ACTIVE enrollment per (distinct) child — a child may hold only one
+        # active enrollment (unique constraint on child_id, is_active).
+        base = datetime.now() - timedelta(days=35)
+        for i in range(0, 35, 5):
+            child = models.Child(
+                parent_id=parent_id,
+                first_name=f"طفل{i}",
+                last_name="تجربة",
+                gender=models.Gender.MALE,
+                date_of_birth=date(2024, 1, 1) + timedelta(days=i),
+                father_name="أب",
+                mother_first_name="أم",
+                mother_last_name="تجربة",
+                mother_nationality="الأردن",
+            )
+            test_db.add(child)
+            test_db.flush()
+            test_db.add(models.EnrollmentApplication(
+                child_id=child.id,
+                kindergarten_id=kg_id,
+                status=models.EnrollmentStatus.ACTIVE,
+                created_at=base + timedelta(days=i),
+            ))
+        test_db.commit()
+
+    def test_all_groupings(self, test_db, kg_a, child_kg_a):
+        from manager_analytics import ManagerAnalyticsService as MA
+        self._seed(test_db, kg_a.id, child_kg_a.parent_id)
+        end = date.today()
+        start = end - timedelta(days=40)
+
+        for grouping in ("daily", "weekly", "monthly"):
+            trend = MA.compute_enrollment_trend(test_db, kg_a.id, start, end, grouping)
+            assert trend, f"{grouping} trend should not be empty"
+            for point in trend:
+                assert {"date", "new_enrollments", "active_enrollments", "cumulative_active"} <= set(point)
+
+        monthly = MA.compute_enrollment_trend(test_db, kg_a.id, start, end, "monthly")
+        assert all(len(p["date"]) == 7 and p["date"][4] == "-" for p in monthly)  # YYYY-MM
+        # cumulative is monotonic non-decreasing
+        cums = [p["cumulative_active"] for p in monthly]
+        assert cums == sorted(cums)
+
+
+class TestManagerAnalyticsIncidentBoundary:
+    """#13 — an incident late on the end date is still counted."""
+
+    def test_incident_on_end_date_counted(self, test_db, kg_a, class_kg_a, child_kg_a, enrollment_kg_a):
+        from datetime import time
+        from manager_analytics import ManagerAnalyticsService as MA
+        end = date.today()
+        start = end - timedelta(days=7)
+        test_db.add(models.Incident(
+            child_id=child_kg_a.id,
+            kindergarten_id=kg_a.id,
+            class_id=class_kg_a.id,
+            type=models.IncidentType.INJURY,
+            severity_level=models.SeverityLevel.LOW,
+            description="late incident",
+            occurred_at=datetime.combine(end, time(23, 0)),
+        ))
+        test_db.commit()
+        rows = MA.get_drilldown_by_class(test_db, kg_a.id, start, end)
+        row = next(r for r in rows if r["class_id"] == class_kg_a.id)
+        assert row["incidents"] >= 1
+
+
+def _make_child(test_db, parent_id, first_name):
+    child = models.Child(
+        parent_id=parent_id,
+        first_name=first_name,
+        last_name="تجربة",
+        gender=models.Gender.MALE,
+        date_of_birth=date.today() - timedelta(days=800),
+        father_name="أب",
+        mother_first_name="أم",
+        mother_last_name="تجربة",
+        mother_nationality="الأردن",
+    )
+    test_db.add(child)
+    test_db.commit()
+    test_db.refresh(child)
+    return child
+
+
+class TestDashboardCountsAnchoring:
+    """#5 — dashboard report counts are anchored to DailyReport.kindergarten_id
+    (not a Child->EnrollmentApplication join), so they are correct regardless of
+    the child's enrollment state and cannot be inflated.
+
+    Note: same-kindergarten enrollment fan-out is *structurally* impossible — the
+    uq_enrollment_child_kindergarten unique constraint allows a child at most one
+    enrollment row per kindergarten. The remaining real defect was that the old
+    join-based report counts *undercounted* a report whose child had no
+    enrollment row; the kindergarten_id anchor fixes that and decouples the count
+    from enrollment state.
+    """
+
+    def test_report_count_independent_of_enrollment(
+        self, client, test_db, manager_kg_a, kg_a, parent_kg_a, supervisor_kg_a
+    ):
+        today = date.today()
+        profile = test_db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == parent_kg_a.id
+        ).first()
+        # A child with a SUBMITTED report in kg_a but NO enrollment row: the old
+        # join through EnrollmentApplication returned 0; the kindergarten_id
+        # anchor correctly counts it.
+        child = _make_child(test_db, profile.id, "بلا_تسجيل")
+        test_db.add(models.DailyReport(
+            child_id=child.id, kindergarten_id=kg_a.id, date=today,
+            status=models.DailyReportStatus.SUBMITTED, submitted_by=supervisor_kg_a.id,
+            arrival_time="08:00",
+        ))
+        test_db.commit()
+
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.get("/api/manager/dashboard")
+        assert r.status_code == 200
+        assert r.json()["summary"]["pending_daily_reports"] == 1
+        app.dependency_overrides.clear()
+
+    def test_attendance_and_reports_counted_once(
+        self, client, test_db, manager_kg_a, kg_a, class_kg_a, child_kg_a, enrollment_kg_a, supervisor_kg_a
+    ):
+        today = date.today()
+        # One PRESENT log for the actively-enrolled child + one SENT report today.
+        test_db.add(models.AttendanceLog(
+            child_id=child_kg_a.id, class_id=class_kg_a.id, date=today,
+            status=models.AttendanceStatus.PRESENT, recorded_by=supervisor_kg_a.id,
+        ))
+        test_db.add(models.DailyReport(
+            child_id=child_kg_a.id, kindergarten_id=kg_a.id, date=today,
+            status=models.DailyReportStatus.SENT_TO_PARENT, submitted_by=supervisor_kg_a.id,
+            arrival_time="08:00",
+        ))
+        test_db.commit()
+
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        r = client.get("/api/manager/dashboard")
+        assert r.status_code == 200
+        summary = r.json()["summary"]
+        assert summary["attendance_today"] == 1
+        assert summary["reports_sent_today"] == 1
+        app.dependency_overrides.clear()
+
+
+class TestAbsenteeismOperatingDays:
+    """#11 — absenteeism denominator uses operating days, not raw calendar days."""
+
+    def test_absenteeism_excludes_closed_days(
+        self, test_db, kg_a, class_kg_a, child_kg_a, enrollment_kg_a, supervisor_kg_a
+    ):
+        from manager_analytics import ManagerAnalyticsService as MA
+        start, end = date(2026, 6, 1), date(2026, 6, 5)  # Mon..Fri; Fri closed by default
+        for d in (date(2026, 6, 1), date(2026, 6, 2)):
+            test_db.add(models.AttendanceLog(
+                child_id=child_kg_a.id, class_id=class_kg_a.id, date=d,
+                status=models.AttendanceStatus.ABSENT, recorded_by=supervisor_kg_a.id,
+            ))
+        test_db.commit()
+        rate = MA.compute_absenteeism_rate(test_db, kg_a.id, start, end)
+        # 2 absences / (1 active * 4 operating days) = 50%
+        # (raw 5 calendar days would wrongly give 40%).
+        assert rate == 50.0
+
+
+class TestClassDrilldownAttendance:
+    """#12 — class drilldown counts only PRESENT/LATE over operating days."""
+
+    def test_drilldown_present_late_over_operating_days(
+        self, test_db, kg_a, class_kg_a, child_kg_a, enrollment_kg_a, supervisor_kg_a
+    ):
+        from manager_analytics import ManagerAnalyticsService as MA
+        start, end = date(2026, 6, 1), date(2026, 6, 5)
+        seeded = [
+            (date(2026, 6, 1), models.AttendanceStatus.PRESENT),
+            (date(2026, 6, 2), models.AttendanceStatus.LATE),
+            (date(2026, 6, 3), models.AttendanceStatus.ABSENT),  # must NOT count
+        ]
+        for d, st in seeded:
+            test_db.add(models.AttendanceLog(
+                child_id=child_kg_a.id, class_id=class_kg_a.id, date=d,
+                status=st, recorded_by=supervisor_kg_a.id,
+            ))
+        test_db.commit()
+        rows = MA.get_drilldown_by_class(test_db, kg_a.id, start, end)
+        row = next(r for r in rows if r["class_id"] == class_kg_a.id)
+        # attended (PRESENT+LATE)=2; expected = 1 enrolled * 4 operating days => 50%.
+        assert row["attendance_rate"] == 50.0
+
+
+# =============================================================================
 # RUN TESTS
 # =============================================================================
 

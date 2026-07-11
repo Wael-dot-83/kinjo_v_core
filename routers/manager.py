@@ -48,25 +48,17 @@ def _get_class_or_403(class_id: int, manager: User, db: Session) -> Class:
     return cls
 
 
-def _get_report_or_404(report_id: int, manager: User, db: Session) -> DailyReport:
-    """Fetch a DailyReport and verify it belongs to the manager's kindergarten.
+def _get_daily_report_for_manager_or_404(report_id: int, manager: User, db: Session) -> DailyReport:
+    """Fetch a daily report enforcing the manager's kindergarten scope.
 
-    Returns 404 (not 403) when the report is absent or belongs to another
-    kindergarten, so cross-tenant existence is never leaked.
+    Scope is anchored to the report's OWN ``kindergarten_id`` column (the
+    authoritative context stored on the report), not to the child's current
+    enrollment — a report belongs to the kindergarten it was filed in. A report
+    in another kindergarten returns 404 (never 403) so we don't leak that it
+    exists (#6/#14).
     """
     report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found.")
-    enrollment = (
-        db.query(EnrollmentApplication)
-        .join(Class, EnrollmentApplication.class_id == Class.id)
-        .filter(
-            EnrollmentApplication.child_id == report.child_id,
-            Class.kindergarten_id == manager.kindergarten_id,
-        )
-        .first()
-    )
-    if not enrollment:
+    if not report or report.kindergarten_id != manager.kindergarten_id:
         raise HTTPException(status_code=404, detail="Report not found.")
     return report
 
@@ -321,8 +313,9 @@ def move_child_between_classes(
 def list_daily_reports_for_review(
     class_id: Optional[int] = Query(None),
     supervisor_id: Optional[int] = Query(None),
-    from_date: Optional[str] = Query(None),
-    to_date: Optional[str] = Query(None),
+    # Typed date params: FastAPI returns 422 for malformed dates instead of a 500 (#8).
+    from_date: Optional[date] = Query(None),
+    to_date: Optional[date] = Query(None),
     report_status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
@@ -333,6 +326,8 @@ def list_daily_reports_for_review(
     class_ids = {c.id for c in classes}
 
     if class_id:
+        # A class outside the manager's kindergarten is reported as not found (#14),
+        # so we don't reveal that it exists in another tenant.
         if class_id not in class_ids:
             raise HTTPException(status_code=404, detail="Class not found.")
         class_ids = {class_id}
@@ -352,10 +347,16 @@ def list_daily_reports_for_review(
     q = db.query(DailyReport).filter(DailyReport.child_id.in_(child_ids))
 
     if report_status:
+        # An unrecognized status is a client error, not silently ignored (#9).
         try:
-            q = q.filter(DailyReport.status == DailyReportStatus[report_status.upper()])
+            status_enum = DailyReportStatus[report_status.upper()]
         except KeyError:
-            pass
+            allowed = ", ".join(s.name for s in DailyReportStatus)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid report_status '{report_status}'. Allowed: {allowed}.",
+            )
+        q = q.filter(DailyReport.status == status_enum)
     else:
         # Default: show SUBMITTED only
         q = q.filter(DailyReport.status == DailyReportStatus.SUBMITTED)
@@ -418,7 +419,7 @@ def edit_daily_report(
     current_user: User = Depends(_require_manager),
 ):
     """Manager can edit a submitted report's content before sending to parents."""
-    report = _get_report_or_404(report_id, current_user, db)
+    report = _get_daily_report_for_manager_or_404(report_id, current_user, db)
 
     if report.status == DailyReportStatus.SENT_TO_PARENT:
         raise HTTPException(status_code=403, detail="Cannot edit a report that has already been sent to parents.")
@@ -446,7 +447,7 @@ def send_report_to_parents(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
-    report = _get_report_or_404(report_id, current_user, db)
+    report = _get_daily_report_for_manager_or_404(report_id, current_user, db)
     child = db.query(Child).filter(Child.id == report.child_id).first()
     if not child:
         raise HTTPException(status_code=404, detail="Report not found.")
@@ -454,39 +455,50 @@ def send_report_to_parents(
     if report.status not in (DailyReportStatus.SUBMITTED, DailyReportStatus.APPROVED):
         raise HTTPException(status_code=400, detail="Report must be in SUBMITTED state to send to parents.")
 
-    report.status = DailyReportStatus.SENT_TO_PARENT
-    report.approved_by = current_user.id
-    report.approved_at = datetime.now(_JORDAN_TZ)
-    db.add(AuditLog(
-        user_id=current_user.id,
-        action=AuditAction.DAILY_REPORT_SENT_TO_PARENT,
-        entity_type="daily_report",
-        entity_id=report.id,
-        details=f"Manager sent daily report for child {report.child_id} to parent",
-    ))
-    db.commit()
-
-    # Create notification message for parent
-    parent_user_id = child.parent.user_id if child.parent else None
-    if parent_user_id:
-        notification = Message(
-            thread_type=MessageThreadType.DIRECT,
-            sender_id=current_user.id,
-            recipient_id=parent_user_id,
-            kindergarten_id=current_user.kindergarten_id,
-            subject=f"تقرير يومي جديد — {child.first_name} — {report.date}",
-            message_body=f"تم إرسال تقرير يومي جديد لطفلك {child.first_name} بتاريخ {report.date}.",
-        )
-        db.add(notification)
-        db.flush()  # assign notification.id before the audit row references it
+    # Atomic: status change, approval fields, parent notification, and both audit
+    # rows commit together (#7). If anything fails, roll the whole thing back so
+    # we never leave a report marked SENT_TO_PARENT without its parent message.
+    try:
+        report.status = DailyReportStatus.SENT_TO_PARENT
+        report.approved_by = current_user.id
+        report.approved_at = datetime.now(_JORDAN_TZ)
         db.add(AuditLog(
             user_id=current_user.id,
-            action=AuditAction.MESSAGE_SENT,
-            entity_type="message",
-            entity_id=notification.id,
-            details=f"Manager sent daily-report notification to parent {parent_user_id} for child {report.child_id}",
+            action=AuditAction.DAILY_REPORT_SENT_TO_PARENT,
+            entity_type="daily_report",
+            entity_id=report.id,
+            details=f"Manager sent daily report for child {report.child_id} to parent",
         ))
+
+        parent_user_id = child.parent.user_id if child.parent else None
+        if parent_user_id:
+            notification = Message(
+                thread_type=MessageThreadType.DIRECT,
+                sender_id=current_user.id,
+                recipient_id=parent_user_id,
+                kindergarten_id=current_user.kindergarten_id,
+                subject=f"تقرير يومي جديد — {child.first_name} — {report.date}",
+                message_body=f"تم إرسال تقرير يومي جديد لطفلك {child.first_name} بتاريخ {report.date}.",
+            )
+            db.add(notification)
+            db.flush()  # assign notification.id before the audit row references it
+            db.add(AuditLog(
+                user_id=current_user.id,
+                action=AuditAction.MESSAGE_SENT,
+                entity_type="message",
+                entity_id=notification.id,
+                details=f"Manager sent daily-report notification to parent {parent_user_id} for child {report.child_id}",
+            ))
+
         db.commit()
+    except HTTPException:
+        raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send report to parent; no changes were applied.",
+        )
 
     return {"id": report.id, "status": report.status.value}
 
@@ -497,7 +509,7 @@ def delete_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_manager),
 ):
-    report = _get_report_or_404(report_id, current_user, db)
+    report = _get_daily_report_for_manager_or_404(report_id, current_user, db)
 
     if report.status == DailyReportStatus.SENT_TO_PARENT:
         raise HTTPException(status_code=409, detail="Cannot delete a report that has been sent to parents.")

@@ -16,9 +16,49 @@ from audit_actions import AuditAction
 import validators
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, get_class_or_404, get_class_for_user_or_404
 
 router = APIRouter(tags=["Classes"])
+
+
+def _validate_capacity(capacity_total: int) -> None:
+    """Enforce the KinJo class-size business rule (config-driven, default 3–10)."""
+    lo = settings.CLASS_MIN_CAPACITY
+    hi = settings.CLASS_MAX_CAPACITY
+    if capacity_total < lo or capacity_total > hi:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"سعة الصف يجب أن تكون بين {lo} و {hi}. / "
+                f"Class capacity must be between {lo} and {hi}."
+            ),
+        )
+
+
+def _validate_supervisor_for_kindergarten(
+    db: Session, supervisor_id: int, kindergarten_id: int
+) -> models.User:
+    """Return the supervisor iff they are an ACTIVE, non-deleted SUPERVISOR in the
+    same kindergarten; otherwise raise a clear 400. Rejects admins/managers/parents,
+    inactive, and soft-deleted users being assigned as a class supervisor (#3)."""
+    supervisor = db.query(models.User).filter(
+        models.User.id == supervisor_id,
+        models.User.deleted_at.is_(None),
+    ).first()
+    if (
+        not supervisor
+        or supervisor.role != models.UserRole.SUPERVISOR
+        or supervisor.status != models.UserStatus.ACTIVE
+        or supervisor.kindergarten_id != kindergarten_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "المشرف غير صالح: يجب أن يكون مشرفاً نشطاً في نفس الحضانة. / "
+                "Invalid supervisor: must be an active SUPERVISOR in the same kindergarten."
+            ),
+        )
+    return supervisor
 
 class ClassCreate(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -73,14 +113,12 @@ def create_class(
     if class_data.max_age_months < class_data.min_age_months:
         raise HTTPException(status_code=400, detail="Max age must be >= min age")
 
-    # Validate supervisor belongs to the same kindergarten
-    supervisor = db.query(models.User).filter(
-        models.User.id == class_data.supervisor_id
-    ).first()
-    if not supervisor:
-        raise HTTPException(status_code=400, detail="Supervisor not found")
-    if supervisor.kindergarten_id != class_data.kindergarten_id:
-        raise HTTPException(status_code=400, detail="Supervisor must belong to the same kindergarten")
+    _validate_capacity(class_data.capacity_total)
+
+    # Supervisor must be an ACTIVE, non-deleted SUPERVISOR in the same kindergarten (#3).
+    _validate_supervisor_for_kindergarten(
+        db, class_data.supervisor_id, class_data.kindergarten_id
+    )
 
     class_dict = class_data.model_dump(exclude={"supervisor_id"})
     class_obj = models.Class(
@@ -128,7 +166,8 @@ def list_classes(
     db: Session = Depends(get_db)
 ):
     """List classes with filtering and current supervisor info"""
-    query = db.query(models.Class)
+    # Soft-deleted classes never appear in normal APIs (#4).
+    query = db.query(models.Class).filter(models.Class.deleted_at.is_(None))
 
     # Filter by kindergarten for non-admins
     if current_user.role != models.UserRole.ADMIN:
@@ -189,9 +228,8 @@ def get_class_required_supervisors(
     db: Session = Depends(get_db),
 ):
     """Calculate required supervisors for a specific class."""
-    cls = db.query(models.Class).filter(models.Class.id == class_id).first()
-    if not cls:
-        raise HTTPException(status_code=404, detail="Class not found")
+    # Enforce role + kindergarten scope; cross-tenant/soft-deleted -> 404 (#2).
+    cls = get_class_for_user_or_404(db, class_id, current_user)
     age_group = cls.age_group or "AGE_2_4"
     children_count = cls.enrolled_children_count if hasattr(cls, 'enrolled_children_count') and cls.enrolled_children_count else 0
     try:
@@ -236,8 +274,10 @@ def get_eligible_supervisors(
         models.User.status == models.UserStatus.ACTIVE
     ).all()
 
-    # Get IDs of supervisors currently assigned to any class (active assignments)
+    # Get IDs of supervisors currently assigned to any class (active assignments).
+    # A soft-deleted assignment must NOT make a supervisor look ineligible (#16).
     assigned_query = db.query(models.SupervisorAssignment.supervisor_id).filter(
+        models.SupervisorAssignment.deleted_at.is_(None),
         models.SupervisorAssignment.start_date <= today,
         or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= today)
     )
@@ -260,12 +300,8 @@ def get_class_capacity_status(
     db: Session = Depends(get_db)
 ):
     """Get current enrollment vs capacity for a class"""
-    class_obj = db.query(models.Class).filter(
-        models.Class.id == class_id
-    ).first()
-
-    if not class_obj:
-        raise HTTPException(status_code=404, detail="Class not found")
+    # Enforce role + kindergarten scope; cross-tenant/soft-deleted -> 404 (#1).
+    class_obj = get_class_for_user_or_404(db, class_id, current_user)
 
     # Count active enrollments assigned to this class
     enrolled_count = db.query(func.count(models.EnrollmentApplication.id)).filter(
@@ -290,15 +326,8 @@ def get_class(
     db: Session = Depends(get_db)
 ):
     """Get a specific class by ID"""
-    class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()
-    if not class_obj:
-        raise HTTPException(status_code=404, detail="Class not found")
-
-    # Check permissions - admin can see all, others only their kindergarten's classes
-    if current_user.role != models.UserRole.ADMIN:
-        if class_obj.kindergarten_id != current_user.kindergarten_id:
-            raise HTTPException(status_code=403, detail="Access denied")
-
+    # Cross-tenant / soft-deleted -> 404 (no existence leak); wrong role -> 403 (#4/#14).
+    class_obj = get_class_for_user_or_404(db, class_id, current_user)
     return _class_response(db, class_obj)
 
 
@@ -312,11 +341,8 @@ def update_class(
     """Update class details (Manager or Admin)"""
     validators.validate_manager_role(current_user)
 
-    class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()
-    if not class_obj:
-        raise HTTPException(status_code=404, detail="Class not found")
-
-    validators.validate_kindergarten_scope(current_user, class_obj.kindergarten_id)
+    # Cross-tenant / soft-deleted -> 404; scope enforced centrally (#4/#14).
+    class_obj = get_class_for_user_or_404(db, class_id, current_user)
 
     # Validate age range if provided
     if hasattr(class_data, 'max_age_months') and hasattr(class_data, 'min_age_months'):
@@ -324,16 +350,15 @@ def update_class(
             if class_data.max_age_months < class_data.min_age_months:
                 raise HTTPException(status_code=400, detail="Max age must be >= min age")
 
-    # Validate supervisor belongs to same kindergarten
+    # Enforce capacity range on update too (#15).
+    if class_data.capacity_total is not None:
+        _validate_capacity(class_data.capacity_total)
+
+    # Supervisor must be an ACTIVE, non-deleted SUPERVISOR in the same kindergarten (#3).
     if class_data.supervisor_id is not None:
-        supervisor = db.query(models.User).filter(
-            models.User.id == class_data.supervisor_id,
-            models.User.role == models.UserRole.SUPERVISOR
-        ).first()
-        if not supervisor:
-            raise HTTPException(status_code=400, detail="Supervisor not found")
-        if supervisor.kindergarten_id != class_obj.kindergarten_id:
-            raise HTTPException(status_code=400, detail="Supervisor must belong to the same kindergarten as the class")
+        _validate_supervisor_for_kindergarten(
+            db, class_data.supervisor_id, class_obj.kindergarten_id
+        )
 
     # supervisor_id is handled separately: the primary supervisor lives only in
     # SupervisorAssignment now (the legacy Class.supervisor_id column is retired).
@@ -384,11 +409,8 @@ def deactivate_class(
     """Deactivate class (soft delete - Manager or Admin)"""
     validators.validate_manager_role(current_user)
 
-    class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()
-    if not class_obj:
-        raise HTTPException(status_code=404, detail="Class not found")
-
-    validators.validate_kindergarten_scope(current_user, class_obj.kindergarten_id)
+    # Cross-tenant / already-soft-deleted -> 404 (#4/#14).
+    class_obj = get_class_for_user_or_404(db, class_id, current_user)
 
     if not class_obj.is_active:
         raise HTTPException(status_code=400, detail="Class is already inactive")
@@ -506,9 +528,11 @@ def assign_child_to_class(
     if not profile_complete:
         raise HTTPException(status_code=400, detail={"message": "Child profile incomplete", "missing_fields": missing_fields})
 
-    # Get class — row-level lock prevents double-booking (see api/enrollment.py review_enrollment)
+    # Get class — row-level lock prevents double-booking (see api/enrollment.py review_enrollment).
+    # Soft-deleted classes are not assignable (#4).
     class_obj = db.query(models.Class).filter(
-        models.Class.id == class_id
+        models.Class.id == class_id,
+        models.Class.deleted_at.is_(None),
     ).with_for_update().first()
 
     if not class_obj:

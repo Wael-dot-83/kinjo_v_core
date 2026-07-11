@@ -3,6 +3,7 @@ Unit tests for Frontend Routes
 """
 import re
 import pytest
+from pathlib import Path
 from datetime import date, timedelta
 from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
@@ -1442,8 +1443,22 @@ class TestFrontendRoutes:
         response = client.get("/admin/heatmap")
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
+        html = response.text
+        assert 'class="heatmap-shell"' in html
+        assert 'id="googleMapContainer"' in html
+        assert "/static/js/jordan_cesium_map.js" in html
 
         app.dependency_overrides.clear()
+
+    def test_admin_heatmap_has_professional_loading_state_contract(self):
+        """Heat map client keeps an explicit map loading state before Google Maps is ready."""
+        template = Path("templates/admin/heatmap.html").read_text(encoding="utf-8")
+        script = Path("static/js/jordan_cesium_map.js").read_text(encoding="utf-8")
+
+        assert ".heatmap-shell" in template
+        assert ".map-loading-state" in template
+        assert "ensureMapLoadingState()" in script
+        assert "map-ready" in script
 
     def test_admin_heatmap_page_non_admin_redirects(self, client, manager_user):
         """Heat map page must redirect non-admin to dashboard"""

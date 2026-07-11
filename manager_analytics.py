@@ -77,59 +77,66 @@ class ManagerAnalyticsService:
     ) -> Dict[date, float]:
         """Per-day attendance rate (%) for every day in [start_date, end_date].
 
-        Equivalent to calling compute_attendance_rate(db, kg, d, d) for each day
-        but with a fixed small number of queries instead of one set per day (B3):
-        one for active enrollments, one grouped attended-count query, one for the
-        calendar. Closed days and days with no active enrollments are 0.0, and
-        every day in the range is present (missing attendance => 0.0).
+        Each value equals ``KPIService.compute_attendance_rate(db, kg, d, d)`` — it
+        reuses the canonical working-day / expected-child-day / attended-child-day
+        definitions so the forecast & anomaly series stay consistent with the
+        headline attendance KPI — but computes the whole range with a bounded
+        number of queries (3) instead of one set per day (B3). Closed days and
+        days with no expected child-days are 0.0, and every day in the range is
+        present (missing attendance => 0.0).
         """
+        from collections import defaultdict
+        from kpi_service import KPIService
+
         result: Dict[date, float] = {}
         if end_date < start_date:
             return result
 
-        active = db.query(
-            func.count(models.EnrollmentApplication.id)
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-        ).scalar() or 0
+        # Query 1: working days (Jordan Sun–Thu + explicit OperatingCalendar).
+        working_set = set(
+            KPIService._list_working_days(db, kindergarten_id, start_date, end_date)
+        )
+        # Query 2: active enrollments overlapping the window, with effective
+        # per-child date ranges (a child may hold several overlapping rows).
+        enrollments = KPIService._get_overlapping_active_enrollments(
+            db, kindergarten_id, start_date, end_date
+        )
+        child_windows: Dict[int, list] = defaultdict(list)
+        for child_id, eff_start, eff_end in enrollments:
+            child_windows[child_id].append((eff_start, eff_end))
 
-        attended_by_day = {}
-        if active:
+        # Query 3: attended (PRESENT/LATE) child-days grouped by (date, child).
+        attended_by_day_child: Dict[Tuple[date, int], int] = {}
+        child_ids = list(child_windows.keys())
+        if child_ids:
             rows = db.query(
                 models.AttendanceLog.date,
+                models.AttendanceLog.child_id,
                 func.count(models.AttendanceLog.id),
-            ).join(
-                models.Child
-            ).join(
-                models.EnrollmentApplication
             ).filter(
-                models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+                models.AttendanceLog.child_id.in_(child_ids),
                 models.AttendanceLog.date >= start_date,
                 models.AttendanceLog.date <= end_date,
                 models.AttendanceLog.status.in_(_ATTENDED_STATUSES),
-            ).group_by(models.AttendanceLog.date).all()
-            attended_by_day = {row[0]: row[1] for row in rows}
-
-        cal = db.query(
-            models.OperatingCalendar.date,
-            models.OperatingCalendar.is_open,
-        ).filter(
-            models.OperatingCalendar.kindergarten_id == kindergarten_id,
-            models.OperatingCalendar.date >= start_date,
-            models.OperatingCalendar.date <= end_date,
-        ).all()
-        explicit = {row[0]: bool(row[1]) for row in cal}
+            ).group_by(models.AttendanceLog.date, models.AttendanceLog.child_id).all()
+            attended_by_day_child = {(row[0], row[1]): row[2] for row in rows}
 
         cursor = start_date
         while cursor <= end_date:
-            is_open = explicit[cursor] if cursor in explicit else cursor.weekday() not in (4, 5)
-            if active == 0 or not is_open:
+            if cursor not in working_set:
                 result[cursor] = 0.0
-            else:
-                fraction = attended_by_day.get(cursor, 0) / active
-                fraction = max(0.0, min(1.0, fraction))
-                result[cursor] = round(fraction * 100, 2)
+                cursor += timedelta(days=1)
+                continue
+            # expected = enrollment rows whose effective window covers this day;
+            # attended = PRESENT/LATE logs on this day for those same children.
+            expected = 0
+            attended = 0
+            for child_id, windows in child_windows.items():
+                covers = sum(1 for (s, e) in windows if s <= cursor <= e)
+                if covers:
+                    expected += covers
+                    attended += attended_by_day_child.get((cursor, child_id), 0)
+            result[cursor] = round(attended / expected * 100, 2) if expected else 0.0
             cursor += timedelta(days=1)
         return result
 
@@ -172,9 +179,18 @@ class ManagerAnalyticsService:
         grouping: str = "daily"  # daily, weekly, monthly
     ) -> List[Dict]:
         """
-        Compute enrollment trend over period.
-        Returns list of {date, new_enrollments, total_active, cumulative}
+        Compute enrollment trend over a period, grouped by day, ISO week, or month.
+
+        Returns a list of {date, new_enrollments, active_enrollments, cumulative_active}
+        with one entry per period bucket in [start_date, end_date] (empty buckets
+        included). Period labels:
+          - daily:   YYYY-MM-DD of the day
+          - weekly:  YYYY-MM-DD of the ISO week start (Monday) — stable/sortable
+          - monthly: YYYY-MM
         """
+        if grouping not in ("daily", "weekly", "monthly"):
+            grouping = "daily"
+
         # Get all enrollments in date range
         enrollments = db.query(
             models.EnrollmentApplication.created_at,
@@ -185,35 +201,47 @@ class ManagerAnalyticsService:
             models.EnrollmentApplication.created_at <= end_date
         ).all()
 
-        # Group by period
-        if grouping == "daily":
-            periods = {}
-            for enrollment in enrollments:
-                key = enrollment.created_at.date()
-                if key not in periods:
-                    periods[key] = {"new": 0, "active": 0}
-                periods[key]["new"] += 1
-                if enrollment.status == models.EnrollmentStatus.ACTIVE:
-                    periods[key]["active"] += 1
+        def _period_start(d: date) -> date:
+            if grouping == "weekly":
+                return d - timedelta(days=d.weekday())  # Monday of that ISO week
+            if grouping == "monthly":
+                return d.replace(day=1)
+            return d
 
-            # Fill in missing days
-            result = []
-            current = start_date
-            cumulative_active = 0
-            while current <= end_date:
-                if current in periods:
-                    cumulative_active += periods[current]["active"]
-                result.append({
-                    "date": current.isoformat(),
-                    "new_enrollments": periods.get(current, {}).get("new", 0),
-                    "active_enrollments": periods.get(current, {}).get("active", 0),
-                    "cumulative_active": cumulative_active
-                })
-                current += timedelta(days=1)
-            return result
-        else:
-            # For weekly/monthly, aggregate
-            return []
+        def _label(key: date) -> str:
+            return f"{key.year:04d}-{key.month:02d}" if grouping == "monthly" else key.isoformat()
+
+        def _next(key: date) -> date:
+            if grouping == "weekly":
+                return key + timedelta(days=7)
+            if grouping == "monthly":
+                return (key.replace(day=1) + timedelta(days=32)).replace(day=1)
+            return key + timedelta(days=1)
+
+        # Bucket the enrollments by period start.
+        periods: Dict[date, Dict[str, int]] = {}
+        for enrollment in enrollments:
+            key = _period_start(enrollment.created_at.date())
+            bucket = periods.setdefault(key, {"new": 0, "active": 0})
+            bucket["new"] += 1
+            if enrollment.status == models.EnrollmentStatus.ACTIVE:
+                bucket["active"] += 1
+
+        # Emit every period in range (including empty ones) with a running total.
+        result: List[Dict] = []
+        current = _period_start(start_date)
+        cumulative_active = 0
+        while current <= end_date:
+            bucket = periods.get(current, {"new": 0, "active": 0})
+            cumulative_active += bucket["active"]
+            result.append({
+                "date": _label(current),
+                "new_enrollments": bucket["new"],
+                "active_enrollments": bucket["active"],
+                "cumulative_active": cumulative_active,
+            })
+            current = _next(current)
+        return result
 
     @staticmethod
     def compute_attendance_rate(
@@ -223,56 +251,10 @@ class ManagerAnalyticsService:
         end_date: date
     ) -> float:
         """
-        Compute attendance rate: (check-ins / expected attendances) * 100
-        Expected = active enrollments * operating days
+        Compute attendance rate using the centralized KPIService logic.
         """
-        # Count active enrollments in this kindergarten
-        active_enrollments = db.query(
-            func.count(models.EnrollmentApplication.id)
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).scalar() or 0
-
-        if active_enrollments == 0:
-            return 0.0
-
-        # Numerator: only PRESENT/LATE count as attended. ABSENT and EXCUSED must
-        # not inflate the rate (B1).
-        attended = db.query(
-            func.count(models.AttendanceLog.id)
-        ).join(
-            models.Child
-        ).join(
-            models.EnrollmentApplication
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.AttendanceLog.date >= start_date,
-            models.AttendanceLog.date <= end_date,
-            models.AttendanceLog.status.in_(_ATTENDED_STATUSES),
-        ).scalar() or 0
-
-        # Denominator: active enrollments * *operating* days (open days from
-        # OperatingCalendar, not raw calendar days). Closed days are excluded (B2).
-        operating_days = ManagerAnalyticsService._count_operating_days(
-            db, kindergarten_id, start_date, end_date
-        )
-        expected_attendance = active_enrollments * operating_days
-        if expected_attendance == 0:
-            return 0.0
-
-        # Validate/clamp the underlying fraction to [0, 1]; log anomalies (e.g.
-        # duplicate logs) rather than returning an impossible >100% rate.
-        fraction = attended / expected_attendance
-        if fraction < 0.0 or fraction > 1.0:
-            logger.warning(
-                "Attendance rate out of range for kg=%s [%s..%s]: "
-                "attended=%s expected=%s fraction=%.3f",
-                kindergarten_id, start_date, end_date,
-                attended, expected_attendance, fraction,
-            )
-            fraction = max(0.0, min(1.0, fraction))
-        return round(fraction * 100, 2)
+        from kpi_service import KPIService
+        return KPIService.compute_attendance_rate(db, kindergarten_id, start_date, end_date)
 
     @staticmethod
     def compute_incident_rate(
@@ -280,34 +262,17 @@ class ManagerAnalyticsService:
         kindergarten_id: int,
         start_date: date,
         end_date: date,
-        per_children: int = 100
+        per_children: int = 100  # retained for backward compatibility; unused
     ) -> float:
+        """Compute incident rate using the centralized KPIService logic.
+
+        NOTE: KPIService expresses this **per 1,000 attended child-days** (not the
+        legacy per-100-children), to match kpi_standards.py thresholds. The
+        ``per_children`` argument is ignored and kept only for call-site
+        compatibility.
         """
-        Compute incident rate per 100 children.
-        Rate = (incidents / active_enrollments) * per_children
-        """
-        # Count active enrollments
-        active_enrollments = db.query(
-            func.count(models.EnrollmentApplication.id)
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).scalar() or 0
-
-        if active_enrollments == 0:
-            return 0.0
-
-        # Count incidents in date range
-        incidents = db.query(
-            func.count(models.Incident.id)
-        ).filter(
-            models.Incident.kindergarten_id == kindergarten_id,
-            models.Incident.occurred_at >= start_date,
-            models.Incident.occurred_at <= end_date
-        ).scalar() or 0
-
-        incident_rate = (incidents / active_enrollments) * per_children
-        return round(incident_rate, 2)
+        from kpi_service import KPIService
+        return KPIService.compute_incident_rate(db, kindergarten_id, start_date, end_date)
 
     @staticmethod
     def compute_absenteeism_rate(
@@ -630,13 +595,20 @@ class ManagerAnalyticsService:
             .all()
         )
 
+        # Only PRESENT/LATE count as attended (B1); ACTIVE enrollments only and
+        # DISTINCT log ids so a child with several enrollment rows isn't
+        # double-counted (fan-out).
         attendance_by_class = dict(
-            db.query(models.EnrollmentApplication.class_id, func.count(models.AttendanceLog.id))
+            db.query(
+                models.EnrollmentApplication.class_id,
+                func.count(func.distinct(models.AttendanceLog.id)),
+            )
             .select_from(models.AttendanceLog)
             .join(models.Child, models.Child.id == models.AttendanceLog.child_id)
             .join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id)
             .filter(
                 models.EnrollmentApplication.class_id.in_(class_ids),
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
                 models.AttendanceLog.date >= start_date,
                 models.AttendanceLog.date <= end_date,
                 models.AttendanceLog.status.in_(_ATTENDED_STATUSES),
@@ -645,17 +617,21 @@ class ManagerAnalyticsService:
             .all()
         )
 
+        # occurred_at is a timezone-aware DateTime; compare on its DATE so
+        # incidents on end_date (after 00:00) are not silently dropped.
         incidents_by_class = dict(
             db.query(models.Incident.class_id, func.count(models.Incident.id))
             .filter(
                 models.Incident.class_id.in_(class_ids),
-                models.Incident.occurred_at >= start_date,
-                models.Incident.occurred_at <= end_date,
+                func.date(models.Incident.occurred_at) >= start_date,
+                func.date(models.Incident.occurred_at) <= end_date,
             )
             .group_by(models.Incident.class_id)
             .all()
         )
 
+        # Calendar-aware operating days (Jordan Sun–Thu + OperatingCalendar), so
+        # the per-class attendance rate agrees with the KG-level KPI (B2).
         operating_days = ManagerAnalyticsService._count_operating_days(
             db, kindergarten_id, start_date, end_date
         )
@@ -732,8 +708,9 @@ class ManagerAnalyticsService:
             .join(models.Incident, models.Incident.class_id == models.Class.id)
             .filter(
                 SA.supervisor_id.in_(sup_ids), *_primary,
-                models.Incident.occurred_at >= start_date,
-                models.Incident.occurred_at <= end_date,
+                # occurred_at is a DateTime; compare on DATE so end_date incidents count.
+                func.date(models.Incident.occurred_at) >= start_date,
+                func.date(models.Incident.occurred_at) <= end_date,
             )
             .group_by(SA.supervisor_id)
             .all()

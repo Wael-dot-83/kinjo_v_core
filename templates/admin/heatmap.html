@@ -216,11 +216,78 @@
 .risk-filter-btn.risk-btn-critical.active { background:rgba(239,68,68,0.18); color:#ef4444; border-color:#ef4444; }
 
 /* ── RESPONSIVE ──────────────────────────────────────────────────── */
+/* Professional operations-dashboard polish */
+.heatmap-shell { margin:0.5rem 0 2rem; overflow:hidden; border:1px solid rgba(148,163,184,0.16); border-radius:0.75rem; background:#08111f; box-shadow:0 18px 45px rgba(2,8,23,0.24); }
+.geo-cc { background:linear-gradient(180deg,#0b1524 0%,#08111f 44%,#07101d 100%); }
+.cc-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:1.125rem 1.5rem; background:linear-gradient(135deg,rgba(15,23,42,0.98),rgba(11,32,45,0.96)); border-bottom:1px solid rgba(148,163,184,0.16); }
+.cc-identity { min-width:0; }
+.hkj-emblem { width:44px; height:44px; display:grid; place-items:center; flex:0 0 auto; border-radius:0.75rem; background:rgba(255,255,255,0.06); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08); }
+.cc-title { max-width:920px; font-size:clamp(1.05rem,1.7vw,1.35rem); line-height:1.25; color:#f8fafc; }
+.cc-subtitle { max-width:920px; margin-top:0.25rem; color:#a7b4c8; }
+.cc-status-strip { justify-content:flex-end; margin-top:0; min-width:min(100%,340px); }
+.status-chip { min-height:2rem; border:1px solid transparent; font-weight:600; }
+.status-chip.live { border-color:rgba(34,197,94,0.22); background:rgba(22,101,52,0.18); color:#86efac; }
+.status-chip.info { border-color:rgba(148,163,184,0.14); background:rgba(15,23,42,0.58); color:#d7dee9; }
+.status-chip.error { border-color:rgba(248,113,113,0.25); background:rgba(127,29,29,0.22); color:#fca5a5; }
+.freshness-badge { flex-basis:100%; text-align:end; color:#7f8da3; }
+.page-desc { padding:0.8rem 1.5rem; background:rgba(15,23,42,0.42); color:#b7c2d4; border-bottom:1px solid rgba(148,163,184,0.12); }
+.cc-filters { position:sticky; top:0; z-index:4; padding:0.85rem 1.5rem; background:rgba(8,17,31,0.94); border-bottom:1px solid rgba(148,163,184,0.14); box-shadow:0 8px 24px rgba(2,8,23,0.18); }
+.filter-label { color:#c6d0df; font-weight:600; }
+.cc-select,.cs-search,.rankings-search { background:#101b2b; border-color:rgba(148,163,184,0.22); color:#f8fafc; box-shadow:inset 0 1px 0 rgba(255,255,255,0.03); }
+.cc-select:focus,.cs-search:focus,.rankings-search:focus { outline:0.2rem solid rgba(56,189,248,0.22); border-color:#38bdf8; }
+.cc-btn,.sort-btn,.risk-filter-btn { border-color:rgba(148,163,184,0.22); background:#101b2b; color:#dbe4ef; box-shadow:0 1px 0 rgba(255,255,255,0.04); }
+.cc-btn:hover,.sort-btn:hover,.risk-filter-btn:hover { background:#152238; border-color:rgba(148,163,184,0.36); color:#f8fafc; }
+.cc-btn-export { border-color:rgba(45,212,191,0.28); color:#ccfbf1; }
+.cc-btn-export:hover { background:rgba(20,184,166,0.14); border-color:rgba(45,212,191,0.42); }
+.kpi-strip { display:grid; grid-template-columns:repeat(6,minmax(128px,1fr)); gap:0.75rem; padding:1rem 1.25rem; background:#0a1423; border-bottom:1px solid rgba(148,163,184,0.12); }
+.kpi-card { min-width:0; border-color:rgba(148,163,184,0.15); background:linear-gradient(180deg,rgba(15,23,42,0.92),rgba(15,23,42,0.66)); box-shadow:none; }
+.kpi-card:hover { transform:translateY(-1px); border-color:rgba(45,212,191,0.28); box-shadow:0 10px 26px rgba(2,8,23,0.2); }
+.kpi-label { color:#94a3b8; letter-spacing:0.04em; }
+.kpi-value { color:#f8fafc; font-size:1.35rem; }
+.kpi-sub { color:#7f8da3; }
+.cs-scene { margin:0; min-height:560px; border-bottom:1px solid rgba(148,163,184,0.12); background:#07101d; }
+.cs-left,.intel-panel { background:#0d1828; border-color:rgba(148,163,184,0.12); backdrop-filter:none; }
+.cs-left { width:260px; }
+.intel-panel { width:360px; padding:1.125rem; }
+.cs-left-head,.cs-risk-filter,.cs-layer-toggles { background:#0f1b2c; border-color:rgba(148,163,184,0.12); }
+.cs-gov-item { min-height:3rem; border-color:rgba(148,163,184,0.08); }
+.cs-gov-item:hover { background:#132035; }
+.cs-gov-item.selected { background:rgba(20,184,166,0.14); border-inline-start-color:#14b8a6; }
+.cs-gov-name,.rank-name,.intel-gov-name { color:#f8fafc; }
+#googleMapContainer { overflow:hidden; background:#0b1220; box-shadow:inset 0 0 0 1px rgba(148,163,184,0.1); }
+.map-loading-state { position:absolute; inset:0; display:grid; place-items:center; padding:1rem; background:radial-gradient(circle at 50% 34%,rgba(20,184,166,0.12),transparent 32%),#0b1220; color:#dbe4ef; z-index:1; }
+.map-loading-card { display:flex; align-items:center; gap:0.8rem; max-width:360px; padding:1rem 1.125rem; border:1px solid rgba(148,163,184,0.18); border-radius:0.75rem; background:rgba(15,23,42,0.86); box-shadow:0 18px 38px rgba(2,8,23,0.24); }
+.map-loading-spinner { width:2rem; height:2rem; border:3px solid rgba(148,163,184,0.22); border-top-color:#2dd4bf; border-radius:999px; animation:spin 0.8s linear infinite; flex:0 0 auto; }
+.map-loading-title { font-weight:700; color:#f8fafc; }
+.map-loading-sub { margin-top:0.1rem; font-size:0.82rem; color:#94a3b8; }
+#googleMapContainer.map-ready .map-loading-state { display:none; }
+.intel-placeholder { border:1px dashed rgba(148,163,184,0.2); border-radius:0.75rem; background:rgba(15,23,42,0.42); }
+.intel-action-box { background:rgba(20,184,166,0.1); border-color:rgba(45,212,191,0.22); }
+.risk-legend { padding:0.8rem 1.25rem; background:#0a1423; border-color:rgba(148,163,184,0.12); }
+.legend-item { padding:0.25rem 0.55rem; border:1px solid rgba(148,163,184,0.12); border-radius:999px; background:rgba(15,23,42,0.56); }
+.rankings-section { padding:1rem 1.25rem 1.5rem; background:#08111f; }
+.rankings-head { padding-top:0; }
+.rankings-title { color:#f8fafc; font-size:1rem; }
+.rankings-table-wrap { border-color:rgba(148,163,184,0.14); border-radius:0.75rem; background:#0d1828; }
+#rankingsTable th { position:sticky; top:0; z-index:1; background:#111d2f; color:#c7d2e2; }
+#rankingsTable td { border-color:rgba(148,163,184,0.08); }
+#rankingsTable tbody tr:hover { background:#122036; }
+#rankingsTable tbody tr.rank-selected { background:rgba(20,184,166,0.12); }
+#geoTooltip { border-color:rgba(148,163,184,0.22); background:rgba(8,17,31,0.98); box-shadow:0 14px 34px rgba(2,8,23,0.38); }
+.skeleton { background:linear-gradient(90deg,rgba(148,163,184,0.08),rgba(148,163,184,0.16),rgba(148,163,184,0.08)); background-size:200% 100%; animation:skeleton-shimmer 1.3s ease-in-out infinite; }
+@keyframes skeleton-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
 @media (max-width:1100px) {
-  .cs-left { width:190px; }
-  .intel-panel { width:270px; }
+  .kpi-strip { grid-template-columns:repeat(3,minmax(150px,1fr)); }
+  .cs-left { width:220px; }
+  .intel-panel { width:300px; }
 }
 @media (max-width:800px) {
+  .heatmap-shell { border-radius:0.5rem; }
+  .cc-header { flex-direction:column; }
+  .cc-status-strip { justify-content:flex-start; width:100%; }
+  .cc-filters { position:relative; top:auto; }
+  .kpi-strip { grid-template-columns:repeat(2,minmax(130px,1fr)); }
   .cs-scene { flex-direction:column; height:auto; }
   .cs-left  { width:100%; height:200px; border-inline-end:none; border-bottom:1px solid rgba(255,255,255,0.05); flex-direction:row; }
   .cs-left-body { display:flex; flex-direction:row; overflow-x:auto; overflow-y:hidden; }
@@ -233,6 +300,7 @@
 }
 @media (max-width:500px) {
   .cc-filters { gap:0.5rem; }
+  .kpi-strip { grid-template-columns:1fr; }
   #rankingsTable td:nth-child(3),
   #rankingsTable th:nth-child(3),
   #rankingsTable td:nth-child(4),
@@ -254,7 +322,7 @@
   window.GOOGLE_MAPS_API_KEY = {{ google_maps_api_key | tojson | safe }};
 </script>
 
-<div class="glass-panel border border-white/10 rounded-2xl overflow-hidden shadow-2xl relative z-10 mb-8 mt-2 p-0">
+<div class="heatmap-shell">
 <div class="geo-cc"
      dir="{{ 'ltr' if ui_lang == 'en' else 'rtl' }}"
      lang="{{ ui_lang }}"
@@ -598,7 +666,33 @@
 {% block extra_scripts %}
 {# ── Heatmap application (must load before Google Maps callback fires) ── #}
 <script defer src="/static/js/jordan_cesium_map.js?v=6" charset="utf-8"></script>
+
+{# ── Graceful degradation: if the Google Maps key is missing or unauthorized,
+     suppress Google's raw error dialog / "for development only" watermarks and
+     show a clean notice — the governorate list, rankings and KPIs in the side
+     panel still load from the API. ─────────────────────────────────────── #}
+<script>
+  window.gm_authFailure = function () {
+    if (typeof showFallback === 'function') {
+      showFallback('مفتاح خرائط Google غير مُفعّل لهذا الموقع. تُعرض بيانات المحافظات والمؤشرات في القائمة الجانبية.');
+    }
+    if (typeof fetchMapData === 'function') { try { fetchMapData(); } catch (e) {} }
+  };
+</script>
+
+{% if google_maps_api_key %}
 {# ── Google Maps JavaScript API — satellite imagery ───────────────────── #}
 <script async defer
-  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key | default('') }}&loading=async&libraries=marker&callback=_gmapsLoaded&v=weekly"></script>
+  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&loading=async&libraries=marker&callback=_gmapsLoaded&v=weekly"></script>
+{% else %}
+{# No key configured — skip Google Maps and render the data-only view. #}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof showFallback === 'function') {
+      showFallback('لم يتم ضبط مفتاح خرائط Google (GOOGLE_MAPS_API_KEY). تُعرض بيانات المحافظات والمؤشرات في القائمة الجانبية.');
+    }
+    if (typeof fetchMapData === 'function') { try { fetchMapData(); } catch (e) {} }
+  });
+</script>
+{% endif %}
 {% endblock %}
