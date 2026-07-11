@@ -763,11 +763,11 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
   {# ══════════════════════════════════════════ Brand Panel — visible on lg+
   screens only (aria-hidden: decorative, not needed by AT)
   ══════════════════════════════════════════ #}
+  {% from 'components/kinjo_logo.html' import kinjo_logo %}
   <aside class="auth-brand-panel" aria-hidden="true">
     <div class="auth-brand-logo-wrap">
-      <i class="bi bi-building"></i>
+      {{ kinjo_logo(size='login') }}
     </div>
-    <div class="auth-brand-name">KinJo</div>
     <p class="auth-brand-tagline">
       {% if ui_lang == 'en' %} The complete kindergarten management platform for
       administrators, directors, supervisors, and parents. {% else %} منصة
@@ -830,16 +830,7 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
 
       {# Mobile logo — only shown when brand panel is hidden #}
       <div class="auth-mobile-logo-row af-anim">
-        <div class="auth-mobile-logo-icon" aria-hidden="true">
-          <i class="bi bi-building"></i>
-        </div>
-        <div>
-          <div class="auth-mobile-logo-text-name">KinJo</div>
-          <div class="auth-mobile-logo-text-sub">
-            {% if ui_lang == 'en' %}Kindergarten Management{% else %}منصة إدارة
-            الحضانات{% endif %}
-          </div>
-        </div>
+        {{ kinjo_logo(size='navbar', extra_class='auth-mobile-logo-img') }}
       </div>
 
       {# Welcome heading #}

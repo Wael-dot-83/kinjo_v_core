@@ -1,0 +1,37 @@
+{#
+  Reusable KinJo logo component.
+  Usage: {% from 'components/kinjo_logo.html' import kinjo_logo %}
+         {{ kinjo_logo(size='navbar') }}
+
+  size values:
+    navbar  — top nav / admin header  (height: 36px, width: auto)
+    sidebar — sidebar header          (width: 120px, height: auto)
+    login   — login brand panel       (height: 160px, width: auto)
+#}
+{%- macro kinjo_logo(size='navbar', extra_class='') -%}
+{%- if size == 'sidebar' -%}
+<img
+  src="/static/img/kinjo-logo.png"
+  alt="شعار كينجو"
+  class="kinjo-logo kinjo-logo--sidebar {{ extra_class }}"
+  style="width:120px;height:auto;object-fit:contain;display:block"
+  loading="eager"
+/>
+{%- elif size == 'login' -%}
+<img
+  src="/static/img/kinjo-logo.png"
+  alt="شعار كينجو"
+  class="kinjo-logo kinjo-logo--login {{ extra_class }}"
+  style="width:auto;height:160px;object-fit:contain;display:block"
+  loading="eager"
+/>
+{%- else -%}{# navbar / admin header #}
+<img
+  src="/static/img/kinjo-logo.png"
+  alt="شعار كينجو"
+  class="kinjo-logo kinjo-logo--navbar {{ extra_class }}"
+  style="height:36px;width:auto;object-fit:contain;display:inline-block"
+  loading="eager"
+/>
+{%- endif -%}
+{%- endmacro -%}

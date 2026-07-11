@@ -1,10 +1,10 @@
 <!-- Top Navigation Bar -->
+{% from 'components/kinjo_logo.html' import kinjo_logo %}
 <nav class="navbar navbar-expand-lg fixed-top kinjo-navbar">
     <div class="container-fluid">
         <!-- Brand -->
-        <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-            <span class="kinjo-brand-icon" aria-hidden="true"><i class="bi bi-building"></i></span>
-            <span class="fw-bold">KinJo</span>
+        <a class="navbar-brand" href="/" aria-label="كينجو — الرئيسية">
+            {{ kinjo_logo(size='navbar') }}
         </a>
 
         {% if current_user %}
