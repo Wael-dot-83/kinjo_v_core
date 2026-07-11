@@ -266,6 +266,11 @@ class Settings(BaseSettings):
         "ACTIVE",
     ]
 
+    # Class capacity business rule (KinJo FRD): a class holds 3–10 children.
+    # Override via env if a kindergarten policy differs.
+    CLASS_MIN_CAPACITY: int = 3
+    CLASS_MAX_CAPACITY: int = 10
+
     # Message limits
     MAX_MESSAGE_RECIPIENTS: int = 10000
     DUPLICATE_MESSAGE_CHECK_MINUTES: int = 5

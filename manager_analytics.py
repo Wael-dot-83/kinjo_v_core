@@ -179,9 +179,18 @@ class ManagerAnalyticsService:
         grouping: str = "daily"  # daily, weekly, monthly
     ) -> List[Dict]:
         """
-        Compute enrollment trend over period.
-        Returns list of {date, new_enrollments, total_active, cumulative}
+        Compute enrollment trend over a period, grouped by day, ISO week, or month.
+
+        Returns a list of {date, new_enrollments, active_enrollments, cumulative_active}
+        with one entry per period bucket in [start_date, end_date] (empty buckets
+        included). Period labels:
+          - daily:   YYYY-MM-DD of the day
+          - weekly:  YYYY-MM-DD of the ISO week start (Monday) — stable/sortable
+          - monthly: YYYY-MM
         """
+        if grouping not in ("daily", "weekly", "monthly"):
+            grouping = "daily"
+
         # Get all enrollments in date range
         enrollments = db.query(
             models.EnrollmentApplication.created_at,
@@ -192,35 +201,47 @@ class ManagerAnalyticsService:
             models.EnrollmentApplication.created_at <= end_date
         ).all()
 
-        # Group by period
-        if grouping == "daily":
-            periods = {}
-            for enrollment in enrollments:
-                key = enrollment.created_at.date()
-                if key not in periods:
-                    periods[key] = {"new": 0, "active": 0}
-                periods[key]["new"] += 1
-                if enrollment.status == models.EnrollmentStatus.ACTIVE:
-                    periods[key]["active"] += 1
+        def _period_start(d: date) -> date:
+            if grouping == "weekly":
+                return d - timedelta(days=d.weekday())  # Monday of that ISO week
+            if grouping == "monthly":
+                return d.replace(day=1)
+            return d
 
-            # Fill in missing days
-            result = []
-            current = start_date
-            cumulative_active = 0
-            while current <= end_date:
-                if current in periods:
-                    cumulative_active += periods[current]["active"]
-                result.append({
-                    "date": current.isoformat(),
-                    "new_enrollments": periods.get(current, {}).get("new", 0),
-                    "active_enrollments": periods.get(current, {}).get("active", 0),
-                    "cumulative_active": cumulative_active
-                })
-                current += timedelta(days=1)
-            return result
-        else:
-            # For weekly/monthly, aggregate
-            return []
+        def _label(key: date) -> str:
+            return f"{key.year:04d}-{key.month:02d}" if grouping == "monthly" else key.isoformat()
+
+        def _next(key: date) -> date:
+            if grouping == "weekly":
+                return key + timedelta(days=7)
+            if grouping == "monthly":
+                return (key.replace(day=1) + timedelta(days=32)).replace(day=1)
+            return key + timedelta(days=1)
+
+        # Bucket the enrollments by period start.
+        periods: Dict[date, Dict[str, int]] = {}
+        for enrollment in enrollments:
+            key = _period_start(enrollment.created_at.date())
+            bucket = periods.setdefault(key, {"new": 0, "active": 0})
+            bucket["new"] += 1
+            if enrollment.status == models.EnrollmentStatus.ACTIVE:
+                bucket["active"] += 1
+
+        # Emit every period in range (including empty ones) with a running total.
+        result: List[Dict] = []
+        current = _period_start(start_date)
+        cumulative_active = 0
+        while current <= end_date:
+            bucket = periods.get(current, {"new": 0, "active": 0})
+            cumulative_active += bucket["active"]
+            result.append({
+                "date": _label(current),
+                "new_enrollments": bucket["new"],
+                "active_enrollments": bucket["active"],
+                "cumulative_active": cumulative_active,
+            })
+            current = _next(current)
+        return result
 
     @staticmethod
     def compute_attendance_rate(

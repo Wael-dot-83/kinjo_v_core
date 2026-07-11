@@ -344,6 +344,44 @@ def require_manager(current_user: models.User = Depends(get_current_user)) -> mo
     return current_user
 
 
+# ---------------------------------------------------------------------------
+# Shared class-scope helpers (single source of truth for class lookups)
+# ---------------------------------------------------------------------------
+
+def get_class_or_404(db, class_id: int, *, include_deleted: bool = False) -> "models.Class":
+    """Fetch a class by id, 404 if missing. Soft-deleted classes are hidden
+    unless include_deleted=True, so normal APIs never surface them."""
+    q = db.query(models.Class).filter(models.Class.id == class_id)
+    if not include_deleted:
+        q = q.filter(models.Class.deleted_at.is_(None))
+    cls = q.first()
+    if cls is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Class not found")
+    return cls
+
+
+def get_class_for_user_or_404(
+    db,
+    class_id: int,
+    current_user: models.User,
+    *,
+    include_deleted: bool = False,
+) -> "models.Class":
+    """Fetch a class enforcing role + kindergarten scope (IDOR guard).
+
+    Policy (consistent with ManagerScope, S2/#14):
+      - ADMIN: any class.
+      - MANAGER / SUPERVISOR: only their own kindergarten's class; a cross-tenant
+        id returns 404 (never 403) so we don't leak that it exists.
+      - Any other role (e.g. PARENT): 403.
+      - Manager/supervisor with no kindergarten: 400 (misconfigured account).
+    Soft-deleted classes are hidden (404) unless include_deleted=True.
+    """
+    cls = get_class_or_404(db, class_id, include_deleted=include_deleted)
+    ManagerScope.assert_kindergarten_access(current_user, cls.kindergarten_id)
+    return cls
+
+
 class RedirectToLogin(Exception):
     """Exception to trigger redirect to login page"""
     def __init__(self, redirect_url: str = "/login"):
