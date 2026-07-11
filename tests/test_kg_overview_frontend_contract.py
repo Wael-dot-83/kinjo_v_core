@@ -102,3 +102,31 @@ def test_alert_action_buttons_have_per_alert_accessible_names():
     js = KG_OVERVIEW_JS.read_text(encoding="utf-8")
     assert "aria-label=\"${isAr ? 'عرض' : 'View'} — ${koEscape(a.title)}" in js
     assert "aria-label=\"${isAr ? 'تجاهل' : 'Dismiss'} — ${koEscape(a.title)}" in js
+
+
+def test_no_duplicate_manage_kindergartens_button_in_template():
+    """A stray centered `btn btn-primary btn-lg` "Manage Kindergartens"
+    button was rendered in the middle of the page, duplicating the toolbar
+    quick-action of the same name. The template must not reintroduce it —
+    the single Manage-KGs action lives in the JS quick-action bar."""
+    html = KG_OVERVIEW_TEMPLATE.read_text(encoding="utf-8")
+    assert "btn btn-primary btn-lg" not in html
+    assert "Manage Kindergartens" not in html
+    assert "إدارة الحضانات" not in html
+
+
+def test_manage_kg_quick_action_links_to_management_page():
+    """The "Manage KGs / إدارة الحضانات" quick action pointed at
+    /admin/heatmap instead of the kindergarten management page."""
+    js = KG_OVERVIEW_JS.read_text(encoding="utf-8")
+    assert "/admin/heatmap" not in js
+    assert "href:'/admin/kindergartens'" in js
+
+
+def test_overview_section_header_is_not_a_duplicate_of_page_title():
+    """The JS-rendered section header repeated the page H1
+    ("نظرة عامة على الحضانات"), showing the same title twice. It must be a
+    distinct label."""
+    js = KG_OVERVIEW_JS.read_text(encoding="utf-8")
+    assert "نظرة عامة على الحضانات" not in js
+    assert "أداء الحضانات" in js
