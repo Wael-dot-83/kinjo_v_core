@@ -226,7 +226,7 @@ class TestFrontendRoutes:
         assert 'data-ui-state="loading"' in page
         assert 'id="dashboard-loading"' in page
         assert 'aria-busy="true"' in page
-        assert 'id="kpi-cards"' in page
+        assert 'id="mission-kpi-cards"' in page
         assert 'id="dashboard-content"' in page
         assert 'id="refresh-dashboard"' in page
         assert '/static/js/admin_dashboard.js' in page

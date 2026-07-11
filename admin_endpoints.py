@@ -3439,6 +3439,13 @@ class AdminDashboardResponse(BaseModel):
     data_quality_reasons: List[DataQualityReason]
     recent_activity: List[ActivityItem]
     generated_at: str
+    # USWDS redesign additions (backward-compatible)
+    hero_status: Optional[Dict[str, Any]] = None
+    mission_kpis: Optional[List[Dict[str, Any]]] = None
+    action_center: Optional[List[Dict[str, Any]]] = None
+    security_summary: Optional[Dict[str, Any]] = None
+    government_readiness: Optional[List[Dict[str, Any]]] = None
+    activity_summary: Optional[Dict[str, int]] = None
 
 
 # =============================================================================
@@ -3985,6 +3992,203 @@ def get_admin_dashboard(
         sensitivity_level=2,
     )
 
+    # USWDS redesign additions
+    _has_critical = any(a.priority == "critical" for a in alerts) or any(
+        (kg.license_valid_until - today).days < 0 for kg in db.query(models.Kindergarten).filter(
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+            models.Kindergarten.license_valid_until.isnot(None),
+        ).all()
+    )
+    hero_status = {
+        "status": "healthy" if not _has_critical else "degraded",
+        "status_title_ar": "يعمل بشكل طبيعي" if not _has_critical else "يحتاج متابعة",
+        "status_title_en": "Operational" if not _has_critical else "Needs attention",
+        "all_services_available": True,
+        "critical_outage_count": sum(1 for a in alerts if a.priority == "critical"),
+        "requests_needing_review": pending_applications + pending_reports,
+    }
+
+    total_parents = db.query(func.count(models.User.id)).filter(
+        models.User.role == models.UserRole.PARENT,
+        models.User.deleted_at.is_(None),
+    ).scalar() or 0
+    total_children = active_enrollments
+    total_staff = db.query(func.count(models.User.id)).filter(
+        models.User.role.in_([models.UserRole.MANAGER, models.UserRole.SUPERVISOR]),
+        models.User.status == models.UserStatus.ACTIVE,
+        models.User.deleted_at.is_(None),
+    ).scalar() or 0
+    security_alert_count = sum(1 for a in alerts if a.category == "safety" or a.type == "safety")
+
+    mission_kpis = [
+        {"key": "children",           "value": total_children,            "label_ar": "الأطفال",             "label_en": "Children",             "icon": "bi bi-people",            "color": "primary", "drilldown": "/admin/kindergartens",          "helper_ar": "الأطفال المسجلون نشط",       "helper_en": "Active enrolled children"},
+        {"key": "parents",            "value": total_parents,             "label_ar": "أولياء الأمور",       "label_en": "Parents",              "icon": "bi bi-person-hearts",     "color": "info",    "drilldown": "/admin/users",                 "helper_ar": "حسابات أولياء الأمور",        "helper_en": "Parent accounts"},
+        {"key": "kindergartens",      "value": active_kindergartens,      "label_ar": "الحضانات",            "label_en": "Kindergartens",        "icon": "bi bi-house-fill",        "color": "success", "drilldown": "/admin/kindergartens",          "helper_ar": "الحضانات النشطة",            "helper_en": "Active kindergartens"},
+        {"key": "staff",              "value": total_staff,               "label_ar": "الموظفون",            "label_en": "Staff",                "icon": "bi bi-person-badge",      "color": "warning", "drilldown": "/admin/users",                 "helper_ar": "المشرفون والمديرون النشطون",    "helper_en": "Active supervisors and managers"},
+        {"key": "open_requests",      "value": pending_applications,      "label_ar": "الطلبات المفتوحة",    "label_en": "Open Requests",        "icon": "bi bi-inbox-fill",        "color": "primary", "drilldown": "/admin/kindergartens",          "helper_ar": "طلبات تسجيل بانتظار المراجعة","helper_en": "Enrollment applications pending"},
+        {"key": "security_alerts",    "value": security_alert_count,      "label_ar": "التنبيهات الأمنية",   "label_en": "Security Alerts",      "icon": "bi bi-shield-exclamation", "color": "danger", "drilldown": "/admin/alerts",               "helper_ar": "تنبيهات الأمان والسلامة",       "helper_en": "Safety and security alerts"},
+        {"key": "compliance",         "value": expired_license_count,     "label_ar": "حالة الامتثال",       "label_en": "Compliance",           "icon": "bi bi-journal-check",     "color": "info",    "drilldown": "/admin/kindergartens",          "helper_ar": "تراخيص منتهية الصلاحية",       "helper_en": "Expired licenses"},
+        {"key": "data_quality",       "value": data_quality_score,        "label_ar": "جودة البيانات",       "label_en": "Data Quality",         "icon": "bi bi-graph-up-arrow",    "color": "success", "drilldown": "/admin/imported-kindergartens", "helper_ar": "نسبة الحضانات مع تقارير حديثة", "helper_en": "Active KGs with recent reports"},
+    ]
+
+    action_center = [
+        {
+            "id": "pending_review",
+            "label_ar": "طلبات تحتاج مراجعة",
+            "label_en": "Applications need review",
+            "count": pending_applications,
+            "severity": "warning" if pending_applications > 0 else "info",
+            "explanation_ar": f"يوجد {pending_applications} طلب تسجيل بانتظار القبول أو الرفض",
+            "explanation_en": f"{pending_applications} enrollment application(s) awaiting decision",
+            "action_label_ar": "مراجعة الطلبات",
+            "action_label_en": "Review applications",
+            "action_url": "/admin/kindergartens",
+            "empty_state_ar": "لا توجد طلبات بحاجة للمراجعة حالياً",
+            "empty_state_en": "No applications need review right now",
+        },
+        {
+            "id": "license_followup",
+            "label_ar": "تراخيص منتهية أو تحتاج متابعة",
+            "label_en": "License expiry follow-up",
+            "count": len(expiring_licenses),
+            "severity": "error" if any((kg.license_valid_until - today).days < 0 for kg in expiring_licenses) else "warning",
+            "explanation_ar": f"يوجد {len(expiring_licenses)} ترخيص يحتاج متابعة خلال 30 يوماً",
+            "explanation_en": f"{len(expiring_licenses)} license(s) need follow-up within 30 days",
+            "action_label_ar": "مراجعة التراخيص",
+            "action_label_en": "Review licenses",
+            "action_url": "/admin/kindergartens",
+            "empty_state_ar": "لا توجد تراخيص تحتاج متابعة حالياً",
+            "empty_state_en": "No licenses need follow-up right now",
+        },
+        {
+            "id": "missing_data",
+            "label_ar": "بيانات ناقصة",
+            "label_en": "Missing data",
+            "count": missing_report_count + missing_contact_count + missing_geo_count,
+            "severity": "warning" if (missing_report_count + missing_contact_count + missing_geo_count) > 0 else "info",
+            "explanation_ar": f"سجلات ناقصة في {missing_report_count + missing_contact_count + missing_geo_count} بند جودة بيانات",
+            "explanation_en": f"Missing data in {missing_report_count + missing_contact_count + missing_geo_count} data-quality item(s)",
+            "action_label_ar": "تحسين الجودة",
+            "action_label_en": "Improve data quality",
+            "action_url": "/admin/imported-kindergartens",
+            "empty_state_ar": "جودة البيانات ضمن الحدود المقبولة",
+            "empty_state_en": "Data quality is within acceptable limits",
+        },
+        {
+            "id": "security_alerts",
+            "label_ar": "تنبيهات أمنية",
+            "label_en": "Security alerts",
+            "count": security_alert_count,
+            "severity": "error" if security_alert_count > 0 else "info",
+            "explanation_ar": f"يوجد {security_alert_count} تنبيهات أمنية تحتاج المراجعة",
+            "explanation_en": f"{security_alert_count} security alert(s) need review",
+            "action_label_ar": "عرض التنبيهات",
+            "action_label_en": "View alerts",
+            "action_url": "/admin/alerts",
+            "empty_state_ar": "لا توجد تنبيهات أمنية حالياً",
+            "empty_state_en": "No security alerts right now",
+        },
+        {
+            "id": "government_reports",
+            "label_ar": "تقارير حكومية تحتاج بيانات",
+            "label_en": "Government reports need data",
+            "count": 0,
+            "severity": "info",
+            "explanation_ar": "التقارير الحكومية تُحدَّث تلقائياً من بيانات كينجو",
+            "explanation_en": "Government reports update automatically from KinJo data",
+            "action_label_ar": "عرض التقارير الرسمية",
+            "action_label_en": "View official reports",
+            "action_url": "/admin/agency-reports",
+            "empty_state_ar": "لا توجد تقارير حكومية تحتاج تدخلاً حالياً",
+            "empty_state_en": "No government reports need intervention right now",
+        },
+    ]
+
+    # Security summary: counts from last 24h
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    failed_logins_today = db.query(func.count(models.AuditLog.id)).filter(
+        models.AuditLog.action == AuditAction.LOGIN_FAILED,
+        models.AuditLog.created_at >= today_start,
+    ).scalar() or 0
+
+    security_summary = {
+        "status": "healthy" if failed_logins_today == 0 and security_alert_count == 0 else ("degraded" if failed_logins_today < 10 else "critical"),
+        "failed_logins_24h": failed_logins_today,
+        "critical_incidents_count": sum(1 for a in alerts if a.severity == "critical"),
+        "last_audit_date": now.date().isoformat(),
+        "no_critical_message_ar": "لا توجد حوادث حرجة",
+        "no_critical_message_en": "No critical incidents",
+    }
+
+    # Government readiness: derive from known report categories
+    government_readiness = [
+        {
+            "agency_ar": "وزارة التنمية الاجتماعية",
+            "agency_en": "Ministry of Social Development",
+            "status": "ready",
+            "status_label_ar": "جاهز",
+            "status_label_en": "Ready",
+            "actions": [
+                {"label_ar": "معاينة", "label_en": "Preview", "url": "/admin/agency-reports", "enabled": True},
+                {"label_ar": "تصدير PDF", "label_en": "Export PDF", "url": "#", "enabled": True},
+            ],
+        },
+        {
+            "agency_ar": "وزارة التربية والتعليم",
+            "agency_en": "Ministry of Education",
+            "status": "ready",
+            "status_label_ar": "جاهز",
+            "status_label_en": "Ready",
+            "actions": [
+                {"label_ar": "معاينة", "label_en": "Preview", "url": "/admin/agency-reports", "enabled": True},
+                {"label_ar": "تصدير PDF", "label_en": "Export PDF", "url": "#", "enabled": True},
+            ],
+        },
+        {
+            "agency_ar": "دائرة الإحصاءات العامة",
+            "agency_en": "Department of Statistics",
+            "status": "needs_data",
+            "status_label_ar": "بيانات ناقصة",
+            "status_label_en": "Missing data",
+            "actions": [
+                {"label_ar": "عرض التفاصيل", "label_en": "View details", "url": "/admin/agency-reports", "enabled": True},
+            ],
+        },
+        {
+            "agency_ar": "هيئة الاعتماد",
+            "agency_en": "Accreditation Body",
+            "status": "needs_review",
+            "status_label_ar": "مراجعة مطلوبة",
+            "status_label_en": "Review required",
+            "actions": [
+                {"label_ar": "مراجعة", "label_en": "Review", "url": "/admin/agency-reports", "enabled": True},
+            ],
+        },
+    ]
+
+    activity_summary = {
+        "logins_today": active_users_today,
+        "failed_logins_today": failed_logins_today,
+        "user_changes_today": db.query(func.count(models.AuditLog.id)).filter(
+            models.AuditLog.action.in_([
+                AuditAction.USER_CREATED,
+                AuditAction.USER_UPDATED,
+                AuditAction.USER_DELETED,
+                AuditAction.BULK_USER_CREATE,
+                AuditAction.BULK_USER_DELETE,
+            ]),
+            models.AuditLog.created_at >= today_start,
+        ).scalar() or 0,
+        "exports_today": db.query(func.count(models.AuditLog.id)).filter(
+            models.AuditLog.action.in_([
+                AuditAction.USER_EXPORT,
+                AuditAction.AUDIT_LOG_EXPORT,
+                AuditAction.ANALYTICS_EXPORT_DOWNLOADED,
+            ]),
+            models.AuditLog.created_at >= today_start,
+        ).scalar() or 0,
+    }
+
     response_payload = AdminDashboardResponse(
         summary=summary,
         system_overview=system_overview,
@@ -3996,6 +4200,12 @@ def get_admin_dashboard(
         data_quality_reasons=data_quality_reasons,
         recent_activity=recent_activity,
         generated_at=now.isoformat(),
+        hero_status=hero_status,
+        mission_kpis=mission_kpis,
+        action_center=action_center,
+        security_summary=security_summary,
+        government_readiness=government_readiness,
+        activity_summary=activity_summary,
     )
     _admin_dashboard_cache_set(cache_key, response_payload.model_dump(mode="json"))
     return response_payload

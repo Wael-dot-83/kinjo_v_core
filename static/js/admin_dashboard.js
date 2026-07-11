@@ -1,6 +1,7 @@
 /**
- * Admin Dashboard — KinJo v2.7
- * Handles KPI rendering, charts, activity feed, and alerts.
+ * Admin Dashboard — KinJo v2.8
+ * Handles KPI rendering, charts, activity feed, alerts, mission KPIs,
+ * action center, security center, government readiness, and data quality.
  * Depends on: chart_utils.js (safeChartData), admin_i18n.js (window.AdminI18n)
  * window.KINJO_LANG must be set before this script executes (injected by template).
  */
@@ -248,37 +249,39 @@ class AdminDashboard {
 
   renderDashboard(data) {
     const normalized = this.normalizePayload(data || {});
-    this.renderKPICards(normalized.kpis, normalized.kpi_trends, normalized.data_quality_reasons);
+    this.renderHeroStatus(normalized.hero_status);
+    this.renderMissionKPIs(normalized.mission_kpis, normalized.kpi_trends, normalized.data_quality_reasons);
+    this.renderActionCenter(normalized.action_center);
     this.renderCharts(normalized.charts);
-    // Skip when an ActivityFilterBar owns #activity-feed (admin_activity_filters.js):
-    // both scripts render into the same container on admin_dashboard.html, and
-    // this unfiltered/unpaginated top-10 payload used to win the race on every
-    // load AND on every 5-minute auto-refresh, silently discarding any filter
-    // or page the user had applied while the pagination footer below it (which
-    // only ActivityFilterBar updates) kept claiming the filtered view was
-    // still active. ActivityFilterBar.load() is this container's sole owner
-    // whenever it's present; renderActivityFeed remains here as the shared
-    // rendering primitive it calls into (window.adminDashboard.renderActivityFeed).
     if (!document.getElementById("activity-filter-bar")) {
       this.renderActivityFeed(normalized.recent_activity);
     }
+    this.renderActivitySummary(normalized.activity_summary);
     this.renderAlerts(normalized.alerts);
+    this.renderSecurityCenter(normalized.security_summary);
+    this.renderGovernmentReadiness(normalized.government_readiness);
+    this.renderDataQualityProgress(normalized.data_quality_reasons);
     // Translate any data-i18n elements injected dynamically by this script
     window.AdminI18n?.translatePage?.();
   }
 
   /**
    * Map API response shape to internal normalized form.
-   * The API returns { kpis, summary, system_overview, charts, alerts, recent_activity }.
+   * The API returns { kpis, summary, system_overview, charts, alerts, recent_activity, ... }.
    */
   normalizePayload(data) {
     const alerts = Array.isArray(data.alerts) ? data.alerts : [];
     const lang   = window.KINJO_LANG === "en" ? "en" : "ar";
 
-    // kpis is now a flat dict provided directly by the API
     const kpis = data.kpis || {};
     const kpiTrends = data.kpi_trends || {};
     const dataQualityReasons = Array.isArray(data.data_quality_reasons) ? data.data_quality_reasons : [];
+    const heroStatus = data.hero_status || null;
+    const missionKpis = Array.isArray(data.mission_kpis) ? data.mission_kpis : [];
+    const actionCenter = Array.isArray(data.action_center) ? data.action_center : [];
+    const securitySummary = data.security_summary || null;
+    const governmentReadiness = Array.isArray(data.government_readiness) ? data.government_readiness : [];
+    const activitySummary = data.activity_summary || null;
 
     const chartPayload      = data.charts || {};
     const userActivityChart = {
@@ -307,6 +310,12 @@ class AdminDashboard {
       charts: { user_activity: userActivityChart, data_submissions: submissionChart },
       recent_activity: recentActivity,
       alerts,
+      hero_status: heroStatus,
+      mission_kpis: missionKpis,
+      action_center: actionCenter,
+      security_summary: securitySummary,
+      government_readiness: governmentReadiness,
+      activity_summary: activitySummary,
     };
   }
 
@@ -878,6 +887,335 @@ class AdminDashboard {
       info:     "bi bi-info-circle-fill",
       success:  "bi bi-check-circle-fill",
     }[severity] || "bi bi-info-circle-fill";
+  }
+
+  // ── Hero Status ─────────────────────────────────────────────────────────────
+
+  renderHeroStatus(heroStatus) {
+    const container = document.getElementById("hero-status");
+    if (!container) return;
+    const card = container.querySelector(".admin-hero-card");
+    if (!card) return;
+    if (!heroStatus) {
+      card.style.display = "none";
+      return;
+    }
+    card.style.display = "";
+    card.dataset.state = heroStatus.status || "healthy";
+    const titleEl = card.querySelector(".admin-hero-subtitle");
+    if (titleEl) {
+      const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+      titleEl.textContent = lang === "en" ? (heroStatus.status_title_en || "Operational") : (heroStatus.status_title_ar || "يعمل بشكل طNormal");
+    }
+    const reviewLi = document.getElementById("hero-review-count");
+    if (reviewLi && heroStatus.requests_needing_review !== undefined) {
+      const span = reviewLi.querySelector("span");
+      if (span) {
+        const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+        span.textContent = this.t(
+          "hero.requests_needing_review",
+          lang === "en" ? `${heroStatus.requests_needing_review} requests need review` : `${heroStatus.requests_needing_review} طلب بحاجة للمراجعة`,
+          { count: String(heroStatus.requests_needing_review) }
+        );
+      }
+    }
+  }
+
+  // ── Mission KPIs ────────────────────────────────────────────────────────────
+
+  renderMissionKPIs(missionKpis, kpiTrends, dataQualityReasons) {
+    const container = document.getElementById("mission-kpi-cards");
+    if (!container) return;
+    container.innerHTML = "";
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    (Array.isArray(missionKpis) ? missionKpis : []).forEach((kpi) => {
+      const card = document.createElement("li");
+      card.className = "admin-kpi-card admin-kpi-card--mission";
+
+      const iconWrap = document.createElement("div");
+      iconWrap.className = `admin-kpi-card-icon admin-kpi-card-icon--${kpi.color || "primary"}`;
+      const icon = document.createElement("i");
+      icon.className = kpi.icon || "bi bi-circle";
+      icon.setAttribute("aria-hidden", "true");
+      iconWrap.appendChild(icon);
+
+      const content = document.createElement("div");
+      content.className = "admin-kpi-card-content";
+
+      const value = document.createElement("div");
+      value.className = "admin-kpi-card-value";
+      const num = Number(kpi.value);
+      value.textContent = Number.isFinite(num) ? new Intl.NumberFormat(lang === "en" ? "en-US" : "ar-JO").format(num) : "—";
+      content.appendChild(value);
+
+      const title = document.createElement("h3");
+      title.className = "admin-kpi-card-title";
+      title.textContent = lang === "en" ? (kpi.label_en || kpi.key) : (kpi.label_ar || kpi.key);
+      content.appendChild(title);
+
+      if (kpi.helper_ar || kpi.helper_en) {
+        const helper = document.createElement("p");
+        helper.className = "admin-kpi-card-helper";
+        helper.textContent = lang === "en" ? (kpi.helper_en || "") : (kpi.helper_ar || "");
+        content.appendChild(helper);
+      }
+
+      if (kpi.drilldown) {
+        const link = document.createElement("a");
+        link.className = "admin-kpi-card-drilldown";
+        link.href = kpi.drilldown;
+        const label = document.createElement("span");
+        label.textContent = this.t("dashboard.view_details", lang === "en" ? "View details" : "عرض التفاصيل");
+        const chevron = document.createElement("i");
+        chevron.className = "bi bi-chevron-left icon-directional";
+        chevron.setAttribute("aria-hidden", "true");
+        link.appendChild(label);
+        link.appendChild(chevron);
+        content.appendChild(link);
+      }
+
+      card.appendChild(iconWrap);
+      card.appendChild(content);
+      container.appendChild(card);
+    });
+  }
+
+  // ── Action Center ───────────────────────────────────────────────────────────
+
+  renderActionCenter(actionCenter) {
+    const container = document.getElementById("action-center");
+    if (!container) return;
+    container.innerHTML = "";
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const items = Array.isArray(actionCenter) ? actionCenter : [];
+    if (items.length === 0) {
+      container.appendChild(this.createEmptyState(
+        "action_center.no_actions", "No actions required",
+        "action_center.no_actions_hint", "All caught up — nice work",
+        "bi-check2-circle"
+      ));
+      return;
+    }
+    items.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = `admin-action-card admin-action-card--${item.severity || "info"}`;
+
+      const header = document.createElement("div");
+      header.className = "admin-action-card-header";
+
+      const icon = document.createElement("i");
+      icon.className = item.severity === "error" ? "bi bi-exclamation-triangle-fill" :
+                       item.severity === "warning" ? "bi bi-exclamation-circle-fill" :
+                       "bi bi-info-circle-fill";
+      icon.setAttribute("aria-hidden", "true");
+      header.appendChild(icon);
+
+      const title = document.createElement("strong");
+      title.textContent = lang === "en" ? (item.label_en || item.label_ar || "") : (item.label_ar || item.label_en || "");
+      header.appendChild(title);
+
+      card.appendChild(header);
+
+      const count = document.createElement("div");
+      count.className = "admin-action-card-count";
+      count.textContent = String(item.count ?? 0);
+      card.appendChild(count);
+
+      const explanation = document.createElement("p");
+      explanation.className = "admin-action-card-explanation";
+      explanation.textContent = lang === "en" ? (item.explanation_en || item.explanation_ar || "") : (item.explanation_ar || item.explanation_en || "");
+      card.appendChild(explanation);
+
+      const actions = document.createElement("div");
+      actions.className = "admin-action-card-actions";
+      if (item.action_url) {
+        const link = document.createElement("a");
+        link.className = "admin-btn admin-btn-sm admin-btn-primary";
+        link.href = item.action_url;
+        link.textContent = lang === "en" ? (item.action_label_en || item.action_label_ar || "View") : (item.action_label_ar || item.action_label_en || "عرض");
+        actions.appendChild(link);
+      }
+      if (item.empty_state_ar || item.empty_state_en) {
+        const span = document.createElement("span");
+        span.className = "admin-action-card-empty";
+        span.textContent = (item.count === 0) ? (lang === "en" ? (item.empty_state_en || "") : (item.empty_state_ar || "")) : "";
+        actions.appendChild(span);
+      }
+      card.appendChild(actions);
+      container.appendChild(card);
+    });
+  }
+
+  // ── Security Center ─────────────────────────────────────────────────────────
+
+  renderSecurityCenter(securitySummary) {
+    const container = document.getElementById("security-summary");
+    if (!container) return;
+    container.innerHTML = "";
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    if (!securitySummary) {
+      container.appendChild(this.createEmptyState(
+        "security.no_data", "No security data available",
+        "security.no_data_hint", "Security metrics will appear here",
+        "bi-shield-slash"
+      ));
+      return;
+    }
+    const isHealthy = securitySummary.status === "healthy";
+    const statusClass = isHealthy ? "security-status--healthy" : (securitySummary.status === "degraded" ? "security-status--degraded" : "security-status--critical");
+    const statusText = isHealthy
+      ? (lang === "en" ? "No critical incidents" : "لا توجد حوادث حرجة")
+      : (lang === "en" ? "Needs attention" : "يحتاج متابعة");
+
+    const items = [
+      { icon: "bi bi-shield-check", label_ar: "حالة الأمان", label_en: "Security status", value: statusText, cls: statusClass },
+      { icon: "bi bi-person-x", label_ar: "محاولات دخول فاشلة", label_en: "Failed logins (24h)", value: String(securitySummary.failed_logins_24h ?? 0) },
+      { icon: "bi bi-exclamation-triangle", label_ar: "حوادث حرجة", label_en: "Critical incidents", value: String(securitySummary.critical_incidents_count ?? 0) },
+      { icon: "bi bi-calendar-check", label_ar: "آخر فحص", label_en: "Last audit", value: securitySummary.last_audit_date || "—" },
+    ];
+
+    items.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "admin-security-row";
+
+      const iconWrap = document.createElement("div");
+      iconWrap.className = "admin-security-icon";
+      const iconEl = document.createElement("i");
+      iconEl.className = item.icon;
+      iconEl.setAttribute("aria-hidden", "true");
+      iconWrap.appendChild(iconEl);
+
+      const label = document.createElement("span");
+      label.className = "admin-security-label";
+      label.textContent = lang === "en" ? item.label_en : item.label_ar;
+
+      const value = document.createElement("span");
+      value.className = `admin-security-value${item.cls ? ` ${item.cls}` : ""}`;
+      value.textContent = item.value;
+
+      row.appendChild(iconWrap);
+      row.appendChild(label);
+      row.appendChild(value);
+      container.appendChild(row);
+    });
+  }
+
+  // ── Government Readiness ────────────────────────────────────────────────────
+
+  renderGovernmentReadiness(governmentReadiness) {
+    const container = document.getElementById("government-readiness");
+    if (!container) return;
+    container.innerHTML = "";
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const items = Array.isArray(governmentReadiness) ? governmentReadiness : [];
+    if (items.length === 0) {
+      container.appendChild(this.createEmptyState(
+        "gov.no_data", "No government report data",
+        "gov.no_data_hint", "Report readiness will appear here",
+        "bi-building"
+      ));
+      return;
+    }
+    items.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "admin-gov-row";
+
+      const agency = document.createElement("div");
+      agency.className = "admin-gov-agency";
+      agency.textContent = lang === "en" ? (item.agency_en || item.agency_ar || "") : (item.agency_ar || item.agency_en || "");
+
+      const status = document.createElement("div");
+      status.className = `admin-gov-status admin-gov-status--${item.status || "info"}`;
+      status.textContent = lang === "en" ? (item.status_label_en || item.status_label_ar || "") : (item.status_label_ar || item.status_label_en || "");
+
+      const actions = document.createElement("div");
+      actions.className = "admin-gov-actions";
+      (Array.isArray(item.actions) ? item.actions : []).forEach((act) => {
+        const link = document.createElement("a");
+        link.className = "admin-btn admin-btn-sm admin-btn-outline-secondary";
+        link.href = act.url || "#";
+        if (!act.enabled) {
+          link.classList.add("disabled");
+          link.setAttribute("aria-disabled", "true");
+          link.setAttribute("tabindex", "-1");
+        }
+        link.textContent = lang === "en" ? (act.label_en || act.label_ar || "") : (act.label_ar || act.label_en || "");
+        actions.appendChild(link);
+      });
+
+      row.appendChild(agency);
+      row.appendChild(status);
+      row.appendChild(actions);
+      container.appendChild(row);
+    });
+  }
+
+  // ── Data Quality Progress ───────────────────────────────────────────────────
+
+  renderDataQualityProgress(dataQualityReasons) {
+    const container = document.getElementById("data-quality-progress");
+    if (!container) return;
+    container.innerHTML = "";
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+
+    const score = this._dqScoreFromReasons(dataQualityReasons);
+    const clamped = Math.max(0, Math.min(100, score));
+    const bar = document.createElement("div");
+    bar.className = "admin-dq-bar-track";
+    const fill = document.createElement("div");
+    fill.className = "admin-dq-bar-fill";
+    fill.style.width = `${clamped}%`;
+    fill.textContent = `${clamped}%`;
+    bar.appendChild(fill);
+
+    const scoreText = document.createElement("p");
+    scoreText.className = "admin-dq-score";
+    scoreText.textContent = this.t("data_quality.score", `${clamped}%`, { pct: String(clamped) });
+    bar.appendChild(scoreText);
+
+    const reasonsWrap = document.createElement("div");
+    reasonsWrap.className = "admin-dq-reasons";
+    const reasons = Array.isArray(dataQualityReasons) ? dataQualityReasons : [];
+    if (reasons.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "admin-dq-reasons-empty";
+      empty.textContent = this.t("data_quality.all_complete", lang === "en" ? "All records complete" : "جميع السجلات مكتملة");
+      reasonsWrap.appendChild(empty);
+    } else {
+      const ul = document.createElement("ul");
+      reasons.forEach((r) => {
+        const li = document.createElement("li");
+        li.setAttribute("dir", "auto");
+        li.textContent = lang === "en" ? (r.label_en || r.label_ar || "") : (r.label_ar || r.label_en || "");
+        ul.appendChild(li);
+      });
+      reasonsWrap.appendChild(ul);
+    }
+
+    container.appendChild(bar);
+    container.appendChild(reasonsWrap);
+  }
+
+  _dqScoreFromReasons(dataQualityReasons) {
+    const reasons = Array.isArray(dataQualityReasons) ? dataQualityReasons : [];
+    if (reasons.length === 0) return 100;
+    const issueCount = reasons.reduce((acc, r) => acc + (Number(r.count) || 0), 0);
+    const score = 100 - Math.min(100, issueCount * 5);
+    return Math.max(0, score);
+  }
+
+  // ── Activity Summary ────────────────────────────────────────────────────────
+
+  renderActivitySummary(activitySummary) {
+    if (!activitySummary) return;
+    const setText = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = new Intl.NumberFormat("ar-JO").format(val);
+    };
+    setText("act-sum-logins", activitySummary.logins_today || 0);
+    setText("act-sum-failed", activitySummary.failed_logins_today || 0);
+    setText("act-sum-changes", activitySummary.user_changes_today || 0);
+    setText("act-sum-exports", activitySummary.exports_today || 0);
   }
 
   // ── Auto Refresh ──────────────────────────────────────────────────────────

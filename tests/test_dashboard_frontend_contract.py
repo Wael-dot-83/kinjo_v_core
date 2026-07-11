@@ -267,9 +267,10 @@ def test_dashboard_card_collections_are_enumerable_lists_with_real_headings():
     a <ul> with each card as an <li> so screen readers can enumerate the
     collection, and each card needs a real heading in logical outline order
     (not a plain <div> standing in for one). Covers both card collections on
-    /admin/dashboard: the 7 KPI cards and the 4 Quick Action cards."""
+    /admin/dashboard: the Mission KPI cards and the 4+ Quick Action cards."""
     template = ADMIN_DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
-    assert re.search(r'<ul\s+class="admin-dashboard-cards"\s+id="kpi-cards"[^>]*role="list"', template)
+    assert re.search(r'<ul\s+class="[^"]*admin-mission-kpi-grid[^"]*"\s+id="mission-kpi-cards"[^>]*role="list"', template), \
+        "mission KPI cards must be an enumerable list"
     assert re.search(r'<ul\s+class="admin-quick-actions"\s+role="list"', template)
     # Each quick-action <a> must be wrapped in its own <li>
     assert template.count("<li><a") >= 4
