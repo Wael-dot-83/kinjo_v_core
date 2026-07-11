@@ -35,7 +35,7 @@ test.describe('Admin Agency Reports — Custom Reports', () => {
     expect(await page.locator('.custom-kpi-card').count()).toBeGreaterThan(0);
     await expect(page.locator('.custom-table')).toBeVisible();
     await expect(page.locator('.custom-dq')).toBeVisible();
-    await expect(page.locator('.custom-export-bar button')).toHaveCount(2);
+    await expect(page.locator('.custom-export-bar button')).toHaveCount(1); // CSV only (Print removed per spec)
     await expect(page.locator('.custom-report-state--loading')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
