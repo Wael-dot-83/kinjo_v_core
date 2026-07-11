@@ -3,7 +3,7 @@
 {% block title %}{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.0" />
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=2.0" />
 {% endblock %}
 
 {% block content %}
@@ -24,10 +24,36 @@
     </div>
   </header>
 
+  <!-- Guidance Panel -->
+  <aside class="agency-guidance-panel" role="note" aria-labelledby="guidance-title">
+    <div class="agency-guidance-icon" aria-hidden="true"><i class="bi bi-info-circle-fill"></i></div>
+    <div class="agency-guidance-body">
+      <h2 id="guidance-title" class="agency-guidance-title">
+        {% if ui_lang == 'en' %}How to Use Official Agency Reports{% else %}دليل استخدام تقارير الجهات الرسمية{% endif %}
+      </h2>
+      <p class="agency-guidance-text">
+        {% if ui_lang == 'en' %}
+          Select an official agency to view available aggregated reports. All reports display statistical and aggregated data only — no personal or sensitive data is ever exposed. Use filters to set the time period and geographic scope, then export results as CSV or chart as needed.
+        {% else %}
+          اختر الجهة الرسمية لعرض التقارير التجميعية المتاحة. جميع التقارير تعرض بيانات إحصائية وتجميعية فقط، ولا تعرض أي بيانات شخصية أو حساسة. استخدم الفلاتر لتحديد الفترة الزمنية والنطاق الجغرافي، ثم صدّر النتائج بصيغة CSV أو الرسم البياني عند الحاجة.
+        {% endif %}
+      </p>
+    </div>
+  </aside>
+
+  <!-- Privacy Alert -->
   <div class="agency-alert" role="note">
-    {% if ui_lang == 'en' %}Reports are aggregated only. Sensitive personal fields are excluded from the API and exports.{% else %}هذه التقارير تجميعية فقط. يتم استبعاد الحقول الشخصية والحساسة من واجهات API والتصدير.{% endif %}
+    <i class="bi bi-shield-lock-fill me-2" aria-hidden="true"></i>
+    <strong>{% if ui_lang == 'en' %}Privacy protected:{% else %}بيانات تجميعية فقط:{% endif %}</strong>
+    {% if ui_lang == 'en' %}Reports are aggregated only. Sensitive personal fields are excluded from the API and all exports.{% else %}جميع التقارير تجميعية وإحصائية. لا تُعرض أي بيانات شخصية أو حساسة في واجهات API أو التصدير.{% endif %}
   </div>
 
+  <!-- Summary Widgets -->
+  <div id="agency-summary-widgets" class="agency-summary-widgets" aria-live="polite" aria-label="{% if ui_lang == 'en' %}Summary statistics{% else %}ملخص إحصائيات{% endif %}">
+    <!-- Populated by JS from catalog API -->
+  </div>
+
+  <!-- Agency Cards -->
   <div id="agency-reports-root" role="status" aria-live="polite">
     {% if ui_lang == 'en' %}Loading agencies...{% else %}جارٍ تحميل الجهات الرسمية...{% endif %}
   </div>
@@ -40,7 +66,7 @@
         <span class="agency-section-subtitle">{% if ui_lang == 'en' %}Flexible aggregated decision-support reports{% else %}تقارير تجميعية مرنة لدعم القرار{% endif %}</span>
       </h2>
       <p>
-        {% if ui_lang == 'en' %}Build a flexible, aggregated report for an official agency by choosing the level, period, geography and indicators. Aggregated data only — no personal data.{% else %}ابنِ تقريرًا تجميعيًا مرنًا لجهة رسمية باختيار المستوى والفترة والنطاق الجغرافي والمؤشرات. بيانات تجميعية فقط دون أي بيانات شخصية.{% endif %}
+        {% if ui_lang == 'en' %}Build a flexible, aggregated report for an official agency by choosing the scope, period, geography and indicators. Aggregated data only — no personal data.{% else %}ابنِ تقريرًا تجميعيًا مرنًا لجهة رسمية باختيار النطاق الجغرافي وفترة تجميع البيانات والمؤشرات. بيانات تجميعية فقط دون أي بيانات شخصية.{% endif %}
       </p>
     </header>
 
@@ -63,10 +89,16 @@
     <div id="custom-report-result" class="custom-report-result" role="region" aria-live="polite"
          aria-label="{% if ui_lang == 'en' %}Custom report result{% else %}نتيجة التقرير المخصص{% endif %}"></div>
   </section>
+
+  <!-- Footer Privacy Note -->
+  <footer class="agency-footer-privacy" role="contentinfo">
+    <i class="bi bi-lock-fill" aria-hidden="true"></i>
+    {% if ui_lang == 'en' %}This page displays statistical and aggregated data only to support decision-making. No personal or sensitive data is displayed.{% else %}تعرض هذه الصفحة بيانات إحصائية وتجميعية فقط لدعم القرار، ولا تعرض أي بيانات شخصية أو حساسة.{% endif %}
+  </footer>
 </section>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/admin_agency_reports.js?v=1.0"></script>
-<script src="/static/js/admin_agency_reports_custom.js?v=1.0"></script>
+<script src="/static/js/admin_agency_reports.js?v=2.0"></script>
+<script src="/static/js/admin_agency_reports_custom.js?v=2.0"></script>
 {% endblock %}

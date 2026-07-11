@@ -3,7 +3,7 @@
 {% block title %}{% if ui_lang == 'en' %}Official Report{% else %}تقرير رسمي{% endif %}{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.0" />
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=2.0" />
 {% endblock %}
 
 {% block content %}
@@ -13,38 +13,119 @@
     <span aria-hidden="true">/</span>
     <a href="/admin/agency-reports">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</a>
     <span aria-hidden="true">/</span>
-    <a href="/admin/agency-reports/{{ agency_code }}">{{ agency_code }}</a>
+    <a href="/admin/agency-reports/{{ agency_code }}" id="breadcrumb-agency-name">{{ agency_code }}</a>
     <span aria-hidden="true">/</span>
-    <span aria-current="page">{{ report_code }}</span>
+    <span aria-current="page" id="breadcrumb-report-name">{{ report_code }}</span>
   </nav>
+
   <header class="agency-page-header">
-    <h1 id="agency-report-title">{% if ui_lang == 'en' %}Official Report{% else %}تقرير رسمي{% endif %}</h1>
-    <p id="agency-report-description"></p>
+    <div class="agency-logo-lockup">
+      <div id="report-agency-logo"></div>
+      <div>
+        <h1 id="agency-report-title">{% if ui_lang == 'en' %}Official Report{% else %}تقرير رسمي{% endif %}</h1>
+        <p id="agency-report-description"></p>
+      </div>
+    </div>
+    <div class="agency-privacy-badge" aria-label="{% if ui_lang == 'en' %}Aggregated data only{% else %}بيانات تجميعية فقط{% endif %}">
+      <i class="bi bi-shield-check" aria-hidden="true"></i>
+      {% if ui_lang == 'en' %}Aggregated data only — no personal data{% else %}بيانات تجميعية فقط - لا توجد بيانات شخصية{% endif %}
+    </div>
   </header>
+
+  <!-- Help Panel -->
+  <details class="agency-help-panel">
+    <summary class="agency-help-summary">
+      <i class="bi bi-question-circle" aria-hidden="true"></i>
+      {% if ui_lang == 'en' %}How to Use This Report{% else %}كيفية استخدام التقرير{% endif %}
+    </summary>
+    <div class="agency-help-body">
+      <ol>
+        <li>{% if ui_lang == 'en' %}Select the data aggregation period.{% else %}اختر فترة تجميع البيانات.{% endif %}</li>
+        <li>{% if ui_lang == 'en' %}Select a governorate when needed.{% else %}حدد المحافظة عند الحاجة.{% endif %}</li>
+        <li>{% if ui_lang == 'en' %}Then select a district and area if available.{% else %}اختر قصبة / لواء ثم المنطقة إذا كانت متاحة.{% endif %}</li>
+        <li>{% if ui_lang == 'en' %}Click Apply Filters.{% else %}اضغط تطبيق الفلاتر.{% endif %}</li>
+        <li>{% if ui_lang == 'en' %}Review the summary and chart.{% else %}راجع الملخص والرسم البياني.{% endif %}</li>
+        <li>{% if ui_lang == 'en' %}Use CSV export or chart export as needed.{% else %}استخدم تصدير CSV أو تصدير الرسم البياني عند الحاجة.{% endif %}</li>
+      </ol>
+    </div>
+  </details>
+
+  <!-- Filters -->
   <form id="agency-report-filters" class="agency-filter-panel" aria-label="{% if ui_lang == 'en' %}Report filters{% else %}فلاتر التقرير{% endif %}">
-    <div>
+    <div class="agency-filter-field">
       <label for="filter-governorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-      <input id="filter-governorate" name="governorate" type="text" />
+      <select id="filter-governorate" name="governorate">
+        <option value="">{% if ui_lang == 'en' %}All governorates{% else %}كل المحافظات{% endif %}</option>
+        <option value="العاصمة">{% if ui_lang == 'en' %}العاصمة (Amman){% else %}العاصمة{% endif %}</option>
+        <option value="إربد">{% if ui_lang == 'en' %}إربد (Irbid){% else %}إربد{% endif %}</option>
+        <option value="الزرقاء">{% if ui_lang == 'en' %}الزرقاء (Zarqa){% else %}الزرقاء{% endif %}</option>
+        <option value="البلقاء">{% if ui_lang == 'en' %}البلقاء (Balqa){% else %}البلقاء{% endif %}</option>
+        <option value="مادبا">{% if ui_lang == 'en' %}مادبا (Madaba){% else %}مادبا{% endif %}</option>
+        <option value="الكرك">{% if ui_lang == 'en' %}الكرك (Karak){% else %}الكرك{% endif %}</option>
+        <option value="الطفيلة">{% if ui_lang == 'en' %}الطفيلة (Tafilah){% else %}الطفيلة{% endif %}</option>
+        <option value="معان">{% if ui_lang == 'en' %}معان (Ma'an){% else %}معان{% endif %}</option>
+        <option value="العقبة">{% if ui_lang == 'en' %}العقبة (Aqaba){% else %}العقبة{% endif %}</option>
+        <option value="جرش">{% if ui_lang == 'en' %}جرش (Jerash){% else %}جرش{% endif %}</option>
+        <option value="عجلون">{% if ui_lang == 'en' %}عجلون (Ajloun){% else %}عجلون{% endif %}</option>
+        <option value="المفرق">{% if ui_lang == 'en' %}المفرق (Mafraq){% else %}المفرق{% endif %}</option>
+      </select>
     </div>
-    <div>
-      <label for="filter-city">{% if ui_lang == 'en' %}City/District{% else %}المدينة / اللواء{% endif %}</label>
-      <input id="filter-city" name="city" type="text" />
+    <div class="agency-filter-field">
+      <label for="filter-district">{% if ui_lang == 'en' %}District / Sub-district{% else %}قصبة / لواء{% endif %}</label>
+      <select id="filter-district" name="district" disabled>
+        <option value="">{% if ui_lang == 'en' %}Select governorate first{% else %}اختر المحافظة أولاً{% endif %}</option>
+      </select>
     </div>
-    <div>
+    <div class="agency-filter-field">
+      <label for="filter-area">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</label>
+      <select id="filter-area" name="area" disabled>
+        <option value="">{% if ui_lang == 'en' %}Select district first{% else %}اختر قصبة / لواء أولاً{% endif %}</option>
+      </select>
+    </div>
+    <div class="agency-filter-field">
+      <label for="filter-gender">{% if ui_lang == 'en' %}Gender{% else %}الجنس{% endif %}</label>
+      <select id="filter-gender" name="gender">
+        <option value="">{% if ui_lang == 'en' %}All genders{% else %}كل الأجناس{% endif %}</option>
+        <option value="male">{% if ui_lang == 'en' %}Male{% else %}ذكر{% endif %}</option>
+        <option value="female">{% if ui_lang == 'en' %}Female{% else %}أنثى{% endif %}</option>
+      </select>
+    </div>
+    <div class="agency-filter-field">
       <label for="filter-aggregation-level">{% if ui_lang == 'en' %}Aggregation level{% else %}مستوى التجميع{% endif %}</label>
       <select id="filter-aggregation-level" name="aggregation_level">
         <option value="governorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</option>
-        <option value="city">{% if ui_lang == 'en' %}City/District{% else %}المدينة / اللواء{% endif %}</option>
+        <option value="district">{% if ui_lang == 'en' %}District{% else %}قصبة / لواء{% endif %}</option>
+        <option value="area">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</option>
       </select>
     </div>
-    <button type="submit" class="admin-btn admin-btn-primary">{% if ui_lang == 'en' %}Apply filters{% else %}تطبيق الفلاتر{% endif %}</button>
+    <div class="agency-filter-actions">
+      <button type="submit" class="admin-btn admin-btn-primary">
+        <i class="bi bi-funnel" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}
+      </button>
+      <button type="button" class="admin-btn admin-btn-secondary" id="filter-reset-btn">
+        {% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
+      </button>
+    </div>
   </form>
+
+  <!-- Report Result -->
   <div id="agency-report-root" role="status" aria-live="polite">
     {% if ui_lang == 'en' %}Loading report...{% else %}جارٍ تحميل التقرير...{% endif %}
   </div>
+
+  <!-- Footer Privacy Note -->
+  <footer class="agency-footer-privacy" role="contentinfo">
+    <i class="bi bi-lock-fill" aria-hidden="true"></i>
+    {% if ui_lang == 'en' %}This page displays statistical and aggregated data only to support decision-making. No personal or sensitive data is displayed.{% else %}تعرض هذه الصفحة بيانات إحصائية وتجميعية فقط لدعم القرار، ولا تعرض أي بيانات شخصية أو حساسة.{% endif %}
+  </footer>
 </section>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/admin_agency_reports.js?v=1.0"></script>
+<script>
+window.JORDAN_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";
+</script>
+<script src="/static/js/admin_agency_reports.js?v=2.0"></script>
+<script src="/static/js/agency_report_location_filter.js?v=1.0"></script>
 {% endblock %}
