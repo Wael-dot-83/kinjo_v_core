@@ -46,3 +46,9 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_national_immunization_schedule_id"), table_name="national_immunization_schedule")
     op.drop_index("ix_immunization_due_age_days", table_name="national_immunization_schedule")
     op.drop_table("national_immunization_schedule")
+    # PostgreSQL keeps the ENUM type after the table is dropped; without this an
+    # upgrade->downgrade->upgrade cycle (the CI reversibility smoke test) fails
+    # with 'type "immunizationageunit" already exists'. SQLite has no such type.
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("DROP TYPE IF EXISTS immunizationageunit")
