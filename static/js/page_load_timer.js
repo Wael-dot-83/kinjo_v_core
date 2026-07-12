@@ -134,7 +134,9 @@
         background: linear-gradient(90deg, #4F46E5 0%, #0EA5E9 100%);
       }
       .page-load-timer.is-done {
-        background: rgba(22, 163, 74, 0.9);
+        /* Solid green-800: white text needs >= 4.5:1 (WCAG AA); the old
+           rgba(22,163,74,0.9) composited to ~2.93:1. #146c43 gives ~5.4:1. */
+        background: #146c43;
       }
       .page-load-timer.is-done .page-load-timer__bar-fill {
         background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%);
