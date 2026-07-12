@@ -30,17 +30,49 @@ router = APIRouter(tags=["Kindergartens"])
 
 
 @router.get("/reference/governorates")
-def get_governorates():
-    """Return list of governorates and their areas from canonical source."""
+def get_governorates(
+    db: Session = Depends(get_db),
+):
+    """Return all Jordan governorates and their areas from the canonical
+    jordan_locations source, augmented with any districts already present in
+    kindergarten data so real values still surface.
+
+    Public reference data (no auth) — matches the unified location-filter API.
+    """
     governorates = []
     for gov in get_all_governorates():
-        areas = get_areas_for_governorate(gov["key"])
+        cities = {a["name_ar"] for a in get_areas_for_governorate(gov["key"])}
         governorates.append({
             "id": gov["key"],
             "name_ar": gov["name_ar"],
             "name_en": gov["name_en"],
-            "cities": [a["name_ar"] for a in areas],
+            "_cities": cities,
         })
+    by_name = {g["name_ar"]: g for g in governorates}
+    # Augment with distinct districts stored on kindergartens (preserves the
+    # data-driven behaviour verified by tests/test_reference_governorates.py).
+    # Degrade gracefully to the canonical list if the data isn't queryable.
+    try:
+        kg_rows = (
+            db.query(models.Kindergarten.governorate, models.Kindergarten.district)
+            .filter(models.Kindergarten.governorate.isnot(None))
+            .distinct()
+            .all()
+        )
+    except Exception:
+        kg_rows = []
+    for gov, dist in kg_rows:
+        if not gov or not dist:
+            continue
+        try:
+            normalized = validators.validate_jordan_governorate(gov)
+        except validators.ValidationError:
+            normalized = gov
+        entry = by_name.get(normalized)
+        if entry:
+            entry["_cities"].add(dist)
+    for g in governorates:
+        g["cities"] = sorted(g.pop("_cities"))
     return {"governorates": sorted(governorates, key=lambda x: x["name_ar"])}
 
 
@@ -546,6 +578,65 @@ def get_kindergarten(
     pres, tot = (att[0], att[1]) if att else (0, 0)
     return _envelope(True, _serialize(kg, child_count=cc, attendance_present=pres, attendance_total=tot),
                      "تم جلب بيانات الحضانة بنجاح")
+
+
+@router.get("/admin/kindergartens/stats")
+def kindergarten_stats(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Aggregate counts + occupancy for the admin Kindergartens KPI cards.
+
+    Admin-only. Uses batched aggregate queries. ``total`` is the active roster
+    excluding soft-deleted records; ``deleted`` is reported separately.
+    """
+    _admin_only(current_user)
+    from models import EnrollmentApplication, EnrollmentStatus
+
+    rows = (
+        db.query(models.Kindergarten.status, func.count(models.Kindergarten.id))
+        .group_by(models.Kindergarten.status)
+        .all()
+    )
+    counts = {status.value.lower(): int(n) for status, n in rows}
+    active = counts.get("active", 0)
+    frozen = counts.get("frozen", 0)
+    draft = counts.get("draft", 0)
+    inactive = counts.get("inactive", 0)
+    deleted = counts.get("deleted", 0)
+    total = active + frozen + draft + inactive
+
+    total_capacity = (
+        db.query(func.coalesce(func.sum(models.Kindergarten.total_capacity), 0))
+        .filter(models.Kindergarten.status != models.KindergartenStatus.DELETED)
+        .scalar()
+    ) or 0
+    total_children = (
+        db.query(func.count(EnrollmentApplication.id))
+        .join(models.Kindergarten, models.Kindergarten.id == EnrollmentApplication.kindergarten_id)
+        .filter(
+            EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+            models.Kindergarten.status != models.KindergartenStatus.DELETED,
+        )
+        .scalar()
+    ) or 0
+    avg_occupancy = round((total_children / total_capacity) * 100, 1) if total_capacity else 0.0
+
+    return _envelope(
+        True,
+        {
+            "total": total,
+            "active": active,
+            "frozen": frozen,
+            "draft": draft,
+            "inactive": inactive,
+            "deleted": deleted,
+            "avg_occupancy": avg_occupancy,
+            "total_children": int(total_children),
+            "total_capacity": int(total_capacity),
+        },
+        "تم جلب إحصائيات الحضانات بنجاح / Kindergarten stats retrieved",
+    )
 
 
 @router.post("/admin/kindergartens", status_code=201)
