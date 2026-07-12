@@ -2526,3 +2526,37 @@ class ClientErrorReport(Base):
         Index("ix_client_errors_stack_hash", "stack_hash"),
         Index("ix_client_errors_timestamp", "timestamp_ms"),
     )
+
+class ImmunizationAgeUnit(str, enum.Enum):
+    """Unit for a vaccine's scheduled (due) age in the national immunization schedule."""
+    DAY = "DAY"
+    MONTH = "MONTH"
+    YEAR = "YEAR"
+
+
+class NationalImmunizationSchedule(Base):
+    """National immunization schedule row: one vaccine dose due at a given age.
+
+    Uploaded by the admin via the MOH agency-reports Excel template
+    (المطعوم | العمر | الوحدة). Powers the ``vaccination_due_children`` report,
+    which counts children whose age has reached each vaccine's scheduled age.
+    Aggregated-only usage — no per-child data is stored here.
+    """
+    __tablename__ = "national_immunization_schedule"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vaccine_name = Column(String(200), nullable=False)
+    age_value = Column(Integer, nullable=False)
+    age_unit = Column(Enum(ImmunizationAgeUnit), nullable=False)
+    # Denormalised due age in days for fast age-eligibility comparisons.
+    due_age_days = Column(Integer, nullable=False)
+    notes = Column(String(500), nullable=True)
+    sort_order = Column(Integer, nullable=False, default=0)
+    uploaded_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        CheckConstraint("age_value >= 0", name="ck_immunization_age_value_nonneg"),
+        CheckConstraint("due_age_days >= 0", name="ck_immunization_due_age_days_nonneg"),
+        Index("ix_immunization_due_age_days", "due_age_days"),
+    )

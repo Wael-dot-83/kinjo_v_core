@@ -44,6 +44,9 @@ class AuditAction:
     # Kindergarten imports
     KINDERGARTEN_IMPORT = "KINDERGARTEN_IMPORT"
 
+    # Agency reports — MOH national immunization schedule upload
+    IMMUNIZATION_SCHEDULE_UPLOAD = "IMMUNIZATION_SCHEDULE_UPLOAD"
+
     # Alert management
     ALERT_ACKNOWLEDGED = "ALERT_ACKNOWLEDGED"
 

@@ -109,6 +109,33 @@
     </div>
   </form>
 
+  {% if agency_code == 'moh' and report_code == 'vaccination_due_children' %}
+  <!-- National immunization schedule upload (drives this report) -->
+  <section class="agency-upload-panel" aria-labelledby="immunization-upload-title" style="margin:1rem 0;padding:1.25rem;border:1px solid var(--admin-border,#d9dee6);border-radius:12px;background:var(--admin-surface,#fff);">
+    <h2 id="immunization-upload-title" style="margin:0 0 .35rem;font-size:1.05rem;">
+      <i class="bi bi-file-earmark-medical" aria-hidden="true"></i>
+      {% if ui_lang == 'en' %}National Immunization Schedule{% else %}جدول المطاعيم الوطني{% endif %}
+    </h2>
+    <p style="margin:0 0 .9rem;color:var(--admin-text-muted,#5a6472);font-size:.9rem;">
+      {% if ui_lang == 'en' %}Download the template, fill in each vaccine and its due age (days / months / years), then upload it to generate the report.{% else %}حمّل القالب، عبّئ كل مطعوم والعمر المستحق له (بالأيام / الأشهر / السنوات)، ثم ارفعه لتوليد التقرير.{% endif %}
+    </p>
+    <div class="agency-upload-status" id="immunization-status" role="status" aria-live="polite" style="margin-bottom:.9rem;font-size:.9rem;"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;">
+      <a class="admin-btn admin-btn-secondary" href="/api/admin/agency-reports/moh/immunization-schedule/template">
+        <i class="bi bi-download" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Download Excel Template{% else %}تنزيل قالب Excel{% endif %}
+      </a>
+      <input type="file" id="immunization-file" accept=".xlsx" aria-label="{% if ui_lang == 'en' %}Immunization schedule file{% else %}ملف جدول المطاعيم{% endif %}"
+             style="max-width:320px;font-size:.9rem;" />
+      <button type="button" class="admin-btn admin-btn-primary" id="immunization-upload-btn">
+        <i class="bi bi-upload" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Upload &amp; Generate{% else %}رفع وتوليد التقرير{% endif %}
+      </button>
+    </div>
+    <div id="immunization-upload-feedback" role="alert" aria-live="assertive" style="margin-top:.7rem;font-size:.9rem;"></div>
+  </section>
+  {% endif %}
+
   <!-- Report Result -->
   <div id="agency-report-root" role="status" aria-live="polite">
     {% if ui_lang == 'en' %}Loading report...{% else %}جارٍ تحميل التقرير...{% endif %}
@@ -128,4 +155,69 @@ window.JORDAN_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";
 </script>
 <script src="/static/js/admin_agency_reports.js?v=2.0"></script>
 <script src="/static/js/agency_report_location_filter.js?v=1.0"></script>
+{% if agency_code == 'moh' and report_code == 'vaccination_due_children' %}
+<script>
+(function () {
+  "use strict";
+  var EN = document.documentElement.lang === "en";
+  var t = function (ar, en) { return EN ? en : ar; };
+  var base = "/api/admin/agency-reports/moh/immunization-schedule";
+  var statusEl = document.getElementById("immunization-status");
+  var fileEl = document.getElementById("immunization-file");
+  var btn = document.getElementById("immunization-upload-btn");
+  var feedback = document.getElementById("immunization-upload-feedback");
+  function getCookie(name) {
+    var m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+    return m ? decodeURIComponent(m[1]) : "";
+  }
+  function refreshStatus() {
+    fetch(base, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.count > 0) {
+          statusEl.innerHTML = '<span style="color:#1f7a4d;"><i class="bi bi-check-circle-fill"></i> ' +
+            t("الجدول الحالي: ", "Current schedule: ") + d.count + t(" مطعوم.", " vaccines.") + "</span>";
+        } else {
+          statusEl.innerHTML = '<span style="color:#b45309;"><i class="bi bi-exclamation-triangle-fill"></i> ' +
+            t("لا يوجد جدول مطاعيم مرفوع بعد.", "No immunization schedule uploaded yet.") + "</span>";
+        }
+      })
+      .catch(function () { statusEl.textContent = ""; });
+  }
+  function upload() {
+    if (!fileEl.files || !fileEl.files.length) {
+      feedback.innerHTML = '<span style="color:#b91c1c;">' + t("اختر ملف Excel أولاً.", "Select an Excel file first.") + "</span>";
+      return;
+    }
+    var fd = new FormData();
+    fd.append("file", fileEl.files[0]);
+    btn.disabled = true;
+    feedback.innerHTML = t("جارٍ الرفع...", "Uploading...");
+    fetch(base, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "X-CSRF-Token": getCookie("kinjo_csrf_token"), "X-Requested-With": "XMLHttpRequest" },
+      body: fd
+    }).then(function (r) {
+      return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+    }).then(function (res) {
+      btn.disabled = false;
+      if (!res.ok) {
+        var msg = (res.d && res.d.detail) ? res.d.detail : t("فشل الرفع.", "Upload failed.");
+        feedback.innerHTML = '<span style="color:#b91c1c;">' + msg + "</span>";
+        return;
+      }
+      feedback.innerHTML = '<span style="color:#1f7a4d;">' + (res.d.message_ar || t("تم الرفع.", "Uploaded.")) +
+        " " + t("جارٍ إعادة تحميل التقرير...", "Reloading report...") + "</span>";
+      setTimeout(function () { window.location.reload(); }, 900);
+    }).catch(function () {
+      btn.disabled = false;
+      feedback.innerHTML = '<span style="color:#b91c1c;">' + t("تعذّر الاتصال بالخادم.", "Could not reach the server.") + "</span>";
+    });
+  }
+  btn.addEventListener("click", upload);
+  refreshStatus();
+})();
+</script>
+{% endif %}
 {% endblock %}
