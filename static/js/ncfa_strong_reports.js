@@ -105,6 +105,103 @@
     }
   ];
 
+  // Bilingual presentation maps. The custom-report backend returns Arabic-only
+  // KPI labels/units and Arabic chart titles, and pushes raw enum values
+  // (ACTIVE, PENDING_REVIEW, CRITICAL, ...) into chart categories and table
+  // cells. These maps localise that output for both languages without changing
+  // the shared backend contract, and reframe data_quality_score as the
+  // reporting-participation metric it actually is in the NCFA context.
+  const KPI_LABELS = {
+    children_count: { ar: "عدد الأطفال", en: "Recorded children" },
+    gender_distribution: { ar: "نسبة الذكور", en: "Male share" },
+    age_distribution_6mo: { ar: "عدد الفئات العمرية (كل 6 أشهر)", en: "Six-month age bands" },
+    enrollment_status: { ar: "التسجيلات النشطة", en: "Active enrolments" },
+    kindergarten_count: { ar: "عدد الحضانات", en: "Nurseries" },
+    kindergarten_status: { ar: "الحضانات النشطة", en: "Active nurseries" },
+    occupancy_rate: { ar: "نسبة الإشغال", en: "Occupancy rate" },
+    attendance_rate: { ar: "نسبة الحضور", en: "Attendance rate" },
+    absence_requests: { ar: "طلبات الغياب", en: "Absence requests" },
+    daily_report_completion: { ar: "معدل إنجاز التقارير اليومية", en: "Daily-report completion" },
+    late_reports: { ar: "التقارير المتأخرة", en: "Late reports" },
+    critical_incidents: { ar: "الحوادث الحرجة", en: "Critical incidents" },
+    incidents_by_severity: { ar: "إجمالي الحوادث", en: "Total incidents" },
+    staff_count: { ar: "عدد الموظفين", en: "Managers & supervisors" },
+    unassigned_classes: { ar: "الفصول غير المسندة لمشرف", en: "Classes without supervisor" },
+    unassigned_children: { ar: "الأطفال غير المسجلين في صف", en: "Children without a class" },
+    // NCFA reframes this indicator as reporting participation, matching the
+    // bundle caveat — it is NOT a comprehensive data-quality score.
+    data_quality_score: { ar: "نسبة المشاركة في الإبلاغ", en: "Reporting participation rate" }
+  };
+
+  const UNIT_LABELS = {
+    "طفل": { ar: "طفل", en: "children" },
+    "%": { ar: "%", en: "%" },
+    "فئة": { ar: "فئة", en: "bands" },
+    "تسجيل": { ar: "تسجيل", en: "enrolments" },
+    "حضانة": { ar: "حضانة", en: "nurseries" },
+    "طلب": { ar: "طلب", en: "requests" },
+    "تقرير": { ar: "تقرير", en: "reports" },
+    "حادثة": { ar: "حادثة", en: "incidents" },
+    "موظف": { ar: "موظف", en: "staff" },
+    "صف": { ar: "صف", en: "classes" }
+  };
+
+  const CHART_TITLES = {
+    "التوزيع حسب الجنس": { ar: "التوزيع حسب الجنس", en: "Sex distribution" },
+    "التوزيع العمري كل 6 أشهر": { ar: "التوزيع العمري كل 6 أشهر", en: "Age distribution (6-month bands)" },
+    "حالة التسجيل": { ar: "حالة التسجيل", en: "Enrolment status" },
+    "حالة الحضانات": { ar: "حالة الحضانات", en: "Nursery status" },
+    "الحوادث حسب الخطورة": { ar: "الحوادث حسب الخطورة", en: "Incidents by severity" }
+  };
+
+  // Raw enum values (and pre-translated gender labels) that the backend emits
+  // as category labels. Localised in BOTH languages — the Arabic UI currently
+  // leaks the raw uppercase enum too, so this fixes the primary language as well.
+  const CATEGORY_LABELS = {
+    DRAFT: { ar: "مسودة", en: "Draft" },
+    SUBMITTED: { ar: "مُقدَّم", en: "Submitted" },
+    PENDING_REVIEW: { ar: "قيد المراجعة", en: "Pending review" },
+    ACCEPTED: { ar: "مقبول", en: "Accepted" },
+    REJECTED: { ar: "مرفوض", en: "Rejected" },
+    WITHDRAWN: { ar: "منسحب", en: "Withdrawn" },
+    WAITLISTED: { ar: "قائمة الانتظار", en: "Waitlisted" },
+    ACTIVE: { ar: "نشط", en: "Active" },
+    FROZEN: { ar: "مجمّدة", en: "Frozen" },
+    INACTIVE: { ar: "غير نشطة", en: "Inactive" },
+    DELETED: { ar: "محذوفة", en: "Deleted" },
+    LOW: { ar: "منخفضة", en: "Low" },
+    MEDIUM: { ar: "متوسطة", en: "Medium" },
+    HIGH: { ar: "عالية", en: "High" },
+    CRITICAL: { ar: "حرجة", en: "Critical" },
+    "ذكر": { ar: "ذكر", en: "Male" },
+    "أنثى": { ar: "أنثى", en: "Female" },
+    "غير محدد": { ar: "غير محدد", en: "Unspecified" }
+  };
+
+  // Common table headers the backend returns as Arabic dict keys.
+  const HEADER_LABELS = {
+    "المؤشر": "Indicator",
+    "القيمة": "Value",
+    "الفئة": "Category",
+    "النسبة %": "Percent %"
+  };
+
+  function pickLocale(map, key) {
+    const meta = key == null ? null : map[String(key)];
+    if (!meta) return null;
+    return lang === "en" ? meta.en : meta.ar;
+  }
+
+  function localizeCategory(value) {
+    const localized = pickLocale(CATEGORY_LABELS, value);
+    return localized == null ? value : localized;
+  }
+
+  function localizeHeader(header) {
+    if (lang !== "en") return header;
+    return HEADER_LABELS[header] || header;
+  }
+
   function getCookie(name) {
     const escaped = name.replace(/([.$?*|{}()[\]\\/+^])/g, "\\$1");
     const match = document.cookie.match(new RegExp("(?:^|; )" + escaped + "=([^;]*)"));
@@ -299,12 +396,14 @@
     if (kpis.length) {
       const grid = createElement("div", { className: "ncfa-kpi-grid" });
       kpis.forEach((kpi) => {
-        const value = String(kpi.value == null ? "—" : kpi.value) + (kpi.unit_ar ? " " + kpi.unit_ar : "");
+        const label = pickLocale(KPI_LABELS, kpi.code) || kpi.label_ar || kpi.code || "";
+        const unit = (kpi.unit_ar ? (pickLocale(UNIT_LABELS, kpi.unit_ar) || kpi.unit_ar) : "");
+        const value = String(kpi.value == null ? "—" : kpi.value) + (unit ? " " + unit : "");
         grid.appendChild(createElement("div", {
           className: "ncfa-kpi-card",
           children: [
             createElement("strong", { text: value }),
-            createElement("span", { text: kpi.label_ar || kpi.code || "" })
+            createElement("span", { text: label })
           ]
         }));
       });
@@ -347,7 +446,7 @@
       const series = Array.isArray(chart.series) ? chart.series : [];
       if (!series.length) return;
       const card = createElement("div", { className: "ncfa-chart-card" });
-      const title = chart.title_ar || t("الرسم البياني", "Chart");
+      const title = pickLocale(CHART_TITLES, chart.title_ar) || chart.title_ar || t("الرسم البياني", "Chart");
       card.appendChild(createElement("h4", { text: title }));
       const canvas = createElement("canvas", {
         attrs: {
@@ -361,7 +460,7 @@
       const instance = new window.Chart(canvas.getContext("2d"), {
         type: chart.type === "pie" ? "pie" : "bar",
         data: {
-          labels: series.map((item) => item.label),
+          labels: series.map((item) => localizeCategory(item.label)),
           datasets: [{ label: title, data: series.map((item) => item.value) }]
         },
         options: {
@@ -389,13 +488,13 @@
     table.appendChild(caption);
     const thead = createElement("thead");
     const headRow = createElement("tr");
-    headers.forEach((header) => headRow.appendChild(createElement("th", { text: header, attrs: { scope: "col" } })));
+    headers.forEach((header) => headRow.appendChild(createElement("th", { text: localizeHeader(header), attrs: { scope: "col" } })));
     thead.appendChild(headRow);
     table.appendChild(thead);
     const tbody = createElement("tbody");
     rows.forEach((row) => {
       const tr = createElement("tr");
-      headers.forEach((header) => tr.appendChild(createElement("td", { text: row[header] == null ? "—" : row[header] })));
+      headers.forEach((header) => tr.appendChild(createElement("td", { text: row[header] == null ? "—" : localizeCategory(row[header]) })));
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
