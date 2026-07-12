@@ -12,6 +12,7 @@ from datetime import date, timedelta
 
 import models
 from agency_reports_service import AgencyReportsService
+from kpi_service import KPIService
 
 
 def _active_kg(db, name: str):
@@ -78,3 +79,52 @@ def test_reporting_participation_uses_exact_seven_day_window(test_db, sample_chi
     assert row["النشطة"] == 4          # four active nurseries in scope
     assert row["المُبلِّغة"] == 2       # only the end and end-6 reporters count
     assert result["kpi"]["value"] == 50.0
+
+
+def _active_enrollment(db, kg_id, child_id, e_start, e_end):
+    db.add(models.EnrollmentApplication(
+        child_id=child_id,
+        kindergarten_id=kg_id,
+        status=models.EnrollmentStatus.ACTIVE,
+        enrollment_start_date=e_start,
+        enrollment_end_date=e_end,
+    ))
+    db.commit()
+
+
+def test_expected_child_days_matches_kpi_service(test_db, sample_child):
+    """The batched aggregate expected-child-days must equal kpi_service's
+    authoritative per-kindergarten computation (single source of truth)."""
+    kg = _active_kg(test_db, "expected-eq")
+    start, end = date(2026, 6, 1), date(2026, 6, 30)
+    _active_enrollment(test_db, kg.id, sample_child.id, start - timedelta(days=10), None)
+
+    agency_total, _ = AgencyReportsService(test_db)._expected_child_days([kg.id], start, end)
+    kpi_total, _, _ = KPIService._count_expected_child_days(test_db, kg.id, start, end)
+
+    assert agency_total == kpi_total
+    assert agency_total > 0  # Sun-Thu working days in June 2026
+
+
+def test_attendance_rate_denominator_is_expected_not_rows(test_db, sample_child):
+    """With an active enrolment but no attendance recorded, the rate is 0%
+    (missing records lower the rate) rather than being undefined or based on
+    the number of existing attendance rows."""
+    kg = _active_kg(test_db, "attend-expected")
+    start, end = date(2026, 6, 1), date(2026, 6, 30)
+    _active_enrollment(test_db, kg.id, sample_child.id, start, None)
+
+    result = AgencyReportsService(test_db)._ind_attendance_rate(None, start, end)
+    assert result["kpi"]["value"] == 0.0
+    assert result["rows"][0]["أيام الحضور المتوقعة"] > 0
+    assert result["rows"][0]["أيام حضور فعلية"] == 0
+
+
+def test_attendance_rate_unavailable_without_active_enrollment(test_db):
+    """No active enrolment -> no expected child-days -> unavailable (None),
+    not a misleading 0%."""
+    _active_kg(test_db, "attend-empty")
+    start, end = date(2026, 6, 1), date(2026, 6, 30)
+    result = AgencyReportsService(test_db)._ind_attendance_rate(None, start, end)
+    assert result["kpi"]["value"] is None
+    assert result["note"]

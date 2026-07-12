@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 import models
@@ -100,6 +100,9 @@ class AgencyReportsService:
 
     def __init__(self, db: Session):
         self.db = db
+        # Per-request memo for expected-child-day computation, which several
+        # indicators (attendance, daily reports, incident rate) share.
+        self._expected_cache: dict[Any, tuple[int, dict[int, int]]] = {}
 
     def catalog(self) -> dict[str, Any]:
         agencies = []
@@ -857,20 +860,116 @@ class AgencyReportsService:
         }
 
     # -- attendance ----------------------------------------------------
-    def _ind_attendance_rate(self, kg_ids, start, end):
-        q = self.db.query(models.AttendanceLog.status, func.count(models.AttendanceLog.id)).filter(
-            models.AttendanceLog.date >= start, models.AttendanceLog.date <= end)
+    # -- expected child-days (aggregate; mirrors kpi_service semantics) -----
+    # These compute production-grade denominators across a set of nurseries in a
+    # few batched queries rather than "all existing rows". Working days respect
+    # the Jordan school week (Sun–Thu) plus explicit OperatingCalendar overrides,
+    # exactly as KPIService._list_working_days does; enrolment date ranges are
+    # honoured via overlap. Attendance is PRESENT+LATE physical child-days.
+    def _resolve_kg_ids(self, kg_ids: list[int] | None) -> list[int]:
         if kg_ids is not None:
-            q = q.join(models.Class, models.Class.id == models.AttendanceLog.class_id).filter(
-                models.Class.kindergarten_id.in_(kg_ids))
-        rows = dict((_enum_value(s), _safe_int(c)) for s, c in q.group_by(models.AttendanceLog.status).all())
-        total = sum(rows.values())
-        present = rows.get("PRESENT", 0) + rows.get("LATE", 0)
-        pct = _safe_pct(present, total)
+            return kg_ids
+        return [r[0] for r in self.db.query(models.Kindergarten.id).filter(
+            models.Kindergarten.status != models.KindergartenStatus.DELETED).all()]
+
+    def _working_days_by_kg(self, kg_ids: list[int], start: date, end: date) -> dict[int, set]:
+        if start > end or not kg_ids:
+            return {kid: set() for kid in kg_ids}
+        overrides: dict[int, dict] = defaultdict(dict)
+        for kid, d, is_open in self.db.query(
+            models.OperatingCalendar.kindergarten_id,
+            models.OperatingCalendar.date,
+            models.OperatingCalendar.is_open,
+        ).filter(
+            models.OperatingCalendar.kindergarten_id.in_(kg_ids),
+            models.OperatingCalendar.date >= start,
+            models.OperatingCalendar.date <= end,
+        ).all():
+            overrides[kid][d] = bool(is_open)
+        # Default working days (Sun–Thu) are shared; only nurseries with explicit
+        # calendar rows diverge from the default.
+        all_days = []
+        cursor = start
+        while cursor <= end:
+            all_days.append(cursor)
+            cursor += timedelta(days=1)
+        default_days = frozenset(d for d in all_days if d.weekday() not in (4, 5))
+        result: dict[int, set] = {}
+        for kid in kg_ids:
+            kg_overrides = overrides.get(kid)
+            if not kg_overrides:
+                result[kid] = default_days
+                continue
+            days = set(default_days)
+            for d, is_open in kg_overrides.items():
+                if is_open:
+                    days.add(d)
+                else:
+                    days.discard(d)
+            result[kid] = days
+        return result
+
+    def _expected_child_days(self, kg_ids: list[int] | None, start: date, end: date) -> tuple[int, dict[int, int]]:
+        """Return (total_expected_child_days, expected_days_per_child) across the scope."""
+        resolved = self._resolve_kg_ids(kg_ids)
+        cache_key = (tuple(sorted(resolved)), start, end)
+        if cache_key in self._expected_cache:
+            return self._expected_cache[cache_key]
+        if not resolved:
+            self._expected_cache[cache_key] = (0, {})
+            return 0, {}
+        working = self._working_days_by_kg(resolved, start, end)
+        rows = self.db.query(
+            models.EnrollmentApplication.child_id,
+            models.EnrollmentApplication.kindergarten_id,
+            models.EnrollmentApplication.enrollment_start_date,
+            models.EnrollmentApplication.enrollment_end_date,
+        ).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(resolved),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            or_(models.EnrollmentApplication.enrollment_end_date.is_(None),
+                models.EnrollmentApplication.enrollment_end_date >= start),
+            or_(models.EnrollmentApplication.enrollment_start_date.is_(None),
+                models.EnrollmentApplication.enrollment_start_date <= end),
+        ).all()
+        expected_by_child: dict[int, int] = defaultdict(int)
+        total = 0
+        for child_id, kid, e_start, e_end in rows:
+            days = working.get(kid)
+            if not days:
+                continue
+            eff_start = max(start, e_start or start)
+            eff_end = min(end, e_end or end)
+            if eff_start > eff_end:
+                continue
+            cnt = sum(1 for d in days if eff_start <= d <= eff_end)
+            if cnt:
+                expected_by_child[int(child_id)] += cnt
+                total += cnt
+        out = (total, dict(expected_by_child))
+        self._expected_cache[cache_key] = out
+        return out
+
+    def _attended_child_days(self, child_ids: list[int], start: date, end: date) -> int:
+        if not child_ids:
+            return 0
+        return _safe_int(self.db.query(func.count(models.AttendanceLog.id)).filter(
+            models.AttendanceLog.child_id.in_(child_ids),
+            models.AttendanceLog.date >= start,
+            models.AttendanceLog.date <= end,
+            models.AttendanceLog.status.in_([models.AttendanceStatus.PRESENT, models.AttendanceStatus.LATE]),
+        ).scalar())
+
+    # -- attendance ----------------------------------------------------
+    def _ind_attendance_rate(self, kg_ids, start, end):
+        expected, expected_by_child = self._expected_child_days(kg_ids, start, end)
+        attended = self._attended_child_days(list(expected_by_child.keys()), start, end)
+        # Denominator is expected child-days on working days, not "all rows".
+        pct = _safe_pct(attended, expected) if expected else None
         return {
             "kpi": self._kpi("attendance_rate", "نسبة الحضور", pct, "%"),
-            "rows": [{"المؤشر": "نسبة الحضور", "سجلات الحضور": total, "حاضر/متأخر": present, "النسبة %": pct}],
-            "note": ("لا توجد سجلات حضور ضمن الفترة المحددة." if total == 0 else None),
+            "rows": [{"المؤشر": "نسبة الحضور", "أيام الحضور المتوقعة": expected, "أيام حضور فعلية": attended, "النسبة %": (pct if pct is not None else "—")}],
+            "note": ("لا توجد أيام حضور متوقعة ضمن النطاق (لا يوجد تسجيل نشط أو أيام دوام)." if not expected else None),
         }
 
     def _ind_absence_requests(self, kg_ids, start, end):
@@ -884,18 +983,26 @@ class AgencyReportsService:
 
     # -- daily reports -------------------------------------------------
     def _ind_daily_report_completion(self, kg_ids, start, end):
-        q = self.db.query(models.DailyReport.status, func.count(models.DailyReport.id)).filter(
-            models.DailyReport.date >= start, models.DailyReport.date <= end)
-        if kg_ids is not None:
-            q = q.filter(models.DailyReport.kindergarten_id.in_(kg_ids))
-        rows = dict((_enum_value(s), _safe_int(c)) for s, c in q.group_by(models.DailyReport.status).all())
-        total = sum(rows.values())
-        completed = rows.get("APPROVED", 0) + rows.get("SENT_TO_PARENT", 0)
-        pct = _safe_pct(completed, total)
+        # Denominator is expected child-days (eligible active-enrolment days on
+        # working days), NOT the count of existing report rows — missing reports
+        # must lower completion rather than disappear from the denominator.
+        expected, expected_by_child = self._expected_child_days(kg_ids, start, end)
+        child_ids = list(expected_by_child.keys())
+        completed = 0
+        if child_ids:
+            completed = _safe_int(self.db.query(func.count(models.DailyReport.id)).filter(
+                models.DailyReport.child_id.in_(child_ids),
+                models.DailyReport.date >= start, models.DailyReport.date <= end,
+                models.DailyReport.status.in_([
+                    models.DailyReportStatus.APPROVED,
+                    models.DailyReportStatus.SENT_TO_PARENT,
+                ]),
+            ).scalar())
+        pct = _safe_pct(completed, expected) if expected else None
         return {
             "kpi": self._kpi("daily_report_completion", "معدل إنجاز التقارير اليومية", pct, "%"),
-            "rows": [{"المؤشر": "إنجاز التقارير اليومية", "الإجمالي": total, "المكتملة": completed, "النسبة %": pct}],
-            "note": ("لا توجد تقارير يومية ضمن الفترة المحددة." if total == 0 else None),
+            "rows": [{"المؤشر": "إنجاز التقارير اليومية", "التقارير المتوقعة": expected, "المكتملة": completed, "النسبة %": (pct if pct is not None else "—")}],
+            "note": ("لا توجد تقارير متوقعة ضمن النطاق (لا يوجد تسجيل نشط أو أيام دوام)." if not expected else None),
         }
 
     def _ind_late_reports(self, kg_ids, start, end):
@@ -929,10 +1036,23 @@ class AgencyReportsService:
         rows = q.group_by(models.Incident.severity_level).all()
         series = [{"label": _enum_value(s), "value": _safe_int(c)} for s, c in rows]
         total = sum(s["value"] for s in series)
+        # Exposure-adjusted incident rate per 1,000 attended child-days — the
+        # comparable measure. Unavailable (not 0) when there is no attendance.
+        _, expected_by_child = self._expected_child_days(kg_ids, start, end)
+        attended = self._attended_child_days(list(expected_by_child.keys()), start, end)
+        rate = round(total / attended * 1000, 3) if attended else None
+        table = [{"المؤشر": "الحوادث حسب الخطورة", "الفئة": s["label"], "القيمة": s["value"]} for s in series]
+        table.append({
+            "المؤشر": "معدل الحوادث لكل 1000 يوم حضور",
+            "أيام الحضور": attended,
+            "المعدل": (rate if rate is not None else "—"),
+        })
         return {
             "kpi": self._kpi("incidents_by_severity", "إجمالي الحوادث", total, "حادثة"),
             "chart": {"type": "bar", "title_ar": "الحوادث حسب الخطورة", "series": series},
-            "rows": [{"المؤشر": "الحوادث حسب الخطورة", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+            "rows": table,
+            "note": ("لا توجد أيام حضور لاحتساب معدل الحوادث لكل 1000 يوم." if not attended else
+                     f"معدل الحوادث: {rate} لكل 1000 يوم حضور."),
         }
 
     # -- staff / governance -------------------------------------------
