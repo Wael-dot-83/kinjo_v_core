@@ -1925,8 +1925,10 @@ html[dir="rtl"] .submenu .nav-link {
   font-size: var(--text-xs);
   margin-top: var(--space-1);
 }
-.admin-kpi-card-status--good    { color: var(--color-success-dark); }
-.admin-kpi-card-status--warning { color: var(--color-warning-dark); }
+.admin-kpi-card-status--good        { color: var(--color-success-dark); }
+.admin-kpi-card-status--warning     { color: var(--color-warning-dark); }
+.admin-kpi-card-status--critical    { color: var(--color-error-dark); font-weight: var(--font-weight-semibold, 600); }
+.admin-kpi-card-status--unavailable { color: var(--color-gray-600); }
 
 /* KPI card drill-down link */
 .admin-kpi-card-drilldown {

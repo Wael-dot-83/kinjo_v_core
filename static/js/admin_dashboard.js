@@ -344,7 +344,13 @@ class AdminDashboard {
     const card = document.createElement("li");
     card.className = "admin-kpi-card";
 
-    const { formattedValue, badgeHtml } = this.formatKPIValue(config, value);
+    let { formattedValue, badgeHtml } = this.formatKPIValue(config, value);
+    // A metric that could not be computed must not masquerade as a real value
+    // (e.g. data quality with no eligible kindergartens showing "0%").
+    if (trendMeta && trendMeta.measurable === false) {
+      formattedValue = this.t("dashboard.value_unavailable", "Unavailable");
+      badgeHtml = "";
+    }
 
     // Icon
     const iconDiv = document.createElement("div");
@@ -381,7 +387,10 @@ class AdminDashboard {
 
     if (trendMeta && value !== null) {
       contentDiv.appendChild(this.createKPITrendRow(trendMeta));
-      contentDiv.appendChild(this.createKPIStatusRow(trendMeta));
+      // Raw counts return no status row (neutral) — a "Good" badge without a
+      // target is noise. Only judgment-bearing statuses render.
+      const statusRow = this.createKPIStatusRow(trendMeta);
+      if (statusRow) contentDiv.appendChild(statusRow);
     }
 
     if (Array.isArray(dataQualityReasons) && dataQualityReasons.length > 0) {
@@ -400,6 +409,22 @@ class AdminDashboard {
   // Trend row: icon (shape, not just color) + comparison-to-previous-period text.
   createKPITrendRow(trendMeta) {
     const row = document.createElement("div");
+
+    // No prior-period data (or metric unavailable): a "+635" here would be a
+    // seed/baseline artifact, not a real trend. Show an explicit neutral note.
+    const noBaseline = trendMeta.measurable === false || trendMeta.baseline_available === false;
+    if (noBaseline) {
+      row.className = "admin-kpi-card-trend admin-kpi-card-trend--flat";
+      const icon = document.createElement("i");
+      icon.className = "bi bi-dash-lg";
+      icon.setAttribute("aria-hidden", "true");
+      row.appendChild(icon);
+      const text = document.createElement("span");
+      text.textContent = this.t("dashboard.trend_no_baseline", "No reliable prior-period comparison");
+      row.appendChild(text);
+      return row;
+    }
+
     row.className = `admin-kpi-card-trend admin-kpi-card-trend--${trendMeta.trend || "flat"}`;
 
     const icon = document.createElement("i");
@@ -431,19 +456,34 @@ class AdminDashboard {
   }
 
   // Status meaning — icon + text, never color alone.
+  // Returns null for "neutral" (raw counts) so no meaningless badge renders.
   createKPIStatusRow(trendMeta) {
+    const status = trendMeta.status || "good";
+    if (status === "neutral") return null;
+
     const row = document.createElement("div");
-    row.className = `admin-kpi-card-status admin-kpi-card-status--${trendMeta.status || "good"}`;
+    row.className = `admin-kpi-card-status admin-kpi-card-status--${status}`;
+
+    const iconByStatus = {
+      good: "bi bi-check-circle-fill",
+      warning: "bi bi-exclamation-triangle-fill",
+      critical: "bi bi-x-octagon-fill",
+      unavailable: "bi bi-dash-circle",
+    };
+    const labelByStatus = {
+      good: this.t("dashboard.status_good", "Good"),
+      warning: this.t("dashboard.status_warning", "Needs attention"),
+      critical: this.t("dashboard.status_critical", "Critical"),
+      unavailable: this.t("dashboard.status_unavailable", "Unavailable"),
+    };
 
     const icon = document.createElement("i");
-    icon.className = trendMeta.status === "warning" ? "bi bi-exclamation-triangle-fill" : "bi bi-check-circle-fill";
+    icon.className = iconByStatus[status] || iconByStatus.good;
     icon.setAttribute("aria-hidden", "true");
     row.appendChild(icon);
 
     const text = document.createElement("span");
-    text.textContent = trendMeta.status === "warning"
-      ? this.t("dashboard.status_warning", "Needs attention")
-      : this.t("dashboard.status_good", "Good");
+    text.textContent = labelByStatus[status] || labelByStatus.good;
     row.appendChild(text);
 
     return row;

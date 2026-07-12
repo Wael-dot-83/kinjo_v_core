@@ -3352,7 +3352,15 @@ class KPITrendMeta(BaseModel):
     change: float
     change_pct: Optional[float] = None
     trend: str = "flat"
+    # good | warning | critical | neutral | unavailable.
+    # "neutral" = a raw count with no target, so no good/bad judgment is implied.
     status: str = "good"
+    # False when the previous period had no data (previous_value == 0), so a
+    # change like "+635" is not a real trend and must not be shown as one.
+    baseline_available: bool = True
+    # False when the metric could not be computed (e.g. data quality with zero
+    # eligible kindergartens) — distinct from a genuine 0 value.
+    measurable: bool = True
 
 
 class DataQualityReason(BaseModel):
@@ -3953,15 +3961,23 @@ def get_admin_dashboard(
         (prev_active_kg_with_recent_report / prev_active_kindergartens * 100.0) if prev_active_kindergartens > 0 else 0.0, 1
     )
 
-    def _kpi_trend(key: str, current: float, previous: float) -> KPITrendMeta:
+    def _kpi_trend(key: str, current: float, previous: float, measurable: bool = True) -> KPITrendMeta:
         direction, change = KPIService._trend_from_values(current, previous)
+        baseline_available = previous > 0
         change_pct = round((change / previous * 100.0), 1) if previous else None
-        if key == "pending_submissions":
+        if not measurable:
+            # Metric could not be computed — no good/bad claim, no trend.
+            status = "unavailable"
+        elif key == "pending_submissions":
+            # Actionable backlog: anything pending needs attention.
             status = "warning" if current > 0 else "good"
         elif key == "data_quality_score":
-            status = "good" if current >= 70 else "warning"
+            # Threshold-based; a genuine 0 is a governance emergency, not merely "low".
+            status = "critical" if current <= 0 else ("good" if current >= 70 else "warning")
         else:
-            status = "good"
+            # Raw counts (users, kindergartens, submissions) have no target, so a
+            # green "Good" badge would be meaningless — stay neutral.
+            status = "neutral"
         return KPITrendMeta(
             value=current,
             previous_value=previous,
@@ -3969,6 +3985,8 @@ def get_admin_dashboard(
             change_pct=change_pct,
             trend=direction,
             status=status,
+            baseline_available=baseline_available,
+            measurable=measurable,
         )
 
     kpi_trends: Dict[str, KPITrendMeta] = {
@@ -3978,7 +3996,7 @@ def get_admin_dashboard(
         "active_kindergartens": _kpi_trend("active_kindergartens", active_kindergartens, prev_active_kindergartens),
         "total_submissions":    _kpi_trend("total_submissions", total_reports_in_period, prev_total_submissions),
         "pending_submissions":  _kpi_trend("pending_submissions", pending_reports, prev_pending_submissions),
-        "data_quality_score":   _kpi_trend("data_quality_score", data_quality_score, prev_data_quality_score),
+        "data_quality_score":   _kpi_trend("data_quality_score", data_quality_score, prev_data_quality_score, measurable=active_kindergartens > 0),
     }
 
     # Log dashboard access
