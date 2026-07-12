@@ -134,14 +134,17 @@ function populateSummaryCards(metrics, type) {
       summaryCard("السعة", "Capacity", metrics.capacity) +
       summaryCard("الفئة العمرية", "Age group", drilldownLiteral(metrics.age_group));
   } else if (t === "CHILD") {
+    const suppressed = metrics.data_state === "suppressed";
+    const withheld = drilldownText("محجوب لحماية الخصوصية", "Withheld for privacy");
+    const attendance = suppressed
+      ? withheld
+      : metrics.attendance_rate == null
+        ? drilldownText("بيانات غير كافية", "Insufficient data")
+        : metrics.attendance_rate.toFixed(1) + "%";
     cardsHtml =
-      summaryCard(
-        "نسبة الحضور", "Attendance rate",
-        metrics.attendance_rate == null ? drilldownText("بيانات غير كافية", "Insufficient data")
-                                        : metrics.attendance_rate.toFixed(1) + "%"
-      ) +
-      summaryCard("أيام الحضور", "Attendance days", metrics.attendance_days) +
-      summaryCard("الأيام المسجّلة", "Logged days", metrics.logged_days);
+      summaryCard("نسبة الحضور", "Attendance rate", attendance) +
+      summaryCard("أيام الحضور", "Attendance days", suppressed ? withheld : metrics.attendance_days) +
+      summaryCard("الأيام المسجّلة", "Logged days", suppressed ? withheld : metrics.logged_days);
   } else {
     // KINDERGARTEN (Nursery)
     cardsHtml = `

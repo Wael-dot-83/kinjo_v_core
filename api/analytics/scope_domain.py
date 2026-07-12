@@ -118,6 +118,18 @@ def enforce_kindergarten_scope(
     return requested_kg_id
 
 
+def can_view_child_detail(current_user: models.User) -> bool:
+    """Authorization for the ``analytics:child_detail`` capability.
+
+    Individual-child (CHILD-layer) analytics are privacy_level=restricted PII.
+    Per the production-readiness decision this is ADMIN-only; other roles receive
+    suppressed values (data_state=suppressed) rather than the underlying numbers.
+    Kept as a small predicate so a future permission framework can swap the body
+    without touching call sites.
+    """
+    return current_user.role == models.UserRole.ADMIN
+
+
 def enforce_analytics_rbac(
     current_user: models.User,
     db: Session,

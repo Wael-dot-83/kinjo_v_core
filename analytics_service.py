@@ -53,6 +53,7 @@ from analytics_domain import (
 from api.analytics.scope_domain import (
     allowed_kindergarten_ids as _allowed_kindergarten_ids,
     allowed_governorates as _allowed_governorates,
+    can_view_child_detail,
     enforce_analytics_rbac as _enforce_analytics_rbac,
     enforce_kindergarten_scope,
     get_date_range,
@@ -2159,17 +2160,30 @@ def get_drilldown(
         ).scalar() or 0
         attendance_rate = round(present_count / total_logged * 100, 2) if total_logged else None
 
+        # analytics:child_detail is ADMIN-only; suppress values for other roles
+        # (scope already enforced above) rather than leak individual-child figures.
+        if can_view_child_detail(current_user):
+            child_metrics = {
+                "attendance_rate": attendance_rate,
+                "attendance_days": present_count,
+                "logged_days": total_logged,
+                "data_state": "valid",
+            }
+        else:
+            child_metrics = {
+                "attendance_rate": None,
+                "attendance_days": None,
+                "logged_days": None,
+                "data_state": "suppressed",
+            }
+
         return DrilldownResponse(
             dimension_type="CHILD",
             dimension_id=dimension_id,
             dimension_name=f"{child.first_name} {child.last_name}",
             period_start=period_start,
             period_end=period_end,
-            metrics={
-                "attendance_rate": attendance_rate,
-                "attendance_days": present_count,
-                "logged_days": total_logged,
-            },
+            metrics=child_metrics,
             children=[],  # leaf — no further drill-down
         )
 
