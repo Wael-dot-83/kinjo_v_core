@@ -78,6 +78,12 @@ _FIELD_LABELS: dict[str, str] = {
     "severity": "درجة الخطورة",
     "thread_type": "نوع المحادثة",
     "children_per_kindergarten": "أطفال لكل حضانة",
+    # vaccination_due_children
+    "vaccine": "المطعوم",
+    "due_age": "العمر المستحق",
+    "vaccines_in_schedule": "عدد المطاعيم في الجدول",
+    "children_considered": "الأطفال المشمولون",
+    "vaccine_doses_due": "إجمالي الجرعات المستحقة",
 }
 
 
@@ -167,6 +173,28 @@ class AgencyReportsService:
         agency = self._agency(agency_code)
         report = self._report(agency_code, report_code)
         filters = self._clean_filters(filters or {})
+
+        # vaccination_due_children becomes available once a national immunization
+        # schedule has been uploaded (status in the registry is a static placeholder).
+        if agency_code == "moh" and report_code == "vaccination_due_children":
+            import immunization_service
+            if immunization_service.schedule_count(self.db) > 0:
+                payload = self._vaccination_due_children(agency_code, agency, report_code, report, filters)
+                self._assert_privacy(payload)
+                return payload
+            payload = self._unavailable_payload(
+                agency_code, agency, report_code, report, filters,
+            )
+            payload["summary"]["message_ar"] = (
+                "لم يتم رفع جدول المطاعيم الوطني بعد. حمّل قالب Excel، عبّئ المطاعيم "
+                "والأعمار المستحقة، ثم ارفعه لتوليد التقرير."
+            )
+            payload["unavailable_indicators"] = [{
+                "code": report_code, "status": "awaiting_schedule_upload",
+                "message_ar": payload["summary"]["message_ar"],
+            }]
+            self._assert_privacy(payload)
+            return payload
 
         if report.get("status") != "ready":
             payload = self._unavailable_payload(agency_code, agency, report_code, report, filters)
@@ -311,6 +339,87 @@ class AgencyReportsService:
         ]
         total = sum(r["count"] for r in breakdowns)
         return self._payload(agency_code, agency, report_code, report, filters, {"total_children": total}, breakdowns)
+
+    def _vaccination_due_children(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        """Age-eligibility report: count children whose age has reached each
+        vaccine's scheduled age in the uploaded national immunization schedule.
+
+        Aggregated only. 'Due' means age-eligible — the system holds no record of
+        which vaccines a child already received, so this is not per-child overdue.
+        """
+        import immunization_service
+
+        schedule = immunization_service.get_schedule(self.db)
+        today = datetime.now(_JORDAN_TZ).date()
+
+        # One pass over the (filtered) child population; bucket per vaccine in Python
+        # to avoid one query per vaccine.
+        q = (
+            self.db.query(
+                models.ParentProfile.home_governorate.label("gov"),
+                models.Child.gender.label("gender"),
+                models.Child.date_of_birth.label("dob"),
+            )
+            .join(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
+            .filter(models.Child.deleted_at.is_(None), models.ParentProfile.deleted_at.is_(None))
+        )
+        q = self._apply_parent_geo_filters(q, filters)
+        gender_filter = filters.get("gender")
+        if gender_filter:
+            try:
+                q = q.filter(models.Child.gender == models.Gender(str(gender_filter).upper()))
+            except ValueError:
+                pass  # unknown gender value → ignore filter rather than 500
+
+        children = q.all()
+        children_considered = len(children)
+
+        # counts keyed by (vaccine_label, governorate, gender_ar)
+        detail: dict[tuple[str, str, str], int] = defaultdict(int)
+        per_vaccine: dict[str, int] = defaultdict(int)
+        vaccine_order: list[str] = []
+        vaccine_seen: set[str] = set()
+
+        for row in schedule:
+            label = f"{row.vaccine_name} ({row.age_value} {immunization_service.unit_label_ar(row.age_unit)})"
+            if label not in vaccine_seen:
+                vaccine_seen.add(label)
+                vaccine_order.append(label)
+            for child in children:
+                age_days = (today - child.dob).days
+                if age_days >= row.due_age_days:
+                    gov = child.gov or "غير محدد"
+                    gender_ar = _gender_ar(child.gender)
+                    detail[(label, gov, gender_ar)] += 1
+                    per_vaccine[label] += 1
+
+        breakdowns = [
+            {"vaccine": vac, "governorate": gov, "gender": gender_ar, "count": cnt}
+            for (vac, gov, gender_ar), cnt in sorted(detail.items(), key=lambda kv: (-kv[1], kv[0][0]))
+            if cnt > 0
+        ]
+        chart_series = [
+            {"label": vac, "value": per_vaccine.get(vac, 0)}
+            for vac in vaccine_order if per_vaccine.get(vac, 0) > 0
+        ]
+        doses_due = sum(per_vaccine.values())
+
+        summary = {
+            "vaccines_in_schedule": len(schedule),
+            "children_considered": children_considered,
+            "vaccine_doses_due": doses_due,
+        }
+        payload = self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns)
+        payload["chart"] = {
+            "type": "bar",
+            "title_ar": "الأطفال المستحقون لكل مطعوم",
+            "series": chart_series,
+        }
+        payload["exports"] = {"csv": True, "json": True}
+        payload["metadata"]["limitations"] = [
+            "التقرير يعتمد على العمر فقط (استحقاق عمري) ولا يعكس سجل التطعيم الفعلي لكل طفل.",
+        ]
+        return payload
 
     def _kindergarten_registry(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
         q = self.db.query(models.Kindergarten.governorate, models.Kindergarten.district, models.Kindergarten.status, func.count(models.Kindergarten.id).label("count"))

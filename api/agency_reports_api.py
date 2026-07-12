@@ -7,11 +7,14 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 
+import immunization_service
 import models
+from admin_security import log_audit_event
+from audit_actions import AuditAction
 from agency_reports_export import custom_report_to_csv, to_csv
 from agency_reports_service import AgencyReportError, AgencyReportsService
 from database import get_db
@@ -75,6 +78,88 @@ def agency_report_summary(
     db: Session = Depends(get_db),
 ):
     return AgencyReportsService(db).summary()
+
+
+# ---------------------------------------------------------------------------
+# MOH national immunization schedule (powers vaccination_due_children)
+# Declared before the parametrised /{agency_code}/reports routes.
+# ---------------------------------------------------------------------------
+@router.get("/admin/agency-reports/moh/immunization-schedule/template")
+def immunization_schedule_template(
+    current_user: models.User = Depends(_require_admin),
+):
+    data = immunization_service.build_template_xlsx()
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="immunization_schedule_template.xlsx"'},
+    )
+
+
+@router.get("/admin/agency-reports/moh/immunization-schedule")
+def immunization_schedule_current(
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+):
+    rows = immunization_service.get_schedule(db)
+    return {
+        "success": True,
+        "count": len(rows),
+        "rows": [
+            {
+                "id": r.id,
+                "vaccine_name": r.vaccine_name,
+                "age_value": r.age_value,
+                "age_unit": r.age_unit.value,
+                "age_unit_ar": immunization_service.unit_label_ar(r.age_unit),
+                "due_age_days": r.due_age_days,
+                "notes": r.notes,
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.post("/admin/agency-reports/moh/immunization-schedule")
+def immunization_schedule_upload(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+):
+    filename = (file.filename or "").lower()
+    if not filename.endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="يجب أن يكون الملف بصيغة Excel (.xlsx)")
+    raw = file.file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="الملف فارغ")
+    try:
+        rows, errors = immunization_service.parse_schedule_xlsx(raw)
+    except immunization_service.ImmunizationScheduleError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not rows:
+        detail = "لم يتم العثور على صفوف صالحة في الملف."
+        if errors:
+            detail += " " + " | ".join(errors[:10])
+        raise HTTPException(status_code=422, detail=detail)
+
+    written = immunization_service.replace_schedule(db, rows, current_user.id)
+    log_audit_event(
+        db,
+        AuditAction.IMMUNIZATION_SCHEDULE_UPLOAD,
+        current_user,
+        target_type="NationalImmunizationSchedule",
+        after_state={"rows": written, "filename": file.filename},
+        metadata={"skipped_rows": len(errors)},
+        sensitivity_level=1,
+    )
+    db.commit()
+    return {
+        "success": True,
+        "imported": written,
+        "skipped": len(errors),
+        "errors": errors[:20],
+        "message_ar": f"تم رفع الجدول: {written} مطعوم." + (f" (تم تجاهل {len(errors)} صف)" if errors else ""),
+    }
 
 
 @router.get("/admin/agency-reports/{agency_code}/reports")
