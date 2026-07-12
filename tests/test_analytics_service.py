@@ -358,25 +358,37 @@ class TestAnalyticsService:
         )
         assert response.status_code == 200
 
-    def test_drilldown_governorate_metrics_include_aggregates(self, client, admin_user, sample_data):
-        """GOVERNORATE metrics previously only ever returned
-        {"kindergarten_count": N} -- the frontend's summary cards also read
-        metrics.children_count and metrics.governance_score, which were
-        always undefined ("N/A" on every load), even though the same
-        per-kindergarten data used to build those aggregates was already
-        being fetched into `children` for the table."""
+    def test_drilldown_governorate_lists_cities_with_aggregates(self, client, admin_user, sample_data):
+        """The completed hierarchy inserts the City level (baseline audit D2):
+        GOVERNORATE now drills into Cities (distinct areas), returning
+        {city_count, nursery_count, children_count} aggregates, and each row is a
+        City (dimension_type AREA). The per-nursery governance aggregate moved down
+        to the City(AREA) level, where nurseries are actually listed."""
         response = client.post("/token", data={"username": "admin", "password": "Admin123!"})
         token = response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
 
         gov = sample_data['kindergarten'].governorate
-        response = client.get(
-            f"/api/analytics/drilldown/GOVERNORATE/{gov}",
-            headers={"Authorization": f"Bearer {token}"}
-        )
+        response = client.get(f"/api/analytics/drilldown/GOVERNORATE/{gov}", headers=headers)
         assert response.status_code == 200
-        metrics = response.json()["metrics"]
+        body = response.json()
+        metrics = body["metrics"]
+        assert "city_count" in metrics
+        assert "nursery_count" in metrics
         assert "children_count" in metrics
-        assert "governance_score" in metrics
+        # rows are Cities that drill to the AREA level
+        assert body["children"], "governorate should list at least one city"
+        assert body["children"][0]["dimension_type"] == "AREA"
+
+        # City(AREA) level carries the governance aggregate + lists nurseries.
+        area = sample_data['kindergarten'].area
+        response = client.get(f"/api/analytics/drilldown/AREA/{area}", headers=headers)
+        assert response.status_code == 200
+        area_body = response.json()
+        assert area_body["dimension_type"] == "AREA"
+        assert "governance_score" in area_body["metrics"]
+        assert "children_count" in area_body["metrics"]
+        assert area_body["children"][0]["dimension_type"] == "KINDERGARTEN"
 
     def test_drilldown_class_dimension_works(self, client, admin_user, sample_data):
         """The CLASS dimension type is fully implemented server-side
