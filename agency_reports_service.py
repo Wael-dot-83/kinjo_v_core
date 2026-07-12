@@ -598,7 +598,15 @@ class AgencyReportsService:
                 quality_notes.append(f"{ind_name.get(code, code)}: تعذّر احتساب هذا المؤشر.")
                 continue
             if result.get("kpi"):
-                kpis.append(result["kpi"])
+                kpi = result["kpi"]
+                kpis.append(kpi)
+                # An unavailable (None) value must be reflected in data quality,
+                # not silently presented as a real figure — this also downgrades
+                # the overall status from "sufficient" to "limited".
+                if kpi.get("value") is None:
+                    quality_notes.append(
+                        f"{ind_name.get(code, code)}: غير متاح ضمن النطاق المحدد (لا يوجد مقام صالح للاحتساب)."
+                    )
             if result.get("chart"):
                 charts.append(result["chart"])
             table.extend(result.get("rows", []))
@@ -759,20 +767,32 @@ class AgencyReportsService:
         }
 
     def _ind_age_distribution(self, kg_ids, start, end):
-        today = datetime.now(_JORDAN_TZ).date()
+        # Age is computed as of the reporting period end, using full year/month/day
+        # boundaries (not a year+month approximation). Children with a missing or
+        # invalid date of birth stay visible as a data-quality category rather
+        # than being silently dropped from the distribution.
+        ref = end
         buckets: dict[str, int] = defaultdict(int)
+        unknown = 0
         for (dob,) in self._child_base_query(kg_ids).with_entities(models.Child.date_of_birth).all():
             if not dob:
+                unknown += 1
                 continue
-            months = (today.year - dob.year) * 12 + (today.month - dob.month)
+            months = (ref.year - dob.year) * 12 + (ref.month - dob.month)
+            if ref.day < dob.day:
+                months -= 1
             months = max(months, 0)
             low = (months // 6) * 6
             buckets[f"{low}-{low + 6} شهر"] += 1
         series = [{"label": k, "value": v} for k, v in sorted(buckets.items(), key=lambda kv: int(kv[0].split("-")[0]))]
+        band_count = len(series)
+        if unknown:
+            series.append({"label": "غير معروف", "value": unknown})
         return {
-            "kpi": self._kpi("age_distribution_6mo", "عدد الفئات العمرية (كل 6 أشهر)", len(series), "فئة"),
+            "kpi": self._kpi("age_distribution_6mo", "عدد الفئات العمرية (كل 6 أشهر)", band_count, "فئة"),
             "chart": {"type": "bar", "title_ar": "التوزيع العمري كل 6 أشهر", "series": series},
             "rows": [{"المؤشر": "التوزيع العمري", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+            "note": (f"يوجد {unknown} طفل بدون تاريخ ميلاد صالح ضمن النطاق." if unknown else None),
         }
 
     def _ind_enrollment_status(self, kg_ids, start, end):
@@ -824,13 +844,15 @@ class AgencyReportsService:
             enr_q = enr_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
         capacity = _safe_int(cap_q.scalar())
         enrolled = _safe_int(enr_q.scalar())
-        pct = _safe_pct(enrolled, capacity)
+        # Missing/zero capacity must read as "unavailable" (None), never a
+        # misleading 0% that looks like a real, empty nursery network.
+        pct = _safe_pct(enrolled, capacity) if capacity else None
         note = None
         if capacity == 0:
             note = "لا توجد سعة صفية مسجّلة ضمن النطاق لاحتساب نسبة الإشغال."
         return {
             "kpi": self._kpi("occupancy_rate", "نسبة الإشغال", pct, "%"),
-            "rows": [{"المؤشر": "نسبة الإشغال", "المسجلون": enrolled, "السعة": capacity, "النسبة %": pct}],
+            "rows": [{"المؤشر": "نسبة الإشغال", "المسجلون": enrolled, "السعة": capacity, "النسبة %": (pct if pct is not None else "—")}],
             "note": note,
         }
 
@@ -951,8 +973,12 @@ class AgencyReportsService:
                 "rows": [{"المؤشر": "الأطفال غير المسجلين في صف", "القيمة": total}]}
 
     def _ind_data_quality_score(self, kg_ids, start, end):
-        today = datetime.now(_JORDAN_TZ).date()
-        week_ago = today - timedelta(days=7)
+        # Reporting participation: share of active nurseries with >=1 daily report
+        # in the 7-day window ENDING on the report end date. The window is exactly
+        # seven inclusive calendar dates (end-6 .. end), anchored to the selected
+        # period end rather than "now".
+        window_end = end
+        window_start = end - timedelta(days=6)
         kg_q = self.db.query(models.Kindergarten.id).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
         if kg_ids is not None:
             kg_q = kg_q.filter(models.Kindergarten.id.in_(kg_ids))
@@ -962,12 +988,13 @@ class AgencyReportsService:
         if active_ids:
             reported = self.db.query(func.count(func.distinct(models.DailyReport.kindergarten_id))).filter(
                 models.DailyReport.kindergarten_id.in_(active_ids),
-                models.DailyReport.date >= week_ago, models.DailyReport.date <= today).scalar() or 0
-        pct = _safe_pct(reported, total)
+                models.DailyReport.date >= window_start, models.DailyReport.date <= window_end).scalar() or 0
+        # No active nurseries in scope -> participation is unavailable, not 0%.
+        pct = _safe_pct(reported, total) if total else None
         return {
             "kpi": self._kpi("data_quality_score", "مؤشر جودة البيانات", pct, "%"),
-            "rows": [{"المؤشر": "جودة البيانات (حضانات قدّمت تقريرًا خلال 7 أيام)", "النشطة": total, "المُبلِّغة": reported, "النسبة %": pct}],
-            "note": ("لا توجد حضانات نشطة ضمن النطاق لاحتساب جودة البيانات." if total == 0 else None),
+            "rows": [{"المؤشر": f"المشاركة في الإبلاغ ({window_start} → {window_end})", "النشطة": total, "المُبلِّغة": reported, "النسبة %": (pct if pct is not None else "—")}],
+            "note": ("لا توجد حضانات نشطة ضمن النطاق لاحتساب المشاركة في الإبلاغ." if total == 0 else None),
         }
 
     def _ind_service_access_ratio(self, kg_ids, start, end):
@@ -994,6 +1021,10 @@ class AgencyReportsService:
         head = "، ".join(parts) + "."
         if not kpis:
             return head + " لا توجد مؤشرات محسوبة ضمن هذا النطاق."
-        highlights = "؛ ".join(f"{k['label_ar']}: {k['value']}{(' ' + k['unit_ar']) if k.get('unit_ar') else ''}" for k in kpis[:6])
+        def _fmt(k: dict[str, Any]) -> str:
+            if k.get("value") is None:
+                return f"{k['label_ar']}: غير متاح"
+            return f"{k['label_ar']}: {k['value']}{(' ' + k['unit_ar']) if k.get('unit_ar') else ''}"
+        highlights = "؛ ".join(_fmt(k) for k in kpis[:6])
         status_ar = {"sufficient": "البيانات كافية", "limited": "البيانات محدودة", "incomplete": "البيانات غير مكتملة"}.get(status, status)
         return f"{head} أبرز المؤشرات: {highlights}. حالة البيانات: {status_ar}."

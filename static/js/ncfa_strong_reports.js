@@ -175,7 +175,8 @@
     CRITICAL: { ar: "حرجة", en: "Critical" },
     "ذكر": { ar: "ذكر", en: "Male" },
     "أنثى": { ar: "أنثى", en: "Female" },
-    "غير محدد": { ar: "غير محدد", en: "Unspecified" }
+    "غير محدد": { ar: "غير محدد", en: "Unspecified" },
+    "غير معروف": { ar: "غير معروف", en: "Unknown" }
   };
 
   // Common table headers the backend returns as Arabic dict keys.
