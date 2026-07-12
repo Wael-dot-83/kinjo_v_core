@@ -4916,7 +4916,8 @@ body.admin-container {
 
 /* ============================================================================
    ADMIN DASHBOARD — Modernization & Accessibility Enhancements
-   (added by dashboard UX pass; scoped to .admin-uswds-dashboard)
+   (dashboard UX pass; scoped to .admin-uswds-dashboard; strictly additive so
+   it never overrides the design-system's token-based card transition/hover)
    ============================================================================ */
 
 /* 1. Visible focus indicators for keyboard users */
@@ -4932,17 +4933,8 @@ body.admin-container {
   box-shadow: 0 0 0 4px rgba(183, 121, 31, 0.25);
 }
 
-/* 2. Subtle lift on interactive cards for a modern feel */
-.admin-uswds-dashboard .admin-kpi-card {
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
-}
-.admin-uswds-dashboard .admin-kpi-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 14px 30px rgba(15, 79, 57, 0.12);
-  border-color: #9fc8b5;
-}
-
-/* 3. Entrance animation for dashboard KPI cards (respects reduced motion) */
+/* 2. Entrance animation for KPI cards. The design-system already supplies the
+      hover lift + token-based transition, so we only ADD the fade-up here. */
 .admin-uswds-dashboard .admin-kpi-card {
   animation: adminDashFadeUp 420ms ease both;
 }
@@ -4958,7 +4950,7 @@ body.admin-container {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* 4. Component reference guide (injected by admin_dashboard.js) */
+/* 3. Component reference guide (injected by admin_dashboard.js) */
 .admin-uswds-dashboard .admin-component-guide {
   margin: 0;
   padding: 0;
@@ -5021,18 +5013,15 @@ body.admin-container {
   color: var(--dashboard-muted, #52635d);
 }
 
-/* 5. Relative "updated" timestamp emphasis */
+/* 4. Relative "updated" timestamp emphasis */
 .admin-uswds-dashboard #last-updated-time {
   font-variant-numeric: tabular-nums;
 }
 
-/* 6. Reduced motion: disable entrance/lift animations */
+/* 5. Reduced motion: disable the entrance animation (hover is handled by the
+      design system's own reduced-motion block) */
 @media (prefers-reduced-motion: reduce) {
   .admin-uswds-dashboard .admin-kpi-card {
     animation: none !important;
-    transition: none !important;
-  }
-  .admin-uswds-dashboard .admin-kpi-card:hover {
-    transform: none !important;
   }
 }

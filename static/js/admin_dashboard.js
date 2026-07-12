@@ -740,7 +740,7 @@ class AdminDashboard {
   renderUserActivityChart(data) {
     const ctx = document.getElementById("user-activity-chart");
     if (!ctx) return;
-    // Add accessibility attributes
+    // Accessibility: give the canvas an accessible name + role.
     ctx.setAttribute("role", "img");
     ctx.setAttribute("aria-label", "User activity chart showing active users over time");
     this.charts.userActivity?.destroy();
@@ -794,7 +794,7 @@ class AdminDashboard {
   renderSubmissionsChart(data) {
     const ctx = document.getElementById("enrollment-status-chart");
     if (!ctx) return;
-    // Add accessibility attributes
+    // Accessibility: give the canvas an accessible name + role.
     ctx.setAttribute("role", "img");
     ctx.setAttribute("aria-label", "Enrollment status chart showing distribution of application statuses");
     this.charts.dataSubmissions?.destroy();
@@ -898,7 +898,7 @@ class AdminDashboard {
 
     const actor = document.createElement("span");
     actor.className = "activity-actor";
-    actor.innerHTML = `<i class="bi bi-person-fill"></i> ${escapeHtml(activity.user_name || this.t("dashboard.system_actor", "System"))}`;
+    actor.innerHTML = `<i class="bi bi-person-fill"></i> ${activity.user_name || this.t("dashboard.system_actor", "System")}`;
 
     const time = document.createElement("span");
     time.className = "activity-time";
@@ -915,7 +915,7 @@ class AdminDashboard {
     if (moduleName) {
       const categoryRow = document.createElement("div");
       categoryRow.className = "activity-category-row";
-      categoryRow.innerHTML = `<span class="activity-category-badge"><i class="bi bi-folder2"></i> ${escapeHtml(moduleName)}</span>`;
+      categoryRow.innerHTML = `<span class="activity-category-badge"><i class="bi bi-folder2"></i> ${moduleName}</span>`;
       article.appendChild(categoryRow);
     }
 
