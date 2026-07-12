@@ -105,7 +105,6 @@ def test_agency_report_payload_ships_arabic_labels(client, test_db):
 
 def test_mosd_card_custom_design_applied():
     source = AGENCY_REPORTS_JS.read_text(encoding="utf-8")
-    assert 'agency.code === "mosd"' in source
-    assert 'agency-card-prominent-logo' in source
-    assert 'agency-logo-placeholder' in source
+    assert 'agency.code !== "mosd"' in source
+    assert 'renderAgencyLogo(agency, 80)' in source
 

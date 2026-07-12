@@ -136,7 +136,7 @@
 
     const head = document.createElement("div");
     head.className = "agency-card__head";
-    head.appendChild(window.renderAgencyLogo(agency, 56));
+    head.appendChild(window.renderAgencyLogo(agency, 80));
     const titleWrap = document.createElement("div");
     titleWrap.className = "agency-card__title-wrap";
     const h3 = document.createElement("h3");
@@ -145,25 +145,8 @@
     titleWrap.append(h3, readinessBadge(readiness));
     head.appendChild(titleWrap);
 
-    let bodyElement;
-    if (agency.code === "mosd") {
-      bodyElement = document.createElement("div");
-      bodyElement.className = "agency-card-logo-container";
-      const img = document.createElement("img");
-      img.className = "agency-card-prominent-logo";
-      img.src = "/static/img/agencies/mosd.jpg";
-      img.alt = t("شعار وزارة التنمية الاجتماعية", "Logo of the Ministry of Social Development");
-      img.addEventListener("error", function () {
-        const placeholder = document.createElement("div");
-        placeholder.className = "agency-logo-placeholder";
-        placeholder.setAttribute("role", "img");
-        placeholder.setAttribute("aria-label", t("شعار وزارة التنمية الاجتماعية", "Logo of the Ministry of Social Development"));
-        placeholder.innerHTML = '<i class="bi bi-bank" aria-hidden="true"></i>';
-        bodyElement.innerHTML = "";
-        bodyElement.appendChild(placeholder);
-      });
-      bodyElement.appendChild(img);
-    } else {
+    let bodyElement = null;
+    if (agency.code !== "mosd") {
       const desc = document.createElement("p");
       desc.className = "agency-card-desc";
       desc.textContent = (lang === "en" ? (agency.description_en || agency.description_ar) : agency.description_ar) || "";
@@ -186,7 +169,9 @@
       stat("تحتاج بيانات", "Needs data", agency.requires_data_count || 0, "warning"),
     );
 
-    li.append(head, bodyElement, stats);
+    li.appendChild(head);
+    if (bodyElement) li.appendChild(bodyElement);
+    li.appendChild(stats);
 
     if (readiness !== "ready" && (agency.requires_data_count || 0) > 0) {
       const note = document.createElement("p");
