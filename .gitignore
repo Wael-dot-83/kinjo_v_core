@@ -181,3 +181,6 @@ htmlcov/
 /test_advanced_analytics_cache_multi.py
 /test_api_advanced_cache.py
 /test_cache_invalidation.py
+
+# Google Drive sync temp folder
+.tmp.driveupload/
