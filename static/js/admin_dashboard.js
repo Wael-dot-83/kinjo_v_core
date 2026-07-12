@@ -84,6 +84,17 @@ class AdminDashboard {
     this.initEventListeners();
     this.initChartDefaults();
     this.loadDashboardData();
+
+    // Accessibility: announce timestamp changes to screen readers.
+    const lastUpdatedTime = document.getElementById("last-updated-time");
+    if (lastUpdatedTime) lastUpdatedTime.setAttribute("aria-live", "polite");
+
+    // On-page component reference (explains each section of the dashboard).
+    this.renderComponentGuide();
+
+    // Live "updated Xs ago" relative timestamp.
+    this.startRelativeTimeTicker();
+
     // Auto-refresh existed unconditionally before (5-minute interval, no way
     // to disable); autoRefreshEnabled persists the user's choice to keep
     // that same default (on) when no preference has been saved yet.
@@ -188,7 +199,8 @@ class AdminDashboard {
         const now = new Date();
         const timeStr = now.toLocaleTimeString(lang === "en" ? "en-US" : "ar-SA", { hour: '2-digit', minute: '2-digit' });
         if (lastUpdatedLabel) {
-            lastUpdatedLabel.textContent = lang === "en" ? `Last updated: ${timeStr}` : `آخر تحديث: ${timeStr}`;
+          this._lastUpdatedAt = new Date();
+          this._renderRelativeTime();
         }
 
         setTimeout(() => {
@@ -215,7 +227,10 @@ class AdminDashboard {
         refreshBtn.disabled = false;
         refreshBtn.classList.remove("is-loading");
         if (refreshText) refreshText.textContent = lang === "en" ? "Update Data" : "تحديث البيانات";
-        if (refreshIcon) refreshIcon.classList.remove("spin");
+        if (refreshIcon) {
+          refreshIcon.classList.remove("spin", "bi-check2");
+          refreshIcon.classList.add("bi-arrow-clockwise");
+        }
       }
     } finally {
       this.isLoading = false;
@@ -343,6 +358,9 @@ class AdminDashboard {
     // below), which is the correct accessible name source for a list item.
     const card = document.createElement("li");
     card.className = "admin-kpi-card";
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const desc = this._kpiDescription(config, lang);
+    if (desc) card.title = desc; // native tooltip — keyboard + pointer accessible
 
     let { formattedValue, badgeHtml } = this.formatKPIValue(config, value);
     // A metric that could not be computed must not masquerade as a real value
@@ -368,6 +386,11 @@ class AdminDashboard {
     valueDiv.className = "admin-kpi-card-value";
     valueDiv.textContent = formattedValue;
     contentDiv.appendChild(valueDiv);
+
+    // Modern touch: animate the numeric value counting up to its target.
+    if (value !== null && (config.format === "number" || config.format === "percentage")) {
+      this.animateCountUp(valueDiv, value, config.format, lang);
+    }
 
     if (badgeHtml) {
       const badgeWrap = document.createElement("div");
@@ -569,9 +592,157 @@ class AdminDashboard {
     if (charts.data_submissions) this.renderSubmissionsChart(charts.data_submissions);
   }
 
+  /**
+   * Injects an accessible, collapsible "About this dashboard" reference that
+   * explains every section of the page. The template cannot be edited in this
+   * pass, so the explanation is added to the DOM at runtime, right after the
+   * existing "How to use" guide. Built with semantic <details>/<summary> for
+   * free keyboard support and screen-reader disclosure.
+   */
+  renderComponentGuide() {
+    const host = document.querySelector(".admin-dashboard-guide");
+    if (!host || document.getElementById("admin-component-guide")) return;
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+
+    const COMPONENTS = [
+      { key: "kpis",       title: { en: "KPI cards",                ar: "بطاقات المؤشرات" },
+        desc: { en: "Seven headline metrics: total & active users, total & active kindergartens, reports submitted, pending reports, and data-quality score.",
+                ar: "سبعة مؤشرات رئيسية: إجمالي والمستخدمون النشطون، إجمالي والحضانات النشطة، التقارير المقدّمة، التقارير المعلّقة، ودرجة جودة البيانات." } },
+      { key: "alerts",     title: { en: "System alerts",           ar: "تنبيهات النظام" },
+        desc: { en: "Items needing attention, ordered by severity: pending enrolments, recent incidents, and licence expiries.",
+                ar: "بنود تحتاج متابعة مرتّبة حسب الخطورة: طلبات التسجيل المعلّقة، الحوادث الأخيرة، وانتهاء التراخيص." } },
+      { key: "activity",   title: { en: "User activity chart",     ar: "مخطط نشاط المستخدمين" },
+        desc: { en: "Line chart of daily attendance over the selected period so you can spot engagement trends.",
+                ar: "مخطط خطي لحضور يومي خلال الفترة المحددة لملاحظة اتجاهات التفاعل." } },
+      { key: "enrollment", title: { en: "Enrollment status chart", ar: "مخطط حالة التسجيل" },
+        desc: { en: "Bar chart of enrolment applications by stage, revealing where pending workload sits.",
+                ar: "مخطط أعمدة لطلبات التسجيل حسب المرحلة، يوضح حجم العمل المعلّق." } },
+      { key: "feed",       title: { en: "Recent activity",         ar: "النشاطات الحديثة" },
+        desc: { en: "Audit trail of the latest administrative actions with the actor and timestamp.",
+                ar: "سجل تدقيق لآخر الإجراءات الإدارية مع الفاعل والوقت." } },
+      { key: "actions",    title: { en: "Quick actions",           ar: "الإجراءات السريعة" },
+        desc: { en: "Shortcuts to the most common tasks: manage users, send messages, view analytics, manage data.",
+                ar: "اختصارات لأكثر المهام شيوعاً: إدارة المستخدمين، إرسال رسالة، عرض التحليلات، إدارة البيانات." } },
+      { key: "agency",     title: { en: "Official agency reports", ar: "تقارير الجهات الرسمية" },
+        desc: { en: "Aggregated, privacy-controlled reports generated for external government stakeholders.",
+                ar: "تقارير مجمّعة وخاضعة لضوابط الخصوصية موجّهة للجهات الحكومية الخارجية." } },
+    ];
+
+    const section = document.createElement("section");
+    section.id = "admin-component-guide";
+    section.className = "admin-component-guide agency-reports-dashboard-section";
+    section.setAttribute("aria-labelledby", "admin-component-guide-title");
+
+    const details = document.createElement("details");
+    details.className = "admin-component-guide-details";
+
+    const summary = document.createElement("summary");
+    summary.id = "admin-component-guide-title";
+    summary.textContent = lang === "en" ? "About this dashboard" : "حول لوحة التحكم";
+    details.appendChild(summary);
+
+    const intro = document.createElement("p");
+    intro.className = "admin-component-guide-intro";
+    intro.textContent = lang === "en"
+      ? "Each section below is explained so you can read the page with confidence:"
+      : "يُشرح كل قسم أدناه لتتمكّن من قراءة الصفحة بثقة:";
+    details.appendChild(intro);
+
+    const list = document.createElement("ul");
+    list.className = "admin-component-guide-list";
+    COMPONENTS.forEach((c) => {
+      const li = document.createElement("li");
+      const h = document.createElement("h3");
+      h.className = "admin-component-guide-item-title";
+      h.textContent = c.title[lang];
+      const p = document.createElement("p");
+      p.textContent = c.desc[lang];
+      li.appendChild(h);
+      li.appendChild(p);
+      list.appendChild(li);
+    });
+    details.appendChild(list);
+    section.appendChild(details);
+
+    host.insertAdjacentElement("afterend", section);
+  }
+
+  // ── Relative "updated" timestamp ─────────────────────────────────────────
+
+  startRelativeTimeTicker() {
+    if (this._relativeTickerId) clearInterval(this._relativeTickerId);
+    this._relativeTickerId = setInterval(() => this._renderRelativeTime(), 30000);
+  }
+
+  _renderRelativeTime() {
+    const el = document.getElementById("last-updated-time");
+    if (!el || !this._lastUpdatedAt) return;
+    const sec = Math.max(0, Math.floor((Date.now() - this._lastUpdatedAt.getTime()) / 1000));
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    let text;
+    if (sec < 5) {
+      text = lang === "en" ? "Updated just now" : "تم التحديث الآن";
+    } else if (sec < 60) {
+      text = lang === "en" ? `Updated ${sec} seconds ago` : `تم التحديث قبل ${sec} ثانية`;
+    } else {
+      const mins = Math.floor(sec / 60);
+      text = lang === "en"
+        ? `Updated ${mins} minute${mins > 1 ? "s" : ""} ago`
+        : `تم التحديث قبل ${mins} دقيقة`;
+    }
+    el.textContent = text;
+  }
+
+  // ── KPI helper: accessible description for tooltips ──────────────────────
+
+  _kpiDescription(config, lang) {
+    const MAP = {
+      total_users:          { en: "All user accounts in the system.",                               ar: "جميع حسابات المستخدمين في النظام." },
+      active_users:         { en: "Users who signed in today.",                                     ar: "المستخدمون الذين سجّلوا دخولهم اليوم." },
+      total_kindergartens:  { en: "Every kindergarten on record.",                                   ar: "كل حضانة مسجّلة في النظام." },
+      active_kindergartens: { en: "Kindergartens currently marked active.",                          ar: "الحضانات المفعّلة حالياً." },
+      total_submissions:    { en: "Daily reports submitted in the selected period.",                 ar: "التقارير اليومية المقدّمة خلال الفترة المحددة." },
+      pending_submissions:  { en: "Daily reports awaiting review.",                                  ar: "التقارير اليومية بانتظار المراجعة." },
+      data_quality_score:   { en: "Share of active kindergartens that reported in the last 7 days.", ar: "نسبة الحضانات النشطة التي قدّمت تقريراً خلال آخر 7 أيام." },
+    };
+    const m = MAP[config.key];
+    return m ? m[lang] : "";
+  }
+
+  /**
+   * Lightweight requestAnimationFrame count-up for KPI values. Always finishes
+   * on the exact locale-formatted string so screen readers and layouts stay
+   * correct even if the animation is interrupted.
+   */
+  animateCountUp(el, target, format, lang) {
+    if (typeof target !== "number" || !Number.isFinite(target)) return;
+    const finalText = el.textContent;
+    const locale = lang === "en" ? "en-US" : "ar-JO";
+    const start = (typeof performance !== "undefined" ? performance.now() : Date.now());
+    const duration = 700;
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const current = target * eased;
+      el.textContent = format === "percentage"
+        ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(current) + "%"
+        : new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(current));
+      if (t < 1) requestAnimationFrame(step);
+      else el.textContent = finalText; // exact locale-correct final value
+    };
+    try {
+      requestAnimationFrame(step);
+    } catch (e) {
+      el.textContent = finalText;
+    }
+  }
+
   renderUserActivityChart(data) {
     const ctx = document.getElementById("user-activity-chart");
     if (!ctx) return;
+    // Add accessibility attributes
+    ctx.setAttribute("role", "img");
+    ctx.setAttribute("aria-label", "User activity chart showing active users over time");
     this.charts.userActivity?.destroy();
     const context = ctx.getContext("2d");
     const gradient = context ? (() => {
@@ -623,6 +794,9 @@ class AdminDashboard {
   renderSubmissionsChart(data) {
     const ctx = document.getElementById("enrollment-status-chart");
     if (!ctx) return;
+    // Add accessibility attributes
+    ctx.setAttribute("role", "img");
+    ctx.setAttribute("aria-label", "Enrollment status chart showing distribution of application statuses");
     this.charts.dataSubmissions?.destroy();
     const palette = ["#0d6efd", "#198754", "#ffc107", "#dc3545", "#6c757d", "#0dcaf0"];
     this.charts.dataSubmissions = new Chart(ctx, {
@@ -724,7 +898,7 @@ class AdminDashboard {
 
     const actor = document.createElement("span");
     actor.className = "activity-actor";
-    actor.innerHTML = `<i class="bi bi-person-fill"></i> ${activity.user_name || this.t("dashboard.system_actor", "System")}`;
+    actor.innerHTML = `<i class="bi bi-person-fill"></i> ${escapeHtml(activity.user_name || this.t("dashboard.system_actor", "System"))}`;
 
     const time = document.createElement("span");
     time.className = "activity-time";
@@ -741,7 +915,7 @@ class AdminDashboard {
     if (moduleName) {
       const categoryRow = document.createElement("div");
       categoryRow.className = "activity-category-row";
-      categoryRow.innerHTML = `<span class="activity-category-badge"><i class="bi bi-folder2"></i> ${moduleName}</span>`;
+      categoryRow.innerHTML = `<span class="activity-category-badge"><i class="bi bi-folder2"></i> ${escapeHtml(moduleName)}</span>`;
       article.appendChild(categoryRow);
     }
 
@@ -936,6 +1110,7 @@ class AdminDashboard {
 
   destroy() {
     this.stopAutoRefresh();
+    if (this._relativeTickerId) clearInterval(this._relativeTickerId);
     document.getElementById("refresh-dashboard")?.removeEventListener("click", this._listeners.refresh);
     document.getElementById("retry-dashboard")?.removeEventListener("click",   this._listeners.retry);
     document.getElementById("autoRefreshCheck")?.removeEventListener("change", this._listeners.autoRefreshToggle);
