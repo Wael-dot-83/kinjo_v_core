@@ -176,7 +176,8 @@
     "ذكر": { ar: "ذكر", en: "Male" },
     "أنثى": { ar: "أنثى", en: "Female" },
     "غير محدد": { ar: "غير محدد", en: "Unspecified" },
-    "غير معروف": { ar: "غير معروف", en: "Unknown" }
+    "غير معروف": { ar: "غير معروف", en: "Unknown" },
+    "محجوب": { ar: "محجوب", en: "Suppressed" }
   };
 
   // Common table headers the backend returns as Arabic dict keys.

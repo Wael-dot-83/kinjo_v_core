@@ -1,6 +1,7 @@
 """Dynamic, privacy-safe services for official agency reports."""
 from __future__ import annotations
 
+import os
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -12,6 +13,16 @@ import models
 from agency_reports_registry import AGENCY_REPORT_REGISTRY, SENSITIVE_FIELD_DENYLIST
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
+
+
+def _min_cell_size() -> int:
+    """Statistical disclosure threshold: category counts below this are
+    suppressed. Configurable via AGENCY_REPORT_MIN_CELL_SIZE; safe default 5.
+    A value <= 1 disables suppression."""
+    try:
+        return max(0, int(os.getenv("AGENCY_REPORT_MIN_CELL_SIZE", "5")))
+    except (TypeError, ValueError):
+        return 5
 
 
 def _now_iso() -> str:
@@ -635,6 +646,13 @@ class AgencyReportsService:
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
         }
+        # Statistical disclosure control: blank identifying small category counts
+        # before the payload leaves the service (applies to JSON and CSV alike).
+        suppressed_cells = self._apply_small_cell_suppression(charts, table)
+        if suppressed_cells:
+            quality_notes.append(
+                f"تم حجب {suppressed_cells} خلية بأعداد صغيرة لحماية الخصوصية (الحد الأدنى {_min_cell_size()})."
+            )
         payload = {
             "title": "تقرير مخصص",
             "generated_at": _now_iso(),
@@ -644,7 +662,7 @@ class AgencyReportsService:
             "charts": charts,
             "summary_ar": self._custom_summary_ar(scope_out, kpis, status),
             "decision_notes_ar": notes,
-            "data_quality": {"status": status, "notes": quality_notes},
+            "data_quality": {"status": status, "notes": quality_notes, "suppressed_cells": suppressed_cells},
             "privacy_notice_ar": "يعرض هذا التقرير بيانات تجميعية فقط ولا يتضمن أي بيانات شخصية أو حساسة.",
             "excluded_sensitive_fields": sorted(SENSITIVE_FIELD_DENYLIST),
         }
@@ -1130,6 +1148,34 @@ class AgencyReportsService:
             "rows": [{"المؤشر": "أطفال لكل حضانة نشطة", "الأطفال": children, "الحضانات النشطة": active_kgs, "النسبة": ratio}],
             "note": ("لا توجد حضانات نشطة ضمن النطاق." if active_kgs == 0 else None),
         }
+
+    SUPPRESSION_MARKER = "محجوب"
+
+    def _apply_small_cell_suppression(self, charts: list, table: list) -> int:
+        """Suppress identifying small category counts (statistical disclosure
+        control). Counts in (0, threshold) are blanked: chart points become a gap
+        (None, never 0) and table breakdown cells show "محجوب". Returns the number
+        of suppressed table cells. Headline KPI totals/rates are not suppressed;
+        complementary suppression is a documented follow-up."""
+        threshold = _min_cell_size()
+        if threshold <= 1:
+            return 0
+
+        def _small(v: Any) -> bool:
+            return isinstance(v, int) and not isinstance(v, bool) and 0 < v < threshold
+
+        for chart in charts:
+            for point in chart.get("series", []):
+                if _small(point.get("value")):
+                    point["value"] = None
+                    point["suppressed"] = True
+
+        suppressed = 0
+        for row in table:
+            if "الفئة" in row and _small(row.get("القيمة")):
+                row["القيمة"] = self.SUPPRESSION_MARKER
+                suppressed += 1
+        return suppressed
 
     def _custom_summary_ar(self, scope: dict[str, Any], kpis: list[dict[str, Any]], status: str) -> str:
         parts = [f"تقرير مخصص للجهة: {scope['agency_name_ar']}، على مستوى {scope['level_name_ar']}"]

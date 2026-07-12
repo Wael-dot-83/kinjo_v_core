@@ -81,6 +81,30 @@ def test_reporting_participation_uses_exact_seven_day_window(test_db, sample_chi
     assert result["kpi"]["value"] == 50.0
 
 
+def test_small_cell_suppression_blanks_small_counts(test_db, monkeypatch):
+    """Category counts below the disclosure threshold are suppressed: chart
+    points become a gap (None, never 0), table cells show "محجوب", and the count
+    is reported in metadata. Values at/above the threshold are untouched."""
+    monkeypatch.setenv("AGENCY_REPORT_MIN_CELL_SIZE", "5")
+    svc = AgencyReportsService(test_db)
+    charts = [{"type": "bar", "series": [
+        {"label": "CRITICAL", "value": 2},
+        {"label": "LOW", "value": 9},
+    ]}]
+    table = [
+        {"المؤشر": "x", "الفئة": "CRITICAL", "القيمة": 2},
+        {"المؤشر": "x", "الفئة": "LOW", "القيمة": 9},
+    ]
+    suppressed = svc._apply_small_cell_suppression(charts, table)
+
+    assert suppressed == 1
+    assert charts[0]["series"][0]["value"] is None      # gap, not zero
+    assert charts[0]["series"][0]["suppressed"] is True
+    assert charts[0]["series"][1]["value"] == 9          # above threshold, kept
+    assert table[0]["القيمة"] == "محجوب"
+    assert table[1]["القيمة"] == 9
+
+
 def _active_enrollment(db, kg_id, child_id, e_start, e_end):
     db.add(models.EnrollmentApplication(
         child_id=child_id,
