@@ -69,102 +69,147 @@
     return logoBadge(agency);
   };
 
-  function renderSummaryWidgets(agencies) {
-    const box = document.getElementById("agency-summary-widgets");
-    if (!box) return;
-    const total = agencies.length;
+  // -------- Index page: readiness, KPI grid, agency cards, skeletons --------
+  const READINESS = {
+    ready:      { ar: "جاهز",            en: "Ready",           cls: "success", icon: "bi-check-circle-fill" },
+    partial:    { ar: "جاهز جزئيًا",     en: "Partially ready", cls: "info",    icon: "bi-clock-history" },
+    needs_data: { ar: "يحتاج إلى بيانات", en: "Needs data",      cls: "warning", icon: "bi-exclamation-triangle-fill" },
+  };
+  const READINESS_RANK = { ready: 0, partial: 1, needs_data: 2 };
+
+  function agencyReadiness(agency) {
+    const total = agency.report_count || 0;
+    const ready = agency.ready_report_count || 0;
+    if (total > 0 && ready >= total) return "ready";
+    if (ready > 0) return "partial";
+    return "needs_data";
+  }
+
+  function readinessBadge(key) {
+    const r = READINESS[key] || READINESS.needs_data;
+    const span = document.createElement("span");
+    span.className = "agency-readiness agency-readiness--" + r.cls;
+    const i = document.createElement("i");
+    i.className = "bi " + r.icon;
+    i.setAttribute("aria-hidden", "true");
+    span.appendChild(i);
+    span.appendChild(document.createTextNode(" " + t(r.ar, r.en)));
+    return span;
+  }
+
+  function renderKpiGrid(agencies) {
+    const grid = document.getElementById("agency-kpi-grid");
+    if (!grid) return;
     const totalReports = agencies.reduce((s, a) => s + (a.report_count || 0), 0);
     const readyReports = agencies.reduce((s, a) => s + (a.ready_report_count || 0), 0);
     const needsData = agencies.reduce((s, a) => s + (a.requires_data_count || 0), 0);
     const items = [
-      { label: t("عدد الجهات الرسمية", "Official Agencies"), value: total, icon: "bi-building" },
-      { label: t("إجمالي التقارير", "Total Reports"), value: totalReports, icon: "bi-file-earmark-bar-graph" },
-      { label: t("التقارير الجاهزة", "Ready Reports"), value: readyReports, icon: "bi-check-circle-fill", cls: "agency-widget--success" },
-      { label: t("تحتاج بيانات منظمة", "Need structured data"), value: needsData, icon: "bi-exclamation-triangle-fill", cls: "agency-widget--warning" },
+      { value: agencies.length, label: t("الجهات الرسمية", "Official agencies"), icon: "bi-buildings", cls: "primary", hint: t("جهات حكومية متكاملة", "Connected agencies") },
+      { value: totalReports, label: t("إجمالي التقارير", "Total reports"), icon: "bi-file-earmark-bar-graph", cls: "primary", hint: t("تقارير تجميعية متاحة", "Aggregated reports") },
+      { value: readyReports, label: t("التقارير الجاهزة", "Ready reports"), icon: "bi-check-circle-fill", cls: "success", hint: t("جاهزة للعرض والتصدير", "Ready to view & export") },
+      { value: needsData, label: t("تحتاج إلى بيانات", "Need data"), icon: "bi-exclamation-triangle-fill", cls: "warning", hint: t("بانتظار بيانات منظمة", "Awaiting structured data") },
     ];
-    box.innerHTML = "";
-    const grid = document.createElement("div");
-    grid.className = "agency-summary-widgets-grid";
+    grid.innerHTML = "";
     items.forEach((item) => {
-      const card = document.createElement("div");
-      card.className = "agency-summary-widget" + (item.cls ? " " + item.cls : "");
-      const ico = document.createElement("i");
-      ico.className = "bi " + item.icon + " agency-widget-icon";
-      ico.setAttribute("aria-hidden", "true");
-      const val = document.createElement("strong");
-      val.className = "agency-widget-value";
-      val.textContent = item.value;
-      const lbl = document.createElement("span");
-      lbl.className = "agency-widget-label";
-      lbl.textContent = item.label;
-      card.append(ico, val, lbl);
-      grid.appendChild(card);
+      const li = document.createElement("li");
+      li.className = "agency-kpi agency-kpi--" + item.cls;
+      li.setAttribute("aria-label", item.value + " — " + item.label);
+      const icon = document.createElement("span");
+      icon.className = "agency-kpi__icon";
+      icon.innerHTML = '<i class="bi ' + item.icon + '" aria-hidden="true"></i>';
+      const body = document.createElement("div");
+      body.className = "agency-kpi__body";
+      const val = document.createElement("span"); val.className = "agency-kpi__value"; val.textContent = item.value;
+      const lbl = document.createElement("span"); lbl.className = "agency-kpi__label"; lbl.textContent = item.label;
+      const hint = document.createElement("span"); hint.className = "agency-kpi__hint"; hint.textContent = item.hint;
+      body.append(val, lbl, hint);
+      li.append(icon, body);
+      grid.appendChild(li);
     });
-    box.appendChild(grid);
   }
 
-  function renderIndex(data) {
-    clear(root);
-    renderSummaryWidgets(data.agencies || []);
+  function agencyCard(agency) {
+    const li = document.createElement("li");
+    li.className = "agency-card agency-card--interactive";
+    const readiness = agencyReadiness(agency);
+    const href = "/admin/agency-reports/" + encodeURIComponent(agency.code);
 
-    const list = document.createElement("ul");
-    list.className = "agency-card-grid";
-    list.setAttribute("role", "list");
+    const head = document.createElement("div");
+    head.className = "agency-card__head";
+    head.appendChild(window.renderAgencyLogo(agency, 56));
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "agency-card__title-wrap";
+    const h3 = document.createElement("h3");
+    h3.className = "agency-card__title";
+    h3.textContent = lang === "en" ? (agency.name_en || agency.name_ar) : agency.name_ar;
+    titleWrap.append(h3, readinessBadge(readiness));
+    head.appendChild(titleWrap);
 
-    data.agencies.forEach((agency) => {
-      const li = document.createElement("li");
-      li.className = "agency-card";
+    const desc = document.createElement("p");
+    desc.className = "agency-card-desc";
+    desc.textContent = (lang === "en" ? (agency.description_en || agency.description_ar) : agency.description_ar) || "";
 
-      // Header: logo + name
-      const header = document.createElement("div");
-      header.className = "agency-card__head";
-      header.appendChild(window.renderAgencyLogo(agency, 72));
-      const h2 = document.createElement("h2");
-      h2.textContent = lang === "en" ? agency.name_en : agency.name_ar;
-      header.appendChild(h2);
-
-      // Description
-      const desc = document.createElement("p");
-      desc.className = "agency-card-desc";
-      desc.textContent = agency.description_ar || "";
-
-      // Metadata row
-      const meta = document.createElement("div");
-      meta.className = "agency-card-meta";
-      meta.append(
-        pill(t("التقارير: ", "Reports: ") + (agency.report_count || 0), "info", "bi-file-earmark"),
-        pill(t("جاهزة: ", "Ready: ") + (agency.ready_report_count || 0), "success", "bi-check-circle")
-      );
-      if (agency.requires_data_count) {
-        meta.append(pill(t("تحتاج بيانات: ", "Needs data: ") + agency.requires_data_count, "warning", "bi-exclamation-triangle"));
-      }
-
-      // Open button
-      const link = document.createElement("a");
-      link.className = "admin-btn admin-btn-primary agency-card-btn";
-      link.href = "/admin/agency-reports/" + encodeURIComponent(agency.code);
-      link.textContent = t("فتح تقارير الجهة", "Open Agency Reports");
-      link.setAttribute("aria-label", t("فتح تقارير " + (agency.name_ar || agency.code), "Open reports for " + (agency.name_en || agency.code)));
-
-      li.append(header, desc, meta, link);
-
-      li.addEventListener("click", function (e) {
-        e.stopPropagation();
-        window.location.href = "/admin/agency-reports/" + encodeURIComponent(agency.code);
-      });
-      link.addEventListener("click", function (e) { e.stopPropagation(); });
-
-      list.appendChild(li);
-    });
-
-    if (!data.agencies.length) {
-      const empty = document.createElement("div");
-      empty.className = "agency-alert";
-      empty.textContent = t("لا توجد تقارير جاهزة حالياً. يرجى استكمال البيانات المطلوبة أو مراجعة إعدادات التكامل.", "No reports are available at this time. Please complete the required data or review integration settings.");
-      root.appendChild(empty);
-    } else {
-      root.appendChild(list);
+    const stats = document.createElement("dl");
+    stats.className = "agency-card__stats";
+    function stat(labelAr, labelEn, value, cls) {
+      const wrap = document.createElement("div");
+      wrap.className = "agency-card__stat" + (cls ? " agency-card__stat--" + cls : "");
+      const dd = document.createElement("dd"); dd.textContent = value;
+      const dt = document.createElement("dt"); dt.textContent = t(labelAr, labelEn);
+      wrap.append(dd, dt);
+      return wrap;
     }
+    stats.append(
+      stat("التقارير", "Reports", agency.report_count || 0),
+      stat("جاهزة", "Ready", agency.ready_report_count || 0, "success"),
+      stat("تحتاج بيانات", "Needs data", agency.requires_data_count || 0, "warning"),
+    );
+
+    li.append(head, desc, stats);
+
+    if (readiness !== "ready" && (agency.requires_data_count || 0) > 0) {
+      const note = document.createElement("p");
+      note.className = "agency-card__note";
+      note.innerHTML = '<i class="bi bi-info-circle" aria-hidden="true"></i> ';
+      note.appendChild(document.createTextNode(
+        agency.code === "moh"
+          ? t("تحتاج التقارير إلى بيانات صحية منظمة.", "These reports need structured health data.")
+          : t("بعض التقارير تحتاج إلى بيانات منظمة إضافية.", "Some reports need additional structured data.")
+      ));
+      li.appendChild(note);
+    }
+
+    const link = document.createElement("a");
+    link.className = "admin-btn admin-btn-primary agency-card-btn";
+    link.href = href;
+    link.innerHTML = "<span>" + t("عرض التقارير", "View reports") + '</span><i class="bi bi-chevron-left icon-directional" aria-hidden="true"></i>';
+    link.setAttribute("aria-label", t("عرض تقارير " + (agency.name_ar || agency.code), "View reports for " + (agency.name_en || agency.code)));
+    li.appendChild(link);
+
+    // Whole-card affordance without nesting interactive controls: clicking the
+    // card background navigates; keyboard users use the real link/inner controls.
+    li.addEventListener("click", function (e) {
+      if (e.target.closest("a,button")) return;
+      window.location.href = href;
+    });
+    return li;
+  }
+
+  function skeletonGrid(n) {
+    const ul = document.createElement("ul");
+    ul.className = "agency-card-grid";
+    ul.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < n; i++) {
+      const li = document.createElement("li");
+      li.className = "agency-card agency-card--skeleton";
+      li.innerHTML =
+        '<div class="agency-card__head"><span class="sk sk-logo"></span><span class="sk sk-line sk-title"></span></div>' +
+        '<span class="sk sk-line"></span><span class="sk sk-line sk-short"></span>' +
+        '<div class="agency-card__stats"><span class="sk sk-stat"></span><span class="sk sk-stat"></span><span class="sk sk-stat"></span></div>' +
+        '<span class="sk sk-btn"></span>';
+      ul.appendChild(li);
+    }
+    return ul;
   }
 
   function renderAgency(data) {
@@ -400,13 +445,163 @@
       });
   }
 
+  // -------- Tabs (ARIA tablist) --------
+  function activateTab(tabId) {
+    const tabs = Array.prototype.slice.call(document.querySelectorAll('.agency-tab[role="tab"]'));
+    tabs.forEach((tab) => {
+      const selected = tab.id === tabId;
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      const panel = document.getElementById(tab.getAttribute("aria-controls"));
+      if (panel) panel.hidden = !selected;
+    });
+  }
+
+  function initTabs() {
+    const tabs = Array.prototype.slice.call(document.querySelectorAll('.agency-tab[role="tab"]'));
+    if (!tabs.length) return;
+    tabs.forEach((tab, idx) => {
+      tab.addEventListener("click", () => { activateTab(tab.id); tab.focus(); });
+      tab.addEventListener("keydown", (e) => {
+        let target = null;
+        if (e.key === "ArrowLeft") target = tabs[(idx + 1) % tabs.length];        // RTL: left = next
+        else if (e.key === "ArrowRight") target = tabs[(idx - 1 + tabs.length) % tabs.length];
+        else if (e.key === "Home") target = tabs[0];
+        else if (e.key === "End") target = tabs[tabs.length - 1];
+        if (target) { e.preventDefault(); activateTab(target.id); target.focus(); }
+      });
+    });
+  }
+
+  // -------- Usage-guide drawer (native <dialog>: focus trap + Esc) --------
+  function initDrawer() {
+    const dlg = document.getElementById("usage-guide-dialog");
+    const openBtn = document.getElementById("open-usage-guide");
+    const closeBtn = document.getElementById("close-usage-guide");
+    if (!dlg || !openBtn) return;
+    openBtn.addEventListener("click", () => {
+      if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
+    });
+    if (closeBtn) closeBtn.addEventListener("click", () => dlg.close());
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+  }
+
   const type = page.dataset.agencyReportsPage;
 
   if (type === "index") {
+    initTabs();
+    initDrawer();
+    const ctaCustom = document.getElementById("cta-create-custom");
+    if (ctaCustom) ctaCustom.addEventListener("click", () => { activateTab("tab-custom"); const c = document.getElementById("tab-custom"); if (c) c.focus(); });
+
+    if (root) { clear(root); root.appendChild(skeletonGrid(6)); }
+
+    const state = { search: "", status: "all", sort: "name" };
+    let allAgencies = [];
+
+    function matches(agency) {
+      if (state.status !== "all" && agencyReadiness(agency) !== state.status) return false;
+      if (state.search) {
+        const q = state.search.toLowerCase();
+        const hay = [agency.name_ar, agency.name_en, agency.description_ar, agency.code].filter(Boolean).join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    }
+    function sortAgencies(list) {
+      const arr = list.slice();
+      if (state.sort === "reports") arr.sort((a, b) => (b.report_count || 0) - (a.report_count || 0));
+      else if (state.sort === "readiness") arr.sort((a, b) => READINESS_RANK[agencyReadiness(a)] - READINESS_RANK[agencyReadiness(b)]);
+      else arr.sort((a, b) => String(a.name_ar || "").localeCompare(String(b.name_ar || ""), "ar"));
+      return arr;
+    }
+    function resetFilters() {
+      state.search = ""; state.status = "all"; state.sort = "name";
+      const s = document.getElementById("agency-search"); if (s) s.value = "";
+      const st = document.getElementById("agency-status-filter"); if (st) st.value = "all";
+      const so = document.getElementById("agency-sort"); if (so) so.value = "name";
+      render();
+    }
+    function emptyState(hasFilters) {
+      const box = document.createElement("div");
+      box.className = "agency-empty-state";
+      box.innerHTML = '<i class="bi bi-search" aria-hidden="true"></i>';
+      const h = document.createElement("p");
+      h.className = "agency-empty-state__title";
+      h.textContent = hasFilters
+        ? t("لم يتم العثور على جهات أو تقارير مطابقة.", "No matching agencies or reports found.")
+        : t("لا توجد جهات متاحة حاليًا.", "No agencies are available right now.");
+      box.appendChild(h);
+      if (hasFilters) {
+        const p = document.createElement("p");
+        p.textContent = t("جرّب تعديل كلمات البحث أو إزالة بعض عوامل التصفية.", "Try changing your search terms or removing some filters.");
+        box.appendChild(p);
+        const btn = document.createElement("button");
+        btn.type = "button"; btn.className = "admin-btn admin-btn-secondary";
+        btn.textContent = t("مسح عوامل التصفية", "Clear filters");
+        btn.addEventListener("click", resetFilters);
+        box.appendChild(btn);
+      }
+      return box;
+    }
+    function render() {
+      if (!root) return;
+      const filtered = sortAgencies(allAgencies.filter(matches));
+      const countEl = document.getElementById("agency-result-count");
+      if (countEl) countEl.textContent = t(filtered.length + " من " + allAgencies.length + " جهة", filtered.length + " of " + allAgencies.length + " agencies");
+      const active = !!(state.search || state.status !== "all" || state.sort !== "name");
+      const clearBtn = document.getElementById("agency-clear-filters");
+      if (clearBtn) clearBtn.hidden = !active;
+      clear(root);
+      if (!filtered.length) { root.appendChild(emptyState(active)); return; }
+      const ul = document.createElement("ul");
+      ul.className = "agency-card-grid";
+      ul.setAttribute("role", "list");
+      filtered.forEach((a) => ul.appendChild(agencyCard(a)));
+      root.appendChild(ul);
+    }
+    function wireToolbar() {
+      const toolbar = document.getElementById("agency-toolbar");
+      if (toolbar) toolbar.hidden = false;
+      const s = document.getElementById("agency-search");
+      if (s) {
+        let deb;
+        s.addEventListener("input", function () {
+          clearTimeout(deb);
+          deb = setTimeout(() => { state.search = s.value.trim(); render(); }, 250);
+        });
+      }
+      const st = document.getElementById("agency-status-filter");
+      if (st) st.addEventListener("change", () => { state.status = st.value; render(); });
+      const so = document.getElementById("agency-sort");
+      if (so) so.addEventListener("change", () => { state.sort = so.value; render(); });
+      const clearBtn = document.getElementById("agency-clear-filters");
+      if (clearBtn) clearBtn.addEventListener("click", resetFilters);
+    }
+
     api("/api/admin/agency-reports/catalog")
-      .then(renderIndex)
+      .then((data) => {
+        allAgencies = data.agencies || [];
+        renderKpiGrid(allAgencies);
+        wireToolbar();
+        render();
+      })
       .catch(() => {
-        if (root) root.textContent = t("تعذر تحميل الجهات الرسمية.", "Unable to load agencies.");
+        if (!root) return;
+        clear(root);
+        const err = document.createElement("div");
+        err.className = "agency-alert agency-alert--error agency-error-state";
+        err.setAttribute("role", "alert");
+        err.innerHTML = '<i class="bi bi-exclamation-octagon" aria-hidden="true"></i>';
+        const p = document.createElement("p");
+        p.textContent = t("تعذر تحميل البيانات. تحقق من الاتصال ثم حاول مرة أخرى.", "Could not load data. Check your connection and try again.");
+        err.appendChild(p);
+        const retry = document.createElement("button");
+        retry.type = "button"; retry.className = "admin-btn admin-btn-secondary";
+        retry.textContent = t("إعادة المحاولة", "Retry");
+        retry.addEventListener("click", () => window.location.reload());
+        err.appendChild(retry);
+        root.appendChild(err);
       });
   }
 
