@@ -101,3 +101,11 @@ def test_agency_report_payload_ships_arabic_labels(client, test_db):
             assert payload["column_labels"].get(col), f"missing label for column {col}"
         # labels must be non-ASCII (Arabic), never the raw English key
         assert payload["column_labels"]["governorate"] != "governorate"
+
+
+def test_mosd_card_custom_design_applied():
+    source = AGENCY_REPORTS_JS.read_text(encoding="utf-8")
+    assert 'agency.code === "mosd"' in source
+    assert 'agency-card-prominent-logo' in source
+    assert 'agency-logo-placeholder' in source
+

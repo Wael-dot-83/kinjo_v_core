@@ -145,9 +145,30 @@
     titleWrap.append(h3, readinessBadge(readiness));
     head.appendChild(titleWrap);
 
-    const desc = document.createElement("p");
-    desc.className = "agency-card-desc";
-    desc.textContent = (lang === "en" ? (agency.description_en || agency.description_ar) : agency.description_ar) || "";
+    let bodyElement;
+    if (agency.code === "mosd") {
+      bodyElement = document.createElement("div");
+      bodyElement.className = "agency-card-logo-container";
+      const img = document.createElement("img");
+      img.className = "agency-card-prominent-logo";
+      img.src = "/static/img/agencies/mosd.jpg";
+      img.alt = t("شعار وزارة التنمية الاجتماعية", "Logo of the Ministry of Social Development");
+      img.addEventListener("error", function () {
+        const placeholder = document.createElement("div");
+        placeholder.className = "agency-logo-placeholder";
+        placeholder.setAttribute("role", "img");
+        placeholder.setAttribute("aria-label", t("شعار وزارة التنمية الاجتماعية", "Logo of the Ministry of Social Development"));
+        placeholder.innerHTML = '<i class="bi bi-bank" aria-hidden="true"></i>';
+        bodyElement.innerHTML = "";
+        bodyElement.appendChild(placeholder);
+      });
+      bodyElement.appendChild(img);
+    } else {
+      const desc = document.createElement("p");
+      desc.className = "agency-card-desc";
+      desc.textContent = (lang === "en" ? (agency.description_en || agency.description_ar) : agency.description_ar) || "";
+      bodyElement = desc;
+    }
 
     const stats = document.createElement("dl");
     stats.className = "agency-card__stats";
@@ -165,7 +186,7 @@
       stat("تحتاج بيانات", "Needs data", agency.requires_data_count || 0, "warning"),
     );
 
-    li.append(head, desc, stats);
+    li.append(head, bodyElement, stats);
 
     if (readiness !== "ready" && (agency.requires_data_count || 0) > 0) {
       const note = document.createElement("p");
