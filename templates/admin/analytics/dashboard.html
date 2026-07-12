@@ -47,7 +47,7 @@
       <div class="exec-banner__content">
         <p class="exec-banner__title">{% if ui_lang == 'en' %}EXECUTIVE SUMMARY{% else %}الملخص التنفيذي{% endif %}</p>
         <h2 class="exec-banner__heading mb-4">
-          {% if ui_lang == 'en' %}Jordan Kindergarten Network{% else %}شبكة الحضانات في الأردن{% endif %}
+          {% if ui_lang == 'en' %}Jordan Nursery Network{% else %}شبكة الحضانات في الأردن{% endif %}
         </h2>
         <div class="exec-banner__insights hero-insights" id="execInsights" role="list" aria-label="{% if ui_lang == 'en' %}Key insights{% else %}رؤى رئيسية{% endif %}">
           {# JS-populated — skeleton micro-cards #}
@@ -175,12 +175,12 @@
 
           {# Card 1: Kindergartens #}
           <article class="kpi-card-v2" style="--kpi-accent:var(--kpi-accent-kg);--kpi-icon-bg:var(--kpi-icon-bg-kg);"
-                   aria-label="{% if ui_lang == 'ar' %}عدد الحضانات{% else %}Kindergartens{% endif %}">
+                   aria-label="{% if ui_lang == 'ar' %}عدد الحضانات{% else %}Nurseries{% endif %}">
             <div class="kpi-card-v2__header">
-              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}</p>
+              <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Nurseries{% else %}الحضانات{% endif %}</p>
               <span class="kpi-card-v2__icon" aria-hidden="true"><i class="bi bi-building"></i></span>
             </div>
-            <p class="kpi-card-v2__value" id="totalKg" aria-live="polite" aria-label="{% if ui_lang == 'en' %}Total kindergartens{% else %}إجمالي الحضانات{% endif %}">
+            <p class="kpi-card-v2__value" id="totalKg" aria-live="polite" aria-label="{% if ui_lang == 'en' %}Total nurseries{% else %}إجمالي الحضانات{% endif %}">
               <span class="skel skel-value" aria-hidden="true"></span>
             </p>
             <div class="kpi-card-v2__footer">
@@ -356,7 +356,7 @@
                   {% if ui_lang == 'en' %}
                   <p class="mb-2">Data Quality is calculated from three independently measured components:</p>
                   <ul class="ps-3 mb-2">
-                    <li><strong>Completeness:</strong> the share of kindergartens with all core fields filled in (name, governorate, district, area, address, phone) averaged with the share of children with core fields filled in (name, date of birth, gender).</li>
+                    <li><strong>Completeness:</strong> the share of nurseries with all core fields filled in (name, governorate, district, area, address, phone) averaged with the share of children with core fields filled in (name, date of birth, gender).</li>
                     <li><strong>Accuracy:</strong> a validity check score — deducts for attendance records with an invalid status, classes with negative capacity, and children with a future date of birth.</li>
                     <li><strong>Freshness:</strong> based on hours since the most recent daily report network-wide (100% within 2h, 80% within 6h, 60% within 12h, 30% beyond that).</li>
                   </ul>
