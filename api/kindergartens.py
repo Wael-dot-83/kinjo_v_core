@@ -460,6 +460,58 @@ def list_kindergartens(
     )
 
 
+@router.get("/admin/kindergartens/stats")
+def admin_kindergarten_stats(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _admin_only(current_user)
+
+    status_rows = (
+        db.query(models.Kindergarten.status, func.count(models.Kindergarten.id))
+        .group_by(models.Kindergarten.status)
+        .all()
+    )
+    counts = {
+        status.value.lower() if hasattr(status, "value") else str(status).lower(): int(count)
+        for status, count in status_rows
+    }
+    active = counts.get("active", 0)
+    frozen = counts.get("frozen", 0)
+    draft = counts.get("draft", 0)
+    inactive = counts.get("inactive", 0)
+    deleted = counts.get("deleted", 0)
+    total = active + frozen + draft + inactive
+
+    child_count_sq, _attendance_sq = _stats_subqueries(db)
+    children_by_kg = dict(db.query(child_count_sq.c.kindergarten_id, child_count_sq.c[1]).all())
+    total_children = int(sum(children_by_kg.values()))
+
+    active_capacity_rows = (
+        db.query(models.Kindergarten.id, models.Kindergarten.total_capacity)
+        .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+        .all()
+    )
+    total_capacity = int(sum(capacity or 0 for _kg_id, capacity in active_capacity_rows))
+    avg_occupancy = round((total_children / total_capacity) * 100, 1) if total_capacity else 0
+
+    return _envelope(
+        True,
+        {
+            "total": total,
+            "active": active,
+            "frozen": frozen,
+            "draft": draft,
+            "inactive": inactive,
+            "deleted": deleted,
+            "avg_occupancy": avg_occupancy,
+            "total_children": total_children,
+            "total_capacity": total_capacity,
+        },
+        "Kindergarten statistics loaded successfully",
+    )
+
+
 @router.get("/kindergartens/{kindergarten_id}")
 def get_kindergarten(
     kindergarten_id: int,

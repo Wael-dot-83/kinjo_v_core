@@ -178,6 +178,8 @@ class ReportType(str, enum.Enum):
 class ReportScopeType(str, enum.Enum):
     KINDERGARTEN = "KINDERGARTEN"
     GOVERNORATE = "GOVERNORATE"
+    DISTRICT = "DISTRICT"
+    AREA = "AREA"
     ALL = "ALL"
 
 
@@ -968,6 +970,8 @@ class Report(Base):
     scope_type = Column(Enum(ReportScopeType), nullable=False)
     kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True)
     governorate = Column(String(100), nullable=True)
+    district = Column(String(100), nullable=True)
+    area = Column(String(100), nullable=True)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     metrics_json = Column(JSON, nullable=False)
@@ -2526,6 +2530,7 @@ class ClientErrorReport(Base):
         Index("ix_client_errors_stack_hash", "stack_hash"),
         Index("ix_client_errors_timestamp", "timestamp_ms"),
     )
+
 
 class ImmunizationAgeUnit(str, enum.Enum):
     """Unit for a vaccine's scheduled (due) age in the national immunization schedule."""

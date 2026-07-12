@@ -75,9 +75,41 @@
     if (input) { input.setAttribute("aria-invalid", msg ? "true" : "false"); input.classList.toggle("is-invalid", !!msg); }
   }
 
+  // Cascading geo select: placeholder-first select with an inline error slot.
+  function geoSelect(id, labelText, hint) {
+    const wrap = el("div", { class: "custom-field", attrs: { id: "field-" + id } });
+    const label = el("label", { text: labelText, attrs: { for: id, id: "label-" + id } });
+    const select = el("select", { attrs: { id, name: id, class: "form-select" } });
+    select.appendChild(el("option", { text: t("— اختر —", "— Select —"), attrs: { value: "" } }));
+    wrap.append(label, select);
+    if (hint) wrap.append(el("span", { class: "wiz-hint", text: hint, attrs: { id: "hint-" + id } }));
+    wrap.append(el("p", { class: "wiz-field-error", attrs: { id: id + "-error", role: "alert", hidden: "hidden" } }));
+    return wrap;
+  }
+  function resetSelect(id, placeholder) {
+    const s = document.getElementById(id);
+    if (!s) return;
+    s.innerHTML = "";
+    s.appendChild(el("option", { text: placeholder, attrs: { value: "" } }));
+  }
+  function optionEl(value, text) { const o = el("option", { text }); o.value = value; return o; }
+  function selectedText(id) { const s = document.getElementById(id); return s && s.selectedIndex > 0 ? s.options[s.selectedIndex].text : ""; }
+
   // -------------------------------------------------- state
   let schema = null;
   let schemaAgencies = [];
+  let divisions = []; // Jordan governorate -> districts -> areas (from static JSON)
+
+  // Geographic requirement per scope level. Non-geographic levels (class/child/
+  // supervisor/manager) allow optional governorate+district refinement.
+  const LEVEL_GEO = {
+    national: { gov: "hidden", city: "hidden", kg: "hidden", noteAr: "سيشمل التقرير المملكة بالكامل.", noteEn: "The report will cover the whole kingdom." },
+    governorate: { gov: "required", city: "optional", kg: "hidden" },
+    city: { gov: "required", city: "required", kg: "hidden" },
+    kindergarten: { gov: "required", city: "required", kg: "required" },
+  };
+  function levelGeo(level) { return LEVEL_GEO[level] || { gov: "optional", city: "optional", kg: "hidden" }; }
+  function geoBaseLabel(id) { return id === "cr-governorate" ? t("المحافظة", "Governorate") : id === "cr-city" ? t("قصبة / لواء", "District") : t("الحضانة", "Kindergarten"); }
   let currentStep = 0;
   let dirty = false;
   let generated = false;
@@ -153,17 +185,110 @@
       labelledSelect("cr-period", t("مستوى التجميع", "Aggregation level"), schema.periods, "code"),
     );
     p.appendChild(row1);
+    // National-scope note (shown when no geographic narrowing applies).
+    p.appendChild(el("p", { class: "wiz-geo-note", attrs: { id: "cr-geo-note", role: "note", hidden: "hidden" } }));
     const dates = el("div", { class: "custom-report-row", attrs: { id: "cr-custom-dates", hidden: "hidden" } });
     dates.append(field("cr-start", t("تاريخ البداية", "Start date"), "date"), field("cr-end", t("تاريخ النهاية", "End date"), "date"));
     p.appendChild(dates);
     const row2 = el("div", { class: "custom-report-row" });
     row2.append(
-      field("cr-governorate", t("المحافظة (اختياري)", "Governorate (optional)")),
-      field("cr-city", t("قصبة / لواء (اختياري)", "District (optional)"), "text", { hint: t("اختر المحافظة أولاً", "Select a governorate first") }),
-      field("cr-kindergarten", t("معرف الحضانة (اختياري)", "Kindergarten ID (optional)"), "number"),
+      geoSelect("cr-governorate", geoBaseLabel("cr-governorate")),
+      geoSelect("cr-city", geoBaseLabel("cr-city"), t("اختر المحافظة أولاً", "Select a governorate first")),
+      geoSelect("cr-kindergarten", geoBaseLabel("cr-kindergarten"), t("اختر المحافظة والقصبة / اللواء أولاً", "Select governorate and district first")),
     );
     p.appendChild(row2);
+
+    // Wiring
+    const level = document.getElementById("cr-level");
+    const period = document.getElementById("cr-period");
+    const gov = document.getElementById("cr-governorate");
+    const city = document.getElementById("cr-city");
+    if (level) level.addEventListener("change", () => { onLevelChanged(); markDirty(); });
+    if (period) period.addEventListener("change", () => { togglePeriodDates(); markDirty(); });
+    if (gov) gov.addEventListener("change", () => { fillDistricts(gov.value); resetSelect("cr-kindergarten", t("اختر القصبة / اللواء أولاً", "Select a district first")); applyLevelVisibility(); maybeFillKindergartens(); markDirty(); });
+    if (city) city.addEventListener("change", () => { applyLevelVisibility(); maybeFillKindergartens(); markDirty(); });
     return p;
+  }
+
+  // -------------------------------------------------- geo cascade
+  function populateGovernorates() {
+    const s = document.getElementById("cr-governorate");
+    if (!s || !divisions.length) return;
+    const cur = s.value;
+    resetSelect("cr-governorate", t("— اختر المحافظة —", "— Select governorate —"));
+    divisions.forEach((g) => s.appendChild(optionEl(g.gov, g.gov)));
+    if (cur) s.value = cur;
+  }
+  function fillDistricts(govName, keep) {
+    resetSelect("cr-city", t("— اختر قصبة / لواء —", "— Select district —"));
+    const s = document.getElementById("cr-city");
+    const entry = divisions.find((g) => g.gov === govName);
+    if (s && entry) entry.districts.forEach((d) => s.appendChild(optionEl(d.name, d.name)));
+    if (s && keep) s.value = keep;
+  }
+  function fillKindergartens(govName, distName, keep) {
+    const s = document.getElementById("cr-kindergarten");
+    if (!s) return Promise.resolve();
+    resetSelect("cr-kindergarten", t("جارٍ التحميل...", "Loading..."));
+    s.disabled = true;
+    const params = new URLSearchParams({ limit: "200" });
+    if (govName) params.set("governorate", govName);
+    if (distName) params.set("district", distName);
+    return apiGet("/api/kindergartens?" + params.toString())
+      .then((res) => {
+        const items = (res.data && res.data.items) || [];
+        resetSelect("cr-kindergarten", items.length ? t("— اختر الحضانة —", "— Select kindergarten —") : t("لا توجد حضانات في هذا النطاق", "No kindergartens in this scope"));
+        items.forEach((kg) => s.appendChild(optionEl(String(kg.id), kg.name_ar || ("#" + kg.id))));
+        s.disabled = items.length === 0;
+        if (keep) s.value = keep;
+      })
+      .catch(() => { resetSelect("cr-kindergarten", t("تعذّر تحميل الحضانات", "Could not load kindergartens")); s.disabled = true; });
+  }
+  function maybeFillKindergartens() {
+    const cfg = levelGeo(valueOf("cr-level"));
+    if (cfg.kg === "hidden") return;
+    const g = valueOf("cr-governorate"), d = valueOf("cr-city");
+    if (g && d) fillKindergartens(g, d);
+    else resetSelect("cr-kindergarten", t("اختر القصبة / اللواء أولاً", "Select a district first"));
+  }
+  function onLevelChanged() {
+    // Clear geo selections that no longer apply, then re-apply visibility.
+    const cfg = levelGeo(valueOf("cr-level"));
+    if (cfg.gov === "hidden") { const g = document.getElementById("cr-governorate"); if (g) g.value = ""; }
+    if (cfg.city === "hidden") { const c = document.getElementById("cr-city"); if (c) c.value = ""; }
+    if (cfg.kg === "hidden") { resetSelect("cr-kindergarten", t("— اختر الحضانة —", "— Select kindergarten —")); }
+    applyLevelVisibility();
+    maybeFillKindergartens();
+  }
+  function togglePeriodDates() {
+    const period = document.getElementById("cr-period");
+    const dates = document.getElementById("cr-custom-dates");
+    if (period && dates) dates.hidden = period.value !== "custom";
+  }
+  function applyLevelVisibility() {
+    const cfg = levelGeo(valueOf("cr-level"));
+    [["cr-governorate", cfg.gov], ["cr-city", cfg.city], ["cr-kindergarten", cfg.kg]].forEach(([id, state]) => {
+      const wrap = document.getElementById("field-" + id);
+      const sel = document.getElementById(id);
+      const label = document.getElementById("label-" + id);
+      if (!wrap || !sel) return;
+      if (state === "hidden") { wrap.hidden = true; sel.setAttribute("aria-required", "false"); }
+      else {
+        wrap.hidden = false;
+        const req = state === "required";
+        sel.setAttribute("aria-required", req ? "true" : "false");
+        if (label) label.innerHTML = geoBaseLabel(id) + (req ? ' <span class="wiz-req" aria-hidden="true">*</span>' : ' <span class="wiz-optional">(' + t("اختياري", "optional") + ")</span>");
+      }
+    });
+    const gov = valueOf("cr-governorate"), dist = valueOf("cr-city");
+    const citySel = document.getElementById("cr-city");
+    const cityWrap = document.getElementById("field-cr-city");
+    if (citySel && cityWrap && !cityWrap.hidden) citySel.disabled = !gov;
+    const kgSel = document.getElementById("cr-kindergarten");
+    const kgWrap = document.getElementById("field-cr-kindergarten");
+    if (kgSel && kgWrap && !kgWrap.hidden && !(gov && dist)) kgSel.disabled = true;
+    const note = document.getElementById("cr-geo-note");
+    if (note) { const txt = t(cfg.noteAr || "", cfg.noteEn || ""); note.textContent = txt; note.hidden = !txt; }
   }
 
   function buildStepIndicators() {
@@ -275,11 +400,15 @@
 
   function validateStep(index) {
     const errors = [];
-    ["cr-agency", "cr-start", "cr-end"].forEach((id) => fieldError(id, ""));
+    ["cr-agency", "cr-start", "cr-end", "cr-governorate", "cr-city", "cr-kindergarten"].forEach((id) => fieldError(id, ""));
     if (index === 0) {
       const agency = valueOf("cr-agency");
       if (!agency) { errors.push(t("يرجى اختيار الجهة الرسمية المستفيدة.", "Please select the beneficiary agency.")); fieldError("cr-agency", t("مطلوب", "Required")); }
     } else if (index === 1) {
+      const cfg = levelGeo(valueOf("cr-level"));
+      if (cfg.gov === "required" && !valueOf("cr-governorate")) { errors.push(t("يرجى اختيار المحافظة.", "Please select a governorate.")); fieldError("cr-governorate", t("مطلوب", "Required")); }
+      if (cfg.city === "required" && !valueOf("cr-city")) { errors.push(t("يرجى اختيار القصبة / اللواء.", "Please select a district.")); fieldError("cr-city", t("مطلوب", "Required")); }
+      if (cfg.kg === "required" && !valueOf("cr-kindergarten")) { errors.push(t("يرجى اختيار الحضانة.", "Please select a kindergarten.")); fieldError("cr-kindergarten", t("مطلوب", "Required")); }
       if (valueOf("cr-period") === "custom") {
         const s = valueOf("cr-start"), e = valueOf("cr-end");
         if (!s || !e) { errors.push(t("يرجى تحديد تاريخ البداية وتاريخ النهاية.", "Please set both the start and end dates.")); if (!s) fieldError("cr-start", t("مطلوب", "Required")); if (!e) fieldError("cr-end", t("مطلوب", "Required")); }
@@ -323,7 +452,7 @@
       line("النطاق الجغرافي", "Geographic scope", level ? level.name_ar : ""),
       line("المحافظة", "Governorate", valueOf("cr-governorate")),
       line("قصبة / لواء", "District", valueOf("cr-city")),
-      line("معرف الحضانة", "Kindergarten", valueOf("cr-kindergarten"), true),
+      line("الحضانة", "Kindergarten", selectedText("cr-kindergarten")),
       line("مستوى التجميع", "Aggregation level", period ? period.name_ar : ""),
       valueOf("cr-period") === "custom" ? line("الفترة", "Period", (valueOf("cr-start") || "—") + " → " + (valueOf("cr-end") || "—"), true) : null,
       line("عدد المؤشرات", "Indicators selected", String(indicators.length)),
@@ -404,10 +533,18 @@
   function applyDraft(draft) {
     function set(id, v) { const n = document.getElementById(id); if (n && v != null) n.value = v; }
     set("cr-agency", draft.agency); set("cr-level", draft.level); set("cr-period", draft.period);
-    set("cr-governorate", draft.governorate); set("cr-city", draft.city); set("cr-kindergarten", draft.kindergarten_id);
     set("cr-name", draft.report_name); set("cr-purpose", draft.purpose);
     set("cr-start", draft.start_date); set("cr-end", draft.end_date);
-    onScopeControlsChanged();
+    // geo cascade (governorate -> district -> kindergarten)
+    populateGovernorates();
+    set("cr-governorate", draft.governorate);
+    if (draft.governorate) fillDistricts(draft.governorate, draft.city);
+    togglePeriodDates();
+    applyLevelVisibility();
+    const cfg = levelGeo(draft.level);
+    if (cfg.kg !== "hidden" && draft.governorate && draft.city) {
+      fillKindergartens(draft.governorate, draft.city, draft.kindergarten_id).then(applyLevelVisibility);
+    }
     (draft.indicators || []).forEach((code) => { const cb = form.querySelector('input[name="indicator"][value="' + code + '"]'); if (cb && !cb.disabled) cb.checked = true; });
     updateCounts();
     onAgencyChanged();
@@ -428,18 +565,8 @@
 
   // -------------------------------------------------- progressive disclosure
   function onScopeControlsChanged() {
-    const period = document.getElementById("cr-period");
-    const dates = document.getElementById("cr-custom-dates");
-    if (period && dates) dates.hidden = period.value !== "custom";
-    const gov = document.getElementById("cr-governorate");
-    const city = document.getElementById("cr-city");
-    if (gov && city) {
-      const enabled = !!gov.value.trim();
-      city.disabled = !enabled;
-      const hint = city.parentNode.querySelector(".wiz-hint");
-      if (hint) hint.style.display = enabled ? "none" : "";
-      if (!enabled) city.value = "";
-    }
+    togglePeriodDates();
+    applyLevelVisibility();
   }
   function onAgencyChanged() {
     const box = document.getElementById("cr-agency-preview-wiz");
@@ -586,15 +713,21 @@
 
   // -------------------------------------------------- init
   form.addEventListener("submit", (e) => e.preventDefault());
+  // cr-level / cr-period / cr-governorate / cr-city have explicit listeners in buildStepScope.
   form.addEventListener("input", (e) => {
-    if (e.target && (e.target.id === "cr-period" || e.target.id === "cr-governorate")) onScopeControlsChanged();
     if (e.target && e.target.id === "cr-agency") onAgencyChanged();
     if (e.target && e.target.closest && e.target.closest("#custom-report-controls")) markDirty();
   });
-  form.addEventListener("change", (e) => { if (e.target && (e.target.id === "cr-period" || e.target.id === "cr-agency")) { onScopeControlsChanged(); onAgencyChanged(); } });
+  form.addEventListener("change", (e) => { if (e.target && e.target.id === "cr-agency") onAgencyChanged(); });
   window.addEventListener("beforeunload", (e) => { if (dirty && !generated) { e.preventDefault(); e.returnValue = ""; } });
 
+  // Jordan admin divisions (governorate -> district -> area) for the geo cascade.
+  fetch((window.JORDAN_ADMIN_DIVISIONS_URL) || "/static/data/jordan_admin_divisions.json", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : []))
+    .then((data) => { divisions = Array.isArray(data) ? data : []; populateGovernorates(); applyLevelVisibility(); })
+    .catch(() => {});
+
   apiGet("/api/admin/agency-reports/custom/schema")
-    .then((res) => { buildWizard(res.data); onScopeControlsChanged(); onAgencyChanged(); updateCounts(); })
+    .then((res) => { buildWizard(res.data); populateGovernorates(); onScopeControlsChanged(); onAgencyChanged(); updateCounts(); })
     .catch(() => { controls.removeAttribute("aria-busy"); controls.textContent = t("تعذّر تحميل خيارات التقرير المخصص.", "Could not load custom report options."); });
 })();

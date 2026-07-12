@@ -318,3 +318,9 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
   .wiz-nav .admin-btn{flex:1 1 auto}
   .wiz-flash{inset-inline:16px;text-align:center}
 }
+
+/* Scope-step cascading selects */
+.wiz-req{color:#dc2626;font-weight:800;margin-inline-start:2px}
+.wiz-optional{color:#94a3b8;font-weight:500;font-size:.85em;margin-inline-start:2px}
+.wiz-geo-note{margin:0 0 14px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px;font-size:.9rem}
+.custom-field select:disabled{background:#e2e8f0;color:#94a3b8;cursor:not-allowed}

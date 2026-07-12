@@ -3,6 +3,7 @@ Advanced Analytics Endpoints — All 33 Metrics
 Covers: Network (1-7), Governorate (8-14), KG (15-22),
         Child (23-27), Predictive (28-31), Governance (32-33)
 """
+from typing import Optional
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy import distinct as sqla_distinct
 from sqlalchemy.orm import Session
@@ -171,3 +172,89 @@ async def list_governorates(
         .all()
     )
     return {"governorates": sorted(r[0] for r in rows if r[0])}
+
+
+@router.get(
+    "/districts",
+    summary="List all distinct district names available for analytics",
+)
+async def list_districts(
+    governorate: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+) -> dict:
+    """Returns the distinct district name strings, optionally filtered by governorate."""
+    query = db.query(sqla_distinct(models.Kindergarten.district)).filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+    )
+    if governorate:
+        query = query.filter(models.Kindergarten.governorate == governorate)
+    rows = query.all()
+    return {"districts": sorted(r[0] for r in rows if r[0])}
+
+
+@router.get(
+    "/areas",
+    summary="List all distinct area names available for analytics",
+)
+async def list_areas(
+    governorate: Optional[str] = Query(None),
+    district: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+) -> dict:
+    """Returns the distinct area name strings, optionally filtered by governorate and/or district."""
+    query = db.query(sqla_distinct(models.Kindergarten.area)).filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+    )
+    if governorate:
+        query = query.filter(models.Kindergarten.governorate == governorate)
+    if district:
+        query = query.filter(models.Kindergarten.district == district)
+    rows = query.all()
+    return {"areas": sorted(r[0] for r in rows if r[0])}
+
+
+@router.get(
+    "/district/{district_name}",
+    response_model=dict,
+    summary="District-level analytics",
+)
+async def get_district_analytics(
+    district_name: str = Path(..., description="District name string (e.g. 'الجامعة')"),
+    locale: str = Query("ar"),
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+) -> dict:
+    """
+    Returns 7 district-level metrics.
+    """
+    cache_key = f"adv_analytics:district:{district_name}:{locale}"
+    return dashboard_cache.get_or_set(
+        cache_key,
+        lambda: AnalyticsGapService(db).get_district_metrics(district_name, locale).model_dump(mode="json"),
+        ttl_seconds=1800
+    )
+
+
+@router.get(
+    "/area/{area_name}",
+    response_model=dict,
+    summary="Area-level analytics",
+)
+async def get_area_analytics(
+    area_name: str = Path(..., description="Area name string (e.g. 'صويلح')"),
+    locale: str = Query("ar"),
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+) -> dict:
+    """
+    Returns 7 area-level metrics.
+    """
+    cache_key = f"adv_analytics:area:{area_name}:{locale}"
+    return dashboard_cache.get_or_set(
+        cache_key,
+        lambda: AnalyticsGapService(db).get_area_metrics(area_name, locale).model_dump(mode="json"),
+        ttl_seconds=1800
+    )
+

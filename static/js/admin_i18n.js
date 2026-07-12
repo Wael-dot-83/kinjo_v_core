@@ -148,7 +148,14 @@ class AdminI18n {
       if (this.serverLanguageApiState === "missing") {
         return;
       }
+      const csrfToken =
+        (window.AuthStorage && AuthStorage.getCookie("kinjo_csrf_token")) ||
+        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
+        "";
       const headers = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["X-CSRF-Token"] = csrfToken;
+      }
       const response = await fetch("/api/users/me/language", {
         method: "PUT",
         headers,

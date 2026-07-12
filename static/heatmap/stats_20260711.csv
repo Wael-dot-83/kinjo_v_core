@@ -1,0 +1,16 @@
+main_indicator,sub_indicator,pearson_r,pearson_p,pearson_strength,spearman_rho,spearman_p,spearman_method,spearman_strength,beta_std,std_error,t_stat,ols_p_value,high_impact,vif,vif_flag,fit_warning,strong_correlation,n_samples_spearman
+kindergarten_status,kindergartens_inactive,-0.4839,0.0,False,-0.5563,0.0,spearman,False,-1.4163,0.0879,-16.1126,0.0,True,2.6433,ok,,False,84
+kindergarten_status,kindergartens_active,0.0659,0.5516,False,0.0406,0.7136,spearman,False,1.1826,0.0879,13.4536,0.0,True,2.6433,ok,,False,84
+children_enrollment,unregistered_children,-0.1947,0.0759,False,-0.288,0.0079,spearman,False,-5.6094,0.4667,-12.0203,0.0,True,49.4387,red,,False,84
+children_enrollment,enrolled_children,-0.0821,0.4578,False,-0.15,0.1733,spearman,False,5.4703,0.4667,11.7222,0.0,True,49.4387,red,,False,84
+staff_classrooms,classes_without_supervisor,-0.3282,0.0023,False,-0.4351,0.0,spearman,False,-1.4853,0.1032,-14.3925,0.0,True,3.3646,ok,,False,84
+staff_classrooms,supervisors_count,0.1747,0.112,False,0.1103,0.3179,spearman,False,2.2059,0.815,2.7067,0.0083,True,209.8293,red,,False,84
+staff_classrooms,classes_count,0.1571,0.1534,False,0.0878,0.4269,spearman,False,-0.8026,0.8303,-0.9666,0.3367,True,217.805,red,,False,84
+safety_incidents,critical_incidents,-0.9896,0.0,True,-0.9796,0.0,kendall_tau,True,-0.8108,0.0,-2325992358558696.0,0.0,True,2.5495,ok,,True,84
+safety_incidents,protection_issues,-0.8615,0.0,True,-0.7168,0.0,kendall_tau,True,-0.2294,0.0,-657935838674977.0,0.0,True,2.5495,ok,,True,84
+reports_attendance,daily_reports_count,0.2507,0.0214,False,0.2476,0.0231,spearman,False,4.889,0.4576,10.6837,0.0,True,50.5521,red,,False,84
+reports_attendance,absences_health_alerts,-0.0649,0.5575,False,-0.2077,0.0579,spearman,False,0.4417,0.2278,1.9392,0.056,True,12.5217,red,,False,84
+reports_attendance,absences_total,0.1034,0.3493,False,-0.0034,0.9757,spearman,False,-5.1099,0.6126,-8.3415,0.0,True,90.5893,red,,False,84
+tasks_governance,governance_score,0.9634,0.0,True,0.9782,0.0,spearman,True,0.3915,0.0,153939041062772.38,0.0,True,159.9081,red,,True,84
+tasks_governance,tasks_overdue,-0.9239,0.0,True,-0.9435,0.0,spearman,True,-0.4301,0.0,-1302201443893993.5,0.0,True,2.6968,ok,,True,84
+tasks_governance,training_completion_pct,0.9649,0.0,True,0.9756,0.0,spearman,True,0.2336,0.0,90960259981411.12,0.0,True,163.0382,red,,True,84

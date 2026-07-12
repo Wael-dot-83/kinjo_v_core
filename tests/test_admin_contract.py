@@ -72,6 +72,16 @@ def _is_registered_path_or_prefix(path):
     return any(route_path.startswith(f"{prefix}/") for route_path in _registered_paths())
 
 
+def test_effective_route_inventory_includes_nested_admin_routers():
+    route_paths = _registered_paths()
+
+    assert len(route_paths) >= 600
+    assert "/admin/dashboard" in route_paths
+    assert "/admin/kindergartens/new" in route_paths
+    assert "/api/admin/users/{user_id:int}/admin-reset-password" in route_paths
+    assert "/api/admin/charts/render" in route_paths
+
+
 def _literal_paths(source):
     patterns = [
         r"""(?:href|src|action)=["']([^"'{}]+)["']""",

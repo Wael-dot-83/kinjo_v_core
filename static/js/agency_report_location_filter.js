@@ -22,8 +22,8 @@
 
   function fillDistricts(govName) {
     const entry = divisions.find((g) => g.gov === govName);
-    clearSelect(distSel, t("Select district", "اختر قصبة / لواء"));
-    clearSelect(areaSel, t("Select district first", "اختر قصبة / لواء أولاً"));
+    clearSelect(distSel, t("اختر قصبة / لواء", "Select district"));
+    clearSelect(areaSel, t("اختر قصبة / لواء أولاً", "Select district first"));
     if (!entry) return;
     entry.districts.forEach((d) => {
       const opt = document.createElement("option");
@@ -36,7 +36,7 @@
 
   function fillAreas(govName, distName) {
     const entry = divisions.find((g) => g.gov === govName);
-    clearSelect(areaSel, t("Select area", "اختر المنطقة"));
+    clearSelect(areaSel, t("اختر المنطقة", "Select area"));
     if (!entry) return;
     const dist = entry.districts.find((d) => d.name === distName);
     if (!dist) return;
@@ -50,21 +50,21 @@
   }
 
   govSel.addEventListener("change", function () {
-    clearSelect(distSel, t("Select district", "اختر قصبة / لواء"));
-    clearSelect(areaSel, t("Select district first", "اختر قصبة / لواء أولاً"));
+    clearSelect(distSel, t("اختر قصبة / لواء", "Select district"));
+    clearSelect(areaSel, t("اختر قصبة / لواء أولاً", "Select district first"));
     if (this.value) fillDistricts(this.value);
   });
 
   distSel.addEventListener("change", function () {
-    clearSelect(areaSel, t("Select area", "اختر المنطقة"));
+    clearSelect(areaSel, t("اختر المنطقة", "Select area"));
     if (this.value) fillAreas(govSel.value, this.value);
   });
 
   if (resetBtn) {
     resetBtn.addEventListener("click", function () {
       govSel.value = "";
-      clearSelect(distSel, t("Select governorate first", "اختر المحافظة أولاً"));
-      clearSelect(areaSel, t("Select district first", "اختر قصبة / لواء أولاً"));
+      clearSelect(distSel, t("اختر المحافظة أولاً", "Select governorate first"));
+      clearSelect(areaSel, t("اختر قصبة / لواء أولاً", "Select district first"));
     });
   }
 

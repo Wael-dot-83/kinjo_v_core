@@ -156,3 +156,77 @@ def test_overview_city_level_requires_city_filter(client, auth_headers_admin):
     )
     assert response.status_code == 422
     assert "city" in response.json()["detail"].lower()
+
+
+def test_geography_lookups_reports(client, auth_headers_admin, sample_kindergarten):
+    # Test reports lookup
+    resp = client.get("/api/admin/reports/geography/districts?governorate=Amman", headers=auth_headers_admin)
+    assert resp.status_code == 200
+    assert "Amman" in resp.json()["districts"]
+
+    resp = client.get("/api/admin/reports/geography/areas?governorate=Amman&district=Amman", headers=auth_headers_admin)
+    assert resp.status_code == 200
+    assert "Abdoun" in resp.json()["areas"]
+
+
+def test_geography_lookups_analytics(client, auth_headers_admin, sample_kindergarten):
+    # Test analytics lookup
+    resp = client.get("/api/admin/analytics/districts?governorate=Amman", headers=auth_headers_admin)
+    assert resp.status_code == 200
+    assert "Amman" in resp.json()["districts"]
+
+    resp = client.get("/api/admin/analytics/areas?governorate=Amman&district=Amman", headers=auth_headers_admin)
+    assert resp.status_code == 200
+    assert "Abdoun" in resp.json()["areas"]
+
+
+def test_district_area_analytics_detail(client, auth_headers_admin, sample_kindergarten):
+    resp = client.get("/api/admin/analytics/district/Amman", headers=auth_headers_admin)
+    assert resp.status_code == 200
+    assert resp.json()["layer"] == "district"
+
+    resp = client.get("/api/admin/analytics/area/Abdoun", headers=auth_headers_admin)
+    assert resp.status_code == 200
+    assert resp.json()["layer"] == "area"
+
+
+def test_area_level_requires_area_filter(client, auth_headers_admin):
+    resp = client.get(
+        "/api/admin/reports/overview?level=area&governorate=Amman&city=Amman",
+        headers=auth_headers_admin,
+    )
+    assert resp.status_code == 422
+    assert "area" in resp.json()["detail"].lower()
+
+
+def test_reports_with_area_filtering(client, auth_headers_admin, sample_kindergarten, sample_class, sample_enrollment):
+    resp = client.get(
+        "/api/admin/reports/overview?level=area&governorate=Amman&city=Amman&area=Abdoun",
+        headers=auth_headers_admin,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["level"] == "area"
+
+    # Test geography endpoint contains areas and doesn't crash
+    resp_geo = client.get(
+        "/api/admin/reports/children/geography?level=area&governorate=Amman&city=Amman&area=Abdoun",
+        headers=auth_headers_admin,
+    )
+    assert resp_geo.status_code == 200
+    data_geo = resp_geo.json()
+    assert "areas" in data_geo
+    assert len(data_geo["areas"]) > 0
+    assert data_geo["areas"][0]["area"] == "Abdoun"
+
+    # Test kindergartens classification endpoint returns filters
+    resp_class = client.get(
+        "/api/admin/reports/kindergartens/classification?level=area&governorate=Amman&city=Amman&area=Abdoun",
+        headers=auth_headers_admin,
+    )
+    assert resp_class.status_code == 200
+    data_class = resp_class.json()
+    assert "filters" in data_class
+    assert data_class["filters"]["area"] == "Abdoun"
+    assert data_class["filters"]["city"] == "Amman"
+    assert data_class["filters"]["governorate"] == "Amman"
+

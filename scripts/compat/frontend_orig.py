@@ -28,6 +28,20 @@ def normalize_ui_language(value: Optional[str]) -> str:
     return normalized if normalized in SUPPORTED_UI_LANGUAGES else "ar"
 
 
+_JORDAN_TZ = timezone(timedelta(hours=3))
+
+
+def _ui_lang(request: Request) -> str:
+    return normalize_ui_language(
+        request.cookies.get("kinjo_lang")
+        or request.query_params.get("lang")
+    )
+
+
+def _now() -> datetime:
+    return datetime.now(_JORDAN_TZ)
+
+
 def language_context_processor(request: Request) -> dict:
     # Resolve UI language from the persisted cookie first; allow request.state/query override.
     lang = normalize_ui_language(

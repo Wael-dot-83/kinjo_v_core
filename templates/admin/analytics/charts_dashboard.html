@@ -173,7 +173,7 @@ async function renderChart() {
   clearTask();
 
   try {
-    const resp = await fetch(`/admin/charts/render?${params}`, {
+    const resp = await fetch(`/api/admin/charts/render?${params}`, {
       headers: { 'Accept': 'application/json' }
     });
     if (!resp.ok) {
@@ -223,7 +223,7 @@ function showTaskStatus(taskId) {
 
 async function pollTask(taskId) {
   try {
-    const resp = await fetch(`/admin/charts/task/${taskId}`, {
+    const resp = await fetch(`/api/admin/charts/task/${taskId}`, {
       headers: { 'Accept': 'application/json' }
     });
     const data = await resp.json();
@@ -256,7 +256,7 @@ async function getSuggestions() {
   panel.style.display = '';
 
   try {
-    const resp = await fetchWithAuth('/admin/charts/suggest', {
+    const resp = await fetchWithAuth('/api/admin/charts/suggest', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(body),

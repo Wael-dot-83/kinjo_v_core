@@ -992,7 +992,12 @@ if (typeof module !== "undefined" && module.exports) {
       if (window.AuthService && typeof AuthService.logout === "function") {
         await AuthService.logout();
       } else {
-        await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
+        const csrfToken =
+          (window.AuthStorage && AuthStorage.getCookie("kinjo_csrf_token")) ||
+          document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
+          "";
+        const headers = csrfToken ? { "X-CSRF-Token": csrfToken } : {};
+        await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin", headers }).catch(() => {});
       }
     } catch (e) {
       // best-effort: proceed regardless

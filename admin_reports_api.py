@@ -45,6 +45,8 @@ class ReportLevel(str, Enum):
     JORDAN = "jordan"
     GOVERNORATE = "governorate"
     CITY = "city"
+    DISTRICT = "district"
+    AREA = "area"
     KINDERGARTEN = "kindergarten"
     CLASS = "class"
 
@@ -54,6 +56,7 @@ class ScopeFilters:
     level: ReportLevel
     governorate: Optional[str]
     city: Optional[str]
+    area: Optional[str]
     kindergarten_id: Optional[int]
     class_id: Optional[int]
 
@@ -139,13 +142,16 @@ def _build_scope_filters(
     level: ReportLevel,
     governorate: Optional[str],
     city: Optional[str],
+    area: Optional[str],
     kindergarten_id: Optional[int],
     class_id: Optional[int],
 ) -> ScopeFilters:
-    if level in {ReportLevel.GOVERNORATE, ReportLevel.CITY} and not governorate:
-        raise HTTPException(status_code=422, detail="governorate is required for governorate/city level")
-    if level == ReportLevel.CITY and not city:
-        raise HTTPException(status_code=422, detail="city is required for city level")
+    if level in {ReportLevel.GOVERNORATE, ReportLevel.CITY, ReportLevel.DISTRICT, ReportLevel.AREA} and not governorate:
+        raise HTTPException(status_code=422, detail="governorate is required for governorate/city/district/area level")
+    if level in {ReportLevel.CITY, ReportLevel.DISTRICT} and not city:
+        raise HTTPException(status_code=422, detail="city is required for city/district level")
+    if level == ReportLevel.AREA and not area:
+        raise HTTPException(status_code=422, detail="area is required for area level")
     if level == ReportLevel.KINDERGARTEN and not kindergarten_id:
         raise HTTPException(status_code=422, detail="kindergarten_id is required for kindergarten level")
     if level == ReportLevel.CLASS and not class_id:
@@ -155,6 +161,7 @@ def _build_scope_filters(
         level=level,
         governorate=governorate,
         city=city,
+        area=area,
         kindergarten_id=kindergarten_id,
         class_id=class_id,
     )
@@ -162,11 +169,13 @@ def _build_scope_filters(
 
 def _kg_filter_expr(filters: ScopeFilters):
     clauses = [models.Kindergarten.status == models.KindergartenStatus.ACTIVE]
-    if filters.level in {ReportLevel.GOVERNORATE, ReportLevel.CITY, ReportLevel.KINDERGARTEN, ReportLevel.CLASS}:
+    if filters.level in {ReportLevel.GOVERNORATE, ReportLevel.CITY, ReportLevel.DISTRICT, ReportLevel.AREA, ReportLevel.KINDERGARTEN, ReportLevel.CLASS}:
         if filters.governorate:
             clauses.append(models.Kindergarten.governorate == filters.governorate)
-    if filters.level in {ReportLevel.CITY, ReportLevel.KINDERGARTEN, ReportLevel.CLASS} and filters.city:
+    if filters.level in {ReportLevel.CITY, ReportLevel.DISTRICT, ReportLevel.AREA, ReportLevel.KINDERGARTEN, ReportLevel.CLASS} and filters.city:
         clauses.append(models.Kindergarten.district == filters.city)
+    if filters.level in {ReportLevel.AREA, ReportLevel.KINDERGARTEN, ReportLevel.CLASS} and filters.area:
+        clauses.append(models.Kindergarten.area == filters.area)
     if filters.level == ReportLevel.KINDERGARTEN and filters.kindergarten_id:
         clauses.append(models.Kindergarten.id == filters.kindergarten_id)
     if filters.level == ReportLevel.CLASS and filters.class_id:
@@ -290,6 +299,8 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         kindergartens_q = kindergartens_q.filter(models.Kindergarten.governorate == filters.governorate)
     if filters.city:
         kindergartens_q = kindergartens_q.filter(models.Kindergarten.district == filters.city)
+    if filters.area:
+        kindergartens_q = kindergartens_q.filter(models.Kindergarten.area == filters.area)
     if filters.kindergarten_id:
         kindergartens_q = kindergartens_q.filter(models.Kindergarten.id == filters.kindergarten_id)
     kindergartens_q = kindergartens_q.filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
@@ -383,9 +394,11 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
     # Geography aggregations
     by_governorate: dict[str, dict[str, Any]] = {}
     by_city: dict[tuple[str, str], dict[str, Any]] = {}
+    by_area: dict[tuple[str, str, str], dict[str, Any]] = {}
     for kg in kindergartens:
         gov = kg.governorate or "Unknown"
         city = kg.district or "Unknown"
+        area = kg.area or "Unknown"
         if gov not in by_governorate:
             by_governorate[gov] = {
                 "governorate": gov,
@@ -406,9 +419,22 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
                 "supervisor_count": 0,
                 "capacity": 0,
             }
+        area_key = (gov, city, area)
+        if area_key not in by_area:
+            by_area[area_key] = {
+                "governorate": gov,
+                "city": city,
+                "area": area,
+                "kindergarten_count": 0,
+                "class_count": 0,
+                "children_count": 0,
+                "supervisor_count": 0,
+                "capacity": 0,
+            }
 
         by_governorate[gov]["kindergarten_count"] += 1
         by_city[key]["kindergarten_count"] += 1
+        by_area[area_key]["kindergarten_count"] += 1
 
     kg_id_map = {k.id: k for k in kindergartens}
     class_map = {c.id: c for c in classes}
@@ -418,13 +444,21 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         parent_kg = kg_id_map.get(c.kindergarten_id)
         gov = (parent_kg.governorate if parent_kg else None) or "Unknown"
         city = (parent_kg.district if parent_kg else None) or "Unknown"
+        area = (parent_kg.area if parent_kg else None) or "Unknown"
+        
         by_governorate.setdefault(gov, {"governorate": gov, "kindergarten_count": 0, "class_count": 0, "children_count": 0, "supervisor_count": 0, "capacity": 0})
         by_governorate[gov]["class_count"] += 1
         by_governorate[gov]["capacity"] += c.capacity_total or 0
+        
         city_key = (gov, city)
         by_city.setdefault(city_key, {"governorate": gov, "city": city, "kindergarten_count": 0, "class_count": 0, "children_count": 0, "supervisor_count": 0, "capacity": 0})
         by_city[city_key]["class_count"] += 1
         by_city[city_key]["capacity"] += c.capacity_total or 0
+
+        area_key = (gov, city, area)
+        by_area.setdefault(area_key, {"governorate": gov, "city": city, "area": area, "kindergarten_count": 0, "class_count": 0, "children_count": 0, "supervisor_count": 0, "capacity": 0})
+        by_area[area_key]["class_count"] += 1
+        by_area[area_key]["capacity"] += c.capacity_total or 0
 
     supervisor_counts_by_kg: dict[int, int] = {}
     for s in supervisors:
@@ -443,15 +477,19 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
             continue
         gov = kg.governorate or "Unknown"
         city = kg.district or "Unknown"
+        area = kg.area or "Unknown"
         by_governorate[gov]["children_count"] += 1
         by_city[(gov, city)]["children_count"] += 1
+        by_area[(gov, city, area)]["children_count"] += 1
 
     for kg in kindergartens:
         gov = kg.governorate or "Unknown"
         city = kg.district or "Unknown"
+        area = kg.area or "Unknown"
         sup = supervisor_counts_by_kg.get(kg.id, 0)
         by_governorate[gov]["supervisor_count"] += sup
         by_city[(gov, city)]["supervisor_count"] += sup
+        by_area[(gov, city, area)]["supervisor_count"] += sup
 
     # Data quality and compliance issue counters
     duplicate_children = (
@@ -575,6 +613,7 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         "compliance_score": compliance_score,
         "by_governorate": list(by_governorate.values()),
         "by_city": list(by_city.values()),
+        "by_area": list(by_area.values()),
     }
     return metrics
 
@@ -1086,6 +1125,7 @@ def _resolve_report_payload(
     level: ReportLevel,
     governorate: Optional[str],
     city: Optional[str],
+    area: Optional[str],
     kindergarten_id: Optional[int],
     class_id: Optional[int],
     period: Optional[str],
@@ -1093,7 +1133,7 @@ def _resolve_report_payload(
     date_to: Optional[date],
     lang: str,
 ) -> dict[str, Any]:
-    filters = _build_scope_filters(level, governorate, city, kindergarten_id, class_id)
+    filters = _build_scope_filters(level, governorate, city, area, kindergarten_id, class_id)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
 
@@ -1104,6 +1144,7 @@ def _resolve_report_payload(
             level=level,
             governorate=filters.governorate,
             city=filters.city,
+            area=filters.area,
             kindergarten_id=filters.kindergarten_id,
             date_from=start,
             date_to=end,
@@ -1116,6 +1157,7 @@ def _resolve_report_payload(
             level=level,
             governorate=filters.governorate,
             city=filters.city,
+            area=filters.area,
             kindergarten_id=filters.kindergarten_id,
             date_from=start,
             date_to=end,
@@ -1128,6 +1170,7 @@ def _resolve_report_payload(
             level=level,
             governorate=filters.governorate,
             city=filters.city,
+            area=filters.area,
             kindergarten_id=filters.kindergarten_id,
             date_from=start,
             date_to=end,
@@ -1140,6 +1183,7 @@ def _resolve_report_payload(
             level=level,
             governorate=filters.governorate,
             city=filters.city,
+            area=filters.area,
             date_from=start,
             date_to=end,
             lang=lang,
@@ -1150,6 +1194,7 @@ def _resolve_report_payload(
         return {
             "governorates": metrics["by_governorate"],
             "cities": metrics["by_city"],
+            "areas": metrics["by_area"],
         }
     if report_type == "children_age_buckets":
         total = max(1, sum(metrics["age_buckets"].values()))
@@ -1244,6 +1289,8 @@ def resolve_kindergarten_detail_report(db: Session, filters: ScopeFilters, date_
         kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
     if filters.city:
         kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
+    if filters.area:
+        kg_q = kg_q.filter(models.Kindergarten.area == filters.area)
     if filters.kindergarten_id:
         kg_q = kg_q.filter(models.Kindergarten.id == filters.kindergarten_id)
     kg_ids = [k.id for k in kg_q.all()]
@@ -1341,6 +1388,7 @@ def reports_overview(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     kindergarten_id: Optional[int] = Query(None),
     class_id: Optional[int] = Query(None),
     period: Optional[str] = Query("this_month"),
@@ -1350,7 +1398,7 @@ def reports_overview(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, kindergarten_id, class_id)
+    filters = _build_scope_filters(level, governorate, city, area, kindergarten_id, class_id)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     prev_start, prev_end = _prev_period(start, end)
@@ -1387,6 +1435,7 @@ def children_summary(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     kindergarten_id: Optional[int] = Query(None),
     class_id: Optional[int] = Query(None),
     period: Optional[str] = Query("this_month"),
@@ -1396,7 +1445,7 @@ def children_summary(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, kindergarten_id, class_id)
+    filters = _build_scope_filters(level, governorate, city, area, kindergarten_id, class_id)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     return _build_response("children_summary", filters, metrics, lang)
@@ -1407,6 +1456,7 @@ def children_geography(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -1414,14 +1464,15 @@ def children_geography(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, None, None)
+    filters = _build_scope_filters(level, governorate, city, area, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     return {
         "level": level.value,
-        "filters": {"governorate": governorate, "city": city, "period": {"from": start.isoformat(), "to": end.isoformat()}},
+        "filters": {"governorate": governorate, "city": city, "area": area, "period": {"from": start.isoformat(), "to": end.isoformat()}},
         "governorates": metrics["by_governorate"],
         "cities": metrics["by_city"],
+        "areas": metrics["by_area"],
         "interpretation": _interpret_overview(metrics, lang),
     }
 
@@ -1431,6 +1482,7 @@ def children_age_buckets(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -1438,7 +1490,7 @@ def children_age_buckets(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, None, None)
+    filters = _build_scope_filters(level, governorate, city, area, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     total = max(1, sum(metrics["age_buckets"].values()))
@@ -1504,6 +1556,7 @@ def children_gender(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -1511,7 +1564,7 @@ def children_gender(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, None, None)
+    filters = _build_scope_filters(level, governorate, city, area, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     total = max(1, metrics["total_children"])
@@ -1539,6 +1592,7 @@ def kindergartens_summary(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -1546,7 +1600,7 @@ def kindergartens_summary(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, None, None)
+    filters = _build_scope_filters(level, governorate, city, area, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     return _build_response("kindergartens_summary", filters, metrics, lang)
@@ -1557,6 +1611,7 @@ def kindergartens_supervision(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -1564,7 +1619,7 @@ def kindergartens_supervision(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, None, None)
+    filters = _build_scope_filters(level, governorate, city, area, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     return {
@@ -1584,6 +1639,7 @@ def supervisors_coverage(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -1591,7 +1647,7 @@ def supervisors_coverage(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, None, None)
+    filters = _build_scope_filters(level, governorate, city, area, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     return _build_response("supervisors_coverage", filters, metrics, lang)
@@ -1602,6 +1658,7 @@ def data_quality_report(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -1609,7 +1666,7 @@ def data_quality_report(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, None, None)
+    filters = _build_scope_filters(level, governorate, city, area, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     prev_start, prev_end = _prev_period(start, end)
@@ -1665,6 +1722,7 @@ def compliance_report(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -1672,7 +1730,7 @@ def compliance_report(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, None, None)
+    filters = _build_scope_filters(level, governorate, city, area, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     prev_start, prev_end = _prev_period(start, end)
@@ -1724,6 +1782,7 @@ def risk_ranking(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -1731,7 +1790,7 @@ def risk_ranking(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, None, None)
+    filters = _build_scope_filters(level, governorate, city, area, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     rows = _risk_rows(metrics)
@@ -1752,6 +1811,7 @@ def drilldown(
     level: ReportLevel = Query(...),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     kindergarten_id: Optional[int] = Query(None),
     class_id: Optional[int] = Query(None),
     period: Optional[str] = Query("this_month"),
@@ -1761,7 +1821,7 @@ def drilldown(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, kindergarten_id, class_id)
+    filters = _build_scope_filters(level, governorate, city, area, kindergarten_id, class_id)
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     return _build_response("drilldown", filters, metrics, lang)
@@ -1772,6 +1832,7 @@ def kindergartens_detail(
     level: ReportLevel = Query(ReportLevel.CITY),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     kindergarten_id: Optional[int] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
@@ -1780,7 +1841,7 @@ def kindergartens_detail(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, kindergarten_id, None)
+    filters = _build_scope_filters(level, governorate, city, area, kindergarten_id, None)
     start, end = _resolve_dates(date_from, date_to, period)
     enroll_q = _base_enrollment_query(db, filters)
     official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
@@ -1794,6 +1855,8 @@ def kindergartens_detail(
         kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
     if filters.city:
         kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
+    if filters.area:
+        kg_q = kg_q.filter(models.Kindergarten.area == filters.area)
     if filters.kindergarten_id:
         kg_q = kg_q.filter(models.Kindergarten.id == filters.kindergarten_id)
     kg_ids = [k.id for k in kg_q.all()]
@@ -1832,6 +1895,7 @@ def kindergartens_detail(
         "filters": {
             "governorate": filters.governorate,
             "city": filters.city,
+            "area": filters.area,
             "kindergarten_id": filters.kindergarten_id,
             "period": {"from": start.isoformat(), "to": end.isoformat()},
         },
@@ -1867,6 +1931,7 @@ def classes_detail(
     level: ReportLevel = Query(ReportLevel.KINDERGARTEN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     kindergarten_id: Optional[int] = Query(None),
     class_id: Optional[int] = Query(None),
     period: Optional[str] = Query("this_month"),
@@ -1878,7 +1943,7 @@ def classes_detail(
 ):
     if level != ReportLevel.KINDERGARTEN or not kindergarten_id:
         raise HTTPException(status_code=422, detail="kindergarten_id is required for class detail")
-    filters = _build_scope_filters(level, governorate, city, kindergarten_id, class_id)
+    filters = _build_scope_filters(level, governorate, city, area, kindergarten_id, class_id)
     start, end = _resolve_dates(date_from, date_to, period)
     enroll_q = _base_enrollment_query(db, filters)
     official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
@@ -1936,6 +2001,7 @@ def classes_detail(
         "filters": {
             "governorate": filters.governorate,
             "city": filters.city,
+            "area": filters.area,
             "kindergarten_id": filters.kindergarten_id,
             "period": {"from": start.isoformat(), "to": end.isoformat()},
         },
@@ -1969,6 +2035,7 @@ def supervisors_analytics(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     kindergarten_id: Optional[int] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
@@ -1977,7 +2044,7 @@ def supervisors_analytics(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, kindergarten_id, None)
+    filters = _build_scope_filters(level, governorate, city, area, kindergarten_id, None)
     start, end = _resolve_dates(date_from, date_to, period)
     enroll_q = _base_enrollment_query(db, filters)
     official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
@@ -1989,6 +2056,8 @@ def supervisors_analytics(
         kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
     if filters.city:
         kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
+    if filters.area:
+        kg_q = kg_q.filter(models.Kindergarten.area == filters.area)
     if filters.kindergarten_id:
         kg_q = kg_q.filter(models.Kindergarten.id == filters.kindergarten_id)
     kg_ids = [k.id for k in kg_q.all()]
@@ -2020,6 +2089,7 @@ def supervisors_analytics(
         "filters": {
             "governorate": filters.governorate,
             "city": filters.city,
+            "area": filters.area,
             "kindergarten_id": filters.kindergarten_id,
             "period": {"from": start.isoformat(), "to": end.isoformat()},
         },
@@ -2046,6 +2116,7 @@ def kindergartens_classification(
     level: ReportLevel = Query(ReportLevel.GOVERNORATE),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     period: Optional[str] = Query("this_month"),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -2053,7 +2124,7 @@ def kindergartens_classification(
     db: Session = Depends(get_db),
     _: models.User = Depends(require_admin),
 ):
-    filters = _build_scope_filters(level, governorate, city, None, None)
+    filters = _build_scope_filters(level, governorate, city, area, None, None)
     start, end = _resolve_dates(date_from, date_to, period)
     enroll_q = _base_enrollment_query(db, filters)
     official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
@@ -2067,6 +2138,8 @@ def kindergartens_classification(
         kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
     if filters.city:
         kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
+    if filters.area:
+        kg_q = kg_q.filter(models.Kindergarten.area == filters.area)
     kg_ids = [k.id for k in kg_q.all()]
     if kg_ids:
         classes_q = classes_q.filter(models.Class.kindergarten_id.in_(kg_ids))
@@ -2098,6 +2171,12 @@ def kindergartens_classification(
 
     return {
         "level": level.value,
+        "filters": {
+            "governorate": filters.governorate,
+            "city": filters.city,
+            "area": filters.area,
+            "period": {"from": start.isoformat(), "to": end.isoformat()},
+        },
         "kindergartens": rows,
         "classification_counts": classification_counts,
         "interpretation": {
@@ -2124,6 +2203,7 @@ def export_report(
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
     kindergarten_id: Optional[int] = Query(None),
     class_id: Optional[int] = Query(None),
     period: Optional[str] = Query("this_month"),
@@ -2139,6 +2219,7 @@ def export_report(
         level=level,
         governorate=governorate,
         city=city,
+        area=area,
         kindergarten_id=kindergarten_id,
         class_id=class_id,
         period=period,
@@ -2239,6 +2320,8 @@ def generate_incident_report(
     scope_type: str = Form(...),
     kindergarten_id: Optional[int] = Form(None),
     governorate: Optional[str] = Form(None),
+    district: Optional[str] = Form(None),
+    area: Optional[str] = Form(None),
     period_type: str = Form(...),
     year: Optional[int] = Form(None),
     current_user: models.User = Depends(require_admin),
@@ -2259,7 +2342,14 @@ def generate_incident_report(
 
         # Generate metrics
         metrics = ReportService.generate_incident_report(
-            scope_enum, start_date, end_date, kindergarten_id, governorate, db
+            scope_type=scope_enum,
+            start_date=start_date,
+            end_date=end_date,
+            kindergarten_id=kindergarten_id,
+            governorate=governorate,
+            district=district,
+            area=area,
+            db=db
         )
 
         # Create report record
@@ -2268,6 +2358,8 @@ def generate_incident_report(
             scope_type=scope_enum,
             kindergarten_id=kindergarten_id,
             governorate=governorate,
+            district=district,
+            area=area,
             start_date=start_date,
             end_date=end_date,
             metrics_json=metrics,
@@ -2349,6 +2441,10 @@ def list_incident_reports(
                 scope_name = report.kindergarten.name_ar
             elif report.scope_type == models.ReportScopeType.GOVERNORATE:
                 scope_name = report.governorate
+            elif report.scope_type == models.ReportScopeType.DISTRICT:
+                scope_name = report.district
+            elif report.scope_type == models.ReportScopeType.AREA:
+                scope_name = report.area
             elif report.scope_type == models.ReportScopeType.ALL:
                 scope_name = "جميع الحضانات"
 
@@ -2405,6 +2501,10 @@ def get_incident_report_detail(
             scope_name = report.kindergarten.name_ar
         elif report.scope_type == models.ReportScopeType.GOVERNORATE:
             scope_name = report.governorate
+        elif report.scope_type == models.ReportScopeType.DISTRICT:
+            scope_name = report.district
+        elif report.scope_type == models.ReportScopeType.AREA:
+            scope_name = report.area
         elif report.scope_type == models.ReportScopeType.ALL:
             scope_name = "جميع الحضانات"
 
@@ -2519,6 +2619,49 @@ def export_incident_report_csv(
             sensitivity_level=3,
         )
         logger.error(f"Failed to export incident report: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/geography/districts")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_districts(
+    request: Request,
+    governorate: Optional[str] = Query(None),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List distinct districts/قصبة/لواء, optionally filtered by governorate"""
+    try:
+        query = db.query(models.Kindergarten.district).distinct()
+        if governorate:
+            query = query.filter(models.Kindergarten.governorate == governorate)
+        districts = [d[0] for d in query.all() if d[0]]
+        return {"districts": sorted(districts)}
+    except Exception as e:
+        logger.error(f"Failed to list districts: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/geography/areas")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_areas(
+    request: Request,
+    governorate: Optional[str] = Query(None),
+    district: Optional[str] = Query(None),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """List distinct areas/منطقة, optionally filtered by governorate and/or district"""
+    try:
+        query = db.query(models.Kindergarten.area).distinct()
+        if governorate:
+            query = query.filter(models.Kindergarten.governorate == governorate)
+        if district:
+            query = query.filter(models.Kindergarten.district == district)
+        areas = [a[0] for a in query.all() if a[0]]
+        return {"areas": sorted(areas)}
+    except Exception as e:
+        logger.error(f"Failed to list areas: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

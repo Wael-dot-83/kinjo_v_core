@@ -403,6 +403,21 @@ class AnalyticsGapService:
     def get_governorate_metrics(
         self, gov_name: str, locale: str = "ar"
     ) -> LayerMetricsResponse:
+        return self._get_geographic_layer_metrics("governorate", gov_name, "governorate", locale)
+
+    def get_district_metrics(
+        self, dist_name: str, locale: str = "ar"
+    ) -> LayerMetricsResponse:
+        return self._get_geographic_layer_metrics("district", dist_name, "district", locale)
+
+    def get_area_metrics(
+        self, area_name: str, locale: str = "ar"
+    ) -> LayerMetricsResponse:
+        return self._get_geographic_layer_metrics("area", area_name, "area", locale)
+
+    def _get_geographic_layer_metrics(
+        self, field_name: str, value: str, layer_name: str, locale: str = "ar"
+    ) -> LayerMetricsResponse:
         metrics: List[MetricResponse] = []
         today = _today()
         window_start = today - timedelta(days=30)
@@ -410,7 +425,7 @@ class AnalyticsGapService:
         kg_ids_subq = (
             self.db.query(models.Kindergarten.id)
             .filter(
-                models.Kindergarten.governorate == gov_name,
+                getattr(models.Kindergarten, field_name) == value,
                 models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
             )
             .subquery()
@@ -748,7 +763,7 @@ class AnalyticsGapService:
             locale=locale,
         ))
 
-        return LayerMetricsResponse(layer="governorate", metrics=metrics, locale=locale)
+        return LayerMetricsResponse(layer=layer_name, metrics=metrics, locale=locale)
 
     # ═══════════════════════════════════════════════════════════════════════
     # KINDERGARTEN LAYER — Metrics 15-22

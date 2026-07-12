@@ -25,6 +25,8 @@ class ReportService:
         end_date: date,
         kindergarten_id: Optional[int] = None,
         governorate: Optional[str] = None,
+        district: Optional[str] = None,
+        area: Optional[str] = None,
         db: Session = None
     ) -> Dict[str, Any]:
         """Generate incident summary report for the given scope and date range"""
@@ -47,6 +49,24 @@ class ReportService:
             # Get all kindergartens in the governorate
             kindergarten_ids = db.query(models.Kindergarten.id).filter(
                 models.Kindergarten.governorate == governorate
+            ).all()
+            kindergarten_ids = [k.id for k in kindergarten_ids]
+            filters.append(models.Incident.kindergarten_id.in_(kindergarten_ids))
+        elif scope_type == models.ReportScopeType.DISTRICT:
+            if district is None:
+                raise ValueError("district required for DISTRICT scope")
+            # Get all kindergartens in the district
+            kindergarten_ids = db.query(models.Kindergarten.id).filter(
+                models.Kindergarten.district == district
+            ).all()
+            kindergarten_ids = [k.id for k in kindergarten_ids]
+            filters.append(models.Incident.kindergarten_id.in_(kindergarten_ids))
+        elif scope_type == models.ReportScopeType.AREA:
+            if area is None:
+                raise ValueError("area required for AREA scope")
+            # Get all kindergartens in the area
+            kindergarten_ids = db.query(models.Kindergarten.id).filter(
+                models.Kindergarten.area == area
             ).all()
             kindergarten_ids = [k.id for k in kindergarten_ids]
             filters.append(models.Incident.kindergarten_id.in_(kindergarten_ids))
@@ -76,7 +96,7 @@ class ReportService:
 
         # Per-kindergarten breakdown (if applicable)
         per_kindergarten = {}
-        if scope_type in [models.ReportScopeType.GOVERNORATE, models.ReportScopeType.ALL]:
+        if scope_type in [models.ReportScopeType.GOVERNORATE, models.ReportScopeType.DISTRICT, models.ReportScopeType.AREA, models.ReportScopeType.ALL]:
             kindergarten_incidents = db.query(
                 models.Kindergarten.name_ar,
                 func.count(models.Incident.id).label('incident_count')
@@ -160,11 +180,32 @@ class ReportService:
             # Governorates
             governorates = db.query(models.Kindergarten.governorate).distinct().all()
             for gov in governorates:
-                scopes.append({
-                    "type": "GOVERNORATE",
-                    "name": gov[0],
-                    "governorate": gov[0]
-                })
+                if gov[0]:
+                    scopes.append({
+                        "type": "GOVERNORATE",
+                        "name": gov[0],
+                        "governorate": gov[0]
+                    })
+
+            # Districts
+            districts = db.query(models.Kindergarten.district).distinct().all()
+            for dist in districts:
+                if dist[0]:
+                    scopes.append({
+                        "type": "DISTRICT",
+                        "name": dist[0],
+                        "district": dist[0]
+                    })
+
+            # Areas
+            areas = db.query(models.Kindergarten.area).distinct().all()
+            for ar in areas:
+                if ar[0]:
+                    scopes.append({
+                        "type": "AREA",
+                        "name": ar[0],
+                        "area": ar[0]
+                    })
 
             # Individual kindergartens
             kindergartens = db.query(models.Kindergarten).all()

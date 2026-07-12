@@ -966,8 +966,8 @@ class AgencyReportsService:
         pct = _safe_pct(reported, total)
         return {
             "kpi": self._kpi("data_quality_score", "مؤشر جودة البيانات", pct, "%"),
-            "rows": [{"المؤشر": "جودة البيانات (رياض قدّمت تقريرًا خلال 7 أيام)", "النشطة": total, "المُبلِّغة": reported, "النسبة %": pct}],
-            "note": ("لا توجد رياض نشطة ضمن النطاق لاحتساب جودة البيانات." if total == 0 else None),
+            "rows": [{"المؤشر": "جودة البيانات (حضانات قدّمت تقريرًا خلال 7 أيام)", "النشطة": total, "المُبلِّغة": reported, "النسبة %": pct}],
+            "note": ("لا توجد حضانات نشطة ضمن النطاق لاحتساب جودة البيانات." if total == 0 else None),
         }
 
     def _ind_service_access_ratio(self, kg_ids, start, end):
@@ -981,7 +981,7 @@ class AgencyReportsService:
         return {
             "kpi": self._kpi("service_access_ratio", "أطفال لكل حضانة نشطة", ratio, "طفل/حضانة"),
             "rows": [{"المؤشر": "أطفال لكل حضانة نشطة", "الأطفال": children, "الحضانات النشطة": active_kgs, "النسبة": ratio}],
-            "note": ("لا توجد رياض نشطة ضمن النطاق." if active_kgs == 0 else None),
+            "note": ("لا توجد حضانات نشطة ضمن النطاق." if active_kgs == 0 else None),
         }
 
     def _custom_summary_ar(self, scope: dict[str, Any], kpis: list[dict[str, Any]], status: str) -> str:
