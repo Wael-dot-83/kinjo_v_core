@@ -234,3 +234,87 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
   .agency-toolbar__meta{margin-inline-start:0;justify-content:space-between}
   .agency-tab{flex:1 1 auto;justify-content:center;padding:12px 8px;font-size:.9rem}
 }
+
+/* ============================================================
+   Custom-report WIZARD (v3)
+   ============================================================ */
+.wiz-stepper{list-style:none;display:flex;gap:8px;margin:0 0 24px;padding:0;flex-wrap:wrap;counter-reset:none}
+.wiz-step{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;color:#94a3b8;font-weight:600;font-size:.9rem;padding:8px 10px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0}
+.wiz-step__num{flex:0 0 auto;width:26px;height:26px;border-radius:999px;background:#e2e8f0;color:#64748b;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem}
+.wiz-step__label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wiz-step.is-active{color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff}
+.wiz-step.is-active .wiz-step__num{background:#1d4ed8;color:#fff}
+.wiz-step.is-done{color:#166534;border-color:#bbf7d0;background:#f0fdf4}
+.wiz-step.is-done .wiz-step__num{background:#16a34a;color:#fff}
+
+.wiz-panel{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:22px;margin-bottom:16px}
+.wiz-panel__title{font-size:1.2rem;margin:0 0 14px;color:#0f172a;outline:none}
+.wiz-panel__title:focus-visible{outline:3px solid #93c5fd;outline-offset:3px;border-radius:6px}
+
+.wiz-errors{border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.wiz-errors ul{margin:6px 0 0;padding-inline-start:20px}
+.wiz-errors strong{display:block}
+.wiz-field-error{color:#b91c1c;font-size:.82rem;margin:4px 0 0}
+.form-control.is-invalid,.form-select.is-invalid{border-color:#dc2626;box-shadow:0 0 0 1px #dc2626}
+.wiz-hint{font-size:.8rem;color:#64748b}
+
+/* Indicators */
+.wiz-indicator-total{font-weight:700;color:#1e40af;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px 14px;margin:0 0 14px;display:inline-block}
+.wiz-groups{display:flex;flex-direction:column;gap:10px}
+.wiz-group{border:1px solid #e2e8f0;border-radius:12px;background:#fff;overflow:hidden}
+.wiz-group__summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:12px 16px;font-weight:700;color:#0f172a;background:#f8fafc}
+.wiz-group__summary::-webkit-details-marker{display:none}
+.wiz-group__summary::before{content:"\25B8";color:#64748b;font-size:.8rem;transition:transform .15s}
+.wiz-group[open] .wiz-group__summary::before{transform:rotate(90deg)}
+.wiz-group__name{flex:1 1 auto}
+.wiz-group__count{flex:0 0 auto;min-width:24px;height:22px;padding:0 7px;border-radius:999px;background:#e2e8f0;color:#475569;font-size:.8rem;display:inline-flex;align-items:center;justify-content:center;font-weight:800}
+.wiz-group__count.is-active{background:#1d4ed8;color:#fff}
+.wiz-group__actions{display:flex;gap:10px;flex:0 0 auto}
+.wiz-group__body{padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px}
+.wiz-linkbtn{appearance:none;background:transparent;border:none;color:#1d4ed8;font-weight:700;font-size:.85rem;cursor:pointer;padding:4px 6px;border-radius:6px;min-height:32px}
+.wiz-linkbtn:hover{text-decoration:underline}
+.wiz-linkbtn:disabled{color:#94a3b8;cursor:not-allowed;text-decoration:none}
+.wiz-linkbtn:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.custom-indicator input:disabled+span{color:#94a3b8}
+.custom-indicator--needs-data{opacity:1;border-style:dashed;background:#f8fafc}
+.wiz-needs-badge{font-size:.72rem;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:999px;padding:1px 7px;margin-inline-start:2px}
+
+/* Review */
+.wiz-review__list{display:grid;grid-template-columns:minmax(140px,220px) 1fr;gap:8px 16px;margin:0 0 18px}
+.wiz-review__line{display:contents}
+.wiz-review__line dt{font-weight:700;color:#334155;margin:0}
+.wiz-review__line dd{margin:0;color:#0f172a}
+.wiz-review__indicators h4{margin:8px 0 10px;color:#0f172a}
+.wiz-review__group{margin-bottom:12px}
+.wiz-review__group h5{margin:0 0 4px;color:#1e40af;font-size:.95rem}
+.wiz-review__group ul{margin:0;padding-inline-start:20px;color:#334155}
+.wiz-warning{color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px}
+.wiz-privacy-note{display:flex;align-items:center;gap:8px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;margin:4px 0 0}
+
+/* Generate actions + nav */
+.wiz-generate-actions{display:flex;gap:12px;flex-wrap:wrap}
+.wiz-generate-actions .admin-btn{min-height:44px}
+.wiz-nav{display:flex;align-items:center;gap:12px;margin-top:8px}
+.wiz-nav__spacer{flex:1 1 auto}
+.wiz-nav .admin-btn{min-height:44px;min-width:110px;justify-content:center}
+.wiz-reset-link{appearance:none;background:transparent;border:none;color:#64748b;font-weight:600;cursor:pointer;text-decoration:underline;min-height:44px;padding:0 8px}
+.wiz-reset-link:hover{color:#b91c1c}
+.wiz-reset-link:focus-visible{outline:3px solid #93c5fd;outline-offset:2px;border-radius:6px}
+
+/* Draft banner + flash */
+.wiz-draft-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px;padding:10px 14px;margin-bottom:16px}
+.wiz-flash{position:fixed;inset-block-end:24px;inset-inline-start:24px;background:#0f172a;color:#fff;padding:12px 18px;border-radius:10px;box-shadow:0 10px 30px rgba(15,23,42,.3);opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none;z-index:1200}
+.wiz-flash.is-visible{opacity:1;transform:translateY(0)}
+.wiz-flash--error{background:#991b1b}
+.custom-report-state--partial{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+
+@media (max-width:640px){
+  .wiz-stepper{gap:6px}
+  .wiz-step{flex:1 1 100%;justify-content:flex-start}
+  .wiz-step__label{white-space:normal}
+  .wiz-review__list{grid-template-columns:1fr}
+  .wiz-review__line dt{margin-top:6px}
+  .wiz-nav{flex-wrap:wrap}
+  .wiz-nav .admin-btn{flex:1 1 auto}
+  .wiz-flash{inset-inline:16px;text-align:center}
+}
