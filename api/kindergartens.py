@@ -580,65 +580,6 @@ def get_kindergarten(
                      "تم جلب بيانات الحضانة بنجاح")
 
 
-@router.get("/admin/kindergartens/stats")
-def kindergarten_stats(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Aggregate counts + occupancy for the admin Kindergartens KPI cards.
-
-    Admin-only. Uses batched aggregate queries. ``total`` is the active roster
-    excluding soft-deleted records; ``deleted`` is reported separately.
-    """
-    _admin_only(current_user)
-    from models import EnrollmentApplication, EnrollmentStatus
-
-    rows = (
-        db.query(models.Kindergarten.status, func.count(models.Kindergarten.id))
-        .group_by(models.Kindergarten.status)
-        .all()
-    )
-    counts = {status.value.lower(): int(n) for status, n in rows}
-    active = counts.get("active", 0)
-    frozen = counts.get("frozen", 0)
-    draft = counts.get("draft", 0)
-    inactive = counts.get("inactive", 0)
-    deleted = counts.get("deleted", 0)
-    total = active + frozen + draft + inactive
-
-    total_capacity = (
-        db.query(func.coalesce(func.sum(models.Kindergarten.total_capacity), 0))
-        .filter(models.Kindergarten.status != models.KindergartenStatus.DELETED)
-        .scalar()
-    ) or 0
-    total_children = (
-        db.query(func.count(EnrollmentApplication.id))
-        .join(models.Kindergarten, models.Kindergarten.id == EnrollmentApplication.kindergarten_id)
-        .filter(
-            EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
-            models.Kindergarten.status != models.KindergartenStatus.DELETED,
-        )
-        .scalar()
-    ) or 0
-    avg_occupancy = round((total_children / total_capacity) * 100, 1) if total_capacity else 0.0
-
-    return _envelope(
-        True,
-        {
-            "total": total,
-            "active": active,
-            "frozen": frozen,
-            "draft": draft,
-            "inactive": inactive,
-            "deleted": deleted,
-            "avg_occupancy": avg_occupancy,
-            "total_children": int(total_children),
-            "total_capacity": int(total_capacity),
-        },
-        "تم جلب إحصائيات الحضانات بنجاح / Kindergarten stats retrieved",
-    )
-
-
 @router.post("/admin/kindergartens", status_code=201)
 def create_kindergarten(
     data: KindergartenCreate,
