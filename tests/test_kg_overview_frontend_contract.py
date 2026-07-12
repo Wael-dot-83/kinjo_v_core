@@ -130,3 +130,11 @@ def test_overview_section_header_is_not_a_duplicate_of_page_title():
     js = KG_OVERVIEW_JS.read_text(encoding="utf-8")
     assert "نظرة عامة على الحضانات" not in js
     assert "أداء الحضانات" in js
+
+
+def test_add_child_button_removed_from_admin_quick_actions():
+    """The 'Add Child' / 'إضافة طفل' action has been removed from the admin overview page."""
+    js = KG_OVERVIEW_JS.read_text(encoding="utf-8")
+    assert "إضافة طفل" not in js
+    assert "/enroll" not in js
+

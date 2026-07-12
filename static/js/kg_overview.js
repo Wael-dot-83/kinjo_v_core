@@ -1006,7 +1006,6 @@ class KgOverview {
     const isAr = lang !== 'en';
 
     const actions = [
-      { icon:'bi-person-plus-fill', ar:'إضافة طفل',      en:'Add Child',     accent:'#2563eb', href:'/enroll',         cls:'primary' },
       { icon:'bi-building-fill',    ar:'إدارة الحضانات',  en:'Manage KGs',    accent:'#7c3aed', href:'/admin/kindergartens',  cls:'' },
       { icon:'bi-bar-chart-fill',   ar:'عرض تقرير',      en:'View Report',   accent:'#16a34a', href:'/admin/analytics',cls:'' },
       { icon:'bi-bell-fill',        ar:'مراجعة التنبيهات',en:'Review Alerts', accent:'#dc2626', href:'/admin/alerts',   cls:'' },
