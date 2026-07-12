@@ -38,8 +38,9 @@ def test_kindergarten_and_class_table_branches_implemented():
     list (for CLASS), but that data was fetched and then thrown away,
     leaving the table permanently blank on drill-down."""
     js = JS_FILE.read_text(encoding="utf-8")
-    assert 'type.toUpperCase() === "KINDERGARTEN"' in js
-    assert 'type.toUpperCase() === "CLASS"' in js
+    # populateTable now branches on a `const t = type.toUpperCase()` local.
+    assert 't === "KINDERGARTEN"' in js
+    assert 't === "CLASS"' in js
     assert "Add logic for KINDERGARTEN -> CLASS drilldown if needed later" not in js
 
 
@@ -51,9 +52,26 @@ def test_class_summary_cards_have_dedicated_branch():
     age_group}), so a CLASS page (once reachable) would have silently
     shown 0.0%/0.00 placeholders instead of real data."""
     js = JS_FILE.read_text(encoding="utf-8")
-    assert 'else if (type.toUpperCase() === "CLASS")' in js
+    assert 'else if (t === "CLASS")' in js
     assert "metrics.capacity" in js
     assert "metrics.age_group" in js
+
+
+def test_full_drilldown_hierarchy_levels_implemented():
+    """Baseline audit D2: the drill-down journey skipped the City level. The
+    completed hierarchy is Country(NETWORK) -> Governorate -> City(AREA) ->
+    Nursery(KINDERGARTEN) -> Class -> Child, so populateTable must handle every
+    level and rows must carry a next-level drill target via drillHref()."""
+    js = JS_FILE.read_text(encoding="utf-8")
+    for level in ("NETWORK", "AREA", "CHILD"):
+        assert f't === "{level}"' in js, f"missing populateTable branch for {level}"
+    # City == AREA is surfaced with the "City" label, not "Kindergarten".
+    assert 'drilldownText("مدينة", "City")' in js
+    # Generic next-level navigation helper (encodes Arabic geographic ids).
+    assert "function drillHref(nextType, id)" in js
+    assert "encodeURIComponent(id)" in js
+    # Nursery terminology (D1) in English labels, not "Kindergarten".
+    assert 'drilldownText("حضانة", "Nursery")' in js
 
 
 def test_apply_date_filter_alias_wired_for_shared_macro_presets():
@@ -74,4 +92,6 @@ def test_table_has_caption_and_column_scope():
     js = JS_FILE.read_text(encoding="utf-8")
     assert '<th role="button">' not in js
     assert '<th class="text-center" role="button"' not in js
-    assert js.count('<th scope="col"') == 12
+    # 15 headers across the geo list (3), City->Nursery (5), Nursery->Class (4),
+    # Class->Child (3) tables. Country/Governorate/District share the geo builder.
+    assert js.count('<th scope="col"') == 15

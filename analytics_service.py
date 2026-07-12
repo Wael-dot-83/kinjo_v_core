@@ -1832,6 +1832,34 @@ def get_analytics_overview(
     }
 
 
+def _drilldown_geo_rollup(db, group_col, base_filter, allowed_kgs):
+    """Return ({group_value: nursery_count}, {group_value: children_count}) for an
+    active-nursery grouping, honoring an optional allowed-kindergarten scope.
+
+    Used by the NETWORK -> Governorate -> City drill-down levels. Two grouped
+    queries (not per-nursery loops) so higher levels stay cheap on large networks.
+    """
+    kg_q = db.query(group_col, func.count(models.Kindergarten.id)).filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE, *base_filter
+    )
+    ch_q = (
+        db.query(group_col, func.count(func.distinct(models.EnrollmentApplication.id)))
+        .join(models.Class, models.Class.kindergarten_id == models.Kindergarten.id)
+        .join(models.EnrollmentApplication, models.EnrollmentApplication.class_id == models.Class.id)
+        .filter(
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            *base_filter,
+        )
+    )
+    if allowed_kgs is not None:
+        kg_q = kg_q.filter(models.Kindergarten.id.in_(allowed_kgs))
+        ch_q = ch_q.filter(models.Kindergarten.id.in_(allowed_kgs))
+    nurseries = {k: v for k, v in kg_q.group_by(group_col).all() if k}
+    children = {k: v for k, v in ch_q.group_by(group_col).all() if k}
+    return nurseries, children
+
+
 @router.get("/drilldown/{dimension_type}/{dimension_id}")
 def get_drilldown(
     dimension_type: str,
@@ -1842,8 +1870,15 @@ def get_drilldown(
     db: Session = Depends(get_db)
 ):
     """
-    Drill down into a specific dimension (governorate, kindergarten, class, child)
+    Drill down one level of the hierarchy:
+    Country(NETWORK) -> Governorate -> City(AREA) -> Nursery(KINDERGARTEN) -> Class -> Child.
+
+    Each level returns aggregate ``metrics`` plus a ``children`` list of the next
+    level's rows. DISTRICT is also accepted as an optional intermediate (District
+    lists its Cities). "City" is the user-facing label for the AREA dimension — no
+    separate City model exists (Kindergarten.area is the finest geographic field).
     """
+    dim = dimension_type.upper()
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
     allowed_govs = _allowed_governorates(current_user, db) or []
     if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
@@ -1851,41 +1886,62 @@ def get_drilldown(
 
     period_start, period_end = get_date_range(start_date, end_date)
 
-    if dimension_type.upper() in {"KINDERGARTEN", "CLASS"} and not dimension_id.isdigit():
+    if dim in {"KINDERGARTEN", "CLASS", "CHILD"} and not dimension_id.isdigit():
         raise HTTPException(status_code=400, detail="dimension_id must be numeric for this dimension_type")
 
-    if dimension_type.upper() == "GOVERNORATE":
+    if dim == "NETWORK":
+        # Country level -> list governorates. dimension_id is ignored (use "all").
+        base = []
+        if allowed_govs and current_user.role != models.UserRole.ADMIN:
+            base.append(models.Kindergarten.governorate.in_(allowed_govs))
+        nurseries, children = _drilldown_geo_rollup(
+            db, models.Kindergarten.governorate, base, allowed_kgs
+        )
+        gov_rows = [
+            {
+                "id": gov,
+                "name": gov,
+                "dimension_type": "GOVERNORATE",
+                "nursery_count": nurseries.get(gov, 0),
+                "children_count": children.get(gov, 0),
+            }
+            for gov in sorted(nurseries)
+        ]
+        return DrilldownResponse(
+            dimension_type="NETWORK",
+            dimension_id="all",
+            dimension_name="الشبكة",
+            period_start=period_start,
+            period_end=period_end,
+            metrics={
+                "governorate_count": len(gov_rows),
+                "nursery_count": sum(nurseries.values()),
+                "children_count": sum(children.values()),
+            },
+            children=gov_rows,
+        )
+
+    if dim == "GOVERNORATE":
         if current_user.role != models.UserRole.ADMIN and allowed_govs and dimension_id not in allowed_govs:
             raise HTTPException(status_code=403, detail="Governorate not allowed")
 
-        kg_ids = _kg_ids_for_governorate(db, dimension_id) or []
-        if allowed_kgs is not None:
-            kg_ids = [kg for kg in kg_ids if kg in allowed_kgs]
-        if not kg_ids:
-            raise HTTPException(status_code=403, detail="No allowed kindergartens in this governorate")
-
-        # Get all kindergartens in this governorate
-        kindergartens = db.query(models.Kindergarten).filter(
-            models.Kindergarten.id.in_(kg_ids),
-            models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-        ).all()
-
-        children_list = []
-        for kg in kindergartens:
-            metrics = AnalyticsService.get_kindergarten_metrics(
-                db, kg.id, period_start, period_end
-            )
-            children_list.append(metrics.model_dump())
-
-        total_children = sum(c["children_count"] for c in children_list)
-        governance_scores = [
-            c["governance_score"] for c in children_list
-            if c.get("governance_score") is not None
-        ]
-        avg_governance = (
-            sum(governance_scores) / len(governance_scores) if governance_scores else None
+        # Governorate level -> list Cities (distinct areas) within the governorate.
+        base = [models.Kindergarten.governorate == dimension_id]
+        nurseries, children = _drilldown_geo_rollup(
+            db, models.Kindergarten.area, base, allowed_kgs
         )
-
+        if not nurseries:
+            raise HTTPException(status_code=403, detail="No allowed nurseries in this governorate")
+        city_rows = [
+            {
+                "id": area,
+                "name": area,
+                "dimension_type": "AREA",
+                "nursery_count": nurseries.get(area, 0),
+                "children_count": children.get(area, 0),
+            }
+            for area in sorted(nurseries)
+        ]
         return DrilldownResponse(
             dimension_type="GOVERNORATE",
             dimension_id=dimension_id,
@@ -1893,14 +1949,93 @@ def get_drilldown(
             period_start=period_start,
             period_end=period_end,
             metrics={
-                "kindergarten_count": len(kindergartens),
+                "city_count": len(city_rows),
+                "nursery_count": sum(nurseries.values()),
+                "children_count": sum(children.values()),
+            },
+            children=city_rows,
+        )
+
+    if dim == "DISTRICT":
+        # Optional intermediate: District -> list Cities (areas) within the district.
+        base = [models.Kindergarten.district == dimension_id]
+        nurseries, children = _drilldown_geo_rollup(
+            db, models.Kindergarten.area, base, allowed_kgs
+        )
+        if not nurseries:
+            raise HTTPException(status_code=404, detail="No nurseries in this district")
+        city_rows = [
+            {
+                "id": area, "name": area, "dimension_type": "AREA",
+                "nursery_count": nurseries.get(area, 0),
+                "children_count": children.get(area, 0),
+            }
+            for area in sorted(nurseries)
+        ]
+        return DrilldownResponse(
+            dimension_type="DISTRICT",
+            dimension_id=dimension_id,
+            dimension_name=dimension_id,
+            period_start=period_start,
+            period_end=period_end,
+            metrics={
+                "city_count": len(city_rows),
+                "nursery_count": sum(nurseries.values()),
+                "children_count": sum(children.values()),
+            },
+            children=city_rows,
+        )
+
+    if dim == "AREA":
+        # City level -> list Nurseries in this area, each with its own metrics.
+        kg_ids = [
+            r[0] for r in db.query(models.Kindergarten.id).filter(
+                models.Kindergarten.area == dimension_id,
+                models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+            ).all()
+        ]
+        if allowed_kgs is not None:
+            kg_ids = [kg for kg in kg_ids if kg in allowed_kgs]
+        if not kg_ids:
+            raise HTTPException(status_code=403, detail="No allowed nurseries in this city")
+
+        kindergartens = db.query(models.Kindergarten).filter(
+            models.Kindergarten.id.in_(kg_ids),
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+        ).all()
+
+        nursery_rows = []
+        for kg in kindergartens:
+            metrics = AnalyticsService.get_kindergarten_metrics(
+                db, kg.id, period_start, period_end
+            )
+            row = metrics.model_dump()
+            row["dimension_type"] = "KINDERGARTEN"
+            nursery_rows.append(row)
+
+        total_children = sum(c["children_count"] for c in nursery_rows)
+        governance_scores = [
+            c["governance_score"] for c in nursery_rows
+            if c.get("governance_score") is not None
+        ]
+        avg_governance = (
+            sum(governance_scores) / len(governance_scores) if governance_scores else None
+        )
+        return DrilldownResponse(
+            dimension_type="AREA",
+            dimension_id=dimension_id,
+            dimension_name=dimension_id,
+            period_start=period_start,
+            period_end=period_end,
+            metrics={
+                "nursery_count": len(kindergartens),
                 "children_count": total_children,
                 "governance_score": avg_governance,
             },
-            children=children_list
+            children=nursery_rows,
         )
 
-    elif dimension_type.upper() == "KINDERGARTEN":
+    elif dim == "KINDERGARTEN":
         kg_id = enforce_kindergarten_scope(current_user, int(dimension_id), db)
         metrics = AnalyticsService.get_kindergarten_metrics(
             db, kg_id, period_start, period_end
@@ -1971,6 +2106,7 @@ def get_drilldown(
                 children_list.append({
                     "id": child.id,
                     "name": f"{child.first_name} {child.last_name}",
+                    "dimension_type": "CHILD",
                     "attendance_rate": round(attendance_rate, 2),
                     "attendance_days": attendance_count
                 })
@@ -1990,6 +2126,51 @@ def get_drilldown(
                 "age_group": cls_age_group
             },
             children=children_list
+        )
+
+    elif dim == "CHILD":
+        # Leaf level -> a single child's attendance summary for the period.
+        # privacy_level=restricted; Phase 4 gates this behind analytics:child_detail.
+        child_id = int(dimension_id)
+        child = db.query(models.Child).filter(models.Child.id == child_id).first()
+        if not child:
+            raise HTTPException(status_code=404, detail="Child not found")
+
+        # Scope: the child's class -> kindergarten must be within the caller's scope.
+        enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == child_id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).first()
+        if enrollment and enrollment.class_id:
+            cls = db.query(models.Class).filter(models.Class.id == enrollment.class_id).first()
+            if cls:
+                enforce_kindergarten_scope(current_user, cls.kindergarten_id, db)
+
+        present_count = db.query(func.count(models.AttendanceLog.id)).filter(
+            models.AttendanceLog.child_id == child_id,
+            models.AttendanceLog.status.in_(["PRESENT", "LATE"]),
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
+        ).scalar() or 0
+        total_logged = db.query(func.count(models.AttendanceLog.id)).filter(
+            models.AttendanceLog.child_id == child_id,
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
+        ).scalar() or 0
+        attendance_rate = round(present_count / total_logged * 100, 2) if total_logged else None
+
+        return DrilldownResponse(
+            dimension_type="CHILD",
+            dimension_id=dimension_id,
+            dimension_name=f"{child.first_name} {child.last_name}",
+            period_start=period_start,
+            period_end=period_end,
+            metrics={
+                "attendance_rate": attendance_rate,
+                "attendance_days": present_count,
+                "logged_days": total_logged,
+            },
+            children=[],  # leaf — no further drill-down
         )
 
     raise HTTPException(status_code=400, detail="Invalid dimension type")
