@@ -98,7 +98,10 @@
   // -------------------------------------------------- state
   let schema = null;
   let schemaAgencies = [];
-  let divisions = []; // Jordan governorate -> districts -> areas (from static JSON)
+  // Canonical governorates the backend validates/filters against: [{name_ar, cities:[district...]}].
+  // Using the canonical reference (not the static divisions JSON) guarantees the
+  // selected governorate/district values match Kindergarten/ParentProfile data.
+  let divisions = [];
 
   // Geographic requirement per scope level. Non-geographic levels (class/child/
   // supervisor/manager) allow optional governorate+district refinement.
@@ -138,6 +141,7 @@
     controls.appendChild(buildStepGenerate());
     controls.appendChild(buildNav());
 
+    wireScopeStep(); // panels are now in the DOM
     maybeOfferDraft();
     goToStep(0);
   }
@@ -197,8 +201,11 @@
       geoSelect("cr-kindergarten", geoBaseLabel("cr-kindergarten"), t("اختر المحافظة والقصبة / اللواء أولاً", "Select governorate and district first")),
     );
     p.appendChild(row2);
+    return p;
+  }
 
-    // Wiring
+  // Attached after panels are in the DOM (buildStepScope returns a detached node).
+  function wireScopeStep() {
     const level = document.getElementById("cr-level");
     const period = document.getElementById("cr-period");
     const gov = document.getElementById("cr-governorate");
@@ -207,7 +214,6 @@
     if (period) period.addEventListener("change", () => { togglePeriodDates(); markDirty(); });
     if (gov) gov.addEventListener("change", () => { fillDistricts(gov.value); resetSelect("cr-kindergarten", t("اختر القصبة / اللواء أولاً", "Select a district first")); applyLevelVisibility(); maybeFillKindergartens(); markDirty(); });
     if (city) city.addEventListener("change", () => { applyLevelVisibility(); maybeFillKindergartens(); markDirty(); });
-    return p;
   }
 
   // -------------------------------------------------- geo cascade
@@ -216,14 +222,14 @@
     if (!s || !divisions.length) return;
     const cur = s.value;
     resetSelect("cr-governorate", t("— اختر المحافظة —", "— Select governorate —"));
-    divisions.forEach((g) => s.appendChild(optionEl(g.gov, g.gov)));
+    divisions.forEach((g) => s.appendChild(optionEl(g.name_ar, g.name_ar)));
     if (cur) s.value = cur;
   }
   function fillDistricts(govName, keep) {
     resetSelect("cr-city", t("— اختر قصبة / لواء —", "— Select district —"));
     const s = document.getElementById("cr-city");
-    const entry = divisions.find((g) => g.gov === govName);
-    if (s && entry) entry.districts.forEach((d) => s.appendChild(optionEl(d.name, d.name)));
+    const entry = divisions.find((g) => g.name_ar === govName);
+    if (s && entry) (entry.cities || []).forEach((c) => s.appendChild(optionEl(c, c)));
     if (s && keep) s.value = keep;
   }
   function fillKindergartens(govName, distName, keep) {
@@ -287,6 +293,11 @@
     const kgSel = document.getElementById("cr-kindergarten");
     const kgWrap = document.getElementById("field-cr-kindergarten");
     if (kgSel && kgWrap && !kgWrap.hidden && !(gov && dist)) kgSel.disabled = true;
+    // Hide "select parent first" hints once the parent selection exists.
+    const cityHint = document.getElementById("hint-cr-city");
+    if (cityHint) cityHint.style.display = gov ? "none" : "";
+    const kgHint = document.getElementById("hint-cr-kindergarten");
+    if (kgHint) kgHint.style.display = (gov && dist) ? "none" : "";
     const note = document.getElementById("cr-geo-note");
     if (note) { const txt = t(cfg.noteAr || "", cfg.noteEn || ""); note.textContent = txt; note.hidden = !txt; }
   }
@@ -721,10 +732,9 @@
   form.addEventListener("change", (e) => { if (e.target && e.target.id === "cr-agency") onAgencyChanged(); });
   window.addEventListener("beforeunload", (e) => { if (dirty && !generated) { e.preventDefault(); e.returnValue = ""; } });
 
-  // Jordan admin divisions (governorate -> district -> area) for the geo cascade.
-  fetch((window.JORDAN_ADMIN_DIVISIONS_URL) || "/static/data/jordan_admin_divisions.json", { credentials: "same-origin" })
-    .then((r) => (r.ok ? r.json() : []))
-    .then((data) => { divisions = Array.isArray(data) ? data : []; populateGovernorates(); applyLevelVisibility(); })
+  // Canonical governorates + districts (matches the data the backend filters on).
+  apiGet("/api/reference/governorates")
+    .then((res) => { divisions = (res && res.governorates) || []; populateGovernorates(); applyLevelVisibility(); })
     .catch(() => {});
 
   apiGet("/api/admin/agency-reports/custom/schema")
