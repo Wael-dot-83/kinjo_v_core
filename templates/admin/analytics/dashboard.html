@@ -117,6 +117,9 @@
               <option value="">{% if ui_lang == 'en' %}All Reviewers{% else %}كل المراجعين{% endif %}</option>
             </select>
           </div>
+          <button class="btn btn-sm btn-outline-secondary" id="comparePeriodBtn" data-bs-toggle="modal" data-bs-target="#comparePeriodModal" aria-label="{% if ui_lang == 'en' %}Compare Period{% else %}مقارنة الفترة{% endif %}">
+            <i class="bi bi-arrow-left-right me-1"></i>{% if ui_lang == 'en' %}Compare Period{% else %}مقارنة الفترة{% endif %}
+          </button>
         </div>
       </div>
     </div>
@@ -282,6 +285,42 @@
           </article>
 
         </div>{# /kpi-grid-v2 #}
+      </section>
+
+      {# ══ Insights Widget ══════════════════════════════════════════════════ #}
+      <section class="insights-widget mb-section" id="insightsWidget" aria-label="{% if ui_lang == 'en' %}Actionable Insights{% else %}رؤى قابلة للتنفيذ{% endif %}">
+        <div class="az-card">
+          <div class="az-card__header">
+            <h3 class="az-card__title">
+              <i class="bi bi-lightbulb-fill me-2 text-warning"></i>
+              {% if ui_lang == 'en' %}Actionable Insights{% else %}رؤى قابلة للتنفيذ{% endif %}
+              <span class="badge bg-warning text-dark ms-2" id="insightsCount">0</span>
+            </h3>
+          </div>
+          <div class="az-card__body">
+            <div id="insightsList" class="insights-list">
+              <div class="skeleton-loading" style="height: 80px;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {# ══ Action Queue Widget ══════════════════════════════════════════════ #}
+      <section class="action-queue-widget mb-section" id="actionQueueWidget" aria-label="{% if ui_lang == 'en' %}Action Queue{% else %}قائمة الإجراءات{% endif %}">
+        <div class="az-card">
+          <div class="az-card__header">
+            <h3 class="az-card__title">
+              <i class="bi bi-list-check me-2 text-primary"></i>
+              {% if ui_lang == 'en' %}Recommended Actions{% else %}الإجراءات الموصى بها{% endif %}
+              <span class="badge bg-primary ms-2" id="actionCount">0</span>
+            </h3>
+          </div>
+          <div class="az-card__body">
+            <div id="actionQueueList" class="action-queue-list">
+              <div class="skeleton-loading" style="height: 80px;"></div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {# — Trend + Risk two-column ─────────────────────────────────────── #}
@@ -947,6 +986,21 @@
         </div>
       </div>
 
+      {# Target Progress #}
+      <div class="az-card mb-4" id="targetProgressCard">
+        <div class="az-card__header">
+          <h4 class="az-card__title">
+            <i class="bi bi-bullseye me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}Target Progress{% else %}التقدم نحو الأهداف{% endif %}
+          </h4>
+        </div>
+        <div class="az-card__body">
+          <div id="targetProgressContent">
+            <div class="skeleton-loading" style="height: 100px;"></div>
+          </div>
+        </div>
+      </div>
+
     </div>{# /tabGovernance #}
 
     {# ═══════════════════════════════════════════════════════════════════════
@@ -977,12 +1031,109 @@
         </div>
       </div>
 
+      {# Model Performance #}
+      <div class="az-card mb-4" id="modelPerformanceCard">
+        <div class="az-card__header">
+          <h4 class="az-card__title">
+            <i class="bi bi-graph-up-arrow me-2 text-success"></i>
+            {% if ui_lang == 'en' %}Model Performance{% else %}أداء النموذج{% endif %}
+          </h4>
+        </div>
+        <div class="az-card__body">
+          <div id="modelPerformanceContent">
+            <div class="skeleton-loading" style="height: 60px;"></div>
+          </div>
+        </div>
+      </div>
+
+      {# Forecast Horizon Controls #}
+      <div class="forecast-controls mb-section">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <label for="forecastHorizon" class="fw-bold mb-0">
+            <i class="bi bi-calendar-range me-1"></i>
+            {% if ui_lang == 'en' %}Forecast Period:{% else %}فترة التنبؤ:{% endif %}
+          </label>
+          <select id="forecastHorizon" class="form-select form-select-sm" style="width: auto;">
+            <option value="7">{% if ui_lang == 'en' %}Next 7 days{% else %}7 أيام القادمة{% endif %}</option>
+            <option value="14">{% if ui_lang == 'en' %}Next 14 days{% else %}14 يومًا القادمة{% endif %}</option>
+            <option value="30" selected>{% if ui_lang == 'en' %}Next 30 days{% else %}30 يومًا القادمة{% endif %}</option>
+            <option value="60">{% if ui_lang == 'en' %}Next 60 days{% else %}60 يومًا القادمة{% endif %}</option>
+            <option value="90">{% if ui_lang == 'en' %}Next 90 days{% else %}90 يومًا القادمة{% endif %}</option>
+          </select>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="updateForecastHorizon()">
+            <i class="bi bi-arrow-repeat me-1"></i>
+            {% if ui_lang == 'en' %}Update{% else %}تحديث{% endif %}
+          </button>
+        </div>
+      </div>
+
+      {# Scenario Controls #}
+      <div class="scenario-controls mb-4" id="scenarioControls">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <label class="fw-bold mb-0">
+            <i class="bi bi-diagram-3 me-1"></i>
+            {% if ui_lang == 'en' %}Scenarios:{% else %}السيناريوهات:{% endif %}
+          </label>
+          <div class="btn-group btn-group-sm" role="group">
+            <input type="checkbox" class="btn-check" id="scenarioBaseline" checked autocomplete="off">
+            <label class="btn btn-outline-primary" for="scenarioBaseline">
+              {% if ui_lang == 'en' %}Baseline{% else %}الأساسي{% endif %}
+            </label>
+
+            <input type="checkbox" class="btn-check" id="scenarioOptimistic" autocomplete="off">
+            <label class="btn btn-outline-success" for="scenarioOptimistic">
+              <i class="bi bi-arrow-up me-1"></i>{% if ui_lang == 'en' %}Optimistic{% else %}متفائل{% endif %}
+            </label>
+
+            <input type="checkbox" class="btn-check" id="scenarioPessimistic" autocomplete="off">
+            <label class="btn btn-outline-danger" for="scenarioPessimistic">
+              <i class="bi bi-arrow-down me-1"></i>{% if ui_lang == 'en' %}Pessimistic{% else %}متشائم{% endif %}
+            </label>
+
+            <input type="checkbox" class="btn-check" id="scenarioBestCase" autocomplete="off">
+            <label class="btn btn-outline-success" for="scenarioBestCase">
+              {% if ui_lang == 'en' %}Best Case{% else %}أفضل حالة{% endif %}
+            </label>
+
+            <input type="checkbox" class="btn-check" id="scenarioWorstCase" autocomplete="off">
+            <label class="btn btn-outline-danger" for="scenarioWorstCase">
+              {% if ui_lang == 'en' %}Worst Case{% else %}أسوأ حالة{% endif %}
+            </label>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary" onclick="loadScenarios()">
+            <i class="bi bi-arrow-repeat me-1"></i>
+            {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+          </button>
+        </div>
+        <div id="scenarioLegend" class="mt-2 d-none">
+          <small class="text-muted" id="scenarioStddev"></small>
+        </div>
+      </div>
+
+      <div class="az-card what-if-card mb-4" id="whatIfCard">
+        <div class="az-card__header">
+          <h4 class="az-card__title"><i class="bi bi-sliders me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}What-If Analysis{% else %}تحليل ماذا لو{% endif %}</h4>
+        </div>
+        <div class="az-card__body">
+          <div class="what-if-controls d-flex align-items-center gap-3 flex-wrap">
+            <label for="whatIfSlider" class="fw-bold mb-0">
+              {% if ui_lang == 'en' %}Adjustment{% else %}التعديل{% endif %}</label>
+            <input type="range" id="whatIfSlider" min="-50" max="100" value="0" step="5" style="flex:1;min-width:180px">
+            <span id="whatIfValue" class="badge bg-primary">0%</span>
+            <button class="btn btn-sm btn-primary" onclick="runWhatIf()">
+              <i class="bi bi-play-fill me-1"></i>{% if ui_lang == 'en' %}Apply{% else %}تطبيق{% endif %}</button>
+          </div>
+          <div id="whatIfResult" class="what-if-result mt-3"></div>
+        </div>
+      </div>
+
       {# Forecast Cards #}
       <section aria-label="{% if ui_lang == 'en' %}AI Forecasts{% else %}توقعات الذكاء الاصطناعي{% endif %}" class="mb-section">
         <div class="forecast-grid">
           <div class="forecast-card">
             <div class="forecast-card__icon"><i class="bi bi-person-check"></i></div>
-            <div class="forecast-card__label">{% if ui_lang == 'en' %}Attendance Forecast (30d){% else %}توقع الحضور (30 يوم){% endif %}</div>
+            <div class="forecast-card__label" data-forecast-label="attendance">{% if ui_lang == 'en' %}Attendance Forecast{% else %}توقع الحضور{% endif %} <span class="forecast-period-suffix">(30d)</span></div>
             <div class="forecast-card__value" id="attendanceForecast">
               <span class="skel skel-value"></span>
             </div>
@@ -994,7 +1145,7 @@
 
           <div class="forecast-card">
             <div class="forecast-card__icon"><i class="bi bi-exclamation-octagon"></i></div>
-            <div class="forecast-card__label">{% if ui_lang == 'en' %}Incident Forecast (30d){% else %}توقع الحوادث (30 يوم){% endif %}</div>
+            <div class="forecast-card__label" data-forecast-label="incidents">{% if ui_lang == 'en' %}Incident Forecast{% else %}توقع الحوادث{% endif %} <span class="forecast-period-suffix">(30d)</span></div>
             <div class="forecast-card__value" id="incidentForecast">
               <span class="skel skel-value"></span>
             </div>
@@ -1006,7 +1157,7 @@
 
           <div class="forecast-card">
             <div class="forecast-card__icon"><i class="bi bi-file-earmark-plus"></i></div>
-            <div class="forecast-card__label">{% if ui_lang == 'en' %}Enrollment Forecast (30d){% else %}توقع التسجيل (30 يوم){% endif %}</div>
+            <div class="forecast-card__label" data-forecast-label="enrollment">{% if ui_lang == 'en' %}Enrollment Forecast{% else %}توقع التسجيل{% endif %} <span class="forecast-period-suffix">(30d)</span></div>
             <div class="forecast-card__value" id="enrollmentForecast">
               <span class="skel skel-value"></span>
             </div>
@@ -1075,11 +1226,52 @@
   <i class="bi bi-download" aria-hidden="true"></i>
 </button>
 
+  {# ══ Compare Period Modal ══════════════════════════════════════════════════════ #}
+  <div class="modal fade" id="comparePeriodModal" tabindex="-1" aria-labelledby="comparePeriodModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="comparePeriodModalLabel">
+            <i class="bi bi-arrow-left-right me-2"></i>
+            {% if ui_lang == 'en' %}Compare Periods{% else %}مقارنة الفترات{% endif %}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Comparison Type{% else %}نوع المقارنة{% endif %}</label>
+            <select class="form-select" id="comparisonType">
+              <option value="previous">{% if ui_lang == 'en' %}Previous Period{% else %}الفترة السابقة{% endif %}</option>
+              <option value="custom">{% if ui_lang == 'en' %}Custom Range{% else %}نطاق مخصص{% endif %}</option>
+            </select>
+          </div>
+          <div id="customRangeFields" class="d-none">
+            <div class="row g-3">
+              <div class="col-6">
+                <label class="form-label">{% if ui_lang == 'en' %}Start Date{% else %}تاريخ البدء{% endif %}</label>
+                <input type="date" class="form-control" id="compareStart">
+              </div>
+              <div class="col-6">
+                <label class="form-label">{% if ui_lang == 'en' %}End Date{% else %}تاريخ الانتهاء{% endif %}</label>
+                <input type="date" class="form-control" id="compareEnd">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+          <button type="button" class="btn btn-primary" onclick="applyComparison()">{% if ui_lang == 'en' %}Compare{% else %}مقارنة{% endif %}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 {% endblock %}
 
 {% block extra_scripts %}
 <script>window.KINJO_LANG = "{{ ui_lang }}";</script>
 <script src="/static/vendor/chartjs/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script defer src="/static/js/chart_utils.js?v=2.1" charset="utf-8"></script>
 <script defer src="/static/js/kpi-validation.js?v=2.1" charset="utf-8"></script>
 <script defer src="/static/js/admin_analytics.js?v=2.1" charset="utf-8"></script>

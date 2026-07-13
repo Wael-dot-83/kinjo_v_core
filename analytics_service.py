@@ -165,6 +165,121 @@ def _analytics_cache_set(key: str, value: Any, ttl: int = _DASHBOARD_CACHE_TTL) 
         pass
 
 
+class InsightEngine:
+    """Generate actionable insights from analytics data"""
+
+    @staticmethod
+    def generate_insights(network_summary: dict, governorate_breakdown: list) -> list:
+        insights = []
+
+        attendance_rate = network_summary.get('attendance_rate', 100)
+        if attendance_rate < 70:
+            insights.append({
+                'type': 'ATTENDANCE_CRITICAL',
+                'severity': 'HIGH',
+                'icon': 'bi-exclamation-triangle-fill',
+                'message_ar': f'معدل الحضور منخفض جدًا ({attendance_rate:.1f}%)',
+                'message_en': f'Attendance rate critically low ({attendance_rate:.1f}%)',
+                'action_ar': 'مراجعة سجلات الحضور والتواصل مع مديري الحضانات',
+                'action_en': 'Review attendance records and contact kindergarten managers',
+                'affected_count': len([g for g in governorate_breakdown if g.get('attendance_rate', 100) < 70]),
+                'link': '/admin/analytics?tab=overview#attendance'
+            })
+        elif attendance_rate < 80:
+            insights.append({
+                'type': 'ATTENDANCE_WARNING',
+                'severity': 'MEDIUM',
+                'icon': 'bi-exclamation-circle-fill',
+                'message_ar': f'معدل الحضور منخفض ({attendance_rate:.1f}%)',
+                'message_en': f'Attendance rate below target ({attendance_rate:.1f}%)',
+                'action_ar': 'مراجعة اتجاهات الحضور وتحديد الحضانات المتأثرة',
+                'action_en': 'Review attendance trends and identify affected kindergartens',
+                'affected_count': len([g for g in governorate_breakdown if g.get('attendance_rate', 100) < 80]),
+                'link': '/admin/analytics?tab=overview#attendance'
+            })
+
+        incident_rate = network_summary.get('incident_rate', 0)
+        if incident_rate > 10:
+            insights.append({
+                'type': 'INCIDENT_CRITICAL',
+                'severity': 'HIGH',
+                'icon': 'bi-shield-exclamation',
+                'message_ar': f'معدل الحوادث مرتفع ({incident_rate:.1f} لكل 100 طفل)',
+                'message_en': f'Incident rate elevated ({incident_rate:.1f} per 100 children)',
+                'action_ar': 'مراجعة الحوادث الأخيرة ومراجعة بروتوكولات السلامة',
+                'action_en': 'Investigate recent incidents and review safety protocols',
+                'affected_count': len([g for g in governorate_breakdown if g.get('incident_rate', 0) > 10]),
+                'link': '/admin/analytics?tab=overview#incidents'
+            })
+        elif incident_rate > 5:
+            insights.append({
+                'type': 'INCIDENT_WARNING',
+                'severity': 'MEDIUM',
+                'icon': 'bi-shield-exclamation',
+                'message_ar': f'معدل الحوادث فوق الطبيعي ({incident_rate:.1f} لكل 100 طفل)',
+                'message_en': f'Incident rate above normal ({incident_rate:.1f} per 100 children)',
+                'action_ar': 'مراجعة تقارير الحوادث وتحديد الأنماط',
+                'action_en': 'Review incident reports and identify patterns',
+                'affected_count': len([g for g in governorate_breakdown if g.get('incident_rate', 0) > 5]),
+                'link': '/admin/analytics?tab=overview#incidents'
+            })
+
+        governance_score = network_summary.get('governance_avg_score', 100)
+        if governance_score < 60:
+            insights.append({
+                'type': 'GOVERNANCE_CRITICAL',
+                'severity': 'HIGH',
+                'icon': 'bi-clipboard-x-fill',
+                'message_ar': f'متوسط درجة الحوكمة منخفض ({governance_score:.1f}%)',
+                'message_en': f'Governance score critically low ({governance_score:.1f}%)',
+                'action_ar': 'مراجعة تقييمات الحوكمة ووضع خطط تحسين',
+                'action_en': 'Review governance assessments and create improvement plans',
+                'affected_count': len([g for g in governorate_breakdown if g.get('governance_score', 100) < 60]),
+                'link': '/admin/analytics?tab=governance'
+            })
+
+        severity_order = {'HIGH': 0, 'MEDIUM': 1, 'LOW': 2}
+        insights.sort(key=lambda x: severity_order.get(x['severity'], 3))
+
+        return insights[:5]
+
+
+def log_data_anomaly(field: str, value: Any, expected_range: str = None):
+    """Log data integrity anomalies"""
+    msg = f"Data anomaly detected: {field}={value}"
+    if expected_range:
+        msg += f" (expected: {expected_range})"
+    logger.warning(msg)
+
+
+def validate_dashboard_data(data: dict) -> dict:
+    """Validate data integrity before serving to frontend"""
+    validated = data.copy()
+
+    for key in ['total_kindergartens', 'total_children', 'total_incidents']:
+        if key in validated:
+            val = validated[key]
+            if val is None or val < 0:
+                log_data_anomaly(key, val, ">= 0")
+                validated[key] = max(0, val or 0)
+
+    for key in ['attendance_rate', 'incident_rate', 'enrollment_rate']:
+        if key in validated:
+            val = validated[key]
+            if val is not None and not (0 <= val <= 100):
+                log_data_anomaly(key, val, "0-100")
+                validated[key] = max(0, min(100, val))
+
+    for trend_key in ['attendance_trend', 'incident_trend']:
+        if trend_key in validated and validated[trend_key]:
+            series = validated[trend_key]
+            for i in range(1, len(series)):
+                if series[i].date <= series[i-1].date:
+                    log_data_anomaly(f"{trend_key}[{i}].date", series[i].date, "chronological order")
+
+    return validated
+
+
 def _ensure_admin_only(current_user: models.User):
     if current_user.role != models.UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admin only")
@@ -297,6 +412,265 @@ def predict_metric(
         confidence=confidence,
         model_meta=model_meta,
     )
+
+
+@router.get("/model-performance")
+def get_model_performance(
+    metric: str = Query(..., pattern="^(attendance|incidents|enrollment)$"),
+    days_back: int = Query(30, ge=7, le=180),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Evaluate forecast model accuracy by comparing predictions vs actuals."""
+    _ensure_admin_only(current_user)
+
+    today = _jordan_today()
+    evaluation_start = today - timedelta(days=days_back)
+
+    past_predictions = db.query(models.PredictionCache).filter(
+        models.PredictionCache.metric_type == metric,
+        models.PredictionCache.scope_type == "NETWORK",
+        models.PredictionCache.created_at >= evaluation_start,
+    ).order_by(models.PredictionCache.created_at.desc()).limit(10).all()
+
+    if not past_predictions:
+        return {
+            "metric": metric,
+            "accuracy": None,
+            "mape": None,
+            "evaluations": 0,
+            "trend": "insufficient_data",
+            "message_ar": "لا توجد بيانات كافية لتقييم الأداء",
+            "message_en": "Insufficient data for performance evaluation",
+        }
+
+    evaluations = []
+    total_error = 0
+    eval_count = 0
+
+    for prediction in past_predictions:
+        forecast_points = prediction.forecast_points
+        if isinstance(forecast_points, str):
+            forecast_points = json.loads(forecast_points)
+
+        for fp in forecast_points:
+            forecast_date = fp["date"] if isinstance(fp, dict) else fp.date
+            if isinstance(forecast_date, str):
+                forecast_date = date.fromisoformat(forecast_date)
+
+            if forecast_date >= today:
+                continue
+
+            predicted_value = fp["value"] if isinstance(fp, dict) else fp.value
+            actual_value = _get_actual_value(db, metric, forecast_date, prediction.scope_type, prediction.scope_id)
+
+            if actual_value is not None:
+                error = abs(predicted_value - actual_value)
+                percentage_error = (error / actual_value * 100) if actual_value != 0 else 0
+
+                evaluations.append(
+                    {
+                        "date": forecast_date.isoformat(),
+                        "predicted": predicted_value,
+                        "actual": actual_value,
+                        "error": round(error, 2),
+                        "percentage_error": round(percentage_error, 2),
+                    }
+                )
+
+                total_error += percentage_error
+                eval_count += 1
+
+    if eval_count == 0:
+        return {
+            "metric": metric,
+            "accuracy": None,
+            "mape": None,
+            "evaluations": 0,
+            "trend": "insufficient_data",
+            "message_ar": "لا توجد تنبؤات منتهية الصلاحية للتقييم",
+            "message_en": "No expired predictions to evaluate",
+        }
+
+    mape = total_error / eval_count
+    accuracy = 100 - mape
+
+    recent_evals = evaluations[: len(evaluations) // 2] if len(evaluations) > 1 else evaluations
+    older_evals = evaluations[len(evaluations) // 2 :] if len(evaluations) > 1 else evaluations
+
+    recent_mape = sum(e["percentage_error"] for e in recent_evals) / len(recent_evals) if recent_evals else mape
+    older_mape = sum(e["percentage_error"] for e in older_evals) / len(older_evals) if older_evals else mape
+
+    if recent_mape < older_mape * 0.9:
+        trend = "improving"
+    elif recent_mape > older_mape * 1.1:
+        trend = "declining"
+    else:
+        trend = "stable"
+
+    return {
+        "metric": metric,
+        "accuracy": round(accuracy, 2),
+        "mape": round(mape, 2),
+        "evaluations": eval_count,
+        "trend": trend,
+        "recent_evaluations": evaluations[:5],
+    }
+
+
+def _get_actual_value(db: Session, metric: str, target_date: date, scope_type: str, scope_id: Optional[str]) -> Optional[float]:
+    """Get actual value for a metric on a specific date."""
+    try:
+        if metric == "attendance":
+            total_q = db.query(func.count(models.AttendanceLog.id)).filter(
+                models.AttendanceLog.date == target_date
+            )
+            present_q = db.query(func.count(models.AttendanceLog.id)).filter(
+                models.AttendanceLog.date == target_date,
+                models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
+            )
+
+            total = total_q.scalar() or 0
+            present = present_q.scalar() or 0
+
+            return round((present / total) * 100, 2) if total > 0 else None
+
+        elif metric == "incidents":
+            count = (
+                db.query(func.count(models.Incident.id))
+                .filter(func.date(models.Incident.occurred_at) == target_date)
+                .scalar()
+                or 0
+            )
+            return float(count)
+
+        elif metric == "enrollment":
+            count = (
+                db.query(func.count(models.EnrollmentApplication.id))
+                .filter(func.date(models.EnrollmentApplication.created_at) == target_date)
+                .scalar()
+                or 0
+            )
+            return float(count)
+
+        return None
+    except Exception as e:
+        logger.error(f"Error getting actual value for {metric} on {target_date}: {e}")
+        return None
+
+
+@router.get("/scenarios")
+def get_scenarios(
+    metric: str = Query(..., pattern="^(attendance|incidents|enrollment)$"),
+    horizon_days: int = Query(30, ge=1, le=180),
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate forecast scenarios (optimistic, pessimistic, etc.)."""
+    _ensure_admin_only(current_user)
+
+    scope_type = "NETWORK"
+    scope_id = None
+
+    if metric == "attendance":
+        series = attendance_series(db, scope_type, scope_id, period_start, period_end)
+    elif metric == "incidents":
+        series = incident_series(db, scope_type, scope_id, period_start, period_end)
+    else:
+        series = enrollment_series(db, scope_type, scope_id, period_start, period_end)
+
+    if not series:
+        return {"scenarios": {}, "metric": metric}
+
+    forecast_points, confidence, model_meta = build_forecast(series, horizon_days)
+
+    if not forecast_points:
+        return {"scenarios": {}, "metric": metric}
+
+    values = [p.value for p in series]
+    mean_val = sum(values) / len(values)
+    variance = sum((v - mean_val) ** 2 for v in values) / max(len(values) - 1, 1)
+    stddev = variance ** 0.5 or 1.0
+
+    scenarios = {}
+
+    scenarios['baseline'] = [
+        {"date": p.date.isoformat(), "value": p.value}
+        for p in forecast_points
+    ]
+
+    scenarios['optimistic'] = [
+        {"date": p.date.isoformat(), "value": round(max(0.0, p.value + stddev), 2)}
+        for p in forecast_points
+    ]
+
+    scenarios['pessimistic'] = [
+        {"date": p.date.isoformat(), "value": round(max(0.0, p.value - stddev), 2)}
+        for p in forecast_points
+    ]
+
+    scenarios['best_case'] = [
+        {"date": p.date.isoformat(), "value": round(max(0.0, p.value + 2 * stddev), 2)}
+        for p in forecast_points
+    ]
+
+    scenarios['worst_case'] = [
+        {"date": p.date.isoformat(), "value": round(max(0.0, p.value - 2 * stddev), 2)}
+        for p in forecast_points
+    ]
+
+    return {
+        "metric": metric,
+        "horizon_days": horizon_days,
+        "stddev": round(stddev, 2),
+        "scenarios": scenarios,
+        "historical": [
+            {"date": p.date.isoformat(), "value": p.value}
+            for p in series[-30:]
+        ]
+    }
+
+
+@router.get("/what-if")
+def get_what_if(
+    metric: str = Query(..., pattern="^(attendance|incidents|enrollment)$"),
+    adjustment_percent: float = Query(0.0, ge=-50, le=100),
+    horizon_days: int = Query(30, ge=1, le=180),
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Interactive what-if: apply a ramped adjustment to a forecast."""
+    _ensure_admin_only(current_user)
+    if period_start > period_end:
+        raise HTTPException(status_code=422, detail="period_start must be <= period_end")
+    if metric == "attendance":
+        series = attendance_series(db, "NETWORK", None, period_start, period_end)
+    elif metric == "incidents":
+        series = incident_series(db, "NETWORK", None, period_start, period_end)
+    else:
+        series = enrollment_series(db, "NETWORK", None, period_start, period_end)
+    forecast_points, _confidence, _meta = build_forecast(series, horizon_days)
+    if not forecast_points:
+        return {"metric": metric, "adjustment_percent": adjustment_percent,
+                "horizon_days": horizon_days, "baseline": [], "adjusted": [], "summary": {}}
+    n = len(forecast_points)
+    baseline = [{"date": p.date.isoformat(), "value": p.value} for p in forecast_points]
+    adjusted = []
+    for i, p in enumerate(forecast_points):
+        multiplier = 1.0 + (adjustment_percent / 100.0) * ((i + 1) / n)
+        adjusted.append({"date": p.date.isoformat(), "value": round(max(0.0, p.value * multiplier), 2)})
+    baseline_end = baseline[-1]["value"]
+    adjusted_end = adjusted[-1]["value"]
+    delta_abs = round(adjusted_end - baseline_end, 2)
+    delta_pct = round((delta_abs / baseline_end * 100), 2) if baseline_end else 0.0
+    return {"metric": metric, "adjustment_percent": adjustment_percent, "horizon_days": horizon_days,
+            "baseline": baseline, "adjusted": adjusted,
+            "summary": {"baseline_end": baseline_end, "adjusted_end": adjusted_end,
+                        "delta_absolute": delta_abs, "delta_percent": delta_pct}}
 
 
 @router.get("/anomalies")
@@ -503,6 +877,159 @@ def set_target(
     db.commit()
     db.refresh(target)
     return {"id": target.id, "status": "created"}
+
+
+@router.get("/target-progress")
+def get_target_progress(
+    metric: str = Query(..., pattern="^(attendance_rate|incident_rate|governance_score|enrollment_rate)$"),
+    governorate: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Show progress toward targets with velocity and ETA"""
+    allowed_kgs = _allowed_kindergarten_ids(current_user, db)
+    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    kg_filter = _kg_ids_for_governorate(db, governorate)
+    if allowed_kgs is not None and kg_filter is not None:
+        kg_filter = [kg for kg in kg_filter if kg in allowed_kgs]
+    elif allowed_kgs is not None:
+        kg_filter = allowed_kgs
+
+    today = _jordan_today()
+    period_start = today - timedelta(days=30)
+    summary = AnalyticsService.get_network_summary(db, period_start, today, kg_filter)
+
+    current_values = {
+        "attendance_rate": summary.attendance_rate,
+        "incident_rate": summary.incident_rate,
+        "governance_score": summary.governance_avg_score,
+        "enrollment_rate": summary.enrollment_rate,
+    }
+
+    current_value = current_values.get(metric)
+    if current_value is None:
+        return {"metric": metric, "error": "Metric not available"}
+
+    default_targets = {
+        "attendance_rate": 90.0,
+        "incident_rate": 3.0,
+        "governance_score": 80.0,
+        "enrollment_rate": 85.0,
+    }
+
+    custom_target = db.query(models.PerformanceTarget).filter(
+        models.PerformanceTarget.metric_type == metric,
+        models.PerformanceTarget.scope_type == "NETWORK",
+    ).order_by(models.PerformanceTarget.effective_date.desc()).first()
+
+    target_value = custom_target.target_value if custom_target else default_targets.get(metric, 80.0)
+
+    higher_is_better = metric != "incident_rate"
+
+    if higher_is_better:
+        progress = min(100, (current_value / target_value) * 100) if target_value > 0 else 0
+        gap = target_value - current_value
+    else:
+        baseline = default_targets.get(metric, 10)
+        progress = min(100, ((baseline - current_value) / (baseline - target_value)) * 100) if target_value < baseline else 0
+        gap = current_value - target_value
+
+    prev_start = period_start - timedelta(days=30)
+    prev_summary = AnalyticsService.get_network_summary(db, prev_start, period_start, kg_filter)
+
+    prev_values = {
+        "attendance_rate": prev_summary.attendance_rate,
+        "incident_rate": prev_summary.incident_rate,
+        "governance_score": prev_summary.governance_avg_score,
+        "enrollment_rate": prev_summary.enrollment_rate,
+    }
+    prev_value = prev_values.get(metric, current_value)
+
+    velocity = (current_value - prev_value) / 30
+
+    if higher_is_better:
+        if velocity > 0 and gap > 0:
+            days_to_target = int(gap / velocity)
+        elif gap <= 0:
+            days_to_target = 0
+        else:
+            days_to_target = -1
+    else:
+        if velocity < 0 and gap > 0:
+            days_to_target = int(gap / abs(velocity))
+        elif gap <= 0:
+            days_to_target = 0
+        else:
+            days_to_target = -1
+
+    percentile = None
+    if governorate:
+        all_govs = AnalyticsService.get_governorate_breakdown(db, period_start, today, None, allowed_kgs, None)
+        gov_values = [getattr(g, metric, 0) or 0 for g in all_govs]
+        if gov_values:
+            gov_values.sort()
+            idx = next((i for i, v in enumerate(gov_values) if v >= current_value), len(gov_values))
+            percentile = round((idx / len(gov_values)) * 100)
+
+    return {
+        "metric": metric,
+        "current_value": round(current_value, 2),
+        "target_value": round(target_value, 2),
+        "progress_percent": round(progress, 1),
+        "gap": round(abs(gap), 2),
+        "velocity_per_day": round(velocity, 4),
+        "days_to_target": days_to_target,
+        "percentile": percentile,
+        "higher_is_better": higher_is_better,
+        "status": "on_track" if days_to_target >= 0 and days_to_target <= 90 else "at_risk" if days_to_target >= 0 else "off_track" if days_to_target < 0 and gap > 0 else "achieved",
+    }
+
+
+@router.get("/network-rankings")
+def get_network_rankings(
+    metric: str = Query(..., pattern="^(attendance_rate|incident_rate|governance_score|total_children)$"),
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    governorate: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get network-wide rankings with percentile positions"""
+    allowed_kgs = _allowed_kindergarten_ids(current_user, db)
+    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    breakdown = AnalyticsService.get_governorate_breakdown(db, period_start, period_end, governorate, allowed_kgs, None)
+
+    rankings = []
+    for item in breakdown:
+        item_dict = item.model_dump() if hasattr(item, "model_dump") else item
+        value = item_dict.get(metric, 0) or 0
+        rankings.append(
+            {
+                "governorate": item_dict.get("governorate", "Unknown"),
+                "value": round(value, 2),
+                "kindergartens": item_dict.get("kindergarten_count", 0),
+                "children": item_dict.get("children_count", 0),
+            }
+        )
+
+    higher_is_better = metric != "incident_rate"
+    rankings.sort(key=lambda x: x["value"], reverse=higher_is_better)
+
+    total = len(rankings)
+    for idx, item in enumerate(rankings):
+        item["rank"] = idx + 1
+        item["percentile"] = round(((total - idx) / total) * 100)
+
+    return {
+        "metric": metric,
+        "rankings": rankings,
+        "total": total,
+        "higher_is_better": higher_is_better,
+    }
 
 
 @router.get("/recommendations/{kindergarten_id}")
@@ -910,6 +1437,348 @@ def get_governorate_breakdown_endpoint(
     )
 
 
+@router.get("/action-queue")
+def get_action_queue(
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    governorate: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get prioritized action queue based on insights and data quality"""
+    if period_start > period_end:
+        raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
+    allowed_kgs = _allowed_kindergarten_ids(current_user, db)
+    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    kg_filter = _kg_ids_for_governorate(db, governorate)
+    if allowed_kgs is not None and kg_filter is not None:
+        kg_filter = [kg for kg in kg_filter if kg in allowed_kgs]
+    elif allowed_kgs is not None:
+        kg_filter = allowed_kgs
+
+    # Get insights
+    network_summary = AnalyticsService.get_network_summary(db, period_start, period_end, kg_filter)
+    governorate_breakdown = AnalyticsService.get_governorate_breakdown(
+        db, period_start, period_end, governorate, allowed_kgs, None
+    )
+    insights = InsightEngine.generate_insights(
+        network_summary.model_dump(),
+        [g.model_dump() if hasattr(g, 'model_dump') else g for g in governorate_breakdown]
+    )
+
+    # Convert insights to actions
+    actions = []
+    for insight in insights:
+        action = {
+            'id': f"action_{insight['type'].lower()}",
+            'type': insight['type'],
+            'priority': insight['severity'],
+            'icon': insight['icon'],
+            'title_ar': insight['message_ar'],
+            'title_en': insight['message_en'],
+            'description_ar': insight['action_ar'],
+            'description_en': insight['action_en'],
+            'affected_count': insight.get('affected_count', 0),
+            'deadline': _calculate_deadline(insight['severity']),
+            'status': 'pending',
+            'link': insight.get('link', '#')
+        }
+        actions.append(action)
+
+    # Add data quality actions if needed. evaluate_data_quality() persists a
+    # DataQualityMetric but returns None, so read the latest stored metric.
+    latest_dq = (
+        db.query(models.DataQualityMetric)
+        .filter(models.DataQualityMetric.entity_type == "NETWORK")
+        .order_by(models.DataQualityMetric.evaluated_at.desc())
+        .first()
+    )
+    completeness_percent = latest_dq.completeness_percent if latest_dq else 100.0
+    if completeness_percent < 90:
+        actions.append({
+            'id': 'action_data_quality',
+            'type': 'DATA_QUALITY',
+            'priority': 'MEDIUM',
+            'icon': 'bi-database-exclamation',
+            'title_ar': f'جودة البيانات منخفضة ({completeness_percent:.1f}%)',
+            'title_en': f'Data quality low ({completeness_percent:.1f}%)',
+            'description_ar': 'مراجعة سجلات البيانات الناقصة أو غير الدقيقة',
+            'description_en': 'Review incomplete or inaccurate data records',
+            'affected_count': 0,
+            'deadline': _calculate_deadline('MEDIUM'),
+            'status': 'pending',
+            'link': '/admin/data-quality'
+        })
+
+    # Sort by priority
+    priority_order = {'HIGH': 0, 'MEDIUM': 1, 'LOW': 2}
+    actions.sort(key=lambda x: priority_order.get(x['priority'], 3))
+
+    return {"actions": actions[:10], "total": len(actions)}
+
+
+@router.get("/root-cause")
+def get_root_cause(
+    metric: str = Query(..., pattern="^(attendance_rate|incident_rate|governance_score)$"),
+    governorate: Optional[str] = Query(None),
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Analyze root causes for metric underperformance"""
+    allowed_kgs = _allowed_kindergarten_ids(current_user, db)
+    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    kg_filter = _kg_ids_for_governorate(db, governorate)
+    if allowed_kgs is not None and kg_filter is not None:
+        kg_filter = [kg for kg in kg_filter if kg in allowed_kgs]
+    elif allowed_kgs is not None:
+        kg_filter = allowed_kgs
+
+    factors = []
+
+    if metric == 'attendance_rate':
+        factors = _analyze_attendance_root_causes(db, kg_filter, period_start, period_end)
+    elif metric == 'incident_rate':
+        factors = _analyze_incident_root_causes(db, kg_filter, period_start, period_end)
+    elif metric == 'governance_score':
+        factors = _analyze_governance_root_causes(db, kg_filter, period_start, period_end)
+
+    factors.sort(key=lambda x: x['impact_score'], reverse=True)
+
+    return {
+        'metric': metric,
+        'governorate': governorate,
+        'period': {'start': period_start.isoformat(), 'end': period_end.isoformat()},
+        'factors': factors,
+        'recommendations': _generate_recommendations(factors, metric)
+    }
+
+
+def _analyze_attendance_root_causes(db: Session, kg_filter, period_start: date, period_end: date) -> list:
+    """Analyze factors affecting attendance"""
+    factors = []
+
+    incident_count = db.query(func.count(models.Incident.id)).filter(
+        func.date(models.Incident.occurred_at) >= period_start,
+        func.date(models.Incident.occurred_at) <= period_end
+    )
+    if kg_filter:
+        incident_count = incident_count.filter(models.Incident.kindergarten_id.in_(kg_filter))
+    incidents = incident_count.scalar() or 0
+
+    if incidents > 5:
+        factors.append({
+            'factor_ar': 'حوادث حديثة متكررة',
+            'factor_en': 'Frequent recent incidents',
+            'impact_score': min(1.0, incidents / 20),
+            'detail_ar': f'{incidents} حادثة في الفترة المحددة',
+            'detail_en': f'{incidents} incidents in the selected period',
+            'icon': 'bi-shield-exclamation',
+            'severity': 'HIGH' if incidents > 10 else 'MEDIUM'
+        })
+
+    current_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
+        models.EnrollmentApplication.status == 'ACTIVE',
+        func.date(models.EnrollmentApplication.created_at) <= period_end
+    )
+    if kg_filter:
+        current_enrollments = current_enrollments.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
+    current_count = current_enrollments.scalar() or 0
+
+    prev_start = period_start - (period_end - period_start)
+    prev_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
+        models.EnrollmentApplication.status == 'ACTIVE',
+        func.date(models.EnrollmentApplication.created_at) <= prev_start
+    )
+    if kg_filter:
+        prev_enrollments = prev_enrollments.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
+    prev_count = prev_enrollments.scalar() or 0
+
+    if prev_count > 0 and current_count < prev_count * 0.9:
+        drop_pct = ((prev_count - current_count) / prev_count) * 100
+        factors.append({
+            'factor_ar': 'انخفاض في التسجيل',
+            'factor_en': 'Enrollment decline',
+            'impact_score': min(1.0, drop_pct / 30),
+            'detail_ar': f'انخفاض بنسبة {drop_pct:.1f}% عن الفترة السابقة',
+            'detail_en': f'{drop_pct:.1f}% decline from previous period',
+            'icon': 'bi-person-dash-fill',
+            'severity': 'HIGH' if drop_pct > 20 else 'MEDIUM'
+        })
+
+    total_expected = (period_end - period_start).days + 1
+    attendance_records = db.query(func.count(func.distinct(models.AttendanceLog.date))).filter(
+        models.AttendanceLog.date >= period_start,
+        models.AttendanceLog.date <= period_end
+    ).scalar() or 0
+
+    if attendance_records < total_expected * 0.8:
+        completeness = (attendance_records / total_expected) * 100
+        factors.append({
+            'factor_ar': 'بيانات حضور غير مكتملة',
+            'factor_en': 'Incomplete attendance data',
+            'impact_score': min(1.0, (100 - completeness) / 50),
+            'detail_ar': f'{completeness:.1f}% فقط من أيام التسجيل',
+            'detail_en': f'Only {completeness:.1f}% of days have records',
+            'icon': 'bi-calendar-x-fill',
+            'severity': 'MEDIUM'
+        })
+
+    return factors
+
+
+def _analyze_incident_root_causes(db: Session, kg_filter, period_start: date, period_end: date) -> list:
+    """Analyze factors affecting incident rates"""
+    factors = []
+
+    serious_incidents = db.query(func.count(models.Incident.id)).filter(
+        func.date(models.Incident.occurred_at) >= period_start,
+        func.date(models.Incident.occurred_at) <= period_end,
+        models.Incident.severity_level.in_([models.SeverityLevel.HIGH, models.SeverityLevel.CRITICAL])
+    )
+    if kg_filter:
+        serious_incidents = serious_incidents.filter(models.Incident.kindergarten_id.in_(kg_filter))
+    serious_count = serious_incidents.scalar() or 0
+
+    total_incidents = db.query(func.count(models.Incident.id)).filter(
+        func.date(models.Incident.occurred_at) >= period_start,
+        func.date(models.Incident.occurred_at) <= period_end
+    )
+    if kg_filter:
+        total_incidents = total_incidents.filter(models.Incident.kindergarten_id.in_(kg_filter))
+    total_count = total_incidents.scalar() or 0
+
+    if total_count > 0 and serious_count / total_count > 0.3:
+        ratio = (serious_count / total_count) * 100
+        factors.append({
+            'factor_ar': 'نسبة حوادث خطيرة مرتفعة',
+            'factor_en': 'High serious incident ratio',
+            'impact_score': min(1.0, ratio / 50),
+            'detail_ar': f'{ratio:.1f}% من الحوادث خطيرة',
+            'detail_en': f'{ratio:.1f}% of incidents are serious',
+            'icon': 'bi-exclamation-octagon-fill',
+            'severity': 'HIGH'
+        })
+
+    if kg_filter and total_count > 0:
+        top_kg_incidents = db.query(
+            models.Incident.kindergarten_id,
+            func.count(models.Incident.id).label('count')
+        ).filter(
+            func.date(models.Incident.occurred_at) >= period_start,
+            func.date(models.Incident.occurred_at) <= period_end,
+            models.Incident.kindergarten_id.in_(kg_filter)
+        ).group_by(models.Incident.kindergarten_id).order_by(desc('count')).limit(3).all()
+
+        if top_kg_incidents and len(top_kg_incidents) > 0:
+            top_count = sum(c for _, c in top_kg_incidents)
+            concentration = (top_count / total_count) * 100
+            if concentration > 60:
+                factors.append({
+                    'factor_ar': 'حوادث مركزة في حضانات محددة',
+                    'factor_en': 'Incidents concentrated in specific kindergartens',
+                    'impact_score': min(1.0, concentration / 80),
+                    'detail_ar': f'{concentration:.1f}% من الحوادث في {len(top_kg_incidents)} حضانة',
+                    'detail_en': f'{concentration:.1f}% of incidents in {len(top_kg_incidents)} kindergartens',
+                    'icon': 'bi-geo-alt-fill',
+                    'severity': 'MEDIUM'
+                })
+
+    return factors
+
+
+def _analyze_governance_root_causes(db: Session, kg_filter, period_start: date, period_end: date) -> list:
+    """Analyze factors affecting governance scores"""
+    factors = []
+
+    low_gov_count = db.query(func.count(models.Kindergarten.id)).filter(
+        models.Kindergarten.governance_score < 60
+    )
+    if kg_filter:
+        low_gov_count = low_gov_count.filter(models.Kindergarten.id.in_(kg_filter))
+    low_count = low_gov_count.scalar() or 0
+
+    total_kgs = db.query(func.count(models.Kindergarten.id))
+    if kg_filter:
+        total_kgs = total_kgs.filter(models.Kindergarten.id.in_(kg_filter))
+    total_count = total_kgs.scalar() or 0
+
+    if total_count > 0 and low_count / total_count > 0.2:
+        pct = (low_count / total_count) * 100
+        factors.append({
+            'factor_ar': 'نسبة عالية من الحضانات منخفضة الحوكمة',
+            'factor_en': 'High proportion of low-governance kindergartens',
+            'impact_score': min(1.0, pct / 40),
+            'detail_ar': f'{pct:.1f}% من الحضانات درجة الحوكمة فيها أقل من 60',
+            'detail_en': f'{pct:.1f}% of kindergartens have governance score below 60',
+            'icon': 'bi-clipboard-x-fill',
+            'severity': 'HIGH' if pct > 40 else 'MEDIUM'
+        })
+
+    return factors
+
+
+def _generate_recommendations(factors: list, metric: str) -> list:
+    """Generate actionable recommendations based on root causes"""
+    recommendations = []
+
+    for factor in factors[:3]:
+        if 'incident' in factor.get('factor_en', '').lower():
+            recommendations.append({
+                'recommendation_ar': 'مراجعة بروتوكولات السلامة وتوفير تدريب إضافي',
+                'recommendation_en': 'Review safety protocols and provide additional training',
+                'priority': factor['severity'],
+                'related_factor': factor['factor_en']
+            })
+        elif 'enrollment' in factor.get('factor_en', '').lower():
+            recommendations.append({
+                'recommendation_ar': 'مراجعة عملية التسجيل وتبسيطها',
+                'recommendation_en': 'Review and streamline the enrollment process',
+                'priority': factor['severity'],
+                'related_factor': factor['factor_en']
+            })
+        elif 'data' in factor.get('factor_en', '').lower() or 'incomplete' in factor.get('factor_en', '').lower():
+            recommendations.append({
+                'recommendation_ar': 'تعزيز متطلبات الإبلاغ ومتابعة اكتمال البيانات',
+                'recommendation_en': 'Strengthen reporting requirements and follow up on data completeness',
+                'priority': factor['severity'],
+                'related_factor': factor['factor_en']
+            })
+        elif 'governance' in factor.get('factor_en', '').lower():
+            recommendations.append({
+                'recommendation_ar': 'وضع خطط تحسين مخصصة للحضانات منخفضة الأداء',
+                'recommendation_en': 'Create targeted improvement plans for underperforming kindergartens',
+                'priority': factor['severity'],
+                'related_factor': factor['factor_en']
+            })
+        elif 'concentrated' in factor.get('factor_en', '').lower():
+            recommendations.append({
+                'recommendation_ar': 'تركيز التدخلات على الحضانات الأكثر تأثراً',
+                'recommendation_en': 'Focus interventions on the most affected kindergartens',
+                'priority': factor['severity'],
+                'related_factor': factor['factor_en']
+            })
+
+    return recommendations
+
+
+def _calculate_deadline(severity: str) -> str:
+    """Calculate recommended deadline based on severity"""
+    today = _jordan_today()
+    if severity == 'HIGH':
+        deadline = today + timedelta(days=3)
+    elif severity == 'MEDIUM':
+        deadline = today + timedelta(days=7)
+    else:
+        deadline = today + timedelta(days=14)
+    return deadline.isoformat()
+
+
 def _previous_period_bounds(period_start: date, period_end: date) -> Optional[tuple[date, date]]:
     if period_start > period_end or period_start <= date.min:
         return None
@@ -1170,6 +2039,9 @@ def get_consolidated_dashboard_data(
 
         logger.info("Successfully retrieved analytics data")
 
+        validated_summary = validate_dashboard_data(network_summary.model_dump())
+        network_summary = type(network_summary)(**validated_summary)
+
         result = ConsolidatedAnalyticsResponse(
             network_summary=network_summary,
             governorate_breakdown=governorate_breakdown,
@@ -1193,6 +2065,137 @@ def get_consolidated_dashboard_data(
         logger.error("Unexpected error fetching analytics data: %s: %s", type(e).__name__, str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error while fetching analytics data")
 
+
+@router.get("/insights")
+def get_insights(
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    governorate: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Generate actionable insights for the dashboard"""
+    allowed_kgs = _allowed_kindergarten_ids(current_user, db)
+    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    gov_filter = _kg_ids_for_governorate(db, governorate)
+    if allowed_kgs is not None and gov_filter is not None:
+        gov_filter = [kg for kg in gov_filter if kg in allowed_kgs]
+    elif allowed_kgs is not None:
+        gov_filter = allowed_kgs
+
+    network_summary = AnalyticsService.get_network_summary(db, period_start, period_end, gov_filter)
+    governorate_breakdown = AnalyticsService.get_governorate_breakdown(
+        db, period_start, period_end, governorate, allowed_kgs, None
+    )
+
+    insights = InsightEngine.generate_insights(
+        network_summary.model_dump(),
+        [g.model_dump() if hasattr(g, 'model_dump') else g for g in governorate_breakdown]
+    )
+
+    return {"insights": insights, "count": len(insights)}
+
+
+@router.get("/annotations")
+def get_annotations(
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    governorate: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get chart annotations (holidays, anomalies, events) for the trend chart."""
+    if period_start > period_end:
+        raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
+
+    allowed_kgs = _allowed_kindergarten_ids(current_user, db)
+    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    annotations: List[Dict[str, Any]] = []
+
+    # Jordan public holidays (fixed Gregorian dates, expanded across the range)
+    for holiday in _get_jordan_holidays(period_start, period_end):
+        annotations.append({
+            'type': 'holiday',
+            'date': holiday['date'].isoformat(),
+            'label_ar': holiday['name_ar'],
+            'label_en': holiday['name_en'],
+            'color': '#f59e0b',
+            'severity': 'info'
+        })
+
+    # Resolve kindergarten scope (intersection of allowed and requested governorate)
+    kg_filter = _kg_ids_for_governorate(db, governorate)
+    if allowed_kgs is not None and kg_filter is not None:
+        kg_filter = [kg for kg in kg_filter if kg in allowed_kgs]
+    elif allowed_kgs is not None:
+        kg_filter = allowed_kgs
+
+    # Attendance anomalies from existing z-score detection
+    attendance_series_data = AnalyticsService.get_network_trends(
+        db, "attendance", period_start, period_end, kg_filter
+    )
+    attendance_anomalies = z_score_anomalies(
+        [SeriesPoint(date=date.fromisoformat(p.date), value=p.value) for p in attendance_series_data]
+    )
+    for point, score, severity in attendance_anomalies:
+        annotations.append({
+            'type': 'anomaly',
+            'date': point.date.isoformat(),
+            'label_ar': f'شذوذ في الحضور (الدرجة: {score:.2f})',
+            'label_en': f'Attendance anomaly (score: {score:.2f})',
+            'color': '#ef4444' if severity == models.SeverityLevel.HIGH else '#f59e0b',
+            'severity': severity.value if hasattr(severity, 'value') else str(severity),
+            'metric': 'attendance'
+        })
+
+    # Incident anomalies from existing z-score detection
+    incident_series_data = AnalyticsService.get_network_trends(
+        db, "incidents", period_start, period_end, kg_filter
+    )
+    incident_anomalies = z_score_anomalies(
+        [SeriesPoint(date=date.fromisoformat(p.date), value=p.value) for p in incident_series_data]
+    )
+    for point, score, severity in incident_anomalies:
+        annotations.append({
+            'type': 'anomaly',
+            'date': point.date.isoformat(),
+            'label_ar': f'شذوذ في الحوادث (الدرجة: {score:.2f})',
+            'label_en': f'Incident anomaly (score: {score:.2f})',
+            'color': '#ef4444' if severity == models.SeverityLevel.HIGH else '#f59e0b',
+            'severity': severity.value if hasattr(severity, 'value') else str(severity),
+            'metric': 'incidents'
+        })
+
+    annotations.sort(key=lambda x: x['date'])
+    return {"annotations": annotations}
+
+
+def _get_jordan_holidays(start: date, end: date) -> list:
+    """Return Jordan public holidays (fixed Gregorian dates) within [start, end]."""
+    fixed_holidays = [
+        (1, 1, 'رأس السنة الميلادية', "New Year's Day"),
+        (5, 1, 'عيد العمال', 'Labour Day'),
+        (5, 25, 'عيد الاستقلال', 'Independence Day'),
+        (12, 25, 'عيد الميلاد المجيد', 'Christmas Day'),
+    ]
+    holidays = []
+    for year in range(start.year, end.year + 1):
+        for month, day, name_ar, name_en in fixed_holidays:
+            try:
+                holiday_date = date(year, month, day)
+            except ValueError:
+                continue
+            if start <= holiday_date <= end:
+                holidays.append({
+                    'date': holiday_date,
+                    'name_ar': name_ar,
+                    'name_en': name_en,
+                })
+    return holidays
 
 
 @router.get("/trends", response_model=List[TimeSeriesPoint])
@@ -2049,14 +3052,89 @@ def get_time_series_data(
 
 
 @router.get("/compare")
-def compare_kindergartens(
-    kg_ids: str = Query(..., description="Comma-separated kindergarten IDs"),
+def compare_endpoint(
+    mode: Optional[str] = Query(None, description="Comparison mode: 'period' for time period comparison"),
+    period_start: Optional[date] = Query(None),
+    period_end: Optional[date] = Query(None),
+    compare_start: Optional[date] = Query(None),
+    compare_end: Optional[date] = Query(None),
+    governorate: Optional[str] = Query(None),
+    kg_ids: Optional[str] = Query(None, description="Comma-separated kindergarten IDs"),
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    if mode == "period":
+        """Compare two time periods and return deltas"""
+        if not period_start or not period_end or not compare_start or not compare_end:
+            raise HTTPException(status_code=422, detail="period_start, period_end, compare_start, and compare_end are required for period comparison")
+
+        if period_start > period_end:
+            raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
+        if compare_start > compare_end:
+            raise HTTPException(status_code=422, detail="compare_start must be before or equal to compare_end")
+
+        allowed_kgs = _allowed_kindergarten_ids(current_user, db)
+        if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        kg_filter = _kg_ids_for_governorate(db, governorate)
+        if allowed_kgs is not None and kg_filter is not None:
+            kg_filter = [kg for kg in kg_filter if kg in allowed_kgs]
+        elif allowed_kgs is not None:
+            kg_filter = allowed_kgs
+
+        current_summary = AnalyticsService.get_network_summary(db, period_start, period_end, kg_filter)
+        compare_summary = AnalyticsService.get_network_summary(db, compare_start, compare_end, kg_filter)
+
+        def calc_delta(current_val, compare_val, higher_is_better=True):
+            if compare_val is None or compare_val == 0:
+                return {'absolute': 0, 'percentage': 0, 'direction': 'flat', 'significant': False}
+
+            absolute = current_val - compare_val
+            percentage = (absolute / compare_val) * 100 if compare_val != 0 else 0
+
+            if higher_is_better:
+                direction = 'up' if absolute > 0 else 'down' if absolute < 0 else 'flat'
+            else:
+                direction = 'down' if absolute > 0 else 'up' if absolute < 0 else 'flat'
+
+            significant = abs(percentage) > 5
+
+            return {
+                'absolute': round(absolute, 2),
+                'percentage': round(percentage, 2),
+                'direction': direction,
+                'significant': significant
+            }
+
+        deltas = {
+            'total_kindergartens': calc_delta(current_summary.total_kindergartens, compare_summary.total_kindergartens, True),
+            'total_children': calc_delta(current_summary.total_children, compare_summary.total_children, True),
+            'attendance_rate': calc_delta(current_summary.attendance_rate, compare_summary.attendance_rate, True),
+            'incident_rate': calc_delta(current_summary.incident_rate, compare_summary.incident_rate, False),
+            'governance_avg_score': calc_delta(current_summary.governance_avg_score, compare_summary.governance_avg_score, True),
+        }
+
+        return {
+            'current_period': {
+                'start': period_start.isoformat(),
+                'end': period_end.isoformat(),
+                'summary': current_summary.model_dump(mode='json')
+            },
+            'compare_period': {
+                'start': compare_start.isoformat(),
+                'end': compare_end.isoformat(),
+                'summary': compare_summary.model_dump(mode='json')
+            },
+            'deltas': deltas
+        }
+
     """Compare multiple kindergartens side by side"""
+    if not kg_ids:
+        raise HTTPException(status_code=422, detail="kg_ids is required for kindergarten comparison")
+
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
     if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")

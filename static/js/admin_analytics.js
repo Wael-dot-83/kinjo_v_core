@@ -28,6 +28,7 @@ function adminAnalyticsText(arText, enText) {
 }
 
 var lastDashboardData = null;
+let scenarioData = null;
 var fetchWithAuth = window.fetchWithAuth || async function adminAnalyticsFetchFallback(url, options) {
   const opts = Object.assign({ credentials: "same-origin" }, options || {});
   const method = (opts.method || "GET").toUpperCase();
@@ -197,6 +198,7 @@ document.addEventListener("DOMContentLoaded", function () {
 let governanceChart = null;
 let trendChartInstance = null;
 let governorateTableSorter = null;
+let chartAnnotations = null;
 
 // =============================================================================
 // Unified Translation Dictionary — Ensures linguistic consistency
@@ -392,7 +394,9 @@ async function loadAdminAnalytics(retryCount = 0) {
 
     const data = await response.json();
 
-    // Update all dashboard components
+    // Phase 1: Critical data — KPIs + the charts that come bundled in the
+    // single dashboard-data payload. Render these synchronously so the user
+    // sees the headline numbers and core visuals as soon as possible.
     lastDashboardData = data;
     updateNetworkSummary(data.network_summary);
     updateTrendCharts(data.attendance_trend, data.incident_trend);
@@ -401,34 +405,21 @@ async function loadAdminAnalytics(retryCount = 0) {
     const dist = data.governance_distribution || {};
     updateGovernanceChart(dist.green || 0, dist.amber || 0, dist.red || 0);
 
+    // Critical payload is on screen — drop the skeleton states.
+    hideSkeletonLoaders();
+
+    loadInsights();
+    loadActionQueue();
+
     const scopeType = gov ? "GOVERNORATE" : "NETWORK";
     const scopeId = gov || null;
 
-    // These 9 widgets are independent of the primary KPIs above and of each
-    // other -- each fetches its own data, owns its own DOM subtree, and
-    // already has its own internal try/catch. Awaiting them one at a time
-    // meant a single slow call (e.g. the leaderboard scan inside
-    // loadComparativeAnalysis) gated every widget queued behind it, even
-    // ones that resolve in milliseconds once reached. allSettled (not
-    // Promise.all) so one widget's unexpected rejection can't affect the
-    // others' already-in-flight requests.
-    await Promise.allSettled([
-      loadComparativeAnalysis(start, end),
-      loadPredictiveInsights(start, end, scopeType, scopeId),
-      loadAnomalies(start, end, scopeType, scopeId),
-      loadAlerts(),
-      loadDataQuality(),
-      loadTargets(),
-      loadBenchmarks(),
-      loadRecommendations(),
-      loadRegistrationAnalytics(),
-    ]);
-
+    // Success feedback, timestamp, and the v2 enhancement event fire once the
+    // critical view is rendered rather than after every secondary widget.
     showToast(
       adminAnalyticsText("تم تحديث البيانات بنجاح", "Data refreshed successfully"),
       "success"
     );
-    // Update last-updated timestamp
     updateLastUpdatedTimestamp();
 
     // Fire event for v2 enhancement layer
@@ -437,6 +428,16 @@ async function loadAdminAnalytics(retryCount = 0) {
         __period__: { start: start, end: end }
       })
     }));
+
+    // Phase 2: Secondary widgets — heavier analytical views. These are
+    // independent of each other and already have their own internal
+    // try/catch, so a single slow call can't stall the rest. Scheduled on
+    // idle so they never compete with the critical render above.
+    scheduleIdle(() => loadSecondaryWidgets(start, end, scopeType, scopeId), 100);
+
+    // Phase 3: Tertiary widgets — supporting panels (alerts, data quality,
+    // targets, benchmarks, recommendations). Lowest priority; loaded last.
+    scheduleIdle(() => loadTertiaryWidgets(), 200);
   } catch (error) {
     console.error("Analytics load error:", error);
 
@@ -505,6 +506,42 @@ async function loadAdminAnalytics(retryCount = 0) {
     }
     hideSkeletonLoaders();
   }
+}
+
+// Run a non-critical task during browser idle time, falling back to a timeout
+// when requestIdleCallback is unavailable (older Safari / some embedded webviews).
+function scheduleIdle(task, fallbackDelay = 100) {
+  if (typeof window.requestIdleCallback === "function") {
+    return window.requestIdleCallback(task, { timeout: 2000 });
+  }
+  return setTimeout(task, fallbackDelay);
+}
+
+// Phase 2: secondary analytical widgets. Each fetches its own data and owns its
+// own DOM subtree, and each already has its own internal try/catch, so we use
+// allSettled (not Promise.all) and never await them in the critical path.
+async function loadSecondaryWidgets(start, end, scopeType, scopeId) {
+  await Promise.allSettled([
+    loadComparativeAnalysis(start, end),
+    loadPredictiveInsights(start, end, scopeType, scopeId),
+    loadAnomalies(start, end, scopeType, scopeId),
+    loadRegistrationAnalytics(),
+    loadChartAnnotations(),
+    loadTargetProgress(),
+  ]);
+  await loadScenarios();
+}
+
+// Phase 3: tertiary supporting panels (alerts, data quality, targets,
+// benchmarks, recommendations). Lowest priority, loaded last on idle.
+async function loadTertiaryWidgets() {
+  await Promise.allSettled([
+    loadAlerts(),
+    loadDataQuality(),
+    loadTargets(),
+    loadBenchmarks(),
+    loadRecommendations(),
+  ]);
 }
 
 function showSkeletonLoaders() {
@@ -773,6 +810,126 @@ function renderDeltaIndicator(delta, elementId, metricKey) {
   element.innerHTML = `<i class="bi ${icon}" aria-hidden="true"></i><span class="delta-value" aria-hidden="true">${displaySign}${percent}%</span><span class="delta-label">${label}</span>`;
 }
 
+function applyComparison() {
+  const type = document.getElementById('comparisonType').value;
+  const periodStart = document.getElementById('periodStart').value;
+  const periodEnd = document.getElementById('periodEnd').value;
+
+  let compareStart, compareEnd;
+
+  if (type === 'previous') {
+    const start = new Date(periodStart);
+    const end = new Date(periodEnd);
+    const duration = (end - start) / (1000 * 60 * 60 * 24);
+
+    compareEnd = new Date(start);
+    compareEnd.setDate(compareEnd.getDate() - 1);
+    compareStart = new Date(compareEnd);
+    compareStart.setDate(compareStart.getDate() - duration);
+  } else {
+    compareStart = document.getElementById('compareStart').value;
+    compareEnd = document.getElementById('compareEnd').value;
+  }
+
+  if (!compareStart || !compareEnd) {
+    alert(adminAnalyticsText('يرجى تحديد نطاق المقارنة', 'Please select comparison range'));
+    return;
+  }
+
+  fetchComparison(periodStart, periodEnd, compareStart, compareEnd);
+
+  if (window.bootstrap && bootstrap.Modal) {
+    bootstrap.Modal.getInstance(document.getElementById('comparePeriodModal'))?.hide();
+  }
+}
+
+async function fetchComparison(periodStart, periodEnd, compareStart, compareEnd) {
+  const governorate = document.getElementById('governorateFilter')?.value;
+
+  const params = new URLSearchParams({
+    mode: 'period',
+    period_start: periodStart,
+    period_end: periodEnd,
+    compare_start: compareStart,
+    compare_end: compareEnd
+  });
+  if (governorate) params.append('governorate', governorate);
+
+  try {
+    const response = await fetchWithAuth(`/api/analytics/compare?${params}`);
+    if (!response.ok) throw new Error('Comparison failed');
+
+    const data = await response.json();
+    renderComparisonDeltas(data.deltas);
+  } catch (error) {
+    console.error('Comparison error:', error);
+    showToast(
+      adminAnalyticsText('فشلت المقارنة', 'Comparison failed'),
+      'error'
+    );
+  }
+}
+
+function renderComparisonDeltas(deltas) {
+  const kpiMappings = {
+    'totalKg': deltas.total_kindergartens,
+    'totalChildren': deltas.total_children,
+    'avgAttendance': deltas.attendance_rate,
+    'incidentRate': deltas.incident_rate,
+    'ohGovernanceScore': deltas.governance_avg_score
+  };
+
+  Object.entries(kpiMappings).forEach(([kpiId, delta]) => {
+    const valueEl = document.getElementById(kpiId);
+    if (!valueEl) return;
+
+    const card = valueEl.closest('.kpi-card-v2');
+    if (!card) return;
+
+    const footer = card.querySelector('.kpi-card-v2__footer');
+    if (!footer) return;
+
+    let deltaEl = footer.querySelector('.kpi-delta.comparison-delta');
+    if (!deltaEl) {
+      deltaEl = document.createElement('span');
+      deltaEl.className = 'kpi-delta comparison-delta';
+      footer.appendChild(deltaEl);
+    }
+
+    const direction = delta.direction;
+    const significant = delta.significant;
+    const absPct = Math.abs(delta.percentage).toFixed(1);
+
+    let icon, colorClass, bgClass;
+    if (direction === 'up') {
+      icon = 'bi-arrow-up';
+      colorClass = 'text-success';
+      bgClass = 'kpi-delta--up';
+    } else if (direction === 'down') {
+      icon = 'bi-arrow-down';
+      colorClass = 'text-danger';
+      bgClass = 'kpi-delta--down';
+    } else {
+      icon = 'bi-dash';
+      colorClass = 'text-muted';
+      bgClass = 'kpi-delta--flat';
+    }
+
+    deltaEl.className = `kpi-delta ${bgClass} comparison-delta`;
+    deltaEl.innerHTML = `<i class="bi ${icon} me-1" aria-hidden="true"></i>${absPct}%${significant ? '<span class="badge bg-light text-dark ms-1" style="font-size:0.625rem;padding:0.25em 0.5em">SIG</span>' : ''}`;
+    deltaEl.setAttribute('aria-label', `${absPct}% ${direction}${significant ? ' significant' : ''}`);
+  });
+}
+
+document.getElementById('comparisonType')?.addEventListener('change', function() {
+  const customFields = document.getElementById('customRangeFields');
+  if (this.value === 'custom') {
+    customFields.classList.remove('d-none');
+  } else {
+    customFields.classList.add('d-none');
+  }
+});
+
 function updateTrendCharts(attendanceData, incidentData) {
   const ctx = document.getElementById("trendChart");
   if (!ctx) return;
@@ -855,6 +1012,10 @@ function updateTrendChart(type) {
   trendChartInstance.data = chartData.data;
   trendChartInstance.options = chartData.options;
   trendChartInstance.update("active");
+  // Keep annotations aligned when the displayed metric changes.
+  if (chartAnnotations && chartAnnotations.length) {
+    renderTrendChartWithAnnotations();
+  }
 }
 
 function buildTrendChartData(type) {
@@ -1036,6 +1197,151 @@ function buildTrendChartData(type) {
       },
     },
   };
+}
+
+// =============================================================================
+// Chart Annotations — holidays, anomalies, and significant events overlayed
+// on the trend chart via the Chart.js annotation plugin.
+// =============================================================================
+async function loadChartAnnotations() {
+  const periodStart = document.getElementById('periodStart')?.value;
+  const periodEnd = document.getElementById('periodEnd')?.value;
+
+  if (!periodStart || !periodEnd) return;
+
+  try {
+    const params = new URLSearchParams({
+      period_start: periodStart,
+      period_end: periodEnd,
+    });
+    const gov = document.getElementById('governorateFilter')?.value;
+    if (gov) params.set('governorate', gov);
+
+    const response = await fetchWithAuth(`/api/analytics/annotations?${params}`);
+    if (!response.ok) throw new Error('Failed to load annotations');
+
+    const data = await response.json();
+    chartAnnotations = data.annotations || [];
+
+    // Re-render the trend chart with the loaded annotations.
+    if (trendChartInstance) {
+      renderTrendChartWithAnnotations();
+    }
+  } catch (error) {
+    console.error('Error loading annotations:', error);
+  }
+}
+
+function _currentTrendMetric() {
+  const incidentsRadio = document.getElementById('incidentsTrend');
+  if (incidentsRadio && incidentsRadio.checked) return 'incidents';
+  return 'attendance';
+}
+
+// Map an ISO (YYYY-MM-DD) annotation date to the chart's category label so
+// category-axis annotations line up with the plotted data point. Falls back to
+// the nearest plotted point when no exact match exists.
+function _annotationLabelForDate(isoDate) {
+  if (!trendChartInstance) return isoDate;
+  const series = window.__trendData?.attendance || [];
+  const labels = trendChartInstance.data.labels || [];
+  for (let i = 0; i < series.length; i++) {
+    if (series[i] && series[i].date === isoDate && labels[i]) {
+      return labels[i];
+    }
+  }
+  const target = new Date(isoDate).getTime();
+  let bestIdx = -1;
+  let bestDiff = Infinity;
+  for (let i = 0; i < series.length; i++) {
+    if (!series[i] || !series[i].date) continue;
+    const diff = Math.abs(new Date(series[i].date).getTime() - target);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestIdx = i;
+    }
+  }
+  return bestIdx >= 0 && labels[bestIdx] ? labels[bestIdx] : isoDate;
+}
+
+function renderTrendChartWithAnnotations() {
+  if (!trendChartInstance || !chartAnnotations) return;
+
+  const chart = trendChartInstance;
+  const lang = adminAnalyticsText('ar', 'en');
+
+  const holidays = chartAnnotations.filter(a => a.type === 'holiday');
+  const anomalies = chartAnnotations.filter(a => a.type === 'anomaly');
+  const currentMetric = _currentTrendMetric();
+
+  const annotationConfig = { annotations: {} };
+
+  // Vertical dashed lines for holidays/events.
+  holidays.forEach((holiday, idx) => {
+    const label = lang === 'en' ? holiday.label_en : holiday.label_ar;
+    annotationConfig.annotations[`holiday_${idx}`] = {
+      type: 'line',
+      xMin: _annotationLabelForDate(holiday.date),
+      xMax: _annotationLabelForDate(holiday.date),
+      borderColor: holiday.color,
+      borderWidth: 2,
+      borderDash: [5, 5],
+      label: {
+        content: label,
+        enabled: true,
+        position: 'start',
+        backgroundColor: 'rgba(245, 158, 11, 0.85)',
+        color: 'white',
+        font: { size: 10 }
+      }
+    };
+  });
+
+  // Highlight anomaly points with a colored box + marker.
+  anomalies.forEach((anomaly, idx) => {
+    const xLabel = _annotationLabelForDate(anomaly.date);
+    annotationConfig.annotations[`anomaly_${idx}`] = {
+      type: 'box',
+      xMin: xLabel,
+      xMax: xLabel,
+      backgroundColor: (anomaly.color || '#ef4444') + '20',
+      borderColor: anomaly.color || '#ef4444',
+      borderWidth: 1
+    };
+
+    // Only draw the point marker when the anomaly belongs to the metric
+    // currently shown on the trend chart.
+    if (!anomaly.metric || anomaly.metric === currentMetric) {
+      annotationConfig.annotations[`anomaly_point_${idx}`] = {
+        type: 'point',
+        xValue: xLabel,
+        yValue: getAnomalyYValue(anomaly),
+        radius: 6,
+        backgroundColor: anomaly.color || '#ef4444',
+        borderColor: 'white',
+        borderWidth: 2
+      };
+    }
+  });
+
+  chart.options.plugins.annotation = annotationConfig;
+  chart.update();
+}
+
+function getAnomalyYValue(anomaly) {
+  if (!trendChartInstance) return 0;
+  const chart = trendChartInstance;
+  const dataset = chart.data.datasets[0];
+  if (!dataset || !dataset.data) return 0;
+
+  const series = window.__trendData?.[_currentTrendMetric()] || [];
+  for (let i = 0; i < series.length; i++) {
+    if (series[i] && series[i].date === anomaly.date) {
+      const v = dataset.data[i];
+      return (v && typeof v === 'object') ? v.y : (Number.isFinite(v) ? v : 0);
+    }
+  }
+  return 0;
 }
 
 function formatDateForDisplay(dateStr) {
@@ -1739,7 +2045,7 @@ async function loadPredictiveInsights(start, end, scopeType, scopeId) {
       scope_id: scopeId,
       start_date: start,
       end_date: end,
-      horizon_days: 30,
+      horizon_days: getForecastHorizon(),
     };
     const [attendanceRes, incidentsRes, enrollmentRes] = await Promise.all([
       fetchWithAuth(`/api/analytics/predict/attendance`, {
@@ -1776,6 +2082,195 @@ async function loadPredictiveInsights(start, end, scopeType, scopeId) {
   } catch (error) {
     console.error("Predictive insights error", error);
   }
+}
+
+function getForecastHorizon() {
+  const select = document.getElementById("forecastHorizon");
+  const value = select ? parseInt(select.value, 10) : 30;
+  return Number.isFinite(value) && value > 0 ? value : 30;
+}
+
+async function loadScenarios() {
+    const metric = _currentTrendMetric();
+    const horizon = getForecastHorizon();
+    const periodStart = document.getElementById('periodStart')?.value;
+    const periodEnd = document.getElementById('periodEnd')?.value;
+
+    if (!periodStart || !periodEnd) return;
+
+    try {
+      const params = new URLSearchParams({
+          metric: metric,
+          horizon_days: horizon,
+          period_start: periodStart,
+          period_end: periodEnd
+      });
+
+      const response = await fetchWithAuth(`/api/analytics/scenarios?${params}`);
+      if (!response.ok) throw new Error('Failed to load scenarios');
+
+      scenarioData = await response.json();
+
+      const legend = document.getElementById('scenarioLegend');
+      const stddevEl = document.getElementById('scenarioStddev');
+      if (legend && stddevEl && scenarioData.stddev) {
+        stddevEl.textContent = adminAnalyticsText(
+          `الانحراف المعياري: ${scenarioData.stddev.toFixed(2)}`,
+          `Standard deviation: ${scenarioData.stddev.toFixed(2)}`
+        );
+        legend.classList.remove('d-none');
+      }
+
+      renderScenarioOverlay();
+    } catch (error) {
+      console.error('Error loading scenarios:', error);
+    }
+}
+
+document.addEventListener('input', function (e) {
+  if (e.target && e.target.id === 'whatIfSlider') {
+    var v = document.getElementById('whatIfValue');
+    if (v) v.textContent = (e.target.value > 0 ? '+' : '') + e.target.value + '%';
+  }
+});
+
+async function runWhatIf() {
+  var slider = document.getElementById('whatIfSlider');
+  var resultEl = document.getElementById('whatIfResult');
+  if (!slider || !resultEl) return;
+  var adjustment = parseFloat(slider.value) || 0;
+  var horizon = (typeof getForecastHorizon === 'function') ? getForecastHorizon() : 30;
+  var metric = (typeof _currentTrendMetric === 'function') ? _currentTrendMetric() : 'attendance';
+  var periodStart = document.getElementById('periodStart') ? document.getElementById('periodStart').value : '';
+  var periodEnd = document.getElementById('periodEnd') ? document.getElementById('periodEnd').value : '';
+  if (!periodStart || !periodEnd) return;
+  resultEl.innerHTML = '<div class="text-muted small">' + adminAnalyticsText('جاري الحساب...', 'Calculating...') + '</div>';
+  try {
+    var params = new URLSearchParams({ metric: metric, adjustment_percent: adjustment,
+      horizon_days: horizon, period_start: periodStart, period_end: periodEnd });
+    var res = await fetchWithAuth('/api/analytics/what-if?' + params.toString());
+    if (!res.ok) throw new Error('what-if failed');
+    var data = await res.json();
+    if (!data.summary || data.summary.baseline_end === undefined) {
+      resultEl.innerHTML = '<div class="text-muted small">' + adminAnalyticsText('لا توجد بيانات كافية', 'Not enough data') + '</div>';
+      return;
+    }
+    var s = data.summary;
+    var favorable = metric === 'incidents' ? (s.delta_absolute < 0) : (s.delta_absolute > 0);
+    var arrow = s.delta_absolute > 0 ? 'bi-arrow-up' : (s.delta_absolute < 0 ? 'bi-arrow-down' : 'bi-dash');
+    var color = s.delta_absolute === 0 ? 'text-muted' : (favorable ? 'text-success' : 'text-danger');
+    resultEl.innerHTML =
+      '<div class="d-flex gap-4 flex-wrap">' +
+      '<div><div class="text-muted small">' + adminAnalyticsText('الأساسي (النهاية)', 'Baseline (end)') + '</div>' +
+      '<div class="fs-5 fw-bold">' + s.baseline_end + '</div></div>' +
+      '<div><div class="text-muted small">' + adminAnalyticsText('المعدّل (النهاية)', 'Adjusted (end)') + '</div>' +
+      '<div class="fs-5 fw-bold">' + s.adjusted_end + '</div></div>' +
+      '<div><div class="text-muted small">' + adminAnalyticsText('الفرق', 'Delta') + '</div>' +
+      '<div class="fs-5 fw-bold ' + color + '"><i class="bi ' + arrow + ' me-1"></i>' +
+      Math.abs(s.delta_percent).toFixed(1) + '%</div></div></div>';
+  } catch (err) {
+    resultEl.innerHTML = '<div class="alert alert-warning mb-0">' + adminAnalyticsText('تعذر إجراء التحليل', 'Analysis failed') + '</div>';
+  }
+}
+
+function renderScenarioOverlay() {
+    if (!scenarioData || !trendChartInstance) return;
+
+    const chart = trendChartInstance;
+    const scenarios = scenarioData.scenarios;
+
+    chart.data.datasets = chart.data.datasets.filter(ds => !ds._isScenario);
+
+    if (!scenarios || Object.keys(scenarios).length === 0) return;
+
+    const currentType = _currentTrendMetric();
+    const forecastPayload = window.__forecastData || {};
+    const forecastSeries = forecastPayload[currentType] || {};
+    const forecastPoints = forecastSeries.forecast_points || [];
+
+    if (!forecastPoints.length) return;
+
+    const dataSeries = window.__trendData?.[currentType] || [];
+    const paddingLength = Math.max(0, dataSeries.length - 1);
+
+    const scenarioConfigs = {
+      'scenarioBaseline': { key: 'baseline', label_ar: 'الأساسي', label_en: 'Baseline', color: '#3b82f6', dash: [] },
+      'scenarioOptimistic': { key: 'optimistic', label_ar: 'متفائل (+1σ)', label_en: 'Optimistic (+1σ)', color: '#22c55e', dash: [5, 5] },
+      'scenarioPessimistic': { key: 'pessimistic', label_ar: 'متشائم (-1σ)', label_en: 'Pessimistic (-1σ)', color: '#ef4444', dash: [5, 5] },
+      'scenarioBestCase': { key: 'best_case', label_ar: 'أفضل حالة (+2σ)', label_en: 'Best Case (+2σ)', color: '#16a34a', dash: [10, 5] },
+      'scenarioWorstCase': { key: 'worst_case', label_ar: 'أسوأ حالة (-2σ)', label_en: 'Worst Case (-2σ)', color: '#dc2626', dash: [10, 5] }
+    };
+
+    const lang = adminAnalyticsText('ar', 'en');
+
+    Object.entries(scenarioConfigs).forEach(([checkboxId, config]) => {
+      const checkbox = document.getElementById(checkboxId);
+      if (!checkbox || !checkbox.checked) return;
+
+      const scenarioPoints = scenarios[config.key];
+      if (!scenarioPoints || scenarioPoints.length === 0) return;
+
+      const historicalNulls = new Array(paddingLength).fill(null);
+      const forecastData = scenarioPoints.map(sp => {
+        return typeof sp.value === 'number' ? sp.value : parseFloat(sp.value) || 0;
+      });
+      const data = historicalNulls.concat(forecastData);
+
+      chart.data.datasets.push({
+        label: lang === 'en' ? config.label_en : config.label_ar,
+        data: data,
+        borderColor: config.color,
+        backgroundColor: config.color + '20',
+        borderWidth: 2,
+        borderDash: config.dash,
+        pointRadius: 0,
+        fill: false,
+        tension: 0.3,
+        _isScenario: true
+      });
+    });
+
+    chart.update();
+}
+
+document.addEventListener("change", function(e) {
+  if (e.target.id && e.target.id.startsWith('scenario')) {
+    renderScenarioOverlay();
+  }
+});
+
+function updateForecastLabels(horizon) {
+  const suffix = `(${horizon}d)`;
+  document
+    .querySelectorAll("[data-forecast-label] .forecast-period-suffix")
+    .forEach((el) => {
+      el.textContent = suffix;
+    });
+}
+
+async function updateForecastHorizon() {
+  const horizon = getForecastHorizon();
+  updateForecastLabels(horizon);
+
+  const start = document.getElementById("periodStart")?.value || "";
+  const end = document.getElementById("periodEnd")?.value || "";
+  const gov = document.getElementById("governorateFilter")?.value || "";
+
+  if (!start || !end) {
+    showToast(
+      adminAnalyticsText(
+        "يرجى تحديد تاريخ البداية والنهاية أولاً",
+        "Please select a start and end date first"
+      ),
+      "warning"
+    );
+    return;
+  }
+
+  const scopeType = gov ? "GOVERNORATE" : "NETWORK";
+  const scopeId = gov || null;
+
+  await loadPredictiveInsights(start, end, scopeType, scopeId);
 }
 
 function updatePredictiveCards(attendanceData, incidentsData, enrollmentData) {
@@ -1870,6 +2365,99 @@ function updateModelMeta(meta) {
   const safeTrainedAt = escapeHtml(trainedAt);
   const safeVersion = escapeHtml(version);
   container.innerHTML = `<div class="small text-muted">${adminAnalyticsText(`آخر تدريب: ${safeTrainedAt} | الإصدار: ${safeVersion} | الثقة: ${confidence}`, `Last training: ${safeTrainedAt} | Version: ${safeVersion} | Confidence: ${confidence}`)}</div>`;
+}
+
+async function loadModelPerformance() {
+  const metrics = ["attendance", "incidents", "enrollment"];
+  const results = {};
+
+  for (const metric of metrics) {
+    try {
+      const response = await fetchWithAuth(`/api/analytics/model-performance?metric=${metric}&days_back=30`);
+      if (response && response.ok) {
+        results[metric] = await response.json();
+      }
+    } catch (error) {
+      console.error(`Error loading ${metric} performance:`, error);
+    }
+  }
+
+  renderModelPerformance(results);
+}
+
+function renderModelPerformance(results) {
+  const container = document.getElementById("modelPerformanceContent");
+  if (!container) return;
+
+  const metrics = Object.entries(results);
+  if (metrics.length === 0) {
+    container.innerHTML = `
+      <div class="text-center text-muted py-3">
+        <i class="bi bi-info-circle me-2"></i>
+        ${adminAnalyticsText("لا توجد بيانات أداء متاحة", "No performance data available")}
+      </div>
+    `;
+    return;
+  }
+
+  const lang = adminAnalyticsText("ar", "en");
+
+  container.innerHTML = `
+    <div class="row g-3">
+      ${metrics
+        .map(([metric, data]) => {
+          const metricLabel = {
+            attendance: lang === "en" ? "Attendance" : "الحضور",
+            incidents: lang === "en" ? "Incidents" : "الحوادث",
+            enrollment: lang === "en" ? "Enrollment" : "التسجيل",
+          }[metric];
+
+          const trendIcon = {
+            improving: "bi-arrow-up-circle-fill text-success",
+            declining: "bi-arrow-down-circle-fill text-danger",
+            stable: "bi-dash-circle-fill text-muted",
+            insufficient_data: "bi-question-circle-fill text-warning",
+          }[data.trend] || "bi-question-circle-fill text-muted";
+
+          const trendLabel = {
+            improving: lang === "en" ? "Improving" : "يتحسن",
+            declining: lang === "en" ? "Declining" : "يتراجع",
+            stable: lang === "en" ? "Stable" : "مستقر",
+            insufficient_data: lang === "en" ? "Insufficient data" : "بيانات غير كافية",
+          }[data.trend];
+
+          return `
+            <div class="col-md-4">
+              <div class="model-perf-metric">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="fw-bold">${metricLabel}</span>
+                  <i class="bi ${trendIcon}" title="${trendLabel}"></i>
+                </div>
+                ${
+                  data.accuracy !== null
+                    ? `
+                  <div class="d-flex align-items-baseline gap-2">
+                    <span class="fs-3 fw-bold text-primary">${data.accuracy.toFixed(1)}%</span>
+                    <small class="text-muted">${adminAnalyticsText("دقة", "accuracy")}</small>
+                  </div>
+                  <div class="text-muted small mt-1">
+                    MAPE: ${data.mape.toFixed(2)}% · ${data.evaluations} ${adminAnalyticsText("تقييمات", "evaluations")}
+                  </div>
+                `
+                    : `
+                  <div class="text-muted small">
+                    <i class="bi ${trendIcon} me-1"></i>
+                    ${lang === "en" ? data.message_en : data.message_ar}
+                  </div>
+                `
+                }
+              </div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
 }
 
 async function loadAnomalies(start, end, scopeType, scopeId) {
@@ -2088,6 +2676,94 @@ async function loadBenchmarks() {
   } catch (error) {
     console.error("Benchmarks load error", error);
   }
+}
+
+async function loadTargetProgress() {
+  const metrics = ["attendance_rate", "incident_rate", "governance_score"];
+  const governorate = document.getElementById("governorateFilter")?.value;
+  const results = {};
+
+  for (const metric of metrics) {
+    try {
+      const params = new URLSearchParams({ metric });
+      if (governorate) params.append("governorate", governorate);
+
+      const response = await fetchWithAuth(`/api/analytics/target-progress?${params}`);
+      if (response && response.ok) {
+        results[metric] = await response.json();
+      }
+    } catch (error) {
+      console.error(`Error loading ${metric} progress:`, error);
+    }
+  }
+
+  renderTargetProgress(results);
+}
+
+function renderTargetProgress(results) {
+  const container = document.getElementById("targetProgressContent");
+  if (!container) return;
+
+  const metrics = Object.entries(results);
+  if (metrics.length === 0) {
+    container.innerHTML = `<div class="text-center text-muted py-3">${adminAnalyticsText("لا توجد بيانات تقدم متاحة", "No progress data available")}</div>`;
+    return;
+  }
+
+  const lang = adminAnalyticsText("ar", "en");
+
+  container.innerHTML = `<div class="row g-3">${metrics.map(([metric, data]) => {
+    const metricLabel = {
+      attendance_rate: lang === "en" ? "Attendance Rate" : "معدل الحضور",
+      incident_rate: lang === "en" ? "Incident Rate" : "معدل الحوادث",
+      governance_score: lang === "en" ? "Governance Score" : "درجة الحوكمة",
+    }[metric];
+
+    const statusClass = {
+      achieved: "success",
+      on_track: "primary",
+      at_risk: "warning",
+      off_track: "danger",
+    }[data.status] || "secondary";
+
+    const statusLabel = {
+      achieved: lang === "en" ? "Achieved" : "محقق",
+      on_track: lang === "en" ? "On Track" : "على المسار",
+      at_risk: lang === "en" ? "At Risk" : "معرض للخطر",
+      off_track: lang === "en" ? "Off Track" : "خارج المسار",
+    }[data.status];
+
+    const daysText = data.days_to_target === 0
+      ? (lang === "en" ? "Target achieved!" : "تم تحقيق الهدف!")
+      : data.days_to_target > 0
+        ? (lang === "en" ? `${data.days_to_target} days to target` : `${data.days_to_target} يوم للوصول للهدف`)
+        : (lang === "en" ? "Moving away from target" : "يبتعد عن الهدف");
+
+    return `<div class="col-md-4">
+      <div class="target-progress-item">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="fw-bold">${metricLabel}</span>
+          <span class="badge bg-${statusClass}">${statusLabel}</span>
+        </div>
+        <div class="target-progress-bar mb-2">
+          <div class="target-progress-fill bg-${statusClass}" style="width: ${Math.min(100, data.progress_percent)}%"></div>
+        </div>
+        <div class="d-flex justify-content-between small">
+          <span class="text-muted">
+            ${data.current_value}${metric === "incident_rate" ? "/100" : "%"}
+            <i class="bi bi-arrow-right mx-1"></i>
+            ${data.target_value}${metric === "incident_rate" ? "/100" : "%"}
+          </span>
+          <span class="text-${statusClass}">${daysText}</span>
+        </div>
+        ${data.percentile !== null ? `<div class="mt-1 small text-muted"><i class="bi bi-trophy me-1"></i>${adminAnalyticsText(`المئوية ${data.percentile}`, `${data.percentile}th percentile`)}</div>` : ""}
+        <div class="mt-1 small text-muted">
+          <i class="bi bi-speedometer2 me-1"></i>
+          ${adminAnalyticsText(`السرعة: ${data.velocity_per_day > 0 ? "+" : ""}${data.velocity_per_day.toFixed(3)}/يوم`, `Velocity: ${data.velocity_per_day > 0 ? "+" : ""}${data.velocity_per_day.toFixed(3)}/day`)}
+        </div>
+      </div>
+    </div>`;
+  }).join("")}</div>`;
 }
 
 async function loadRecommendations() {
@@ -2990,6 +3666,360 @@ function exportTableToCSV(tableId, filename) {
   document.body.removeChild(downloadLink);
 }
 
+async function loadActionQueue() {
+    const periodStart = document.getElementById('periodStart')?.value;
+    const periodEnd = document.getElementById('periodEnd')?.value;
+    const governorate = document.getElementById('governorateFilter')?.value;
+
+    if (!periodStart || !periodEnd) return;
+
+    try {
+        const params = new URLSearchParams({
+            period_start: periodStart,
+            period_end: periodEnd
+        });
+        if (governorate) params.append('governorate', governorate);
+
+        const response = await fetchWithAuth(`/api/analytics/action-queue?${params}`);
+        if (!response.ok) throw new Error('Failed to load action queue');
+
+        const data = await response.json();
+        renderActionQueue(data.actions || []);
+    } catch (error) {
+        console.error('Error loading action queue:', error);
+        document.getElementById('actionQueueList').innerHTML = `
+            <div class="alert alert-warning mb-0">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                ${adminAnalyticsText('تعذر تحميل قائمة الإجراءات', 'Unable to load action queue')}
+            </div>
+        `;
+    }
+}
+
+function renderActionQueue(actions) {
+    const container = document.getElementById('actionQueueList');
+    const countBadge = document.getElementById('actionCount');
+
+    if (!actions || actions.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-check-circle-fill fs-1 text-success mb-2"></i>
+                <p class="mb-0">${adminAnalyticsText('لا توجد إجراءات مطلوبة', 'No actions required')}</p>
+            </div>
+        `;
+        countBadge.textContent = '0';
+        return;
+    }
+
+    countBadge.textContent = actions.length;
+
+    const lang = adminAnalyticsText('ar', 'en');
+
+    container.innerHTML = actions.map(action => {
+        const priorityClass = {
+            'HIGH': 'danger',
+            'MEDIUM': 'warning',
+            'LOW': 'info'
+        }[action.priority] || 'secondary';
+
+        const title = lang === 'en' ? action.title_en : action.title_ar;
+        const description = lang === 'en' ? action.description_en : action.description_ar;
+        const deadline = new Date(action.deadline).toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-JO');
+
+        return `
+            <div class="action-item action-item--${priorityClass.toLowerCase()} mb-3">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="action-icon">
+                        <i class="bi ${action.icon} text-${priorityClass} fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-${priorityClass}">${action.priority}</span>
+                            <small class="text-muted">
+                                <i class="bi bi-calendar-event me-1"></i>
+                                ${adminAnalyticsText('الموعد النهائي:', 'Deadline:')} ${deadline}
+                            </small>
+                            ${action.affected_count > 0 ? `
+                                <small class="text-muted ms-2">
+                                    <i class="bi bi-building me-1"></i>
+                                    ${action.affected_count} ${adminAnalyticsText('كيان', 'entities')}
+                                </small>
+                            ` : ''}
+                        </div>
+                        <p class="mb-1 fw-bold">${title}</p>
+                        <p class="mb-2 text-muted small">${description}</p>
+                        <div class="d-flex gap-2">
+                            <a href="${action.link}" class="btn btn-sm btn-outline-${priorityClass}">
+                                <i class="bi bi-eye me-1"></i>
+                                ${adminAnalyticsText('عرض', 'View')}
+                            </a>
+                            <button class="btn btn-sm btn-${priorityClass}" onclick="createActionPlan('${action.id}')">
+                                <i class="bi bi-plus-circle me-1"></i>
+                                ${adminAnalyticsText('إنشاء خطة عمل', 'Create Action Plan')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function createActionPlan(actionId) {
+    // Navigate to action plan creation or open modal
+    window.location.href = `/admin/action-plans/new?action=${actionId}`;
+}
+
+async function loadInsights() {
+    const periodStart = document.getElementById('periodStart')?.value;
+    const periodEnd = document.getElementById('periodEnd')?.value;
+    const governorate = document.getElementById('governorateFilter')?.value;
+
+    if (!periodStart || !periodEnd) return;
+
+    try {
+        const params = new URLSearchParams({
+            period_start: periodStart,
+            period_end: periodEnd
+        });
+        if (governorate) params.append('governorate', governorate);
+
+        const response = await fetchWithAuth(`/api/analytics/insights?${params}`);
+        if (!response.ok) throw new Error('Failed to load insights');
+
+        const data = await response.json();
+        renderInsights(data.insights || []);
+    } catch (error) {
+        console.error('Error loading insights:', error);
+        document.getElementById('insightsList').innerHTML = `
+            <div class="alert alert-warning mb-0">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                ${adminAnalyticsText('تعذر تحميل الرؤى', 'Unable to load insights')}
+            </div>
+        `;
+    }
+}
+
+function renderInsights(insights) {
+    const container = document.getElementById('insightsList');
+    const countBadge = document.getElementById('insightsCount');
+
+    if (!insights || insights.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-check-circle-fill fs-1 text-success mb-2"></i>
+                <p class="mb-0">${adminAnalyticsText('لا توجد مشكلات تتطلب الانتباه', 'No issues requiring attention')}</p>
+            </div>
+        `;
+        countBadge.textContent = '0';
+        return;
+    }
+
+    countBadge.textContent = insights.length;
+
+    const lang = adminAnalyticsText('ar', 'en');
+
+    container.innerHTML = insights.map(insight => {
+        const severityClass = {
+            'HIGH': 'danger',
+            'MEDIUM': 'warning',
+            'LOW': 'info'
+        }[insight.severity] || 'secondary';
+
+        const message = lang === 'en' ? insight.message_en : insight.message_ar;
+        const action = lang === 'en' ? insight.action_en : insight.action_ar;
+
+        return `
+            <div class="insight-card insight-card--${severityClass.toLowerCase()} mb-3">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="insight-icon">
+                        <i class="bi ${insight.icon} text-${severityClass} fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-${severityClass}">${insight.severity}</span>
+                            ${insight.affected_count > 0 ? `
+                                <small class="text-muted">
+                                    <i class="bi bi-building me-1"></i>
+                                    ${insight.affected_count} ${adminAnalyticsText('كيان متأثر', 'affected entities')}
+                                </small>
+                            ` : ''}
+                        </div>
+                        <p class="mb-2 fw-bold">${message}</p>
+                        <p class="mb-2 text-muted small">${action}</p>
+                        <div class="d-flex gap-2">
+                            <a href="${insight.link}" class="btn btn-sm btn-outline-${severityClass}">
+                                <i class="bi bi-arrow-right me-1"></i>
+                                ${adminAnalyticsText('عرض التفاصيل', 'View Details')}
+                            </a>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="analyzeRootCause('${insight.type}')">
+                                <i class="bi bi-search me-1"></i>
+                                ${adminAnalyticsText('تحليل السبب', 'Analyze Root Cause')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function insightTypeToMetric(insightType) {
+    if (insightType.includes('ATTENDANCE')) return 'attendance_rate';
+    if (insightType.includes('INCIDENT')) return 'incident_rate';
+    if (insightType.includes('GOVERNANCE')) return 'governance_score';
+    return null;
+}
+
+async function analyzeRootCause(insightType) {
+    const metric = insightTypeToMetric(insightType);
+    if (!metric) return;
+
+    const periodStart = document.getElementById('periodStart')?.value;
+    const periodEnd = document.getElementById('periodEnd')?.value;
+    const governorate = document.getElementById('governorateFilter')?.value;
+
+    if (!periodStart || !periodEnd) return;
+
+    const modalHtml = `
+        <div class="modal fade" id="rootCauseModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-search me-2"></i>
+                            ${adminAnalyticsText('تحليل الأسباب الجذرية', 'Root Cause Analysis')}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="rootCauseContent">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2 text-muted">${adminAnalyticsText('جاري التحليل...', 'Analyzing...')}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const existingModal = document.getElementById('rootCauseModal');
+    if (existingModal) existingModal.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('rootCauseModal'));
+    modal.show();
+
+    try {
+        const params = new URLSearchParams({
+            metric: metric,
+            period_start: periodStart,
+            period_end: periodEnd
+        });
+        if (governorate) params.append('governorate', governorate);
+
+        const response = await fetchWithAuth(`/api/analytics/root-cause?${params}`);
+        if (!response.ok) throw new Error('Root cause analysis failed');
+
+        const data = await response.json();
+        renderRootCauseAnalysis(data);
+    } catch (error) {
+        console.error('Root cause error:', error);
+        document.getElementById('rootCauseContent').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                ${adminAnalyticsText('تعذر إجراء التحليل', 'Analysis failed')}
+            </div>
+        `;
+    }
+}
+
+function renderRootCauseAnalysis(data) {
+    const container = document.getElementById('rootCauseContent');
+    const lang = adminAnalyticsText('ar', 'en');
+
+    if (!data.factors || data.factors.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-check-circle-fill fs-1 text-success mb-2"></i>
+                <p>${adminAnalyticsText('لم يتم العثور على أسباب جذرية واضحة', 'No significant root causes identified')}</p>
+            </div>
+        `;
+        return;
+    }
+
+    const maxImpact = Math.max(...data.factors.map(f => f.impact_score));
+
+    let html = `
+        <div class="mb-4">
+            <h6 class="text-muted mb-3">
+                <i class="bi bi-bar-chart-fill me-1"></i>
+                ${adminAnalyticsText('العوامل المساهمة', 'Contributing Factors')}
+            </h6>
+            <div class="root-cause-factors">
+    `;
+
+    data.factors.forEach((factor, idx) => {
+        const factorName = lang === 'en' ? factor.factor_en : factor.factor_ar;
+        const detail = lang === 'en' ? factor.detail_en : factor.detail_ar;
+        const severityClass = {
+            'HIGH': 'danger',
+            'MEDIUM': 'warning',
+            'LOW': 'info'
+        }[factor.severity] || 'secondary';
+
+        const barWidth = (factor.impact_score / maxImpact) * 100;
+
+        html += `
+            <div class="root-cause-factor mb-3">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi ${factor.icon} text-${severityClass}"></i>
+                    <span class="fw-bold">${factorName}</span>
+                    <span class="badge bg-${severityClass} ms-auto">${factor.severity}</span>
+                </div>
+                <div class="root-cause-bar mb-1">
+                    <div class="root-cause-bar-fill bg-${severityClass}" style="width: ${barWidth}%"></div>
+                </div>
+                <small class="text-muted">${detail}</small>
+            </div>
+        `;
+    });
+
+    html += `</div></div>`;
+
+    if (data.recommendations && data.recommendations.length > 0) {
+        html += `
+            <div>
+                <h6 class="text-muted mb-3">
+                    <i class="bi bi-lightbulb-fill me-1"></i>
+                    ${adminAnalyticsText('التوصيات', 'Recommendations')}
+                </h6>
+                <div class="list-group">
+        `;
+
+        data.recommendations.forEach(rec => {
+            const recText = lang === 'en' ? rec.recommendation_en : rec.recommendation_ar;
+            const priorityClass = {
+                'HIGH': 'danger',
+                'MEDIUM': 'warning',
+                'LOW': 'info'
+            }[rec.priority] || 'secondary';
+
+            html += `
+                <div class="list-group-item">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-${priorityClass}">${rec.priority}</span>
+                        <span>${recText}</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div></div>`;
+    }
+
+    container.innerHTML = html;
+}
 
 // CYBERLUME Export Modal Integration
 document.addEventListener('exportData', async function(e) {
