@@ -284,17 +284,45 @@
 }
 
 .ncfa-chart-card {
-  min-height: 300px;
-  padding: 15px;
-  border: 1px solid var(--admin-border, #cbd5e1);
-  border-radius: 13px;
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  padding: 16px 18px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
   background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .ncfa-chart-card h4,
 .ncfa-table-wrap h4 {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   color: #0f172a;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.ncfa-chart-canvas {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 240px;
+}
+
+.ncfa-chart-empty {
+  margin: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 220px;
+  padding: 20px;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .ncfa-table-wrap {
