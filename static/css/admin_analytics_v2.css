@@ -1188,3 +1188,134 @@ a:focus-visible {
 
 /* Utility classes */
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* =========================================================================
+   Phase 4 analytics widget styles — reconstructed 2026-07-13
+   Covers the widgets shipped in Phase 4 item 1 (insights, action queue,
+   root-cause, target progress, model performance, what-if, forecast/scenario
+   controls, skeletons, empty state). Built on the :root design tokens above.
+   Light theme (matches base); RTL-safe via logical properties.
+   ========================================================================= */
+
+/* --- Widget shells -------------------------------------------------------- */
+.insights-widget,
+.action-queue-widget { display: flex; flex-direction: column; gap: var(--sp-3); }
+.insights-list,
+.action-queue-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+/* --- Insight / action cards (severity-accented, start-side rail) ---------- */
+.insight-card,
+.action-item {
+  background: #fff;
+  border: 1px solid var(--slate-200);
+  border-inline-start-width: 4px;
+  border-inline-start-color: var(--slate-300);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow .18s ease;
+}
+.insight-card:hover,
+.action-item:hover { box-shadow: var(--shadow-sm); }
+.insight-card--danger,    .action-item--danger    { border-inline-start-color: var(--az-danger);  background: var(--az-danger-light); }
+.insight-card--warning,   .action-item--warning   { border-inline-start-color: var(--az-warning); background: var(--az-warning-light); }
+.insight-card--info,      .action-item--info      { border-inline-start-color: var(--az-cyan);    background: var(--az-cyan-light); }
+.insight-card--secondary, .action-item--secondary { border-inline-start-color: var(--slate-400); }
+
+.insight-icon,
+.action-icon {
+  flex: 0 0 auto;
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r-md);
+  background: var(--slate-100);
+}
+
+/* --- Progress-style bars (root cause, target progress) -------------------- */
+.root-cause-bar,
+.target-progress-bar {
+  width: 100%; height: 8px;
+  background: var(--slate-200);
+  border-radius: var(--r-full);
+  overflow: hidden;
+}
+.root-cause-bar-fill,
+.target-progress-fill {
+  height: 100%;
+  border-radius: var(--r-full);
+  transition: width .5s ease;
+}
+.root-cause-factors { display: flex; flex-direction: column; gap: var(--sp-2); }
+.root-cause-factor,
+.target-progress-item,
+.model-perf-metric {
+  background: #fff;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow-xs);
+  height: 100%;
+}
+
+/* --- What-if panel -------------------------------------------------------- */
+.what-if-card {
+  background: linear-gradient(135deg, var(--az-purple-light) 0%, #fff 100%);
+  border: 1px solid var(--az-primary-mid);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+}
+.what-if-controls {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-3);
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4);
+}
+.what-if-result { min-height: 24px; }
+
+/* --- Forecast / scenario control rows ------------------------------------- */
+.forecast-controls,
+.scenario-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.forecast-period-suffix { color: var(--slate-500); font-weight: 400; font-size: .85em; }
+
+/* --- Hero / exec insight strip ------------------------------------------- */
+.hero-insights { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+/* --- Empty state ---------------------------------------------------------- */
+.analytics-empty-state {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 160px; padding: var(--sp-6);
+  color: var(--slate-500); text-align: center;
+  border: 1px dashed var(--slate-300);
+  border-radius: var(--r-md);
+  background: var(--slate-50);
+}
+
+/* --- Skeleton loaders ----------------------------------------------------- */
+.skeleton-loading,
+.skeleton-row,
+.skeleton-text {
+  position: relative; overflow: hidden;
+  background: var(--slate-200);
+  border-radius: var(--r-sm);
+}
+.skeleton-text { height: 1em; margin: .25em 0; }
+.skeleton-row  { height: 44px; margin-bottom: var(--sp-2); }
+.skeleton-loading::after,
+.skeleton-row::after,
+.skeleton-text::after {
+  content: ""; position: absolute; inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent);
+  animation: azSkeletonShimmer 1.4s ease-in-out infinite;
+}
+@keyframes azSkeletonShimmer { 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-loading::after, .skeleton-row::after, .skeleton-text::after { animation: none; }
+  .root-cause-bar-fill, .target-progress-fill, .insight-card, .action-item { transition: none; }
+}
+
+/* --- Small utilities ------------------------------------------------------ */
+.min-w-0 { min-width: 0; }
+.rank-circle { flex: 0 0 auto; }
+.dq-info > summary { cursor: pointer; color: var(--slate-500); }
