@@ -85,5 +85,10 @@ jobs:
       - name: Verify Alembic migrations (upgrade → downgrade → upgrade)
         run: |
           alembic upgrade head
+          python scripts/manual-diagnostics/verify_postgres_migration_state.py
           alembic downgrade -1
           alembic upgrade head
+          python scripts/manual-diagnostics/verify_postgres_migration_state.py
+          alembic downgrade base
+          alembic upgrade head
+          python scripts/manual-diagnostics/verify_postgres_migration_state.py

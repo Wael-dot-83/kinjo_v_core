@@ -203,7 +203,25 @@ def _drop_foreign_key_sqlite_safe(
     constraint_name: str | None = None,
 ) -> None:
     constraint_name = constraint_name or _fk_name(table_name, column_name, ref_table)
-    if not _foreign_key_exists(table_name, column_name, ref_table, ref_column, constraint_name):
+    if not _table_exists(table_name):
+        return
+
+    matching_names = [
+        fk.get("name")
+        for fk in sa.inspect(op.get_bind()).get_foreign_keys(table_name)
+        if (
+            fk.get("name")
+            and (
+                fk.get("name") == constraint_name
+                or (
+                    fk.get("constrained_columns") == [column_name]
+                    and fk.get("referred_table") == ref_table
+                    and fk.get("referred_columns") == [ref_column]
+                )
+            )
+        )
+    ]
+    if not matching_names:
         return
 
     if _dialect_name() == "sqlite":
@@ -212,7 +230,11 @@ def _drop_foreign_key_sqlite_safe(
         # rebuild and avoids name-reflection differences across SQLite builds.
         return
     else:
-        op.drop_constraint(constraint_name, table_name, type_="foreignkey")
+        # A later migration may have recreated this semantic FK under
+        # PostgreSQL's conventional <table>_<column>_fkey name. Drop the
+        # reflected name(s), not the historical name we originally requested.
+        for existing_name in matching_names:
+            op.drop_constraint(existing_name, table_name, type_="foreignkey")
 
 
 def add_fk_column_sqlite_safe(
@@ -324,7 +346,11 @@ def _backfill_attendance_class_id() -> None:
         sa.select(enrollments.c.class_id)
         .where(
             enrollments.c.child_id == attendance_logs.c.child_id,
-            enrollments.c.status == "ACTIVE",
+            # PostgreSQL stores this column as the enrollmentstatus enum.  The
+            # lightweight migration table declares String for cross-dialect
+            # compatibility, so compare through TEXT instead of binding a
+            # VARCHAR directly against the enum.
+            sa.cast(enrollments.c.status, sa.String()) == "ACTIVE",
             enrollments.c.class_id.is_not(None),
         )
         .limit(1)

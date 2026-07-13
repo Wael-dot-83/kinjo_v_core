@@ -22,7 +22,6 @@ dropped and recreated with the correct ON DELETE rule.
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.engine import reflection
 
 
 revision = "p2_fk_cascade_001"
@@ -44,13 +43,25 @@ def _recreate_fk(
     ref_col: str,
     on_delete: str,
 ) -> None:
-    """Drop (if it exists) and recreate a FK with the desired ON DELETE rule."""
-    # Drop existing constraint if present. A bare try/except around
-    # op.drop_constraint does NOT work on PostgreSQL: a failed DROP aborts the
-    # whole transaction, so the create_foreign_key below then fails with
-    # "current transaction is aborted". DROP CONSTRAINT IF EXISTS is the
-    # idempotent, transaction-safe form (this migration is PostgreSQL-only).
-    op.execute(f'ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {constraint_name}')
+    """Replace every equivalent FK, regardless of its historical name."""
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    matching_names = []
+    for fk in inspector.get_foreign_keys(table):
+        if (
+            fk.get("constrained_columns") == [local_col]
+            and fk.get("referred_table") == ref_table
+            and fk.get("referred_columns") == [ref_col]
+            and fk.get("name")
+        ):
+            matching_names.append(fk["name"])
+
+    # c1a2b3d4e5f6 used explicit fk_<table>_<column>_<target> names while
+    # earlier schemas and PostgreSQL defaults used <table>_<column>_fkey.
+    # Drop every semantic match so the migration cannot leave a NO ACTION FK
+    # beside the desired CASCADE/SET NULL FK.
+    for existing_name in matching_names:
+        op.drop_constraint(existing_name, table, type_="foreignkey")
 
     op.create_foreign_key(
         constraint_name,
