@@ -441,35 +441,95 @@
     resultTitle.focus();
   }
 
+  // Validated accessible categorical palette (CVD-safe), status ramp for
+  // severity, and a single brand hue for ordinal (age-band) distributions.
+  const VIZ_CATEGORICAL = ["#2a78d6", "#1baf7a", "#eda100", "#008300", "#4a3aa7", "#e34948", "#e87ba4", "#eb6834"];
+  const VIZ_STATUS = { LOW: "#0ca30c", MEDIUM: "#fab219", HIGH: "#ec835a", CRITICAL: "#d03b3b" };
+  const VIZ_BRAND = "#176b4d";
+  const VIZ_GRID = "#e2e8f0";
+  const VIZ_TICK = "#64748b";
+  const VIZ_INK = "#0f172a";
+
+  function chartColorsFor(chart) {
+    const labels = (chart.series || []).map((s) => String(s.label));
+    const severity = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+    if (labels.length && labels.every((l) => severity.includes(l))) {
+      return labels.map((l) => VIZ_STATUS[l] || VIZ_CATEGORICAL[0]); // severity -> status ramp
+    }
+    if ((chart.title_ar || "").indexOf("العمري") !== -1) {
+      return VIZ_BRAND; // ordinal age bands -> one hue
+    }
+    return labels.map((_, i) => VIZ_CATEGORICAL[i % VIZ_CATEGORICAL.length]);
+  }
+
   function renderCharts(charts) {
     if (!Array.isArray(charts) || !charts.length || !window.Chart) return;
     const grid = createElement("div", { className: "ncfa-chart-grid" });
+    const rtl = lang !== "en";
     charts.forEach((chart, index) => {
       const series = Array.isArray(chart.series) ? chart.series : [];
       if (!series.length) return;
       const card = createElement("div", { className: "ncfa-chart-card" });
       const title = pickLocale(CHART_TITLES, chart.title_ar) || chart.title_ar || t("الرسم البياني", "Chart");
       card.appendChild(createElement("h4", { text: title }));
-      const canvas = createElement("canvas", {
-        attrs: {
-          id: "ncfa-chart-" + index,
-          role: "img",
-          "aria-label": title
-        }
-      });
-      card.appendChild(canvas);
+
+      // A breakdown whose values are all suppressed (null) or zero must show an
+      // honest empty state, never a blank axis frame that looks broken.
+      const displayable = series.filter((s) => typeof s.value === "number" && s.value > 0);
+      if (!displayable.length) {
+        card.appendChild(createElement("p", {
+          className: "ncfa-chart-empty",
+          text: series.some((s) => s.suppressed)
+            ? t("القيم ضمن هذه الفئة محجوبة لحماية الخصوصية.", "Values in this breakdown are suppressed to protect privacy.")
+            : t("لا توجد بيانات كافية للعرض ضمن النطاق المحدد.", "Not enough data to display for the selected scope.")
+        }));
+        grid.appendChild(card);
+        return;
+      }
+
+      const isPie = chart.type === "pie";
+      const colors = chartColorsFor(chart);
+      const wrap = createElement("div", { className: "ncfa-chart-canvas" });
+      const canvas = createElement("canvas", { attrs: { id: "ncfa-chart-" + index, role: "img", "aria-label": title } });
+      wrap.appendChild(canvas);
+      card.appendChild(wrap);
       grid.appendChild(card);
+
       const instance = new window.Chart(canvas.getContext("2d"), {
-        type: chart.type === "pie" ? "pie" : "bar",
+        type: isPie ? "doughnut" : "bar",
         data: {
           labels: series.map((item) => localizeCategory(item.label)),
-          datasets: [{ label: title, data: series.map((item) => item.value) }]
+          datasets: [{
+            label: title,
+            data: series.map((item) => item.value),
+            backgroundColor: colors,
+            borderColor: isPie ? "#ffffff" : colors,
+            borderWidth: isPie ? 2 : 0,
+            borderRadius: isPie ? 0 : 5,
+            borderSkipped: false,
+            maxBarThickness: 34,
+            hoverOffset: isPie ? 6 : 0
+          }]
         },
         options: {
+          indexAxis: isPie ? "x" : "y", // horizontal bars read long Arabic labels cleanly
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: chart.type === "pie" ? "bottom" : "top" } },
-          scales: chart.type === "pie" ? {} : { y: { beginAtZero: true } }
+          layout: { padding: 4 },
+          cutout: isPie ? "58%" : undefined,
+          plugins: {
+            legend: {
+              display: isPie,
+              position: "bottom",
+              rtl: rtl,
+              labels: { color: VIZ_INK, usePointStyle: true, pointStyle: "circle", boxWidth: 8, padding: 14, font: { size: 12 } }
+            },
+            tooltip: { rtl: rtl, backgroundColor: "#0f172a", padding: 10, cornerRadius: 8, titleFont: { size: 12 }, bodyFont: { size: 13 } }
+          },
+          scales: isPie ? {} : {
+            x: { beginAtZero: true, ticks: { precision: 0, color: VIZ_TICK, font: { size: 11 } }, grid: { color: VIZ_GRID, drawBorder: false } },
+            y: { ticks: { color: VIZ_INK, font: { size: 12 } }, grid: { display: false, drawBorder: false } }
+          }
         }
       });
       chartInstances.push(instance);
