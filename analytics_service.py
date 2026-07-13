@@ -604,6 +604,118 @@ def _actual_values_for_window(db: Session, metric: str, start: date, end: date) 
         return result
 
 
+def _metric_target(db: Session, metric_type: str, default: float) -> float:
+    """Latest network PerformanceTarget for a metric, else the supplied default."""
+    t = (
+        db.query(models.PerformanceTarget)
+        .filter(
+            models.PerformanceTarget.metric_type == metric_type,
+            models.PerformanceTarget.scope_type == "NETWORK",
+        )
+        .order_by(models.PerformanceTarget.effective_date.desc())
+        .first()
+    )
+    return t.target_value if t else default
+
+
+def _forecast_breach_alert(series, horizon_days, today, threshold, higher_is_better,
+                           metric, unit, name_ar, name_en):
+    """Forecast a series and, if it is projected to cross `threshold` adversely
+    within the horizon, return a bilingual predictive alert (else None)."""
+    if not series or len(series) < 5:
+        return None
+    forecast_points, _bands, meta = build_forecast(series, horizon_days)
+    if not forecast_points:
+        return None
+
+    def _is_adverse(v):
+        return v < threshold if higher_is_better else v > threshold
+
+    breach = next((p for p in forecast_points if _is_adverse(p.value)), None)
+    if breach is None:
+        return None
+
+    days_out = (breach.date - today).days
+    severity = "HIGH" if days_out <= 3 else "MEDIUM" if days_out <= 7 else "LOW"
+    dir_ar = "الانخفاض دون" if higher_is_better else "تجاوز"
+    dir_en = "fall below" if higher_is_better else "exceed"
+    return {
+        "metric": metric,
+        "severity": severity,
+        "breach_date": breach.date.isoformat(),
+        "days_until_breach": days_out,
+        "predicted_value": round(breach.value, 2),
+        "threshold": round(threshold, 2),
+        "unit": unit,
+        "higher_is_better": higher_is_better,
+        "confidence": meta.get("confidence"),
+        "icon": "bi-graph-down-arrow" if higher_is_better else "bi-graph-up-arrow",
+        "message_ar": (
+            f"يُتوقع {dir_ar} {threshold:.1f}{unit} لمؤشر {name_ar} بحلول "
+            f"{breach.date.isoformat()} (القيمة المتوقعة {breach.value:.1f}{unit})"
+        ),
+        "message_en": (
+            f"{name_en} is projected to {dir_en} {threshold:.1f}{unit} by "
+            f"{breach.date.isoformat()} (predicted {breach.value:.1f}{unit})"
+        ),
+    }
+
+
+@router.get("/predictive-alerts")
+def get_predictive_alerts(
+    horizon_days: int = Query(14, ge=1, le=90),
+    lookback_days: int = Query(60, ge=14, le=365),
+    governorate: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Forecast key metrics and raise alerts for any projected to breach their
+    target/threshold within the horizon. Composes attendance/incident series +
+    the ensemble build_forecast + configured PerformanceTargets. Admin-only."""
+    _ensure_admin_only(current_user)
+
+    today = _jordan_today()
+    start = today - timedelta(days=lookback_days)
+    scope_type = "GOVERNORATE" if governorate else "NETWORK"
+    scope_id = governorate
+
+    alerts = []
+
+    # Attendance rate (%, higher is better): alert if projected below target.
+    att_target = _metric_target(db, "attendance_rate", 85.0)
+    att = _forecast_breach_alert(
+        attendance_series(db, scope_type, scope_id, start, today),
+        horizon_days, today, threshold=att_target, higher_is_better=True,
+        metric="attendance", unit="%", name_ar="الحضور", name_en="Attendance",
+    )
+    if att:
+        alerts.append(att)
+
+    # Incidents (daily count, lower is better): alert if projected to spike above
+    # 1.5x the recent baseline (floored at 1) — a data-driven, self-scaling threshold.
+    inc_series = incident_series(db, scope_type, scope_id, start, today)
+    recent = inc_series[-14:]
+    inc_baseline = (sum(p.value for p in recent) / len(recent)) if recent else 0.0
+    inc = _forecast_breach_alert(
+        inc_series, horizon_days, today,
+        threshold=max(inc_baseline * 1.5, 1.0), higher_is_better=False,
+        metric="incidents", unit="", name_ar="الحوادث", name_en="Incidents",
+    )
+    if inc:
+        alerts.append(inc)
+
+    sev_order = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+    alerts.sort(key=lambda a: (sev_order.get(a["severity"], 3), a["breach_date"]))
+
+    return {
+        "generated_at": today.isoformat(),
+        "horizon_days": horizon_days,
+        "governorate": governorate,
+        "alerts": alerts,
+        "count": len(alerts),
+    }
+
+
 @router.get("/scenarios")
 def get_scenarios(
     metric: str = Query(..., pattern="^(attendance|incidents|enrollment)$"),
@@ -2219,8 +2331,41 @@ def get_annotations(
     return {"annotations": annotations}
 
 
+# Jordan Islamic public holidays — Gregorian dates for the first day of each
+# observance. Hijri-based, so these are the officially published/announced dates
+# and are APPROXIMATE: actual observance can shift by ±1 day on moon-sighting.
+# VERIFY AND EXTEND ANNUALLY against the official Jordan government calendar.
+# (month, day, name_ar, name_en) keyed by Gregorian year.
+_JORDAN_ISLAMIC_HOLIDAYS: Dict[int, list] = {
+    2025: [
+        (1, 27, 'الإسراء والمعراج', "Isra and Mi'raj"),
+        (3, 30, 'عيد الفطر', 'Eid al-Fitr'),
+        (6, 5, 'وقفة عرفة', 'Arafat Day'),
+        (6, 6, 'عيد الأضحى', 'Eid al-Adha'),
+        (6, 26, 'رأس السنة الهجرية', 'Islamic New Year'),
+        (9, 4, 'المولد النبوي الشريف', "Prophet's Birthday"),
+    ],
+    2026: [
+        (1, 16, 'الإسراء والمعراج', "Isra and Mi'raj"),
+        (3, 20, 'عيد الفطر', 'Eid al-Fitr'),
+        (5, 26, 'وقفة عرفة', 'Arafat Day'),
+        (5, 27, 'عيد الأضحى', 'Eid al-Adha'),
+        (6, 16, 'رأس السنة الهجرية', 'Islamic New Year'),
+        (8, 25, 'المولد النبوي الشريف', "Prophet's Birthday"),
+    ],
+    2027: [
+        (1, 5, 'الإسراء والمعراج', "Isra and Mi'raj"),
+        (3, 10, 'عيد الفطر', 'Eid al-Fitr'),
+        (5, 16, 'وقفة عرفة', 'Arafat Day'),
+        (5, 17, 'عيد الأضحى', 'Eid al-Adha'),
+        (6, 6, 'رأس السنة الهجرية', 'Islamic New Year'),
+        (8, 14, 'المولد النبوي الشريف', "Prophet's Birthday"),
+    ],
+}
+
+
 def _get_jordan_holidays(start: date, end: date) -> list:
-    """Return Jordan public holidays (fixed Gregorian dates) within [start, end]."""
+    """Return Jordan public holidays (fixed Gregorian + Islamic) within [start, end]."""
     fixed_holidays = [
         (1, 1, 'رأس السنة الميلادية', "New Year's Day"),
         (5, 1, 'عيد العمال', 'Labour Day'),
@@ -2230,6 +2375,17 @@ def _get_jordan_holidays(start: date, end: date) -> list:
     holidays = []
     for year in range(start.year, end.year + 1):
         for month, day, name_ar, name_en in fixed_holidays:
+            try:
+                holiday_date = date(year, month, day)
+            except ValueError:
+                continue
+            if start <= holiday_date <= end:
+                holidays.append({
+                    'date': holiday_date,
+                    'name_ar': name_ar,
+                    'name_en': name_en,
+                })
+        for month, day, name_ar, name_en in _JORDAN_ISLAMIC_HOLIDAYS.get(year, []):
             try:
                 holiday_date = date(year, month, day)
             except ValueError:
