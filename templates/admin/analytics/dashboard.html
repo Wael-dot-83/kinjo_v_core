@@ -305,6 +305,25 @@
         </div>
       </section>
 
+      {# ══ Predictive Alerts Widget ═════════════════════════════════════════ #}
+      <section class="insights-widget mb-section" id="predictiveAlertsWidget" aria-label="{% if ui_lang == 'en' %}Predictive Alerts{% else %}التنبيهات التنبؤية{% endif %}">
+        <div class="az-card">
+          <div class="az-card__header">
+            <h3 class="az-card__title">
+              <i class="bi bi-graph-up-arrow me-2 text-danger"></i>
+              {% if ui_lang == 'en' %}Predictive Alerts{% else %}التنبيهات التنبؤية{% endif %}
+              <span class="badge bg-danger ms-2 d-none" id="predictiveAlertsCount">0</span>
+            </h3>
+            <small class="text-muted">{% if ui_lang == 'en' %}Metrics forecast to breach their target within the next 2 weeks{% else %}مؤشرات يُتوقع أن تتجاوز أهدافها خلال الأسبوعين القادمين{% endif %}</small>
+          </div>
+          <div class="az-card__body">
+            <div id="predictiveAlertsList" class="insights-list">
+              <div class="skeleton-loading" style="height: 80px;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {# ══ Action Queue Widget ══════════════════════════════════════════════ #}
       <section class="action-queue-widget mb-section" id="actionQueueWidget" aria-label="{% if ui_lang == 'en' %}Action Queue{% else %}قائمة الإجراءات{% endif %}">
         <div class="az-card">

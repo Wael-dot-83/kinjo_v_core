@@ -528,6 +528,7 @@ async function loadSecondaryWidgets(start, end, scopeType, scopeId) {
     loadRegistrationAnalytics(),
     loadChartAnnotations(),
     loadTargetProgress(),
+    loadPredictiveAlerts(),
   ]);
   await loadScenarios();
 }
@@ -3861,6 +3862,61 @@ function renderInsights(insights) {
                 </div>
             </div>
         `;
+    }).join('');
+}
+
+async function loadPredictiveAlerts() {
+    const container = document.getElementById('predictiveAlertsList');
+    if (!container) return;
+    const governorate = document.getElementById('governorateFilter')?.value;
+    try {
+        const params = new URLSearchParams({ horizon_days: '14', lookback_days: '60' });
+        if (governorate) params.set('governorate', governorate);
+        const response = await fetchWithAuth(`/api/analytics/predictive-alerts?${params}`);
+        if (!response.ok) throw new Error('Failed to load predictive alerts');
+        const data = await response.json();
+        renderPredictiveAlerts(data.alerts || []);
+    } catch (error) {
+        console.error('Error loading predictive alerts:', error);
+        container.innerHTML = `<div class="analytics-empty-state">${adminAnalyticsText('تعذر تحميل التنبيهات التنبؤية', 'Unable to load predictive alerts')}</div>`;
+    }
+}
+
+function renderPredictiveAlerts(alerts) {
+    const container = document.getElementById('predictiveAlertsList');
+    const countBadge = document.getElementById('predictiveAlertsCount');
+    if (!container) return;
+    const lang = adminAnalyticsText('ar', 'en');
+
+    if (!alerts || alerts.length === 0) {
+        if (countBadge) countBadge.classList.add('d-none');
+        container.innerHTML = `<div class="analytics-empty-state">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            ${adminAnalyticsText('لا توجد مؤشرات مهددة بتجاوز أهدافها', 'No metrics are projected to breach their targets')}
+        </div>`;
+        return;
+    }
+
+    if (countBadge) { countBadge.textContent = alerts.length; countBadge.classList.remove('d-none'); }
+    container.innerHTML = alerts.map(a => {
+        const sev = { HIGH: 'danger', MEDIUM: 'warning', LOW: 'info' }[a.severity] || 'secondary';
+        const message = lang === 'en' ? a.message_en : a.message_ar;
+        const conf = (a.confidence !== null && a.confidence !== undefined)
+            ? `${Math.round(a.confidence * 100)}%` : '—';
+        return `
+            <div class="insight-card insight-card--${sev} mb-3">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="insight-icon"><i class="bi ${a.icon} text-${sev} fs-4"></i></div>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                            <span class="badge bg-${sev}">${a.severity}</span>
+                            <small class="text-muted"><i class="bi bi-calendar-event me-1"></i>${adminAnalyticsText('خلال', 'in')} ${a.days_until_breach} ${adminAnalyticsText('يوم', 'days')}</small>
+                            <small class="text-muted ms-2"><i class="bi bi-bullseye me-1"></i>${adminAnalyticsText('الثقة', 'confidence')}: ${conf}</small>
+                        </div>
+                        <p class="mb-0 fw-bold">${escapeHtml(message)}</p>
+                    </div>
+                </div>
+            </div>`;
     }).join('');
 }
 
