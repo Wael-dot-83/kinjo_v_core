@@ -207,7 +207,7 @@ Keep third-party assets self-hosted or covered by the production Content Securit
 4. Build an immutable artifact and serve the checked-in static assets. Verify `/static/**` references before release.
 5. Run compile, bug-class lint, Admin tests, route-duplicate, link/API/global/CSRF, and asset checks.
 6. Smoke test login, dashboard, a read-only list, one approved write, audit appearance, and logout in the deployment environment.
-7. Validate `/api/health` for the platform and authenticated `/api/admin/health` for the detailed Admin view.
+7. Validate public `/health`, authenticated `/api/health`, and `/api/admin/health` for the detailed Admin view.
 8. Confirm log ingestion, metrics, alert routing, backup retention, restore procedure, and rollback owner.
 
 ### Required verification commands
@@ -223,6 +223,21 @@ python scripts/manual-diagnostics/generate_admin_api_reference.py
 ```
 
 Run the complete Admin-relevant suite before release, not only the three fast contract/security files.
+
+### Staging smoke gate
+
+The smoke harness performs controlled writes and soft-deletes its uniquely named test user. Run it only against an approved staging environment. The rate-limit probe is disabled by default because it intentionally exhausts the login limit for the source address.
+
+```powershell
+$env:SMOKE_BASE_URL = "https://staging.example"
+$env:SMOKE_ADMIN_USERNAME = "admin"
+$env:SMOKE_ADMIN_PASSWORD = "<from-secret-store>"
+$env:SMOKE_ALLOW_MUTATIONS = "true"
+$env:SMOKE_EXPECTED_HOST = "staging.example"
+python scripts/manual-diagnostics/staging_smoke_test.py --output smoke-report.json
+```
+
+Enable `SMOKE_RATELIMIT_PROBE=true` only during an isolated validation window. Impersonation is mandatory: supply `SMOKE_IMPERSONATE_USER_ID` when staging does not contain a discoverable active Manager.
 
 ## Troubleshooting
 

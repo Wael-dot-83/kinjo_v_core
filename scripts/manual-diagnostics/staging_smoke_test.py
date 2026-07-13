@@ -2,9 +2,9 @@
 """
 KinJo Admin — staging smoke-test harness.
 
-Environment-driven, secret-free, self-cleaning end-to-end gate that ops can point
-at a freshly-deployed staging URL. Emits a machine-readable JSON report and exits
-non-zero on any failure, so it can gate a pipeline.
+Environment-driven, secret-free end-to-end gate that ops can point at a
+freshly-deployed staging URL. It soft-deletes its uniquely named test user,
+emits a machine-readable JSON report, and exits non-zero on any failure.
 
 Covers:
   - Health / readiness endpoints
@@ -24,11 +24,15 @@ Configuration (all via environment; nothing secret is embedded):
   SMOKE_IMPERSONATE_USER_ID optional manager user id; else a manager is discovered
   SMOKE_OUTPUT              optional path for the JSON report (default: stdout only)
   SMOKE_VERIFY_TLS          default "true" ("false" to allow self-signed staging certs)
-  SMOKE_RATELIMIT_PROBE     default "true" ("false" to skip the 429 probe)
+  SMOKE_ALLOW_MUTATIONS     REQUIRED "true" acknowledgement for staging writes
+  SMOKE_EXPECTED_HOST       REQUIRED exact hostname for non-local targets
+  SMOKE_RATELIMIT_PROBE     default "false" (enable only in an isolated window)
   SMOKE_TIMEOUT             per-request timeout seconds, default 30
 
 Usage:
   SMOKE_BASE_URL=https://staging.example SMOKE_ADMIN_PASSWORD=*** \
+      SMOKE_ALLOW_MUTATIONS=true \
+      SMOKE_EXPECTED_HOST=staging.example \
       python scripts/manual-diagnostics/staging_smoke_test.py --output report.json
 
 Exit code: 0 = all executed checks passed; 1 = at least one failed; 2 = setup error.
@@ -42,6 +46,7 @@ import sys
 import time
 import uuid
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 try:
     import requests
@@ -68,7 +73,9 @@ ADMIN_USERNAME = env("SMOKE_ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = env("SMOKE_ADMIN_PASSWORD")
 IMPERSONATE_USER_ID = env("SMOKE_IMPERSONATE_USER_ID")
 VERIFY_TLS = env_bool("SMOKE_VERIFY_TLS", True)
-RATELIMIT_PROBE = env_bool("SMOKE_RATELIMIT_PROBE", True)
+ALLOW_MUTATIONS = env_bool("SMOKE_ALLOW_MUTATIONS", False)
+EXPECTED_HOST = env("SMOKE_EXPECTED_HOST")
+RATELIMIT_PROBE = env_bool("SMOKE_RATELIMIT_PROBE", False)
 TIMEOUT = float(env("SMOKE_TIMEOUT", "30"))
 
 CSRF_COOKIE = "kinjo_csrf_token"
@@ -120,8 +127,16 @@ def timed(fn):
 
 
 # --------------------------------------------------------------------------- http helpers
+class NoRedirectSession(requests.Session):
+    """Never follow redirects; every probe must stay on the acknowledged host."""
+
+    def request(self, method, url, **kwargs):
+        kwargs["allow_redirects"] = False
+        return super().request(method, url, **kwargs)
+
+
 def new_session() -> requests.Session:
-    s = requests.Session()
+    s = NoRedirectSession()
     s.verify = VERIFY_TLS
     s.headers["Origin"] = BASE_URL
     return s
@@ -142,6 +157,7 @@ def login(session: requests.Session, username: str, password: str) -> requests.R
         data={"username": username, "password": password},
         headers={"X-CSRF-Token": csrf_of(session)},
         timeout=TIMEOUT,
+        allow_redirects=False,
     )
 
 
@@ -169,14 +185,22 @@ def check_authz_boundary(report: Report) -> None:
 
 
 @timed
-def check_csrf_enforced(report: Report, session: requests.Session) -> None:
+def check_csrf_enforced(report: Report, session: requests.Session, created: list) -> None:
     # A state-changing admin write with NO CSRF header must be refused.
+    probe_username = f"csrf_probe_{uuid.uuid4().hex[:10]}"
+    artifact = {"username": probe_username, "id": None}
+    created.append(artifact)
     r = session.post(
         f"{BASE_URL}/api/admin/users",
-        json={"username": "csrf_probe", "password": "x" * 10, "role": "SUPERVISOR"},
+        json={"username": probe_username, "password": "Sm0ke!Probe123", "role": "PARENT"},
         headers={"Content-Type": "application/json"},  # deliberately no X-CSRF-Token
         timeout=TIMEOUT,
+        allow_redirects=False,
     )
+    if 200 <= r.status_code < 300:
+        uid = (r.json() or {}).get("id")
+        if uid:
+            artifact["id"] = uid
     assert r.status_code in (401, 403), f"CSRF-less admin write got {r.status_code}, expected 401/403"
     report.record("csrf_double_submit_enforced", "pass",
                   f"admin write without X-CSRF-Token -> {r.status_code}")
@@ -212,6 +236,8 @@ def check_admin_crud_soft_delete(report: Report, session: requests.Session, crea
     payload = {"username": uname, "password": pwd, "role": "SUPERVISOR", "full_name": "Smoke Test"}
     if kg_id:
         payload["kindergarten_id"] = kg_id
+    artifact = {"username": uname, "id": None}
+    created.append(artifact)
     # create
     r = session.post(f"{BASE_URL}/api/admin/users",
                      data=json.dumps(payload),
@@ -219,7 +245,7 @@ def check_admin_crud_soft_delete(report: Report, session: requests.Session, crea
     assert r.status_code == 201, f"create user got {r.status_code}: {r.text[:160]}"
     uid = (r.json() or {}).get("id")
     assert uid, f"create response missing id: {r.text[:120]}"
-    created.append(uid)
+    artifact["id"] = uid
     # read
     g = session.get(f"{BASE_URL}/api/admin/users/{uid}", timeout=TIMEOUT)
     assert g.status_code == 200, f"read created user got {g.status_code}"
@@ -244,13 +270,13 @@ def check_import_limits(report: Report, session: requests.Session) -> None:
     results = []
     # XLSX endpoint: a non-ZIP payload must be rejected (bounded, not 500).
     files = {"file": ("bad.xlsx", b"this is not a real xlsx zip", "application/vnd.ms-excel")}
-    r = session.post(f"{BASE_URL}/api/admin/kindergartens/import-excel",
+    r = session.post(f"{BASE_URL}/api/admin/kindergartens/import-excel?dry_run=true",
                      files=files, headers={"X-CSRF-Token": csrf_of(session)}, timeout=TIMEOUT)
     assert r.status_code in (400, 415, 422), f"malformed XLSX got {r.status_code}, expected 4xx"
     results.append(f"xlsx-nonzip={r.status_code}")
     # CSV endpoint: a malformed CSV must be rejected with a validation error, not a crash.
     files = {"file": ("bad.csv", b"\x00\x01 not,a,valid\ncsv payload", "text/csv")}
-    r2 = session.post(f"{BASE_URL}/api/admin/users/import-csv",
+    r2 = session.post(f"{BASE_URL}/api/admin/users/import-csv?dry_run=true",
                       files=files, headers={"X-CSRF-Token": csrf_of(session)}, timeout=TIMEOUT)
     assert r2.status_code in (400, 415, 422), f"malformed CSV got {r2.status_code}, expected 4xx"
     results.append(f"csv-malformed={r2.status_code}")
@@ -288,44 +314,114 @@ def _discover_manager(session: requests.Session) -> int | None:
 def check_impersonation_full(report: Report, session: requests.Session) -> None:
     target = _discover_manager(session)
     if not target:
-        report.record("impersonation_full", "skip",
-                      "no active MANAGER found; set SMOKE_IMPERSONATE_USER_ID to enable")
+        report.record("impersonation_full", "fail",
+                      "no active MANAGER found; set SMOKE_IMPERSONATE_USER_ID")
         return
 
     imp = new_session()
     assert login(imp, ADMIN_USERNAME, ADMIN_PASSWORD).status_code == 200, "impersonation admin login failed"
+    exited = False
+    logout_imp = None
+    try:
+        r = imp.post(
+            f"{BASE_URL}/api/admin/impersonate",
+            data=json.dumps({"target_user_id": int(target), "reason": "staging smoke test"}),
+            headers=admin_headers(imp), timeout=TIMEOUT,
+        )
+        assert r.status_code == 200, f"impersonate got {r.status_code}: {r.text[:160]}"
+        restore_cookie = imp.cookies.get("kinjo_impersonation")
+        target_session = imp.cookies.get(SESSION_COOKIE)
+        target_csrf = csrf_of(imp)
+        assert restore_cookie and target_session and target_csrf, "impersonation cookies were not issued"
 
-    r = imp.post(f"{BASE_URL}/api/admin/impersonate",
-                 data=json.dumps({"target_user_id": int(target), "reason": "staging smoke test"}),
-                 headers=admin_headers(imp), timeout=TIMEOUT)
-    assert r.status_code == 200, f"impersonate got {r.status_code}: {r.text[:160]}"
-    restore_cookie = imp.cookies.get("kinjo_impersonation")
+        ex = imp.post(
+            f"{BASE_URL}/api/admin/exit-impersonation",
+            headers={"X-CSRF-Token": target_csrf}, timeout=TIMEOUT,
+        )
+        assert ex.status_code == 200, f"exit-impersonation got {ex.status_code}"
+        exited = True
 
-    # exit restores the admin (session is the MANAGER until this point)
-    ex = imp.post(f"{BASE_URL}/api/admin/exit-impersonation",
-                  headers={"X-CSRF-Token": csrf_of(imp)}, timeout=TIMEOUT)
-    assert ex.status_code == 200, f"exit-impersonation got {ex.status_code}"
+        aud = imp.get(f"{BASE_URL}/api/admin/impersonate/audit", timeout=TIMEOUT)
+        assert aud.status_code == 200, f"impersonation audit query as admin got {aud.status_code}"
+        events = (aud.json() or {}).get("events", [])
+        starts = [event for event in events
+                  if event.get("action") == "IMPERSONATION_START"
+                  and event.get("target_user_id") == int(target)
+                  and event.get("reason") == "staging smoke test"
+                  and event.get("admin_id")]
+        ends = [event for event in events
+                if event.get("action") == "IMPERSONATION_END"
+                and event.get("target_user_id") == int(target)
+                and event.get("admin_id")]
+        assert starts and ends, "impersonation start/end audit attribution was not found"
 
-    # audit attribution: as the RESTORED admin, the start event must be queryable
-    aud = imp.get(f"{BASE_URL}/api/admin/impersonate/audit", timeout=TIMEOUT)
-    assert aud.status_code == 200, f"impersonation audit query as admin got {aud.status_code}"
-    audit_ok = aud.status_code == 200
-
-    # replay rejection: re-presenting the consumed restore token must fail closed
-    replay_status = "n/a"
-    if restore_cookie:
         replay = new_session()
-        login(replay, ADMIN_USERNAME, ADMIN_PASSWORD)
+        replay.cookies.set(SESSION_COOKIE, target_session)
         replay.cookies.set("kinjo_impersonation", restore_cookie)
-        rr = replay.post(f"{BASE_URL}/api/admin/exit-impersonation",
-                         headers={"X-CSRF-Token": csrf_of(replay)}, timeout=TIMEOUT)
-        replay_status = rr.status_code
-        assert rr.status_code in (400, 401, 403, 409), \
-            f"consumed restore token replay got {rr.status_code}, expected 4xx"
+        replay.cookies.set(CSRF_COOKIE, target_csrf)
+        rr = replay.post(
+            f"{BASE_URL}/api/admin/exit-impersonation",
+            headers={"X-CSRF-Token": target_csrf}, timeout=TIMEOUT,
+        )
+        assert rr.status_code == 401, \
+            f"consumed restore token replay got {rr.status_code}, expected 401"
 
-    report.record("impersonation_full", "pass",
-                  f"start 200 -> exit 200 -> audit {aud.status_code} -> replay {replay_status}",
-                  target_user_id=target, audit_ok=audit_ok)
+        logout_imp = new_session()
+        assert login(logout_imp, ADMIN_USERNAME, ADMIN_PASSWORD).status_code == 200
+        start2 = logout_imp.post(
+            f"{BASE_URL}/api/admin/impersonate",
+            data=json.dumps({"target_user_id": int(target), "reason": "staging logout smoke test"}),
+            headers=admin_headers(logout_imp), timeout=TIMEOUT,
+        )
+        assert start2.status_code == 200, f"second impersonation got {start2.status_code}"
+        restore2 = logout_imp.cookies.get("kinjo_impersonation")
+        target_session2 = logout_imp.cookies.get(SESSION_COOKIE)
+        target_csrf2 = csrf_of(logout_imp)
+        assert restore2 and target_session2 and target_csrf2
+        logged_out = logout_imp.post(
+            f"{BASE_URL}/api/auth/logout",
+            headers={"X-CSRF-Token": target_csrf2}, timeout=TIMEOUT,
+        )
+        assert logged_out.status_code == 200, f"impersonated logout got {logged_out.status_code}"
+        logout_replay = new_session()
+        logout_replay.cookies.set(SESSION_COOKIE, target_session2)
+        logout_replay.cookies.set("kinjo_impersonation", restore2)
+        logout_replay.cookies.set(CSRF_COOKIE, target_csrf2)
+        logout_rr = logout_replay.post(
+            f"{BASE_URL}/api/admin/exit-impersonation",
+            headers={"X-CSRF-Token": target_csrf2}, timeout=TIMEOUT,
+        )
+        assert logout_rr.status_code == 401, \
+            f"logout-revoked restore replay got {logout_rr.status_code}, expected 401"
+
+        report.record(
+            "impersonation_full", "pass",
+            f"exit/audit/replay {rr.status_code}; logout replay {logout_rr.status_code}",
+            target_user_id=target, audit_ok=True,
+        )
+    finally:
+        if logout_imp and logout_imp.cookies.get(SESSION_COOKIE):
+            cleanup_logout = logout_imp.post(
+                f"{BASE_URL}/api/auth/logout",
+                headers={"X-CSRF-Token": csrf_of(logout_imp)}, timeout=TIMEOUT,
+            )
+            assert cleanup_logout.status_code in (200, 204), \
+                f"secondary impersonation cleanup failed ({cleanup_logout.status_code})"
+        if not exited and imp.cookies.get(SESSION_COOKIE):
+            if imp.cookies.get("kinjo_impersonation"):
+                cleanup_exit = imp.post(
+                    f"{BASE_URL}/api/admin/exit-impersonation",
+                    headers={"X-CSRF-Token": csrf_of(imp)}, timeout=TIMEOUT,
+                )
+                assert cleanup_exit.status_code == 200, \
+                    f"impersonation cleanup exit failed ({cleanup_exit.status_code})"
+            else:
+                cleanup_logout = imp.post(
+                    f"{BASE_URL}/api/auth/logout",
+                    headers={"X-CSRF-Token": csrf_of(imp)}, timeout=TIMEOUT,
+                )
+                assert cleanup_logout.status_code in (200, 204), \
+                    f"impersonation cleanup logout failed ({cleanup_logout.status_code})"
 
 
 @timed
@@ -335,8 +431,8 @@ def check_logout(report: Report, session: requests.Session) -> None:
     assert r.status_code in (200, 204), f"logout got {r.status_code}"
     after = session.get(f"{BASE_URL}/api/admin/users", timeout=TIMEOUT)
     assert after.status_code in (401, 403), f"session still valid after logout ({after.status_code})"
-    report.record("logout_revokes_session", "pass",
-                  f"logout {r.status_code}, post-logout admin access {after.status_code}")
+    report.record("logout_clears_browser_session", "pass",
+                  f"logout {r.status_code}, cleared-cookie access {after.status_code}")
 
 
 @timed
@@ -362,15 +458,35 @@ def check_rate_limit(report: Report) -> None:
 
 
 # --------------------------------------------------------------------------- cleanup
+@timed
 def cleanup(report: Report, admin_session: requests.Session, created: list) -> None:
     # Runs while the admin session is still valid (before logout / the rate-limit
     # probe), so no re-authentication is needed. 404 counts as removed (the CRUD
     # check already soft-deletes its own user; this is the safety net).
     if not created:
-        report.record("cleanup", "pass", "no test artifacts to remove")
+        report.record("cleanup", "pass", "no active test artifacts remain")
         return
     remaining = []
-    for uid in created:
+    for artifact in created:
+        uid = artifact.get("id") if isinstance(artifact, dict) else artifact
+        username = artifact.get("username") if isinstance(artifact, dict) else None
+        if not uid and username:
+            lookup = admin_session.get(
+                f"{BASE_URL}/api/admin/users",
+                params={"search": username, "page": 1, "page_size": 10},
+                timeout=TIMEOUT,
+            )
+            if lookup.status_code != 200:
+                remaining.append(f"{username}:lookup-{lookup.status_code}")
+                continue
+            body = lookup.json()
+            items = body.get("items") or body.get("users") or body.get("data") or []
+            match = next((item for item in items if item.get("username") == username), None)
+            uid = match.get("id") if match else None
+        if not uid:
+            # A successful exact-name lookup with no match confirms the pre-tracked
+            # request did not leave an active account.
+            continue
         d = admin_session.delete(f"{BASE_URL}/api/admin/users/{uid}",
                                  headers={"X-CSRF-Token": csrf_of(admin_session)}, timeout=TIMEOUT)
         if d.status_code not in (200, 204, 404):
@@ -378,7 +494,11 @@ def cleanup(report: Report, admin_session: requests.Session, created: list) -> N
     if remaining:
         report.record("cleanup", "fail", f"test users not removed: {', '.join(remaining)}")
     else:
-        report.record("cleanup", "pass", f"removed/confirmed-gone {len(created)} test artifact(s)")
+        report.record(
+            "cleanup",
+            "pass",
+            f"soft-deleted/confirmed-unreachable {len(created)} test artifact(s)",
+        )
 
 
 # --------------------------------------------------------------------------- main
@@ -390,6 +510,25 @@ def main() -> int:
     if not ADMIN_PASSWORD:
         print("ERROR: SMOKE_ADMIN_PASSWORD is required (supply via the deploy secret store).", file=sys.stderr)
         return 2
+    if not ALLOW_MUTATIONS:
+        print(
+            "ERROR: SMOKE_ALLOW_MUTATIONS=true is required because this harness "
+            "creates and soft-deletes staging data.",
+            file=sys.stderr,
+        )
+        return 2
+    parsed = urlparse(BASE_URL)
+    host = (parsed.hostname or "").lower()
+    is_local = host in {"127.0.0.1", "localhost", "::1"}
+    if not is_local and parsed.scheme != "https":
+        print("ERROR: non-local smoke targets must use HTTPS.", file=sys.stderr)
+        return 2
+    if not is_local and (not EXPECTED_HOST or EXPECTED_HOST.lower() != host):
+        print(
+            "ERROR: SMOKE_EXPECTED_HOST must exactly match the non-local target hostname.",
+            file=sys.stderr,
+        )
+        return 2
 
     print(f"KinJo Admin smoke test -> {BASE_URL} (verify_tls={VERIFY_TLS})", file=sys.stderr)
     report = Report()
@@ -400,12 +539,16 @@ def main() -> int:
     check_health(report, admin)
     check_authz_boundary(report)
     check_login_session(report, admin)          # establishes the admin session
-    check_csrf_enforced(report, admin)
-    check_admin_crud_soft_delete(report, admin, created)
-    check_import_limits(report, admin)
-    check_exports(report, admin)
-    check_impersonation_full(report, admin)
-    cleanup(report, admin, created)              # delete test data while admin session is valid
+    try:
+        check_csrf_enforced(report, admin, created)
+        check_admin_crud_soft_delete(report, admin, created)
+        check_import_limits(report, admin)
+        check_exports(report, admin)
+        check_impersonation_full(report, admin)
+    except KeyboardInterrupt:
+        report.record("run_interrupted", "fail", "operator interrupted the smoke run")
+    finally:
+        cleanup(report, admin, created)          # best-effort cleanup on interruption/failure
     check_logout(report, admin)                  # revokes the admin session
     check_rate_limit(report)                     # last: harmlessly trips the login limiter at the end
 
