@@ -400,3 +400,16 @@ def test_component_guide_falls_back_to_a_real_anchor():
     body = match.group("body")
     assert 'getElementById("kpi-cards")' in body
     assert "beforebegin" in body
+
+
+def test_relative_time_uses_intl_and_adaptive_cadence():
+    """The 'updated X ago' timestamp must use Intl.RelativeTimeFormat (correct
+    Arabic dual/plural + Arabic-Indic numerals) and an adaptive ticker cadence
+    so the seconds reading is not stuck at a coarse 30s interval."""
+    js = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
+    assert "Intl.RelativeTimeFormat" in js
+    # No hardcoded singular Arabic unit interpolation remains.
+    assert "${sec} ثانية" not in js.replace("`قبل ${sec} ثانية`", "")  # only the catch fallback
+    # Adaptive cadence (not a fixed 30000 interval).
+    assert "setInterval(() => this._renderRelativeTime(), 30000)" not in js
+    assert "sec < 60 ? 5000" in js

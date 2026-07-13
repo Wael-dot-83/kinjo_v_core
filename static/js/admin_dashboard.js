@@ -676,8 +676,17 @@ class AdminDashboard {
   // ── Relative "updated" timestamp ─────────────────────────────────────────
 
   startRelativeTimeTicker() {
-    if (this._relativeTickerId) clearInterval(this._relativeTickerId);
-    this._relativeTickerId = setInterval(() => this._renderRelativeTime(), 30000);
+    if (this._relativeTickerId) clearTimeout(this._relativeTickerId);
+    // Adaptive cadence keeps the "seconds ago" reading fresh without per-second
+    // churn: every 5s in the first minute, 30s within the hour, then a minute.
+    const tick = () => {
+      this._renderRelativeTime();
+      const sec = this._lastUpdatedAt
+        ? Math.floor((Date.now() - this._lastUpdatedAt.getTime()) / 1000) : 0;
+      const delay = sec < 60 ? 5000 : (sec < 3600 ? 30000 : 60000);
+      this._relativeTickerId = setTimeout(tick, delay);
+    };
+    this._relativeTickerId = setTimeout(tick, 5000);
   }
 
   _renderRelativeTime() {
@@ -685,18 +694,24 @@ class AdminDashboard {
     if (!el || !this._lastUpdatedAt) return;
     const sec = Math.max(0, Math.floor((Date.now() - this._lastUpdatedAt.getTime()) / 1000));
     const lang = window.KINJO_LANG === "en" ? "en" : "ar";
-    let text;
     if (sec < 5) {
-      text = lang === "en" ? "Updated just now" : "تم التحديث الآن";
-    } else if (sec < 60) {
-      text = lang === "en" ? `Updated ${sec} seconds ago` : `تم التحديث قبل ${sec} ثانية`;
-    } else {
-      const mins = Math.floor(sec / 60);
-      text = lang === "en"
-        ? `Updated ${mins} minute${mins > 1 ? "s" : ""} ago`
-        : `تم التحديث قبل ${mins} دقيقة`;
+      el.textContent = lang === "en" ? "Updated just now" : "تم التحديث الآن";
+      return;
     }
-    el.textContent = text;
+    const locale = lang === "en" ? "en-US" : "ar-JO";
+    const prefix = lang === "en" ? "Updated " : "تم التحديث ";
+    let rel;
+    try {
+      // Intl handles pluralization (second/seconds, ثانية/ثانيتين/ثوانٍ, the
+      // Arabic dual) and locale numerals (Arabic-Indic in ar-JO) natively.
+      const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+      if (sec < 60) rel = rtf.format(-sec, "second");
+      else if (sec < 3600) rel = rtf.format(-Math.floor(sec / 60), "minute");
+      else rel = rtf.format(-Math.floor(sec / 3600), "hour");
+    } catch (e) {
+      rel = lang === "en" ? `${sec} seconds ago` : `قبل ${sec} ثانية`;
+    }
+    el.textContent = prefix + rel;
   }
 
   // ── KPI helper: accessible description for tooltips ──────────────────────
