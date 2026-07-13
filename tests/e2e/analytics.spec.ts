@@ -126,6 +126,20 @@ async function mockAnalyticsRuntime(page: Page, unavailableDeltas = false) {
     });
   });
 
+  // Unified locations API (the governorate filter now reads this): envelope
+  // { data: { governorates: [{ key, name_ar, name_en }] } }.
+  await page.route('**/api/locations/jordan/governorates', async (route) => {
+    await route.fulfill({
+      json: {
+        data: {
+          governorates: [
+            { key: 'amman', name_ar: 'عمان', name_en: 'Amman' },
+          ],
+        },
+      },
+    });
+  });
+
   await page.route('**/api/admin/options/kindergartens', async (route) => {
     await route.fulfill({ json: { kindergartens: [{ id: 'kg-1', name_ar: 'KG 1', name_en: 'KG 1' }] } });
   });
@@ -237,12 +251,14 @@ test.describe('Admin Analytics production checks', () => {
   });
 
   test('normalizes governorate options without object labels', async ({ page }) => {
-    page.route('**/api/admin/options/governorates', async (route) => {
+    page.route('**/api/locations/jordan/governorates', async (route) => {
       await route.fulfill({
         json: {
-          governorates: [
-            { id: 'amman', name_ar: 'عمان', name_en: 'Amman' },
-          ],
+          data: {
+            governorates: [
+              { key: 'amman', name_ar: 'عمان', name_en: 'Amman' },
+            ],
+          },
         },
       });
     });

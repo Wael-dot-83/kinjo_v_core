@@ -30,17 +30,49 @@ router = APIRouter(tags=["Kindergartens"])
 
 
 @router.get("/reference/governorates")
-def get_governorates():
-    """Return list of governorates and their areas from canonical source."""
+def get_governorates(
+    db: Session = Depends(get_db),
+):
+    """Return all Jordan governorates and their areas from the canonical
+    jordan_locations source, augmented with any districts already present in
+    kindergarten data so real values still surface.
+
+    Public reference data (no auth) — matches the unified location-filter API.
+    """
     governorates = []
     for gov in get_all_governorates():
-        areas = get_areas_for_governorate(gov["key"])
+        cities = {a["name_ar"] for a in get_areas_for_governorate(gov["key"])}
         governorates.append({
             "id": gov["key"],
             "name_ar": gov["name_ar"],
             "name_en": gov["name_en"],
-            "cities": [a["name_ar"] for a in areas],
+            "_cities": cities,
         })
+    by_name = {g["name_ar"]: g for g in governorates}
+    # Augment with distinct districts stored on kindergartens (preserves the
+    # data-driven behaviour verified by tests/test_reference_governorates.py).
+    # Degrade gracefully to the canonical list if the data isn't queryable.
+    try:
+        kg_rows = (
+            db.query(models.Kindergarten.governorate, models.Kindergarten.district)
+            .filter(models.Kindergarten.governorate.isnot(None))
+            .distinct()
+            .all()
+        )
+    except Exception:
+        kg_rows = []
+    for gov, dist in kg_rows:
+        if not gov or not dist:
+            continue
+        try:
+            normalized = validators.validate_jordan_governorate(gov)
+        except validators.ValidationError:
+            normalized = gov
+        entry = by_name.get(normalized)
+        if entry:
+            entry["_cities"].add(dist)
+    for g in governorates:
+        g["cities"] = sorted(g.pop("_cities"))
     return {"governorates": sorted(governorates, key=lambda x: x["name_ar"])}
 
 

@@ -4913,3 +4913,115 @@ body.admin-container {
     .glass-card, .admin-card, .hover-float, .top-menu-link { transition: none !important; }
     .glass-card:hover, .admin-card:hover, .hover-float:hover, .top-menu-link:hover { transform: none !important; }
 }
+
+/* ============================================================================
+   ADMIN DASHBOARD — Modernization & Accessibility Enhancements
+   (dashboard UX pass; scoped to .admin-uswds-dashboard; strictly additive so
+   it never overrides the design-system's token-based card transition/hover)
+   ============================================================================ */
+
+/* 1. Visible focus indicators for keyboard users */
+.admin-uswds-dashboard .admin-btn-primary:focus-visible,
+.admin-uswds-dashboard .admin-btn-enterprise-refresh:focus-visible,
+.admin-uswds-dashboard .admin-quick-action-card:focus-visible,
+.admin-uswds-dashboard .admin-kpi-card:focus-visible,
+.admin-uswds-dashboard a:focus-visible,
+.admin-uswds-dashboard summary:focus-visible,
+.admin-uswds-dashboard #refresh-dashboard:focus-visible {
+  outline: 3px solid var(--dashboard-accent, #b7791f);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(183, 121, 31, 0.25);
+}
+
+/* 2. Entrance animation for KPI cards. The design-system already supplies the
+      hover lift + token-based transition, so we only ADD the fade-up here. */
+.admin-uswds-dashboard .admin-kpi-card {
+  animation: adminDashFadeUp 420ms ease both;
+}
+.admin-uswds-dashboard .admin-kpi-card:nth-child(2) { animation-delay: 60ms; }
+.admin-uswds-dashboard .admin-kpi-card:nth-child(3) { animation-delay: 120ms; }
+.admin-uswds-dashboard .admin-kpi-card:nth-child(4) { animation-delay: 180ms; }
+.admin-uswds-dashboard .admin-kpi-card:nth-child(5) { animation-delay: 240ms; }
+.admin-uswds-dashboard .admin-kpi-card:nth-child(6) { animation-delay: 300ms; }
+.admin-uswds-dashboard .admin-kpi-card:nth-child(7) { animation-delay: 360ms; }
+
+@keyframes adminDashFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 3. Component reference guide (injected by admin_dashboard.js) */
+.admin-uswds-dashboard .admin-component-guide {
+  margin: 0;
+  padding: 0;
+}
+.admin-uswds-dashboard .admin-component-guide-details {
+  border: 1px solid var(--dashboard-border, #d9e5df);
+  border-radius: 1rem;
+  background: var(--dashboard-surface, #fff);
+  box-shadow: 0 10px 30px rgba(16, 42, 34, 0.07);
+  padding: 0.25rem 1.25rem;
+}
+.admin-uswds-dashboard .admin-component-guide-details > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.9rem 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--dashboard-ink, #102a22);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.admin-uswds-dashboard .admin-component-guide-details > summary::before {
+  content: "\F64D";
+  font-family: "bootstrap-icons";
+  transition: transform 160ms ease;
+  color: var(--dashboard-primary, #176b4d);
+}
+.admin-uswds-dashboard .admin-component-guide-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+.admin-uswds-dashboard .admin-component-guide-intro {
+  color: var(--dashboard-muted, #52635d);
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+.admin-uswds-dashboard .admin-component-guide-list {
+  list-style: none;
+  padding: 0 0 1rem;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+.admin-uswds-dashboard .admin-component-guide-list li {
+  border: 1px solid var(--dashboard-border, #d9e5df);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--dashboard-soft, #f3f8f5);
+}
+.admin-uswds-dashboard .admin-component-guide-item-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  color: var(--dashboard-ink, #102a22);
+}
+.admin-uswds-dashboard .admin-component-guide-list li p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--dashboard-muted, #52635d);
+}
+
+/* 4. Relative "updated" timestamp emphasis */
+.admin-uswds-dashboard #last-updated-time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 5. Reduced motion: disable the entrance animation (hover is handled by the
+      design system's own reduced-motion block) */
+@media (prefers-reduced-motion: reduce) {
+  .admin-uswds-dashboard .admin-kpi-card {
+    animation: none !important;
+  }
+}

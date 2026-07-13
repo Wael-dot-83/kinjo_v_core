@@ -111,15 +111,25 @@ document.addEventListener("DOMContentLoaded", function () {
       govSelect.remove(1);
     }
 
-    fetchWithAuth("/api/locations/jordan/governorates")
+    // Public reference data — use a plain cookie fetch (not the auth-gated
+    // fetchWithAuth, which redirects to /login when no localStorage token is
+    // present, e.g. under cookie-only sessions and E2E).
+    fetch("/api/locations/jordan/governorates", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
       .then((res) => {
-        if (!res) return;
-        return res.json ? res.json() : res;
+        if (!res || !res.ok) return;
+        return res.json();
       })
       .then((data) => {
         if (!data) return;
         const locale = adminAnalyticsLocale();
-        (data.governorates || []).forEach((g) => {
+        // The unified locations API wraps the list in an envelope:
+        // { data: { governorates: [...] } }. Fall back to a flat shape too.
+        const govList =
+          (data.data && data.data.governorates) || data.governorates || [];
+        govList.forEach((g) => {
           const normalized = normalizeGovernorateOption(g, locale);
           if (!normalized.value || !normalized.label) return;
           const opt = document.createElement("option");
