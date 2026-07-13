@@ -152,3 +152,38 @@ def test_attendance_rate_unavailable_without_active_enrollment(test_db):
     result = AgencyReportsService(test_db)._ind_attendance_rate(None, start, end)
     assert result["kpi"]["value"] is None
     assert result["note"]
+
+
+def test_absence_requests_count_overlaps_not_just_starts(test_db, sample_child):
+    """An absence that starts before the period but continues into it must be
+    counted (overlap), while one entirely outside the period must not."""
+    kg = _active_kg(test_db, "absence-overlap")
+    start, end = date(2026, 6, 10), date(2026, 6, 20)
+    test_db.add(models.AbsenceRequest(  # overlaps: starts before, ends inside
+        parent_id=sample_child.parent_id, child_id=sample_child.id, kindergarten_id=kg.id,
+        start_date=date(2026, 6, 5), end_date=date(2026, 6, 12), reason="travel"))
+    test_db.add(models.AbsenceRequest(  # entirely before the period
+        parent_id=sample_child.parent_id, child_id=sample_child.id, kindergarten_id=kg.id,
+        start_date=date(2026, 5, 1), end_date=date(2026, 5, 3), reason="sick"))
+    test_db.commit()
+
+    result = AgencyReportsService(test_db)._ind_absence_requests([kg.id], start, end)
+    assert result["kpi"]["value"] == 1
+
+
+def test_custom_export_writes_an_audit_event(client, admin_user, test_db):
+    """Every agency-report export must leave an audit trail."""
+    from dependencies import get_current_user
+    from main import app
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+    try:
+        resp = client.post("/api/admin/agency-reports/custom/export.csv", json={
+            "agency": "mosd", "level": "national", "period": "year",
+            "indicators": ["children_count"],
+        })
+        assert resp.status_code == 200
+        logs = test_db.query(models.AuditLog).filter(
+            models.AuditLog.action == "AGENCY_REPORT_EXPORT").all()
+        assert len(logs) >= 1
+    finally:
+        app.dependency_overrides.clear()

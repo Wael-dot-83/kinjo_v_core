@@ -991,8 +991,11 @@ class AgencyReportsService:
         }
 
     def _ind_absence_requests(self, kg_ids, start, end):
+        # Count absence requests that OVERLAP the period (start <= period_end and
+        # end >= period_start), not only those whose start falls inside it — an
+        # absence spanning into the period must still be counted.
         q = self.db.query(func.count(models.AbsenceRequest.id)).filter(
-            models.AbsenceRequest.start_date >= start, models.AbsenceRequest.start_date <= end)
+            models.AbsenceRequest.start_date <= end, models.AbsenceRequest.end_date >= start)
         if kg_ids is not None:
             q = q.filter(models.AbsenceRequest.kindergarten_id.in_(kg_ids))
         total = _safe_int(q.scalar())
