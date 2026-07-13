@@ -87,6 +87,24 @@ else:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
+@event.listens_for(Session, "before_flush")
+def _attribute_impersonated_audit_events(session, flush_context, instances):
+    """Attach original-admin provenance to every audit row in an impersonated request."""
+    impersonated_by = session.info.get("impersonated_by")
+    if not impersonated_by:
+        return
+
+    import models
+
+    reason = session.info.get("impersonation_reason")
+    for obj in session.new:
+        if isinstance(obj, models.AuditLog):
+            if obj.impersonated_by is None:
+                obj.impersonated_by = impersonated_by
+            if obj.impersonation_reason is None:
+                obj.impersonation_reason = reason
+
+
 @event.listens_for(Session, "do_orm_execute")
 def _apply_child_age_policy(execute_state):
     """Apply global child age filter to all ORM SELECT queries."""

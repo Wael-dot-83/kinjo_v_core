@@ -1831,7 +1831,7 @@ def get_action_queue(
             'affected_count': 0,
             'deadline': _calculate_deadline('MEDIUM'),
             'status': 'pending',
-            'link': '/admin/data-quality'
+            'link': '/admin/analytics/reports#pane-dataquality'
         })
 
     # Sort by priority
@@ -4742,7 +4742,7 @@ def get_export_status(
         created_at=_to_jordan_iso(job.created_at),
         file_path=job.file_path,
         error=job.error_message if job.status == models.ExportStatus.FAILED else None,
-        trace_url=f"/admin/logs?job_id={job.id}" if job.status == models.ExportStatus.FAILED else None,
+        trace_url="/admin/audit-logs" if job.status == models.ExportStatus.FAILED else None,
     )
 
 

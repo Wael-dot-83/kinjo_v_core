@@ -416,6 +416,9 @@ def can_admin_access_user(actor: models.User, target: models.User) -> bool:
     - Admin cannot modify other admin accounts
     - Manager can only access users in their kindergarten
     """
+    if target.deleted_at is not None:
+        return False
+
     if actor.role == models.UserRole.ADMIN:
         # Admins cannot manage other admins
         if target.role == models.UserRole.ADMIN and target.id != actor.id:

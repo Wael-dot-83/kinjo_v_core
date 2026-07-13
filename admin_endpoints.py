@@ -20,6 +20,7 @@ import secrets
 import enum
 import logging
 import math
+from zipfile import BadZipFile
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone, date
 from typing import List, Optional, Dict, Any, Set, Tuple, Union
@@ -55,6 +56,7 @@ from kindergarten_import_service import KindergartenImportService
 from kpi_service import KPIService
 from cache_service import cache_service
 from csv_utils import escape_csv_formula
+from upload_security import validate_xlsx_archive
 from audit_actions import AuditAction
 from admin_security import (
     # Error handling
@@ -629,7 +631,9 @@ def get_user(
     """
     Get user details with IDOR protection.
     """
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(models.User).filter(
+        models.User.id == user_id, models.User.deleted_at.is_(None)
+    ).first()
 
     if not user:
         raise not_found_error("User not found")
@@ -674,7 +678,9 @@ def update_user(
     """
     Update user with IDOR protection and audit logging.
     """
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(models.User).filter(
+        models.User.id == user_id, models.User.deleted_at.is_(None)
+    ).first()
 
     if not user:
         raise not_found_error("User not found")
@@ -841,7 +847,9 @@ def delete_user(
     """
     Delete user (Admin only) with IDOR protection.
     """
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(models.User).filter(
+        models.User.id == user_id, models.User.deleted_at.is_(None)
+    ).first()
 
     if not user:
         raise not_found_error("User not found")
@@ -890,7 +898,9 @@ def admin_reset_password(
     Admin-initiated password reset with verification.
     Rate limited to 3 requests per minute.
     """
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(models.User).filter(
+        models.User.id == user_id, models.User.deleted_at.is_(None)
+    ).first()
 
     if not user:
         raise not_found_error("User not found")
@@ -1041,7 +1051,9 @@ def admin_mfa_bypass(
     if user_id == current_user.id:
         raise forbidden_error("Cannot bypass your own MFA. Use the standard MFA reset flow.")
 
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(models.User).filter(
+        models.User.id == user_id, models.User.deleted_at.is_(None)
+    ).first()
     if not user:
         raise not_found_error("User not found")
 
@@ -1090,7 +1102,9 @@ def get_user_mfa_status(
     db: Session = Depends(get_db)
 ):
     """Get MFA status for a user (Admin only)."""
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(models.User).filter(
+        models.User.id == user_id, models.User.deleted_at.is_(None)
+    ).first()
     if not user:
         raise not_found_error("User not found")
 
@@ -1569,8 +1583,17 @@ async def import_users_csv(
     errors: List[CSVRowError] = []
     created_ids = []
 
+    # Bound validation, hashing, and ORM work independently of compressed size.
+    _MAX_CSV_ROWS = 1_000
+    _MAX_CSV_COLUMNS = 50
+    _MAX_CSV_CELL_CHARS = 10_000
     required_fields = {'username', 'email', 'password', 'role'}
     header_fields = set(reader.fieldnames or [])
+
+    if len(reader.fieldnames or []) > _MAX_CSV_COLUMNS:
+        raise validation_error(
+            f"CSV header exceeds the {_MAX_CSV_COLUMNS} column maximum."
+        )
 
     # Validate headers
     missing_fields = required_fields - header_fields
@@ -1580,8 +1603,26 @@ async def import_users_csv(
             {field: "Column required" for field in missing_fields}
         )
 
-    # Buffer rows so we can pre-fetch conflicts in one batch
-    all_rows = list(reader)
+    all_rows = []
+    try:
+        for row_number, row in enumerate(reader, start=1):
+            if row_number > _MAX_CSV_ROWS:
+                raise validation_error(
+                    f"CSV contains more than the {_MAX_CSV_ROWS:,} row maximum."
+                )
+            actual_column_count = len(reader.fieldnames or []) + len(row.get(None) or [])
+            if actual_column_count > _MAX_CSV_COLUMNS:
+                raise validation_error(
+                    f"CSV row {row_number + 1} exceeds the {_MAX_CSV_COLUMNS} column maximum."
+                )
+            if any(len(str(value or "")) > _MAX_CSV_CELL_CHARS for value in row.values()):
+                raise validation_error(
+                    f"CSV row {row_number + 1} contains a cell longer than "
+                    f"{_MAX_CSV_CELL_CHARS:,} characters."
+                )
+            all_rows.append(row)
+    except csv.Error as exc:
+        raise validation_error(f"Could not parse CSV: {exc}")
 
     # Batch duplicate check — one query for all usernames/emails in the file
     all_usernames = [sanitize_csv_cell(str(r.get('username', '')).strip()) for r in all_rows if r.get('username')]
@@ -5073,16 +5114,27 @@ def import_kindergartens_from_excel(
         raise HTTPException(status_code=500, detail="openpyxl is not installed on the server")
 
     # Enforce file size limit (10 MB)
-    MAX_UPLOAD_SIZE = 10 * 1024 * 1024
+    MAX_UPLOAD_SIZE = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if file.size is not None and file.size > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail="File too large")
     try:
         contents = file.file.read()
         if len(contents) > MAX_UPLOAD_SIZE:  # pragma: no cover — requires a >10 MB upload; content-length header check fires first for normal clients
-            raise HTTPException(status_code=400, detail="File too large. Maximum size is 10 MB.")
+            raise HTTPException(status_code=413, detail="File too large")
+        validate_xlsx_archive(contents, max_compressed_bytes=MAX_UPLOAD_SIZE)
         from io import BytesIO
-        from zipfile import BadZipFile
         wb = openpyxl.load_workbook(BytesIO(contents), read_only=True)
         ws = wb.worksheets[0]  # Use first sheet
-        rows = list(ws.iter_rows(min_row=2, values_only=True))  # skip header
+        if ws.max_column > 100:
+            wb.close()
+            raise HTTPException(status_code=413, detail="Workbook exceeds the 100-column import limit")
+        rows = []
+        for row_number, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if row_number > 50_001:
+                raise HTTPException(status_code=413, detail="Workbook exceeds the 50,000-row import limit")
+            if any(len(str(value)) > 10_000 for value in row if value is not None):
+                raise HTTPException(status_code=422, detail=f"Cell value is too long at row {row_number}")
+            rows.append(row)
         wb.close()
     except (OSError, IOError, KeyError, ValueError, IndexError, BadZipFile):
         logger.exception("Failed to read uploaded Excel file")
@@ -5663,7 +5715,7 @@ async def list_imported_kindergartens(
     governorate: str = Query(None),
     district: str = Query(None),
     search: str = Query(None),
-    current_user: models.User = Depends(require_admin_or_manager),
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """List imported kindergartens with filtering and pagination."""
@@ -5708,37 +5760,39 @@ async def list_import_logs(
     current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """List import logs with pagination.
-
-    `status` (SUCCESS/PARTIAL/FAILED) is derived at serialization time from
-    imported_count/errors_json rather than being a stored column, so it is
-    filtered in Python after fetching the SQL-filterable subset (date range
-    only); ImportLog rows are periodic admin actions, not a high-volume
-    table, so this stays a single query with no N+1.
-    """
+    """List import logs with database-side filtering and pagination."""
     query = db.query(models.ImportLog).order_by(models.ImportLog.created_at.desc())
 
     if date_from:
         try:
             query = query.filter(models.ImportLog.created_at >= datetime.fromisoformat(date_from))
         except ValueError:
-            pass
+            raise HTTPException(status_code=422, detail="Invalid 'from' date; use ISO-8601")
     if date_to:
         try:
             query = query.filter(models.ImportLog.created_at <= datetime.fromisoformat(date_to))
         except ValueError:
-            pass
+            raise HTTPException(status_code=422, detail="Invalid 'to' date; use ISO-8601")
 
-    serialized = [_serialize_import_log(lg) for lg in query.all()]
+    if type and type != "EXCEL_KINDERGARTENS":
+        query = query.filter(models.ImportLog.id == -1)
 
-    if type:
-        serialized = [lg for lg in serialized if lg["import_type"] == type]
+    has_errors = and_(models.ImportLog.errors_json.is_not(None), models.ImportLog.errors_json != [])
     if status:
-        serialized = [lg for lg in serialized if lg["status"] == status]
+        normalized_status = status.upper()
+        if normalized_status == "SUCCESS":
+            query = query.filter(or_(models.ImportLog.errors_json.is_(None), models.ImportLog.errors_json == []))
+        elif normalized_status == "FAILED":
+            query = query.filter(has_errors, models.ImportLog.imported_count == 0)
+        elif normalized_status == "PARTIAL":
+            query = query.filter(has_errors, models.ImportLog.imported_count > 0)
+        else:
+            raise HTTPException(status_code=422, detail="Invalid status; use SUCCESS, PARTIAL, or FAILED")
 
-    total = len(serialized)
-    start = (page - 1) * per_page
-    page_items = serialized[start:start + per_page]
+    total = query.order_by(None).count()
+    offset = (page - 1) * per_page
+    rows = query.offset(offset).limit(per_page).all()
+    page_items = [_serialize_import_log(log) for log in rows]
 
     return {
         "logs": page_items,

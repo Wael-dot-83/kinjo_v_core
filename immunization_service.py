@@ -130,6 +130,9 @@ def parse_schedule_xlsx(data: bytes) -> tuple[list[dict[str, Any]], list[str]]:
     first = True
     order = 0
     for idx, raw in enumerate(ws.iter_rows(values_only=True), start=1):
+        if idx > 5_001:
+            wb.close()
+            raise ImmunizationScheduleError("Workbook exceeds the 5,000-row schedule limit")
         if raw is None:
             continue
         cells = list(raw) + [None, None, None, None]

@@ -115,6 +115,26 @@ class DashboardSummaryRequest(BaseModel):
     kindergarten_id: Optional[int] = None
 
 
+def _dashboard_kindergarten_scope(
+    current_user: models.User,
+    requested_kindergarten_id: Optional[int] = None,
+) -> Optional[int]:
+    """Resolve the only kindergarten a non-admin may use for aggregate data."""
+    if current_user.role == models.UserRole.ADMIN:
+        return requested_kindergarten_id
+
+    if current_user.role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        assigned_id = current_user.kindergarten_id
+        if not assigned_id:
+            raise HTTPException(status_code=403, detail="No kindergarten is assigned to this account")
+        if requested_kindergarten_id is not None and requested_kindergarten_id != assigned_id:
+            # Do not reveal whether a kindergarten outside the caller's scope exists.
+            raise HTTPException(status_code=404, detail="Kindergarten not found")
+        return assigned_id
+
+    raise HTTPException(status_code=403, detail="Not authorized")
+
+
 @router.post("/summary")
 def get_dashboard_summary(
     body: DashboardSummaryRequest,
@@ -145,17 +165,16 @@ def get_dashboard_summary(
         start = date(today.year, today.month, 1)
         end = today
 
-    # kindergarten filter (ADMIN/MANAGER can filter; others see their own scope)
-    kg_filter_ids: Optional[list] = None
-    if body.kindergarten_id:
-        kg_filter_ids = [body.kindergarten_id]
-    elif current_user.role == models.UserRole.MANAGER and current_user.kindergarten_id:
-        kg_filter_ids = [current_user.kindergarten_id]
+    scoped_kindergarten_id = _dashboard_kindergarten_scope(
+        current_user, body.kindergarten_id
+    )
+    kg_filter_ids = [scoped_kindergarten_id] if scoped_kindergarten_id else None
 
     try:
         # active enrolled children
         ch_q = db.query(func.count(models.EnrollmentApplication.id)).filter(
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            models.EnrollmentApplication.deleted_at.is_(None),
         )
         if kg_filter_ids:
             ch_q = ch_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter_ids))
@@ -169,30 +188,42 @@ def get_dashboard_summary(
         )
         if kg_filter_ids:
             att_q = att_q.join(
-                models.EnrollmentApplication,
-                models.EnrollmentApplication.child_id == models.AttendanceLog.child_id,
-            ).filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter_ids))
+                models.Class, models.Class.id == models.AttendanceLog.class_id
+            ).filter(models.Class.kindergarten_id.in_(kg_filter_ids))
         present = att_q.scalar() or 0
         attendance = round(present / children * 100, 1) if children > 0 else 0.0
 
         # open alerts: pending enrollments + today's incidents
-        pending_enr = db.query(func.count(models.EnrollmentApplication.id)).filter(
-            models.EnrollmentApplication.status == models.EnrollmentStatus.PENDING_REVIEW
-        ).scalar() or 0
-        today_incidents = db.query(func.count(models.Incident.id)).filter(
+        pending_q = db.query(func.count(models.EnrollmentApplication.id)).filter(
+            models.EnrollmentApplication.status == models.EnrollmentStatus.PENDING_REVIEW,
+            models.EnrollmentApplication.deleted_at.is_(None),
+        )
+        incident_q = db.query(func.count(models.Incident.id)).filter(
             func.date(models.Incident.occurred_at) == today,
             models.Incident.deleted_at.is_(None),
-        ).scalar() or 0
+        )
+        if kg_filter_ids:
+            pending_q = pending_q.filter(
+                models.EnrollmentApplication.kindergarten_id.in_(kg_filter_ids)
+            )
+            incident_q = incident_q.filter(models.Incident.kindergarten_id.in_(kg_filter_ids))
+        pending_enr = pending_q.scalar() or 0
+        today_incidents = incident_q.scalar() or 0
         alerts = pending_enr + today_incidents
 
         # 7-day attendance trend (percent each day)
         trend = []
         for i in range(6, -1, -1):
             d = today - timedelta(days=i)
-            day_present = db.query(func.count(models.AttendanceLog.id)).filter(
+            day_q = db.query(func.count(models.AttendanceLog.id)).filter(
                 models.AttendanceLog.date == d,
                 models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
-            ).scalar() or 0
+            )
+            if kg_filter_ids:
+                day_q = day_q.join(
+                    models.Class, models.Class.id == models.AttendanceLog.class_id
+                ).filter(models.Class.kindergarten_id.in_(kg_filter_ids))
+            day_present = day_q.scalar() or 0
             trend.append(round(day_present / children * 100, 1) if children > 0 else 0.0)
 
         return {
@@ -214,8 +245,7 @@ def get_suggested_actions(
     db: Session = Depends(get_db),
 ):
     """Returns live-computed action-card data for the dashboard (week-over-week attendance change, pending enrollments)."""
-    if current_user.role == models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    scoped_kindergarten_id = _dashboard_kindergarten_scope(current_user)
 
     today = datetime.now(_JORDAN_TZ).date()
     week_start = today - timedelta(days=6)
@@ -224,23 +254,39 @@ def get_suggested_actions(
 
     try:
         # Pending enrollment count
-        pending_count: int = db.query(func.count(models.EnrollmentApplication.id)).filter(
+        pending_q = db.query(func.count(models.EnrollmentApplication.id)).filter(
             models.EnrollmentApplication.status == models.EnrollmentStatus.PENDING_REVIEW,
-        ).scalar() or 0
+            models.EnrollmentApplication.deleted_at.is_(None),
+        )
+        if scoped_kindergarten_id:
+            pending_q = pending_q.filter(
+                models.EnrollmentApplication.kindergarten_id == scoped_kindergarten_id
+            )
+        pending_count: int = pending_q.scalar() or 0
 
         # Week-over-week attendance rate
         def _att_rate(start: date, end: date) -> Optional[float]:
-            total = db.query(func.count(models.AttendanceLog.id)).filter(
+            total_q = db.query(func.count(models.AttendanceLog.id)).filter(
                 models.AttendanceLog.date >= start,
                 models.AttendanceLog.date <= end,
-            ).scalar() or 0
+            )
+            if scoped_kindergarten_id:
+                total_q = total_q.join(
+                    models.Class, models.Class.id == models.AttendanceLog.class_id
+                ).filter(models.Class.kindergarten_id == scoped_kindergarten_id)
+            total = total_q.scalar() or 0
             if not total:
                 return None
-            present = db.query(func.count(models.AttendanceLog.id)).filter(
+            present_q = db.query(func.count(models.AttendanceLog.id)).filter(
                 models.AttendanceLog.date >= start,
                 models.AttendanceLog.date <= end,
                 models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
-            ).scalar() or 0
+            )
+            if scoped_kindergarten_id:
+                present_q = present_q.join(
+                    models.Class, models.Class.id == models.AttendanceLog.class_id
+                ).filter(models.Class.kindergarten_id == scoped_kindergarten_id)
+            present = present_q.scalar() or 0
             return round(present / total * 100, 1)
 
         curr_rate = _att_rate(week_start, today)

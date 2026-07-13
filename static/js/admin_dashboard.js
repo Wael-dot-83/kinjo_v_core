@@ -927,7 +927,9 @@ class AdminDashboard {
 
     const actor = document.createElement("span");
     actor.className = "activity-actor";
-    actor.innerHTML = `<i class="bi bi-person-fill"></i> ${activity.user_name || this.t("dashboard.system_actor", "System")}`;
+    const actorIcon = document.createElement("i");
+    actorIcon.className = "bi bi-person-fill";
+    actor.append(actorIcon, ` ${activity.user_name || this.t("dashboard.system_actor", "System")}`);
 
     const time = document.createElement("span");
     time.className = "activity-time";
@@ -944,7 +946,12 @@ class AdminDashboard {
     if (moduleName) {
       const categoryRow = document.createElement("div");
       categoryRow.className = "activity-category-row";
-      categoryRow.innerHTML = `<span class="activity-category-badge"><i class="bi bi-folder2"></i> ${moduleName}</span>`;
+      const categoryBadge = document.createElement("span");
+      categoryBadge.className = "activity-category-badge";
+      const categoryIcon = document.createElement("i");
+      categoryIcon.className = "bi bi-folder2";
+      categoryBadge.append(categoryIcon, ` ${moduleName}`);
+      categoryRow.appendChild(categoryBadge);
       article.appendChild(categoryRow);
     }
 

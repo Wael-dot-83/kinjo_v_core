@@ -27,6 +27,22 @@ function adminAnalyticsText(arText, enText) {
   return String(lang).toLowerCase().startsWith("en") ? enText : arText;
 }
 
+function adminAnalyticsEscape(value) {
+  return String(value ?? "").replace(/[&<>'"]/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+  })[char]);
+}
+
+function adminAnalyticsInternalLink(value, fallback = "/admin/analytics") {
+  const link = String(value || "");
+  return /^\/admin(?:\/|$)/.test(link) ? link : fallback;
+}
+
+function adminAnalyticsIcon(value, fallback = "bi-info-circle") {
+  const icon = String(value || "");
+  return /^bi-[a-z0-9-]+$/.test(icon) ? icon : fallback;
+}
+
 var lastDashboardData = null;
 let scenarioData = null;
 var fetchWithAuth = window.fetchWithAuth || async function adminAnalyticsFetchFallback(url, options) {
@@ -3732,15 +3748,17 @@ function renderActionQueue(actions) {
             'LOW': 'info'
         }[action.priority] || 'secondary';
 
-        const title = lang === 'en' ? action.title_en : action.title_ar;
-        const description = lang === 'en' ? action.description_en : action.description_ar;
+        const title = adminAnalyticsEscape(lang === 'en' ? action.title_en : action.title_ar);
+        const description = adminAnalyticsEscape(lang === 'en' ? action.description_en : action.description_ar);
         const deadline = new Date(action.deadline).toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-JO');
+        const link = adminAnalyticsEscape(adminAnalyticsInternalLink(action.link));
+        const icon = adminAnalyticsIcon(action.icon);
 
         return `
             <div class="action-item action-item--${priorityClass.toLowerCase()} mb-3">
                 <div class="d-flex align-items-start gap-3">
                     <div class="action-icon">
-                        <i class="bi ${action.icon} text-${priorityClass} fs-4"></i>
+                        <i class="bi ${icon} text-${priorityClass} fs-4"></i>
                     </div>
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center gap-2 mb-2">
@@ -3759,11 +3777,11 @@ function renderActionQueue(actions) {
                         <p class="mb-1 fw-bold">${title}</p>
                         <p class="mb-2 text-muted small">${description}</p>
                         <div class="d-flex gap-2">
-                            <a href="${action.link}" class="btn btn-sm btn-outline-${priorityClass}">
+                            <a href="${link}" class="btn btn-sm btn-outline-${priorityClass}">
                                 <i class="bi bi-eye me-1"></i>
                                 ${adminAnalyticsText('عرض', 'View')}
                             </a>
-                            <button class="btn btn-sm btn-${priorityClass}" onclick="createActionPlan('${action.id}')">
+                            <button class="btn btn-sm btn-${priorityClass}" onclick="createActionPlan()">
                                 <i class="bi bi-plus-circle me-1"></i>
                                 ${adminAnalyticsText('إنشاء خطة عمل', 'Create Action Plan')}
                             </button>
@@ -3775,9 +3793,8 @@ function renderActionQueue(actions) {
     }).join('');
 }
 
-function createActionPlan(actionId) {
-    // Navigate to action plan creation or open modal
-    window.location.href = `/admin/action-plans/new?action=${actionId}`;
+function createActionPlan() {
+    window.location.href = '/admin/governance/reminders';
 }
 
 async function loadInsights() {
@@ -3836,14 +3853,17 @@ function renderInsights(insights) {
             'LOW': 'info'
         }[insight.severity] || 'secondary';
 
-        const message = lang === 'en' ? insight.message_en : insight.message_ar;
-        const action = lang === 'en' ? insight.action_en : insight.action_ar;
+        const message = adminAnalyticsEscape(lang === 'en' ? insight.message_en : insight.message_ar);
+        const action = adminAnalyticsEscape(lang === 'en' ? insight.action_en : insight.action_ar);
+        const link = adminAnalyticsEscape(adminAnalyticsInternalLink(insight.link));
+        const icon = adminAnalyticsIcon(insight.icon);
+        const typeArg = encodeURIComponent(String(insight.type || ''));
 
         return `
             <div class="insight-card insight-card--${severityClass.toLowerCase()} mb-3">
                 <div class="d-flex align-items-start gap-3">
                     <div class="insight-icon">
-                        <i class="bi ${insight.icon} text-${severityClass} fs-4"></i>
+                        <i class="bi ${icon} text-${severityClass} fs-4"></i>
                     </div>
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center gap-2 mb-2">
@@ -3858,11 +3878,11 @@ function renderInsights(insights) {
                         <p class="mb-2 fw-bold">${message}</p>
                         <p class="mb-2 text-muted small">${action}</p>
                         <div class="d-flex gap-2">
-                            <a href="${insight.link}" class="btn btn-sm btn-outline-${severityClass}">
+                            <a href="${link}" class="btn btn-sm btn-outline-${severityClass}">
                                 <i class="bi bi-arrow-right me-1"></i>
                                 ${adminAnalyticsText('عرض التفاصيل', 'View Details')}
                             </a>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="analyzeRootCause('${insight.type}')">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="analyzeRootCause(decodeURIComponent('${typeArg}'))">
                                 <i class="bi bi-search me-1"></i>
                                 ${adminAnalyticsText('تحليل السبب', 'Analyze Root Cause')}
                             </button>

@@ -18,7 +18,13 @@ from correlation_engine import correlation_engine
 from performance_monitor import performance_monitor
 from cache_service import dashboard_cache
 
-router = APIRouter(prefix="/api/observability", tags=["Observability"])
+# Backend for the Admin-only observability dashboard. The router-level gate
+# keeps network operational and tenant metrics unavailable to Managers.
+router = APIRouter(
+    prefix="/api/observability",
+    tags=["Observability"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 @router.get("/alert-quality")

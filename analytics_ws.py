@@ -83,6 +83,8 @@ async def websocket_dashboard(websocket: WebSocket):
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("purpose"):
+            raise JWTError("purpose-scoped token is not an access token")
         username = payload.get("sub")
         if not username:
             raise JWTError("missing sub")
@@ -93,7 +95,9 @@ async def websocket_dashboard(websocket: WebSocket):
     # Use a fresh database session for the query
     db = SessionLocal()
     try:
-        user = db.query(models.User).filter(models.User.username == username).first()
+        user = db.query(models.User).filter(
+            models.User.username == username, models.User.deleted_at.is_(None)
+        ).first()
         # Handle both enum and string role values
         allowed_role_values = ["ADMIN", "MANAGER", "SUPERVISOR"]
 

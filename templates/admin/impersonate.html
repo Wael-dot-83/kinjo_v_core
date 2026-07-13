@@ -82,7 +82,7 @@
                         <textarea class="form-control" id="impersonateReason" rows="3" maxlength="500"
                                   placeholder="{% if ui_lang == 'en' %}e.g. Reviewing a technical issue reported by the manager...{% else %}مثال: مراجعة مشكلة تقنية بلّغ عنها المدير...{% endif %}"
                                   aria-label="{% if ui_lang == 'en' %}Reason for impersonation{% else %}سبب انتحال الهوية{% endif %}"></textarea>
-                        <div class="form-text">{% if ui_lang == 'en' %}Providing a reason is recommended to facilitate future review{% else %}يُوصى بذكر السبب لتسهيل المراجعة لاحقاً{% endif %}</div>
+                        <div class="form-text">{% if ui_lang == 'en' %}A specific reason is required for the audit trail (minimum 3 characters){% else %}يجب إدخال سبب محدد لسجل التدقيق (3 أحرف على الأقل){% endif %}</div>
                     </div>
 
                     <button type="submit" class="btn btn-danger w-100 py-2" id="startImpersonateBtn">
@@ -260,9 +260,15 @@
         document.getElementById('confirmManagerName').textContent = mgr ? (mgr.name || mgr.username) : '';
         document.getElementById('confirmManagerKG').textContent   = mgr ? (mgr.kindergarten_name || _noKg) : '';
 
+        const reason = document.getElementById('impersonateReason').value.trim();
+        if (reason.length < 3) {
+            showValidation(_isEn ? 'Enter a specific reason (at least 3 characters)' : 'يرجى إدخال سبب محدد (3 أحرف على الأقل)');
+            return;
+        }
+
         pendingPayload = {
             target_user_id: selectedMgrId,
-            reason: document.getElementById('impersonateReason').value.trim() || null
+            reason
         };
 
         confirmModal.show();

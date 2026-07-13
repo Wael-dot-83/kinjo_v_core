@@ -17,8 +17,10 @@ from admin_security import log_audit_event
 from audit_actions import AuditAction
 from agency_reports_export import custom_report_to_csv, to_csv
 from agency_reports_service import AgencyReportError, AgencyReportsService
+from config import settings
 from database import get_db
 from dependencies import get_current_user
+from upload_security import validate_xlsx_archive
 
 router = APIRouter(tags=["Admin Agency Reports"])
 
@@ -129,7 +131,11 @@ def immunization_schedule_upload(
     filename = (file.filename or "").lower()
     if not filename.endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="يجب أن يكون الملف بصيغة Excel (.xlsx)")
+    max_upload = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if file.size is not None and file.size > max_upload:
+        raise HTTPException(status_code=413, detail="Uploaded workbook is too large")
     raw = file.file.read()
+    validate_xlsx_archive(raw, max_compressed_bytes=max_upload)
     if not raw:
         raise HTTPException(status_code=400, detail="الملف فارغ")
     try:

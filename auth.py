@@ -155,7 +155,9 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[mod
             ]
         )
 
-    user = db.query(models.User).filter(or_(*filters)).first()
+    user = db.query(models.User).filter(
+        or_(*filters), models.User.deleted_at.is_(None)
+    ).first()
     if not user:
         verify_password(password, DUMMY_PASSWORD_HASH)
         return None

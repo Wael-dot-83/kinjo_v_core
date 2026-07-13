@@ -4,6 +4,7 @@ Supports both Redis and in-memory fallback
 """
 import json
 import logging
+import threading
 from typing import Any, Optional
 from datetime import datetime, timedelta, timezone
 import redis
@@ -27,6 +28,7 @@ class CacheService:
     def __init__(self):
         self.redis_client = None
         self.memory_cache = {}
+        self._memory_lock = threading.Lock()
         self._init_redis()
 
     def _init_redis(self):
@@ -130,6 +132,42 @@ class CacheService:
         }
         logger.debug(f"Cache set (Memory): {key} (TTL: {ttl_seconds}s)")
         self._record_sets()
+
+    def add_if_absent(
+        self, key: str, value: Any, ttl_seconds: int = 300
+    ) -> Optional[bool]:
+        """Atomically reserve a key; return None when a required shared store fails."""
+        cache_key = self._make_key(key)
+        expires = datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)
+        cache_data = {"value": value, "expires": expires.isoformat()}
+
+        if self.redis_client:
+            try:
+                created = self.redis_client.set(
+                    cache_key,
+                    json.dumps(cache_data),
+                    ex=ttl_seconds,
+                    nx=True,
+                )
+                if created:
+                    self._record_sets()
+                return bool(created)
+            except (RedisError, TypeError, ValueError) as exc:
+                logger.error("Redis atomic reservation failed for key %s: %s", key, exc)
+                if settings.ENVIRONMENT.lower() == "production":
+                    return None
+
+        if settings.ENVIRONMENT.lower() == "production":
+            logger.error("Shared Redis is unavailable for security key %s", key)
+            return None
+
+        with self._memory_lock:
+            existing = self.memory_cache.get(key)
+            if existing and existing["expires"] > datetime.now(timezone.utc):
+                return False
+            self.memory_cache[key] = {"value": value, "expires": expires}
+            self._record_sets()
+            return True
 
     def delete(self, key: str):
         """Delete value from cache"""

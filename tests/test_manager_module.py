@@ -299,6 +299,7 @@ class TestManagerRBACEnforcement:
         assert response.status_code == 200
         payload = response.json()["data"]  # {success, data, message} envelope
         assert "items" in payload
+        assert {item["id"] for item in payload["items"]} == {kg_a.id}
 
         app.dependency_overrides.clear()
 

@@ -1,4 +1,5 @@
 import re
+import runpy
 from pathlib import Path
 
 from main import app
@@ -80,6 +81,28 @@ def test_effective_route_inventory_includes_nested_admin_routers():
     assert "/admin/kindergartens/new" in route_paths
     assert "/api/admin/users/{user_id:int}/admin-reset-password" in route_paths
     assert "/api/admin/charts/render" in route_paths
+
+
+def test_no_duplicate_registered_method_path_pairs():
+    seen = set()
+    duplicates = set()
+    for route in app.routes:
+        for effective_route, path in _iter_effective_routes(route):
+            for method in getattr(effective_route, "methods", set()) or set():
+                if method in {"HEAD", "OPTIONS"}:
+                    continue
+                key = (method, path)
+                if key in seen:
+                    duplicates.add(key)
+                seen.add(key)
+    assert duplicates == set()
+
+
+def test_generated_admin_api_reference_matches_registered_openapi():
+    generator = runpy.run_path(str(ROOT / "scripts" / "manual-diagnostics" / "generate_admin_api_reference.py"))
+    expected = generator["generate"]()
+    actual = (ROOT / "docs" / "ADMIN_API_REFERENCE.md").read_text(encoding="utf-8")
+    assert actual == expected
 
 
 def _literal_paths(source):
@@ -200,10 +223,75 @@ def test_admin_api_calls_resolve_to_registered_backend_routes():
     assert broken == []
 
 
+def test_runtime_generated_admin_links_resolve_to_registered_frontend_routes():
+    """Cover links emitted from JS and backend service payloads, not only HTML hrefs."""
+    runtime_sources = [
+        *ADMIN_TEMPLATES,
+        *FIRST_PARTY_ADMIN_JS,
+        ROOT / "analytics_service.py",
+    ]
+    broken = []
+    for source_path in runtime_sources:
+        source = source_path.read_text(encoding="utf-8")
+        # Capture both complete literals and the static prefix of template
+        # literals (for example `/admin/users/${id}/edit`).
+        for path in re.findall(r'''["'`](/admin(?:/[^"'`$?\s<>)]+)?)''', source):
+            resolves = _is_registered_path_or_prefix(path)
+            if not resolves and path.endswith("/"):
+                resolves = _is_registered_path(f"{path}1")
+            if not resolves:
+                broken.append(f"{source_path.relative_to(ROOT)} -> {path}")
+    assert broken == []
+
+
+def test_templates_using_api_global_inherit_its_defining_script():
+    base_source = ADMIN_BASE.read_text(encoding="utf-8")
+    assert "/static/js/kinjo-api.js" in base_source
+
+    offenders = []
+    for template in ADMIN_TEMPLATES:
+        source = template.read_text(encoding="utf-8")
+        if re.search(r"\bapi\.(?:get|post|put|patch|delete)\s*\(", source):
+            if not re.search(r'''{%\s*extends\s+["']admin_base\.html["']\s*%}''', source):
+                offenders.append(str(template.relative_to(ROOT)))
+    assert offenders == []
+
+
+def test_admin_settings_uses_configured_session_timeout_global():
+    frontend_source = (ROOT / "scripts" / "compat" / "frontend_orig.py").read_text(encoding="utf-8")
+    settings_source = (ADMIN_TEMPLATE_ROOT / "settings.html").read_text(encoding="utf-8")
+    assert "templates.env.globals['session_timeout_minutes'] = settings.SESSION_TIMEOUT_MINUTES" in frontend_source
+    assert "{{ session_timeout_minutes" in settings_source
+
+
+def test_admin_user_form_uses_bounded_remote_kindergarten_lookup():
+    frontend_source = (ROOT / "scripts" / "compat" / "frontend_orig.py").read_text(encoding="utf-8")
+    template_source = (ADMIN_TEMPLATE_ROOT / "users" / "form.html").read_text(encoding="utf-8")
+    assert "db.query(Kindergarten).all()" not in frontend_source
+    assert "'/api/admin/options/kindergartens'" in template_source
+    assert "page_size: 50" in template_source
+
+
+def test_first_party_static_javascript_contains_no_jinja_control_syntax():
+    offenders = []
+    for source_path in (ROOT / "static" / "js").rglob("*.js"):
+        source = source_path.read_text(encoding="utf-8")
+        if "{%" in source:
+            offenders.append(str(source_path.relative_to(ROOT)))
+    assert offenders == []
+
+
 def test_admin_unsafe_requests_use_csrf_aware_helpers():
     auth_source = (ROOT / "static" / "js" / "auth.js").read_text(encoding="utf-8")
     assert "if (![\"GET\", \"HEAD\", \"OPTIONS\"].includes(method))" in auth_source
     assert "options.headers[\"X-CSRF-Token\"] = csrfToken;" in auth_source
+
+    # Raw fetch is also safe on admin pages because auth.js installs the
+    # wrapper globally before any page scripts execute. Guard that indirect
+    # contract explicitly so a future base-template change cannot silently
+    # remove CSRF protection from inline fetch calls.
+    base_source = ADMIN_BASE.read_text(encoding="utf-8")
+    assert base_source.index("/static/js/auth.js") < base_source.index("{% block extra_scripts %}")
 
     offenders = []
     unsafe_pattern = re.compile(

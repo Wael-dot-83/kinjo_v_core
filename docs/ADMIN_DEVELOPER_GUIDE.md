@@ -1,13 +1,16 @@
 # KinJo Admin Module — Developer Guide
 
+> This quick-reference is subordinate to the comprehensive [Admin Module Guide](ADMIN_GUIDE.md) and generated [Admin API Reference](ADMIN_API_REFERENCE.md). If they differ, the comprehensive guide and registered OpenAPI schema are authoritative.
+
 ## Overview
 
-The admin module lives in `admin_endpoints.py` and is mounted at `/api` in `main.py`
-(registered **before** `api_router` so admin routes take precedence on any path overlap).
-All routes use the `/admin/` prefix: `GET /api/admin/users`, `POST /api/admin/backup/create`, etc.
+The core router lives in `admin_endpoints.py` and is mounted at `/api/admin` in `main.py`.
+Its route decorators use paths relative to that prefix. Specialist Admin routers and
+frontend page routes are catalogued in `docs/ADMIN_GUIDE.md`.
 
 Frontend admin templates extend `admin_base.html` (not `base.html`).
-Admin UI pages are served by route handlers in `frontend.py`.
+Most Admin UI handlers live in `scripts/compat/frontend_orig.py` and are registered
+through the lightweight `frontend.py` compatibility loader.
 
 ---
 
@@ -16,7 +19,7 @@ Admin UI pages are served by route handlers in `frontend.py`.
 ### 1. Define the route in `admin_endpoints.py`
 
 ```python
-@router.get("/admin/my-feature")
+@router.get("/my-feature")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)   # always add a rate limit
 def my_feature(
     request: Request,                             # required by slowapi
@@ -35,13 +38,14 @@ Rules:
 
 ```python
 log_audit_event(
-    db=db,
-    user_id=current_user.id,
-    action=AuditAction.ADMIN_UPDATE_USER,
-    resource_type="User",
-    resource_id=user.id,
-    details={"before": before_dict, "after": after_dict},
-    request=request,
+    db,
+    AuditAction.USER_UPDATED,
+    current_user,
+    "User",
+    target_ids=user.id,
+    before_state=before_dict,
+    after_state=after_dict,
+    metadata={"source": "admin_api"},
 )
 ```
 
@@ -115,8 +119,9 @@ Admin pages extend `admin_base.html`. Template blocks:
 | `content` | Main page content |
 | `extra_scripts` | Page-specific `<script>` blocks |
 
-The template engine has `settings` registered as a global, so templates can use
-`{{ settings.SESSION_TIMEOUT_MINUTES }}` without it being passed in the context.
+The template engine exposes only approved non-sensitive globals. For example,
+templates use `{{ session_timeout_minutes }}`; the complete settings object is
+intentionally not exposed.
 
 ---
 

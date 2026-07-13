@@ -469,6 +469,12 @@ def validate_production_settings():
             "recognised Redis URI scheme. Expected 'redis://', 'rediss://', or 'redis+sentinel://'."
         )
 
+    if not settings.REDIS_URL.startswith(("redis://", "rediss://")):
+        raise RuntimeError(
+            "CRITICAL: REDIS_URL must use redis:// or rediss:// in production; "
+            "impersonation token revocation requires a shared Redis store."
+        )
+
     logger.info("✓ Production configuration validation passed")
 
 

@@ -111,13 +111,18 @@ async def get_current_user(
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("purpose"):
+            raise credentials_exception
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    user = db.query(models.User).filter(models.User.username == username).first()
+    user = db.query(models.User).filter(
+        models.User.username == username,
+        models.User.deleted_at.is_(None),
+    ).first()
     if user is None:
         raise credentials_exception
 
@@ -128,6 +133,19 @@ async def get_current_user(
         )
 
     _check_and_refresh_session(username)
+
+    impersonated_by = payload.get("impersonated_by")
+    if impersonated_by is not None:
+        try:
+            impersonated_by = int(impersonated_by)
+        except (TypeError, ValueError):
+            raise credentials_exception
+        db.info["impersonated_by"] = impersonated_by
+        db.info["impersonation_reason"] = payload.get("impersonation_reason")
+        request.state.impersonated_by = impersonated_by
+    else:
+        db.info.pop("impersonated_by", None)
+        db.info.pop("impersonation_reason", None)
 
     # Cache resolved id on request.state so middleware (e.g. structured access log)
     # can read it without re-decoding the JWT.
@@ -206,14 +224,31 @@ async def get_current_user_optional(
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("purpose"):
+            return None
         username: str = payload.get("sub")
         if username is None:
             return None
     except JWTError:
         return None
 
-    user = db.query(models.User).filter(models.User.username == username).first()
+    user = db.query(models.User).filter(
+        models.User.username == username,
+        models.User.deleted_at.is_(None),
+    ).first()
     if user and user.status == models.UserStatus.ACTIVE:
+        impersonated_by = payload.get("impersonated_by")
+        if impersonated_by is not None:
+            try:
+                impersonated_by = int(impersonated_by)
+            except (TypeError, ValueError):
+                return None
+            db.info["impersonated_by"] = impersonated_by
+            db.info["impersonation_reason"] = payload.get("impersonation_reason")
+            request.state.impersonated_by = impersonated_by
+        else:
+            db.info.pop("impersonated_by", None)
+            db.info.pop("impersonation_reason", None)
         return user
     return None
 
@@ -406,6 +441,8 @@ async def get_current_user_or_redirect(
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        if payload.get("purpose"):
+            raise RedirectToLogin("/login?expired=true")
         username: str = payload.get("sub")
         if username is None:
             logger.error("JWT payload missing 'sub'")
@@ -414,7 +451,10 @@ async def get_current_user_or_redirect(
         logger.error(f"JWTError in get_current_user_or_redirect: {str(e)} | token: {token[:10]}...")
         raise RedirectToLogin("/login?expired=true")
 
-    user = db.query(models.User).filter(models.User.username == username).first()
+    user = db.query(models.User).filter(
+        models.User.username == username,
+        models.User.deleted_at.is_(None),
+    ).first()
     if user is None:
         logger.error(f"User not found for username: {username}")
         raise RedirectToLogin("/login")

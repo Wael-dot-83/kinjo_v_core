@@ -740,6 +740,8 @@ def _resolve_rate_limit_by_role(
         return fallback_limit
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("purpose"):
+            return fallback_limit
         username = payload.get("sub")
         if not username:
             return fallback_limit
@@ -748,7 +750,9 @@ def _resolve_rate_limit_by_role(
 
     db = SessionLocal()
     try:
-        user = db.query(models.User).filter(models.User.username == username).first()
+        user = db.query(models.User).filter(
+            models.User.username == username, models.User.deleted_at.is_(None)
+        ).first()
     finally:
         db.close()
 

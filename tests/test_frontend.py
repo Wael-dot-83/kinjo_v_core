@@ -15,6 +15,74 @@ from database import get_db
 from dependencies import get_current_user_optional, get_current_user, get_current_user_or_redirect
 
 
+def test_admin_user_edit_page_hides_other_admin(client, test_db, admin_user):
+    other_admin = models.User(
+        username="frontend_other_admin",
+        email="frontend-other-admin@example.com",
+        hashed_password=get_password_hash("SecurePass123!"),
+        role=models.UserRole.ADMIN,
+        status=models.UserStatus.ACTIVE,
+    )
+    test_db.add(other_admin)
+    test_db.commit()
+    test_db.refresh(other_admin)
+    app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+    try:
+        response = client.get(f"/admin/users/{other_admin.id}/edit")
+        assert response.status_code == 404
+        assert other_admin.email not in response.text
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_manager_user_edit_page_hides_cross_tenant_user(client, test_db, manager_user):
+    other_kg = models.Kindergarten(
+        name_ar="حضانه نطاق آخر",
+        name_en="Other Scope KG",
+        governorate="Amman",
+        district="Amman",
+        area="Test",
+        address_line="Test",
+        contact_phone="+962790009999",
+        status=models.KindergartenStatus.ACTIVE,
+    )
+    test_db.add(other_kg)
+    test_db.flush()
+    other_user = models.User(
+        username="frontend_cross_tenant",
+        email="frontend-cross-tenant@example.com",
+        hashed_password=get_password_hash("SecurePass123!"),
+        role=models.UserRole.SUPERVISOR,
+        status=models.UserStatus.ACTIVE,
+        kindergarten_id=other_kg.id,
+    )
+    test_db.add(other_user)
+    test_db.commit()
+    app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+    try:
+        response = client.get(f"/admin/users/{other_user.id}/edit")
+        assert response.status_code == 404
+        assert other_user.email not in response.text
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/admin/kindergartens/999999999",
+        "/admin/kindergartens/999999999/edit",
+    ],
+)
+def test_missing_admin_kindergarten_pages_return_404(client, admin_user, path):
+    app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+    try:
+        response = client.get(path)
+        assert response.status_code == 404
+    finally:
+        app.dependency_overrides.clear()
+
+
 """
 Unit tests for Frontend Routes
 """
@@ -2624,7 +2692,7 @@ class TestFrontendRoutes:
         """Manager cannot edit user from another kindergarten"""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
         response = client.get(f"/admin/users/{admin_user.id}/edit", follow_redirects=False)
-        assert response.status_code in (302, 307)
+        assert response.status_code == 404
         app.dependency_overrides.clear()
 
     def test_admin_users_edit_manager_own_kg(self, client, manager_user, test_db, sample_kindergarten):

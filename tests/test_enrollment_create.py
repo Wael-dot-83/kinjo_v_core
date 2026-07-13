@@ -107,6 +107,29 @@ class TestKindergartenFilteringWithCity:
         assert response.status_code == 200
 
 
+def test_parent_kindergarten_list_is_active_public_projection(
+    client, parent_token, sample_kindergarten
+):
+    response = client.get(
+        "/api/kindergartens",
+        params={"status": "ACTIVE"},
+        headers={"Authorization": f"Bearer {parent_token}"},
+    )
+    assert response.status_code == 200
+    item = next(row for row in response.json()["data"]["items"] if row["id"] == sample_kindergarten.id)
+    assert "license_number" not in item
+    assert "administrative_notes" not in item
+    assert "attendance_pct" not in item
+
+
+def test_parent_cannot_request_deleted_kindergartens(client, parent_token):
+    response = client.get(
+        "/api/kindergartens?include_deleted=true",
+        headers={"Authorization": f"Bearer {parent_token}"},
+    )
+    assert response.status_code == 403
+
+
 class TestParentKindergartenDetails:
     """Test parent access to GET /api/kindergartens/{id}"""
 

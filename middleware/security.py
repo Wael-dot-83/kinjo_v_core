@@ -216,10 +216,12 @@ def _resolve_actor_id(request: Request, db: Session) -> Optional[int]:
         return None
 
     username = payload.get("sub")
-    if not username:
+    if not username or payload.get("purpose"):
         return None
 
-    user = db.query(models.User).filter(models.User.username == username).first()
+    user = db.query(models.User).filter(
+        models.User.username == username, models.User.deleted_at.is_(None)
+    ).first()
     return user.id if user else None
 
 

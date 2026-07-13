@@ -1025,6 +1025,76 @@ short_pass,short@test.jo,123,PARENT,{sample_kindergarten.id}"""
         # Should have some errors
         assert len(data.get("errors", [])) >= 1
 
+    def test_csv_import_rejects_excessive_rows(
+        self, client, auth_headers_admin, sample_kindergarten
+    ):
+        header = "username,email,password,role,kindergarten_id"
+        rows = [
+            f"bulk{i},bulk{i}@test.jo,SecurePass123!,PARENT,{sample_kindergarten.id}"
+            for i in range(1001)
+        ]
+        response = client.post(
+            "/api/admin/users/import-csv?dry_run=true",
+            files={"file": ("too-many.csv", "\n".join([header, *rows]).encode(), "text/csv")},
+            headers=auth_headers_admin,
+        )
+
+        assert response.status_code == 400
+        assert "1,000 row maximum" in response.text
+
+    def test_csv_import_rejects_surplus_columns(
+        self, client, auth_headers_admin
+    ):
+        header = "username,email,password,role"
+        row = ["wide", "wide@example.com", "SecurePass123!", "PARENT", *(["x"] * 47)]
+        response = client.post(
+            "/api/admin/users/import-csv?dry_run=true",
+            files={"file": ("wide.csv", f"{header}\n{','.join(row)}".encode(), "text/csv")},
+            headers=auth_headers_admin,
+        )
+
+        assert response.status_code == 400
+        assert "50 column maximum" in response.text
+
+
+def test_soft_deleted_user_is_not_addressable_by_admin_routes(
+    client, test_db, supervisor_user, auth_headers_manager
+):
+    supervisor_user.deleted_at = datetime.now(timezone.utc)
+    test_db.commit()
+
+    assert client.get(
+        f"/api/admin/users/{supervisor_user.id}", headers=auth_headers_manager
+    ).status_code == 404
+    assert client.put(
+        f"/api/admin/users/{supervisor_user.id}",
+        headers=auth_headers_manager,
+        json={"email": "resurrected@example.com"},
+    ).status_code == 404
+    assert client.get(
+        f"/admin/users/{supervisor_user.id}/edit", headers=auth_headers_manager
+    ).status_code == 404
+
+
+def test_soft_deleted_user_is_not_reachable_through_legacy_api_or_login(
+    client, test_db, supervisor_user, auth_headers_admin
+):
+    supervisor_user.deleted_at = datetime.now(timezone.utc)
+    test_db.commit()
+
+    assert client.get(
+        f"/api/users/{supervisor_user.id}", headers=auth_headers_admin
+    ).status_code == 404
+    assert client.put(
+        f"/api/users/{supervisor_user.id}",
+        headers=auth_headers_admin,
+        json={"status": "ACTIVE"},
+    ).status_code == 404
+    assert client.post(
+        "/token",
+        data={"username": supervisor_user.username, "password": "Supervisor123!"},
+    ).status_code == 401
+
 
 # =============================================================================
 # Admin Kindergarten Import Tests
@@ -1041,15 +1111,30 @@ def test_admin_import_kindergartens_rejects_non_excel(client, auth_headers_admin
 
 
 def test_imported_kindergartens_list_access_control(client, auth_headers_admin, auth_headers_manager, auth_headers_parent):
-    """Admin/Manager can list imported kindergartens, parent cannot."""
+    """Imported staging records are network-wide and therefore Admin-only."""
     admin_response = client.get("/api/admin/kindergartens/imported", headers=auth_headers_admin)
     assert admin_response.status_code == 200
 
     manager_response = client.get("/api/admin/kindergartens/imported", headers=auth_headers_manager)
-    assert manager_response.status_code == 200
+    assert manager_response.status_code == 403
 
     parent_response = client.get("/api/admin/kindergartens/imported", headers=auth_headers_parent)
     assert parent_response.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/observability/summary",
+        "/api/observability/data-quality",
+        "/api/observability/staff-equity",
+        "/api/admin/charts/data?source=kindergartens",
+        "/admin/charts/data?source=kindergartens",
+    ],
+)
+def test_network_wide_admin_analytics_reject_manager(client, auth_headers_manager, path):
+    response = client.get(path, headers=auth_headers_manager)
+    assert response.status_code == 403
 
 
 def test_imported_kindergartens_list_returns_filter_options(client, auth_headers_admin):

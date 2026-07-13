@@ -9,21 +9,27 @@ GET  /api/admin/impersonate/audit   — recent impersonation audit log entries
 from __future__ import annotations
 
 import json
+import secrets
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
+from jose import JWTError, jwt
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from audit_actions import AuditAction
 from database import get_db
-from models import AuditLog, Kindergarten, User, UserRole
+from models import AuditLog, Kindergarten, User, UserRole, UserStatus
 from rate_limiter import limiter
 from config import settings
-from rbac import IMPERSONATION_SESSION_KEY, require_role
+from auth import create_access_token
+from cache_service import cache_service
+from dependencies import get_current_user
+from rbac import IMPERSONATION_COOKIE_NAME, require_role
 
 router = APIRouter()
 
@@ -36,7 +42,7 @@ _require_admin = require_role(UserRole.ADMIN)
 
 class ImpersonateRequest(BaseModel):
     target_user_id: int
-    reason: Optional[str] = Field(None, max_length=500)
+    reason: str = Field(..., min_length=3, max_length=500)
 
 
 # ---------------------------------------------------------------------------
@@ -48,15 +54,43 @@ def _get_ip(request: Request) -> Optional[str]:
     return client.host if client else None
 
 
-def _get_session(request: Request) -> dict:
-    """Return a mutable session dict from request.state, or a plain dict fallback."""
-    session = getattr(request.state, "session", None)
-    if session is None:
-        # Provide a simple dict-backed fallback so the endpoint doesn't crash
-        # when no session middleware is configured.
-        request.state.session = {}
-        return request.state.session
-    return session
+def _set_auth_cookie(response: JSONResponse, token: str, *, max_age: int) -> None:
+    response.set_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        value=token,
+        max_age=max_age,
+        path="/",
+        samesite="strict",
+        secure=settings.secure_cookies,
+        httponly=True,
+        domain=settings.COOKIE_DOMAIN or None,
+    )
+
+
+def _rotate_csrf_cookie(response: JSONResponse, *, max_age: int) -> None:
+    response.set_cookie(
+        key=settings.CSRF_COOKIE_NAME,
+        value=secrets.token_hex(32),
+        max_age=max_age,
+        path="/",
+        samesite="strict",
+        secure=settings.secure_cookies,
+        httponly=False,
+        domain=settings.COOKIE_DOMAIN or None,
+    )
+
+
+def _set_restore_cookie(response: JSONResponse, token: str, *, max_age: int) -> None:
+    response.set_cookie(
+        key=IMPERSONATION_COOKIE_NAME,
+        value=token,
+        max_age=max_age,
+        path="/",
+        samesite="strict",
+        secure=settings.secure_cookies,
+        httponly=True,
+        domain=settings.COOKIE_DOMAIN or None,
+    )
 
 
 def _write_audit(
@@ -98,6 +132,7 @@ def start_impersonation(
     target = db.query(User).filter(
         User.id == payload.target_user_id,
         User.deleted_at.is_(None),
+        User.status == UserStatus.ACTIVE,
     ).first()
     if not target:
         _write_audit(
@@ -123,15 +158,32 @@ def start_impersonation(
             detail="Only managers can be impersonated.",
         )
 
-    session = _get_session(request)
-    session[IMPERSONATION_SESSION_KEY] = {
-        "admin_id": current_admin.id,
-        "admin_username": current_admin.username,
-        "user_id": target.id,
-        "username": target.full_name or target.username,
-        "role": target.role.value,
-        "started_at": datetime.now(_JORDAN_TZ).isoformat(),
-    }
+    started_at = datetime.now(_JORDAN_TZ).isoformat()
+    lifetime = min(settings.ACCESS_TOKEN_EXPIRE_MINUTES, 30)
+    max_age = lifetime * 60
+    target_token = create_access_token(
+        {
+            "sub": target.username,
+            "role": target.role.value,
+            "impersonated_by": current_admin.id,
+            "impersonation_reason": payload.reason,
+        },
+        expires_delta=timedelta(minutes=lifetime),
+    )
+    restore_token = create_access_token(
+        {
+            "sub": current_admin.username,
+            "purpose": "impersonation_restore",
+            "admin_id": current_admin.id,
+            "target_user_id": target.id,
+            "target_username": target.username,
+            "target_display_name": target.full_name or target.username,
+            "target_role": target.role.value,
+            "started_at": started_at,
+            "jti": secrets.token_urlsafe(24),
+        },
+        expires_delta=timedelta(minutes=lifetime),
+    )
 
     _write_audit(
         db,
@@ -147,7 +199,7 @@ def start_impersonation(
         kg = db.query(Kindergarten).filter(Kindergarten.id == target.kindergarten_id).first()
         kg_name = kg.name_ar if kg else ""
 
-    return {
+    response = JSONResponse({
         "message": "Impersonation started.",
         "impersonating": {
             "user_id": target.id,
@@ -156,7 +208,12 @@ def start_impersonation(
             "role": target.role.value,
             "kindergarten_name": kg_name,
         },
-    }
+    })
+    _set_auth_cookie(response, target_token, max_age=max_age)
+    _set_restore_cookie(response, restore_token, max_age=max_age)
+    _rotate_csrf_cookie(response, max_age=max_age)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -167,29 +224,77 @@ def start_impersonation(
 @router.post("/exit-impersonation", status_code=status.HTTP_200_OK)
 def exit_impersonation(
     request: Request,
-    current_admin: User = Depends(_require_admin),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    session = _get_session(request)
-    imp_data = session.get(IMPERSONATION_SESSION_KEY)
-
-    if not imp_data:
+    restore_token = request.cookies.get(IMPERSONATION_COOKIE_NAME)
+    if not restore_token:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not currently impersonating.")
+    try:
+        imp_data = jwt.decode(restore_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Impersonation session is invalid or expired.")
+    if imp_data.get("purpose") != "impersonation_restore":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid impersonation session.")
+    restore_jti = imp_data.get("jti")
+    if not restore_jti:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Impersonation session has been revoked.")
+    if imp_data.get("target_user_id") != current_user.id or imp_data.get("target_username") != current_user.username:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Impersonation identity mismatch.")
 
-    target_id = imp_data.get("user_id")
+    admin = db.query(User).filter(
+        User.id == imp_data.get("admin_id"),
+        User.username == imp_data.get("sub"),
+        User.role == UserRole.ADMIN,
+        User.status == UserStatus.ACTIVE,
+        User.deleted_at.is_(None),
+    ).first()
+    if not admin:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Original administrator is unavailable.")
+
+    target_id = current_user.id
+
+    now = int(datetime.now(timezone.utc).timestamp())
+    ttl = max(1, int(imp_data.get("exp", now + 1)) - now)
+    consumed = cache_service.add_if_absent(
+        f"impersonation_restore_revoked:{restore_jti}", True, ttl_seconds=ttl
+    )
+    if consumed is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Impersonation security store is unavailable.",
+        )
+    if not consumed:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Impersonation session has been revoked.",
+        )
 
     _write_audit(
         db,
-        admin_id=current_admin.id,   # always use JWT-verified identity
-        target_id=target_id or current_admin.id,
+        admin_id=admin.id,
+        target_id=target_id,
         action=AuditAction.IMPERSONATION_END,
         reason=None,
         ip=_get_ip(request),
     )
 
-    session.pop(IMPERSONATION_SESSION_KEY, None)
-
-    return {"message": "Impersonation ended."}
+    lifetime = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    max_age = lifetime * 60
+    admin_token = create_access_token(
+        {"sub": admin.username, "role": admin.role.value},
+        expires_delta=timedelta(minutes=lifetime),
+    )
+    response = JSONResponse({"message": "Impersonation ended."})
+    _set_auth_cookie(response, admin_token, max_age=max_age)
+    _rotate_csrf_cookie(response, max_age=max_age)
+    response.delete_cookie(
+        key=IMPERSONATION_COOKIE_NAME,
+        path="/",
+        domain=settings.COOKIE_DOMAIN or None,
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 # ---------------------------------------------------------------------------

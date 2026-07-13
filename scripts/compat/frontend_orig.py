@@ -17,6 +17,7 @@ from models import User, UserRole, Kindergarten, EnrollmentApplication
 from config import settings
 from validators import validate_jordan_governorate
 from services.jordan_locations import get_all_governorates
+from admin_security import can_admin_access_user
 
 SUPPORTED_UI_LANGUAGES = {"ar", "en"}
 
@@ -49,10 +50,10 @@ def language_context_processor(request: Request) -> dict:
         or getattr(request.state, "ui_lang", None)
         or request.query_params.get("lang")
     )
-    # Pass impersonation state so the banner template can render it
-    from rbac import IMPERSONATION_SESSION_KEY
-    session = getattr(request.state, "session", None) or {}
-    impersonation = session.get(IMPERSONATION_SESSION_KEY)
+    # Decode only the signed, display-safe impersonation cookie. Never trust
+    # client-provided identity fields or ephemeral request.state data.
+    from rbac import get_impersonation_context
+    impersonation = get_impersonation_context(request)
     return {
         "ui_lang": lang,
         "ui_dir": "rtl" if lang == "ar" else "ltr",
@@ -1296,14 +1297,16 @@ async def create_user_page(request: Request, db: Session = Depends(get_db), curr
         kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
         is_manager_user = True
     else:
-        kgs = db.query(Kindergarten).all()
+        selected_id = request.query_params.get("kindergarten_id")
+        kgs = db.query(Kindergarten).filter(Kindergarten.id == int(selected_id)).all() if selected_id and selected_id.isdigit() else []
         is_manager_user = False
 
     return templates.TemplateResponse(request=request, name="admin/users/form.html", context={
         "current_user": current_user, 
         "kindergartens": kgs, 
         "user_obj": None,
-        "is_manager_user": is_manager_user
+        "is_manager_user": is_manager_user,
+        "governorates": [item["name_ar"] for item in get_all_governorates()],
     })
 
 @router.get("/admin/users/{user_id}/edit", response_class=HTMLResponse)
@@ -1311,8 +1314,12 @@ async def edit_user_page(request: Request, user_id: int, db: Session = Depends(g
     if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
          return RedirectResponse("/")
     
-    user_obj = db.query(User).filter(User.id == user_id).first()
+    user_obj = db.query(User).filter(
+        User.id == user_id, User.deleted_at.is_(None)
+    ).first()
     if not user_obj:
+        return templates.TemplateResponse(request=request, name="404.html", status_code=404)
+    if not can_admin_access_user(current_user, user_obj):
         return templates.TemplateResponse(request=request, name="404.html", status_code=404)
     
     # Check permission for Manager
@@ -1322,14 +1329,15 @@ async def edit_user_page(request: Request, user_id: int, db: Session = Depends(g
         kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
         is_manager_user = True
     else:
-        kgs = db.query(Kindergarten).all()
+        kgs = db.query(Kindergarten).filter(Kindergarten.id == user_obj.kindergarten_id).all() if user_obj.kindergarten_id else []
         is_manager_user = False
 
     return templates.TemplateResponse(request=request, name="admin/users/form.html", context={
         "current_user": current_user, 
         "kindergartens": kgs, 
         "user_obj": user_obj,
-        "is_manager_user": is_manager_user
+        "is_manager_user": is_manager_user,
+        "governorates": [item["name_ar"] for item in get_all_governorates()],
     })
 
 
@@ -1363,7 +1371,7 @@ async def import_kindergartens_page(request: Request, current_user: User = Depen
 @router.get("/admin/imported-kindergartens", response_class=HTMLResponse)
 async def list_imported_kindergartens_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """List imported kindergartens page"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+    if current_user.role != UserRole.ADMIN:
         return RedirectResponse("/dashboard")
     return templates.TemplateResponse(
         request=request,
@@ -1443,6 +1451,8 @@ async def admin_kindergarten_edit(kindergarten_id: int, request: Request, curren
     if current_user.role != UserRole.ADMIN:
         return RedirectResponse("/dashboard")
     kg = _get_kg_or_none(kindergarten_id)
+    if kg is None:
+        return templates.TemplateResponse(request=request, name="404.html", status_code=404)
     return templates.TemplateResponse(
         request=request,
         name="admin/kindergartens/form.html",
@@ -1455,6 +1465,8 @@ async def admin_kindergarten_detail(kindergarten_id: int, request: Request, curr
     if current_user.role != UserRole.ADMIN:
         return RedirectResponse("/dashboard")
     kg = _get_kg_or_none(kindergarten_id)
+    if kg is None:
+        return templates.TemplateResponse(request=request, name="404.html", status_code=404)
     from database import SessionLocal
     from models import AuditLog
     db = SessionLocal()

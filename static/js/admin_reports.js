@@ -628,7 +628,11 @@
     const govSelect = getEl("governorateFilter");
     if (!citySelect || !govSelect) return;
     const gov = (govSelect.value || "").trim();
-    citySelect.innerHTML = '<option value="">{% if ui_lang == "en" %}All Cities{% else %}جميع المدن{% endif %}</option>';
+    citySelect.replaceChildren();
+    const allCitiesOption = document.createElement("option");
+    allCitiesOption.value = "";
+    allCitiesOption.textContent = reportsText("جميع المدن", "All Cities");
+    citySelect.appendChild(allCitiesOption);
     if (!gov) {
       citySelect.disabled = true;
       return;

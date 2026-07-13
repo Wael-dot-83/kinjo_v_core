@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import require_admin_or_manager
+from dependencies import require_admin, require_admin_or_manager
 from rate_limiter import limiter
 from config import settings
 from frontend import templates  # use the singleton with globals/filters pre-configured
@@ -36,7 +36,9 @@ from charts.schemas import (
 from charts.service import ChartService
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["Charts"])
+# Chart sources can aggregate network-wide operational data. Protect both the
+# canonical API and its compatibility aliases at the router boundary.
+router = APIRouter(tags=["Charts"], dependencies=[Depends(require_admin)])
 _svc = ChartService()
 
 # ---------------------------------------------------------------------------
@@ -146,7 +148,7 @@ def render_chart(
         logger.exception("render_chart failed source=%s", source)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Chart rendering failed: {exc}",
+            detail="Chart rendering failed. Use the correlation ID to investigate.",
         )
 
 # ---------------------------------------------------------------------------
@@ -167,7 +169,7 @@ def suggest_charts(request: Request, req: SuggestRequest, db: Session = Depends(
         logger.exception("suggest_charts failed source=%s", req.source)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Suggestion failed: {exc}",
+            detail="Chart suggestion failed. Use the correlation ID to investigate.",
         )
 
 # ---------------------------------------------------------------------------

@@ -189,8 +189,8 @@ def list_daily_reports_for_organization(
     if governorate_filter:
         try:
             governorate_filter = validators.validate_jordan_governorate(governorate_filter)
-        except validators.ValidationError:
-            pass
+        except validators.ValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
 
     kindergarten_query = db.query(models.Kindergarten)
 

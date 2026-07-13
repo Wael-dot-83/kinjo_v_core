@@ -115,14 +115,29 @@ def assert_manager_owns_kindergarten(manager: User, kindergarten_id: int) -> Non
 # ---------------------------------------------------------------------------
 
 IMPERSONATION_SESSION_KEY = "impersonation"
+IMPERSONATION_COOKIE_NAME = "kinjo_impersonation"
 
 
 def get_impersonation_context(request: Request) -> Optional[dict]:
-    """Return impersonation dict from session, or None if not impersonating."""
-    session = getattr(request.state, "session", None)
-    if session is None:
+    """Return verified, display-safe impersonation context from its signed cookie."""
+    token = request.cookies.get(IMPERSONATION_COOKIE_NAME)
+    if not token:
         return None
-    return session.get(IMPERSONATION_SESSION_KEY)
+    try:
+        from jose import JWTError, jwt
+        from config import settings
+
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("purpose") != "impersonation_restore":
+            return None
+        return {
+            "user_id": payload.get("target_user_id"),
+            "username": payload.get("target_display_name") or payload.get("target_username"),
+            "role": payload.get("target_role"),
+            "started_at": payload.get("started_at"),
+        }
+    except JWTError:
+        return None
 
 
 def is_impersonating(request: Request) -> bool:

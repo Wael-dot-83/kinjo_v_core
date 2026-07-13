@@ -158,13 +158,9 @@ window.exitImpersonation = async function () {
     btn.disabled = true;
 
     try {
-        const token = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-        const r = await fetch('/api/admin/exit-impersonation', {
+        const r = await fetchWithAuth('/api/admin/exit-impersonation', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            }
+            headers: { 'Content-Type': 'application/json' }
         });
 
         if (r.ok) {

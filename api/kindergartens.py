@@ -417,6 +417,15 @@ def _admin_only(user: models.User):
         raise HTTPException(status_code=403, detail="Admin access only")
 
 
+def _public_kindergarten_projection(item: dict) -> dict:
+    """Return the enrollment-safe projection exposed outside Admin/Manager."""
+    allowed = {
+        "id", "name_ar", "name_en", "governorate", "district", "area",
+        "address_line", "contact_phone", "contact_email", "status",
+    }
+    return {key: value for key, value in item.items() if key in allowed}
+
+
 # --------------------------------------------------------------------------
 # Endpoints
 # --------------------------------------------------------------------------
@@ -441,8 +450,21 @@ def list_kindergartens(
     db: Session = Depends(get_db),
 ):
     query = db.query(models.Kindergarten)
+    role = current_user.role
+    if include_deleted and role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only administrators may include deleted kindergartens")
     if not include_deleted:
         query = query.filter(models.Kindergarten.status != models.KindergartenStatus.DELETED)
+
+    if role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        if not current_user.kindergarten_id:
+            query = query.filter(models.Kindergarten.id == -1)
+        else:
+            query = query.filter(models.Kindergarten.id == current_user.kindergarten_id)
+    elif role == models.UserRole.PARENT:
+        query = query.filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+    elif role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     if q:
         query = query.filter(
@@ -473,7 +495,8 @@ def list_kindergartens(
     for kg in kgs:
         cc = cc_map.get(kg.id, kg.current_child_count or 0)
         pres, tot = att_map.get(kg.id, (0, 0))
-        items.append(_serialize(kg, child_count=cc, attendance_present=pres, attendance_total=tot))
+        item = _serialize(kg, child_count=cc, attendance_present=pres, attendance_total=tot)
+        items.append(item)
 
     def within(v, lo, hi):
         return (lo is None or (v is not None and v >= lo)) and (hi is None or (v is not None and v <= hi))
@@ -484,6 +507,8 @@ def list_kindergartens(
         and within(it["occupancy_pct"], min_occupancy, max_occupancy)
         and within(it["attendance_pct"], min_attendance, max_attendance)
     ]
+    if role in (models.UserRole.PARENT, models.UserRole.SUPERVISOR):
+        items = [_public_kindergarten_projection(item) for item in items]
 
     return _envelope(
         True,
@@ -576,7 +601,10 @@ def get_kindergarten(
     cc = db.query(child_count_sq.c[1]).filter(child_count_sq.c.kindergarten_id == kg.id).scalar() or kg.current_child_count or 0
     att = db.query(attendance_sq.c[1], attendance_sq.c[2]).filter(attendance_sq.c.kindergarten_id == kg.id).first()
     pres, tot = (att[0], att[1]) if att else (0, 0)
-    return _envelope(True, _serialize(kg, child_count=cc, attendance_present=pres, attendance_total=tot),
+    serialized = _serialize(kg, child_count=cc, attendance_present=pres, attendance_total=tot)
+    if role == models.UserRole.PARENT:
+        serialized = _public_kindergarten_projection(serialized)
+    return _envelope(True, serialized,
                      "تم جلب بيانات الحضانة بنجاح")
 
 

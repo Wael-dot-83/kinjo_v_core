@@ -664,7 +664,9 @@ def get_user(
     db: Session = Depends(get_db)
 ):
     """Get user details"""
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(models.User).filter(
+        models.User.id == user_id, models.User.deleted_at.is_(None)
+    ).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -697,7 +699,9 @@ def update_user(
     db: Session = Depends(get_db)
 ):
     """Update user"""
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(models.User).filter(
+        models.User.id == user_id, models.User.deleted_at.is_(None)
+    ).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -801,7 +805,9 @@ def delete_user(
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own admin account")
 
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(models.User).filter(
+        models.User.id == user_id, models.User.deleted_at.is_(None)
+    ).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 

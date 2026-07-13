@@ -15,6 +15,7 @@ from io import BytesIO
 import pytest
 
 import models
+from audit_actions import AuditAction
 
 
 # ===========================================================================
@@ -767,12 +768,12 @@ class TestAdminImpersonation:
         assert data["impersonating"]["user_id"] == manager_user.id
 
     def test_impersonate_non_manager_rejected(self, client, admin_user, supervisor_user, admin_token):
-        payload = {"target_user_id": supervisor_user.id}
+        payload = {"target_user_id": supervisor_user.id, "reason": "Support investigation"}
         r = client.post("/api/admin/impersonate", json=payload, headers=_hdr(admin_token))
         assert r.status_code == 422
 
     def test_impersonate_nonexistent_user_rejected(self, client, admin_user, admin_token):
-        payload = {"target_user_id": 999999}
+        payload = {"target_user_id": 999999, "reason": "Support investigation"}
         r = client.post("/api/admin/impersonate", json=payload, headers=_hdr(admin_token))
         assert r.status_code == 404
 
@@ -795,7 +796,7 @@ class TestAdminImpersonation:
     def test_impersonation_audit_endpoint(
         self, client, test_db, admin_user, manager_user, admin_token
     ):
-        payload = {"target_user_id": manager_user.id}
+        payload = {"target_user_id": manager_user.id, "reason": "Audit history test"}
         client.post("/api/admin/impersonate", json=payload, headers=_hdr(admin_token))
         r = client.get("/api/admin/impersonate/audit", headers=_hdr(admin_token))
         assert r.status_code == 200
@@ -805,7 +806,7 @@ class TestAdminImpersonation:
     def test_non_admin_cannot_impersonate(
         self, client, manager_user, supervisor_user, manager_token
     ):
-        payload = {"target_user_id": supervisor_user.id}
+        payload = {"target_user_id": supervisor_user.id, "reason": "Unauthorized attempt"}
         r = client.post("/api/admin/impersonate", json=payload, headers=_hdr(manager_token))
         assert r.status_code == 403
 
@@ -814,6 +815,155 @@ class TestAdminImpersonation:
     ):
         r = client.post("/api/admin/exit-impersonation", headers=_hdr(admin_token))
         assert r.status_code == 400
+
+    def test_impersonation_persists_switches_identity_and_restores_admin(
+        self, client, admin_user, manager_user, admin_token
+    ):
+        start = client.post(
+            "/api/admin/impersonate",
+            json={"target_user_id": manager_user.id, "reason": "Reproduce approved support case"},
+            headers=_hdr(admin_token),
+        )
+        assert start.status_code == 200
+        assert client.cookies.get("kinjo_impersonation")
+        captured_target_session = client.cookies.get("kinjo_session")
+        captured_restore = client.cookies.get("kinjo_impersonation")
+        captured_csrf = client.cookies.get("kinjo_csrf_token")
+
+        # With no bearer override, the new HttpOnly session resolves as Manager.
+        denied = client.get("/api/admin/impersonate/audit")
+        assert denied.status_code == 403
+
+        csrf = client.cookies.get("kinjo_csrf_token")
+        restored = client.post(
+            "/api/admin/exit-impersonation",
+            headers={"X-CSRF-Token": csrf},
+        )
+        assert restored.status_code == 200, restored.text
+        assert not client.cookies.get("kinjo_impersonation")
+
+        # The replacement session is the original active Admin again.
+        audit = client.get("/api/admin/impersonate/audit")
+        assert audit.status_code == 200
+
+        # A captured pre-exit cookie set cannot consume the one-time restore token again.
+        client.cookies.set("kinjo_session", captured_target_session)
+        client.cookies.set("kinjo_impersonation", captured_restore)
+        client.cookies.set("kinjo_csrf_token", captured_csrf)
+        replay = client.post(
+            "/api/admin/exit-impersonation",
+            headers={"X-CSRF-Token": captured_csrf},
+        )
+        assert replay.status_code == 401
+
+    def test_logout_revokes_impersonation_restore_credential(
+        self, client, test_db, admin_user, manager_user, admin_token
+    ):
+        start = client.post(
+            "/api/admin/impersonate",
+            json={"target_user_id": manager_user.id, "reason": "Logout revocation test"},
+            headers=_hdr(admin_token),
+        )
+        assert start.status_code == 200
+        assert client.cookies.get("kinjo_impersonation")
+        captured_restore = client.cookies.get("kinjo_impersonation")
+
+        logout = client.post(
+            "/api/auth/logout",
+            headers={"X-CSRF-Token": client.cookies.get("kinjo_csrf_token")},
+        )
+        assert logout.status_code == 200
+        assert not client.cookies.get("kinjo_impersonation")
+
+        login = client.post(
+            "/token",
+            data={"username": manager_user.username, "password": "Manager123!"},
+        )
+        assert login.status_code == 200
+
+        replay_as_bearer = client.get(
+            "/api/admin/impersonate/audit",
+            headers={"Authorization": f"Bearer {captured_restore}"},
+        )
+        assert replay_as_bearer.status_code == 401
+
+        html_replay = client.get(
+            "/admin/users",
+            headers={"Authorization": f"Bearer {captured_restore}"},
+            follow_redirects=False,
+        )
+        assert html_replay.status_code in (302, 303, 307)
+        assert html_replay.headers["location"].startswith("/login")
+
+        from starlette.websockets import WebSocketDisconnect
+
+        manager_session = client.cookies.get("kinjo_session")
+        client.cookies.delete("kinjo_session")
+        with pytest.raises(WebSocketDisconnect) as websocket_error:
+            with client.websocket_connect(
+                f"/ws/heatmap?token={captured_restore}"
+            ) as websocket:
+                websocket.receive_json()
+        assert websocket_error.value.code == 4001
+        client.cookies.set("kinjo_session", manager_session)
+
+        client.cookies.set("kinjo_impersonation", captured_restore)
+        exit_response = client.post(
+            "/api/admin/exit-impersonation",
+            headers={"X-CSRF-Token": client.cookies.get("kinjo_csrf_token")},
+        )
+        assert exit_response.status_code == 401
+
+        logout_audit = (
+            test_db.query(models.AuditLog)
+            .filter(models.AuditLog.action == AuditAction.LOGOUT)
+            .order_by(models.AuditLog.id.desc())
+            .first()
+        )
+        assert logout_audit is not None
+        assert logout_audit.user_id == manager_user.id
+        assert logout_audit.impersonated_by == admin_user.id
+        assert logout_audit.impersonation_reason == "Logout revocation test"
+
+    def test_impersonated_manager_mutation_records_originating_admin(
+        self,
+        client,
+        test_db,
+        admin_user,
+        manager_user,
+        supervisor_user,
+        sample_class,
+        admin_token,
+    ):
+        reason = "Trace manager support mutation"
+        start = client.post(
+            "/api/admin/impersonate",
+            json={"target_user_id": manager_user.id, "reason": reason},
+            headers=_hdr(admin_token),
+        )
+        assert start.status_code == 200
+
+        mutation = client.post(
+            "/api/manager/classes/assign-supervisor",
+            json={
+                "class_id": sample_class.id,
+                "supervisor_id": supervisor_user.id,
+                "is_primary": True,
+            },
+            headers={"X-CSRF-Token": client.cookies.get("kinjo_csrf_token")},
+        )
+        assert mutation.status_code == 201, mutation.text
+
+        audit = (
+            test_db.query(models.AuditLog)
+            .filter(models.AuditLog.action == AuditAction.SUPERVISOR_ASSIGNED)
+            .order_by(models.AuditLog.id.desc())
+            .first()
+        )
+        assert audit is not None
+        assert audit.user_id == manager_user.id
+        assert audit.impersonated_by == admin_user.id
+        assert audit.impersonation_reason == reason
 
 
 # ===========================================================================

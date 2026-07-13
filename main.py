@@ -64,6 +64,7 @@ logger = logging.getLogger(__name__)
 import models
 from database import get_db, init_db
 from auth import authenticate_user, create_access_token, get_password_hash
+from cache_service import cache_service
 from config import settings
 from dependencies import get_current_user, get_current_user_optional, RedirectToLogin
 from middleware.auth import (
@@ -91,7 +92,7 @@ import validators
 from captcha_service import captcha_error_message, captcha_required, verify_captcha
 from admin_security import CorrelationIdMiddleware, APIError, api_error_handler
 from audit_actions import AuditAction
-from rate_limiter import limiter, rate_limit_exceeded_handler
+from rate_limiter import limiter, rate_limit_exceeded_handler, check_admin_surface_limit
 from performance_monitor import PerformanceMiddleware, setup_database_monitoring, start_system_monitoring
 from backup_manager import backup_scheduler
 from daily_report_scheduler import daily_report_scheduler, waitlist_expiry_scheduler
@@ -374,6 +375,21 @@ async def enforce_request_timeout(request: Request, call_next):
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     return await security_headers_middleware(request, call_next)
+
+
+@app.middleware("http")
+async def enforce_admin_surface_rate_limit(request: Request, call_next):
+    path = request.url.path
+    protected_prefixes = ("/api/admin", "/api/observability", "/api/analytics", "/admin/charts")
+    if path.startswith(protected_prefixes):
+        allowed, limit_value = check_admin_surface_limit(request)
+        if not allowed:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded"},
+                headers={"Retry-After": "60", "X-RateLimit-Policy": limit_value},
+            )
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -748,12 +764,37 @@ def _set_authenticated_session(
     _set_no_store_headers(response)
 
 
-def _clear_authenticated_session(response: Response) -> None:
+def _clear_authenticated_session(response: Response, request: Request) -> None:
+    restore_token = request.cookies.get("kinjo_impersonation")
+    if restore_token:
+        try:
+            from jose import JWTError, jwt as _jwt
+
+            restore_payload = _jwt.decode(
+                restore_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            )
+            if restore_payload.get("purpose") == "impersonation_restore" and restore_payload.get("jti"):
+                now = int(datetime.now(timezone.utc).timestamp())
+                ttl = max(1, int(restore_payload.get("exp", now + 1)) - now)
+                revoked = cache_service.add_if_absent(
+                    f"impersonation_restore_revoked:{restore_payload['jti']}",
+                    True,
+                    ttl_seconds=ttl,
+                )
+                if revoked is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Authentication security store is unavailable.",
+                    )
+        except (JWTError, TypeError, ValueError):
+            pass
+
     for cookie_name in (
         settings.SESSION_COOKIE_NAME,
         settings.CSRF_COOKIE_NAME,
         "kinjo_token",
         "kinjo_mfa_ticket",
+        "kinjo_impersonation",
     ):
         response.delete_cookie(
             key=cookie_name,
@@ -940,7 +981,9 @@ def _decode_mfa_ticket(token: str, db: Session, *, expected_purposes: set[str]) 
     if not username or purpose not in expected_purposes:
         raise HTTPException(status_code=401, detail="MFA session expired.")
 
-    user = db.query(models.User).filter(models.User.username == username).first()
+    user = db.query(models.User).filter(
+        models.User.username == username, models.User.deleted_at.is_(None)
+    ).first()
     if not user or user.status != models.UserStatus.ACTIVE:
         raise HTTPException(status_code=401, detail="MFA session expired.")
 
@@ -992,7 +1035,7 @@ async def logout(
             sensitivity_level=1
         )
     response = JSONResponse(content={"message": "Logged out successfully"})
-    _clear_authenticated_session(response)
+    _clear_authenticated_session(response, request)
     return response
 
 
@@ -1234,6 +1277,8 @@ async def dashboard_websocket(websocket: WebSocket):
 
     def decode_token(value: str):
         payload = _jwt.decode(value, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("purpose"):
+            raise JWTError("purpose-scoped token is not an access token")
         username = payload.get("sub")
         if not username:
             raise JWTError("missing subject")
@@ -1260,7 +1305,9 @@ async def dashboard_websocket(websocket: WebSocket):
     # Verify user still exists and is active
     db = next(get_db())
     try:
-        user = db.query(models.User).filter(models.User.username == username).first()
+        user = db.query(models.User).filter(
+            models.User.username == username, models.User.deleted_at.is_(None)
+        ).first()
         if not user or user.status != models.UserStatus.ACTIVE:
             await websocket.close(code=4003, reason="User not found or inactive")
             return
@@ -1279,6 +1326,8 @@ async def heatmap_websocket(websocket: WebSocket):
 
     def decode_token(value: str):
         payload = _jwt.decode(value, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("purpose"):
+            raise JWTError("purpose-scoped token is not an access token")
         username = payload.get("sub")
         if not username:
             raise JWTError("missing subject")
@@ -1302,7 +1351,9 @@ async def heatmap_websocket(websocket: WebSocket):
 
     db = next(get_db())
     try:
-        user = db.query(models.User).filter(models.User.username == username).first()
+        user = db.query(models.User).filter(
+            models.User.username == username, models.User.deleted_at.is_(None)
+        ).first()
         if not user or user.status != models.UserStatus.ACTIVE:
             await websocket.close(code=4003, reason="User not found or inactive")
             return
@@ -1346,6 +1397,8 @@ async def notify_websocket(websocket: WebSocket):
 
     def decode_token(value: str) -> str:
         payload = _jwt.decode(value, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("purpose"):
+            raise JWTError("purpose-scoped token is not an access token")
         sub = payload.get("sub")
         if not sub:
             raise JWTError("missing subject")
@@ -1369,7 +1422,9 @@ async def notify_websocket(websocket: WebSocket):
 
     db = next(get_db())
     try:
-        user = db.query(models.User).filter(models.User.username == username).first()
+        user = db.query(models.User).filter(
+            models.User.username == username, models.User.deleted_at.is_(None)
+        ).first()
         if not user or user.status != models.UserStatus.ACTIVE:
             await websocket.close(code=4003, reason="User not found or inactive")
             return
@@ -1910,7 +1965,7 @@ async def analyze_trends(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.get("/api/analytics/insights")
+@app.get("/api/analytics/predictive-insights")
 async def get_predictive_insights(
     kindergarten_id: int,
     current_user: models.User = Depends(get_current_user),

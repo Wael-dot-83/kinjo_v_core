@@ -63,3 +63,172 @@ def test_decision_support_dashboard_scopes_to_manager_kindergarten(
 def test_decision_support_dashboard_rejects_supervisor(client, auth_headers_supervisor):
     response = client.get("/api/dashboard/decision-support", headers=auth_headers_supervisor)
     assert response.status_code == 403
+
+
+def test_dashboard_summary_forces_manager_kindergarten_scope(
+    client, auth_headers_manager, sample_kindergarten, sample_enrollment
+):
+    response = client.post(
+        "/api/dashboard/summary",
+        headers=auth_headers_manager,
+        json={"range": "week", "kindergarten_id": sample_kindergarten.id + 999},
+    )
+
+    assert response.status_code == 404
+
+    own_response = client.post(
+        "/api/dashboard/summary",
+        headers=auth_headers_manager,
+        json={"range": "week"},
+    )
+    assert own_response.status_code == 200
+    assert own_response.json()["children"] == 1
+
+
+def test_dashboard_summary_forces_supervisor_scope_and_rejects_parents(
+    client,
+    auth_headers_supervisor,
+    auth_headers_parent,
+    sample_enrollment,
+):
+    supervisor_response = client.post(
+        "/api/dashboard/summary",
+        headers=auth_headers_supervisor,
+        json={"range": "week"},
+    )
+    assert supervisor_response.status_code == 200
+    assert supervisor_response.json()["children"] == 1
+
+    parent_response = client.post(
+        "/api/dashboard/summary",
+        headers=auth_headers_parent,
+        json={"range": "week"},
+    )
+    assert parent_response.status_code == 403
+
+
+def test_suggested_actions_are_scoped_to_manager_kindergarten(
+    client,
+    auth_headers_manager,
+    test_db,
+    sample_child,
+    sample_enrollment,
+):
+    import models
+
+    other_kindergarten = models.Kindergarten(
+        name_ar="حضانة أخرى",
+        name_en="Other Kindergarten",
+        license_number="LIC-DASHBOARD-SCOPE",
+        governorate="Amman",
+        district="Amman",
+        area="Shmeisani",
+        address_line="Other address",
+        contact_phone="+962790000001",
+        contact_email="other-dashboard@test.invalid",
+        status=models.KindergartenStatus.ACTIVE,
+    )
+    test_db.add(other_kindergarten)
+    test_db.flush()
+    other_child = models.Child(
+        parent_id=sample_child.parent_id,
+        first_name="Other",
+        last_name="Child",
+        gender=models.Gender.FEMALE,
+        date_of_birth=sample_child.date_of_birth,
+        father_name="Other Father",
+        mother_first_name="Other",
+        mother_last_name="Mother",
+        mother_nationality="Jordanian",
+        mother_national_id="DASHBOARD-SCOPE-MOTHER",
+        media_consent=False,
+    )
+    test_db.add(other_child)
+    test_db.flush()
+    test_db.add(
+        models.EnrollmentApplication(
+            child_id=other_child.id,
+            kindergarten_id=other_kindergarten.id,
+            status=models.EnrollmentStatus.PENDING_REVIEW,
+            source="WEB",
+        )
+    )
+    test_db.commit()
+
+    response = client.get(
+        "/api/dashboard/suggested-actions", headers=auth_headers_manager
+    )
+
+    assert response.status_code == 200
+    pending_action = next(
+        item for item in response.json()["data"] if item["id"] == "pending_enrollments"
+    )
+    assert pending_action["pending_count"] == 0
+
+
+def test_dashboard_attendance_scope_follows_attendance_class_not_enrollment_history(
+    client,
+    auth_headers_manager,
+    test_db,
+    sample_child,
+    sample_enrollment,
+    manager_user,
+):
+    from datetime import date
+
+    import models
+
+    other_kindergarten = models.Kindergarten(
+        name_ar="حضانة سجل الحضور",
+        name_en="Attendance Scope KG",
+        license_number="LIC-ATTENDANCE-SCOPE",
+        governorate="Amman",
+        district="Amman",
+        area="Khalda",
+        address_line="Attendance scope address",
+        contact_phone="+962790000002",
+        contact_email="attendance-scope@example.com",
+        status=models.KindergartenStatus.ACTIVE,
+    )
+    test_db.add(other_kindergarten)
+    test_db.flush()
+    other_class = models.Class(
+        kindergarten_id=other_kindergarten.id,
+        name_ar="صف آخر",
+        name_en="Other Class",
+        class_code="ATT-SCOPE",
+        age_group="AGE_1_2",
+        capacity_total=20,
+        min_age_months=24,
+        max_age_months=48,
+        is_active=True,
+    )
+    test_db.add(other_class)
+    test_db.flush()
+    test_db.add(
+        models.AttendanceLog(
+            child_id=sample_child.id,
+            class_id=other_class.id,
+            date=date.today(),
+            status=models.AttendanceStatus.PRESENT,
+            recorded_by=manager_user.id,
+        )
+    )
+    test_db.commit()
+
+    summary = client.post(
+        "/api/dashboard/summary",
+        headers=auth_headers_manager,
+        json={"range": "today"},
+    )
+    assert summary.status_code == 200
+    assert summary.json()["attendance"] == 0.0
+    assert summary.json()["chart"][-1] == 0.0
+
+    actions = client.get(
+        "/api/dashboard/suggested-actions", headers=auth_headers_manager
+    )
+    attendance_action = next(
+        item for item in actions.json()["data"] if item["id"] == "attendance_trend"
+    )
+    assert attendance_action["current_rate"] is None
