@@ -716,6 +716,10 @@ class AdminDashboard {
    */
   animateCountUp(el, target, format, lang) {
     if (typeof target !== "number" || !Number.isFinite(target)) return;
+    // Respect users who requested reduced motion — the final value is already
+    // set on the element, so we simply skip the animation entirely (WCAG 2.3.3).
+    if (typeof window !== "undefined" && window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const finalText = el.textContent;
     const locale = lang === "en" ? "en-US" : "ar-JO";
     const start = (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -742,7 +746,9 @@ class AdminDashboard {
     if (!ctx) return;
     // Accessibility: give the canvas an accessible name + role.
     ctx.setAttribute("role", "img");
-    ctx.setAttribute("aria-label", "User activity chart showing active users over time");
+    ctx.setAttribute("aria-label", window.KINJO_LANG === "en"
+      ? "User activity chart showing active users over time"
+      : "مخطط نشاط المستخدمين يوضح عدد المستخدمين النشطين عبر الزمن");
     this.charts.userActivity?.destroy();
     const context = ctx.getContext("2d");
     const gradient = context ? (() => {
@@ -796,7 +802,9 @@ class AdminDashboard {
     if (!ctx) return;
     // Accessibility: give the canvas an accessible name + role.
     ctx.setAttribute("role", "img");
-    ctx.setAttribute("aria-label", "Enrollment status chart showing distribution of application statuses");
+    ctx.setAttribute("aria-label", window.KINJO_LANG === "en"
+      ? "Enrollment status chart showing distribution of application statuses"
+      : "مخطط حالة التسجيل يوضح توزيع حالات الطلبات");
     this.charts.dataSubmissions?.destroy();
     const palette = ["#0d6efd", "#198754", "#ffc107", "#dc3545", "#6c757d", "#0dcaf0"];
     this.charts.dataSubmissions = new Chart(ctx, {
