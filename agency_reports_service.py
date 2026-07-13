@@ -1,17 +1,28 @@
 """Dynamic, privacy-safe services for official agency reports."""
 from __future__ import annotations
 
+import os
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 import models
 from agency_reports_registry import AGENCY_REPORT_REGISTRY, SENSITIVE_FIELD_DENYLIST
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
+
+
+def _min_cell_size() -> int:
+    """Statistical disclosure threshold: category counts below this are
+    suppressed. Configurable via AGENCY_REPORT_MIN_CELL_SIZE; safe default 5.
+    A value <= 1 disables suppression."""
+    try:
+        return max(0, int(os.getenv("AGENCY_REPORT_MIN_CELL_SIZE", "5")))
+    except (TypeError, ValueError):
+        return 5
 
 
 def _now_iso() -> str:
@@ -100,6 +111,9 @@ class AgencyReportsService:
 
     def __init__(self, db: Session):
         self.db = db
+        # Per-request memo for expected-child-day computation, which several
+        # indicators (attendance, daily reports, incident rate) share.
+        self._expected_cache: dict[Any, tuple[int, dict[int, int]]] = {}
 
     def catalog(self) -> dict[str, Any]:
         agencies = []
@@ -598,7 +612,15 @@ class AgencyReportsService:
                 quality_notes.append(f"{ind_name.get(code, code)}: تعذّر احتساب هذا المؤشر.")
                 continue
             if result.get("kpi"):
-                kpis.append(result["kpi"])
+                kpi = result["kpi"]
+                kpis.append(kpi)
+                # An unavailable (None) value must be reflected in data quality,
+                # not silently presented as a real figure — this also downgrades
+                # the overall status from "sufficient" to "limited".
+                if kpi.get("value") is None:
+                    quality_notes.append(
+                        f"{ind_name.get(code, code)}: غير متاح ضمن النطاق المحدد (لا يوجد مقام صالح للاحتساب)."
+                    )
             if result.get("chart"):
                 charts.append(result["chart"])
             table.extend(result.get("rows", []))
@@ -624,6 +646,13 @@ class AgencyReportsService:
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
         }
+        # Statistical disclosure control: blank identifying small category counts
+        # before the payload leaves the service (applies to JSON and CSV alike).
+        suppressed_cells = self._apply_small_cell_suppression(charts, table)
+        if suppressed_cells:
+            quality_notes.append(
+                f"تم حجب {suppressed_cells} خلية بأعداد صغيرة لحماية الخصوصية (الحد الأدنى {_min_cell_size()})."
+            )
         payload = {
             "title": "تقرير مخصص",
             "generated_at": _now_iso(),
@@ -633,7 +662,7 @@ class AgencyReportsService:
             "charts": charts,
             "summary_ar": self._custom_summary_ar(scope_out, kpis, status),
             "decision_notes_ar": notes,
-            "data_quality": {"status": status, "notes": quality_notes},
+            "data_quality": {"status": status, "notes": quality_notes, "suppressed_cells": suppressed_cells},
             "privacy_notice_ar": "يعرض هذا التقرير بيانات تجميعية فقط ولا يتضمن أي بيانات شخصية أو حساسة.",
             "excluded_sensitive_fields": sorted(SENSITIVE_FIELD_DENYLIST),
         }
@@ -759,20 +788,32 @@ class AgencyReportsService:
         }
 
     def _ind_age_distribution(self, kg_ids, start, end):
-        today = datetime.now(_JORDAN_TZ).date()
+        # Age is computed as of the reporting period end, using full year/month/day
+        # boundaries (not a year+month approximation). Children with a missing or
+        # invalid date of birth stay visible as a data-quality category rather
+        # than being silently dropped from the distribution.
+        ref = end
         buckets: dict[str, int] = defaultdict(int)
+        unknown = 0
         for (dob,) in self._child_base_query(kg_ids).with_entities(models.Child.date_of_birth).all():
             if not dob:
+                unknown += 1
                 continue
-            months = (today.year - dob.year) * 12 + (today.month - dob.month)
+            months = (ref.year - dob.year) * 12 + (ref.month - dob.month)
+            if ref.day < dob.day:
+                months -= 1
             months = max(months, 0)
             low = (months // 6) * 6
             buckets[f"{low}-{low + 6} شهر"] += 1
         series = [{"label": k, "value": v} for k, v in sorted(buckets.items(), key=lambda kv: int(kv[0].split("-")[0]))]
+        band_count = len(series)
+        if unknown:
+            series.append({"label": "غير معروف", "value": unknown})
         return {
-            "kpi": self._kpi("age_distribution_6mo", "عدد الفئات العمرية (كل 6 أشهر)", len(series), "فئة"),
+            "kpi": self._kpi("age_distribution_6mo", "عدد الفئات العمرية (كل 6 أشهر)", band_count, "فئة"),
             "chart": {"type": "bar", "title_ar": "التوزيع العمري كل 6 أشهر", "series": series},
             "rows": [{"المؤشر": "التوزيع العمري", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+            "note": (f"يوجد {unknown} طفل بدون تاريخ ميلاد صالح ضمن النطاق." if unknown else None),
         }
 
     def _ind_enrollment_status(self, kg_ids, start, end):
@@ -824,36 +865,137 @@ class AgencyReportsService:
             enr_q = enr_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
         capacity = _safe_int(cap_q.scalar())
         enrolled = _safe_int(enr_q.scalar())
-        pct = _safe_pct(enrolled, capacity)
+        # Missing/zero capacity must read as "unavailable" (None), never a
+        # misleading 0% that looks like a real, empty nursery network.
+        pct = _safe_pct(enrolled, capacity) if capacity else None
         note = None
         if capacity == 0:
             note = "لا توجد سعة صفية مسجّلة ضمن النطاق لاحتساب نسبة الإشغال."
         return {
             "kpi": self._kpi("occupancy_rate", "نسبة الإشغال", pct, "%"),
-            "rows": [{"المؤشر": "نسبة الإشغال", "المسجلون": enrolled, "السعة": capacity, "النسبة %": pct}],
+            "rows": [{"المؤشر": "نسبة الإشغال", "المسجلون": enrolled, "السعة": capacity, "النسبة %": (pct if pct is not None else "—")}],
             "note": note,
         }
 
     # -- attendance ----------------------------------------------------
-    def _ind_attendance_rate(self, kg_ids, start, end):
-        q = self.db.query(models.AttendanceLog.status, func.count(models.AttendanceLog.id)).filter(
-            models.AttendanceLog.date >= start, models.AttendanceLog.date <= end)
+    # -- expected child-days (aggregate; mirrors kpi_service semantics) -----
+    # These compute production-grade denominators across a set of nurseries in a
+    # few batched queries rather than "all existing rows". Working days respect
+    # the Jordan school week (Sun–Thu) plus explicit OperatingCalendar overrides,
+    # exactly as KPIService._list_working_days does; enrolment date ranges are
+    # honoured via overlap. Attendance is PRESENT+LATE physical child-days.
+    def _resolve_kg_ids(self, kg_ids: list[int] | None) -> list[int]:
         if kg_ids is not None:
-            q = q.join(models.Class, models.Class.id == models.AttendanceLog.class_id).filter(
-                models.Class.kindergarten_id.in_(kg_ids))
-        rows = dict((_enum_value(s), _safe_int(c)) for s, c in q.group_by(models.AttendanceLog.status).all())
-        total = sum(rows.values())
-        present = rows.get("PRESENT", 0) + rows.get("LATE", 0)
-        pct = _safe_pct(present, total)
+            return kg_ids
+        return [r[0] for r in self.db.query(models.Kindergarten.id).filter(
+            models.Kindergarten.status != models.KindergartenStatus.DELETED).all()]
+
+    def _working_days_by_kg(self, kg_ids: list[int], start: date, end: date) -> dict[int, set]:
+        if start > end or not kg_ids:
+            return {kid: set() for kid in kg_ids}
+        overrides: dict[int, dict] = defaultdict(dict)
+        for kid, d, is_open in self.db.query(
+            models.OperatingCalendar.kindergarten_id,
+            models.OperatingCalendar.date,
+            models.OperatingCalendar.is_open,
+        ).filter(
+            models.OperatingCalendar.kindergarten_id.in_(kg_ids),
+            models.OperatingCalendar.date >= start,
+            models.OperatingCalendar.date <= end,
+        ).all():
+            overrides[kid][d] = bool(is_open)
+        # Default working days (Sun–Thu) are shared; only nurseries with explicit
+        # calendar rows diverge from the default.
+        all_days = []
+        cursor = start
+        while cursor <= end:
+            all_days.append(cursor)
+            cursor += timedelta(days=1)
+        default_days = frozenset(d for d in all_days if d.weekday() not in (4, 5))
+        result: dict[int, set] = {}
+        for kid in kg_ids:
+            kg_overrides = overrides.get(kid)
+            if not kg_overrides:
+                result[kid] = default_days
+                continue
+            days = set(default_days)
+            for d, is_open in kg_overrides.items():
+                if is_open:
+                    days.add(d)
+                else:
+                    days.discard(d)
+            result[kid] = days
+        return result
+
+    def _expected_child_days(self, kg_ids: list[int] | None, start: date, end: date) -> tuple[int, dict[int, int]]:
+        """Return (total_expected_child_days, expected_days_per_child) across the scope."""
+        resolved = self._resolve_kg_ids(kg_ids)
+        cache_key = (tuple(sorted(resolved)), start, end)
+        if cache_key in self._expected_cache:
+            return self._expected_cache[cache_key]
+        if not resolved:
+            self._expected_cache[cache_key] = (0, {})
+            return 0, {}
+        working = self._working_days_by_kg(resolved, start, end)
+        rows = self.db.query(
+            models.EnrollmentApplication.child_id,
+            models.EnrollmentApplication.kindergarten_id,
+            models.EnrollmentApplication.enrollment_start_date,
+            models.EnrollmentApplication.enrollment_end_date,
+        ).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(resolved),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            or_(models.EnrollmentApplication.enrollment_end_date.is_(None),
+                models.EnrollmentApplication.enrollment_end_date >= start),
+            or_(models.EnrollmentApplication.enrollment_start_date.is_(None),
+                models.EnrollmentApplication.enrollment_start_date <= end),
+        ).all()
+        expected_by_child: dict[int, int] = defaultdict(int)
+        total = 0
+        for child_id, kid, e_start, e_end in rows:
+            days = working.get(kid)
+            if not days:
+                continue
+            eff_start = max(start, e_start or start)
+            eff_end = min(end, e_end or end)
+            if eff_start > eff_end:
+                continue
+            cnt = sum(1 for d in days if eff_start <= d <= eff_end)
+            if cnt:
+                expected_by_child[int(child_id)] += cnt
+                total += cnt
+        out = (total, dict(expected_by_child))
+        self._expected_cache[cache_key] = out
+        return out
+
+    def _attended_child_days(self, child_ids: list[int], start: date, end: date) -> int:
+        if not child_ids:
+            return 0
+        return _safe_int(self.db.query(func.count(models.AttendanceLog.id)).filter(
+            models.AttendanceLog.child_id.in_(child_ids),
+            models.AttendanceLog.date >= start,
+            models.AttendanceLog.date <= end,
+            models.AttendanceLog.status.in_([models.AttendanceStatus.PRESENT, models.AttendanceStatus.LATE]),
+        ).scalar())
+
+    # -- attendance ----------------------------------------------------
+    def _ind_attendance_rate(self, kg_ids, start, end):
+        expected, expected_by_child = self._expected_child_days(kg_ids, start, end)
+        attended = self._attended_child_days(list(expected_by_child.keys()), start, end)
+        # Denominator is expected child-days on working days, not "all rows".
+        pct = _safe_pct(attended, expected) if expected else None
         return {
             "kpi": self._kpi("attendance_rate", "نسبة الحضور", pct, "%"),
-            "rows": [{"المؤشر": "نسبة الحضور", "سجلات الحضور": total, "حاضر/متأخر": present, "النسبة %": pct}],
-            "note": ("لا توجد سجلات حضور ضمن الفترة المحددة." if total == 0 else None),
+            "rows": [{"المؤشر": "نسبة الحضور", "أيام الحضور المتوقعة": expected, "أيام حضور فعلية": attended, "النسبة %": (pct if pct is not None else "—")}],
+            "note": ("لا توجد أيام حضور متوقعة ضمن النطاق (لا يوجد تسجيل نشط أو أيام دوام)." if not expected else None),
         }
 
     def _ind_absence_requests(self, kg_ids, start, end):
+        # Count absence requests that OVERLAP the period (start <= period_end and
+        # end >= period_start), not only those whose start falls inside it — an
+        # absence spanning into the period must still be counted.
         q = self.db.query(func.count(models.AbsenceRequest.id)).filter(
-            models.AbsenceRequest.start_date >= start, models.AbsenceRequest.start_date <= end)
+            models.AbsenceRequest.start_date <= end, models.AbsenceRequest.end_date >= start)
         if kg_ids is not None:
             q = q.filter(models.AbsenceRequest.kindergarten_id.in_(kg_ids))
         total = _safe_int(q.scalar())
@@ -862,18 +1004,26 @@ class AgencyReportsService:
 
     # -- daily reports -------------------------------------------------
     def _ind_daily_report_completion(self, kg_ids, start, end):
-        q = self.db.query(models.DailyReport.status, func.count(models.DailyReport.id)).filter(
-            models.DailyReport.date >= start, models.DailyReport.date <= end)
-        if kg_ids is not None:
-            q = q.filter(models.DailyReport.kindergarten_id.in_(kg_ids))
-        rows = dict((_enum_value(s), _safe_int(c)) for s, c in q.group_by(models.DailyReport.status).all())
-        total = sum(rows.values())
-        completed = rows.get("APPROVED", 0) + rows.get("SENT_TO_PARENT", 0)
-        pct = _safe_pct(completed, total)
+        # Denominator is expected child-days (eligible active-enrolment days on
+        # working days), NOT the count of existing report rows — missing reports
+        # must lower completion rather than disappear from the denominator.
+        expected, expected_by_child = self._expected_child_days(kg_ids, start, end)
+        child_ids = list(expected_by_child.keys())
+        completed = 0
+        if child_ids:
+            completed = _safe_int(self.db.query(func.count(models.DailyReport.id)).filter(
+                models.DailyReport.child_id.in_(child_ids),
+                models.DailyReport.date >= start, models.DailyReport.date <= end,
+                models.DailyReport.status.in_([
+                    models.DailyReportStatus.APPROVED,
+                    models.DailyReportStatus.SENT_TO_PARENT,
+                ]),
+            ).scalar())
+        pct = _safe_pct(completed, expected) if expected else None
         return {
             "kpi": self._kpi("daily_report_completion", "معدل إنجاز التقارير اليومية", pct, "%"),
-            "rows": [{"المؤشر": "إنجاز التقارير اليومية", "الإجمالي": total, "المكتملة": completed, "النسبة %": pct}],
-            "note": ("لا توجد تقارير يومية ضمن الفترة المحددة." if total == 0 else None),
+            "rows": [{"المؤشر": "إنجاز التقارير اليومية", "التقارير المتوقعة": expected, "المكتملة": completed, "النسبة %": (pct if pct is not None else "—")}],
+            "note": ("لا توجد تقارير متوقعة ضمن النطاق (لا يوجد تسجيل نشط أو أيام دوام)." if not expected else None),
         }
 
     def _ind_late_reports(self, kg_ids, start, end):
@@ -907,10 +1057,23 @@ class AgencyReportsService:
         rows = q.group_by(models.Incident.severity_level).all()
         series = [{"label": _enum_value(s), "value": _safe_int(c)} for s, c in rows]
         total = sum(s["value"] for s in series)
+        # Exposure-adjusted incident rate per 1,000 attended child-days — the
+        # comparable measure. Unavailable (not 0) when there is no attendance.
+        _, expected_by_child = self._expected_child_days(kg_ids, start, end)
+        attended = self._attended_child_days(list(expected_by_child.keys()), start, end)
+        rate = round(total / attended * 1000, 3) if attended else None
+        table = [{"المؤشر": "الحوادث حسب الخطورة", "الفئة": s["label"], "القيمة": s["value"]} for s in series]
+        table.append({
+            "المؤشر": "معدل الحوادث لكل 1000 يوم حضور",
+            "أيام الحضور": attended,
+            "المعدل": (rate if rate is not None else "—"),
+        })
         return {
             "kpi": self._kpi("incidents_by_severity", "إجمالي الحوادث", total, "حادثة"),
             "chart": {"type": "bar", "title_ar": "الحوادث حسب الخطورة", "series": series},
-            "rows": [{"المؤشر": "الحوادث حسب الخطورة", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+            "rows": table,
+            "note": ("لا توجد أيام حضور لاحتساب معدل الحوادث لكل 1000 يوم." if not attended else
+                     f"معدل الحوادث: {rate} لكل 1000 يوم حضور."),
         }
 
     # -- staff / governance -------------------------------------------
@@ -951,8 +1114,12 @@ class AgencyReportsService:
                 "rows": [{"المؤشر": "الأطفال غير المسجلين في صف", "القيمة": total}]}
 
     def _ind_data_quality_score(self, kg_ids, start, end):
-        today = datetime.now(_JORDAN_TZ).date()
-        week_ago = today - timedelta(days=7)
+        # Reporting participation: share of active nurseries with >=1 daily report
+        # in the 7-day window ENDING on the report end date. The window is exactly
+        # seven inclusive calendar dates (end-6 .. end), anchored to the selected
+        # period end rather than "now".
+        window_end = end
+        window_start = end - timedelta(days=6)
         kg_q = self.db.query(models.Kindergarten.id).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
         if kg_ids is not None:
             kg_q = kg_q.filter(models.Kindergarten.id.in_(kg_ids))
@@ -962,12 +1129,13 @@ class AgencyReportsService:
         if active_ids:
             reported = self.db.query(func.count(func.distinct(models.DailyReport.kindergarten_id))).filter(
                 models.DailyReport.kindergarten_id.in_(active_ids),
-                models.DailyReport.date >= week_ago, models.DailyReport.date <= today).scalar() or 0
-        pct = _safe_pct(reported, total)
+                models.DailyReport.date >= window_start, models.DailyReport.date <= window_end).scalar() or 0
+        # No active nurseries in scope -> participation is unavailable, not 0%.
+        pct = _safe_pct(reported, total) if total else None
         return {
             "kpi": self._kpi("data_quality_score", "مؤشر جودة البيانات", pct, "%"),
-            "rows": [{"المؤشر": "جودة البيانات (حضانات قدّمت تقريرًا خلال 7 أيام)", "النشطة": total, "المُبلِّغة": reported, "النسبة %": pct}],
-            "note": ("لا توجد حضانات نشطة ضمن النطاق لاحتساب جودة البيانات." if total == 0 else None),
+            "rows": [{"المؤشر": f"المشاركة في الإبلاغ ({window_start} → {window_end})", "النشطة": total, "المُبلِّغة": reported, "النسبة %": (pct if pct is not None else "—")}],
+            "note": ("لا توجد حضانات نشطة ضمن النطاق لاحتساب المشاركة في الإبلاغ." if total == 0 else None),
         }
 
     def _ind_service_access_ratio(self, kg_ids, start, end):
@@ -984,6 +1152,34 @@ class AgencyReportsService:
             "note": ("لا توجد حضانات نشطة ضمن النطاق." if active_kgs == 0 else None),
         }
 
+    SUPPRESSION_MARKER = "محجوب"
+
+    def _apply_small_cell_suppression(self, charts: list, table: list) -> int:
+        """Suppress identifying small category counts (statistical disclosure
+        control). Counts in (0, threshold) are blanked: chart points become a gap
+        (None, never 0) and table breakdown cells show "محجوب". Returns the number
+        of suppressed table cells. Headline KPI totals/rates are not suppressed;
+        complementary suppression is a documented follow-up."""
+        threshold = _min_cell_size()
+        if threshold <= 1:
+            return 0
+
+        def _small(v: Any) -> bool:
+            return isinstance(v, int) and not isinstance(v, bool) and 0 < v < threshold
+
+        for chart in charts:
+            for point in chart.get("series", []):
+                if _small(point.get("value")):
+                    point["value"] = None
+                    point["suppressed"] = True
+
+        suppressed = 0
+        for row in table:
+            if "الفئة" in row and _small(row.get("القيمة")):
+                row["القيمة"] = self.SUPPRESSION_MARKER
+                suppressed += 1
+        return suppressed
+
     def _custom_summary_ar(self, scope: dict[str, Any], kpis: list[dict[str, Any]], status: str) -> str:
         parts = [f"تقرير مخصص للجهة: {scope['agency_name_ar']}، على مستوى {scope['level_name_ar']}"]
         if scope.get("governorate"):
@@ -994,6 +1190,10 @@ class AgencyReportsService:
         head = "، ".join(parts) + "."
         if not kpis:
             return head + " لا توجد مؤشرات محسوبة ضمن هذا النطاق."
-        highlights = "؛ ".join(f"{k['label_ar']}: {k['value']}{(' ' + k['unit_ar']) if k.get('unit_ar') else ''}" for k in kpis[:6])
+        def _fmt(k: dict[str, Any]) -> str:
+            if k.get("value") is None:
+                return f"{k['label_ar']}: غير متاح"
+            return f"{k['label_ar']}: {k['value']}{(' ' + k['unit_ar']) if k.get('unit_ar') else ''}"
+        highlights = "؛ ".join(_fmt(k) for k in kpis[:6])
         status_ar = {"sufficient": "البيانات كافية", "limited": "البيانات محدودة", "incomplete": "البيانات غير مكتملة"}.get(status, status)
         return f"{head} أبرز المؤشرات: {highlights}. حالة البيانات: {status_ar}."
