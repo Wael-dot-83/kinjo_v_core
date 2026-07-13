@@ -12,7 +12,10 @@ def test_build_forecast_generates_points():
     assert len(forecast_points) == 5
     assert len(confidence["lower"]) == 5
     assert len(confidence["upper"]) == 5
-    assert meta["model_version"] == "linear_v1"
+    # build_forecast() was upgraded from a plain linear fit to a weighted
+    # ensemble (linear + moving-average + exponential-smoothing + seasonal).
+    assert meta["model_version"] == "ensemble_v1"
+    assert meta["ensemble"] is True
 
 
 def test_z_score_anomalies_detects_outlier():
