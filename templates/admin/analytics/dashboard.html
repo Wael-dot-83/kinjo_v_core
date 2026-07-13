@@ -324,6 +324,24 @@
         </div>
       </section>
 
+      {# ══ Executive Narrative (auto-generated) ═════════════════════════════ #}
+      <section class="insights-widget mb-section" id="narrativeWidget" aria-label="{% if ui_lang == 'en' %}Executive Narrative{% else %}الملخص السردي{% endif %}">
+        <div class="az-card">
+          <div class="az-card__header">
+            <h3 class="az-card__title">
+              <i class="bi bi-chat-left-text-fill me-2 text-primary"></i>
+              {% if ui_lang == 'en' %}Executive Narrative{% else %}الملخص السردي{% endif %}
+            </h3>
+            <small class="text-muted">{% if ui_lang == 'en' %}Auto-generated plain-language summary of the current period{% else %}ملخص تلقائي بلغة واضحة للفترة الحالية{% endif %}</small>
+          </div>
+          <div class="az-card__body">
+            <div id="narrativeList" class="narrative-list">
+              <div class="skeleton-loading" style="height: 60px;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {# ══ Action Queue Widget ══════════════════════════════════════════════ #}
       <section class="action-queue-widget mb-section" id="actionQueueWidget" aria-label="{% if ui_lang == 'en' %}Action Queue{% else %}قائمة الإجراءات{% endif %}">
         <div class="az-card">
@@ -337,6 +355,24 @@
           <div class="az-card__body">
             <div id="actionQueueList" class="action-queue-list">
               <div class="skeleton-loading" style="height: 80px;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {# ══ Data Lineage / Provenance ════════════════════════════════════════ #}
+      <section class="insights-widget mb-section" id="dataLineageWidget" aria-label="{% if ui_lang == 'en' %}Data Sources{% else %}مصادر البيانات{% endif %}">
+        <div class="az-card">
+          <div class="az-card__header">
+            <h3 class="az-card__title">
+              <i class="bi bi-diagram-3-fill me-2 text-secondary"></i>
+              {% if ui_lang == 'en' %}Data Sources &amp; Freshness{% else %}مصادر البيانات وحداثتها{% endif %}
+            </h3>
+            <small class="text-muted">{% if ui_lang == 'en' %}Where these analytics come from, and how current each source is{% else %}من أين تأتي هذه التحليلات ومدى حداثة كل مصدر{% endif %}</small>
+          </div>
+          <div class="az-card__body">
+            <div id="dataLineageList" class="lineage-grid">
+              <div class="skeleton-loading" style="height: 60px;"></div>
             </div>
           </div>
         </div>

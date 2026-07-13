@@ -1319,3 +1319,41 @@ a:focus-visible {
 .min-w-0 { min-width: 0; }
 .rank-circle { flex: 0 0 auto; }
 .dq-info > summary { cursor: pointer; color: var(--slate-500); }
+
+/* --- Phase 4 items 3-4: narrative insights + data lineage ----------------- */
+.narrative-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+.narrative-line {
+  display: flex; align-items: flex-start; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  background: var(--slate-50);
+  border-inline-start: 3px solid var(--slate-300);
+}
+.narrative-line i { margin-top: 3px; flex: 0 0 auto; }
+.narrative-line--positive { border-inline-start-color: var(--az-success); }
+.narrative-line--warning  { border-inline-start-color: var(--az-warning); }
+.narrative-line--negative { border-inline-start-color: var(--az-danger); }
+.narrative-line--neutral  { border-inline-start-color: var(--slate-400); }
+
+.lineage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--sp-3);
+}
+.lineage-source {
+  border: 1px solid var(--slate-200);
+  border-radius: var(--r-md);
+  padding: var(--sp-3);
+  background: #fff;
+}
+.lineage-source__count { font-size: 1.4rem; font-weight: 700; color: var(--slate-800); }
+.lineage-status {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: .72rem; font-weight: 600;
+  padding: 2px 8px; border-radius: var(--r-full);
+}
+.lineage-status--fresh   { background: var(--az-success-light); color: var(--az-success); }
+.lineage-status--recent  { background: var(--az-primary-light); color: var(--az-primary); }
+.lineage-status--stale   { background: var(--az-warning-light); color: var(--az-warning); }
+.lineage-status--empty   { background: var(--az-danger-light);  color: var(--az-danger); }
+.lineage-status--unknown { background: var(--slate-100);        color: var(--slate-500); }

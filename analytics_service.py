@@ -716,6 +716,171 @@ def get_predictive_alerts(
     }
 
 
+# --- Phase 4 item 3: data lineage / provenance ------------------------------
+# (dataset key, table, name_ar, name_en, model, recency column, is-a-Date-not-DateTime)
+_LINEAGE_SOURCES = [
+    ("attendance", "attendance_logs", "سجلات الحضور", "Attendance logs",
+     models.AttendanceLog, "date", True),
+    ("incidents", "incidents", "بلاغات الحوادث", "Incident reports",
+     models.Incident, "occurred_at", False),
+    ("daily_reports", "daily_reports", "التقارير اليومية", "Daily reports",
+     models.DailyReport, "date", True),
+    ("enrollments", "enrollment_applications", "طلبات التسجيل", "Enrollment applications",
+     models.EnrollmentApplication, "created_at", False),
+    ("kindergartens", "kindergartens", "الحضانات", "Kindergartens",
+     models.Kindergarten, "created_at", False),
+    ("children", "children", "الأطفال", "Children",
+     models.Child, "created_at", False),
+]
+
+
+def _lineage_status(count: int, freshness_days: Optional[int]) -> str:
+    if count == 0:
+        return "empty"
+    if freshness_days is None:
+        return "unknown"
+    if freshness_days <= 2:
+        return "fresh"
+    if freshness_days <= 7:
+        return "recent"
+    return "stale"
+
+
+@router.get("/data-lineage")
+def get_data_lineage(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Provenance panel: for each source feeding the analytics, report row count,
+    last-updated date and freshness — so the dashboard's numbers are traceable."""
+    _ensure_admin_only(current_user)
+    today = _jordan_today()
+
+    sources = []
+    for key, table, name_ar, name_en, model, col_name, is_date in _LINEAGE_SOURCES:
+        col = getattr(model, col_name)
+        count = db.query(func.count(model.id)).scalar() or 0
+        latest = db.query(func.max(col)).scalar()
+        latest_date = None
+        if latest is not None:
+            latest_date = latest if (isinstance(latest, date) and not isinstance(latest, datetime)) \
+                else (latest.date() if isinstance(latest, datetime) else None)
+        freshness_days = (today - latest_date).days if latest_date else None
+        sources.append({
+            "dataset": key, "table": table, "name_ar": name_ar, "name_en": name_en,
+            "record_count": count,
+            "last_updated": latest_date.isoformat() if latest_date else None,
+            "freshness_days": freshness_days,
+            "status": _lineage_status(count, freshness_days),
+        })
+
+    operational = [s["freshness_days"] for s in sources
+                   if s["dataset"] in ("attendance", "incidents", "daily_reports")
+                   and s["freshness_days"] is not None]
+    return {
+        "generated_at": today.isoformat(),
+        "sources": sources,
+        "overall_freshness_days": max(operational) if operational else None,
+    }
+
+
+# --- Phase 4 item 4: NLP narrative insights (rule-based NLG) -----------------
+@router.get("/narrative-summary")
+def get_narrative_summary(
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    governorate: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Auto-generated bilingual executive narrative — plain-language sentences
+    composed deterministically from the computed network + governorate metrics."""
+    if period_start > period_end:
+        raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
+    allowed_kgs = _allowed_kindergarten_ids(current_user, db)
+    if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    kg_filter = _kg_ids_for_governorate(db, governorate)
+    if allowed_kgs is not None and kg_filter is not None:
+        kg_filter = [kg for kg in kg_filter if kg in allowed_kgs]
+    elif allowed_kgs is not None:
+        kg_filter = allowed_kgs
+
+    ns = _cached_network_summary(db, period_start, period_end, kg_filter)
+    breakdown = _cached_governorate_breakdown(db, period_start, period_end, governorate, allowed_kgs, None)
+
+    sentences = []
+
+    # 1. Scale
+    sentences.append({
+        "tone": "neutral", "icon": "bi-diagram-3",
+        "ar": f"تغطي الشبكة {ns.total_kindergartens} حضانة و{ns.total_children} طفلاً في الفترة المحددة.",
+        "en": f"The network covers {ns.total_kindergartens} kindergartens and {ns.total_children} children in the selected period.",
+    })
+
+    # 2. Attendance assessment
+    att = ns.attendance_rate or 0
+    if att >= 90:
+        tone, ar_q, en_q = "positive", "قوي", "strong"
+    elif att >= 80:
+        tone, ar_q, en_q = "neutral", "ضمن المستوى المقبول", "within an acceptable range"
+    elif att >= 70:
+        tone, ar_q, en_q = "warning", "دون المستهدف", "below target"
+    else:
+        tone, ar_q, en_q = "negative", "منخفض بشكل حرج", "critically low"
+    sentences.append({
+        "tone": tone, "icon": "bi-person-check",
+        "ar": f"متوسط الحضور {att:.1f}% وهو {ar_q}.",
+        "en": f"Average attendance is {att:.1f}%, which is {en_q}.",
+    })
+
+    # 3. Governorates below the 80% attendance line
+    below = [g for g in breakdown if (getattr(g, "attendance_rate", 100) or 100) < 80]
+    if breakdown:
+        if below:
+            names = "، ".join(g.governorate for g in below[:3])
+            names_en = ", ".join(g.governorate for g in below[:3])
+            sentences.append({
+                "tone": "warning", "icon": "bi-geo-alt",
+                "ar": f"{len(below)} من {len(breakdown)} محافظة دون خط الحضور 80% (أبرزها: {names}).",
+                "en": f"{len(below)} of {len(breakdown)} governorates are below the 80% attendance line (notably: {names_en}).",
+            })
+        else:
+            sentences.append({
+                "tone": "positive", "icon": "bi-geo-alt",
+                "ar": "جميع المحافظات عند خط الحضور 80% أو أعلى.",
+                "en": "All governorates are at or above the 80% attendance line.",
+            })
+
+    # 4. Incidents
+    inc = ns.incident_rate or 0
+    sentences.append({
+        "tone": "negative" if inc > 10 else "warning" if inc > 5 else "neutral",
+        "icon": "bi-shield-exclamation",
+        "ar": f"معدل الحوادث {inc:.1f} لكل 1000 طفل.",
+        "en": f"The incident rate is {inc:.1f} per 1,000 children.",
+    })
+
+    # 5. Governance
+    gov = ns.governance_avg_score or 0
+    sentences.append({
+        "tone": "positive" if gov >= 80 else "warning" if gov >= 60 else "negative",
+        "icon": "bi-clipboard-check",
+        "ar": f"متوسط درجة الحوكمة {gov:.1f}%.",
+        "en": f"The average governance score is {gov:.1f}%.",
+    })
+
+    return {
+        "generated_at": _jordan_today().isoformat(),
+        "period": {"start": period_start.isoformat(), "end": period_end.isoformat()},
+        "governorate": governorate,
+        "narrative_ar": " ".join(s["ar"] for s in sentences),
+        "narrative_en": " ".join(s["en"] for s in sentences),
+        "sentences": sentences,
+    }
+
+
 @router.get("/scenarios")
 def get_scenarios(
     metric: str = Query(..., pattern="^(attendance|incidents|enrollment)$"),

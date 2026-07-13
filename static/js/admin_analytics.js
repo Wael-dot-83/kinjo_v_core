@@ -529,6 +529,7 @@ async function loadSecondaryWidgets(start, end, scopeType, scopeId) {
     loadChartAnnotations(),
     loadTargetProgress(),
     loadPredictiveAlerts(),
+    loadNarrativeSummary(),
   ]);
   await loadScenarios();
 }
@@ -542,6 +543,7 @@ async function loadTertiaryWidgets() {
     loadTargets(),
     loadBenchmarks(),
     loadRecommendations(),
+    loadDataLineage(),
   ]);
 }
 
@@ -3917,6 +3919,91 @@ function renderPredictiveAlerts(alerts) {
                     </div>
                 </div>
             </div>`;
+    }).join('');
+}
+
+async function loadNarrativeSummary() {
+    const container = document.getElementById('narrativeList');
+    if (!container) return;
+    const periodStart = document.getElementById('periodStart')?.value;
+    const periodEnd = document.getElementById('periodEnd')?.value;
+    const governorate = document.getElementById('governorateFilter')?.value;
+    if (!periodStart || !periodEnd) return;
+    try {
+        const params = new URLSearchParams({ period_start: periodStart, period_end: periodEnd });
+        if (governorate) params.set('governorate', governorate);
+        const response = await fetchWithAuth(`/api/analytics/narrative-summary?${params}`);
+        if (!response.ok) throw new Error('Failed to load narrative');
+        const data = await response.json();
+        renderNarrativeSummary(data.sentences || []);
+    } catch (error) {
+        console.error('Error loading narrative summary:', error);
+        container.innerHTML = `<div class="analytics-empty-state">${adminAnalyticsText('تعذر تحميل الملخص السردي', 'Unable to load the narrative summary')}</div>`;
+    }
+}
+
+function renderNarrativeSummary(sentences) {
+    const container = document.getElementById('narrativeList');
+    if (!container) return;
+    const lang = adminAnalyticsText('ar', 'en');
+    if (!sentences.length) {
+        container.innerHTML = `<div class="analytics-empty-state">${adminAnalyticsText('لا يوجد ملخص متاح', 'No summary available')}</div>`;
+        return;
+    }
+    const toneColor = { positive: 'success', warning: 'warning', negative: 'danger', neutral: 'secondary' };
+    container.innerHTML = sentences.map(s => {
+        const text = lang === 'en' ? s.en : s.ar;
+        return `<div class="narrative-line narrative-line--${s.tone}">
+            <i class="bi ${s.icon} text-${toneColor[s.tone] || 'secondary'}"></i>
+            <span>${escapeHtml(text)}</span>
+        </div>`;
+    }).join('');
+}
+
+async function loadDataLineage() {
+    const container = document.getElementById('dataLineageList');
+    if (!container) return;
+    try {
+        const response = await fetchWithAuth('/api/analytics/data-lineage');
+        if (!response.ok) throw new Error('Failed to load data lineage');
+        const data = await response.json();
+        renderDataLineage(data.sources || []);
+    } catch (error) {
+        console.error('Error loading data lineage:', error);
+        container.innerHTML = `<div class="analytics-empty-state">${adminAnalyticsText('تعذر تحميل مصادر البيانات', 'Unable to load data sources')}</div>`;
+    }
+}
+
+function renderDataLineage(sources) {
+    const container = document.getElementById('dataLineageList');
+    if (!container) return;
+    const lang = adminAnalyticsText('ar', 'en');
+    if (!sources.length) {
+        container.innerHTML = `<div class="analytics-empty-state">${adminAnalyticsText('لا توجد مصادر', 'No sources')}</div>`;
+        return;
+    }
+    const statusLabel = {
+        fresh: adminAnalyticsText('حديث', 'Fresh'),
+        recent: adminAnalyticsText('حديث نسبيًا', 'Recent'),
+        stale: adminAnalyticsText('قديم', 'Stale'),
+        empty: adminAnalyticsText('فارغ', 'Empty'),
+        unknown: adminAnalyticsText('غير معروف', 'Unknown'),
+    };
+    const statusIcon = { fresh: 'bi-check-circle-fill', recent: 'bi-clock-fill', stale: 'bi-exclamation-triangle-fill', empty: 'bi-slash-circle', unknown: 'bi-question-circle' };
+    container.innerHTML = sources.map(s => {
+        const name = lang === 'en' ? s.name_en : s.name_ar;
+        const updated = s.last_updated
+            ? `${adminAnalyticsText('آخر تحديث', 'Updated')}: ${s.last_updated}${s.freshness_days != null ? ` (${s.freshness_days} ${adminAnalyticsText('يوم', 'd')})` : ''}`
+            : adminAnalyticsText('لا توجد سجلات', 'No records');
+        return `<div class="lineage-source">
+            <div class="d-flex justify-content-between align-items-start mb-1 gap-2">
+                <span class="fw-bold">${escapeHtml(name)}</span>
+                <span class="lineage-status lineage-status--${s.status}"><i class="bi ${statusIcon[s.status] || 'bi-question-circle'}"></i>${statusLabel[s.status] || s.status}</span>
+            </div>
+            <div class="lineage-source__count">${Number(s.record_count).toLocaleString(lang === 'en' ? 'en-US' : 'ar-EG')}</div>
+            <div class="small text-muted"><code>${escapeHtml(s.table)}</code></div>
+            <div class="small text-muted mt-1">${escapeHtml(updated)}</div>
+        </div>`;
     }).join('');
 }
 
