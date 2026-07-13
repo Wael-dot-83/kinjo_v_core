@@ -5,12 +5,13 @@ Implements drill-down analytics from Network → Governorate → Kindergarten �
 from fastapi import APIRouter, Depends, Query, HTTPException, status, BackgroundTasks, Response
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any, Tuple
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, case, desc, asc
 from sqlalchemy.exc import SQLAlchemyError
 from enum import Enum
 import os
+import hashlib
 from pathlib import Path
 import csv
 import io
@@ -165,6 +166,43 @@ def _analytics_cache_set(key: str, value: Any, ttl: int = _DASHBOARD_CACHE_TTL) 
         pass
 
 
+def _kg_ids_cache_token(kg_ids: Optional[List[int]]) -> str:
+    if not kg_ids:
+        return "all"
+    return hashlib.md5(",".join(map(str, sorted(kg_ids))).encode()).hexdigest()[:12]
+
+
+def _cached_network_summary(db, period_start, period_end, kg_ids):
+    """Cache-backed get_network_summary. Keyed on the explicit (Jordan) period +
+    scope, so it never uses date.today()/UTC. Collapses the redundant recomputes
+    that insights / action-queue / target-progress otherwise trigger per load."""
+    key = (
+        f"analytics:netsum:{period_start.isoformat()}:{period_end.isoformat()}:"
+        f"{_kg_ids_cache_token(kg_ids)}"
+    )
+    cached = _analytics_cache_get(key)
+    if cached is not None:
+        return NetworkSummary.model_validate(cached)
+    summary = AnalyticsService.get_network_summary(db, period_start, period_end, kg_ids)
+    _analytics_cache_set(key, summary.model_dump(mode="json"))
+    return summary
+
+
+def _cached_governorate_breakdown(db, period_start, period_end, governorate, allowed_kgs, extra=None):
+    key = (
+        f"analytics:govbrk:{period_start.isoformat()}:{period_end.isoformat()}:"
+        f"{governorate or 'all'}:{_kg_ids_cache_token(allowed_kgs)}"
+    )
+    cached = _analytics_cache_get(key)
+    if cached is not None:
+        return [GovernorateMetrics.model_validate(item) for item in cached]
+    breakdown = AnalyticsService.get_governorate_breakdown(
+        db, period_start, period_end, governorate, allowed_kgs, extra
+    )
+    _analytics_cache_set(key, [b.model_dump(mode="json") for b in breakdown])
+    return breakdown
+
+
 class InsightEngine:
     """Generate actionable insights from analytics data"""
 
@@ -270,13 +308,9 @@ def validate_dashboard_data(data: dict) -> dict:
                 log_data_anomaly(key, val, "0-100")
                 validated[key] = max(0, min(100, val))
 
-    for trend_key in ['attendance_trend', 'incident_trend']:
-        if trend_key in validated and validated[trend_key]:
-            series = validated[trend_key]
-            for i in range(1, len(series)):
-                if series[i].date <= series[i-1].date:
-                    log_data_anomaly(f"{trend_key}[{i}].date", series[i].date, "chronological order")
-
+    # (Removed a dead attendance_trend/incident_trend chronological check:
+    # NetworkSummary carries no such keys, and post-model_dump items are dicts
+    # with no .date attribute, so the branch never ran and would have errored.)
     return validated
 
 
@@ -448,6 +482,10 @@ def get_model_performance(
     total_error = 0
     eval_count = 0
 
+    # Batch every actual for the window in one grouped query (was an N+1:
+    # 2 non-sargable COUNTs per forecast point across up to 10 predictions).
+    actuals = _actual_values_for_window(db, metric, evaluation_start, today)
+
     for prediction in past_predictions:
         forecast_points = prediction.forecast_points
         if isinstance(forecast_points, str):
@@ -462,7 +500,7 @@ def get_model_performance(
                 continue
 
             predicted_value = fp["value"] if isinstance(fp, dict) else fp.value
-            actual_value = _get_actual_value(db, metric, forecast_date, prediction.scope_type, prediction.scope_id)
+            actual_value = actuals.get(forecast_date)
 
             if actual_value is not None:
                 error = abs(predicted_value - actual_value)
@@ -495,8 +533,12 @@ def get_model_performance(
     mape = total_error / eval_count
     accuracy = 100 - mape
 
-    recent_evals = evaluations[: len(evaluations) // 2] if len(evaluations) > 1 else evaluations
-    older_evals = evaluations[len(evaluations) // 2 :] if len(evaluations) > 1 else evaluations
+    # Order chronologically so "recent" is really the later half — evaluations
+    # were appended in prediction-desc order, not by date.
+    evaluations.sort(key=lambda e: e["date"])
+    half = len(evaluations) // 2
+    older_evals = evaluations[:half] or evaluations
+    recent_evals = evaluations[half:] or evaluations
 
     recent_mape = sum(e["percentage_error"] for e in recent_evals) / len(recent_evals) if recent_evals else mape
     older_mape = sum(e["percentage_error"] for e in older_evals) / len(older_evals) if older_evals else mape
@@ -514,49 +556,52 @@ def get_model_performance(
         "mape": round(mape, 2),
         "evaluations": eval_count,
         "trend": trend,
-        "recent_evaluations": evaluations[:5],
+        "recent_evaluations": evaluations[-5:],
     }
 
 
-def _get_actual_value(db: Session, metric: str, target_date: date, scope_type: str, scope_id: Optional[str]) -> Optional[float]:
-    """Get actual value for a metric on a specific date."""
+def _actual_values_for_window(db: Session, metric: str, start: date, end: date) -> Dict[date, float]:
+    """Batched {date: actual_value} for the whole [start, end] window in one grouped
+    query per metric. Same definitions as the former per-date _get_actual_value, but
+    avoids the N+1 (2 COUNTs per forecast point) and the non-sargable
+    func.date(col) == filters — the WHERE uses half-open ranges on the raw column."""
+    result: Dict[date, float] = {}
     try:
         if metric == "attendance":
-            total_q = db.query(func.count(models.AttendanceLog.id)).filter(
-                models.AttendanceLog.date == target_date
+            rows = (
+                db.query(
+                    models.AttendanceLog.date,
+                    func.count(models.AttendanceLog.id),
+                    func.sum(case((models.AttendanceLog.status == models.AttendanceStatus.PRESENT, 1), else_=0)),
+                )
+                .filter(models.AttendanceLog.date >= start, models.AttendanceLog.date <= end)
+                .group_by(models.AttendanceLog.date)
+                .all()
             )
-            present_q = db.query(func.count(models.AttendanceLog.id)).filter(
-                models.AttendanceLog.date == target_date,
-                models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
+            for d, total, present in rows:
+                if total:
+                    result[d] = round((present or 0) / total * 100, 2)
+        elif metric in ("incidents", "enrollment"):
+            if metric == "incidents":
+                col, model_id = models.Incident.occurred_at, models.Incident.id
+            else:
+                col, model_id = models.EnrollmentApplication.created_at, models.EnrollmentApplication.id
+            rows = (
+                db.query(func.date(col), func.count(model_id))
+                .filter(
+                    col >= datetime.combine(start, time.min),
+                    col < datetime.combine(end + timedelta(days=1), time.min),
+                )
+                .group_by(func.date(col))
+                .all()
             )
-
-            total = total_q.scalar() or 0
-            present = present_q.scalar() or 0
-
-            return round((present / total) * 100, 2) if total > 0 else None
-
-        elif metric == "incidents":
-            count = (
-                db.query(func.count(models.Incident.id))
-                .filter(func.date(models.Incident.occurred_at) == target_date)
-                .scalar()
-                or 0
-            )
-            return float(count)
-
-        elif metric == "enrollment":
-            count = (
-                db.query(func.count(models.EnrollmentApplication.id))
-                .filter(func.date(models.EnrollmentApplication.created_at) == target_date)
-                .scalar()
-                or 0
-            )
-            return float(count)
-
-        return None
+            for d, c in rows:
+                key = d if isinstance(d, date) else date.fromisoformat(str(d)[:10])
+                result[key] = float(c)
+        return result
     except Exception as e:
-        logger.error(f"Error getting actual value for {metric} on {target_date}: {e}")
-        return None
+        logger.error(f"Error batching actuals for {metric} [{start}..{end}]: {e}")
+        return result
 
 
 @router.get("/scenarios")
@@ -899,7 +944,7 @@ def get_target_progress(
 
     today = _jordan_today()
     period_start = today - timedelta(days=30)
-    summary = AnalyticsService.get_network_summary(db, period_start, today, kg_filter)
+    summary = _cached_network_summary(db, period_start, today, kg_filter)
 
     current_values = {
         "attendance_rate": summary.attendance_rate,
@@ -937,7 +982,7 @@ def get_target_progress(
         gap = current_value - target_value
 
     prev_start = period_start - timedelta(days=30)
-    prev_summary = AnalyticsService.get_network_summary(db, prev_start, period_start, kg_filter)
+    prev_summary = _cached_network_summary(db, prev_start, period_start, kg_filter)
 
     prev_values = {
         "attendance_rate": prev_summary.attendance_rate,
@@ -966,7 +1011,7 @@ def get_target_progress(
 
     percentile = None
     if governorate:
-        all_govs = AnalyticsService.get_governorate_breakdown(db, period_start, today, None, allowed_kgs, None)
+        all_govs = _cached_governorate_breakdown(db, period_start, today, None, allowed_kgs, None)
         gov_values = [getattr(g, metric, 0) or 0 for g in all_govs]
         if gov_values:
             gov_values.sort()
@@ -1459,8 +1504,8 @@ def get_action_queue(
         kg_filter = allowed_kgs
 
     # Get insights
-    network_summary = AnalyticsService.get_network_summary(db, period_start, period_end, kg_filter)
-    governorate_breakdown = AnalyticsService.get_governorate_breakdown(
+    network_summary = _cached_network_summary(db, period_start, period_end, kg_filter)
+    governorate_breakdown = _cached_governorate_breakdown(
         db, period_start, period_end, governorate, allowed_kgs, None
     )
     insights = InsightEngine.generate_insights(
@@ -2085,8 +2130,8 @@ def get_insights(
     elif allowed_kgs is not None:
         gov_filter = allowed_kgs
 
-    network_summary = AnalyticsService.get_network_summary(db, period_start, period_end, gov_filter)
-    governorate_breakdown = AnalyticsService.get_governorate_breakdown(
+    network_summary = _cached_network_summary(db, period_start, period_end, gov_filter)
+    governorate_breakdown = _cached_governorate_breakdown(
         db, period_start, period_end, governorate, allowed_kgs, None
     )
 

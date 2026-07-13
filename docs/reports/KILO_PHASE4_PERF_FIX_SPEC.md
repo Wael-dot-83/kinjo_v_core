@@ -1,5 +1,14 @@
 # Phase 4 Analytics — Performance Fix Spec (for Kilo)
 
+> **STATUS 2026-07-13 — P1, P2, P3b IMPLEMENTED & TESTED** in `analytics_service.py`
+> (cached `_cached_network_summary`/`_cached_governorate_breakdown` wrappers wired into
+> insights/action-queue/target-progress; model-performance batched via
+> `_actual_values_for_window` with sargable ranges + chronological trend split; dead
+> `validate_dashboard_data` trend branch removed). Analytics suite 160 passed / 0 failed;
+> cache round-trip verified lossless. **P3a (Islamic-holiday annotations) is still OPEN** —
+> it needs a maintained annual date table; left for a deliberate decision. Kilo: do not
+> re-implement P1/P2/P3b.
+
 **Author:** Claude (read-only reviewer)
 **Date:** 2026-07-13
 **Target files (all currently uncommitted in Kilo's working tree):**
