@@ -508,11 +508,18 @@ async function loadAdminAnalytics(retryCount = 0) {
   }
 }
 
-// Run a non-critical task during browser idle time, falling back to a timeout
-// when requestIdleCallback is unavailable (older Safari / some embedded webviews).
+// Run a non-critical task during browser idle time. requestIdleCallback is
+// heavily throttled in backgrounded/hidden tabs (and in headless), where even its
+// own `timeout` can be starved — so we also arm a guaranteed setTimeout fallback
+// and run whichever fires first (once). Falls back to a plain timeout when
+// requestIdleCallback is unavailable (older Safari / some embedded webviews).
 function scheduleIdle(task, fallbackDelay = 100) {
   if (typeof window.requestIdleCallback === "function") {
-    return window.requestIdleCallback(task, { timeout: 2000 });
+    let ran = false;
+    const run = () => { if (!ran) { ran = true; task(); } };
+    window.requestIdleCallback(run, { timeout: 2000 });
+    setTimeout(run, 2500);
+    return;
   }
   return setTimeout(task, fallbackDelay);
 }
