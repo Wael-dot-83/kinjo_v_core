@@ -600,8 +600,13 @@ class AdminDashboard {
    * free keyboard support and screen-reader disclosure.
    */
   renderComponentGuide() {
-    const host = document.querySelector(".admin-dashboard-guide");
-    if (!host || document.getElementById("admin-component-guide")) return;
+    if (document.getElementById("admin-component-guide")) return;
+    // Prefer the legacy "How to use" guide as the anchor when present; otherwise
+    // fall back to the KPI-cards list so the reference always renders instead of
+    // silently no-opping (the template ships no .admin-dashboard-guide element).
+    const legacyGuide = document.querySelector(".admin-dashboard-guide");
+    const anchor = legacyGuide || document.getElementById("kpi-cards");
+    if (!anchor) return;
     const lang = window.KINJO_LANG === "en" ? "en" : "ar";
 
     const COMPONENTS = [
@@ -664,7 +669,8 @@ class AdminDashboard {
     details.appendChild(list);
     section.appendChild(details);
 
-    host.insertAdjacentElement("afterend", section);
+    // After the legacy guide when present, else just before the KPI cards.
+    anchor.insertAdjacentElement(legacyGuide ? "afterend" : "beforebegin", section);
   }
 
   // ── Relative "updated" timestamp ─────────────────────────────────────────

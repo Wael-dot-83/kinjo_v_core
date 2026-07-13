@@ -388,3 +388,15 @@ def test_dashboard_chart_aria_labels_are_bilingual():
     assert "مخطط نشاط المستخدمين" in js
     assert "Enrollment status chart showing distribution of application statuses" in js
     assert "مخطط حالة التسجيل" in js
+
+
+def test_component_guide_falls_back_to_a_real_anchor():
+    """Kilo's injected 'About this dashboard' guide anchored only on
+    .admin-dashboard-guide, which the template does not ship — so it silently
+    never rendered. It must fall back to #kpi-cards so the feature works."""
+    js = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
+    match = re.search(r"renderComponentGuide\(\)\s*\{(?P<body>.*?)\n  \}", js, re.S)
+    assert match, "renderComponentGuide not found"
+    body = match.group("body")
+    assert 'getElementById("kpi-cards")' in body
+    assert "beforebegin" in body
