@@ -107,7 +107,10 @@ def test_trend_chart_padding_guards_against_negative_array_length():
     source = ADMIN_ANALYTICS_JS.read_text(encoding="utf-8")
     assert "const paddingLength = Math.max(0, dataSeries.length - 1);" in source
     assert "new Array(dataSeries.length - 1)" not in source
-    assert source.count("new Array(paddingLength)") == 3
+    # 3 in the trend chart + 1 in the scenarios chart (Phase 4). What matters is
+    # that every padding array goes through the Math.max(0, …) guard above, never
+    # the raw dataSeries.length - 1.
+    assert source.count("new Array(paddingLength)") == 4
 
 
 def test_alerts_card_has_empty_state():
@@ -132,11 +135,13 @@ def test_secondary_widgets_load_in_parallel_not_sequentially():
     leaderboard, deferred separately) is.
     """
     source = ADMIN_ANALYTICS_JS.read_text(encoding="utf-8")
-    match = re.search(
-        r"await Promise\.allSettled\(\[(?P<body>.*?)\]\);", source, re.S
-    )
-    assert match is not None, "secondary widget loaders must be dispatched via Promise.allSettled"
-    body = match.group("body")
+    # Phase 4 split these into two idle-scheduled parallel batches
+    # (loadSecondaryWidgets + loadTertiaryWidgets), each dispatched via
+    # Promise.allSettled. The parallel-not-sequential guarantee is unchanged —
+    # assert the union of every allSettled batch still contains all 9 widgets.
+    bodies = re.findall(r"Promise\.allSettled\(\[(.*?)\]\);", source, re.S)
+    assert bodies, "secondary widget loaders must be dispatched via Promise.allSettled"
+    combined = "\n".join(bodies)
     for call in (
         "loadComparativeAnalysis(start, end)",
         "loadPredictiveInsights(start, end, scopeType, scopeId)",
@@ -148,7 +153,7 @@ def test_secondary_widgets_load_in_parallel_not_sequentially():
         "loadRecommendations()",
         "loadRegistrationAnalytics()",
     ):
-        assert call in body, f"missing from parallel batch: {call}"
+        assert call in combined, f"missing from parallel batches: {call}"
 
     # The old sequential form must not reappear elsewhere in the file.
     for stale in (
