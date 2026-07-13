@@ -365,3 +365,38 @@ def test_activity_search_placeholder_meets_contrast_minimum():
     match = re.search(r"\.admin-activity-filter-input::placeholder\s*\{(?P<body>[^}]+)\}", css)
     assert match, "no explicit ::placeholder rule for .admin-activity-filter-input"
     assert "var(--color-gray-500)" in match.group("body")
+
+
+def test_kpi_count_up_respects_reduced_motion():
+    """The requestAnimationFrame KPI count-up must not run for users who
+    requested reduced motion (WCAG 2.3.3) — the CSS fade-up is guarded, so the
+    JS animation must be too."""
+    js = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
+    match = re.search(r"animateCountUp\([^)]*\)\s*\{(?P<body>.*?)\n  \}", js, re.S)
+    assert match, "animateCountUp not found"
+    body = match.group("body")
+    assert "prefers-reduced-motion: reduce" in body
+    assert "matchMedia" in body
+
+
+def test_dashboard_chart_aria_labels_are_bilingual():
+    """Chart canvas accessible names must be localized — an Arabic-primary app
+    must not announce English-only aria-labels to screen readers."""
+    js = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
+    # English kept, Arabic added for both charts.
+    assert "User activity chart showing active users over time" in js
+    assert "مخطط نشاط المستخدمين" in js
+    assert "Enrollment status chart showing distribution of application statuses" in js
+    assert "مخطط حالة التسجيل" in js
+
+
+def test_component_guide_falls_back_to_a_real_anchor():
+    """Kilo's injected 'About this dashboard' guide anchored only on
+    .admin-dashboard-guide, which the template does not ship — so it silently
+    never rendered. It must fall back to #kpi-cards so the feature works."""
+    js = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
+    match = re.search(r"renderComponentGuide\(\)\s*\{(?P<body>.*?)\n  \}", js, re.S)
+    assert match, "renderComponentGuide not found"
+    body = match.group("body")
+    assert 'getElementById("kpi-cards")' in body
+    assert "beforebegin" in body
