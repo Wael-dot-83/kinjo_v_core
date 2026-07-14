@@ -471,9 +471,10 @@ def test_postgres_enforces_the_owner_foreign_key(fresh_pg: str) -> None:
     ids = _seed_rows(fresh_pg, n_incidents=1)
     engine = sa.create_engine(fresh_pg)
     try:
-        incident = engine.connect().execute(
-            sa.text("SELECT id FROM incidents LIMIT 1")
-        ).scalar_one()
+        with engine.connect() as conn:
+            incident = conn.execute(
+                sa.text("SELECT id FROM incidents LIMIT 1")
+            ).scalar_one()
         with pytest.raises(sa.exc.IntegrityError, match="fk_incidents_owner_id_users"):
             with engine.begin() as conn:
                 conn.execute(
