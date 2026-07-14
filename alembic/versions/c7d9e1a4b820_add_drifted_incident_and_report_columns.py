@@ -1,4 +1,4 @@
-"""add incidents.status/owner_id and reports.district/area + two missing unique constraints
+"""add incidents.status/owner_id and reports.district/area; rename a stale unique constraint
 
 These columns are declared in models.py but no migration ever created them, so a database
 built from the migration chain does not have them. This is the same class of fresh-deploy
@@ -27,23 +27,46 @@ creating incident_history, which references the same `name='incidentstatus'`. So
 migration must NOT recreate it (create_type=False) — a second CREATE TYPE would abort the
 deploy. On SQLite the enum is a VARCHAR + CHECK and the question does not arise.
 
-Unique constraints — investigated individually rather than trusting autogenerate, which
-reported six (three, each twice):
+Unique constraints — autogenerate reported six (three, each listed twice). Verified against
+a real PostgreSQL 15 database built through this chain: **none of them was missing.** All
+three are already enforcing; only their declared shape or name disagreed with models.py.
+So this migration adds no unique constraint at all.
 
-  ai_features (entity_type, entity_id, feature_name) — genuinely absent. Added.
-  governorate (slug)                                 — genuinely absent. Added.
-  imported_kindergartens (name_ar, district, phone)  — NOT missing. It is already there and
-      already enforcing, but under the stale name `uq_imported_kindergartens_name_city_phone`
-      while models.py expects `uq_imported_kindergartens_name_district_phone` — the name was
-      never updated when city became district. Same columns, so this is a rename, not an add.
+  ai_features (entity_type, entity_id, feature_name)
+      Enforced since d2e3f4a5b6c7 as a unique INDEX named idx_ai_features_entity_feature.
+      models.py declared the same name as a UniqueConstraint. PostgreSQL keeps indexes and
+      constraints in ONE relation namespace, so ADD CONSTRAINT under that name aborts with
+      `relation "idx_ai_features_entity_feature" already exists`. Fixed in models.py by
+      declaring the index it has always been. No DDL.
 
-Names matter more than they look: a constraint whose name does not match models.py is
-reported as missing forever, which is exactly how imported_kindergartens hid in the drift
-list while enforcing correctly the whole time. Both added constraints use the model's own
-name for that reason.
+  governorate (slug)
+      Enforced since h1m2026h01, which declared the column unique=True *and* index=True —
+      that combination emits a unique INDEX (ix_governorate_slug), not a constraint.
+      models.py omitted index=True, so metadata asked for a constraint the database never
+      had; adding it would have built a second redundant unique index over one column.
+      Fixed in models.py. No DDL.
 
-The added constraints are duplicate-checked first and abort with the offending keys rather
-than destroying rows. No data is merged or deleted automatically.
+  imported_kindergartens (name_ar, district, phone)
+      Present and enforcing, but under the stale name
+      uq_imported_kindergartens_name_city_phone. b2e9a2f60c27 renamed the *column* city to
+      district; PostgreSQL silently repoints a constraint at a renamed column but keeps the
+      constraint's own name, so the name has said "city" ever since while the definition
+      reads UNIQUE (name_ar, district, phone). Same columns — a rename, not an add.
+
+The lesson that cost the most here: **a unique index and a unique constraint enforce
+identically, but autogenerate reports one as a missing instance of the other, forever.**
+Every `add_constraint` in this drift report was a false positive. Trusting them would have
+crashed the deploy outright, which the first PostgreSQL run of this migration duly did.
+
+No data is merged or deleted anywhere in this migration.
+
+Supported upgrade source — databases built through the Alembic revision chain, only.
+That is not a preference, it is the contract the code already keeps: database.py's init_db()
+refuses to call Base.metadata.create_all() when ENVIRONMENT is production and defers to
+Alembic. A schema created directly from models.py metadata would already have these columns
+and the corrected constraint name, so ADD COLUMN would fail on it — such a database is not
+an upgrade source, and the rename below says so explicitly rather than failing obscurely.
+Dev and test databases are create_all-built and disposable; they never take this path.
 
 Revision ID: c7d9e1a4b820
 Revises: 1417f512f696
@@ -71,21 +94,39 @@ def _status_type(bind):
     return sa.Enum(*_STATUS_LABELS, name="incidentstatus")
 
 
-def _abort_on_duplicates(bind, table: str, columns: str) -> None:
-    """Refuse to add a unique constraint over data that violates it."""
-    rows = bind.execute(
-        sa.text(
-            f"SELECT {columns}, COUNT(*) AS n FROM {table} "
-            f"GROUP BY {columns} HAVING COUNT(*) > 1"
-        )
-    ).fetchall()
-    if rows:
-        keys = "; ".join(str(tuple(r[:-1])) for r in rows[:10])
+_OLD_IK_CONSTRAINT = "uq_imported_kindergartens_name_city_phone"
+_NEW_IK_CONSTRAINT = "uq_imported_kindergartens_name_district_phone"
+
+
+def _rename_ik_constraint(bind, old: str, new: str) -> None:
+    """Rename the imported_kindergartens unique constraint, cheaply where possible.
+
+    PostgreSQL renames the constraint and its backing index in place — no table scan, no
+    index rebuild, and uniqueness is never lifted. SQLite has no RENAME CONSTRAINT, so
+    batch mode recreates the table there; that is fine for a dev database.
+
+    The name is looked up rather than assumed. This migration targets a database built by
+    the Alembic chain (see the module docstring), where the constraint is still called
+    `old`; but if it is already called `new` there is nothing to do, and if neither exists
+    the database did not come from this chain and we say so plainly instead of failing on a
+    confusing `constraint does not exist`.
+    """
+    names = {c["name"] for c in sa.inspect(bind).get_unique_constraints("imported_kindergartens")}
+    if new in names:
+        return
+    if old not in names:
         raise RuntimeError(
-            f"Cannot add a unique constraint on {table}({columns}): "
-            f"{len(rows)} duplicate group(s) exist. Resolve them deliberately — this "
-            f"migration will not merge or delete rows. Offending keys: {keys}"
+            f"imported_kindergartens has neither {old!r} nor {new!r} (found: {sorted(names)}). "
+            f"This migration supports databases built through the Alembic revision chain. A "
+            f"schema created directly from models.py metadata is not a supported upgrade "
+            f"source — see database.py:init_db(), which never calls create_all() in production."
         )
+    if bind.dialect.name == "postgresql":
+        op.execute(sa.text(f'ALTER TABLE imported_kindergartens RENAME CONSTRAINT "{old}" TO "{new}"'))
+        return
+    with op.batch_alter_table("imported_kindergartens", schema=None) as batch_op:
+        batch_op.drop_constraint(old, type_="unique")
+        batch_op.create_unique_constraint(new, ["name_ar", "district", "phone"])
 
 
 def upgrade() -> None:
@@ -112,49 +153,17 @@ def upgrade() -> None:
     op.add_column("reports", sa.Column("district", sa.String(length=100), nullable=True))
     op.add_column("reports", sa.Column("area", sa.String(length=100), nullable=True))
 
-    # --- the two genuinely-missing unique constraints ----------------------------------
-    # Names must match models.py exactly, or autogenerate keeps reporting drift for a
-    # constraint that is actually present — which is how imported_kindergartens below
-    # ended up looking "missing" for months.
-    _abort_on_duplicates(bind, "ai_features", "entity_type, entity_id, feature_name")
-    with op.batch_alter_table("ai_features", schema=None) as batch_op:
-        batch_op.create_unique_constraint(
-            "idx_ai_features_entity_feature", ["entity_type", "entity_id", "feature_name"]
-        )
-
-    _abort_on_duplicates(bind, "governorate", "slug")
-    with op.batch_alter_table("governorate", schema=None) as batch_op:
-        batch_op.create_unique_constraint("uq_governorate_slug", ["slug"])
-
-    # --- imported_kindergartens: rename, do not re-add --------------------------------
-    # The constraint is present and correct; only its name is stale — it still says
-    # "city" after the city->district rename, while models.py expects "district". Same
-    # columns, so this is a rename, and dropping/recreating it under batch mode keeps the
-    # uniqueness guarantee for the whole operation.
-    with op.batch_alter_table("imported_kindergartens", schema=None) as batch_op:
-        batch_op.drop_constraint(
-            "uq_imported_kindergartens_name_city_phone", type_="unique"
-        )
-        batch_op.create_unique_constraint(
-            "uq_imported_kindergartens_name_district_phone",
-            ["name_ar", "district", "phone"],
-        )
+    # --- imported_kindergartens: rename only ------------------------------------------
+    # No unique constraint is added anywhere in this migration. ai_features and
+    # governorate were reported as missing but are already enforced by unique indexes;
+    # see the module docstring. Only this name is stale.
+    _rename_ik_constraint(bind, _OLD_IK_CONSTRAINT, _NEW_IK_CONSTRAINT)
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("imported_kindergartens", schema=None) as batch_op:
-        batch_op.drop_constraint(
-            "uq_imported_kindergartens_name_district_phone", type_="unique"
-        )
-        batch_op.create_unique_constraint(
-            "uq_imported_kindergartens_name_city_phone", ["name_ar", "district", "phone"]
-        )
+    bind = op.get_bind()
 
-    with op.batch_alter_table("governorate", schema=None) as batch_op:
-        batch_op.drop_constraint("uq_governorate_slug", type_="unique")
-
-    with op.batch_alter_table("ai_features", schema=None) as batch_op:
-        batch_op.drop_constraint("idx_ai_features_entity_feature", type_="unique")
+    _rename_ik_constraint(bind, _NEW_IK_CONSTRAINT, _OLD_IK_CONSTRAINT)
 
     op.drop_column("reports", "area")
     op.drop_column("reports", "district")

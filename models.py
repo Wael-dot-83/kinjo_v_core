@@ -2298,7 +2298,11 @@ class Governorate(Base):
     __tablename__ = "governorate"
 
     code = Column(String(8), primary_key=True)
-    slug = Column(String(32), unique=True, nullable=False)
+    # index=True matters: h1m2026h01 created slug with unique=True + index=True, which
+    # emits a unique INDEX (ix_governorate_slug), not a unique constraint. Without
+    # index=True here the metadata asks for a constraint the database has never had, and
+    # adding one would just build a second, redundant unique index over the same column.
+    slug = Column(String(32), unique=True, index=True, nullable=False)
     name_en = Column(String(64), nullable=False)
     name_ar = Column(String(64), nullable=False)
     center_lon = Column(Float, nullable=False)
@@ -2395,7 +2399,12 @@ class AIFeature(Base):
     model_version = Column(String(50), nullable=True)
 
     __table_args__ = (
-        UniqueConstraint("entity_type", "entity_id", "feature_name", name="idx_ai_features_entity_feature"),
+        # A unique INDEX, not a UniqueConstraint. d2e3f4a5b6c7 built it with
+        # op.create_index(..., unique=True), so that is what every migrated database
+        # actually has, and PostgreSQL keeps indexes and constraints in one namespace —
+        # declaring it as a constraint under the same name makes ADD CONSTRAINT collide
+        # with the existing index. Uniqueness is identical either way.
+        Index("idx_ai_features_entity_feature", "entity_type", "entity_id", "feature_name", unique=True),
     )
 
 
