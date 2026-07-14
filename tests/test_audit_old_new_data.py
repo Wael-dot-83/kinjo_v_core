@@ -24,15 +24,21 @@ from main import app
 from dependencies import get_current_user
 
 
-def test_user_role_change_captures_old_and_new_data(client, test_db, admin_user, manager_user):
-    """PUT /api/users/{id} changing role should write old_data/new_data on the audit row."""
+def test_user_role_change_captures_old_and_new_data(client, test_db, admin_user, supervisor_user):
+    """PUT /api/users/{id} changing role should write old_data/new_data on the audit row.
+
+    The subject is a supervisor, not a manager: this endpoint now refuses manager
+    lifecycle changes ("Manager lifecycle changes must use /api/admin/users or the
+    kindergarten manager-assignment workflow"), so a manager would 409 here and never
+    reach the audit path this test exists to cover.
+    """
     app.dependency_overrides[get_current_user] = lambda: admin_user
     try:
         response = client.put(
-            f"/api/users/{manager_user.id}",
-            json={"role": "SUPERVISOR"},
+            f"/api/users/{supervisor_user.id}",
+            json={"role": "PARENT"},
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, response.text
     finally:
         app.dependency_overrides.clear()
 
@@ -40,7 +46,7 @@ def test_user_role_change_captures_old_and_new_data(client, test_db, admin_user,
         test_db.query(models.AuditLog)
         .filter(
             models.AuditLog.action == "USER_UPDATED",
-            models.AuditLog.entity_id == manager_user.id,
+            models.AuditLog.entity_id == supervisor_user.id,
         )
         .order_by(models.AuditLog.id.desc())
         .first()
@@ -48,8 +54,8 @@ def test_user_role_change_captures_old_and_new_data(client, test_db, admin_user,
     assert audit_row is not None, "Expected a USER_UPDATED audit row"
     assert audit_row.old_data is not None
     assert audit_row.new_data is not None
-    assert audit_row.old_data["role"] == "MANAGER"
-    assert audit_row.new_data["role"] == "SUPERVISOR"
+    assert audit_row.old_data["role"] == "SUPERVISOR"
+    assert audit_row.new_data["role"] == "PARENT"
 
 
 def test_legacy_null_audit_row_renders_safely_in_list_and_export(client, test_db, admin_user):
