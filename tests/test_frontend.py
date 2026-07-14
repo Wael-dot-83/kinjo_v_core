@@ -281,6 +281,27 @@ class TestFrontendRoutes:
         response = client.get("/login")
         assert 'href="/forgot-password"' in response.text
 
+    def test_login_language_toggle_preserves_expired_state(self, client):
+        """The no-JS language switch must carry the session-expired context and a
+        redirect target across the language change (mandate §17), and must not
+        leak that state onto a normal login page."""
+        response = client.get("/login?expired=true&redirect=%2Fdashboard")
+        text = response.text
+        assert "?lang=en&expired=true" in text
+        # redirect is carried too (Jinja's urlencode may or may not encode the
+        # leading slash depending on version — accept either form)
+        assert ("redirect=%2Fdashboard" in text) or ("redirect=/dashboard" in text)
+        # A normal visit keeps the toggle href clean
+        clean = client.get("/login").text
+        assert 'href="?lang=en"' in clean
+        assert "expired=true" not in clean
+
+    def test_login_form_has_accessible_name(self, client):
+        """The login form is programmatically named by the page heading (§7)."""
+        text = client.get("/login").text
+        assert 'aria-labelledby="authHeading"' in text
+        assert 'id="authHeading"' in text
+
     def test_register_page(self, client):
         """Test register page renders"""
         response = client.get("/register")

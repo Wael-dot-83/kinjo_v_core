@@ -825,11 +825,15 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   ══════════════════════════════════════════ #}
   <div class="auth-form-panel" id="formPanel">
     <div class="auth-form-inner">
-      {# Language toggle #}
+      {# Language toggle. Preserve safe, non-sensitive state (expired flag and a
+         validated redirect) across the switch so the no-JS fallback keeps the
+         session-expired context; the redirect is url-encoded so it cannot break
+         out of the attribute and is re-validated before use at login time. #}
+      {% set lang_qs %}{% if request.query_params.get('expired') == 'true' %}&expired=true{% endif %}{% if request.query_params.get('redirect') %}&redirect={{ request.query_params.get('redirect') | urlencode }}{% endif %}{% endset %}
       <div class="auth-lang-row">
         {% if ui_lang == 'en' %}
         <a
-          href="?lang=ar"
+          href="?lang=ar{{ lang_qs }}"
           class="auth-lang-btn"
           aria-label="التبديل إلى العربية"
         >
@@ -837,7 +841,11 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
           <span>العربية</span>
         </a>
         {% else %}
-        <a href="?lang=en" class="auth-lang-btn" aria-label="Switch to English">
+        <a
+          href="?lang=en{{ lang_qs }}"
+          class="auth-lang-btn"
+          aria-label="Switch to English"
+        >
           <i class="bi bi-translate" aria-hidden="true"></i>
           <span>English</span>
         </a>
@@ -851,7 +859,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
 
       {# Welcome heading #}
       <div class="af-anim af-delay1">
-        <h1 class="auth-heading">
+        <h1 class="auth-heading" id="authHeading">
           {% if ui_lang == 'en' %}Welcome back to KinJo{% else %}مرحباً بعودتك
           إلى KinJo{% endif %}
         </h1>
@@ -900,6 +908,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
         action="/token"
         novalidate
         autocomplete="on"
+        aria-labelledby="authHeading"
         class="af-anim af-delay2"
       >
         <input
