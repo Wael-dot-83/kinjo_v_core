@@ -146,6 +146,17 @@ verify_*.py
 git-error-*.txt
 cookies.txt
 *_tail.txt
+
+# Generated diagnostic dumps at the repo root. These are stdout snapshots from
+# scripts/manual-diagnostics/audit_routes.py and audit_base_includes.py, so they
+# go stale on every route or template change and show up as noise in unrelated
+# diffs. Regenerate on demand instead. Paths are anchored to the root so the
+# deliberately archived copies under docs/reports/ stay tracked.
+/route_dump_full.txt
+/route_admin_namespace.txt
+/base_includes_audit.txt
+/admin_routes.txt
+/all_routes.txt
 db_cols.txt
 _worktrees/
 _archived_dead_code/
