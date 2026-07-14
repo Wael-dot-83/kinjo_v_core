@@ -217,8 +217,29 @@ class AgencyReportsService:
 
         if agency_code == "moe" and report_code == "kg2_eligibility":
             payload = self._kg2_eligibility(agency_code, agency, report_code, report, filters)
-        elif agency_code == "dos" and report_code == "children_statistical_profile":
-            payload = self._children_profile(agency_code, agency, report_code, report, filters)
+        elif agency_code == "dos":
+            if report_code == "children_demographics":
+                payload = self._dos_children_demographics(agency_code, agency, report_code, report, filters)
+            elif report_code == "enrollment_participation_36_59":
+                payload = self._dos_enrollment_participation(agency_code, agency, report_code, report, filters)
+            elif report_code == "institutions_active_licensed":
+                payload = self._dos_institutions_active(agency_code, agency, report_code, report, filters)
+            elif report_code == "capacity_occupancy_overcrowding":
+                payload = self._dos_capacity_occupancy(agency_code, agency, report_code, report, filters)
+            elif report_code == "monthly_attendance_absence":
+                payload = self._dos_monthly_attendance(agency_code, agency, report_code, report, filters)
+            elif report_code == "supervisors_child_ratio":
+                payload = self._dos_supervisors_child_ratio(agency_code, agency, report_code, report, filters)
+            elif report_code == "incidents_safety_1000_child_days":
+                payload = self._dos_incidents_safety(agency_code, agency, report_code, report, filters)
+            elif report_code == "geographic_service_gaps":
+                payload = self._service_access_gaps(agency_code, agency, report_code, report, filters)
+            elif report_code == "data_quality_completeness":
+                payload = self._dos_data_quality(agency_code, agency, report_code, report, filters)
+            elif report_code == "annual_quarterly_trends":
+                payload = self._dos_annual_trends(agency_code, agency, report_code, report, filters)
+            else:
+                payload = self._unavailable_payload(agency_code, agency, report_code, report, filters, status="not_available")
         elif agency_code == "ncfa" and report_code == "child_family_profile":
             payload = self._children_profile(agency_code, agency, report_code, report, filters)
         elif agency_code == "ncfa" and report_code == "family_communication_counts":
@@ -514,6 +535,170 @@ class AgencyReportsService:
             kgs = kg_index.get(key, 0)
             breakdowns.append({"governorate": r.home_governorate or "غير محدد", "city": r.home_district or "غير محدد", "children": children, "active_kindergartens": kgs, "children_per_kindergarten": round(children / max(kgs, 1), 2)})
         return self._payload(agency_code, agency, report_code, report, filters, {"areas": len(breakdowns), "children": sum(r["children"] for r in breakdowns), "active_kindergartens": sum(r["active_kindergartens"] for r in breakdowns)}, sorted(breakdowns, key=lambda x: x["children_per_kindergarten"], reverse=True))
+
+    def _dos_children_demographics(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        q = (
+            self.db.query(models.ParentProfile.home_governorate, models.ParentProfile.home_district, models.Child.gender, func.count(models.Child.id).label("count"))
+            .join(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
+            .filter(models.Child.deleted_at.is_(None), models.ParentProfile.deleted_at.is_(None))
+        )
+        q = self._apply_parent_geo_filters(q, filters)
+        if filters.get("gender"):
+            q = q.filter(models.Child.gender == models.Gender(filters["gender"]))
+        rows = q.group_by(models.ParentProfile.home_governorate, models.ParentProfile.home_district, models.Child.gender).all()
+        breakdowns = [
+            {"governorate": r.home_governorate or "غير محدد", "city": r.home_district or "غير محدد", "gender": _gender_ar(r.gender), "count": _safe_int(r.count)}
+            for r in rows
+        ]
+        total = sum(r["count"] for r in breakdowns)
+        return self._payload(agency_code, agency, report_code, report, filters, {"total_children": total}, breakdowns)
+
+    def _dos_enrollment_participation(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        today = datetime.now(_JORDAN_TZ).date()
+        date_36m_ago = today - timedelta(days=36*30)
+        date_59m_ago = today - timedelta(days=59*30)
+        q = (
+            self.db.query(models.ParentProfile.home_governorate, models.ParentProfile.home_district, func.count(models.Child.id).label("count"))
+            .join(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
+            .join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id)
+            .filter(
+                models.Child.deleted_at.is_(None),
+                models.ParentProfile.deleted_at.is_(None),
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+                models.Child.date_of_birth >= date_59m_ago,
+                models.Child.date_of_birth <= date_36m_ago
+            )
+        )
+        q = self._apply_parent_geo_filters(q, filters)
+        if filters.get("gender"):
+            q = q.filter(models.Child.gender == models.Gender(filters["gender"]))
+        rows = q.group_by(models.ParentProfile.home_governorate, models.ParentProfile.home_district).all()
+        breakdowns = [
+            {"governorate": r.home_governorate or "غير محدد", "city": r.home_district or "غير محدد", "enrolled_36_59m": _safe_int(r.count)}
+            for r in rows
+        ]
+        total = sum(r["enrolled_36_59m"] for r in breakdowns)
+        return self._payload(agency_code, agency, report_code, report, filters, {"enrolled_children": total}, breakdowns)
+
+    def _dos_institutions_active(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        q = self.db.query(models.Kindergarten.governorate, models.Kindergarten.district, models.Kindergarten.status, func.count(models.Kindergarten.id).label("count"))
+        q = self._apply_kindergarten_geo_filters(q, filters)
+        if filters.get("status"):
+            q = q.filter(models.Kindergarten.status == models.KindergartenStatus(filters["status"]))
+        rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.Kindergarten.status).all()
+        breakdowns = [
+            {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "status": _enum_value(r.status), "count": _safe_int(r.count)}
+            for r in rows
+        ]
+        total = sum(r["count"] for r in breakdowns)
+        active = sum(r["count"] for r in breakdowns if r.get("status") == "ACTIVE")
+        return self._payload(agency_code, agency, report_code, report, filters, {"total_institutions": total, "active_institutions": active}, breakdowns)
+
+    def _dos_capacity_occupancy(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        q = (
+            self.db.query(
+                models.Kindergarten.governorate,
+                models.Kindergarten.district,
+                func.sum(models.Class.capacity_total).label("capacity"),
+                func.sum(models.Class.enrolled_children_count).label("enrolled")
+            )
+            .join(models.Class, models.Class.kindergarten_id == models.Kindergarten.id)
+            .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE, models.Class.is_active == True, models.Class.deleted_at.is_(None))
+        )
+        q = self._apply_kindergarten_geo_filters(q, filters)
+        rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district).all()
+        breakdowns = [
+            {
+                "governorate": r.governorate or "غير محدد",
+                "city": r.district or "غير محدد",
+                "total_capacity": _safe_int(r.capacity),
+                "total_enrolled": _safe_int(r.enrolled),
+                "occupancy_rate": _safe_pct(r.enrolled, r.capacity)
+            }
+            for r in rows
+        ]
+        total_cap = sum(r["total_capacity"] for r in breakdowns)
+        total_enr = sum(r["total_enrolled"] for r in breakdowns)
+        return self._payload(agency_code, agency, report_code, report, filters, {"total_capacity": total_cap, "total_enrolled": total_enr, "occupancy_rate_pct": _safe_pct(total_enr, total_cap)}, breakdowns)
+
+    def _dos_monthly_attendance(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        q = (
+            self.db.query(
+                models.Kindergarten.governorate,
+                models.Kindergarten.district,
+                models.AttendanceLog.status,
+                func.count(models.AttendanceLog.id).label("count")
+            )
+            .join(models.Kindergarten, models.Kindergarten.id == models.AttendanceLog.kindergarten_id)
+        )
+        q = self._apply_kindergarten_geo_filters(q, filters)
+        rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.AttendanceLog.status).all()
+        breakdowns = [
+            {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "status": _enum_value(r.status), "count": _safe_int(r.count)}
+            for r in rows
+        ]
+        total_attendance = sum(r["count"] for r in breakdowns)
+        return self._payload(agency_code, agency, report_code, report, filters, {"total_records": total_attendance}, breakdowns)
+
+    def _dos_supervisors_child_ratio(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        q = (
+            self.db.query(
+                models.Kindergarten.governorate,
+                models.Kindergarten.district,
+                func.count(models.Class.supervisor_id).label("supervisors"),
+                func.sum(models.Class.enrolled_children_count).label("enrolled")
+            )
+            .join(models.Class, models.Class.kindergarten_id == models.Kindergarten.id)
+            .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE, models.Class.is_active == True, models.Class.deleted_at.is_(None))
+        )
+        q = self._apply_kindergarten_geo_filters(q, filters)
+        rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district).all()
+        breakdowns = [
+            {
+                "governorate": r.governorate or "غير محدد",
+                "city": r.district or "غير محدد",
+                "supervisors": _safe_int(r.supervisors),
+                "enrolled": _safe_int(r.enrolled),
+                "children_per_supervisor": round(_safe_int(r.enrolled) / max(_safe_int(r.supervisors), 1), 2)
+            }
+            for r in rows
+        ]
+        total_sup = sum(r["supervisors"] for r in breakdowns)
+        total_enr = sum(r["enrolled"] for r in breakdowns)
+        return self._payload(agency_code, agency, report_code, report, filters, {"total_supervisors": total_sup, "total_enrolled": total_enr}, breakdowns)
+
+    def _dos_incidents_safety(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        q = (
+            self.db.query(models.Kindergarten.governorate, models.Kindergarten.district, models.Incident.severity_level, func.count(models.Incident.id).label("count"))
+            .join(models.Kindergarten, models.Kindergarten.id == models.Incident.kindergarten_id)
+            .filter(models.Incident.deleted_at.is_(None))
+        )
+        q = self._apply_kindergarten_geo_filters(q, filters)
+        if filters.get("severity"):
+            q = q.filter(models.Incident.severity_level == models.SeverityLevel(filters["severity"]))
+        rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.Incident.severity_level).all()
+        breakdowns = [{"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "severity": _enum_value(r.severity_level), "count": _safe_int(r.count)} for r in rows]
+        return self._payload(agency_code, agency, report_code, report, filters, {"incident_count": sum(r["count"] for r in breakdowns)}, breakdowns)
+
+    def _dos_data_quality(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        q = (
+            self.db.query(models.ParentProfile.home_governorate, models.ParentProfile.home_district, func.count(models.Child.id).label("count"))
+            .join(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
+            .filter(models.Child.deleted_at.is_(None), models.Child.date_of_birth.is_(None))
+        )
+        q = self._apply_parent_geo_filters(q, filters)
+        rows = q.group_by(models.ParentProfile.home_governorate, models.ParentProfile.home_district).all()
+        breakdowns = [{"governorate": r.home_governorate or "غير محدد", "city": r.home_district or "غير محدد", "missing_dob": _safe_int(r.count)} for r in rows]
+        return self._payload(agency_code, agency, report_code, report, filters, {"children_missing_dob": sum(r["missing_dob"] for r in breakdowns)}, breakdowns)
+
+    def _dos_annual_trends(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        q = (
+            self.db.query(func.extract('year', models.Kindergarten.created_at).label("year"), func.count(models.Kindergarten.id).label("count"))
+            .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+        )
+        rows = q.group_by(func.extract('year', models.Kindergarten.created_at)).all()
+        breakdowns = [{"year": str(int(r.year)) if r.year else "غير محدد", "new_kindergartens": _safe_int(r.count)} for r in rows]
+        return self._payload(agency_code, agency, report_code, report, filters, {"trend_years": len(breakdowns)}, breakdowns)
 
     def _payload(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any], summary: dict[str, Any], breakdowns: list[dict[str, Any]]) -> dict[str, Any]:
         table = {"caption_ar": report.get("title_ar"), "rows": breakdowns}
