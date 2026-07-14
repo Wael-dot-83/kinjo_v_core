@@ -577,8 +577,10 @@ async def create_enrollment_page(request: Request, db: Session = Depends(get_db)
     # Filter kindergartens based on user role
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
 
-    # Supervisors cannot create enrollments - redirect to 403
-    if user_role == 'SUPERVISOR':
+    # Enrollment applications are authored by parents. Managers review and
+    # decide them from /enrollments; they must not impersonate a parent or
+    # create a child identity without a parent-owned account.
+    if user_role != 'PARENT':
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
 
     if user_role == 'ADMIN':
@@ -590,21 +592,6 @@ async def create_enrollment_page(request: Request, db: Session = Depends(get_db)
             "kindergartens": kgs,
             "governorates": app_settings.JORDAN_GOVERNORATES,
             "is_manager_supervisor": False
-        }
-    elif user_role == 'MANAGER' and current_user.kindergarten_id:
-        # Only Managers can create enrollments for their own kindergarten
-        kgs = db.query(Kindergarten).filter(
-            Kindergarten.status == models.KindergartenStatus.ACTIVE,
-            Kindergarten.id == current_user.kindergarten_id
-        ).all()
-        user_kindergarten = kgs[0] if kgs else None
-        from config import settings as app_settings
-        context = {
-            "current_user": current_user,
-            "kindergartens": kgs,
-            "governorates": app_settings.JORDAN_GOVERNORATES,
-            "user_kindergarten": user_kindergarten,
-            "is_manager_supervisor": True
         }
     elif user_role == 'PARENT':
         # Parents can see all active kindergartens to enroll their children
@@ -647,6 +634,11 @@ async def view_enrollment(request: Request, app_id: int, db: Session = Depends(g
         child = db.query(models.Child).filter(models.Child.id == enrollment.child_id).first()
         if not parent_profile or not child or child.parent_id != parent_profile.id:
             return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
+    elif user_role == 'MANAGER':
+        if enrollment.kindergarten_id != current_user.kindergarten_id:
+            return templates.TemplateResponse(request=request, name="404.html", status_code=404, context={"current_user": current_user})
+    elif user_role != 'ADMIN':
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
 
     # Enrich data for template
     child = db.query(models.Child).filter(models.Child.id == enrollment.child_id).first()
@@ -790,25 +782,66 @@ async def list_reports(request: Request, current_user: User = Depends(get_curren
 @router.get("/reports/create", response_class=HTMLResponse)
 async def create_report_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
-    if user_role not in ('SUPERVISOR', 'ADMIN', 'MANAGER'):
-        return RedirectResponse(url="/dashboard")
+    if user_role != 'SUPERVISOR':
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     return templates.TemplateResponse(request=request, name="reports/form.html", context={"current_user": current_user, "today": _today()})
 
 @router.get("/reports/{report_id}", response_class=HTMLResponse)
-async def view_report(request: Request, report_id: int, current_user: User = Depends(get_current_user_or_redirect)):
+async def view_report(
+    request: Request,
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_or_redirect),
+):
     """
     Daily report detail page with full approval workflow support.
     The actual report data is fetched via API call from the frontend JS.
     """
     # Provide default report object for template rendering - actual data loaded via JS
+    report_row = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()
+    if not report_row:
+        return templates.TemplateResponse(request=request, name="404.html", status_code=404, context={"current_user": current_user})
+
+    role = current_user.role.value if hasattr(current_user.role, "value") else current_user.role
+    if role == "PARENT":
+        profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
+        if (not profile or not report_row.child or report_row.child.parent_id != profile.id or
+                report_row.status != models.DailyReportStatus.SENT_TO_PARENT):
+            return templates.TemplateResponse(request=request, name="404.html", status_code=404, context={"current_user": current_user})
+    elif role == "MANAGER":
+        if report_row.kindergarten_id != current_user.kindergarten_id:
+            return templates.TemplateResponse(request=request, name="404.html", status_code=404, context={"current_user": current_user})
+    elif role == "SUPERVISOR":
+        if report_row.kindergarten_id != current_user.kindergarten_id or report_row.submitted_by != current_user.id:
+            return templates.TemplateResponse(request=request, name="404.html", status_code=404, context={"current_user": current_user})
+    elif role != "ADMIN":
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
+
+    mood_map = {
+        "happy": ("😊", "Happy"), "normal": ("🙂", "Calm"),
+        "sad": ("😟", "Sad"), "tired": ("😴", "Tired"), "sick": ("🤒", "Unwell"),
+    }
+    mood_emoji, mood_text = mood_map.get((report_row.mood or "normal").lower(), ("🙂", report_row.mood or "Calm"))
     default_report = {
         "id": report_id,
-        "child_name": "...",
-        "date": "",
-        "teacher_name": "...",
+        "child_name": f"{report_row.child.first_name} {report_row.child.last_name}" if report_row.child else "—",
+        "date": report_row.date.isoformat(),
+        "teacher_name": (report_row.submitter.full_name or report_row.submitter.username) if report_row.submitter else "—",
         "mood_emoji": "😊",
         "mood_text": ""
     }
+    default_report.update({
+        "mood_emoji": mood_emoji,
+        "mood_text": mood_text,
+        "breakfast": bool(report_row.breakfast), "lunch": bool(report_row.lunch),
+        "snack": bool(report_row.snack), "milk": bool(report_row.milk),
+        "sleep_minutes": report_row.nap_duration_minutes or 0,
+        "bathroom_count": report_row.bathroom_count or 0,
+        "diaper_wet": bool(report_row.diaper_wet), "diaper_soiled": bool(report_row.diaper_soiled),
+        "activities": [item.strip() for item in (report_row.activities or "").split(",") if item.strip()],
+        "notes": report_row.notes,
+        "photos": [],
+    })
     return templates.TemplateResponse(
         request=request,
         name="reports/view.html",
@@ -1031,7 +1064,7 @@ async def admin_daily_reports_organization_page(
 async def create_daily_report(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Create a new daily report"""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
-    if user_role != 'MANAGER':
+    if user_role != 'SUPERVISOR':
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     return templates.TemplateResponse(request=request, name="reports/form.html", context={"current_user": current_user, "today": _today()})
 
@@ -1238,10 +1271,7 @@ async def parent_reports(
 
     reports = []
     if child_ids:
-        visible_statuses = [
-            models.DailyReportStatus.APPROVED,
-            models.DailyReportStatus.SENT_TO_PARENT,
-        ]
+        visible_statuses = [models.DailyReportStatus.SENT_TO_PARENT]
         reports = db.query(models.DailyReport).filter(
             models.DailyReport.child_id.in_(child_ids),
             models.DailyReport.date == selected_date,
@@ -2053,5 +2083,3 @@ async def admin_help_center_page(request: Request, current_user: User = Depends(
 async def admin_observability_page(request: Request, current_user: User = Depends(require_admin)):
     """Admin observability dashboard — system health, latency, data quality, alert quality."""
     return templates.TemplateResponse(request=request, name="admin/observability_dashboard.html", context={"current_user": current_user})
-
-

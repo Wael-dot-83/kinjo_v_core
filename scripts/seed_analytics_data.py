@@ -108,7 +108,7 @@ def create_kindergartens(db: Session, count: int = 15) -> list:
             address_line=f"شارع {random.randint(1, 100)}، {governorate}",
             contact_phone=f"07{random.randint(70000000, 99999999)}",
             contact_email=f"kg{i+1}@kinjo.jo",
-            status=KindergartenStatus.ACTIVE,
+            status=KindergartenStatus.DRAFT,
             license_number=f"MOE-{2024}-{random.randint(1000, 9999)}",
             license_valid_until=date.today() + timedelta(days=random.randint(180, 730))
         )
@@ -150,6 +150,9 @@ def create_staff(db: Session, kindergartens: list) -> list:
             db.add(supervisor)
             staff.append(supervisor)
 
+    db.commit()
+    for kg in kindergartens:
+        kg.status = KindergartenStatus.ACTIVE
     db.commit()
     print(f"Created {len(staff)} staff members")
     return staff

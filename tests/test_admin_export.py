@@ -43,6 +43,21 @@ def _create_manager(db, kg_id, suffix="1"):
     return user
 
 
+def _create_supervisor(db, kg_id, suffix="1"):
+    user = models.User(
+        username=f"exportsup{suffix}",
+        email=f"exportsup{suffix}@test.com",
+        hashed_password=get_password_hash("Supervisor123!"),
+        role=models.UserRole.SUPERVISOR,
+        status=models.UserStatus.ACTIVE,
+        kindergarten_id=kg_id,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def _get_token(client, username, password="Admin123!"):
     r = client.post("/token", data={"username": username, "password": password})
     assert r.status_code == 200
@@ -67,9 +82,10 @@ class TestExportRequiresAdmin:
 class TestExportRowLimit:
     def test_export_within_limit_succeeds(self, client, test_db, sample_kindergarten):
         admin = _create_admin(test_db)
-        # Create 5 managers (well within the 10,000 limit)
+        # Create 5 users (well within the 10,000 limit). Managers are unique
+        # per kindergarten, so use supervisors for this row-count test.
         for i in range(5):
-            _create_manager(test_db, sample_kindergarten.id, suffix=str(i))
+            _create_supervisor(test_db, sample_kindergarten.id, suffix=str(i))
 
         token = _get_token(client, "exportadmin")
         r = client.get(

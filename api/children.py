@@ -33,6 +33,41 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Children"])
 MAX_CHILD_EXPORT_ROWS = 10_000
 
+
+def _authorize_child_access(
+    db: Session,
+    child: models.Child,
+    current_user: models.User,
+    *,
+    allow_supervisor: bool = True,
+) -> None:
+    """Enforce child ownership / kindergarten scope for every child subresource.
+
+    Staff lookups deliberately return 404 outside their kindergarten so numeric
+    child IDs cannot be used to discover another tenant's records.
+    """
+    if current_user.role == models.UserRole.ADMIN:
+        return
+    if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        if not parent_profile or child.parent_id != parent_profile.id:
+            raise HTTPException(status_code=403, detail="Not authorized for this child")
+        return
+    if current_user.role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        if current_user.role == models.UserRole.SUPERVISOR and not allow_supervisor:
+            raise HTTPException(status_code=403, detail="Manager access required")
+        enrollment = db.query(models.EnrollmentApplication.id).filter(
+            models.EnrollmentApplication.child_id == child.id,
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+        ).first()
+        if not enrollment:
+            raise HTTPException(status_code=404, detail="Child not found")
+        return
+    raise HTTPException(status_code=403, detail="Not authorized for this child")
+
 class ParentProfileUpdateRequest(BaseModel):
     first_name: Optional[str] = None
     second_name: Optional[str] = None
@@ -123,21 +158,7 @@ def update_child_profile(
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
-    # Authorization: parent owns child or admin/manager
-    if current_user.role == models.UserRole.PARENT:
-        parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-        if not parent_profile or child.parent_id != parent_profile.id:
-            raise HTTPException(status_code=403, detail="Not authorized to update this child")
-    elif current_user.role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
-        enrollment = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == child_id,
-            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
-            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
-        ).first()
-        if not enrollment:
-            raise HTTPException(status_code=403, detail="Child not in your kindergarten scope")
-    elif current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized to update child profiles")
+    _authorize_child_access(db, child, current_user, allow_supervisor=False)
 
     # Apply updates
     changed = False
@@ -226,13 +247,7 @@ def upload_child_photo(
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
-    # Parent can only upload for their own child
-    if current_user.role == models.UserRole.PARENT:
-        parent_profile = db.query(models.ParentProfile).filter(
-            models.ParentProfile.user_id == current_user.id
-        ).first()
-        if not parent_profile or child.parent_id != parent_profile.id:
-            raise HTTPException(status_code=403, detail="Not your child")
+    _authorize_child_access(db, child, current_user)
 
     if file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="Invalid image type. Allowed: png, jpeg, gif, webp")
@@ -288,12 +303,7 @@ def upload_child_document(
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
-    if current_user.role == models.UserRole.PARENT:
-        parent_profile = db.query(models.ParentProfile).filter(
-            models.ParentProfile.user_id == current_user.id
-        ).first()
-        if not parent_profile or child.parent_id != parent_profile.id:
-            raise HTTPException(status_code=403, detail="Not your child")
+    _authorize_child_access(db, child, current_user)
 
     if document_type not in VALID_DOCUMENT_TYPES:
         raise HTTPException(status_code=400, detail=f"Invalid document type. Allowed: {', '.join(sorted(VALID_DOCUMENT_TYPES))}")
@@ -355,12 +365,7 @@ def list_child_documents(
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
-    if current_user.role == models.UserRole.PARENT:
-        parent_profile = db.query(models.ParentProfile).filter(
-            models.ParentProfile.user_id == current_user.id
-        ).first()
-        if not parent_profile or child.parent_id != parent_profile.id:
-            raise HTTPException(status_code=403, detail="Not your child")
+    _authorize_child_access(db, child, current_user)
 
     query = db.query(models.ChildDocument).filter(models.ChildDocument.child_id == child_id)
     if document_type:
@@ -427,14 +432,10 @@ def delete_child_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # Only parent of the child or admin/manager can delete
-    if current_user.role == models.UserRole.PARENT:
-        child = db.query(models.Child).filter(models.Child.id == doc.child_id).first()
-        parent_profile = db.query(models.ParentProfile).filter(
-            models.ParentProfile.user_id == current_user.id
-        ).first()
-        if not parent_profile or not child or child.parent_id != parent_profile.id:
-            raise HTTPException(status_code=403, detail="Not your document")
+    child = db.query(models.Child).filter(models.Child.id == doc.child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Document not found")
+    _authorize_child_access(db, child, current_user, allow_supervisor=False)
 
     # Remove file if it exists
     if doc.file_path and os.path.exists(doc.file_path):

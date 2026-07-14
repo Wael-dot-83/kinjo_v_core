@@ -84,10 +84,7 @@ def get_parent_dashboard(
             )
             .filter(
                 models.DailyReport.child_id.in_(child_ids),
-                models.DailyReport.status.in_([
-                    models.DailyReportStatus.APPROVED,
-                    models.DailyReportStatus.SENT_TO_PARENT,
-                ]),
+                models.DailyReport.status == models.DailyReportStatus.SENT_TO_PARENT,
             )
             .group_by(models.DailyReport.child_id)
             .subquery()

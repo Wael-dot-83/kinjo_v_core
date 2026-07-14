@@ -44,7 +44,7 @@ def _validate_supervisor_for_kindergarten(
     supervisor = db.query(models.User).filter(
         models.User.id == supervisor_id,
         models.User.deleted_at.is_(None),
-    ).first()
+    ).with_for_update().first()
     if (
         not supervisor
         or supervisor.role != models.UserRole.SUPERVISOR
@@ -59,6 +59,28 @@ def _validate_supervisor_for_kindergarten(
             ),
         )
     return supervisor
+
+
+def _ensure_supervisor_available(
+    db: Session,
+    supervisor_id: int,
+    *,
+    exclude_class_id: Optional[int] = None,
+) -> None:
+    """Serialize assignment changes and prevent concurrent class overlap."""
+    today = datetime.now(_JORDAN_TZ).date()
+    query = db.query(models.SupervisorAssignment).filter(
+        models.SupervisorAssignment.supervisor_id == supervisor_id,
+        models.SupervisorAssignment.deleted_at.is_(None),
+        or_(
+            models.SupervisorAssignment.end_date.is_(None),
+            models.SupervisorAssignment.end_date >= today,
+        ),
+    )
+    if exclude_class_id is not None:
+        query = query.filter(models.SupervisorAssignment.class_id != exclude_class_id)
+    if query.first():
+        raise HTTPException(status_code=409, detail="Supervisor is already assigned to another class")
 
 class ClassCreate(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -119,6 +141,7 @@ def create_class(
     _validate_supervisor_for_kindergarten(
         db, class_data.supervisor_id, class_data.kindergarten_id
     )
+    _ensure_supervisor_available(db, class_data.supervisor_id)
 
     class_dict = class_data.model_dump(exclude={"supervisor_id"})
     class_obj = models.Class(
@@ -129,8 +152,7 @@ def create_class(
     # primary supervisor is recorded only as a SupervisorAssignment below (D1/B5).
 
     db.add(class_obj)
-    db.commit()
-    db.refresh(class_obj)
+    db.flush()
 
     # Auto-create primary supervisor assignment when supervisor_id provided
     if class_data.supervisor_id is not None:
@@ -142,7 +164,6 @@ def create_class(
             start_date=datetime.now(_JORDAN_TZ).date()
         )
         db.add(assignment)
-        db.commit()
 
     validators.log_audit_action(
         db=db,
@@ -152,6 +173,7 @@ def create_class(
         entity_id=class_obj.id,
         sensitivity_level=2
     )
+    db.refresh(class_obj)
 
     # Response supervisor_id comes from the SupervisorAssignment just created,
     # not the retired Class.supervisor_id column (D1/B5).
@@ -189,6 +211,7 @@ def list_classes(
         for assignment in db.query(models.SupervisorAssignment).filter(
             models.SupervisorAssignment.class_id.in_(class_ids),
             models.SupervisorAssignment.is_primary == True,
+            models.SupervisorAssignment.deleted_at.is_(None),
             models.SupervisorAssignment.start_date <= today,
             _or(
                 models.SupervisorAssignment.end_date == None,
@@ -356,8 +379,13 @@ def update_class(
 
     # Supervisor must be an ACTIVE, non-deleted SUPERVISOR in the same kindergarten (#3).
     if class_data.supervisor_id is not None:
+        if not class_obj.is_active:
+            raise HTTPException(status_code=409, detail="Cannot assign a supervisor to an inactive class")
         _validate_supervisor_for_kindergarten(
             db, class_data.supervisor_id, class_obj.kindergarten_id
+        )
+        _ensure_supervisor_available(
+            db, class_data.supervisor_id, exclude_class_id=class_obj.id
         )
 
     # supervisor_id is handled separately: the primary supervisor lives only in
@@ -367,8 +395,6 @@ def update_class(
     new_supervisor_id = update_data.pop("supervisor_id", None)
     for field, value in update_data.items():
         setattr(class_obj, field, value)
-
-    db.commit()
 
     if supervisor_id_changed:
         current_primary = validators.active_primary_supervisor_map(
@@ -384,10 +410,6 @@ def update_class(
                     full_time_dedication=True,
                     start_date=datetime.now(_JORDAN_TZ).date(),
                 ))
-            db.commit()
-
-    db.refresh(class_obj)
-
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
@@ -396,6 +418,7 @@ def update_class(
         entity_id=class_obj.id,
         sensitivity_level=2
     )
+    db.refresh(class_obj)
 
     return _class_response(db, class_obj)
 
@@ -504,24 +527,26 @@ def assign_child_to_class(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Assign an active enrollment to a specific class (Manager only)"""
+    """Assign an accepted or active enrollment to a class (Manager only)."""
     validators.validate_manager_role(current_user)
 
     # Get enrollment
     enrollment = db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.id == enrollment_id
-    ).first()
+    ).with_for_update().first()
 
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
 
 
-    # Validate enrollment is active
-    if enrollment.status != models.EnrollmentStatus.ACTIVE:
-        raise HTTPException(status_code=400, detail="Can only assign active enrollments")
-
-    # Validate kindergarten scope
+    # Scope before lifecycle validation to avoid a cross-tenant status oracle.
     validators.validate_kindergarten_scope(current_user, enrollment.kindergarten_id)
+
+    if enrollment.status not in {
+        models.EnrollmentStatus.ACCEPTED,
+        models.EnrollmentStatus.ACTIVE,
+    }:
+        raise HTTPException(status_code=409, detail="Can only assign accepted or active enrollments")
 
     # Auto-mark profiles complete if all required data is present
     profile_complete, missing_fields = validators.mark_profile_complete_if_ready(db, enrollment.child_id)
@@ -569,6 +594,8 @@ def assign_child_to_class(
     }
     enrollment.class_id = class_id
     enrollment.class_assignment_date = datetime.now(_JORDAN_TZ).date()
+    if enrollment.status == models.EnrollmentStatus.ACCEPTED:
+        enrollment.status = models.EnrollmentStatus.ACTIVE
 
     db.commit()
     db.refresh(enrollment)

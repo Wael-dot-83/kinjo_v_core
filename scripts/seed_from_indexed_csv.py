@@ -116,7 +116,7 @@ def main():
                 contact_phone="N/A",
                 latitude=lat,
                 longitude=lng,
-                status=KindergartenStatus.ACTIVE,
+                status=KindergartenStatus.DRAFT,
                 license_number=kg_index,  # store index as license for uniqueness
             )
             db.add(kg)

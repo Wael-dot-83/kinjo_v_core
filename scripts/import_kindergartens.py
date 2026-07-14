@@ -143,7 +143,7 @@ def build_payload(row: Dict[str, str]) -> Dict:
     return payload
 
 
-def import_file(path: str, commit: bool = False, default_status: str = "ACTIVE", backup: Optional[str] = None, verbose: bool = False) -> Dict:
+def import_file(path: str, commit: bool = False, default_status: str = "DRAFT", backup: Optional[str] = None, verbose: bool = False) -> Dict:
     rows, headers = read_csv(path)
     # Check if required columns are present after mapping
     if rows:
@@ -178,13 +178,6 @@ def import_file(path: str, commit: bool = False, default_status: str = "ACTIVE",
                 if v is not None and getattr(existing, k, None) != v:
                     setattr(existing, k, v)
                     changed[k] = v
-            # status if provided
-            if default_status and existing.status != getattr(models.KindergartenStatus, default_status):
-                try:
-                    existing.status = models.KindergartenStatus(default_status)
-                    changed["status"] = default_status
-                except (ValueError, TypeError, AttributeError):
-                    pass
             if changed:
                 updates.append((existing.id, changed))
                 affected_existing_records.append(existing)
@@ -207,7 +200,7 @@ def import_file(path: str, commit: bool = False, default_status: str = "ACTIVE",
                 contact_email=payload.get("contact_email"),
                 license_number=payload.get("license_number"),
                 license_valid_until=payload.get("license_valid_until"),
-                status=models.KindergartenStatus(default_status)
+                status=models.KindergartenStatus.DRAFT
             )
             session.add(kg)
             inserts.append(payload)
@@ -263,7 +256,7 @@ def main(argv: Optional[List[str]] = None):
     parser = argparse.ArgumentParser(description="Import kindergartens from CSV into KinJo DB")
     parser.add_argument("--file", "-f", required=True, help="Path to CSV file")
     parser.add_argument("--commit", action="store_true", help="Apply changes to database (default: dry-run)")
-    parser.add_argument("--status", choices=[s.name for s in models.KindergartenStatus], default="ACTIVE", help="Status for new records (default: ACTIVE)")
+    parser.add_argument("--status", choices=["DRAFT"], default="DRAFT", help="New records remain DRAFT until a manager is assigned")
     parser.add_argument("--backup", help="If provided and --commit, backup affected existing records to path")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output: list inserts/updates and per-row info")
     args = parser.parse_args(argv)

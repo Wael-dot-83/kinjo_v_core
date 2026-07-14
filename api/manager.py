@@ -9,9 +9,8 @@ from datetime import datetime, timedelta, timezone
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
 import models
-import validators
 from database import get_db
-from dependencies import get_current_user
+from dependencies import require_manager
 
 router = APIRouter(tags=["Manager"])
 
@@ -22,12 +21,10 @@ _ATTENDED_STATUSES = (models.AttendanceStatus.PRESENT, models.AttendanceStatus.L
 
 @router.get("/manager/dashboard")
 def get_manager_dashboard(
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_manager),
     db: Session = Depends(get_db)
 ):
     """Get comprehensive manager dashboard"""
-    validators.validate_manager_role(current_user)
-
     kindergarten_id = current_user.kindergarten_id
     if kindergarten_id is None:
         # validate_manager_role also admits ADMIN; this dashboard is

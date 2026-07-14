@@ -23,7 +23,7 @@ def test_map_row_maps_city_to_district_and_fills_defaults():
     assert payload["district"] == "القويسمة"          # city -> district
     assert payload["area"] == "غير محدد"               # required default filled
     assert payload["contact_phone"] == "0000000000"    # required default filled
-    assert payload["status"] == models.KindergartenStatus.ACTIVE
+    assert payload["status"] == models.KindergartenStatus.DRAFT
 
 
 def test_map_row_district_falls_back_to_governorate():

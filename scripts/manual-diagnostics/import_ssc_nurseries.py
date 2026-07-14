@@ -273,7 +273,7 @@ def import_rows(rows: list[NurseryRow], commit: bool, geocode: bool, replace_gen
                 "license_number": license_number,
                 "license_status": "approved_ssc",
                 "administrative_notes": notes,
-                "status": models.KindergartenStatus.ACTIVE,
+                "status": models.KindergartenStatus.DRAFT,
             }
             if kg:
                 changed = False

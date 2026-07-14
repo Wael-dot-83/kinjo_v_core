@@ -379,6 +379,10 @@ class TestServerSideValidation:
 
     def test_manager_update_validation(self, client, test_db, admin_user, auth_headers_admin, sample_kindergarten):
         """Manager update should enforce kindergarten assignment and uniqueness rules."""
+        # Keep both kindergartens draft so this test isolates uniqueness;
+        # active kindergartens separately enforce that a manager is retained.
+        sample_kindergarten.status = models.KindergartenStatus.DRAFT
+        test_db.commit()
         # Create first manager
         response = client.post(
             "/api/admin/users",
@@ -397,6 +401,8 @@ class TestServerSideValidation:
 
         # Create second kindergarten
         kg2 = _create_kindergarten(test_db, "B")
+        kg2.status = models.KindergartenStatus.DRAFT
+        test_db.commit()
 
         # Create second manager for different kindergarten
         response = client.post(
@@ -483,6 +489,8 @@ class TestServerSideValidation:
 
     def test_bulk_status_update_manager_validation(self, client, test_db, admin_user, auth_headers_admin, sample_kindergarten):
         """Bulk status update should validate manager activations."""
+        sample_kindergarten.status = models.KindergartenStatus.DRAFT
+        test_db.commit()
         # Create a suspended manager for the kindergarten
         response = client.post(
             "/api/admin/users",

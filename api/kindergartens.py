@@ -575,7 +575,12 @@ def get_kindergarten(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    kg = (
+        db.query(models.Kindergarten)
+        .filter(models.Kindergarten.id == kindergarten_id)
+        .with_for_update()
+        .first()
+    )
     if not kg or kg.status == models.KindergartenStatus.DELETED:
         return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
 
@@ -627,7 +632,9 @@ def create_kindergarten(
         }.get(dup, "سجل مكرر / Duplicate record")
         return _envelope(False, None, msg, 400)
 
-    kg = models.Kindergarten(**data.model_dump(exclude_none=True), status=models.KindergartenStatus.ACTIVE)
+    # A kindergarten without an authenticated manager is not operational yet.
+    # Create it as DRAFT; assigning its first manager activates it atomically.
+    kg = models.Kindergarten(**data.model_dump(exclude_none=True), status=models.KindergartenStatus.DRAFT)
     db.add(kg)
     db.flush()
     validators.log_audit_action(
@@ -718,11 +725,35 @@ def activate_kindergarten(
     db: Session = Depends(get_db),
 ):
     _admin_only(current_user)
-    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    kg = (
+        db.query(models.Kindergarten)
+        .filter(models.Kindergarten.id == kindergarten_id)
+        .with_for_update()
+        .first()
+    )
     if not kg or kg.status == models.KindergartenStatus.DELETED:
         return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
     if kg.status != models.KindergartenStatus.FROZEN:
         return _envelope(False, None, "الحضانة غير مجمدة / Not frozen", 400)
+
+    managers = (
+        db.query(models.User)
+        .filter(
+            models.User.kindergarten_id == kg.id,
+            models.User.role == models.UserRole.MANAGER,
+            models.User.deleted_at.is_(None),
+            models.User.status.in_([models.UserStatus.ACTIVE, models.UserStatus.SUSPENDED]),
+        )
+        .with_for_update()
+        .all()
+    )
+    if len(managers) != 1:
+        return _envelope(
+            False,
+            None,
+            "Kindergarten activation requires exactly one assigned manager",
+            409,
+        )
 
     kg.status = models.KindergartenStatus.ACTIVE
     kg.frozen_at = None
@@ -752,7 +783,12 @@ def delete_kindergarten(
     db: Session = Depends(get_db),
 ):
     _admin_only(current_user)
-    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    kg = (
+        db.query(models.Kindergarten)
+        .filter(models.Kindergarten.id == kindergarten_id)
+        .with_for_update()
+        .first()
+    )
     if not kg or kg.status == models.KindergartenStatus.DELETED:
         return _envelope(False, None, "الحضانة غير موجودة / Kindergarten not found", 404)
 
@@ -848,20 +884,56 @@ def assign_manager_to_kg(
     db: Session = Depends(get_db)
 ):
     _admin_only(current_user)
-    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    kg = (
+        db.query(models.Kindergarten)
+        .filter(models.Kindergarten.id == kindergarten_id)
+        .with_for_update()
+        .first()
+    )
     if not kg:
         raise HTTPException(status_code=404, detail="Not Found")
+    if kg.status == models.KindergartenStatus.DELETED:
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
+    if kg.status == models.KindergartenStatus.FROZEN:
+        raise HTTPException(
+            status_code=409,
+            detail="Managers cannot be assigned while the kindergarten is frozen.",
+        )
     
-    user = db.query(models.User).filter(models.User.id == payload.user_id).first()
+    user = (
+        db.query(models.User)
+        .filter(
+            models.User.id == payload.user_id,
+            models.User.deleted_at.is_(None),
+        )
+        .with_for_update()
+        .first()
+    )
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    if user.role == models.UserRole.ADMIN:
+        raise HTTPException(
+            status_code=409,
+            detail="Administrator accounts cannot be assigned as kindergarten managers.",
+        )
         
     from manager_assignment_service import assign_user_as_manager, ManagerAssignmentError
+    from sqlalchemy.exc import IntegrityError
     try:
         assign_user_as_manager(db, user, kg.id, actor_id=current_user.id, allow_replace=payload.replace)
+        if kg.status in (models.KindergartenStatus.DRAFT, models.KindergartenStatus.INACTIVE):
+            kg.status = models.KindergartenStatus.ACTIVE
         db.commit()
         return {"success": True, "message": "Manager assigned"}
     except ManagerAssignmentError as e:
         db.rollback()
         raise HTTPException(status_code=e.status_code, detail=e.message)
+    except IntegrityError as e:
+        db.rollback()
+        if "uq_users_active_manager_per_kindergarten" in str(e.orig):
+            raise HTTPException(
+                status_code=409,
+                detail="This kindergarten already has an active manager.",
+            )
+        raise
 

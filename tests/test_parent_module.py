@@ -1020,7 +1020,7 @@ class TestParentMyReportsPage:
         assert response.status_code == 200
 
         html = response.text
-        assert "VISIBLE_APPROVED_NOTE" in html
+        assert "VISIBLE_APPROVED_NOTE" not in html
         assert "VISIBLE_SENT_NOTE" in html
         assert "HIDDEN_DRAFT_NOTE" not in html
         assert "HIDDEN_OTHER_PARENT_NOTE" not in html
@@ -1058,7 +1058,7 @@ class TestParentMyReportsPage:
                     child_id=sample_child.id,
                     kindergarten_id=sample_kindergarten.id,
                     date=report_date,
-                    status=models.DailyReportStatus.APPROVED,
+                    status=models.DailyReportStatus.SENT_TO_PARENT,
                     submitted_by=supervisor_user.id,
                     arrival_time="08:00",
                     leave_time="14:00",

@@ -290,7 +290,7 @@ def list_users(
     db: Session = Depends(get_db)
 ):
     """List users. Admins see all. Managers see only their kindergarten's staff."""
-    query = db.query(models.User)
+    query = db.query(models.User).filter(models.User.deleted_at.is_(None))
     active_parent_statuses = (
         models.EnrollmentStatus.ACCEPTED,
         models.EnrollmentStatus.ACTIVE
@@ -418,7 +418,7 @@ def export_users(
     if current_user.role != models.UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    query = db.query(models.User)
+    query = db.query(models.User).filter(models.User.deleted_at.is_(None))
 
     if kindergarten_id:
         query = query.filter(models.User.kindergarten_id == kindergarten_id)
@@ -473,6 +473,14 @@ def create_user(
         if user_data.role == models.UserRole.ADMIN:
             _log_access_denied(db, current_user, "create_user", "Cannot create admin users", request)
             raise HTTPException(status_code=403, detail="Cannot create admin users")
+        if user_data.role == models.UserRole.MANAGER:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Manager accounts must be created through the canonical admin "
+                    "manager-assignment workflow."
+                ),
+            )
     elif current_user.role == models.UserRole.MANAGER:
         # Manager can only create non-admin, non-manager roles for their own KG
         if user_data.role in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
@@ -508,7 +516,8 @@ def create_user(
         hashed_password=hashed_password,
         role=user_data.role,
         kindergarten_id=user_data.kindergarten_id,
-        status=models.UserStatus.ACTIVE
+        status=models.UserStatus.ACTIVE,
+        must_change_password=True,
     )
     
     db.add(new_user)
@@ -747,6 +756,19 @@ def update_user(
         user.hashed_password = get_password_hash(user_data.password)
 
     if current_user.role == models.UserRole.ADMIN:
+        lifecycle_fields = {"role", "status", "kindergarten_id"}
+        touches_manager_lifecycle = bool(user_data.model_fields_set & lifecycle_fields) and (
+            user.role == models.UserRole.MANAGER
+            or user_data.role == models.UserRole.MANAGER
+        )
+        if touches_manager_lifecycle:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Manager lifecycle changes must use /api/admin/users or the "
+                    "kindergarten manager-assignment workflow."
+                ),
+            )
         if user_data.role:
             user.role = user_data.role
         if user_data.status:
@@ -815,6 +837,11 @@ def delete_user(
     if user.role == models.UserRole.ADMIN:
         _log_access_denied(db, current_user, "delete_user", "Cannot delete admin users", request)
         raise HTTPException(status_code=403, detail="Cannot delete admin users")
+    if user.role == models.UserRole.MANAGER:
+        raise HTTPException(
+            status_code=409,
+            detail="Manager deletion must use the canonical /api/admin/users workflow.",
+        )
 
     user.deleted_at = datetime.now(UTC)
     user.deleted_by = current_user.id
@@ -877,7 +904,10 @@ def request_password_reset(
         lang = "en" if request.headers.get("Accept-Language", "ar").startswith("en") else "ar"
         raise HTTPException(status_code=400, detail=captcha_error_message(lang))
 
-    user = db.query(models.User).filter(models.User.email == reset_request.email).first()
+    user = db.query(models.User).filter(
+        models.User.email == reset_request.email,
+        models.User.deleted_at.is_(None),
+    ).first()
     # Always return the same message — never reveal whether email exists
     if not user:
         return {"message": "If the email exists, a reset link has been sent"}
@@ -974,10 +1004,22 @@ def bulk_update_status(
             detail=f"Cannot update admin accounts: {', '.join([u.username for u in admin_users])}"
         )
 
+    manager_users = db.query(models.User).filter(
+        models.User.id.in_(bulk_data.user_ids),
+        models.User.role == models.UserRole.MANAGER,
+        models.User.deleted_at.is_(None),
+    ).all()
+    if manager_users:
+        raise HTTPException(
+            status_code=409,
+            detail="Manager status changes must use the canonical /api/admin/users workflow.",
+        )
+
     # Update only non-admin users
     updated_count = db.query(models.User).filter(
         models.User.id.in_(bulk_data.user_ids),
-        models.User.role != models.UserRole.ADMIN
+        models.User.role != models.UserRole.ADMIN,
+        models.User.deleted_at.is_(None),
     ).update({"status": bulk_data.new_status}, synchronize_session=False)
 
     db.commit()
@@ -1038,10 +1080,30 @@ def bulk_delete_users(
             detail=f"Cannot delete admin accounts: {', '.join([u.username for u in admin_users])}"
         )
 
-    # Delete users
+    manager_users = db.query(models.User).filter(
+        models.User.id.in_(bulk_data.user_ids),
+        models.User.role == models.UserRole.MANAGER,
+        models.User.deleted_at.is_(None),
+    ).all()
+    if manager_users:
+        raise HTTPException(
+            status_code=409,
+            detail="Manager deletion must use the canonical /api/admin/users workflow.",
+        )
+
+    # Preserve referential integrity and auditability through soft deletion.
+    now = datetime.now(UTC)
     deleted_count = db.query(models.User).filter(
-        models.User.id.in_(bulk_data.user_ids)
-    ).delete()
+        models.User.id.in_(bulk_data.user_ids),
+        models.User.deleted_at.is_(None),
+    ).update(
+        {
+            "deleted_at": now,
+            "deleted_by": current_user.id,
+            "status": models.UserStatus.INACTIVE,
+        },
+        synchronize_session=False,
+    )
 
     db.commit()
 
@@ -1105,6 +1167,16 @@ def bulk_create_users(
                     "message": "Cannot create admin users",
                 })
                 continue
+            if user_data.role == models.UserRole.MANAGER:
+                errors.append({
+                    "row": i + 1,
+                    "field": "role",
+                    "message": (
+                        "Manager accounts must use the canonical admin "
+                        "manager-assignment workflow"
+                    ),
+                })
+                continue
 
             # Check against pre-fetched conflict set
             if user_data.username in taken_usernames or user_data.email in taken_emails:
@@ -1124,7 +1196,8 @@ def bulk_create_users(
                 hashed_password=hashed_password,
                 role=user_data.role,
                 kindergarten_id=user_data.kindergarten_id,
-                status=models.UserStatus.ACTIVE
+                status=models.UserStatus.ACTIVE,
+                must_change_password=True,
             )
 
             db.add(new_user)

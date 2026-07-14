@@ -703,6 +703,30 @@ def update_user(
 
     target_status = user_data.status if user_data.status is not None else user.status
 
+    # An ACTIVE kindergarten must retain exactly one ACTIVE manager. Replacement
+    # inside the same kindergarten is handled atomically by the dedicated
+    # assignment flow; demotion, suspension, deletion, or reassignment of its
+    # sole manager is rejected until the kindergarten is frozen/inactive.
+    if (
+        current_user.role == models.UserRole.ADMIN
+        and user.role == models.UserRole.MANAGER
+        and user.status == models.UserStatus.ACTIVE
+        and user.kindergarten_id is not None
+    ):
+        current_kg = db.query(models.Kindergarten).filter(
+            models.Kindergarten.id == user.kindergarten_id
+        ).first()
+        remains_active_manager = (
+            target_role == models.UserRole.MANAGER
+            and target_status == models.UserStatus.ACTIVE
+            and target_kindergarten_id == user.kindergarten_id
+        )
+        if current_kg and current_kg.status == models.KindergartenStatus.ACTIVE and not remains_active_manager:
+            raise conflict_error(
+                "An active kindergarten must retain an active manager. Freeze the kindergarten or replace its manager atomically.",
+                {"manager": "active_kindergarten_requires_manager"},
+            )
+
     # Detect a manager assignment/reassignment transition (FRD §4, C3).
     # This covers: promoting a supervisor/other role to manager, or moving an
     # existing manager to a different kindergarten. Only admins can change
@@ -864,6 +888,20 @@ def delete_user(
     # Prevent deleting admins
     if user.role == models.UserRole.ADMIN:
         raise forbidden_error("Cannot delete admin accounts")
+
+    if (
+        user.role == models.UserRole.MANAGER
+        and user.status == models.UserStatus.ACTIVE
+        and user.kindergarten_id is not None
+    ):
+        kindergarten = db.query(models.Kindergarten).filter(
+            models.Kindergarten.id == user.kindergarten_id
+        ).first()
+        if kindergarten and kindergarten.status == models.KindergartenStatus.ACTIVE:
+            raise conflict_error(
+                "An active kindergarten must retain an active manager. Freeze the kindergarten or replace its manager atomically.",
+                {"manager": "active_kindergarten_requires_manager"},
+            )
 
     # Capture before state for audit
     before_state = model_to_dict(user)
@@ -1250,6 +1288,35 @@ def bulk_update_status(
                 }
             )
 
+    # Deactivation cannot orphan an active kindergarten.
+    if bulk_data.new_status != models.UserStatus.ACTIVE:
+        if 'target_users' not in locals():
+            target_users = {
+                u.id: u for u in
+                db.query(models.User).filter(models.User.id.in_(access_result["allowed"])).all()
+            }
+        orphaned = []
+        for user in target_users.values():
+            if (
+                user.role == models.UserRole.MANAGER
+                and user.status == models.UserStatus.ACTIVE
+                and user.kindergarten_id is not None
+            ):
+                kg = db.query(models.Kindergarten).filter(
+                    models.Kindergarten.id == user.kindergarten_id
+                ).first()
+                if kg and kg.status == models.KindergartenStatus.ACTIVE:
+                    orphaned.append(user.id)
+        if orphaned:
+            return JSONResponse(
+                status_code=status.HTTP_409_CONFLICT,
+                content={
+                    "message": "Active kindergartens must retain an active manager",
+                    "errors": [{"user_id": user_id, "error": "active_kindergarten_requires_manager"} for user_id in orphaned],
+                    "correlation_id": get_correlation_id(),
+                },
+            )
+
     # Execute update (reuse batch-loaded users if available, else batch-load)
     succeeded = []
     failed = []
@@ -1371,6 +1438,27 @@ def bulk_delete_users(
         u.id: u for u in
         db.query(models.User).filter(models.User.id.in_(access_result["allowed"])).all()
     }
+    orphaned = []
+    for user in target_users.values():
+        if (
+            user.role == models.UserRole.MANAGER
+            and user.status == models.UserStatus.ACTIVE
+            and user.kindergarten_id is not None
+        ):
+            kg = db.query(models.Kindergarten).filter(
+                models.Kindergarten.id == user.kindergarten_id
+            ).first()
+            if kg and kg.status == models.KindergartenStatus.ACTIVE:
+                orphaned.append(user.id)
+    if orphaned:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "message": "Active kindergartens must retain an active manager",
+                "errors": [{"user_id": user_id, "error": "active_kindergarten_requires_manager"} for user_id in orphaned],
+                "correlation_id": get_correlation_id(),
+            },
+        )
     for user_id in access_result["allowed"]:
         user = target_users.get(user_id)
         if user:
@@ -5208,7 +5296,7 @@ def import_kindergartens_from_excel(
                     area=area,
                     address_line=address_line,
                     contact_phone=phone,
-                    status=models.KindergartenStatus.ACTIVE,
+                    status=models.KindergartenStatus.DRAFT,
                 )
                 db.add(kg)
             except (SQLAlchemyError, AttributeError, ValueError, KeyError) as exc:

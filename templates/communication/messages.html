@@ -239,9 +239,7 @@
                 params.set('archived_only', 'true');
             }
 
-            const response = await fetch(`/comm/messages?${params.toString()}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await fetchWithAuth(`/comm/messages?${params.toString()}`);
 
             if (handleUnauthorizedResponse(response)) {
                 return;
@@ -447,9 +445,7 @@
                 return;
             }
 
-            const response = await fetch(`/comm/messages/${messageId}/replies`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await fetchWithAuth(`/comm/messages/${messageId}/replies`);
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
@@ -578,9 +574,7 @@
                 return;
             }
 
-            const response = await fetch('/comm/messages/unread/count', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await fetchWithAuth('/comm/messages/unread/count');
             if (handleUnauthorizedResponse(response)) {
                 return;
             }
@@ -621,11 +615,10 @@
                 return;
             }
 
-            const response = await fetch(`/comm/messages/${currentOpenMessageId}/replies`, {
+            const response = await fetchWithAuth(`/comm/messages/${currentOpenMessageId}/replies`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ message_body: body })
             });
@@ -667,9 +660,8 @@
             }
 
             const action = currentOpenArchived ? 'unarchive' : 'archive';
-            const response = await fetch(`/comm/messages/${currentOpenMessageId}/${action}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+            const response = await fetchWithAuth(`/comm/messages/${currentOpenMessageId}/${action}`, {
+                method: 'POST'
             });
 
             if (!response.ok) {
@@ -708,11 +700,10 @@
                 return;
             }
 
-            const response = await fetch('/comm/messages/bulk', {
+            const response = await fetchWithAuth('/comm/messages/bulk', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     message_ids: Array.from(selectedMessageIds),
@@ -755,9 +746,8 @@
                 return;
             }
 
-            const response = await fetch(`/comm/messages/${currentOpenMessageId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+            const response = await fetchWithAuth(`/comm/messages/${currentOpenMessageId}`, {
+                method: 'DELETE'
             });
 
             if (!response.ok) {
@@ -790,9 +780,8 @@
                 return;
             }
 
-            const response = await fetch(`/comm/messages/${messageId}/read`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+            const response = await fetchWithAuth(`/comm/messages/${messageId}/read`, {
+                method: 'POST'
             });
 
             if (!response.ok) {

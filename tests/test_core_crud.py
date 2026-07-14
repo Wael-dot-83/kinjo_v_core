@@ -23,7 +23,9 @@ def test_kindergarten_crud_admin(client, test_db, admin_token, admin_user):
     headers = {"Authorization": f"Bearer {admin_token}"}
     response = client.post("/api/admin/kindergartens", json=kg_data, headers=headers)
     assert response.status_code == 201, f"Create failed: {response.text}"
-    kg_id = response.json().get("data", response.json())["id"]
+    created = response.json().get("data", response.json())
+    kg_id = created["id"]
+    assert created["status"] == models.KindergartenStatus.DRAFT.value.lower()
 
     # 2. List Kindergartens (should find it)
     response = client.get("/api/kindergartens", headers=headers)

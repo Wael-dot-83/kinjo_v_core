@@ -670,6 +670,10 @@ def non_empty_update_payload(prepared: PreparedRow, existing: models.Kindergarte
     for field_name, value in prepared.payload.items():
         if field_name not in MODEL_FIELDS:
             continue
+        if field_name == "status":
+            # Activation is coupled to accountable manager assignment and is
+            # never performed by a data import.
+            continue
         if value is None or value == "":
             continue
         old_value = existing_payload.get(field_name)
@@ -692,7 +696,7 @@ def create_payload(prepared: PreparedRow) -> dict[str, Any]:
     payload.setdefault("area", MISSING_DB_TEXT)
     payload.setdefault("address_line", MISSING_DB_TEXT)
     payload.setdefault("contact_phone", prepared.extra.get("contact_phone_original") or MISSING_PHONE_TEXT)
-    payload.setdefault("status", models.KindergartenStatus.ACTIVE)
+    payload["status"] = models.KindergartenStatus.DRAFT
     if not payload.get("name_ar"):
         payload["name_ar"] = payload.get("name_en")
     return {key: value for key, value in payload.items() if key in MODEL_FIELDS}

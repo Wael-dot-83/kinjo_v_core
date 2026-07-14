@@ -61,7 +61,7 @@ def seed_database():
             address_line="شارع الرينبو 15",
             contact_phone="+962791234568",
             contact_email="info@alnoor.jo",
-            status=models.KindergartenStatus.ACTIVE,
+            status=models.KindergartenStatus.DRAFT,
             operating_hours_start="07:30",
             operating_hours_end="14:30",
             license_number="KG-AMM-2024-002",

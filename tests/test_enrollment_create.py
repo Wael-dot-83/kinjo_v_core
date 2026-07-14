@@ -432,15 +432,11 @@ class TestEnrollmentCreatePage:
         assert "عمان" in html
         assert "إربد" in html
 
-    def test_admin_sees_enrollment_form(self, client, admin_token, test_db, sample_kindergarten):
-        """Admin should see enrollment form with same KG selector"""
+    def test_admin_cannot_author_parent_enrollment(self, client, admin_token, test_db, sample_kindergarten):
+        """Admins review enrollment data but cannot impersonate a parent applicant."""
         client.cookies.set("kinjo_token", admin_token)
         response = client.get("/enrollments/create")
-        assert response.status_code == 200
-        html = response.text
-        assert "govFilter" in html
-        assert "cityFilter" in html
-        assert "kgDetailModal" in html
+        assert response.status_code == 403
 
     def test_supervisor_gets_403(self, client, supervisor_token, test_db, sample_kindergarten):
         """Supervisor should get 403 on enrollment create"""
@@ -448,14 +444,11 @@ class TestEnrollmentCreatePage:
         response = client.get("/enrollments/create")
         assert response.status_code == 403
 
-    def test_manager_skips_kg_selector(self, client, manager_token, test_db, sample_kindergarten):
-        """Manager should skip KG selector (auto-assigned)"""
+    def test_manager_cannot_author_parent_enrollment(self, client, manager_token, test_db, sample_kindergarten):
+        """Managers decide applications for their KG but cannot create them as a parent."""
         client.cookies.set("kinjo_token", manager_token)
         response = client.get("/enrollments/create")
-        assert response.status_code == 200
-        html = response.text
-        # Manager shouldn't see the search panel div (id="kgSearchPanel") in the HTML
-        assert 'id="kgSearchPanel"' not in html
+        assert response.status_code == 403
 
     def test_page_has_detail_modal(self, client, parent_token, test_db, sample_kindergarten):
         """Page should include the KG detail modal"""

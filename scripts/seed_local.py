@@ -72,7 +72,7 @@ def run():
                 area="الجبيهة",
                 address_line="شارع الجامعة الأردنية، عمان",
                 contact_phone="0791234567",
-                status=KindergartenStatus.ACTIVE,
+                status=KindergartenStatus.DRAFT,
             )
             db.add(kg1)
         kg2 = db.query(Kindergarten).filter(Kindergarten.name_ar == "حضانة النجوم").first()
@@ -85,7 +85,7 @@ def run():
                 area="وسط البلد",
                 address_line="شارع الملك حسين، إربد",
                 contact_phone="0798765432",
-                status=KindergartenStatus.ACTIVE,
+                status=KindergartenStatus.DRAFT,
             )
             db.add(kg2)
         db.commit()
@@ -137,6 +137,10 @@ def run():
         upsert_user("parent2",     "parent2@kinjo.jo",     "Parent@1234",  UserRole.PARENT,     None,   "هند",  "سالم")
 
         # ── Classes ───────────────────────────────────────────────────────────
+        kg1.status = KindergartenStatus.ACTIVE
+        kg2.status = KindergartenStatus.ACTIVE
+        db.commit()
+
         def upsert_class(kg_id, name_ar, name_en, class_code):
             c = db.query(Class).filter(Class.kindergarten_id == kg_id, Class.name_en == name_en).first()
             if not c:

@@ -544,7 +544,7 @@ class TestManagerReportEdit:
             json={"notes": "محاولة تعديل"},
             headers=_hdr(manager_token),
         )
-        assert r.status_code == 403
+        assert r.status_code == 409
 
     def test_manager_cannot_edit_report_in_foreign_kindergarten(
         self,
@@ -649,9 +649,9 @@ class TestSupervisorFrontendBlocks:
         r = client.get("/attendance/daily", headers=_hdr(supervisor_token))
         assert r.status_code == 403
 
-    def test_supervisor_blocked_from_daily_reports_create(self, client, supervisor_token):
+    def test_supervisor_can_access_daily_reports_create(self, client, supervisor_token):
         r = client.get("/daily-reports/create", headers=_hdr(supervisor_token))
-        assert r.status_code == 403
+        assert r.status_code == 200
 
 
 # ===========================================================================

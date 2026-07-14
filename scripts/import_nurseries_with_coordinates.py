@@ -185,7 +185,7 @@ def prepare_row(row: pd.Series, row_num: int) -> dict[str, Any]:
     
     payload["latitude"] = latitude
     payload["longitude"] = longitude
-    payload["status"] = models.KindergartenStatus.ACTIVE
+    payload["status"] = models.KindergartenStatus.DRAFT
     
     if not payload.get("contact_phone"):
         payload["contact_phone"] = "غير متوفر"

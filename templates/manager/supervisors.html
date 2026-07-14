@@ -10,6 +10,9 @@
         <p class="lead text-muted mt-0">{{ _('إدارة المشرفين وتعيينهم للشعب') }}</p>
     </div>
     <div class="mt-2">
+        <button class="btn btn-primary me-2" type="button" data-bs-toggle="modal" data-bs-target="#supervisorModal" id="createSupervisorBtn">
+            <i class="bi bi-person-plus me-2"></i>{% if ui_lang == 'en' %}Add Supervisor{% else %}إضافة مشرف{% endif %}
+        </button>
         <button class="btn btn-outline-primary js-load-supervisors">
             <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
         </button>
@@ -73,6 +76,29 @@
     <div class="col-12 text-center py-5 text-secondary" id="loadingState">
         <p class="mt-2">{{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}</p>
     </div>
+</div>
+
+<!-- Assign class modal -->
+<div class="modal fade" id="supervisorModal" tabindex="-1" aria-labelledby="supervisorModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="supervisorModalLabel">{% if ui_lang == 'en' %}Supervisor account{% else %}حساب المشرف{% endif %}</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="supervisorForm">
+        <div class="modal-body">
+          <input type="hidden" id="supervisorId">
+          <div class="mb-3"><label class="form-label" for="supervisorFullName">{% if ui_lang == 'en' %}Full name{% else %}الاسم الكامل{% endif %}</label><input class="form-control" id="supervisorFullName" required minlength="2" maxlength="255"></div>
+          <div class="mb-3"><label class="form-label" for="supervisorUsername">{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</label><input class="form-control" id="supervisorUsername" required minlength="3" maxlength="100" autocomplete="username"></div>
+          <div class="mb-3"><label class="form-label" for="supervisorEmail">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label><input class="form-control" id="supervisorEmail" type="email"></div>
+          <div class="mb-3"><label class="form-label" for="supervisorPhone">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</label><input class="form-control" id="supervisorPhone" maxlength="20"></div>
+          <div class="mb-3" id="supervisorPasswordGroup"><label class="form-label" for="supervisorPassword">{% if ui_lang == 'en' %}Temporary password{% else %}كلمة المرور المؤقتة{% endif %}</label><input class="form-control" id="supervisorPassword" type="password" minlength="8" maxlength="128" autocomplete="new-password"></div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-primary" type="submit">{% if ui_lang == 'en' %}Save{% else %}حفظ{% endif %}</button><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button></div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <!-- Assign class modal -->
@@ -176,6 +202,13 @@ function renderSupervisors(supervisors) {
                     <a href="#assignClassModal" class="btn btn-outline-primary js-assign-class" role="button" aria-controls="assignClassModal" data-bs-toggle="modal" data-bs-target="#assignClassModal" data-sup-id="${sup.id}">
                         <i class="bi bi-plus-circle me-2"></i>تعيين شعبة
                     </a>
+                    <button type="button" class="btn btn-outline-secondary js-edit-supervisor" data-bs-toggle="modal" data-bs-target="#supervisorModal"
+                        data-sup-id="${sup.id}" data-sup-name="${escHtml(sup.full_name)}" data-sup-email="${escHtml(sup.email || '')}" data-sup-phone="${escHtml(sup.phone_number || '')}" data-sup-username="${escHtml(sup.username)}">
+                        <i class="bi bi-pencil me-1"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}
+                    </button>
+                    <button type="button" class="btn btn-outline-danger js-delete-supervisor" data-sup-id="${sup.id}">
+                        <i class="bi bi-person-x me-1"></i>{% if ui_lang == 'en' %}Remove{% else %}إزالة{% endif %}
+                    </button>
                 </div>
             </div>
         </li>`;
@@ -211,17 +244,77 @@ async function confirmAssignClass() {
     } catch { alert('خطأ في الشبكة'); }
 }
 
+function resetSupervisorForm() {
+    document.getElementById('supervisorForm').reset();
+    document.getElementById('supervisorId').value = '';
+    document.getElementById('supervisorUsername').disabled = false;
+    document.getElementById('supervisorPasswordGroup').classList.remove('d-none');
+    document.getElementById('supervisorPassword').required = true;
+}
+
+function editSupervisor(btn) {
+    document.getElementById('supervisorId').value = btn.dataset.supId;
+    document.getElementById('supervisorFullName').value = btn.dataset.supName || '';
+    document.getElementById('supervisorUsername').value = btn.dataset.supUsername || '';
+    document.getElementById('supervisorUsername').disabled = true;
+    document.getElementById('supervisorEmail').value = btn.dataset.supEmail || '';
+    document.getElementById('supervisorPhone').value = btn.dataset.supPhone || '';
+    document.getElementById('supervisorPasswordGroup').classList.add('d-none');
+    document.getElementById('supervisorPassword').required = false;
+}
+
+async function saveSupervisor() {
+    const id = document.getElementById('supervisorId').value;
+    const payload = {
+        full_name: document.getElementById('supervisorFullName').value.trim(),
+        email: document.getElementById('supervisorEmail').value.trim() || null,
+        phone_number: document.getElementById('supervisorPhone').value.trim() || null,
+    };
+    if (!id) {
+        payload.username = document.getElementById('supervisorUsername').value.trim();
+        payload.password = document.getElementById('supervisorPassword').value;
+    }
+    const res = await fetch(id ? `/api/manager/supervisors/${id}` : '/api/manager/supervisors', {
+        method: id ? 'PUT' : 'POST', headers: h(), body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || '{% if ui_lang == "en" %}Unable to save supervisor{% else %}تعذر حفظ المشرف{% endif %}');
+    }
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('supervisorModal')).hide();
+    await loadSupervisors();
+}
+
+async function removeSupervisor(id) {
+    if (!confirm('{% if ui_lang == "en" %}Remove this supervisor account?{% else %}هل تريد إزالة حساب المشرف؟{% endif %}')) return;
+    const res = await fetch(`/api/manager/supervisors/${id}`, { method: 'DELETE', headers: h() });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || '{% if ui_lang == "en" %}Unable to remove supervisor{% else %}تعذر إزالة المشرف{% endif %}');
+        return;
+    }
+    await loadSupervisors();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Delegated wiring (replaces inline on* handlers — F1/CSP).
     document.querySelectorAll('.js-load-supervisors').forEach(b =>
         b.addEventListener('click', loadSupervisors));
     const assignForm = document.getElementById('assignClassForm');
     if (assignForm) assignForm.addEventListener('submit', e => { e.preventDefault(); confirmAssignClass(); });
+    document.getElementById('createSupervisorBtn')?.addEventListener('click', resetSupervisorForm);
+    document.getElementById('supervisorForm')?.addEventListener('submit', async e => {
+        e.preventDefault();
+        try { await saveSupervisor(); } catch (err) { alert(err.message); }
+    });
     const container = document.getElementById('supervisorsContainer');
     if (container) container.addEventListener('click', e => {
-        const btn = e.target.closest('.js-assign-class');
-        if (!btn) return;
-        setupAssignModal(parseInt(btn.dataset.supId, 10));
+        const assignBtn = e.target.closest('.js-assign-class');
+        if (assignBtn) setupAssignModal(parseInt(assignBtn.dataset.supId, 10));
+        const editBtn = e.target.closest('.js-edit-supervisor');
+        if (editBtn) editSupervisor(editBtn);
+        const deleteBtn = e.target.closest('.js-delete-supervisor');
+        if (deleteBtn) removeSupervisor(parseInt(deleteBtn.dataset.supId, 10));
     });
     loadSupervisors();
 });

@@ -145,7 +145,7 @@ def seed_kindergartens(db: Session) -> List[Kindergarten]:
             name_ar=name_ar, name_en=name_en,
             governorate=gov, district=city, area=area, address_line=addr,
             contact_phone="N/A", latitude=lat, longitude=lng,
-            status=KindergartenStatus.ACTIVE,
+            status=KindergartenStatus.DRAFT,
         ))
         existing.add((name_ar, gov))
         inserted += 1
@@ -161,7 +161,7 @@ def seed_kindergartens(db: Session) -> List[Kindergarten]:
             name_ar=name_ar, name_en=name_en,
             governorate=gov, district=city, area=area, address_line=addr,
             contact_phone="N/A", latitude=lat, longitude=lng,
-            status=KindergartenStatus.ACTIVE,
+            status=KindergartenStatus.DRAFT,
         ))
         existing.add((name_ar, gov))
         inserted += 1

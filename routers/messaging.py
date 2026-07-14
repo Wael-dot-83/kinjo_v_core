@@ -15,6 +15,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -237,11 +238,16 @@ def send_message_safe(
     if body.scheduled_at and body.scheduled_at > datetime.now(_JORDAN_TZ):
         queue_status = MessageQueueStatus.SCHEDULED
 
+    message_kindergarten_id = current_user.kindergarten_id
+    if message_kindergarten_id is None and recipient_id:
+        recipient = db.query(User).filter(User.id == recipient_id).first()
+        message_kindergarten_id = recipient.kindergarten_id if recipient else None
+
     msg = Message(
         thread_type=thread_type,
         sender_id=current_user.id,
         recipient_id=recipient_id,
-        kindergarten_id=current_user.kindergarten_id,
+        kindergarten_id=message_kindergarten_id,
         subject=body.subject,
         message_body=body.message_body,
         scheduled_at=body.scheduled_at,
@@ -295,9 +301,25 @@ def list_messages(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    from sqlalchemy import or_
-
-    base = db.query(Message).filter(Message.kindergarten_id == current_user.kindergarten_id)
+    base = db.query(Message)
+    allowed_kindergarten_ids: set[int] = set()
+    if current_user.kindergarten_id:
+        allowed_kindergarten_ids.add(current_user.kindergarten_id)
+    elif current_user.role == UserRole.PARENT:
+        allowed_kindergarten_ids = {
+            row[0]
+            for row in (
+                db.query(EnrollmentApplication.kindergarten_id)
+                .join(Child, Child.id == EnrollmentApplication.child_id)
+                .join(ParentProfile, ParentProfile.id == Child.parent_id)
+                .filter(
+                    ParentProfile.user_id == current_user.id,
+                    EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+                )
+                .distinct()
+                .all()
+            )
+        }
 
     if folder == "inbox":
         # Direct messages to me OR I'm in message_recipients
@@ -306,12 +328,17 @@ def list_messages(
             .filter(MessageRecipient.recipient_user_id == current_user.id)
             .subquery()
         )
-        base = base.filter(
-            or_(
-                Message.recipient_id == current_user.id,
-                Message.id.in_(recipient_msg_ids),
+        inbox_predicates = [
+            Message.recipient_id == current_user.id,
+            Message.id.in_(recipient_msg_ids),
+        ]
+        if allowed_kindergarten_ids:
+            inbox_predicates.append(and_(
                 Message.thread_type == MessageThreadType.BROADCAST,
-            )
+                Message.kindergarten_id.in_(allowed_kindergarten_ids),
+            ))
+        base = base.filter(
+            or_(*inbox_predicates)
         ).filter(Message.sender_id != current_user.id)
     elif folder == "sent":
         base = base.filter(Message.sender_id == current_user.id)
@@ -321,14 +348,17 @@ def list_messages(
             .filter(MessageRecipient.recipient_user_id == current_user.id)
             .subquery()
         )
-        base = base.filter(
-            or_(
-                Message.sender_id == current_user.id,
-                Message.recipient_id == current_user.id,
-                Message.id.in_(recipient_msg_ids),
+        all_predicates = [
+            Message.sender_id == current_user.id,
+            Message.recipient_id == current_user.id,
+            Message.id.in_(recipient_msg_ids),
+        ]
+        if allowed_kindergarten_ids:
+            all_predicates.append(and_(
                 Message.thread_type == MessageThreadType.BROADCAST,
-            )
-        )
+                Message.kindergarten_id.in_(allowed_kindergarten_ids),
+            ))
+        base = base.filter(or_(*all_predicates))
 
     total = base.count()
     messages = base.order_by(Message.created_at.desc()).offset(offset).limit(limit).all()

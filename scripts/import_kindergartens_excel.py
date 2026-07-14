@@ -144,7 +144,7 @@ def import_kindergartens(file_path: str, dry_run: bool = False, sheet_name: str 
                     area=area,
                     address_line=address_line,
                     contact_phone=phone,
-                    status=KindergartenStatus.ACTIVE,
+                    status=KindergartenStatus.DRAFT,
                 )
                 db.add(kg)
                 existing.add(key)

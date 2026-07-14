@@ -161,7 +161,12 @@ def submit_daily_report(
     if current_user.role != models.UserRole.SUPERVISOR:
         raise HTTPException(status_code=403, detail="Only supervisors can submit daily reports")
 
-    report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()
+    report = (
+        db.query(models.DailyReport)
+        .filter(models.DailyReport.id == report_id)
+        .with_for_update()
+        .first()
+    )
 
     if not report:
         raise HTTPException(status_code=404, detail="Daily report not found")
@@ -193,7 +198,12 @@ def approve_daily_report(
     """Approve a daily report (Manager only)"""
     validators.validate_manager_role(current_user)
     
-    report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()
+    report = (
+        db.query(models.DailyReport)
+        .filter(models.DailyReport.id == report_id)
+        .with_for_update()
+        .first()
+    )
 
     if not report:
         raise HTTPException(status_code=404, detail="Daily report not found")
@@ -201,7 +211,7 @@ def approve_daily_report(
     # Cross-KG scope: managers cannot approve reports outside their kindergarten
     if current_user.role != models.UserRole.ADMIN:
         if report.kindergarten_id != current_user.kindergarten_id:
-            raise HTTPException(status_code=403, detail="Report not in your kindergarten scope")
+            raise HTTPException(status_code=404, detail="Daily report not found")
 
     if report.status != models.DailyReportStatus.SUBMITTED:
         raise HTTPException(status_code=400, detail="Only submitted reports can be approved")
@@ -247,13 +257,12 @@ def get_child_daily_reports(
             raise HTTPException(status_code=403, detail="Child not in your kindergarten scope")
 
     query = db.query(models.DailyReport).filter(models.DailyReport.child_id == child_id)
+    if current_user.role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        query = query.filter(models.DailyReport.kindergarten_id == current_user.kindergarten_id)
     
-    # Parents see approved and sent-to-parent reports
+    # Explicit manager delivery is the publication boundary.
     if current_user.role == models.UserRole.PARENT:
-        query = query.filter(models.DailyReport.status.in_([
-            models.DailyReportStatus.APPROVED,
-            models.DailyReportStatus.SENT_TO_PARENT,
-        ]))
+        query = query.filter(models.DailyReport.status == models.DailyReportStatus.SENT_TO_PARENT)
     
     reports = query.order_by(models.DailyReport.date.desc()).all()
     
@@ -284,7 +293,9 @@ def get_daily_report_by_id(
     if not report:
         raise HTTPException(status_code=404, detail="Daily report not found")
 
-    # Parents can only see approved reports for their own children
+    # Parents can only see published reports for their own children. Staff are
+    # scoped by the report's immutable kindergarten context, not the child's
+    # current enrollment, so transfers cannot create cross-tenant disclosure.
     if current_user.role == models.UserRole.PARENT:
         child = db.query(models.Child).filter(models.Child.id == report.child_id).first()
         parent_profile = db.query(models.ParentProfile).filter(
@@ -292,8 +303,13 @@ def get_daily_report_by_id(
         ).first()
         if not parent_profile or not child or child.parent_id != parent_profile.id:
             raise HTTPException(status_code=403, detail="Forbidden")
-        if report.status != models.DailyReportStatus.APPROVED:
+        if report.status != models.DailyReportStatus.SENT_TO_PARENT:
             raise HTTPException(status_code=403, detail="Report not available")
+    elif current_user.role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        if not current_user.kindergarten_id or report.kindergarten_id != current_user.kindergarten_id:
+            raise HTTPException(status_code=404, detail="Daily report not found")
+    elif current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     return {
         "id": report.id,
@@ -330,7 +346,7 @@ def record_daily_report_view(
         raise HTTPException(status_code=404, detail="Report not found")
 
     # 2. Report must be in an accessible status (not a draft)
-    allowed_statuses = {models.DailyReportStatus.APPROVED, models.DailyReportStatus.SENT_TO_PARENT}
+    allowed_statuses = {models.DailyReportStatus.SENT_TO_PARENT}
     if report.status not in allowed_statuses:
         raise HTTPException(status_code=403, detail="Report is not accessible")
 

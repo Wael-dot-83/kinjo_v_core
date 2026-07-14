@@ -10,10 +10,8 @@ from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from database import SessionLocal, engine, Base
+from config import settings
 import models
-
-# Ensure all tables exist (creates missing columns for SQLite dev DB)
-Base.metadata.create_all(bind=engine)
 
 random.seed(42)
 
@@ -53,6 +51,12 @@ def _hhmm_to_minutes(t: str) -> int:
 
 
 def seed(kg_id: int = 1, start: str = "2026-02-01", end: str = "2026-02-09"):
+    if settings.ENVIRONMENT.lower() == "production":
+        raise RuntimeError("Refusing to seed synthetic daily reports in production")
+
+    # This utility is development-only; create missing local tables only after
+    # the production guard has run.
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         # Ensure base objects exist
@@ -63,7 +67,7 @@ def seed(kg_id: int = 1, start: str = "2026-02-01", end: str = "2026-02-09"):
                 governorate="Amman", city="Amman", area="Downtown",
                 address_line="شارع الملك فهد",
                 contact_phone="0551234567",
-                status=models.KindergartenStatus.ACTIVE,
+                status=models.KindergartenStatus.DRAFT,
             )
             db.add(kg)
             db.flush()
@@ -93,6 +97,20 @@ def seed(kg_id: int = 1, start: str = "2026-02-01", end: str = "2026-02-09"):
             )
             db.add(manager)
             db.flush()
+
+        if (
+            manager.deleted_at is not None
+            or manager.role != models.UserRole.MANAGER
+            or manager.status != models.UserStatus.ACTIVE
+            or manager.kindergarten_id != kg_id
+        ):
+            raise RuntimeError(
+                "seed_manager must be a non-deleted ACTIVE manager assigned to the target kindergarten"
+            )
+
+        # A kindergarten becomes operational only after its single manager is
+        # known to be valid in this transaction.
+        kg.status = models.KindergartenStatus.ACTIVE
 
         # Ensure parent users and children exist (10 children)
         children = db.query(models.Child).join(

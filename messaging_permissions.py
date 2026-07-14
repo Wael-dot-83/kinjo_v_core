@@ -690,7 +690,14 @@ def resolve_recipients(db: Session, audience: AudienceDefinition, sender: models
 
     # Add explicitly included users
     if audience.include_user_ids:
-        recipient_ids.update(audience.include_user_ids)
+        if sender.role == models.UserRole.MANAGER:
+            invalid_ids = set(audience.include_user_ids) - recipient_ids
+            if invalid_ids:
+                raise forbidden_error(
+                    "Managers can explicitly include only supervisors and parents in their own kindergarten"
+                )
+        else:
+            recipient_ids.update(audience.include_user_ids)
 
     # Remove excluded users
     if audience.exclude_user_ids:

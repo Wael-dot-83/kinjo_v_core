@@ -973,6 +973,22 @@ class TestDailyReportScope:
         assert r.status_code == 200
         app.dependency_overrides.clear()
 
+    @pytest.mark.parametrize("report_status", [
+        models.DailyReportStatus.DRAFT,
+        models.DailyReportStatus.REJECTED,
+        models.DailyReportStatus.RETURNED,
+        models.DailyReportStatus.APPROVED,
+        models.DailyReportStatus.SENT_TO_PARENT,
+    ])
+    def test_manager_cannot_edit_outside_submitted_review_state(
+        self, client, test_db, manager_kg_a, kg_a, child_kg_a, supervisor_kg_a, report_status
+    ):
+        report = _make_report(test_db, kg_a.id, child_kg_a.id, supervisor_kg_a.id, status=report_status)
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        response = client.put(f"/api/manager/daily-reports/{report.id}", json={"notes": "not allowed"})
+        assert response.status_code == 409
+        app.dependency_overrides.clear()
+
 
 class TestSendReportAtomic:
     """#7 — status change and the parent notification commit together."""
@@ -1205,6 +1221,86 @@ class TestClassDrilldownAttendance:
 # =============================================================================
 # RUN TESTS
 # =============================================================================
+
+
+class TestManagerProductionBlockers:
+    def test_valid_daily_report_date_filters_work(
+        self, client, test_db, manager_kg_a, kg_a, child_kg_a, supervisor_kg_a
+    ):
+        _make_report(test_db, kg_a.id, child_kg_a.id, supervisor_kg_a.id)
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        today = date.today().isoformat()
+        response = client.get(f"/api/manager/daily-reports?from_date={today}&to_date={today}")
+        assert response.status_code == 200, response.text
+        assert response.json()
+        app.dependency_overrides.clear()
+
+    def test_manager_cannot_read_foreign_daily_report_detail(
+        self, client, test_db, manager_kg_a, kg_b, child_kg_a, supervisor_kg_b
+    ):
+        report = _make_report(test_db, kg_b.id, child_kg_a.id, supervisor_kg_b.id)
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        response = client.get(f"/api/daily-reports/{report.id}")
+        assert response.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_manager_cannot_list_foreign_child_documents(
+        self, client, test_db, manager_kg_b, child_kg_a, manager_kg_a
+    ):
+        test_db.add(models.ChildDocument(
+            child_id=child_kg_a.id,
+            document_type="other",
+            file_name="private.pdf",
+            file_path="private.pdf",
+            uploaded_by=manager_kg_a.id,
+        ))
+        test_db.commit()
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_b
+        response = client.get(f"/api/children/{child_kg_a.id}/documents")
+        assert response.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_active_manager_uniqueness_is_database_enforced(self, test_db, manager_kg_a):
+        from sqlalchemy.exc import IntegrityError
+
+        duplicate = models.User(
+            username="duplicate_active_manager",
+            email="duplicate-manager@example.com",
+            hashed_password="x",
+            role=models.UserRole.MANAGER,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=manager_kg_a.kindergarten_id,
+        )
+        test_db.add(duplicate)
+        with pytest.raises(IntegrityError):
+            test_db.commit()
+        test_db.rollback()
+
+    def test_manager_supervisor_crud_is_scoped(
+        self, client, manager_kg_a, manager_kg_b
+    ):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        created = client.post("/api/manager/supervisors", json={
+            "username": "manager_created_supervisor",
+            "email": "manager-created-supervisor@example.com",
+            "password": "StrongPass123!",
+            "full_name": "Manager Created Supervisor",
+            "phone_number": "+962790000099",
+        })
+        assert created.status_code == 201, created.text
+        supervisor_id = created.json()["id"]
+
+        updated = client.put(f"/api/manager/supervisors/{supervisor_id}", json={
+            "full_name": "Updated Supervisor",
+        })
+        assert updated.status_code == 200, updated.text
+
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_b
+        foreign = client.put(f"/api/manager/supervisors/{supervisor_id}", json={
+            "full_name": "Forbidden Update",
+        })
+        assert foreign.status_code == 404
+        app.dependency_overrides.clear()
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

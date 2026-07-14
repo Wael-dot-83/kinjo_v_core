@@ -112,13 +112,31 @@ def validate_manager_rules(
             field="kindergarten_id"
         )
 
+    kindergarten = db.query(models.Kindergarten).filter(
+        models.Kindergarten.id == kindergarten_id
+    ).first()
+    if kindergarten is None or kindergarten.status == models.KindergartenStatus.DELETED:
+        raise ManagerRuleError(
+            message="Kindergarten not found or deleted",
+            status_code=status.HTTP_404_NOT_FOUND,
+            field="kindergarten_id",
+        )
+    if kindergarten.status == models.KindergartenStatus.FROZEN:
+        raise ManagerRuleError(
+            message="Managers cannot be assigned while the kindergarten is frozen",
+            status_code=status.HTTP_409_CONFLICT,
+            field="kindergarten_id",
+            kindergarten_id=kindergarten_id,
+        )
+
     if status_value != models.UserStatus.ACTIVE:
         return
 
     query = db.query(models.User).filter(
         models.User.kindergarten_id == kindergarten_id,
         models.User.role == models.UserRole.MANAGER,
-        models.User.status == models.UserStatus.ACTIVE
+        models.User.status == models.UserStatus.ACTIVE,
+        models.User.deleted_at.is_(None),
     )
 
     if exclude_user_id is not None:

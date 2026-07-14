@@ -95,6 +95,7 @@ def test_strip_supervisor_role_removes_all_artifacts(test_db):
 def test_manager_reassignment_detaches_from_previous_kg(test_db):
     kg_a = _mk_kg(test_db, "KG A", "LIC-A")
     kg_b = _mk_kg(test_db, "KG B", "LIC-B")
+    kg_a.status = models.KindergartenStatus.DRAFT
     mgr = _mk_user(test_db, "mgr_move", models.UserRole.MANAGER, kg_a.id)
 
     assign_user_as_manager(test_db, mgr, kg_b.id, actor_id=None)
@@ -108,6 +109,17 @@ def test_manager_reassignment_detaches_from_previous_kg(test_db):
         models.User.status == models.UserStatus.ACTIVE,
     ).count()
     assert a_mgrs == 0
+
+
+def test_active_kindergarten_manager_cannot_be_moved(test_db):
+    kg_a = _mk_kg(test_db, "KG guarded", "LIC-GUARDED")
+    kg_b = _mk_kg(test_db, "KG target", "LIC-GUARDED-T")
+    mgr = _mk_user(test_db, "mgr_guarded", models.UserRole.MANAGER, kg_a.id)
+
+    with pytest.raises(ManagerAssignmentError) as exc:
+        assign_user_as_manager(test_db, mgr, kg_b.id, actor_id=None)
+    assert exc.value.status_code == 409
+    assert exc.value.code == "active_kindergarten_requires_manager"
 
 
 def test_promoting_supervisor_to_manager_strips_supervisor_role(test_db):
@@ -143,6 +155,7 @@ def test_assign_to_occupied_kg_conflicts_without_replace(test_db):
 def test_replace_vacates_existing_manager(test_db):
     kg_a = _mk_kg(test_db, "KG rep A", "LIC-REPA")
     kg_b = _mk_kg(test_db, "KG rep B", "LIC-REPB")
+    kg_a.status = models.KindergartenStatus.DRAFT
     outgoing = _mk_user(test_db, "mgr_out", models.UserRole.MANAGER, kg_b.id)
     incoming = _mk_user(test_db, "mgr_in", models.UserRole.MANAGER, kg_a.id)
 
@@ -249,6 +262,7 @@ def test_freeze_and_unfreeze_cycle(client, auth_headers_admin, test_db, sample_k
 
 def test_assign_manager_endpoint(client, auth_headers_admin, test_db, sample_kindergarten):
     other_kg = _mk_kg(test_db, "KG other", "LIC-OTHER-EP")
+    other_kg.status = models.KindergartenStatus.DRAFT
     user = _mk_user(test_db, "mgr_ep", models.UserRole.MANAGER, other_kg.id)
 
     r = client.post(

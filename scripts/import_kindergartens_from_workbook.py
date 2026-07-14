@@ -92,7 +92,7 @@ def map_row(row: dict) -> dict | None:
     payload.setdefault("district", payload["governorate"])
     for key, default in REQUIRED_DEFAULTS.items():
         payload.setdefault(key, default)
-    payload["status"] = models.KindergartenStatus.ACTIVE
+    payload["status"] = models.KindergartenStatus.DRAFT
     return payload
 
 

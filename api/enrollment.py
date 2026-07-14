@@ -189,10 +189,11 @@ def create_enrollment_application(
     
     # Validate kindergarten exists
     kindergarten = db.query(models.Kindergarten).filter(
-        models.Kindergarten.id == enrollment_data.kindergarten_id
+        models.Kindergarten.id == enrollment_data.kindergarten_id,
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
     ).first()
     if not kindergarten:
-        raise HTTPException(status_code=404, detail="Kindergarten not found")
+        raise HTTPException(status_code=404, detail="Active kindergarten not found")
 
     # Conditional identity validation
     child_nationality = enrollment_data.nationality or ""
@@ -379,17 +380,20 @@ def review_enrollment(
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
 
+    # Authorize before validating workflow state so a foreign manager cannot
+    # enumerate another tenant's application status through response differences.
+    if current_user.role not in [models.UserRole.MANAGER, models.UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Only managers can review applications")
+    if (
+        current_user.role == models.UserRole.MANAGER
+        and enrollment.kindergarten_id != current_user.kindergarten_id
+    ):
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+
     target_status = models.EnrollmentStatus.REJECTED if decision == "reject" else models.EnrollmentStatus.ACCEPTED
     _assert_valid_transition(enrollment.status, target_status, _ulang(current_user))
 
     before_state = {"status": enrollment.status.value, "class_id": enrollment.class_id}
-
-    # Only managers or admins can review
-    if current_user.role not in [models.UserRole.MANAGER, models.UserRole.ADMIN]:
-        raise HTTPException(status_code=403, detail="Only managers can review applications")
-
-    # Ensure manager is in the same kindergarten
-    validators.validate_kindergarten_scope(current_user, enrollment.kindergarten_id)
 
     if decision == "reject":
         if not reason or not reason.strip():
@@ -408,13 +412,6 @@ def review_enrollment(
         docs_ok, missing_docs = validators.validate_required_documents(db, child.id)
         if not docs_ok:
             raise HTTPException(status_code=400, detail={"missing_documents": missing_docs})
-
-        # Require class assignment before acceptance
-        if not enrollment.class_id:
-            raise HTTPException(
-                status_code=400,
-                detail=_api("Child must be assigned to a class before the enrollment can be accepted", _ulang(current_user))
-            )
 
         # Class capacity guard — row-level lock prevents double-booking
         if enrollment.class_id:

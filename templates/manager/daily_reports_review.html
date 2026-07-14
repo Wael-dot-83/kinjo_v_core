@@ -173,6 +173,25 @@
     </div>
 </div>
 
+<!-- Edit submitted report modal -->
+<div class="modal fade" id="editReportModal" tabindex="-1" aria-labelledby="editReportModalLabel" aria-hidden="true">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title" id="editReportModalLabel">{% if ui_lang == 'en' %}Edit submitted report{% else %}تعديل التقرير المقدم{% endif %}</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <form id="editReportForm"><div class="modal-body">
+      <input type="hidden" id="editReportId">
+      <div class="row g-3 mb-3"><div class="col-6"><label class="form-label" for="editArrivalTime">{% if ui_lang == 'en' %}Arrival{% else %}وقت الوصول{% endif %}</label><input class="form-control" id="editArrivalTime" type="time" required></div><div class="col-6"><label class="form-label" for="editLeaveTime">{% if ui_lang == 'en' %}Departure{% else %}وقت المغادرة{% endif %}</label><input class="form-control" id="editLeaveTime" type="time"></div></div>
+      <div class="mb-3"><label class="form-label" for="editActivities">{% if ui_lang == 'en' %}Activities{% else %}الأنشطة{% endif %}</label><textarea class="form-control" id="editActivities" rows="2"></textarea></div>
+      <div class="mb-3"><label class="form-label" for="editNotes">{% if ui_lang == 'en' %}Notes{% else %}الملاحظات{% endif %}</label><textarea class="form-control" id="editNotes" rows="3"></textarea></div>
+      <fieldset><legend class="h6">{% if ui_lang == 'en' %}Meals{% else %}الوجبات{% endif %}</legend><div class="d-flex flex-wrap gap-3">
+        <label class="form-check"><input class="form-check-input" id="editBreakfast" type="checkbox"> {% if ui_lang == 'en' %}Breakfast{% else %}فطور{% endif %}</label>
+        <label class="form-check"><input class="form-check-input" id="editSnack" type="checkbox"> {% if ui_lang == 'en' %}Snack{% else %}وجبة خفيفة{% endif %}</label>
+        <label class="form-check"><input class="form-check-input" id="editMilk" type="checkbox"> {% if ui_lang == 'en' %}Milk{% else %}حليب{% endif %}</label>
+        <label class="form-check"><input class="form-check-input" id="editLunch" type="checkbox"> {% if ui_lang == 'en' %}Lunch{% else %}غداء{% endif %}</label>
+      </div></fieldset>
+    </div><div class="modal-footer"><button class="btn btn-primary" type="submit">{% if ui_lang == 'en' %}Save review{% else %}حفظ المراجعة{% endif %}</button><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button></div></form>
+  </div></div>
+</div>
+
 <!-- Send to Parents Confirm Modal -->
 <div class="modal fade" id="sendParentsModal" tabindex="-1" aria-labelledby="sendParentsModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -229,6 +248,7 @@
 
     let pendingSendId    = null;
     let pendingDeleteId  = null;
+    let reportsById      = new Map();
 
     const STATUS_BADGE = {
         'SUBMITTED':      `<span class="badge text-bg-primary text-primary">{{ _('بانتظار مراجعة المدير') }}</span>`,
@@ -260,11 +280,14 @@
         if (sendBtn) sendBtn.addEventListener('click', confirmSendToParents);
         const delBtn = document.getElementById('confirmDeleteReportBtn');
         if (delBtn) delBtn.addEventListener('click', confirmDeleteReport);
+        document.getElementById('editReportForm')?.addEventListener('submit', saveEditedReport);
         // Delegated for dynamically-rendered row buttons.
         const tbody = document.getElementById('reportsTableBody');
         if (tbody) tbody.addEventListener('click', e => {
             const sendEl = e.target.closest('.js-send-report');
             if (sendEl) { window.pendingSendId = parseInt(sendEl.dataset.reportId, 10); return; }
+            const editEl = e.target.closest('.js-edit-report');
+            if (editEl) { openEditReport(parseInt(editEl.dataset.reportId, 10)); return; }
             const delEl = e.target.closest('.js-delete-report');
             if (delEl) { window.pendingDeleteId = parseInt(delEl.dataset.reportId, 10); return; }
         });
@@ -368,6 +391,7 @@
     };
 
     function renderTable(reports) {
+        reportsById = new Map(reports.map(report => [report.id, report]));
         const tbody = document.getElementById('reportsTableBody');
         tbody.innerHTML = reports.map(r => {
             const date  = r.date ? new Date(r.date).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'}) : '—';
@@ -391,6 +415,10 @@
                             <i class="bi bi-eye me-2"></i>{{ _('عرض') }}
                         </a>
                         ${canSend ? `
+                         <button type="button" class="btn btn-link text-decoration-none p-1 js-edit-report"
+                            data-bs-toggle="modal" data-bs-target="#editReportModal" data-report-id="${r.id}" aria-label="{% if ui_lang == 'en' %}Edit report{% else %}تعديل التقرير{% endif %}">
+                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                         </button>
                          <button type="button" class="btn btn-link text-decoration-none p-1 text-success js-send-report"
                             data-bs-toggle="modal" data-bs-target="#sendParentsModal" aria-label="{{ _('إرسال التقرير للوالدين') }}"
                             data-report-id="${r.id}">
@@ -406,6 +434,45 @@
                 </td>
             </tr>`;
         }).join('');
+    }
+
+    function openEditReport(id) {
+        const report = reportsById.get(id);
+        if (!report) return;
+        document.getElementById('editReportId').value = id;
+        document.getElementById('editArrivalTime').value = report.arrival_time || '';
+        document.getElementById('editLeaveTime').value = report.leave_time || '';
+        document.getElementById('editActivities').value = report.activities || '';
+        document.getElementById('editNotes').value = report.notes || '';
+        document.getElementById('editBreakfast').checked = !!report.breakfast;
+        document.getElementById('editSnack').checked = !!report.snack;
+        document.getElementById('editMilk').checked = !!report.milk;
+        document.getElementById('editLunch').checked = !!report.lunch;
+    }
+
+    async function saveEditedReport(event) {
+        event.preventDefault();
+        const id = document.getElementById('editReportId').value;
+        const payload = {
+            arrival_time: document.getElementById('editArrivalTime').value,
+            leave_time: document.getElementById('editLeaveTime').value || null,
+            activities: document.getElementById('editActivities').value.trim() || null,
+            notes: document.getElementById('editNotes').value.trim() || null,
+            breakfast: document.getElementById('editBreakfast').checked,
+            snack: document.getElementById('editSnack').checked,
+            milk: document.getElementById('editMilk').checked,
+            lunch: document.getElementById('editLunch').checked,
+        };
+        const response = await fetch(`/api/manager/daily-reports/${id}`, {
+            method: 'PUT', headers: getHeaders(), body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            alert(error.detail || '{% if ui_lang == "en" %}Unable to save report{% else %}تعذر حفظ التقرير{% endif %}');
+            return;
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editReportModal')).hide();
+        await loadReports();
     }
 
     window.confirmSendToParents = async function () {

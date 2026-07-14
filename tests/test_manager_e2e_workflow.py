@@ -178,8 +178,16 @@ class TestManagerE2EWorkflow:
 
         # 3. Assign the supervisor to the original class (audited path —
         # class creation above already auto-assigned them to the new class).
+        r = client.post("/api/manager/supervisors", json={
+            "username": "e2e_second_supervisor",
+            "email": "e2e-second-supervisor@example.com",
+            "password": "SecondSupervisor123!",
+            "full_name": "Second Supervisor",
+        })
+        assert r.status_code == 201, r.text
+        second_supervisor_id = r.json()["id"]
         r = client.post("/api/manager/classes/assign-supervisor", json={
-            "class_id": A["cls"].id, "supervisor_id": A["supervisor"].id,
+            "class_id": A["cls"].id, "supervisor_id": second_supervisor_id,
             "is_primary": True,
         })
         assert r.status_code == 201, r.text
@@ -221,7 +229,7 @@ class TestManagerE2EWorkflow:
         # 8. Sent report is read-only; double-send is rejected.
         r = client.put(f"/api/manager/daily-reports/{A['report'].id}",
                        json={"notes": "تعديل ممنوع"})
-        assert r.status_code == 403
+        assert r.status_code == 409
         r = client.put(f"/api/manager/daily-reports/{A['report'].id}/send-to-parents")
         assert r.status_code == 400
 

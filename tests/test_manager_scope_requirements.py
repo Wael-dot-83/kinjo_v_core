@@ -342,7 +342,7 @@ class TestIdentityValidation:
 
 class TestManagerAsSupervisor:
 
-    def test_manager_assigned_as_supervisor_ok(self, client, test_db):
+    def test_manager_cannot_be_assigned_as_supervisor(self, client, test_db):
         kg = _make_kg(test_db)
         mgr = _make_user(test_db, models.UserRole.MANAGER, kg, "mgr_sv")
         # Create supervisor profile for manager
@@ -375,8 +375,8 @@ class TestManagerAsSupervisor:
             },
             headers=headers,
         )
-        assert r.status_code == 201, r.text
-        assert r.json()["supervisor_id"] == mgr.id
+        # MANAGER and SUPERVISOR are mutually exclusive operational roles.
+        assert r.status_code == 404, r.text
 
     def test_manager_cannot_create_class_with_manager_as_supervisor(self, client, test_db):
         """A class supervisor must have role SUPERVISOR (#3 / FRD C5 — MANAGER and

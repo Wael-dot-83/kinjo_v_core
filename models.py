@@ -415,6 +415,13 @@ class User(Base):
         Index("ix_users_status", "status"),
         Index("ix_users_kindergarten_id", "kindergarten_id"),
         Index("ix_users_role_status", "role", "status"),
+        Index(
+            "uq_users_active_manager_per_kindergarten",
+            "kindergarten_id",
+            unique=True,
+            postgresql_where=text("role = 'MANAGER' AND status = 'ACTIVE' AND deleted_at IS NULL"),
+            sqlite_where=text("role = 'MANAGER' AND status = 'ACTIVE' AND deleted_at IS NULL"),
+        ),
     )
 
 

@@ -14,6 +14,26 @@ from audit_actions import AuditAction
 from validators import ValidationError
 
 
+def _ensure_no_assignment_overlap(
+    db: Session,
+    supervisor_id: int,
+    start_date: date,
+    end_date: Optional[date],
+) -> None:
+    query = db.query(models.SupervisorAssignment).filter(
+        models.SupervisorAssignment.supervisor_id == supervisor_id,
+        models.SupervisorAssignment.deleted_at.is_(None),
+        or_(
+            models.SupervisorAssignment.end_date.is_(None),
+            models.SupervisorAssignment.end_date >= start_date,
+        ),
+    )
+    if end_date is not None:
+        query = query.filter(models.SupervisorAssignment.start_date <= end_date)
+    if query.first():
+        raise ValidationError("Supervisor assignment overlaps an existing class assignment", level=3)
+
+
 class SupervisorService:
     """Service for supervisor operations and class management"""
 
@@ -99,15 +119,19 @@ class SupervisorService:
         # Get supervisor user
         supervisor = db.query(models.User).filter(
             models.User.id == supervisor_id,
-            models.User.role == models.UserRole.SUPERVISOR
-        ).first()
+            models.User.role == models.UserRole.SUPERVISOR,
+            models.User.status == models.UserStatus.ACTIVE,
+            models.User.deleted_at.is_(None),
+        ).with_for_update().first()
 
         if not supervisor:
             raise ValidationError("Supervisor not found", level=4)
 
         # Get class
         class_obj = db.query(models.Class).filter(
-            models.Class.id == class_id
+            models.Class.id == class_id,
+            models.Class.is_active.is_(True),
+            models.Class.deleted_at.is_(None),
         ).first()
 
         if not class_obj:
@@ -123,9 +147,7 @@ class SupervisorService:
             )
 
         # L3: Validate no double assignment
-        validators.validate_no_double_supervisor_assignment(
-            db, supervisor_id, start_date, end_date
-        )
+        _ensure_no_assignment_overlap(db, supervisor_id, start_date, end_date)
 
         # Create assignment
         assignment = models.SupervisorAssignment(
@@ -137,19 +159,17 @@ class SupervisorService:
         )
 
         db.add(assignment)
-        db.commit()
-        db.refresh(assignment)
-
-        # L5: Audit log
-        validators.log_audit_action(
-            db=db,
+        db.flush()
+        db.add(models.AuditLog(
             user_id=manager_user.id,
             action=AuditAction.SUPERVISOR_ASSIGNED,
             entity_type="SupervisorAssignment",
             entity_id=assignment.id,
             details=f"Supervisor {supervisor_id} assigned to Class {class_id}",
-            sensitivity_level=3
-        )
+            sensitivity_level=3,
+        ))
+        db.commit()
+        db.refresh(assignment)
 
         return assignment
 
@@ -178,15 +198,19 @@ class SupervisorService:
         # Get replacement supervisor
         replacement = db.query(models.User).filter(
             models.User.id == replacement_supervisor_id,
-            models.User.role == models.UserRole.SUPERVISOR
-        ).first()
+            models.User.role == models.UserRole.SUPERVISOR,
+            models.User.status == models.UserStatus.ACTIVE,
+            models.User.deleted_at.is_(None),
+        ).with_for_update().first()
 
         if not replacement:
             raise ValidationError("Replacement supervisor not found", level=4)
 
         # Get class
         class_obj = db.query(models.Class).filter(
-            models.Class.id == class_id
+            models.Class.id == class_id,
+            models.Class.is_active.is_(True),
+            models.Class.deleted_at.is_(None),
         ).first()
 
         if not class_obj:
@@ -202,7 +226,7 @@ class SupervisorService:
             )
 
         # L3: Validate replacement doesn't overlap with another assignment
-        validators.validate_no_double_supervisor_assignment(
+        _ensure_no_assignment_overlap(
             db, replacement_supervisor_id, start_date, end_date
         )
 
@@ -216,19 +240,17 @@ class SupervisorService:
         )
 
         db.add(assignment)
-        db.commit()
-        db.refresh(assignment)
-
-        # L5: Audit log
-        validators.log_audit_action(
-            db=db,
+        db.flush()
+        db.add(models.AuditLog(
             user_id=manager_user.id,
             action=AuditAction.REPLACEMENT_SUPERVISOR_ASSIGNED,
             entity_type="SupervisorAssignment",
             entity_id=assignment.id,
             details=f"Replacement supervisor {replacement_supervisor_id} for Class {class_id}. Reason: {reason}",
-            sensitivity_level=3
-        )
+            sensitivity_level=3,
+        ))
+        db.commit()
+        db.refresh(assignment)
 
         return assignment
 

@@ -43,24 +43,25 @@ class ManagerAssignmentError(HTTPException):
     """
 
     def __init__(self, status_code: int, message: str, code: str = "manager_assignment_error"):
+        self.message = message
+        self.code = code
         super().__init__(status_code=status_code, detail={"code": code, "message": message})
 
 
 def _audit(db: Session, actor_id: Optional[int], action: str, entity_type: str,
            entity_id: Optional[int], details: str) -> None:
-    """Best-effort audit row using the shared generic helper (no commit)."""
+    """Stage an audit row without committing the assignment transaction."""
     from audit_actions import AuditAction  # local import avoids cycles
 
     resolved = getattr(AuditAction, action, action)
-    validators.log_audit_action(
-        db=db,
+    db.add(models.AuditLog(
         user_id=actor_id,
         action=resolved,
         entity_type=entity_type,
         entity_id=entity_id,
         details=details,
         sensitivity_level=3,
-    )
+    ))
 
 
 # ---------------------------------------------------------------------------
@@ -165,19 +166,63 @@ def assign_user_as_manager(
             new manager can take over ("Replace manager" flow, FRD §3.3).
             When False, an occupied target KG raises 409.
     """
-    # Target kindergarten must exist.
-    target_kg = (
-        db.query(models.Kindergarten)
-        .filter(models.Kindergarten.id == target_kindergarten_id)
-        .first()
+    previous_kg_id = user.kindergarten_id
+
+    # Lock every kindergarten whose manager coverage may change.  The stable
+    # order prevents concurrent activation/reassignment flows from observing
+    # an intermediate managerless ACTIVE kindergarten.
+    kindergarten_ids = sorted(
+        {kg_id for kg_id in (target_kindergarten_id, previous_kg_id) if kg_id}
     )
+    locked_kindergartens = {
+        kg.id: kg
+        for kg in (
+            db.query(models.Kindergarten)
+            .filter(models.Kindergarten.id.in_(kindergarten_ids))
+            .order_by(models.Kindergarten.id)
+            .with_for_update()
+            .all()
+        )
+    }
+    target_kg = locked_kindergartens.get(target_kindergarten_id)
     if target_kg is None:
         raise ManagerAssignmentError(
             status_code=status.HTTP_404_NOT_FOUND,
             message="Target kindergarten not found.",
             code="kindergarten_not_found",
         )
+    if target_kg.status == models.KindergartenStatus.DELETED:
+        raise ManagerAssignmentError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="Target kindergarten not found.",
+            code="kindergarten_not_found",
+        )
+    if target_kg.status == models.KindergartenStatus.FROZEN:
+        raise ManagerAssignmentError(
+            status_code=status.HTTP_409_CONFLICT,
+            message="Managers cannot be assigned while the kindergarten is frozen.",
+            code="kindergarten_frozen",
+        )
 
+    locked_user = (
+        db.query(models.User)
+        .filter(models.User.id == user.id)
+        .with_for_update()
+        .first()
+    )
+    if locked_user is None or locked_user.deleted_at is not None:
+        raise ManagerAssignmentError(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="User not found.",
+            code="user_not_found",
+        )
+    if locked_user.role == models.UserRole.ADMIN:
+        raise ManagerAssignmentError(
+            status_code=status.HTTP_409_CONFLICT,
+            message="Administrator accounts cannot be assigned as kindergarten managers.",
+            code="privileged_role_assignment_forbidden",
+        )
+    user = locked_user
     previous_kg_id = user.kindergarten_id
     was_manager = user.role == models.UserRole.MANAGER
     was_supervisor = user.role == models.UserRole.SUPERVISOR
@@ -186,6 +231,18 @@ def assign_user_as_manager(
     if was_manager and previous_kg_id == target_kindergarten_id \
             and user.status == models.UserStatus.ACTIVE:
         return {"changed": False, "reason": "already_active_manager"}
+
+    if was_manager and previous_kg_id and previous_kg_id != target_kindergarten_id:
+        previous_kg = locked_kindergartens.get(previous_kg_id)
+        if previous_kg and previous_kg.status == models.KindergartenStatus.ACTIVE:
+            raise ManagerAssignmentError(
+                status_code=status.HTTP_409_CONFLICT,
+                message=(
+                    "An active kindergarten cannot be left without a manager. "
+                    "Freeze it or assign a replacement before moving this manager."
+                ),
+                code="active_kindergarten_requires_manager",
+            )
 
     # C3.5 — do not strand a KG without a supervisor.
     guard_supervisor_coverage(db, user)
@@ -198,7 +255,9 @@ def assign_user_as_manager(
             models.User.role == models.UserRole.MANAGER,
             models.User.status == models.UserStatus.ACTIVE,
             models.User.id != user.id,
+            models.User.deleted_at.is_(None),
         )
+        .with_for_update()
         .first()
     )
     replaced_manager_id = None

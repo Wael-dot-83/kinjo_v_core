@@ -103,6 +103,19 @@
   </div>
 </div>
 
+<div class="modal fade" id="editChildModal" tabindex="-1" aria-labelledby="editChildLabel" aria-hidden="true">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title" id="editChildLabel">{% if ui_lang == 'en' %}Edit child profile{% else %}تعديل ملف الطفل{% endif %}</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <form id="editChildForm"><div class="modal-body">
+      <input type="hidden" id="editChildId">
+      <div class="mb-3"><label class="form-label" for="editChildFirstName">{% if ui_lang == 'en' %}First name{% else %}الاسم الأول{% endif %}</label><input class="form-control" id="editChildFirstName" required></div>
+      <div class="mb-3"><label class="form-label" for="editChildLastName">{% if ui_lang == 'en' %}Last name{% else %}اسم العائلة{% endif %}</label><input class="form-control" id="editChildLastName" required></div>
+      <div class="mb-3"><label class="form-label" for="editChildDob">{% if ui_lang == 'en' %}Date of birth{% else %}تاريخ الميلاد{% endif %}</label><input class="form-control" id="editChildDob" type="date" required></div>
+      <div class="mb-3"><label class="form-label" for="editChildGender">{% if ui_lang == 'en' %}Gender{% else %}الجنس{% endif %}</label><select class="form-select" id="editChildGender"><option value="MALE">{% if ui_lang == 'en' %}Male{% else %}ذكر{% endif %}</option><option value="FEMALE">{% if ui_lang == 'en' %}Female{% else %}أنثى{% endif %}</option></select></div>
+    </div><div class="modal-footer"><button class="btn btn-primary" type="submit">{% if ui_lang == 'en' %}Save{% else %}حفظ{% endif %}</button><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button></div></form>
+  </div></div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -187,6 +200,11 @@ function renderTable(children) {
                         data-from-class-id="${c.class_id}" data-from-class-name="${esc(rawClass)}">
                     <i class="bi bi-arrow-left-right me-2"></i>نقل
                 </a>
+                <button type="button" class="btn btn-outline-secondary py-2 js-edit-child" data-bs-toggle="modal" data-bs-target="#editChildModal"
+                    data-child-id="${c.id}" data-first-name="${esc(c.first_name)}" data-last-name="${esc(c.last_name)}" data-dob="${dob}" data-gender="${esc(c.gender || '')}">
+                    <i class="bi bi-pencil me-1"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}
+                </button>
+                <a class="btn btn-outline-secondary py-2" href="/children/${c.id}"><i class="bi bi-eye me-1"></i>{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}</a>
             </td>
         </tr>`;
     }).join('');
@@ -234,6 +252,31 @@ async function confirmMoveChild() {
 }
 
 // Delegated event wiring (replaces inline on* handlers — F1/CSP).
+function setupEditChild(btn) {
+    document.getElementById('editChildId').value = btn.dataset.childId;
+    document.getElementById('editChildFirstName').value = btn.dataset.firstName || '';
+    document.getElementById('editChildLastName').value = btn.dataset.lastName || '';
+    document.getElementById('editChildDob').value = btn.dataset.dob || '';
+    document.getElementById('editChildGender').value = btn.dataset.gender || 'MALE';
+}
+
+async function saveChild() {
+    const id = document.getElementById('editChildId').value;
+    const payload = {
+        first_name: document.getElementById('editChildFirstName').value.trim(),
+        last_name: document.getElementById('editChildLastName').value.trim(),
+        date_of_birth: document.getElementById('editChildDob').value,
+        gender: document.getElementById('editChildGender').value,
+    };
+    const res = await fetch(`/api/children/${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(payload) });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || '{% if ui_lang == "en" %}Unable to save child{% else %}تعذر حفظ بيانات الطفل{% endif %}');
+    }
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('editChildModal')).hide();
+    await loadChildren();
+}
+
 function wireEvents() {
     document.querySelectorAll('form.js-noreload').forEach(f =>
         f.addEventListener('submit', e => e.preventDefault()));
@@ -246,18 +289,23 @@ function wireEvents() {
 
     const moveForm = document.getElementById('moveChildForm');
     if (moveForm) moveForm.addEventListener('submit', e => { e.preventDefault(); confirmMoveChild(); });
+    document.getElementById('editChildForm')?.addEventListener('submit', async e => {
+        e.preventDefault();
+        try { await saveChild(); } catch (err) { alert(err.message); }
+    });
 
     // Delegated: the move button is re-rendered with each table refresh.
     const tbody = document.getElementById('childrenTableBody');
     if (tbody) tbody.addEventListener('click', e => {
-        const btn = e.target.closest('.js-move-child');
-        if (!btn) return;
-        setupMoveModal(
-            parseInt(btn.dataset.childId, 10),
-            btn.dataset.childName,
-            parseInt(btn.dataset.fromClassId, 10),
-            btn.dataset.fromClassName
+        const moveBtn = e.target.closest('.js-move-child');
+        if (moveBtn) setupMoveModal(
+            parseInt(moveBtn.dataset.childId, 10),
+            moveBtn.dataset.childName,
+            parseInt(moveBtn.dataset.fromClassId, 10),
+            moveBtn.dataset.fromClassName
         );
+        const editBtn = e.target.closest('.js-edit-child');
+        if (editBtn) setupEditChild(editBtn);
     });
 }
 

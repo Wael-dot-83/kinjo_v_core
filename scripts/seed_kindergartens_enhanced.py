@@ -466,7 +466,7 @@ def seed():
                     address_line=rec["address_line"],
                     contact_phone=rec["contact_phone"],
                     contact_email=rec.get("contact_email"),
-                    status=models.KindergartenStatus.ACTIVE,
+                    status=models.KindergartenStatus.DRAFT,
                     latitude=rec.get("latitude"),
                     longitude=rec.get("longitude"),
                 )

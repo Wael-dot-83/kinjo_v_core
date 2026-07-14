@@ -41,7 +41,7 @@ def seed_tasks():
             address_line="Street 1, Building 5",
             contact_phone="+962791111111",
             contact_email="alamal@example.com",
-            status=models.KindergartenStatus.ACTIVE,
+            status=models.KindergartenStatus.DRAFT,
             operating_hours_start="07:00",
             operating_hours_end="16:00"
         )
@@ -56,7 +56,7 @@ def seed_tasks():
             address_line="Street 10, Building 3",
             contact_phone="+962792222222",
             contact_email="alnoor@example.com",
-            status=models.KindergartenStatus.ACTIVE,
+            status=models.KindergartenStatus.DRAFT,
             operating_hours_start="07:30",
             operating_hours_end="15:30"
         )
@@ -114,6 +114,24 @@ def seed_tasks():
             print(f"   [+] Manager (Al Noor): manager2")
         else:
             print(f"   [*] manager2 already exists")
+
+        for expected_manager, expected_kg, username in (
+            (manager1, kg1, "manager1"),
+            (manager2, kg2, "manager2"),
+        ):
+            if (
+                expected_manager.role != models.UserRole.MANAGER
+                or expected_manager.status != models.UserStatus.ACTIVE
+                or expected_manager.kindergarten_id != expected_kg.id
+                or expected_manager.deleted_at is not None
+            ):
+                raise RuntimeError(
+                    f"Refusing to activate seeded kindergarten: {username} is not its active manager"
+                )
+
+        kg1.status = models.KindergartenStatus.ACTIVE
+        kg2.status = models.KindergartenStatus.ACTIVE
+        db.commit()
 
         supervisor1 = db.query(models.User).filter(models.User.username == "supervisor1").first()
         if not supervisor1:

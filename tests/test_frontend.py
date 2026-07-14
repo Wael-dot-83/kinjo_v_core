@@ -748,22 +748,22 @@ class TestFrontendRoutes:
 
         app.dependency_overrides.clear()
 
-    def test_create_enrollment_page_admin(self, client, admin_user, test_db):
-        """Test create enrollment page for admin"""
+    def test_create_enrollment_page_admin_denied(self, client, admin_user, test_db):
+        """Enrollment applications must be authored by parents."""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
 
         response = client.get("/enrollments/create")
-        assert response.status_code == 200
+        assert response.status_code == 403
         assert "text/html" in response.headers.get("content-type", "")
 
         app.dependency_overrides.clear()
 
-    def test_create_enrollment_page_manager(self, client, manager_user, test_db):
-        """Test create enrollment page for manager"""
+    def test_create_enrollment_page_manager_denied(self, client, manager_user, test_db):
+        """Managers review applications but cannot impersonate a parent applicant."""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
 
         response = client.get("/enrollments/create")
-        assert response.status_code == 200
+        assert response.status_code == 403
         assert "text/html" in response.headers.get("content-type", "")
 
         app.dependency_overrides.clear()
@@ -842,22 +842,22 @@ class TestFrontendRoutes:
 
         app.dependency_overrides.clear()
 
-    def test_create_report_page(self, client, admin_user):
-        """Test create report page"""
+    def test_create_report_page_admin_denied(self, client, admin_user):
+        """Daily reports are authored by assigned supervisors."""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
 
         response = client.get("/reports/create")
-        assert response.status_code == 200
+        assert response.status_code == 403
         assert "text/html" in response.headers.get("content-type", "")
 
         app.dependency_overrides.clear()
 
-    def test_view_report(self, client, admin_user):
-        """Test view report page"""
+    def test_view_missing_report(self, client, admin_user):
+        """A nonexistent report returns a real 404 rather than a placeholder."""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
 
         response = client.get("/reports/123")
-        assert response.status_code == 200
+        assert response.status_code == 404
         assert "text/html" in response.headers.get("content-type", "")
 
         app.dependency_overrides.clear()
@@ -2355,11 +2355,11 @@ class TestFrontendRoutes:
         assert response.status_code in (302, 307)
         app.dependency_overrides.clear()
 
-    def test_reports_create_parent_redirect(self, client, parent_user):
-        """Parent is redirected away from /reports/create"""
+    def test_reports_create_parent_denied(self, client, parent_user):
+        """Parent cannot author a supervisor daily report."""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
         response = client.get("/reports/create", follow_redirects=False)
-        assert response.status_code in (302, 307)
+        assert response.status_code == 403
         app.dependency_overrides.clear()
 
     # ------------------------------------------------------------------
@@ -2492,11 +2492,11 @@ class TestFrontendRoutes:
         assert "/api/manager/daily-reports" in response.text
         app.dependency_overrides.clear()
 
-    def test_create_daily_report_manager(self, client, manager_user):
-        """Manager can access daily-reports/create"""
+    def test_create_daily_report_manager_denied(self, client, manager_user):
+        """Manager reviews reports but does not author a supervisor report."""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
         response = client.get("/daily-reports/create")
-        assert response.status_code == 200
+        assert response.status_code == 403
         app.dependency_overrides.clear()
 
     # ------------------------------------------------------------------
@@ -3060,8 +3060,8 @@ class TestFrontendRoutes:
     # Enrollment create — MANAGER with no kindergarten (line 462)
     # ------------------------------------------------------------------
 
-    def test_enrollment_create_manager_no_kg(self, client, test_db):
-        """Manager with no kindergarten_id gets empty enrollment form"""
+    def test_enrollment_create_manager_no_kg_denied(self, client, test_db):
+        """An unassigned manager cannot author a parent enrollment."""
         user = models.User(
             id=9021,
             username="mgr_nokg_enroll",
@@ -3073,7 +3073,7 @@ class TestFrontendRoutes:
         )
         app.dependency_overrides[get_current_user_or_redirect] = lambda: user
         response = client.get("/enrollments/create")
-        assert response.status_code == 200
+        assert response.status_code == 403
         app.dependency_overrides.clear()
 
     # ------------------------------------------------------------------

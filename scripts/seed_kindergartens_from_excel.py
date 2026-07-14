@@ -249,7 +249,9 @@ def seed():
                     address_line=rec["address_line"],
                     contact_phone=rec["contact_phone"],
                     contact_email=None,
-                    status=models.KindergartenStatus.ACTIVE,
+                    # Imported rows are not operational until an accountable
+                    # manager is assigned through the admin workflow.
+                    status=models.KindergartenStatus.DRAFT,
                     latitude=rec.get("latitude"),
                     longitude=rec.get("longitude"),
                 )

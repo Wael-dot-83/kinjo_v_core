@@ -218,7 +218,7 @@ def create_schema(db_path: str) -> sqlite3.Connection:
             address_line TEXT,
             contact_phone TEXT,
             contact_email TEXT,
-            status TEXT DEFAULT 'ACTIVE',
+            status TEXT DEFAULT 'DRAFT',
             operating_hours_start TEXT,
             operating_hours_end TEXT,
             license_number TEXT,
@@ -403,11 +403,14 @@ def import_files(
             if dup:
                 existing_id, existing_key = dup
                 if commit:
-                    _update_row(conn, existing_id, mapped)
+                    update_data = dict(mapped)
+                    update_data.pop("status", None)
+                    _update_row(conn, existing_id, update_data)
                 total_updated += 1
                 if verbose:
                     log(f"  Row {i}: UPDATE id={existing_id}")
             else:
+                mapped["status"] = "DRAFT"
                 if commit:
                     _insert_row(conn, mapped)
                 total_inserted += 1

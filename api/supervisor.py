@@ -36,7 +36,7 @@ _ALLOWED_OBSERVATION_IMAGE_TYPES = set(_OBSERVATION_IMAGE_TYPE_TO_EXT)
 class SupervisorAssignmentRequest(BaseModel):
     supervisor_id: int
     class_id: int
-    start_date: str
+    start_date: date
     is_primary: bool = False
 
 
@@ -45,7 +45,7 @@ def assign_supervisor(
     assignment_data: Optional[SupervisorAssignmentRequest] = Body(None),
     supervisor_id: Optional[int] = Query(None),
     class_id: Optional[int] = Query(None),
-    start_date: Optional[str] = Query(None),
+    start_date: Optional[date] = Query(None),
     is_primary: bool = Query(False),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -65,7 +65,11 @@ def assign_supervisor(
         )
 
     # Verify class exists
-    class_obj = db.query(models.Class).filter(models.Class.id == assignment_data.class_id).first()
+    class_obj = db.query(models.Class).filter(
+        models.Class.id == assignment_data.class_id,
+        models.Class.deleted_at.is_(None),
+        models.Class.is_active.is_(True),
+    ).first()
     if not class_obj:
         raise HTTPException(status_code=404, detail="Class not found")
     
@@ -74,17 +78,20 @@ def assign_supervisor(
     # Verify supervisor exists and has correct role
     supervisor = db.query(models.User).filter(
         models.User.id == assignment_data.supervisor_id,
-        models.User.role.in_([models.UserRole.SUPERVISOR, models.UserRole.MANAGER])
-    ).first()
+        models.User.role == models.UserRole.SUPERVISOR,
+        models.User.kindergarten_id == current_user.kindergarten_id,
+        models.User.status == models.UserStatus.ACTIVE,
+        models.User.deleted_at.is_(None),
+    ).with_for_update().first()
     if not supervisor:
         raise HTTPException(status_code=404, detail="Supervisor not found")
 
     # Check if supervisor is already assigned to any class on this date
-    new_start = date.fromisoformat(assignment_data.start_date)
+    new_start = assignment_data.start_date
     existing = db.query(models.SupervisorAssignment).filter(
         models.SupervisorAssignment.supervisor_id == assignment_data.supervisor_id,
-        models.SupervisorAssignment.start_date <= new_start,
-        or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= new_start)
+        or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= new_start),
+        models.SupervisorAssignment.deleted_at.is_(None),
     ).first()
     if existing:
         raise HTTPException(status_code=409, detail="Supervisor already assigned to a class on this date")
@@ -92,7 +99,7 @@ def assign_supervisor(
     assignment = models.SupervisorAssignment(
         class_id=assignment_data.class_id,
         supervisor_id=assignment_data.supervisor_id,
-        start_date=date.fromisoformat(assignment_data.start_date),
+        start_date=new_start,
         is_primary=assignment_data.is_primary
     )
     db.add(assignment)
@@ -112,8 +119,8 @@ def assign_supervisor(
 def assign_replacement_supervisor(
     class_id: int = Query(...),
     replacement_supervisor_id: int = Query(...),
-    start_date: str = Query(...),
-    end_date: str = Query(...),
+    start_date: date = Query(...),
+    end_date: date = Query(...),
     reason: Optional[str] = Query(None),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -122,7 +129,11 @@ def assign_replacement_supervisor(
     validators.validate_manager_role(current_user)
 
     # Verify class exists
-    class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()
+    class_obj = db.query(models.Class).filter(
+        models.Class.id == class_id,
+        models.Class.deleted_at.is_(None),
+        models.Class.is_active.is_(True),
+    ).first()
     if not class_obj:
         raise HTTPException(status_code=404, detail="Class not found")
 
@@ -131,16 +142,35 @@ def assign_replacement_supervisor(
     # Verify replacement supervisor exists and has correct role
     supervisor = db.query(models.User).filter(
         models.User.id == replacement_supervisor_id,
-        models.User.role == models.UserRole.SUPERVISOR
-    ).first()
+        models.User.role == models.UserRole.SUPERVISOR,
+        models.User.kindergarten_id == current_user.kindergarten_id,
+        models.User.status == models.UserStatus.ACTIVE,
+        models.User.deleted_at.is_(None),
+    ).with_for_update().first()
     if not supervisor:
         raise HTTPException(status_code=404, detail="Replacement supervisor not found")
+
+    replacement_start = start_date
+    replacement_end = end_date
+    if replacement_end < replacement_start:
+        raise HTTPException(status_code=400, detail="Replacement end date must be on or after start date")
+    overlap = db.query(models.SupervisorAssignment).filter(
+        models.SupervisorAssignment.supervisor_id == replacement_supervisor_id,
+        models.SupervisorAssignment.deleted_at.is_(None),
+        models.SupervisorAssignment.start_date <= replacement_end,
+        or_(
+            models.SupervisorAssignment.end_date.is_(None),
+            models.SupervisorAssignment.end_date >= replacement_start,
+        ),
+    ).first()
+    if overlap:
+        raise HTTPException(status_code=409, detail="Supervisor already assigned during this date range")
 
     assignment = models.SupervisorAssignment(
         class_id=class_id,
         supervisor_id=replacement_supervisor_id,
-        start_date=date.fromisoformat(start_date),
-        end_date=date.fromisoformat(end_date)
+        start_date=replacement_start,
+        end_date=replacement_end
     )
     db.add(assignment)
     db.commit()
