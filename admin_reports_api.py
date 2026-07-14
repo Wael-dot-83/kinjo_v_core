@@ -2378,6 +2378,7 @@ def generate_incident_report(
                 "correlation_id": get_correlation_id()
             }
         )
+        db.commit()
 
         return JSONResponse({
             "success": True,

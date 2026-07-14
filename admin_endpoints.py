@@ -505,6 +505,7 @@ def create_user(
             metadata={"parent_user_id": new_user.id, "children_count": len(user_data.children)},
             sensitivity_level=2
         )
+        db.commit()
 
     # Audit log with after state
     log_audit_event(
@@ -513,6 +514,7 @@ def create_user(
         after_state=model_to_dict(new_user),
         sensitivity_level=3
     )
+    db.commit()
 
     return {
         "id": new_user.id,
@@ -818,6 +820,7 @@ def update_user(
         after_state=after_state,
         sensitivity_level=3
     )
+    db.commit()
 
     return {
         "id": user.id,
@@ -877,6 +880,7 @@ def delete_user(
         before_state=before_state,
         sensitivity_level=3
     )
+    db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -930,6 +934,7 @@ def admin_reset_password(
         metadata={"initiated_by": current_user.username},
         sensitivity_level=3
     )
+    db.commit()
 
     return {
         "message": "Password reset successfully",
@@ -1006,6 +1011,7 @@ def confirm_password_reset(
         target_ids=token_record.user_id,
         sensitivity_level=2
     )
+    db.commit()
 
     return {
         "message": "Password reset successfully",
@@ -1085,6 +1091,7 @@ def admin_mfa_bypass(
         },
         sensitivity_level=3  # Critical security event
     )
+    db.commit()
 
     return {
         "message": "MFA bypass completed. User must re-enroll MFA on next login.",
@@ -1278,6 +1285,7 @@ def bulk_update_status(
         },
         sensitivity_level=3
     )
+    db.commit()
 
     return {
         "message": f"Updated {len(succeeded)} users",
@@ -1384,6 +1392,7 @@ def bulk_delete_users(
         },
         sensitivity_level=3
     )
+    db.commit()
 
     return {
         "message": f"Deleted {len(deleted_ids)} users",
@@ -1513,6 +1522,7 @@ def bulk_create_users(
             },
             sensitivity_level=3
         )
+        db.commit()
 
     return {
         "dry_run": bulk_data.dry_run,
@@ -1798,6 +1808,7 @@ async def import_users_csv(
             },
             sensitivity_level=3
         )
+        db.commit()
 
     result = CSVImportResult(
         total_rows=total_rows,
@@ -1970,6 +1981,7 @@ def resolve_contact_message(
             metadata={"message_id": message_id},
             sensitivity_level=1,
         )
+        db.commit()
 
     return {"message": "Success"}
 
@@ -2945,6 +2957,7 @@ def create_admin_message(
         },
         sensitivity_level=2
     )
+    db.commit()
 
     recipient_users = db.query(models.User).filter(models.User.id.in_(recipient_ids)).all()
     try:
@@ -2959,6 +2972,7 @@ def create_admin_message(
                 metadata={"recipient_count": len(recipient_users)},
                 sensitivity_level=1
             )
+            db.commit()
         if not notifications_enabled:
             warnings.append("Message notifications are disabled; status will be reviewed later.")
             log_audit_event(
@@ -2970,6 +2984,7 @@ def create_admin_message(
                 metadata={"reason": "notifications_disabled"},
                 sensitivity_level=1
             )
+            db.commit()
     except (SQLAlchemyError, RuntimeError, TypeError, AttributeError) as exc:
         logger.warning("Failed to enqueue notifications for message %s: %s", message.id, exc)
         warnings.append("Notification system error; please verify manually.")
@@ -6073,6 +6088,7 @@ def acknowledge_alert(
         metadata={"metric": alert.metric_type, "severity": alert.severity.value if hasattr(alert.severity, "value") else str(alert.severity)},
         sensitivity_level=2,
     )
+    db.commit()
 
     # Build response (mirrors get_admin_alerts logic for the single record)
     threshold_val: Optional[float] = None
@@ -6408,6 +6424,7 @@ def update_admin_profile(
         after_state=after,
         sensitivity_level=2,
     )
+    db.commit()
     return {
         "message": "Profile updated",
         "full_name": current_user.full_name,
@@ -6448,6 +6465,7 @@ def change_admin_password(
         target_ids=current_user.id,
         sensitivity_level=3,
     )
+    db.commit()
     return {"message": "Password changed successfully", "correlation_id": get_correlation_id()}
 
 
@@ -6522,5 +6540,6 @@ def cleanup_audit_logs(
         metadata={"deleted_count": count, "retention_days": days, "cutoff": cutoff.isoformat()},
         sensitivity_level=3,
     )
+    db.commit()
 
     return {"deleted": count, "cutoff": cutoff.isoformat(), "days": days}

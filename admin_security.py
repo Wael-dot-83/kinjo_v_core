@@ -310,6 +310,12 @@ def log_audit_event(
     """
     Log an audit event with full context including before/after diffs.
 
+    This only add()s and flush()es — it deliberately does not commit, because callers
+    that audit mid-transaction would otherwise have half-finished work committed early.
+    The caller owns the commit. If the audit is the last thing you do (i.e. after your
+    final commit), you MUST commit again or `get_db()`'s db.close() rolls the audit row
+    back and the event is lost. See tests/test_audit_durability.py.
+
     Args:
         db: Database session
         action: Action name (e.g., "USER_CREATED", "BULK_DELETE")

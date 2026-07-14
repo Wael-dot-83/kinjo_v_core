@@ -994,6 +994,7 @@ def send_message(
             },
             sensitivity_level=2
         )
+        db.commit()
 
     # Send notifications (existing logic)
     try:
@@ -1009,6 +1010,7 @@ def send_message(
                 metadata={"recipient_count": len(recipients)},
                 sensitivity_level=1
             )
+            db.commit()
     except (RuntimeError, TypeError, ValueError, AttributeError) as exc:
         logger.warning("Failed to enqueue notifications for message %s: %s", msg.id, exc)
 
@@ -1428,6 +1430,7 @@ def mark_message_read(
         metadata={"read_at": state.read_at.isoformat() if state.read_at else None},
         sensitivity_level=1
     )
+    db.commit()
 
     return MessageReadResponse(message_id=message.id, read_at=state.read_at)
 
@@ -1475,6 +1478,7 @@ def delete_message(
         metadata={"deleted_at": state.deleted_at.isoformat() if state.deleted_at else None},
         sensitivity_level=2
     )
+    db.commit()
 
     return MessageDeleteResponse(message_id=message.id, deleted_at=state.deleted_at)
 
@@ -1519,6 +1523,7 @@ def archive_message(
         metadata={"archived_at": state.archived_at.isoformat()},
         sensitivity_level=1
     )
+    db.commit()
 
     return MessageArchiveResponse(message_id=message.id, archived_at=state.archived_at)
 
@@ -1562,6 +1567,7 @@ def unarchive_message(
         target_ids=message.id,
         sensitivity_level=1
     )
+    db.commit()
 
     return MessageArchiveResponse(message_id=message.id, archived_at=None)
 
@@ -1654,6 +1660,7 @@ def bulk_message_action(
             metadata={"requested": len(message_ids), "succeeded": len(succeeded_ids)},
             sensitivity_level=2
         )
+        db.commit()
 
     return BulkMessageActionResult(
         action=payload.action,
@@ -1776,6 +1783,7 @@ def reply_to_message(
         },
         sensitivity_level=2
     )
+    db.commit()
 
     try:
         recipients = _get_notification_recipients(db, reply_msg, current_user)
@@ -1790,6 +1798,7 @@ def reply_to_message(
                 metadata={"recipient_count": len(recipients)},
                 sensitivity_level=1
             )
+            db.commit()
     except (RuntimeError, TypeError, ValueError, AttributeError) as exc:
         logger.warning("Failed to enqueue notifications for message %s: %s", reply_msg.id, exc)
 
@@ -1893,6 +1902,7 @@ def upload_message_attachment(
         metadata={"attachment_id": attachment.id, "file_name": attachment.file_name},
         sensitivity_level=2
     )
+    db.commit()
 
     return AttachmentResponse(
         id=attachment.id,
