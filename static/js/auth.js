@@ -381,23 +381,33 @@ class AuthService {
       formData.append("captcha_token", window.getCaptchaToken());
     }
 
-    const response = await fetch(AUTH_CONFIG.loginEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-    });
+    let response;
+    try {
+      response = await fetch(AUTH_CONFIG.loginEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
+      });
+    } catch (networkError) {
+      // fetch() rejects only on a network/connectivity failure, never on an HTTP
+      // error status. Tag it so the caller can show a distinct connectivity
+      // message instead of the generic credentials message.
+      const err = new Error("network");
+      err.kind = "network";
+      throw err;
+    }
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(
-        data.detail ||
-          t(
-            "بيانات تسجيل الدخول غير صحيحة. يرجى التحقق من معلوماتك والمحاولة مرة أخرى.",
-            "Unable to sign in with the provided credentials.",
-          ),
-      );
+      // Do not surface the backend detail verbatim: it is an English-only,
+      // enumeration-safe string, so the localized message is chosen by status
+      // in describeLoginError().
+      const err = new Error(data.detail || "auth_failed");
+      err.kind = "http";
+      err.status = response.status;
+      throw err;
     }
     return data;
   }
@@ -497,6 +507,40 @@ class AuthService {
   }
 }
 
+function describeLoginError(error) {
+  // Map a login failure to one localized, enumeration-safe message. Never echo
+  // the raw backend detail (English-only) or a raw fetch TypeError.
+  if (error && error.kind === "network") {
+    return t(
+      "تعذّر الاتصال بالخدمة. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.",
+      "Couldn't reach the service. Check your internet connection and try again.",
+    );
+  }
+  const status = error && error.status;
+  if (status === 423) {
+    return t(
+      "تم قفل الحساب مؤقتاً بعد عدة محاولات. حاول لاحقاً أو تواصل مع الدعم.",
+      "This account is temporarily locked after several attempts. Try again later or contact support.",
+    );
+  }
+  if (status === 429) {
+    return t(
+      "محاولات كثيرة جداً. انتظر قليلاً ثم حاول مرة أخرى.",
+      "Too many attempts. Please wait a moment and try again.",
+    );
+  }
+  if (status === 400 || status === 401) {
+    return t(
+      "تعذّر تسجيل الدخول. تحقق من بيانات الدخول وحاول مرة أخرى.",
+      "Sign-in failed. Check your details and try again.",
+    );
+  }
+  return t(
+    "حدث خطأ غير متوقع. حاول مرة أخرى بعد قليل.",
+    "Something went wrong. Please try again shortly.",
+  );
+}
+
 async function handleLogin(event) {
   event.preventDefault();
   const form = event.target;
@@ -521,7 +565,7 @@ async function handleLogin(event) {
         const waitSecs = Math.ceil((30000 - (now - lastAttempt)) / 1000);
         if (errorMessage && errorAlert) {
           errorMessage.textContent = t(
-            "Too many failed attempts. Please wait " + waitSecs + " seconds before trying again.",
+            "محاولات كثيرة جداً. انتظر " + waitSecs + " ثانية قبل المحاولة مرة أخرى.",
             "Too many failed attempts. Please wait " + waitSecs + " seconds before trying again.",
           );
           errorAlert.classList.remove("d-none");
@@ -583,11 +627,12 @@ async function handleLogin(event) {
     } catch {
       // ignore storage errors
     }
+    const message = describeLoginError(error);
     if (errorAlert && errorMessage) {
-      errorMessage.textContent = error.message;
+      errorMessage.textContent = message;
       errorAlert.classList.remove("d-none");
     } else {
-      alert(error.message);
+      alert(message);
     }
   } finally {
     if (loginBtn) {

@@ -566,9 +566,43 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     gap: 0.625rem;
     margin-top: 1.25rem;
   }
-  .auth-closed-notice i {
+  .auth-closed-notice > i {
     flex-shrink: 0;
     margin-top: 0.15rem;
+  }
+  .auth-closed-body {
+    min-width: 0;
+  }
+  .auth-closed-title {
+    font-weight: 600;
+    margin: 0 0 0.2rem;
+  }
+  .auth-closed-text {
+    margin: 0;
+  }
+  .auth-closed-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0.55rem 0 0;
+  }
+  .auth-support-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 600;
+    color: #163d2e;
+    text-decoration: none;
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.2rem;
+    margin-inline: -0.2rem;
+  }
+  .auth-support-link:hover {
+    text-decoration: underline;
+  }
+  .auth-support-link:focus-visible {
+    outline: 2px solid #1F5E47;
+    outline-offset: 2px;
   }
 
   /* ── Footer ── */
@@ -727,6 +761,9 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
       color: #a8d4c4;
       border-color: #163d2e;
     }
+    .auth-support-link {
+      color: #7ec8a8;
+    }
     .af-hint {
       color: #475569;
     }
@@ -860,12 +897,11 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
       {# Welcome heading #}
       <div class="af-anim af-delay1">
         <h1 class="auth-heading" id="authHeading">
-          {% if ui_lang == 'en' %}Welcome back to KinJo{% else %}مرحباً بعودتك
-          إلى KinJo{% endif %}
+          {% if ui_lang == 'en' %}Welcome back{% else %}مرحباً بعودتك{% endif %}
         </h1>
         <p class="auth-subheading">
-          {% if ui_lang == 'en' %} Sign in to manage your kindergarten account.
-          {% else %} سجّل الدخول لإدارة حسابك في منصة الحضانة. {% endif %}
+          {% if ui_lang == 'en' %} Sign in to your account. {% else %} سجّل
+          الدخول إلى حسابك. {% endif %}
         </p>
       </div>
 
@@ -921,8 +957,8 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
         {# ── Username / Phone / Email ── #}
         <div class="auth-field" id="usernameField">
           <label for="username">
-            {% if ui_lang == 'en' %}Username, phone, or email{% else %}اسم
-            المستخدم أو رقم الهاتف أو البريد الإلكتروني{% endif %}
+            {% if ui_lang == 'en' %}Phone number or email{% else %}رقم الهاتف أو
+            البريد الإلكتروني{% endif %}
             <span class="req-star" aria-hidden="true">*</span>
           </label>
           <div class="auth-input-wrap" id="usernameWrap">
@@ -936,7 +972,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
               class="af-control"
               id="username"
               name="username"
-              placeholder="{% if ui_lang == 'en' %}Example: 07XXXXXXXX{% else %}مثال: 07XXXXXXXX{% endif %}"
+              placeholder="{% if ui_lang == 'en' %}Example: 07XXXXXXXX or name@example.com{% else %}مثال: 07XXXXXXXX أو name@example.com{% endif %}"
               autocomplete="username"
               inputmode="text"
               required
@@ -952,9 +988,8 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
           </div>
           <p id="usernameHint" class="af-hint">
             <i class="bi bi-info-circle" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %} Enter your registered Jordanian phone
-            number, email address, or username. {% else %} أدخل رقم هاتفك
-            الأردني المسجل أو بريدك الإلكتروني أو اسم المستخدم. {% endif %}
+            {% if ui_lang == 'en' %} You can also use your account username. {%
+            else %} يمكنك أيضاً استخدام اسم المستخدم الخاص بحسابك. {% endif %}
           </p>
           <p
             id="usernameError"
@@ -1082,12 +1117,37 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
       {% else %}
       <div class="auth-closed-notice">
         <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
-        <span>
-          {% if ui_lang == 'en' %} Public registration is currently disabled.
-          Please contact your platform administrator for account access. {% else
-          %} التسجيل العام معطّل حالياً. يرجى التواصل مع مسؤول المنصة للحصول على
-          حساب. {% endif %}
-        </span>
+        <div class="auth-closed-body">
+          <p class="auth-closed-title">
+            {% if ui_lang == 'en' %}Don't have an account?{% else %}ليس لديك
+            حساب؟{% endif %}
+          </p>
+          <p class="auth-closed-text">
+            {% if ui_lang == 'en' %}Accounts are created by the platform
+            administration. Contact the administrator at your organization to get
+            an account.{% else %}يتم إنشاء الحسابات من خلال إدارة المنصة. تواصل
+            مع المسؤول في مؤسستك للحصول على حساب.{% endif %}
+          </p>
+          {% if support_contact_email or support_contact_phone %}
+          <p class="auth-closed-actions">
+            {% if support_contact_email %}
+            <a
+              href="mailto:{{ support_contact_email }}"
+              class="auth-support-link"
+            >
+              <i class="bi bi-envelope" aria-hidden="true"></i>
+              {% if ui_lang == 'en' %}Contact support{% else %}التواصل مع
+              الدعم{% endif %}
+            </a>
+            {% endif %} {% if support_contact_phone %}
+            <a href="tel:{{ support_contact_phone }}" class="auth-support-link">
+              <i class="bi bi-telephone" aria-hidden="true"></i>
+              <bdi dir="ltr">{{ support_contact_phone }}</bdi>
+            </a>
+            {% endif %}
+          </p>
+          {% endif %}
+        </div>
       </div>
       {% endif %}
     </div>
@@ -1121,7 +1181,10 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
      Validation messages
      ───────────────────────────────────────── */
     const MSG = {
-      usernameRequired: tr("هذا الحقل مطلوب.", "This field is required."),
+      usernameRequired: tr(
+        "أدخل رقم الهاتف أو البريد الإلكتروني.",
+        "Enter your phone number or email address.",
+      ),
       phoneInvalid: tr(
         "أدخل رقم هاتف أردني صحيح، مثل 07XXXXXXXX.",
         "Enter a valid Jordanian phone number, e.g. 07XXXXXXXX.",
@@ -1130,7 +1193,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
         "أدخل بريداً إلكترونياً صحيحاً.",
         "Enter a valid email address.",
       ),
-      passwordRequired: tr("كلمة المرور مطلوبة.", "Password is required."),
+      passwordRequired: tr("أدخل كلمة المرور.", "Enter your password."),
       loginFailed: tr(
         "بيانات تسجيل الدخول غير صحيحة. يرجى التحقق من معلوماتك والمحاولة مرة أخرى.",
         "The sign-in details are incorrect. Please check your information and try again.",

@@ -302,6 +302,59 @@ class TestFrontendRoutes:
         assert 'aria-labelledby="authHeading"' in text
         assert 'id="authHeading"' in text
 
+    def test_login_english_variant_renders_ltr(self, client):
+        """English login page renders LTR with equivalent English copy."""
+        text = client.get("/login?lang=en").text
+        assert 'lang="en"' in text and 'dir="ltr"' in text
+        assert "Welcome back" in text
+        assert "Phone number or email" in text
+        assert "Keep me signed in" in text
+
+    def test_login_identifier_label_phone_email_first(self, client):
+        """Identifier label leads with phone/email to reduce cognitive load (§8);
+        username is demoted to the helper text, not the label."""
+        norm = re.sub(r"\s+", " ", client.get("/login").text)
+        assert "رقم الهاتف أو البريد الإلكتروني" in norm
+        assert "اسم المستخدم أو رقم الهاتف" not in norm  # old label gone
+        assert "يمكنك أيضاً استخدام اسم المستخدم" in norm  # helper mentions username
+
+    def test_login_localized_validation_messages(self, client):
+        """Empty-field messages are the localized, human phrasings (§13.1/13.2),
+        embedded for the client validator."""
+        norm = re.sub(r"\s+", " ", client.get("/login").text)
+        assert "أدخل كلمة المرور." in norm
+        assert "أدخل رقم الهاتف أو البريد الإلكتروني." in norm
+
+    def test_login_single_submit_button_and_skip_link(self, client):
+        """Exactly one visible submit control, and a skip link is present (§7/§19)."""
+        text = client.get("/login").text
+        assert text.count('type="submit"') == 1
+        assert 'href="#loginForm"' in text  # skip link target
+
+    def test_auth_js_login_errors_are_localized(self):
+        """auth.js maps login failures to localized messages via
+        describeLoginError, incl. a distinct connectivity path — never the raw
+        English backend detail (§13.3/§13.4/§27)."""
+        source = (
+            Path(__file__).resolve().parent.parent / "static" / "js" / "auth.js"
+        ).read_text(encoding="utf-8")
+        assert "function describeLoginError" in source
+        assert "تعذّر الاتصال بالخدمة" in source  # connectivity (§13.4)
+        assert "حدث خطأ غير متوقع" in source  # unexpected (§13.6)
+        assert 'kind = "network"' in source  # network vs http distinction
+
+    def test_login_support_panel_uses_configured_contact_only(self):
+        """The disabled-registration panel carries the 'no account?' guidance and
+        exposes a support action ONLY when contact info is configured — never a
+        fabricated link (§16)."""
+        source = (
+            Path(__file__).resolve().parent.parent
+            / "templates" / "auth" / "login.html"
+        ).read_text(encoding="utf-8")
+        assert "ليس لديك حساب؟" in source
+        assert "support_contact_email or support_contact_phone" in source
+        assert "mailto:{{ support_contact_email }}" in source
+
     def test_register_page(self, client):
         """Test register page renders"""
         response = client.get("/register")
