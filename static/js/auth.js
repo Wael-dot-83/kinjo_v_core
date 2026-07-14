@@ -303,7 +303,13 @@ class AuthGuard {
         window.location.href = "/login";
         return false;
       }
-      if (AuthStorage.isAuthenticated() && currentPath === "/login") {
+      // Only probe the server for an existing session when this browser shows
+      // evidence of a PRIOR login (a cached user profile from a previous
+      // successful sign-in). The CSRF cookie is NOT a valid signal here: the
+      // CSRF middleware sets kinjo_csrf_token on every safe GET, so an
+      // anonymous visitor to /login would otherwise trigger a needless
+      // /api/auth/refresh that 401s and logs a console error on each load.
+      if (AuthStorage.getUser() && currentPath === "/login") {
         const hasCookie = await AuthStorage.ensureServerSession();
         if (hasCookie) {
           const verifiedUser = await this.verifySession();
