@@ -3,13 +3,94 @@
 This file defines how an AI coding agent (Claude Code, or any compatible agent reading
 `AGENTS.md`) must approach Admin module production-readiness work in this repository.
 
-## Work in the repository root — no worktrees
+## Agent isolation — one worktree and one branch per agent
 
-All agent work happens directly in `d:\Final Version` on the `main` branch. Do **not**
-create or use git worktrees (`.kilo/worktrees/`, `.claude/worktrees/`); past worktrees
-accumulated stale, superseded diffs and were removed on 2026-07-03. If a session starts
-with its working directory inside a leftover worktree stub, immediately switch to
-absolute paths under `d:\Final Version`. Commit all work on `main` in the root checkout.
+**This reverses the 2026-07-03 "no worktrees, work in the root on `main`" rule.** That rule
+was written because abandoned worktrees accumulated stale, superseded diffs. The problem
+was real, but banning worktrees only moved it: it forced every concurrent agent into the
+same checkout, and on 2026-07-14 that produced both failure modes at once — two agents
+mutating `d:\Final Version` simultaneously (28 files churning mid-session, a branch
+switched out from under an in-flight task, a rebase blocked by another agent's dirty
+files), *and* a four-day-old worktree still holding 1055 lines of uncommitted work with an
+unresolved merge conflict. The fix for stale worktrees is a lifecycle, not a ban.
+
+Rules:
+
+- Each autonomous agent uses a **dedicated git worktree and feature branch**.
+- Agents must **not** modify the primary checkout (`d:\Final Version`) directly.
+- Agents must **not** work directly on `main`.
+- **Keep the human git author identity** and add agent attribution as commit trailers:
+
+  ```
+  Agent: Claude-Code
+  Agent-Run-ID: <unique-session-id>
+  ```
+
+  Do not invent per-agent author identities: the author field carries repository
+  ownership, signing and contribution history, and forging it there to gain traceability
+  costs more than it buys. Trailers make concurrent work distinguishable
+  (`git log --grep='Agent-Run-ID: …'`) while ownership stays correct. Today every agent
+  commits as the same author with no trailer, so git cannot attribute concurrent work at all.
+- Before rebasing, merging or switching branches, an agent verifies **its own** worktree is
+  clean. Never run destructive git operations against a tree you do not own.
+- Generated files and diagnostics are not committed unless explicitly required.
+
+Worktree lifecycle — this is what the old rule was protecting against, so it is mandatory:
+
+- Remove the worktree when its branch **merges or is abandoned**: `git worktree remove <path>`,
+  then `git worktree prune`.
+- **A worktree is stale when it has had no recorded activity for 72 hours AND has no open PR
+  and no identified active owner.** Age alone is not the test: a week-old worktree behind an
+  open PR is alive, while a one-day-old abandoned tree holding an unresolved conflict already
+  needs attention.
+- Audit `git worktree list` at session start and triage every stale tree before starting
+  parallel work.
+
+### Never abandon a worktree with uncommitted work — and rescue it completely
+
+`git diff HEAD > rescue.patch` is **not** a rescue. It captures tracked changes (staged and
+unstaged together) but **silently omits untracked files**, loses the staged-vs-unstaged
+distinction, and does not record conflict stages. Untracked is the dangerous gap: a file
+git has never seen leaves no trace in any diff, so the loss is invisible.
+
+Honest note on the 2026-07-14 rescue of `D:/Final Version-dashboard-uswds`, because the
+near-miss is the lesson: its unique file, `tests/test_admin_dashboard_redesign.py`, existed
+nowhere else, and `git diff HEAD` *did* capture it — but only because it happened to be
+**staged** (`A `). Had it been one keystroke behind, untracked (`??`), the same command
+would have dropped it without a word. Do not rely on that luck; `git ls-files --others
+--exclude-standard` is the only thing that finds those files.
+
+Land the work, or export a complete package before removing anything:
+
+```bash
+git status --porcelain=v1 > rescue-status.txt          # full state, incl. UU conflicts
+git diff --binary HEAD > rescue-working-tree.patch     # tracked, unstaged (binary-safe)
+git diff --cached --binary > rescue-index.patch        # staged/index state
+git ls-files -u > rescue-conflicts.txt                 # unresolved conflict stages
+git ls-files --others --exclude-standard > rescue-untracked.txt
+# then COPY every path listed in rescue-untracked.txt into the rescue directory
+```
+
+Safest of all: snapshot the whole working directory, excluding only the `.git` link.
+
+**Restore with the working-tree patch alone — do not apply both.** `rescue-working-tree.patch`
+is HEAD → working tree and *already contains* the staged changes, so applying
+`rescue-index.patch` as well double-applies and fails (`patch does not apply`), leaving a
+**partial** restore that still looks like it worked. Keep the index patch only as a record of
+*which* changes were staged. Verified on 2026-07-15: applying both restored 6 files/832
+insertions; the working-tree patch alone restored all 7/1055.
+
+**A rescue is not proven until it is restored.** Before removing the source worktree: create
+a disposable worktree at the original commit, apply the patch, copy the untracked files back,
+and compare **disk to disk by hash** — every shared file byte-identical, nothing missing but
+regenerable artifacts (`.env`, caches, local DB). Only then `git worktree remove` +
+`git worktree prune`. "A backup appears to exist" is not recoverability.
+
+Compare disk to disk, **not** with `git diff`: `git diff HEAD --name-only` does not list
+untracked files, so a restored-but-unstaged file reports as "missing" while sitting on disk
+byte-identical. That artifact cost a full round of false alarm on 2026-07-15 — the same blind
+spot that makes `git diff HEAD` an unsafe rescue in the first place.
+
 Historical audit/readiness reports live in `docs/reports/`; manually-run diagnostic and
 data scripts live in `scripts/manual-diagnostics/` (the former `scripts/one_off/` was
 merged into it).
