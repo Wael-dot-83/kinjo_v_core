@@ -37,8 +37,8 @@ Rules:
 
 Worktree lifecycle — this is what the old rule was protecting against, so it is mandatory:
 
-- Remove the worktree when its branch **merges or is abandoned**: `git worktree remove <path>`,
-  then `git worktree prune`.
+- Remove the worktree when its branch **lands or is abandoned**: `git worktree remove <path>`,
+  then `git worktree prune`. ("Lands" covers squash, rebase and merge commits alike.)
 - **A worktree is stale when it has had no recorded activity for 72 hours AND has no open PR
   and no identified active owner.** Age alone is not the test: a week-old worktree behind an
   open PR is alive, while a one-day-old abandoned tree holding an unresolved conflict already
@@ -64,8 +64,8 @@ Land the work, or export a complete package before removing anything:
 
 ```bash
 git status --porcelain=v1 > rescue-status.txt          # full state, incl. UU conflicts
-git diff --binary HEAD > rescue-working-tree.patch     # tracked, unstaged (binary-safe)
-git diff --cached --binary > rescue-index.patch        # staged/index state
+git diff --binary HEAD > rescue-working-tree.patch     # tracked: staged AND unstaged both
+git diff --cached --binary > rescue-index.patch        # record of what was staged, only
 git ls-files -u > rescue-conflicts.txt                 # unresolved conflict stages
 git ls-files --others --exclude-standard > rescue-untracked.txt
 # then COPY every path listed in rescue-untracked.txt into the rescue directory
