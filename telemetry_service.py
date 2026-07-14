@@ -15,12 +15,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from dependencies import get_current_user, require_admin
-from models import (
-    User, UserRole,
-    TelemetryEvent, TelemetryEventType,
-    WebVitalMetric, WebVitalType, VitalRating,
-    ClientErrorReport,
-)
+from models import User, UserRole
 
 logger = logging.getLogger(__name__)
 
