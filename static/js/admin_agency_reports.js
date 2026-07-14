@@ -356,13 +356,70 @@
         canvas.setAttribute("aria-label", payload.chart.title_ar || "");
         canvas.setAttribute("role", "img");
         chartSection.appendChild(canvas);
-        const chartInst = new window.Chart(canvas.getContext("2d"), {
-          type: payload.chart.type === "pie" ? "pie" : "bar",
+        canvas.style.minHeight = "350px";
+        const isPie = payload.chart.type === "pie";
+        const premiumPalette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
+        const ctx = canvas.getContext("2d");
+        const bgColors = payload.chart.series.map((_, i) => {
+            if (isPie) return premiumPalette[i % premiumPalette.length];
+            const g = ctx.createLinearGradient(0, 0, 0, 400);
+            const baseColor = premiumPalette[i % premiumPalette.length];
+            g.addColorStop(0, baseColor);
+            g.addColorStop(1, baseColor + "80");
+            return g;
+        });
+
+        if (window.Chart) {
+          window.Chart.defaults.font.family = "'Inter', 'Segoe UI', system-ui, sans-serif";
+          window.Chart.defaults.color = "#64748b";
+        }
+
+        const chartInst = new window.Chart(ctx, {
+          type: isPie ? "pie" : "bar",
           data: {
             labels: payload.chart.series.map((s) => s.label),
-            datasets: [{ label: payload.chart.title_ar || "", data: payload.chart.series.map((s) => s.value), backgroundColor: ["#1f6f54","#2f8f6d","#2b6cb0","#6b46c1","#c0392b","#e0a90e","#718096"] }]
+            datasets: [{ 
+              label: payload.chart.title_ar || "", 
+              data: payload.chart.series.map((s) => s.value), 
+              backgroundColor: bgColors,
+              borderWidth: isPie ? 2 : 0,
+              borderColor: "#ffffff",
+              borderRadius: isPie ? 0 : 8,
+              borderSkipped: false,
+              hoverOffset: isPie ? 8 : 0
+            }]
           },
-          options: { responsive: true, plugins: { legend: { position: payload.chart.type === "pie" ? "bottom" : "top" } } }
+          options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            layout: { padding: { top: 20, bottom: 20 } },
+            plugins: { 
+              legend: { 
+                position: isPie ? "bottom" : "top",
+                labels: { padding: 20, usePointStyle: true, pointStyle: 'circle' }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                titleFont: { size: 14, family: "'Inter', sans-serif" },
+                bodyFont: { size: 14, family: "'Inter', sans-serif" },
+                padding: 14,
+                cornerRadius: 12,
+                boxPadding: 6,
+                usePointStyle: true
+              }
+            },
+            scales: isPie ? {} : {
+                x: {
+                    grid: { display: false, drawBorder: false },
+                    ticks: { font: { weight: '500' } }
+                },
+                y: {
+                    grid: { color: '#e2e8f0', borderDash: [5, 5], drawBorder: false },
+                    beginAtZero: true
+                }
+            }
+          }
         });
         // Chart export button
         const chartExportBtn = document.createElement("button");

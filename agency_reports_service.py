@@ -78,6 +78,17 @@ _FIELD_LABELS: dict[str, str] = {
     "incident_count": "عدد الحوادث",
     "areas": "عدد المناطق",
     "children": "الأطفال",
+    "enrolled_children": "الأطفال المسجلون",
+    "total_institutions": "إجمالي المؤسسات",
+    "active_institutions": "المؤسسات النشطة",
+    "total_capacity": "الطاقة الاستيعابية",
+    "total_enrolled": "العدد الفعلي للمسجلين",
+    "occupancy_rate_pct": "نسبة الإشغال %",
+    "total_records": "إجمالي السجلات",
+    "total_supervisors": "إجمالي المشرفين",
+    "children_missing_dob": "أطفال بدون تاريخ ميلاد",
+    "trend_years": "سنوات القياس",
+
     # table columns
     "governorate": "المحافظة",
     "city": "المدينة/اللواء",
@@ -89,6 +100,20 @@ _FIELD_LABELS: dict[str, str] = {
     "severity": "درجة الخطورة",
     "thread_type": "نوع المحادثة",
     "children_per_kindergarten": "أطفال لكل حضانة",
+    "age_group": "الفئة العمرية",
+    "enrolled_total": "إجمالي المسجلين (0-60)",
+    "enrolled_0_11m": "0-11 شهر",
+    "enrolled_12_23m": "12-23 شهر",
+    "enrolled_24_35m": "24-35 شهر",
+    "enrolled_36_47m": "36-47 شهر",
+    "enrolled_48_60m": "48-60 شهر",
+    "occupancy_rate": "نسبة الإشغال",
+    "enrolled": "الأطفال المسجلين",
+    "children_per_supervisor": "أطفال لكل مشرف",
+    "missing_dob": "بدون تاريخ ميلاد",
+    "year": "السنة",
+    "new_kindergartens": "حضانات جديدة",
+    
     # vaccination_due_children
     "vaccine": "المطعوم",
     "due_age": "العمر المستحق",
@@ -220,7 +245,7 @@ class AgencyReportsService:
         elif agency_code == "dos":
             if report_code == "children_demographics":
                 payload = self._dos_children_demographics(agency_code, agency, report_code, report, filters)
-            elif report_code == "enrollment_participation_36_59":
+            elif report_code == "enrollment_participation_0_60":
                 payload = self._dos_enrollment_participation(agency_code, agency, report_code, report, filters)
             elif report_code == "institutions_active_licensed":
                 payload = self._dos_institutions_active(agency_code, agency, report_code, report, filters)
@@ -555,30 +580,76 @@ class AgencyReportsService:
 
     def _dos_enrollment_participation(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
         today = datetime.now(_JORDAN_TZ).date()
-        date_36m_ago = today - timedelta(days=36*30)
-        date_59m_ago = today - timedelta(days=59*30)
+        date_60m_ago = today - timedelta(days=60*30)
         q = (
-            self.db.query(models.ParentProfile.home_governorate, models.ParentProfile.home_district, func.count(models.Child.id).label("count"))
+            self.db.query(models.ParentProfile.home_governorate, models.ParentProfile.home_district, models.Child.date_of_birth)
             .join(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
             .join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id)
             .filter(
                 models.Child.deleted_at.is_(None),
                 models.ParentProfile.deleted_at.is_(None),
                 models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-                models.Child.date_of_birth >= date_59m_ago,
-                models.Child.date_of_birth <= date_36m_ago
+                models.Child.date_of_birth >= date_60m_ago,
+                models.Child.date_of_birth <= today
             )
         )
         q = self._apply_parent_geo_filters(q, filters)
         if filters.get("gender"):
             q = q.filter(models.Child.gender == models.Gender(filters["gender"]))
-        rows = q.group_by(models.ParentProfile.home_governorate, models.ParentProfile.home_district).all()
+        
+        rows = q.all()
+        
+        detail = defaultdict(lambda: {"total": 0, "0_11": 0, "12_23": 0, "24_35": 0, "36_47": 0, "48_60": 0})
+        for r in rows:
+            gov = r.home_governorate or "غير محدد"
+            city = r.home_district or "غير محدد"
+            dob = r.date_of_birth
+            age_months = (today - dob).days // 30
+            key = (gov, city)
+            detail[key]["total"] += 1
+            if age_months < 12:
+                detail[key]["0_11"] += 1
+            elif age_months < 24:
+                detail[key]["12_23"] += 1
+            elif age_months < 36:
+                detail[key]["24_35"] += 1
+            elif age_months < 48:
+                detail[key]["36_47"] += 1
+            else:
+                detail[key]["48_60"] += 1
+
         breakdowns = [
-            {"governorate": r.home_governorate or "غير محدد", "city": r.home_district or "غير محدد", "enrolled_36_59m": _safe_int(r.count)}
-            for r in rows
+            {
+                "governorate": k[0], "city": k[1], 
+                "enrolled_total": v["total"],
+                "enrolled_0_11m": v["0_11"],
+                "enrolled_12_23m": v["12_23"],
+                "enrolled_24_35m": v["24_35"],
+                "enrolled_36_47m": v["36_47"],
+                "enrolled_48_60m": v["48_60"],
+            }
+            for k, v in detail.items()
         ]
-        total = sum(r["enrolled_36_59m"] for r in breakdowns)
-        return self._payload(agency_code, agency, report_code, report, filters, {"enrolled_children": total}, breakdowns)
+        breakdowns.sort(key=lambda x: x["enrolled_total"], reverse=True)
+        total = sum(r["enrolled_total"] for r in breakdowns)
+
+        # Meaningful chart: pie chart for age distribution
+        total_by_age = {
+            "0-11 شهر": sum(b["enrolled_0_11m"] for b in breakdowns),
+            "12-23 شهر": sum(b["enrolled_12_23m"] for b in breakdowns),
+            "24-35 شهر": sum(b["enrolled_24_35m"] for b in breakdowns),
+            "36-47 شهر": sum(b["enrolled_36_47m"] for b in breakdowns),
+            "48-60 شهر": sum(b["enrolled_48_60m"] for b in breakdowns),
+        }
+        chart_series = [{"label": k, "value": v} for k, v in total_by_age.items() if v > 0]
+        
+        chart = {
+            "type": "pie",
+            "title_ar": "التوزيع العمري للأطفال المسجلين (0-60 شهراً)",
+            "series": chart_series
+        }
+
+        return self._payload(agency_code, agency, report_code, report, filters, {"enrolled_children": total}, breakdowns, chart=chart)
 
     def _dos_institutions_active(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
         q = self.db.query(models.Kindergarten.governorate, models.Kindergarten.district, models.Kindergarten.status, func.count(models.Kindergarten.id).label("count"))
@@ -700,20 +771,31 @@ class AgencyReportsService:
         breakdowns = [{"year": str(int(r.year)) if r.year else "غير محدد", "new_kindergartens": _safe_int(r.count)} for r in rows]
         return self._payload(agency_code, agency, report_code, report, filters, {"trend_years": len(breakdowns)}, breakdowns)
 
-    def _payload(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any], summary: dict[str, Any], breakdowns: list[dict[str, Any]]) -> dict[str, Any]:
+    def _payload(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any], summary: dict[str, Any], breakdowns: list[dict[str, Any]], chart: dict[str, Any] | None = None) -> dict[str, Any]:
         table = {"caption_ar": report.get("title_ar"), "rows": breakdowns}
-        return {
+        
+        if chart is None and breakdowns:
+            keys = list(breakdowns[0].keys())
+            label_col = keys[0] if keys else ""
+            val_col = keys[-1] if keys else ""
+            if label_col and val_col:
+                series = [{"label": str(b.get(label_col, "")), "value": b.get(val_col, 0)} for b in breakdowns[:15]]
+                chart = {"type": "bar", "title_ar": report.get("title_ar"), "series": series}
+
+        payload = {
             "metadata": self._metadata(agency_code, agency, report_code, report, filters),
             "summary": summary,
             "summary_labels": _label_map(summary.keys()),
             "column_labels": _label_map(breakdowns[0].keys() if breakdowns else []),
             "breakdowns": breakdowns,
-            "charts": [{"type": "bar", "title_ar": report.get("title_ar"), "data": breakdowns[:20]}],
             "tables": [table],
             "unavailable_indicators": [],
             "exports": {"csv": "csv" in report.get("exports", []), "json": "json" in report.get("exports", [])},
             "privacy_notice_ar": "يعرض هذا التقرير بيانات تجميعية فقط ولا يتضمن أي بيانات شخصية أو حساسة.",
         }
+        if chart:
+            payload["chart"] = chart
+        return payload
 
     def _assert_privacy(self, payload: Any) -> None:
         text_keys: list[str] = []
