@@ -392,6 +392,18 @@ def validate_production_settings():
             "Disable in .env: API_DOCS_ENABLED=false"
         )
 
+    # Validate PostgreSQL. SQLite has no real timezone support: it silently drops tzinfo
+    # from DateTime(timezone=True), so `server_default=func.now()` columns land in UTC
+    # while Python-set Jordan timestamps land in local wall-clock — a 3h skew that makes
+    # date-bounded queries wrong. It also skips VARCHAR length enforcement. Postgres has
+    # neither problem, and the deployment docs already require it — enforce it.
+    if settings.DATABASE_URL.strip().lower().startswith("sqlite"):
+        raise RuntimeError(
+            "CRITICAL: SQLite is not supported in production — it has no timezone support "
+            "(Jordan/UTC timestamps skew by 3h) and does not enforce VARCHAR limits. "
+            "Set a PostgreSQL DATABASE_URL in .env: postgresql://user:pass@host:5432/db"
+        )
+
     # Validate SECRET_KEY is secure
     if not settings.SECRET_KEY or len(settings.SECRET_KEY) < 32:
         raise RuntimeError(
