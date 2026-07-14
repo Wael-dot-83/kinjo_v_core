@@ -343,6 +343,21 @@ class TestFrontendRoutes:
         assert "حدث خطأ غير متوقع" in source  # unexpected (§13.6)
         assert 'kind = "network"' in source  # network vs http distinction
 
+    def test_login_has_single_main_landmark(self, client):
+        """The login page exposes exactly one <main> landmark for AT landmark
+        navigation (§19), and the skip target is focusable."""
+        text = client.get("/login").text
+        assert text.count("<main") == 1
+        assert 'id="mainContent"' in text
+        # skip link target is programmatically focusable
+        assert 'id="loginForm"' in text and 'tabindex="-1"' in text
+
+    def test_login_no_duplicate_language_switch(self, client):
+        """Exactly one language switch renders — the base navbar (which carries
+        its own switch) is not included on the auth page (§17)."""
+        text = client.get("/login").text
+        assert text.count('class="auth-lang-btn"') == 1
+
     def test_login_support_panel_uses_configured_contact_only(self):
         """The disabled-registration panel carries the 'no account?' guidance and
         exposes a support action ONLY when contact info is configured — never a

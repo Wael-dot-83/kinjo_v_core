@@ -861,7 +861,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   {# ══════════════════════════════════════════ Form Panel
   ══════════════════════════════════════════ #}
   <div class="auth-form-panel" id="formPanel">
-    <div class="auth-form-inner">
+    <main class="auth-form-inner" id="mainContent">
       {# Language toggle. Preserve safe, non-sensitive state (expired flag and a
          validated redirect) across the switch so the no-JS fallback keeps the
          session-expired context; the redirect is url-encoded so it cannot break
@@ -945,6 +945,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
         novalidate
         autocomplete="on"
         aria-labelledby="authHeading"
+        tabindex="-1"
         class="af-anim af-delay2"
       >
         <input
@@ -1150,7 +1151,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
         </div>
       </div>
       {% endif %}
-    </div>
+    </main>
     {# /.auth-form-inner #} {# ── Footer ── #}
     <footer
       class="auth-footer"
