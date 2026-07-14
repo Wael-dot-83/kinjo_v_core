@@ -78,9 +78,9 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
                 "exports": ["csv", "json"],
                 "data_sources": ["Child", "ParentProfile", "EnrollmentApplication"],
             },
-            "enrollment_participation_36_59": {
-                "title_ar": "مشاركة والتحاق الأطفال (36-59 شهراً)",
-                "title_en": "Enrollment participation 36-59 months",
+            "enrollment_participation_0_60": {
+                "title_ar": "مشاركة والتحاق الأطفال (0-60 شهراً)",
+                "title_en": "Enrollment participation 0-60 months",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "parent_residence",
@@ -452,25 +452,4 @@ def custom_report_schema() -> dict[str, Any]:
     }
 
 
-SENSITIVE_FIELD_DENYLIST = {
-    "child_name",
-    "parent_name",
-    "first_name",
-    "last_name",
-    "national_id",
-    "mother_national_id",
-    "passport_number",
-    "phone_number",
-    "home_address_line",
-    "photo_url",
-    "photo_metadata",
-    "health_notes",
-    "medical_notes",
-    "allergy_notes",
-    "special_needs_notes",
-    "description",
-    "parent_response",
-    "resolution_notes",
-    "message_body",
-    "feedback_text",
-}
+
