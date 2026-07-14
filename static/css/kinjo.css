@@ -397,11 +397,15 @@ html {
   box-shadow: 0 0 0 3px rgba(31, 94, 71, 0.15);
 }
 
-/* Arabic Font Support - Cairo is already primary, fallbacks for systems without it */
+/* Arabic UI font. Noto Sans Arabic is the only Arabic webfont admin_base.html
+   actually loads — Cairo/Tajawal were never fetched anywhere, so this stack used
+   to fall through to "Arabic Typesetting", a calligraphic face meant for setting
+   classical text, not dense UI. Keep the fallbacks to real UI faces: a display
+   face here makes body copy and table data noticeably harder to read. */
 [lang="ar"] body,
 [dir="rtl"] body {
   font-family:
-    "Cairo", "Tajawal", "Segoe UI", "Arabic Typesetting", "Traditional Arabic", Tahoma, sans-serif;
+    "Noto Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
   line-height: 1.7;
 }
 
@@ -469,7 +473,7 @@ h6 {
 
 .sidebar-section-title {
   letter-spacing: 0.03em;
-  font-family: "Cairo", sans-serif;
+  font-family: "Noto Sans Arabic", "Segoe UI", Tahoma, sans-serif;
   font-size: 0.75rem;
   text-transform: uppercase;
 }

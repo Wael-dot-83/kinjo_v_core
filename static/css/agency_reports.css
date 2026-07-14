@@ -124,8 +124,8 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
 .agency-header-actions .admin-btn{min-height:44px}
 
 /* Compact privacy notice */
-.agency-privacy-notice{display:flex;align-items:flex-start;gap:12px;border:1px solid #fecaca;border-inline-start:4px solid #dc2626;background:#fef2f2;border-radius:12px;padding:16px 20px;margin-bottom:22px;color:#991b1b;font-weight:600;line-height:1.8}
-.agency-privacy-notice__icon{color:#dc2626;font-size:1.3rem;flex:0 0 auto;margin-top:2px}
+.agency-privacy-notice{display:flex;align-items:flex-start;gap:12px;border:1px solid #e2e8f0;border-inline-start:4px solid #1E40AF;background:#f8fafc;border-radius:12px;padding:14px 18px;margin-bottom:22px;color:#334155;font-weight:500;line-height:1.7}
+.agency-privacy-notice__icon{color:#1E40AF;font-size:1.3rem;flex:0 0 auto;margin-top:2px}
 .agency-privacy-notice__text{line-height:1.8;font-size:.95rem}
 
 /* Tabs */

@@ -5,8 +5,19 @@
 {% block extra_head %}
 {{ super() }}
 <link rel="stylesheet" href="/static/vendor/uswds/css/uswds.min.css" />
-<link rel="stylesheet" href="/static/css/agency_reports.css?v=1.0" />
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=3.2" />
 <style>
+/* USWDS ships a Latin-only type stack (Source Sans Pro Web) and applies it to
+   .usa-prose / .usa-summary-box. It loads after kinjo.css, so it beat the Arabic
+   UI font on this RTL page and Arabic silently fell back to Arial, out of step
+   with the rest of the admin. Only those two USWDS classes carry that stack
+   here; keep the override narrow so icon fonts stay untouched. */
+[dir="rtl"] .usa-prose,
+[dir="rtl"] .usa-summary-box,
+[dir="rtl"] .usa-summary-box__heading {
+  font-family: "Noto Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
 /* USWDS-inspired admin dashboard layer. Scoped to this page so it does not
    disturb the legacy admin shell or other Bootstrap-based pages. */
 .admin-uswds-dashboard {
@@ -14,8 +25,10 @@
   --dashboard-ink: #1f2937;
   --dashboard-muted: #5b6472;
   --dashboard-border: #d7dee8;
-  --dashboard-primary: #005ea8;
-  --dashboard-primary-dark: #1a4480;
+  /* Was #005ea8 (USWDS blue) — a fourth competing "primary". Points at the one
+     source of truth; see the brand-vs-action note in design-tokens.css. */
+  --dashboard-primary: var(--kinjo-action, #1E40AF);
+  --dashboard-primary-dark: var(--kinjo-action-hover, #1E3A8A);
   --dashboard-accent: #2e8540;
   display: flex;
   flex-direction: column;

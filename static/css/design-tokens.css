@@ -1,8 +1,24 @@
 /* static/css/design-tokens.css */
 :root {
+  /* ---- Brand vs action -------------------------------------------------
+     KinJo's brand is the deep green in the logo (#066136) and the login page.
+     The admin does NOT use it for buttons/links on purpose: green is already
+     load-bearing here as a STATUS colour ("جاهز" / ready, healthy KPIs), so
+     making primary actions green would erase the readiness signal. Green is
+     therefore identity (logo, login, marketing chrome) and blue is interaction
+     (buttons, links, focus, active tabs) in the data-dense admin.
+
+     These two are the single source of truth. Four different "primary" values
+     used to compete (#2563eb here, #1E40AF in admin_design_system.css, #1F5E47
+     in kinjo.css, #005ea8 inline on the dashboard); everything below now points
+     at --kinjo-action so there is one place to change it. Do not add a fifth. */
+  --kinjo-brand: #1F5E47;   /* identity only — logo lockup, login, public chrome */
+  --kinjo-action: #1E40AF;  /* interaction — 8.7:1 on white, the most accessible of the four */
+  --kinjo-action-hover: #1E3A8A;
+
   /* Colors */
-  --kinjo-color-primary: #2563eb;
-  --kinjo-color-primary-hover: #1d4ed8;
+  --kinjo-color-primary: var(--kinjo-action);
+  --kinjo-color-primary-hover: var(--kinjo-action-hover);
   --kinjo-color-secondary: #475569;
   --kinjo-color-success: #10b981;
   --kinjo-color-warning: #f59e0b; /* Adjusted for better contrast on light backgrounds */

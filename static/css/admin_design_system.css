@@ -21,8 +21,11 @@
   --focus-ring: 0 0 0 3px rgba(30, 64, 175, 0.45);
 
   /* Primary Palette */
-  --color-primary: #1E40AF;
-  --color-primary-hover: #1D4ED8;
+  /* Interaction colour. Single source of truth is --kinjo-action in
+     design-tokens.css — see the brand-vs-action note there before changing it.
+     The literals are fallbacks for the few pages that skip design-tokens.css. */
+  --color-primary: var(--kinjo-action, #1E40AF);
+  --color-primary-hover: var(--kinjo-action-hover, #1E3A8A);
   --color-primary-light: #DBEAFE;
   --color-primary-surface: #F8FAFC;
   --color-primary-accent: #B49B3B;
@@ -3516,7 +3519,7 @@ html[dir="rtl"] .submenu .nav-link {
   flex-direction: column;
   min-height: calc(100vh - 60px);
   background: #050d1a;
-  font-family: 'Inter', 'Cairo', sans-serif;
+  font-family: 'Inter', 'Noto Sans Arabic', sans-serif;
   color: rgba(255,255,255,0.85);
 }
 
@@ -3552,7 +3555,7 @@ html[dir="rtl"] .submenu .nav-link {
 .cc-titles { display: flex; flex-direction: column; gap: var(--space-1); }
 
 .cc-title {
-  font-family: 'Cairo', sans-serif;
+  font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
   font-size: var(--text-lg);
   font-weight: var(--font-weight-bold);
   color: #ffffff;
@@ -5024,4 +5027,64 @@ body.admin-container {
   .admin-uswds-dashboard .admin-kpi-card {
     animation: none !important;
   }
+}
+
+/* ============================================================================
+   ADMIN BUTTON
+   .admin-btn had no unscoped rule anywhere in the codebase — the only matches
+   were layout-only (`.agency-header-actions .admin-btn { min-height: 44px }`)
+   and one `.admin-uswds-dashboard .admin-btn-primary:focus-visible`. Every
+   button using these classes therefore rendered as a raw user-agent button
+   (grey bg, black border, square corners). This is the missing base component.
+   ============================================================================ */
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 44px; /* touch target */
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast),
+              color var(--transition-fast);
+}
+
+.admin-btn:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.admin-btn:disabled,
+.admin-btn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+
+.admin-btn-secondary {
+  background: #fff;
+  border-color: #cbd5e1;
+  color: var(--color-primary);
+}
+
+.admin-btn-secondary:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
 }
