@@ -142,10 +142,18 @@ async def index(request: Request, current_user: typing.Optional[User] = Depends(
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
+    # Server-render the session-expired banner so it works without JavaScript
+    # and does not flash in after paint. The query flag is a trusted boolean —
+    # never reflected as HTML — so it is safe against injection.
+    session_expired = request.query_params.get("expired") == "true"
     return templates.TemplateResponse(
         request=request,
         name="auth/login.html",
-        context={"current_user": None, "messages": []},
+        context={
+            "current_user": None,
+            "messages": [],
+            "session_expired": session_expired,
+        },
     )
 
 @router.get("/register", response_class=HTMLResponse)

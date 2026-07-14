@@ -446,6 +446,19 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     outline-offset: 2px;
   }
 
+  /* Shared-device guidance under the "Keep me signed in" checkbox */
+  .auth-remember-hint {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin: -1.1rem 0 1.4rem;
+  }
+  .auth-remember-hint i {
+    flex-shrink: 0;
+  }
+
   /* ── Submit button ── */
   .auth-submit-btn {
     width: 100%;
@@ -694,6 +707,9 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     .auth-check-label {
       color: #94a3b8;
     }
+    .auth-remember-hint {
+      color: #64748b;
+    }
     .auth-forgot-link {
       color: #7ec8a8;
     }
@@ -848,17 +864,19 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
       {# ── Session expired alert ── #}
       <div
         id="sessionExpiredAlert"
-        class="auth-alert auth-alert-warning d-none"
-        role="alert"
+        class="auth-alert auth-alert-warning{% if not session_expired %} d-none{% endif %}"
+        role="status"
         aria-live="polite"
         aria-atomic="true"
         style="border-inline-start: 4px solid #d97706;"
       >
         <i class="bi bi-clock-history" aria-hidden="true"></i>
         <span>
-          {% if ui_lang == 'en' %}Your session has expired. Please sign in
-          again.{% else %}انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.{%
-          endif %}
+          {% if ui_lang == 'en' %}<strong>Your session has ended.</strong> To
+          keep your account secure, you were signed out after a period of
+          inactivity. Please sign in again to continue.{% else %}<strong>انتهت
+          جلستك.</strong> حفاظاً على أمان حسابك، تم تسجيل خروجك بعد فترة من عدم
+          النشاط. سجّل الدخول للمتابعة.{% endif %}
         </span>
       </div>
 
@@ -983,21 +1001,32 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
            ></p>
            <p id="capsLockWarning" class="af-hint" style="display:none; color:#b45309;">
              <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-             {% if ui_lang == 'en' %}Caps Lock is on{% else %}مفتع Caps Lock مفعل{% endif %}
+             {% if ui_lang == 'en' %}Caps Lock is on{% else %}مفتاح Caps Lock مفعّل{% endif %}
            </p>
          </div>
 
          {# ── Remember me + Forgot password ── #}
         <div class="auth-options-row af-anim af-delay3">
           <label class="auth-check-label" for="rememberMe">
-            <input type="checkbox" id="rememberMe" name="remember_me" />
-            {% if ui_lang == 'en' %}Remember me{% else %}تذكّرني{% endif %}
+            <input
+              type="checkbox"
+              id="rememberMe"
+              name="remember_me"
+              aria-describedby="rememberHint"
+            />
+            {% if ui_lang == 'en' %}Keep me signed in{% else %}إبقائي مسجّل
+            الدخول{% endif %}
           </label>
           <a href="/forgot-password" class="auth-forgot-link">
             {% if ui_lang == 'en' %}Forgot password?{% else %}هل نسيت كلمة
             المرور؟{% endif %}
           </a>
         </div>
+        <p class="auth-remember-hint" id="rememberHint">
+          <i class="bi bi-info-circle" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Don't use this on a public or shared device.{%
+          else %}لا تستخدم هذا الخيار على جهاز عام أو مشترك.{% endif %}
+        </p>
 
         {% if captcha_enabled %}
         <div class="mb-3 af-anim af-delay3">

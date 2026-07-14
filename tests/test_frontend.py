@@ -241,6 +241,46 @@ class TestFrontendRoutes:
         assert "text/html" in response.headers.get("content-type", "")
         assert b"login" in response.content.lower()
 
+    def test_login_page_expired_banner_server_rendered(self, client):
+        """/login?expired=true renders the session-expired banner visible
+        server-side (no d-none) so it works without JavaScript, with the
+        warmer 'session ended for your security' copy."""
+        import re
+
+        response = client.get("/login?expired=true")
+        assert response.status_code == 200
+        text = response.text
+        norm = re.sub(r"\s+", " ", text)
+        # Banner is NOT hidden when the session expired
+        assert "auth-alert-warning d-none" not in text
+        # Warmer bilingual copy is present (Arabic is the primary UI language)
+        assert "حفاظاً على أمان حسابك" in norm
+
+    def test_login_page_no_expired_banner_by_default(self, client):
+        """A normal /login visit keeps the expired banner hidden (d-none)."""
+        response = client.get("/login")
+        assert response.status_code == 200
+        assert "auth-alert-warning d-none" in response.text
+
+    def test_login_page_remember_me_label_matches_behavior(self, client):
+        """remember_me extends the session lifetime server-side, so the label
+        must read 'Keep me signed in' (إبقائي مسجّل الدخول) — never the
+        ambiguous 'تذكّرني' — and must warn about shared devices."""
+        import re
+
+        response = client.get("/login")
+        text = response.text
+        norm = re.sub(r"\s+", " ", text)
+        assert "إبقائي مسجّل" in norm
+        assert "تذكّرني" not in text
+        assert "جهاز عام أو مشترك" in norm
+
+    def test_login_page_has_forgot_password_link(self, client):
+        """The forgot-password recovery link is present and points at the
+        reachable /forgot-password route."""
+        response = client.get("/login")
+        assert 'href="/forgot-password"' in response.text
+
     def test_register_page(self, client):
         """Test register page renders"""
         response = client.get("/register")
