@@ -427,7 +427,22 @@ class TestManagerClassCRUD:
 
         payload = {"class_id": sample_class.id, "supervisor_id": foreign_sup.id, "is_primary": False}
         r = client.post("/api/manager/classes/assign-supervisor", json=payload, headers=_hdr(manager_token))
-        assert r.status_code in (400, 403, 422), f"Expected rejection, got {r.status_code}: {r.text}"
+        # 404 counts: the endpoint scopes its supervisor lookup to the caller's own
+        # kindergarten, so a foreign supervisor is simply not found. That is a better
+        # answer than 403 — it rejects the assignment without confirming that the
+        # supervisor exists in some other kindergarten.
+        assert r.status_code in (400, 403, 404, 422), f"Expected rejection, got {r.status_code}: {r.text}"
+
+        # The status code alone does not prove the write was refused.
+        test_db.expire_all()
+        assert not (
+            test_db.query(models.SupervisorAssignment)
+            .filter(
+                models.SupervisorAssignment.class_id == sample_class.id,
+                models.SupervisorAssignment.supervisor_id == foreign_sup.id,
+            )
+            .count()
+        ), "foreign supervisor must not be assigned"
 
     def test_assign_primary_supervisor_records_assignment(
         self, client, test_db, manager_user, sample_class, sample_kindergarten, manager_token
