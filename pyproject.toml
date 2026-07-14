@@ -1,7 +1,7 @@
 [project]
 name = "kinjo"
 version = "1.0.0"
-description = "KInJo - Kindergarten Management Platform"
+description = "KinJo - Kindergarten Management Platform"
 requires-python = ">=3.11"
 
 [tool.ruff]

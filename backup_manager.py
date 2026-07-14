@@ -1,6 +1,6 @@
 """
 Backup manager module — provides database snapshot, config, and upload backup handling
-for the KInJo platform admin panel.
+for the KinJo platform admin panel.
 """
 
 import os

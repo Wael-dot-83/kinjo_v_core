@@ -36,7 +36,7 @@ from models import (
 
 random.seed(42)
 
-EXCEL_PATH = r"C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Project-Kinjo-seed\DATS\Dataset_kinjo_jordan_reviewed_deduped.xlsx"
+EXCEL_PATH = r"C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Project-KinJo-seed\DATS\Dataset_kinjo_jordan_reviewed_deduped.xlsx"
 DB_PATH = r"D:\Final Version\data\kinjo.db"
 
 GOV_MAP = {

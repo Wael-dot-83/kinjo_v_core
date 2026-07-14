@@ -1113,11 +1113,11 @@ const defaultArabicTranslations = {
     ar: "العربية",
   },
   page: {
-    title: "إدارة كينجو",
+    title: "إدارة KinJo",
     description: "نظام إدارة حضانات الأطفال المهني",
   },
   nav: {
-    brand: "كينجو",
+    brand: "KinJo",
     dashboard: "لوحة التحكم",
     users: "المستخدمون",
     communication: "التواصل",
@@ -1159,7 +1159,7 @@ const defaultArabicTranslations = {
   dashboard: {
     title: "لوحة التحكم",
     subtitle: "مراقبة أداء النظام وإدارة العمليات",
-    welcome: "مرحباً بك في إدارة كينجو",
+    welcome: "مرحباً بك في إدارة KinJo",
     total_users: "إجمالي المستخدمين",
     active_users: "المستخدمون النشطون",
     total_kindergartens: "إجمالي الحضانات",

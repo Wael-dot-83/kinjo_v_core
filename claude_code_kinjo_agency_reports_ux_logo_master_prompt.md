@@ -214,7 +214,7 @@ grep -RIn "/admin/agency-reports" .
 grep -RIn "agency_reports" .
 grep -RIn "وزارة التربية\|وزارة التربية والتعليم\|وزارة التنمية الاجتماعية" .
 grep -RIn "رياض الأطفال\|روضة\|الحضانة\|الحضانات" templates static api services tests --include="*.html" --include="*.js" --include="*.css" --include="*.py" || true
-grep -RIn "Kj\|KJ\|كينجو\|KinJo\|logo\|brand\|app-logo\|navbar-brand\|sidebar-logo" templates static api services --include="*.html" --include="*.js" --include="*.css" --include="*.py" || true
+grep -RIn "Kj\|KJ\|KinJo\|logo\|brand\|app-logo\|navbar-brand\|sidebar-logo" templates static api services --include="*.html" --include="*.js" --include="*.css" --include="*.py" || true
 find . -iname "*kinjo*logo*" -o -iname "*logo*"
 ```
 
@@ -966,7 +966,7 @@ Current temporary usages:
 ```text
 Kj
 KJ
-text-logo كينجو
+text-logo KinJo
 ```
 
 Required official asset name:
@@ -977,7 +977,7 @@ kinjo-logo
 
 Important:
 
-Only replace visual logo/brand-mark usage. Do not replace normal text references where “كينجو” appears in readable content, page titles, descriptions, or normal sentences.
+Replace temporary visual logo/brand-mark usage with the official asset. Keep the official `KinJo` text spelling in readable content, page titles, descriptions, and normal sentences.
 
 Scope:
 
@@ -1026,7 +1026,7 @@ Do not use temporary KJ/Kj fallback as final result.
 Do not stretch.
 Do not crop.
 object-fit: contain.
-alt text: شعار كينجو
+alt text: شعار KinJo
 ```
 
 Suggested sizes:

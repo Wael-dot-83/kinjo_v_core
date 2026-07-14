@@ -19,7 +19,7 @@ def calculate_required_supervisors(age_group: str, children_count: int) -> int:
     else:
         raise ValidationError("Invalid age group.")
 """
-Validation utilities and audit logging for KInJo platform
+Validation utilities and audit logging for KinJo platform
 """
 import logging
 import re

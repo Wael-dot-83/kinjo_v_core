@@ -26,7 +26,7 @@ Our AI examines your input and applies proven prompt engineering techniques to i
 
 Try it below! Enter any prompt and click "Enhance Prompt" to watch the transformation. It takes seconds, costs nothing to try, and you can experiment as much as you like.
 
-*Note: This feature is available in both Arabic and English, matching your language preferences throughout the KInJo platform.*
+*Note: This feature is available in both Arabic and English, matching your language preferences throughout the KinJo platform.*
 
 ---
-*Enhance Prompt Guide - Part of KInJo v2.0 — Final Version — May 2026*
+*Enhance Prompt Guide - Part of KinJo v2.0 — Final Version — May 2026*

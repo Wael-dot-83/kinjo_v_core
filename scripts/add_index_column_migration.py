@@ -36,7 +36,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="repla
 # ── Constants ──────────────────────────────────────────────────────────────────
 
 DB_CANDIDATE_PATHS: List[str] = [
-    r"C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Project-Kinjo-seed\DATS\kindergartens.db",
+    r"C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Project-KinJo-seed\DATS\kindergartens.db",
     r"D:\Final Version\kindergartens.db",
     r"D:\Final Version\data\kinjo.db",
 ]

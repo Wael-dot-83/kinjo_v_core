@@ -1,4 +1,4 @@
-MASTER TASK: Exact GWS Compliance Audit + Fix for Kinjo
+MASTER TASK: Exact GWS Compliance Audit + Fix for KinJo
 
 Project root:
 D:\Final Version
@@ -31,7 +31,7 @@ Hard rules:
 * If something cannot be verified, mark it PARTIAL or MISMATCH.
 * If not applicable, explain why clearly.
 * Fix code directly, not just recommendations.
-* Preserve existing Kinjo business logic.
+* Preserve existing KinJo business logic.
 * Use minimal, safe, maintainable changes.
 * Keep Arabic professional, government-appropriate, and RTL-correct.
 * Keep English clean and consistent.
@@ -41,7 +41,7 @@ Use this status logic:
 MATCH = fully implemented with direct evidence.
 PARTIAL = partly implemented or unverified edge cases remain.
 MISMATCH = missing, wrong, broken, insecure, inaccessible, unclear, or not evidenced.
-N/A = genuinely not applicable to Kinjo, with reason.
+N/A = genuinely not applicable to KinJo, with reason.
 
 Audit and fix these areas at minimum:
 

@@ -35,7 +35,7 @@
       indicators: ["children_count", "gender_distribution", "age_distribution_6mo", "enrollment_status"],
       bulletsAr: ["عدد الأطفال المسجلين", "التوزيع حسب الجنس والعمر", "حالات التسجيل"],
       bulletsEn: ["Recorded children", "Sex and age distribution", "Enrolment status"],
-      caveatAr: "يعكس التقرير الأطفال المسجلين في كينجو ولا يمثل تعداداً سكانياً وطنياً.",
+      caveatAr: "يعكس التقرير الأطفال المسجلين في KinJo ولا يمثل تعداداً سكانياً وطنياً.",
       caveatEn: "This report reflects children recorded in KinJo and is not a national population census."
     },
     {

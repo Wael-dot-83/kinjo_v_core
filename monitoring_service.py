@@ -1,5 +1,5 @@
 """
-Comprehensive Monitoring and Health Check Service for KInJo Platform
+Comprehensive Monitoring and Health Check Service for KinJo Platform
 """
 import asyncio
 import logging

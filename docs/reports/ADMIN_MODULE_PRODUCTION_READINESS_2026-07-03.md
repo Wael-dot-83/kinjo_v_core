@@ -1,4 +1,4 @@
-# KInJo Admin Module - Production Readiness Audit Report
+# KinJo Admin Module - Production Readiness Audit Report
 
 **Audit Date:** 2026-07-03
 **Auditor:** Kilo (automed code inspection)

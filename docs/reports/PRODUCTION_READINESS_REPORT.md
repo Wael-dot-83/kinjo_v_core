@@ -1,4 +1,4 @@
-# KInJo Admin Module — Final Production-Readiness Report
+# KinJo Admin Module — Final Production-Readiness Report
 
 **Date**: June 21, 2026
 **Version**: 2.0.0

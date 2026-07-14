@@ -1,6 +1,6 @@
 # Geographic Reporting System Expansion — Production-Readiness Report
 
-This report documents the design, verification, and audit of the expanded geographic reporting and analytics systems within the KInJo management platform.
+This report documents the design, verification, and audit of the expanded geographic reporting and analytics systems within the KinJo management platform.
 
 ---
 

@@ -1,4 +1,4 @@
-# KInJo Production Deployment Guide
+# KinJo Production Deployment Guide
 
 ## Quick Start - Deploy to Production
 
@@ -101,7 +101,7 @@ python main.py
 ```bash
 # Health check
 curl http://localhost:8000/health
-# Expected: {"status": "healthy", "app": "KInJo", "version": "1.0.0"}
+# Expected: {"status": "healthy", "app": "KinJo", "version": "1.0.0"}
 
 # Comprehensive health (admin only - after login)
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/health
@@ -265,5 +265,5 @@ curl http://localhost:8000/health
 
 ---
 
-_Deployment Guide v1.0 - KInJo v2.0.0_  
+_Deployment Guide v1.0 - KinJo v2.0.0_
 _Last Updated: April 25, 2026_

@@ -1,5 +1,5 @@
 """
-FastAPI Dependencies for KInJo platform
+FastAPI Dependencies for KinJo platform
 """
 import logging
 from typing import Optional

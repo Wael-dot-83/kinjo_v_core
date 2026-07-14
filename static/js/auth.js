@@ -319,7 +319,7 @@ class AuthGuard {
         }
         AuthStorage.clearAll();
       }
-      // Not redirecting â€” reveal the page now
+      // Not redirecting — reveal the page now
       if (typeof window.__kinjoRevealPage === "function") {
         window.__kinjoRevealPage();
       }
@@ -404,7 +404,7 @@ class AuthService {
     if (!response.ok) {
       throw new Error(
         data.detail ||
-          t("ØªØ¹Ø°Ø± ØªÙ‡ÙŠØ¦Ø© Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø© Ø§Ù„Ø«Ù†Ø§Ø¦ÙŠØ©.", "Unable to start MFA setup."),
+          t("تعذر تهيئة المصادقة الثنائية.", "Unable to start MFA setup."),
       );
     }
     return data;
@@ -616,13 +616,13 @@ async function initMfaPage() {
     setupPanel?.classList.add("d-none");
     if (heading) {
       heading.textContent = t(
-        "Ø£Ø¯Ø®Ù„ Ø±Ù…Ø² Ø§Ù„ØªØ­Ù‚Ù‚",
+        "أدخل رمز التحقق",
         "Enter your verification code",
       );
     }
     if (intro) {
       intro.textContent = t(
-        "Ø£Ø¯Ø®Ù„ Ø§Ù„Ø±Ù…Ø² Ø§Ù„Ù…ÙƒÙˆÙ† Ù…Ù† 6 Ø£Ø±Ù‚Ø§Ù… Ù…Ù† ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø© Ù„Ø¥ÙƒÙ…Ø§Ù„ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„.",
+        "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة لإكمال تسجيل الدخول.",
         "Enter the 6-digit code from your authenticator app to finish signing in.",
       );
     }
@@ -682,7 +682,7 @@ function handleLogout(event) {
   }
   if (
     confirm(
-      t("Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬ØŸ", "Are you sure you want to sign out?"),
+      t("هل أنت متأكد من تسجيل الخروج؟", "Are you sure you want to sign out?"),
     )
   ) {
     AuthService.logout();

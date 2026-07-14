@@ -2,7 +2,7 @@
 
 ## 1) Scope and Purpose
 
-The Admin Module in this project is the central operational and governance control plane for the KInJo platform.  
+The Admin Module in this project is the central operational and governance control plane for the KinJo platform.
 It is implemented primarily across:
 
 - `main.py` (router composition, middleware/security baseline, global auth/session behavior)

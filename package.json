@@ -1,7 +1,7 @@
 {
   "name": "final-version",
   "version": "1.0.0",
-  "description": "KInJo is a FastAPI-based kindergarten management platform with:\r - Backend APIs and WebSocket endpoints\r - Server-rendered frontend templates (Jinja2)\r - PostgreSQL/SQLite support through SQLAlchemy\r - Alembic database migrations",
+  "description": "KinJo is a FastAPI-based kindergarten management platform with:\r - Backend APIs and WebSocket endpoints\r - Server-rendered frontend templates (Jinja2)\r - PostgreSQL/SQLite support through SQLAlchemy\r - Alembic database migrations",
   "main": "playwright.config.js",
   "directories": {
     "doc": "docs",

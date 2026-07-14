@@ -760,7 +760,7 @@ function renderIntelPanel(d) {
       <div style="margin-top:.5rem;font-size:.7rem;color:#475569">
         آخر تحديث: ${d.last_update ? new Date(d.last_update).toLocaleString('ar-JO') : 'غير متوفر'}
       </div>
-      <div style="font-size:.7rem;color:#475569">المصدر: قاعدة بيانات كينجو المركزية</div>
+      <div style="font-size:.7rem;color:#475569">المصدر: قاعدة بيانات KinJo المركزية</div>
     </div>`;
 }
 
@@ -1199,7 +1199,7 @@ function exportGovReport(slug, name) {
     ),
     '', '--- معلومات التقرير ---',
     'تاريخ التصدير : ' + new Date().toLocaleString('ar-JO'),
-    'المصدر        : قاعدة بيانات كينجو المركزية',
+    'المصدر        : قاعدة بيانات KinJo المركزية',
     'وزارة التنمية الاجتماعية — المملكة الأردنية الهاشمية',
   ].filter(l => l != null);
 

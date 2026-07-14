@@ -1,16 +1,16 @@
-# Kinjo — GWS (Government Website Standard) Compliance Audit Report
+# KinJo — GWS (Government Website Standard) Compliance Audit Report
 
 **Source of truth:** `GWS/kinjo_match_mismatch_checklist.xlsx`, sheet **"Full GWS Checklist"** (300 rows, MODEE GWS v6.0 / 2019).
 **Audit date:** 2026-06-17
-**Scope:** Full repository at `D:\Final Version` (the Kinjo kindergarten enrollment & management platform).
+**Scope:** Full repository at `D:\Final Version` (the KinJo kindergarten enrollment & management platform).
 
 ---
 
 ## 1. Executive Summary
 
-This audit evaluated all 300 rows of Jordan's official Government Website Standard checklist against the live Kinjo codebase, with every status backed by a direct `file:line` citation or an explicit "not found after searching X." No row was marked MATCH on assumption.
+This audit evaluated all 300 rows of Jordan's official Government Website Standard checklist against the live KinJo codebase, with every status backed by a direct `file:line` citation or an explicit "not found after searching X." No row was marked MATCH on assumption.
 
-Kinjo is **not** a ministry public-information portal — it is an **authenticated operational application** (kindergarten enrollment, attendance, daily reports, messaging) for parents, kindergarten managers/supervisors, and government admins. A large share of the GWS checklist (Ministers/Directorates pages, RSS news feeds, a classic public-content CMS, a marketing homepage) assumes a public ministry website and is genuinely **not applicable** to Kinjo's nature; those rows are marked N/A with a stated reason rather than forced into MATCH or MISMATCH.
+KinJo is **not** a ministry public-information portal — it is an **authenticated operational application** (kindergarten enrollment, attendance, daily reports, messaging) for parents, kindergarten managers/supervisors, and government admins. A large share of the GWS checklist (Ministers/Directorates pages, RSS news feeds, a classic public-content CMS, a marketing homepage) assumes a public ministry website and is genuinely **not applicable** to KinJo's nature; those rows are marked N/A with a stated reason rather than forced into MATCH or MISMATCH.
 
 Within what *is* applicable, the audit found the security middleware, RBAC, audit logging, and bilingual (Arabic/English, RTL/LTR) foundation to be substantially real and well-built — but found a near-total absence of GWS-required public pages (no Privacy Policy, Terms of Use, Disclaimer, Copyright statement, Contact Us form, FAQ, About page, Service Guide, sitemap, or robots.txt), several accessibility gaps (no language-label, no scroll-to-top, no accessibility toolbar), and a handful of real security polish items (no centralized unhandled-exception logging, dev-seed credentials with no production guard, reset-token-in-URL).
 
@@ -200,7 +200,7 @@ All evidence is in `GWS_COMPLIANCE_MATRIX.csv`, one row per checklist ID, with a
 
 These are real, applicable checklist rows that **no amount of code change can close** — they require an operator/business/legal/government decision or external action:
 
-- **Domain naming, HTTPS certificate, www/non-www behavior** (`A.1.1-001..008`) — Kinjo is not yet deployed to a real `.gov.jo` (or any production) domain; there is nothing to inspect until deployment.
+- **Domain naming, HTTPS certificate, www/non-www behavior** (`A.1.1-001..008`) — KinJo is not yet deployed to a real `.gov.jo` (or any production) domain; there is nothing to inspect until deployment.
 - **Official social media accounts** (`A.1.6-030/031/033/034/035/036`, `U.2.2-063`) — cannot link buttons to accounts that don't exist; needs a business decision on whether/which platforms to use.
 - **Legal sign-off on Privacy Policy / Terms of Use / Disclaimer / Copyright text** (`C.3.7-082..085`) — real, reasonable content was written, but final wording is a legal decision, not a code one.
 - **CAPTCHA provider credentials** (`U.2.6-098`, `S.5.5-012/013`) — application code, schema fields, and tests now exist, but production enforcement requires configured hCaptcha/reCAPTCHA credentials and `CAPTCHA_ENABLED=true`.
@@ -208,10 +208,10 @@ These are real, applicable checklist rows that **no amount of code change can cl
 - **Opaque public IDs** (`S.5.10-026`) — sensitive models now have UUID `public_id` values and IDOR tests, but legacy admin integer-ID routes remain for internal compatibility until a deliberate public-API migration is shipped.
 - **Annual third-party vulnerability assessment / penetration test** (`S.5.1-001`/the mislabeled `R.4.2-001` row) — needs an actual engagement with a security firm; cannot be "coded."
 - **TLS certificate issuance and renewal process** (`S.5.2-003/004`) — a hosting/ops decision, not application code.
-- **GWS Design Kit adoption** (`U.2.8-109`) — Kinjo was never given access to this MODEE asset; adopting it (if mandated) is a design decision, not a bug fix.
+- **GWS Design Kit adoption** (`U.2.8-109`) — KinJo was never given access to this MODEE asset; adopting it (if mandated) is a design decision, not a bug fix.
 - **Real Lighthouse/RUM performance numbers against the 9s/5MB/800ms/150KB/40KB thresholds** (`A.1.8-040..045`) — these need to be measured against a real, deployed, internet-facing instance; a dev-machine measurement would not be honest evidence.
 - **Cross-browser testing including Internet Explorer 11** (`A.1.3-015`) — Bootstrap 5 itself dropped IE11 support; supporting it would mean abandoning the entire current CSS framework, a major architectural decision for stakeholders, not a fix.
-- **Whether a public marketing homepage is even wanted** (`U.2.2` homepage cluster) — Kinjo's current product decision is "no anonymous homepage, `/` goes straight to login" — building one assumes a business decision that hasn't been made.
+- **Whether a public marketing homepage is even wanted** (`U.2.2` homepage cluster) — KinJo's current product decision is "no anonymous homepage, `/` goes straight to login" — building one assumes a business decision that hasn't been made.
 
 ---
 

@@ -1,8 +1,8 @@
-# KInJo — Product Goal
+# KinJo — Product Goal
 
 ## Vision
 
-KInJo is a bilingual (Arabic / English) kindergarten management platform built for national-scale deployment.  
+KinJo is a bilingual (Arabic / English) kindergarten management platform built for national-scale deployment.
 Its goal is to give every stakeholder — government regulators, regional managers, kindergarten supervisors, and parents — a single, trusted system for running, monitoring, and improving early-childhood education quality.
 
 ---
@@ -101,4 +101,4 @@ The system is deployable today without code changes:
 
 ---
 
-*KInJo v2.0 — Final Version — May 2026*
+*KinJo v2.0 — Final Version — May 2026*

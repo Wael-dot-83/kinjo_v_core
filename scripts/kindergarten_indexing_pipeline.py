@@ -80,7 +80,7 @@ INDEX_KEYWORDS: Set[str] = {
 }
 
 DATS_CANDIDATE_PATHS: List[str] = [
-    r"C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Project-Kinjo-seed\DATS",
+    r"C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Project-KinJo-seed\DATS",
     os.getcwd(),
     r"D:\Final Version\DATS",
     str(Path(__file__).resolve().parent.parent),

@@ -2,7 +2,7 @@
 KINDERGARTEN INDEXING PIPELINE — FINAL REPORT
 ======================================================================
 Generated: 2026-06-21 04:00:47 UTC
-DATS folder: C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Project-Kinjo-seed\DATS
+DATS folder: C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Project-KinJo-seed\DATS
 Excel files scanned: 6
 Sheets processed: 22
 

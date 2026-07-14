@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import SessionLocal
 import models
 
-DATASET_PATH = r"C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Project-Kinjo-seed\DATS"
+DATASET_PATH = r"C:\Users\waelj\OneDrive - zuj.edu.jo\Desktop\Project-KinJo-seed\DATS"
 
 HEADERS = [
     "اسم الحضانة (عربي)",

@@ -1,5 +1,5 @@
 """
-Comprehensive seed data for KInJo – bilingual Jordanian kindergarten management system.
+Comprehensive seed data for KinJo – bilingual Jordanian kindergarten management system.
 Creates realistic data across ALL major models with Arabic/English content.
 
 Usage:

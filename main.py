@@ -1,5 +1,5 @@
 """
-KInJo - Kindergarten Management Platform
+KinJo - Kindergarten Management Platform
 Main FastAPI Application
 """
 import asyncio
@@ -124,7 +124,7 @@ def ensure_secure_production_config() -> None:
 ensure_not_testing_in_production()
 ensure_secure_production_config()
 
-# Logging configuration â€” JSON-structured in production, human-readable otherwise
+# Logging configuration — JSON-structured in production, human-readable otherwise
 def configure_logging():
     log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
     use_json = settings.LOG_FORMAT.lower() == "json" and settings.ENVIRONMENT.lower() == "production"
@@ -281,7 +281,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI application
 api_docs_enabled = settings.API_DOCS_ENABLED and settings.ENVIRONMENT.lower() != "production"
 app = FastAPI(
-    title="KInJo - Kindergarten Management Platform",
+    title="KinJo - Kindergarten Management Platform",
     description="Enterprise-grade management system for kindergartens in Jordan",
     version="2.0.0",
     docs_url="/docs" if api_docs_enabled else None,
@@ -521,7 +521,7 @@ async def enforce_english_language_integrity(request: Request, call_next):
     return response
 
 
-# CSRF protection â€” validate Origin/Referer on state-changing requests
+# CSRF protection — validate Origin/Referer on state-changing requests
 # Cookie uses SameSite=Lax (set in auth.js), this is defense-in-depth.
 _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 _CSRF_DOUBLE_SUBMIT_EXEMPT_PATHS = {"/token", "/api/auth/login", "/api/auth/register", "/api/auth/mfa/setup", "/api/auth/mfa/verify", "/api/telemetry/vitals", "/api/telemetry/errors", "/api/telemetry/api"}
@@ -552,7 +552,7 @@ async def csrf_origin_check(request: Request, call_next):
         # Skip CSRF check for API calls with Bearer token (inherently CSRF-safe)
         auth_header = request.headers.get("authorization", "")
         if not auth_header.lower().startswith("bearer "):
-            # Cookie-based auth â€” verify Origin or Referer
+            # Cookie-based auth — verify Origin or Referer
             origin = request.headers.get("origin", "")
             referer = request.headers.get("referer", "")
             request_netloc = (request.url.netloc or "").lower()
@@ -1636,7 +1636,7 @@ async def api_health_check(
             "details": health_check.details
         }
 
-    # Add SMTP health (non-blocking â€” failure degrades but doesn't mark service unhealthy)
+    # Add SMTP health (non-blocking — failure degrades but doesn't mark service unhealthy)
     from email_service import check_smtp_health
     smtp_health = check_smtp_health()
     response["services"]["smtp"] = smtp_health

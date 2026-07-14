@@ -1,5 +1,5 @@
 """
-SQLAlchemy ORM Models for KInJo Kindergarten Management Platform
+SQLAlchemy ORM Models for KinJo Kindergarten Management Platform
 """
 import enum
 import uuid

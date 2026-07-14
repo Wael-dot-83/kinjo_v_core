@@ -6,7 +6,7 @@
     {% endif %}
 
     <head>
-      <meta charset="utf-8" />
+      <meta charset="UTF-8" />
       <!-- Anti-FOUC: html is hidden until CSS+JS are ready. Revealed by inline script at end of body. -->
       <!-- noscript fallback: reveal immediately if JS is disabled -->
       <noscript><style>html{visibility:visible!important}</style></noscript>
@@ -29,14 +29,14 @@
       {% block meta_description %}
       <meta
         name="description"
-        content="{% if ui_lang == 'en' %}KinJo - Kindergarten and child care management platform{% else %}KinJo - Ù…Ù†ØµØ© Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø±ÙˆØ¶Ø§Øª ÙˆØ±Ø¹Ø§ÙŠØ© Ø§Ù„Ø£Ø·ÙØ§Ù„{% endif %}"
+        content="{% if ui_lang == 'en' %}KinJo - Kindergarten and child care management platform{% else %}KinJo - منصة إدارة الروضات ورعاية الأطفال{% endif %}"
       />
       {% endblock %}
 
       {% block meta_keywords %}
       <meta
         name="keywords"
-        content="{% if ui_lang == 'en' %}KinJo, kindergarten, Jordan, child care, enrollment, daily reports, attendance{% else %}كينجو, حضانة, الأردن, رعاية الأطفال, تسجيل, تقارير يومية, حضور{% endif %}"
+        content="{% if ui_lang == 'en' %}KinJo, kindergarten, Jordan, child care, enrollment, daily reports, attendance{% else %}KinJo, حضانة, الأردن, رعاية الأطفال, تسجيل, تقارير يومية, حضور{% endif %}"
       />
       {% endblock %}
       <meta name="author" content="KinJo" />
@@ -255,8 +255,8 @@
     <body class="kinjo-app {% block body_class %}{% endblock %}">
       {% include 'components/impersonation_banner.html' %} {% block body %}
       <a href="#mainContent" class="skip-link"
-        >{% if ui_lang == 'en' %}Skip to main content{% else %}ØªØ®Ø·ÙŠ Ø¥Ù„Ù‰ Ø§Ù„Ù…Ø­ØªÙˆÙ‰
-        Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ{% endif %}</a
+        >{% if ui_lang == 'en' %}Skip to main content{% else %}تخطي إلى المحتوى
+        الرئيسي{% endif %}</a
       >
 
       <!-- Navigation -->
@@ -288,7 +288,7 @@
                   type="button"
                   class="btn-close"
                   data-bs-dismiss="alert"
-                  aria-label="{% if ui_lang == 'en' %}Close{% else %}Ø¥ØºÙ„Ø§Ù‚{% endif %}"
+                  aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"
                   data-i18n-aria="common.close"
                 ></button>
               </div>
@@ -478,7 +478,7 @@
       <script src="/static/js/app_i18n.js?v=2.1"></script>
       <script src="/static/js/kinjo-app.js?v=2.1"></script>
 
-      <!-- SweetAlert2 â€” loaded after page scripts to avoid render-blocking -->
+      <!-- SweetAlert2 — loaded after page scripts to avoid render-blocking -->
       <link
         href="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css"
         rel="stylesheet"
