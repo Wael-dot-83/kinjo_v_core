@@ -486,15 +486,13 @@
 
     // Auth helper
     function getHeaders() {
-        // Use centralized auth system
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
-
-        const token = AuthService.getToken();
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        return headers;
+        // No Authorization header: the session is the HttpOnly 'kinjo_session' cookie,
+        // which the browser attaches on its own. `AuthService.getToken()` deliberately
+        // returns the CSRF cookie as a truthy sentinel, not the JWT (auth.js), so
+        // sending it as `Bearer` made every call here 401 — and auth.js turns any 401
+        // into a redirect to /login?expired=true, which logged admins out of this page.
+        // CSRF for unsafe methods is injected centrally by auth.js's fetch wrapper.
+        return { 'Content-Type': 'application/json' };
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
