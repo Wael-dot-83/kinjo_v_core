@@ -18,6 +18,14 @@ from audit_actions import AuditAction
 
 router = APIRouter(tags=["Absence Requests"])
 
+# Approving an absence writes one attendance row per day in the span, so the span is
+# not just a validation nicety — it is the loop bound of a write path a parent gets to
+# choose. Unbounded, `end_date=9999-12-31` is accepted (2,912,246 days) and the
+# manager who approves it detonates ~2.9M SELECT+INSERT pairs on a sync worker.
+# 366 matches MAX_CUSTOM_PERIOD_DAYS (admin_endpoints.py), which already bounds the
+# read windows; a kindergarten absence longer than a year is not a real request.
+MAX_ABSENCE_SPAN_DAYS = 366
+
 
 def _require_scoped_manager(current_user: models.User) -> None:
     """Absence decisions are a manager-only operation on their own KG.
@@ -52,6 +60,11 @@ class CreateAbsenceRequest(BaseModel):
         start = info.data.get("start_date")
         if start and v < start:
             raise ValueError("end_date must not be before start_date")
+        if start and (v - start).days + 1 > MAX_ABSENCE_SPAN_DAYS:
+            raise ValueError(
+                f"absence span must not exceed {MAX_ABSENCE_SPAN_DAYS} days "
+                f"(requested {(v - start).days + 1})"
+            )
         return v
 
 

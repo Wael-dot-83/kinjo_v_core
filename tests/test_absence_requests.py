@@ -111,6 +111,39 @@ class TestParentCreateAbsence:
         }, headers=auth_headers_parent)
         assert resp.status_code == 422  # Pydantic validation
 
+    def test_create_rejects_span_longer_than_a_year(self, client, auth_headers_parent, parent_user, sample_child, active_enrollment):
+        """The span is the loop bound of a write path, not just a validation nicety.
+
+        Approving an absence writes one attendance row per day in the span. Before
+        MAX_ABSENCE_SPAN_DAYS this request was accepted with 201 — a 2,912,246-day
+        span that a manager could detonate into ~2.9M SELECT+INSERT pairs on a sync
+        worker. Parent-supplied input, so the bound belongs at the door.
+        """
+        resp = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": "9999-12-31",
+            "reason": "سبب ما",
+        }, headers=auth_headers_parent)
+        assert resp.status_code == 422, (
+            f"a 2.9M-day absence was accepted with {resp.status_code}; approving it "
+            "loops once per day"
+        )
+
+    def test_create_accepts_span_up_to_the_limit(self, client, auth_headers_parent, parent_user, sample_child, active_enrollment):
+        """The bound must not break legitimate long absences — 366 days inclusive."""
+        start = date.today() + timedelta(days=1)
+        resp = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": start.isoformat(),
+            "end_date": (start + timedelta(days=365)).isoformat(),  # 366 inclusive
+            "reason": "سبب ما",
+        }, headers=auth_headers_parent)
+        assert resp.status_code == 201, (
+            f"a 366-day absence (the documented limit) was rejected with "
+            f"{resp.status_code}: {resp.text[:200]}"
+        )
+
     def test_create_wrong_child(self, client, auth_headers_parent, parent_user, test_db, sample_kindergarten):
         """Parent cannot submit for a child that doesn't belong to them."""
         other_parent_user = models.User(
