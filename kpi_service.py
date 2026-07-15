@@ -1085,18 +1085,8 @@ class KPIService:
         ).all()
         explicit_map = {row[0]: bool(row[1]) for row in calendar_rows}
 
-        working_days: List[date] = []
-        cursor = period_start
-        while cursor <= period_end:
-            if cursor in explicit_map:
-                is_open = explicit_map[cursor]
-            else:
-                # Jordan school week is Sun–Thu; Friday (4) and Saturday (5) are closed.
-                is_open = cursor.weekday() not in (4, 5)
-            if is_open:
-                working_days.append(cursor)
-            cursor += timedelta(days=1)
-        return working_days
+        # Classification is shared with the bulk path so the two cannot drift.
+        return KPIService._working_days_from_overrides(explicit_map, period_start, period_end)
 
     @staticmethod
     def _get_overlapping_active_enrollments(
@@ -1304,6 +1294,159 @@ class KPIService:
 
         rate = (attended_days / expected_days) * 100
         return round(rate, 2)
+
+    @staticmethod
+    def compute_attendance_rates_bulk(
+        db: Session,
+        kindergarten_ids: List[int],
+        period_start: date,
+        period_end: date,
+    ) -> Dict[int, float]:
+        """`compute_attendance_rate` for many kindergartens in a fixed 3 queries.
+
+        Same definition, same number — `test_bulk_attendance_rate_matches_per_kg`
+        pins them together. This exists because the per-kindergarten form costs 4
+        queries each, so a listing endpoint calling it in a loop is an N+1 (CLAUDE.md
+        forbids); without it, callers like kg-overview grow their own inline formula
+        and drift from the authoritative one.
+
+        Returns {kindergarten_id: rate}; a kindergarten with no expected child-days
+        maps to 0.0, matching the scalar form.
+        """
+        components = KPIService.compute_attendance_components_bulk(
+            db, kindergarten_ids, period_start, period_end
+        )
+        return {
+            kg_id: (round((attended / expected) * 100, 2) if expected else 0.0)
+            for kg_id, (attended, expected) in components.items()
+        }
+
+    @staticmethod
+    def compute_attendance_components_bulk(
+        db: Session,
+        kindergarten_ids: List[int],
+        period_start: date,
+        period_end: date,
+    ) -> Dict[int, Tuple[int, int]]:
+        """{kindergarten_id: (attended_child_days, expected_child_days)}.
+
+        The parts, not the percentage, because a rate over a *set* of kindergartens is
+        sum(attended)/sum(expected) — averaging the per-kindergarten percentages would
+        weight a 3-child kindergarten the same as a 300-child one.
+        """
+        if not kindergarten_ids:
+            return {}
+
+        # 1. Calendar overrides for every kindergarten at once.
+        calendar_rows = db.query(
+            models.OperatingCalendar.kindergarten_id,
+            models.OperatingCalendar.date,
+            models.OperatingCalendar.is_open,
+        ).filter(
+            models.OperatingCalendar.kindergarten_id.in_(kindergarten_ids),
+            models.OperatingCalendar.date >= period_start,
+            models.OperatingCalendar.date <= period_end,
+        ).all()
+        explicit_by_kg: Dict[int, Dict[date, bool]] = {}
+        for kg_id, day, is_open in calendar_rows:
+            explicit_by_kg.setdefault(int(kg_id), {})[day] = bool(is_open)
+
+        # 2. Active enrollments overlapping the window, for every kindergarten.
+        enrollment_rows = db.query(
+            models.EnrollmentApplication.kindergarten_id,
+            models.EnrollmentApplication.child_id,
+            models.EnrollmentApplication.enrollment_start_date,
+            models.EnrollmentApplication.enrollment_end_date,
+        ).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(kindergarten_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            or_(
+                models.EnrollmentApplication.enrollment_end_date.is_(None),
+                models.EnrollmentApplication.enrollment_end_date >= period_start,
+            ),
+            or_(
+                models.EnrollmentApplication.enrollment_start_date.is_(None),
+                models.EnrollmentApplication.enrollment_start_date <= period_end,
+            ),
+        ).all()
+
+        enrollments_by_kg: Dict[int, List[Tuple[int, date, date]]] = {}
+        for kg_id, child_id, enr_start, enr_end in enrollment_rows:
+            start = enr_start or period_start
+            end = enr_end or period_end
+            effective_start = max(period_start, start)
+            effective_end = min(period_end, end)
+            if effective_start <= effective_end:
+                enrollments_by_kg.setdefault(int(kg_id), []).append(
+                    (int(child_id), effective_start, effective_end)
+                )
+
+        # Expected child-days per kindergarten, reusing the scalar form's arithmetic.
+        expected_by_kg: Dict[int, int] = {}
+        child_ids_by_kg: Dict[int, List[int]] = {}
+        for kg_id in kindergarten_ids:
+            working_days = KPIService._working_days_from_overrides(
+                explicit_by_kg.get(int(kg_id), {}), period_start, period_end
+            )
+            if not working_days:
+                expected_by_kg[int(kg_id)] = 0
+                continue
+            ordinals = [d.toordinal() for d in working_days]
+            total_expected = 0
+            kg_children: List[int] = []
+            for child_id, effective_start, effective_end in enrollments_by_kg.get(int(kg_id), []):
+                left = bisect_left(ordinals, effective_start.toordinal())
+                right = bisect_right(ordinals, effective_end.toordinal())
+                expected_days = max(0, right - left)
+                if expected_days <= 0:
+                    continue
+                total_expected += expected_days
+                kg_children.append(child_id)
+            expected_by_kg[int(kg_id)] = total_expected
+            if kg_children:
+                child_ids_by_kg[int(kg_id)] = kg_children
+
+        # 3. Attended (PRESENT + LATE) child-days for every child at once.
+        all_child_ids = sorted({c for ids in child_ids_by_kg.values() for c in ids})
+        attended_by_child = KPIService._attended_child_days_by_child(
+            db, all_child_ids, period_start, period_end
+        )
+
+        components: Dict[int, Tuple[int, int]] = {}
+        for kg_id in kindergarten_ids:
+            expected = expected_by_kg.get(int(kg_id), 0)
+            attended = sum(
+                attended_by_child.get(c, 0) for c in child_ids_by_kg.get(int(kg_id), [])
+            )
+            components[int(kg_id)] = (int(attended), int(expected))
+        return components
+
+    @staticmethod
+    def _working_days_from_overrides(
+        explicit_map: Dict[date, bool],
+        period_start: date,
+        period_end: date,
+    ) -> List[date]:
+        """The day-classification half of `_list_working_days`, without the query.
+
+        Split out so the bulk path can fetch every kindergarten's OperatingCalendar in
+        one query and still classify days identically — the Jordan school week (Sun–Thu)
+        with explicit OperatingCalendar entries overriding it.
+        """
+        if period_start > period_end:
+            return []
+        working_days: List[date] = []
+        cursor = period_start
+        while cursor <= period_end:
+            if cursor in explicit_map:
+                is_open = explicit_map[cursor]
+            else:
+                # Jordan school week is Sun–Thu; Friday (4) and Saturday (5) are closed.
+                is_open = cursor.weekday() not in (4, 5)
+            if is_open:
+                working_days.append(cursor)
+            cursor += timedelta(days=1)
+        return working_days
 
     @staticmethod
     def compute_excused_absence_rate(

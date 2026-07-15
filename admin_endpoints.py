@@ -4647,31 +4647,32 @@ def get_kg_overview(
     ).group_by(models.EnrollmentApplication.kindergarten_id).all()
     children_by_kg = {kid: cnt for kid, cnt in active_enrollments}
 
-    attendance_records = db.query(
-        models.AttendanceLog.class_id,
-        func.count(models.AttendanceLog.id)
-    ).join(models.Class, models.AttendanceLog.class_id == models.Class.id).filter(
-        models.Class.kindergarten_id.in_(kg_ids),
-        models.AttendanceLog.date >= date_start,
-        models.AttendanceLog.date <= date_end,
-        models.AttendanceLog.status == models.AttendanceStatus.PRESENT
-    ).group_by(models.AttendanceLog.class_id).all()
-    present_by_class = {cid: cnt for cid, cnt in attendance_records}
+    # Attendance rate comes from the authoritative KPI engine, in bulk (3 queries for
+    # every kindergarten, not 4 each).
+    #
+    # It used to be computed here as `present_rows / active_children * 100`, which
+    # divides a count of PRESENT rows *across the whole window* by a *single-day*
+    # headcount. The two have different dimensions, so the result scaled with the
+    # window: one child present 5 days reported 100% over a 1-day window and 500% over
+    # a 10-day one — every band still "on_target", because 500 >= the target. The
+    # denominator has to be expected child-days, which means respecting working days
+    # (Sun–Thu plus OperatingCalendar) and each enrolment's own date range. That is
+    # exactly what KPIService already does, and duplicating it here is what let this
+    # number drift from the KPI dashboard's in the first place (CLAUDE.md: KPI
+    # computations belong in kpi_service.py).
+    attendance_components_by_kg = KPIService.compute_attendance_components_bulk(
+        db, list(kg_ids), date_start, date_end
+    )
+    attendance_rate_by_kg = {
+        kg_id: (round((attended / expected) * 100, 2) if expected else 0.0)
+        for kg_id, (attended, expected) in attendance_components_by_kg.items()
+    }
 
     classes = db.query(models.Class).filter(models.Class.kindergarten_id.in_(kg_ids)).all()
     capacity_by_kg: Dict[int, Dict[str, int]] = defaultdict(lambda: {"total_capacity": 0, "total_enrolled": 0})
-    class_to_kg: Dict[int, int] = {}
     for cls in classes:
         capacity_by_kg[cls.kindergarten_id]["total_capacity"] += cls.capacity_total or 0
         capacity_by_kg[cls.kindergarten_id]["total_enrolled"] += cls.enrolled_children_count or 0
-        class_to_kg[cls.id] = cls.kindergarten_id
-
-    # Map attendance per kg by summing present counts across classes
-    att_by_kg: Dict[int, int] = defaultdict(int)
-    for class_id, present_count in present_by_class.items():
-        kg_id = class_to_kg.get(class_id)
-        if kg_id is not None:
-            att_by_kg[kg_id] += present_count
 
     # Teachers: MANAGER + SUPERVISOR linked to kindergartens
     teachers_by_kg: Dict[int, int] = defaultdict(int)
@@ -4734,8 +4735,7 @@ def get_kg_overview(
     kg_cards: List[KgKindergartenCard] = []
     for kg in all_kgs:
         kids = children_by_kg.get(kg.id, 0)
-        present = att_by_kg.get(kg.id, 0)
-        att_rate = round((present / kids * 100.0), 1) if kids > 0 else 0.0
+        att_rate = round(attendance_rate_by_kg.get(kg.id, 0.0), 1)
         cap = capacity_by_kg.get(kg.id, {"total_capacity": 0, "total_enrolled": 0})
         occ_rate = round((cap["total_enrolled"] / cap["total_capacity"] * 100.0), 1) if cap["total_capacity"] > 0 else 0.0
         teachers = teachers_by_kg.get(kg.id, 0)
@@ -4826,9 +4826,15 @@ def get_kg_overview(
     # Aggregates (based on filtered kg_cards when governorate/risk_level is set)
     total_children = sum(c.children_count for c in kg_cards)
     kg_card_ids = [c.id for c in kg_cards]
-    total_present = sum(att_by_kg.get(kid, 0) for kid in kg_card_ids)
     total_enrolled = sum(children_by_kg.get(kid, 0) for kid in kg_card_ids)
-    avg_attendance = round((total_present / total_enrolled * 100.0), 1) if total_enrolled > 0 else 0.0
+    # Network attendance is sum(attended)/sum(expected) over the filtered set, not the
+    # mean of the per-kindergarten percentages: averaging rates would weight a 3-child
+    # kindergarten the same as a 300-child one. It divided window-wide PRESENT rows by
+    # a single-day headcount, so it scaled with the window exactly like the per-card
+    # rate did.
+    _attended_total = sum(attendance_components_by_kg.get(kid, (0, 0))[0] for kid in kg_card_ids)
+    _expected_total = sum(attendance_components_by_kg.get(kid, (0, 0))[1] for kid in kg_card_ids)
+    avg_attendance = round((_attended_total / _expected_total * 100.0), 1) if _expected_total > 0 else 0.0
     total_teachers = sum(c.teachers_count for c in kg_cards)
     total_alerts = sum(c.open_alerts for c in kg_cards)
 
@@ -4849,11 +4855,14 @@ def get_kg_overview(
         alert_severity_counts[sev] += 1
         alert_type_counts[a.metric_type] += 1
 
-    # Governorate comparison — weighted attendance (total present / total enrolled * 100)
+    # Governorate comparison — attendance weighted by expected child-days
+    # (sum(attended) / sum(expected) * 100), so a small kindergarten does not swing the
+    # governorate the same as a large one.
     gov_data: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
         "kindergartens": 0,
         "children": 0,
-        "present_sum": 0,
+        "attended_sum": 0,
+        "expected_sum": 0,
         "alerts": 0,
         "occupancy_sum": 0.0,
         "capacity_sum": 0,
@@ -4862,7 +4871,12 @@ def get_kg_overview(
     for kg in active_kgs:
         gov_data[kg.governorate]["kindergartens"] += 1
         gov_data[kg.governorate]["children"] += children_by_kg.get(kg.id, 0)
-        gov_data[kg.governorate]["present_sum"] += att_by_kg.get(kg.id, 0)
+        # Same story as the per-card and network rates: attended/expected child-days,
+        # summed across the governorate. `present_sum / children` divided window-wide
+        # rows by a single-day headcount and scaled with the window.
+        _att, _exp = attendance_components_by_kg.get(kg.id, (0, 0))
+        gov_data[kg.governorate]["attended_sum"] += _att
+        gov_data[kg.governorate]["expected_sum"] += _exp
         gov_data[kg.governorate]["alerts"] += len(alerts_by_kg.get(kg.id, []))
         cap = capacity_by_kg.get(kg.id, {"total_capacity": 0, "total_enrolled": 0})
         gov_data[kg.governorate]["occupancy_sum"] += cap["total_enrolled"]
@@ -4871,7 +4885,7 @@ def get_kg_overview(
 
     governorate_chart = []
     for gov_name, d in sorted(gov_data.items()):
-        att = round((d["present_sum"] / d["children"] * 100.0), 1) if d["children"] > 0 else 0.0
+        att = round((d["attended_sum"] / d["expected_sum"] * 100.0), 1) if d["expected_sum"] > 0 else 0.0
         occ = round((d["enrolled_sum"] / d["capacity_sum"] * 100.0), 1) if d["capacity_sum"] > 0 else 0.0
         governorate_chart.append({
             "name": gov_name,
