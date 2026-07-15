@@ -1,79 +1,75 @@
 {% extends 'manager_base.html' %}
+{% from 'components/page-header.html' import page_header %}
 {% block title %}{{ _('المشرفون') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="mb-4">
-    <div class="mb-3">
-        <h1 class="fs-1 fw-bold mt-0 mb-1">
-            <i class="bi bi-person-badge-fill text-primary"></i> {{ _('المشرفون') }}
-        </h1>
-        <p class="lead text-muted mt-0">{{ _('إدارة المشرفين وتعيينهم للشعب') }}</p>
-    </div>
-    <div class="mt-2">
-        <button class="btn btn-primary me-2" type="button" data-bs-toggle="modal" data-bs-target="#supervisorModal" id="createSupervisorBtn">
-            <i class="bi bi-person-plus me-2"></i>{% if ui_lang == 'en' %}Add Supervisor{% else %}إضافة مشرف{% endif %}
-        </button>
-        <button class="btn btn-outline-primary js-load-supervisors">
-            <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
-        </button>
-    </div>
-</div>
+{# Shared page-header component: the block renders outside .admin-content, so bespoke
+   markup gets no page gutter and clips against the viewport edge in RTL. #}
+{% set supervisor_actions %}
+<button class="btn btn-primary me-2" type="button" data-bs-toggle="modal" data-bs-target="#supervisorModal" id="createSupervisorBtn">
+    <i class="bi bi-person-plus me-2"></i>{% if ui_lang == 'en' %}Add Supervisor{% else %}إضافة مشرف{% endif %}
+</button>
+<button class="btn btn-outline-primary js-load-supervisors">
+    <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
+</button>
+{% endset %}
+{{ page_header(
+title=_('المشرفون'),
+icon='bi-person-badge-fill',
+subtitle=_('إدارة المشرفين وتعيينهم للشعب'),
+breadcrumbs=[
+{"label": _('لوحة التحكم'), "url": "/dashboard"},
+{"label": _('المشرفون')}
+],
+actions=supervisor_actions
+) }}
 {% endblock %}
 
 {% block content %}
 
 <!-- Stats -->
-<div class="row g-3 mb-4">
-    <div class="col-md-4 mb-2 mb-md-0">
-        <ul class="row g-4">
-            <li class="col-12 col-md-12">
-                <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-primary-subtle border-primary border-opacity-25">
-                    <div class="p-2 bg-primary text-white rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 56px; height: 56px; border-radius: 50%;">
-                        <i class="bi bi-people-fill h3 fw-bold"></i>
-                    </div>
-                    <div class="card-body p-0">
-                        <h2 class="card-title text-uppercase m-0">{% if ui_lang == 'en' %}Total Supervisors{% else %}إجمالي المشرفين{% endif %}</h2>
-                        <p class="fs-1 fw-bold text-primary m-0" id="statTotal">—</p>
-                    </div>
-                </div>
-            </li>
-        </ul>
-    </div>
-    <div class="col-md-4 mb-2 mb-md-0">
-        <ul class="row g-4">
-            <li class="col-12 col-md-12">
-                <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-success-subtle border-success border-opacity-25">
-                    <div class="p-2 text-bg-success text-white rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 56px; height: 56px; border-radius: 50%;">
-                        <i class="bi bi-person-check-fill h3 fw-bold"></i>
-                    </div>
-                    <div class="card-body p-0">
-                        <h2 class="card-title text-uppercase m-0">{% if ui_lang == 'en' %}Assigned to Classes{% else %}مُعيَّنون لشعب{% endif %}</h2>
-                        <p class="fs-1 fw-bold text-success-dark m-0" id="statAssigned">—</p>
-                    </div>
-                </div>
-            </li>
-        </ul>
-    </div>
-    <div class="col-md-4">
-        <ul class="row g-4">
-            <li class="col-12 col-md-12">
-                <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-warning-subtle border-gold">
-                    <div class="p-2 bg-gold text-white rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 56px; height: 56px; border-radius: 50%;">
-                        <i class="bi bi-person-dash-fill h3 fw-bold"></i>
-                    </div>
-                    <div class="card-body p-0">
-                        <h2 class="card-title text-uppercase m-0">{% if ui_lang == 'en' %}Unassigned{% else %}بدون تعيين{% endif %}</h2>
-                        <p class="fs-1 fw-bold text-gold m-0" id="statUnassigned">—</p>
-                    </div>
-                </div>
-            </li>
-        </ul>
-    </div>
-</div>
+{# One list of three stats. Each tile previously sat in its own <ul class="row"> holding a
+   single full-width <li>, which nested a grid row inside a column for no layout gain and
+   showed the browser's default list markers, since .row does not unstyle a list. #}
+<ul class="row g-3 mb-4 list-unstyled">
+    <li class="col-md-4">
+        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-primary-subtle border-primary border-opacity-25">
+            <div class="p-2 bg-primary text-white rounded-circle me-3 d-flex justify-content-center align-items-center flex-shrink-0" style="width: 56px; height: 56px; border-radius: 50%;">
+                <i class="bi bi-people-fill h3 fw-bold m-0"></i>
+            </div>
+            <div class="card-body p-0">
+                <h2 class="card-title fs-6 text-secondary m-0">{% if ui_lang == 'en' %}Total Supervisors{% else %}إجمالي المشرفين{% endif %}</h2>
+                <p class="fs-1 fw-bold text-primary m-0" id="statTotal">—</p>
+            </div>
+        </div>
+    </li>
+    <li class="col-md-4">
+        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-success-subtle border-success border-opacity-25">
+            <div class="p-2 text-bg-success text-white rounded-circle me-3 d-flex justify-content-center align-items-center flex-shrink-0" style="width: 56px; height: 56px; border-radius: 50%;">
+                <i class="bi bi-person-check-fill h3 fw-bold m-0"></i>
+            </div>
+            <div class="card-body p-0">
+                <h2 class="card-title fs-6 text-secondary m-0">{% if ui_lang == 'en' %}Assigned to Classes{% else %}مُعيَّنون لشعب{% endif %}</h2>
+                <p class="fs-1 fw-bold text-success-dark m-0" id="statAssigned">—</p>
+            </div>
+        </div>
+    </li>
+    <li class="col-md-4">
+        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-warning-subtle border-gold">
+            <div class="p-2 bg-gold text-white rounded-circle me-3 d-flex justify-content-center align-items-center flex-shrink-0" style="width: 56px; height: 56px; border-radius: 50%;">
+                <i class="bi bi-person-dash-fill h3 fw-bold m-0"></i>
+            </div>
+            <div class="card-body p-0">
+                <h2 class="card-title fs-6 text-secondary m-0">{% if ui_lang == 'en' %}Unassigned{% else %}بدون تعيين{% endif %}</h2>
+                <p class="fs-1 fw-bold text-gold m-0" id="statUnassigned">—</p>
+            </div>
+        </div>
+    </li>
+</ul>
 
 <!-- Supervisor Cards -->
-<div class="row g-3" id="supervisorsContainer">
-    <div class="col-12 text-center py-5 text-secondary" id="loadingState">
+<div id="supervisorsContainer">
+    <div class="text-center py-5 text-secondary" id="loadingState">
         <p class="mt-2">{{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}</p>
     </div>
 </div>
@@ -135,6 +131,17 @@
 
 {% block extra_js %}
 <script>
+const IS_EN_SUP = document.documentElement.lang === 'en';
+// This page reported every outcome through a raw browser alert(), several of them with
+// Arabic-only text. showToast comes from admin_components.js, which manager_base.html
+// already loads; alert() stays only as a fallback if that script ever fails to load.
+const TS = (ar, en) => IS_EN_SUP ? en : ar;
+const notify = (ar, en, type) => {
+    const msg = TS(ar, en);
+    if (typeof showToast === 'function') showToast(msg, type || 'info');
+    else alert(msg);
+};
+
 // Auth is the httpOnly session cookie (kinjo_session); add the CSRF
 // double-submit token for the assign-class POST (F2).
 const h = () => {
@@ -156,7 +163,7 @@ async function loadSupervisors() {
         _classes = clsData.classes || [];
         renderSupervisors(supData.supervisors || []);
     } catch {
-        alert('تعذّر تحميل البيانات');
+        notify('تعذّر تحميل البيانات', 'Unable to load data', 'error');
     }
 }
 
@@ -169,21 +176,23 @@ function renderSupervisors(supervisors) {
 
     const container = document.getElementById('supervisorsContainer');
     if (!supervisors.length) {
-        container.innerHTML = `<div class="col-12 text-center py-5 text-secondary">
-            <span>لا يوجد مشرفون</span>
+        container.innerHTML = `<div class="text-center py-5 text-secondary">
+            <span>${TS('لا يوجد مشرفون', 'No supervisors yet')}</span>
         </div>`;
         return;
     }
     
-    // Using Bootstrap grid / Elite card layout
-    container.innerHTML = `<ul class="row g-4">` + supervisors.map(sup => {
+    // This <ul> is the grid row itself, so #supervisorsContainer must NOT also be a .row:
+    // nesting a .row directly inside a .row doubles Bootstrap's negative gutter margins and
+    // pushes the cards past the inline edge. list-unstyled removes the default markers.
+    container.innerHTML = `<ul class="row g-4 list-unstyled mb-0">` + supervisors.map(sup => {
         const classBadges = sup.classes && sup.classes.length
             ? sup.classes.map(c => `<span class="badge me-2">${escHtml(c.name_ar)}${c.is_primary ? ' ★' : ''}</span>`).join('')
-            : `<span class="badge">بدون تعيين</span>`;
-            
-        const statusTag = sup.status === 'ACTIVE' 
-            ? `<span class="badge text-bg-success mt-1">نشط</span>` 
-            : `<span class="badge text-bg-light mt-1 text-muted">غير نشط</span>`;
+            : `<span class="badge">${TS('بدون تعيين', 'Unassigned')}</span>`;
+
+        const statusTag = sup.status === 'ACTIVE'
+            ? `<span class="badge text-bg-success mt-1">${TS('نشط', 'Active')}</span>`
+            : `<span class="badge text-bg-light mt-1 text-muted">${TS('غير نشط', 'Inactive')}</span>`;
 
         return `
         <li class="col-12 col-md-6 col-lg-4">
@@ -200,7 +209,7 @@ function renderSupervisors(supervisors) {
                 </div>
                 <div class="card-footer bg-transparent border-0">
                     <a href="#assignClassModal" class="btn btn-outline-primary js-assign-class" role="button" aria-controls="assignClassModal" data-bs-toggle="modal" data-bs-target="#assignClassModal" data-sup-id="${sup.id}">
-                        <i class="bi bi-plus-circle me-2"></i>تعيين شعبة
+                        <i class="bi bi-plus-circle me-2"></i>${TS('تعيين شعبة', 'Assign class')}
                     </a>
                     <button type="button" class="btn btn-outline-secondary js-edit-supervisor" data-bs-toggle="modal" data-bs-target="#supervisorModal"
                         data-sup-id="${sup.id}" data-sup-name="${escHtml(sup.full_name)}" data-sup-email="${escHtml(sup.email || '')}" data-sup-phone="${escHtml(sup.phone_number || '')}" data-sup-username="${escHtml(sup.username)}">
@@ -233,15 +242,16 @@ async function confirmAssignClass() {
             body: JSON.stringify({ supervisor_id: supId, class_id: classId, is_primary: primary }),
         });
         if (res.ok) {
-            alert('تم التعيين بنجاح');
+            notify('تم التعيين بنجاح', 'Assigned successfully', 'success');
             // Close the Bootstrap modal and reload the list
             document.querySelector('#assignClassModal .usa-modal__close').click();
             loadSupervisors();
         } else {
             const err = await res.json().catch(() => ({}));
-            alert(err.detail || 'فشل التعيين');
+            if (err.detail) notify(err.detail, err.detail, 'error');
+            else notify('فشل التعيين', 'Assignment failed', 'error');
         }
-    } catch { alert('خطأ في الشبكة'); }
+    } catch { notify('خطأ في الشبكة', 'Network error', 'error'); }
 }
 
 function resetSupervisorForm() {
@@ -290,7 +300,8 @@ async function removeSupervisor(id) {
     const res = await fetch(`/api/manager/supervisors/${id}`, { method: 'DELETE', headers: h() });
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        alert(err.detail || '{% if ui_lang == "en" %}Unable to remove supervisor{% else %}تعذر إزالة المشرف{% endif %}');
+        if (err.detail) notify(err.detail, err.detail, 'error');
+        else notify('تعذر إزالة المشرف', 'Unable to remove supervisor', 'error');
         return;
     }
     await loadSupervisors();
@@ -305,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('createSupervisorBtn')?.addEventListener('click', resetSupervisorForm);
     document.getElementById('supervisorForm')?.addEventListener('submit', async e => {
         e.preventDefault();
-        try { await saveSupervisor(); } catch (err) { alert(err.message); }
+        try { await saveSupervisor(); } catch (err) { notify(err.message, err.message, 'error'); }
     });
     const container = document.getElementById('supervisorsContainer');
     if (container) container.addEventListener('click', e => {

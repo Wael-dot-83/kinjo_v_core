@@ -4,13 +4,16 @@
 {% block title %}{% if ui_lang == 'en' %}{{ class.name_en or class.name_ar }}{% else %}{{ class.name_ar }}{% endif %}{% endblock %}
 
 {% block page_header %}
+{# Macro arguments are an expression context: Jinja does not evaluate {% %} tags inside a
+   string literal, so the old "{% if %}" ~ value ~ "{% else %}" form concatenated the tags
+   in as literal text and printed both languages at once. Use inline conditionals. #}
 {{ page_header(
-title="{% if ui_lang == 'en' %}" ~ (class.name_en or class.name_ar) ~ "{% else %}" ~ class.name_ar ~ "{% endif %}",
+title=((class.name_en or class.name_ar) if ui_lang == 'en' else class.name_ar),
 icon="bi-people-fill",
 breadcrumbs=[
-{"label": "{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}", "url": "/dashboard"},
-{"label": "{% if ui_lang == 'en' %}Classrooms{% else %}الشعب الصفية{% endif %}", "url": "/classes"},
-{"label": "{% if ui_lang == 'en' %}" ~ (class.name_en or class.name_ar) ~ "{% else %}" ~ class.name_ar ~ "{% endif %}"}
+{"label": ('Dashboard' if ui_lang == 'en' else 'لوحة التحكم'), "url": "/dashboard"},
+{"label": ('Classrooms' if ui_lang == 'en' else 'الشعب الصفية'), "url": "/classes"},
+{"label": ((class.name_en or class.name_ar) if ui_lang == 'en' else class.name_ar)}
 ]
 ) }}
 {% endblock %}

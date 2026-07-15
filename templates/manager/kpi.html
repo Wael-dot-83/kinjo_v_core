@@ -1,25 +1,26 @@
 {% extends 'manager_base.html' %}
+{% from 'components/page-header.html' import page_header %}
 {% block title %}{{ _('مؤشرات الأداء الرئيسية') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="mb-4 d-flex flex-justify align-items-start flex-wrap g-2">
-    <div class="mb-3">
-        <h1 class="fs-1 fw-bold mt-0 mb-1">
-            <i class="bi bi-graph-up-arrow text-primary"></i> {{ _('مؤشرات الأداء الرئيسية') }}
-        </h1>
-        <nav aria-label="Breadcrumb" class="admin-breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard" class="">{{ _('لوحة التحكم') }}</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ _('مؤشرات الأداء') }}</li>
-            </ol>
-        </nav>
-    </div>
-    <div class="mt-1">
-        <button class="btn btn-outline-primary js-load-kpi">
-            <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
-        </button>
-    </div>
-</div>
+{# Use the shared page-header component rather than bespoke markup. The block renders
+   outside .admin-content (which owns the page gutter), so a hand-rolled wrapper sits
+   flush against the viewport edge and clips the title in RTL; .page-header-wrap carries
+   that gutter itself. It also keeps this page identical to the other manager pages. #}
+{% set refresh_action %}
+<button class="btn btn-outline-primary js-load-kpi">
+    <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
+</button>
+{% endset %}
+{{ page_header(
+title=_('مؤشرات الأداء الرئيسية'),
+icon='bi-graph-up-arrow',
+breadcrumbs=[
+{"label": _('لوحة التحكم'), "url": "/dashboard"},
+{"label": _('مؤشرات الأداء')}
+],
+actions=refresh_action
+) }}
 {% endblock %}
 
 {% block content %}
@@ -71,20 +72,20 @@
         <div class="kpi-hero-card p-4 border border-base-lighter rounded-3">
             <div class="row g-3 align-items-center">
                 <div class="col-md-4 text-center">
-                    <div class="text-secondary fw-bold mb-1">{{ _('مؤشر حوكمة الحضانة الشامل') }}</div>
+                    <div class="kpi-hero-label fw-bold mb-1">{{ _('مؤشر حوكمة الحضانة الشامل') }}</div>
                     <div class="fs-1 fw-bold lh-1" id="gceiValue">—</div>
-                    <div class="text-secondary">{{ _('من 100 نقطة') }}</div>
+                    <div class="kpi-hero-label">{{ _('من 100 نقطة') }}</div>
                     <div class="mt-2">
                         <span class="badge" id="gceiStatusBadge">—</span>
                     </div>
                 </div>
                 <div class="col-md-4 text-center">
-                    <div class="text-secondary fw-bold mb-1">{{ _('الاتجاه') }}</div>
+                    <div class="kpi-hero-label fw-bold mb-1">{{ _('الاتجاه') }}</div>
                     <div class="fs-1 fw-bold lh-1" id="gceiTrendIcon">—</div>
-                    <div class="text-secondary" id="gceiTrendValue">—</div>
+                    <div class="kpi-hero-label" id="gceiTrendValue">—</div>
                 </div>
                 <div class="col-md-4">
-                    <div class="text-secondary fw-bold mb-1">{{ _('ملاحظة المدير') }}</div>
+                    <div class="kpi-hero-label fw-bold mb-1">{{ _('ملاحظة المدير') }}</div>
                     <div class="text-white lh-sm" id="gceiNote"></div>
                 </div>
             </div>
@@ -138,11 +139,20 @@
 
 <style>
 .kpi-hero-card { background: linear-gradient(135deg, #0A5C8E 0%, #0d7db5 100%); color: #fff; }
+/* The hero is dark, so Bootstrap's .text-secondary (a dark grey meant for light surfaces)
+   is unreadable on it. These labels sit on the gradient and need a light ink instead. */
+.kpi-hero-label { color: rgba(255, 255, 255, 0.88); }
+.kpi-hero-trend-good    { color: #6ee7b7; }
+.kpi-hero-trend-bad     { color: #fca5a5; }
+.kpi-hero-trend-neutral { color: rgba(255, 255, 255, 0.88); }
 .kpi-card { transition: transform .18s, box-shadow .18s; }
 .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,.1); }
 .kpi-status-bar-green { border-inline-start: 4px solid #10b981; }
 .kpi-status-bar-amber { border-inline-start: 4px solid #f59e0b; }
 .kpi-status-bar-red   { border-inline-start: 4px solid #ef4444; }
+/* gray and insufficient_data are real BandColor members and reach this class too. */
+.kpi-status-bar-gray,
+.kpi-status-bar-insufficient_data { border-inline-start: 4px solid #9ca3af; }
 .kpi-action-high   { border-inline-start: 3px solid #ef4444; }
 .kpi-action-medium { border-inline-start: 3px solid #f59e0b; }
 .kpi-action-low    { border-inline-start: 3px solid #10b981; }
@@ -228,17 +238,34 @@
 
     /* ── helpers ─────────────────────────────────────────────────────── */
 
-    function statusColor(s) {
-        return { green: '#10b981', amber: '#f59e0b', red: '#ef4444' }[s] || '#6b7280';
-    }
-    function statusBadgeCls(s) {
-        return { green: 'text-bg-success text-white', amber: 'bg-gold text-dark', red: 'text-bg-secondary text-white' }[s] || 'text-bg-light text-dark';
-    }
-    function statusLabel(s) {
-        if (IS_AR) return { green: 'جيد', amber: 'تحذير', red: 'تنبيه' }[s] || s;
-        return { green: 'Good', amber: 'Warning', red: 'Alert' }[s] || s;
-    }
+    /* The API's band vocabulary is BandColor in kpi_standards.py and has FIVE members —
+       green, amber, red, gray ("no data / not applicable") and insufficient_data. Every
+       map below must cover all five: the old maps knew only the first three and fell back
+       to `|| s`, which printed the raw English key ("gray", "insufficient_data") into the
+       Arabic UI. Nothing here ever echoes the key back. */
+    const KPI_STATUS = {
+        green:             { color: '#10b981', badge: 'text-bg-success text-white', ar: 'جيد',              en: 'Good' },
+        amber:             { color: '#f59e0b', badge: 'bg-gold text-dark',          ar: 'تحذير',            en: 'Warning' },
+        red:               { color: '#ef4444', badge: 'text-bg-secondary text-white', ar: 'تنبيه',          en: 'Alert' },
+        gray:              { color: '#6b7280', badge: 'text-bg-light text-dark',    ar: 'لا توجد بيانات',   en: 'No Data' },
+        insufficient_data: { color: '#6b7280', badge: 'text-bg-light text-dark',    ar: 'بيانات غير كافية', en: 'Insufficient Data' },
+    };
+    const KPI_STATUS_UNKNOWN = { color: '#6b7280', badge: 'text-bg-light text-dark', ar: 'غير محدد', en: 'Unknown' };
+
+    function statusEntry(s) { return KPI_STATUS[s] || KPI_STATUS_UNKNOWN; }
+    function statusColor(s) { return statusEntry(s).color; }
+    function statusBadgeCls(s) { return statusEntry(s).badge; }
+    function statusLabel(s) { const e = statusEntry(s); return IS_AR ? e.ar : e.en; }
     function trendIcon(t) { return { up: '↑', down: '↓', stable: '→' }[t] || '—'; }
+    /* Trend ink for the dark hero. trendCls() below returns Bootstrap text-* utilities,
+       which are tuned for light surfaces and wash out on the gradient. */
+    function heroTrendCls(t, lowerIsBetter) {
+        if (!t || t === 'stable') return 'kpi-hero-trend-neutral';
+        const good = lowerIsBetter ? 'down' : 'up';
+        if (t === good) return 'kpi-hero-trend-good';
+        return (t === (lowerIsBetter ? 'up' : 'down')) ? 'kpi-hero-trend-bad'
+                                                       : 'kpi-hero-trend-neutral';
+    }
     function trendCls(t, lowerIsBetter) {
         const good = lowerIsBetter ? 'down' : 'up';
         const bad  = lowerIsBetter ? 'up'   : 'down';
@@ -263,7 +290,9 @@
         const li   = c.threshold.lower_is_better;
         const icon = document.getElementById('gceiTrendIcon');
         icon.textContent = trendIcon(c.trend);
-        icon.className   = `${trendCls(c.trend, li)}`;
+        // Re-state the typography classes: assigning className replaces the whole list,
+        // and the markup's `fs-1 fw-bold lh-1` would otherwise be dropped on first render.
+        icon.className   = `fs-1 fw-bold lh-1 ${heroTrendCls(c.trend, li)}`;
 
         const sign = c.trend === 'up' ? '+' : '';
         document.getElementById('gceiTrendValue').textContent = `${sign}${c.trend_value.toFixed(1)}%`;

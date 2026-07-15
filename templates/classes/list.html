@@ -1,15 +1,17 @@
-{% extends 'base.html' %}
+{% extends 'manager_base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if ui_lang == 'en' %}Classroom Management{% else %}إدارة الشعب الصفية{% endif %}{% endblock %}
 
 {% block page_header %}
+{# Macro arguments are an expression context: Jinja does not evaluate {% %} tags inside a
+   string literal, so use the inline conditional the page-header macro itself uses. #}
 {{ page_header(
-title="{% if ui_lang == 'en' %}Classroom Management{% else %}إدارة الشعب الصفية{% endif %}",
+title=('Classroom Management' if ui_lang == 'en' else 'إدارة الشعب الصفية'),
 icon="bi-people-fill",
 breadcrumbs=[
-{"label": "{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}", "url": "/dashboard"},
-{"label": "{% if ui_lang == 'en' %}Classrooms{% else %}الشعب الصفية{% endif %}"}
+{"label": ('Dashboard' if ui_lang == 'en' else 'لوحة التحكم'), "url": "/dashboard"},
+{"label": ('Classrooms' if ui_lang == 'en' else 'الشعب الصفية')}
 ]
 ) }}
 {% endblock %}

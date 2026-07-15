@@ -4,8 +4,10 @@
 {% block title %}{% if ui_lang == 'en' %}Report New Incident{% else %}تسجيل حادث جديد{% endif %}{% endblock %}
 
 {% block page_header %}
+{# Macro args are an expression context — a {% %} tag inside a string literal prints raw.
+   The breadcrumbs below already use the inline conditional; the title now matches. #}
 {{ page_header(
-title="{% if ui_lang == 'en' %}Report New Incident{% else %}تسجيل حادث جديد{% endif %}",
+title=('Report New Incident' if ui_lang == 'en' else 'تسجيل حادث جديد'),
 icon="bi-file-medical",
 icon_color="text-danger",
 breadcrumbs=[
