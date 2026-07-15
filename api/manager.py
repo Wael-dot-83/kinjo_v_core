@@ -270,29 +270,52 @@ def get_manager_dashboard(
         "alerts": []
     }
 
-    # Add alerts
+    # Add alerts. `message` is kept as a compatibility alias for the English text
+    # so existing consumers keep working; new consumers should read message_ar /
+    # message_en, which the Arabic-primary UI needs.
+    def _alert(alert_type: str, message_ar: str, message_en: str, priority: str) -> dict:
+        return {
+            "type": alert_type,
+            "message": message_en,
+            "message_ar": message_ar,
+            "message_en": message_en,
+            "priority": priority,
+        }
+
     if pending_applications > 0:
-        dashboard["alerts"].append({
-            "type": "pending_applications",
-            "message": f"{pending_applications} enrollment applications pending review",
-            "priority": "high"
-        })
+        dashboard["alerts"].append(_alert(
+            "pending_applications",
+            f"{pending_applications} طلب تسجيل بانتظار المراجعة",
+            f"{pending_applications} enrollment applications pending review",
+            "high",
+        ))
 
     if pending_reports > 0:
-        dashboard["alerts"].append({
-            "type": "pending_reports",
-            "message": f"{pending_reports} daily reports pending approval",
-            "priority": "medium"
-        })
+        dashboard["alerts"].append(_alert(
+            "pending_reports",
+            f"{pending_reports} تقرير يومي بانتظار الاعتماد",
+            f"{pending_reports} daily reports pending approval",
+            "medium",
+        ))
 
     if kindergarten.license_valid_until:
         days_until_expiry = (kindergarten.license_valid_until - today).days
-        if days_until_expiry < 30:
-            dashboard["alerts"].append({
-                "type": "license_expiry",
-                "message": f"License expires in {days_until_expiry} days",
-                "priority": "critical" if days_until_expiry < 0 else "high"
-            })
+        if days_until_expiry < 0:
+            # An expired licence is not "expiring in -5 days" — it already lapsed.
+            days_ago = abs(days_until_expiry)
+            dashboard["alerts"].append(_alert(
+                "license_expiry",
+                f"انتهت صلاحية الترخيص منذ {days_ago} يوم",
+                f"License expired {days_ago} day(s) ago",
+                "critical",
+            ))
+        elif days_until_expiry < 30:
+            dashboard["alerts"].append(_alert(
+                "license_expiry",
+                f"تنتهي صلاحية الترخيص خلال {days_until_expiry} يوم",
+                f"License expires in {days_until_expiry} day(s)",
+                "high",
+            ))
 
     return dashboard
 

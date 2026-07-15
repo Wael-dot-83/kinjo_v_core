@@ -1,7 +1,7 @@
 """
 Absence Request endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from datetime import date, datetime, timedelta, timezone, UTC
@@ -143,6 +143,11 @@ def create_absence_request(
 
 @router.get("/absence-requests")
 def list_absence_requests(
+    # Aliased: a bare `status` parameter would shadow the imported `fastapi.status`
+    # module inside this function.
+    status_filter: Optional[models.AbsenceRequestStatus] = Query(
+        None, alias="status", description="Filter by request status; omit for all requests"
+    ),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -152,9 +157,12 @@ def list_absence_requests(
         ).first()
         if not parent_profile:
             return []
-        requests = db.query(models.AbsenceRequest).filter(
+        query = db.query(models.AbsenceRequest).filter(
             models.AbsenceRequest.parent_id == parent_profile.id
-        ).order_by(models.AbsenceRequest.created_at.desc()).all()
+        )
+        if status_filter is not None:
+            query = query.filter(models.AbsenceRequest.status == status_filter)
+        requests = query.order_by(models.AbsenceRequest.created_at.desc()).all()
         return [_serialize_request(r) for r in requests]
     else:
         # Manager: own kindergarten only (no silent unscoped fallback).
@@ -166,6 +174,8 @@ def list_absence_requests(
             query = query.filter(
                 models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id
             )
+        if status_filter is not None:
+            query = query.filter(models.AbsenceRequest.status == status_filter)
         requests = query.order_by(models.AbsenceRequest.created_at.desc()).all()
         return [_serialize_request(r, include_child_name=True) for r in requests]
 

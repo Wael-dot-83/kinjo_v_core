@@ -384,8 +384,10 @@ class KinJoAPI {
     return this.get("/api/kindergartens", queryParams);
   }
 
-  async getCitiesByGovernorate(governorate) {
-    return this.get(`/api/governorates/${encodeURIComponent(governorate)}/cities`);
+  // The backend exposes districts, not cities — `/cities` was never registered and
+  // returned 404 (a leftover of the city→district migration).
+  async getDistrictsByGovernorate(governorate) {
+    return this.get(`/api/governorates/${encodeURIComponent(governorate)}/districts`);
   }
 
   async getKindergartenClasses(kindergartenId) {
@@ -741,7 +743,9 @@ const response = await fetchWithAuth(url);
   // =========================================================================
 
   async createIncident(data) {
-    return this.post("/api/incidents/create", data);
+    // Incidents are created by POSTing the collection; /api/incidents/create
+    // was never registered.
+    return this.post("/api/incidents", data);
   }
 
   async getIncidents(params = {}) {

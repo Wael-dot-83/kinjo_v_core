@@ -146,7 +146,9 @@
 
         // ---- load requests ----
         function loadRequests() {
-            let url = '/api/attendance/absence-requests';
+            // Absence requests are served from /api/absence-requests; the
+            // /api/attendance/ prefix only exists for the create endpoint.
+            let url = '/api/absence-requests';
             if (currentFilter !== 'all') url += '?status=' + currentFilter;
 
             fetch(url, { headers: HEADERS })
@@ -201,7 +203,7 @@
                 cancelButtonText: T('تراجع', 'Go back'),
             }).then(result => {
                 if (!result.isConfirmed) return;
-                fetch(`/api/attendance/absence-requests/${id}/cancel`, { method: 'POST', headers: HEADERS })
+                fetch(`/api/absence-requests/${id}/cancel`, { method: 'POST', headers: HEADERS })
                     .then(r => { if (!r.ok) throw r; return r.json(); })
                     .then(() => { Swal.fire(T('تم', 'Done'), T('تم إلغاء الطلب', 'Request cancelled'), 'success'); loadRequests(); })
                     .catch(() => Swal.fire(T('خطأ', 'Error'), T('فشل في إلغاء الطلب', 'Failed to cancel request'), 'error'));

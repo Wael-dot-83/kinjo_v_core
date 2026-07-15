@@ -29,7 +29,7 @@ _JORDAN_TZ = timezone(timedelta(hours=3))
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, UploadFile, File, Form
 from fastapi.responses import Response, JSONResponse, StreamingResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from admin_reports_api import AdminAlertResponse, AdminAlertsListResponse
 
 from sqlalchemy.orm import Session, selectinload
@@ -3643,6 +3643,10 @@ _ACTIVITY_MAP: Dict[str, tuple] = {
     AuditAction.ADMIN_PROFILE_UPDATED:      ("تحديث إعدادات النظام",      "System settings updated",        "settings_change",  "settings"),
     AuditAction.ENROLLMENT_ACCEPTED:        ("قبول طلب تسجيل",            "Enrollment application accepted","data_update",      "operations"),
     AuditAction.ENROLLMENT_REJECTED:        ("رفض طلب تسجيل",             "Enrollment application rejected","data_update",      "operations"),
+    # Governance reminders are audited (see the /governance reminder endpoint) but
+    # were never classified, which left the feed's `governance` module filter with
+    # no rows to match and hid these events from the feed entirely.
+    AuditAction.GOVERNANCE_REMINDER_SENT:   ("إرسال تذكير حوكمة",          "Governance reminder sent",       "message_sent",     "governance"),
 }
 
 # High-risk actions escalated to "critical" regardless of their sensitivity_level.
@@ -3675,7 +3679,115 @@ _ENTITY_TYPE_LABELS: Dict[str, tuple] = {
     "EnrollmentApplication":  ("طلب تسجيل", "Enrollment Application"),
     "Message":                ("رسالة", "Message"),
     "Incident":               ("حادثة", "Incident"),
+    "GovernanceReminder":     ("تذكير حوكمة", "Governance Reminder"),
 }
+
+
+# =============================================================================
+# Custom period validation — shared by the admin endpoints that accept
+# `period=custom`. Invalid custom input previously fell back silently to the
+# endpoint's default window, so a caller asking for one range was answered with
+# a different one and had no way to tell.
+# =============================================================================
+
+# A year of daily rows is the widest window these dashboards aggregate without
+# pre-rollups; beyond it the query cost stops being interactive.
+MAX_CUSTOM_PERIOD_DAYS = 366
+
+# Accepted `period` values, per endpoint. Anything else is a 422 — these are the
+# only windows the endpoints can actually resolve.
+_ACTIVITY_PERIODS = ("today", "24h", "7d", "30d", "month", "custom")
+_KG_OVERVIEW_PERIODS = ("today", "week", "month", "custom")
+
+
+class CustomPeriodWindow(BaseModel):
+    """A validated inclusive [start_date, end_date] window."""
+
+    model_config = ConfigDict(frozen=True)
+
+    start_date: date
+    end_date: date
+
+    @model_validator(mode="after")
+    def _validate_window(self) -> "CustomPeriodWindow":
+        if self.start_date > self.end_date:
+            raise ValueError("start_date must be on or before end_date")
+        if self.inclusive_days > MAX_CUSTOM_PERIOD_DAYS:
+            raise ValueError(
+                f"custom period must not exceed {MAX_CUSTOM_PERIOD_DAYS} days "
+                f"(requested {self.inclusive_days})"
+            )
+        return self
+
+    @property
+    def inclusive_days(self) -> int:
+        return (self.end_date - self.start_date).days + 1
+
+
+def _resolve_period(
+    period: Optional[str],
+    start_date: Optional[date],
+    end_date: Optional[date],
+    *,
+    allowed: tuple,
+) -> Optional[CustomPeriodWindow]:
+    """Validate `period` and return the window when it is `custom`.
+
+    Returns None for the non-custom presets, which each endpoint resolves itself.
+    Raises 422 rather than silently substituting a different window.
+    """
+    if period is None:
+        return None
+    if period not in allowed:
+        raise HTTPException(
+            status_code=422,
+            detail=f"invalid period '{period}'; expected one of: {', '.join(allowed)}",
+        )
+    if period != "custom":
+        return None
+    if not start_date or not end_date:
+        raise HTTPException(
+            status_code=422,
+            detail="custom period requires both start_date and end_date",
+        )
+    try:
+        return CustomPeriodWindow(start_date=start_date, end_date=end_date)
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="; ".join(e["msg"].removeprefix("Value error, ") for e in exc.errors()),
+        )
+
+
+# `permission_change` is a *derived* activity type: it is not an AuditAction, so it
+# cannot appear in _ACTIVITY_MAP. It is a USER_UPDATED row whose old_data/new_data
+# disagree on `role`. The render path and the query filter must derive it from the
+# same definition — when they drift, the filter silently returns the wrong rows.
+PERMISSION_CHANGE_TYPE = "permission_change"
+
+# Base types that a derived type can steal rows from, keyed by the action involved.
+_DERIVED_FROM_ACTION = AuditAction.USER_UPDATED
+
+
+def _is_role_change(old_data, new_data) -> bool:
+    """Python classifier for PERMISSION_CHANGE_TYPE — mirrored in SQL by
+    _role_change_clause(). Both must agree or filtering breaks."""
+    old_role = (old_data or {}).get("role")
+    new_role = (new_data or {}).get("role")
+    return old_role is not None and new_role is not None and old_role != new_role
+
+
+def _role_change_clause():
+    """SQL mirror of _is_role_change().
+
+    AuditLog.old_data/new_data are generic JSON columns, so SQLAlchemy renders
+    this as `->>` on PostgreSQL and `json_extract` on SQLite — a role change is
+    therefore filterable in SQL, without persisting extra audit metadata, which
+    keeps `total` and pagination correct.
+    """
+    old_role = models.AuditLog.old_data["role"].as_string()
+    new_role = models.AuditLog.new_data["role"].as_string()
+    return and_(old_role.isnot(None), new_role.isnot(None), old_role != new_role)
 
 
 def _severity_for(action: str, sensitivity_level: Optional[int]) -> str:
@@ -3697,11 +3809,8 @@ def _activity_item_from_log(log: "models.AuditLog", actor_username: Optional[str
         return None
     msg_ar, msg_en, act_type, module_id = mapping
 
-    if action_str == AuditAction.USER_UPDATED:
-        old_role = (log.old_data or {}).get("role") if log.old_data else None
-        new_role = (log.new_data or {}).get("role") if log.new_data else None
-        if old_role is not None and new_role is not None and old_role != new_role:
-            msg_ar, msg_en, act_type = "تعديل صلاحيات مستخدم", "User permissions updated", "permission_change"
+    if action_str == _DERIVED_FROM_ACTION and _is_role_change(log.old_data, log.new_data):
+        msg_ar, msg_en, act_type = "تعديل صلاحيات مستخدم", "User permissions updated", PERMISSION_CHANGE_TYPE
 
     module_ar, module_en = _SIDEBAR_MODULE_LABELS.get(module_id, ("", ""))
     entity_ar, entity_en = _ENTITY_TYPE_LABELS.get(log.entity_type or "", (log.entity_type or "", log.entity_type or ""))
@@ -4204,6 +4313,9 @@ def get_admin_dashboard_activity(
 ):
     """Filterable, paginated recent-activity feed backing the dashboard's activity filter bar."""
     page, page_size, offset = enforce_pagination(page, page_size)
+    custom_window = _resolve_period(
+        period, start_date, end_date, allowed=_ACTIVITY_PERIODS
+    )
     now = datetime.now(_JORDAN_TZ)
     today = now.date()
 
@@ -4223,16 +4335,27 @@ def get_admin_dashboard_activity(
         query = query.filter(models.AuditLog.created_at >= now - timedelta(days=30))
     elif period == "month":
         query = query.filter(models.AuditLog.created_at >= datetime.combine(today.replace(day=1), datetime.min.time(), tzinfo=_JORDAN_TZ))
-    elif period == "custom" and start_date and end_date:
+    elif custom_window is not None:
         query = query.filter(
-            models.AuditLog.created_at >= datetime.combine(start_date, datetime.min.time(), tzinfo=_JORDAN_TZ),
-            models.AuditLog.created_at < datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=_JORDAN_TZ),
+            models.AuditLog.created_at >= datetime.combine(custom_window.start_date, datetime.min.time(), tzinfo=_JORDAN_TZ),
+            models.AuditLog.created_at < datetime.combine(custom_window.end_date + timedelta(days=1), datetime.min.time(), tzinfo=_JORDAN_TZ),
         )
 
     if activity_type:
-        query = query.filter(models.AuditLog.action.in_(
-            [a for a, m in _ACTIVITY_MAP.items() if m[2] == activity_type]
-        ))
+        if activity_type == PERMISSION_CHANGE_TYPE:
+            # Derived type: USER_UPDATED rows where the role actually changed.
+            query = query.filter(
+                models.AuditLog.action == _DERIVED_FROM_ACTION,
+                _role_change_clause(),
+            )
+        else:
+            base_actions = [a for a, m in _ACTIVITY_MAP.items() if m[2] == activity_type]
+            query = query.filter(models.AuditLog.action.in_(base_actions))
+            if _DERIVED_FROM_ACTION in base_actions:
+                # Role changes render as `permission_change`, so they must not also
+                # come back under `user_update` — the filter would disagree with the
+                # `type` on every returned item.
+                query = query.filter(~_role_change_clause())
 
     if module:
         query = query.filter(models.AuditLog.action.in_(
@@ -4429,6 +4552,8 @@ _OCCUPANCY_NEAR = 95.0
 def get_kg_overview(
     request: Request,
     period: str = Query("month", description="Filter period: today, week, month, custom"),
+    start_date: Optional[date] = Query(None, description="Start date (required when period=custom)"),
+    end_date: Optional[date] = Query(None, description="End date (required when period=custom)"),
     governorate: Optional[str] = Query(None, description="Filter by governorate"),
     city: Optional[str] = Query(None, description="Filter by city (mapped to district)"),
     kindergarten_id: Optional[int] = Query(None, description="Filter by specific kindergarten"),
@@ -4438,19 +4563,22 @@ def get_kg_overview(
     db: Session = Depends(get_db)
 ):
     """Get comprehensive kindergarten overview with KPIs, health cards, charts, and alerts."""
+    custom_window = _resolve_period(
+        period, start_date, end_date, allowed=_KG_OVERVIEW_PERIODS
+    )
     now = datetime.now(_JORDAN_TZ)
     today = now.date()
 
-    if period == "today":
+    if custom_window is not None:
+        date_start = custom_window.start_date
+        date_end = custom_window.end_date
+    elif period == "today":
         date_start = today
         date_end = today
     elif period == "week":
         date_start = today - timedelta(days=6)
         date_end = today
-    elif period == "month":
-        date_start = today - timedelta(days=29)
-        date_end = today
-    else:
+    else:  # "month"
         date_start = today - timedelta(days=29)
         date_end = today
 

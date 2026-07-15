@@ -821,8 +821,8 @@ breadcrumbs=[
         cityFilter.disabled = true;
 
         try {
-            const data = await api.getCitiesByGovernorate(governorate);
-            const cities = data.cities || [];
+            const data = await api.getDistrictsByGovernorate(governorate);
+            const cities = data.districts || [];
             _citiesCache[governorate] = cities;
             populateCityDropdown(cities);
         } catch (err) {
