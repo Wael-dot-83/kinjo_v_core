@@ -158,6 +158,10 @@
         <p class="mb-0" id="alertNearCapacityList"></p>
       </div>
     </div>
+    <!-- Alerts the API reports that have no dedicated block above: licence expiry,
+         pending applications, pending reports. Rendered from the `alerts` payload so
+         a new server-side alert type shows up here instead of vanishing. -->
+    <div id="alertsFromApi" hidden></div>
     <div id="alertsAllClear" class="alert py-2 alert-success" hidden>
       <div>
         <p class="mb-0">{% if ui_lang == 'en' %}No operational alerts — everything looks good.{% else %}لا توجد تنبيهات تشغيلية — كل شيء على ما يرام.{% endif %}</p>
@@ -232,7 +236,35 @@ async function loadDashboard() {
                 nearCap.map(c => `${nameOf(c)} (${c.occupied}/${c.capacity})`).join('، ');
             document.getElementById('alertNearCapacity').hidden = false;
         }
-        document.getElementById('alertsAllClear').hidden = Boolean(noSup.length || nearCap.length);
+        // The API's own alerts (licence expiry, pending applications, pending
+        // reports) had no consumer: this page only ever read the two class lists, so
+        // a kindergarten whose licence had expired — with its classes fully staffed
+        // and under capacity — rendered the green "no operational alerts" banner.
+        const apiAlerts = Array.isArray(d.alerts) ? d.alerts : [];
+        const PRIORITY_CLASS = { critical: 'alert-danger', high: 'alert-warning', medium: 'alert-info' };
+        // Alert types with a dedicated block above; rendering them again would duplicate.
+        const RENDERED_ABOVE = new Set(['classes_without_supervisor', 'classes_near_capacity']);
+        const extra = apiAlerts.filter(a => !RENDERED_ABOVE.has(a && a.type));
+        const apiBox = document.getElementById('alertsFromApi');
+        if (extra.length) {
+            const isEn = (window.KINJO_LANG || 'ar') === 'en';
+            apiBox.innerHTML = extra.map(a => {
+                // message_ar/message_en are the bilingual fields; `message` is the
+                // English-only compatibility alias, so it is the last resort.
+                const text = isEn ? (a.message_en || a.message) : (a.message_ar || a.message);
+                const cls = PRIORITY_CLASS[a.priority] || 'alert-info';
+                const div = document.createElement('div');
+                div.className = `alert ${cls}`;
+                div.textContent = text || '';
+                return div.outerHTML;
+            }).join('');
+            apiBox.hidden = false;
+        } else {
+            apiBox.hidden = true;
+            apiBox.innerHTML = '';
+        }
+        document.getElementById('alertsAllClear').hidden =
+            Boolean(noSup.length || nearCap.length || extra.length);
 
         loading.hidden = true;
         content.hidden = false;
