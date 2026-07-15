@@ -452,6 +452,119 @@ h6 {
   padding-top: 0.5rem;
 }
 
+/* ---------------------------------------------------------------------------
+   Sidebar component internals (templates/components/sidebar.html)
+
+   2ccf4401 rewrote that component onto these class names and shipped their styles
+   in static/css/sidebar-professional.css — but never linked that file from base.html,
+   the only template that includes the sidebar. 8bc64640 then removed the file as an
+   unreferenced orphan, which it genuinely was. The markup has had no styles since:
+   .sidebar-menu kept the browser's default list bullets and indent, and the header and
+   profile blocks were unstyled, on all 60 templates that extend base.html.
+
+   These rules live here, next to the .sidebar and .sidebar .nav-link rules they belong
+   with, rather than restoring that file: it was written for a CSS Grid shell and a light
+   yellow palette that predates the brand-token unification in d532d33f.
+   --------------------------------------------------------------------------- */
+/* Colours below intentionally track the dark-slate tokens from the "Design Enhancement
+   Layer v3.0" further down this file (--kinjo-sidebar-*), which is the authoritative
+   sidebar theme: it restyles .sidebar .nav-link to light-on-dark with !important. The
+   older light .sidebar rules above are dead weight kept only for the legacy class names.
+   The equivalent v3.0 rules for the profile block target .sidebar-user-card /
+   .sidebar-role-badge — names 2ccf4401 renamed out of the markup — so they no longer
+   match anything either. */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 0.8rem 0.75rem;
+}
+
+.sidebar-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  max-width: 100%;
+}
+
+.sidebar-logo img {
+  max-width: 100%;
+  height: auto;
+}
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  margin-inline: 0.75rem;
+  margin-block-end: 0.75rem;
+  padding: 0.7rem 0.8rem;
+}
+
+.sidebar-profile-avatar {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--kinjo-sidebar-active-text, #a8d4c4);
+  background: rgba(31, 94, 71, 0.2);
+  border: 1px solid rgba(31, 94, 71, 0.3);
+}
+
+/* min-width:0 lets the ellipsis below actually engage inside the flex row */
+.sidebar-profile-info {
+  min-width: 0;
+}
+
+.sidebar-profile-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #f9fafb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-profile-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-block-start: 0.15rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--kinjo-sidebar-muted, #cbd5e1);
+}
+
+.sidebar-nav {
+  padding-block-end: 1rem;
+}
+
+/* The bullets and the ~2rem inline indent came from the browser default here. */
+.sidebar-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar-section {
+  list-style: none;
+  margin-block-start: 0.75rem;
+  padding-inline: 0.9rem;
+}
+
+.sidebar-section .sidebar-section-title {
+  margin: 0;
+}
+
 .sidebar-divider {
   height: 1px;
   background-color: #e8eef7;
@@ -1248,14 +1361,21 @@ body.sidebar-open .sidebar-backdrop {
   }
 
   html[dir="rtl"] .sidebar {
-    inset-inline-start: auto;
-    inset-inline-end: 0;
+    /* inset-inline-* already flips with direction, so the base rule above puts the drawer
+       on the correct edge in RTL. Re-stating it here inverted (start:auto / end:0) pinned
+       the drawer to the left edge instead, and then translateX(102%) slid it toward the
+       middle — leaving a permanent sliver of it on screen while "closed". Only the
+       transform needs an RTL variant: transforms do not flip with direction. */
     transform: translateX(102%);
     border-inline-end: 0;
     border-inline-start: 1px solid rgba(15, 23, 42, 0.12);
   }
 
-  .sidebar.show {
+  .sidebar.show,
+  /* `html[dir="rtl"] .sidebar` (0,2,1) outranks a bare `.sidebar.show` (0,2,0), so without
+     an RTL-qualified selector here the drawer keeps its closed transform and never slides
+     in on Arabic — which is the default language. */
+  html[dir="rtl"] .sidebar.show {
     transform: translateX(0);
   }
 
@@ -2411,7 +2531,13 @@ body.sidebar-open .sidebar-backdrop {
   --kinjo-sidebar-accent:   #2F7D62;
 }
 
+/* This layer restyles the sidebar's text to light-on-dark (--kinjo-sidebar-text is
+   #d1d5db), but --kinjo-sidebar-bg was only ever painted onto .sidebar inside the
+   max-width:767.98px block near the end of this file. Above 768px the sidebar therefore
+   had no background at all and rendered near-white link text on the page's white surface
+   — roughly 1.4:1 contrast. The background belongs at every width, not just on mobile. */
 .sidebar {
+  background-color: var(--kinjo-sidebar-bg) !important;
   border-inline-end: 1px solid var(--kinjo-sidebar-border) !important;
 }
 html[dir="rtl"] .sidebar {

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'manager_base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}{% endblock %}
 
@@ -150,6 +150,39 @@
 <script>
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
+
+    // formatDate and getStatusBadge are defined locally: manager_base.html does not load
+    // kinjo-app.js (which is where those globals live), and pulling that whole script in
+    // for two helpers would drag its unrelated globals along with it. showToast is not
+    // repeated here — admin_components.js, which manager_base.html does load, defines it.
+    const formatDate = (value) => {
+        if (!value) return '—';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString(IS_EN ? 'en-JO' : 'ar-JO', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+    };
+
+    // Keys are the EnrollmentStatus members in models.py. The API sends them UPPERCASE,
+    // so normalise before lookup rather than assuming the case.
+    const ENROLLMENT_STATUS_BADGES = {
+        draft:          { cls: 'bg-secondary', text: T('مسودة', 'Draft') },
+        submitted:      { cls: 'bg-info',      text: T('مُقدم', 'Submitted') },
+        pending_review: { cls: 'bg-warning',   text: T('قيد المراجعة', 'Pending review') },
+        accepted:       { cls: 'bg-success',   text: T('مقبول', 'Accepted') },
+        rejected:       { cls: 'bg-danger',    text: T('مرفوض', 'Rejected') },
+        withdrawn:      { cls: 'bg-dark',      text: T('منسحب', 'Withdrawn') },
+        waitlisted:     { cls: 'bg-warning',   text: T('قائمة انتظار', 'Waitlisted') },
+        active:         { cls: 'bg-success',   text: T('نشط', 'Active') },
+    };
+
+    const getStatusBadge = (status) => {
+        const key = String(status ?? '').toLowerCase();
+        const info = ENROLLMENT_STATUS_BADGES[key]
+            || { cls: 'bg-secondary', text: status || '—' };
+        return `<span class="badge ${info.cls}">${info.text}</span>`;
+    };
 
     let enrollments = [];
     let currentEnrollmentId = null;

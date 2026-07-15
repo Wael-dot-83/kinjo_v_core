@@ -6,13 +6,15 @@
 {% block title %}{% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}{% endblock %}
 
 {% block page_header %}
+{# Macro arguments are an expression context: Jinja does not evaluate {% %} tags inside a
+   string literal, so these printed raw to the page. Use inline conditionals. #}
 {{ page_header(
-title="{% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}",
+title=('Register New Child' if ui_lang == 'en' else 'تسجيل طفل جديد'),
 icon="bi-person-plus",
 breadcrumbs=[
-{"label": "{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}", "url": "/dashboard"},
-{"label": "{% if ui_lang == 'en' %}Enrollment{% else %}التسجيل{% endif %}", "url": "/enrollments"},
-{"label": "{% if ui_lang == 'en' %}New Request{% else %}طلب جديد{% endif %}", "url": None}
+{"label": ('Dashboard' if ui_lang == 'en' else 'لوحة التحكم'), "url": "/dashboard"},
+{"label": ('Enrollment' if ui_lang == 'en' else 'التسجيل'), "url": "/enrollments"},
+{"label": ('New Request' if ui_lang == 'en' else 'طلب جديد'), "url": None}
 ]
 ) }}
 {% endblock %}
@@ -222,8 +224,9 @@ breadcrumbs=[
                                 {{ gender_select(id="childGender") }}
                             </div>
                             <div class="col-md-6 mb-3">
-                                {{ date_input(name="date_of_birth", id="childDob", label="{% if ui_lang == 'en' %}Date of Birth{% else %}تاريخ الميلاد{% endif %}",
-                                invalid_feedback="{% if ui_lang == 'en' %}Please enter date of birth{% else %}يرجى إدخال تاريخ الميلاد{% endif %}") }}
+                                {{ date_input(name="date_of_birth", id="childDob",
+                                label=('Date of Birth' if ui_lang == 'en' else 'تاريخ الميلاد'),
+                                invalid_feedback=('Please enter date of birth' if ui_lang == 'en' else 'يرجى إدخال تاريخ الميلاد')) }}
                                 <div id="ageDisplay" class="form-text"></div>
                             </div>
                         </div>
@@ -354,8 +357,9 @@ breadcrumbs=[
                         <button type="button" class="btn btn-outline-secondary" onclick="goToStep(3)">
                             <i class="bi bi-arrow-right me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                         </button>
-                        {{ submit_button(label="{% if ui_lang == 'en' %}Submit Request{% else %}إرسال الطلب{% endif %}", loading_label="{% if ui_lang == 'en' %}Submitting...{% else %}جاري الإرسال...{% endif %}", btn_class="btn-success
-                        btn-lg") }}
+                        {{ submit_button(label=('Submit Request' if ui_lang == 'en' else 'إرسال الطلب'),
+                        loading_label=('Submitting...' if ui_lang == 'en' else 'جاري الإرسال...'),
+                        btn_class="btn-success btn-lg") }}
                     </div>
                 </div>
             </div>
