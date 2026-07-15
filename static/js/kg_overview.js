@@ -412,7 +412,25 @@ class KgOverview {
   async #loadOverviewData() {
     const params = new URLSearchParams();
     const period = this.#store.get('period');
-    if (period && period !== 'all') params.set('period', period);
+    if (period && period !== 'all') {
+      if (period === 'custom') {
+        // The custom range was never sent to the server, so picking dates
+        // silently returned the default 30-day window instead. The API needs
+        // both bounds; without them fall back to the month preset rather than
+        // asking for a window we cannot specify.
+        const from = document.getElementById('ko-date-from')?.value;
+        const to = document.getElementById('ko-date-to')?.value;
+        if (from && to) {
+          params.set('period', 'custom');
+          params.set('start_date', from);
+          params.set('end_date', to);
+        } else {
+          params.set('period', 'month');
+        }
+      } else {
+        params.set('period', period);
+      }
+    }
     const response = await fetchWithAuth(`/api/admin/kg-overview?${params.toString()}`);
     if (!response) return;
     const payload = await response.json();
@@ -507,9 +525,13 @@ class KgOverview {
       });
     });
 
-    /* Date range */
+    /* Date range — the server resolves the custom window, so a date change must
+       refetch; #onFilterChange only re-filters what is already loaded. */
     ['ko-date-from','ko-date-to'].forEach(id => {
-      document.getElementById(id)?.addEventListener('change', () => this.#onFilterChange());
+      document.getElementById(id)?.addEventListener('change', () => {
+        if (this.#store.get('period') === 'custom') this.#onPeriodChange();
+        else this.#onFilterChange();
+      });
     });
 
     /* Governorate filter */
