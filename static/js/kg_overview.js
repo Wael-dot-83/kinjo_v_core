@@ -367,6 +367,11 @@ class KgOverview {
 
     this.#store = new KoStore({
       period:     saved.period     || 'month',
+      // The custom range lives in the store, not only in the inputs: the control
+      // bar is built *after* the first load, so reading the DOM during a load
+      // would find nothing on a reload with period='custom' persisted.
+      dateFrom:   saved.dateFrom   || this.#today(-30),
+      dateTo:     saved.dateTo     || this.#today(0),
       govFilter:  saved.govFilter  || 'all',
       kgFilter:   saved.kgFilter   || 'all',
       kgs:        [],
@@ -415,11 +420,11 @@ class KgOverview {
     if (period && period !== 'all') {
       if (period === 'custom') {
         // The custom range was never sent to the server, so picking dates
-        // silently returned the default 30-day window instead. The API needs
-        // both bounds; without them fall back to the month preset rather than
-        // asking for a window we cannot specify.
-        const from = document.getElementById('ko-date-from')?.value;
-        const to = document.getElementById('ko-date-to')?.value;
+        // silently returned the default 30-day window instead. Read the range
+        // from the store — the control bar is built after the first load, so the
+        // inputs do not exist yet on a reload with period='custom' persisted.
+        const from = this.#store.get('dateFrom');
+        const to = this.#store.get('dateTo');
         if (from && to) {
           params.set('period', 'custom');
           params.set('start_date', from);
@@ -475,10 +480,10 @@ class KgOverview {
 
       <div class="ko-date-range" id="ko-date-range-wrap" style="${cur !== 'custom' ? 'display:none' : ''}">
         <input type="date" class="ko-date-input" id="ko-date-from"
-               value="${this.#today(-30)}" aria-label="${isAr ? 'من' : 'From'}">
+               value="${this.#store.get('dateFrom')}" aria-label="${isAr ? 'من' : 'From'}">
         <span class="text-muted" style="font-size:.8rem">→</span>
         <input type="date" class="ko-date-input" id="ko-date-to"
-               value="${this.#today(0)}" aria-label="${isAr ? 'إلى' : 'To'}">
+               value="${this.#store.get('dateTo')}" aria-label="${isAr ? 'إلى' : 'To'}">
       </div>
 
       <select class="ko-filter-select" id="ko-gov-filter" aria-label="${isAr ? 'المحافظة' : 'Governorate'}">
@@ -527,8 +532,9 @@ class KgOverview {
 
     /* Date range — the server resolves the custom window, so a date change must
        refetch; #onFilterChange only re-filters what is already loaded. */
-    ['ko-date-from','ko-date-to'].forEach(id => {
-      document.getElementById(id)?.addEventListener('change', () => {
+    [['ko-date-from', 'dateFrom'], ['ko-date-to', 'dateTo']].forEach(([id, key]) => {
+      document.getElementById(id)?.addEventListener('change', e => {
+        this.#store.set({ [key]: e.target.value });
         if (this.#store.get('period') === 'custom') this.#onPeriodChange();
         else this.#onFilterChange();
       });
@@ -1411,6 +1417,10 @@ class KgOverview {
   #savePrefs() {
     KoPersist.save({
       period:     this.#store.get('period'),
+      // Persisted alongside `period`: restoring period='custom' without its dates
+      // would silently resolve to a different window than the bar displays.
+      dateFrom:   this.#store.get('dateFrom'),
+      dateTo:     this.#store.get('dateTo'),
       govFilter:  this.#store.get('govFilter'),
       theme:      this.#store.get('theme'),
       hiddenKPIs: this.#store.get('hiddenKPIs'),

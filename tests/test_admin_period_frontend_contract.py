@@ -53,40 +53,75 @@ class TestActivityFilterBar:
 
 
 class TestKgOverviewControlBar:
+    @staticmethod
+    def _loader_body(src):
+        loader = re.search(r"#loadOverviewData\(\)\s*\{(.*?)\n  \}", src, re.S)
+        assert loader, "#loadOverviewData not found"
+        return loader.group(1)
+
     def test_custom_period_sends_both_dates(self, kg_overview_src):
         """Regression: the Custom button sent `period=custom` with no dates, so the
         server silently used its 30-day default and the date inputs did nothing."""
-        assert "ko-date-from" in kg_overview_src and "ko-date-to" in kg_overview_src
-        loader = re.search(
-            r"#loadOverviewData\(\)\s*\{(.*?)\n  \}", kg_overview_src, re.S
-        )
-        assert loader, "#loadOverviewData not found"
-        body = loader.group(1)
-        assert "ko-date-from" in body and "ko-date-to" in body, (
-            "#loadOverviewData must read the custom date inputs — otherwise the "
-            "chosen range is never sent to the server"
-        )
+        body = self._loader_body(kg_overview_src)
         assert "start_date" in body and "end_date" in body, (
             "#loadOverviewData must send start_date/end_date for period=custom"
         )
 
-    def test_incomplete_custom_range_does_not_request_custom(self, kg_overview_src):
-        loader = re.search(
-            r"#loadOverviewData\(\)\s*\{(.*?)\n  \}", kg_overview_src, re.S
+    def test_loader_reads_the_range_from_the_store_not_the_dom(self, kg_overview_src):
+        """init() loads data *before* #buildControlBar(), so the date inputs do not
+        exist during the first load. Reading the DOM there meant a persisted
+        period='custom' silently fell back to the month window while the control bar
+        rendered "Custom" as active — the UI showing one range and the data another.
+        """
+        body = self._loader_body(kg_overview_src)
+        assert "getElementById" not in body, (
+            "#loadOverviewData must not read the DOM: it runs before the control "
+            "bar exists, so the inputs would be null on a reload"
         )
-        body = loader.group(1)
-        assert re.search(r"if\s*\(from\s*&&\s*to\)", body), (
-            "period=custom must only be sent when both dates are present"
+        assert "dateFrom" in body and "dateTo" in body, (
+            "#loadOverviewData must read the custom range from the store"
         )
 
-    def test_changing_a_custom_date_refetches(self, kg_overview_src):
-        """The server resolves the window, so a date change must refetch rather
-        than only re-filtering the rows already in memory."""
+    def test_init_loads_before_building_the_control_bar(self, kg_overview_src):
+        """Pins the ordering the store-based fix depends on. If the control bar is
+        ever built first it must be re-verified that its dropdowns, which read the
+        loaded `kgs`, are still populated."""
+        init = re.search(r"async init\(\)\s*\{(.*?)\n  \}", kg_overview_src, re.S)
+        assert init, "init() not found"
+        body = init.group(1)
+        assert body.index("#loadOverviewData") < body.index("#buildControlBar"), (
+            "init() order changed — re-check that #loadOverviewData no longer "
+            "depends on control-bar DOM and that the filter dropdowns still populate"
+        )
+
+    def test_custom_range_is_persisted_with_the_period(self, kg_overview_src):
+        """Persisting `period='custom'` without its dates is what let a reload
+        resolve to a different window than the bar displayed."""
+        prefs = re.search(r"#savePrefs\(\)\s*\{(.*?)\n  \}", kg_overview_src, re.S)
+        assert prefs, "#savePrefs not found"
+        body = prefs.group(1)
+        assert "dateFrom" in body and "dateTo" in body, (
+            "#savePrefs must persist the custom range alongside `period`"
+        )
+
+    def test_store_seeds_the_custom_range(self, kg_overview_src):
+        """The store must always hold a usable range, so period=custom can never be
+        restored without dates."""
+        assert re.search(r"dateFrom:\s*saved\.dateFrom\s*\|\|", kg_overview_src)
+        assert re.search(r"dateTo:\s*saved\.dateTo\s*\|\|", kg_overview_src)
+
+    def test_changing_a_custom_date_syncs_the_store_and_refetches(self, kg_overview_src):
+        """The server resolves the window, so a date change must reach the store
+        (which the loader reads) and refetch — not just re-filter rows in memory."""
         handler = re.search(
-            r"\['ko-date-from','ko-date-to'\]\.forEach\((.*?)\}\);", kg_overview_src, re.S
+            r"\[\['ko-date-from', 'dateFrom'\], \['ko-date-to', 'dateTo'\]\]\.forEach\("
+            r"([\s\S]*?)\n    \}\);",
+            kg_overview_src,
         )
         assert handler, "date-range change handler not found"
-        assert "#onPeriodChange" in handler.group(1), (
+        body = handler.group(1)
+        assert "#store.set" in body, "a date change must update the store"
+        assert "#onPeriodChange" in body, (
             "a custom date change must trigger a refetch (#onPeriodChange), not "
             "just #onFilterChange"
         )

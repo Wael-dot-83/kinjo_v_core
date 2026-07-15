@@ -1186,7 +1186,10 @@
 
     async function deleteKindergarten() {
         try {
-            const response = await fetch(`/api/kindergartens/${kindergartenId}`, {
+            // Deletion is only registered under /api/admin (the button is already
+            // admin-only); DELETE /api/kindergartens/{id} was never a route, so this
+            // returned 405 and the delete never worked.
+            const response = await fetch(`/api/admin/kindergartens/${kindergartenId}`, {
                 method: 'DELETE',
                 headers: getHeaders()
             });
@@ -1197,7 +1200,9 @@
                 showToast(result.message, 'success');
                 setTimeout(() => window.location.href = '/kindergartens', 1000);
             } else {
-                showToast(result.detail || T('فشل في الحذف', 'Delete failed'), 'error');
+                // The admin API answers with a {success, data, message} envelope;
+                // `detail` is FastAPI's own error shape.
+                showToast(result.message || result.detail || T('فشل في الحذف', 'Delete failed'), 'error');
             }
         } catch (error) {
             console.error('Delete error:', error);
