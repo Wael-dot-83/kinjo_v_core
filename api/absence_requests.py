@@ -164,20 +164,21 @@ def list_absence_requests(
             query = query.filter(models.AbsenceRequest.status == status_filter)
         requests = query.order_by(models.AbsenceRequest.created_at.desc()).all()
         return [_serialize_request(r) for r in requests]
-    else:
-        # Manager: own kindergarten only (no silent unscoped fallback).
-        # Admin: read-only national view.
+    if current_user.role == models.UserRole.MANAGER:
+        if current_user.kindergarten_id is None:
+            raise HTTPException(status_code=403, detail="No kindergarten is associated with this manager account")
+        query = db.query(models.AbsenceRequest).filter(
+            models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id
+        )
+    elif current_user.role == models.UserRole.ADMIN:
         query = db.query(models.AbsenceRequest)
-        if current_user.role != models.UserRole.ADMIN:
-            if current_user.kindergarten_id is None:
-                raise HTTPException(status_code=403, detail="No kindergarten is associated with this account")
-            query = query.filter(
-                models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id
-            )
-        if status_filter is not None:
-            query = query.filter(models.AbsenceRequest.status == status_filter)
-        requests = query.order_by(models.AbsenceRequest.created_at.desc()).all()
-        return [_serialize_request(r, include_child_name=True) for r in requests]
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized to view absence requests")
+
+    if status_filter is not None:
+        query = query.filter(models.AbsenceRequest.status == status_filter)
+    requests = query.order_by(models.AbsenceRequest.created_at.desc()).all()
+    return [_serialize_request(r, include_child_name=True) for r in requests]
 
 
 # ── GET /absence-requests/{id} ──────────────────────────────────────
@@ -188,19 +189,34 @@ def get_absence_request(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    absence = db.query(models.AbsenceRequest).filter(
-        models.AbsenceRequest.id == request_id
-    ).first()
-    if not absence:
-        raise HTTPException(status_code=404, detail="Absence request not found")
-
-    # Scope check
     if current_user.role == models.UserRole.PARENT:
+        absence = db.query(models.AbsenceRequest).filter(
+            models.AbsenceRequest.id == request_id
+        ).first()
+        if not absence:
+            raise HTTPException(status_code=404, detail="Absence request not found")
         parent_profile = db.query(models.ParentProfile).filter(
             models.ParentProfile.user_id == current_user.id
         ).first()
         if not parent_profile or absence.parent_id != parent_profile.id:
             raise HTTPException(status_code=404, detail="Absence request not found")
+    elif current_user.role == models.UserRole.MANAGER:
+        if current_user.kindergarten_id is None:
+            raise HTTPException(status_code=403, detail="No kindergarten is associated with this manager account")
+        absence = db.query(models.AbsenceRequest).filter(
+            models.AbsenceRequest.id == request_id,
+            models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id,
+        ).first()
+        if not absence:
+            raise HTTPException(status_code=404, detail="Absence request not found")
+    elif current_user.role == models.UserRole.ADMIN:
+        absence = db.query(models.AbsenceRequest).filter(
+            models.AbsenceRequest.id == request_id
+        ).first()
+        if not absence:
+            raise HTTPException(status_code=404, detail="Absence request not found")
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized to view absence requests")
 
     data = _serialize_request(absence, include_child_name=True)
     return data

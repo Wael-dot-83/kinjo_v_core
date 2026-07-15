@@ -207,3 +207,20 @@ class TestUiFilterOptionsAreAnswerable:
         backend_modules = {m[3] for m in admin_endpoints._ACTIVITY_MAP.values()}
         unbacked = set(self._js_option_values("MODULE_OPTIONS")) - backend_modules
         assert not unbacked, f"UI offers module values the backend cannot return: {sorted(unbacked)}"
+
+
+class TestInvalidActivityFilters:
+    @pytest.mark.parametrize(
+        "parameter",
+        ["activity_type", "module", "status", "severity"],
+    )
+    def test_unknown_filter_value_is_rejected(
+        self, client, admin_user, auth_headers_admin, parameter
+    ):
+        response = client.get(
+            ACTIVITY_URL,
+            params={parameter: "not-a-real-filter"},
+            headers=auth_headers_admin,
+        )
+        assert response.status_code == 422, response.text
+        assert parameter in response.json()["detail"]

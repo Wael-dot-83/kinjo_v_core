@@ -4312,6 +4312,31 @@ def get_admin_dashboard_activity(
     db: Session = Depends(get_db),
 ):
     """Filterable, paginated recent-activity feed backing the dashboard's activity filter bar."""
+    allowed_activity_types = {mapping[2] for mapping in _ACTIVITY_MAP.values()} | {
+        PERMISSION_CHANGE_TYPE
+    }
+    allowed_modules = {mapping[3] for mapping in _ACTIVITY_MAP.values()}
+    if activity_type is not None and activity_type not in allowed_activity_types:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported activity_type: {activity_type}",
+        )
+    if module is not None and module not in allowed_modules:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported module: {module}",
+        )
+    if status_filter is not None and status_filter not in {"success", "failed"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported status: {status_filter}",
+        )
+    if severity is not None and severity not in {"low", "medium", "high", "critical"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported severity: {severity}",
+        )
+
     page, page_size, offset = enforce_pagination(page, page_size)
     custom_window = _resolve_period(
         period, start_date, end_date, allowed=_ACTIVITY_PERIODS

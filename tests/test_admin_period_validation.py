@@ -12,12 +12,16 @@ their default window:
 Answering a different question than the caller asked, with a 200, is the defect
 these tests pin down.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 
+import models
+from audit_actions import AuditAction
+
 ACTIVITY_URL = "/api/admin/dashboard/activity"
 KG_OVERVIEW_URL = "/api/admin/kg-overview"
+_JORDAN_TZ = timezone(timedelta(hours=3))
 
 
 class TestActivityPeriodValidation:
@@ -78,6 +82,64 @@ class TestActivityPeriodValidation:
             headers=auth_headers_admin,
         )
         assert r.status_code == 200, r.text
+
+    def test_custom_range_includes_both_calendar_day_boundaries(
+        self, client, test_db, admin_user, auth_headers_admin
+    ):
+        start = date(2026, 5, 10)
+        end = date(2026, 5, 11)
+        rows = [
+            models.AuditLog(
+                user_id=admin_user.id,
+                action=AuditAction.USER_CREATED,
+                entity_type="User",
+                entity_id=admin_user.id,
+                created_at=datetime.combine(start, time.min, tzinfo=_JORDAN_TZ),
+            ),
+            models.AuditLog(
+                user_id=admin_user.id,
+                action=AuditAction.USER_CREATED,
+                entity_type="User",
+                entity_id=admin_user.id,
+                created_at=datetime.combine(end, time.max, tzinfo=_JORDAN_TZ),
+            ),
+            models.AuditLog(
+                user_id=admin_user.id,
+                action=AuditAction.USER_CREATED,
+                entity_type="User",
+                entity_id=admin_user.id,
+                created_at=datetime.combine(start - timedelta(days=1), time.max, tzinfo=_JORDAN_TZ),
+            ),
+            models.AuditLog(
+                user_id=admin_user.id,
+                action=AuditAction.USER_CREATED,
+                entity_type="User",
+                entity_id=admin_user.id,
+                created_at=datetime.combine(end + timedelta(days=1), time.min, tzinfo=_JORDAN_TZ),
+            ),
+        ]
+        test_db.add_all(rows)
+        test_db.commit()
+
+        response = client.get(
+            ACTIVITY_URL,
+            params={
+                "period": "custom",
+                "start_date": start.isoformat(),
+                "end_date": end.isoformat(),
+                "activity_type": "user_create",
+            },
+            headers=auth_headers_admin,
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["total"] == 2
+        returned_dates = {
+            datetime.fromisoformat(item["timestamp"]).date()
+            for item in body["items"]
+        }
+        assert returned_dates == {start, end}
 
     @pytest.mark.parametrize("period", ["today", "24h", "7d", "30d", "month"])
     def test_preset_periods_still_work(self, client, admin_user, auth_headers_admin, period):

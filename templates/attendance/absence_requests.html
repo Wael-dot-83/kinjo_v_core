@@ -223,7 +223,7 @@
                 reason: document.getElementById('reason').value,
             };
 
-            fetch('/api/attendance/absence-requests', { method: 'POST', headers: HEADERS, body: JSON.stringify(body) })
+            fetch('/api/absence-requests', { method: 'POST', headers: HEADERS, body: JSON.stringify(body) })
                 .then(r => {
                     if (!r.ok) return r.json().then(d => { throw d; });
                     return r.json();
