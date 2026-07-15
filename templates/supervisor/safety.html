@@ -98,9 +98,14 @@
         </select>
         <select id="filterStatus" class="form-select form-select-sm w-auto"
                 aria-label="{{ _('تصفية حسب الحالة') }}">
+            {# Values are IncidentStatus names (models.py). UNDER_REVIEW was not one of
+               them, and the two middle states were missing entirely, so an incident
+               under investigation or awaiting action could not be filtered for at all. #}
             <option value="">{{ _('— جميع الحالات —') }}</option>
             <option value="OPEN">{{ _('مفتوح') }}</option>
-            <option value="UNDER_REVIEW">{{ _('تحت المراجعة') }}</option>
+            <option value="UNDER_INVESTIGATION">{{ _('تحت التحقيق') }}</option>
+            <option value="ACTION_REQUIRED">{{ _('يتطلب إجراء') }}</option>
+            <option value="RESOLVED">{{ _('تم الحل') }}</option>
             <option value="CLOSED">{{ _('مُغلق') }}</option>
         </select>
         <button class="btn btn-primary btn-sm" onclick="loadIncidents()">

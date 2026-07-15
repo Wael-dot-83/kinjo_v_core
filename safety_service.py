@@ -112,6 +112,33 @@ def create_incident(
     return incident
 
 
+def _resolve_enum(enum_cls, raw: str, field: str):
+    """Resolve a query-string filter to an enum by NAME or VALUE, or 422.
+
+    Two separate bugs met here. `IncidentStatus` is the one enum in this module whose
+    names and values differ (OPEN = "Open"), while SeverityLevel and IncidentType have
+    name == value. Calling `IncidentStatus(raw)` looks up by *value*, so the UI's own
+    dropdown — which sends the names OPEN / UNDER_REVIEW / CLOSED
+    (templates/supervisor/safety.html) — never matched. And an unknown value raised a
+    bare ValueError out of the handler, which is a 500: an unrecognised filter is bad
+    input, not a server fault, so picking any status crashed the page.
+
+    Accepting either spelling keeps the existing callers working without a migration,
+    and anything genuinely unknown now gets a 422 naming the valid options.
+    """
+    candidate = (raw or "").strip()
+    for member in enum_cls:
+        if candidate == member.value or candidate.upper() == member.name:
+            return member
+    raise HTTPException(
+        status_code=422,
+        detail=(
+            f"invalid {field} '{raw}'. Valid values: "
+            + ", ".join(sorted({m.name for m in enum_cls} | {m.value for m in enum_cls}))
+        ),
+    )
+
+
 @router.get("/incidents")
 def list_incidents(
     child_id: Optional[int] = None,
@@ -150,10 +177,14 @@ def list_incidents(
         query = query.filter(models.Incident.child_id == child_id)
     
     if severity:
-        query = query.filter(models.Incident.severity_level == models.SeverityLevel(severity.upper()))
-        
+        query = query.filter(
+            models.Incident.severity_level == _resolve_enum(models.SeverityLevel, severity, "severity")
+        )
+
     if status:
-        query = query.filter(models.Incident.status == models.IncidentStatus(status))
+        query = query.filter(
+            models.Incident.status == _resolve_enum(models.IncidentStatus, status, "status")
+        )
         
     if search:
         search_term = f"%{search}%"
