@@ -29,8 +29,10 @@
             <i class="bi bi-snow me-2"></i><span id="freezeBtnLabel">{% if ui_lang == 'en' %}Freeze{% else %}تجميد{% endif %}</span>
         </button>
         {% endif %}
+        {# The endpoint soft-deletes (status=DELETED + deleted_at) and refuses while
+           active enrollments or staff remain, so this is not a permanent erase. #}
         <button class="btn btn-danger" onclick="confirmDelete()" id="deleteBtn" style="display: none;">
-            <i class="bi bi-trash me-2"></i>{% if ui_lang == 'en' %}Delete Permanently{% else %}حذف نهائي{% endif %}
+            <i class="bi bi-trash me-2"></i>{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}
         </button>
     </div>
 </div>
@@ -1158,7 +1160,10 @@
     }
 
     function confirmDelete() {
-        if (confirm(T('هل أنت متأكد من حذف هذه الحضانة نهائياً؟ لا يمكن التراجع عن هذا الإجراء وستفقد جميع البيانات المرتبطة.', 'Are you sure you want to permanently delete this kindergarten? This action cannot be undone and all associated data will be lost.'))) {
+        // Describe what the endpoint actually does: a soft delete that keeps the
+        // record (status=DELETED) and is refused while active enrollments or staff
+        // remain. The old copy promised a permanent, irreversible erase.
+        if (confirm(T('هل أنت متأكد من حذف هذه الحضانة؟ سيتم إخفاؤها من النظام مع الاحتفاظ بالبيانات، ولا يمكن الحذف إذا كان بها تسجيلات أو موظفون نشطون.', 'Are you sure you want to delete this kindergarten? It will be hidden from the system, its data is retained, and deletion is refused while it still has active enrollments or staff.'))) {
             deleteKindergarten();
         }
     }

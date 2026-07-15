@@ -462,6 +462,11 @@ class KgOverview {
     const currentKgs = this.#store.get('kgs');
     const govs = ['all', ...new Set(currentKgs.map(k => k.gov).filter(Boolean))];
     const kgNames = ['all', ...currentKgs.map(k => k.name)];
+    // Both filters are persisted and applied on load, so the options must show
+    // which one is active: without `selected` the bar reads "All Governorates"
+    // while the list below it is filtered to one governorate.
+    const curGov = this.#store.get('govFilter');
+    const curKg = this.#store.get('kgFilter');
     const lang = window.KINJO_LANG || 'ar';
     const isAr = lang !== 'en';
     const cur  = this.#store.get('period');
@@ -487,11 +492,11 @@ class KgOverview {
       </div>
 
       <select class="ko-filter-select" id="ko-gov-filter" aria-label="${isAr ? 'المحافظة' : 'Governorate'}">
-        ${govs.map(g => `<option value="${g}">${g === 'all' ? (isAr ? 'كل المحافظات' : 'All Governorates') : g}</option>`).join('')}
+        ${govs.map(g => `<option value="${g}" ${g === curGov ? 'selected' : ''}>${g === 'all' ? (isAr ? 'كل المحافظات' : 'All Governorates') : g}</option>`).join('')}
       </select>
 
       <select class="ko-filter-select" id="ko-kg-filter" aria-label="${isAr ? 'الحضانة' : 'Kindergarten'}">
-        ${kgNames.map(n => `<option value="${n}">${n === 'all' ? (isAr ? 'كل الحضانات' : 'All Kindergartens') : n}</option>`).join('')}
+        ${kgNames.map(n => `<option value="${n}" ${n === curKg ? 'selected' : ''}>${n === 'all' ? (isAr ? 'كل الحضانات' : 'All Kindergartens') : n}</option>`).join('')}
       </select>
 
       <div class="ko-bar-end">
@@ -534,6 +539,14 @@ class KgOverview {
        refetch; #onFilterChange only re-filters what is already loaded. */
     [['ko-date-from', 'dateFrom'], ['ko-date-to', 'dateTo']].forEach(([id, key]) => {
       document.getElementById(id)?.addEventListener('change', e => {
+        // A date input can be cleared. Accepting '' would leave the store without
+        // a resolvable range, and the loader would quietly ask for the month
+        // window while the bar still showed "Custom" — the same lie as before.
+        // Keep the last good value and put it back in the input instead.
+        if (!e.target.value) {
+          e.target.value = this.#store.get(key);
+          return;
+        }
         this.#store.set({ [key]: e.target.value });
         if (this.#store.get('period') === 'custom') this.#onPeriodChange();
         else this.#onFilterChange();
@@ -1398,7 +1411,11 @@ class KgOverview {
   }
 
   #today(offsetDays = 0) {
-    const d = new Date(); d.setDate(d.getDate() + offsetDays);
+    // Jordan is UTC+3 and the backend resolves every window in Jordan time, so
+    // derive the date there: toISOString() is UTC and would seed "yesterday"
+    // between 00:00 and 03:00 local.
+    const d = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    d.setUTCDate(d.getUTCDate() + offsetDays);
     return d.toISOString().split('T')[0];
   }
 

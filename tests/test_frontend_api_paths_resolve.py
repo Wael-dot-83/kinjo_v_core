@@ -149,9 +149,18 @@ def _resolves(method, call: str, index) -> bool:
 def _method_for(window: str, url: str):
     """The call site's HTTP method, or None when it cannot be determined.
 
-    Returning None (rather than assuming GET) matters: many `/api/...` strings are
-    config constants or base URLs with no verb attached — e.g. auth.js's endpoint
-    map — and defaulting those to GET reports live POST-only routes as dead.
+    Returning None (rather than assuming GET) matters: many `/api/...` strings carry
+    no readable verb — config constants and endpoint maps (auth.js), but also calls
+    whose method is an expression this regex cannot evaluate, e.g.
+    `method: id ? 'PUT' : 'POST'`. Assuming GET for those reported live POST-only
+    routes as dead.
+
+    The cost is real and worth stating plainly: **roughly 59% of call sites (263 of
+    444 at the time of writing) yield None** and are therefore matched against *any*
+    method, which is weaker than a true (method, path) check. Every site currently
+    relying on that fallback was inspected and is legitimate, but a future dead path
+    could hide behind an unreadable verb. Strengthening this means parsing the call
+    expression, not the line.
     """
     verb = _VERB_CALL_RE.search(window)
     if verb and verb.group(2) == url:
@@ -216,6 +225,32 @@ def test_resolver_rejects_the_paths_this_file_was_written_to_catch(index):
         "the resolver considers these dead paths valid, so it cannot catch the bugs "
         f"this file exists to prevent: {still_resolving}"
     )
+
+
+def test_method_extraction_still_reads_real_call_sites():
+    """The other half of the non-vacuity guard.
+
+    `test_resolver_rejects_...` passes explicit methods to `_resolves`, so it never
+    exercises `_method_for`. Gutting the verb extraction (making it always return
+    None) leaves that guard green while every call silently reverts to the weaker
+    match-any-method path. This pins the extraction itself against real shapes taken
+    from the codebase.
+    """
+    cases = [
+        ("""fetch(`/api/absence-requests/${id}/cancel`, { method: 'POST', headers: H })""",
+         "/api/absence-requests/${id}/cancel", "POST"),
+        ("""const response = await fetch(`/api/admin/kindergartens/${kindergartenId}`, {\n  method: 'DELETE',\n  headers: getHeaders()\n});""",
+         "/api/admin/kindergartens/${kindergartenId}", "DELETE"),
+        ("""return this.post("/api/incidents", data);""", "/api/incidents", "POST"),
+        ("""return this.get("/api/kindergartens", queryParams);""", "/api/kindergartens", "GET"),
+        # No readable verb -> None (matched against any method).
+        ("""logoutEndpoint: "/api/auth/logout",""", "/api/auth/logout", None),
+    ]
+    for window, url, expected in cases:
+        assert _method_for(window, url) == expected, (
+            f"method extraction broke for {url!r}: expected {expected}, "
+            f"got {_method_for(window, url)}"
+        )
 
 
 def test_every_frontend_api_call_resolves_to_a_registered_route(index):

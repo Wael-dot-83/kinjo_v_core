@@ -110,6 +110,42 @@ class TestKgOverviewControlBar:
         assert re.search(r"dateFrom:\s*saved\.dateFrom\s*\|\|", kg_overview_src)
         assert re.search(r"dateTo:\s*saved\.dateTo\s*\|\|", kg_overview_src)
 
+    def test_clearing_a_date_cannot_empty_the_stored_range(self, kg_overview_src):
+        """A date input can be cleared. Writing '' to the store made the loader fall
+        back to `period=month` while the bar still showed "Custom" active — the same
+        silent substitution the store fix was meant to end, one step further in."""
+        handler = re.search(
+            r"\[\['ko-date-from', 'dateFrom'\], \['ko-date-to', 'dateTo'\]\]\.forEach\("
+            r"([\s\S]*?)\n    \}\);",
+            kg_overview_src,
+        )
+        assert handler, "date-range change handler not found"
+        body = handler.group(1)
+        assert re.search(r"if\s*\(!e\.target\.value\)", body), (
+            "an empty date must not reach the store, or the requested window and the "
+            "displayed period diverge again"
+        )
+        assert body.index("if (!e.target.value)") < body.index("#store.set"), (
+            "the empty-value guard must run before the store is written"
+        )
+
+    def test_active_filters_are_shown_as_selected(self, kg_overview_src):
+        """govFilter/kgFilter are persisted and applied on load, so the control bar
+        must mark the active option — otherwise it reads "All Governorates" while the
+        list below it is filtered."""
+        assert "curGov" in kg_overview_src and "curKg" in kg_overview_src
+        assert re.search(r"g === curGov \? 'selected' : ''", kg_overview_src)
+        assert re.search(r"n === curKg \? 'selected' : ''", kg_overview_src)
+
+    def test_seeded_dates_use_jordan_time(self, kg_overview_src):
+        """The backend resolves windows in Jordan time (UTC+3); seeding from
+        toISOString() alone would pick yesterday between 00:00 and 03:00 local."""
+        today = re.search(r"#today\(offsetDays = 0\)\s*\{(.*?)\n  \}", kg_overview_src, re.S)
+        assert today, "#today not found"
+        assert "3 * 60 * 60 * 1000" in today.group(1), (
+            "#today must offset to Jordan time before taking the ISO date"
+        )
+
     def test_changing_a_custom_date_syncs_the_store_and_refetches(self, kg_overview_src):
         """The server resolves the window, so a date change must reach the store
         (which the loader reads) and refetch — not just re-filter rows in memory."""
