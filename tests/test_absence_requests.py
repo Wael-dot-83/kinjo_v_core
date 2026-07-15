@@ -38,6 +38,8 @@ class TestParentCreateAbsence:
         assert "fetch('/api/attendance/absence-requests'" not in source
         assert "start_date:" in source
         assert "end_date:" in source
+        assert "Authorization': 'Bearer" not in source
+        assert "AuthStorage.getToken()" not in source
 
     def test_create_success(self, client, auth_headers_parent, parent_user, sample_child, active_enrollment):
         resp = client.post("/api/absence-requests", json={
@@ -176,6 +178,70 @@ class TestParentListCancel:
         cancel_resp = client.post(f"/api/absence-requests/{rid}/cancel", headers=auth_headers_parent)
         assert cancel_resp.status_code == 200
         assert cancel_resp.json()["status"] == "CANCELLED"
+
+    def test_parent_without_profile_cannot_cancel_another_parents_request(
+        self, client, test_db, auth_headers_parent, parent_user,
+        sample_child, active_enrollment,
+    ):
+        created = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "ownership regression",
+        }, headers=auth_headers_parent)
+        assert created.status_code == 201
+
+        profileless = models.User(
+            username="profileless_parent",
+            email="profileless_parent@test.com",
+            hashed_password="x",
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
+        )
+        test_db.add(profileless)
+        test_db.commit()
+        from auth import create_access_token
+        token = create_access_token(data={"sub": profileless.username})
+
+        response = client.post(
+            f"/api/absence-requests/{created.json()['id']}/cancel",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 404
+        request = test_db.get(models.AbsenceRequest, created.json()["id"])
+        assert request.status == models.AbsenceRequestStatus.SUBMITTED
+
+    def test_approved_request_cannot_be_cancelled_and_attendance_remains_consistent(
+        self, client, test_db, auth_headers_parent, auth_headers_manager,
+        parent_user, manager_user, sample_child, active_enrollment,
+    ):
+        created = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "approved cancellation regression",
+        }, headers=auth_headers_parent)
+        assert created.status_code == 201
+        request_id = created.json()["id"]
+        approved = client.post(
+            f"/api/absence-requests/{request_id}/approve",
+            json={},
+            headers=auth_headers_manager,
+        )
+        assert approved.status_code == 200
+
+        cancelled = client.post(
+            f"/api/absence-requests/{request_id}/cancel",
+            headers=auth_headers_parent,
+        )
+        assert cancelled.status_code == 400
+        request = test_db.get(models.AbsenceRequest, request_id)
+        assert request.status == models.AbsenceRequestStatus.APPROVED
+        attendance = test_db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.child_id == sample_child.id,
+            models.AttendanceLog.date == date.today() + timedelta(days=1),
+        ).one()
+        assert attendance.status == models.AttendanceStatus.ABSENT
 
 
 # ─── Manager: approve ─────────────────────────────────────────────────

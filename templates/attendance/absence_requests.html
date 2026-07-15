@@ -129,8 +129,9 @@
         const IS_EN = document.documentElement.lang === 'en';
         const T = (ar, en) => IS_EN ? en : ar;
 
-        const TOKEN = (window.AuthStorage ? AuthStorage.getToken() : null) || localStorage.getItem('kinjo_token') || '';
-        const HEADERS = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN };
+        // Authentication uses the HttpOnly session cookie. The global fetch
+        // wrapper adds the matching CSRF header to state-changing requests.
+        const HEADERS = { 'Content-Type': 'application/json' };
         let currentFilter = 'all';
 
         // ---- helpers ----

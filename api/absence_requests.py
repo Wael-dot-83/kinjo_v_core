@@ -236,12 +236,20 @@ def cancel_absence_request(
     parent_profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id
     ).first()
+    if parent_profile is None:
+        raise HTTPException(status_code=404, detail="Not found")
 
     absence = db.query(models.AbsenceRequest).filter(
         models.AbsenceRequest.id == request_id,
+        models.AbsenceRequest.parent_id == parent_profile.id,
     ).first()
-    if not absence or (parent_profile and absence.parent_id != parent_profile.id):
+    if not absence:
         raise HTTPException(status_code=404, detail="Not found")
+    if absence.status != models.AbsenceRequestStatus.SUBMITTED:
+        raise HTTPException(
+            status_code=400,
+            detail="Only submitted requests can be cancelled",
+        )
 
     absence.status = models.AbsenceRequestStatus.CANCELLED
     db.commit()
