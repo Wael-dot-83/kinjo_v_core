@@ -83,6 +83,18 @@ class TestActivityPeriodValidation:
         )
         assert r.status_code == 200, r.text
 
+    def test_maximum_iso_date_does_not_overflow(self, client, admin_user, auth_headers_admin):
+        response = client.get(
+            ACTIVITY_URL,
+            params={
+                "period": "custom",
+                "start_date": "9999-12-31",
+                "end_date": "9999-12-31",
+            },
+            headers=auth_headers_admin,
+        )
+        assert response.status_code == 200, response.text
+
     def test_custom_range_includes_both_calendar_day_boundaries(
         self, client, test_db, admin_user, auth_headers_admin
     ):

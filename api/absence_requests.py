@@ -4,6 +4,7 @@ Absence Request endpoints
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
+from sqlalchemy.exc import IntegrityError
 from datetime import date, datetime, timedelta, timezone, UTC
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
@@ -251,7 +252,17 @@ def cancel_absence_request(
             detail="Only submitted requests can be cancelled",
         )
 
-    absence.status = models.AbsenceRequestStatus.CANCELLED
+    transitioned = db.query(models.AbsenceRequest).filter(
+        models.AbsenceRequest.id == absence.id,
+        models.AbsenceRequest.parent_id == parent_profile.id,
+        models.AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED,
+    ).update(
+        {models.AbsenceRequest.status: models.AbsenceRequestStatus.CANCELLED},
+        synchronize_session=False,
+    )
+    if transitioned != 1:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Request was already decided")
     db.commit()
     db.refresh(absence)
     return {"id": absence.id, "status": absence.status.value}
@@ -283,10 +294,35 @@ def approve_absence_request(
     if absence.status != models.AbsenceRequestStatus.SUBMITTED:
         raise HTTPException(status_code=400, detail="Only submitted requests can be approved")
 
-    absence.status = models.AbsenceRequestStatus.APPROVED
-    absence.manager_id = current_user.id
-    absence.decision_note = payload.decision_note
-    absence.decided_at = datetime.now(_JORDAN_TZ)
+    conflicting_attendance = db.query(models.AttendanceLog).filter(
+        models.AttendanceLog.child_id == absence.child_id,
+        models.AttendanceLog.date >= absence.start_date,
+        models.AttendanceLog.date <= absence.end_date,
+        models.AttendanceLog.status != models.AttendanceStatus.ABSENT,
+    ).first()
+    if conflicting_attendance is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Existing attendance conflicts with this absence request",
+        )
+
+    decided_at = datetime.now(_JORDAN_TZ)
+    transitioned = db.query(models.AbsenceRequest).filter(
+        models.AbsenceRequest.id == absence.id,
+        models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id,
+        models.AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED,
+    ).update(
+        {
+            models.AbsenceRequest.status: models.AbsenceRequestStatus.APPROVED,
+            models.AbsenceRequest.manager_id: current_user.id,
+            models.AbsenceRequest.decision_note: payload.decision_note,
+            models.AbsenceRequest.decided_at: decided_at,
+        },
+        synchronize_session=False,
+    )
+    if transitioned != 1:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Request was already decided")
     db.add(models.AuditLog(
         user_id=current_user.id,
         action=AuditAction.ABSENCE_REQUEST_APPROVED,
@@ -316,7 +352,14 @@ def approve_absence_request(
             records_created += 1
         current_date += timedelta(days=1)
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Attendance changed while the request was being approved",
+        ) from exc
     db.refresh(absence)
 
     return {
@@ -352,10 +395,22 @@ def reject_absence_request(
         # records approval created; only pending requests are decidable.
         raise HTTPException(status_code=400, detail="Only submitted requests can be rejected")
 
-    absence.status = models.AbsenceRequestStatus.REJECTED
-    absence.manager_id = current_user.id
-    absence.decision_note = payload.decision_note
-    absence.decided_at = datetime.now(_JORDAN_TZ)
+    transitioned = db.query(models.AbsenceRequest).filter(
+        models.AbsenceRequest.id == absence.id,
+        models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id,
+        models.AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED,
+    ).update(
+        {
+            models.AbsenceRequest.status: models.AbsenceRequestStatus.REJECTED,
+            models.AbsenceRequest.manager_id: current_user.id,
+            models.AbsenceRequest.decision_note: payload.decision_note,
+            models.AbsenceRequest.decided_at: datetime.now(_JORDAN_TZ),
+        },
+        synchronize_session=False,
+    )
+    if transitioned != 1:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Request was already decided")
     db.add(models.AuditLog(
         user_id=current_user.id,
         action=AuditAction.ABSENCE_REQUEST_REJECTED,

@@ -10,6 +10,7 @@ Tests for the Absence Request workflow:
 - Attendance correction with notification
 """
 import pytest
+import inspect
 from datetime import date, timedelta
 from pathlib import Path
 import models
@@ -40,6 +41,45 @@ class TestParentCreateAbsence:
         assert "end_date:" in source
         assert "Authorization': 'Bearer" not in source
         assert "AuthStorage.getToken()" not in source
+        assert 'min="{{ min_absence_date }}"' in source
+
+        route_source = Path("scripts/compat/frontend_orig.py").read_text(
+            encoding="utf-8"
+        )
+        assert '"min_absence_date": _today() + timedelta(days=1)' in route_source
+
+    def test_parent_cookie_session_requires_and_accepts_matching_csrf(
+        self, client, parent_user, sample_child, active_enrollment,
+    ):
+        login = client.post(
+            "/token",
+            data={"username": parent_user.username, "password": "Parent123!"},
+        )
+        assert login.status_code == 200, login.text
+        csrf = client.cookies.get("kinjo_csrf_token")
+        assert client.cookies.get("kinjo_session")
+        assert csrf
+
+        payload = {
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "cookie csrf contract",
+        }
+        missing = client.post("/api/absence-requests", json=payload)
+        assert missing.status_code == 403
+        mismatched = client.post(
+            "/api/absence-requests",
+            json=payload,
+            headers={"X-CSRF-Token": "wrong"},
+        )
+        assert mismatched.status_code == 403
+        accepted = client.post(
+            "/api/absence-requests",
+            json=payload,
+            headers={"X-CSRF-Token": csrf},
+        )
+        assert accepted.status_code == 201, accepted.text
 
     def test_create_success(self, client, auth_headers_parent, parent_user, sample_child, active_enrollment):
         resp = client.post("/api/absence-requests", json={
@@ -299,6 +339,59 @@ class TestManagerApprove:
         # Try again
         resp = client.post(f"/api/absence-requests/{rid}/approve", json={}, headers=auth_headers_manager)
         assert resp.status_code == 400
+
+    def test_approve_rejects_conflicting_present_attendance(
+        self, client, test_db, auth_headers_parent, auth_headers_manager,
+        parent_user, manager_user, sample_child, sample_class, active_enrollment,
+    ):
+        created = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "attendance conflict",
+        }, headers=auth_headers_parent)
+        assert created.status_code == 201
+        attendance = models.AttendanceLog(
+            child_id=sample_child.id,
+            class_id=sample_class.id,
+            date=date.today() + timedelta(days=1),
+            status=models.AttendanceStatus.PRESENT,
+            recorded_by=manager_user.id,
+        )
+        test_db.add(attendance)
+        test_db.commit()
+
+        response = client.post(
+            f"/api/absence-requests/{created.json()['id']}/approve",
+            json={},
+            headers=auth_headers_manager,
+        )
+        assert response.status_code == 409
+        request = test_db.get(models.AbsenceRequest, created.json()["id"])
+        assert request.status == models.AbsenceRequestStatus.SUBMITTED
+        assert attendance.status == models.AttendanceStatus.PRESENT
+
+    def test_decision_state_changes_use_atomic_conditional_updates(self):
+        import api.absence_requests as endpoint
+
+        for handler in (
+            endpoint.cancel_absence_request,
+            endpoint.approve_absence_request,
+            endpoint.reject_absence_request,
+        ):
+            source = inspect.getsource(handler)
+            assert "AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED" in source
+            assert ").update(" in source
+            assert "transitioned != 1" in source
+
+
+class TestManagerAbsencePageContract:
+    def test_admin_view_is_read_only(self):
+        source = Path("templates/manager/absence_requests.html").read_text(
+            encoding="utf-8"
+        )
+        assert "const CAN_DECIDE" in source
+        assert "CAN_DECIDE && r.status === 'SUBMITTED'" in source
 
 
 # ─── Manager: reject ──────────────────────────────────────────────────

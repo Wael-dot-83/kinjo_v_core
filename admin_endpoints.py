@@ -4363,7 +4363,7 @@ def get_admin_dashboard_activity(
     elif custom_window is not None:
         query = query.filter(
             models.AuditLog.created_at >= datetime.combine(custom_window.start_date, datetime.min.time(), tzinfo=_JORDAN_TZ),
-            models.AuditLog.created_at < datetime.combine(custom_window.end_date + timedelta(days=1), datetime.min.time(), tzinfo=_JORDAN_TZ),
+            models.AuditLog.created_at <= datetime.combine(custom_window.end_date, datetime.max.time(), tzinfo=_JORDAN_TZ),
         )
 
     if activity_type:

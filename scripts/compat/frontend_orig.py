@@ -1790,6 +1790,7 @@ async def parent_absence_requests(
             "current_user": current_user,
             "children": children,
             "today": _today(),
+            "min_absence_date": _today() + timedelta(days=1),
         }
     )
 
