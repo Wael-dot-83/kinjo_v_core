@@ -1136,6 +1136,14 @@ class KPIService:
         """
         Count expected child-days respecting working days and enrollment date ranges.
         Returns (total_expected_child_days, expected_days_per_child, working_days_list).
+
+        The attendance-RATE path no longer calls this — it uses
+        `_attendance_components_by_child`, which builds the denominator from the same
+        per-child day-set as its numerator so the two cannot disagree. This function
+        remains the denominator for the incident-rate and report-rate paths. The two
+        builders produce identical expected counts for the normal single-segment case
+        (pinned by test_scalar_and_bulk_agree_on_awkward_data and the KPI regressions);
+        keep them in step if either is edited.
         """
         working_days = KPIService._list_working_days(db, kindergarten_id, period_start, period_end)
         if not working_days:
@@ -1480,6 +1488,13 @@ class KPIService:
             kg_sets = KPIService._expected_dayset_by_child(
                 working_days, enrollments_by_kg.get(int(kg_id), [])
             )
+            # Keying the per-child set and its kg by child_id alone assumes a child has
+            # at most one active enrollment. That is enforced by the DB unique index
+            # uq_enrollment_child_active (child_id, is_active), so a child cannot be
+            # active in two kindergartens at once. If that invariant were ever relaxed,
+            # this would attribute the child's attendance to only the last kg seen and
+            # the bulk result would diverge from the per-kg scalar; key by
+            # (kg_id, child_id) here if that day comes.
             for child_id, days in kg_sets.items():
                 expected_set_by_child[child_id] = days
                 child_to_kg[child_id] = int(kg_id)
@@ -3480,6 +3495,8 @@ def get_consolidated_kpi_dashboard_data(
             kg_sets = KPIService._expected_dayset_by_child(
                 working_days_by_kg.get(kg_id, []), enroll_ranges_by_kg.get(kg_id, [])
             )
+            # Per-child keying assumes one active enrollment per child (DB index
+            # uq_enrollment_child_active); see compute_attendance_components_bulk.
             for cid, days in kg_sets.items():
                 expected_set_by_child[cid] = days
                 child_to_kg[cid] = kg_id
