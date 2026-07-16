@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 import auth
 import models
 import validators
+from api.absence_requests import MAX_ABSENCE_SPAN_DAYS
 from database import get_db
 from dependencies import get_current_user
 from utils.time_utils import today_amman
@@ -635,6 +636,22 @@ def create_absence_request(
 
     if body.to_date < body.from_date:
         raise HTTPException(status_code=400, detail="to_date must be >= from_date")
+
+    # This handler writes the same absence_requests row as POST /api/absence-requests,
+    # and the same approve loop consumes it — one SELECT + one INSERT per day in the
+    # span. Bounding only the other door left this one open: to_date=9999-12-31 was
+    # accepted here (201) while the bounded path rejected it (422), and approving it
+    # would run ~2.9M statements. Same constant, not a second copy, so the two doors
+    # cannot drift apart.
+    span_days = (body.to_date - body.from_date).days + 1
+    if span_days > MAX_ABSENCE_SPAN_DAYS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"absence span must not exceed {MAX_ABSENCE_SPAN_DAYS} days "
+                f"(requested {span_days})"
+            ),
+        )
 
     profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id,
