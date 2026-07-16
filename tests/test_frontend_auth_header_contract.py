@@ -34,8 +34,13 @@ _BEARER_RE = re.compile(r"""Bearer\s*\$\{\s*(?:token|authToken|t)\s*\}|['"]Beare
 # `/notifications` took a 401 and rendered no list, and `PUT /api/users/me/password`
 # 401'd, so nobody could change their password. Verified 2026-07-16: the same request
 # returns 200 with no header and 401 with `Bearer null`.
+# Both spellings of the inline storage read. The template-literal form was missed by the
+# concatenation-only version of this pattern, which left templates/supervisor/settings.html
+# sitting in the tree with the bug while the ratchet reported clean — the check was
+# guarding a spelling rather than a defect.
 _STORAGE_BEARER_RE = re.compile(
-    r"""['"]Bearer\s*['"]\s*\+\s*\(?\s*(?:local|session)Storage\.getItem"""
+    r"""['"]Bearer\s*['"]\s*\+\s*\(?\s*(?:local|session)Storage\.getItem"""   # 'Bearer ' + localStorage.getItem(…)
+    r"""|Bearer\s*\$\{\s*\(?\s*(?:local|session)Storage\.getItem"""            # `Bearer ${localStorage.getItem(…)}`
 )
 
 # Files still carrying the bug. Each one boots the user to /login?expired=true the
@@ -116,6 +121,10 @@ def test_scanner_is_not_vacuous():
     storage_sample = [
         "'Authorization': 'Bearer ' + (localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token'))",
         "'Authorization': 'Bearer ' + sessionStorage.getItem('kinjo_token')",
+        # The template-literal spelling. An earlier version of this pattern matched only
+        # the concatenation form and reported the tree clean while this exact line was
+        # live in templates/supervisor/settings.html.
+        "{ 'Authorization': `Bearer ${localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token')}` }",
     ]
     for s in storage_sample:
         assert _STORAGE_BEARER_RE.search(s), f"storage scanner no longer recognises: {s!r}"

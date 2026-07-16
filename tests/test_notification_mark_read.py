@@ -55,6 +55,41 @@ def test_cannot_mark_another_users_notification_read(client, parent_token, admin
     )
 
 
+def test_a_failed_notification_is_not_flipped_to_sent(client, parent_token, parent_user, test_db):
+    """`status` here is DELIVERY state (PENDING/SENT/FAILED), not read/unread — marking
+    read reuses it, as /read-all does. Without a PENDING filter this endpoint would turn
+    a FAILED notification into SENT and claim a delivery that never happened."""
+    n = _notify(test_db, parent_user.id)
+    n.status = models.NotificationStatus.FAILED
+    test_db.commit()
+
+    resp = client.post(
+        f"/api/notifications/{n.id}/read",
+        headers={"Authorization": f"Bearer {parent_token}"},
+    )
+    assert resp.status_code == 200, f"{resp.status_code}: {resp.text[:150]}"
+
+    test_db.expire_all()
+    assert test_db.get(models.Notification, n.id).status == models.NotificationStatus.FAILED, (
+        "a FAILED notification was rewritten to SENT — the endpoint is now reporting a "
+        "delivery that failed as delivered"
+    )
+
+
+def test_marking_an_already_read_notification_is_a_no_op_success(client, parent_token, parent_user, test_db):
+    """Idempotent: the caller wanted it not-pending, and it is not pending."""
+    n = _notify(test_db, parent_user.id)
+    n.status = models.NotificationStatus.SENT
+    test_db.commit()
+
+    resp = client.post(
+        f"/api/notifications/{n.id}/read",
+        headers={"Authorization": f"Bearer {parent_token}"},
+    )
+    assert resp.status_code == 200, f"already-read notification -> {resp.status_code}: {resp.text[:150]}"
+    assert resp.json()["updated"] == 0
+
+
 def test_unknown_notification_is_404(client, parent_token):
     resp = client.post(
         "/api/notifications/999999/read",

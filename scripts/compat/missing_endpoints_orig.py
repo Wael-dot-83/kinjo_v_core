@@ -198,14 +198,29 @@ def mark_notification_read(
         .filter(
             models.Notification.id == notification_id,
             models.Notification.user_id == current_user.id,
+            # PENDING only, matching /read-all. Without it a FAILED notification would
+            # flip to SENT — this endpoint would be claiming a delivery that failed.
+            models.Notification.status == models.NotificationStatus.PENDING,
         )
         .update({"status": models.NotificationStatus.SENT})
     )
     db.commit()
     if not updated:
-        # Same answer whether the row is missing or belongs to someone else — a 403
-        # here would confirm the id exists.
-        raise HTTPException(status_code=404, detail="Notification not found")
+        # Nothing changed: either the row is not ours/absent, or it was not PENDING.
+        # The existence probe is itself ownership-scoped, so it cannot be used to test
+        # whether an id exists — a missing row and someone else's row both 404.
+        owned = (
+            db.query(models.Notification.id)
+            .filter(
+                models.Notification.id == notification_id,
+                models.Notification.user_id == current_user.id,
+            )
+            .first()
+        )
+        if not owned:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        # Ours, but already SENT or FAILED. The caller wanted it not-pending and it is
+        # not pending, so this is a no-op success rather than an error.
     return {"updated": updated}
 
 
