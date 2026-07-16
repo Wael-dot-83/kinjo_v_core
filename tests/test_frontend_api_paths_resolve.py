@@ -35,11 +35,17 @@ from main import app
 # Known-dead paths whose backend was never implemented: they cannot be repointed,
 # they need building. Each needs a reason so this cannot become a dumping ground.
 KNOWN_UNRESOLVED = {
-    ("GET", "/api/kindergartens/{}/services"): "services CRUD never implemented (templates/kindergartens/view.html)",
-    ("POST", "/api/kindergartens/{}/services"): "services CRUD never implemented",
-    ("PUT", "/api/kindergartens/{}/services/{}"): "services CRUD never implemented",
-    ("DELETE", "/api/kindergartens/{}/services/{}"): "services CRUD never implemented",
-    ("POST", "/api/kindergartens/{}/archive"): "archive endpoint never implemented",
+    # Services CRUD and archive were never implemented. The calling JS still exists in
+    # templates/kindergartens/view.html so the feature can be re-enabled in one place
+    # once the backend lands, but nothing reaches it any more: the Services tab and the
+    # Archive button are hidden, and loadServices() is no longer called on page load.
+    # Before that, an admin saw an Add button that ended in `alert("Error: Not Found")`
+    # and an Archive button that toasted "Not Found".
+    ("GET", "/api/kindergartens/{}/services"): "services CRUD never implemented; UI hidden, JS retained (templates/kindergartens/view.html)",
+    ("POST", "/api/kindergartens/{}/services"): "services CRUD never implemented; UI hidden",
+    ("PUT", "/api/kindergartens/{}/services/{}"): "services CRUD never implemented; UI hidden",
+    ("DELETE", "/api/kindergartens/{}/services/{}"): "services CRUD never implemented; UI hidden",
+    ("POST", "/api/kindergartens/{}/archive"): "archive never implemented; button hidden, handler retained",
     ("POST", "/api/daily-reports/manager/create-and-send"): "manager create-and-send never implemented (templates/reports/form.html)",
     ("GET", "/api/supervisor/present-children"): "superseded by /api/supervisor/attendance/status; caller is dead code",
     ("GET", "/api/manager/accounts"): "uncalled dead method in kinjo-api.js",

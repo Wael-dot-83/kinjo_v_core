@@ -21,7 +21,13 @@
         <a href="/kindergartens/{{ kindergarten.id }}/edit" class="btn btn-outline-primary">
             <i class="bi bi-pencil me-2"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}
         </a>
-        <button class="btn btn-warning" onclick="confirmArchive()" id="archiveBtn">
+        {# POST /api/kindergartens/{id}/archive is not registered and answers 404
+           (KNOWN_UNRESOLVED). This button had no `display:none`, so unlike Delete it
+           was visible from first paint, and checkDeletePermissions() then *showed* it
+           for the common case (a kindergarten with classes or staff). Confirming the
+           dialog toasted "Not Found". Hidden until the endpoint exists; the handler is
+           left in place so building the backend re-enables it. #}
+        <button class="btn btn-warning" onclick="confirmArchive()" id="archiveBtn" style="display:none">
             <i class="bi bi-archive me-2"></i>{% if ui_lang == 'en' %}Archive{% else %}أرشفة{% endif %}
         </button>
         {% if current_user.role.name == 'ADMIN' %}
@@ -152,9 +158,17 @@
             <li class="nav-item">
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#staff">{% if ui_lang == 'en' %}Staff{% else %}الكادر{% endif %}</button>
             </li>
+            {# Services & Facilities has no backend: GET/POST/PUT/DELETE
+               /api/kindergartens/{id}/services are all unregistered and answer 404
+               (tests/test_frontend_api_paths_resolve.py KNOWN_UNRESOLVED). The tab
+               therefore could only ever show "no services registered", and its Add
+               button walked an admin through a form that ended in
+               `alert("Error: Not Found")`. Hidden until the endpoints exist — the tab
+               body and its JS are left in place so building the backend re-enables it.
             <li class="nav-item">
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#services">{% if ui_lang == 'en' %}Services & Facilities{% else %}الخدمات والمرافق{% endif %}</button>
             </li>
+            #}
             <li class="nav-item">
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#audit">{% if ui_lang == 'en' %}Audit Log{% else %}سجل التدقيق{% endif %}</button>
             </li>
@@ -496,7 +510,10 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-        await Promise.all([loadClasses(), loadStaff(), loadServices()]);
+        // loadServices() is deliberately not called: its endpoint is unregistered, so
+        // it only ever fetched a 404 for a tab that is now hidden. Restore it here
+        // alongside the tab when the services backend exists.
+        await Promise.all([loadClasses(), loadStaff()]);
         await checkDeletePermissions();
 
         // Services CRUD logic
@@ -653,13 +670,12 @@
             // Show appropriate button based on dependencies and user role
             const hasDependencies = activeClasses > 0 || activeStaff > 0;
             const isAdmin = "{{ 'true' if current_user.role.name == 'ADMIN' else 'false' }}";
-            if (hasDependencies || isAdmin !== 'true') {
-                document.getElementById('archiveBtn').style.display = 'inline-block';
-                document.getElementById('deleteBtn').style.display = 'none';
-            } else {
-                document.getElementById('archiveBtn').style.display = 'none';
-                document.getElementById('deleteBtn').style.display = 'inline-block';
-            }
+            // Archive stays hidden either way: its endpoint is not implemented (404),
+            // so offering it here just produced a "Not Found" toast. Restore the
+            // inline-block branch when POST /api/kindergartens/{id}/archive exists.
+            document.getElementById('archiveBtn').style.display = 'none';
+            const canDelete = !hasDependencies && isAdmin === 'true';
+            document.getElementById('deleteBtn').style.display = canDelete ? 'inline-block' : 'none';
         } catch (error) {
             console.error('Error checking permissions:', error);
         }
