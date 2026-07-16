@@ -1255,6 +1255,89 @@ class KPIService:
         return int(sum(attended_map.values()))
 
     @staticmethod
+    def _attendance_components_by_child(
+        db: Session,
+        kindergarten_id: int,
+        period_start: date,
+        period_end: date,
+    ) -> Tuple[Dict[int, int], Dict[int, int], List[date]]:
+        """Canonical per-child attendance: (expected_by_child, attended_by_child, working_days).
+
+        Both counts are taken over the SAME per-child day-set — the kindergarten's
+        working days (Sun–Thu plus OperatingCalendar overrides) intersected with the
+        child's effective enrollment range. The attended set is a subset of the expected
+        set, so ``attended <= expected`` for every child and any rate built from these
+        cannot exceed 100%.
+
+        This is the one definition every attendance-rate consumer shares. The bug it
+        replaces counted the numerator over the raw window — every PRESENT/LATE log
+        regardless of working day or enrollment range — against a denominator that
+        respected both, so a child present outside their enrollment, or on a closed day,
+        pushed the rate past 100% (measured at 333%).
+
+        Physical attendance only (PRESENT + LATE); EXCUSED is not attendance. This is
+        NOT the incident-exposure numerator: incident rates count every physical
+        attendance day as exposure (see ``_count_attended_child_days``), because an
+        incident can happen on any day a child is present.
+        """
+        working_days = KPIService._list_working_days(
+            db, kindergarten_id, period_start, period_end
+        )
+        if not working_days:
+            return {}, {}, []
+        enrollments = KPIService._get_overlapping_active_enrollments(
+            db, kindergarten_id, period_start, period_end
+        )
+        if not enrollments:
+            return {}, {}, working_days
+
+        expected_set_by_child = KPIService._expected_dayset_by_child(working_days, enrollments)
+        expected_by_child = {cid: len(days) for cid, days in expected_set_by_child.items()}
+        child_ids = list(expected_by_child.keys())
+
+        attended_by_child: Dict[int, int] = {}
+        if child_ids:
+            rows = db.query(
+                models.AttendanceLog.child_id,
+                models.AttendanceLog.date,
+            ).filter(
+                models.AttendanceLog.child_id.in_(child_ids),
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end,
+                models.AttendanceLog.status.in_([
+                    models.AttendanceStatus.PRESENT,
+                    models.AttendanceStatus.LATE,
+                ]),
+            ).all()
+            for cid, day in rows:
+                expected_days = expected_set_by_child.get(int(cid))
+                if expected_days and day.toordinal() in expected_days:
+                    attended_by_child[int(cid)] = attended_by_child.get(int(cid), 0) + 1
+
+        return expected_by_child, attended_by_child, working_days
+
+    @staticmethod
+    def _expected_dayset_by_child(
+        working_days: List[date],
+        enrollments: List[Tuple[int, date, date]],
+    ) -> Dict[int, set]:
+        """child_id -> set of expected-day ordinals (working days within its enrollment).
+
+        A *set*, not a count, so that overlapping enrollment segments for one child
+        cannot double-count a shared day, and so the attended numerator can be tested
+        for membership against exactly the days that were expected. Shared by the scalar
+        and bulk paths so the two cannot drift.
+        """
+        working_ords = [d.toordinal() for d in working_days]  # sorted ascending
+        expected_set_by_child: Dict[int, set] = {}
+        for child_id, effective_start, effective_end in enrollments:
+            lo = bisect_left(working_ords, effective_start.toordinal())
+            hi = bisect_right(working_ords, effective_end.toordinal())
+            if hi > lo:
+                expected_set_by_child.setdefault(int(child_id), set()).update(working_ords[lo:hi])
+        return {cid: days for cid, days in expected_set_by_child.items() if days}
+
+    @staticmethod
     def _compute_previous_period(period_start: date, period_end: date) -> tuple:
         """Return (prev_start, prev_end) of the same length immediately before period_start."""
         period_len = (period_end - period_start).days + 1
@@ -1280,18 +1363,18 @@ class KPIService:
         """
         Physical attendance rate % = (PRESENT + LATE child-days / expected child-days) × 100.
         Excused absences are NOT included — use compute_excused_absence_rate separately.
+
+        Numerator and denominator are taken over the same expected day-set
+        (``_attendance_components_by_child``), so the result is bounded to [0, 100].
         """
-        expected_days, expected_by_child, _ = KPIService._count_expected_child_days(
+        expected_by_child, attended_by_child, _ = KPIService._attendance_components_by_child(
             db, kindergarten_id, period_start, period_end
         )
+        expected_days = sum(expected_by_child.values())
         if expected_days == 0:
             return 0.0
 
-        active_child_ids = list(expected_by_child.keys())
-        attended_days = KPIService._count_attended_child_days(
-            db, kindergarten_id, period_start, period_end, active_child_ids
-        )
-
+        attended_days = sum(attended_by_child.values())
         rate = (attended_days / expected_days) * 100
         return round(rate, 2)
 
@@ -1381,45 +1464,53 @@ class KPIService:
                     (int(child_id), effective_start, effective_end)
                 )
 
-        # Expected child-days per kindergarten, reusing the scalar form's arithmetic.
-        expected_by_kg: Dict[int, int] = {}
-        child_ids_by_kg: Dict[int, List[int]] = {}
+        # Expected day-SET per child (union of working days within its enrollment),
+        # via the same helper the scalar path uses so the two cannot drift. Sets, not
+        # counts, because the attended numerator is tested for membership against
+        # exactly these days — that intersection is what keeps the rate <= 100%.
+        expected_by_kg: Dict[int, int] = {int(kg_id): 0 for kg_id in kindergarten_ids}
+        expected_set_by_child: Dict[int, set] = {}
+        child_to_kg: Dict[int, int] = {}
         for kg_id in kindergarten_ids:
             working_days = KPIService._working_days_from_overrides(
                 explicit_by_kg.get(int(kg_id), {}), period_start, period_end
             )
             if not working_days:
-                expected_by_kg[int(kg_id)] = 0
                 continue
-            ordinals = [d.toordinal() for d in working_days]
-            total_expected = 0
-            kg_children: List[int] = []
-            for child_id, effective_start, effective_end in enrollments_by_kg.get(int(kg_id), []):
-                left = bisect_left(ordinals, effective_start.toordinal())
-                right = bisect_right(ordinals, effective_end.toordinal())
-                expected_days = max(0, right - left)
-                if expected_days <= 0:
-                    continue
-                total_expected += expected_days
-                kg_children.append(child_id)
-            expected_by_kg[int(kg_id)] = total_expected
-            if kg_children:
-                child_ids_by_kg[int(kg_id)] = kg_children
-
-        # 3. Attended (PRESENT + LATE) child-days for every child at once.
-        all_child_ids = sorted({c for ids in child_ids_by_kg.values() for c in ids})
-        attended_by_child = KPIService._attended_child_days_by_child(
-            db, all_child_ids, period_start, period_end
-        )
-
-        components: Dict[int, Tuple[int, int]] = {}
-        for kg_id in kindergarten_ids:
-            expected = expected_by_kg.get(int(kg_id), 0)
-            attended = sum(
-                attended_by_child.get(c, 0) for c in child_ids_by_kg.get(int(kg_id), [])
+            kg_sets = KPIService._expected_dayset_by_child(
+                working_days, enrollments_by_kg.get(int(kg_id), [])
             )
-            components[int(kg_id)] = (int(attended), int(expected))
-        return components
+            for child_id, days in kg_sets.items():
+                expected_set_by_child[child_id] = days
+                child_to_kg[child_id] = int(kg_id)
+                expected_by_kg[int(kg_id)] += len(days)
+
+        # 3. Attended (PRESENT + LATE) child-days for every child at once, counted only
+        #    on days that were expected — the whole reason this is not the raw window count.
+        all_child_ids = list(expected_set_by_child.keys())
+        attended_by_kg: Dict[int, int] = {int(kg_id): 0 for kg_id in kindergarten_ids}
+        if all_child_ids:
+            rows = db.query(
+                models.AttendanceLog.child_id,
+                models.AttendanceLog.date,
+            ).filter(
+                models.AttendanceLog.child_id.in_(all_child_ids),
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end,
+                models.AttendanceLog.status.in_([
+                    models.AttendanceStatus.PRESENT,
+                    models.AttendanceStatus.LATE,
+                ]),
+            ).all()
+            for child_id, day in rows:
+                expected_days = expected_set_by_child.get(int(child_id))
+                if expected_days and day.toordinal() in expected_days:
+                    attended_by_kg[child_to_kg[int(child_id)]] += 1
+
+        return {
+            int(kg_id): (attended_by_kg[int(kg_id)], expected_by_kg[int(kg_id)])
+            for kg_id in kindergarten_ids
+        }
 
     @staticmethod
     def _working_days_from_overrides(
@@ -1687,16 +1778,17 @@ class KPIService:
         Chronic absence % = (Children with absence >= threshold / active children) x 100
         Default threshold: 10% of expected days
         """
-        _, expected_by_child, _ = KPIService._count_expected_child_days(
+        # Absence per child is (expected - attended)/expected, so the numerator must be
+        # attended-among-expected or a child present outside their enrollment produces a
+        # negative absence and silently escapes the chronic count. Same canonical
+        # components as the attendance rate.
+        expected_by_child, attended_by_child, _ = KPIService._attendance_components_by_child(
             db, kindergarten_id, period_start, period_end
         )
         if not expected_by_child:
             return 0.0
 
         active_child_ids = list(expected_by_child.keys())
-        attended_by_child = KPIService._attended_child_days_by_child(
-            db, active_child_ids, period_start, period_end
-        )
 
         chronic_absence_count = 0
         for child_id in active_child_ids:
@@ -2269,15 +2361,21 @@ class KPIService:
         """
         Compute a full KPI bundle for one kindergarten and period with data-quality metadata.
         """
-        expected_child_days, expected_by_child, working_days = KPIService._count_expected_child_days(
+        # Canonical attendance components: expected and attended over the SAME expected
+        # day-set (working days ∩ enrollment range), so attendance_rate and chronic
+        # absence below are bounded. attended_by_child here is attended-among-expected.
+        expected_by_child, attended_by_child, working_days = KPIService._attendance_components_by_child(
             db, kindergarten_id, period_start, period_end
         )
+        expected_child_days = int(sum(expected_by_child.values()))
         child_ids = list(expected_by_child.keys())
-        # Physical attendance: PRESENT + LATE only (excludes EXCUSED)
-        attended_by_child = KPIService._attended_child_days_by_child(
-            db, child_ids, period_start, period_end
-        )
         attended_child_days = int(sum(attended_by_child.values()))
+        # Incident EXPOSURE is every physical-attendance day (PRESENT + LATE), not only
+        # the expected ones — an incident can happen on any day a child is present. Kept
+        # separate from the rate numerator on purpose (see _attendance_components_by_child).
+        attended_exposure_days = KPIService._count_attended_child_days(
+            db, kindergarten_id, period_start, period_end, child_ids
+        )
         # Excused absence: separate count
         excused_by_child = KPIService._excused_child_days_by_child(
             db, child_ids, period_start, period_end
@@ -2435,11 +2533,12 @@ class KPIService:
         excused_absence_rate = round((excused_child_days / expected_child_days) * 100, 2) if expected_child_days > 0 else 0.0
         # Incident rates expressed per 1,000 child-days to match kpi_standards.py thresholds.
         # per-100 values were always < threshold (2.0/1000) → permanently GREEN — now fixed.
-        incident_rate = round((incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
-        serious_incident_rate = round((serious_incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
+        # Denominator is exposure (all physical-attendance days), not the rate numerator.
+        incident_rate = round((incident_count / attended_exposure_days) * 1000, 3) if attended_exposure_days > 0 else 0.0
+        serious_incident_rate = round((serious_incident_count / attended_exposure_days) * 1000, 3) if attended_exposure_days > 0 else 0.0
         # Legacy per-100 aliases kept for any consumers that haven't migrated yet
-        incident_rate_per_100 = round((incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
-        serious_incident_rate_per_100 = round((serious_incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
+        incident_rate_per_100 = round((incident_count / attended_exposure_days) * 100, 2) if attended_exposure_days > 0 else 0.0
+        serious_incident_rate_per_100 = round((serious_incident_count / attended_exposure_days) * 100, 2) if attended_exposure_days > 0 else 0.0
         incident_followup_sla = round((followup_closed_within_sla / followup_required) * 100, 2) if followup_required > 0 else 0.0
 
         gqi_components = [
@@ -2460,7 +2559,7 @@ class KPIService:
             ("chronic_absence", 100 - chronic_absence_rate, 0.25, chronic_denominator > 0 and has_attendance_data),
             # serious_incident_rate is per-1,000 child-days; divide by 10 to restore
             # per-100 equivalent so the ceiling of 100 remains correctly calibrated.
-            ("serious_incident_rate", 100 - min(serious_incident_rate / 10, 100), 0.20, attended_child_days > 0),
+            ("serious_incident_rate", 100 - min(serious_incident_rate / 10, 100), 0.20, attended_exposure_days > 0),
             ("parent_satisfaction", parent_satisfaction, 0.20, survey_responses > 0),
         ]
         cei_weight_sum = sum(weight for _, _, weight, has_data in cei_components if has_data)
@@ -2603,8 +2702,8 @@ class KPIService:
             "denominators": {
                 "attendance_rate": expected_child_days,
                 "excused_absence_rate": expected_child_days,
-                "incident_rate": attended_child_days,
-                "serious_incident_rate": attended_child_days,
+                "incident_rate": attended_exposure_days,
+                "serious_incident_rate": attended_exposure_days,
                 "incident_followup_sla": followup_required,
                 "ratio_compliance": ratio_operating_minutes,
                 "training_completion_rate": training_expected,
@@ -3363,28 +3462,42 @@ def get_consolidated_kpi_dashboard_data(
             ),
         ).all()
 
-        expected_by_child_by_kg: Dict[int, Dict[int, int]] = {kg_id: {} for kg_id in target_kindergarten_ids}
+        # Per-child expected day-SET (working days ∩ enrollment range), via the same
+        # helper the scalar and bulk rate paths use. The attended numerator below is
+        # tested for membership against exactly these days, which is what keeps the rate
+        # <= 100% — the old inline count took every PRESENT/LATE log in the window.
+        enroll_ranges_by_kg: Dict[int, List[Tuple[int, date, date]]] = {kg_id: [] for kg_id in target_kindergarten_ids}
         for _kg, _child, _es, _ee in enroll_rows:
             eff_start = max(period_start, _es or period_start)
             eff_end = min(period_end, _ee or period_end)
-            if eff_start > eff_end:
-                continue
-            ords = [d.toordinal() for d in working_days_by_kg.get(int(_kg), [])]
-            days_count = max(0, bisect_right(ords, eff_end.toordinal()) - bisect_left(ords, eff_start.toordinal()))
-            if days_count > 0:
-                ecbc = expected_by_child_by_kg[int(_kg)]
-                ecbc[int(_child)] = ecbc.get(int(_child), 0) + days_count
+            if eff_start <= eff_end:
+                enroll_ranges_by_kg[int(_kg)].append((int(_child), eff_start, eff_end))
+
+        expected_set_by_child: Dict[int, set] = {}
+        child_to_kg: Dict[int, int] = {}
+        expected_by_child_by_kg: Dict[int, Dict[int, int]] = {kg_id: {} for kg_id in target_kindergarten_ids}
+        for kg_id in target_kindergarten_ids:
+            kg_sets = KPIService._expected_dayset_by_child(
+                working_days_by_kg.get(kg_id, []), enroll_ranges_by_kg.get(kg_id, [])
+            )
+            for cid, days in kg_sets.items():
+                expected_set_by_child[cid] = days
+                child_to_kg[cid] = kg_id
+                expected_by_child_by_kg[kg_id][cid] = len(days)
 
         child_ids_by_kg: Dict[int, List[int]] = {kg_id: list(v.keys()) for kg_id, v in expected_by_child_by_kg.items()}
         expected_child_days_by_kg: Dict[int, int] = {kg_id: sum(v.values()) for kg_id, v in expected_by_child_by_kg.items()}
 
         # ── Attended child-days per child (single bulk query) ─────────────────
-        all_child_ids = list({cid for cids in child_ids_by_kg.values() for cid in cids})
+        # att_by_child: attended-among-expected (rate/absence numerator, bounded).
+        # exposure_by_child: every physical-attendance day (incident exposure).
+        all_child_ids = list(expected_set_by_child.keys())
         att_by_child: Dict[int, int] = {}
+        exposure_by_child: Dict[int, int] = {}
         if all_child_ids:
-            for row in db.query(
+            for cid, day in db.query(
                 models.AttendanceLog.child_id,
-                func.count(models.AttendanceLog.id),
+                models.AttendanceLog.date,
             ).filter(
                 models.AttendanceLog.child_id.in_(all_child_ids),
                 models.AttendanceLog.date >= period_start,
@@ -3393,8 +3506,12 @@ def get_consolidated_kpi_dashboard_data(
                     models.AttendanceStatus.PRESENT,
                     models.AttendanceStatus.LATE,
                 ]),
-            ).group_by(models.AttendanceLog.child_id).all():
-                att_by_child[int(row[0])] = int(row[1])
+            ).all():
+                cid = int(cid)
+                exposure_by_child[cid] = exposure_by_child.get(cid, 0) + 1
+                days = expected_set_by_child.get(cid)
+                if days and day.toordinal() in days:
+                    att_by_child[cid] = att_by_child.get(cid, 0) + 1
 
         # ── Incidents: 4 GROUP-BY queries ─────────────────────────────────────
         def _inc_query(extra_filters=()):
@@ -3599,6 +3716,9 @@ def get_consolidated_kpi_dashboard_data(
 
             attended_child_days = sum(att_by_child.get(cid, 0) for cid in child_ids)
             att_by_child_kg = {cid: att_by_child.get(cid, 0) for cid in child_ids}
+            # Exposure (all physical-attendance days) for incident rates — see the
+            # att_by_child / exposure_by_child split above.
+            attended_exposure_days = sum(exposure_by_child.get(cid, 0) for cid in child_ids)
 
             incident_count = inc_total_by_kg.get(kg_id, 0)
             serious_incident_count = inc_serious_by_kg.get(kg_id, 0)
@@ -3666,8 +3786,8 @@ def get_consolidated_kpi_dashboard_data(
             chronic_absence_rate = round((chronic_absence_count / chronic_denominator) * 100, 2) if (chronic_denominator > 0 and has_attendance_data) else 0.0
 
             attendance_rate = round((attended_child_days / expected_child_days) * 100, 2) if expected_child_days > 0 else 0.0
-            incident_rate = round((incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
-            serious_incident_rate_val = round((serious_incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
+            incident_rate = round((incident_count / attended_exposure_days) * 1000, 3) if attended_exposure_days > 0 else 0.0
+            serious_incident_rate_val = round((serious_incident_count / attended_exposure_days) * 1000, 3) if attended_exposure_days > 0 else 0.0
             incident_followup_sla = round((followup_closed_within_sla / followup_required) * 100, 2) if followup_required > 0 else 0.0
 
             gqi_components = [
@@ -3684,7 +3804,7 @@ def get_consolidated_kpi_dashboard_data(
                 ("attendance_rate", attendance_rate, 0.35, expected_child_days > 0),
                 ("chronic_absence", 100 - chronic_absence_rate, 0.25, chronic_denominator > 0 and has_attendance_data),
                 # serious_incident_rate_val is per-1,000 child-days; divide by 10 for per-100 equivalent.
-                ("serious_incident_rate", 100 - min(serious_incident_rate_val / 10, 100), 0.20, attended_child_days > 0),
+                ("serious_incident_rate", 100 - min(serious_incident_rate_val / 10, 100), 0.20, attended_exposure_days > 0),
                 ("parent_satisfaction", parent_satisfaction, 0.20, survey_responses > 0),
             ]
             cei_weight_sum = sum(w for _, _, w, hd in cei_components if hd)
@@ -3738,14 +3858,14 @@ def get_consolidated_kpi_dashboard_data(
                         "reason": "Missing active enrollment periods or operating calendar data" if expected_child_days == 0 else None,
                     },
                     "incident_rate": {
-                        "has_data": attended_child_days > 0,
-                        "coverage_pct": 100.0 if attended_child_days > 0 else 0.0,
-                        "reason": "No attended child-days in selected period" if attended_child_days == 0 else None,
+                        "has_data": attended_exposure_days > 0,
+                        "coverage_pct": 100.0 if attended_exposure_days > 0 else 0.0,
+                        "reason": "No attended child-days in selected period" if attended_exposure_days == 0 else None,
                     },
                     "serious_incident_rate": {
-                        "has_data": attended_child_days > 0,
-                        "coverage_pct": 100.0 if attended_child_days > 0 else 0.0,
-                        "reason": "No attended child-days in selected period" if attended_child_days == 0 else None,
+                        "has_data": attended_exposure_days > 0,
+                        "coverage_pct": 100.0 if attended_exposure_days > 0 else 0.0,
+                        "reason": "No attended child-days in selected period" if attended_exposure_days == 0 else None,
                     },
                     "incident_followup_sla": {
                         "has_data": followup_required > 0,
