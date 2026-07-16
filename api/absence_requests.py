@@ -346,6 +346,22 @@ def approve_absence_request(
     db.flush()
 
     # Create attendance records for each day in range
+    # The loop below is the thing the span bound exists to protect, so check it here
+    # too, against the STORED row. Both creation routes are bounded now, but a row
+    # persisted before that bound shipped — or written by a migration or a fixture —
+    # would still walk ~2.9M days one SELECT+INSERT at a time. Guarding only the doors
+    # protects only rows created after the doors were fitted.
+    stored_span = (absence.end_date - absence.start_date).days + 1
+    if stored_span > MAX_ABSENCE_SPAN_DAYS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"absence spans {stored_span} days, which exceeds the "
+                f"{MAX_ABSENCE_SPAN_DAYS}-day limit; it cannot be approved. Reject it "
+                "and ask for a shorter request."
+            ),
+        )
+
     records_created = 0
     current_date = absence.start_date
     while current_date <= absence.end_date:

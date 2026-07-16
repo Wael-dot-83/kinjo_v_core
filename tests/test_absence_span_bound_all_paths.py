@@ -71,6 +71,50 @@ def test_span_at_the_limit_is_accepted(client, auth_headers_parent, sample_child
     )
 
 
+def test_approve_refuses_a_stored_row_that_exceeds_the_bound(
+    client, auth_headers_manager, manager_user, test_db, sample_child, active_enrollment
+):
+    """The loop is the thing the bound protects, so the loop must check too.
+
+    Both creation routes are bounded, but that only protects rows created *after* the
+    bound shipped. A row already in the table — persisted before this deploy, or written
+    by a migration or a fixture — still walks ~2.9M days, one SELECT + one INSERT each.
+    Planted directly in the DB, which is the only way to get one past the validators and
+    therefore the only honest test of this guard.
+    """
+    import models
+
+    absurd = models.AbsenceRequest(
+        parent_id=sample_child.parent_id,
+        child_id=sample_child.id,
+        kindergarten_id=active_enrollment.kindergarten_id,
+        class_id=active_enrollment.class_id,
+        start_date=date.today() + timedelta(days=1),
+        end_date=date(9999, 12, 31),
+        reason="planted",
+        status=models.AbsenceRequestStatus.SUBMITTED,
+    )
+    test_db.add(absurd)
+    test_db.commit()
+    test_db.refresh(absurd)
+
+    resp = client.post(
+        f"/api/absence-requests/{absurd.id}/approve",
+        json={},
+        headers=auth_headers_manager,
+    )
+    assert resp.status_code == 422, (
+        f"approving a stored 2.9M-day absence returned {resp.status_code}; the loop ran "
+        f"unbounded: {resp.text[:160]}"
+    )
+
+    # And nothing was written on the way to refusing.
+    written = test_db.query(models.AttendanceLog).filter(
+        models.AttendanceLog.child_id == sample_child.id
+    ).count()
+    assert written == 0, f"{written} attendance rows were written before the refusal"
+
+
 def test_both_routes_are_actually_registered():
     """Non-vacuity: if a path 404s, its rejection assertions pass for the wrong reason."""
     from fastapi.routing import APIRoute, Mount
