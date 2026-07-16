@@ -13,26 +13,22 @@ governorate chart. All three now route through KPIService, which defines attenda
 (PRESENT + LATE child-days) / expected child-days, with expected respecting working days
 (Sun–Thu plus OperatingCalendar) and each enrolment's own date range.
 
-**What is still wrong — read this before trusting the number.** The rate can still
-exceed 100%. `_attended_child_days_by_child` (kpi_service.py) filters only on child_id
-and the window, while the denominator additionally respects working days and each
-enrolment's effective range. The numerator therefore counts days the denominator never
-expected. Reproduced (see `test_rate_can_still_exceed_100_percent` below):
+**The numerator is now constrained to the expected day-set.** The earlier fix removed
+the window-scaling but left a deeper asymmetry: `_attended_child_days_by_child` counted
+every PRESENT/LATE log in the window, while the denominator counted only working days
+within each enrolment. A child present outside their enrolment, or on a closed day,
+pushed the rate past 100% (measured at 333% and 136%).
 
-    enrolled 07-07..07-09, attendance logged 07-01..07-10, window 07-01..07-15 -> 333.33%
-    PRESENT every calendar day including Fri/Sat, window 07-01..07-15         -> 136.36%
+The canonical `KPIService._attendance_components_by_child` now takes numerator and
+denominator over the SAME per-child day-set (working days ∩ enrolment range), so
+attended ⊆ expected and the rate is bounded to [0, 100]. Every attendance-rate consumer
+— kg-overview (card, network KPI, governorate chart), the KPI dashboard, and the
+analytics call sites — routes through it, so they agree by construction. Incident rates
+deliberately keep counting ALL physical-attendance days as exposure (an incident can
+happen on any day a child is present); that split is documented in kpi_service.py.
 
-This is **pre-existing and shared**: identical on the merge base and reached by ~9
-analytics_service.py call sites plus the KPI dashboard, all through the same
-compute_attendance_rate. So this branch makes kg-overview *agree* with the rest of the
-system — which was the point — and removes the window-scaling. It does not make the
-shared definition sound. Fixing that means constraining the numerator to the same
-day-set as the denominator inside kpi_service, which changes KPI values system-wide and
-needs its own branch and verification.
-
-An earlier version of this file asserted "a rate cannot exceed 100%" and passed only
-because its seed happened to avoid both cases. The bound tests below now assert exact
-values instead, so gutting the implementation cannot satisfy them.
+The bound tests below assert exact values, so a gutted numerator returning 0 cannot
+satisfy them.
 """
 from datetime import date, timedelta
 
@@ -124,19 +120,21 @@ def test_network_and_governorate_rates_match_the_card(
     assert gov["attendance_rate"] == 100.0, f"governorate={gov['attendance_rate']}"
 
 
-def test_rate_can_still_exceed_100_percent(
+def test_attendance_outside_the_enrollment_range_does_not_exceed_100(
     test_db, admin_user, sample_kindergarten, sample_class, sample_child
 ):
-    """Pins a KNOWN, UNFIXED defect so it stays visible and cannot be re-discovered.
+    """The 333% regression, now fixed and pinned the other way.
 
-    The numerator counts every attendance row for the child in the window; the
-    denominator counts only working days inside the enrolment's effective range. Days
-    outside the enrolment (or on Fri/Sat) inflate the numerator against a denominator
-    that never expected them.
+    Enrolled for three days (07-07..07-09) but present across ten (07-01..07-10). The
+    seven present days outside the enrollment used to be counted in the numerator
+    against a denominator that only expected the three — 333%. The canonical helper
+    (`_attendance_components_by_child`) now counts attendance only on expected days
+    (working days ∩ enrollment range), so the numerator is a subset of the denominator
+    and the rate cannot exceed 100%.
 
-    Pre-existing and shared with the KPI dashboard and ~9 analytics_service call sites.
-    **If this test starts failing, the shared definition was fixed** — delete this test
-    and tighten the bound in the two above to `<= 100.0`.
+    The child was present on 07-07/08/09 (the three expected days), so the rate is
+    exactly 100 — an exact value, not just a bound, so a gutted numerator returning 0
+    cannot satisfy it.
     """
     _enroll(test_db, sample_kindergarten, sample_child,
             start=date(2026, 7, 7), end=date(2026, 7, 9))
@@ -145,11 +143,32 @@ def test_rate_can_still_exceed_100_percent(
     rate = KPIService.compute_attendance_rate(
         test_db, sample_kindergarten.id, date(2026, 7, 1), date(2026, 7, 15)
     )
-    assert rate > 100.0, (
-        f"compute_attendance_rate now returns {rate}% for attendance logged outside the "
-        "enrolment range. If that is because the numerator was constrained to the "
-        "denominator's day-set, this defect is fixed: remove this test and tighten the "
-        "bounds above."
+    # 07-07 (Tue), 07-08 (Wed), 07-09 (Thu) are all Sun–Thu working days, all attended.
+    assert rate == 100.0, (
+        f"expected 100.0 (present on all three expected days), got {rate}. A value over "
+        "100 means the numerator is again counting days the denominator did not expect."
+    )
+
+
+def test_attendance_on_closed_days_does_not_exceed_100(
+    test_db, admin_user, sample_kindergarten, sample_class, sample_child
+):
+    """The other half of the 333% class: present every calendar day, including Fri/Sat.
+
+    With no OperatingCalendar rows, Fri/Sat are closed and not expected. Logging
+    attendance on them used to inflate the numerator (136% before the fix). Enrolled and
+    present for the full window, so every expected (Sun–Thu) day is attended -> 100.
+    """
+    _enroll(test_db, sample_kindergarten, sample_child,
+            start=date(2026, 7, 1), end=date(2026, 7, 15))
+    _present(test_db, sample_class, sample_child, admin_user.id, 15, date(2026, 7, 1))
+
+    rate = KPIService.compute_attendance_rate(
+        test_db, sample_kindergarten.id, date(2026, 7, 1), date(2026, 7, 15)
+    )
+    assert rate == 100.0, (
+        f"expected 100.0 (present on every working day), got {rate}. A value over 100 "
+        "means attendance on closed (Fri/Sat) days is being counted."
     )
 
 

@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from typing import List, Dict, Optional
 from pydantic import BaseModel
 from dependencies import get_current_user
+from kpi_service import KPIService
 from database import get_db
 from dashboard_customization import dashboard_customization
 import models
@@ -180,18 +181,28 @@ def get_dashboard_summary(
             ch_q = ch_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter_ids))
         children = ch_q.scalar() or 0
 
-        # attendance rate over period
-        att_q = db.query(func.count(models.AttendanceLog.id)).filter(
-            models.AttendanceLog.date >= start,
-            models.AttendanceLog.date <= end,
-            models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
-        )
+        # Attendance rate over the period, via the canonical definition (attended-among-
+        # expected child-days / expected child-days). This used to be
+        # `present_rows_in_window / active_children`, which divides a multi-day count by
+        # a single-day headcount and so grew with the window — a month view could report
+        # an "attendance" far above 100%. compute_attendance_components_bulk is a fixed
+        # 3 queries regardless of kindergarten count.
         if kg_filter_ids:
-            att_q = att_q.join(
-                models.Class, models.Class.id == models.AttendanceLog.class_id
-            ).filter(models.Class.kindergarten_id.in_(kg_filter_ids))
-        present = att_q.scalar() or 0
-        attendance = round(present / children * 100, 1) if children > 0 else 0.0
+            summary_kg_ids = list(kg_filter_ids)
+        else:
+            summary_kg_ids = [
+                kid
+                for (kid,) in db.query(models.Kindergarten.id).filter(
+                    models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+                    models.Kindergarten.deleted_at.is_(None),
+                ).all()
+            ]
+        components = KPIService.compute_attendance_components_bulk(
+            db, summary_kg_ids, start, end
+        )
+        att_num = sum(a for a, _ in components.values())
+        att_den = sum(e for _, e in components.values())
+        attendance = round(att_num / att_den * 100, 1) if att_den > 0 else 0.0
 
         # open alerts: pending enrollments + today's incidents
         pending_q = db.query(func.count(models.EnrollmentApplication.id)).filter(
@@ -211,20 +222,19 @@ def get_dashboard_summary(
         today_incidents = incident_q.scalar() or 0
         alerts = pending_enr + today_incidents
 
-        # 7-day attendance trend (percent each day)
+        # 7-day attendance trend, one canonical single-day rate per point (attended /
+        # expected for that day). Each day is a 1-day window, so the same definition as
+        # the headline number above — a point can only be 0/50/100 style values bounded
+        # by that day's expected child-days, never the headcount-scaled figure.
         trend = []
         for i in range(6, -1, -1):
             d = today - timedelta(days=i)
-            day_q = db.query(func.count(models.AttendanceLog.id)).filter(
-                models.AttendanceLog.date == d,
-                models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
+            day_components = KPIService.compute_attendance_components_bulk(
+                db, summary_kg_ids, d, d
             )
-            if kg_filter_ids:
-                day_q = day_q.join(
-                    models.Class, models.Class.id == models.AttendanceLog.class_id
-                ).filter(models.Class.kindergarten_id.in_(kg_filter_ids))
-            day_present = day_q.scalar() or 0
-            trend.append(round(day_present / children * 100, 1) if children > 0 else 0.0)
+            day_num = sum(a for a, _ in day_components.values())
+            day_den = sum(e for _, e in day_components.values())
+            trend.append(round(day_num / day_den * 100, 1) if day_den > 0 else 0.0)
 
         return {
             "children": children,
