@@ -7184,38 +7184,30 @@ class AnalyticsService:
 
     @staticmethod
     def _compute_network_attendance_rate(db: Session, period_start: date, period_end: date, kg_ids: Optional[List[int]] = None) -> float:
-        """Compute network-wide attendance rate (optionally filtered to a KG list)"""
-        # Build subquery of active child_ids in scope to avoid Cartesian product
-        active_child_sq = db.query(models.EnrollmentApplication.child_id).filter(
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-        )
-        if kg_ids:
-            active_child_sq = active_child_sq.filter(
-                models.EnrollmentApplication.kindergarten_id.in_(kg_ids)
-            )
-        active_child_sq = active_child_sq.distinct().scalar_subquery()
+        """Network-wide attendance rate via the canonical KPIService definition.
 
-        total_attended_days = db.query(func.count(models.AttendanceLog.id)).filter(
-            models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end,
-            models.AttendanceLog.child_id.in_(active_child_sq),
-        ).scalar() or 0
-
-        # Active enrollment count (denominator for expected child-days)
-        enroll_q = db.query(func.count(models.EnrollmentApplication.id)).filter(
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-        )
-        if kg_ids:
-            enroll_q = enroll_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
-        total_active_enrollments = enroll_q.scalar() or 0
-
-        days_in_period = (period_end - period_start).days + 1
-        total_expected_days = total_active_enrollments * days_in_period
-
-        if total_expected_days == 0:
+        Was a looser calendar-day formula — every attendance log (any status) over the
+        window divided by active_enrollments × calendar_days — which counted absences as
+        attendance, ignored working days, and disagreed with kg-overview and the KPI
+        dashboard for the same data. It now sums the canonical (attended, expected)
+        child-days over the scope, so a network number matches the sum of its parts.
+        """
+        if kg_ids is None:
+            kg_ids = [
+                kid for (kid,) in db.query(models.Kindergarten.id).filter(
+                    models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+                    models.Kindergarten.deleted_at.is_(None),
+                ).all()
+            ]
+        if not kg_ids:
             return 0.0
 
-        return round((total_attended_days / total_expected_days) * 100, 2)
+        components = KPIService.compute_attendance_components_bulk(
+            db, kg_ids, period_start, period_end
+        )
+        attended = sum(a for a, _ in components.values())
+        expected = sum(e for _, e in components.values())
+        return round((attended / expected) * 100, 2) if expected > 0 else 0.0
 
     @staticmethod
     def _compute_network_incident_rate(db: Session, period_start: date, period_end: date, kg_ids: Optional[List[int]] = None) -> float:
@@ -7324,30 +7316,15 @@ class AnalyticsService:
         if not kg_ids:
             return 0.0
 
-        # Subquery for active child_ids in this governorate's KGs (avoids Cartesian product)
-        active_child_sq = db.query(models.EnrollmentApplication.child_id).filter(
-            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-        ).distinct().scalar_subquery()
-
-        attended = db.query(func.count(models.AttendanceLog.id)).filter(
-            models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end,
-            models.AttendanceLog.child_id.in_(active_child_sq),
-        ).scalar() or 0
-
-        active_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
-            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-        ).scalar() or 0
-
-        days_in_period = (period_end - period_start).days + 1
-        expected = active_enrollments * days_in_period
-
-        if expected == 0:
-            return 0.0
-
-        return round((attended / expected) * 100, 2)
+        # Canonical definition over the governorate's kindergartens — same helper the
+        # network rate above uses, so governorate and network agree with each other and
+        # with kg-overview / the KPI dashboard. (Was the looser calendar-day formula.)
+        components = KPIService.compute_attendance_components_bulk(
+            db, kg_ids, period_start, period_end
+        )
+        attended = sum(a for a, _ in components.values())
+        expected = sum(e for _, e in components.values())
+        return round((attended / expected) * 100, 2) if expected > 0 else 0.0
 
     @staticmethod
     def _compute_governorate_incident_rate(

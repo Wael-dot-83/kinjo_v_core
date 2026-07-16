@@ -274,3 +274,31 @@ def test_bulk_query_count_is_flat_in_kindergarten_count(
     # per-kg loop would make n6 ≈ n1 + 5.
     assert n6 <= n1, f"query count grew from {n1} (1 kg) to {n6} (6 kgs) — that is an N+1"
     assert n6 <= 4, f"bulk used {n6} queries for 6 kgs; expected a small constant (<=4)"
+
+
+# ── 7. analytics network / governorate rates share the definition ────────────
+def test_network_and_governorate_analytics_agree_with_canonical(
+    test_db, admin_user, sample_kindergarten, sample_class, sample_child
+):
+    """`_compute_network_attendance_rate` / `_compute_governorate_attendance_rate` were a
+    looser calendar-day, all-status formula that disagreed with kg-overview and the KPI
+    dashboard. They now route through the canonical helper, so all three agree — on the
+    same pathological data (present outside enrollment) that used to diverge."""
+    from analytics_service import AnalyticsService
+
+    _enroll(test_db, sample_kindergarten, sample_child,
+            start=date(2026, 7, 7), end=date(2026, 7, 9))
+    _present(test_db, sample_class, sample_child, admin_user.id,
+             [date(2026, 7, 1) + timedelta(days=i) for i in range(10)])  # 07-01..07-10
+    s, e = date(2026, 7, 1), date(2026, 7, 15)
+
+    canonical = KPIService.compute_attendance_rate(test_db, sample_kindergarten.id, s, e)
+    network = AnalyticsService._compute_network_attendance_rate(test_db, s, e, [sample_kindergarten.id])
+    governorate = AnalyticsService._compute_governorate_attendance_rate(
+        test_db, "Amman", s, e, [sample_kindergarten.id])
+
+    assert network == governorate == canonical, (
+        f"network={network} gov={governorate} canonical={canonical} — analytics still "
+        "uses a different attendance definition"
+    )
+    assert canonical <= 100.0
