@@ -115,16 +115,16 @@ def create_incident(
 def _resolve_enum(enum_cls, raw: str, field: str):
     """Resolve a query-string filter to an enum by NAME or VALUE, or 422.
 
-    Two separate bugs met here. `IncidentStatus` is the one enum in this module whose
-    names and values differ (OPEN = "Open"), while SeverityLevel and IncidentType have
-    name == value. Calling `IncidentStatus(raw)` looks up by *value*, so the UI's own
-    dropdown — which sends the names OPEN / UNDER_REVIEW / CLOSED
-    (templates/supervisor/safety.html) — never matched. And an unknown value raised a
-    bare ValueError out of the handler, which is a 500: an unrecognised filter is bad
-    input, not a server fault, so picking any status crashed the page.
+    `IncidentStatus` is the one enum in this module whose names and values differ
+    (OPEN = "Open"); SeverityLevel and IncidentType have name == value. Calling
+    `IncidentStatus(raw)` looks up by *value*, so a caller sending the name got
+    `ValueError: 'OPEN' is not a valid IncidentStatus` — raised bare out of the
+    handler, i.e. a 500. An unrecognised filter is bad input, not a server fault.
 
-    Accepting either spelling keeps the existing callers working without a migration,
-    and anything genuinely unknown now gets a 422 naming the valid options.
+    The live /safety page sends values ("Open"), so it was never broken; the 500 needed
+    a hand-crafted URL or a client using names. Accepting either spelling costs nothing,
+    keeps every existing caller working, and means a page built from IncidentStatus.name
+    cannot resurrect the crash.
     """
     candidate = (raw or "").strip()
     for member in enum_cls:
