@@ -332,8 +332,16 @@
       if (this.state.role) params.set("role", this.state.role);
       if (this.state.user_id) params.set("user_id", this.state.user_id);
       if (this.state.activity_type) params.set("activity_type", this.state.activity_type);
-      if (this.state.period) params.set("period", this.state.period);
-      if (this.state.period === "custom" && this.state.start_date && this.state.end_date) {
+      // Selecting "Custom range" reloads before either date is filled in, and the
+      // state can also be rehydrated from a bookmarked `?period=custom` URL. An
+      // incomplete custom range is not a window the API can resolve (it answers
+      // 422), so omit the period until both dates exist and show the unfiltered
+      // feed meanwhile.
+      const customRangeReady = Boolean(this.state.start_date && this.state.end_date);
+      if (this.state.period && (this.state.period !== "custom" || customRangeReady)) {
+        params.set("period", this.state.period);
+      }
+      if (this.state.period === "custom" && customRangeReady) {
         params.set("start_date", this.state.start_date);
         params.set("end_date", this.state.end_date);
       }

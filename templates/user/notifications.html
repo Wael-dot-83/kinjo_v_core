@@ -47,11 +47,11 @@
 
     async function loadNotifications(page = 1) {
         try {
-            const response = await fetch(`/api/notifications?page=${page}&limit=20`, {
-                headers: {
-                    'Authorization': 'Bearer ' + (localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token'))
-                }
-            });
+            // No Authorization header: the HttpOnly kinjo_session cookie carries the
+            // session. 'kinjo_token' is a dead storage key — nothing writes it since
+            // the JWT left browser storage — so this sent `Bearer null`, the server
+            // answered 401, and the list never loaded.
+            const response = await fetch(`/api/notifications?page=${page}&limit=20`);
 
             if (response.ok) {
                 const data = await response.json();
@@ -108,26 +108,44 @@
 
     async function markAsRead(notificationId) {
         try {
-            await fetch(`/api/notifications/${notificationId}/read`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + (localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token'))
-                }
+            // Cookie session + auth.js-injected X-CSRF-Token; see loadNotifications.
+            // The result is checked now: this used to ignore it, so a failure looked
+            // exactly like success — the list reloaded and the notification was still
+            // unread, with nothing said.
+            const response = await fetch(`/api/notifications/${notificationId}/read`, {
+                method: 'POST'
             });
+            if (!response.ok) {
+                Swal.fire({
+                    icon: 'error',
+                    title: T('خطأ', 'Error'),
+                    text: T('تعذر تحديد الإشعار كمقروء', 'Could not mark the notification as read'),
+                });
+                return;
+            }
             loadNotifications(currentPage);
         } catch (error) {
             console.error('Error marking notification as read:', error);
+            Swal.fire({
+                icon: 'error',
+                title: T('خطأ', 'Error'),
+                text: T('تعذر تحديد الإشعار كمقروء', 'Could not mark the notification as read'),
+            });
         }
     }
 
     document.getElementById('markAllRead').addEventListener('click', async function () {
         try {
-            await fetch('/api/notifications/read-all', {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + (localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token'))
-                }
-            });
+            // Cookie session + auth.js-injected X-CSRF-Token; see loadNotifications.
+            const response = await fetch('/api/notifications/read-all', { method: 'POST' });
+            if (!response.ok) {
+                Swal.fire({
+                    icon: 'error',
+                    title: T('خطأ', 'Error'),
+                    text: T('تعذر تحديد الإشعارات كمقروءة', 'Could not mark notifications as read'),
+                });
+                return;
+            }
             loadNotifications(currentPage);
             Swal.fire({
                 icon: 'success',

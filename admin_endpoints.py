@@ -29,7 +29,7 @@ _JORDAN_TZ = timezone(timedelta(hours=3))
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, UploadFile, File, Form
 from fastapi.responses import Response, JSONResponse, StreamingResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from admin_reports_api import AdminAlertResponse, AdminAlertsListResponse
 
 from sqlalchemy.orm import Session, selectinload
@@ -3643,6 +3643,10 @@ _ACTIVITY_MAP: Dict[str, tuple] = {
     AuditAction.ADMIN_PROFILE_UPDATED:      ("تحديث إعدادات النظام",      "System settings updated",        "settings_change",  "settings"),
     AuditAction.ENROLLMENT_ACCEPTED:        ("قبول طلب تسجيل",            "Enrollment application accepted","data_update",      "operations"),
     AuditAction.ENROLLMENT_REJECTED:        ("رفض طلب تسجيل",             "Enrollment application rejected","data_update",      "operations"),
+    # Governance reminders are audited (see the /governance reminder endpoint) but
+    # were never classified, which left the feed's `governance` module filter with
+    # no rows to match and hid these events from the feed entirely.
+    AuditAction.GOVERNANCE_REMINDER_SENT:   ("إرسال تذكير حوكمة",          "Governance reminder sent",       "message_sent",     "governance"),
 }
 
 # High-risk actions escalated to "critical" regardless of their sensitivity_level.
@@ -3675,7 +3679,115 @@ _ENTITY_TYPE_LABELS: Dict[str, tuple] = {
     "EnrollmentApplication":  ("طلب تسجيل", "Enrollment Application"),
     "Message":                ("رسالة", "Message"),
     "Incident":               ("حادثة", "Incident"),
+    "GovernanceReminder":     ("تذكير حوكمة", "Governance Reminder"),
 }
+
+
+# =============================================================================
+# Custom period validation — shared by the admin endpoints that accept
+# `period=custom`. Invalid custom input previously fell back silently to the
+# endpoint's default window, so a caller asking for one range was answered with
+# a different one and had no way to tell.
+# =============================================================================
+
+# A year of daily rows is the widest window these dashboards aggregate without
+# pre-rollups; beyond it the query cost stops being interactive.
+MAX_CUSTOM_PERIOD_DAYS = 366
+
+# Accepted `period` values, per endpoint. Anything else is a 422 — these are the
+# only windows the endpoints can actually resolve.
+_ACTIVITY_PERIODS = ("today", "24h", "7d", "30d", "month", "custom")
+_KG_OVERVIEW_PERIODS = ("today", "week", "month", "custom")
+
+
+class CustomPeriodWindow(BaseModel):
+    """A validated inclusive [start_date, end_date] window."""
+
+    model_config = ConfigDict(frozen=True)
+
+    start_date: date
+    end_date: date
+
+    @model_validator(mode="after")
+    def _validate_window(self) -> "CustomPeriodWindow":
+        if self.start_date > self.end_date:
+            raise ValueError("start_date must be on or before end_date")
+        if self.inclusive_days > MAX_CUSTOM_PERIOD_DAYS:
+            raise ValueError(
+                f"custom period must not exceed {MAX_CUSTOM_PERIOD_DAYS} days "
+                f"(requested {self.inclusive_days})"
+            )
+        return self
+
+    @property
+    def inclusive_days(self) -> int:
+        return (self.end_date - self.start_date).days + 1
+
+
+def _resolve_period(
+    period: Optional[str],
+    start_date: Optional[date],
+    end_date: Optional[date],
+    *,
+    allowed: tuple,
+) -> Optional[CustomPeriodWindow]:
+    """Validate `period` and return the window when it is `custom`.
+
+    Returns None for the non-custom presets, which each endpoint resolves itself.
+    Raises 422 rather than silently substituting a different window.
+    """
+    if period is None:
+        return None
+    if period not in allowed:
+        raise HTTPException(
+            status_code=422,
+            detail=f"invalid period '{period}'; expected one of: {', '.join(allowed)}",
+        )
+    if period != "custom":
+        return None
+    if not start_date or not end_date:
+        raise HTTPException(
+            status_code=422,
+            detail="custom period requires both start_date and end_date",
+        )
+    try:
+        return CustomPeriodWindow(start_date=start_date, end_date=end_date)
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="; ".join(e["msg"].removeprefix("Value error, ") for e in exc.errors()),
+        )
+
+
+# `permission_change` is a *derived* activity type: it is not an AuditAction, so it
+# cannot appear in _ACTIVITY_MAP. It is a USER_UPDATED row whose old_data/new_data
+# disagree on `role`. The render path and the query filter must derive it from the
+# same definition — when they drift, the filter silently returns the wrong rows.
+PERMISSION_CHANGE_TYPE = "permission_change"
+
+# Base types that a derived type can steal rows from, keyed by the action involved.
+_DERIVED_FROM_ACTION = AuditAction.USER_UPDATED
+
+
+def _is_role_change(old_data, new_data) -> bool:
+    """Python classifier for PERMISSION_CHANGE_TYPE — mirrored in SQL by
+    _role_change_clause(). Both must agree or filtering breaks."""
+    old_role = (old_data or {}).get("role")
+    new_role = (new_data or {}).get("role")
+    return old_role is not None and new_role is not None and old_role != new_role
+
+
+def _role_change_clause():
+    """SQL mirror of _is_role_change().
+
+    AuditLog.old_data/new_data are generic JSON columns, so SQLAlchemy renders
+    this as `->>` on PostgreSQL and `json_extract` on SQLite — a role change is
+    therefore filterable in SQL, without persisting extra audit metadata, which
+    keeps `total` and pagination correct.
+    """
+    old_role = models.AuditLog.old_data["role"].as_string()
+    new_role = models.AuditLog.new_data["role"].as_string()
+    return and_(old_role.isnot(None), new_role.isnot(None), old_role != new_role)
 
 
 def _severity_for(action: str, sensitivity_level: Optional[int]) -> str:
@@ -3697,11 +3809,8 @@ def _activity_item_from_log(log: "models.AuditLog", actor_username: Optional[str
         return None
     msg_ar, msg_en, act_type, module_id = mapping
 
-    if action_str == AuditAction.USER_UPDATED:
-        old_role = (log.old_data or {}).get("role") if log.old_data else None
-        new_role = (log.new_data or {}).get("role") if log.new_data else None
-        if old_role is not None and new_role is not None and old_role != new_role:
-            msg_ar, msg_en, act_type = "تعديل صلاحيات مستخدم", "User permissions updated", "permission_change"
+    if action_str == _DERIVED_FROM_ACTION and _is_role_change(log.old_data, log.new_data):
+        msg_ar, msg_en, act_type = "تعديل صلاحيات مستخدم", "User permissions updated", PERMISSION_CHANGE_TYPE
 
     module_ar, module_en = _SIDEBAR_MODULE_LABELS.get(module_id, ("", ""))
     entity_ar, entity_en = _ENTITY_TYPE_LABELS.get(log.entity_type or "", (log.entity_type or "", log.entity_type or ""))
@@ -4203,7 +4312,35 @@ def get_admin_dashboard_activity(
     db: Session = Depends(get_db),
 ):
     """Filterable, paginated recent-activity feed backing the dashboard's activity filter bar."""
+    allowed_activity_types = {mapping[2] for mapping in _ACTIVITY_MAP.values()} | {
+        PERMISSION_CHANGE_TYPE
+    }
+    allowed_modules = {mapping[3] for mapping in _ACTIVITY_MAP.values()}
+    if activity_type is not None and activity_type not in allowed_activity_types:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported activity_type: {activity_type}",
+        )
+    if module is not None and module not in allowed_modules:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported module: {module}",
+        )
+    if status_filter is not None and status_filter not in {"success", "failed"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported status: {status_filter}",
+        )
+    if severity is not None and severity not in {"low", "medium", "high", "critical"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported severity: {severity}",
+        )
+
     page, page_size, offset = enforce_pagination(page, page_size)
+    custom_window = _resolve_period(
+        period, start_date, end_date, allowed=_ACTIVITY_PERIODS
+    )
     now = datetime.now(_JORDAN_TZ)
     today = now.date()
 
@@ -4223,16 +4360,27 @@ def get_admin_dashboard_activity(
         query = query.filter(models.AuditLog.created_at >= now - timedelta(days=30))
     elif period == "month":
         query = query.filter(models.AuditLog.created_at >= datetime.combine(today.replace(day=1), datetime.min.time(), tzinfo=_JORDAN_TZ))
-    elif period == "custom" and start_date and end_date:
+    elif custom_window is not None:
         query = query.filter(
-            models.AuditLog.created_at >= datetime.combine(start_date, datetime.min.time(), tzinfo=_JORDAN_TZ),
-            models.AuditLog.created_at < datetime.combine(end_date + timedelta(days=1), datetime.min.time(), tzinfo=_JORDAN_TZ),
+            models.AuditLog.created_at >= datetime.combine(custom_window.start_date, datetime.min.time(), tzinfo=_JORDAN_TZ),
+            models.AuditLog.created_at <= datetime.combine(custom_window.end_date, datetime.max.time(), tzinfo=_JORDAN_TZ),
         )
 
     if activity_type:
-        query = query.filter(models.AuditLog.action.in_(
-            [a for a, m in _ACTIVITY_MAP.items() if m[2] == activity_type]
-        ))
+        if activity_type == PERMISSION_CHANGE_TYPE:
+            # Derived type: USER_UPDATED rows where the role actually changed.
+            query = query.filter(
+                models.AuditLog.action == _DERIVED_FROM_ACTION,
+                _role_change_clause(),
+            )
+        else:
+            base_actions = [a for a, m in _ACTIVITY_MAP.items() if m[2] == activity_type]
+            query = query.filter(models.AuditLog.action.in_(base_actions))
+            if _DERIVED_FROM_ACTION in base_actions:
+                # Role changes render as `permission_change`, so they must not also
+                # come back under `user_update` — the filter would disagree with the
+                # `type` on every returned item.
+                query = query.filter(~_role_change_clause())
 
     if module:
         query = query.filter(models.AuditLog.action.in_(
@@ -4429,6 +4577,8 @@ _OCCUPANCY_NEAR = 95.0
 def get_kg_overview(
     request: Request,
     period: str = Query("month", description="Filter period: today, week, month, custom"),
+    start_date: Optional[date] = Query(None, description="Start date (required when period=custom)"),
+    end_date: Optional[date] = Query(None, description="End date (required when period=custom)"),
     governorate: Optional[str] = Query(None, description="Filter by governorate"),
     city: Optional[str] = Query(None, description="Filter by city (mapped to district)"),
     kindergarten_id: Optional[int] = Query(None, description="Filter by specific kindergarten"),
@@ -4438,19 +4588,22 @@ def get_kg_overview(
     db: Session = Depends(get_db)
 ):
     """Get comprehensive kindergarten overview with KPIs, health cards, charts, and alerts."""
+    custom_window = _resolve_period(
+        period, start_date, end_date, allowed=_KG_OVERVIEW_PERIODS
+    )
     now = datetime.now(_JORDAN_TZ)
     today = now.date()
 
-    if period == "today":
+    if custom_window is not None:
+        date_start = custom_window.start_date
+        date_end = custom_window.end_date
+    elif period == "today":
         date_start = today
         date_end = today
     elif period == "week":
         date_start = today - timedelta(days=6)
         date_end = today
-    elif period == "month":
-        date_start = today - timedelta(days=29)
-        date_end = today
-    else:
+    else:  # "month"
         date_start = today - timedelta(days=29)
         date_end = today
 
@@ -4494,31 +4647,32 @@ def get_kg_overview(
     ).group_by(models.EnrollmentApplication.kindergarten_id).all()
     children_by_kg = {kid: cnt for kid, cnt in active_enrollments}
 
-    attendance_records = db.query(
-        models.AttendanceLog.class_id,
-        func.count(models.AttendanceLog.id)
-    ).join(models.Class, models.AttendanceLog.class_id == models.Class.id).filter(
-        models.Class.kindergarten_id.in_(kg_ids),
-        models.AttendanceLog.date >= date_start,
-        models.AttendanceLog.date <= date_end,
-        models.AttendanceLog.status == models.AttendanceStatus.PRESENT
-    ).group_by(models.AttendanceLog.class_id).all()
-    present_by_class = {cid: cnt for cid, cnt in attendance_records}
+    # Attendance rate comes from the authoritative KPI engine, in bulk (3 queries for
+    # every kindergarten, not 4 each).
+    #
+    # It used to be computed here as `present_rows / active_children * 100`, which
+    # divides a count of PRESENT rows *across the whole window* by a *single-day*
+    # headcount. The two have different dimensions, so the result scaled with the
+    # window: one child present 5 days reported 100% over a 1-day window and 500% over
+    # a 10-day one — every band still "on_target", because 500 >= the target. The
+    # denominator has to be expected child-days, which means respecting working days
+    # (Sun–Thu plus OperatingCalendar) and each enrolment's own date range. That is
+    # exactly what KPIService already does, and duplicating it here is what let this
+    # number drift from the KPI dashboard's in the first place (CLAUDE.md: KPI
+    # computations belong in kpi_service.py).
+    attendance_components_by_kg = KPIService.compute_attendance_components_bulk(
+        db, list(kg_ids), date_start, date_end
+    )
+    attendance_rate_by_kg = {
+        kg_id: (round((attended / expected) * 100, 2) if expected else 0.0)
+        for kg_id, (attended, expected) in attendance_components_by_kg.items()
+    }
 
     classes = db.query(models.Class).filter(models.Class.kindergarten_id.in_(kg_ids)).all()
     capacity_by_kg: Dict[int, Dict[str, int]] = defaultdict(lambda: {"total_capacity": 0, "total_enrolled": 0})
-    class_to_kg: Dict[int, int] = {}
     for cls in classes:
         capacity_by_kg[cls.kindergarten_id]["total_capacity"] += cls.capacity_total or 0
         capacity_by_kg[cls.kindergarten_id]["total_enrolled"] += cls.enrolled_children_count or 0
-        class_to_kg[cls.id] = cls.kindergarten_id
-
-    # Map attendance per kg by summing present counts across classes
-    att_by_kg: Dict[int, int] = defaultdict(int)
-    for class_id, present_count in present_by_class.items():
-        kg_id = class_to_kg.get(class_id)
-        if kg_id is not None:
-            att_by_kg[kg_id] += present_count
 
     # Teachers: MANAGER + SUPERVISOR linked to kindergartens
     teachers_by_kg: Dict[int, int] = defaultdict(int)
@@ -4581,8 +4735,7 @@ def get_kg_overview(
     kg_cards: List[KgKindergartenCard] = []
     for kg in all_kgs:
         kids = children_by_kg.get(kg.id, 0)
-        present = att_by_kg.get(kg.id, 0)
-        att_rate = round((present / kids * 100.0), 1) if kids > 0 else 0.0
+        att_rate = round(attendance_rate_by_kg.get(kg.id, 0.0), 1)
         cap = capacity_by_kg.get(kg.id, {"total_capacity": 0, "total_enrolled": 0})
         occ_rate = round((cap["total_enrolled"] / cap["total_capacity"] * 100.0), 1) if cap["total_capacity"] > 0 else 0.0
         teachers = teachers_by_kg.get(kg.id, 0)
@@ -4673,9 +4826,15 @@ def get_kg_overview(
     # Aggregates (based on filtered kg_cards when governorate/risk_level is set)
     total_children = sum(c.children_count for c in kg_cards)
     kg_card_ids = [c.id for c in kg_cards]
-    total_present = sum(att_by_kg.get(kid, 0) for kid in kg_card_ids)
     total_enrolled = sum(children_by_kg.get(kid, 0) for kid in kg_card_ids)
-    avg_attendance = round((total_present / total_enrolled * 100.0), 1) if total_enrolled > 0 else 0.0
+    # Network attendance is sum(attended)/sum(expected) over the filtered set, not the
+    # mean of the per-kindergarten percentages: averaging rates would weight a 3-child
+    # kindergarten the same as a 300-child one. It divided window-wide PRESENT rows by
+    # a single-day headcount, so it scaled with the window exactly like the per-card
+    # rate did.
+    _attended_total = sum(attendance_components_by_kg.get(kid, (0, 0))[0] for kid in kg_card_ids)
+    _expected_total = sum(attendance_components_by_kg.get(kid, (0, 0))[1] for kid in kg_card_ids)
+    avg_attendance = round((_attended_total / _expected_total * 100.0), 1) if _expected_total > 0 else 0.0
     total_teachers = sum(c.teachers_count for c in kg_cards)
     total_alerts = sum(c.open_alerts for c in kg_cards)
 
@@ -4696,11 +4855,14 @@ def get_kg_overview(
         alert_severity_counts[sev] += 1
         alert_type_counts[a.metric_type] += 1
 
-    # Governorate comparison — weighted attendance (total present / total enrolled * 100)
+    # Governorate comparison — attendance weighted by expected child-days
+    # (sum(attended) / sum(expected) * 100), so a small kindergarten does not swing the
+    # governorate the same as a large one.
     gov_data: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
         "kindergartens": 0,
         "children": 0,
-        "present_sum": 0,
+        "attended_sum": 0,
+        "expected_sum": 0,
         "alerts": 0,
         "occupancy_sum": 0.0,
         "capacity_sum": 0,
@@ -4709,7 +4871,12 @@ def get_kg_overview(
     for kg in active_kgs:
         gov_data[kg.governorate]["kindergartens"] += 1
         gov_data[kg.governorate]["children"] += children_by_kg.get(kg.id, 0)
-        gov_data[kg.governorate]["present_sum"] += att_by_kg.get(kg.id, 0)
+        # Same story as the per-card and network rates: attended/expected child-days,
+        # summed across the governorate. `present_sum / children` divided window-wide
+        # rows by a single-day headcount and scaled with the window.
+        _att, _exp = attendance_components_by_kg.get(kg.id, (0, 0))
+        gov_data[kg.governorate]["attended_sum"] += _att
+        gov_data[kg.governorate]["expected_sum"] += _exp
         gov_data[kg.governorate]["alerts"] += len(alerts_by_kg.get(kg.id, []))
         cap = capacity_by_kg.get(kg.id, {"total_capacity": 0, "total_enrolled": 0})
         gov_data[kg.governorate]["occupancy_sum"] += cap["total_enrolled"]
@@ -4718,7 +4885,7 @@ def get_kg_overview(
 
     governorate_chart = []
     for gov_name, d in sorted(gov_data.items()):
-        att = round((d["present_sum"] / d["children"] * 100.0), 1) if d["children"] > 0 else 0.0
+        att = round((d["attended_sum"] / d["expected_sum"] * 100.0), 1) if d["expected_sum"] > 0 else 0.0
         occ = round((d["enrolled_sum"] / d["capacity_sum"] * 100.0), 1) if d["capacity_sum"] > 0 else 0.0
         governorate_chart.append({
             "name": gov_name,

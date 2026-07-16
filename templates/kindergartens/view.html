@@ -21,7 +21,13 @@
         <a href="/kindergartens/{{ kindergarten.id }}/edit" class="btn btn-outline-primary">
             <i class="bi bi-pencil me-2"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}
         </a>
-        <button class="btn btn-warning" onclick="confirmArchive()" id="archiveBtn">
+        {# POST /api/kindergartens/{id}/archive is not registered and answers 404
+           (KNOWN_UNRESOLVED). This button had no `display:none`, so unlike Delete it
+           was visible from first paint, and checkDeletePermissions() then *showed* it
+           for the common case (a kindergarten with classes or staff). Confirming the
+           dialog toasted "Not Found". Hidden until the endpoint exists; the handler is
+           left in place so building the backend re-enables it. #}
+        <button class="btn btn-warning" onclick="confirmArchive()" id="archiveBtn" style="display:none">
             <i class="bi bi-archive me-2"></i>{% if ui_lang == 'en' %}Archive{% else %}أرشفة{% endif %}
         </button>
         {% if current_user.role.name == 'ADMIN' %}
@@ -29,8 +35,10 @@
             <i class="bi bi-snow me-2"></i><span id="freezeBtnLabel">{% if ui_lang == 'en' %}Freeze{% else %}تجميد{% endif %}</span>
         </button>
         {% endif %}
+        {# The endpoint soft-deletes (status=DELETED + deleted_at) and refuses while
+           active enrollments or staff remain, so this is not a permanent erase. #}
         <button class="btn btn-danger" onclick="confirmDelete()" id="deleteBtn" style="display: none;">
-            <i class="bi bi-trash me-2"></i>{% if ui_lang == 'en' %}Delete Permanently{% else %}حذف نهائي{% endif %}
+            <i class="bi bi-trash me-2"></i>{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}
         </button>
     </div>
 </div>
@@ -150,9 +158,17 @@
             <li class="nav-item">
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#staff">{% if ui_lang == 'en' %}Staff{% else %}الكادر{% endif %}</button>
             </li>
+            {# Services & Facilities has no backend: GET/POST/PUT/DELETE
+               /api/kindergartens/{id}/services are all unregistered and answer 404
+               (tests/test_frontend_api_paths_resolve.py KNOWN_UNRESOLVED). The tab
+               therefore could only ever show "no services registered", and its Add
+               button walked an admin through a form that ended in
+               `alert("Error: Not Found")`. Hidden until the endpoints exist — the tab
+               body and its JS are left in place so building the backend re-enables it.
             <li class="nav-item">
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#services">{% if ui_lang == 'en' %}Services & Facilities{% else %}الخدمات والمرافق{% endif %}</button>
             </li>
+            #}
             <li class="nav-item">
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#audit">{% if ui_lang == 'en' %}Audit Log{% else %}سجل التدقيق{% endif %}</button>
             </li>
@@ -484,19 +500,20 @@
 
     // Auth helper
     function getHeaders() {
-        // Use centralized auth system
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
-
-        const token = AuthService.getToken();
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        return headers;
+        // No Authorization header: the session is the HttpOnly 'kinjo_session' cookie,
+        // which the browser attaches on its own. `AuthService.getToken()` deliberately
+        // returns the CSRF cookie as a truthy sentinel, not the JWT (auth.js), so
+        // sending it as `Bearer` made every call here 401 — and auth.js turns any 401
+        // into a redirect to /login?expired=true, which logged admins out of this page.
+        // CSRF for unsafe methods is injected centrally by auth.js's fetch wrapper.
+        return { 'Content-Type': 'application/json' };
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-        await Promise.all([loadClasses(), loadStaff(), loadServices()]);
+        // loadServices() is deliberately not called: its endpoint is unregistered, so
+        // it only ever fetched a 404 for a tab that is now hidden. Restore it here
+        // alongside the tab when the services backend exists.
+        await Promise.all([loadClasses(), loadStaff()]);
         await checkDeletePermissions();
 
         // Services CRUD logic
@@ -653,13 +670,12 @@
             // Show appropriate button based on dependencies and user role
             const hasDependencies = activeClasses > 0 || activeStaff > 0;
             const isAdmin = "{{ 'true' if current_user.role.name == 'ADMIN' else 'false' }}";
-            if (hasDependencies || isAdmin !== 'true') {
-                document.getElementById('archiveBtn').style.display = 'inline-block';
-                document.getElementById('deleteBtn').style.display = 'none';
-            } else {
-                document.getElementById('archiveBtn').style.display = 'none';
-                document.getElementById('deleteBtn').style.display = 'inline-block';
-            }
+            // Archive stays hidden either way: its endpoint is not implemented (404),
+            // so offering it here just produced a "Not Found" toast. Restore the
+            // inline-block branch when POST /api/kindergartens/{id}/archive exists.
+            document.getElementById('archiveBtn').style.display = 'none';
+            const canDelete = !hasDependencies && isAdmin === 'true';
+            document.getElementById('deleteBtn').style.display = canDelete ? 'inline-block' : 'none';
         } catch (error) {
             console.error('Error checking permissions:', error);
         }
@@ -1158,7 +1174,10 @@
     }
 
     function confirmDelete() {
-        if (confirm(T('هل أنت متأكد من حذف هذه الحضانة نهائياً؟ لا يمكن التراجع عن هذا الإجراء وستفقد جميع البيانات المرتبطة.', 'Are you sure you want to permanently delete this kindergarten? This action cannot be undone and all associated data will be lost.'))) {
+        // Describe what the endpoint actually does: a soft delete that keeps the
+        // record (status=DELETED) and is refused while active enrollments or staff
+        // remain. The old copy promised a permanent, irreversible erase.
+        if (confirm(T('هل أنت متأكد من حذف هذه الحضانة؟ سيتم إخفاؤها من النظام مع الاحتفاظ بالبيانات، ولا يمكن الحذف إذا كان بها تسجيلات أو موظفون نشطون.', 'Are you sure you want to delete this kindergarten? It will be hidden from the system, its data is retained, and deletion is refused while it still has active enrollments or staff.'))) {
             deleteKindergarten();
         }
     }
@@ -1186,7 +1205,10 @@
 
     async function deleteKindergarten() {
         try {
-            const response = await fetch(`/api/kindergartens/${kindergartenId}`, {
+            // Deletion is only registered under /api/admin (the button is already
+            // admin-only); DELETE /api/kindergartens/{id} was never a route, so this
+            // returned 405 and the delete never worked.
+            const response = await fetch(`/api/admin/kindergartens/${kindergartenId}`, {
                 method: 'DELETE',
                 headers: getHeaders()
             });
@@ -1197,7 +1219,9 @@
                 showToast(result.message, 'success');
                 setTimeout(() => window.location.href = '/kindergartens', 1000);
             } else {
-                showToast(result.detail || T('فشل في الحذف', 'Delete failed'), 'error');
+                // The admin API answers with a {success, data, message} envelope;
+                // `detail` is FastAPI's own error shape.
+                showToast(result.message || result.detail || T('فشل في الحذف', 'Delete failed'), 'error');
             }
         } catch (error) {
             console.error('Delete error:', error);

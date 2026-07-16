@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 import auth
 import models
 import validators
+from api.absence_requests import MAX_ABSENCE_SPAN_DAYS
 from database import get_db
 from dependencies import get_current_user
 from utils.time_utils import today_amman
@@ -172,6 +173,54 @@ def mark_all_notifications_read(
         .update({"status": models.NotificationStatus.SENT})
     )
     db.commit()
+    return {"updated": updated}
+
+
+@router.post("/notifications/{notification_id}/read")
+def mark_notification_read(
+    notification_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark one notification read.
+
+    templates/user/notifications.html has always rendered a per-notification control
+    calling this, but only /read-all existed, so the request 404'd — and the caller
+    never checked `response.ok`, so it reloaded the list and the notification simply
+    stayed unread with no error. "Nothing happens when I click it" is the whole bug.
+
+    `user_id == current_user.id` is in the UPDATE itself, not a fetch-then-check: the
+    id comes from the URL, so without it any user could mark anyone's notification
+    read by guessing an integer.
+    """
+    updated = (
+        db.query(models.Notification)
+        .filter(
+            models.Notification.id == notification_id,
+            models.Notification.user_id == current_user.id,
+            # PENDING only, matching /read-all. Without it a FAILED notification would
+            # flip to SENT — this endpoint would be claiming a delivery that failed.
+            models.Notification.status == models.NotificationStatus.PENDING,
+        )
+        .update({"status": models.NotificationStatus.SENT})
+    )
+    db.commit()
+    if not updated:
+        # Nothing changed: either the row is not ours/absent, or it was not PENDING.
+        # The existence probe is itself ownership-scoped, so it cannot be used to test
+        # whether an id exists — a missing row and someone else's row both 404.
+        owned = (
+            db.query(models.Notification.id)
+            .filter(
+                models.Notification.id == notification_id,
+                models.Notification.user_id == current_user.id,
+            )
+            .first()
+        )
+        if not owned:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        # Ours, but already SENT or FAILED. The caller wanted it not-pending and it is
+        # not pending, so this is a no-op success rather than an error.
     return {"updated": updated}
 
 
@@ -602,6 +651,22 @@ def create_absence_request(
 
     if body.to_date < body.from_date:
         raise HTTPException(status_code=400, detail="to_date must be >= from_date")
+
+    # This handler writes the same absence_requests row as POST /api/absence-requests,
+    # and the same approve loop consumes it — one SELECT + one INSERT per day in the
+    # span. Bounding only the other door left this one open: to_date=9999-12-31 was
+    # accepted here (201) while the bounded path rejected it (422), and approving it
+    # would run ~2.9M statements. Same constant, not a second copy, so the two doors
+    # cannot drift apart.
+    span_days = (body.to_date - body.from_date).days + 1
+    if span_days > MAX_ABSENCE_SPAN_DAYS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"absence span must not exceed {MAX_ABSENCE_SPAN_DAYS} days "
+                f"(requested {span_days})"
+            ),
+        )
 
     profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id,

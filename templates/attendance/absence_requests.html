@@ -97,11 +97,11 @@
                         <div class="col-6">
                             <label for="startDate" class="form-label">{{ _('From Date') }} <span
                                     class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="startDate" required min="{{ today }}">
+                            <input type="date" class="form-control" id="startDate" required min="{{ min_absence_date }}">
                         </div>
                         <div class="col-6">
                             <label for="endDate" class="form-label">{{ _('To Date') }} <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="endDate" required min="{{ today }}">
+                            <input type="date" class="form-control" id="endDate" required min="{{ min_absence_date }}">
                         </div>
                     </div>
                     <div class="mb-3">
@@ -129,8 +129,9 @@
         const IS_EN = document.documentElement.lang === 'en';
         const T = (ar, en) => IS_EN ? en : ar;
 
-        const TOKEN = (window.AuthStorage ? AuthStorage.getToken() : null) || localStorage.getItem('kinjo_token') || '';
-        const HEADERS = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN };
+        // Authentication uses the HttpOnly session cookie. The global fetch
+        // wrapper adds the matching CSRF header to state-changing requests.
+        const HEADERS = { 'Content-Type': 'application/json' };
         let currentFilter = 'all';
 
         // ---- helpers ----
@@ -146,7 +147,9 @@
 
         // ---- load requests ----
         function loadRequests() {
-            let url = '/api/attendance/absence-requests';
+            // Absence requests are served from /api/absence-requests; the
+            // /api/attendance/ prefix only exists for the create endpoint.
+            let url = '/api/absence-requests';
             if (currentFilter !== 'all') url += '?status=' + currentFilter;
 
             fetch(url, { headers: HEADERS })
@@ -201,7 +204,7 @@
                 cancelButtonText: T('تراجع', 'Go back'),
             }).then(result => {
                 if (!result.isConfirmed) return;
-                fetch(`/api/attendance/absence-requests/${id}/cancel`, { method: 'POST', headers: HEADERS })
+                fetch(`/api/absence-requests/${id}/cancel`, { method: 'POST', headers: HEADERS })
                     .then(r => { if (!r.ok) throw r; return r.json(); })
                     .then(() => { Swal.fire(T('تم', 'Done'), T('تم إلغاء الطلب', 'Request cancelled'), 'success'); loadRequests(); })
                     .catch(() => Swal.fire(T('خطأ', 'Error'), T('فشل في إلغاء الطلب', 'Failed to cancel request'), 'error'));
@@ -221,7 +224,7 @@
                 reason: document.getElementById('reason').value,
             };
 
-            fetch('/api/attendance/absence-requests', { method: 'POST', headers: HEADERS, body: JSON.stringify(body) })
+            fetch('/api/absence-requests', { method: 'POST', headers: HEADERS, body: JSON.stringify(body) })
                 .then(r => {
                     if (!r.ok) return r.json().then(d => { throw d; });
                     return r.json();

@@ -465,6 +465,7 @@ def list_daily_reports_for_review(
             "date": str(r.date),
             "status": r.status.value,
             "submitted_by": r.submitted_by,
+            "submitted_at": r.submitted_at.isoformat() if r.submitted_at else None,
             "supervisor_name": supervisor_name_by_id.get(r.submitted_by, ""),
             "class_name": class_name_by_id.get(child_class_map.get(r.child_id), ""),
             "notes": r.notes,

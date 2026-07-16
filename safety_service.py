@@ -112,6 +112,33 @@ def create_incident(
     return incident
 
 
+def _resolve_enum(enum_cls, raw: str, field: str):
+    """Resolve a query-string filter to an enum by NAME or VALUE, or 422.
+
+    `IncidentStatus` is the one enum in this module whose names and values differ
+    (OPEN = "Open"); SeverityLevel and IncidentType have name == value. Calling
+    `IncidentStatus(raw)` looks up by *value*, so a caller sending the name got
+    `ValueError: 'OPEN' is not a valid IncidentStatus` — raised bare out of the
+    handler, i.e. a 500. An unrecognised filter is bad input, not a server fault.
+
+    The live /safety page sends values ("Open"), so it was never broken; the 500 needed
+    a hand-crafted URL or a client using names. Accepting either spelling costs nothing,
+    keeps every existing caller working, and means a page built from IncidentStatus.name
+    cannot resurrect the crash.
+    """
+    candidate = (raw or "").strip()
+    for member in enum_cls:
+        if candidate == member.value or candidate.upper() == member.name:
+            return member
+    raise HTTPException(
+        status_code=422,
+        detail=(
+            f"invalid {field} '{raw}'. Valid values: "
+            + ", ".join(sorted({m.name for m in enum_cls} | {m.value for m in enum_cls}))
+        ),
+    )
+
+
 @router.get("/incidents")
 def list_incidents(
     child_id: Optional[int] = None,
@@ -150,10 +177,14 @@ def list_incidents(
         query = query.filter(models.Incident.child_id == child_id)
     
     if severity:
-        query = query.filter(models.Incident.severity_level == models.SeverityLevel(severity.upper()))
-        
+        query = query.filter(
+            models.Incident.severity_level == _resolve_enum(models.SeverityLevel, severity, "severity")
+        )
+
     if status:
-        query = query.filter(models.Incident.status == models.IncidentStatus(status))
+        query = query.filter(
+            models.Incident.status == _resolve_enum(models.IncidentStatus, status, "status")
+        )
         
     if search:
         search_term = f"%{search}%"

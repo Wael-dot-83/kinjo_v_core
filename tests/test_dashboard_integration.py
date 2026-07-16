@@ -166,7 +166,7 @@ def test_suggested_actions_are_scoped_to_manager_kindergarten(
     assert pending_action["pending_count"] == 0
 
 
-def test_dashboard_attendance_scope_follows_attendance_class_not_enrollment_history(
+def test_dashboard_summary_attendance_matches_the_canonical_definition(
     client,
     auth_headers_manager,
     test_db,
@@ -174,9 +174,26 @@ def test_dashboard_attendance_scope_follows_attendance_class_not_enrollment_hist
     sample_enrollment,
     manager_user,
 ):
+    """The dashboard summary now uses the one canonical attendance definition.
+
+    This test used to assert that the summary scoped attendance by the CLASS a log was
+    recorded in (so a child enrolled here but marked present in another kindergarten's
+    class counted as 0). That was an inline quirk of the old summary endpoint. Every
+    other attendance surface — kg-overview, the KPI dashboard, the analytics services —
+    attributes attendance by ENROLLMENT (the child is enrolled here and was physically
+    present), via KPIService, and reports 100 for this scenario.
+
+    The summary was routed through that same canonical definition to end the 333% window
+    scaling, so it now agrees: attendance is enrollment-scoped everywhere. In normal data
+    (attendance recorded in the enrolled kindergarten's own classes) the two scopings are
+    identical; they differ only for cross-kindergarten attendance logs, which are a data
+    anomaly. Consistency across surfaces is the point of this branch, so the summary is
+    pinned to the canonical value rather than to the old per-endpoint behavior.
+    """
     from datetime import date
 
     import models
+    from kpi_service import KPIService
 
     other_kindergarten = models.Kindergarten(
         name_ar="حضانة سجل الحضور",
@@ -222,9 +239,19 @@ def test_dashboard_attendance_scope_follows_attendance_class_not_enrollment_hist
         json={"range": "today"},
     )
     assert summary.status_code == 200
-    assert summary.json()["attendance"] == 0.0
-    assert summary.json()["chart"][-1] == 0.0
 
+    # The canonical rate for the manager's kindergarten today: the enrolled child was
+    # physically present, so 100 — and the summary must report exactly that.
+    canonical = KPIService.compute_attendance_rate(
+        test_db, manager_user.kindergarten_id, date.today(), date.today()
+    )
+    assert canonical == 100.0  # guards the fixture: enrolled + present today
+    assert summary.json()["attendance"] == canonical
+    assert summary.json()["chart"][-1] == canonical
+
+    # suggested-actions' week-over-week indicator is a separate "% of logged attendance
+    # that was present" metric, still scoped to the manager's own classes, so it has no
+    # data here — left unchanged by the canonical-rate work.
     actions = client.get(
         "/api/dashboard/suggested-actions", headers=auth_headers_manager
     )
@@ -232,3 +259,39 @@ def test_dashboard_attendance_scope_follows_attendance_class_not_enrollment_hist
         item for item in actions.json()["data"] if item["id"] == "attendance_trend"
     )
     assert attendance_action["current_rate"] is None
+
+
+def test_dashboard_summary_attendance_does_not_scale_with_window(
+    client,
+    auth_headers_manager,
+    test_db,
+    sample_child,
+    sample_enrollment,
+    sample_class,
+    manager_user,
+):
+    """/api/dashboard/summary once divided window-wide PRESENT rows by a single-day
+    headcount, so a 'month' view reported attendance far above 100%. It now uses the
+    canonical bounded definition, so a multi-day window can never exceed 100%."""
+    from datetime import date, timedelta
+
+    import models
+
+    # Enrolled for one working day, present that day only.
+    for i in range(20):
+        d = date.today() - timedelta(days=i)
+        test_db.add(models.AttendanceLog(
+            child_id=sample_child.id, class_id=sample_class.id, date=d,
+            status=models.AttendanceStatus.PRESENT, recorded_by=manager_user.id,
+        ))
+    test_db.commit()
+
+    for rng in ("today", "week", "month", "quarter"):
+        resp = client.post(
+            "/api/dashboard/summary", headers=auth_headers_manager, json={"range": rng},
+        )
+        assert resp.status_code == 200, resp.text[:200]
+        att = resp.json()["attendance"]
+        assert 0.0 <= att <= 100.0, f"range={rng} reported attendance={att}%, must be <= 100"
+        for point in resp.json()["chart"]:
+            assert 0.0 <= point <= 100.0, f"range={rng} trend point {point} out of range"

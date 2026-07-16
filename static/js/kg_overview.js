@@ -367,6 +367,11 @@ class KgOverview {
 
     this.#store = new KoStore({
       period:     saved.period     || 'month',
+      // The custom range lives in the store, not only in the inputs: the control
+      // bar is built *after* the first load, so reading the DOM during a load
+      // would find nothing on a reload with period='custom' persisted.
+      dateFrom:   saved.dateFrom   || this.#today(-30),
+      dateTo:     saved.dateTo     || this.#today(0),
       govFilter:  saved.govFilter  || 'all',
       kgFilter:   saved.kgFilter   || 'all',
       kgs:        [],
@@ -412,7 +417,25 @@ class KgOverview {
   async #loadOverviewData() {
     const params = new URLSearchParams();
     const period = this.#store.get('period');
-    if (period && period !== 'all') params.set('period', period);
+    if (period && period !== 'all') {
+      if (period === 'custom') {
+        // The custom range was never sent to the server, so picking dates
+        // silently returned the default 30-day window instead. Read the range
+        // from the store — the control bar is built after the first load, so the
+        // inputs do not exist yet on a reload with period='custom' persisted.
+        const from = this.#store.get('dateFrom');
+        const to = this.#store.get('dateTo');
+        if (from && to) {
+          params.set('period', 'custom');
+          params.set('start_date', from);
+          params.set('end_date', to);
+        } else {
+          params.set('period', 'month');
+        }
+      } else {
+        params.set('period', period);
+      }
+    }
     const response = await fetchWithAuth(`/api/admin/kg-overview?${params.toString()}`);
     if (!response) return;
     const payload = await response.json();
@@ -439,6 +462,11 @@ class KgOverview {
     const currentKgs = this.#store.get('kgs');
     const govs = ['all', ...new Set(currentKgs.map(k => k.gov).filter(Boolean))];
     const kgNames = ['all', ...currentKgs.map(k => k.name)];
+    // Both filters are persisted and applied on load, so the options must show
+    // which one is active: without `selected` the bar reads "All Governorates"
+    // while the list below it is filtered to one governorate.
+    const curGov = this.#store.get('govFilter');
+    const curKg = this.#store.get('kgFilter');
     const lang = window.KINJO_LANG || 'ar';
     const isAr = lang !== 'en';
     const cur  = this.#store.get('period');
@@ -457,18 +485,18 @@ class KgOverview {
 
       <div class="ko-date-range" id="ko-date-range-wrap" style="${cur !== 'custom' ? 'display:none' : ''}">
         <input type="date" class="ko-date-input" id="ko-date-from"
-               value="${this.#today(-30)}" aria-label="${isAr ? 'من' : 'From'}">
+               value="${this.#store.get('dateFrom')}" aria-label="${isAr ? 'من' : 'From'}">
         <span class="text-muted" style="font-size:.8rem">→</span>
         <input type="date" class="ko-date-input" id="ko-date-to"
-               value="${this.#today(0)}" aria-label="${isAr ? 'إلى' : 'To'}">
+               value="${this.#store.get('dateTo')}" aria-label="${isAr ? 'إلى' : 'To'}">
       </div>
 
       <select class="ko-filter-select" id="ko-gov-filter" aria-label="${isAr ? 'المحافظة' : 'Governorate'}">
-        ${govs.map(g => `<option value="${g}">${g === 'all' ? (isAr ? 'كل المحافظات' : 'All Governorates') : g}</option>`).join('')}
+        ${govs.map(g => `<option value="${g}" ${g === curGov ? 'selected' : ''}>${g === 'all' ? (isAr ? 'كل المحافظات' : 'All Governorates') : g}</option>`).join('')}
       </select>
 
       <select class="ko-filter-select" id="ko-kg-filter" aria-label="${isAr ? 'الحضانة' : 'Kindergarten'}">
-        ${kgNames.map(n => `<option value="${n}">${n === 'all' ? (isAr ? 'كل الحضانات' : 'All Kindergartens') : n}</option>`).join('')}
+        ${kgNames.map(n => `<option value="${n}" ${n === curKg ? 'selected' : ''}>${n === 'all' ? (isAr ? 'كل الحضانات' : 'All Kindergartens') : n}</option>`).join('')}
       </select>
 
       <div class="ko-bar-end">
@@ -507,9 +535,22 @@ class KgOverview {
       });
     });
 
-    /* Date range */
-    ['ko-date-from','ko-date-to'].forEach(id => {
-      document.getElementById(id)?.addEventListener('change', () => this.#onFilterChange());
+    /* Date range — the server resolves the custom window, so a date change must
+       refetch; #onFilterChange only re-filters what is already loaded. */
+    [['ko-date-from', 'dateFrom'], ['ko-date-to', 'dateTo']].forEach(([id, key]) => {
+      document.getElementById(id)?.addEventListener('change', e => {
+        // A date input can be cleared. Accepting '' would leave the store without
+        // a resolvable range, and the loader would quietly ask for the month
+        // window while the bar still showed "Custom" — the same lie as before.
+        // Keep the last good value and put it back in the input instead.
+        if (!e.target.value) {
+          e.target.value = this.#store.get(key);
+          return;
+        }
+        this.#store.set({ [key]: e.target.value });
+        if (this.#store.get('period') === 'custom') this.#onPeriodChange();
+        else this.#onFilterChange();
+      });
     });
 
     /* Governorate filter */
@@ -1370,7 +1411,11 @@ class KgOverview {
   }
 
   #today(offsetDays = 0) {
-    const d = new Date(); d.setDate(d.getDate() + offsetDays);
+    // Jordan is UTC+3 and the backend resolves every window in Jordan time, so
+    // derive the date there: toISOString() is UTC and would seed "yesterday"
+    // between 00:00 and 03:00 local.
+    const d = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    d.setUTCDate(d.getUTCDate() + offsetDays);
     return d.toISOString().split('T')[0];
   }
 
@@ -1389,6 +1434,10 @@ class KgOverview {
   #savePrefs() {
     KoPersist.save({
       period:     this.#store.get('period'),
+      // Persisted alongside `period`: restoring period='custom' without its dates
+      // would silently resolve to a different window than the bar displays.
+      dateFrom:   this.#store.get('dateFrom'),
+      dateTo:     this.#store.get('dateTo'),
       govFilter:  this.#store.get('govFilter'),
       theme:      this.#store.get('theme'),
       hiddenKPIs: this.#store.get('hiddenKPIs'),

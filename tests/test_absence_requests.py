@@ -10,7 +10,9 @@ Tests for the Absence Request workflow:
 - Attendance correction with notification
 """
 import pytest
+import inspect
 from datetime import date, timedelta
+from pathlib import Path
 import models
 
 
@@ -29,6 +31,56 @@ def _past():
 # ─── Parent: create ───────────────────────────────────────────────────
 
 class TestParentCreateAbsence:
+    def test_parent_page_posts_to_canonical_request_contract(self):
+        source = Path("templates/attendance/absence_requests.html").read_text(
+            encoding="utf-8"
+        )
+        assert "fetch('/api/absence-requests'" in source
+        assert "fetch('/api/attendance/absence-requests'" not in source
+        assert "start_date:" in source
+        assert "end_date:" in source
+        assert "Authorization': 'Bearer" not in source
+        assert "AuthStorage.getToken()" not in source
+        assert 'min="{{ min_absence_date }}"' in source
+
+        route_source = Path("scripts/compat/frontend_orig.py").read_text(
+            encoding="utf-8"
+        )
+        assert '"min_absence_date": _today() + timedelta(days=1)' in route_source
+
+    def test_parent_cookie_session_requires_and_accepts_matching_csrf(
+        self, client, parent_user, sample_child, active_enrollment,
+    ):
+        login = client.post(
+            "/token",
+            data={"username": parent_user.username, "password": "Parent123!"},
+        )
+        assert login.status_code == 200, login.text
+        csrf = client.cookies.get("kinjo_csrf_token")
+        assert client.cookies.get("kinjo_session")
+        assert csrf
+
+        payload = {
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "cookie csrf contract",
+        }
+        missing = client.post("/api/absence-requests", json=payload)
+        assert missing.status_code == 403
+        mismatched = client.post(
+            "/api/absence-requests",
+            json=payload,
+            headers={"X-CSRF-Token": "wrong"},
+        )
+        assert mismatched.status_code == 403
+        accepted = client.post(
+            "/api/absence-requests",
+            json=payload,
+            headers={"X-CSRF-Token": csrf},
+        )
+        assert accepted.status_code == 201, accepted.text
+
     def test_create_success(self, client, auth_headers_parent, parent_user, sample_child, active_enrollment):
         resp = client.post("/api/absence-requests", json={
             "child_id": sample_child.id,
@@ -58,6 +110,39 @@ class TestParentCreateAbsence:
             "reason": "سبب ما",
         }, headers=auth_headers_parent)
         assert resp.status_code == 422  # Pydantic validation
+
+    def test_create_rejects_span_longer_than_a_year(self, client, auth_headers_parent, parent_user, sample_child, active_enrollment):
+        """The span is the loop bound of a write path, not just a validation nicety.
+
+        Approving an absence writes one attendance row per day in the span. Before
+        MAX_ABSENCE_SPAN_DAYS this request was accepted with 201 — a 2,912,246-day
+        span that a manager could detonate into ~2.9M SELECT+INSERT pairs on a sync
+        worker. Parent-supplied input, so the bound belongs at the door.
+        """
+        resp = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": "9999-12-31",
+            "reason": "سبب ما",
+        }, headers=auth_headers_parent)
+        assert resp.status_code == 422, (
+            f"a 2.9M-day absence was accepted with {resp.status_code}; approving it "
+            "loops once per day"
+        )
+
+    def test_create_accepts_span_up_to_the_limit(self, client, auth_headers_parent, parent_user, sample_child, active_enrollment):
+        """The bound must not break legitimate long absences — 366 days inclusive."""
+        start = date.today() + timedelta(days=1)
+        resp = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": start.isoformat(),
+            "end_date": (start + timedelta(days=365)).isoformat(),  # 366 inclusive
+            "reason": "سبب ما",
+        }, headers=auth_headers_parent)
+        assert resp.status_code == 201, (
+            f"a 366-day absence (the documented limit) was rejected with "
+            f"{resp.status_code}: {resp.text[:200]}"
+        )
 
     def test_create_wrong_child(self, client, auth_headers_parent, parent_user, test_db, sample_kindergarten):
         """Parent cannot submit for a child that doesn't belong to them."""
@@ -167,6 +252,70 @@ class TestParentListCancel:
         assert cancel_resp.status_code == 200
         assert cancel_resp.json()["status"] == "CANCELLED"
 
+    def test_parent_without_profile_cannot_cancel_another_parents_request(
+        self, client, test_db, auth_headers_parent, parent_user,
+        sample_child, active_enrollment,
+    ):
+        created = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "ownership regression",
+        }, headers=auth_headers_parent)
+        assert created.status_code == 201
+
+        profileless = models.User(
+            username="profileless_parent",
+            email="profileless_parent@test.com",
+            hashed_password="x",
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
+        )
+        test_db.add(profileless)
+        test_db.commit()
+        from auth import create_access_token
+        token = create_access_token(data={"sub": profileless.username})
+
+        response = client.post(
+            f"/api/absence-requests/{created.json()['id']}/cancel",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 404
+        request = test_db.get(models.AbsenceRequest, created.json()["id"])
+        assert request.status == models.AbsenceRequestStatus.SUBMITTED
+
+    def test_approved_request_cannot_be_cancelled_and_attendance_remains_consistent(
+        self, client, test_db, auth_headers_parent, auth_headers_manager,
+        parent_user, manager_user, sample_child, active_enrollment,
+    ):
+        created = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "approved cancellation regression",
+        }, headers=auth_headers_parent)
+        assert created.status_code == 201
+        request_id = created.json()["id"]
+        approved = client.post(
+            f"/api/absence-requests/{request_id}/approve",
+            json={},
+            headers=auth_headers_manager,
+        )
+        assert approved.status_code == 200
+
+        cancelled = client.post(
+            f"/api/absence-requests/{request_id}/cancel",
+            headers=auth_headers_parent,
+        )
+        assert cancelled.status_code == 400
+        request = test_db.get(models.AbsenceRequest, request_id)
+        assert request.status == models.AbsenceRequestStatus.APPROVED
+        attendance = test_db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.child_id == sample_child.id,
+            models.AttendanceLog.date == date.today() + timedelta(days=1),
+        ).one()
+        assert attendance.status == models.AttendanceStatus.ABSENT
+
 
 # ─── Manager: approve ─────────────────────────────────────────────────
 
@@ -224,6 +373,59 @@ class TestManagerApprove:
         resp = client.post(f"/api/absence-requests/{rid}/approve", json={}, headers=auth_headers_manager)
         assert resp.status_code == 400
 
+    def test_approve_rejects_conflicting_present_attendance(
+        self, client, test_db, auth_headers_parent, auth_headers_manager,
+        parent_user, manager_user, sample_child, sample_class, active_enrollment,
+    ):
+        created = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "attendance conflict",
+        }, headers=auth_headers_parent)
+        assert created.status_code == 201
+        attendance = models.AttendanceLog(
+            child_id=sample_child.id,
+            class_id=sample_class.id,
+            date=date.today() + timedelta(days=1),
+            status=models.AttendanceStatus.PRESENT,
+            recorded_by=manager_user.id,
+        )
+        test_db.add(attendance)
+        test_db.commit()
+
+        response = client.post(
+            f"/api/absence-requests/{created.json()['id']}/approve",
+            json={},
+            headers=auth_headers_manager,
+        )
+        assert response.status_code == 409
+        request = test_db.get(models.AbsenceRequest, created.json()["id"])
+        assert request.status == models.AbsenceRequestStatus.SUBMITTED
+        assert attendance.status == models.AttendanceStatus.PRESENT
+
+    def test_decision_state_changes_use_atomic_conditional_updates(self):
+        import api.absence_requests as endpoint
+
+        for handler in (
+            endpoint.cancel_absence_request,
+            endpoint.approve_absence_request,
+            endpoint.reject_absence_request,
+        ):
+            source = inspect.getsource(handler)
+            assert "AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED" in source
+            assert ").update(" in source
+            assert "transitioned != 1" in source
+
+
+class TestManagerAbsencePageContract:
+    def test_admin_view_is_read_only(self):
+        source = Path("templates/manager/absence_requests.html").read_text(
+            encoding="utf-8"
+        )
+        assert "const CAN_DECIDE" in source
+        assert "CAN_DECIDE && r.status === 'SUBMITTED'" in source
+
 
 # ─── Manager: reject ──────────────────────────────────────────────────
 
@@ -269,6 +471,28 @@ class TestManagerList:
         assert len(data) >= 1
         assert "child_name" in data[0]
         assert data[0]["child_name"]
+
+    def test_supervisor_cannot_list_requests(
+        self, client, auth_headers_supervisor, supervisor_user,
+    ):
+        resp = client.get("/api/absence-requests", headers=auth_headers_supervisor)
+        assert resp.status_code == 403
+
+    def test_admin_can_list_requests(
+        self, client, auth_headers_parent, auth_headers_admin,
+        parent_user, admin_user, sample_child, active_enrollment,
+    ):
+        created = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "admin national read",
+        }, headers=auth_headers_parent)
+        assert created.status_code == 201
+
+        resp = client.get("/api/absence-requests", headers=auth_headers_admin)
+        assert resp.status_code == 200
+        assert created.json()["id"] in {item["id"] for item in resp.json()}
 
 
 # ─── Attendance correction ────────────────────────────────────────────
@@ -384,10 +608,98 @@ class TestGetAbsenceDetail:
         resp = client.get("/api/absence-requests/99999", headers=auth_headers_parent)
         assert resp.status_code == 404
 
+    def test_supervisor_cannot_read_detail(
+        self, client, auth_headers_parent, auth_headers_supervisor,
+        parent_user, supervisor_user, sample_child, active_enrollment,
+    ):
+        created = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "supervisor must not read",
+        }, headers=auth_headers_parent)
+        assert created.status_code == 201
+
+        resp = client.get(
+            f"/api/absence-requests/{created.json()['id']}",
+            headers=auth_headers_supervisor,
+        )
+        assert resp.status_code == 403
+
+    def test_admin_can_read_detail(
+        self, client, auth_headers_parent, auth_headers_admin,
+        parent_user, admin_user, sample_child, active_enrollment,
+    ):
+        created = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "admin national detail",
+        }, headers=auth_headers_parent)
+        assert created.status_code == 201
+
+        resp = client.get(
+            f"/api/absence-requests/{created.json()['id']}",
+            headers=auth_headers_admin,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["id"] == created.json()["id"]
+
 
 # ─── Cross-KG scope check ────────────────────────────────────────────
 
 class TestCrossKGScope:
+    @staticmethod
+    def _other_manager_headers(test_db, kindergarten_id, username="other_manager_read"):
+        other_mgr = models.User(
+            username=username,
+            email=f"{username}@test.com",
+            hashed_password="x",
+            role=models.UserRole.MANAGER,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=kindergarten_id,
+        )
+        test_db.add(other_mgr)
+        test_db.commit()
+        from auth import create_access_token
+        token = create_access_token(data={"sub": other_mgr.username})
+        return {"Authorization": f"Bearer {token}"}
+
+    def test_foreign_manager_cannot_list_or_read_request(
+        self, client, test_db, auth_headers_parent, parent_user,
+        sample_child, active_enrollment,
+    ):
+        created = client.post("/api/absence-requests", json={
+            "child_id": sample_child.id,
+            "start_date": _tomorrow(),
+            "end_date": _day_after(),
+            "reason": "cross tenant read",
+        }, headers=auth_headers_parent)
+        assert created.status_code == 201
+
+        other_kg = models.Kindergarten(
+            name_ar="Other read KG",
+            name_en="Other read KG",
+            license_number="OTHER-READ-999",
+            governorate="Amman",
+            district="Amman",
+            area="Sweileh",
+            contact_phone="0551111112",
+            address_line="Other read street",
+        )
+        test_db.add(other_kg)
+        test_db.commit()
+        headers = self._other_manager_headers(test_db, other_kg.id)
+
+        listed = client.get("/api/absence-requests", headers=headers)
+        assert listed.status_code == 200
+        assert created.json()["id"] not in {item["id"] for item in listed.json()}
+
+        detail = client.get(
+            f"/api/absence-requests/{created.json()['id']}", headers=headers
+        )
+        assert detail.status_code == 404
+
     def test_approve_from_other_kg_forbidden(
         self, client, test_db, auth_headers_parent, parent_user,
         sample_child, active_enrollment, sample_kindergarten,

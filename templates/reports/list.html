@@ -168,7 +168,7 @@
                     <div>
                         <h6 class="mb-1 fw-bold">${escHtml(report.child_name || '-')}</h6>
                         <small class="text-on-surface-variant">
-                            ${tr('التاريخ', 'Date')}: ${formatUiDate(report.date)} | ${tr('المشرف', 'Supervisor')}: ${escHtml(report.submitted_by || tr('غير محدد', 'Not specified'))}
+                            ${tr('التاريخ', 'Date')}: ${formatUiDate(report.date)} | ${tr('المشرف', 'Supervisor')}: ${escHtml(report.supervisor_name || tr('غير محدد', 'Not specified'))}
                         </small>
                     </div>
                     <a href="/reports/${report.id}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
@@ -240,8 +240,12 @@
 
         try {
             if (reportsRole === 'MANAGER') {
-                const payload = await fetchJson(`/api/daily-reports/submitted?date=${encodeURIComponent(selectedDate)}`);
-                renderManagerReports(payload?.reports || [], selectedDate);
+                // /api/daily-reports/submitted was never registered — the manager
+                // review list is served by /api/manager/daily-reports, which
+                // defaults to SUBMITTED and returns a bare array.
+                const day = encodeURIComponent(selectedDate);
+                const payload = await fetchJson(`/api/manager/daily-reports?from_date=${day}&to_date=${day}`);
+                renderManagerReports(Array.isArray(payload) ? payload : [], selectedDate);
                 return;
             }
 

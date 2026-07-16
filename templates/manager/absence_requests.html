@@ -186,6 +186,8 @@
                 });
         }
 
+        const CAN_DECIDE = {{ 'true' if current_user.role.value == 'MANAGER' else 'false' }};
+
         function renderTable(data) {
             const tbody = document.getElementById('requestsBody');
             if (!data.length) {
@@ -195,7 +197,7 @@
 
             tbody.innerHTML = data.map((r, i) => {
                     const cname = (r.child_name && String(r.child_name).trim()) ? r.child_name : `#${r.child_id}`;
-                    const actions = r.status === 'SUBMITTED'
+                    const actions = CAN_DECIDE && r.status === 'SUBMITTED'
                         ? `<div class="d-flex g-1">
                                 <button type="button" class="btn btn-link text-decoration-none p-1 text-success approve-btn" data-bs-toggle="modal" data-bs-target="#decisionModal" data-id="${r.id}" data-child="${escHtml(cname)}" data-start="${escHtml(r.start_date)}" data-end="${escHtml(r.end_date)}" data-reason="${escHtml(r.reason)}"><i class="bi bi-check-circle me-2"></i> ${tr('قبول', 'Approve')}</button>
                                 <button type="button" class="btn btn-link text-decoration-none p-1 text-secondary reject-btn" data-bs-toggle="modal" data-bs-target="#decisionModal" data-id="${r.id}" data-child="${escHtml(cname)}" data-start="${escHtml(r.start_date)}" data-end="${escHtml(r.end_date)}" data-reason="${escHtml(r.reason)}"><i class="bi bi-x-circle me-2"></i> ${tr('رفض', 'Reject')}</button>
