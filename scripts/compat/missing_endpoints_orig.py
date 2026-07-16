@@ -175,6 +175,39 @@ def mark_all_notifications_read(
     return {"updated": updated}
 
 
+@router.post("/notifications/{notification_id}/read")
+def mark_notification_read(
+    notification_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark one notification read.
+
+    templates/user/notifications.html has always rendered a per-notification control
+    calling this, but only /read-all existed, so the request 404'd — and the caller
+    never checked `response.ok`, so it reloaded the list and the notification simply
+    stayed unread with no error. "Nothing happens when I click it" is the whole bug.
+
+    `user_id == current_user.id` is in the UPDATE itself, not a fetch-then-check: the
+    id comes from the URL, so without it any user could mark anyone's notification
+    read by guessing an integer.
+    """
+    updated = (
+        db.query(models.Notification)
+        .filter(
+            models.Notification.id == notification_id,
+            models.Notification.user_id == current_user.id,
+        )
+        .update({"status": models.NotificationStatus.SENT})
+    )
+    db.commit()
+    if not updated:
+        # Same answer whether the row is missing or belongs to someone else — a 403
+        # here would confirm the id exists.
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"updated": updated}
+
+
 # ---------------------------------------------------------------------------
 # Search
 # ---------------------------------------------------------------------------

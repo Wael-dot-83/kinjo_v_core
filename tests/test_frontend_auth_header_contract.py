@@ -25,6 +25,19 @@ from pathlib import Path
 _SCAN_DIRS = (Path("templates"), Path("static/js"))
 _BEARER_RE = re.compile(r"""Bearer\s*\$\{\s*(?:token|authToken|t)\s*\}|['"]Bearer\s*['"]\s*\+\s*token""")
 
+# A second shape of the same bug, which the pattern above does not see because it
+# never names a `token` variable: the header is built inline from a storage key.
+#
+# `kinjo_token` is dead — nothing has written it since the JWT left browser storage —
+# so every one of these sent `Authorization: Bearer null`. Found by browser-driving
+# the pages, not by the scanner, which is the point of keeping both checks:
+# `/notifications` took a 401 and rendered no list, and `PUT /api/users/me/password`
+# 401'd, so nobody could change their password. Verified 2026-07-16: the same request
+# returns 200 with no header and 401 with `Bearer null`.
+_STORAGE_BEARER_RE = re.compile(
+    r"""['"]Bearer\s*['"]\s*\+\s*\(?\s*(?:local|session)Storage\.getItem"""
+)
+
 # Files still carrying the bug. Each one boots the user to /login?expired=true the
 # moment its call path runs. They are outside the Admin module (parent/manager/
 # supervisor/communication surfaces) and each needs its own browser verification, so
@@ -71,10 +84,28 @@ def _offenders() -> dict[str, list[int]]:
     return found
 
 
+def _storage_offenders() -> dict[str, list[int]]:
+    """Files building a Bearer header straight from a browser-storage key."""
+    found: dict[str, list[int]] = {}
+    for base in _SCAN_DIRS:
+        if not base.exists():
+            continue
+        for path in base.rglob("*"):
+            if path.suffix not in {".html", ".js"} or not path.is_file():
+                continue
+            if path.name == "auth.js":
+                continue
+            lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+            for i, line in enumerate(lines, 1):
+                if _STORAGE_BEARER_RE.search(line):
+                    found.setdefault(path.as_posix(), []).append(i)
+    return found
+
+
 def test_scanner_is_not_vacuous():
     """If the regex or the scan dirs break, every assertion below passes trivially.
 
-    Pinned against the real shape the bug takes, so a decayed scanner is loud.
+    Pinned against the real shapes the bug takes, so a decayed scanner is loud.
     """
     sample = [
         "        if (token) headers['Authorization'] = `Bearer ${token}`;",
@@ -82,7 +113,29 @@ def test_scanner_is_not_vacuous():
     ]
     for s in sample:
         assert _BEARER_RE.search(s), f"scanner no longer recognises the bug shape: {s!r}"
+    storage_sample = [
+        "'Authorization': 'Bearer ' + (localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token'))",
+        "'Authorization': 'Bearer ' + sessionStorage.getItem('kinjo_token')",
+    ]
+    for s in storage_sample:
+        assert _STORAGE_BEARER_RE.search(s), f"storage scanner no longer recognises: {s!r}"
     assert Path("templates").exists() and Path("static/js").exists(), "scan dirs missing"
+
+
+def test_no_page_builds_a_bearer_header_from_browser_storage():
+    """The JWT is not in browser storage, so any such header is `Bearer null`.
+
+    This shape names no `token` variable, so the getToken() scanner above never saw it.
+    It cost a real outage on two pages: `/notifications` 401'd and rendered nothing, and
+    `PUT /api/users/me/password` 401'd, so no one could change their password.
+    """
+    offenders = _storage_offenders()
+    assert not offenders, (
+        "these pages build an Authorization header from a browser-storage key. The JWT "
+        "lives in the HttpOnly kinjo_session cookie and is not readable from JS, so "
+        f"this sends `Bearer null` and the server answers 401: {offenders}. Send no "
+        "Authorization header."
+    )
 
 
 def test_kindergarten_view_does_not_send_the_csrf_sentinel_as_bearer():

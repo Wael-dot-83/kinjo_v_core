@@ -40,7 +40,6 @@ KNOWN_UNRESOLVED = {
     ("PUT", "/api/kindergartens/{}/services/{}"): "services CRUD never implemented",
     ("DELETE", "/api/kindergartens/{}/services/{}"): "services CRUD never implemented",
     ("POST", "/api/kindergartens/{}/archive"): "archive endpoint never implemented",
-    ("POST", "/api/notifications/{}/read"): "single mark-read never implemented; only /read-all exists",
     ("POST", "/api/daily-reports/manager/create-and-send"): "manager create-and-send never implemented (templates/reports/form.html)",
     ("GET", "/api/supervisor/present-children"): "superseded by /api/supervisor/attendance/status; caller is dead code",
     ("GET", "/api/manager/accounts"): "uncalled dead method in kinjo-api.js",
