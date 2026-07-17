@@ -182,46 +182,70 @@
         <aside id="admin-sidebar">
         <nav class="admin-top-nav" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
           {% set current_path = request.url.path %}
-          {% set top_level_items = [
-            {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم", "label_en": "Dashboard", "active_paths": ["/admin/dashboard"]},
-            {"href": "/admin/help", "icon": "bi-life-preserver", "label_ar": "المساعدة", "label_en": "Help", "active_paths": ["/admin/help"]}
-          ] %}
+          {% set top_level_items = [] %}
           {% set sidebar_sections = [
             {
-              "id": "management",
-              "icon": "bi-grid-1x2",
-              "label_ar": "إدارة النظام",
-              "label_en": "System Management",
+              "id": "overview",
+              "icon": "bi-speedometer2",
+              "label_ar": "نظرة عامة",
+              "label_en": "Overview",
               "items": [
-                {"href": "/admin/users", "icon": "bi-people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users"], "active_prefixes": ["/admin/users/"]},
-                {"href": "/admin/messages", "icon": "bi-send", "label_ar": "التواصل", "label_en": "Communication", "active_paths": ["/admin/messages", "/admin/contact-messages"], "active_prefixes": ["/admin/messages/"]},
-                {"href": "/admin/kg-overview", "icon": "bi-building", "label_ar": "الحضانات", "label_en": "Kindergartens", "active_paths": ["/admin/kg-overview", "/admin/kindergartens", "/admin/kindergartens/new"], "active_prefixes": ["/admin/kindergartens/"]},
-                {"href": "/admin/imported-kindergartens", "icon": "bi-database", "label_ar": "البيانات", "label_en": "Data Management", "active_paths": ["/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs"]}
+                {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم الإدارية", "label_en": "Admin Dashboard", "active_paths": ["/admin/dashboard", "/dashboard"]},
+                {"href": "/admin/observability", "icon": "bi-activity", "label_ar": "مراقبة النظام", "label_en": "System Health", "active_paths": ["/admin/observability"]},
+                {"href": "/admin/alerts", "icon": "bi-bell", "label_ar": "التنبيهات", "label_en": "Alerts", "active_paths": ["/admin/alerts"]}
               ]
             },
             {
-              "id": "operations",
-              "icon": "bi-exclamation-triangle",
-              "label_ar": "العمليات",
-              "label_en": "Operations",
+              "id": "people-organizations",
+              "icon": "bi-people",
+              "label_ar": "الأشخاص والجهات",
+              "label_en": "People & Organizations",
               "items": [
-                {"href": "/admin/reports/incidents", "icon": "bi-list-check", "label_ar": "سجل الحوادث", "label_en": "Incident Log", "active_paths": ["/admin/reports/incidents"]},
-                {"href": "/admin/reports/incidents/generate", "icon": "bi-file-medical", "label_ar": "تقارير الحوادث", "label_en": "Incident Reports", "active_paths": ["/admin/reports/incidents/generate"]}
+                {"href": "/admin/users", "icon": "bi-people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users", "/admin/users/create"], "active_prefixes": ["/admin/users/"]},
+                {"href": "/admin/users/import", "icon": "bi-person-up", "label_ar": "استيراد المستخدمين", "label_en": "Import Users", "active_paths": ["/admin/users/import"]},
+                {"href": "/admin/kg-overview", "icon": "bi-buildings", "label_ar": "نظرة عامة على الحضانات", "label_en": "Kindergarten Overview", "active_paths": ["/admin/kg-overview"]},
+                {"href": "/admin/kindergartens", "icon": "bi-building", "label_ar": "سجل الحضانات", "label_en": "Kindergarten Records", "active_paths": ["/admin/kindergartens", "/admin/kindergartens/new"], "active_prefixes": ["/admin/kindergartens/"]}
               ]
             },
             {
-              "id": "reports-analytics",
+              "id": "communication-data",
+              "icon": "bi-send",
+              "label_ar": "التواصل والبيانات",
+              "label_en": "Communication & Data",
+              "items": [
+                {"href": "/admin/messages", "icon": "bi-envelope", "label_ar": "الرسائل", "label_en": "Messages", "active_paths": ["/admin/messages"], "active_prefixes": ["/admin/messages/"], "group_label_ar": "التواصل", "group_label_en": "Communication"},
+                {"href": "/admin/messages/compose", "icon": "bi-pencil-square", "label_ar": "إنشاء رسالة", "label_en": "Compose Message", "active_paths": ["/admin/messages/compose"], "group_label_ar": "التواصل", "group_label_en": "Communication"},
+                {"href": "/admin/contact-messages", "icon": "bi-chat-left-text", "label_ar": "رسائل التواصل", "label_en": "Contact Messages", "active_paths": ["/admin/contact-messages"], "group_label_ar": "التواصل", "group_label_en": "Communication"},
+                {"href": "/admin/imported-kindergartens", "icon": "bi-database-check", "label_ar": "بيانات الحضانات المستوردة", "label_en": "Imported Kindergarten Data", "active_paths": ["/admin/imported-kindergartens"], "group_label_ar": "إدارة البيانات", "group_label_en": "Data Management"},
+                {"href": "/admin/import-kindergartens", "icon": "bi-file-earmark-arrow-up", "label_ar": "استيراد الحضانات", "label_en": "Import Kindergartens", "active_paths": ["/admin/import-kindergartens"], "group_label_ar": "إدارة البيانات", "group_label_en": "Data Management"},
+                {"href": "/admin/import-logs", "icon": "bi-clock-history", "label_ar": "سجل الاستيراد", "label_en": "Import History", "active_paths": ["/admin/import-logs"], "group_label_ar": "إدارة البيانات", "group_label_en": "Data Management"}
+              ]
+            },
+            {
+              "id": "operations-safety",
+              "icon": "bi-shield-exclamation",
+              "label_ar": "العمليات والسلامة",
+              "label_en": "Operations & Safety",
+              "items": [
+                {"href": "/admin/reports/incidents", "icon": "bi-list-check", "label_ar": "تقارير الحوادث", "label_en": "Incident Reports", "active_paths": ["/admin/reports/incidents"], "active_prefixes": ["/admin/reports/incidents/"]},
+                {"href": "/admin/safety-analytics", "icon": "bi-heart-pulse", "label_ar": "تحليلات الحوادث", "label_en": "Incident Analytics", "active_paths": ["/admin/safety-analytics"]},
+                {"href": "/admin/heatmap", "icon": "bi-globe-asia-australia", "label_ar": "التحليل الجغرافي", "label_en": "Geographic Analysis", "active_paths": ["/admin/heatmap"]}
+              ]
+            },
+            {
+              "id": "analytics-reporting",
               "icon": "bi-bar-chart-line",
-              "label_ar": "التقارير والتحليل",
-              "label_en": "Reports & Analytics",
+              "label_ar": "التحليلات والتقارير",
+              "label_en": "Analytics & Reporting",
               "items": [
-                {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics", "/admin/kpi", "/admin/analytics/charts"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
-                {"href": "/admin/analytics/reports", "icon": "bi-file-earmark-text", "label_ar": "التقارير المفصلة", "label_en": "Detailed Reports", "active_paths": ["/admin/analytics/reports"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
-                {"href": "/admin/analytics/decision-support", "icon": "bi-graph-up-arrow", "label_ar": "تقارير دعم القرار", "label_en": "Decision Support Reports", "active_paths": ["/admin/analytics/decision-support"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
-                {"href": "/admin/analytics/daily-reports", "icon": "bi-calendar-day", "label_ar": "التقارير اليومية", "label_en": "Daily Reports", "active_paths": ["/admin/analytics/daily-reports"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
-                {"href": "/admin/daily-reports-organization", "icon": "bi-calendar-check", "label_ar": "جدولة التقارير", "label_en": "Report Scheduling", "active_paths": ["/admin/daily-reports-organization"], "group_label_ar": "التحليلات والتقارير", "group_label_en": "Analytics & Reports"},
-                {"href": "/admin/heatmap", "icon": "bi-globe-asia-australia", "label_ar": "نظرة عامة على الخريطة", "label_en": "Map Overview", "active_paths": ["/admin/heatmap"], "group_label_ar": "الخريطة الحرارية", "group_label_en": "Heat Map"},
-                {"href": "/admin/heatmap#governorates", "icon": "bi-pin-map", "label_ar": "تحليل المحافظات", "label_en": "Governorate Analysis", "active_paths": [], "group_label_ar": "الخريطة الحرارية", "group_label_en": "Heat Map"}
+                {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics"], "active_prefixes": ["/admin/analytics/drilldown/"]},
+                {"href": "/admin/kpi", "icon": "bi-speedometer", "label_ar": "مؤشرات أداء الشبكة", "label_en": "Network KPIs", "active_paths": ["/admin/kpi"]},
+                {"href": "/admin/analytics/reports", "icon": "bi-file-earmark-text", "label_ar": "مركز التقارير", "label_en": "Reports Center", "active_paths": ["/admin/analytics/reports"]},
+                {"href": "/admin/analytics/decision-support", "icon": "bi-lightbulb", "label_ar": "دعم القرار", "label_en": "Decision Support", "active_paths": ["/admin/analytics/decision-support"]},
+                {"href": "/admin/daily-reports-organization", "icon": "bi-calendar-check", "label_ar": "تنظيم التقارير اليومية", "label_en": "Daily Report Organization", "active_paths": ["/admin/daily-reports-organization", "/daily-reports"]},
+                {"href": "/reports/analytics", "icon": "bi-calendar2-data", "label_ar": "تحليلات التقارير اليومية", "label_en": "Daily Reports Analytics", "active_paths": ["/reports/analytics", "/admin/analytics/daily-reports"]},
+                {"href": "/admin/analytics/charts", "icon": "bi-bar-chart", "label_ar": "مستكشف الرسوم البيانية", "label_en": "Charts Explorer", "active_paths": ["/admin/analytics/charts", "/admin/charts/dashboard", "/api/admin/charts/dashboard"]},
+                {"href": "/admin/agency-reports", "icon": "bi-bank", "label_ar": "تقارير الجهات الرسمية", "label_en": "Official Agency Reports", "active_paths": ["/admin/agency-reports"], "active_prefixes": ["/admin/agency-reports/"]}
               ]
             },
             {
@@ -230,21 +254,33 @@
               "label_ar": "الحوكمة",
               "label_en": "Governance",
               "items": [
-                {"href": "/admin/governance-reports", "icon": "bi-clipboard-data", "label_ar": "السياسات", "label_en": "Policies", "active_paths": ["/admin/governance-reports", "/admin/governance/reminders"]},
-                {"href": "/admin/classification", "icon": "bi-award", "label_ar": "الامتثال", "label_en": "Compliance", "active_paths": ["/admin/classification"]}
+                {"href": "/admin/governance-reports", "icon": "bi-clipboard-data", "label_ar": "حوكمة التقارير اليومية", "label_en": "Daily Report Governance", "active_paths": ["/admin/governance-reports"]},
+                {"href": "/admin/governance/reminders", "icon": "bi-bell", "label_ar": "تذكيرات الالتزام", "label_en": "Compliance Reminders", "active_paths": ["/admin/governance/reminders"]},
+                {"href": "/admin/classification", "icon": "bi-award", "label_ar": "التصنيف والمقارنات", "label_en": "Classification & Benchmarks", "active_paths": ["/admin/classification"]}
               ]
             },
             {
-              "id": "settings",
-              "icon": "bi-sliders",
-              "label_ar": "الإعدادات",
-              "label_en": "Settings",
+              "id": "security-account",
+              "icon": "bi-shield-lock",
+              "label_ar": "الأمان والحساب",
+              "label_en": "Security & Account",
               "items": [
-                {"href": "/admin/settings", "icon": "bi-gear", "label_ar": "إعدادات النظام", "label_en": "System Settings", "active_paths": ["/admin/settings", "/admin/observability"]},
-                {"href": "/admin/audit-logs", "icon": "bi-shield-lock", "label_ar": "السجلات", "label_en": "Logs", "active_paths": ["/admin/audit-logs", "/admin/alerts", "/admin/safety-analytics", "/admin/impersonate"]}
+                {"href": "/admin/audit-logs", "icon": "bi-journal-check", "label_ar": "سجل التدقيق", "label_en": "Audit Log", "active_paths": ["/admin/audit-logs", "/audit-logs"]},
+                {"href": "/admin/impersonate", "icon": "bi-person-bounding-box", "label_ar": "الدخول المقيّد بصفة مستخدم", "label_en": "Controlled User Access", "active_paths": ["/admin/impersonate"]},
+                {"href": "/admin/profile", "icon": "bi-person-circle", "label_ar": "الملف الشخصي للمسؤول", "label_en": "Admin Profile", "active_paths": ["/admin/profile"]},
+                {"href": "/admin/settings", "icon": "bi-gear", "label_ar": "إعدادات النظام", "label_en": "System Settings", "active_paths": ["/admin/settings"]},
+                {"href": "/admin/help", "icon": "bi-life-preserver", "label_ar": "مركز المساعدة", "label_en": "Help Center", "active_paths": ["/admin/help"]}
               ]
             }
           ] %}
+
+          {# Exact destinations take precedence over broader contextual prefixes. #}
+          {% set nav_state = namespace(exact_match=false) %}
+          {% for section in sidebar_sections %}
+            {% for item in section["items"] %}
+              {% if current_path == item.href %}{% set nav_state.exact_match = true %}{% endif %}
+            {% endfor %}
+          {% endfor %}
           
           <div class="top-nav-container">
             <ul class="top-menu" role="menubar">
@@ -261,8 +297,9 @@
               {% for section in sidebar_sections %}
                 {% set section_state = namespace(active=false) %}
                 {% for item in section["items"] %}
-                  {% set item_state = namespace(active=current_path in item.active_paths) %}
-                  {% if item.active_prefixes is defined %}
+                  {% set item_state = namespace(active=current_path == item.href) %}
+                  {% if not nav_state.exact_match and current_path in item.active_paths %}{% set item_state.active = true %}{% endif %}
+                  {% if not nav_state.exact_match and item.active_prefixes is defined %}
                     {% for prefix in item.active_prefixes %}
                       {% if current_path.startswith(prefix) %}{% set item_state.active = true %}{% endif %}
                     {% endfor %}
@@ -278,8 +315,9 @@
                   <ul class="top-menu-dropdown shadow-sm" role="menu">
                     {% set ns = namespace(current_group=none) %}
                     {% for item in section["items"] %}
-                      {% set item_state = namespace(active=current_path in item.active_paths) %}
-                      {% if item.active_prefixes is defined %}
+                      {% set item_state = namespace(active=current_path == item.href) %}
+                      {% if not nav_state.exact_match and current_path in item.active_paths %}{% set item_state.active = true %}{% endif %}
+                      {% if not nav_state.exact_match and item.active_prefixes is defined %}
                         {% for prefix in item.active_prefixes %}
                           {% if current_path.startswith(prefix) %}{% set item_state.active = true %}{% endif %}
                         {% endfor %}
@@ -424,4 +462,3 @@
     </script>
   </body>
 </html>
-

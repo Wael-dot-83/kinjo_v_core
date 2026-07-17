@@ -140,8 +140,8 @@ def test_admin_sidebar_hides_classes_link(test_client):
     assert 'data-i18n="sidebar.classes"' not in response.text
 
 
-def test_admin_sidebar_uses_admin_daily_reports_link(test_client):
-    """Admin sidebar must use the admin reports route, not the non-admin /daily-reports route."""
+def test_admin_sidebar_uses_canonical_daily_reports_analytics_link(test_client):
+    """Navigation must bypass the retired incident clone and old redirect."""
     response = test_client.get("/admin/dashboard")
     assert response.status_code == 200
     html = response.text
@@ -151,7 +151,8 @@ def test_admin_sidebar_uses_admin_daily_reports_link(test_client):
         else html
     )
     assert 'href="/daily-reports"' not in sidebar
-    assert 'href="/admin/analytics/daily-reports"' in sidebar
+    assert 'href="/admin/analytics/daily-reports"' not in sidebar
+    assert 'href="/reports/analytics"' in sidebar
 
 
 def test_admin_sidebar_shows_admin_links(test_client):
