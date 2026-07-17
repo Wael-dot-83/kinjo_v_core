@@ -27,7 +27,7 @@ const IND_RISK_GETTER = {
 };
 
 const IND_LABELS = {
-  nursery_status:        { ar: 'حالة الحضانات والحضانات', color: '#0E334F' },
+  nursery_status:        { ar: 'حالة الحضانات', color: '#0E334F' },
   children_registration: { ar: 'الأطفال المسجلون',            color: '#28A745' },
   staff_classrooms:      { ar: 'الموظفون والفصول',            color: '#155ECF' },
   safety_incidents:      { ar: 'السلامة والحوادث',            color: '#FFC107' },
@@ -361,7 +361,7 @@ function retryFetchMapData() {
 async function fetchKgPins() {
   try {
     const res = await fetch(API_KG_MAPDATA, { credentials: 'include' });
-    if (!res.ok) { addWarning('تعذر تحميل بيانات الحضانات والحضانات على الخريطة.'); return; }
+    if (!res.ok) { addWarning('تعذر تحميل بيانات الحضانات على الخريطة.'); return; }
     const geojson  = await res.json();
     const features = geojson.features || [];
     const kgs = features.map(f => ({
@@ -378,7 +378,7 @@ async function fetchKgPins() {
     addKgPins(kgs);
     CsApp.kgLoaded = true;
   } catch {
-    addWarning('تعذر تحميل مواقع الحضانات والحضانات.');
+    addWarning('تعذر تحميل مواقع الحضانات.');
     renderWarnings();
   }
 }

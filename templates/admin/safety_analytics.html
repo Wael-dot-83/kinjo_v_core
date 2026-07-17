@@ -241,7 +241,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="stat-card card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">{% if ui_lang == 'en' %}Repeated Children{% else %}أطفال متكررون{% endif %}</div>
+                    <div class="stat-label">{% if ui_lang == 'en' %}Repeated Children{% else %}أطفال تعرضوا لحوادث متكررة{% endif %}</div>
                     <div class="stat-value" id="kpiRepeated">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-warning">
@@ -576,7 +576,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         if (!tbody) return;
 
         if (!repeated || !repeated.length) {
-            tbody.innerHTML = `<tr><td colspan="4"><div class="state-box"><i class="bi bi-person-check"></i><p>${_t('لا توجد أطفال بحوادث متكررة', 'No children with repeated incidents')}</p></div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4"><div class="state-box"><i class="bi bi-person-check"></i><p>${_t('لا يوجد أطفال بحوادث متكررة', 'No children with repeated incidents')}</p></div></td></tr>`;
             return;
         }
 

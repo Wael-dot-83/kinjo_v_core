@@ -676,7 +676,7 @@
           <div class="az-card h-100">
             <div class="az-card__header">
               <h3 class="az-card__title"><i class="bi bi-funnel"></i>
-                {% if ui_lang == 'en' %}Registration Funnel{% else %}قمع التسجيل{% endif %}
+                {% if ui_lang == 'en' %}Registration Funnel{% else %}مراحل التسجيل{% endif %}
               </h3>
               <div style="display:flex;align-items:center;gap:8px">
                 <span class="text-muted" style="font-size:.8rem">{% if ui_lang == 'en' %}Conversion:{% else %}التحويل:{% endif %}</span>
@@ -694,7 +694,7 @@
                 </div>
               </div>
               <div class="az-chart-wrap" style="height:180px;margin-top:16px;display:none" id="funnelChartWrap">
-                <canvas id="funnelChart" aria-label="{% if ui_lang == 'en' %}Registration funnel chart{% else %}مخطط قمع التسجيل{% endif %}" role="img"></canvas>
+                <canvas id="funnelChart" aria-label="{% if ui_lang == 'en' %}Registration funnel chart{% else %}مخطط مراحل التسجيل{% endif %}" role="img"></canvas>
               </div>
               <div class="az-empty d-none" id="funnelEmpty">
                 <i class="bi bi-inbox"></i>
@@ -843,7 +843,7 @@
           <div class="az-card h-100">
             <div class="az-card__header">
               <h3 class="az-card__title"><i class="bi bi-map"></i>
-                {% if ui_lang == 'en' %}Governorate Breakdown{% else %}التوزيع المحافظي{% endif %}
+                {% if ui_lang == 'en' %}Governorate Breakdown{% else %}التوزيع حسب المحافظة{% endif %}
               </h3>
             </div>
             <div class="az-table-toolbar">
@@ -1017,7 +1017,7 @@
               </div>
               <hr style="border-color:var(--slate-100);margin:14px 0">
               <span style="font:.7rem/1 var(--font-ar);text-transform:uppercase;color:var(--slate-400);letter-spacing:.06em;display:block;margin-bottom:10px">
-                {% if ui_lang == 'en' %}Bottom 5 — Requires Intervention{% else %}أدنى 5 — تحتاج تدخلاً{% endif %}
+                {% if ui_lang == 'en' %}Bottom 5 — Requires Intervention{% else %}أدنى 5 — تتطلب تدخلًاً{% endif %}
               </span>
               <div class="rank-list" id="govLowPerformersList">
                 <div class="skel skel-row"></div>
@@ -1228,7 +1228,7 @@
       <div class="az-card mb-section">
         <div class="az-card__header">
           <h3 class="az-card__title"><i class="bi bi-activity"></i>
-            {% if ui_lang == 'en' %}Anomaly Detection{% else %}كشف الشذوذات{% endif %}
+            {% if ui_lang == 'en' %}Anomaly Detection{% else %}كشف القيم غير الاعتيادية{% endif %}
           </h3>
           <span class="az-badge az-badge--red d-none" id="anomalyCount">0</span>
         </div>

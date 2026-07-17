@@ -23,7 +23,10 @@ EXPECTED_ARABIC_LABEL_ORDER = [
     "التقارير والتحليل",
     "نظرة عامة على التحليلات",
     "التقارير المفصلة",
-    "تقارير الدعم القرارى",
+    # Corrected per the Admin content audit §2: "تقارير الدعم القرارى" was awkward
+    # Arabic (and its English override read "Decision support reports" against a
+    # mistranslated key). The order/uniqueness this test guards is unchanged.
+    "تقارير دعم القرار",
     "التقارير اليومية",
     "جدولة التقارير",
     "نظرة عامة على الخريطة",

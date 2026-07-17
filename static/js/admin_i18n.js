@@ -1209,7 +1209,7 @@ const defaultArabicTranslations = {
     activity_next_page: "الصفحة التالية",
     activity_page_status: "صفحة {{page}} من {{total}}",
     status_good: "جيد",
-    status_warning: "يتطلب انتباه",
+    status_warning: "يتطلب الانتباه",
     status_critical: "حرج",
     status_unavailable: "غير متاحة",
     status_success: "ناجح",

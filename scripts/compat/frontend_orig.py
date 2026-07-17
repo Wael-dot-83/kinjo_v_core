@@ -1699,7 +1699,7 @@ async def admin_messages_list(
     message_list = [
         {
             "id": msg.id,
-            "subject": msg.subject or "بدون وصول",
+            "subject": msg.subject or "بدون موضوع",
             "message_body": msg.message_body,
             "created_at": msg.created_at,
             "recipient_count": msg.recipient_count or 0,
