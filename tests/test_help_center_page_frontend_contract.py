@@ -26,3 +26,17 @@ def test_html_divs_are_balanced_in_content_block():
     opens = content.count("<div")
     closes = content.count("</div>")
     assert opens == closes, f"unbalanced <div> tags: {opens} opens vs {closes} closes"
+
+
+def test_help_center_is_bilingual_and_does_not_force_direction():
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert "{% if ui_lang == 'en' %}" in html
+    assert 'class="admin-page-container" dir="rtl"' not in html
+    assert "Admin Help Center" in html
+    assert "مركز مساعدة المسؤول" in html
+
+
+def test_help_center_does_not_publish_unverified_contact_details():
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert "support@" not in html
+    assert "+962" not in html

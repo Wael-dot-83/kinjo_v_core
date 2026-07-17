@@ -11,16 +11,20 @@ from dependencies import get_current_user_or_redirect
 ROOT = Path(__file__).resolve().parents[1]
 
 HELP_SECTIONS = [
-    "نبذة عن النظام",
-    "البدء السريع",
+    "نبذة عن وحدة الإدارة",
+    "مؤشرات لوحة التحكم",
+    "إدارة المستخدمين",
     "إدارة الحضانات",
-    "إدارة الأطفال",
-    "إدارة الطلبات",
-    "الحوكمة والامتثال",
+    "استيراد البيانات",
+    "التواصل",
+    "التقارير اليومية",
+    "الحوادث والسلامة",
     "التحليلات والتقارير",
+    "الحوكمة والتصنيف",
+    "الأمان والتدقيق",
     "الأسئلة الشائعة",
     "دليل المصطلحات",
-    "التواصل والدعم",
+    "الدعم",
 ]
 
 
@@ -44,6 +48,23 @@ class TestHelpCenter:
     def test_help_center_has_at_least_20_faqs(self):
         page = self.client.get("/admin/help").text
         assert page.count('class="accordion-item faq-item"') >= 20
+
+    def test_help_center_is_complete_in_english_and_direction_is_inherited(self):
+        page = self.client.get("/admin/help?lang=en").text
+        assert "Admin Help Center" in page
+        assert "Dashboard metrics" in page
+        assert "Users Logged In Today" in page
+        assert "Daily Reports Analytics" in page
+        assert "Security and audit" in page
+        assert '<div class="admin-page-container" dir="rtl">' not in page
+
+    def test_help_center_matches_real_workflows(self):
+        page = self.client.get("/admin/help?lang=en").text
+        assert "protected direct reset" in page
+        assert "not a ticket-reply system" in page
+        assert 'href="/reports/analytics"' in page
+        assert 'href="/admin/audit-logs"' in page
+        assert "never be deleted" not in page.lower()
 
     def test_help_center_linked_from_nav(self):
         page = self.client.get("/admin/dashboard").text

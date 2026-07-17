@@ -1,480 +1,200 @@
 {% extends "admin_base.html" %}
 
-{% block title %}مركز المساعدة — KinJo{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Admin Help Center{% else %}مركز مساعدة المسؤول{% endif %} — KinJo{% endblock %}
 
 {% block extra_head %}
 <style>
-  .help-layout { display: grid; grid-template-columns: 260px 1fr; gap: 24px; align-items: start; }
-  @media (max-width: 991px) { .help-layout { grid-template-columns: 1fr; } .help-toc { position: static !important; } }
-  .help-toc {
-    position: sticky; top: 0; background: #fff; border: 1px solid #e5e7eb;
-    border-radius: 12px; padding: 16px; max-height: calc(100vh - 220px); overflow-y: auto;
-  }
-  .help-toc a {
-    display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px;
-    color: #374151; text-decoration: none; font-size: .9rem;
-  }
-  .help-toc a:hover { background: #eff6ff; color: #1d4ed8; }
-  .help-section { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 28px; margin-bottom: 24px; scroll-margin-top: 90px; }
-  .help-section h2 { font-size: 1.35rem; font-weight: 700; color: #111827; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
-  .help-section h3 { font-size: 1.05rem; font-weight: 700; color: #1f2937; margin-top: 20px; margin-bottom: 10px; }
-  .help-section p, .help-section li { color: #374151; line-height: 1.9; font-size: .95rem; }
-  .help-section ol li, .help-section ul li { margin-bottom: 6px; }
-  .help-step { display: flex; gap: 14px; margin-bottom: 14px; }
-  .help-step-num {
-    flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: #2563eb; color: #fff;
-    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .9rem;
-  }
-  .glossary-table th { background: #f9fafb; white-space: nowrap; }
-  .glossary-table td, .glossary-table th { padding: 10px 14px; border: 1px solid #e5e7eb; vertical-align: top; }
-  .help-search { max-width: 420px; }
-  .faq-item .accordion-button { font-weight: 600; font-size: .95rem; }
-  .help-contact-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; height: 100%; }
+  .help-layout { display:grid; grid-template-columns:minmax(220px,260px) minmax(0,1fr); gap:1.5rem; align-items:start; }
+  .help-toc { position:sticky; top:1rem; max-height:calc(100vh - 8rem); overflow:auto; }
+  .help-toc a { display:flex; gap:.5rem; align-items:center; padding:.55rem .7rem; border-radius:.5rem; color:inherit; text-decoration:none; }
+  .help-toc a:hover, .help-toc a:focus-visible { background:var(--admin-bg-subtle,#f3f4f6); }
+  .help-section { scroll-margin-top:6rem; }
+  .metric-definition { border-inline-start:.25rem solid var(--bs-primary); padding-inline-start:1rem; }
+  .help-search { max-width:32rem; }
+  @media (max-width:991px) { .help-layout { grid-template-columns:1fr; } .help-toc { position:static; max-height:none; } }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-container" dir="rtl">
-
-  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+<div class="admin-page-container">
+  <header class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
     <div>
-      <h1 class="admin-page-title mb-1"><i class="bi bi-life-preserver me-2 text-primary"></i>مركز المساعدة</h1>
-      <p class="text-muted mb-0">الدليل الشامل لاستخدام منصة KinJo لإدارة الحضانات</p>
+      <h1 class="admin-page-title mb-1">
+        <i class="bi bi-life-preserver me-2 text-primary" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Admin Help Center{% else %}مركز مساعدة المسؤول{% endif %}
+      </h1>
+      <p class="admin-page-subtitle text-muted mb-0">
+        {% if ui_lang == 'en' %}Verified guidance for administrative tasks, metric interpretation, and troubleshooting.{% else %}إرشادات موثقة لتنفيذ المهام الإدارية وفهم المؤشرات ومعالجة المشكلات.{% endif %}
+      </p>
     </div>
-    <div class="help-search w-100 w-md-auto">
+    <div class="help-search w-100">
+      <label class="visually-hidden" for="helpSearch">{% if ui_lang == 'en' %}Search help{% else %}البحث في المساعدة{% endif %}</label>
       <div class="input-group">
-        <span class="input-group-text bg-white"><i class="bi bi-search" aria-hidden="true"></i></span>
-        <input type="search" id="helpSearch" class="form-control" placeholder="ابحث في صفحات المساعدة…" aria-label="البحث في المساعدة">
+        <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+        <input id="helpSearch" type="search" class="form-control" placeholder="{% if ui_lang == 'en' %}Search this guide…{% else %}ابحث في هذا الدليل…{% endif %}">
       </div>
     </div>
-  </div>
+  </header>
 
   <div class="help-layout">
-
-    {# ── فهرس المحتويات ── #}
-    <nav class="help-toc" aria-label="فهرس المساعدة">
-      <div class="fw-bold mb-2 text-muted" style="font-size:.8rem">المحتويات</div>
-      <a href="#about"><i class="bi bi-info-circle"></i>نبذة عن النظام</a>
-      <a href="#quick-start"><i class="bi bi-rocket-takeoff"></i>البدء السريع</a>
-      <a href="#kg-management"><i class="bi bi-building"></i>إدارة الحضانات</a>
-      <a href="#children"><i class="bi bi-person-hearts"></i>إدارة الأطفال</a>
-      <a href="#applications"><i class="bi bi-inbox"></i>إدارة الطلبات</a>
-      <a href="#governance"><i class="bi bi-bank"></i>الحوكمة والامتثال</a>
-      <a href="#analytics"><i class="bi bi-bar-chart-line"></i>التحليلات والتقارير</a>
-      <a href="#faq"><i class="bi bi-question-circle"></i>الأسئلة الشائعة</a>
-      <a href="#glossary"><i class="bi bi-book"></i>دليل المصطلحات</a>
-      <a href="#support"><i class="bi bi-headset"></i>التواصل والدعم</a>
+    <nav class="help-toc card p-3" aria-label="{% if ui_lang == 'en' %}Help topics{% else %}موضوعات المساعدة{% endif %}">
+      <strong class="small text-muted mb-2">{% if ui_lang == 'en' %}Topics{% else %}الموضوعات{% endif %}</strong>
+      <a href="#about"><i class="bi bi-info-circle" aria-hidden="true"></i>{% if ui_lang == 'en' %}About the Admin module{% else %}نبذة عن وحدة الإدارة{% endif %}</a>
+      <a href="#dashboard"><i class="bi bi-speedometer2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Dashboard metrics{% else %}مؤشرات لوحة التحكم{% endif %}</a>
+      <a href="#users"><i class="bi bi-people" aria-hidden="true"></i>{% if ui_lang == 'en' %}Users{% else %}المستخدمون{% endif %}</a>
+      <a href="#kindergartens"><i class="bi bi-building" aria-hidden="true"></i>{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}</a>
+      <a href="#imports"><i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>{% if ui_lang == 'en' %}Data imports{% else %}استيراد البيانات{% endif %}</a>
+      <a href="#communication"><i class="bi bi-envelope" aria-hidden="true"></i>{% if ui_lang == 'en' %}Communication{% else %}التواصل{% endif %}</a>
+      <a href="#daily-reports"><i class="bi bi-calendar2-data" aria-hidden="true"></i>{% if ui_lang == 'en' %}Daily reports{% else %}التقارير اليومية{% endif %}</a>
+      <a href="#safety"><i class="bi bi-shield-check" aria-hidden="true"></i>{% if ui_lang == 'en' %}Incidents and safety{% else %}الحوادث والسلامة{% endif %}</a>
+      <a href="#analytics"><i class="bi bi-graph-up" aria-hidden="true"></i>{% if ui_lang == 'en' %}Analytics and reports{% else %}التحليلات والتقارير{% endif %}</a>
+      <a href="#governance"><i class="bi bi-bank" aria-hidden="true"></i>{% if ui_lang == 'en' %}Governance{% else %}الحوكمة{% endif %}</a>
+      <a href="#security"><i class="bi bi-shield-lock" aria-hidden="true"></i>{% if ui_lang == 'en' %}Security and audit{% else %}الأمان والتدقيق{% endif %}</a>
+      <a href="#faq"><i class="bi bi-question-circle" aria-hidden="true"></i>{% if ui_lang == 'en' %}Frequently asked questions{% else %}الأسئلة الشائعة{% endif %}</a>
+      <a href="#glossary"><i class="bi bi-book" aria-hidden="true"></i>{% if ui_lang == 'en' %}Glossary{% else %}دليل المصطلحات{% endif %}</a>
+      <a href="#support"><i class="bi bi-headset" aria-hidden="true"></i>{% if ui_lang == 'en' %}Support{% else %}الدعم{% endif %}</a>
     </nav>
 
-    <div class="help-content">
-
-      {# ═══ نبذة عن النظام ═══ #}
-      <section class="help-section" id="about">
-        <h2><i class="bi bi-info-circle text-primary"></i>نبذة عن النظام</h2>
-        <p>
-          <strong>KinJo</strong> هي منصة وطنية متكاملة لإدارة الحضانات في المملكة الأردنية الهاشمية.
-          تهدف المنصة إلى رقمنة العمليات التشغيلية والإشرافية للحضانات، وتمكين الجهات الرقابية من
-          متابعة جودة الخدمات المقدمة للأطفال، ودعم أولياء الأمور في تسجيل أطفالهم ومتابعة يومهم بكل شفافية.
-        </p>
-
-        <h3>القدرات الرئيسية</h3>
-        <ul>
-          <li><strong>إدارة الحضانات:</strong> سجل وطني موحد لبيانات الحضانات وتراخيصها وطاقتها الاستيعابية.</li>
-          <li><strong>إدارة التسجيل:</strong> دورة كاملة لطلبات تسجيل الأطفال من التقديم حتى القبول أو الرفض.</li>
-          <li><strong>متابعة الحضور:</strong> تسجيل يومي لحضور الأطفال وغيابهم مع مؤشرات المواظبة.</li>
-          <li><strong>التقارير اليومية:</strong> تقارير يومية عن أنشطة الأطفال وتغذيتهم ونومهم ترسل لأولياء الأمور.</li>
-          <li><strong>إدارة الحوادث:</strong> توثيق الحوادث والإجراءات المتخذة ومتابعة معالجتها.</li>
-          <li><strong>التحليلات والمؤشرات:</strong> لوحات معلومات وطنية بمؤشرات الأداء الرئيسية والخريطة الحرارية.</li>
-          <li><strong>الحوكمة:</strong> مؤشرات جودة الحوكمة وتصنيف الحضانات ومتابعة الالتزام بالمعايير.</li>
-        </ul>
-
-        <h3>أدوار المستخدمين</h3>
-        <ul>
-          <li><strong>مدير النظام:</strong> صلاحيات كاملة على مستوى المنصة — إدارة المستخدمين والحضانات والبيانات، ومتابعة التحليلات والحوكمة والسجلات. لا يقوم مدير النظام بإدخال البيانات التشغيلية (حضور، حوادث، تقارير يومية) بل يشرف عليها.</li>
-          <li><strong>مدير الحضانة:</strong> إدارة حضانته — الشعب، والطلبات الواردة، والكادر، والتقارير.</li>
-          <li><strong>المشرفة:</strong> العمل اليومي داخل الشعبة — تسجيل الحضور، وإعداد التقارير اليومية، وتوثيق الحوادث.</li>
-          <li><strong>ولي الأمر:</strong> تسجيل الأطفال، ومتابعة حضورهم وتقاريرهم اليومية، والتواصل مع الحضانة.</li>
-        </ul>
-
-        <h3>سير العمل الإداري</h3>
-        <div class="help-step"><div class="help-step-num">1</div><p class="mb-0">تُسجَّل الحضانة في المنصة وتُعتمد بياناتها وترخيصها من مدير النظام.</p></div>
-        <div class="help-step"><div class="help-step-num">2</div><p class="mb-0">يقدّم ولي الأمر طلب تسجيل لطفله في الحضانة المناسبة.</p></div>
-        <div class="help-step"><div class="help-step-num">3</div><p class="mb-0">تراجع الحضانة الطلب وتوافق عليه أو ترفضه أو تعيده للاستكمال.</p></div>
-        <div class="help-step"><div class="help-step-num">4</div><p class="mb-0">بعد القبول يتابع الكادر حضور الطفل وأنشطته اليومية ويوثقها.</p></div>
-        <div class="help-step"><div class="help-step-num">5</div><p class="mb-0">تتجمع البيانات في مؤشرات وتقارير تدعم القرار الرقابي على المستوى الوطني.</p></div>
+    <main id="helpTopics">
+      <section id="about" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}About the Admin module{% else %}نبذة عن وحدة الإدارة{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}The Admin module brings together platform monitoring, users, kindergartens, communication, daily reports, safety, analytics, governance, and audit tools. Access is enforced by the server; hiding a control is never an authorization boundary.{% else %}تجمع وحدة الإدارة أدوات مراقبة المنصة والمستخدمين والحضانات والتواصل والتقارير اليومية والسلامة والتحليلات والحوكمة والتدقيق. يفرض الخادم صلاحيات الوصول؛ وإخفاء عنصر في الواجهة ليس وسيلة تفويض.{% endif %}</p>
+        <p class="mb-0">{% if ui_lang == 'en' %}Use the reference ID shown with an error when escalating a problem so support can correlate the browser request with server logs.{% else %}استخدم الرقم المرجعي الظاهر مع الخطأ عند تصعيد المشكلة لربط طلب المتصفح بسجلات الخادم.{% endif %}</p>
       </section>
 
-      {# ═══ البدء السريع ═══ #}
-      <section class="help-section" id="quick-start">
-        <h2><i class="bi bi-rocket-takeoff text-primary"></i>البدء السريع</h2>
-
-        <h3>تسجيل حضانة</h3>
-        <ol>
-          <li>من القائمة الرئيسية اختر <strong>إدارة النظام ← الحضانات</strong>.</li>
-          <li>اضغط زر <strong>إضافة حضانة</strong> وعبّئ البيانات الأساسية: الاسم، المحافظة، اللواء، العنوان، رقم الهاتف.</li>
-          <li>أدخل رقم الترخيص وتاريخ انتهائه والطاقة الاستيعابية المرخصة.</li>
-          <li>احفظ السجل؛ تظهر الحضانة الجديدة بحالة «مسودة» حتى يتم تفعيلها.</li>
-        </ol>
-
-        <h3>إضافة الأطفال</h3>
-        <ol>
-          <li>يُضاف الأطفال عادة عبر طلبات التسجيل المقدمة من أولياء الأمور.</li>
-          <li>يمكن لمدير الحضانة إضافة طفل يدويًا من صفحة الحضانة ← <strong>الأطفال ← إضافة طفل</strong>.</li>
-          <li>تأكد من صحة تاريخ الميلاد؛ يُحدد بناءً عليه توافق الفئة العمرية مع الشعبة.</li>
-        </ol>
-
-        <h3>إدارة الطلبات</h3>
-        <ol>
-          <li>افتح <strong>التسجيلات</strong> من لوحة التحليلات أو من صفحة الحضانة.</li>
-          <li>استخدم عوامل التصفية (الحالة، المحافظة، المصدر، المراجع) لحصر الطلبات.</li>
-          <li>افتح الطلب لمراجعة بياناته ومرفقاته ثم اتخذ الإجراء المناسب.</li>
-        </ol>
-
-        <h3>مراجعة البيانات</h3>
-        <ol>
-          <li>من <strong>إدارة النظام ← البيانات</strong> يمكن استعراض البيانات المستوردة ومعالجة الملاحظات.</li>
-          <li>تابع مؤشر <strong>جودة البيانات</strong> في لوحة المعلومات لرصد الحضانات المتأخرة في رفع تقاريرها.</li>
-        </ol>
-
-        <h3>تشغيل التقارير</h3>
-        <ol>
-          <li>افتح <strong>التقارير والتحليل ← التقارير المفصلة</strong>.</li>
-          <li>اختر نوع التقرير والفترة الزمنية والنطاق (وطني أو محافظة أو حضانة).</li>
-          <li>اطّلع على المعاينة ثم صدّر التقرير بالصيغة المطلوبة (PDF أو Excel أو CSV).</li>
-        </ol>
+      <section id="dashboard" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Dashboard metrics{% else %}مؤشرات لوحة التحكم{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}The dashboard contains seven operational indicators. Values are live results for the displayed period and scope, not fixed targets.{% else %}تعرض لوحة التحكم سبعة مؤشرات تشغيلية. القيم نتائج فعلية للفترة والنطاق الظاهرين وليست أهدافًا ثابتة.{% endif %}</p>
+        <div class="metric-definition"><dl class="row mb-0">
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Total users{% else %}إجمالي المستخدمين{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}All user accounts counted by the dashboard query.{% else %}جميع حسابات المستخدمين التي يحتسبها استعلام لوحة التحكم.{% endif %}</dd>
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Users logged in today{% else %}المستخدمون الذين سجلوا الدخول اليوم{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Distinct users with a successful login since the start of today in Amman time.{% else %}عدد المستخدمين المميزين الذين سجلوا دخولًا ناجحًا منذ بداية اليوم بتوقيت عمّان.{% endif %}</dd>
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Total/active kindergartens{% else %}إجمالي الحضانات والحضانات النشطة{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Registered kindergartens and the subset currently marked active.{% else %}الحضانات المسجلة والجزء المصنف منها بالحالة النشطة حاليًا.{% endif %}</dd>
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Reports in period{% else %}التقارير خلال الفترة{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Daily reports whose dates fall inside the selected period.{% else %}التقارير اليومية التي تقع تواريخها ضمن الفترة المحددة.{% endif %}</dd>
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Pending reports{% else %}التقارير المعلّقة{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Daily reports currently in the submitted/pending state defined by the API.{% else %}التقارير اليومية الموجودة حاليًا في حالة التقديم أو الانتظار التي تعرفها الواجهة البرمجية.{% endif %}</dd>
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Data quality{% else %}جودة البيانات{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}A completeness score accompanied by reasons when required fields are missing.{% else %}درجة اكتمال ترافقها أسباب عند فقدان الحقول المطلوبة.{% endif %}</dd>
+        </dl></div>
       </section>
 
-      {# ═══ إدارة الحضانات ═══ #}
-      <section class="help-section" id="kg-management">
-        <h2><i class="bi bi-building text-primary"></i>إدارة الحضانات</h2>
-
-        <h3>إنشاء حضانة</h3>
-        <p>
-          يتم إنشاء الحضانات من صفحة <strong>الحضانات</strong>. البيانات الإلزامية هي: الاسم العربي،
-          المحافظة، اللواء، ورقم الهاتف. يُنصح باستكمال الإحداثيات الجغرافية ليظهر موقع الحضانة
-          على الخريطة الحرارية الوطنية. كما يمكن استيراد مجموعة حضانات دفعة واحدة من ملف Excel
-          عبر صفحة <strong>البيانات ← استيراد الحضانات</strong>.
-        </p>
-
-        <h3>تعديل البيانات</h3>
-        <p>
-          افتح سجل الحضانة واضغط <strong>تعديل</strong>. تُسجَّل جميع التعديلات في سجل التدقيق مع اسم
-          المستخدم والوقت، حفاظًا على سلامة البيانات وموثوقيتها.
-        </p>
-
-        <h3>إدارة الطاقة الاستيعابية</h3>
-        <ul>
-          <li>تُحدد الطاقة الاستيعابية على مستوى الشعبة، ويُجمَع إجماليها على مستوى الحضانة.</li>
-          <li>يمنع النظام قبول طلبات تتجاوز الطاقة المتاحة، ويظهر تنبيه عند اقتراب الإشغال من الحد الأقصى.</li>
-          <li>تظهر نسب الإشغال في تقارير <strong>الطاقة الاستيعابية</strong> ولوحة التحليلات.</li>
-        </ul>
-
-        <h3>إدارة المشرفين</h3>
-        <ul>
-          <li>تُنشأ حسابات المشرفات من صفحة <strong>المستخدمون</strong> وتُربط بالحضانة والشعبة.</li>
-          <li>يتابع النظام نسبة المشرفات إلى الأطفال ويُظهر فجوة الإشراف في التقارير عند وجود نقص.</li>
-          <li>لا يمكن حذف مشرفة مرتبطة بشعبة نشطة قبل نقل الشعبة لمشرفة أخرى.</li>
-        </ul>
+      <section id="users" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Users{% else %}إدارة المستخدمين{% endif %}</h2>
+        <ol><li>{% if ui_lang == 'en' %}Open Users and filter by role, status, or kindergarten.{% else %}افتح المستخدمين وصفِّ النتائج حسب الدور أو الحالة أو الحضانة.{% endif %}</li><li>{% if ui_lang == 'en' %}Create or edit an account within your permitted scope. A role sets the general access level; the server applies detailed restrictions.{% else %}أنشئ حسابًا أو عدله ضمن نطاق صلاحيتك. يحدد الدور مستوى الوصول العام ويطبق الخادم القيود التفصيلية.{% endif %}</li><li>{% if ui_lang == 'en' %}For an Admin reset, enter the new password and your own current administrator password. This is not an emailed reset-link workflow.{% else %}لإعادة التعيين الإداري أدخل كلمة المرور الجديدة وكلمة مرورك الحالية كمسؤول. هذه ليست عملية إرسال رابط بالبريد الإلكتروني.{% endif %}</li></ol>
+        <p class="mb-0"><a href="/admin/users">{% if ui_lang == 'en' %}Open User Management{% else %}فتح إدارة المستخدمين{% endif %}</a></p>
       </section>
 
-      {# ═══ إدارة الأطفال ═══ #}
-      <section class="help-section" id="children">
-        <h2><i class="bi bi-person-hearts text-primary"></i>إدارة الأطفال</h2>
-
-        <h3>تسجيل طفل</h3>
-        <p>
-          يبدأ تسجيل الطفل بطلب يقدمه ولي الأمر يتضمن بيانات الطفل الأساسية وتاريخ ميلاده
-          وجهات الاتصال في حالات الطوارئ. يتحقق النظام تلقائيًا من صحة تاريخ الميلاد
-          ومن عدم وجود تسجيل نشط للطفل في حضانة أخرى.
-        </p>
-
-        <h3>تحديث البيانات</h3>
-        <p>
-          يمكن لولي الأمر أو إدارة الحضانة تحديث بيانات الطفل (العنوان، جهات الاتصال، الملاحظات
-          الصحية). البيانات الحساسة مثل تاريخ الميلاد تتطلب صلاحية إدارية.
-        </p>
-
-        <h3>متابعة الحضور</h3>
-        <ul>
-          <li>تسجّل المشرفة الحضور يوميًا لكل طفل في شعبتها: حاضر، غائب، غائب بعذر، أو متأخر.</li>
-          <li>يظهر سجل الحضور التاريخي في صفحة الطفل مع معدل المواظبة الشهري.</li>
-          <li>تعديلات الحضور بأثر رجعي تتطلب صلاحية إدارية وتُوثَّق في سجل التدقيق.</li>
-        </ul>
-
-        <h3>متابعة الغياب</h3>
-        <ul>
-          <li>يمكن لولي الأمر تقديم <strong>طلب غياب بعذر</strong> مسبقًا؛ فيُسجَّل الغياب تلقائيًا كغياب بعذر.</li>
-          <li>الغياب المتكرر دون عذر يظهر كإشارة في مؤشرات المواظبة وتقارير المتابعة.</li>
-          <li>ملاحظة: الغياب بعذر لا يُحتسب حضورًا في مؤشر معدل الحضور.</li>
-        </ul>
+      <section id="kindergartens" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Kindergartens{% else %}إدارة الحضانات{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Use Kindergarten Overview for network monitoring and Kindergarten Records for create, view, edit, freeze, activate, manager-assignment, licence, location, and capacity information. Required create fields include the Arabic name, governorate, district, area, address line, and contact phone.{% else %}استخدم نظرة الحضانات لمراقبة الشبكة وسجل الحضانات للإنشاء والعرض والتعديل والتجميد والتفعيل وتعيين المدير وبيانات الترخيص والموقع والطاقة الاستيعابية. تشمل حقول الإنشاء المطلوبة الاسم العربي والمحافظة واللواء والمنطقة والعنوان ورقم الاتصال.{% endif %}</p>
+        <p class="mb-0"><a href="/admin/kg-overview">{% if ui_lang == 'en' %}Open Kindergarten Overview{% else %}فتح نظرة الحضانات{% endif %}</a></p>
       </section>
 
-      {# ═══ إدارة الطلبات ═══ #}
-      <section class="help-section" id="applications">
-        <h2><i class="bi bi-inbox text-primary"></i>إدارة الطلبات</h2>
-
-        <h3>حالات الطلبات</h3>
-        <ul>
-          <li><strong>غير مكتمل (مسودة):</strong> بدأ ولي الأمر التقديم ولم يكمله بعد.</li>
-          <li><strong>مُقدَّم:</strong> اكتمل الطلب وينتظر إسناده للمراجعة.</li>
-          <li><strong>قيد المراجعة:</strong> يراجعه أحد أعضاء الفريق حاليًا.</li>
-          <li><strong>موافق عليه:</strong> تمت الموافقة وحُجز المقعد للطفل.</li>
-          <li><strong>مرفوض:</strong> رُفض الطلب مع بيان السبب.</li>
-          <li><strong>نشط:</strong> التحق الطفل فعليًا وبدأ الدوام.</li>
-          <li><strong>منسحب:</strong> انسحب الطفل بعد القبول أو الالتحاق.</li>
-        </ul>
-
-        <h3>الموافقة</h3>
-        <ol>
-          <li>افتح الطلب وتحقق من اكتمال البيانات وتوافق عمر الطفل مع الفئة العمرية للشعبة.</li>
-          <li>تأكد من توفر مقعد ضمن الطاقة الاستيعابية؛ يمنع النظام تجاوزها تلقائيًا.</li>
-          <li>اضغط <strong>موافقة</strong>؛ يُشعَر ولي الأمر تلقائيًا ويتغير عداد المقاعد المتاحة.</li>
-        </ol>
-
-        <h3>الرفض</h3>
-        <ol>
-          <li>اختر <strong>رفض</strong> وحدد سببًا واضحًا من القائمة أو اكتب سببًا نصيًا.</li>
-          <li>يصل السبب لولي الأمر كما كتبته؛ استخدم لغة مهنية وواضحة.</li>
-        </ol>
-
-        <h3>الإرجاع للمراجعة</h3>
-        <p>
-          إذا كان الطلب ناقص البيانات أو المرفقات، استخدم <strong>إرجاع للاستكمال</strong> بدلًا من الرفض.
-          يعود الطلب لولي الأمر مع ملاحظاتك، ويستطيع استكماله وإعادة تقديمه دون أن يفقد دوره.
-        </p>
+      <section id="imports" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Data imports{% else %}استيراد البيانات{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Download the provided template, validate the file, and review created, updated, skipped, and error rows returned for that import type. Imported Kindergarten Data is a review list, while Import History records each job and its row/error counts.{% else %}نزّل النموذج المتاح وتحقق من الملف ثم راجع الصفوف المنشأة والمحدثة والمتجاوزة والخاطئة التي يعيدها نوع الاستيراد. صفحة بيانات الحضانات المستوردة قائمة للمراجعة، بينما يسجل سجل الاستيراد كل عملية وأعداد الصفوف والأخطاء.{% endif %}</p>
+        <p class="mb-0"><a href="/admin/import-logs">{% if ui_lang == 'en' %}Open Import History{% else %}فتح سجل الاستيراد{% endif %}</a></p>
       </section>
 
-      {# ═══ الحوكمة والامتثال ═══ #}
-      <section class="help-section" id="governance">
-        <h2><i class="bi bi-bank text-primary"></i>الحوكمة والامتثال</h2>
-
-        <h3>مؤشرات الحوكمة</h3>
-        <p>
-          يُحسب <strong>مؤشر جودة الحوكمة</strong> لكل حضانة من خمسة مؤشرات فرعية: انتظام رفع التقارير،
-          واكتمال البيانات، ومعالجة الحوادث، والالتزام بالطاقة الاستيعابية، وكفاية الإشراف.
-          تُصنَّف الحضانات وفق نطاقات (ممتاز، جيد، مقبول، يحتاج تحسين) وتظهر في
-          <strong>ترتيب الحضانات (الترجيحي)</strong>.
-        </p>
-
-        <h3>مراقبة الجودة</h3>
-        <ul>
-          <li>تابع صفحة <strong>الحوكمة ← السياسات</strong> للاطلاع على أداء الحضانات مقابل المعايير.</li>
-          <li>مؤشر <strong>جودة البيانات</strong> يقيس نسبة الحضانات النشطة التي رفعت تقاريرها خلال آخر 7 أيام.</li>
-          <li>القيم الشاذة (إشغال فوق 100%، بيانات ناقصة) تظهر ضمن قسم كشف الحالات غير الاعتيادية.</li>
-        </ul>
-
-        <h3>إدارة المخالفات</h3>
-        <ul>
-          <li>تُوثَّق المخالفات والحوادث في <strong>العمليات ← سجل الحوادث</strong> مع درجة الخطورة.</li>
-          <li>الحوادث الحرجة تُظهر تنبيهًا فوريًا في لوحة المعلومات حتى تتم معالجتها.</li>
-          <li>لكل حادثة مسار معالجة موثق: التسجيل ← الإجراء ← الإغلاق مع ملاحظات المعالجة.</li>
-        </ul>
-
-        <h3>متابعة الالتزام</h3>
-        <ul>
-          <li>تُرسل <strong>تذكيرات الحوكمة</strong> تلقائيًا للحضانات المتأخرة في رفع تقاريرها.</li>
-          <li>صفحة <strong>الامتثال</strong> تعرض تصنيف كل حضانة وتاريخ ترخيصها ومدى التزامها بالمعايير الوطنية.</li>
-          <li>جميع الإجراءات الإدارية مسجلة في <strong>سجلات التدقيق</strong> ويمكن تصديرها للجهات الرقابية.</li>
-        </ul>
+      <section id="communication" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Communication{% else %}التواصل{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Compose Message lets you choose a target mode, location or kindergarten, and applicable roles. Preview is an estimate; the server recalculates recipients when sending. The Message List currently shows the latest 25 messages. Contact Messages can be reviewed and marked resolved, but it is not a ticket-reply system.{% else %}تتيح صفحة إنشاء رسالة تحديد طريقة الاستهداف والموقع أو الحضانة والأدوار المناسبة. المعاينة تقديرية ويعيد الخادم حساب المستلمين عند الإرسال. تعرض قائمة الرسائل أحدث 25 رسالة حاليًا. يمكن مراجعة رسائل التواصل ووضع علامة تمت المعالجة، لكنها ليست نظام تذاكر وردود.{% endif %}</p>
+        <p class="mb-0"><a href="/admin/messages/compose">{% if ui_lang == 'en' %}Compose a message{% else %}إنشاء رسالة{% endif %}</a></p>
       </section>
 
-      {# ═══ التحليلات والتقارير ═══ #}
-      <section class="help-section" id="analytics">
-        <h2><i class="bi bi-bar-chart-line text-primary"></i>التحليلات والتقارير</h2>
-
-        <h3>قراءة المؤشرات</h3>
-        <ul>
-          <li>لوحة المعلومات الرئيسية تعرض سبعة مؤشرات رئيسية: إجمالي الحضانات، الأطفال المسجلون، معدل الحضور، معدل الحوادث، معدل التسجيل، جودة البيانات، ونمو الشبكة.</li>
-          <li>لون البطاقة يعكس النطاق: أخضر (جيد)، أصفر (مراقبة)، أحمر (يحتاج تدخل).</li>
-          <li>السهم بجانب القيمة يقارنها بالفترة السابقة المكافئة.</li>
-        </ul>
-
-        <h3>استخدام الفلاتر</h3>
-        <ul>
-          <li>شريط التصفية أعلى صفحة التحليلات يتيح التصفية حسب: النطاق الزمني، المحافظة، الحالة، المصدر، والمراجع.</li>
-          <li>يبقى الشريط ظاهرًا أثناء التمرير، وتُطبَّق الفلاتر على جميع تبويبات الصفحة.</li>
-          <li>اضغط <strong>مسح</strong> لإعادة تعيين جميع الفلاتر للوضع الافتراضي.</li>
-        </ul>
-
-        <h3>تصدير البيانات</h3>
-        <ul>
-          <li>زر <strong>تصدير</strong> في شريط التصفية (أو الزر العائم أسفل الصفحة) يفتح نافذة التصدير.</li>
-          <li>اختر نوع التقرير والصيغة: PDF للعرض الرسمي، وExcel أو CSV للتحليل الإضافي.</li>
-          <li>تُسجَّل جميع عمليات التصدير في سجل التدقيق.</li>
-        </ul>
-
-        <h3>مقارنة الفترات الزمنية</h3>
-        <ul>
-          <li>عند اختيار نطاق زمني، يحسب النظام تلقائيًا الفترة السابقة المكافئة لعرض نسب التغير.</li>
-          <li>تقرير <strong>الاتجاهات</strong> يعرض تطور المؤشرات شهريًا لرصد الأنماط الموسمية.</li>
-          <li>في المقارنات، تأكد من تطابق طول الفترتين حتى تكون النسب ذات دلالة.</li>
-        </ul>
+      <section id="daily-reports" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Daily reports{% else %}التقارير اليومية{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Daily Reports Analytics covers attendance, meals, naps, health indicators, and report workflow by period and kindergarten. Daily Report Organization searches, groups, sorts, and reviews reports; it does not create report schedules. Governance measures submission, delivery, viewing, acceptance, and timing according to each displayed definition.{% else %}تشمل تحليلات التقارير اليومية الحضور والوجبات والقيلولة والمؤشرات الصحية ومسار التقرير حسب الفترة والحضانة. تبحث صفحة تنظيم التقارير اليومية في التقارير وتجمعها وتفرزها وتراجعها؛ ولا تنشئ جداول إرسال. تقيس الحوكمة التقديم والتسليم والمشاهدة والقبول والتوقيت وفق تعريف كل مؤشر ظاهر.{% endif %}</p>
+        <p class="mb-0"><a href="/reports/analytics">{% if ui_lang == 'en' %}Open Daily Reports Analytics{% else %}فتح تحليلات التقارير اليومية{% endif %}</a></p>
       </section>
 
-      {# ═══ الأسئلة الشائعة ═══ #}
-      <section class="help-section" id="faq">
-        <h2><i class="bi bi-question-circle text-primary"></i>الأسئلة الشائعة</h2>
-        <div class="accordion" id="faqAccordion">
-          {% set faqs = [
-            ("كيف أعيد تعيين كلمة مرور مستخدم؟",
-             "من صفحة «المستخدمون» افتح سجل المستخدم واختر «إعادة تعيين كلمة المرور». تُرسل رابط إعادة التعيين لبريد المستخدم، وتُسجَّل العملية في سجل التدقيق."),
-            ("لماذا لا أستطيع الموافقة على طلب تسجيل؟",
-             "الأسباب الأكثر شيوعًا: اكتمال الطاقة الاستيعابية للشعبة، أو عدم توافق عمر الطفل مع الفئة العمرية، أو وجود تسجيل نشط للطفل في حضانة أخرى. تظهر رسالة توضح السبب عند محاولة الموافقة."),
-            ("ما الفرق بين الغياب والغياب بعذر؟",
-             "الغياب بعذر هو غياب مسبق الإشعار بطلب من ولي الأمر (مرض، سفر، ظرف عائلي). لا يُحتسب أي منهما حضورًا في مؤشر معدل الحضور، لكن الغياب بعذر لا يؤثر سلبًا في مؤشرات متابعة الطفل."),
-            ("كيف يُحسب مؤشر جودة البيانات؟",
-             "هو نسبة الحضانات النشطة التي رفعت تقريرًا واحدًا على الأقل خلال آخر سبعة أيام، من إجمالي الحضانات النشطة. لا علاقة له بمعدل الحضور."),
-            ("لماذا تختلف الأرقام بين لوحة المعلومات وتقرير مفصل؟",
-             "تُخزَّن بيانات لوحة المعلومات مؤقتًا لمدة 30 ثانية لتسريع العرض، وقد تكون الفلاتر المطبقة مختلفة. وحّد النطاق الزمني والفلاتر ثم حدّث الصفحة قبل المقارنة."),
-            ("كيف أستورد حضانات من ملف Excel؟",
-             "من «البيانات ← استيراد الحضانات» ارفع ملف Excel بالأعمدة المطلوبة (اسم الحضانة عربي، المحافظة، المدينة، رقم الهاتف). يعرض النظام معاينة ونتائج التحقق قبل الاعتماد النهائي."),
-            ("ما هي حالات الطلب الممكنة؟",
-             "غير مكتمل، مُقدَّم، قيد المراجعة، موافق عليه، مرفوض، نشط، منسحب. يظهر تاريخ كل انتقال في سجل الطلب."),
-            ("كيف أمنح مشرفة صلاحية على شعبة؟",
-             "أنشئ حساب المشرفة من «المستخدمون» بدور «مشرفة»، ثم من صفحة الشعبة اختر «تعيين مشرفة» واربطها بها. المشرفة ترى شعبتها فقط."),
-            ("هل يمكن تعديل حضور يوم سابق؟",
-             "نعم لأصحاب الصلاحية الإدارية فقط، من سجل الحضور التاريخي. يُوثَّق التعديل في سجل التدقيق مع القيمة القديمة والجديدة."),
-            ("كيف أتابع الحضانات المتأخرة في رفع التقارير؟",
-             "مؤشر «جودة البيانات» في لوحة المعلومات، وقائمة «حضانات تحتاج إلى تحسين» في صفحة الحوكمة، وكلاهما يعرض الحضانات التي لم ترفع تقارير خلال الأسبوع الأخير."),
-            ("ما معنى ألوان بطاقات المؤشرات؟",
-             "أخضر: ضمن النطاق المستهدف. أصفر: يحتاج مراقبة. أحمر: خارج النطاق ويحتاج تدخلًا. تُحدد النطاقات وفق المعايير الوطنية المعتمدة في النظام."),
-            ("كيف أصدّر سجلات التدقيق؟",
-             "من «الإعدادات ← السجلات» استخدم زر التصدير أعلى الجدول بعد ضبط الفلاتر. تتوفر صيغة CSV، وتُسجَّل عملية التصدير نفسها في السجل."),
-            ("لماذا لا تظهر حضانة على الخريطة الحرارية؟",
-             "الأغلب أن إحداثياتها الجغرافية ناقصة. افتح سجل الحضانة وأضف خط الطول ودائرة العرض، وستظهر في التحديث التالي للخريطة."),
-            ("ما الفرق بين مدير النظام ومدير الحضانة؟",
-             "مدير النظام يشرف على المنصة كاملة ولا يُدخل بيانات تشغيلية. مدير الحضانة يدير حضانته فقط: الطلبات والشعب والكادر والتقارير."),
-            ("كيف أرسل رسالة لجميع أولياء الأمور في حضانة؟",
-             "من «التواصل» اختر «رسالة جديدة» ثم حدد النطاق «حضانة» واختر الحضانة. يمكن أيضًا الإرسال على مستوى محافظة أو على مستوى المنصة (للإعلانات الرسمية)."),
-            ("هل تدعم المنصة اللغة الإنجليزية؟",
-             "العربية هي اللغة الأساسية للمنصة. تتوفر واجهة إنجليزية اختيارية يمكن تفعيلها من قائمة اللغة أعلى الشاشة، وتُحفظ لكل مستخدم على حدة."),
-            ("كيف أتحقق من نسبة الإشغال قبل الموافقة على طلب؟",
-             "تظهر الطاقة الاستيعابية والمقاعد المتاحة في رأس صفحة الطلب وفي سجل الشعبة. كما يمنع النظام تلقائيًا أي موافقة تتجاوز الطاقة المتاحة."),
-            ("ما هي التقارير اليومية ومن يعدّها؟",
-             "تقارير تُعدّها المشرفة يوميًا لكل طفل: الوجبات، النوم، الأنشطة، والملاحظات. تُرسل لولي الأمر بعد اعتمادها، وتدخل في مؤشر انتظام التقارير."),
-            ("كيف يتعامل النظام مع الحوادث الحرجة؟",
-             "الحوادث بدرجة خطورة عالية تُظهر تنبيهًا فوريًا في لوحة المعلومات وترسل إشعارًا للإدارة، وتبقى مفتوحة حتى توثيق الإجراء التصحيحي وإغلاقها."),
-            ("لماذا أرى «لا تتوفر بيانات» في بعض الرسوم؟",
-             "المعنى أن الفلاتر الحالية لا تُرجع أي نتائج للفترة المحددة. وسّع النطاق الزمني أو خفف الفلاتر. إن استمرت الحالة مع وجود بيانات مؤكدة، أبلغ الدعم الفني."),
-            ("هل يمكن استرجاع سجل محذوف؟",
-             "الحذف في المنصة حذف منطقي في الغالب (إخفاء مع بقاء الأثر)، ويمكن لمدير النظام استرجاع السجل من قاعدة البيانات عبر الدعم الفني. سجلات التدقيق لا تُحذف إطلاقًا."),
-            ("كيف أغيّر لغة الواجهة أو أعدّل ملفي الشخصي؟",
-             "من الشريط العلوي: أيقونة الكرة الأرضية لتبديل اللغة، وقائمة المستخدم ← «الملف الشخصي» لتعديل البيانات وتغيير كلمة المرور."),
-          ] %}
-          {% for q, a in faqs %}
+      <section id="safety" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Incidents and safety{% else %}الحوادث والسلامة{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Generated Incident Reports are analytical snapshots, not the live incident queue. Incident Analytics shows open/closed totals, severity, type, parent-notification state, and repeated-child patterns. Treat child-level information as confidential and export only for an approved purpose.{% else %}تقارير الحوادث المنشأة لقطات تحليلية وليست قائمة الحوادث الحية. تعرض تحليلات الحوادث الإجمالي والمفتوح والمغلق والخطورة والنوع وحالة إبلاغ ولي الأمر وأنماط تكرار الحالات لدى الأطفال. تعامل مع معلومات الطفل بسرية ولا تصدرها إلا لغرض معتمد.{% endif %}</p>
+      </section>
+
+      <section id="analytics" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Analytics and reports{% else %}التحليلات والتقارير{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Before interpreting a rate, confirm its numerator, denominator, period, entity scope, unit, data coverage, and last update. Predictions, benchmarks, anomaly detection, and what-if results are analytical outputs rather than observed facts. Export only formats offered by the selected report; availability differs by report.{% else %}قبل تفسير أي نسبة تحقق من البسط والمقام والفترة ونطاق الجهة والوحدة وتغطية البيانات ووقت آخر تحديث. التنبؤات والمقارنات وكشف القيم غير الاعتيادية ونتائج السيناريوهات مخرجات تحليلية وليست حقائق مرصودة. صدّر فقط الصيغ التي يتيحها التقرير المحدد؛ إذ تختلف الصيغ حسب التقرير.{% endif %}</p>
+      </section>
+
+      <section id="governance" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Governance and classification{% else %}الحوكمة والتصنيف{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Daily Report Governance explains reporting rates and reminder eligibility. Compliance Reminders is a sending-history page; the send action is available from Governance Reports. Classification and Benchmarks must show score composition and coverage, and entities with insufficient coverage must not receive a misleading rank.{% else %}تشرح حوكمة التقارير اليومية نسب التقارير وأهلية إرسال التذكير. صفحة تذكيرات الالتزام سجل للإرسال؛ ويتوفر إجراء الإرسال من تقارير الحوكمة. يجب أن يوضح التصنيف والمقارنات مكونات الدرجة والتغطية، وألا تحصل الجهات ذات التغطية غير الكافية على ترتيب مضلل.{% endif %}</p>
+      </section>
+
+      <section id="security" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Security and audit{% else %}الأمان والتدقيق{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Unsafe requests require a matching CSRF cookie and header. Audit export is available from the Audit Log page and respects the selected filters and period. Retention and authorized cleanup are operational controls, so do not describe logs as impossible to remove. Controlled User Access is only for an approved support case and records start/end activity and reason.{% else %}تتطلب الطلبات المعدلة للبيانات تطابق ملف تعريف ارتباط CSRF مع الترويسة. يتوفر تصدير التدقيق من صفحة سجل التدقيق ويحترم المرشحات والفترة المحددة. الاحتفاظ والتنظيف المصرح به ضوابط تشغيلية، لذلك لا توصف السجلات بأنها غير قابلة للإزالة. يستخدم الدخول المقيّد بصفة مستخدم لحالة دعم معتمدة فقط ويسجل البدء والانتهاء والسبب.{% endif %}</p>
+        <p class="mb-0"><a href="/admin/audit-logs">{% if ui_lang == 'en' %}Open Audit Log{% else %}فتح سجل التدقيق{% endif %}</a></p>
+      </section>
+
+      {% set faqs = [
+        {"ar":"لماذا لا أرى صفحة إدارية؟","en":"Why can’t I see an Admin page?","aar":"تحقق من الجلسة والدور. يفرض الخادم الصلاحية حتى لو كان الرابط معروفًا.","aen":"Check your session and role. The server enforces access even when the URL is known."},
+        {"ar":"ماذا يعني المستخدمون الذين سجلوا الدخول اليوم؟","en":"What does Users Logged In Today mean?","aar":"عدد المستخدمين المميزين الذين لديهم تسجيل دخول ناجح منذ بداية اليوم بتوقيت عمّان.","aen":"Distinct users with a successful login since today began in Amman time."},
+        {"ar":"لماذا تظهر شرطة بدل صفر؟","en":"Why is a dash shown instead of zero?","aar":"الشرطة تعني أن القيمة غير متاحة؛ أما الصفر فهو نتيجة مقاسة.","aen":"A dash means unavailable; zero is a measured result."},
+        {"ar":"كيف أعيد تعيين كلمة مرور مستخدم؟","en":"How do I reset a user password?","aar":"افتح تعديل المستخدم وأدخل كلمة المرور الجديدة وكلمة مرورك الحالية كمسؤول.","aen":"Open Edit User and enter the new password plus your current administrator password."},
+        {"ar":"هل ترسل إعادة التعيين رابطًا بالبريد؟","en":"Does Admin reset email a link?","aar":"لا، مسار المسؤول الحالي إعادة تعيين مباشرة ومحمية.","aen":"No. The current Admin flow is a protected direct reset."},
+        {"ar":"كيف أحدد مستلمي الرسالة؟","en":"How do I target message recipients?","aar":"اختر طريقة الاستهداف ثم الموقع أو الحضانة والأدوار المناسبة وراجع المعاينة.","aen":"Choose a target mode, then location or kindergarten and applicable roles, and review the preview."},
+        {"ar":"هل عدد المعاينة نهائي؟","en":"Is the preview count final?","aar":"لا، يعيد الخادم حساب المستلمين عند الإرسال.","aen":"No. The server recalculates recipients when sending."},
+        {"ar":"أين أجد رسائل التواصل؟","en":"Where are contact messages?","aar":"من التواصل والبيانات ← رسائل التواصل.","aen":"Open Communication & Data → Contact Messages."},
+        {"ar":"هل يمكن الرد على رسالة التواصل؟","en":"Can I reply to a contact message?","aar":"الواجهة الحالية تتيح المراجعة ووضع علامة تمت المعالجة، ولا توفر نظام ردود.","aen":"The current page supports review and resolution state, not a reply workflow."},
+        {"ar":"أين تحليلات التقارير اليومية الحقيقية؟","en":"Where is the real Daily Reports Analytics page?","aar":"من التحليلات والتقارير ← تحليلات التقارير اليومية.","aen":"Open Analytics & Reporting → Daily Reports Analytics."},
+        {"ar":"هل تنظيم التقارير ينشئ جدولًا؟","en":"Does Daily Report Organization create schedules?","aar":"لا، الصفحة تبحث وتجمع وتفرز وتراجع التقارير.","aen":"No. It searches, groups, sorts, and reviews reports."},
+        {"ar":"ما الفرق بين الحادث وتقرير الحادث؟","en":"What is the difference between an incident and an incident report?","aar":"الحادث سجل تشغيلي؛ أما التقرير فهو لقطة تحليلية منشأة لنطاق وفترة.","aen":"An incident is an operational record; a report is a generated analytical snapshot."},
+        {"ar":"كيف أفسر النسبة؟","en":"How should I interpret a rate?","aar":"راجع البسط والمقام والفترة والنطاق والوحدة والتغطية.","aen":"Review the numerator, denominator, period, scope, unit, and coverage."},
+        {"ar":"ماذا تعني بيانات غير كافية؟","en":"What does Insufficient data mean?","aar":"التغطية لا تكفي لنتيجة أو ترتيب موثوق.","aen":"Coverage is too low for a reliable result or ranking."},
+        {"ar":"أين أرسل تذكير الحوكمة؟","en":"Where do I send a governance reminder?","aar":"من صفحة حوكمة التقارير اليومية؛ صفحة التذكيرات تعرض سجل الإرسال.","aen":"Use Daily Report Governance; Compliance Reminders displays sending history."},
+        {"ar":"أين أصدر سجل التدقيق؟","en":"Where do I export audit logs?","aar":"من صفحة سجل التدقيق بعد اختيار المرشحات والفترة.","aen":"From Audit Log after selecting filters and period."},
+        {"ar":"لماذا حصلت على 403؟","en":"Why did I receive 403?","aar":"الجلسة صحيحة لكن الدور أو النطاق لا يسمح بالإجراء، أو فشل تحقق CSRF للطلب المعدّل.","aen":"You are authenticated, but role/scope disallows the action, or CSRF validation failed for a write."},
+        {"ar":"لماذا حصلت على 422؟","en":"Why did I receive 422?","aar":"تحقق من الحقول المطلوبة وصيغة التاريخ والمعرف والقيم المسموحة.","aen":"Check required fields and the date, identifier, and allowed-value formats."},
+        {"ar":"ماذا أفعل عند تعذر التحميل؟","en":"What should I do when data cannot load?","aar":"أعد المحاولة وسجل الرقم المرجعي ووقت المشكلة والصفحة والفلاتر المستخدمة.","aen":"Retry and record the reference ID, time, page, and filters used."},
+        {"ar":"كيف أطلب الدعم؟","en":"How do I request support?","aar":"استخدم قناة الدعم المعتمدة لدى مؤسستك وأرفق الرقم المرجعي دون مشاركة كلمة المرور أو الرموز.","aen":"Use your organization’s approved support channel and include the reference ID without sharing passwords or tokens."}
+      ] %}
+      <section id="faq" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Frequently asked questions{% else %}الأسئلة الشائعة{% endif %}</h2>
+        <div class="accordion" id="helpFaq">
+          {% for item in faqs %}
           <div class="accordion-item faq-item">
-            <h3 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq{{ loop.index }}" aria-expanded="false" aria-controls="faq{{ loop.index }}">
-                {{ q }}
-              </button>
-            </h3>
-            <div id="faq{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-              <div class="accordion-body">{{ a }}</div>
-            </div>
+            <h3 class="accordion-header" id="faqHeading{{ loop.index }}"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq{{ loop.index }}" aria-expanded="false" aria-controls="faq{{ loop.index }}">{% if ui_lang == 'en' %}{{ item.en }}{% else %}{{ item.ar }}{% endif %}</button></h3>
+            <div id="faq{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="faqHeading{{ loop.index }}" data-bs-parent="#helpFaq"><div class="accordion-body">{% if ui_lang == 'en' %}{{ item.aen }}{% else %}{{ item.aar }}{% endif %}</div></div>
           </div>
           {% endfor %}
         </div>
       </section>
 
-      {# ═══ دليل المصطلحات ═══ #}
-      <section class="help-section" id="glossary">
-        <h2><i class="bi bi-book text-primary"></i>دليل المصطلحات</h2>
-        <div class="table-responsive">
-          <table class="table glossary-table mb-0">
-            <caption class="visually-hidden">قائمة المصطلحات</caption>
-            <thead><tr><th scope="col">المصطلح</th><th scope="col">التعريف</th></tr></thead>
-            <tbody>
-              <tr><td><strong>الحضانة</strong></td><td>منشأة مرخصة لرعاية الأطفال في مرحلة الطفولة المبكرة، وهي الوحدة الأساسية في المنصة.</td></tr>
-              <tr><td><strong>الشعبة</strong></td><td>مجموعة أطفال داخل الحضانة تجمعهم فئة عمرية واحدة وتشرف عليهم مشرفة محددة.</td></tr>
-              <tr><td><strong>الطاقة الاستيعابية</strong></td><td>الحد الأقصى المرخص لعدد الأطفال في الشعبة أو الحضانة.</td></tr>
-              <tr><td><strong>نسبة الإشغال</strong></td><td>عدد الأطفال المسجلين مقسومًا على الطاقة الاستيعابية، معبرًا عنها بنسبة مئوية.</td></tr>
-              <tr><td><strong>طلب التسجيل</strong></td><td>الطلب الذي يقدمه ولي الأمر لإلحاق طفله بحضانة، ويمر بدورة حالات حتى القبول أو الرفض.</td></tr>
-              <tr><td><strong>المواظبة</strong></td><td>انتظام حضور الطفل، وتقاس بنسبة أيام الحضور الفعلي من أيام الدوام.</td></tr>
-              <tr><td><strong>الغياب بعذر</strong></td><td>غياب مُشعَر به مسبقًا بطلب من ولي الأمر، ولا يُحتسب حضورًا في المؤشرات.</td></tr>
-              <tr><td><strong>التقرير اليومي</strong></td><td>تقرير تعدّه المشرفة عن يوم الطفل: التغذية، النوم، الأنشطة، والملاحظات.</td></tr>
-              <tr><td><strong>الحادثة</strong></td><td>واقعة تمس سلامة طفل أو سير العمل، تُوثَّق بدرجة خطورة ومسار معالجة.</td></tr>
-              <tr><td><strong>المؤشر الرئيسي</strong></td><td>قياس كمي معتمد لأداء الشبكة (مثل معدل الحضور أو معدل الحوادث)، يُحسب مركزيًا وفق منهجية موحدة.</td></tr>
-              <tr><td><strong>النطاق (التصنيف)</strong></td><td>الفئة التي تقع فيها قيمة المؤشر مقارنة بالمعايير: ممتاز، جيد، مقبول، يحتاج تحسين.</td></tr>
-              <tr><td><strong>مؤشر جودة الحوكمة</strong></td><td>مؤشر مركب من خمسة مؤشرات فرعية يقيس جودة إدارة الحضانة والتزامها.</td></tr>
-              <tr><td><strong>جودة البيانات</strong></td><td>نسبة الحضانات النشطة التي رفعت تقريرًا خلال آخر 7 أيام — مقياس لانتظام التوثيق لا للحضور.</td></tr>
-              <tr><td><strong>الخريطة الحرارية</strong></td><td>عرض جغرافي تفاعلي لتوزيع الحضانات ومؤشراتها على محافظات المملكة.</td></tr>
-              <tr><td><strong>سجل التدقيق</strong></td><td>سجل غير قابل للتعديل يوثق كل إجراء إداري في المنصة: من قام به ومتى وماذا غيّر.</td></tr>
-              <tr><td><strong>انتحال الصلاحية</strong></td><td>دخول مدير النظام مؤقتًا بحساب مستخدم آخر لأغراض الدعم، ويُوثَّق بالكامل في سجل التدقيق.</td></tr>
-              <tr><td><strong>فجوة الإشراف</strong></td><td>الفرق بين عدد المشرفات المطلوب وفق المعايير وعددهن الفعلي في الحضانة.</td></tr>
-              <tr><td><strong>المصدر</strong></td><td>قناة تقديم طلب التسجيل: الموقع الإلكتروني، تطبيق الهاتف، أو المكتب.</td></tr>
-              <tr><td><strong>الفترة المرجعية</strong></td><td>الفترة الزمنية السابقة المكافئة التي تُقارن بها مؤشرات الفترة الحالية لحساب نسب التغير.</td></tr>
-              <tr><td><strong>التصدير</strong></td><td>استخراج البيانات أو التقارير من المنصة بصيغ PDF أو Excel أو CSV.</td></tr>
-              <tr><td><strong>التصنيف الوطني</strong></td><td>ترتيب الحضانات وفق مؤشر الحوكمة الترجيحي على مستوى المملكة.</td></tr>
-              <tr><td><strong>الحذف المنطقي</strong></td><td>إخفاء السجل من الواجهات مع الاحتفاظ به في قاعدة البيانات لأغراض التدقيق والاسترجاع.</td></tr>
-            </tbody>
-          </table>
-        </div>
+      <section id="glossary" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Glossary{% else %}دليل المصطلحات{% endif %}</h2>
+        <div class="table-responsive"><table class="table table-bordered glossary-table mb-0">
+          <caption class="visually-hidden">{% if ui_lang == 'en' %}Administrative metric glossary{% else %}دليل مصطلحات المؤشرات الإدارية{% endif %}</caption>
+          <thead><tr><th scope="col">{% if ui_lang == 'en' %}Term{% else %}المصطلح{% endif %}</th><th scope="col">{% if ui_lang == 'en' %}Meaning{% else %}المعنى{% endif %}</th></tr></thead>
+          <tbody>
+            <tr><td>{% if ui_lang == 'en' %}Scope{% else %}النطاق{% endif %}</td><td>{% if ui_lang == 'en' %}The organizations, locations, or records included in a result.{% else %}الجهات أو المواقع أو السجلات المشمولة في النتيجة.{% endif %}</td></tr>
+            <tr><td>{% if ui_lang == 'en' %}Coverage{% else %}التغطية{% endif %}</td><td>{% if ui_lang == 'en' %}The share of expected data available for calculation.{% else %}نسبة البيانات المتوقعة المتاحة للحساب.{% endif %}</td></tr>
+            <tr><td>{% if ui_lang == 'en' %}Freshness{% else %}حداثة البيانات{% endif %}</td><td>{% if ui_lang == 'en' %}When source data was last updated successfully.{% else %}وقت آخر تحديث ناجح للبيانات المصدرية.{% endif %}</td></tr>
+            <tr><td>{% if ui_lang == 'en' %}Reference ID{% else %}الرقم المرجعي{% endif %}</td><td>{% if ui_lang == 'en' %}An identifier used to correlate a browser request with server logs.{% else %}معرف يستخدم لربط طلب المتصفح بسجلات الخادم.{% endif %}</td></tr>
+          </tbody>
+        </table></div>
       </section>
 
-      {# ═══ التواصل والدعم ═══ #}
-      <section class="help-section" id="support">
-        <h2><i class="bi bi-headset text-primary"></i>التواصل والدعم</h2>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <div class="help-contact-card">
-              <h3 class="mt-0"><i class="bi bi-send me-2 text-primary"></i>طريقة طلب الدعم</h3>
-              <ol class="mb-0">
-                <li>راجع هذا الدليل والأسئلة الشائعة أولًا؛ فغالبية الاستفسارات مجاب عنها هنا.</li>
-                <li>من صفحة <strong>التواصل</strong> أرسل رسالة لفريق الدعم مع وصف واضح للمشكلة.</li>
-                <li>أرفق لقطة شاشة ورابط الصفحة إن أمكن لتسريع المعالجة.</li>
-              </ol>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="help-contact-card">
-              <h3 class="mt-0"><i class="bi bi-bug me-2 text-primary"></i>الإبلاغ عن مشكلة</h3>
-              <p class="mb-0">
-                عند مواجهة خطأ تقني، دوّن: الصفحة، الخطوات التي أدت للمشكلة، والوقت التقريبي.
-                ثم أبلغ عنها عبر صفحة التواصل مصنفةً «مشكلة تقنية». الحوادث المتعلقة بسلامة
-                الأطفال تُوثَّق في <strong>سجل الحوادث</strong> وليس في بلاغات الدعم.
-              </p>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="help-contact-card">
-              <h3 class="mt-0"><i class="bi bi-ticket-detailed me-2 text-primary"></i>متابعة التذاكر</h3>
-              <p class="mb-0">
-                تظهر رسائلك وحالة معالجتها في صفحة <strong>التواصل</strong>. تصلك الردود داخل المنصة،
-                ويُشار للرسائل المعالجة بحالة «تمت المعالجة».
-              </p>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="help-contact-card">
-              <h3 class="mt-0"><i class="bi bi-telephone me-2 text-primary"></i>معلومات التواصل</h3>
-              <ul class="mb-0 list-unstyled">
-                <li class="mb-2"><i class="bi bi-envelope me-2 text-muted"></i>البريد الإلكتروني: <span dir="ltr">support@kinjo.jo</span></li>
-                <li class="mb-2"><i class="bi bi-telephone me-2 text-muted"></i>الهاتف: <span dir="ltr">06-500-0000</span> (الأحد – الخميس، 8:00 – 16:00)</li>
-                <li><i class="bi bi-geo-alt me-2 text-muted"></i>عمّان، المملكة الأردنية الهاشمية</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+      <section id="support" class="help-section card p-4 mb-0">
+        <h2>{% if ui_lang == 'en' %}Support{% else %}الدعم{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Use your organization’s approved support channel. Include the page, time, action, selected filters, and reference ID. Never send passwords, session cookies, CSRF tokens, reset tokens, or private child data through an unapproved channel.{% else %}استخدم قناة الدعم المعتمدة لدى مؤسستك. أرفق الصفحة والوقت والإجراء والمرشحات المحددة والرقم المرجعي. لا ترسل كلمات المرور أو ملفات تعريف ارتباط الجلسة أو رموز CSRF أو رموز إعادة التعيين أو بيانات الأطفال الخاصة عبر قناة غير معتمدة.{% endif %}</p>
+        <p class="mb-0"><a href="/admin/observability">{% if ui_lang == 'en' %}Check System Health{% else %}فحص حالة النظام{% endif %}</a> · <a href="/admin/audit-logs">{% if ui_lang == 'en' %}Open Audit Log{% else %}فتح سجل التدقيق{% endif %}</a></p>
       </section>
-
-    </div>
+    </main>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-  /* بحث فوري في أقسام المساعدة */
-  document.getElementById('helpSearch')?.addEventListener('input', function () {
-    const q = this.value.trim().toLowerCase();
-    document.querySelectorAll('.help-section').forEach(function (sec) {
-      if (!q) { sec.style.display = ''; return; }
-      sec.style.display = sec.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-    document.querySelectorAll('.faq-item').forEach(function (item) {
-      if (!q) { item.style.display = ''; return; }
-      item.style.display = item.textContent.toLowerCase().includes(q) ? '' : 'none';
+(() => {
+  const input = document.getElementById('helpSearch');
+  if (!input) return;
+  input.addEventListener('input', () => {
+    const term = input.value.trim().toLocaleLowerCase(document.documentElement.lang || 'ar');
+    document.querySelectorAll('#helpTopics > .help-section').forEach(section => {
+      section.hidden = Boolean(term) && !section.textContent.toLocaleLowerCase(document.documentElement.lang || 'ar').includes(term);
     });
   });
+})();
 </script>
 {% endblock %}
