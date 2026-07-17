@@ -46,7 +46,19 @@ def _normalize_ui_language(value: Optional[str]) -> str:
 
 def _language_context_processor(request: Request) -> dict:
     lang = _normalize_ui_language(request.cookies.get("kinjo_lang"))
-    return {"ui_lang": lang, "ui_dir": "rtl" if lang == "ar" else "ltr"}
+    # This module renders templates that extend base.html, which includes
+    # components/impersonation_banner.html. That partial resolves `impersonation`
+    # or falls back to a `get_impersonation()` global that is never registered, so
+    # omitting the key here raises UndefinedError and the page 500s. The canonical
+    # processor (scripts/compat/frontend_orig.py) supplies it; this one must too.
+    # Decode only the signed, display-safe cookie — never request.state.
+    from rbac import get_impersonation_context
+
+    return {
+        "ui_lang": lang,
+        "ui_dir": "rtl" if lang == "ar" else "ltr",
+        "impersonation": get_impersonation_context(request),
+    }
 
 
 templates = Jinja2Templates(

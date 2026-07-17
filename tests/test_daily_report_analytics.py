@@ -690,3 +690,41 @@ class TestAnalyticsComputations:
         assert data["diaper_bathroom"]["avg_bathroom"] == 0
         assert data["diaper_bathroom"]["wet_rate"] is None
         assert data["diaper_bathroom"]["soiled_rate"] is None
+
+
+class TestAnalyticsDashboardPageRenders:
+    """The /reports/analytics HTML page, not just its JSON API.
+
+    This page 500s on a bare `UndefinedError: 'get_impersonation' is undefined`.
+    daily_report_analytics.py defines its own `_language_context_processor`
+    supplying only ui_lang/ui_dir, but the template extends base.html, which
+    includes components/impersonation_banner.html; that partial resolves
+    `impersonation` or calls a `get_impersonation()` global that is never
+    registered. The canonical processor in scripts/compat/frontend_orig.py
+    supplies `impersonation`, so the duplicate silently diverged.
+
+    Every existing test here hits the JSON API, which uses no template — so the
+    whole suite passed green while the page itself was unreachable.
+    """
+
+    def test_analytics_dashboard_page_renders_for_admin(self, dr_client, dr_admin):
+        headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
+        response = dr_client.get("/reports/analytics", headers=headers)
+        assert response.status_code == 200, response.text[:300]
+        # Proves the banner partial actually rendered rather than the route
+        # merely returning some other 200.
+        assert "wfDraftSub" in response.text
+
+    def test_language_context_processor_supplies_impersonation(self):
+        """Guards the specific key whose absence caused the 500."""
+        from starlette.requests import Request
+
+        from daily_report_analytics import _language_context_processor
+
+        scope = {
+            "type": "http", "method": "GET", "path": "/reports/analytics",
+            "headers": [], "query_string": b"",
+        }
+        context = _language_context_processor(Request(scope))
+        assert "impersonation" in context
+        assert context["ui_lang"] == "ar"
