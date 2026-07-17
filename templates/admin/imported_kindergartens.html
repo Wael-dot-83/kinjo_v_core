@@ -17,7 +17,7 @@
           {% if ui_lang == 'en' %}Imported Kindergartens{% else %}الحضانات المستوردة{% endif %}
         </h1>
         <p class="text-muted small mb-0 mt-1">
-          {% if ui_lang == 'en' %}Manage all imported kindergarten records from external databases.{% else %}إدارة جميع سجلات الحضانات المستوردة من قواعد البيانات الخارجية.{% endif %}
+          {% if ui_lang == 'en' %}Review kindergarten records created through the import workflow.{% else %}مراجعة سجلات الحضانات المنشأة عبر مسار الاستيراد.{% endif %}
         </p>
       </div>
     </div>
@@ -48,9 +48,9 @@
           </select>
         </div>
         <div class="col-12 col-md-3">
-          <label for="cityFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
+          <label for="cityFilter" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</label>
           <select class="form-select form-select-sm" id="cityFilter">
-            <option value="">{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}</option>
+            <option value="">{% if ui_lang == 'en' %}All Districts{% else %}جميع الألوية{% endif %}</option>
           </select>
         </div>
         <div class="col-12 col-md-3 d-flex align-items-end gap-2">

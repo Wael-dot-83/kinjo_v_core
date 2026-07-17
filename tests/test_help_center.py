@@ -79,7 +79,7 @@ def test_legacy_kindergarten_term_absent_from_ui_sources():
     """
     tracked = subprocess.run(
         ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True,
-        encoding="utf-8",
+        encoding="utf-8", stdin=subprocess.DEVNULL, check=True,
     ).stdout.splitlines()
     offenders = []
     self_path = Path(__file__).resolve()

@@ -52,7 +52,7 @@ const KPI_CONFIG = [
   { key: "active_kindergartens", icon: "bi bi-house-check-fill",  color: "success", format: "number",     drilldown: "/admin/kg-overview",               drilldownLabelKey: "dashboard.view_kindergartens" },
   { key: "total_submissions",    icon: "bi bi-file-earmark-fill", color: "warning", format: "number",     drilldown: "/reports/analytics",               drilldownLabelKey: "dashboard.view_reports" },
   { key: "pending_submissions",  icon: "bi bi-clock-fill",        color: "danger",  format: "number",     drilldown: "/reports/analytics",               drilldownLabelKey: "dashboard.view_reports" },
-  { key: "data_quality_score",   icon: "bi bi-graph-up-arrow",    color: "primary", format: "percentage", drilldown: "/admin/imported-kindergartens",    drilldownLabelKey: "dashboard.view_data_management" },
+  { key: "data_quality_score",   icon: "bi bi-graph-up-arrow",    color: "primary", format: "percentage", drilldown: "/admin/daily-reports-organization", drilldownLabelKey: "dashboard.view_data_management" },
 ];
 
 // English fallbacks for KPI labels (used if i18n JSON hasn't loaded yet)
@@ -535,7 +535,7 @@ class AdminDashboard {
 
     const improveLink = document.createElement("a");
     improveLink.className = "admin-kpi-dq-improve-link";
-    improveLink.href = "/admin/imported-kindergartens";
+    improveLink.href = "/admin/daily-reports-organization";
     improveLink.textContent = this.t("dashboard.dq_improve", "Improve data quality");
     details.appendChild(improveLink);
 

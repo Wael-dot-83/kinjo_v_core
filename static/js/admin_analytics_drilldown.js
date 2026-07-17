@@ -39,6 +39,13 @@ function drilldownLiteral(value) {
   return typeof window.escapeHtml === "function" ? window.escapeHtml(result) : result;
 }
 
+function drilldownNumber(value, digits = null, suffix = "") {
+  if (value === null || value === undefined || value === "") return "—";
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "—";
+  return `${digits === null ? numeric : numeric.toFixed(digits)}${suffix}`;
+}
+
 async function loadDrilldownData() {
   const pathParts = window.location.pathname.split("/");
   const dimensionType = pathParts[pathParts.length - 2];
@@ -97,10 +104,10 @@ function populateSummaryCards(metrics, type) {
                 <h6 class="text-muted">${drilldownText("عدد الحضانات", "Number of kindergartens")}</h6><h3 class="fw-bold">${metrics.kindergarten_count}</h3>
             </div></div></div>
             <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("إجمالي الأطفال", "Total children")}</h6><h3 class="fw-bold">${metrics.children_count || "N/A"}</h3>
+                <h6 class="text-muted">${drilldownText("إجمالي الأطفال", "Total children")}</h6><h3 class="fw-bold">${drilldownNumber(metrics.children_count)}</h3>
             </div></div></div>
             <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("متوسط الحوكمة", "Average governance")}</h6><h3 class="fw-bold">${metrics.governance_score ? metrics.governance_score.toFixed(1) : "N/A"}</h3>
+                <h6 class="text-muted">${drilldownText("متوسط الحوكمة", "Average governance")}</h6><h3 class="fw-bold">${drilldownNumber(metrics.governance_score, 1)}</h3>
             </div></div></div>
         `;
   } else if (type.toUpperCase() === "CLASS") {
@@ -122,13 +129,13 @@ function populateSummaryCards(metrics, type) {
                 <h6 class="text-muted">${drilldownText("الأطفال", "Children")}</h6><h3 class="fw-bold">${metrics.children_count}</h3>
             </div></div></div>
             <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("نسبة الحضور", "Attendance rate")}</h6><h3 class="fw-bold">${(metrics.attendance_rate ?? 0).toFixed(1)}%</h3>
+                <h6 class="text-muted">${drilldownText("نسبة الحضور", "Attendance rate")}</h6><h3 class="fw-bold">${drilldownNumber(metrics.attendance_rate, 1, "%")}</h3>
             </div></div></div>
             <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("معدل الحوادث /1K", "Incident rate /1K")}</h6><h3 class="fw-bold">${(metrics.incident_rate ?? 0).toFixed(2)}</h3>
+                <h6 class="text-muted">${drilldownText("معدل الحوادث /1K", "Incident rate /1K")}</h6><h3 class="fw-bold">${drilldownNumber(metrics.incident_rate, 2)}</h3>
             </div></div></div>
             <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("الحوكمة", "Governance")}</h6><h3 class="fw-bold">${(metrics.governance_score ?? 0).toFixed(1)}</h3>
+                <h6 class="text-muted">${drilldownText("الحوكمة", "Governance")}</h6><h3 class="fw-bold">${drilldownNumber(metrics.governance_score, 1)}</h3>
             </div></div></div>
         `;
   }
@@ -164,10 +171,10 @@ function populateTable(children, type) {
             <tr data-kg-id="${kg.id}" style="cursor:pointer;" onclick="window.location.href='/kindergartens/${kg.id}'">
                 <td class="fw-bold">${drilldownLiteral(kg.name)}</td>
                 <td class="text-center">${kg.children_count}</td>
-                <td class="text-center" data-sort="${kg.attendance_rate}"><span class="badge ${getScoreColor(kg.attendance_rate, true)}">${(kg.attendance_rate ?? 0).toFixed(1)}%</span></td>
-                <td class="text-center" data-sort="${kg.incident_rate}">${(kg.incident_rate ?? 0).toFixed(2)}/1K</td>
+                <td class="text-center" data-sort="${kg.attendance_rate ?? ""}"><span class="badge ${getScoreColor(kg.attendance_rate, true)}">${drilldownNumber(kg.attendance_rate, 1, "%")}</span></td>
+                <td class="text-center" data-sort="${kg.incident_rate ?? ""}">${drilldownNumber(kg.incident_rate, 2, "/1K")}</td>
                 <td class="text-center" data-sort="${kg.governance_score}">
-                    <span class="fw-bold me-2">${(kg.governance_score ?? 0).toFixed(1)}</span>
+                    <span class="fw-bold me-2">${drilldownNumber(kg.governance_score, 1)}</span>
                     <span class="badge ${kg.governance_band === "INSUFFICIENT" ? "bg-secondary" : getScoreColor(kg.governance_score)}">${kg.governance_band === "INSUFFICIENT" ? drilldownText("بيانات غير كافية", "Insufficient data") : drilldownLiteral(kg.governance_band)}</span>
                 </td>
             </tr>
@@ -216,7 +223,7 @@ function populateTable(children, type) {
         (child) => `
             <tr>
                 <td class="fw-bold">${drilldownLiteral(child.name)}</td>
-                <td class="text-center" data-sort="${child.attendance_rate}"><span class="badge ${getScoreColor(child.attendance_rate, true)}">${(child.attendance_rate ?? 0).toFixed(1)}%</span></td>
+                <td class="text-center" data-sort="${child.attendance_rate ?? ""}"><span class="badge ${getScoreColor(child.attendance_rate, true)}">${drilldownNumber(child.attendance_rate, 1, "%")}</span></td>
                 <td class="text-center">${child.attendance_days}</td>
             </tr>
         `

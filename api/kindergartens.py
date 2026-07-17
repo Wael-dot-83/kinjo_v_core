@@ -550,7 +550,11 @@ def admin_kindergarten_stats(
         .all()
     )
     total_capacity = int(sum(capacity or 0 for _kg_id, capacity in active_capacity_rows))
-    avg_occupancy = round((total_children / total_capacity) * 100, 1) if total_capacity else 0
+    active_children = int(sum(children_by_kg.get(kg_id, 0) for kg_id, _capacity in active_capacity_rows))
+    # Keep numerator and denominator on the same ACTIVE-kindergarten population.
+    # Using children from frozen/draft kindergartens over active capacity inflated
+    # the network occupancy card and made the percentage impossible to interpret.
+    avg_occupancy = round((active_children / total_capacity) * 100, 1) if total_capacity else None
 
     return _envelope(
         True,
@@ -563,6 +567,7 @@ def admin_kindergarten_stats(
             "deleted": deleted,
             "avg_occupancy": avg_occupancy,
             "total_children": total_children,
+            "active_children": active_children,
             "total_capacity": total_capacity,
         },
         "Kindergarten statistics loaded successfully",

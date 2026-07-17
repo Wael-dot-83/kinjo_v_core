@@ -349,7 +349,10 @@
         {% block page_header %}{% endblock %}
 
         <!-- Page Content -->
-        <div class="admin-content" id="admin-content">{% block content %}{% endblock %}</div>
+        <div class="admin-content" id="admin-content">
+          {% include "components/admin_page_context.html" %}
+          {% block content %}{% endblock %}
+        </div>
       </main>
     </div>
 

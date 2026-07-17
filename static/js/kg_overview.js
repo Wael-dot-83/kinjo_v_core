@@ -392,6 +392,7 @@ class KgOverview {
     this.#applyTheme(this.#store.get('theme'));
     await this.#loadOverviewData().catch(error => {
       console.error('[KgOverview] initial data load failed', error);
+      this.#showLoadError(error);
     });
     this.#buildControlBar();
     this.#renderKPIs();
@@ -437,7 +438,8 @@ class KgOverview {
       }
     }
     const response = await fetchWithAuth(`/api/admin/kg-overview?${params.toString()}`);
-    if (!response) return;
+    if (!response) throw new Error('Authentication required');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
     const mapped = mapOverviewPayload(payload);
     this.#store.set({
@@ -446,6 +448,37 @@ class KgOverview {
       alerts: mapped.alerts,
       trend: mapped.trend,
     });
+    this.#hideLoadError();
+  }
+
+  #hideLoadError() {
+    document.getElementById('ko-page-error')?.classList.add('d-none');
+  }
+
+  #showLoadError(error) {
+    const box = document.getElementById('ko-page-error');
+    const text = document.getElementById('ko-page-error-text');
+    const retry = document.getElementById('ko-page-retry');
+    if (!box || !text || !retry) return;
+    const isAr = (window.KINJO_LANG || 'ar') !== 'en';
+    text.textContent = isAr
+      ? `تعذر تحميل بيانات الحضانات. أعد المحاولة واحتفظ بالرقم المرجعي إن ظهر. (${error.message})`
+      : `Unable to load kindergarten data. Retry and retain any reference ID shown. (${error.message})`;
+    box.classList.remove('d-none');
+    retry.onclick = async () => {
+      retry.disabled = true;
+      try {
+        await this.#loadOverviewData();
+        this.#renderKPIs();
+        this.#renderDataSection();
+        this.#renderAlerts();
+        this.#renderLastUpdated();
+      } catch (retryError) {
+        this.#showLoadError(retryError);
+      } finally {
+        retry.disabled = false;
+      }
+    };
   }
 
   /* ── Control Bar ──────────────────────────────────────── */

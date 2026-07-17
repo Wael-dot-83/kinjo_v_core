@@ -1,7 +1,7 @@
 {% extends "admin_base.html" %}
 {% from 'components/filter-row.html' import filter_row_labeled %}
 
-{% block title %}{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %} — KinJo{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Audit Log{% else %}سجل التدقيق{% endif %} — KinJo{% endblock %}
 
 
 
@@ -9,7 +9,7 @@
 <div class="page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
   <h1 class="page-title mb-0">
     <i class="bi bi-clock-history me-2"></i>
-    {% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}
+    {% if ui_lang == 'en' %}Audit Log{% else %}سجل التدقيق{% endif %}
   </h1>
   <div class="d-flex gap-2">
     <button class="btn btn-ghost" onclick="exportAuditLogs()">
