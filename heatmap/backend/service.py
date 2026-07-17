@@ -100,101 +100,134 @@ def _names_for_slug(slug: str) -> list:
 
 
 def _query_kindergarten_count(db: Session, slug: str) -> int:
-    try:
-        import models
-        names = _names_for_slug(slug)
-        return int(db.query(func.count(models.Kindergarten.id))
-                     .filter(models.Kindergarten.governorate.in_(names))
-                     .scalar() or 0)
-    except Exception:
-        return 0
+    """Count ALL non-deleted Kindergarten records in the governorate."""
+    import models
+    names = _names_for_slug(slug)
+    return int(db.query(func.count(models.Kindergarten.id))
+                 .filter(models.Kindergarten.governorate.in_(names))
+                 .filter(models.Kindergarten.deleted_at.is_(None))
+                 .scalar() or 0)
+
+
+def _query_active_kg_count(db: Session, slug: str) -> int:
+    """Count ACTIVE Kindergarten records in the governorate."""
+    import models
+    names = _names_for_slug(slug)
+    return int(db.query(func.count(models.Kindergarten.id))
+                 .filter(models.Kindergarten.governorate.in_(names))
+                 .filter(models.Kindergarten.deleted_at.is_(None))
+                 .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+                 .scalar() or 0)
+
+
+def _query_inactive_kg_count(db: Session, slug: str) -> int:
+    """Count INACTIVE Kindergarten records in the governorate."""
+    import models
+    names = _names_for_slug(slug)
+    return int(db.query(func.count(models.Kindergarten.id))
+                 .filter(models.Kindergarten.governorate.in_(names))
+                 .filter(models.Kindergarten.deleted_at.is_(None))
+                 .filter(models.Kindergarten.status == models.KindergartenStatus.INACTIVE)
+                 .scalar() or 0)
+
+
+def _query_frozen_kg_count(db: Session, slug: str) -> int:
+    """Count FROZEN Kindergarten records in the governorate."""
+    import models
+    names = _names_for_slug(slug)
+    return int(db.query(func.count(models.Kindergarten.id))
+                 .filter(models.Kindergarten.governorate.in_(names))
+                 .filter(models.Kindergarten.deleted_at.is_(None))
+                 .filter(models.Kindergarten.status == models.KindergartenStatus.FROZEN)
+                 .scalar() or 0)
+
+
+def _query_draft_kg_count(db: Session, slug: str) -> int:
+    """Count DRAFT Kindergarten records in the governorate."""
+    import models
+    names = _names_for_slug(slug)
+    return int(db.query(func.count(models.Kindergarten.id))
+                 .filter(models.Kindergarten.governorate.in_(names))
+                 .filter(models.Kindergarten.deleted_at.is_(None))
+                 .filter(models.Kindergarten.status == models.KindergartenStatus.DRAFT)
+                 .scalar() or 0)
 
 
 def _query_children_count(db: Session, slug: str) -> int:
-    try:
-        import models
-        names = _names_for_slug(slug)
-        # Child has no kindergarten_id; use active EnrollmentApplication as the source of truth
-        return int(db.query(func.count(models.EnrollmentApplication.id))
-                     .join(models.Kindergarten,
-                           models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id)
-                     .filter(models.Kindergarten.governorate.in_(names))
-                     .filter(models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
-                     .scalar() or 0)
-    except Exception:
-        return 0
+    """Count distinct children with active enrollment in the governorate."""
+    import models
+    names = _names_for_slug(slug)
+    return int(db.query(func.count(func.distinct(models.EnrollmentApplication.child_id)))
+                 .join(models.Kindergarten,
+                       models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id)
+                 .filter(models.Kindergarten.governorate.in_(names))
+                 .filter(models.Kindergarten.deleted_at.is_(None))
+                 .filter(models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
+                 .filter(models.EnrollmentApplication.deleted_at.is_(None))
+                 .scalar() or 0)
 
 
 def _query_supervisor_count(db: Session, slug: str) -> int:
-    try:
-        import models
-        names = _names_for_slug(slug)
-        return int(db.query(func.count(models.User.id))
-                     .filter(models.User.role == models.UserRole.SUPERVISOR)
-                     .filter(models.User.kindergarten_id.isnot(None))
-                     .join(models.Kindergarten,
-                           models.User.kindergarten_id == models.Kindergarten.id)
-                     .filter(models.Kindergarten.governorate.in_(names))
-                     .scalar() or 0)
-    except Exception:
-        return 0
+    import models
+    names = _names_for_slug(slug)
+    return int(db.query(func.count(models.User.id))
+                 .filter(models.User.role == models.UserRole.SUPERVISOR)
+                 .filter(models.User.kindergarten_id.isnot(None))
+                 .filter(models.User.deleted_at.is_(None))
+                 .join(models.Kindergarten,
+                       models.User.kindergarten_id == models.Kindergarten.id)
+                 .filter(models.Kindergarten.governorate.in_(names))
+                 .scalar() or 0)
 
 
 def _query_classroom_count(db: Session, slug: str) -> int:
-    try:
-        import models
-        names = _names_for_slug(slug)
-        return int(db.query(func.count(models.Class.id))
-                     .join(models.Kindergarten,
-                           models.Class.kindergarten_id == models.Kindergarten.id)
-                     .filter(models.Kindergarten.governorate.in_(names))
-                     .scalar() or 0)
-    except Exception:
-        return 0
+    import models
+    names = _names_for_slug(slug)
+    return int(db.query(func.count(models.Class.id))
+                 .join(models.Kindergarten,
+                       models.Class.kindergarten_id == models.Kindergarten.id)
+                 .filter(models.Kindergarten.governorate.in_(names))
+                 .filter(models.Kindergarten.deleted_at.is_(None))
+                 .scalar() or 0)
 
 
 def _query_incident_count(db: Session, slug: str, critical_only: bool = False) -> int:
-    try:
-        import models
-        names = _names_for_slug(slug)
-        q = (db.query(func.count(models.Incident.id))
-               .join(models.Kindergarten,
-                     models.Incident.kindergarten_id == models.Kindergarten.id)
-               .filter(models.Kindergarten.governorate.in_(names)))
-        if critical_only and hasattr(models.Incident, "severity_level"):
-            from models import SeverityLevel
-            q = q.filter(models.Incident.severity_level == SeverityLevel.CRITICAL)
-        return int(q.scalar() or 0)
-    except Exception:
-        return 0
+    import models
+    names = _names_for_slug(slug)
+    q = (db.query(func.count(models.Incident.id))
+           .join(models.Kindergarten,
+                 models.Incident.kindergarten_id == models.Kindergarten.id)
+           .filter(models.Kindergarten.governorate.in_(names))
+           .filter(models.Kindergarten.deleted_at.is_(None))
+           .filter(models.Incident.deleted_at.is_(None)))
+    if critical_only and hasattr(models.Incident, "severity_level"):
+        from models import SeverityLevel
+        q = q.filter(models.Incident.severity_level == SeverityLevel.CRITICAL)
+    return int(q.scalar() or 0)
 
 
-def _query_governance_score(db: Session, slug: str) -> float:
-    try:
-        import models
-        names = _names_for_slug(slug)
-        val = (db.query(func.avg(models.GovernanceScore.final_governance_score))
-                 .join(models.Kindergarten,
-                       models.GovernanceScore.kindergarten_id == models.Kindergarten.id)
-                 .filter(models.Kindergarten.governorate.in_(names))
-                 .scalar() or 0)
-        return float(val)
-    except Exception:
-        return 0.0
+def _query_governance_score(db: Session, slug: str) -> Optional[float]:
+    import models
+    names = _names_for_slug(slug)
+    val = (db.query(func.avg(models.GovernanceScore.final_governance_score))
+             .join(models.Kindergarten,
+                   models.GovernanceScore.kindergarten_id == models.Kindergarten.id)
+             .filter(models.Kindergarten.governorate.in_(names))
+             .filter(models.Kindergarten.deleted_at.is_(None))
+             .scalar())
+    return float(round(val, 2)) if val is not None else None
 
 
 def _query_reports_count(db: Session, slug: str, since: datetime) -> int:
-    try:
-        import models
-        names = _names_for_slug(slug)
-        return int(db.query(func.count(models.DailyReport.id))
-                     .join(models.Kindergarten,
-                           models.DailyReport.kindergarten_id == models.Kindergarten.id)
-                     .filter(models.Kindergarten.governorate.in_(names))
-                     .filter(models.DailyReport.date >= since.date())
-                     .scalar() or 0)
-    except Exception:
-        return 0
+    import models
+    names = _names_for_slug(slug)
+    return int(db.query(func.count(models.DailyReport.id))
+                 .join(models.Kindergarten,
+                       models.DailyReport.kindergarten_id == models.Kindergarten.id)
+                 .filter(models.Kindergarten.governorate.in_(names))
+                 .filter(models.Kindergarten.deleted_at.is_(None))
+                 .filter(models.DailyReport.date >= since.date())
+                 .scalar() or 0)
 
 
 def _query_active_alerts(db: Session, slug: str) -> List[Dict]:
@@ -273,24 +306,21 @@ def get_indicators() -> List[Dict]:
     return out
 
 
-_ESTIMATED_SUB_INDICATORS: frozenset = frozenset({
-    "inactive_nurseries",
-    "unregistered_children",
-    "health_absences",
-    "repeated_health",
-    "protection_cases",
-    "incident_severity",
-    "delayed_tasks",
-    "registration_rate",
-    "training_completion",
-    "compliance_status",
-})
+# No estimated sub-indicators remain. All values come from real KinJo model queries.
+# Metrics without a defensible source return None (unavailable).
 
 
 def _compute_sub_indicators(db: Session, slug: str) -> Dict[str, Any]:
-    """Compute the 25 sub-indicator values for a single governorate."""
-    active_kg = _query_kindergarten_count(db, slug)
-    inactive_kg = max(0, int(active_kg * 0.05))  # Conservative estimate if no inactive column
+    """Compute sub-indicator values from real database queries for a single governorate.
+
+    All values come from real KinJo models.  No fabricated estimates.
+    Metrics without a defensible KinJo data source return None (unavailable).
+    """
+    total_kg = _query_kindergarten_count(db, slug)
+    active_kg = _query_active_kg_count(db, slug)
+    inactive_kg = _query_inactive_kg_count(db, slug)
+    frozen_kg = _query_frozen_kg_count(db, slug)
+    draft_kg = _query_draft_kg_count(db, slug)
     children = _query_children_count(db, slug)
     supervisors = _query_supervisor_count(db, slug)
     classrooms = _query_classroom_count(db, slug)
@@ -300,109 +330,99 @@ def _compute_sub_indicators(db: Session, slug: str) -> Dict[str, Any]:
     since = datetime.now() - timedelta(days=30)
     reports_30d = _query_reports_count(db, slug, since)
 
-    active_pct = round((active_kg / max(active_kg + inactive_kg, 1)) * 100, 1)
+    active_pct = round((active_kg / max(total_kg, 1)) * 100, 1)
     inactive_pct = round(100 - active_pct, 1)
-    registration_rate = round(min(100.0, max(0.0, 70.0 + (governance / 5))), 1)
     child_supervisor_ratio = round(children / max(supervisors, 1), 1)
-    child_teacher_ratio = round(child_supervisor_ratio * 0.8, 1)
     classrooms_no_supervisor = max(0, classrooms - supervisors)
-    absences_total = max(0, int(children * 0.08))
-    health_absences = max(0, int(absences_total * 0.2))
-    repeated_health = max(0, int(health_absences * 0.3))
     reports_missing = max(0, active_kg * 30 - reports_30d)
-    absence_rate = round((absences_total / max(children, 1)) * 100, 1)
-    delayed_tasks = max(0, int(active_kg * 0.4))
-    training_completion = round(min(100.0, max(0.0, 60.0 + (governance / 4))), 1)
-    compliance_status = round(min(100.0, max(0.0, 55.0 + (governance / 3))), 1)
+    incident_severity = min(100, critical_incidents * 20)
+    governance_score = round(governance, 1) if governance is not None else None
 
-    sub = {
-        # nursery_status
+    # Build sub-indicator dict with only real/derivable values.
+    # Metrics KinJo cannot measure are None (unavailable).
+    return {
+        # Nursery status — real status counts
+        "total_nurseries": total_kg,
         "active_nurseries": active_kg,
         "inactive_nurseries": inactive_kg,
+        "frozen_nurseries": frozen_kg,
+        "draft_nurseries": draft_kg,
         "active_pct": active_pct,
         "inactive_pct": inactive_pct,
-        # children_registration
+        # Children — real enrollment count only
         "registered_children": children,
-        "unregistered_children": max(0, int(children * 0.05)),
-        "registration_rate": registration_rate,
+        "unregistered_children": None,
+        "registration_rate": None,
         "age_distribution": children,
-        # staff_classrooms
+        # Staff & classrooms — real counts
         "supervisors_count": supervisors,
         "classrooms_count": classrooms,
         "classrooms_no_supervisor": classrooms_no_supervisor,
         "child_supervisor_ratio": child_supervisor_ratio,
-        "child_teacher_ratio": child_teacher_ratio,
-        # safety_incidents
+        "child_teacher_ratio": None,
+        # Incidents — real counts
         "incidents_total": total_incidents,
         "incidents_critical": critical_incidents,
-        "protection_cases": max(0, int(critical_incidents * 0.3)),
-        "incident_severity": min(100, total_incidents * 5),
-        # reports_attendance
+        "protection_cases": None,
+        "incident_severity": incident_severity,
+        # Reports & attendance
         "reports_submitted": reports_30d,
         "reports_missing": reports_missing,
-        "absence_rate": absence_rate,
-        "health_absences": health_absences,
-        "repeated_health": repeated_health,
-        # tasks_governance
-        "delayed_tasks": delayed_tasks,
-        "governance_score": round(governance, 1),
-        "training_completion": training_completion,
-        "compliance_status": compliance_status,
-        "_estimated_keys": sorted(_ESTIMATED_SUB_INDICATORS),
+        "absence_rate": None,
+        "health_absences": None,
+        "repeated_health": None,
+        # Governance
+        "delayed_tasks": None,
+        "governance_score": governance_score,
+        "training_completion": None,
+        "compliance_status": None,
     }
-    return sub
 
 
-def _compute_main_indicators(sub: Dict[str, Any]) -> Dict[str, float]:
-    """Aggregate the 6 main indicators (0-100) from the sub-indicator values.
+def _compute_main_indicators(sub: Dict[str, Any]) -> Dict[str, Optional[float]]:
+    """Aggregate main indicators (0-100) from sub-indicator values.
 
-    Accepts both full sub-indicator dicts (from _compute_sub_indicators) and
-    partial dicts (from _previous_period_sub); missing keys default to 0.
+    Unavailable (None) sub-indicators are excluded.  Remaining weights are
+    renormalized proportionally so missing data does not distort the score.
     """
-    def _g(key, default=0):
-        return sub.get(key, default)
+    def _g(key, default=None):
+        val = sub.get(key, default)
+        return val if val is not None else default
 
-    active_kg = _g("active_nurseries")
-    inactive_kg = _g("inactive_nurseries")
-    kg_total = active_kg + inactive_kg
-    kg_active_ratio = (active_kg / max(kg_total, 1)) * 100.0
+    total_kg = _g("total_nurseries") or _g("active_nurseries", 0) + _g("inactive_nurseries", 0)
+    active_kg = _g("active_nurseries", 0)
+    kg_active_ratio = (active_kg / max(total_kg, 1)) * 100.0
+    nursery_status = kg_active_ratio
 
-    reg_children = _g("registered_children")
-    unreg_children = _g("unregistered_children")
-    children = reg_children + unreg_children
-    enrollment_ratio = (reg_children / max(children, 1)) * 100.0
+    # Children registration: unavailable (no population denominator)
+    children_registration = None
 
-    classrooms_no_sup = _g("classrooms_no_supervisor")
-    classrooms_count = _g("classrooms_count")
+    # Staff classrooms
+    classrooms_no_sup = _g("classrooms_no_supervisor", 0)
+    classrooms_count = _g("classrooms_count", 1)
     supervised_ratio = 100.0 * (1.0 - classrooms_no_sup / max(classrooms_count, 1))
     supervised_ratio = max(0.0, min(100.0, supervised_ratio))
 
-    safety_penalty = min(100.0, _g("incidents_critical") * 10.0 + _g("protection_cases") * 5.0)
+    # Safety
+    safety_penalty = min(100.0, _g("incidents_critical", 0) * 10.0)
     safety_score = max(0.0, 100.0 - safety_penalty)
 
-    absence_rate = _g("absence_rate") / 100.0
-    health_alert_rate = _g("health_absences") / max(reg_children, 1)
-    report_completeness = min(1.0, _g("reports_submitted") / max(active_kg * 30, 1))
-    reports_attendance_score = (
-        report_completeness * 0.5
-        + (1.0 - absence_rate) * 0.3
-        + (1.0 - min(1.0, health_alert_rate)) * 0.2
-    ) * 100.0
+    # Reports & attendance: only real report completeness
+    reports_submitted = _g("reports_submitted", 0)
+    report_completeness = min(1.0, reports_submitted / max(active_kg * 30, 1))
+    reports_attendance_score = report_completeness * 100.0
 
-    task_penalty = min(50.0, _g("delayed_tasks") * 5.0)
-    tasks_governance_score = (
-        _g("governance_score") * 0.5
-        + _g("training_completion") * 0.3
-        + max(0.0, 50.0 - task_penalty) * 0.4
-    )
+    # Governance
+    governance_score = _g("governance_score")
+    tasks_governance_score = governance_score if governance_score is not None else None
 
     return {
-        "nursery_status":        round(kg_active_ratio, 2),
-        "children_registration": round(enrollment_ratio, 2),
+        "nursery_status":        round(nursery_status, 2),
+        "children_registration": children_registration,
         "staff_classrooms":      round(supervised_ratio, 2),
         "safety_incidents":      round(safety_score, 2),
         "reports_attendance":    round(reports_attendance_score, 2),
-        "tasks_governance":      round(tasks_governance_score, 2),
+        "tasks_governance":      round(tasks_governance_score, 2) if tasks_governance_score is not None else None,
     }
 
 
@@ -864,7 +884,10 @@ def get_governorate_overview(db: Session, slug: str) -> Dict:
     # Risk scoring per main indicator
     risk_levels: Dict[str, Dict] = {}
     risk_score = 0.0
+    available_count = 0
     for ind_key, value in main.items():
+        if value is None:
+            continue
         rl = C.risk_level_for_indicator(ind_key, value)
         risk_levels[ind_key] = {
             "key": rl["key"],
@@ -872,8 +895,9 @@ def get_governorate_overview(db: Session, slug: str) -> Dict:
             "name_ar": rl["name_ar"],
             "color": rl["color"],
         }
-        risk_score += (100.0 - max(0.0, min(100.0, value))) / 6.0
-    risk_score = round(risk_score, 1)
+        risk_score += (100.0 - max(0.0, min(100.0, value)))
+        available_count += 1
+    risk_score = round(risk_score / max(available_count, 1), 1) if available_count > 0 else 0.0
     overall_risk = C.risk_level_for_score(risk_score)
 
     # Build trend per main indicator (current vs previous period)
@@ -1013,7 +1037,11 @@ def get_map_overview(db: Session) -> Dict:
         try:
             sub = _compute_sub_indicators(db, gov["slug"])
             main = _compute_main_indicators(sub)
-            risk_score = round(sum(100.0 - v for v in main.values()) / 6.0, 1)
+            available_values = [v for v in main.values() if v is not None]
+            if available_values:
+                risk_score = round(sum(100.0 - v for v in available_values) / len(available_values), 1)
+            else:
+                risk_score = 0.0
             overall_risk = C.risk_level_for_score(risk_score)
             governors.append({
                 "slug": gov["slug"],

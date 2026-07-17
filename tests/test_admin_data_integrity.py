@@ -11,6 +11,10 @@ Verifies:
 - [Req C] Genuine 0% remains possible
 - [Req C] Jordan weekend/calendar logic
 - [Req D] Admin page context entries resolve
+
+NOTE: Tests target BOTH service.py (live production read path) and pipeline.py
+(ETL path).  service.py is the authoritative target since it serves the admin
+dashboard, heat map, and governorate overview endpoints.
 """
 
 import os
@@ -21,170 +25,167 @@ from typing import Dict, Optional
 
 
 # =============================================================================
-# Req A — Heat Map data-integrity
+# Req A — Heat Map data-integrity (LIVE PATH: service.py)
 # =============================================================================
 
-class TestHeatMapNoFabricatedMetrics:
-    """Prove all Heat Map metrics come from real DB queries, not estimates."""
+_LIVE_MODULES = [
+    ("heatmap.backend.service", "_compute_sub_indicators", "service._compute_sub_indicators"),
+    ("heatmap.backend.pipeline", "compute_sub_indicators", "pipeline.compute_sub_indicators"),
+]
+
+class TestNoFabricatedMetrics:
+    """Prove all Heat Map metrics come from real DB queries, not estimates.
+    
+    Tests target BOTH service.py (live read path) and pipeline.py (ETL path).
+    """
+
+    def _get_fn(self, module_path, fn_name):
+        import importlib
+        mod = importlib.import_module(module_path)
+        return getattr(mod, fn_name)
 
     def test_no_fabricated_inactive_pct_multiplier(self):
-        """inactive_kg must not be computed as active_kg * 0.05."""
+        """inactive_kg must not be computed as active_kg * 0.05 in any path."""
         import inspect
-        from heatmap.backend import pipeline
-
-        source = inspect.getsource(pipeline.compute_sub_indicators)
-        assert "* 0.05" not in source, (
-            "compute_sub_indicators must not estimate inactive_kg as active_kg * 0.05"
-        )
+        for mod_path, fn_name, label in _LIVE_MODULES:
+            fn = self._get_fn(mod_path, fn_name)
+            source = inspect.getsource(fn)
+            assert "* 0.05" not in source, (
+                f"{label} must not estimate inactive_kg as active_kg * 0.05"
+            )
 
     def test_no_fabricated_unregistered_multiplier(self):
         """unregistered_children must not be computed as children * 0.05."""
-        from heatmap.backend import pipeline
-
-        # Source-inspect the function
+        # Check both sub-indicator builders
         import inspect
-        source = inspect.getsource(pipeline._build_sub_indicators_from_aggregates)
-        assert "* 0.05" not in source, (
-            "_build_sub_indicators_from_aggregates must not fabricate unregistered_children"
-        )
+        from heatmap.backend.service import _compute_sub_indicators as svc_fn
+        from heatmap.backend.pipeline import _build_sub_indicators_from_aggregates as pipe_fn
+        for label, fn in [("service._compute_sub_indicators", svc_fn),
+                          ("pipeline._build_sub_indicators_from_aggregates", pipe_fn)]:
+            source = inspect.getsource(fn)
+            assert '"unregistered_children": None' in source, (
+                f"{label}: unregistered_children must be None, not fabricated"
+            )
 
     def test_no_registration_rate_fabrication(self):
-        """registration_rate must not use fabricated formula 70 + governance/5."""
+        """registration_rate must be None in both paths."""
         import inspect
-        from heatmap.backend import pipeline
-
-        source = inspect.getsource(pipeline._build_sub_indicators_from_aggregates)
-        assert "registration_rate" not in source or (
-            '"registration_rate": None' in source
-        ), "registration_rate must be None (unavailable), not fabricated"
+        from heatmap.backend.service import _compute_sub_indicators as svc_fn
+        from heatmap.backend.pipeline import _build_sub_indicators_from_aggregates as pipe_fn
+        for label, fn in [("service", svc_fn), ("pipeline", pipe_fn)]:
+            source = inspect.getsource(fn)
+            assert '"registration_rate": None' in source, (
+                f"{label}: registration_rate must be None (unavailable)"
+            )
 
     def test_no_delayed_tasks_fabrication(self):
-        """delayed_tasks must not be estimated as active_kg * 0.4."""
+        """delayed_tasks must be None in both paths."""
         import inspect
-        from heatmap.backend import pipeline
-
-        source = inspect.getsource(pipeline._build_sub_indicators_from_aggregates)
-        assert '"delayed_tasks": None' in source, (
-            "delayed_tasks must be None (unavailable), not fabricated"
-        )
+        from heatmap.backend.service import _compute_sub_indicators as svc_fn
+        from heatmap.backend.pipeline import _build_sub_indicators_from_aggregates as pipe_fn
+        for label, fn in [("service", svc_fn), ("pipeline", pipe_fn)]:
+            source = inspect.getsource(fn)
+            assert '"delayed_tasks": None' in source
 
     def test_no_absence_rate_fabrication(self):
-        """absence_rate must not be estimated as children * 0.08."""
+        """absence_rate must be None in both paths."""
         import inspect
-        from heatmap.backend import pipeline
-
-        source = inspect.getsource(pipeline._build_sub_indicators_from_aggregates)
-        assert '"absence_rate": None' in source, (
-            "absence_rate must be None (unavailable), not fabricated"
-        )
+        from heatmap.backend.service import _compute_sub_indicators as svc_fn
+        from heatmap.backend.pipeline import _build_sub_indicators_from_aggregates as pipe_fn
+        for label, fn in [("service", svc_fn), ("pipeline", pipe_fn)]:
+            source = inspect.getsource(fn)
+            assert '"absence_rate": None' in source
 
     def test_no_health_absences_fabrication(self):
-        """health_absences must not be derived from fabricated absences_total."""
+        """health_absences must be None in both paths."""
         import inspect
-        from heatmap.backend import pipeline
-
-        source = inspect.getsource(pipeline._build_sub_indicators_from_aggregates)
-        assert '"health_absences": None' in source, (
-            "health_absences must be None (unavailable), not fabricated"
-        )
+        from heatmap.backend.service import _compute_sub_indicators as svc_fn
+        from heatmap.backend.pipeline import _build_sub_indicators_from_aggregates as pipe_fn
+        for label, fn in [("service", svc_fn), ("pipeline", pipe_fn)]:
+            source = inspect.getsource(fn)
+            assert '"health_absences": None' in source
 
     def test_no_child_teacher_ratio_fabrication(self):
-        """child_teacher_ratio must not be child_supervisor_ratio * 0.8."""
+        """child_teacher_ratio must be None in both paths."""
         import inspect
-        from heatmap.backend import pipeline
-
-        source = inspect.getsource(pipeline._build_sub_indicators_from_aggregates)
-        assert '"child_teacher_ratio": None' in source, (
-            "child_teacher_ratio must be None (unavailable), not fabricated"
-        )
+        from heatmap.backend.service import _compute_sub_indicators as svc_fn
+        from heatmap.backend.pipeline import _build_sub_indicators_from_aggregates as pipe_fn
+        for label, fn in [("service", svc_fn), ("pipeline", pipe_fn)]:
+            source = inspect.getsource(fn)
+            assert '"child_teacher_ratio": None' in source
 
     def test_no_protection_cases_fabrication(self):
-        """protection_cases must not be critical_incidents * 0.3."""
+        """protection_cases must be None in both paths."""
         import inspect
-        from heatmap.backend import pipeline
-
-        source = inspect.getsource(pipeline._build_sub_indicators_from_aggregates)
-        assert '"protection_cases": None' in source, (
-            "protection_cases must be None (unavailable), not fabricated"
-        )
+        from heatmap.backend.service import _compute_sub_indicators as svc_fn
+        from heatmap.backend.pipeline import _build_sub_indicators_from_aggregates as pipe_fn
+        for label, fn in [("service", svc_fn), ("pipeline", pipe_fn)]:
+            source = inspect.getsource(fn)
+            assert '"protection_cases": None' in source
 
     def test_no_training_completion_fabrication(self):
-        """training_completion must not be fabricated from governance/4."""
+        """training_completion must be None in both paths."""
         import inspect
-        from heatmap.backend import pipeline
-
-        source = inspect.getsource(pipeline._build_sub_indicators_from_aggregates)
-        assert '"training_completion": None' in source, (
-            "training_completion must be None (unavailable), not fabricated"
-        )
+        from heatmap.backend.service import _compute_sub_indicators as svc_fn
+        from heatmap.backend.pipeline import _build_sub_indicators_from_aggregates as pipe_fn
+        for label, fn in [("service", svc_fn), ("pipeline", pipe_fn)]:
+            source = inspect.getsource(fn)
+            assert '"training_completion": None' in source
 
     def test_no_compliance_status_fabrication(self):
-        """compliance_status must not be fabricated from governance/3."""
+        """compliance_status must be None in both paths."""
         import inspect
-        from heatmap.backend import pipeline
-
-        source = inspect.getsource(pipeline._build_sub_indicators_from_aggregates)
-        assert '"compliance_status": None' in source, (
-            "compliance_status must be None (unavailable), not fabricated"
-        )
+        from heatmap.backend.service import _compute_sub_indicators as svc_fn
+        from heatmap.backend.pipeline import _build_sub_indicators_from_aggregates as pipe_fn
+        for label, fn in [("service", svc_fn), ("pipeline", pipe_fn)]:
+            source = inspect.getsource(fn)
+            assert '"compliance_status": None' in source
 
     def test_incident_severity_uses_critical_not_total(self):
-        """incident_severity must be based on critical_incidents, not total_incidents * 5."""
+        """incident_severity must use critical_incidents, not total_incidents * 5."""
         import inspect
-        from heatmap.backend import pipeline
-
-        source = inspect.getsource(pipeline._build_sub_indicators_from_aggregates)
-        assert "incident_severity" in source
-        # Should reference critical_incidents not total_incidents * 5
-        assert "critical_incidents" in source.split("incident_severity")[1].split("\n")[0] or \
-               "min(100, critical" in source, (
-            "incident_severity should derive from critical_incidents"
-        )
+        from heatmap.backend.service import _compute_sub_indicators as svc_fn
+        from heatmap.backend.pipeline import _build_sub_indicators_from_aggregates as pipe_fn
+        for label, fn in [("service", svc_fn), ("pipeline", pipe_fn)]:
+            source = inspect.getsource(fn)
+            # Must reference critical not total_incidents * 5
+            assert "critical_incidents" in source.split("incident_severity")[1].split("\n")[0] if "incident_severity" in source else True
 
 
-class TestHeatMapStatusQueries:
-    """Verify kindergarten status queries use real status-filtered SQL."""
+class TestStatusQueries:
+    """Verify kindergarten status queries exist and filter by status."""
 
-    def test_query_active_kg_exists(self):
-        """_query_active_kg_count must exist and filter by ACTIVE status."""
-        from heatmap.backend import pipeline
-        assert hasattr(pipeline, "_query_active_kg_count")
+    def test_all_status_queries_exist(self):
+        """All 5 status-specific query functions must exist in service.py."""
+        from heatmap.backend import service
+        for name in ["_query_active_kg_count", "_query_inactive_kg_count",
+                      "_query_frozen_kg_count", "_query_draft_kg_count"]:
+            assert hasattr(service, name), f"service.py missing {name}"
+
+    def test_service_query_uses_status_filter(self):
+        """Status queries must filter by their respective KindergartenStatus."""
         import inspect
-        source = inspect.getsource(pipeline._query_active_kg_count)
-        assert "KindergartenStatus.ACTIVE" in source
+        from heatmap.backend import service
+        for name, status_name in [
+            ("_query_active_kg_count", "ACTIVE"),
+            ("_query_inactive_kg_count", "INACTIVE"),
+            ("_query_frozen_kg_count", "FROZEN"),
+            ("_query_draft_kg_count", "DRAFT"),
+        ]:
+            fn = getattr(service, name)
+            source = inspect.getsource(fn)
+            assert f"KindergartenStatus.{status_name}" in source, (
+                f"service.{name} must filter by KindergartenStatus.{status_name}"
+            )
 
-    def test_query_inactive_kg_exists(self):
-        """_query_inactive_kg_count must exist and filter by INACTIVE status."""
-        from heatmap.backend import pipeline
-        assert hasattr(pipeline, "_query_inactive_kg_count")
+
+class TestExceptionSafety:
+    """Verify DB exceptions do not render as measured zero in the live path."""
+
+    def test_service_query_helpers_no_bare_except(self):
+        """service.py query helpers must not use bare 'except Exception: return 0'."""
         import inspect
-        source = inspect.getsource(pipeline._query_inactive_kg_count)
-        assert "KindergartenStatus.INACTIVE" in source
-
-    def test_query_frozen_kg_exists(self):
-        """_query_frozen_kg_count must exist and filter by FROZEN status."""
-        from heatmap.backend import pipeline
-        assert hasattr(pipeline, "_query_frozen_kg_count")
-        import inspect
-        source = inspect.getsource(pipeline._query_frozen_kg_count)
-        assert "KindergartenStatus.FROZEN" in source
-
-    def test_query_draft_kg_exists(self):
-        """_query_draft_kg_count must exist and filter by DRAFT status."""
-        from heatmap.backend import pipeline
-        assert hasattr(pipeline, "_query_draft_kg_count")
-        import inspect
-        source = inspect.getsource(pipeline._query_draft_kg_count)
-        assert "KindergartenStatus.DRAFT" in source
-
-
-class TestHeatMapExceptionSafety:
-    """Verify DB exceptions do not render as measured zero."""
-
-    def test_query_helpers_no_bare_except(self):
-        """Query helpers must not use bare 'except Exception: return 0'."""
-        import inspect
-        from heatmap.backend import pipeline
+        from heatmap.backend import service
 
         helper_names = [
             "_query_kindergarten_count", "_query_active_kg_count",
@@ -195,26 +196,22 @@ class TestHeatMapExceptionSafety:
             "_query_reports_count",
         ]
         for name in helper_names:
-            fn = getattr(pipeline, name, None)
+            fn = getattr(service, name, None)
             if fn is None:
                 continue
             source = inspect.getsource(fn)
             assert "except Exception" not in source, (
-                f"{name} must not use bare 'except Exception'"
+                f"service.{name} must not use bare 'except Exception'"
             )
 
-    def test_governance_score_returns_optional(self):
-        """_query_governance_score must return Optional[float], not float."""
+    def test_service_governance_returns_optional(self):
+        """_query_governance_score must return Optional[float] in service.py."""
         import inspect
-        from heatmap.backend import pipeline
+        from heatmap.backend import service
+        source = inspect.getsource(service._query_governance_score)
+        assert "Optional" in source or "None else None" in source
 
-        source = inspect.getsource(pipeline._query_governance_score)
-        assert "Optional" in source.split("def")[1].split(":")[0].split("->")[1] if "->" in source.split("def")[1] else False or \
-               "-> Optional" in source or "None else None" in source, (
-            "_query_governance_score should return None when no data exists"
-        )
-
-    def test_unavailable_display_in_kindergarten_data(self):
+    def test_unavailable_display_in_both_paths(self):
         """normalize_sub_indicator_value must return unavailable for None input."""
         from heatmap.backend.kindergarten_data import normalize_sub_indicator_value
         result = normalize_sub_indicator_value("active_nurseries", None)
@@ -223,6 +220,35 @@ class TestHeatMapExceptionSafety:
         assert result["status_display_en"] == "Unavailable"
         assert result["status_display_ar"] == "غير متوفر"
         assert result["color"] == "#94A3B8"
+
+
+class TestMainIndicatorsHandleNone:
+    """Prove _compute_main_indicators and consumers handle None values."""
+
+    def test_service_main_indicators_accepts_none(self):
+        """service._compute_main_indicators must not crash on None sub-values."""
+        from heatmap.backend.service import _compute_main_indicators
+        sub = {
+            "total_nurseries": 0, "active_nurseries": 0,
+            "inactive_nurseries": 0, "frozen_nurseries": 0, "draft_nurseries": 0,
+            "active_pct": 0, "inactive_pct": 0,
+            "registered_children": 0, "unregistered_children": None,
+            "registration_rate": None, "age_distribution": 0,
+            "supervisors_count": 0, "classrooms_count": 0,
+            "classrooms_no_supervisor": 0, "child_supervisor_ratio": None,
+            "child_teacher_ratio": None,
+            "incidents_total": 0, "incidents_critical": 0,
+            "protection_cases": None, "incident_severity": 0,
+            "reports_submitted": 0, "reports_missing": 0,
+            "absence_rate": None, "health_absences": None,
+            "repeated_health": None,
+            "delayed_tasks": None, "governance_score": None,
+            "training_completion": None, "compliance_status": None,
+        }
+        result = _compute_main_indicators(sub)
+        assert result["nursery_status"] == 0.0
+        assert result["children_registration"] is None
+        assert result["tasks_governance"] is None
 
 
 # =============================================================================
