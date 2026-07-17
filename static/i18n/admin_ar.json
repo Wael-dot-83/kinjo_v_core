@@ -574,7 +574,7 @@
     "audit_time": "الوقت",
     "audit_ip": "عنوان IP",
     "stat_total_actions": "مجموع الإجراءات",
-    "stat_days_active": "أيام النشاط",
+    "stat_days_active": "عمر الحساب (بالأيام)",
     "stat_last_login": "آخر دخول",
     "stat_mfa": "حالة المصادقة الثنائية",
     "success_profile": "تم تحديث الملف الشخصي بنجاح",

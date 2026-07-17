@@ -112,6 +112,18 @@ def test_profile_age_card_label_matches_what_it_computes():
     assert "عمر الحساب بالأيام" in ctx
     assert "active days" not in ctx
 
+    # No i18n catalogue may carry the old label as a VALUE. These four keys are
+    # unconsumed (the card is Jinja-hardcoded), but four dead copies of the
+    # corrected label is the half-fix pattern regardless of whether they render.
+    import json as _json
+    for cat in ("static/i18n/admin_en.json", "static/i18n/admin_ar.json",
+                "static/i18n/en.json", "static/i18n/ar.json"):
+        values = _json.dumps(_json.loads(source(cat)), ensure_ascii=False)
+        assert "أيام النشاط" not in values, f"{cat} still carries the old Arabic label"
+    # The English display value too (not the key, which stays as an identifier).
+    assert '"stat_days_active": "Days Active"' not in source("static/i18n/admin_en.json")
+    assert '"Days Active": "Days Active"' not in source("static/i18n/en.json")
+
 
 def test_metric_names_match_implemented_behavior():
     assert "Average Staff-to-Child Ratio Compliance" in source("templates/admin/kpi.html")

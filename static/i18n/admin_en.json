@@ -574,7 +574,7 @@
     "audit_time": "Time",
     "audit_ip": "IP Address",
     "stat_total_actions": "Total Actions",
-    "stat_days_active": "Days Active",
+    "stat_days_active": "Account Age (days)",
     "stat_last_login": "Last Login",
     "stat_mfa": "2FA Status",
     "success_profile": "Profile updated successfully",
