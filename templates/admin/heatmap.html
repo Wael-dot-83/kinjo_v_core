@@ -450,20 +450,31 @@
       <div class="kpi-value" id="kpiCovered">--</div>
       <div class="kpi-sub">{% if ui_lang == 'ar' %}من 12 محافظة{% else %}of 12 governorates{% endif %}</div>
     </div>
-    {# Wording restored verbatim from origin/main — do not "improve" it.
-       The value is summary.average_risk from get_map_overview(db), which takes
-       no scope argument, so it is never scoped to a selection: the risk/search
-       filters call applyGovListFilter(), which only toggles style.display and
-       never re-runs updateKpiStrip(). It is equally NOT "the average across all
-       12 governorates": service.py drops any governorate whose sub-indicators
-       raise, and divides by len(governors) — the survivors — so the adjacent
-       Covered Governorates card can read "11 of 12" while this one is an
-       11-governorate mean. "National average risk score" is the strongest claim
-       the code actually supports. #}
-    <div class="kpi-card" title="{% if ui_lang == 'ar' %}المتوسط الوطني لمؤشر الخطر{% else %}National average risk score{% endif %}">
-      <div class="kpi-label">{% if ui_lang == 'ar' %}المتوسط الوطني{% else %}Avg. Risk{% endif %}</div>
+    {# Every word here is bounded by what get_map_overview() computes. Do not
+       add scope or completeness claims.
+
+       The value is summary.average_risk = overall_risk_total / len(governors).
+       `governors` holds only the governorates whose sub-indicators computed:
+       service.py wraps each one in `except Exception -> logger.warning` and
+       drops the failures, so the divisor is the SURVIVORS, never a fixed 12.
+       Each included governorate always carries a non-null risk_score (set
+       before append), so that set is exactly the one the Covered Governorates
+       card counts — which is why this card points at it rather than implying
+       all 12.
+
+       It is also never scoped to a selection: get_map_overview(db) takes no
+       scope argument, the route accepts only `indicator`, and the risk/search
+       filters call applyGovListFilter(), which toggles style.display without
+       re-running updateKpiStrip().
+
+       Prior versions of this card claimed "Selected-scope Average Risk", then
+       "National average risk score across all 12 governorates". Both were
+       false. "National average" alone was origin/main's wording; it is weaker
+       but still implies complete coverage the service does not guarantee. #}
+    <div class="kpi-card" title="{% if ui_lang == 'ar' %}متوسط مؤشر الخطر للمحافظات المغطاة فقط؛ يقل عددها عن 12 إذا تعذّر حساب أي محافظة{% else %}Average risk score across the covered governorates only; fewer than 12 if any governorate could not be computed{% endif %}">
+      <div class="kpi-label">{% if ui_lang == 'ar' %}متوسط المخاطر{% else %}Avg. Risk{% endif %}</div>
       <div class="kpi-value" id="kpiAvgRisk">--</div>
-      <div class="kpi-sub">{% if ui_lang == 'ar' %}مؤشر الخطر{% else %}National average{% endif %}</div>
+      <div class="kpi-sub">{% if ui_lang == 'ar' %}للمحافظات المغطاة{% else %}across covered governorates{% endif %}</div>
     </div>
     <div class="kpi-card kpi-card-warn" title="{% if ui_lang == 'ar' %}المحافظات ذات الخطر المرتفع أو الحرج (≥50){% else %}Governorates with high or critical risk{% endif %}">
       <div class="kpi-label">{% if ui_lang == 'ar' %}مرتفع أو حرج{% else %}High or Critical{% endif %}</div>
