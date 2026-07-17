@@ -7,6 +7,7 @@ Verifies:
 - Response contains expected KPI keys
 - Cache TTL behaviour (second call hits cache)
 """
+from datetime import datetime, timedelta
 import time
 import pytest
 from auth import get_password_hash
@@ -86,6 +87,41 @@ class TestDashboardResponse:
         r2 = client.get("/api/admin/dashboard", headers=headers)
         assert r1.status_code == 200
         assert r2.status_code == 200
+
+    def test_active_users_counts_distinct_successful_logins_today(self, client, test_db):
+        admin = _create_admin(test_db)
+        token = _get_token(client, "dashadmin")
+        other = models.User(
+            username="dashloginother",
+            email="dashloginother@test.com",
+            hashed_password=get_password_hash("Other123!"),
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
+        )
+        test_db.add(other)
+        test_db.flush()
+        now = datetime.now()
+        test_db.query(models.AuditLog).delete()
+        test_db.add_all([
+            models.AuditLog(user_id=admin.id, action="LOGIN_SUCCESS", entity_type="User", created_at=now),
+            models.AuditLog(user_id=admin.id, action="LOGIN_SUCCESS", entity_type="User", created_at=now),
+            models.AuditLog(user_id=other.id, action="LOGIN_SUCCESS", entity_type="User", created_at=now),
+            models.AuditLog(user_id=other.id, action="LOGIN_FAILED", entity_type="User", created_at=now),
+            models.AuditLog(
+                user_id=admin.id, action="LOGIN_SUCCESS", entity_type="User",
+                created_at=now - timedelta(days=1),
+            ),
+        ])
+        test_db.commit()
+
+        r = client.get(
+            "/api/admin/dashboard",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        payload = r.json()
+        assert payload["kpis"]["active_users"] == 2
+        assert payload["kpi_trends"]["active_users"]["previous_value"] == 1
 
 
 class TestDashboardFilters:

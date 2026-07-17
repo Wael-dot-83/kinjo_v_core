@@ -1840,11 +1840,14 @@ async def admin_incident_reports_page(request: Request, current_user: User = Dep
 
 @router.get("/admin/analytics/daily-reports", response_class=HTMLResponse)
 async def daily_reports_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Page to list generated reports"""
+    """Compatibility route for the canonical daily-report analytics page."""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="admin/analytics/daily_reports.html", context={"current_user": current_user})
+    # This route previously rendered an incident-report clone under a Daily
+    # Reports title. Keep the established URL as an Admin-only compatibility
+    # entry, but send it to the real daily-report analytics implementation.
+    return RedirectResponse(url="/reports/analytics", status_code=307)
 
 
 @router.get("/admin/reports/incidents/{report_id}", response_class=HTMLResponse)

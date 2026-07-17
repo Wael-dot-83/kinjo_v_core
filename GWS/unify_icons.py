@@ -75,7 +75,6 @@ MODIFIER_MAP = {
 }
 
 FILES = """templates/admin/alerts.html
-templates/admin/analytics/daily_reports.html
 templates/admin/analytics/dashboard.html
 templates/admin/analytics/drilldown.html
 templates/admin/analytics/incident_reports_generate.html

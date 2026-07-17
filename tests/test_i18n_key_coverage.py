@@ -216,7 +216,7 @@ DASHBOARD_REQUIRED_KEYS = {
     "data_quality_score", "dq_good", "dq_average", "dq_low",
     "no_recent_activity", "no_activity_hint", "no_alerts", "no_alerts_hint",
     "manage_users", "send_message", "view_analytics", "data_management",
-    "quick_actions", "user_activity", "data_submissions",
+    "quick_actions", "daily_attendance", "data_submissions",
     "recent_activity", "alerts", "overview",
     "enrollment_status",
     "enrollment_active", "enrollment_pending", "enrollment_rejected",

@@ -1518,12 +1518,12 @@ class TestFrontendRoutes:
         app.dependency_overrides.clear()
 
     def test_admin_daily_reports_page_admin(self, client, admin_user):
-        """Test daily reports page for admin"""
+        """The misleading incident clone redirects to real report analytics."""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
 
-        response = client.get("/admin/analytics/daily-reports")
-        assert response.status_code == 200
-        assert "text/html" in response.headers.get("content-type", "")
+        response = client.get("/admin/analytics/daily-reports", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers["location"] == "/reports/analytics"
 
         app.dependency_overrides.clear()
 

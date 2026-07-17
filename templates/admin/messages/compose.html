@@ -106,18 +106,15 @@
                     <div id="rolesFilter" class="mb-3 d-none">
                         <label class="form-label d-block">{% if ui_lang == 'en' %}Target Roles{% else %}الأدوار المستهدفة{% endif %}</label>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="roleManager" value="MANAGER" checked
-                                disabled>
+                            <input class="form-check-input role-checkbox" type="checkbox" id="roleManager" value="MANAGER" checked>
                             <label class="form-check-label" for="roleManager">{% if ui_lang == 'en' %}Managers{% else %}مدراء{% endif %}</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="roleSupervisor" value="SUPERVISOR"
-                                checked disabled>
+                            <input class="form-check-input role-checkbox" type="checkbox" id="roleSupervisor" value="SUPERVISOR" checked>
                             <label class="form-check-label" for="roleSupervisor">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفين{% endif %}</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="roleParent" value="PARENT" checked
-                                disabled>
+                            <input class="form-check-input role-checkbox" type="checkbox" id="roleParent" value="PARENT" checked>
                             <label class="form-check-label" for="roleParent">{% if ui_lang == 'en' %}Parents{% else %}أولياء أمور{% endif %}</label>
                         </div>
                     </div>
@@ -304,7 +301,7 @@
         };
 
         if (['GOVERNORATE', 'KINDERGARTENS'].includes(mode)) {
-            target.roles = ['MANAGER', 'SUPERVISOR', 'PARENT'];
+            target.roles = Array.from(document.querySelectorAll('.role-checkbox:checked')).map(c => c.value);
         }
 
         if (mode === 'GOVERNORATE') {
@@ -324,7 +321,8 @@
         const method = (options.method || 'GET').toString().toUpperCase();
         const isStateChanging = !['GET', 'HEAD', 'OPTIONS'].includes(method);
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-                for (let attempt = 0; attempt <= retries; attempt++) {
+        const csrfToken = csrfMeta?.content || '';
+        for (let attempt = 0; attempt <= retries; attempt++) {
             try {
                 const headers = { ...options.headers };
                 if (isStateChanging && csrfToken) {
@@ -348,6 +346,10 @@
 
     async function previewRecipients() {
         const target = getTargetData();
+        if (['GOVERNORATE', 'KINDERGARTENS'].includes(target.mode) && !target.roles.length) {
+            Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار دور واحد على الأقل', 'Please select at least one role'), 'warning');
+            return;
+        }
         if (target.mode === 'GOVERNORATE' && (!target.governorates || !target.governorates.length)) {
             Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار محافظة واحدة على الأقل', 'Please select at least one governorate'), 'warning');
             return;
@@ -444,6 +446,10 @@
             Swal.fire(T('تنبيه', 'Notice'), T('الرجاء تعبئة الموضوع ونص الرسالة', 'Please fill in the subject and message body'), 'warning');
             return;
         }
+        if (['GOVERNORATE', 'KINDERGARTENS'].includes(target.mode) && !target.roles.length) {
+            Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار دور واحد على الأقل', 'Please select at least one role'), 'warning');
+            return;
+        }
         if (target.mode === 'GOVERNORATE' && (!target.governorates || !target.governorates.length)) {
             Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار محافظة واحدة على الأقل', 'Please select at least one governorate'), 'warning');
             return;
@@ -471,7 +477,7 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload)
-            }, 1);
+            }, 0);
 
             await Swal.fire({
                 title: T('تم الإرسال!', 'Sent!'),
