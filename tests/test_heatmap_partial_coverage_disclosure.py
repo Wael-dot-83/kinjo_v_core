@@ -92,3 +92,40 @@ def test_covered_card_still_discloses_the_denominator():
     covered_card = _card_containing('id="kpiCovered"')
     assert "of 12 governorates" in covered_card
     assert "من 12 محافظة" in covered_card
+
+
+def test_total_facilities_card_matches_what_kg_count_counts():
+    """The card must not claim nurseries, nor an 'active' subset.
+
+    kg_count is sub["active_nurseries"], but that key is fed by
+    _query_kindergarten_count(): COUNT(Kindergarten.id) filtered ONLY by
+    governorate — no status filter — so the number is the registered count and
+    "active" would be the wrong word. The value also sums the same surviving
+    governorate list as the average-risk card, hence the coverage caveat.
+
+    "nurseries" is dropped because no nursery type exists to count:
+    models.Kindergarten has no type/category column.
+    """
+    card = _card_containing('id="kpiInstitutions"')
+    assert "and nurseries" not in card, (
+        "the English tooltip still claims nurseries while the sub-label says "
+        "Kindergartens — the card contradicts itself in English only"
+    )
+    assert "KGs & nurseries" not in card
+    assert "حضانة وحضانة" not in card
+    assert "in the covered governorates" in card
+    assert "في المحافظات المغطاة" in card
+
+
+def test_kg_count_really_has_no_status_filter():
+    """Anti-vacuity for the wording above: if a status filter appears, the card
+    should say 'active', and this test should fail rather than let the copy go
+    quietly stale."""
+    service = (ROOT / "heatmap" / "backend" / "service.py").read_text(encoding="utf-8")
+    fn = service[service.index("def _query_kindergarten_count"):]
+    fn = fn[: fn.index("\ndef ")]
+    assert "Kindergarten.governorate.in_(names)" in fn
+    assert "status" not in fn, (
+        "_query_kindergarten_count now filters by status, so the Total "
+        "Facilities card's 'registered' wording is no longer accurate"
+    )

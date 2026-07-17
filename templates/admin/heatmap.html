@@ -489,7 +489,15 @@
       <div class="kpi-value" id="kpiCritical">--</div>
       <div class="kpi-sub">{% if ui_lang == 'ar' %}خطر ≥ 75{% else %}Risk ≥ 75{% endif %}</div>
     </div>
-    <div class="kpi-card" title="{% if ui_lang == 'ar' %}إجمالي الحضانات المسجلة{% else %}Total registered kindergartens and nurseries{% endif %}">
+    {# Value is sum(g.kg_count) over the SAME surviving-governorate list as the
+       average-risk card, so it carries the same coverage caveat. kg_count is
+       sub["active_nurseries"], which despite the name is
+       _query_kindergarten_count(): COUNT(Kindergarten.id) filtered only by
+       governorate, with no status filter — so it is the REGISTERED count, not
+       an active one. "and nurseries" is dropped: models.Kindergarten has no
+       type/category column and "nursery" appears nowhere in models.py, so no
+       nursery type exists to count. #}
+    <div class="kpi-card" title="{% if ui_lang == 'ar' %}إجمالي الحضانات المسجلة في المحافظات المغطاة{% else %}Total registered kindergartens in the covered governorates{% endif %}">
       <div class="kpi-label">{% if ui_lang == 'ar' %}إجمالي المنشآت{% else %}Total Facilities{% endif %}</div>
       <div class="kpi-value" id="kpiInstitutions">--</div>
       <div class="kpi-sub">{% if ui_lang == 'ar' %}حضانات{% else %}Kindergartens{% endif %}</div>
