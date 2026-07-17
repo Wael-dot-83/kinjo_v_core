@@ -2033,7 +2033,9 @@ async def admin_profile_page(
         models.AuditLog.user_id == current_user.id
     ).scalar() or 0
 
-    # Days active since account creation
+    # Account age in days = calendar days since the account was created. This is
+    # NOT the count of distinct days the admin was active; the profile card is
+    # labelled "Account Age (days)" to match, not "Days Active".
     days_active = 0
     if current_user.created_at:
         created = current_user.created_at

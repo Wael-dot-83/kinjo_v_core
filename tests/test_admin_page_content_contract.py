@@ -81,6 +81,38 @@ def test_known_misleading_page_claims_are_removed():
     assert '<h1 class="profile-hero-name"' in profile
 
 
+def test_profile_age_card_label_matches_what_it_computes():
+    """The card shows (now - created_at).days — account age, not distinct
+    active days.
+
+    The label read "Days Active" / "أيام النشاط", which claims the admin was
+    active on that many distinct days; the value is simply the account's age.
+    An account created 100 days ago and used twice would read "100 Days
+    Active". Same class as this branch's other fixes: a label naming a quantity
+    the code does not compute. Pre-existing at origin/main, corrected here
+    because it is pure content.
+    """
+    profile = source("templates/admin/profile.html")
+    assert "Days Active" not in profile, "the card still claims distinct active days"
+    assert "أيام النشاط" not in profile
+    assert "Account Age (days)" in profile
+    assert "عمر الحساب (بالأيام)" in profile
+
+    # Bind the label to the computation: if the value ever becomes a genuine
+    # distinct-active-days count, this guard should fail so the label is
+    # revisited rather than left stale.
+    frontend = source("scripts/compat/frontend_orig.py")
+    assert "days_active = max(0, (now_jordan - created).days)" in frontend, (
+        "days_active is no longer computed as account age; recheck the card label"
+    )
+
+    # The page-context row must describe the same thing, in both languages.
+    ctx = source("templates/components/admin_page_context.html")
+    assert "account age in days" in ctx
+    assert "عمر الحساب بالأيام" in ctx
+    assert "active days" not in ctx
+
+
 def test_metric_names_match_implemented_behavior():
     assert "Average Staff-to-Child Ratio Compliance" in source("templates/admin/kpi.html")
     assert "Chart Suggestions" in source("templates/admin/analytics/charts_dashboard.html")
