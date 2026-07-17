@@ -145,10 +145,18 @@ def _export_audit_logs(
         # would file under the wrong day. The range also uses
         # idx_audit_logs_created_at, which wrapping the column in func.date()
         # defeats.
+        #
+        # The bounds stay timezone-AWARE. created_at is timestamptz on
+        # PostgreSQL, and a naive bound is interpreted in the server's session
+        # TimeZone, not UTC — verified against the real PG container: with
+        # `SET TIME ZONE 'America/New_York'` a naive window returned 0 rows for
+        # a row that is inside the Jordan day, while aware bounds returned it
+        # under Etc/UTC, Asia/Amman and America/New_York alike. Naive bounds
+        # would make this filter silently correct only while the deployment
+        # happens to run UTC.
         day_start_utc = (
             datetime.combine(parsed_date, datetime.min.time(), tzinfo=_JORDAN_TZ)
             .astimezone(timezone.utc)
-            .replace(tzinfo=None)
         )
         query = query.filter(
             models.AuditLog.created_at >= day_start_utc,
