@@ -588,7 +588,11 @@ class AdminDashboard {
 
   renderCharts(charts) {
     if (typeof Chart === "undefined") return;
+<<<<<<< HEAD
     if (charts.attendance)       this.renderAttendanceChart(charts.attendance);
+=======
+    if (charts.attendance)    this.renderAttendanceChart(charts.attendance);
+>>>>>>> kilo-admin-complete-content-implementation
     if (charts.data_submissions) this.renderSubmissionsChart(charts.data_submissions);
   }
 
@@ -616,7 +620,11 @@ class AdminDashboard {
       { key: "alerts",     title: { en: "System alerts",           ar: "تنبيهات النظام" },
         desc: { en: "Items needing attention, ordered by severity: pending enrolments, recent incidents, and licence expiries.",
                 ar: "بنود تحتاج متابعة مرتّبة حسب الخطورة: طلبات التسجيل المعلّقة، الحوادث الأخيرة، وانتهاء التراخيص." } },
+<<<<<<< HEAD
       { key: "activity",   title: { en: "Daily attendance chart",  ar: "مخطط الحضور اليومي" },
+=======
+      { key: "attendance", title: { en: "Attendance chart",     ar: "مخطط الحضور" },
+>>>>>>> kilo-admin-complete-content-implementation
         desc: { en: "Line chart of daily attendance over the selected period so you can spot engagement trends.",
                 ar: "مخطط خطي لحضور يومي خلال الفترة المحددة لملاحظة اتجاهات التفاعل." } },
       { key: "enrollment", title: { en: "Enrollment status chart", ar: "مخطط حالة التسجيل" },
@@ -768,9 +776,15 @@ class AdminDashboard {
     // Accessibility: give the canvas an accessible name + role.
     ctx.setAttribute("role", "img");
     ctx.setAttribute("aria-label", window.KINJO_LANG === "en"
+<<<<<<< HEAD
       ? "Daily attendance chart showing recorded attendance by date"
       : "مخطط الحضور اليومي يوضح سجلات الحضور حسب التاريخ");
     this.charts.attendance?.destroy();
+=======
+      ? "Attendance chart showing daily attendance over time"
+      : "مخطط الحضور يوضح الحضور اليومي عبر الزمن");
+    this.charts.attendanceChart?.destroy();
+>>>>>>> kilo-admin-complete-content-implementation
     const context = ctx.getContext("2d");
     const gradient = context ? (() => {
       const g = context.createLinearGradient(0, 0, 0, 220);
@@ -778,12 +792,20 @@ class AdminDashboard {
       g.addColorStop(1, "rgba(31, 94, 71, 0.02)");
       return g;
     })() : "rgba(31, 94, 71, 0.1)";
+<<<<<<< HEAD
     this.charts.attendance = new Chart(ctx, {
+=======
+    this.charts.attendanceChart = new Chart(ctx, {
+>>>>>>> kilo-admin-complete-content-implementation
       type: "line",
       data: {
         labels:   safeChartData(data.labels),
         datasets: [{
+<<<<<<< HEAD
           label:                window.KINJO_LANG === "en" ? "Recorded Attendance" : "سجلات الحضور",
+=======
+          label:                this.t("dashboard.attendance", "Attendance"),
+>>>>>>> kilo-admin-complete-content-implementation
           data:                 safeChartData(data.values),
           borderColor:          "#4F46E5",
           backgroundColor:      gradient,

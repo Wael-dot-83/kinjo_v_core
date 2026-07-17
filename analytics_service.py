@@ -3335,7 +3335,7 @@ def get_drilldown(
                 ).scalar() or 0
 
                 days_in_period = (period_end - period_start).days + 1
-                attendance_rate = (attendance_count / days_in_period * 100) if days_in_period > 0 else 0
+                attendance_rate = min((attendance_count / days_in_period * 100) if days_in_period > 0 else 0, 100.0)
 
                 children_list.append({
                     "id": child.id,
@@ -3653,7 +3653,7 @@ def get_kpi_analytics(
         days_in_period = (period_end - period_start).days + 1
         expected_logs = total_children * days_in_period
         if expected_logs > 0:
-            attendance_rate = round((attendance_count / expected_logs) * 100, 2)
+            attendance_rate = min(round((attendance_count / expected_logs) * 100, 2), 100.0)
     except SQLAlchemyError as e:
         logger.error(
             "Failed to compute attendance rate KPI for kg_id=%s period=[%s,%s]: %s",
@@ -3823,7 +3823,7 @@ def get_analytics_attendance(
     expected_logs = total_children * days_in_period
     actual_logs = attendance_logs.count()
     
-    attendance_rate = round((actual_logs / expected_logs * 100) if expected_logs > 0 else 0, 2)
+    attendance_rate = min(round((actual_logs / expected_logs * 100) if expected_logs > 0 else 0, 2), 100.0)
     
     # Chronic absence rate (children absent more than 20% of days)
     chronic_threshold = days_in_period * 0.8  # Present less than 80%
@@ -3890,7 +3890,7 @@ def get_analytics_dashboard(
         
         days_in_period = (period_end - period_start).days + 1
         expected = total_children * days_in_period
-        kpis["attendance_rate"] = round((attendance_count / expected * 100) if expected > 0 else 0, 2)
+        kpis["attendance_rate"] = min(round((attendance_count / expected * 100) if expected > 0 else 0, 2), 100.0)
         
         # Governance score
         governance_query = db.query(func.avg(models.GovernanceScore.final_governance_score)).filter(
@@ -7157,7 +7157,7 @@ class AnalyticsService:
 
         risk_children = []
         for child, attendance_days, kg_id in low_attendance_children:
-            attendance_rate = (attendance_days / 30.0) * 100
+            attendance_rate = min((attendance_days / 30.0) * 100, 100.0)
             risk_children.append({
                 "child_id": child.id,
                 "kindergarten_id": kg_id,
@@ -7934,7 +7934,7 @@ class AnalyticsService:
             models.AttendanceLog.date <= period_end,
             models.AttendanceLog.status == models.AttendanceStatus.PRESENT
         ).scalar() or 0
-        attendance_rate = (present_logs / total_logs * 100) if total_logs else 0.0
+        attendance_rate = min((present_logs / total_logs * 100), 100.0) if total_logs else 0.0
 
         incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.class_id == class_id,
@@ -7972,7 +7972,7 @@ class AnalyticsService:
             models.AttendanceLog.date <= period_end,
             models.AttendanceLog.status == models.AttendanceStatus.PRESENT
         ).scalar() or 0
-        attendance_rate = (present_logs / total_logs * 100) if total_logs else 0.0
+        attendance_rate = min((present_logs / total_logs * 100), 100.0) if total_logs else 0.0
 
         incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.child_id == child_id,
@@ -8001,7 +8001,7 @@ class AnalyticsService:
                 models.AttendanceLog.date == current,
                 models.AttendanceLog.status == models.AttendanceStatus.PRESENT
             ).scalar() or 0
-            attendance_rate = (present_logs / total_logs * 100) if total_logs else 0.0
+            attendance_rate = min((present_logs / total_logs * 100), 100.0) if total_logs else 0.0
             points.append({"date": current.isoformat(), "value": round(attendance_rate, 2)})
             current += timedelta(days=1)
         return points
@@ -8020,7 +8020,7 @@ class AnalyticsService:
                 models.AttendanceLog.date == current,
                 models.AttendanceLog.status == models.AttendanceStatus.PRESENT
             ).scalar() or 0
-            attendance_rate = (present_logs / total_logs * 100) if total_logs else 0.0
+            attendance_rate = min((present_logs / total_logs * 100), 100.0) if total_logs else 0.0
             points.append({"date": current.isoformat(), "value": round(attendance_rate, 2)})
             current += timedelta(days=1)
         return points
@@ -8253,7 +8253,7 @@ def get_attendance_by_class(
             models.AttendanceLog.date <= period_end,
             models.AttendanceLog.status == models.AttendanceStatus.PRESENT
         ).scalar() or 0
-        attendance_rate = round((attended / expected) * 100, 2) if expected > 0 else 0.0
+        attendance_rate = min(round((attended / expected) * 100, 2) if expected > 0 else 0.0, 100.0)
         result.append({
             "class_id": cls.id,
             "class_name": cls.name_ar or cls.name_en,
@@ -8295,7 +8295,7 @@ def get_chronic_absence(
             models.AttendanceLog.date <= period_end,
             models.AttendanceLog.status == models.AttendanceStatus.PRESENT
         ).scalar() or 0
-        attendance_rate = round((attended / total_days) * 100, 2)
+        attendance_rate = min(round((attended / total_days) * 100, 2), 100.0)
         if attendance_rate < threshold_pct:
             child = enrollment.child
             chronic_children.append({
@@ -8350,7 +8350,7 @@ def get_attendance_by_governorate(
             models.AttendanceLog.date <= period_end,
             models.AttendanceLog.status == models.AttendanceStatus.PRESENT
         ).scalar() or 0
-        attendance_rate = round((attended / expected_total) * 100, 2) if expected_total > 0 else 0.0
+        attendance_rate = min(round((attended / expected_total) * 100, 2) if expected_total > 0 else 0.0, 100.0)
         result.append({
             "governorate": gov,
             "attendance_rate": attendance_rate,
