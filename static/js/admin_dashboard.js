@@ -611,8 +611,8 @@ class AdminDashboard {
 
     const COMPONENTS = [
       { key: "kpis",       title: { en: "KPI cards",                ar: "بطاقات المؤشرات" },
-        desc: { en: "Seven headline metrics: total & active users, total & active kindergartens, reports submitted, pending reports, and data-quality score.",
-                ar: "سبعة مؤشرات رئيسية: إجمالي والمستخدمون النشطون، إجمالي والحضانات النشطة، التقارير المقدّمة، التقارير المعلّقة، ودرجة جودة البيانات." } },
+        desc: { en: "Seven headline metrics: total users, users logged in today, total & active kindergartens, reports submitted, pending reports, and data-quality score.",
+                ar: "سبعة مؤشرات رئيسية: إجمالي المستخدمين، المستخدمون الذين سجلوا الدخول اليوم، إجمالي والحضانات النشطة، التقارير المقدّمة، التقارير المعلّقة، ودرجة جودة البيانات." } },
       { key: "alerts",     title: { en: "System alerts",           ar: "تنبيهات النظام" },
         desc: { en: "Items needing attention, ordered by severity: pending enrolments, recent incidents, and licence expiries.",
                 ar: "بنود تحتاج متابعة مرتّبة حسب الخطورة: طلبات التسجيل المعلّقة، الحوادث الأخيرة، وانتهاء التراخيص." } },

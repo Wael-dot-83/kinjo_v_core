@@ -728,3 +728,46 @@ class TestAnalyticsDashboardPageRenders:
         context = _language_context_processor(Request(scope))
         assert "impersonation" in context
         assert context["ui_lang"] == "ar"
+
+
+class TestDiaperRateDenominatorSemantics:
+    """The diaper rates count RECORDED observations, not all reports.
+
+    a22a52f5 changed `df[col].fillna(False).sum() / total_reports` to
+    `observed.sum() / len(observed)` where `observed = df[col].dropna()`. Its
+    message described only the zero-denominator guard, but this also changes the
+    value on ordinary non-zero data, so the intent is pinned here rather than
+    left to be rediscovered from a diff.
+
+    The old form treated "nobody recorded a diaper check" as "the diaper was not
+    wet" — asserting an observation that was never made, and understating the
+    rate in exactly the reports where staff logged least. The denominator is now
+    the reports that actually carry an observation; unrecorded is unknown, not
+    false. `None` (no observations at all) is likewise unknown, not 0%.
+    """
+
+    def test_wet_rate_denominator_is_recorded_observations_not_all_reports(
+        self, dr_db, dr_kindergarten, dr_parent, dr_admin
+    ):
+        from daily_report_analytics import DailyReportAnalytics, _load_reports_df
+
+        child = _make_child(dr_db, dr_parent.parent_profile.id, dr_kindergarten.id)
+        base = date(2026, 3, 1)
+        # 4 reports: 2 recorded a diaper check (1 wet), 2 recorded nothing.
+        for i, wet in enumerate([True, False, None, None]):
+            r = _make_daily_report(
+                dr_db, child.id, dr_kindergarten.id, dr_admin.id,
+                base - timedelta(days=i), status=models.DailyReportStatus.APPROVED,
+            )
+            r.diaper_wet = wet
+        dr_db.commit()
+
+        df = _load_reports_df(dr_db, base - timedelta(days=5), base, [dr_kindergarten.id])
+        result = DailyReportAnalytics(df).diaper_bathroom()
+
+        # 1 wet of 2 recorded == 50.0. The old fillna(False)/total form gave
+        # 1/4 == 25.0 by counting the two unrecorded reports as "not wet".
+        assert result["wet_rate"] == 50.0, (
+            f"expected 50.0 (1 wet of 2 recorded); got {result['wet_rate']}. "
+            "25.0 means unrecorded reports are being counted as 'not wet'."
+        )

@@ -127,12 +127,33 @@ def _export_audit_logs(
     if user:
         query = query.filter(models.User.username.ilike(f"%{user}%"))
     if date:
+        # Never swallow the parse error: dropping the filter would return every
+        # audit row across all dates with a 200, and the export's own audit
+        # record below would still report date_filter=<the value>, asserting a
+        # scope that was never applied. The UI sends <input type="date">, so a
+        # malformed value only reaches here from a direct API call.
         try:
-            from sqlalchemy import func
             parsed_date = datetime.strptime(date, "%Y-%m-%d").date()
-            query = query.filter(func.date(models.AuditLog.created_at) == parsed_date)
         except (ValueError, TypeError):
-            pass
+            raise HTTPException(
+                status_code=422,
+                detail="Invalid date filter; expected YYYY-MM-DD.",
+            )
+        # created_at is stored in UTC (server_default=func.now()), so a Jordan
+        # calendar day is a half-open UTC window — not func.date(created_at).
+        # An event at 01:30 Jordan on D is 22:30 UTC on D-1, which func.date()
+        # would file under the wrong day. The range also uses
+        # idx_audit_logs_created_at, which wrapping the column in func.date()
+        # defeats.
+        day_start_utc = (
+            datetime.combine(parsed_date, datetime.min.time(), tzinfo=_JORDAN_TZ)
+            .astimezone(timezone.utc)
+            .replace(tzinfo=None)
+        )
+        query = query.filter(
+            models.AuditLog.created_at >= day_start_utc,
+            models.AuditLog.created_at < day_start_utc + timedelta(days=1),
+        )
 
     query = query.order_by(desc(models.AuditLog.created_at))
     data = query.limit(5000).all()

@@ -52,11 +52,16 @@ def test_export_format_endpoint_rejects_pdf():
     assert pattern == "^(csv|json)$"
 
 
-def test_export_endpoint_accepts_the_visible_exact_date_filter():
-    import audit_service
+def test_export_endpoint_wiring_sends_the_visible_date_filter():
+    """The JS actually sends #dateFilter — the wiring, nothing more.
 
-    sig = inspect.signature(audit_service.export_audit_logs)
-    assert "date" in sig.parameters
+    This deliberately no longer asserts that the endpoint "accepts" the filter.
+    It used to check only that `export_audit_logs` has a parameter named `date`,
+    which passes even when the handler silently drops the filter (it did). The
+    endpoint's real behaviour — honour the filter or reject it, and use the
+    Jordan day — is covered against live responses in
+    tests/test_audit_log_export_filters.py.
+    """
     source = AUDIT_LOGS_JS.read_text(encoding="utf-8")
     assert 'date: document.getElementById("dateFilter").value' in source
 
