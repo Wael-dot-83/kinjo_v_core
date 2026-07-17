@@ -28,6 +28,43 @@ def _require_admin(current_user: models.User) -> None:
         raise HTTPException(status_code=403, detail="Not authorized")
 
 
+def _jordan_day_bounds(date_str: str) -> tuple[datetime, datetime]:
+    """Half-open UTC bounds [start, end) for a Jordan calendar day.
+
+    Shared by the list and the export because they are driven by the SAME
+    #dateFilter input: when each carried its own copy they drifted apart, and
+    the table and the exported file disagreed about what happened on a given
+    day — on an audit trail, an evidentiary problem.
+
+    Why not func.date(created_at) == parsed: created_at is stored UTC, so an
+    event at 01:30 Jordan on D is 22:30 UTC on D-1 and would be filed under the
+    wrong day. A range also uses idx_audit_logs_created_at, which wrapping the
+    column in a function defeats.
+
+    The bounds are timezone-AWARE on purpose. created_at is timestamptz on
+    PostgreSQL, where a naive bound is interpreted in the server's session
+    TimeZone rather than UTC. Verified against the real PG container: under
+    `SET TIME ZONE 'America/New_York'` naive bounds returned 0 rows for a row
+    inside the Jordan day, while aware bounds are correct under Etc/UTC,
+    Asia/Amman and America/New_York alike.
+
+    Raises 422 rather than dropping an unparseable filter: silently widening a
+    filter returns rows the caller did not ask for with a 200, and the export's
+    audit record would still claim the filter was applied.
+    """
+    try:
+        parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid date filter; expected YYYY-MM-DD.",
+        )
+    day_start_utc = datetime.combine(
+        parsed_date, datetime.min.time(), tzinfo=_JORDAN_TZ
+    ).astimezone(timezone.utc)
+    return day_start_utc, day_start_utc + timedelta(days=1)
+
+
 def _list_audit_logs(
     *,
     page: int,
@@ -44,13 +81,7 @@ def _list_audit_logs(
     action = action if action else None
     entity_type = entity_type if entity_type else None
     user = user if user else None
-    parsed_date = None
-    if date:
-        try:
-            from datetime import date as date_type
-            parsed_date = date_type.fromisoformat(date)
-        except (ValueError, TypeError):
-            parsed_date = None
+    day_bounds = _jordan_day_bounds(date) if date else None
 
     logs_with_users = (
         db.query(models.AuditLog, models.User.username)
@@ -61,9 +92,11 @@ def _list_audit_logs(
         logs_with_users = logs_with_users.filter(models.AuditLog.action == action)
     if entity_type:
         logs_with_users = logs_with_users.filter(models.AuditLog.entity_type == entity_type)
-    if parsed_date:
-        from sqlalchemy import func
-        logs_with_users = logs_with_users.filter(func.date(models.AuditLog.created_at) == parsed_date)
+    if day_bounds:
+        logs_with_users = logs_with_users.filter(
+            models.AuditLog.created_at >= day_bounds[0],
+            models.AuditLog.created_at < day_bounds[1],
+        )
     if user:
         logs_with_users = logs_with_users.filter(models.User.username.ilike(f"%{user}%"))
 
@@ -113,12 +146,21 @@ def _export_audit_logs(
     )
 
     if period != "all":
+        # Same reasoning as the date filter: swallowing this returned every
+        # period with a 200 while the audit record below still wrote
+        # period=<garbage>. The UI select only ever sends 7/30/90/365/all.
         try:
             days = int(period)
-            cutoff = datetime.now(_JORDAN_TZ).replace(tzinfo=None) - timedelta(days=days)
-            query = query.filter(models.AuditLog.created_at >= cutoff)
-        except ValueError:
-            pass
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=422,
+                detail="Invalid period; expected a number of days or 'all'.",
+            )
+        # Aware UTC. The old naive Jordan wall-clock cutoff
+        # (datetime.now(_JORDAN_TZ).replace(tzinfo=None)) was compared against
+        # UTC-stored created_at, shifting the window by 3 hours.
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        query = query.filter(models.AuditLog.created_at >= cutoff)
 
     if action:
         query = query.filter(models.AuditLog.action == action)
@@ -127,40 +169,10 @@ def _export_audit_logs(
     if user:
         query = query.filter(models.User.username.ilike(f"%{user}%"))
     if date:
-        # Never swallow the parse error: dropping the filter would return every
-        # audit row across all dates with a 200, and the export's own audit
-        # record below would still report date_filter=<the value>, asserting a
-        # scope that was never applied. The UI sends <input type="date">, so a
-        # malformed value only reaches here from a direct API call.
-        try:
-            parsed_date = datetime.strptime(date, "%Y-%m-%d").date()
-        except (ValueError, TypeError):
-            raise HTTPException(
-                status_code=422,
-                detail="Invalid date filter; expected YYYY-MM-DD.",
-            )
-        # created_at is stored in UTC (server_default=func.now()), so a Jordan
-        # calendar day is a half-open UTC window — not func.date(created_at).
-        # An event at 01:30 Jordan on D is 22:30 UTC on D-1, which func.date()
-        # would file under the wrong day. The range also uses
-        # idx_audit_logs_created_at, which wrapping the column in func.date()
-        # defeats.
-        #
-        # The bounds stay timezone-AWARE. created_at is timestamptz on
-        # PostgreSQL, and a naive bound is interpreted in the server's session
-        # TimeZone, not UTC — verified against the real PG container: with
-        # `SET TIME ZONE 'America/New_York'` a naive window returned 0 rows for
-        # a row that is inside the Jordan day, while aware bounds returned it
-        # under Etc/UTC, Asia/Amman and America/New_York alike. Naive bounds
-        # would make this filter silently correct only while the deployment
-        # happens to run UTC.
-        day_start_utc = (
-            datetime.combine(parsed_date, datetime.min.time(), tzinfo=_JORDAN_TZ)
-            .astimezone(timezone.utc)
-        )
+        day_start_utc, day_end_utc = _jordan_day_bounds(date)
         query = query.filter(
             models.AuditLog.created_at >= day_start_utc,
-            models.AuditLog.created_at < day_start_utc + timedelta(days=1),
+            models.AuditLog.created_at < day_end_utc,
         )
 
     query = query.order_by(desc(models.AuditLog.created_at))

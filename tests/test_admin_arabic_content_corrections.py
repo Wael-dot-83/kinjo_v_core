@@ -64,13 +64,26 @@ def _rendering_files():
 
 @pytest.fixture(scope="module")
 def sources():
-    """Every file that can render admin copy, read once."""
-    out = {}
+    """Every file that can render admin copy, read once.
+
+    Undecodable files are NOT skipped. Skipping them silently drops them from
+    the corpus, so `assert not hits` passes for them vacuously — and in a repo
+    with a history of mojibake-corrupted templates, a file that fails to decode
+    as UTF-8 is exactly the one most likely to still carry defective Arabic.
+    Fall back to a lossy read so its text is still scanned, and surface the
+    file through `undecodable` so it cannot hide.
+    """
+    out, undecodable = {}, []
     for p in _rendering_files():
+        rel = p.relative_to(ROOT).as_posix()
         try:
-            out[p.relative_to(ROOT).as_posix()] = p.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue
+            out[rel] = p.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            undecodable.append(rel)
+            out[rel] = p.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            undecodable.append(rel)
+    out["__undecodable__"] = "\n".join(undecodable)
     return out
 
 
@@ -87,6 +100,20 @@ def test_scan_actually_covers_the_templates(sources):
     assert len(sources) > 200, f"only {len(sources)} files scanned — the walk is broken"
     assert any(f.startswith("templates/admin/") for f in sources)
     assert any(f.startswith("static/js/") for f in sources)
+
+
+def test_no_rendering_file_is_unreadable(sources):
+    """A file the scan cannot read is a hole in every assertion above.
+
+    Undecodable files are now read lossily rather than skipped, so they are
+    still scanned — but an unreadable one (OSError) contributes nothing and
+    would let defective copy through unnoticed. Fail loudly instead.
+    """
+    unreadable = [f for f in sources["__undecodable__"].split("\n") if f]
+    assert not unreadable, (
+        f"these rendering files could not be read as UTF-8 and may hide "
+        f"defective Arabic: {unreadable}"
+    )
 
 
 @pytest.mark.parametrize(

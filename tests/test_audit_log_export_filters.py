@@ -112,3 +112,69 @@ def test_export_without_a_date_filter_still_returns_every_row(
     assert response.status_code == 200
     actions = {row["action"] for row in response.json()}
     assert {"EARLY_HOURS_JORDAN_17", "MIDDAY_JORDAN_17", "MIDDAY_JORDAN_16"} <= actions
+
+
+def test_list_and_export_agree_on_the_same_date_filter(
+    client, auth_headers_admin, audit_rows
+):
+    """The table and the file must describe the same day.
+
+    Both endpoints are driven by the same #dateFilter input (audit-logs.js
+    sends it to the list on every filter change and spreads the same filters
+    into the export). They carried separate copies of the date logic and drifted:
+    the list used func.date(created_at) (the UTC day) while the export used the
+    Jordan day, so an admin who filtered the table to a date and clicked Export
+    got a file with different rows than the screen showed. On an audit trail
+    that is an evidentiary problem, so it is pinned here rather than left to
+    the next refactor.
+    """
+    listed = client.get(
+        "/api/admin/audit-logs?date=2026-07-17&limit=100",
+        headers=auth_headers_admin,
+    )
+    exported = client.get(
+        "/api/admin/audit-logs/export?format=json&period=all&date=2026-07-17",
+        headers=auth_headers_admin,
+    )
+    assert listed.status_code == 200, listed.text[:200]
+    assert exported.status_code == 200, exported.text[:200]
+
+    listed_actions = {row["action"] for row in listed.json()["logs"]}
+    exported_actions = {row["action"] for row in exported.json()}
+    seeded = {"EARLY_HOURS_JORDAN_17", "MIDDAY_JORDAN_17", "MIDDAY_JORDAN_16"}
+
+    assert listed_actions & seeded == exported_actions & seeded, (
+        "the list and the export disagree about which rows fall on 2026-07-17: "
+        f"list={sorted(listed_actions & seeded)} export={sorted(exported_actions & seeded)}"
+    )
+    # And both must agree on the *correct* answer, not merely agree.
+    assert listed_actions & seeded == {"EARLY_HOURS_JORDAN_17", "MIDDAY_JORDAN_17"}
+
+
+def test_list_rejects_an_unparseable_date_instead_of_returning_everything(
+    client, auth_headers_admin, audit_rows
+):
+    """The list is the hot path — the UI hits it on every filter change.
+
+    It previously set parsed_date=None on a parse failure and returned every
+    audit row with a 200, while the export 422d on the same input.
+    """
+    response = client.get(
+        "/api/admin/audit-logs?date=not-a-date", headers=auth_headers_admin
+    )
+    assert response.status_code == 422, (
+        f"expected 422; got {response.status_code}. A 200 here means the filter "
+        "was dropped and every audit row was returned."
+    )
+
+
+def test_export_rejects_an_unparseable_period(client, auth_headers_admin, audit_rows):
+    """period had the same swallow, 15 lines from the date filter."""
+    response = client.get(
+        "/api/admin/audit-logs/export?format=json&period=garbage",
+        headers=auth_headers_admin,
+    )
+    assert response.status_code == 422, (
+        f"expected 422; got {response.status_code}. A 200 means every period was "
+        "returned while the audit record recorded period='garbage'."
+    )
