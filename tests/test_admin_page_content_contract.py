@@ -86,7 +86,16 @@ def test_metric_names_match_implemented_behavior():
     assert "Chart Suggestions" in source("templates/admin/analytics/charts_dashboard.html")
     heatmap = source("templates/admin/heatmap.html")
     assert "Covered Governorates" in heatmap
-    assert "Selected-scope Average Risk" in heatmap
+    # NOT "Selected-scope Average Risk". That name was introduced here and in
+    # the template by 8a775a1f and is false: the value is summary.average_risk
+    # from get_map_overview(db), which takes no scope argument, and the risk /
+    # search filters only toggle style.display without re-running
+    # updateKpiStrip(). Nor may it claim "all 12 governorates" — service.py
+    # drops any governorate whose sub-indicators raise and divides by the
+    # survivors. "National average risk score" is the strongest supportable
+    # claim, and is what origin/main said before this branch touched it.
+    assert "National average risk score" in heatmap
+    assert "Selected-scope Average Risk" not in heatmap
     dashboard_js = source("static/js/admin_dashboard.js")
     assert 'drilldown: "/admin/daily-reports-organization"' in dashboard_js
     assert 'improveLink.href = "/admin/daily-reports-organization"' in dashboard_js

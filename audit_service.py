@@ -146,16 +146,15 @@ def _export_audit_logs(
     )
 
     if period != "all":
-        # Same reasoning as the date filter: swallowing this returned every
-        # period with a 200 while the audit record below still wrote
-        # period=<garbage>. The UI select only ever sends 7/30/90/365/all.
-        try:
-            days = int(period)
-        except (ValueError, TypeError):
-            raise HTTPException(
-                status_code=422,
-                detail="Invalid period; expected a number of days or 'all'.",
-            )
+        # `period` is pattern-validated at the Query (see export_audit_logs), so
+        # by here it is 'all' or 1-5 ASCII digits. int() alone was not enough:
+        #   '-5'        -> timedelta(days=-5) -> a cutoff in the FUTURE -> zero
+        #                  rows with a 200, while the audit record wrote
+        #                  period='-5'. The same silent lie as a dropped filter.
+        #   '999999999' -> OverflowError ("date value out of range") -> 500.
+        #   ' 7 ', '+7', '٧' -> silently accepted by int(), which is not the
+        #                  "number of days" contract the error message states.
+        days = int(period)
         # Aware UTC. The old naive Jordan wall-clock cutoff
         # (datetime.now(_JORDAN_TZ).replace(tzinfo=None)) was compared against
         # UTC-stored created_at, shifting the window by 3 hours.
@@ -255,7 +254,14 @@ def list_audit_logs(
 
 def export_audit_logs(
     format: str = Query("csv", pattern="^(csv|json)$"),
-    period: str = Query("7"),
+    # 'all' or 1-5 ASCII digits, validated here rather than in the handler so a
+    # bad value is a 422 before any query runs — matching `format` above.
+    # Explicit [0-9] because Python's \d also matches Arabic-Indic digits.
+    # Excludes '-5' (a negative shifts the cutoff into the FUTURE -> zero rows
+    # with a 200) and '999999999' (timedelta OverflowError -> 500). The 5-digit
+    # cap is ~273 years, well past any real retention window; 'all' is the
+    # supported way to ask for everything.
+    period: str = Query("7", pattern="^(all|[0-9]{1,5})$"),
     action: Optional[str] = None,
     entity_type: Optional[str] = None,
     user: Optional[str] = None,

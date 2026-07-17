@@ -82,6 +82,7 @@ def test_legacy_kindergarten_term_absent_from_ui_sources():
         encoding="utf-8", stdin=subprocess.DEVNULL, check=True,
     ).stdout.splitlines()
     offenders = []
+    unreadable = []
     self_path = Path(__file__).resolve()
     for rel in tracked:
         if not (rel.startswith(("templates/", "static/")) or rel.endswith(".py")):
@@ -98,8 +99,20 @@ def test_legacy_kindergarten_term_absent_from_ui_sources():
             continue
         try:
             text = path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
+        except UnicodeDecodeError:
+            # Do not `continue`: skipping drops the file from the corpus, so the
+            # assertion below passes for it vacuously — and a file that fails to
+            # decode as UTF-8 is exactly the one most likely to carry mangled
+            # Arabic. Read it lossily so it is still scanned, and record it.
+            text = path.read_text(encoding="utf-8", errors="replace")
+            unreadable.append(rel)
+        except OSError:
+            unreadable.append(rel)
             continue
         if "رياض الأطفال" in text or "رياض أطفال" in text:
             offenders.append(rel)
     assert not offenders, f"Legacy term found in: {offenders}"
+    assert not unreadable, (
+        f"these files could not be read as UTF-8, so the scan above could not "
+        f"vouch for them: {unreadable}"
+    )

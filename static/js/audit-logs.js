@@ -441,8 +441,17 @@ async function doExport() {
   } catch (err) {
     console.error("Export error:", err);
     // fetchWithAuth puts the backend's `detail` on error.message, so a
-    // rejected filter says why instead of a generic failure.
-    const detail = err && err.message ? err.message : "";
+    // rejected filter says why instead of a generic failure. showToast
+    // interpolates its argument into insertAdjacentHTML (kinjo-app.js), so
+    // escape it: every reachable detail is a fixed literal today, but this is
+    // server-controlled text flowing into an HTML sink and must not rely on
+    // that staying true.
+    const escapeForToast = (s) => {
+      const div = document.createElement("div");
+      div.textContent = s;
+      return div.innerHTML;
+    };
+    const detail = err && err.message ? escapeForToast(err.message) : "";
     showToast(
       detail
         ? `${auditText("فشل تصدير السجلات", "Failed to export audit logs")}: ${detail}`

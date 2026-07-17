@@ -178,3 +178,42 @@ def test_export_rejects_an_unparseable_period(client, auth_headers_admin, audit_
         f"expected 422; got {response.status_code}. A 200 means every period was "
         "returned while the audit record recorded period='garbage'."
     )
+
+
+@pytest.mark.parametrize("bad_period", ["-5", "999999999", " 7 ", "+7", "٧", "garbage", "1e3"])
+def test_export_rejects_periods_that_are_not_a_day_count(
+    client, auth_headers_admin, audit_rows, bad_period
+):
+    r"""int() was too permissive to be the validation.
+
+    Each of these got a 200 or a 500 before:
+      '-5'        -> timedelta(days=-5) puts the cutoff in the FUTURE, so the
+                     export returned ZERO rows with a 200 while its own audit
+                     record wrote period='-5'. A filter that answers a
+                     different question and says nothing about it.
+      '999999999' -> OverflowError: date value out of range -> 500.
+      ' 7 ', '+7', '٧' -> silently accepted by int(); Python's \d and int()
+                     both take Arabic-Indic digits, so the pattern uses [0-9].
+    """
+    response = client.get(
+        f"/api/admin/audit-logs/export?format=json&period={bad_period}",
+        headers=auth_headers_admin,
+    )
+    assert response.status_code == 422, (
+        f"period={bad_period!r} produced {response.status_code}, not 422"
+    )
+
+
+@pytest.mark.parametrize("good_period", ["7", "30", "90", "365", "all", "0"])
+def test_export_still_accepts_every_period_the_ui_offers(
+    client, auth_headers_admin, audit_rows, good_period
+):
+    """Guards the pattern against overcorrecting: the select sends these."""
+    response = client.get(
+        f"/api/admin/audit-logs/export?format=json&period={good_period}",
+        headers=auth_headers_admin,
+    )
+    assert response.status_code == 200, (
+        f"period={good_period!r} is offered by the UI select but got "
+        f"{response.status_code}: {response.text[:200]}"
+    )

@@ -450,15 +450,20 @@
       <div class="kpi-value" id="kpiCovered">--</div>
       <div class="kpi-sub">{% if ui_lang == 'ar' %}من 12 محافظة{% else %}of 12 governorates{% endif %}</div>
     </div>
-    {# The value is summary.average_risk from get_map_overview(db), which takes
-       no scope argument and averages all 12 governorates in C.GOVERNORATES.
-       The risk/search filters call applyGovListFilter(), which only toggles
-       style.display and never re-runs updateKpiStrip() — so this figure is the
-       national average at all times and must not claim any narrower scope. #}
-    <div class="kpi-card" title="{% if ui_lang == 'ar' %}المتوسط الوطني لمؤشر الخطر عبر المحافظات الاثنتي عشرة{% else %}National average risk score across all 12 governorates{% endif %}">
-      <div class="kpi-label">{% if ui_lang == 'ar' %}المتوسط الوطني للمخاطر{% else %}National Avg. Risk{% endif %}</div>
+    {# Wording restored verbatim from origin/main — do not "improve" it.
+       The value is summary.average_risk from get_map_overview(db), which takes
+       no scope argument, so it is never scoped to a selection: the risk/search
+       filters call applyGovListFilter(), which only toggles style.display and
+       never re-runs updateKpiStrip(). It is equally NOT "the average across all
+       12 governorates": service.py drops any governorate whose sub-indicators
+       raise, and divides by len(governors) — the survivors — so the adjacent
+       Covered Governorates card can read "11 of 12" while this one is an
+       11-governorate mean. "National average risk score" is the strongest claim
+       the code actually supports. #}
+    <div class="kpi-card" title="{% if ui_lang == 'ar' %}المتوسط الوطني لمؤشر الخطر{% else %}National average risk score{% endif %}">
+      <div class="kpi-label">{% if ui_lang == 'ar' %}المتوسط الوطني{% else %}Avg. Risk{% endif %}</div>
       <div class="kpi-value" id="kpiAvgRisk">--</div>
-      <div class="kpi-sub">{% if ui_lang == 'ar' %}المتوسط الوطني{% else %}National average{% endif %}</div>
+      <div class="kpi-sub">{% if ui_lang == 'ar' %}مؤشر الخطر{% else %}National average{% endif %}</div>
     </div>
     <div class="kpi-card kpi-card-warn" title="{% if ui_lang == 'ar' %}المحافظات ذات الخطر المرتفع أو الحرج (≥50){% else %}Governorates with high or critical risk{% endif %}">
       <div class="kpi-label">{% if ui_lang == 'ar' %}مرتفع أو حرج{% else %}High or Critical{% endif %}</div>
