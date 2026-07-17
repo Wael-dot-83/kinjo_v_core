@@ -50,15 +50,15 @@ const KPI_CONFIG = [
   { key: "active_users",         icon: "bi bi-person-check-fill", color: "success", format: "number",     drilldown: "/admin/users",                     drilldownLabelKey: "dashboard.view_users" },
   { key: "total_kindergartens",  icon: "bi bi-house-fill",        color: "info",    format: "number",     drilldown: "/admin/kg-overview",               drilldownLabelKey: "dashboard.view_kindergartens" },
   { key: "active_kindergartens", icon: "bi bi-house-check-fill",  color: "success", format: "number",     drilldown: "/admin/kg-overview",               drilldownLabelKey: "dashboard.view_kindergartens" },
-  { key: "total_submissions",    icon: "bi bi-file-earmark-fill", color: "warning", format: "number",     drilldown: "/admin/analytics/daily-reports",   drilldownLabelKey: "dashboard.view_reports" },
-  { key: "pending_submissions",  icon: "bi bi-clock-fill",        color: "danger",  format: "number",     drilldown: "/admin/analytics/daily-reports",   drilldownLabelKey: "dashboard.view_reports" },
-  { key: "data_quality_score",   icon: "bi bi-graph-up-arrow",    color: "primary", format: "percentage", drilldown: "/admin/imported-kindergartens",    drilldownLabelKey: "dashboard.view_data_management" },
+  { key: "total_submissions",    icon: "bi bi-file-earmark-fill", color: "warning", format: "number",     drilldown: "/reports/analytics",               drilldownLabelKey: "dashboard.view_reports" },
+  { key: "pending_submissions",  icon: "bi bi-clock-fill",        color: "danger",  format: "number",     drilldown: "/reports/analytics",               drilldownLabelKey: "dashboard.view_reports" },
+  { key: "data_quality_score",   icon: "bi bi-graph-up-arrow",    color: "primary", format: "percentage", drilldown: "/admin/daily-reports-organization", drilldownLabelKey: "dashboard.view_data_management" },
 ];
 
 // English fallbacks for KPI labels (used if i18n JSON hasn't loaded yet)
 const KPI_LABEL_FALLBACK = {
   total_users:          "Total Users",
-  active_users:         "Active Users",
+  active_users:         "Users Logged In Today",
   total_kindergartens:  "Total Kindergartens",
   active_kindergartens: "Active Kindergartens",
   total_submissions:    "Total Submissions",
@@ -296,7 +296,7 @@ class AdminDashboard {
     const dataQualityReasons = Array.isArray(data.data_quality_reasons) ? data.data_quality_reasons : [];
 
     const chartPayload      = data.charts || {};
-    const userActivityChart = {
+    const attendanceChart = {
       labels: Array.isArray(chartPayload.attendance) ? chartPayload.attendance.map((i) => i.date)              : [],
       values: Array.isArray(chartPayload.attendance) ? chartPayload.attendance.map((i) => this.toNumber(i.value)) : [],
     };
@@ -319,7 +319,7 @@ class AdminDashboard {
       kpis,
       kpi_trends: kpiTrends,
       data_quality_reasons: dataQualityReasons,
-      charts: { user_activity: userActivityChart, data_submissions: submissionChart },
+      charts: { attendance: attendanceChart, data_submissions: submissionChart },
       recent_activity: recentActivity,
       alerts,
     };
@@ -535,7 +535,7 @@ class AdminDashboard {
 
     const improveLink = document.createElement("a");
     improveLink.className = "admin-kpi-dq-improve-link";
-    improveLink.href = "/admin/imported-kindergartens";
+    improveLink.href = "/admin/daily-reports-organization";
     improveLink.textContent = this.t("dashboard.dq_improve", "Improve data quality");
     details.appendChild(improveLink);
 
@@ -588,7 +588,7 @@ class AdminDashboard {
 
   renderCharts(charts) {
     if (typeof Chart === "undefined") return;
-    if (charts.user_activity)    this.renderUserActivityChart(charts.user_activity);
+    if (charts.attendance)       this.renderAttendanceChart(charts.attendance);
     if (charts.data_submissions) this.renderSubmissionsChart(charts.data_submissions);
   }
 
@@ -611,12 +611,12 @@ class AdminDashboard {
 
     const COMPONENTS = [
       { key: "kpis",       title: { en: "KPI cards",                ar: "بطاقات المؤشرات" },
-        desc: { en: "Seven headline metrics: total & active users, total & active kindergartens, reports submitted, pending reports, and data-quality score.",
-                ar: "سبعة مؤشرات رئيسية: إجمالي والمستخدمون النشطون، إجمالي والحضانات النشطة، التقارير المقدّمة، التقارير المعلّقة، ودرجة جودة البيانات." } },
+        desc: { en: "Seven headline metrics: total users, users logged in today, total & active kindergartens, reports submitted, pending reports, and data-quality score.",
+                ar: "سبعة مؤشرات رئيسية: إجمالي المستخدمين، المستخدمون الذين سجلوا الدخول اليوم، إجمالي والحضانات النشطة، التقارير المقدّمة، التقارير المعلّقة، ودرجة جودة البيانات." } },
       { key: "alerts",     title: { en: "System alerts",           ar: "تنبيهات النظام" },
         desc: { en: "Items needing attention, ordered by severity: pending enrolments, recent incidents, and licence expiries.",
                 ar: "بنود تحتاج متابعة مرتّبة حسب الخطورة: طلبات التسجيل المعلّقة، الحوادث الأخيرة، وانتهاء التراخيص." } },
-      { key: "activity",   title: { en: "User activity chart",     ar: "مخطط نشاط المستخدمين" },
+      { key: "activity",   title: { en: "Daily attendance chart",  ar: "مخطط الحضور اليومي" },
         desc: { en: "Line chart of daily attendance over the selected period so you can spot engagement trends.",
                 ar: "مخطط خطي لحضور يومي خلال الفترة المحددة لملاحظة اتجاهات التفاعل." } },
       { key: "enrollment", title: { en: "Enrollment status chart", ar: "مخطط حالة التسجيل" },
@@ -762,15 +762,15 @@ class AdminDashboard {
     }
   }
 
-  renderUserActivityChart(data) {
-    const ctx = document.getElementById("user-activity-chart");
+  renderAttendanceChart(data) {
+    const ctx = document.getElementById("attendance-chart");
     if (!ctx) return;
     // Accessibility: give the canvas an accessible name + role.
     ctx.setAttribute("role", "img");
     ctx.setAttribute("aria-label", window.KINJO_LANG === "en"
-      ? "User activity chart showing active users over time"
-      : "مخطط نشاط المستخدمين يوضح عدد المستخدمين النشطين عبر الزمن");
-    this.charts.userActivity?.destroy();
+      ? "Daily attendance chart showing recorded attendance by date"
+      : "مخطط الحضور اليومي يوضح سجلات الحضور حسب التاريخ");
+    this.charts.attendance?.destroy();
     const context = ctx.getContext("2d");
     const gradient = context ? (() => {
       const g = context.createLinearGradient(0, 0, 0, 220);
@@ -778,12 +778,12 @@ class AdminDashboard {
       g.addColorStop(1, "rgba(31, 94, 71, 0.02)");
       return g;
     })() : "rgba(31, 94, 71, 0.1)";
-    this.charts.userActivity = new Chart(ctx, {
+    this.charts.attendance = new Chart(ctx, {
       type: "line",
       data: {
         labels:   safeChartData(data.labels),
         datasets: [{
-          label:                this.t("dashboard.active_users", "Active Users"),
+          label:                window.KINJO_LANG === "en" ? "Recorded Attendance" : "سجلات الحضور",
           data:                 safeChartData(data.values),
           borderColor:          "#4F46E5",
           backgroundColor:      gradient,

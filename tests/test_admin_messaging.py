@@ -714,6 +714,55 @@ def test_admin_send_all_users_and_roles(
     assert recipient_ids == {parent_user.id, parent_irbid.id}
 
 
+def test_selected_role_matches_preview_send_and_saved_target(
+    client,
+    test_db,
+    auth_headers_admin,
+    sample_kindergarten,
+    manager_user,
+    supervisor_user,
+    parent_user,
+    parent_enrollment,
+):
+    """A role selected in the standalone compose page's shared target shape
+    must produce the same recipient set in preview and final send."""
+    params = {
+        "mode": "KINDERGARTENS",
+        "kindergarten_ids": [sample_kindergarten.id],
+        "roles": ["SUPERVISOR"],
+    }
+    preview = client.get(
+        "/api/admin/message-recipients/preview",
+        params=params,
+        headers=auth_headers_admin,
+    )
+    assert preview.status_code == 200
+    preview_ids = {item["id"] for item in preview.json()["sample_recipients"]}
+    assert preview_ids == {supervisor_user.id}
+    assert manager_user.id not in preview_ids
+    assert parent_user.id not in preview_ids
+
+    sent = client.post(
+        "/api/admin/messages",
+        json={
+            "subject": "Supervisors only",
+            "message_body": "Role targeting parity",
+            "target": params,
+        },
+        headers=auth_headers_admin,
+    )
+    assert sent.status_code == 201
+    message = test_db.get(models.Message, sent.json()["id"])
+    assert message.target_roles == ["SUPERVISOR"]
+    recipient_ids = {
+        row.recipient_user_id
+        for row in test_db.query(models.MessageRecipient).filter(
+            models.MessageRecipient.message_id == message.id
+        )
+    }
+    assert recipient_ids == {supervisor_user.id}
+
+
 def test_admin_governorate_targeting(
     client,
     test_db,

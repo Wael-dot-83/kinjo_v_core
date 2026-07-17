@@ -5852,6 +5852,20 @@ async def send_governance_reminder_endpoint(
     if body.target_type not in ("kindergarten", "supervisor"):
         raise HTTPException(status_code=400, detail="target_type must be 'kindergarten' or 'supervisor'")
 
+    if body.target_type == "kindergarten":
+        target_exists = db.query(models.Kindergarten.id).filter(
+            models.Kindergarten.id == body.target_id,
+            models.Kindergarten.deleted_at.is_(None),
+        ).first()
+    else:
+        target_exists = db.query(models.User.id).filter(
+            models.User.id == body.target_id,
+            models.User.role == models.UserRole.SUPERVISOR,
+            models.User.deleted_at.is_(None),
+        ).first()
+    if not target_exists:
+        raise HTTPException(status_code=404, detail="Reminder target not found")
+
     can_send, last_sent_at = check_reminder_cooldown(db, body.target_type, body.target_id)
     if not can_send:
         raise HTTPException(
@@ -6103,12 +6117,10 @@ async def get_governance_reminder_stats(
         models.GovernanceReminder.sent_at >= today_start
     ).scalar() or 0
     total_sent = db.query(func.count(models.GovernanceReminder.id)).scalar() or 0
-    return {
-        "pending": 0,
-        "sent_today": sent_today,
-        "non_compliant": 0,
-        "total_sent": total_sent,
-    }
+    # Only return values that are genuinely measured. The old response exposed
+    # `pending` and `non_compliant` as hard-coded zeroes, which made "unknown"
+    # look like a real operational result on the Admin page.
+    return {"sent_today": sent_today, "total_sent": total_sent}
 
 
 # =============================================================================

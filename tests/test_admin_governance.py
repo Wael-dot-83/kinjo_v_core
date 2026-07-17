@@ -6,7 +6,7 @@ Verifies:
 - Admin can access KPIs, leaderboard, and reminders
 - Reminder POST requires a valid kindergarten
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from auth import get_password_hash
@@ -113,10 +113,28 @@ class TestGovernanceReminders:
         token = _get_token(client, "govadmin")
         r = client.post(
             "/api/admin/governance/reminders",
-            json={"kindergarten_id": 999999, "reminder_type": "EMAIL"},
+            json={
+                "target_type": "kindergarten",
+                "target_id": 999999,
+                "reminder_type": "low_submission_rate",
+            },
             headers={"Authorization": f"Bearer {token}"},
         )
-        assert r.status_code in (400, 404, 422, 429)
+        assert r.status_code == 404
+
+    def test_send_reminder_rejects_non_supervisor_user(self, client, test_db):
+        admin = _create_admin(test_db)
+        token = _get_token(client, "govadmin")
+        r = client.post(
+            "/api/admin/governance/reminders",
+            json={
+                "target_type": "supervisor",
+                "target_id": admin.id,
+                "reminder_type": "low_submission_rate",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 404
 
     def test_admin_gets_reminder_stats(self, client, test_db):
         _create_admin(test_db)
@@ -127,8 +145,33 @@ class TestGovernanceReminders:
         )
         assert r.status_code == 200
         data = r.json()
-        assert "sent_today" in data
-        assert "total_sent" in data
+        assert set(data) == {"sent_today", "total_sent"}
+        assert data == {"sent_today": 0, "total_sent": 0}
+
+    def test_reminder_stats_count_today_without_fabricated_fields(self, client, test_db):
+        admin = _create_admin(test_db)
+        now = datetime.now(timezone.utc)
+        test_db.add_all([
+            models.GovernanceReminder(
+                target_type="supervisor", target_id=admin.id,
+                reminder_type="test_today", sent_by=admin.id, sent_at=now,
+                cooldown_expires_at=now + timedelta(hours=1),
+            ),
+            models.GovernanceReminder(
+                target_type="supervisor", target_id=admin.id,
+                reminder_type="test_yesterday", sent_by=admin.id,
+                sent_at=now - timedelta(days=1),
+                cooldown_expires_at=now,
+            ),
+        ])
+        test_db.commit()
+        token = _get_token(client, "govadmin")
+        r = client.get(
+            "/api/admin/governance/reminders/stats",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert r.status_code == 200
+        assert r.json() == {"sent_today": 1, "total_sent": 2}
 
     def test_reminder_list_resolves_kindergarten_governorate(self, client, test_db, sample_kindergarten):
         """The dedicated /admin/governance/reminders page's "Governorate"

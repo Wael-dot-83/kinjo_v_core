@@ -283,7 +283,6 @@
   "الخطورة": "Danger",
   "الدرجة": "Degree",
   "الدرجة النهائية": "Final grade",
-  "الدور (الصلاحية)": "Role (authority)",
   "الدورية": "Periodicity",
   "الدولة": "State",
   "الراحة والنظافة": "Comfort and cleanliness",
@@ -1035,7 +1034,6 @@
   "قصص": "stories",
   "قم باختيار الشعبة المناسبة لعمر الطالب.": "Choose the section appropriate to the student's age.",
   "قم باختيار نوع التقرير المناسب للحصول على البيانات التي تحتاجها:": "Choose the appropriate report type to get the data you need:",
-  "قمع التسجيل": "Registration suppression",
   "قمع التقارير اليومية": "Suppress daily reports",
   "قياس رضا أولياء الأمور وجمع الملاحظات.": "Measure parent satisfaction and collect feedback.",
   "قيد الانتظار": "On hold",
@@ -1470,5 +1468,7 @@
   "يوضح الرسم تطور الدرجة النهائية خلال فترات متتالية بنفس الطول الزمني.": "The graphic shows the evolution of the final score over successive periods of the same length of time.",
   "يوم - غير مؤهل (الحد الأدنى": "Day - Not eligible (minimum",
   "يوم)": "day)",
-  "يومي": "daily"
+  "يومي": "daily",
+  "الدور": "Role",
+  "مراحل التسجيل": "Enrollment stages"
 }

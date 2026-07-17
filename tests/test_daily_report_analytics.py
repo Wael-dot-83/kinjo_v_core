@@ -100,6 +100,24 @@ def dr_manager(dr_db, dr_kindergarten):
 
 
 @pytest.fixture
+def dr_supervisor(dr_db, dr_kindergarten):
+    u = models.User(
+        username="dr_supervisor",
+        email="dr_supervisor@test.com",
+        hashed_password=get_password_hash("Supervisor123!"),
+        role=models.UserRole.SUPERVISOR,
+        kindergarten_id=dr_kindergarten.id,
+        status=models.UserStatus.ACTIVE,
+    )
+    dr_db.add(u)
+    dr_db.flush()
+    dr_db.add(models.SupervisorProfile(user_id=u.id, kindergarten_id=dr_kindergarten.id))
+    dr_db.commit()
+    dr_db.refresh(u)
+    return u
+
+
+@pytest.fixture
 def dr_parent(dr_db):
     u = models.User(
         username="dr_parent@test.com",
@@ -273,7 +291,17 @@ class TestSummaryEndpoint:
             headers=headers,
         )
         assert resp.status_code == 200
-        assert resp.json()["total_reports"] == 0
+        data = resp.json()
+        assert data["total_reports"] == 0
+        assert data["meal_completion"]["breakfast"] is None
+        assert data["nap_analytics"]["avg_duration"] is None
+        assert data["nap_analytics"]["nap_rate"] is None
+        assert data["workflow_metrics"]["avg_approval_hours"] is None
+        assert data["workflow_metrics"]["rejection_rate"] is None
+        assert data["health_flags"]["sick_rate"] is None
+        assert data["diaper_bathroom"]["avg_bathroom"] is None
+        assert data["diaper_bathroom"]["wet_rate"] is None
+        assert data["diaper_bathroom"]["soiled_rate"] is None
 
     def test_filter_by_kindergarten(self, dr_client, seeded_reports, dr_admin, dr_kindergarten):
         headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
@@ -530,6 +558,41 @@ class TestRBAC:
         )
         assert resp.status_code == 403
 
+    def test_supervisor_is_scoped_to_assigned_kindergarten(
+        self, dr_client, dr_db, seeded_reports, dr_supervisor, dr_kindergarten
+    ):
+        other_kg = models.Kindergarten(
+            name_ar="حضانة خارج نطاق المشرفة",
+            governorate="Zarqa",
+            district="Zarqa",
+            area="Center",
+            address_line="5 St",
+            contact_phone="+962790000098",
+            status=models.KindergartenStatus.ACTIVE,
+        )
+        dr_db.add(other_kg)
+        dr_db.commit()
+        dr_db.refresh(other_kg)
+        headers = _auth_headers(dr_client, "dr_supervisor", "Supervisor123!")
+
+        own_scope = dr_client.get(
+            "/api/reports-analytics/summary",
+            params={"date_from": "2026-02-01", "date_to": "2026-02-03"},
+            headers=headers,
+        )
+        outside_scope = dr_client.get(
+            "/api/reports-analytics/sample-data",
+            params={
+                "date_from": "2026-02-01",
+                "date_to": "2026-02-03",
+                "kindergarten_id": other_kg.id,
+            },
+            headers=headers,
+        )
+        assert own_scope.status_code == 200
+        assert own_scope.json()["total_reports"] == 15
+        assert outside_scope.status_code == 403
+
 
 class TestAnalyticsComputations:
     """Verify computed values from known data."""
@@ -584,3 +647,205 @@ class TestAnalyticsComputations:
         health = resp.json()["health_flags"]
         # 1 child per day with mood=sick × 3 days = 3
         assert health["sick_count"] == 3
+
+    def test_zero_denominator_rates_are_unavailable(
+        self, dr_client, dr_db, dr_kindergarten, dr_parent, dr_admin
+    ):
+        child = _make_child(
+            dr_db, dr_parent.parent_profile.id, dr_kindergarten.id, first_name="لا بيانات"
+        )
+        report = _make_daily_report(
+            dr_db,
+            child.id,
+            dr_kindergarten.id,
+            dr_admin.id,
+            date(2026, 3, 1),
+            status=models.DailyReportStatus.DRAFT,
+            breakfast=None,
+            lunch=None,
+            snack=None,
+            milk=None,
+            nap_duration=None,
+            bathroom_count=None,
+        )
+        report.diaper_wet = None
+        report.diaper_soiled = None
+        dr_db.commit()
+
+        headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
+        response = dr_client.get(
+            "/api/reports-analytics/summary",
+            params={"date_from": "2026-03-01", "date_to": "2026-03-01"},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        conversions = data["status_funnel"]["conversion_rates"]
+        assert conversions["draft_to_submitted"] == 0
+        assert conversions["submitted_to_approved"] is None
+        assert conversions["approved_to_sent"] is None
+        assert data["meal_completion"]["breakfast"] is None
+        assert data["nap_analytics"]["avg_duration"] is None
+        # bathroom_count has a model-level zero default, so this is a measured zero.
+        assert data["diaper_bathroom"]["avg_bathroom"] == 0
+        assert data["diaper_bathroom"]["wet_rate"] is None
+        assert data["diaper_bathroom"]["soiled_rate"] is None
+
+
+class TestAnalyticsDashboardPageRenders:
+    """The /reports/analytics HTML page, not just its JSON API.
+
+    This page 500s on a bare `UndefinedError: 'get_impersonation' is undefined`.
+    daily_report_analytics.py defines its own `_language_context_processor`
+    supplying only ui_lang/ui_dir, but the template extends base.html, which
+    includes components/impersonation_banner.html; that partial resolves
+    `impersonation` or calls a `get_impersonation()` global that is never
+    registered. The canonical processor in scripts/compat/frontend_orig.py
+    supplies `impersonation`, so the duplicate silently diverged.
+
+    Every existing test here hits the JSON API, which uses no template — so the
+    whole suite passed green while the page itself was unreachable.
+    """
+
+    def test_analytics_dashboard_page_renders_for_admin(self, dr_client, dr_admin):
+        headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
+        response = dr_client.get("/reports/analytics", headers=headers)
+        assert response.status_code == 200, response.text[:300]
+        # Proves the banner partial actually rendered rather than the route
+        # merely returning some other 200.
+        assert "wfDraftSub" in response.text
+
+    def test_language_context_processor_supplies_impersonation(self):
+        """Guards the specific key whose absence caused the 500."""
+        from starlette.requests import Request
+
+        from daily_report_analytics import _language_context_processor
+
+        scope = {
+            "type": "http", "method": "GET", "path": "/reports/analytics",
+            "headers": [], "query_string": b"",
+        }
+        context = _language_context_processor(Request(scope))
+        assert "impersonation" in context
+        assert context["ui_lang"] == "ar"
+
+
+class TestDiaperRateDenominatorSemantics:
+    """The diaper rates count RECORDED observations, not all reports.
+
+    a22a52f5 changed `df[col].fillna(False).sum() / total_reports` to
+    `observed.sum() / len(observed)` where `observed = df[col].dropna()`. Its
+    message described only the zero-denominator guard, but this also changes the
+    value on ordinary non-zero data, so the intent is pinned here rather than
+    left to be rediscovered from a diff.
+
+    The old form treated "nobody recorded a diaper check" as "the diaper was not
+    wet" — asserting an observation that was never made, and understating the
+    rate in exactly the reports where staff logged least. The denominator is now
+    the reports that actually carry an observation; unrecorded is unknown, not
+    false. `None` (no observations at all) is likewise unknown, not 0%.
+    """
+
+    def test_wet_rate_denominator_is_recorded_observations_not_all_reports(
+        self, dr_db, dr_kindergarten, dr_parent, dr_admin
+    ):
+        from daily_report_analytics import DailyReportAnalytics, _load_reports_df
+
+        child = _make_child(dr_db, dr_parent.parent_profile.id, dr_kindergarten.id)
+        base = date(2026, 3, 1)
+        # 4 reports: 2 recorded a diaper check (1 wet), 2 recorded nothing.
+        for i, wet in enumerate([True, False, None, None]):
+            r = _make_daily_report(
+                dr_db, child.id, dr_kindergarten.id, dr_admin.id,
+                base - timedelta(days=i), status=models.DailyReportStatus.APPROVED,
+            )
+            r.diaper_wet = wet
+        dr_db.commit()
+
+        df = _load_reports_df(dr_db, base - timedelta(days=5), base, [dr_kindergarten.id])
+        result = DailyReportAnalytics(df).diaper_bathroom()
+
+        # 1 wet of 2 recorded == 50.0. The old fillna(False)/total form gave
+        # 1/4 == 25.0 by counting the two unrecorded reports as "not wet".
+        assert result["wet_rate"] == 50.0, (
+            f"expected 50.0 (1 wet of 2 recorded); got {result['wet_rate']}. "
+            "25.0 means unrecorded reports are being counted as 'not wet'."
+        )
+
+
+class TestMealRateDenominatorSemantics:
+    """Meal rates count only the reports that RECORDED the meal.
+
+    a22a52f5 changed the denominator from `total_reports` to the non-null
+    observations (`observed.sum() / len(observed)`), and the page's own "How to
+    read this page" text went on claiming "the share of reports recording each
+    meal" for two more commits. With 100 reports where 40 recorded breakfast and
+    30 of those ate it, the sentence promised 40% and the card rendered 75%.
+
+    Nothing caught it because the only meal-rate test
+    (TestCalculations::test_meal_completion_rates) uses a fixture with NO nulls:
+    12/15 == 80% under `fillna(False)/total_reports` and under
+    `sum/len(observed)` alike, so reverting the change leaves the suite green.
+    A null-bearing fixture is what makes the formula falsifiable.
+    """
+
+    def test_meal_rate_excludes_reports_that_did_not_record_the_meal(
+        self, dr_db, dr_kindergarten, dr_parent, dr_admin
+    ):
+        from daily_report_analytics import DailyReportAnalytics, _load_reports_df
+
+        child = _make_child(dr_db, dr_parent.parent_profile.id, dr_kindergarten.id)
+        base = date(2026, 4, 1)
+        # 4 reports: 2 recorded breakfast (1 ate, 1 did not), 2 recorded nothing.
+        for i, eaten in enumerate([True, False, None, None]):
+            r = _make_daily_report(
+                dr_db, child.id, dr_kindergarten.id, dr_admin.id,
+                base - timedelta(days=i), status=models.DailyReportStatus.APPROVED,
+            )
+            r.breakfast = eaten
+        dr_db.commit()
+
+        df = _load_reports_df(dr_db, base - timedelta(days=5), base, [dr_kindergarten.id])
+        result = DailyReportAnalytics(df).meal_completion()
+
+        # 1 eaten of 2 recorded == 50.0.
+        # The old fillna(False)/total_reports form gives 1/4 == 25.0 by counting
+        # the two unrecorded reports as "did not eat".
+        assert result["breakfast"] == 50.0, (
+            f"expected 50.0 (1 eaten of 2 recorded); got {result['breakfast']}. "
+            "25.0 means unrecorded reports are being counted as 'not eaten'."
+        )
+
+    def test_meal_rate_is_unavailable_when_no_report_recorded_the_meal(
+        self, dr_db, dr_kindergarten, dr_parent, dr_admin
+    ):
+        """No observations is unknown, not 0% — the zero-denominator rule."""
+        from daily_report_analytics import DailyReportAnalytics, _load_reports_df
+
+        child = _make_child(dr_db, dr_parent.parent_profile.id, dr_kindergarten.id)
+        base = date(2026, 5, 1)
+        for i in range(3):
+            r = _make_daily_report(
+                dr_db, child.id, dr_kindergarten.id, dr_admin.id,
+                base - timedelta(days=i), status=models.DailyReportStatus.APPROVED,
+            )
+            r.breakfast = None
+        dr_db.commit()
+
+        df = _load_reports_df(dr_db, base - timedelta(days=5), base, [dr_kindergarten.id])
+        assert DailyReportAnalytics(df).meal_completion()["breakfast"] is None
+
+
+def test_the_page_text_names_the_denominator_the_code_uses():
+    """The copy and the formula must move together — they did not, for two commits."""
+    import pathlib
+
+    tpl = (pathlib.Path(__file__).resolve().parents[1]
+           / "templates" / "reports" / "analytics_dashboard.html").read_text(encoding="utf-8")
+    assert "meal rates are the share of reports recording each meal" not in tpl, (
+        "the help text claims the denominator is all reports; meal_completion() "
+        "divides by the reports that RECORDED the meal"
+    )
+    assert "حصة التقارير التي سجلت كل وجبة" not in tpl
+    assert "count only the reports that recorded that meal" in tpl
+    assert "تحتسب التقارير التي سجّلت تلك الوجبة فقط" in tpl

@@ -115,7 +115,7 @@
       setKpi("kpi-frozen", d.frozen != null ? d.frozen : "—");
       setKpi("kpi-draft", d.draft != null ? d.draft : "—");
       setKpi("kpi-children", d.total_children != null ? d.total_children : "—");
-      setKpi("kpi-occupancy", (d.avg_occupancy != null ? d.avg_occupancy : 0) + "%");
+      setKpi("kpi-occupancy", d.avg_occupancy != null ? d.avg_occupancy + "%" : "—");
     }).catch(function () {
       ["kpi-total", "kpi-active", "kpi-frozen", "kpi-draft", "kpi-children", "kpi-occupancy"].forEach(function (id) {
         setKpi(id, "—");

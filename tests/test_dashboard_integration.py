@@ -231,6 +231,22 @@ def test_dashboard_summary_attendance_matches_the_canonical_definition(
             recorded_by=manager_user.id,
         )
     )
+    # The endpoint resolves "today" itself, so the fixture cannot choose a weekday.
+    # The canonical rate counts working days only (Jordan's week is Sun–Thu, see
+    # kpi_service._working_days_from_overrides), so on a Friday or Saturday there
+    # are no eligible child-days and the rate is 0 — correctly. Without this the
+    # test asserted 100 and failed every Jordan weekend: the suite was red two
+    # days in seven, on main as well as here. Declaring today open through the
+    # product's own OperatingCalendar override makes the expectation hold on all
+    # seven days without mocking the clock.
+    test_db.add(
+        models.OperatingCalendar(
+            kindergarten_id=manager_user.kindergarten_id,
+            date=date.today(),
+            is_open=True,
+            reason="test fixture: pin today as a working day",
+        )
+    )
     test_db.commit()
 
     summary = client.post(

@@ -300,12 +300,9 @@
   </div>
 
   <div class="profile-hero-info">
-    <div class="profile-hero-name" id="hero-display-name">
+    <h1 class="profile-hero-name" id="hero-display-name">
       {{ current_user.full_name or current_user.username }}
-    </div>
-    <div class="profile-hero-dept">
-      {% if ui_lang == 'en' %}Family &amp; Childhood Directorate{% else %}مديرية الأسرة والطفولة{% endif %}
-    </div>
+    </h1>
     <div>
       <span class="profile-hero-badge">
         {% if ui_lang == 'en' %}Administrator{% else %}مدير النظام{% endif %}
@@ -352,7 +349,7 @@
       <div>
         <div class="profile-stat-value">{{ days_active }}</div>
         <div class="profile-stat-label">
-          {% if ui_lang == 'en' %}Days Active{% else %}أيام النشاط{% endif %}
+          {% if ui_lang == 'en' %}Account Age (days){% else %}عمر الحساب (بالأيام){% endif %}
         </div>
       </div>
     </div>

@@ -28,6 +28,43 @@ def _require_admin(current_user: models.User) -> None:
         raise HTTPException(status_code=403, detail="Not authorized")
 
 
+def _jordan_day_bounds(date_str: str) -> tuple[datetime, datetime]:
+    """Half-open UTC bounds [start, end) for a Jordan calendar day.
+
+    Shared by the list and the export because they are driven by the SAME
+    #dateFilter input: when each carried its own copy they drifted apart, and
+    the table and the exported file disagreed about what happened on a given
+    day — on an audit trail, an evidentiary problem.
+
+    Why not func.date(created_at) == parsed: created_at is stored UTC, so an
+    event at 01:30 Jordan on D is 22:30 UTC on D-1 and would be filed under the
+    wrong day. A range also uses idx_audit_logs_created_at, which wrapping the
+    column in a function defeats.
+
+    The bounds are timezone-AWARE on purpose. created_at is timestamptz on
+    PostgreSQL, where a naive bound is interpreted in the server's session
+    TimeZone rather than UTC. Verified against the real PG container: under
+    `SET TIME ZONE 'America/New_York'` naive bounds returned 0 rows for a row
+    inside the Jordan day, while aware bounds are correct under Etc/UTC,
+    Asia/Amman and America/New_York alike.
+
+    Raises 422 rather than dropping an unparseable filter: silently widening a
+    filter returns rows the caller did not ask for with a 200, and the export's
+    audit record would still claim the filter was applied.
+    """
+    try:
+        parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid date filter; expected YYYY-MM-DD.",
+        )
+    day_start_utc = datetime.combine(
+        parsed_date, datetime.min.time(), tzinfo=_JORDAN_TZ
+    ).astimezone(timezone.utc)
+    return day_start_utc, day_start_utc + timedelta(days=1)
+
+
 def _list_audit_logs(
     *,
     page: int,
@@ -44,13 +81,7 @@ def _list_audit_logs(
     action = action if action else None
     entity_type = entity_type if entity_type else None
     user = user if user else None
-    parsed_date = None
-    if date:
-        try:
-            from datetime import date as date_type
-            parsed_date = date_type.fromisoformat(date)
-        except (ValueError, TypeError):
-            parsed_date = None
+    day_bounds = _jordan_day_bounds(date) if date else None
 
     logs_with_users = (
         db.query(models.AuditLog, models.User.username)
@@ -61,9 +92,11 @@ def _list_audit_logs(
         logs_with_users = logs_with_users.filter(models.AuditLog.action == action)
     if entity_type:
         logs_with_users = logs_with_users.filter(models.AuditLog.entity_type == entity_type)
-    if parsed_date:
-        from sqlalchemy import func
-        logs_with_users = logs_with_users.filter(func.date(models.AuditLog.created_at) == parsed_date)
+    if day_bounds:
+        logs_with_users = logs_with_users.filter(
+            models.AuditLog.created_at >= day_bounds[0],
+            models.AuditLog.created_at < day_bounds[1],
+        )
     if user:
         logs_with_users = logs_with_users.filter(models.User.username.ilike(f"%{user}%"))
 
@@ -102,6 +135,7 @@ def _export_audit_logs(
     action: Optional[str],
     entity_type: Optional[str],
     user: Optional[str],
+    date: Optional[str],
     current_user: models.User,
     db: Session,
 ):
@@ -112,12 +146,20 @@ def _export_audit_logs(
     )
 
     if period != "all":
-        try:
-            days = int(period)
-            cutoff = datetime.now(_JORDAN_TZ).replace(tzinfo=None) - timedelta(days=days)
-            query = query.filter(models.AuditLog.created_at >= cutoff)
-        except ValueError:
-            pass
+        # `period` is pattern-validated at the Query (see export_audit_logs), so
+        # by here it is 'all' or 1-5 ASCII digits. int() alone was not enough:
+        #   '-5'        -> timedelta(days=-5) -> a cutoff in the FUTURE -> zero
+        #                  rows with a 200, while the audit record wrote
+        #                  period='-5'. The same silent lie as a dropped filter.
+        #   '999999999' -> OverflowError ("date value out of range") -> 500.
+        #   ' 7 ', '+7', '٧' -> silently accepted by int(), which is not the
+        #                  "number of days" contract the error message states.
+        days = int(period)
+        # Aware UTC. The old naive Jordan wall-clock cutoff
+        # (datetime.now(_JORDAN_TZ).replace(tzinfo=None)) was compared against
+        # UTC-stored created_at, shifting the window by 3 hours.
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        query = query.filter(models.AuditLog.created_at >= cutoff)
 
     if action:
         query = query.filter(models.AuditLog.action == action)
@@ -125,6 +167,12 @@ def _export_audit_logs(
         query = query.filter(models.AuditLog.entity_type == entity_type)
     if user:
         query = query.filter(models.User.username.ilike(f"%{user}%"))
+    if date:
+        day_start_utc, day_end_utc = _jordan_day_bounds(date)
+        query = query.filter(
+            models.AuditLog.created_at >= day_start_utc,
+            models.AuditLog.created_at < day_end_utc,
+        )
 
     query = query.order_by(desc(models.AuditLog.created_at))
     data = query.limit(5000).all()
@@ -140,6 +188,7 @@ def _export_audit_logs(
             "action_filter": action,
             "entity_type_filter": entity_type,
             "user_filter": user,
+            "date_filter": date,
             "count": len(data),
         },
         sensitivity_level=2,
@@ -205,10 +254,18 @@ def list_audit_logs(
 
 def export_audit_logs(
     format: str = Query("csv", pattern="^(csv|json)$"),
-    period: str = Query("7"),
+    # 'all' or 1-5 ASCII digits, validated here rather than in the handler so a
+    # bad value is a 422 before any query runs — matching `format` above.
+    # Explicit [0-9] because Python's \d also matches Arabic-Indic digits.
+    # Excludes '-5' (a negative shifts the cutoff into the FUTURE -> zero rows
+    # with a 200) and '999999999' (timedelta OverflowError -> 500). The 5-digit
+    # cap is ~273 years, well past any real retention window; 'all' is the
+    # supported way to ask for everything.
+    period: str = Query("7", pattern="^(all|[0-9]{1,5})$"),
     action: Optional[str] = None,
     entity_type: Optional[str] = None,
     user: Optional[str] = None,
+    date: Optional[str] = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -218,6 +275,7 @@ def export_audit_logs(
         action=action,
         entity_type=entity_type,
         user=user,
+        date=date,
         current_user=current_user,
         db=db,
     )

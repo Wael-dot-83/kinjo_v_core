@@ -22,6 +22,12 @@
         </div>
     </div>
 
+    <section class="alert alert-light border mb-4" aria-labelledby="daily-analytics-context-title">
+        <h2 id="daily-analytics-context-title" class="h6 mb-1">{% if ui_lang == 'en' %}How to read this page{% else %}كيفية قراءة هذه الصفحة{% endif %}</h2>
+        <p class="small mb-1">{% if ui_lang == 'en' %}Results use the selected date range and kindergarten scope. Total reports counts matching daily reports; meal rates count only the reports that recorded that meal, and show the share of those in which it was taken; nap rate is the share of all matching reports that recorded a nap; sickness and rejection rates use matching reports as their denominator.{% else %}تستخدم النتائج الفترة والحضانة المحددتين. إجمالي التقارير هو عدد التقارير اليومية المطابقة؛ ونسب الوجبات تحتسب التقارير التي سجّلت تلك الوجبة فقط، وتُظهر حصة التي تناولها الطفل من بينها؛ ونسبة القيلولة هي حصة جميع التقارير المطابقة التي سجّلت قيلولة؛ وتستخدم نسب المرض والرفض التقارير المطابقة مقامًا لها.{% endif %}</p>
+        <p class="small text-muted mb-0">{% if ui_lang == 'en' %}An em dash means the value has not loaded or is unavailable; zero appears only after a measured result. If no reports match, widen the date range or change the kindergarten.{% else %}تعني الشرطة أن القيمة لم تُحمّل أو أنها غير متاحة؛ ولا يظهر الصفر إلا بعد قياس النتيجة. إذا لم توجد تقارير مطابقة، وسّع الفترة أو غيّر الحضانة.{% endif %}</p>
+    </section>
+
     <!-- Filters -->
     <div class="card shadow-sm mb-4">
         <div class="card-body">
@@ -66,7 +72,7 @@
             <div class="card border-0 shadow-sm h-100 card-band-primary">
                 <div class="card-body text-center">
                     <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Total Reports{% else %}إجمالي التقارير{% endif %}</div>
-                    <h2 class="mb-0 text-primary" id="kpiTotal">0</h2>
+                    <h2 class="mb-0 text-primary" id="kpiTotal">—</h2>
                     <div class="text-muted small mt-1">
                         <i class="bi bi-clock"></i> {% if ui_lang == 'en' %}Arrival{% else %}وصول{% endif %}: <span id="kpiAvgArrival">--:--</span>
                         | {% if ui_lang == 'en' %}Leave{% else %}خروج{% endif %}: <span id="kpiAvgLeave">--:--</span>
@@ -78,10 +84,10 @@
             <div class="card border-0 shadow-sm h-100 card-band-success">
                 <div class="card-body text-center">
                     <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Meal Rate{% else %}نسبة الوجبات{% endif %}</div>
-                    <h2 class="mb-0 text-success" id="kpiMealRate">0%</h2>
+                    <h2 class="mb-0 text-success" id="kpiMealRate">—</h2>
                     <div class="text-muted small mt-1">
-                        {% if ui_lang == 'en' %}Breakfast{% else %}فطور{% endif %} <span id="kpiBf">0</span>% |
-                        {% if ui_lang == 'en' %}Lunch{% else %}غداء{% endif %} <span id="kpiLunch">0</span>%
+                        {% if ui_lang == 'en' %}Breakfast{% else %}فطور{% endif %} <span id="kpiBf">—</span> |
+                        {% if ui_lang == 'en' %}Lunch{% else %}غداء{% endif %} <span id="kpiLunch">—</span>
                     </div>
                 </div>
             </div>
@@ -90,9 +96,9 @@
             <div class="card border-0 shadow-sm h-100 card-band-purple">
                 <div class="card-body text-center">
                     <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Average Nap{% else %}متوسط القيلولة{% endif %}</div>
-                    <h2 class="mb-0 text-purple" id="kpiNapAvg">0</h2>
+                    <h2 class="mb-0 text-purple" id="kpiNapAvg">—</h2>
                     <div class="text-muted small mt-1">
-                        {% if ui_lang == 'en' %}min | Sleep rate{% else %}دقيقة | نسبة النوم{% endif %} <span id="kpiNapRate">0</span>%
+                        {% if ui_lang == 'en' %}min | Nap rate{% else %}دقيقة | نسبة القيلولة{% endif %} <span id="kpiNapRate">—</span>
                     </div>
                 </div>
             </div>
@@ -101,10 +107,10 @@
             <div class="card border-0 shadow-sm h-100 card-band-danger">
                 <div class="card-body text-center">
                     <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Health Cases{% else %}حالات صحية{% endif %}</div>
-                    <h2 class="mb-0 text-danger" id="kpiSickCount">0</h2>
+                    <h2 class="mb-0 text-danger" id="kpiSickCount">—</h2>
                     <div class="text-muted small mt-1">
-                        {% if ui_lang == 'en' %}Sick rate{% else %}نسبة المرض{% endif %} <span id="kpiSickRate">0</span>% |
-                        {% if ui_lang == 'en' %}Rejected{% else %}رفض{% endif %} <span id="kpiRejRate">0</span>%
+                        {% if ui_lang == 'en' %}Sick rate{% else %}نسبة المرض{% endif %} <span id="kpiSickRate">—</span> |
+                        {% if ui_lang == 'en' %}Rejected{% else %}مرفوضة{% endif %} <span id="kpiRejRate">—</span>
                     </div>
                 </div>
             </div>
@@ -358,29 +364,30 @@
         setText('kpiAvgArrival', s.attendance.avg_arrival);
         setText('kpiAvgLeave', s.attendance.avg_leave);
 
-        const mealAvg = Math.round(
-            (s.meal_completion.breakfast + s.meal_completion.lunch +
-                s.meal_completion.snack + s.meal_completion.milk) / 4
-        );
-        setText('kpiMealRate', mealAvg + '%');
-        setText('kpiBf', s.meal_completion.breakfast);
-        setText('kpiLunch', s.meal_completion.lunch);
+        const mealValues = [s.meal_completion.breakfast, s.meal_completion.lunch,
+            s.meal_completion.snack, s.meal_completion.milk].filter(Number.isFinite);
+        const mealAvg = mealValues.length
+            ? Math.round(mealValues.reduce((sum, value) => sum + value, 0) / mealValues.length)
+            : null;
+        setText('kpiMealRate', metric(mealAvg, '%'));
+        setText('kpiBf', metric(s.meal_completion.breakfast, '%'));
+        setText('kpiLunch', metric(s.meal_completion.lunch, '%'));
 
-        setText('kpiNapAvg', s.nap_analytics.avg_duration);
-        setText('kpiNapRate', s.nap_analytics.nap_rate);
+        setText('kpiNapAvg', metric(s.nap_analytics.avg_duration));
+        setText('kpiNapRate', metric(s.nap_analytics.nap_rate, '%'));
         setText('kpiSickCount', s.health_flags.sick_count);
-        setText('kpiSickRate', s.health_flags.sick_rate);
-        setText('kpiRejRate', s.workflow_metrics.rejection_rate);
+        setText('kpiSickRate', metric(s.health_flags.sick_rate, '%'));
+        setText('kpiRejRate', metric(s.workflow_metrics.rejection_rate, '%'));
     }
 
     function populateWorkflow(s) {
         const wf = s.workflow_metrics;
         const conv = s.status_funnel.conversion_rates;
-        setText('wfApproval', wf.avg_approval_hours + T(' ساعة',' hrs'));
-        setText('wfRejRate', wf.rejection_rate + '%');
-        setText('wfDraftSub', conv.draft_to_submitted + '%');
-        setText('wfSubAppr', conv.submitted_to_approved + '%');
-        setText('wfApprSent', conv.approved_to_sent + '%');
+        setText('wfApproval', metric(wf.avg_approval_hours, T(' ساعة',' hrs')));
+        setText('wfRejRate', metric(wf.rejection_rate, '%'));
+        setText('wfDraftSub', metric(conv.draft_to_submitted, '%'));
+        setText('wfSubAppr', metric(conv.submitted_to_approved, '%'));
+        setText('wfApprSent', metric(conv.approved_to_sent, '%'));
     }
 
     function renderCharts(charts) {
@@ -478,6 +485,9 @@
     function showEl(id) { document.getElementById(id).classList.remove('d-none'); }
     function hideEl(id) { document.getElementById(id).classList.add('d-none'); }
     function setText(id, val) { document.getElementById(id).textContent = val; }
+    function metric(value, suffix = '') {
+        return value === null || value === undefined ? '—' : String(value) + suffix;
+    }
 
     function escHtml(s) {
         return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

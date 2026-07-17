@@ -52,6 +52,20 @@ def test_export_format_endpoint_rejects_pdf():
     assert pattern == "^(csv|json)$"
 
 
+def test_export_endpoint_wiring_sends_the_visible_date_filter():
+    """The JS actually sends #dateFilter — the wiring, nothing more.
+
+    This deliberately no longer asserts that the endpoint "accepts" the filter.
+    It used to check only that `export_audit_logs` has a parameter named `date`,
+    which passes even when the handler silently drops the filter (it did). The
+    endpoint's real behaviour — honour the filter or reject it, and use the
+    Jordan day — is covered against live responses in
+    tests/test_audit_log_export_filters.py.
+    """
+    source = AUDIT_LOGS_JS.read_text(encoding="utf-8")
+    assert 'date: document.getElementById("dateFilter").value' in source
+
+
 def test_action_badge_classifier_covers_real_taxonomy_patterns():
     """getActionBadgeClass previously only matched CREATE/UPDATE/DELETE/
     LOGIN/LOGOUT/VIEW - none of which are real AuditAction values except

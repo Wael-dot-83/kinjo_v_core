@@ -1699,7 +1699,7 @@ async def admin_messages_list(
     message_list = [
         {
             "id": msg.id,
-            "subject": msg.subject or "بدون وصول",
+            "subject": msg.subject or "بدون موضوع",
             "message_body": msg.message_body,
             "created_at": msg.created_at,
             "recipient_count": msg.recipient_count or 0,
@@ -1840,11 +1840,14 @@ async def admin_incident_reports_page(request: Request, current_user: User = Dep
 
 @router.get("/admin/analytics/daily-reports", response_class=HTMLResponse)
 async def daily_reports_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Page to list generated reports"""
+    """Compatibility route for the canonical daily-report analytics page."""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="admin/analytics/daily_reports.html", context={"current_user": current_user})
+    # This route previously rendered an incident-report clone under a Daily
+    # Reports title. Keep the established URL as an Admin-only compatibility
+    # entry, but send it to the real daily-report analytics implementation.
+    return RedirectResponse(url="/reports/analytics", status_code=307)
 
 
 @router.get("/admin/reports/incidents/{report_id}", response_class=HTMLResponse)
@@ -2030,7 +2033,9 @@ async def admin_profile_page(
         models.AuditLog.user_id == current_user.id
     ).scalar() or 0
 
-    # Days active since account creation
+    # Account age in days = calendar days since the account was created. This is
+    # NOT the count of distinct days the admin was active; the profile card is
+    # labelled "Account Age (days)" to match, not "Days Active".
     days_active = 0
     if current_user.created_at:
         created = current_user.created_at

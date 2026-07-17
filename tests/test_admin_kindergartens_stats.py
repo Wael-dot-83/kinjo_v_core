@@ -61,7 +61,7 @@ def _make_kg(db, name_ar, status=models.KindergartenStatus.ACTIVE, capacity=100)
 
 EXPECTED_KEYS = {
     "total", "active", "frozen", "draft", "inactive",
-    "deleted", "avg_occupancy", "total_children", "total_capacity",
+    "deleted", "avg_occupancy", "total_children", "active_children", "total_capacity",
 }
 
 
@@ -78,7 +78,7 @@ def test_stats_admin_returns_expected_shape(client, test_db):
     assert EXPECTED_KEYS.issubset(data.keys()), f"missing keys: {EXPECTED_KEYS - set(data)}"
     # every count is a non-negative int; avg_occupancy is numeric
     for k in ("total", "active", "frozen", "draft", "inactive", "deleted",
-              "total_children", "total_capacity"):
+              "total_children", "active_children", "total_capacity"):
         assert isinstance(data[k], int) and data[k] >= 0
     assert isinstance(data["avg_occupancy"], (int, float))
     # the active roster excludes deleted and includes our seeded active KG

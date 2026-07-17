@@ -5693,7 +5693,7 @@ _REPORT_TYPES = [
             {"id": "conversion_rate", "label_ar": "معدل التحويل", "label_en": "Conversion Rate", "type": "percent"},
         ],
         charts=[
-            {"id": "enrollment_funnel", "type": "bar", "label_ar": "قمع التسجيل", "label_en": "Enrollment Funnel"},
+            {"id": "enrollment_funnel", "type": "bar", "label_ar": "مراحل التسجيل", "label_en": "Enrollment Funnel"},
             {"id": "source_breakdown", "type": "doughnut", "label_ar": "توزيع المصادر", "label_en": "Source Breakdown"},
         ],
         columns=[
@@ -6016,7 +6016,7 @@ def preview_report(
             {"id": "rejected", "label_ar": "مرفوض", "label_en": "Rejected", "value": 0, "unit": ""},
         ]
         charts = [
-            {"id": "enrollment_funnel", "type": "bar", "label_ar": "قمع التسجيل", "label_en": "Enrollment Funnel"},
+            {"id": "enrollment_funnel", "type": "bar", "label_ar": "مراحل التسجيل", "label_en": "Enrollment Funnel"},
             {"id": "source_breakdown", "type": "doughnut", "label_ar": "توزيع المصادر", "label_en": "Source Breakdown"},
         ]
         try:

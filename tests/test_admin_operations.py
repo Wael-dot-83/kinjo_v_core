@@ -844,7 +844,7 @@ class TestGovernanceReminders:
         with patch("admin_endpoints.check_reminder_cooldown",
                    return_value=(False, last_sent)):
             r = client.post("/api/admin/governance/reminders", headers=headers,
-                            json={"target_type": "supervisor", "target_id": 1})
+                            json={"target_type": "kindergarten", "target_id": sample_kindergarten.id})
         assert r.status_code == 429
 
     def test_list_reminders_with_filters(self, client, test_db):

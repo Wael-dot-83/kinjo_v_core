@@ -35,7 +35,7 @@
   <div class="col-md-6 col-xl-3">
     <div class="card h-100 glass-panel hover-elevate border-start border-4 border-primary shadow-sm"role="region">
       <div class="card-body p-card">
-        <h6 class="text-on-surface-variant mb-0 fw-semibold"style="font: var(--type-label)">{% if ui_lang == 'en' %}Reports Generated{% else %}التقارير المنشأة{% endif %}</h6>
+        <h6 class="text-on-surface-variant mb-0 fw-semibold"style="font: var(--type-label)">{% if ui_lang == 'en' %}Reports Generated This Month{% else %}التقارير المنشأة هذا الشهر{% endif %}</h6>
         <h3 class="mb-0 fw-bold text-primary"id="statReportsGenerated">--</h3>
         <small class="text-on-surface-variant">{% if ui_lang == 'en' %}This month{% else %}هذا الشهر{% endif %}</small>
       </div>
@@ -46,7 +46,7 @@
       <div class="card-body p-card">
         <h6 class="text-on-surface-variant mb-0 fw-semibold"style="font: var(--type-label)">{% if ui_lang == 'en' %}Scheduled Reports{% else %}تقارير مجدولة{% endif %}</h6>
         <h3 class="mb-0 fw-bold text-success"id="statScheduledReports">--</h3>
-        <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Active schedules{% else %}جدولات نشطة{% endif %}</small>
+        <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Active schedules{% else %}جداول نشطة{% endif %}</small>
       </div>
     </div>
   </div>
@@ -89,12 +89,12 @@
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-enrollment"data-bs-toggle="pill"data-bs-target="#pane-enrollment"type="button"role="tab" title="{% if ui_lang == 'en' %}Analyze registration applications, funnel status, and intake sources.{% else %}تحليل طلبات التسجيل، حالة قمع التحويل، ومصادر الاستيعاب.{% endif %}">
+      <button class="nav-link"id="tab-enrollment"data-bs-toggle="pill"data-bs-target="#pane-enrollment"type="button"role="tab" title="{% if ui_lang == 'en' %}Analyze registration applications, funnel status, and intake sources.{% else %}تحليل طلبات التسجيل، مراحل تحويل طلبات التسجيل، ومصادر الاستيعاب.{% endif %}">
         <i class="bi bi-folder2-open me-1"></i>{% if ui_lang == 'en' %}Enrollment{% else %}التسجيل{% endif %}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-audit"data-bs-toggle="pill"data-bs-target="#pane-audit"type="button"role="tab" title="{% if ui_lang == 'en' %}Review system operations, actor roles, and security sensitivity levels.{% else %}مراجعة العمليات البرمجية، أدوار المستخدمين، ومستويات الأمان الحساسة.{% endif %}">
+      <button class="nav-link"id="tab-audit"data-bs-toggle="pill"data-bs-target="#pane-audit"type="button"role="tab" title="{% if ui_lang == 'en' %}Review system operations, actor roles, and security sensitivity levels.{% else %}مراجعة إجراءات النظام، أدوار المستخدمين، ومستويات الأمان الحساسة.{% endif %}">
         <i class="bi bi-list-check me-1"></i>{% if ui_lang == 'en' %}Audit Log{% else %}سجل التدقيق{% endif %}
       </button>
     </li>

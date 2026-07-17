@@ -347,7 +347,7 @@
       </div>
       <div class="cc-titles">
         <h1 class="cc-title">
-          {% if ui_lang == 'ar' %}الخريطة الحرارية التفاعلية — الحضانات والحضانات{% else %}Interactive Risk Heatmap — Kindergartens & Nurseries{% endif %}
+          {% if ui_lang == 'ar' %}الخريطة الحرارية التفاعلية — الحضانات{% else %}Interactive Risk Heatmap — Kindergartens & Nurseries{% endif %}
         </h1>
         <div class="cc-subtitle">
           {% if ui_lang == 'ar' %}مصدر البيانات: قاعدة بيانات KinJo المركزية • خرائط جوجل • تحديث مباشر{% else %}Data source: KinJo Central Database • Google Maps Satellite • Live updates{% endif %}
@@ -375,7 +375,7 @@
   {# ── PAGE DESCRIPTION ──────────────────────────────────────── #}
   <div class="page-desc" role="note" aria-label="{% if ui_lang == 'ar' %}وصف الصفحة{% else %}Page description{% endif %}">
     {% if ui_lang == 'ar' %}
-    تعرض هذه الصفحة خريطة حرارية تفاعلية لمؤشرات الخطر في الحضانات والحضانات على مستوى محافظات المملكة، مع إمكانية تحليل كل محافظة ومقارنة المؤشرات الرئيسية.
+    تعرض هذه الصفحة خريطة حرارية تفاعلية لمؤشرات الخطر في الحضانات على مستوى محافظات المملكة، مع إمكانية تحليل كل محافظة ومقارنة المؤشرات الرئيسية.
     {% else %}
     This page displays an interactive risk heatmap for kindergartens and nurseries at the governorate level across Jordan, with drill-down analysis and comparative key indicators for each region.
     {% endif %}
@@ -393,7 +393,7 @@
     <select id="indicatorViewSelect" class="cc-select"
             aria-label="{% if ui_lang == 'ar' %}اختر المؤشر{% else %}Select indicator{% endif %}">
       <option value="overall_risk">{% if ui_lang == 'ar' %}مؤشر الخطر العام{% else %}Overall Risk{% endif %}</option>
-      <option value="nursery_status">{% if ui_lang == 'ar' %}حالة الحضانات والحضانات{% else %}Nursery Status{% endif %}</option>
+      <option value="nursery_status">{% if ui_lang == 'ar' %}حالة الحضانات{% else %}Nursery Status{% endif %}</option>
       <option value="children_registration">{% if ui_lang == 'ar' %}الأطفال المسجلون{% else %}Children & Registration{% endif %}</option>
       <option value="staff_classrooms">{% if ui_lang == 'ar' %}الموظفون والفصول{% else %}Staff & Classrooms{% endif %}</option>
       <option value="safety_incidents">{% if ui_lang == 'ar' %}السلامة والحوادث{% else %}Safety & Incidents{% endif %}</option>
@@ -446,14 +446,38 @@
        role="region"
        aria-label="{% if ui_lang == 'ar' %}مؤشرات الأداء الرئيسية{% else %}Key Performance Indicators{% endif %}">
     <div class="kpi-card" title="{% if ui_lang == 'ar' %}عدد المحافظات التي تتوفر لها بيانات{% else %}Governorates with data{% endif %}">
-      <div class="kpi-label">{% if ui_lang == 'ar' %}المحافظات المغطاة{% else %}Covered Govs{% endif %}</div>
+      <div class="kpi-label">{% if ui_lang == 'ar' %}المحافظات المغطاة{% else %}Covered Governorates{% endif %}</div>
       <div class="kpi-value" id="kpiCovered">--</div>
       <div class="kpi-sub">{% if ui_lang == 'ar' %}من 12 محافظة{% else %}of 12 governorates{% endif %}</div>
     </div>
-    <div class="kpi-card" title="{% if ui_lang == 'ar' %}المتوسط الوطني لمؤشر الخطر{% else %}National average risk score{% endif %}">
-      <div class="kpi-label">{% if ui_lang == 'ar' %}المتوسط الوطني{% else %}Avg. Risk{% endif %}</div>
+    {# Every word here is bounded by what get_map_overview() computes. Do not
+       add scope or completeness claims.
+
+       The value is summary.average_risk = overall_risk_total / len(governors).
+       `governors` holds only the governorates whose sub-indicators computed:
+       service.py wraps each one in `except Exception -> logger.warning` and
+       drops the failures, so the divisor is the SURVIVORS, never a fixed 12.
+       Each included governorate always carries a non-null risk_score (set
+       before append), so that set is exactly the one the Covered Governorates
+       card counts — which is why this card points at it rather than implying
+       all 12.
+
+       It is also never scoped to a selection: get_map_overview(db) takes no
+       scope argument, the route accepts only `indicator`, and the risk/search
+       filters call applyGovListFilter(), which toggles style.display without
+       re-running updateKpiStrip().
+
+       Earlier versions of this card claimed a selected scope, then a fixed
+       twelve-governorate average. Both were false. origin/main's plain
+       "national average" wording was weaker but still implied complete
+       coverage the service does not guarantee. (The exact defective strings
+       are not repeated here: tests/test_admin_page_content_contract.py scans
+       this file's raw source for them, and a comment quoting one would trip
+       it — the check is deliberately not narrowed to rendered output.) #}
+    <div class="kpi-card" title="{% if ui_lang == 'ar' %}متوسط مؤشر الخطر للمحافظات المغطاة فقط؛ يقل عددها عن 12 إذا تعذّر حساب أي محافظة{% else %}Average risk score across the covered governorates only; fewer than 12 if any governorate could not be computed{% endif %}">
+      <div class="kpi-label">{% if ui_lang == 'ar' %}متوسط المخاطر{% else %}Avg. Risk{% endif %}</div>
       <div class="kpi-value" id="kpiAvgRisk">--</div>
-      <div class="kpi-sub">{% if ui_lang == 'ar' %}مؤشر الخطر{% else %}National average{% endif %}</div>
+      <div class="kpi-sub">{% if ui_lang == 'ar' %}للمحافظات المغطاة{% else %}across covered governorates{% endif %}</div>
     </div>
     <div class="kpi-card kpi-card-warn" title="{% if ui_lang == 'ar' %}المحافظات ذات الخطر المرتفع أو الحرج (≥50){% else %}Governorates with high or critical risk{% endif %}">
       <div class="kpi-label">{% if ui_lang == 'ar' %}مرتفع أو حرج{% else %}High or Critical{% endif %}</div>
@@ -465,10 +489,18 @@
       <div class="kpi-value" id="kpiCritical">--</div>
       <div class="kpi-sub">{% if ui_lang == 'ar' %}خطر ≥ 75{% else %}Risk ≥ 75{% endif %}</div>
     </div>
-    <div class="kpi-card" title="{% if ui_lang == 'ar' %}إجمالي الحضانات والحضانات المسجلة{% else %}Total registered kindergartens and nurseries{% endif %}">
+    {# Value is sum(g.kg_count) over the SAME surviving-governorate list as the
+       average-risk card, so it carries the same coverage caveat. kg_count is
+       sub["active_nurseries"], which despite the name is
+       _query_kindergarten_count(): COUNT(Kindergarten.id) filtered only by
+       governorate, with no status filter — so it is the REGISTERED count, not
+       an active one. "and nurseries" is dropped: models.Kindergarten has no
+       type/category column and "nursery" appears nowhere in models.py, so no
+       nursery type exists to count. #}
+    <div class="kpi-card" title="{% if ui_lang == 'ar' %}إجمالي الحضانات المسجلة في المحافظات المغطاة{% else %}Total registered kindergartens in the covered governorates{% endif %}">
       <div class="kpi-label">{% if ui_lang == 'ar' %}إجمالي المنشآت{% else %}Total Facilities{% endif %}</div>
       <div class="kpi-value" id="kpiInstitutions">--</div>
-      <div class="kpi-sub">{% if ui_lang == 'ar' %}حضانة وحضانة{% else %}KGs & nurseries{% endif %}</div>
+      <div class="kpi-sub">{% if ui_lang == 'ar' %}حضانات{% else %}Kindergartens{% endif %}</div>
     </div>
     <div class="kpi-card" title="{% if ui_lang == 'ar' %}إجمالي الأطفال النشطين المسجلين{% else %}Total active enrolled children{% endif %}">
       <div class="kpi-label">{% if ui_lang == 'ar' %}الأطفال النشطون{% else %}Active Children{% endif %}</div>
@@ -547,7 +579,7 @@
     {# ── CENTER: GOOGLE MAPS SATELLITE ──────────────────────── #}
     <div id="googleMapContainer"
          role="region"
-         aria-label="{% if ui_lang == 'ar' %}خريطة الأردن بالقمر الاصطناعي — الحضانات والحضانات{% else %}Jordan satellite map — Kindergartens and nurseries{% endif %}">
+         aria-label="{% if ui_lang == 'ar' %}خريطة الأردن بالقمر الاصطناعي — الحضانات{% else %}Jordan satellite map — Kindergartens and nurseries{% endif %}">
     </div>
 
     {# ── RIGHT: INTELLIGENCE PANEL ──────────────────────────── #}

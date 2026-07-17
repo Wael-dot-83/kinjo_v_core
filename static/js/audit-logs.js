@@ -414,15 +414,20 @@ async function doExport() {
     ...auditLogs.filters,
   });
 
-  // Download through the admin-namespaced route; rely on the HttpOnly session
-  // cookie for auth and do not send Authorization with a CSRF sentinel value.
-  const response = await fetchWithAuth(`/api/admin/audit-logs/export?${params}`);
-  if (!response) {
-    window.location.href = "/login";
-    return;
-  }
-
   try {
+    // Download through the admin-namespaced route; rely on the HttpOnly session
+    // cookie for auth and do not send Authorization with a CSRF sentinel value.
+    //
+    // This call must stay INSIDE the try: fetchWithAuth throws on any non-ok
+    // response (auth.js), and when it sat outside, a 403/422/500 escaped as an
+    // unhandled rejection — so `finally` never ran and the button stayed
+    // disabled on "Exporting..." with the modal open and no error shown.
+    const response = await fetchWithAuth(`/api/admin/audit-logs/export?${params}`);
+    if (!response) {
+      window.location.href = "/login";
+      return;
+    }
+
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -435,7 +440,24 @@ async function doExport() {
     showToast(auditText("تم تصدير السجلات بنجاح", "Audit logs exported successfully"), "success");
   } catch (err) {
     console.error("Export error:", err);
-    showToast(auditText("فشل تصدير السجلات", "Failed to export audit logs"), "error");
+    // fetchWithAuth puts the backend's `detail` on error.message, so a
+    // rejected filter says why instead of a generic failure. showToast
+    // interpolates its argument into insertAdjacentHTML (kinjo-app.js), so
+    // escape it: every reachable detail is a fixed literal today, but this is
+    // server-controlled text flowing into an HTML sink and must not rely on
+    // that staying true.
+    const escapeForToast = (s) => {
+      const div = document.createElement("div");
+      div.textContent = s;
+      return div.innerHTML;
+    };
+    const detail = err && err.message ? escapeForToast(err.message) : "";
+    showToast(
+      detail
+        ? `${auditText("فشل تصدير السجلات", "Failed to export audit logs")}: ${detail}`
+        : auditText("فشل تصدير السجلات", "Failed to export audit logs"),
+      "error"
+    );
   } finally {
     // Reset button
     exportBtn.textContent = originalText;

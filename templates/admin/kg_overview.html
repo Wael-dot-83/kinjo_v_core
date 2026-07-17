@@ -18,6 +18,10 @@
 
 {% block content %}
 <div class="ko-root" id="ko-root" dir="{{ 'rtl' if ui_lang != 'en' else 'ltr' }}">
+  <div id="ko-page-error" class="alert alert-danger d-none mx-4 mt-3" role="alert">
+    <span id="ko-page-error-text"></span>
+    <button type="button" id="ko-page-retry" class="btn btn-sm btn-outline-danger ms-2">{% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}</button>
+  </div>
 
   <!-- ══ TOP CONTROL BAR ══════════════════════════════════ -->
   <div class="ko-control-bar" id="ko-control-bar" role="toolbar"

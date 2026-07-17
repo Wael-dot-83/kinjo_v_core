@@ -15,7 +15,7 @@
         {% if ui_lang == 'en' %}System Settings{% else %}إعدادات النظام{% endif %}
       </h1>
       <p class="text-muted small mb-0 mt-1">
-        {% if ui_lang == 'en' %}Manage global configuration and platform environment variables.{% else %}إدارة التكوين العام ومتغيرات بيئة المنصة.{% endif %}
+        {% if ui_lang == 'en' %}View session timeout and server-managed environment guidance. This page is read-only.{% else %}عرض مهلة انتهاء الجلسة وإرشادات بيئة النظام التي يديرها الخادم. هذه الصفحة للقراءة فقط.{% endif %}
       </p>
     </div>
   </div>
@@ -43,7 +43,7 @@
               </div>
             </div>
             <div class="fs-5 fw-bold text-primary bg-primary bg-opacity-10 px-3 py-2 rounded border border-primary border-opacity-25 text-nowrap">
-              {{ session_timeout_minutes | default(30) }} {% if ui_lang == 'en' %}min{% else %}دقيقة{% endif %}
+              {% if session_timeout_minutes is defined and session_timeout_minutes is not none %}{{ session_timeout_minutes }} {% if ui_lang == 'en' %}min{% else %}دقيقة{% endif %}{% else %}{% if ui_lang == 'en' %}Unavailable{% else %}غير متاح{% endif %}{% endif %}
             </div>
           </div>
         </div>

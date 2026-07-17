@@ -16,10 +16,17 @@ def test_table_has_caption_and_column_scope():
 
 def test_progress_bars_have_aria_range_semantics():
     """The three network-summary progress bars had no role/aria-value*
-    attributes at all -- screen readers announced nothing about them."""
+    attributes at all -- screen readers announced nothing about them.
+
+    Slice to the end of the element rather than a fixed character count: a
+    fixed window silently starts failing as soon as an attribute is added
+    ahead of the ones under test (a bilingual aria-label pushed aria-valuemax
+    past a 250-char cutoff), which reports a markup regression that isn't one.
+    """
     html = KPI_TEMPLATE.read_text(encoding="utf-8")
     for bar_id in ("netAttBar", "netRatioBar", "netGqiBar"):
-        segment = html[html.index(f'id="{bar_id}"'):html.index(f'id="{bar_id}"') + 250]
+        start = html.index(f'id="{bar_id}"')
+        segment = html[start:html.index(">", start)]
         assert 'role="progressbar"' in segment
         assert 'aria-valuemin="0"' in segment
         assert 'aria-valuemax="100"' in segment

@@ -1,14 +1,14 @@
 {% extends "admin_base.html" %}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 
-{% block title %}{% if ui_lang == 'en' %}Decision Support Reports{% else %}تقارير الدعم القرارى{% endif %} — KinJo{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Decision Support Reports{% else %}تقارير دعم القرار{% endif %} — KinJo{% endblock %}
 
 {% block content %}
 <div class="admin-page-header reports-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
   <div class="reports-page-titleblock">
     <h1 class="admin-page-title mb-0">
       <i class="bi bi-graph-up-arrow me-2"></i>
-      {% if ui_lang == 'en' %}Decision Support Reports{% else %}تقارير الدعم القرارى{% endif %}
+      {% if ui_lang == 'en' %}Decision Support Reports{% else %}تقارير دعم القرار{% endif %}
     </h1>
     <small class="text-on-surface-variant mt-1" id="reportsLastUpdated">
       <i class="bi bi-clock"></i>
@@ -189,7 +189,7 @@
           <div class="card-body p-card">
             <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Supervisor Gap{% else %}فجوة المشرفين{% endif %}</h6>
             <h3 class="mb-0 fw-bold text-danger" id="kpiSupervisorGap">--</h3>
-            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Required minus actual{% else %}مطلوب ناقص الفعلي{% endif %}</small>
+            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Required minus actual{% else %}العدد المطلوب مطروحًا منه العدد الفعلي{% endif %}</small>
           </div>
         </div>
       </div>
@@ -227,7 +227,7 @@
           <div class="card-body p-card">
             <h6 class="text-on-surface-variant mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Critical Kindergartens{% else %}حضانات حرجة{% endif %}</h6>
             <h3 class="mb-0 fw-bold text-danger" id="kpiCriticalKgs">--</h3>
-            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Requires immediate action{% else %}تتطلب تدخل فوري{% endif %}</small>
+            <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Requires immediate action{% else %}تتطلب تدخلًا فوريًا{% endif %}</small>
           </div>
         </div>
       </div>

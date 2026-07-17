@@ -1518,12 +1518,12 @@ class TestFrontendRoutes:
         app.dependency_overrides.clear()
 
     def test_admin_daily_reports_page_admin(self, client, admin_user):
-        """Test daily reports page for admin"""
+        """The misleading incident clone redirects to real report analytics."""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
 
-        response = client.get("/admin/analytics/daily-reports")
-        assert response.status_code == 200
-        assert "text/html" in response.headers.get("content-type", "")
+        response = client.get("/admin/analytics/daily-reports", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers["location"] == "/reports/analytics"
 
         app.dependency_overrides.clear()
 
@@ -2934,12 +2934,14 @@ class TestFrontendRoutes:
         page = response.text
         sidebar = page[page.index('id="admin-sidebar"'):page.index("</aside>")]
         sidebar_no_comments = re.sub(r"<!--.*?-->", "", sidebar, flags=re.DOTALL)
-        assert "لوحة التحكم" in sidebar
+        assert "نظرة عامة" in sidebar
+        assert "لوحة التحكم الإدارية" in sidebar
         assert "المستخدمون" in sidebar
-        assert "البيانات" in sidebar
+        assert "التواصل والبيانات" in sidebar
         assert "التحليلات والتقارير" in sidebar
-        assert "الخريطة الحرارية" in sidebar
-        assert "النظام" in sidebar
+        assert "العمليات والسلامة" in sidebar
+        assert "الأمان والحساب" in sidebar
+        assert "الدخول المقيّد بصفة مستخدم" in sidebar
         assert "انتحال الهوية" not in sidebar
         # None of the old hardcoded English group headers should remain
         # (comments are stripped since the section dividers keep the English
@@ -2957,13 +2959,14 @@ class TestFrontendRoutes:
         assert response.status_code == 200
         page = response.text
         sidebar = page[page.index('id="admin-sidebar"'):page.index("</aside>")]
-        assert "Dashboard" in sidebar
+        assert "Overview" in sidebar
+        assert "Admin Dashboard" in sidebar
         assert "Users" in sidebar
         assert "Data Management" in sidebar
-        assert "Reports &amp; Analytics" in sidebar
-        assert "Heat Map" in sidebar
-        assert "System" in sidebar
-        assert "Impersonation" not in sidebar
+        assert "Analytics &amp; Reporting" in sidebar
+        assert "Operations &amp; Safety" in sidebar
+        assert "Security &amp; Account" in sidebar
+        assert "Controlled User Access" in sidebar
         assert "Jordan Heat Map" not in sidebar
         # No leftover Arabic text should appear when English is selected
         assert "لوحة التحكم" not in sidebar
