@@ -299,6 +299,9 @@ class TestSummaryEndpoint:
         assert data["workflow_metrics"]["avg_approval_hours"] is None
         assert data["workflow_metrics"]["rejection_rate"] is None
         assert data["health_flags"]["sick_rate"] is None
+        assert data["diaper_bathroom"]["avg_bathroom"] is None
+        assert data["diaper_bathroom"]["wet_rate"] is None
+        assert data["diaper_bathroom"]["soiled_rate"] is None
 
     def test_filter_by_kindergarten(self, dr_client, seeded_reports, dr_admin, dr_kindergarten):
         headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
@@ -644,3 +647,46 @@ class TestAnalyticsComputations:
         health = resp.json()["health_flags"]
         # 1 child per day with mood=sick × 3 days = 3
         assert health["sick_count"] == 3
+
+    def test_zero_denominator_rates_are_unavailable(
+        self, dr_client, dr_db, dr_kindergarten, dr_parent, dr_admin
+    ):
+        child = _make_child(
+            dr_db, dr_parent.parent_profile.id, dr_kindergarten.id, first_name="لا بيانات"
+        )
+        report = _make_daily_report(
+            dr_db,
+            child.id,
+            dr_kindergarten.id,
+            dr_admin.id,
+            date(2026, 3, 1),
+            status=models.DailyReportStatus.DRAFT,
+            breakfast=None,
+            lunch=None,
+            snack=None,
+            milk=None,
+            nap_duration=None,
+            bathroom_count=None,
+        )
+        report.diaper_wet = None
+        report.diaper_soiled = None
+        dr_db.commit()
+
+        headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
+        response = dr_client.get(
+            "/api/reports-analytics/summary",
+            params={"date_from": "2026-03-01", "date_to": "2026-03-01"},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        conversions = data["status_funnel"]["conversion_rates"]
+        assert conversions["draft_to_submitted"] == 0
+        assert conversions["submitted_to_approved"] is None
+        assert conversions["approved_to_sent"] is None
+        assert data["meal_completion"]["breakfast"] is None
+        assert data["nap_analytics"]["avg_duration"] is None
+        # bathroom_count has a model-level zero default, so this is a measured zero.
+        assert data["diaper_bathroom"]["avg_bathroom"] == 0
+        assert data["diaper_bathroom"]["wet_rate"] is None
+        assert data["diaper_bathroom"]["soiled_rate"] is None

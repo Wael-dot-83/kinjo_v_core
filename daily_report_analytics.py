@@ -241,9 +241,10 @@ class DailyReportAnalytics:
             "status_counts": counts,
             "conversion_rates": {
                 "draft_to_submitted": round((non_draft / total * 100) if total else 0, 1),
-                "submitted_to_approved": round(((approved + sent) / (submitted + approved + sent + rejected) * 100)
-                                               if (submitted + approved + sent + rejected) else 0, 1),
-                "approved_to_sent": round((sent / (approved + sent) * 100) if (approved + sent) else 0, 1),
+                "submitted_to_approved": round(
+                    (approved + sent) / (submitted + approved + sent + rejected) * 100, 1
+                ) if (submitted + approved + sent + rejected) else None,
+                "approved_to_sent": round(sent / (approved + sent) * 100, 1) if (approved + sent) else None,
                 "rejection_rate": round((rejected / total * 100) if total else 0, 1),
             }
         }
@@ -319,11 +320,14 @@ class DailyReportAnalytics:
     def diaper_bathroom(self) -> Dict[str, Any]:
         """Daily totals and trends for bathroom/diaper events."""
         if self.df.empty:
-            return {"avg_bathroom": 0, "wet_rate": 0, "soiled_rate": 0, "daily": []}
+            return {"avg_bathroom": None, "wet_rate": None, "soiled_rate": None, "daily": []}
 
-        avg_bath = self.df["bathroom_count"].fillna(0).mean()
-        wet_rate = round(self.df["diaper_wet"].fillna(False).sum() / self.total_reports * 100, 1)
-        soiled_rate = round(self.df["diaper_soiled"].fillna(False).sum() / self.total_reports * 100, 1)
+        bathroom_observed = self.df["bathroom_count"].dropna()
+        wet_observed = self.df["diaper_wet"].dropna()
+        soiled_observed = self.df["diaper_soiled"].dropna()
+        avg_bath = bathroom_observed.mean() if len(bathroom_observed) else None
+        wet_rate = round(wet_observed.sum() / len(wet_observed) * 100, 1) if len(wet_observed) else None
+        soiled_rate = round(soiled_observed.sum() / len(soiled_observed) * 100, 1) if len(soiled_observed) else None
 
         daily = []
         for dt, grp in self.df.groupby(self.df["date"].dt.strftime("%Y-%m-%d")):
@@ -335,7 +339,7 @@ class DailyReportAnalytics:
             })
 
         return {
-            "avg_bathroom": round(avg_bath, 1),
+            "avg_bathroom": round(avg_bath, 1) if avg_bath is not None else None,
             "wet_rate": wet_rate,
             "soiled_rate": soiled_rate,
             "daily": daily,
