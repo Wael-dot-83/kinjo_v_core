@@ -1,0 +1,653 @@
+﻿
+ H.264/MPEG-4 Part 10/AVC encoder (x264) (x264)
+      --sout-x264-keyint=<integer> 
+                                 Maximum GOP size
+          Sets maximum interval between IDR-frames. Larger values save bits,
+          thus improving quality for a given bitrate at the cost of seeking
+          precision. Use -1 for infinite.
+      --sout-x264-min-keyint=<integer> 
+                                 Minimum GOP size
+          Sets minimum interval between IDR-frames. In H.264, I-frames do not
+          necessarily bound a closed GOP because it is allowable for a P-frame
+          to be predicted from more frames than just the one frame before it
+          (also see reference frame option). Therefore, I-frames are not
+          necessarily seekable. IDR-frames restrict subsequent P-frames from
+          referring to any frame prior to the IDR-frame.  If scenecuts appear
+          within this interval, they are still encoded as I-frames, but do not
+          start a new GOP.
+      --sout-x264-opengop, --no-sout-x264-opengop 
+                                 Use recovery points to close GOPs
+                                 (default disabled)
+          use open GOP, for bluray compatibility use also bluray-compat option
+      --sout-x264-bluray-compat, --no-sout-x264-bluray-compat 
+                                 Enable compatibility hacks for Blu-ray support
+                                 (default disabled)
+          Enable hacks for Blu-ray support, this doesn't enforce every aspect
+          of Blu-ray compatibility e.g. resolution, framerate, level
+      --sout-x264-scenecut=<integer [-1 .. 100]> 
+                                 Extra I-frames aggressivity
+          Scene-cut detection. Controls how aggressively to insert extra
+          I-frames. With small values of scenecut, the codec often has to force
+          an I-frame when it would exceed keyint. Good values of scenecut may
+          find a better location for the I-frame. Large values use more
+          I-frames than necessary, thus wasting bits. -1 disables scene-cut
+          detection, so I-frames are inserted only every other keyint frames,
+          which probably leads to ugly encoding artifacts. Range 1 to 100.
+      --sout-x264-bframes=<integer [0 .. 16]> 
+                                 B-frames between I and P
+          Number of consecutive B-frames between I and P-frames. Range 1 to 16.
+      --sout-x264-b-adapt=<integer [0 .. 2]> 
+                                 Adaptive B-frame decision
+          Force the specified number of consecutive B-frames to be used, except
+          possibly before an I-frame. Range 0 to 2.
+      --sout-x264-b-bias=<integer [-100 .. 100]> 
+                                 Influence (bias) B-frames usage
+          Bias the choice to use B-frames. Positive values cause more B-frames,
+          negative values cause less B-frames.
+      --sout-x264-bpyramid={none,strict,normal} 
+                                 Keep some B-frames as references
+          Allows B-frames to be used as references for predicting other frames.
+          Keeps the middle of 2+ consecutive B-frames as a reference, and
+          reorders frame appropriately.  - none: Disabled  - strict: Strictly
+          hierarchical pyramid  - normal: Non-strict (not Blu-ray compatible) 
+      --sout-x264-cabac, --no-sout-x264-cabac 
+                                 CABAC
+                                 (default enabled)
+          CABAC (Context-Adaptive Binary Arithmetic Coding). Slightly slows
+          down encoding and decoding, but should save 10 to 15% bitrate.
+      --sout-x264-fullrange, --no-sout-x264-fullrange 
+                                 Use fullrange instead of TV colorrange
+                                 (default disabled)
+          TV-range is usually used colorrange, defining this to true will
+          enable libx264 to use full colorrange on encoding
+      --sout-x264-ref=<integer [1 .. 16]> 
+                                 Number of reference frames
+          Number of previous frames used as predictors. This is effective in
+          Anime, but seems to make little difference in live-action source
+          material. Some decoders are unable to deal with large frameref
+          values. Range 1 to 16.
+      --sout-x264-nf, --no-sout-x264-nf 
+                                 Skip loop filter
+                                 (default disabled)
+          Deactivate the deblocking loop filter (decreases quality).
+      --sout-x264-deblock=<string> 
+                                 Loop filter AlphaC0 and Beta parameters
+                                 alpha:beta
+          Loop filter AlphaC0 and Beta parameters. Range -6 to 6 for both alpha
+          and beta parameters. -6 means light filter, 6 means strong.
+      --sout-x264-psy-rd=<string> 
+                                 Strength of psychovisual optimization, default
+                                 is "1.0:0.0"
+          First parameter controls if RD is on (subme>=6) or off. Second
+          parameter controls if Trellis is used on psychovisual optimization,
+          default off
+      --sout-x264-psy, --no-sout-x264-psy 
+                                 Use Psy-optimizations
+                                 (default enabled)
+          Use all visual optimizations that can worsen both PSNR and SSIM
+      --sout-x264-level=<string> H.264 level
+          Specify H.264 level (as defined by Annex A of the standard). Levels
+          are not enforced; it's up to the user to select a level compatible
+          with the rest of the encoding options. Range 1 to 5.1 (10 to 51 is
+          also allowed). Set to 0 for letting x264 set level.
+      --sout-x264-profile={baseline,main,high,high10,high422,high444} 
+                                 H.264 profile
+          Specify H.264 profile which limits are enforced over other settings
+      --sout-x264-interlaced, --no-sout-x264-interlaced 
+                                 Interlaced mode
+                                 (default disabled)
+          Pure-interlaced mode.
+      --sout-x264-frame-packing={-1 (), 0 (checkerboard), 1 (column alternation), 2 (row alternation), 3 (side by side), 4 (top bottom), 5 (frame alternation), 6 (2D)} 
+                                 Frame packing
+          For stereoscopic videos define frame arrangement:  0: checkerboard -
+          pixels are alternatively from L and R  1: column alternation - L and
+          R are interlaced by column  2: row alternation - L and R are
+          interlaced by row  3: side by side - L is on the left, R on the right
+           4: top bottom - L is on top, R on bottom  5: frame alternation - one
+          view per frame
+      --sout-x264-slices=<integer> 
+                                 Force number of slices per frame
+          Force rectangular slices and is overridden by other slicing options
+      --sout-x264-slice-max-size=<integer> 
+                                 Limit the size of each slice in bytes
+          Sets a maximum slice size in bytes, Includes NAL overhead in size
+      --sout-x264-slice-max-mbs=<integer> 
+                                 Limit the size of each slice in macroblocks
+          Sets a maximum number of macroblocks per slice
+      --sout-x264-hrd={none,vbr,cbr} 
+                                 HRD-timing information
+          HRD-timing information
+      --sout-x264-qp=<integer [-1 .. 51]> 
+                                 Set QP
+          This selects the quantizer to use. Lower values result in better
+          fidelity, but higher bitrates. 26 is a good default value. Range 0
+          (lossless) to 51.
+      --sout-x264-crf=<integer [0 .. 51]> 
+                                 Quality-based VBR
+          1-pass Quality-based VBR. Range 0 to 51.
+      --sout-x264-qpmin=<integer [0 .. 51]> 
+                                 Min QP
+          Minimum quantizer parameter. 15 to 35 seems to be a useful range.
+      --sout-x264-qpmax=<integer [0 .. 51]> 
+                                 Max QP
+          Maximum quantizer parameter.
+      --sout-x264-qpstep=<integer [0 .. 51]> 
+                                 Max QP step
+          Max QP step between frames.
+      --sout-x264-ratetol=<float [0.000000 .. 100.000000]> 
+                                 Average bitrate tolerance
+          Allowed variance in average bitrate (in kbits/s).
+      --sout-x264-vbv-maxrate=<integer> 
+                                 Max local bitrate
+          Sets a maximum local bitrate (in kbits/s).
+      --sout-x264-vbv-bufsize=<integer> 
+                                 VBV buffer
+          Averaging period for the maximum local bitrate (in kbits).
+      --sout-x264-vbv-init=<float [0.000000 .. 1.000000]> 
+                                 Initial VBV buffer occupancy
+          Sets the initial buffer occupancy as a fraction of the buffer size.
+          Range 0.0 to 1.0.
+      --sout-x264-ipratio=<float [1.000000 .. 2.000000]> 
+                                 QP factor between I and P
+          QP factor between I and P. Range 1.0 to 2.0.
+      --sout-x264-pbratio=<float [1.000000 .. 2.000000]> 
+                                 QP factor between P and B
+          QP factor between P and B. Range 1.0 to 2.0.
+      --sout-x264-chroma-qp-offset=<integer> 
+                                 QP difference between chroma and luma
+          QP difference between chroma and luma.
+      --sout-x264-pass=<integer [0 .. 3]> 
+                                 Multipass ratecontrol
+          Multipass ratecontrol:  - 1: First pass, creates stats file  - 2:
+          Last pass, does not overwrite stats file  - 3: Nth pass, overwrites
+          stats file 
+      --sout-x264-qcomp=<float [0.000000 .. 1.000000]> 
+                                 QP curve compression
+          QP curve compression. Range 0.0 (CBR) to 1.0 (QCP).
+      --sout-x264-cplxblur=<float> 
+                                 Reduce fluctuations in QP
+          This reduces the fluctuations in QP before curve compression.
+          Temporally blurs complexity.
+      --sout-x264-qblur=<float>  Reduce fluctuations in QP
+          This reduces the fluctuations in QP after curve compression.
+          Temporally blurs quants.
+      --sout-x264-aq-mode=<integer [0 .. 2]> 
+                                 How AQ distributes bits
+          Defines bitdistribution mode for AQ, default 1  - 0: Disabled  - 1:
+          Current x264 default mode  - 2: uses log(var)^2 instead of log(var)
+          and attempts to adapt strength per frame
+      --sout-x264-aq-strength=<float> 
+                                 Strength of AQ
+          Strength to reduce blocking and blurring in flat and textured areas,
+          default 1.0 recommended to be between 0..2  - 0.5: weak AQ  - 1.5:
+          strong AQ
+      --sout-x264-partitions={none,fast,normal,slow,all} 
+                                 Partitions to consider
+          Partitions to consider in analyse mode:  - none  :   - fast  : i4x4 
+          - normal: i4x4,p8x8,(i8x8)  - slow  : i4x4,p8x8,(i8x8),b8x8  - all  
+          : i4x4,p8x8,(i8x8),b8x8,p4x4 (p4x4 requires p8x8. i8x8 requires
+          8x8dct).
+      --sout-x264-direct={none,spatial,temporal,auto} 
+                                 Direct MV prediction mode
+          Direct MV prediction mode
+      --sout-x264-direct-8x8=<integer [-1 .. 1]> 
+                                 Direct prediction size
+          Direct prediction size:  -  0: 4x4  -  1: 8x8  - -1: smallest
+          possible according to level 
+      --sout-x264-weightb, --no-sout-x264-weightb 
+                                 Weighted prediction for B-frames
+                                 (default enabled)
+          Weighted prediction for B-frames.
+      --sout-x264-weightp=<integer [0 .. 2]> 
+                                 Weighted prediction for P-frames
+          Weighted prediction for P-frames:  - 0: Disabled  - 1: Blind offset 
+          - 2: Smart analysis 
+      --sout-x264-me={dia,hex,umh,esa,tesa} 
+                                 Integer pixel motion estimation method
+          Selects the motion estimation algorithm:  - dia: diamond search,
+          radius 1 (fast)  - hex: hexagonal search, radius 2  - umh: uneven
+          multi-hexagon search (better but slower)  - esa: exhaustive search
+          (extremely slow, primarily for testing)  - tesa: hadamard exhaustive
+          search (extremely slow, primarily for testing) 
+      --sout-x264-merange=<integer [1 .. 64]> 
+                                 Maximum motion vector search range
+          Maximum distance to search for motion estimation, measured from
+          predicted position(s). Default of 16 is good for most footage, high
+          motion sequences may benefit from settings between 24 and 32. Range 0
+          to 64.
+      --sout-x264-mvrange=<integer> 
+                                 Maximum motion vector length
+          Maximum motion vector length in pixels. -1 is automatic, based on
+          level.
+      --sout-x264-mvrange-thread=<integer> 
+                                 Minimum buffer space between threads
+          Minimum buffer space between threads. -1 is automatic, based on
+          number of threads.
+      --sout-x264-subme=<integer> 
+                                 Subpixel motion estimation and partition
+                                 decision quality
+          This parameter controls quality versus speed tradeoffs involved in
+          the motion estimation decision process (lower = quicker and higher =
+          better quality). Range 1 to 9.
+      --sout-x264-mixed-refs, --no-sout-x264-mixed-refs 
+                                 Decide references on a per partition basis
+                                 (default enabled)
+          Allows each 8x8 or 16x8 partition to independently select a reference
+          frame, as opposed to only one ref per macroblock.
+      --sout-x264-chroma-me, --no-sout-x264-chroma-me 
+                                 Chroma in motion estimation
+                                 (default enabled)
+          Chroma ME for subpel and mode decision in P-frames.
+      --sout-x264-8x8dct, --no-sout-x264-8x8dct 
+                                 Adaptive spatial transform size
+                                 (default enabled)
+          SATD-based decision for 8x8 transform in inter-MBs.
+      --sout-x264-trellis=<integer [0 .. 2]> 
+                                 Trellis RD quantization
+          Trellis RD quantization:  - 0: disabled  - 1: enabled only on the
+          final encode of a MB  - 2: enabled on all mode decisions This
+          requires CABAC.
+      --sout-x264-lookahead=<integer [0 .. 60]> 
+                                 Framecount to use on frametype lookahead
+          Framecount to use on frametype lookahead. Currently default can cause
+          sync-issues on unmuxable output, like rtsp-output without ts-mux
+      --sout-x264-intra-refresh, --no-sout-x264-intra-refresh 
+                                 Use Periodic Intra Refresh
+                                 (default disabled)
+          Use Periodic Intra Refresh instead of IDR frames
+      --sout-x264-mbtree, --no-sout-x264-mbtree 
+                                 Use mb-tree ratecontrol
+                                 (default enabled)
+          You can disable use of Macroblock-tree on ratecontrol
+      --sout-x264-fast-pskip, --no-sout-x264-fast-pskip 
+                                 Early SKIP detection on P-frames
+                                 (default enabled)
+          Early SKIP detection on P-frames.
+      --sout-x264-dct-decimate, --no-sout-x264-dct-decimate 
+                                 Coefficient thresholding on P-frames
+                                 (default enabled)
+          Coefficient thresholding on P-frames. Eliminate dct blocks containing
+          only a small single coefficient.
+      --sout-x264-nr=<integer [0 .. 1000]> 
+                                 Noise reduction
+          Dct-domain noise reduction. Adaptive pseudo-deadzone. 10 to 1000
+          seems to be a useful range.
+      --sout-x264-deadzone-inter=<integer [0 .. 32]> 
+                                 Inter luma quantization deadzone
+          Set the size of the inter luma quantization deadzone. Range 0 to 32.
+      --sout-x264-deadzone-intra=<integer [0 .. 32]> 
+                                 Intra luma quantization deadzone
+          Set the size of the intra luma quantization deadzone. Range 0 to 32.
+      --sout-x264-non-deterministic, --no-sout-x264-non-deterministic 
+                                 Non-deterministic optimizations when threaded
+                                 (default disabled)
+          Slightly improve quality of SMP, at the cost of repeatability.
+      --sout-x264-asm, --no-sout-x264-asm 
+                                 CPU optimizations
+                                 (default enabled)
+          Use assembler CPU optimizations.
+      --sout-x264-psnr, --no-sout-x264-psnr 
+                                 PSNR computation
+                                 (default disabled)
+          Compute and print PSNR stats. This has no effect on the actual
+          encoding quality.
+      --sout-x264-ssim, --no-sout-x264-ssim 
+                                 SSIM computation
+                                 (default disabled)
+          Compute and print SSIM stats. This has no effect on the actual
+          encoding quality.
+      --sout-x264-quiet, --no-sout-x264-quiet 
+                                 Quiet mode
+                                 (default disabled)
+          Quiet mode
+      --sout-x264-sps-id=<integer> 
+                                 SPS and PPS id numbers
+          Set SPS and PPS id numbers to allow concatenating streams with
+          different settings.
+      --sout-x264-aud, --no-sout-x264-aud 
+                                 Access unit delimiters
+                                 (default disabled)
+          Generate access unit delimiter NAL units.
+      --sout-x264-verbose, --no-sout-x264-verbose 
+                                 Statistics
+                                 (default disabled)
+          Print stats for each frame.
+      --sout-x264-stats=<string> Filename for 2 pass stats file
+          Filename for 2 pass stats file for multi-pass encoding.
+      --sout-x264-preset={ultrafast,superfast,veryfast,faster,fast,medium,slow,slower,veryslow,placebo} 
+                                 Default preset setting used
+          Default preset setting used
+      --sout-x264-tune={film,animation,grain,stillimage,psnr,ssim,fastdecode,zerolatency} 
+                                 Default tune setting used
+          Default tune setting used
+      --sout-x264-options=<string> 
+                                 x264 advanced options
+          x264 advanced options, in the form {opt=val,op2=val2}.
+
+ H.264/MPEG-4 Part 10/AVC encoder (x264 10-bit) (x26410b)
+      --sout-x26410b-keyint=<integer> 
+                                 Maximum GOP size
+          Sets maximum interval between IDR-frames. Larger values save bits,
+          thus improving quality for a given bitrate at the cost of seeking
+          precision. Use -1 for infinite.
+      --sout-x26410b-min-keyint=<integer> 
+                                 Minimum GOP size
+          Sets minimum interval between IDR-frames. In H.264, I-frames do not
+          necessarily bound a closed GOP because it is allowable for a P-frame
+          to be predicted from more frames than just the one frame before it
+          (also see reference frame option). Therefore, I-frames are not
+          necessarily seekable. IDR-frames restrict subsequent P-frames from
+          referring to any frame prior to the IDR-frame.  If scenecuts appear
+          within this interval, they are still encoded as I-frames, but do not
+          start a new GOP.
+      --sout-x26410b-opengop, --no-sout-x26410b-opengop 
+                                 Use recovery points to close GOPs
+                                 (default disabled)
+          use open GOP, for bluray compatibility use also bluray-compat option
+      --sout-x26410b-bluray-compat, --no-sout-x26410b-bluray-compat 
+                                 Enable compatibility hacks for Blu-ray support
+                                 (default disabled)
+          Enable hacks for Blu-ray support, this doesn't enforce every aspect
+          of Blu-ray compatibility e.g. resolution, framerate, level
+      --sout-x26410b-scenecut=<integer [-1 .. 100]> 
+                                 Extra I-frames aggressivity
+          Scene-cut detection. Controls how aggressively to insert extra
+          I-frames. With small values of scenecut, the codec often has to force
+          an I-frame when it would exceed keyint. Good values of scenecut may
+          find a better location for the I-frame. Large values use more
+          I-frames than necessary, thus wasting bits. -1 disables scene-cut
+          detection, so I-frames are inserted only every other keyint frames,
+          which probably leads to ugly encoding artifacts. Range 1 to 100.
+      --sout-x26410b-bframes=<integer [0 .. 16]> 
+                                 B-frames between I and P
+          Number of consecutive B-frames between I and P-frames. Range 1 to 16.
+      --sout-x26410b-b-adapt=<integer [0 .. 2]> 
+                                 Adaptive B-frame decision
+          Force the specified number of consecutive B-frames to be used, except
+          possibly before an I-frame. Range 0 to 2.
+      --sout-x26410b-b-bias=<integer [-100 .. 100]> 
+                                 Influence (bias) B-frames usage
+          Bias the choice to use B-frames. Positive values cause more B-frames,
+          negative values cause less B-frames.
+      --sout-x26410b-bpyramid={none,strict,normal} 
+                                 Keep some B-frames as references
+          Allows B-frames to be used as references for predicting other frames.
+          Keeps the middle of 2+ consecutive B-frames as a reference, and
+          reorders frame appropriately.  - none: Disabled  - strict: Strictly
+          hierarchical pyramid  - normal: Non-strict (not Blu-ray compatible) 
+      --sout-x26410b-cabac, --no-sout-x26410b-cabac 
+                                 CABAC
+                                 (default enabled)
+          CABAC (Context-Adaptive Binary Arithmetic Coding). Slightly slows
+          down encoding and decoding, but should save 10 to 15% bitrate.
+      --sout-x26410b-fullrange, --no-sout-x26410b-fullrange 
+                                 Use fullrange instead of TV colorrange
+                                 (default disabled)
+          TV-range is usually used colorrange, defining this to true will
+          enable libx264 to use full colorrange on encoding
+      --sout-x26410b-ref=<integer [1 .. 16]> 
+                                 Number of reference frames
+          Number of previous frames used as predictors. This is effective in
+          Anime, but seems to make little difference in live-action source
+          material. Some decoders are unable to deal with large frameref
+          values. Range 1 to 16.
+      --sout-x26410b-nf, --no-sout-x26410b-nf 
+                                 Skip loop filter
+                                 (default disabled)
+          Deactivate the deblocking loop filter (decreases quality).
+      --sout-x26410b-deblock=<string> 
+                                 Loop filter AlphaC0 and Beta parameters
+                                 alpha:beta
+          Loop filter AlphaC0 and Beta parameters. Range -6 to 6 for both alpha
+          and beta parameters. -6 means light filter, 6 means strong.
+      --sout-x26410b-psy-rd=<string> 
+                                 Strength of psychovisual optimization, default
+                                 is "1.0:0.0"
+          First parameter controls if RD is on (subme>=6) or off. Second
+          parameter controls if Trellis is used on psychovisual optimization,
+          default off
+      --sout-x26410b-psy, --no-sout-x26410b-psy 
+                                 Use Psy-optimizations
+                                 (default enabled)
+          Use all visual optimizations that can worsen both PSNR and SSIM
+      --sout-x26410b-level=<string> 
+                                 H.264 level
+          Specify H.264 level (as defined by Annex A of the standard). Levels
+          are not enforced; it's up to the user to select a level compatible
+          with the rest of the encoding options. Range 1 to 5.1 (10 to 51 is
+          also allowed). Set to 0 for letting x264 set level.
+      --sout-x26410b-profile={baseline,main,high,high10,high422,high444} 
+                                 H.264 profile
+          Specify H.264 profile which limits are enforced over other settings
+      --sout-x26410b-interlaced, --no-sout-x26410b-interlaced 
+                                 Interlaced mode
+                                 (default disabled)
+          Pure-interlaced mode.
+      --sout-x26410b-frame-packing={-1 (), 0 (checkerboard), 1 (column alternation), 2 (row alternation), 3 (side by side), 4 (top bottom), 5 (frame alternation), 6 (2D)} 
+                                 Frame packing
+          For stereoscopic videos define frame arrangement:  0: checkerboard -
+          pixels are alternatively from L and R  1: column alternation - L and
+          R are interlaced by column  2: row alternation - L and R are
+          interlaced by row  3: side by side - L is on the left, R on the right
+           4: top bottom - L is on top, R on bottom  5: frame alternation - one
+          view per frame
+      --sout-x26410b-slices=<integer> 
+                                 Force number of slices per frame
+          Force rectangular slices and is overridden by other slicing options
+      --sout-x26410b-slice-max-size=<integer> 
+                                 Limit the size of each slice in bytes
+          Sets a maximum slice size in bytes, Includes NAL overhead in size
+      --sout-x26410b-slice-max-mbs=<integer> 
+                                 Limit the size of each slice in macroblocks
+          Sets a maximum number of macroblocks per slice
+      --sout-x26410b-hrd={none,vbr,cbr} 
+                                 HRD-timing information
+          HRD-timing information
+      --sout-x26410b-qp=<integer [-1 .. 51]> 
+                                 Set QP
+          This selects the quantizer to use. Lower values result in better
+          fidelity, but higher bitrates. 26 is a good default value. Range 0
+          (lossless) to 51.
+      --sout-x26410b-crf=<integer [0 .. 51]> 
+                                 Quality-based VBR
+          1-pass Quality-based VBR. Range 0 to 51.
+      --sout-x26410b-qpmin=<integer [0 .. 51]> 
+                                 Min QP
+          Minimum quantizer parameter. 15 to 35 seems to be a useful range.
+      --sout-x26410b-qpmax=<integer [0 .. 51]> 
+                                 Max QP
+          Maximum quantizer parameter.
+      --sout-x26410b-qpstep=<integer [0 .. 51]> 
+                                 Max QP step
+          Max QP step between frames.
+      --sout-x26410b-ratetol=<float [0.000000 .. 100.000000]> 
+                                 Average bitrate tolerance
+          Allowed variance in average bitrate (in kbits/s).
+      --sout-x26410b-vbv-maxrate=<integer> 
+                                 Max local bitrate
+          Sets a maximum local bitrate (in kbits/s).
+      --sout-x26410b-vbv-bufsize=<integer> 
+                                 VBV buffer
+          Averaging period for the maximum local bitrate (in kbits).
+      --sout-x26410b-vbv-init=<float [0.000000 .. 1.000000]> 
+                                 Initial VBV buffer occupancy
+          Sets the initial buffer occupancy as a fraction of the buffer size.
+          Range 0.0 to 1.0.
+      --sout-x26410b-ipratio=<float [1.000000 .. 2.000000]> 
+                                 QP factor between I and P
+          QP factor between I and P. Range 1.0 to 2.0.
+      --sout-x26410b-pbratio=<float [1.000000 .. 2.000000]> 
+                                 QP factor between P and B
+          QP factor between P and B. Range 1.0 to 2.0.
+      --sout-x26410b-chroma-qp-offset=<integer> 
+                                 QP difference between chroma and luma
+          QP difference between chroma and luma.
+      --sout-x26410b-pass=<integer [0 .. 3]> 
+                                 Multipass ratecontrol
+          Multipass ratecontrol:  - 1: First pass, creates stats file  - 2:
+          Last pass, does not overwrite stats file  - 3: Nth pass, overwrites
+          stats file 
+      --sout-x26410b-qcomp=<float [0.000000 .. 1.000000]> 
+                                 QP curve compression
+          QP curve compression. Range 0.0 (CBR) to 1.0 (QCP).
+      --sout-x26410b-cplxblur=<float> 
+                                 Reduce fluctuations in QP
+          This reduces the fluctuations in QP before curve compression.
+          Temporally blurs complexity.
+      --sout-x26410b-qblur=<float> 
+                                 Reduce fluctuations in QP
+          This reduces the fluctuations in QP after curve compression.
+          Temporally blurs quants.
+      --sout-x26410b-aq-mode=<integer [0 .. 2]> 
+                                 How AQ distributes bits
+          Defines bitdistribution mode for AQ, default 1  - 0: Disabled  - 1:
+          Current x264 default mode  - 2: uses log(var)^2 instead of log(var)
+          and attempts to adapt strength per frame
+      --sout-x26410b-aq-strength=<float> 
+                                 Strength of AQ
+          Strength to reduce blocking and blurring in flat and textured areas,
+          default 1.0 recommended to be between 0..2  - 0.5: weak AQ  - 1.5:
+          strong AQ
+      --sout-x26410b-partitions={none,fast,normal,slow,all} 
+                                 Partitions to consider
+          Partitions to consider in analyse mode:  - none  :   - fast  : i4x4 
+          - normal: i4x4,p8x8,(i8x8)  - slow  : i4x4,p8x8,(i8x8),b8x8  - all  
+          : i4x4,p8x8,(i8x8),b8x8,p4x4 (p4x4 requires p8x8. i8x8 requires
+          8x8dct).
+      --sout-x26410b-direct={none,spatial,temporal,auto} 
+                                 Direct MV prediction mode
+          Direct MV prediction mode
+      --sout-x26410b-direct-8x8=<integer [-1 .. 1]> 
+                                 Direct prediction size
+          Direct prediction size:  -  0: 4x4  -  1: 8x8  - -1: smallest
+          possible according to level 
+      --sout-x26410b-weightb, --no-sout-x26410b-weightb 
+                                 Weighted prediction for B-frames
+                                 (default enabled)
+          Weighted prediction for B-frames.
+      --sout-x26410b-weightp=<integer [0 .. 2]> 
+                                 Weighted prediction for P-frames
+          Weighted prediction for P-frames:  - 0: Disabled  - 1: Blind offset 
+          - 2: Smart analysis 
+      --sout-x26410b-me={dia,hex,umh,esa,tesa} 
+                                 Integer pixel motion estimation method
+          Selects the motion estimation algorithm:  - dia: diamond search,
+          radius 1 (fast)  - hex: hexagonal search, radius 2  - umh: uneven
+          multi-hexagon search (better but slower)  - esa: exhaustive search
+          (extremely slow, primarily for testing)  - tesa: hadamard exhaustive
+          search (extremely slow, primarily for testing) 
+      --sout-x26410b-merange=<integer [1 .. 64]> 
+                                 Maximum motion vector search range
+          Maximum distance to search for motion estimation, measured from
+          predicted position(s). Default of 16 is good for most footage, high
+          motion sequences may benefit from settings between 24 and 32. Range 0
+          to 64.
+      --sout-x26410b-mvrange=<integer> 
+                                 Maximum motion vector length
+          Maximum motion vector length in pixels. -1 is automatic, based on
+          level.
+      --sout-x26410b-mvrange-thread=<integer> 
+                                 Minimum buffer space between threads
+          Minimum buffer space between threads. -1 is automatic, based on
+          number of threads.
+      --sout-x26410b-subme=<integer> 
+                                 Subpixel motion estimation and partition
+                                 decision quality
+          This parameter controls quality versus speed tradeoffs involved in
+          the motion estimation decision process (lower = quicker and higher =
+          better quality). Range 1 to 9.
+      --sout-x26410b-mixed-refs, --no-sout-x26410b-mixed-refs 
+                                 Decide references on a per partition basis
+                                 (default enabled)
+          Allows each 8x8 or 16x8 partition to independently select a reference
+          frame, as opposed to only one ref per macroblock.
+      --sout-x26410b-chroma-me, --no-sout-x26410b-chroma-me 
+                                 Chroma in motion estimation
+                                 (default enabled)
+          Chroma ME for subpel and mode decision in P-frames.
+      --sout-x26410b-8x8dct, --no-sout-x26410b-8x8dct 
+                                 Adaptive spatial transform size
+                                 (default enabled)
+          SATD-based decision for 8x8 transform in inter-MBs.
+      --sout-x26410b-trellis=<integer [0 .. 2]> 
+                                 Trellis RD quantization
+          Trellis RD quantization:  - 0: disabled  - 1: enabled only on the
+          final encode of a MB  - 2: enabled on all mode decisions This
+          requires CABAC.
+      --sout-x26410b-lookahead=<integer [0 .. 60]> 
+                                 Framecount to use on frametype lookahead
+          Framecount to use on frametype lookahead. Currently default can cause
+          sync-issues on unmuxable output, like rtsp-output without ts-mux
+      --sout-x26410b-intra-refresh, --no-sout-x26410b-intra-refresh 
+                                 Use Periodic Intra Refresh
+                                 (default disabled)
+          Use Periodic Intra Refresh instead of IDR frames
+      --sout-x26410b-mbtree, --no-sout-x26410b-mbtree 
+                                 Use mb-tree ratecontrol
+                                 (default enabled)
+          You can disable use of Macroblock-tree on ratecontrol
+      --sout-x26410b-fast-pskip, --no-sout-x26410b-fast-pskip 
+                                 Early SKIP detection on P-frames
+                                 (default enabled)
+          Early SKIP detection on P-frames.
+      --sout-x26410b-dct-decimate, --no-sout-x26410b-dct-decimate 
+                                 Coefficient thresholding on P-frames
+                                 (default enabled)
+          Coefficient thresholding on P-frames. Eliminate dct blocks containing
+          only a small single coefficient.
+      --sout-x26410b-nr=<integer [0 .. 1000]> 
+                                 Noise reduction
+          Dct-domain noise reduction. Adaptive pseudo-deadzone. 10 to 1000
+          seems to be a useful range.
+      --sout-x26410b-deadzone-inter=<integer [0 .. 32]> 
+                                 Inter luma quantization deadzone
+          Set the size of the inter luma quantization deadzone. Range 0 to 32.
+      --sout-x26410b-deadzone-intra=<integer [0 .. 32]> 
+                                 Intra luma quantization deadzone
+          Set the size of the intra luma quantization deadzone. Range 0 to 32.
+      --sout-x26410b-non-deterministic, --no-sout-x26410b-non-deterministic 
+                                 Non-deterministic optimizations when threaded
+                                 (default disabled)
+          Slightly improve quality of SMP, at the cost of repeatability.
+      --sout-x26410b-asm, --no-sout-x26410b-asm 
+                                 CPU optimizations
+                                 (default enabled)
+          Use assembler CPU optimizations.
+      --sout-x26410b-psnr, --no-sout-x26410b-psnr 
+                                 PSNR computation
+                                 (default disabled)
+          Compute and print PSNR stats. This has no effect on the actual
+          encoding quality.
+      --sout-x26410b-ssim, --no-sout-x26410b-ssim 
+                                 SSIM computation
+                                 (default disabled)
+          Compute and print SSIM stats. This has no effect on the actual
+          encoding quality.
+      --sout-x26410b-quiet, --no-sout-x26410b-quiet 
+                                 Quiet mode
+                                 (default disabled)
+          Quiet mode
+      --sout-x26410b-sps-id=<integer> 
+                                 SPS and PPS id numbers
+          Set SPS and PPS id numbers to allow concatenating streams with
+          different settings.
+      --sout-x26410b-aud, --no-sout-x26410b-aud 
+                                 Access unit delimiters
+                                 (default disabled)
+          Generate access unit delimiter NAL units.
+      --sout-x26410b-verbose, --no-sout-x26410b-verbose 
+                                 Statistics
+                                 (default disabled)
+          Print stats for each frame.
+      --sout-x26410b-stats=<string> 
+                                 Filename for 2 pass stats file
+          Filename for 2 pass stats file for multi-pass encoding.
+      --sout-x26410b-preset={ultrafast,superfast,veryfast,faster,fast,medium,slow,slower,veryslow,placebo} 
+                                 Default preset setting used
+          Default preset setting used
+      --sout-x26410b-tune={film,animation,grain,stillimage,psnr,ssim,fastdecode,zerolatency} 
+                                 Default tune setting used
+          Default tune setting used
+      --sout-x26410b-options=<string> 
+                                 x264 advanced options
+          x264 advanced options, in the form {opt=val,op2=val2}.

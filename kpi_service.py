@@ -135,11 +135,11 @@ class AlertsSummary(BaseModel):
 class KPISummaryResponse(BaseModel):
     period_start: date
     period_end: date
-    attendance_rate: float
-    incident_rate: float
-    serious_incident_rate: float
-    ratio_compliance: float
-    gqi_score: float
+    attendance_rate: Optional[float] = None
+    incident_rate: Optional[float] = None
+    serious_incident_rate: Optional[float] = None
+    ratio_compliance: Optional[float] = None
+    gqi_score: Optional[float] = None
 
 class KPIDashboardResponse(BaseModel):
     period_start: date
@@ -885,7 +885,7 @@ class AttendanceRateResponse(BaseModel):
     kindergarten_id: Optional[int] = None
     period_start: date
     period_end: date
-    attendance_rate: float
+    attendance_rate: Optional[float] = None
 
 
 class GovernanceScoreResponse(BaseModel):
@@ -1367,20 +1367,24 @@ class KPIService:
         kindergarten_id: int,
         period_start: date,
         period_end: date
-    ) -> float:
+    ) -> Optional[float]:
         """
         Physical attendance rate % = (PRESENT + LATE child-days / expected child-days) × 100.
         Excused absences are NOT included — use compute_excused_absence_rate separately.
 
         Numerator and denominator are taken over the same expected day-set
         (``_attendance_components_by_child``), so the result is bounded to [0, 100].
+
+        Returns None when there are zero expected attendance days (no scheduled
+        attendance opportunity), distinguishing "no data" from a genuine 0% rate.
+        Returns 0.0 when expected days > 0 but no attendance was recorded.
         """
         expected_by_child, attended_by_child, _ = KPIService._attendance_components_by_child(
             db, kindergarten_id, period_start, period_end
         )
         expected_days = sum(expected_by_child.values())
         if expected_days == 0:
-            return 0.0
+            return None  # No scheduled attendance opportunity
 
         attended_days = sum(attended_by_child.values())
         rate = (attended_days / expected_days) * 100
@@ -1392,7 +1396,7 @@ class KPIService:
         kindergarten_ids: List[int],
         period_start: date,
         period_end: date,
-    ) -> Dict[int, float]:
+    ) -> Dict[int, Optional[float]]:
         """`compute_attendance_rate` for many kindergartens in a fixed 3 queries.
 
         Same definition, same number — `test_bulk_attendance_rate_matches_per_kg`
@@ -1401,14 +1405,14 @@ class KPIService:
         forbids); without it, callers like kg-overview grow their own inline formula
         and drift from the authoritative one.
 
-        Returns {kindergarten_id: rate}; a kindergarten with no expected child-days
-        maps to 0.0, matching the scalar form.
+        Returns {kindergarten_id: rate or None}; a kindergarten with no expected
+        child-days maps to None (unavailable), distinguishing "0%" from "no data".
         """
         components = KPIService.compute_attendance_components_bulk(
             db, kindergarten_ids, period_start, period_end
         )
         return {
-            kg_id: (round((attended / expected) * 100, 2) if expected else 0.0)
+            kg_id: (round((attended / expected) * 100, 2) if expected else None)
             for kg_id, (attended, expected) in components.items()
         }
 

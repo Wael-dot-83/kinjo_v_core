@@ -20,7 +20,7 @@ def normalize_sub_indicator_value(
 
     Args:
         sub_key: Sub-indicator key (e.g., 'active_nurseries', 'incidents_total').
-        value: Raw numeric value or None.
+        value: Raw numeric value or None (unavailable).
         higher_is_better: Whether higher values are healthier for this indicator.
 
     Returns:
@@ -37,8 +37,16 @@ def normalize_sub_indicator_value(
         threshold_low = 0.0
 
     if value is None:
-        value = 0.0
-        status = KPIStatus.UNKNOWN
+        return {
+            "value": None,
+            "status": "unavailable",
+            "status_display_en": "Unavailable",
+            "status_display_ar": "غير متوفر",
+            "color": "#94A3B8",  # neutral gray
+            "threshold_high": threshold_high,
+            "threshold_low": threshold_low,
+            "unavailable": True,
+        }
     elif higher_is_better:
         score = max(0.0, min(100.0, (value / threshold_high) * 100.0))
         status = status_from_numeric(score)
@@ -77,26 +85,49 @@ def get_kindergarten_metrics(db, slug: str) -> Dict[str, Any]:
     from . import service as heatmap_service
     sub = heatmap_service._compute_sub_indicators(db, slug)
 
+    def _norm(key, higher_is_better=True):
+        return normalize_sub_indicator_value(key, sub.get(key), higher_is_better)
+
     return {
         "governorate": slug,
         "kindergartens": {
-            "active": normalize_sub_indicator_value("active_nurseries", float(sub.get("active_nurseries", 0)), True),
-            "inactive": normalize_sub_indicator_value("inactive_nurseries", float(sub.get("inactive_nurseries", 0)), False),
-            "active_pct": normalize_sub_indicator_value("active_pct", float(sub.get("active_pct", 0)), True),
+            "total": _norm("total_nurseries", True),
+            "active": _norm("active_nurseries", True),
+            "inactive": _norm("inactive_nurseries", False),
+            "frozen": _norm("frozen_nurseries", False),
+            "draft": _norm("draft_nurseries", False),
+            "active_pct": _norm("active_pct", True),
         },
         "children": {
-            "registered": normalize_sub_indicator_value("registered_children", float(sub.get("registered_children", 0)), True),
-            "unregistered": normalize_sub_indicator_value("unregistered_children", float(sub.get("unregistered_children", 0)), False),
-            "registration_rate": normalize_sub_indicator_value("registration_rate", float(sub.get("registration_rate", 0)), True),
+            "registered": _norm("registered_children", True),
+            "unregistered": _norm("unregistered_children", False),
+            "registration_rate": _norm("registration_rate", True),
         },
         "staff": {
-            "supervisors": normalize_sub_indicator_value("supervisors_count", float(sub.get("supervisors_count", 0)), True),
-            "classrooms": normalize_sub_indicator_value("classrooms_count", float(sub.get("classrooms_count", 0)), True),
-            "unsupervised_classrooms": normalize_sub_indicator_value("classrooms_no_supervisor", float(sub.get("classrooms_no_supervisor", 0)), False),
+            "supervisors": _norm("supervisors_count", True),
+            "classrooms": _norm("classrooms_count", True),
+            "unsupervised_classrooms": _norm("classrooms_no_supervisor", False),
+            "child_supervisor_ratio": _norm("child_supervisor_ratio", False),
+            "child_teacher_ratio": _norm("child_teacher_ratio", False),
         },
         "incidents": {
-            "total": normalize_sub_indicator_value("incidents_total", float(sub.get("incidents_total", 0)), False),
-            "critical": normalize_sub_indicator_value("incidents_critical", float(sub.get("incidents_critical", 0)), False),
+            "total": _norm("incidents_total", False),
+            "critical": _norm("incidents_critical", False),
+            "protection_cases": _norm("protection_cases", False),
+            "incident_severity": _norm("incident_severity", False),
+        },
+        "reports": {
+            "submitted": _norm("reports_submitted", True),
+            "missing": _norm("reports_missing", False),
+            "absence_rate": _norm("absence_rate", False),
+            "health_absences": _norm("health_absences", False),
+            "repeated_health": _norm("repeated_health", False),
+        },
+        "governance": {
+            "score": _norm("governance_score", True),
+            "delayed_tasks": _norm("delayed_tasks", False),
+            "training_completion": _norm("training_completion", True),
+            "compliance_status": _norm("compliance_status", True),
         },
     }
 

@@ -8127,7 +8127,7 @@ class AnalyticsService:
         attendance_rate = KPIService.compute_attendance_rate(db, kindergarten_id, period_start, period_end)
         incident_rate = KPIService.compute_incident_rate(db, kindergarten_id, period_start, period_end)
 
-        if attendance_rate < 85:
+        if attendance_rate is not None and attendance_rate < 85:
             db.add(models.Recommendation(
                 kindergarten_id=kindergarten_id,
                 scope_type="KINDERGARTEN",

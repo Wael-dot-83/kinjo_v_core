@@ -71,103 +71,147 @@ def _names_for_slug(slug: str) -> list[str]:
 # Sub-indicator computation
 # ---------------------------------------------------------------------------
 def _query_kindergarten_count(db: Session, governorate_en: str) -> int:
-    try:
-        import models
-        return int(db.query(models.Kindergarten)
-                    .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
-                    .count())
-    except Exception:
-        return 0
+    """Count ALL Kindergarten records in the governorate (not soft-deleted)."""
+    import models
+    return int(db.query(models.Kindergarten)
+                .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
+                .filter(models.Kindergarten.deleted_at.is_(None))
+                .count())
+
+
+def _query_active_kg_count(db: Session, governorate_en: str) -> int:
+    """Count ACTIVE Kindergarten records in the governorate."""
+    import models
+    return int(db.query(models.Kindergarten)
+                .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
+                .filter(models.Kindergarten.deleted_at.is_(None))
+                .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+                .count())
+
+
+def _query_inactive_kg_count(db: Session, governorate_en: str) -> int:
+    """Count INACTIVE Kindergarten records in the governorate."""
+    import models
+    return int(db.query(models.Kindergarten)
+                .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
+                .filter(models.Kindergarten.deleted_at.is_(None))
+                .filter(models.Kindergarten.status == models.KindergartenStatus.INACTIVE)
+                .count())
+
+
+def _query_frozen_kg_count(db: Session, governorate_en: str) -> int:
+    """Count FROZEN Kindergarten records in the governorate."""
+    import models
+    return int(db.query(models.Kindergarten)
+                .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
+                .filter(models.Kindergarten.deleted_at.is_(None))
+                .filter(models.Kindergarten.status == models.KindergartenStatus.FROZEN)
+                .count())
+
+
+def _query_draft_kg_count(db: Session, governorate_en: str) -> int:
+    """Count DRAFT Kindergarten records in the governorate."""
+    import models
+    return int(db.query(models.Kindergarten)
+                .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
+                .filter(models.Kindergarten.deleted_at.is_(None))
+                .filter(models.Kindergarten.status == models.KindergartenStatus.DRAFT)
+                .count())
 
 
 def _query_children_count(db: Session, governorate_en: str) -> int:
-    try:
-        import models
-        names = _names_for_slug(governorate_en)
-        return int(db.query(func.count(models.EnrollmentApplication.id))
-                    .join(models.Kindergarten,
-                          models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id)
-                    .filter(models.Kindergarten.governorate.in_(names))
-                    .filter(models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
-                    .scalar() or 0)
-    except Exception:
-        return 0
+    """Count enrolled children (distinct Child records with active enrollment) in the governorate.
+    
+    Returns the number of unique children who have at least one active enrollment
+    in a kindergarten within the governorate. This is a real count, not an estimate.
+    """
+    import models
+    return int(db.query(func.count(func.distinct(models.EnrollmentApplication.child_id)))
+                .join(models.Kindergarten,
+                      models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id)
+                .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
+                .filter(models.Kindergarten.deleted_at.is_(None))
+                .filter(models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
+                .filter(models.EnrollmentApplication.deleted_at.is_(None))
+                .scalar() or 0)
 
 
 def _query_supervisor_count(db: Session, governorate_en: str) -> int:
-    try:
-        import models
-        return int(db.query(func.count(models.User.id))
-                    .filter(models.User.role == models.UserRole.SUPERVISOR)
-                    .filter(models.User.kindergarten_id.isnot(None))
-                    .join(models.Kindergarten,
-                          models.User.kindergarten_id == models.Kindergarten.id)
-                    .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
-                    .scalar() or 0)
-    except Exception:
-        return 0
+    import models
+    return int(db.query(func.count(models.User.id))
+                .filter(models.User.role == models.UserRole.SUPERVISOR)
+                .filter(models.User.kindergarten_id.isnot(None))
+                .filter(models.User.deleted_at.is_(None))
+                .join(models.Kindergarten,
+                      models.User.kindergarten_id == models.Kindergarten.id)
+                .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
+                .scalar() or 0)
 
 
 def _query_classroom_count(db: Session, governorate_en: str) -> int:
-    try:
-        import models
-        return int(db.query(func.count(models.Class.id))
-                    .join(models.Kindergarten,
-                          models.Class.kindergarten_id == models.Kindergarten.id)
-                    .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
-                    .scalar() or 0)
-    except Exception:
-        return 0
+    import models
+    return int(db.query(func.count(models.Class.id))
+                .join(models.Kindergarten,
+                      models.Class.kindergarten_id == models.Kindergarten.id)
+                .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
+                .filter(models.Kindergarten.deleted_at.is_(None))
+                .scalar() or 0)
 
 
 def _query_incident_count(db: Session, governorate_en: str, critical_only: bool = False) -> int:
-    try:
-        import models
-        q = (db.query(func.count(models.Incident.id))
-               .join(models.Kindergarten,
-                     models.Incident.kindergarten_id == models.Kindergarten.id)
-               .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en))))
-        if critical_only and hasattr(models.Incident, "severity_level"):
-            from models import SeverityLevel
-            q = q.filter(models.Incident.severity_level == SeverityLevel.CRITICAL)
-        return int(q.scalar() or 0)
-    except Exception:
-        return 0
+    import models
+    q = (db.query(func.count(models.Incident.id))
+           .join(models.Kindergarten,
+                 models.Incident.kindergarten_id == models.Kindergarten.id)
+           .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
+           .filter(models.Kindergarten.deleted_at.is_(None))
+           .filter(models.Incident.deleted_at.is_(None)))
+    if critical_only and hasattr(models.Incident, "severity_level"):
+        from models import SeverityLevel
+        q = q.filter(models.Incident.severity_level == SeverityLevel.CRITICAL)
+    return int(q.scalar() or 0)
 
 
-def _query_governance_score(db: Session, governorate_en: str) -> float:
-    try:
-        import models
-        return float(db.query(func.avg(models.GovernanceScore.final_governance_score))
-                       .join(models.Kindergarten,
-                             models.GovernanceScore.kindergarten_id == models.Kindergarten.id)
-                       .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
-                       .scalar() or 0)
-    except Exception:
-        return 0.0
+def _query_governance_score(db: Session, governorate_en: str) -> Optional[float]:
+    import models
+    val = db.query(func.avg(models.GovernanceScore.final_governance_score))\
+           .join(models.Kindergarten,
+                 models.GovernanceScore.kindergarten_id == models.Kindergarten.id)\
+           .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))\
+           .filter(models.Kindergarten.deleted_at.is_(None))\
+           .scalar()
+    return float(round(val, 2)) if val is not None else None
 
 
 def _query_reports_count(db: Session, governorate_en: str, since: date) -> int:
-    try:
-        import models
-        return int(db.query(func.count(models.DailyReport.id))
-                    .join(models.Kindergarten,
-                          models.DailyReport.kindergarten_id == models.Kindergarten.id)
-                    .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
-                    .filter(models.DailyReport.date >= since)
-                    .scalar() or 0)
-    except Exception:
-        return 0
+    import models
+    return int(db.query(func.count(models.DailyReport.id))
+                .join(models.Kindergarten,
+                      models.DailyReport.kindergarten_id == models.Kindergarten.id)
+                .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
+                .filter(models.Kindergarten.deleted_at.is_(None))
+                .filter(models.DailyReport.date >= since)
+                .scalar() or 0)
 
 
 def compute_sub_indicators(db: Session, governorate_en: str, today: date) -> Dict[str, float]:
-    """Compute all 22 sub-indicator raw values for one governorate on `today`."""
-    active_kg = _query_kindergarten_count(db, governorate_en)
-    # If the operational data is empty (e.g. in tests) we still produce
-    # sensible defaults from the seed data so the pipeline never crashes.
-    if active_kg == 0:
+    """Compute all 22 sub-indicator raw values for one governorate on `today`.
+    
+    All values come from real database queries against canonical KinJo models.
+    No fabricated estimates or inferred percentages are used.
+    Unavailable values are returned as None where no real source exists.
+    """
+    # Real kindergarten status counts from the database
+    total_kg = _query_kindergarten_count(db, governorate_en)
+    active_kg = _query_active_kg_count(db, governorate_en)
+    inactive_kg = _query_inactive_kg_count(db, governorate_en)
+    frozen_kg = _query_frozen_kg_count(db, governorate_en)
+    draft_kg = _query_draft_kg_count(db, governorate_en)
+
+    # If the operational data is empty, fall back to seed data for pipeline stability
+    if total_kg == 0:
         return _seed_sub_indicators(governorate_en, today)
-    inactive_kg = max(0, int(active_kg * 0.05))
+
     children = _query_children_count(db, governorate_en)
     supervisors = _query_supervisor_count(db, governorate_en)
     classrooms = _query_classroom_count(db, governorate_en)
@@ -176,58 +220,80 @@ def compute_sub_indicators(db: Session, governorate_en: str, today: date) -> Dic
     governance = _query_governance_score(db, governorate_en)
     since = today - timedelta(days=30)
     reports_30d = _query_reports_count(db, governorate_en, since)
+
+    # Build sub-indicators from real aggregates only.
+    # unregistered_children: KinJo has no defensible population denominator,
+    # so this metric is unavailable (None).
+    # training_completion, compliance_status: no KinJo model tracks these;
+    # unavailable (None).
     return _build_sub_indicators_from_aggregates(
-        active_kg, inactive_kg, children, supervisors, classrooms,
+        total_kg, active_kg, inactive_kg, frozen_kg, draft_kg,
+        children, supervisors, classrooms,
         total_incidents, critical_incidents, governance, reports_30d
     )
 
 
 def _build_sub_indicators_from_aggregates(
-    active_kg: int, inactive_kg: int, children: int,
+    total_kg: int, active_kg: int, inactive_kg: int, frozen_kg: int, draft_kg: int,
+    children: int,
     supervisors: int, classrooms: int, total_incidents: int,
-    critical_incidents: int, governance: float, reports_30d: int,
+    critical_incidents: int, governance: Optional[float], reports_30d: int,
 ) -> Dict[str, float]:
-    active_pct = round((active_kg / max(active_kg + inactive_kg, 1)) * 100, 1)
+    """Build sub-indicator dict from real database aggregates.
+
+    Only real, measurable values are included.  No fabricated estimates.
+    Metrics for which KinJo has no defensible source are returned as None.
+    """
+    active_pct = round((active_kg / max(total_kg, 1)) * 100, 1)
     inactive_pct = round(100 - active_pct, 1)
-    registration_rate = round(min(100.0, max(0.0, 70.0 + (governance / 5))), 1)
     child_supervisor_ratio = round(children / max(supervisors, 1), 1)
-    child_teacher_ratio = round(child_supervisor_ratio * 0.8, 1)
     classrooms_no_supervisor = max(0, classrooms - supervisors)
-    absences_total = max(0, int(children * 0.08))
-    health_absences = max(0, int(absences_total * 0.2))
-    repeated_health = max(0, int(health_absences * 0.3))
+
+    # Reports completeness: real count vs expected (active KG * 30 days)
     reports_missing = max(0, active_kg * 30 - reports_30d)
-    absence_rate = round((absences_total / max(children, 1)) * 100, 1)
-    delayed_tasks = max(0, int(active_kg * 0.4))
-    training_completion = round(min(100.0, max(0.0, 60.0 + (governance / 4))), 1)
-    compliance_status = round(min(100.0, max(0.0, 55.0 + (governance / 3))), 1)
+
+    # Incident severity: compute from real critical count
+    incident_severity = min(100, critical_incidents * 20)
+
+    # Governance score is optional — pass through as-is
+    governance_score = round(governance, 1) if governance is not None else None
+
     return {
+        # Nursery status — real status counts
+        "total_nurseries": total_kg,
         "active_nurseries": active_kg,
         "inactive_nurseries": inactive_kg,
+        "frozen_nurseries": frozen_kg,
+        "draft_nurseries": draft_kg,
         "active_pct": active_pct,
         "inactive_pct": inactive_pct,
+        # Children — real enrollment-based count only
         "registered_children": children,
-        "unregistered_children": max(0, int(children * 0.05)),
-        "registration_rate": registration_rate,
+        "unregistered_children": None,  # No defensible population denominator
+        "registration_rate": None,  # Cannot compute without population total
         "age_distribution": children,
+        # Staff & classrooms — real counts
         "supervisors_count": supervisors,
         "classrooms_count": classrooms,
         "classrooms_no_supervisor": classrooms_no_supervisor,
         "child_supervisor_ratio": child_supervisor_ratio,
-        "child_teacher_ratio": child_teacher_ratio,
+        "child_teacher_ratio": None,  # No teacher model in KinJo
+        # Incidents — real counts
         "incidents_total": total_incidents,
         "incidents_critical": critical_incidents,
-        "protection_cases": max(0, int(critical_incidents * 0.3)),
-        "incident_severity": min(100, total_incidents * 5),
+        "protection_cases": None,  # No protection-case model in KinJo
+        "incident_severity": incident_severity,
+        # Reports & attendance — real counts where available
         "reports_submitted": reports_30d,
         "reports_missing": reports_missing,
-        "absence_rate": absence_rate,
-        "health_absences": health_absences,
-        "repeated_health": repeated_health,
-        "delayed_tasks": delayed_tasks,
-        "governance_score": round(governance, 1),
-        "training_completion": training_completion,
-        "compliance_status": compliance_status,
+        "absence_rate": None,  # Requires attendance system, not pipeline
+        "health_absences": None,  # No health-absence tracking model
+        "repeated_health": None,  # No repeated-health-absence tracking model
+        # Governance — real score where available
+        "delayed_tasks": None,  # No task-tracking model in KinJo
+        "governance_score": governance_score,
+        "training_completion": None,  # No training model in KinJo
+        "compliance_status": None,  # No compliance model in KinJo
     }
 
 
@@ -260,8 +326,8 @@ def _seed_sub_indicators(governorate_en: str, today: date) -> Dict[str, float]:
     doy = today.timetuple().tm_yday
     wobble = math.sin(2 * math.pi * doy / 365.0) * 5  # ±5% seasonal swing
     return _build_sub_indicators_from_aggregates(
-        active_kg=int(b["kg"] * (1 + wobble / 100)),
-        inactive_kg=int(b["kg"] * 0.05),
+        total_kg=int(b["kg"]), active_kg=int(b["kg"] * (1 + wobble / 100)),
+        inactive_kg=int(b["kg"] * 0.05), frozen_kg=0, draft_kg=0,
         children=int(b["children"] * (1 + wobble / 100)),
         supervisors=int(b["supervisors"] * (1 + wobble / 200)),
         classrooms=int(b["classrooms"] * (1 + wobble / 200)),
@@ -276,42 +342,54 @@ def _seed_sub_indicators(governorate_en: str, today: date) -> Dict[str, float]:
 # Main-indicator computation
 # ---------------------------------------------------------------------------
 def compute_main_indicators(sub: Dict[str, float]) -> Dict[str, float]:
-    """Aggregate 22 sub-indicators into 6 main indicators (0-100)."""
-    kg_total = sub["active_nurseries"] + sub["inactive_nurseries"]
-    kg_active_ratio = (sub["active_nurseries"] / max(kg_total, 1)) * 100.0
+    """Aggregate 22 sub-indicators into 6 main indicators (0-100).
+    
+    Unavailable (None) sub-indicators are excluded from their main-indicator
+    calculation. Remaining weights are renormalized proportionally.
+    """
+    kg_active_ratio = (sub.get("active_nurseries", 0) / max(sub.get("total_nurseries", sub.get("active_nurseries", 0) + sub.get("inactive_nurseries", 0)), 1)) * 100.0
 
-    children = sub["registered_children"] + sub["unregistered_children"]
-    enrollment_ratio = (sub["registered_children"] / max(children, 1)) * 100.0
+    def _safe_sum(*args):
+        return sum(v for v in args if v is not None)
 
-    supervised_ratio = 100.0 * (1.0 - sub["classrooms_no_supervisor"] / max(sub["classrooms_count"], 1))
+    # Nursery status: based on active / total real ratio
+    nursery_status = kg_active_ratio
+
+    # Children registration: unavailable since we can't measure unregistered
+    children_registration = None
+
+    # Staff & classrooms: real supervision coverage
+    supervised_ratio = 100.0 * (1.0 - sub.get("classrooms_no_supervisor", 0) / max(sub.get("classrooms_count", 1), 1))
     supervised_ratio = max(0.0, min(100.0, supervised_ratio))
+    staff_classrooms = supervised_ratio
 
-    safety_penalty = min(100.0, sub["incidents_critical"] * 10.0 + sub["protection_cases"] * 5.0)
+    # Safety & incidents: real incident counts
+    safety_penalty = min(100.0, (sub.get("incidents_critical", 0) or 0) * 10.0)
     safety_score = max(0.0, 100.0 - safety_penalty)
 
-    absence_rate = sub["absence_rate"] / 100.0
-    health_alert_rate = sub["health_absences"] / max(sub["health_absences"] + 1, 1)
-    report_completeness = min(1.0, sub["reports_submitted"] / max(sub["active_nurseries"] * 30, 1))
-    reports_attendance_score = (
-        report_completeness * 0.5
-        + (1.0 - absence_rate) * 0.3
-        + (1.0 - min(1.0, health_alert_rate)) * 0.2
-    ) * 100.0
+    # Reports & attendance: real report completeness
+    reports_submitted = sub.get("reports_submitted", 0) or 0
+    active_nurseries = sub.get("active_nurseries", 0) or 0
+    report_completeness = min(1.0, reports_submitted / max(active_nurseries * 30, 1)) if reports_submitted is not None else None
+    if report_completeness is not None:
+        reports_attendance_score = report_completeness * 100.0
+    else:
+        reports_attendance_score = None
 
-    task_penalty = min(50.0, sub["delayed_tasks"] * 5.0)
-    tasks_governance_score = (
-        sub["governance_score"] * 0.5
-        + sub["training_completion"] * 0.3
-        + max(0.0, 50.0 - task_penalty) * 0.4
-    )
+    # Tasks & governance: real governance score only
+    governance_score = sub.get("governance_score")
+    if governance_score is not None:
+        tasks_governance_score = governance_score
+    else:
+        tasks_governance_score = None
 
     return {
-        "nursery_status":        round(kg_active_ratio, 2),
-        "children_registration": round(enrollment_ratio, 2),
-        "staff_classrooms":      round(supervised_ratio, 2),
+        "nursery_status":        round(nursery_status, 2),
+        "children_registration": children_registration,
+        "staff_classrooms":      round(staff_classrooms, 2),
         "safety_incidents":      round(safety_score, 2),
-        "reports_attendance":    round(reports_attendance_score, 2),
-        "tasks_governance":      round(tasks_governance_score, 2),
+        "reports_attendance":    round(reports_attendance_score, 2) if reports_attendance_score is not None else None,
+        "tasks_governance":      round(tasks_governance_score, 2) if tasks_governance_score is not None else None,
     }
 
 
@@ -323,15 +401,23 @@ def compute_risk_score(main: Dict[str, float], sub: Dict[str, float],
                        regression_weights: Optional[Dict[str, float]] = None) -> Tuple[float, str, Optional[str], Optional[float]]:
     """
     Compute the composite risk score per the spec §6.2.
-
+    
+    Unavailable (None) main indicators are excluded from the composite score.
+    Available indicators are renormalized to contribute proportionally.
+    
     Returns (risk_score, risk_level, top_driver_sub, top_driver_beta).
     """
-    indicator_risk = {k: max(0.0, min(100.0, 100.0 - v)) for k, v in main.items()}
+    # Only score available indicators
+    available = {k: v for k, v in main.items() if v is not None}
+    if not available:
+        return 0.0, "low", None, None
+
+    indicator_risk = {k: max(0.0, min(100.0, 100.0 - v)) for k, v in available.items()}
 
     # Trend penalty: up to 30 risk points for worsening trends
     trend_penalty = 0.0
     if previous_main:
-        for k, v in main.items():
+        for k, v in available.items():
             prev = previous_main.get(k)
             if prev is not None and prev > 0:
                 change = (v - prev) / prev
@@ -339,15 +425,19 @@ def compute_risk_score(main: Dict[str, float], sub: Dict[str, float],
                     trend_penalty += min(10.0, abs(change) * 50)
     trend_penalty = min(30.0, trend_penalty)
 
-    # Sub-indicator contribution: weighted by regression weights where available
+    # Sub-indicator contribution: weighted by regression weights where available,
+    # only for sub-indicators that have non-None values
     sub_risk = 0.0
     weights = regression_weights or {}
+    available_sub_count = 0
     for main_key, subs in INDICATOR_MAP.items():
         for sub_key in subs:
+            raw = sub.get(sub_key)
+            if raw is None:
+                continue  # skip unavailable sub-indicators
             sub_def = next((s for s in C.SUB_INDICATORS[main_key] if s["key"] == sub_key), None)
             if not sub_def:
                 continue
-            raw = sub.get(sub_key, 0)
             th = sub_def.get("threshold_high", 0)
             if sub_def.get("higher_is_better"):
                 if th > 0 and raw < th:
@@ -362,9 +452,12 @@ def compute_risk_score(main: Dict[str, float], sub: Dict[str, float],
                 else:
                     contribution = 0.0
             sub_risk += contribution * weights.get(f"{main_key}.{sub_key}", 1.0)
-    sub_risk = min(100.0, sub_risk / 6.0)  # normalize to per-main average
+            available_sub_count += 1
+    sub_risk = min(100.0, sub_risk / max(available_sub_count, 1)) if available_sub_count > 0 else 0.0
 
-    score = 0.65 * sum(indicator_risk.values()) / 6.0 + 0.35 * sub_risk
+    # Score: weighted average of available indicator risk + sub-indicator risk
+    avg_indicator_risk = sum(indicator_risk.values()) / max(len(indicator_risk), 1)
+    score = 0.65 * avg_indicator_risk + 0.35 * sub_risk
     score = max(0.0, min(100.0, score + trend_penalty * 0.1))
     level = C.risk_level_for_score(score)
 
@@ -398,7 +491,9 @@ def evaluate_alerts(
             sub_def = next((s for s in C.SUB_INDICATORS[main_key] if s["key"] == sub_key), None)
             if not sub_def:
                 continue
-            raw = sub.get(sub_key, 0)
+            raw = sub.get(sub_key)
+            if raw is None:
+                continue  # skip unavailable sub-indicators
             th = sub_def.get("threshold_high", 0)
             higher_is_better = sub_def.get("higher_is_better", True)
 
