@@ -239,6 +239,15 @@ function populateTable(children, type) {
 }
 
 function getScoreColor(score, isAttendance = false) {
+  // No measurement is not a bad score. null/undefined fail every threshold
+  // comparison (null >= 90 is false), so without this guard an unmeasured
+  // kindergarten renders "—" inside a red "critical" badge — the same
+  // conflation of "no data" with "zero" that the analytics rates removed by
+  // returning null instead of 0. Neutral grey matches the established
+  // convention for governance_band === "INSUFFICIENT".
+  if (score === null || score === undefined || Number.isNaN(score)) {
+    return "bg-secondary-subtle text-secondary-emphasis";
+  }
   if (isAttendance) {
     if (score >= 90) return "bg-success-subtle text-success-emphasis";
     if (score >= 80) return "bg-warning-subtle text-warning-emphasis";

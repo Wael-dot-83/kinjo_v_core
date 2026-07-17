@@ -205,10 +205,17 @@ def test_export_rejects_periods_that_are_not_a_day_count(
 
 
 @pytest.mark.parametrize("good_period", ["7", "30", "90", "365", "all", "0"])
-def test_export_still_accepts_every_period_the_ui_offers(
+def test_export_accepts_every_period_the_ui_offers_plus_zero(
     client, auth_headers_admin, audit_rows, good_period
 ):
-    """Guards the pattern against overcorrecting: the select sends these."""
+    """Guards the pattern against overcorrecting.
+
+    7/30/90/365/all are what the select offers (templates/admin/audit_logs.html).
+    '0' is NOT in the select — it is unreachable from the UI and included only
+    because the pattern admits it and "the last zero days" is a coherent request
+    with an honest empty answer (see the test below). Naming it here because the
+    docstring previously said the select sends all six, which it does not.
+    """
     response = client.get(
         f"/api/admin/audit-logs/export?format=json&period={good_period}",
         headers=auth_headers_admin,

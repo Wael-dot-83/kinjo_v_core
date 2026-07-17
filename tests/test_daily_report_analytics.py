@@ -771,3 +771,81 @@ class TestDiaperRateDenominatorSemantics:
             f"expected 50.0 (1 wet of 2 recorded); got {result['wet_rate']}. "
             "25.0 means unrecorded reports are being counted as 'not wet'."
         )
+
+
+class TestMealRateDenominatorSemantics:
+    """Meal rates count only the reports that RECORDED the meal.
+
+    a22a52f5 changed the denominator from `total_reports` to the non-null
+    observations (`observed.sum() / len(observed)`), and the page's own "How to
+    read this page" text went on claiming "the share of reports recording each
+    meal" for two more commits. With 100 reports where 40 recorded breakfast and
+    30 of those ate it, the sentence promised 40% and the card rendered 75%.
+
+    Nothing caught it because the only meal-rate test
+    (TestCalculations::test_meal_completion_rates) uses a fixture with NO nulls:
+    12/15 == 80% under `fillna(False)/total_reports` and under
+    `sum/len(observed)` alike, so reverting the change leaves the suite green.
+    A null-bearing fixture is what makes the formula falsifiable.
+    """
+
+    def test_meal_rate_excludes_reports_that_did_not_record_the_meal(
+        self, dr_db, dr_kindergarten, dr_parent, dr_admin
+    ):
+        from daily_report_analytics import DailyReportAnalytics, _load_reports_df
+
+        child = _make_child(dr_db, dr_parent.parent_profile.id, dr_kindergarten.id)
+        base = date(2026, 4, 1)
+        # 4 reports: 2 recorded breakfast (1 ate, 1 did not), 2 recorded nothing.
+        for i, eaten in enumerate([True, False, None, None]):
+            r = _make_daily_report(
+                dr_db, child.id, dr_kindergarten.id, dr_admin.id,
+                base - timedelta(days=i), status=models.DailyReportStatus.APPROVED,
+            )
+            r.breakfast = eaten
+        dr_db.commit()
+
+        df = _load_reports_df(dr_db, base - timedelta(days=5), base, [dr_kindergarten.id])
+        result = DailyReportAnalytics(df).meal_completion()
+
+        # 1 eaten of 2 recorded == 50.0.
+        # The old fillna(False)/total_reports form gives 1/4 == 25.0 by counting
+        # the two unrecorded reports as "did not eat".
+        assert result["breakfast"] == 50.0, (
+            f"expected 50.0 (1 eaten of 2 recorded); got {result['breakfast']}. "
+            "25.0 means unrecorded reports are being counted as 'not eaten'."
+        )
+
+    def test_meal_rate_is_unavailable_when_no_report_recorded_the_meal(
+        self, dr_db, dr_kindergarten, dr_parent, dr_admin
+    ):
+        """No observations is unknown, not 0% — the zero-denominator rule."""
+        from daily_report_analytics import DailyReportAnalytics, _load_reports_df
+
+        child = _make_child(dr_db, dr_parent.parent_profile.id, dr_kindergarten.id)
+        base = date(2026, 5, 1)
+        for i in range(3):
+            r = _make_daily_report(
+                dr_db, child.id, dr_kindergarten.id, dr_admin.id,
+                base - timedelta(days=i), status=models.DailyReportStatus.APPROVED,
+            )
+            r.breakfast = None
+        dr_db.commit()
+
+        df = _load_reports_df(dr_db, base - timedelta(days=5), base, [dr_kindergarten.id])
+        assert DailyReportAnalytics(df).meal_completion()["breakfast"] is None
+
+
+def test_the_page_text_names_the_denominator_the_code_uses():
+    """The copy and the formula must move together — they did not, for two commits."""
+    import pathlib
+
+    tpl = (pathlib.Path(__file__).resolve().parents[1]
+           / "templates" / "reports" / "analytics_dashboard.html").read_text(encoding="utf-8")
+    assert "meal rates are the share of reports recording each meal" not in tpl, (
+        "the help text claims the denominator is all reports; meal_completion() "
+        "divides by the reports that RECORDED the meal"
+    )
+    assert "حصة التقارير التي سجلت كل وجبة" not in tpl
+    assert "count only the reports that recorded that meal" in tpl
+    assert "تحتسب التقارير التي سجّلت تلك الوجبة فقط" in tpl
