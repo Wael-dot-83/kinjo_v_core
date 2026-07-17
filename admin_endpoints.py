@@ -360,6 +360,7 @@ def create_user(
     - Admins: Can create any non-admin user
     - Managers: Can only create SUPERVISOR/PARENT roles in their kindergarten
     """
+    _validate_csrf_token(request)
     # Authorization check
     if current_user.role == models.UserRole.MANAGER:
         # Manager restrictions
@@ -680,6 +681,7 @@ def update_user(
     """
     Update user with IDOR protection and audit logging.
     """
+    _validate_csrf_token(request)
     user = db.query(models.User).filter(
         models.User.id == user_id, models.User.deleted_at.is_(None)
     ).first()
@@ -874,6 +876,7 @@ def delete_user(
     """
     Delete user (Admin only) with IDOR protection.
     """
+    _validate_csrf_token(request)
     user = db.query(models.User).filter(
         models.User.id == user_id, models.User.deleted_at.is_(None)
     ).first()
@@ -940,6 +943,7 @@ def admin_reset_password(
     Admin-initiated password reset with verification.
     Rate limited to 3 requests per minute.
     """
+    _validate_csrf_token(request)
     user = db.query(models.User).filter(
         models.User.id == user_id, models.User.deleted_at.is_(None)
     ).first()
@@ -993,6 +997,7 @@ def request_password_reset(
     Rate limited to 5 requests per minute.
     Always returns success to prevent email enumeration.
     """
+    _validate_csrf_token(request)
     user = db.query(models.User).filter(models.User.email == reset_request.email).first()
 
     if user:
@@ -1033,6 +1038,7 @@ def confirm_password_reset(
     Confirm password reset using token.
     Rate limited to 3 requests per minute.
     """
+    _validate_csrf_token(request)
     token_record = resolve_valid_token(db, reset_data.token)
 
     if not token_record:
@@ -1091,6 +1097,7 @@ def admin_mfa_bypass(
     
     WARNING: This is an emergency-only endpoint. Use sparingly and audit all usage.
     """
+    _validate_csrf_token(request)
     # Self-bypass is not permitted — admin must use normal MFA reset flow
     if user_id == current_user.id:
         raise forbidden_error("Cannot bypass your own MFA. Use the standard MFA reset flow.")
@@ -1185,6 +1192,7 @@ def bulk_update_status(
     - Returns per-user success/failure results
     - IDOR protection for each target
     """
+    _validate_csrf_token(request)
     # Check if confirmation is required
     needs_confirmation = len(bulk_data.user_ids) > settings.BULK_CONFIRMATION_THRESHOLD
 
@@ -1383,6 +1391,7 @@ def bulk_delete_users(
     - Prevents deleting admin accounts
     - Returns detailed results
     """
+    _validate_csrf_token(request)
     # Check for admin accounts in the list
     admin_users = db.query(models.User).filter(
         models.User.id.in_(bulk_data.user_ids),
@@ -1509,6 +1518,7 @@ def bulk_create_users(
     - Supports dry-run mode
     - Prevents creating admin accounts
     """
+    _validate_csrf_token(request)
     # Validate manager assignments for the entire batch
     manager_errors = validate_bulk_manager_assignments(db, [user.__dict__ for user in bulk_data.users])
     if manager_errors:
@@ -1646,6 +1656,7 @@ async def import_users_csv(
     - Dry-run mode for preview
     - Downloadable error report
     """
+    _validate_csrf_token(request)
     if not file.filename.endswith('.csv'):
         raise validation_error("File must be a CSV")
 
@@ -2050,13 +2061,13 @@ def resolve_contact_message(
     Mark a contact-form submission as resolved.
     Admin-only.  Idempotent — resolving an already-resolved message is a no-op.
     """
+    _validate_csrf_token(request)
     msg = db.query(models.ContactMessage).filter(
         models.ContactMessage.id == message_id
     ).first()
     if not msg:
         raise not_found_error("Contact message not found")
 
-    _validate_csrf_token(request)
     if not msg.is_resolved:
         msg.is_resolved = True
         msg.resolved_by_id = current_user.id
@@ -3267,6 +3278,7 @@ def preview_admin_message_post(
     current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
+    _validate_csrf_token(request)
     target = payload.target
     roles = _target_roles_for_mode(target)
     governorate_values = _normalize_governorates(target.governorates)
@@ -3894,10 +3906,15 @@ def get_admin_dashboard(
 
     week_ago = today - timedelta(days=7)
 
-    total_users = db.query(func.count(models.User.id)).scalar() or 0
-    total_kindergartens = db.query(func.count(models.Kindergarten.id)).scalar() or 0
+    total_users = db.query(func.count(models.User.id)).filter(
+        models.User.deleted_at.is_(None)
+    ).scalar() or 0
+    total_kindergartens = db.query(func.count(models.Kindergarten.id)).filter(
+        models.Kindergarten.deleted_at.is_(None)
+    ).scalar() or 0
     active_kindergartens = db.query(func.count(models.Kindergarten.id)).filter(
-        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+        models.Kindergarten.deleted_at.is_(None)
     ).scalar() or 0
     active_users_today = db.query(func.count(func.distinct(models.AuditLog.user_id))).filter(
         models.AuditLog.action == "LOGIN_SUCCESS",
@@ -3906,23 +3923,26 @@ def get_admin_dashboard(
     ).scalar() or 0
 
     pending_applications = db.query(func.count(models.EnrollmentApplication.id)).filter(
-        models.EnrollmentApplication.status == models.EnrollmentStatus.PENDING_REVIEW
+        models.EnrollmentApplication.status == models.EnrollmentStatus.PENDING_REVIEW,
+        models.EnrollmentApplication.deleted_at.is_(None)
     ).scalar() or 0
     pending_reports = db.query(func.count(models.DailyReport.id)).filter(
         models.DailyReport.status == models.DailyReportStatus.SUBMITTED
     ).scalar() or 0
     recent_incidents = db.query(func.count(models.Incident.id)).filter(
-        func.date(models.Incident.occurred_at) >= week_ago
+        func.date(models.Incident.occurred_at) >= week_ago,
+        models.Incident.deleted_at.is_(None)
     ).scalar() or 0
     attendance_today = db.query(func.count(models.AttendanceLog.id)).filter(
         models.AttendanceLog.date == today,
         models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
     ).scalar() or 0
     active_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.deleted_at.is_(None)
     ).scalar() or 0
 
-    attendance_rate = (attendance_today / active_enrollments * 100.0) if active_enrollments > 0 else 0.0
+    attendance_rate = min((attendance_today / active_enrollments * 100.0) if active_enrollments > 0 else 0.0, 100.0)
 
     total_reports_in_period = db.query(func.count(models.DailyReport.id)).filter(
         models.DailyReport.date >= today - timedelta(days=period_days),
@@ -3984,6 +4004,8 @@ def get_admin_dashboard(
     enrollment_stats = db.query(
         models.EnrollmentApplication.status,
         func.count(models.EnrollmentApplication.id),
+    ).filter(
+        models.EnrollmentApplication.deleted_at.is_(None)
     ).group_by(models.EnrollmentApplication.status).all()
     enrollment_pie = {
         (status.value if hasattr(status, "value") else str(status)).upper(): count
@@ -3998,6 +4020,7 @@ def get_admin_dashboard(
         ).filter(
             func.date(models.Incident.occurred_at) >= chart_start_date,
             func.date(models.Incident.occurred_at) <= today,
+            models.Incident.deleted_at.is_(None),
         ).group_by(func.date(models.Incident.occurred_at)).all()
     )
     incidents_trend: List[DashboardChartPoint] = []
@@ -4182,6 +4205,7 @@ def get_admin_dashboard(
     prev_active_kindergartens = db.query(func.count(models.Kindergarten.id)).filter(
         models.Kindergarten.created_at < prev_boundary,
         models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+        models.Kindergarten.deleted_at.is_(None),
     ).scalar() or 0
     prev_active_users = db.query(func.count(func.distinct(models.AuditLog.user_id))).filter(
         models.AuditLog.action == "LOGIN_SUCCESS",
@@ -4207,6 +4231,7 @@ def get_admin_dashboard(
             models.Kindergarten.id == models.DailyReport.kindergarten_id,
         ).filter(
             models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+            models.Kindergarten.deleted_at.is_(None),
             models.DailyReport.date >= prev_end - timedelta(days=6),
             models.DailyReport.date <= prev_end,
         ).scalar() or 0
@@ -4609,7 +4634,11 @@ def get_kg_overview(
 
     all_kgs = db.query(models.Kindergarten).order_by(models.Kindergarten.name_ar).all()
     kg_ids = [kg.id for kg in all_kgs]
-    active_kgs = [kg for kg in all_kgs if kg.status == models.KindergartenStatus.ACTIVE]
+    active_kgs = [
+        kg for kg in all_kgs
+        if kg.status == models.KindergartenStatus.ACTIVE
+        and kg.deleted_at is None
+    ]
 
     if governorate:
         gov_normalized = settings.JORDAN_GOVERNORATE_ALIASES.get(governorate, governorate)
@@ -4632,7 +4661,11 @@ def get_kg_overview(
             all_kgs = []
 
     kg_ids = [kg.id for kg in all_kgs]
-    active_kgs = [kg for kg in all_kgs if kg.status == models.KindergartenStatus.ACTIVE]
+    active_kgs = [
+        kg for kg in all_kgs
+        if kg.status == models.KindergartenStatus.ACTIVE
+        and kg.deleted_at is None
+    ]
 
     # Batch queries
     active_enrollments = db.query(
@@ -5069,6 +5102,7 @@ def create_backup(
     db: Session = Depends(get_db)
 ):
     """Enqueue a backup job and return immediately (Admin only)."""
+    _validate_csrf_token(request)
     from backup_tasks import run_backup
 
     try:
@@ -5132,6 +5166,7 @@ def restore_backup(
     First call without a token returns a confirmation token and a warning.
     Second call with the token executes the restore.
     """
+    _validate_csrf_token(request)
     # Sanitize backup_name: reject path separators, null bytes, and parent-directory
     # references. os.path.basename catches separator-based traversal; the ".."
     # substring check rejects names like "..evilfile" that look like traversal attempts.
@@ -5206,6 +5241,7 @@ def delete_backup(
     db: Session = Depends(get_db)
 ):
     """Delete a backup file (Admin only)"""
+    _validate_csrf_token(request)
     # Sanitize backup_name: reject path separators, null bytes, and parent-directory
     # references. os.path.basename catches separator-based traversal; the ".."
     # substring check rejects names like "..evilfile" that look like traversal attempts.
@@ -5285,6 +5321,7 @@ def cleanup_old_backups(
     db: Session = Depends(get_db)
 ):
     """Clean up old backups beyond retention period (Admin only)"""
+    _validate_csrf_token(request)
     from backup_manager import backup_manager
 
     try:
@@ -5315,6 +5352,7 @@ def validate_backup(
     db: Session = Depends(get_db)
 ):
     """Validate a backup file integrity (Admin only)"""
+    _validate_csrf_token(request)
     # Sanitize backup_name: reject path separators, null bytes, and parent-directory
     # references. os.path.basename catches separator-based traversal; the ".."
     # substring check rejects names like "..evilfile" that look like traversal attempts.
@@ -5375,6 +5413,7 @@ def import_kindergartens_from_excel(
       - Column G: رقم الهاتف         → contact_phone
     """
 
+    _validate_csrf_token(request)
     if not file.filename or not file.filename.endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="Only .xlsx files are accepted")
 
@@ -5849,6 +5888,7 @@ async def send_governance_reminder_endpoint(
     current_user: models.User = Depends(require_admin),
 ):
     """Send a governance reminder to a kindergarten or supervisor."""
+    _validate_csrf_token(request)
     if body.target_type not in ("kindergarten", "supervisor"):
         raise HTTPException(status_code=400, detail="target_type must be 'kindergarten' or 'supervisor'")
 
@@ -6321,6 +6361,7 @@ def acknowledge_alert(
     db: Session = Depends(get_db),
 ):
     """Mark an active alert as acknowledged."""
+    _validate_csrf_token(request)
     alert = db.query(models.ActiveAlert).filter(models.ActiveAlert.id == alert_id).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
@@ -6652,6 +6693,7 @@ def update_admin_profile(
     db: Session = Depends(get_db),
 ):
     """Update the logged-in admin's own profile fields."""
+    _validate_csrf_token(request)
     before = {
         "full_name": current_user.full_name,
         "email": current_user.email,
@@ -6698,6 +6740,7 @@ def change_admin_password(
     db: Session = Depends(get_db),
 ):
     """Allow the logged-in admin to change their own password."""
+    _validate_csrf_token(request)
     if payload.new_password != payload.confirm_password:
         raise validation_error("New passwords do not match")
 
@@ -6777,6 +6820,7 @@ def cleanup_audit_logs(
     db: Session = Depends(get_db),
 ):
     """Delete audit log entries older than *days* days. Minimum 30 days. Admin only."""
+    _validate_csrf_token(request)
     cutoff = datetime.now(_JORDAN_TZ) - timedelta(days=days)
     query = db.query(models.AuditLog).filter(models.AuditLog.created_at < cutoff)
     count = query.count()

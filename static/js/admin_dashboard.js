@@ -296,7 +296,7 @@ class AdminDashboard {
     const dataQualityReasons = Array.isArray(data.data_quality_reasons) ? data.data_quality_reasons : [];
 
     const chartPayload      = data.charts || {};
-    const userActivityChart = {
+    const attendanceChart = {
       labels: Array.isArray(chartPayload.attendance) ? chartPayload.attendance.map((i) => i.date)              : [],
       values: Array.isArray(chartPayload.attendance) ? chartPayload.attendance.map((i) => this.toNumber(i.value)) : [],
     };
@@ -319,7 +319,7 @@ class AdminDashboard {
       kpis,
       kpi_trends: kpiTrends,
       data_quality_reasons: dataQualityReasons,
-      charts: { user_activity: userActivityChart, data_submissions: submissionChart },
+      charts: { attendance: attendanceChart, data_submissions: submissionChart },
       recent_activity: recentActivity,
       alerts,
     };
@@ -588,7 +588,7 @@ class AdminDashboard {
 
   renderCharts(charts) {
     if (typeof Chart === "undefined") return;
-    if (charts.user_activity)    this.renderUserActivityChart(charts.user_activity);
+    if (charts.attendance)    this.renderAttendanceChart(charts.attendance);
     if (charts.data_submissions) this.renderSubmissionsChart(charts.data_submissions);
   }
 
@@ -616,7 +616,7 @@ class AdminDashboard {
       { key: "alerts",     title: { en: "System alerts",           ar: "تنبيهات النظام" },
         desc: { en: "Items needing attention, ordered by severity: pending enrolments, recent incidents, and licence expiries.",
                 ar: "بنود تحتاج متابعة مرتّبة حسب الخطورة: طلبات التسجيل المعلّقة، الحوادث الأخيرة، وانتهاء التراخيص." } },
-      { key: "activity",   title: { en: "User activity chart",     ar: "مخطط نشاط المستخدمين" },
+      { key: "attendance", title: { en: "Attendance chart",     ar: "مخطط الحضور" },
         desc: { en: "Line chart of daily attendance over the selected period so you can spot engagement trends.",
                 ar: "مخطط خطي لحضور يومي خلال الفترة المحددة لملاحظة اتجاهات التفاعل." } },
       { key: "enrollment", title: { en: "Enrollment status chart", ar: "مخطط حالة التسجيل" },
@@ -762,15 +762,15 @@ class AdminDashboard {
     }
   }
 
-  renderUserActivityChart(data) {
-    const ctx = document.getElementById("user-activity-chart");
+  renderAttendanceChart(data) {
+    const ctx = document.getElementById("attendance-chart");
     if (!ctx) return;
     // Accessibility: give the canvas an accessible name + role.
     ctx.setAttribute("role", "img");
     ctx.setAttribute("aria-label", window.KINJO_LANG === "en"
-      ? "User activity chart showing active users over time"
-      : "مخطط نشاط المستخدمين يوضح عدد المستخدمين النشطين عبر الزمن");
-    this.charts.userActivity?.destroy();
+      ? "Attendance chart showing daily attendance over time"
+      : "مخطط الحضور يوضح الحضور اليومي عبر الزمن");
+    this.charts.attendanceChart?.destroy();
     const context = ctx.getContext("2d");
     const gradient = context ? (() => {
       const g = context.createLinearGradient(0, 0, 0, 220);
@@ -778,12 +778,12 @@ class AdminDashboard {
       g.addColorStop(1, "rgba(31, 94, 71, 0.02)");
       return g;
     })() : "rgba(31, 94, 71, 0.1)";
-    this.charts.userActivity = new Chart(ctx, {
+    this.charts.attendanceChart = new Chart(ctx, {
       type: "line",
       data: {
         labels:   safeChartData(data.labels),
         datasets: [{
-          label:                this.t("dashboard.active_users", "Active Users"),
+          label:                this.t("dashboard.attendance", "Attendance"),
           data:                 safeChartData(data.values),
           borderColor:          "#4F46E5",
           backgroundColor:      gradient,

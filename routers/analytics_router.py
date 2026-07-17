@@ -1,3 +1,16 @@
+"""
+DEPRECATED — This file is NOT imported by main.py and its routes are dead code.
+
+The routes defined here (predictive, compare, list-dimensions, scatter, demographics,
+government-report) are never registered with the FastAPI app. The active analytics
+router lives in analytics_service.py (imported as analytics_router in main.py L185).
+
+If these routes are needed, import them in main.py as:
+    from routers.analytics_router import router as analytics_extras_router
+    app.include_router(analytics_extras_router)
+
+Otherwise, this file can be removed after confirming no external references exist.
+"""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func

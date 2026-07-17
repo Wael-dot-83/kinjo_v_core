@@ -1054,7 +1054,10 @@ const defaultEnglishTranslations = {
     view_analytics: "View Analytics",
     data_management: "Data Management",
     quick_actions: "Quick Actions",
-    user_activity: "User Activity",
+    dashboard: {
+        attendance: "Attendance",
+    },
+    attendance_chart: "Attendance",
     data_submissions: "Data Submissions",
     recent_activity: "Recent Activity",
     alerts: "Alerts",
@@ -1179,7 +1182,10 @@ const defaultArabicTranslations = {
     view_analytics: "عرض التحليلات",
     data_management: "إدارة البيانات",
     quick_actions: "الإجراءات السريعة",
-    user_activity: "نشاط المستخدمين",
+    dashboard: {
+        attendance: "الحضور",
+    },
+    attendance_chart: "الحضور",
     data_submissions: "عمليات الإدخال",
     recent_activity: "النشاط الأخير",
     alerts: "التنبيهات",
