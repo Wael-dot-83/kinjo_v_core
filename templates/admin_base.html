@@ -238,7 +238,7 @@
               "label_ar": "التحليلات والتقارير",
               "label_en": "Analytics & Reporting",
               "items": [
-                {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics"], "active_prefixes": ["/admin/analytics/drilldown/"]},
+                {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics", "/admin/analytics/dashboard"], "active_prefixes": ["/admin/analytics/drilldown/"]},
                 {"href": "/admin/kpi", "icon": "bi-speedometer", "label_ar": "مؤشرات أداء الشبكة", "label_en": "Network KPIs", "active_paths": ["/admin/kpi"]},
                 {"href": "/admin/analytics/reports", "icon": "bi-file-earmark-text", "label_ar": "مركز التقارير", "label_en": "Reports Center", "active_paths": ["/admin/analytics/reports"]},
                 {"href": "/admin/analytics/decision-support", "icon": "bi-lightbulb", "label_ar": "دعم القرار", "label_en": "Decision Support", "active_paths": ["/admin/analytics/decision-support"]},
@@ -273,6 +273,7 @@
               ]
             }
           ] %}
+          {% set full_admin_navigation = current_user and current_user.role.value == "ADMIN" %}
 
           {# Exact destinations take precedence over broader contextual prefixes. #}
           {% set nav_state = namespace(exact_match=false) %}
@@ -295,8 +296,10 @@
               {% endfor %}
 
               {% for section in sidebar_sections %}
+                {% if full_admin_navigation or section.id == "people-organizations" %}
                 {% set section_state = namespace(active=false) %}
                 {% for item in section["items"] %}
+                  {% if full_admin_navigation or item.href == "/admin/users" %}
                   {% set item_state = namespace(active=current_path == item.href) %}
                   {% if not nav_state.exact_match and current_path in item.active_paths %}{% set item_state.active = true %}{% endif %}
                   {% if not nav_state.exact_match and item.active_prefixes is defined %}
@@ -305,6 +308,7 @@
                     {% endfor %}
                   {% endif %}
                   {% if item_state.active %}{% set section_state.active = true %}{% endif %}
+                  {% endif %}
                 {% endfor %}
 
                 <li class="top-menu-item has-dropdown" role="presentation">
@@ -315,6 +319,7 @@
                   <ul class="top-menu-dropdown shadow-sm" role="menu">
                     {% set ns = namespace(current_group=none) %}
                     {% for item in section["items"] %}
+                      {% if full_admin_navigation or item.href == "/admin/users" %}
                       {% set item_state = namespace(active=current_path == item.href) %}
                       {% if not nav_state.exact_match and current_path in item.active_paths %}{% set item_state.active = true %}{% endif %}
                       {% if not nav_state.exact_match and item.active_prefixes is defined %}
@@ -336,9 +341,11 @@
                           <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
                         </a>
                       </li>
+                      {% endif %}
                     {% endfor %}
                   </ul>
                 </li>
+                {% endif %}
               {% endfor %}
             </ul>
           </div>

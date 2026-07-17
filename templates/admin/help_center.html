@@ -64,14 +64,14 @@
 
       <section id="dashboard" class="help-section card p-4 mb-4">
         <h2>{% if ui_lang == 'en' %}Dashboard metrics{% else %}مؤشرات لوحة التحكم{% endif %}</h2>
-        <p>{% if ui_lang == 'en' %}The dashboard contains seven operational indicators. Values are live results for the displayed period and scope, not fixed targets.{% else %}تعرض لوحة التحكم سبعة مؤشرات تشغيلية. القيم نتائج فعلية للفترة والنطاق الظاهرين وليست أهدافًا ثابتة.{% endif %}</p>
+        <p>{% if ui_lang == 'en' %}The dashboard contains seven operational indicators with different stated windows: current totals, today, the selected report period, or the fixed seven-day coverage window. They are measured results, not fixed targets.{% else %}تعرض لوحة التحكم سبعة مؤشرات تشغيلية بنوافذ زمنية موضحة ومختلفة: الإجماليات الحالية أو اليوم أو فترة التقارير المحددة أو نافذة التغطية الثابتة لسبعة أيام. وهي نتائج مقاسة وليست أهدافًا ثابتة.{% endif %}</p>
         <div class="metric-definition"><dl class="row mb-0">
           <dt class="col-md-4">{% if ui_lang == 'en' %}Total users{% else %}إجمالي المستخدمين{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}All user accounts counted by the dashboard query.{% else %}جميع حسابات المستخدمين التي يحتسبها استعلام لوحة التحكم.{% endif %}</dd>
           <dt class="col-md-4">{% if ui_lang == 'en' %}Users logged in today{% else %}المستخدمون الذين سجلوا الدخول اليوم{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Distinct users with a successful login since the start of today in Amman time.{% else %}عدد المستخدمين المميزين الذين سجلوا دخولًا ناجحًا منذ بداية اليوم بتوقيت عمّان.{% endif %}</dd>
           <dt class="col-md-4">{% if ui_lang == 'en' %}Total/active kindergartens{% else %}إجمالي الحضانات / النشطة{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Registered kindergartens and the subset currently marked active.{% else %}الحضانات المسجلة والجزء المصنف منها بالحالة النشطة حاليًا.{% endif %}</dd>
           <dt class="col-md-4">{% if ui_lang == 'en' %}Reports in period{% else %}التقارير خلال الفترة{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Daily reports whose dates fall inside the selected period.{% else %}التقارير اليومية التي تقع تواريخها ضمن الفترة المحددة.{% endif %}</dd>
           <dt class="col-md-4">{% if ui_lang == 'en' %}Pending reports{% else %}التقارير المعلّقة{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Daily reports currently in the submitted/pending state defined by the API.{% else %}التقارير اليومية الموجودة حاليًا في حالة التقديم أو الانتظار التي تعرفها الواجهة البرمجية.{% endif %}</dd>
-          <dt class="col-md-4">{% if ui_lang == 'en' %}Data quality{% else %}جودة البيانات{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}A completeness score accompanied by reasons when required fields are missing.{% else %}درجة اكتمال ترافقها أسباب عند فقدان الحقول المطلوبة.{% endif %}</dd>
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Data quality{% else %}جودة البيانات{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}The share of currently active kindergartens with at least one daily report in the last seven days.{% else %}نسبة الحضانات النشطة حاليًا التي لديها تقرير يومي واحد على الأقل خلال آخر سبعة أيام.{% endif %}</dd>
         </dl></div>
       </section>
 

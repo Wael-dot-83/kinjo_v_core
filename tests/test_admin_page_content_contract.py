@@ -128,3 +128,20 @@ def test_admin_shell_renders_route_specific_context_in_both_languages(client, ad
     assert "ملخص تنفيذي لحالة المنصة" in dashboard_ar
     assert "About this page" in settings_en
     assert "View session timeout and server-managed environment information" in settings_en
+
+
+def test_manager_admin_shell_exposes_only_the_manager_available_user_link(client, manager_user):
+    app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+    try:
+        response = client.get("/admin/users")
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    page = response.text
+    sidebar = page[page.index('<aside id="admin-sidebar">'):page.index("</aside>")]
+    assert 'href="/admin/users"' in sidebar
+    for unavailable in (
+        "/admin/observability", "/admin/import-kindergartens", "/admin/impersonate",
+        "/admin/governance-reports", "/admin/audit-logs", "/admin/settings",
+    ):
+        assert f'href="{unavailable}"' not in sidebar

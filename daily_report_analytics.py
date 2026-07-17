@@ -88,19 +88,23 @@ def _minutes_to_hhmm(m: float | None) -> str:
 def _enforce_analytics_rbac(user: User, kindergarten_ids: List[int] | None) -> List[int] | None:
     """
     Return allowed kindergarten IDs based on role.
-    Admin/Supervisor see all (or filtered).
-    Manager sees only their assigned kindergarten.
+    Admin sees all (or filtered).
+    Manager and Supervisor see only their assigned kindergarten.
     Parent is forbidden.
     """
     if user.role == UserRole.PARENT:
         raise HTTPException(403, "Parents cannot access analytics dashboards")
-    if user.role == UserRole.MANAGER:
-        if not user.kindergarten_id:
-            raise HTTPException(403, "Manager not assigned to a kindergarten")
-        if kindergarten_ids and user.kindergarten_id not in kindergarten_ids:
-            raise HTTPException(403, "Manager can only view own kindergarten analytics")
-        return [user.kindergarten_id]
-    # Admin / Supervisor — allow all or filtered
+    if user.role in (UserRole.MANAGER, UserRole.SUPERVISOR):
+        assigned_kindergarten_id = user.kindergarten_id
+        if user.role == UserRole.SUPERVISOR and user.supervisor_profile:
+            assigned_kindergarten_id = user.supervisor_profile.kindergarten_id
+        role_label = "Supervisor" if user.role == UserRole.SUPERVISOR else "Manager"
+        if not assigned_kindergarten_id:
+            raise HTTPException(403, f"{role_label} not assigned to a kindergarten")
+        if kindergarten_ids and assigned_kindergarten_id not in kindergarten_ids:
+            raise HTTPException(403, f"{role_label} can only view own kindergarten analytics")
+        return [assigned_kindergarten_id]
+    # Admin — allow all or filtered
     return kindergarten_ids if kindergarten_ids else None
 
 
@@ -268,19 +272,20 @@ class DailyReportAnalytics:
     def meal_completion(self) -> Dict[str, Any]:
         """Percentage of children eating each meal."""
         if self.df.empty:
-            return {"breakfast": 0, "snack": 0, "milk": 0, "lunch": 0, "daily": []}
+            return {"breakfast": None, "snack": None, "milk": None, "lunch": None, "daily": []}
 
         meals = ["breakfast", "snack", "milk", "lunch"]
         rates = {}
         for m in meals:
-            eaten = self.df[m].fillna(False).sum()
-            rates[m] = round(eaten / self.total_reports * 100, 1) if self.total_reports else 0
+            observed = self.df[m].dropna()
+            rates[m] = round(observed.sum() / len(observed) * 100, 1) if len(observed) else None
 
         daily = []
         for dt, grp in self.df.groupby(self.df["date"].dt.strftime("%Y-%m-%d")):
             entry = {"date": dt, "total": len(grp)}
             for m in meals:
-                entry[m] = round(grp[m].fillna(False).sum() / len(grp) * 100, 1) if len(grp) else 0
+                observed = grp[m].dropna()
+                entry[m] = round(observed.sum() / len(observed) * 100, 1) if len(observed) else None
             daily.append(entry)
 
         return {**rates, "daily": daily}
@@ -289,10 +294,10 @@ class DailyReportAnalytics:
     def nap_analytics(self) -> Dict[str, Any]:
         """Avg nap duration, % nappers."""
         if self.df.empty:
-            return {"avg_duration": 0, "nap_rate": 0, "by_kindergarten": []}
+            return {"avg_duration": None, "nap_rate": None, "by_kindergarten": []}
 
         nappers = self.df[self.df["nap_duration_minutes"].notna() & (self.df["nap_duration_minutes"] > 0)]
-        avg_dur = nappers["nap_duration_minutes"].mean() if len(nappers) else 0
+        avg_dur = nappers["nap_duration_minutes"].mean() if len(nappers) else None
         nap_rate = round(len(nappers) / self.total_reports * 100, 1) if self.total_reports else 0
 
         by_kg = []
@@ -300,12 +305,12 @@ class DailyReportAnalytics:
             kg_nappers = grp[grp["nap_duration_minutes"].notna() & (grp["nap_duration_minutes"] > 0)]
             by_kg.append({
                 "kindergarten_id": int(kg_id),
-                "avg_duration": round(kg_nappers["nap_duration_minutes"].mean(), 1) if len(kg_nappers) else 0,
+                "avg_duration": round(kg_nappers["nap_duration_minutes"].mean(), 1) if len(kg_nappers) else None,
                 "nap_rate": round(len(kg_nappers) / len(grp) * 100, 1) if len(grp) else 0,
             })
 
         return {
-            "avg_duration": round(avg_dur, 1),
+            "avg_duration": round(avg_dur, 1) if avg_dur is not None else None,
             "nap_rate": nap_rate,
             "by_kindergarten": by_kg,
         }
@@ -340,7 +345,7 @@ class DailyReportAnalytics:
     def workflow_metrics(self) -> Dict[str, Any]:
         """Submission-to-approval time, rejection analysis."""
         if self.df.empty:
-            return {"avg_approval_hours": 0, "rejection_rate": 0, "top_rejection_reasons": [], "daily_approvals": []}
+            return {"avg_approval_hours": None, "rejection_rate": None, "top_rejection_reasons": [], "daily_approvals": []}
 
         # Time from submitted_at to approved_at
         approved = self.df[(self.df["submitted_at"].notna()) & (self.df["approved_at"].notna())].copy()
@@ -350,7 +355,7 @@ class DailyReportAnalytics:
             ).dt.total_seconds() / 3600
             avg_hrs = approved["approval_time_hrs"].mean()
         else:
-            avg_hrs = 0
+            avg_hrs = None
 
         # Rejections
         rejected = self.df[self.df["status"].isin(["REJECTED", "RETURNED"])]
@@ -363,7 +368,7 @@ class DailyReportAnalytics:
             reasons = {}
 
         return {
-            "avg_approval_hours": round(avg_hrs, 2),
+            "avg_approval_hours": round(avg_hrs, 2) if avg_hrs is not None else None,
             "rejection_rate": rej_rate,
             "top_rejection_reasons": [{"reason": k, "count": int(v)} for k, v in reasons.items()],
         }
@@ -372,7 +377,7 @@ class DailyReportAnalytics:
     def health_flags(self) -> Dict[str, Any]:
         """Flag sick moods + keyword search in health_notes."""
         if self.df.empty:
-            return {"sick_count": 0, "sick_rate": 0, "flagged_keywords": [], "flagged_children": []}
+            return {"sick_count": 0, "sick_rate": None, "flagged_keywords": [], "flagged_children": []}
 
         keywords = ["fever", "حمى", "cough", "سعال", "vomit", "قيء", "rash", "طفح", "allergy", "حساسية",
                      "diarrhea", "إسهال", "pain", "ألم", "injury", "إصابة"]
@@ -1038,8 +1043,9 @@ def analytics_dashboard_page(
         raise HTTPException(403, "Parents cannot access analytics dashboards")
 
     # Get available kindergartens for filter dropdown
-    if user.role == UserRole.MANAGER:
-        kindergartens = db.query(Kindergarten).filter(Kindergarten.id == user.kindergarten_id).all()
+    if user.role in (UserRole.MANAGER, UserRole.SUPERVISOR):
+        allowed_ids = _enforce_analytics_rbac(user, None)
+        kindergartens = db.query(Kindergarten).filter(Kindergarten.id.in_(allowed_ids)).all()
     else:
         kindergartens = db.query(Kindergarten).filter(Kindergarten.status == KindergartenStatus.ACTIVE).all()
 

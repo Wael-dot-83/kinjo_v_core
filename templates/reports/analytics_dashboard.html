@@ -364,15 +364,16 @@
         setText('kpiAvgArrival', s.attendance.avg_arrival);
         setText('kpiAvgLeave', s.attendance.avg_leave);
 
-        const mealAvg = Math.round(
-            (s.meal_completion.breakfast + s.meal_completion.lunch +
-                s.meal_completion.snack + s.meal_completion.milk) / 4
-        );
-        setText('kpiMealRate', mealAvg + '%');
+        const mealValues = [s.meal_completion.breakfast, s.meal_completion.lunch,
+            s.meal_completion.snack, s.meal_completion.milk].filter(Number.isFinite);
+        const mealAvg = mealValues.length
+            ? Math.round(mealValues.reduce((sum, value) => sum + value, 0) / mealValues.length)
+            : null;
+        setText('kpiMealRate', metric(mealAvg, '%'));
         setText('kpiBf', metric(s.meal_completion.breakfast, '%'));
         setText('kpiLunch', metric(s.meal_completion.lunch, '%'));
 
-        setText('kpiNapAvg', s.nap_analytics.avg_duration);
+        setText('kpiNapAvg', metric(s.nap_analytics.avg_duration));
         setText('kpiNapRate', metric(s.nap_analytics.nap_rate, '%'));
         setText('kpiSickCount', s.health_flags.sick_count);
         setText('kpiSickRate', metric(s.health_flags.sick_rate, '%'));
@@ -382,11 +383,11 @@
     function populateWorkflow(s) {
         const wf = s.workflow_metrics;
         const conv = s.status_funnel.conversion_rates;
-        setText('wfApproval', wf.avg_approval_hours + T(' ساعة',' hrs'));
-        setText('wfRejRate', wf.rejection_rate + '%');
-        setText('wfDraftSub', conv.draft_to_submitted + '%');
-        setText('wfSubAppr', conv.submitted_to_approved + '%');
-        setText('wfApprSent', conv.approved_to_sent + '%');
+        setText('wfApproval', metric(wf.avg_approval_hours, T(' ساعة',' hrs')));
+        setText('wfRejRate', metric(wf.rejection_rate, '%'));
+        setText('wfDraftSub', metric(conv.draft_to_submitted, '%'));
+        setText('wfSubAppr', metric(conv.submitted_to_approved, '%'));
+        setText('wfApprSent', metric(conv.approved_to_sent, '%'));
     }
 
     function renderCharts(charts) {

@@ -52,6 +52,15 @@ def test_export_format_endpoint_rejects_pdf():
     assert pattern == "^(csv|json)$"
 
 
+def test_export_endpoint_accepts_the_visible_exact_date_filter():
+    import audit_service
+
+    sig = inspect.signature(audit_service.export_audit_logs)
+    assert "date" in sig.parameters
+    source = AUDIT_LOGS_JS.read_text(encoding="utf-8")
+    assert 'date: document.getElementById("dateFilter").value' in source
+
+
 def test_action_badge_classifier_covers_real_taxonomy_patterns():
     """getActionBadgeClass previously only matched CREATE/UPDATE/DELETE/
     LOGIN/LOGOUT/VIEW - none of which are real AuditAction values except

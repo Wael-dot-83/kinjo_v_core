@@ -100,6 +100,24 @@ def dr_manager(dr_db, dr_kindergarten):
 
 
 @pytest.fixture
+def dr_supervisor(dr_db, dr_kindergarten):
+    u = models.User(
+        username="dr_supervisor",
+        email="dr_supervisor@test.com",
+        hashed_password=get_password_hash("Supervisor123!"),
+        role=models.UserRole.SUPERVISOR,
+        kindergarten_id=dr_kindergarten.id,
+        status=models.UserStatus.ACTIVE,
+    )
+    dr_db.add(u)
+    dr_db.flush()
+    dr_db.add(models.SupervisorProfile(user_id=u.id, kindergarten_id=dr_kindergarten.id))
+    dr_db.commit()
+    dr_db.refresh(u)
+    return u
+
+
+@pytest.fixture
 def dr_parent(dr_db):
     u = models.User(
         username="dr_parent@test.com",
@@ -273,7 +291,14 @@ class TestSummaryEndpoint:
             headers=headers,
         )
         assert resp.status_code == 200
-        assert resp.json()["total_reports"] == 0
+        data = resp.json()
+        assert data["total_reports"] == 0
+        assert data["meal_completion"]["breakfast"] is None
+        assert data["nap_analytics"]["avg_duration"] is None
+        assert data["nap_analytics"]["nap_rate"] is None
+        assert data["workflow_metrics"]["avg_approval_hours"] is None
+        assert data["workflow_metrics"]["rejection_rate"] is None
+        assert data["health_flags"]["sick_rate"] is None
 
     def test_filter_by_kindergarten(self, dr_client, seeded_reports, dr_admin, dr_kindergarten):
         headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
@@ -529,6 +554,41 @@ class TestRBAC:
             headers=headers,
         )
         assert resp.status_code == 403
+
+    def test_supervisor_is_scoped_to_assigned_kindergarten(
+        self, dr_client, dr_db, seeded_reports, dr_supervisor, dr_kindergarten
+    ):
+        other_kg = models.Kindergarten(
+            name_ar="حضانة خارج نطاق المشرفة",
+            governorate="Zarqa",
+            district="Zarqa",
+            area="Center",
+            address_line="5 St",
+            contact_phone="+962790000098",
+            status=models.KindergartenStatus.ACTIVE,
+        )
+        dr_db.add(other_kg)
+        dr_db.commit()
+        dr_db.refresh(other_kg)
+        headers = _auth_headers(dr_client, "dr_supervisor", "Supervisor123!")
+
+        own_scope = dr_client.get(
+            "/api/reports-analytics/summary",
+            params={"date_from": "2026-02-01", "date_to": "2026-02-03"},
+            headers=headers,
+        )
+        outside_scope = dr_client.get(
+            "/api/reports-analytics/sample-data",
+            params={
+                "date_from": "2026-02-01",
+                "date_to": "2026-02-03",
+                "kindergarten_id": other_kg.id,
+            },
+            headers=headers,
+        )
+        assert own_scope.status_code == 200
+        assert own_scope.json()["total_reports"] == 15
+        assert outside_scope.status_code == 403
 
 
 class TestAnalyticsComputations:

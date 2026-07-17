@@ -102,6 +102,7 @@ def _export_audit_logs(
     action: Optional[str],
     entity_type: Optional[str],
     user: Optional[str],
+    date: Optional[str],
     current_user: models.User,
     db: Session,
 ):
@@ -125,6 +126,13 @@ def _export_audit_logs(
         query = query.filter(models.AuditLog.entity_type == entity_type)
     if user:
         query = query.filter(models.User.username.ilike(f"%{user}%"))
+    if date:
+        try:
+            from sqlalchemy import func
+            parsed_date = datetime.strptime(date, "%Y-%m-%d").date()
+            query = query.filter(func.date(models.AuditLog.created_at) == parsed_date)
+        except (ValueError, TypeError):
+            pass
 
     query = query.order_by(desc(models.AuditLog.created_at))
     data = query.limit(5000).all()
@@ -140,6 +148,7 @@ def _export_audit_logs(
             "action_filter": action,
             "entity_type_filter": entity_type,
             "user_filter": user,
+            "date_filter": date,
             "count": len(data),
         },
         sensitivity_level=2,
@@ -209,6 +218,7 @@ def export_audit_logs(
     action: Optional[str] = None,
     entity_type: Optional[str] = None,
     user: Optional[str] = None,
+    date: Optional[str] = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -218,6 +228,7 @@ def export_audit_logs(
         action=action,
         entity_type=entity_type,
         user=user,
+        date=date,
         current_user=current_user,
         db=db,
     )
