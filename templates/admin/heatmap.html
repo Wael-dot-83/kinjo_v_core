@@ -467,10 +467,13 @@
        filters call applyGovListFilter(), which toggles style.display without
        re-running updateKpiStrip().
 
-       Prior versions of this card claimed "Selected-scope Average Risk", then
-       "National average risk score across all 12 governorates". Both were
-       false. "National average" alone was origin/main's wording; it is weaker
-       but still implies complete coverage the service does not guarantee. #}
+       Earlier versions of this card claimed a selected scope, then a fixed
+       twelve-governorate average. Both were false. origin/main's plain
+       "national average" wording was weaker but still implied complete
+       coverage the service does not guarantee. (The exact defective strings
+       are not repeated here: tests/test_admin_page_content_contract.py scans
+       this file's raw source for them, and a comment quoting one would trip
+       it — the check is deliberately not narrowed to rendered output.) #}
     <div class="kpi-card" title="{% if ui_lang == 'ar' %}متوسط مؤشر الخطر للمحافظات المغطاة فقط؛ يقل عددها عن 12 إذا تعذّر حساب أي محافظة{% else %}Average risk score across the covered governorates only; fewer than 12 if any governorate could not be computed{% endif %}">
       <div class="kpi-label">{% if ui_lang == 'ar' %}متوسط المخاطر{% else %}Avg. Risk{% endif %}</div>
       <div class="kpi-value" id="kpiAvgRisk">--</div>
