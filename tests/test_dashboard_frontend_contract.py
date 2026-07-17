@@ -386,11 +386,20 @@ def test_kpi_count_up_respects_reduced_motion():
 
 def test_dashboard_chart_aria_labels_are_bilingual():
     """Chart canvas accessible names must be localized — an Arabic-primary app
-    must not announce English-only aria-labels to screen readers."""
+    must not announce English-only aria-labels to screen readers.
+
+    The accessible name must also describe the data the chart actually plots.
+    This test previously pinned "User activity chart showing active users over
+    time" for the `attendance-chart` canvas, but that series is
+    `AttendanceLog` rows with status PRESENT grouped by date
+    (admin_endpoints.py, `attendance_chart`) — no user or login data is
+    involved. The old name announced attendance figures to screen-reader users
+    as user activity, i.e. it was sighted-user-invisible misinformation.
+    """
     js = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
     # English kept, Arabic added for both charts.
-    assert "User activity chart showing active users over time" in js
-    assert "مخطط نشاط المستخدمين" in js
+    assert "Daily attendance chart showing recorded attendance by date" in js
+    assert "مخطط الحضور اليومي" in js
     assert "Enrollment status chart showing distribution of application statuses" in js
     assert "مخطط حالة التسجيل" in js
 
