@@ -395,7 +395,6 @@ document.addEventListener("DOMContentLoaded", () => {
     loadDimensionIds('dim1');
     loadDimensionIds('dim2');
 });
-}
 
 // Government Report Logic
 async function generateGovReport() {

@@ -1054,14 +1054,7 @@ const defaultEnglishTranslations = {
     view_analytics: "View Analytics",
     data_management: "Data Management",
     quick_actions: "Quick Actions",
-<<<<<<< HEAD
     daily_attendance: "Daily Attendance",
-=======
-    dashboard: {
-        attendance: "Attendance",
-    },
-    attendance_chart: "Attendance",
->>>>>>> kilo-admin-complete-content-implementation
     data_submissions: "Data Submissions",
     recent_activity: "Recent Activity",
     alerts: "Alerts",
@@ -1186,14 +1179,7 @@ const defaultArabicTranslations = {
     view_analytics: "عرض التحليلات",
     data_management: "إدارة البيانات",
     quick_actions: "الإجراءات السريعة",
-<<<<<<< HEAD
     daily_attendance: "الحضور اليومي",
-=======
-    dashboard: {
-        attendance: "الحضور",
-    },
-    attendance_chart: "الحضور",
->>>>>>> kilo-admin-complete-content-implementation
     data_submissions: "عمليات الإدخال",
     recent_activity: "النشاط الأخير",
     alerts: "التنبيهات",
