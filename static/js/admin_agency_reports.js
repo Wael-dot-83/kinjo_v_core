@@ -697,7 +697,6 @@
         }
         renderAgency(data);
       })
-      .then(renderAgency)
       .catch(() => {
         if (root) root.textContent = t("تعذر تحميل تقارير الجهة.", "Unable to load agency reports.");
       });
