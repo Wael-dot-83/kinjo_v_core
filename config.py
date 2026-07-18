@@ -306,6 +306,12 @@ class Settings(BaseSettings):
     OLLAMA_EMBED_DIM: int = 768
     OLLAMA_TIMEOUT_SECONDS: int = 30
 
+    # Agency reports: statistical disclosure threshold. Category counts below this
+    # are suppressed ("محجوبة لحماية الخصوصية"). A value <= 1 disables suppression so
+    # every breakdown value is shown. Read via settings (not os.getenv) because the
+    # app has no load_dotenv() — os.getenv would never see this .env value.
+    AGENCY_REPORT_MIN_CELL_SIZE: int = 5
+
     @field_validator("DEBUG", mode="before")
     @classmethod
     def normalize_debug_flag(cls, value):

@@ -18,10 +18,13 @@ _JORDAN_TZ = timezone(timedelta(hours=3))
 
 def _min_cell_size() -> int:
     """Statistical disclosure threshold: category counts below this are
-    suppressed. Configurable via AGENCY_REPORT_MIN_CELL_SIZE; safe default 5.
-    A value <= 1 disables suppression."""
+    suppressed. Configurable via settings.AGENCY_REPORT_MIN_CELL_SIZE (loaded
+    from .env by pydantic); safe default 5. A value <= 1 disables suppression.
+
+    Reads settings, not os.getenv: the app never calls load_dotenv(), so os.environ
+    does not contain .env values and os.getenv would always fall back to the default."""
     try:
-        return max(0, int(os.getenv("AGENCY_REPORT_MIN_CELL_SIZE", "5")))
+        return max(0, int(settings.AGENCY_REPORT_MIN_CELL_SIZE))
     except (TypeError, ValueError):
         return 5
 
