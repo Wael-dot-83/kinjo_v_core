@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 import models
 from agency_reports_registry import AGENCY_REPORT_REGISTRY, SENSITIVE_FIELD_DENYLIST
+from config import settings
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
@@ -318,7 +319,15 @@ class AgencyReportsService:
         }
 
     def _clean_filters(self, filters: dict[str, Any]) -> dict[str, Any]:
-        return {k: v for k, v in filters.items() if v not in (None, "", "null", "undefined")}
+        cleaned = {k: v for k, v in filters.items() if v not in (None, "", "null", "undefined")}
+        # Normalize governorate aliases so a filter value like "العاصمة" (official
+        # admin name) or "Amman" matches the value stored on records ("عمان").
+        # Without this, selecting "العاصمة" returned zero rows for the capital.
+        gov = cleaned.get("governorate")
+        if isinstance(gov, str):
+            aliases = settings.JORDAN_GOVERNORATE_ALIASES
+            cleaned["governorate"] = aliases.get(gov) or aliases.get(gov.lower(), gov)
+        return cleaned
 
     def _unavailable_payload(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any], status: str | None = None) -> dict[str, Any]:
         status = status or report.get("status", "requires_structured_data")
