@@ -7,6 +7,12 @@
   const api = (path) => fetch(path, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } }).then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
   const t = (ar, en) => lang === "en" ? en : ar;
 
+  // Index-view filter state. Declared at module scope because agencyCard() (a
+  // top-level function) reads state.dateFrom/dateTo to propagate the selected
+  // date range onto agency links; a block-scoped const would throw ReferenceError
+  // there and the catalog .then() would fall into .catch ("تعذر تحميل البيانات").
+  const state = { search: "", status: "all", sort: "name", dateFrom: "", dateTo: "" };
+
   const agencyLogoFiles = {
     moe: "moe.jpg",
     moh: "moh.jpg",
@@ -562,7 +568,6 @@
 
     if (root) { clear(root); root.appendChild(skeletonGrid(6)); }
 
-    const state = { search: "", status: "all", sort: "name", dateFrom: "", dateTo: "" };
     let allAgencies = [];
 
     function matches(agency) {
