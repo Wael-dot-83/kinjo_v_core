@@ -132,7 +132,10 @@
     const li = document.createElement("li");
     li.className = "agency-card agency-card--interactive";
     const readiness = agencyReadiness(agency);
-    const href = "/admin/agency-reports/" + encodeURIComponent(agency.code);
+    const dateParams = (state.dateFrom || state.dateTo)
+      ? "?" + new URLSearchParams({ date_from: state.dateFrom || "", date_to: state.dateTo || "" }).toString()
+      : "";
+    const href = "/admin/agency-reports/" + encodeURIComponent(agency.code) + dateParams;
 
     const head = document.createElement("div");
     head.className = "agency-card__head";
@@ -272,7 +275,7 @@
 
       const link = document.createElement("a");
       link.className = "admin-btn admin-btn-primary agency-card-btn" + (report.status !== "ready" ? " disabled" : "");
-      link.href = "/admin/agency-reports/" + encodeURIComponent(data.agency_code) + "/" + encodeURIComponent(report.report_code);
+      link.href = "/admin/agency-reports/" + encodeURIComponent(data.agency_code) + "/" + encodeURIComponent(report.report_code) + (report._dateSuffix || "");
       link.textContent = t("فتح التقرير", "Open Report");
       if (report.status !== "ready") {
         link.setAttribute("aria-disabled", "true");
@@ -559,7 +562,7 @@
 
     if (root) { clear(root); root.appendChild(skeletonGrid(6)); }
 
-    const state = { search: "", status: "all", sort: "name" };
+    const state = { search: "", status: "all", sort: "name", dateFrom: "", dateTo: "" };
     let allAgencies = [];
 
     function matches(agency) {
@@ -579,10 +582,12 @@
       return arr;
     }
     function resetFilters() {
-      state.search = ""; state.status = "all"; state.sort = "name";
+      state.search = ""; state.status = "all"; state.sort = "name"; state.dateFrom = ""; state.dateTo = "";
       const s = document.getElementById("agency-search"); if (s) s.value = "";
       const st = document.getElementById("agency-status-filter"); if (st) st.value = "all";
       const so = document.getElementById("agency-sort"); if (so) so.value = "name";
+      const df = document.getElementById("agency-date-from"); if (df) df.value = "";
+      const dt = document.getElementById("agency-date-to"); if (dt) dt.value = "";
       render();
     }
     function emptyState(hasFilters) {
@@ -612,7 +617,7 @@
       const filtered = sortAgencies(allAgencies.filter(matches));
       const countEl = document.getElementById("agency-result-count");
       if (countEl) countEl.textContent = t(filtered.length + " من " + allAgencies.length + " جهة", filtered.length + " of " + allAgencies.length + " agencies");
-      const active = !!(state.search || state.status !== "all" || state.sort !== "name");
+      const active = !!(state.search || state.status !== "all" || state.sort !== "name" || state.dateFrom || state.dateTo);
       const clearBtn = document.getElementById("agency-clear-filters");
       if (clearBtn) clearBtn.hidden = !active;
       clear(root);
@@ -638,6 +643,10 @@
       if (st) st.addEventListener("change", () => { state.status = st.value; render(); });
       const so = document.getElementById("agency-sort");
       if (so) so.addEventListener("change", () => { state.sort = so.value; render(); });
+      const df = document.getElementById("agency-date-from");
+      if (df) df.addEventListener("change", () => { state.dateFrom = df.value; render(); });
+      const dt = document.getElementById("agency-date-to");
+      if (dt) dt.addEventListener("change", () => { state.dateTo = dt.value; render(); });
       const clearBtn = document.getElementById("agency-clear-filters");
       if (clearBtn) clearBtn.addEventListener("click", resetFilters);
     }
@@ -669,7 +678,25 @@
   }
 
   if (type === "agency") {
+    // Read date_from/date_to from the URL query string and pass to report links
+    const urlParams = new URLSearchParams(window.location.search);
+    const dateFrom = urlParams.get("date_from") || "";
+    const dateTo = urlParams.get("date_to") || "";
+    const dateSuffix = (dateFrom || dateTo)
+      ? "?" + new URLSearchParams({ date_from: dateFrom, date_to: dateTo }).toString()
+      : "";
+
     api("/api/admin/agency-reports/" + encodeURIComponent(page.dataset.agencyCode) + "/reports")
+      .then(function(data) {
+        // If date params exist, append them to each report's "Open Report" link
+        if (dateSuffix && data.reports) {
+          data.reports.forEach(function(r) {
+            // Store date params so renderAgency can use them
+            r._dateSuffix = dateSuffix;
+          });
+        }
+        renderAgency(data);
+      })
       .then(renderAgency)
       .catch(() => {
         if (root) root.textContent = t("تعذر تحميل تقارير الجهة.", "Unable to load agency reports.");
@@ -678,7 +705,15 @@
 
   if (type === "report") {
     const filtersForm = document.getElementById("agency-report-filters");
-    if (filtersForm) filtersForm.addEventListener("submit", (e) => { e.preventDefault(); loadReport(); });
+    if (filtersForm) {
+      // Pre-fill date_from/date_to from URL query string if present
+      const urlParams = new URLSearchParams(window.location.search);
+      const df = urlParams.get("date_from");
+      const dt = urlParams.get("date_to");
+      if (df) { const el = filtersForm.querySelector("[name=date_from]"); if (el) el.value = df; }
+      if (dt) { const el = filtersForm.querySelector("[name=date_to]"); if (el) el.value = dt; }
+      filtersForm.addEventListener("submit", (e) => { e.preventDefault(); loadReport(); });
+    }
     loadReport();
   }
 })();

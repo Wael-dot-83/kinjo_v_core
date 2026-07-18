@@ -1724,6 +1724,26 @@ async def admin_charts_explorer(request: Request, current_user: User = Depends(g
     if current_user.role != UserRole.ADMIN:
         return RedirectResponse("/dashboard")
     from charts.schemas import ChartSource, ChartType
+    SOURCE_LABELS_EN = {
+        "incidents": "Incidents", "attendance": "Attendance",
+        "daily_reports": "Daily Reports", "enrollments": "Enrollments",
+        "kindergartens": "Kindergartens",
+    }
+    SOURCE_LABELS_AR = {
+        "incidents": "الحوادث", "attendance": "الحضور",
+        "daily_reports": "التقارير اليومية", "enrollments": "التسجيلات",
+        "kindergartens": "الحضانات",
+    }
+    CHART_LABELS_EN = {
+        "line": "Line", "bar": "Bar", "scatter": "Scatter", "pie": "Pie",
+        "histogram": "Histogram", "box": "Box", "heatmap": "Heatmap",
+        "funnel": "Funnel", "treemap": "Treemap",
+    }
+    CHART_LABELS_AR = {
+        "line": "خطي", "bar": "أعمدة", "scatter": "مبعثر", "pie": "دائري",
+        "histogram": "مدرج تكراري", "box": "مربع", "heatmap": "خريطة حرارية",
+        "funnel": "قمعي", "treemap": "شجري",
+    }
     return templates.TemplateResponse(
         request=request,
         name="admin/analytics/charts_dashboard.html",
@@ -1732,6 +1752,10 @@ async def admin_charts_explorer(request: Request, current_user: User = Depends(g
             "today": _today(),
             "sources": [s.value for s in ChartSource],
             "chart_types": [t.value for t in ChartType],
+            "SOURCE_LABELS_EN": SOURCE_LABELS_EN,
+            "SOURCE_LABELS_AR": SOURCE_LABELS_AR,
+            "CHART_LABELS_EN": CHART_LABELS_EN,
+            "CHART_LABELS_AR": CHART_LABELS_AR,
         }
     )
 

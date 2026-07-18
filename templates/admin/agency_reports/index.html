@@ -88,6 +88,14 @@
           <option value="readiness">{% if ui_lang == 'en' %}Readiness{% else %}مستوى الجاهزية{% endif %}</option>
         </select>
       </div>
+      <div class="agency-toolbar__date">
+        <label for="agency-date-from">{% if ui_lang == 'en' %}From{% else %}من{% endif %}</label>
+        <input type="date" id="agency-date-from" class="form-control form-control-sm" aria-label="{% if ui_lang == 'en' %}Start date{% else %}تاريخ البداية{% endif %}">
+      </div>
+      <div class="agency-toolbar__date">
+        <label for="agency-date-to">{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}</label>
+        <input type="date" id="agency-date-to" class="form-control form-control-sm" aria-label="{% if ui_lang == 'en' %}End date{% else %}تاريخ النهاية{% endif %}">
+      </div>
       <div class="agency-toolbar__meta">
         <span id="agency-result-count" class="agency-result-count" aria-live="polite"></span>
         <button type="button" class="agency-clear-btn" id="agency-clear-filters" hidden>
@@ -154,6 +162,7 @@
     <ol>
       <li>{% if ui_lang == 'en' %}Pick an official agency to see its available aggregated reports.{% else %}اختر جهة رسمية لعرض تقاريرها التجميعية المتاحة.{% endif %}</li>
       <li>{% if ui_lang == 'en' %}Use the readiness badge to tell ready reports from those still needing data.{% else %}استخدم شارة الجاهزية للتمييز بين التقارير الجاهزة وتلك التي تحتاج إلى بيانات.{% endif %}</li>
+      <li>{% if ui_lang == 'en' %}Set a date range in the toolbar to filter reports by period.{% else %}حدد نطاقًا زمنيًا في شريط الأدوات لتصفية التقارير حسب الفترة.{% endif %}</li>
       <li>{% if ui_lang == 'en' %}Open an agency, set the period and geographic scope, then export as CSV.{% else %}افتح الجهة، وحدّد الفترة الزمنية والنطاق الجغرافي، ثم صدّر النتائج بصيغة CSV.{% endif %}</li>
       <li>{% if ui_lang == 'en' %}To combine indicators across a scope, use “Create custom report”.{% else %}لدمج مؤشرات ضمن نطاق محدد، استخدم «إنشاء تقرير مخصص».{% endif %}</li>
     </ol>
