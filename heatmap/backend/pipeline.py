@@ -327,7 +327,8 @@ def _seed_sub_indicators(governorate_en: str, today: date) -> Dict[str, float]:
     wobble = math.sin(2 * math.pi * doy / 365.0) * 5  # ±5% seasonal swing
     return _build_sub_indicators_from_aggregates(
         total_kg=int(b["kg"]), active_kg=int(b["kg"] * (1 + wobble / 100)),
-        inactive_kg=max(0, int(b["kg"] * 0.05)), frozen_kg=0, draft_kg=0,
+        inactive_kg=max(0, int(b["kg"] * 0.02)),  # seed fixture constant, NOT a production estimate
+        frozen_kg=0, draft_kg=0,
         children=int(b["children"] * (1 + wobble / 100)),
         supervisors=int(b["supervisors"] * (1 + wobble / 200)),
         classrooms=int(b["classrooms"] * (1 + wobble / 200)),
