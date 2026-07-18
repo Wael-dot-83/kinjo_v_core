@@ -347,7 +347,7 @@
       </div>
       <div class="cc-titles">
         <h1 class="cc-title">
-          {% if ui_lang == 'ar' %}الخريطة الحرارية التفاعلية — الحضانات{% else %}Interactive Risk Heatmap — Kindergartens & Nurseries{% endif %}
+          {% if ui_lang == 'ar' %}الخريطة الحرارية التفاعلية — الحضانات{% else %}Interactive Risk Heatmap — Kindergartens{% endif %}
         </h1>
         <div class="cc-subtitle">
           {% if ui_lang == 'ar' %}مصدر البيانات: قاعدة بيانات KinJo المركزية • خرائط جوجل • تحديث مباشر{% else %}Data source: KinJo Central Database • Google Maps Satellite • Live updates{% endif %}
@@ -377,7 +377,7 @@
     {% if ui_lang == 'ar' %}
     تعرض هذه الصفحة خريطة حرارية تفاعلية لمؤشرات الخطر في الحضانات على مستوى محافظات المملكة، مع إمكانية تحليل كل محافظة ومقارنة المؤشرات الرئيسية.
     {% else %}
-    This page displays an interactive risk heatmap for kindergartens and nurseries at the governorate level across Jordan, with drill-down analysis and comparative key indicators for each region.
+     This page displays an interactive risk heatmap for kindergartens at the governorate level across Jordan, with drill-down analysis and comparative key indicators for each region.
     {% endif %}
   </div>
 
@@ -579,7 +579,7 @@
     {# ── CENTER: GOOGLE MAPS SATELLITE ──────────────────────── #}
     <div id="googleMapContainer"
          role="region"
-         aria-label="{% if ui_lang == 'ar' %}خريطة الأردن بالقمر الاصطناعي — الحضانات{% else %}Jordan satellite map — Kindergartens and nurseries{% endif %}">
+         aria-label="{% if ui_lang == 'ar' %}خريطة الأردن بالقمر الاصطناعي — الحضانات{% else %}Jordan satellite map — Kindergartens{% endif %}">
     </div>
 
     {# ── RIGHT: INTELLIGENCE PANEL ──────────────────────────── #}

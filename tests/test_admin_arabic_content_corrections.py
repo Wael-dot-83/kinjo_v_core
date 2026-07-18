@@ -49,6 +49,9 @@ CORRECTIONS = [
     # No nursery type exists: models.Kindergarten has no type/category column and
     # "nursery" appears nowhere in models.py, so the spec's rule selects الحضانات.
     ("الحضانات والحضانات", "الحضانات"),
+    # English text must not imply a "Nursery" entity exists alongside Kindergarten.
+    ("Kindergartens & Nurseries", "Kindergartens"),
+    ("Kindergartens and nurseries", "Kindergartens"),
 ]
 
 
