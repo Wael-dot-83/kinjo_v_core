@@ -61,6 +61,33 @@ def _enrollment_status_ar(value: Any) -> str:
     return _ENROLLMENT_STATUS_AR.get(raw or "", raw or "غير محدد")
 
 
+_KINDERGARTEN_STATUS_AR = {
+    "DRAFT": "مسودة",
+    "ACTIVE": "نشطة",
+    "FROZEN": "مجمّدة",
+    "INACTIVE": "غير نشطة",
+    "DELETED": "محذوفة",
+}
+
+
+def _kindergarten_status_ar(value: Any) -> str:
+    raw = _enum_value(value)
+    return _KINDERGARTEN_STATUS_AR.get(raw or "", raw or "غير محدد")
+
+
+_SEVERITY_AR = {
+    "LOW": "منخفضة",
+    "MEDIUM": "متوسطة",
+    "HIGH": "عالية",
+    "CRITICAL": "حرجة",
+}
+
+
+def _severity_ar(value: Any) -> str:
+    raw = _enum_value(value)
+    return _SEVERITY_AR.get(raw or "", raw or "غير محدد")
+
+
 def _safe_int(value: Any) -> int:
     try:
         return int(value or 0)
@@ -1167,9 +1194,12 @@ class AgencyReportsService:
             models.Kindergarten.status != models.KindergartenStatus.DELETED)
         if kg_ids is not None:
             q = q.filter(models.Kindergarten.id.in_(kg_ids))
-        rows = q.group_by(models.Kindergarten.status).all()
-        series = [{"label": _enum_value(s), "value": _safe_int(c)} for s, c in rows]
-        active = next((s["value"] for s in series if s["label"] == "ACTIVE"), 0)
+        counts = {_enum_value(s): _safe_int(c) for s, c in q.group_by(models.Kindergarten.status).all()}
+        # Show every operational status (zero-filled, localized), excluding DELETED
+        # which is already filtered out of the query above.
+        statuses = [st for st in models.KindergartenStatus if st != models.KindergartenStatus.DELETED]
+        series = [{"label": _kindergarten_status_ar(st.value), "value": counts.get(st.value, 0)} for st in statuses]
+        active = counts.get("ACTIVE", 0)
         return {
             "kpi": self._kpi("kindergarten_status", "الحضانات النشطة", active, "حضانة"),
             "chart": {"type": "pie", "title_ar": "حالة الحضانات", "series": series},
@@ -1375,8 +1405,9 @@ class AgencyReportsService:
             func.date(models.Incident.occurred_at) >= start, func.date(models.Incident.occurred_at) <= end)
         if kg_ids is not None:
             q = q.filter(models.Incident.kindergarten_id.in_(kg_ids))
-        rows = q.group_by(models.Incident.severity_level).all()
-        series = [{"label": _enum_value(s), "value": _safe_int(c)} for s, c in rows]
+        counts = {_enum_value(s): _safe_int(c) for s, c in q.group_by(models.Incident.severity_level).all()}
+        # All severity levels (zero-filled, localized), ordered low → critical.
+        series = [{"label": _severity_ar(sev.value), "value": counts.get(sev.value, 0)} for sev in models.SeverityLevel]
         total = sum(s["value"] for s in series)
         # Exposure-adjusted incident rate per 1,000 attended child-days — the
         # comparable measure. Unavailable (not 0) when there is no attendance.
