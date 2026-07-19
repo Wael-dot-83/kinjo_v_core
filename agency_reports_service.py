@@ -1043,6 +1043,21 @@ class AgencyReportsService:
     def _kpi(code: str, label_ar: str, value: Any, unit_ar: str = "") -> dict[str, Any]:
         return {"code": code, "label_ar": label_ar, "value": value, "unit_ar": unit_ar}
 
+    @staticmethod
+    def _dist_rows(indicator_ar: str, series: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Table rows for a categorical distribution, each carrying its share of the
+        total — the standard way official statistics present a breakdown (count + %)."""
+        total = sum(s["value"] for s in series if isinstance(s["value"], (int, float)))
+        return [
+            {
+                "المؤشر": indicator_ar,
+                "الفئة": s["label"],
+                "القيمة": s["value"],
+                "النسبة %": (round(s["value"] / total * 100, 1) if total else 0.0),
+            }
+            for s in series
+        ]
+
     def _custom_indicator(self, code: str, filters: dict[str, Any], start: date, end: date) -> dict[str, Any]:
         kg_ids = self._custom_kg_ids(filters)
         m = self._custom_dispatch()
@@ -1114,7 +1129,7 @@ class AgencyReportsService:
         return {
             "kpi": self._kpi("gender_distribution", "نسبة الذكور", _safe_pct(males, total), "%"),
             "chart": {"type": "pie", "title_ar": "التوزيع حسب الجنس", "series": series},
-            "rows": [{"المؤشر": "التوزيع حسب الجنس", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+            "rows": self._dist_rows("التوزيع حسب الجنس", series),
         }
 
     def _ind_age_distribution(self, kg_ids, start, end):
@@ -1155,7 +1170,7 @@ class AgencyReportsService:
         return {
             "kpi": self._kpi("age_distribution_6mo", "عدد الفئات العمرية (كل 6 أشهر)", band_count, "فئة"),
             "chart": {"type": "bar", "title_ar": "التوزيع العمري كل 6 أشهر", "series": series},
-            "rows": [{"المؤشر": "التوزيع العمري", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+            "rows": self._dist_rows("التوزيع العمري", series),
             "note": (f"يوجد {unknown} طفل بدون تاريخ ميلاد صالح ضمن النطاق." if unknown else None),
         }
 
@@ -1174,7 +1189,7 @@ class AgencyReportsService:
         return {
             "kpi": self._kpi("enrollment_status", "التسجيلات النشطة", active, "تسجيل"),
             "chart": {"type": "bar", "title_ar": "حالة التسجيل", "series": series},
-            "rows": [{"المؤشر": "حالة التسجيل", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+            "rows": self._dist_rows("حالة التسجيل", series),
         }
 
     # -- kindergartens / capacity -------------------------------------
@@ -1203,7 +1218,7 @@ class AgencyReportsService:
         return {
             "kpi": self._kpi("kindergarten_status", "الحضانات النشطة", active, "حضانة"),
             "chart": {"type": "pie", "title_ar": "حالة الحضانات", "series": series},
-            "rows": [{"المؤشر": "حالة الحضانة", "الفئة": s["label"], "القيمة": s["value"]} for s in series],
+            "rows": self._dist_rows("حالة الحضانة", series),
         }
 
     def _ind_occupancy_rate(self, kg_ids, start, end):
@@ -1414,7 +1429,7 @@ class AgencyReportsService:
         _, expected_by_child = self._expected_child_days(kg_ids, start, end)
         attended = self._attended_child_days(list(expected_by_child.keys()), start, end)
         rate = round(total / attended * 1000, 3) if attended else None
-        table = [{"المؤشر": "الحوادث حسب الخطورة", "الفئة": s["label"], "القيمة": s["value"]} for s in series]
+        table = self._dist_rows("الحوادث حسب الخطورة", series)
         table.append({
             "المؤشر": "معدل الحوادث لكل 1000 يوم حضور",
             "أيام الحضور": attended,
