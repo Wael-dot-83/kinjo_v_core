@@ -6,6 +6,23 @@
   const root = document.getElementById("agency-reports-root") || document.getElementById("agency-report-root");
   const api = (path) => fetch(path, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } }).then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
   const t = (ar, en) => lang === "en" ? en : ar;
+  const LOCALE = lang === "ar" ? "ar-JO" : "en-US";
+
+  function formatDateForFilename(value) {
+    if (!value) return new Date().toISOString().slice(0, 10);
+    try {
+      if (typeof value === "string" && value.length >= 10) {
+        return value.slice(0, 10);
+      }
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.valueOf())) {
+        return parsed.toISOString().slice(0, 10);
+      }
+    } catch (err) {
+      /* ignore and fall through */
+    }
+    return new Date().toISOString().slice(0, 10);
+  }
 
   // Index-view filter state. Declared at module scope because agencyCard() (a
   // top-level function) reads state.dateFrom/dateTo to propagate the selected
@@ -77,9 +94,9 @@
 
   // -------- Index page: readiness, KPI grid, agency cards, skeletons --------
   const READINESS = {
-    ready:      { ar: "جاهز",            en: "Ready",           cls: "success", icon: "bi-check-circle-fill" },
-    partial:    { ar: "جاهز جزئيًا",     en: "Partially ready", cls: "info",    icon: "bi-clock-history" },
-    needs_data: { ar: "يحتاج إلى بيانات", en: "Needs data",      cls: "warning", icon: "bi-exclamation-triangle-fill" },
+    ready:      { ar: "جاهزة",           en: "Ready",           cls: "success", icon: "bi-check-circle-fill" },
+    partial:    { ar: "جاهزة جزئيًا",    en: "Partially ready", cls: "info",    icon: "bi-clock-history" },
+    needs_data: { ar: "تحتاج بيانات",    en: "Needs data",      cls: "warning", icon: "bi-exclamation-triangle-fill" },
   };
   const READINESS_RANK = { ready: 0, partial: 1, needs_data: 2 };
 
@@ -109,6 +126,7 @@
     const totalReports = agencies.reduce((s, a) => s + (a.report_count || 0), 0);
     const readyReports = agencies.reduce((s, a) => s + (a.ready_report_count || 0), 0);
     const needsData = agencies.reduce((s, a) => s + (a.requires_data_count || 0), 0);
+    const generatedAt = agencies.length ? agencies[0].generated_at : null;
     const items = [
       { value: agencies.length, label: t("الجهات الرسمية", "Official agencies"), icon: "bi-buildings", cls: "primary", hint: t("جهات حكومية متكاملة", "Connected agencies") },
       { value: totalReports, label: t("إجمالي التقارير", "Total reports"), icon: "bi-file-earmark-bar-graph", cls: "primary", hint: t("تقارير تجميعية متاحة", "Aggregated reports") },
@@ -132,6 +150,10 @@
       li.append(icon, body);
       grid.appendChild(li);
     });
+    const updatedAtEl = document.getElementById("agency-index-updated");
+    if (updatedAtEl) {
+      updatedAtEl.innerHTML = '<i class="bi bi-clock" aria-hidden="true"></i> ' + t("آخر تحديث", "Last updated") + ': ' + (generatedAt ? new Date(generatedAt).toLocaleString(LOCALE, { dateStyle: "medium", timeStyle: "short" }) : "—");
+    }
   }
 
   function agencyCard(agency) {
@@ -154,13 +176,17 @@
     titleWrap.append(h3, readinessBadge(readiness));
     head.appendChild(titleWrap);
 
-    let bodyElement = null;
-    if (agency.code !== "mosd") {
-      const desc = document.createElement("p");
-      desc.className = "agency-card-desc";
-      desc.textContent = (lang === "en" ? (agency.description_en || agency.description_ar) : agency.description_ar) || "";
-      bodyElement = desc;
-    }
+    const purpose = document.createElement("p");
+    purpose.className = "agency-card-desc";
+    purpose.textContent = (lang === "en" ? (agency.description_en || agency.description_ar) : agency.description_ar) || "";
+
+    const usage = document.createElement("p");
+    usage.className = "agency-card-usage";
+    usage.innerHTML = '<strong>' + t("كيفية الاستخدام", "How to use") + ':</strong> ' + t("اختر فترة تجميع البيانات. استخدم الفلاتر لتحديد النطاق الجغرافي. راجع النتائج وصدّرها عند الحاجة.", "Select a data aggregation period. Use filters to define the geographic scope. Review results and export when needed.");
+
+    const updated = document.createElement("p");
+    updated.className = "agency-card-updated";
+    updated.innerHTML = '<i class="bi bi-clock" aria-hidden="true"></i> ' + t("آخر تحديث", "Last updated") + ': ' + (agency.generated_at ? new Date(agency.generated_at).toLocaleString(LOCALE, { dateStyle: "medium", timeStyle: "short" }) : "—");
 
     const stats = document.createElement("dl");
     stats.className = "agency-card__stats";
@@ -179,7 +205,9 @@
     );
 
     li.appendChild(head);
-    if (bodyElement) li.appendChild(bodyElement);
+    li.appendChild(purpose);
+    li.appendChild(usage);
+    li.appendChild(updated);
     li.appendChild(stats);
 
     if (readiness !== "ready" && (agency.requires_data_count || 0) > 0) {
@@ -197,7 +225,7 @@
     const link = document.createElement("a");
     link.className = "admin-btn admin-btn-primary agency-card-btn";
     link.href = href;
-    link.innerHTML = "<span>" + t("عرض التقارير", "View reports") + '</span><i class="bi bi-chevron-left icon-directional" aria-hidden="true"></i>';
+    link.innerHTML = "<span>" + t("فتح تقارير الجهة", "Open agency reports") + '</span><i class="bi bi-chevron-left icon-directional" aria-hidden="true"></i>';
     link.setAttribute("aria-label", t("عرض تقارير " + (agency.name_ar || agency.code), "View reports for " + (agency.name_en || agency.code)));
     li.appendChild(link);
 
@@ -237,6 +265,10 @@
     if (titleEl) titleEl.textContent = lang === "en" ? data.agency_name_en : data.agency_name_ar;
     const desc = document.getElementById("agency-description");
     if (desc) desc.textContent = data.description_ar || "";
+    const headerUpdated = document.getElementById("agency-header-updated");
+    if (headerUpdated) {
+      headerUpdated.innerHTML = '<i class="bi bi-clock" aria-hidden="true"></i> ' + t("آخر تحديث", "Last updated") + ': ' + (data.generated_at ? new Date(data.generated_at).toLocaleString(LOCALE, { dateStyle: "medium", timeStyle: "short" }) : "—");
+    }
 
     // Render agency logo in header
     const logoContainer = document.getElementById("agency-logo-container");
@@ -269,6 +301,19 @@
       reportDesc.className = "agency-card-desc";
       reportDesc.textContent = report.description_ar || "";
 
+      const indicators = document.createElement("p");
+      indicators.className = "agency-card-meta";
+      indicators.innerHTML = '<strong>' + t("المؤشرات المتاحة", "Available indicators") + ':</strong> ' + (report.data_sources && report.data_sources.length ? report.data_sources.join(", ") : "—");
+
+      const updated = document.createElement("p");
+      updated.className = "agency-card-updated";
+      const reportUpdated = report.generated_at || data.generated_at;
+      updated.innerHTML = '<i class="bi bi-clock" aria-hidden="true"></i> ' + t("آخر تحديث", "Last updated") + ': ' + (reportUpdated ? new Date(reportUpdated).toLocaleString(LOCALE, { dateStyle: "medium", timeStyle: "short" }) : "—");
+
+      const usage = document.createElement("p");
+      usage.className = "agency-card-usage";
+      usage.innerHTML = '<strong>' + t("كيفية الاستخدام", "How to use") + ':</strong> ' + t("اختر فترة تجميع البيانات. استخدم الفلاتر لتحديد النطاق الجغرافي. راجع النتائج وصدّرها عند الحاجة.", "Select a data aggregation period. Use filters to define the geographic scope. Review results and export when needed.");
+
       const statusRow = document.createElement("div");
       statusRow.className = "agency-card-meta";
       statusRow.appendChild(statusBadge(report.status));
@@ -288,7 +333,7 @@
         link.setAttribute("tabindex", "-1");
       }
 
-      li.append(h2, reportDesc, statusRow, link);
+      li.append(h2, reportDesc, indicators, updated, usage, statusRow, link);
       list.appendChild(li);
     });
 
@@ -325,6 +370,20 @@
       logoEl.appendChild(window.renderAgencyLogo(agencyObj, 72));
     }
 
+    // Data quality badge
+    const dqEl = document.getElementById("agency-data-quality-badge");
+    if (dqEl && payload.metadata.data_quality_status) {
+      const dqMap = {
+        sufficient: { ar: "مؤشر جودة البيانات: كافٍ", en: "Data quality: sufficient", cls: "success" },
+        partial: { ar: "مؤشر جودة البيانات: جزئي", en: "Data quality: partial", cls: "warning" },
+        limited: { ar: "مؤشر جودة البيانات: محدود", en: "Data quality: limited", cls: "warning" },
+        incomplete: { ar: "مؤشر جودة البيانات: غير مكتمل", en: "Data quality: incomplete", cls: "danger" },
+      };
+      const dq = dqMap[payload.metadata.data_quality_status] || { ar: "مؤشر جودة البيانات: " + payload.metadata.data_quality_status, en: "Data quality: " + payload.metadata.data_quality_status, cls: "default" };
+      dqEl.className = "agency-dq-badge agency-dq-badge--" + dq.cls;
+      dqEl.innerHTML = '<i class="bi bi-activity" aria-hidden="true"></i> ' + t(dq.ar, dq.en);
+    }
+
     // Executive summary
     const summary = document.createElement("section");
     summary.className = "agency-report-summary";
@@ -353,120 +412,93 @@
 
     // Chart placeholder (if chart data provided)
     if (payload.chart) {
-      const chartSection = document.createElement("div");
-      chartSection.className = "agency-chart-section";
+        const chartSection = document.createElement("div");
+        chartSection.className = "agency-chart-section";
       const chartTitle = document.createElement("h2");
       chartTitle.className = "agency-chart-title";
       chartTitle.textContent = payload.chart.title_ar || t("الرسم البياني", "Chart");
       chartSection.appendChild(chartTitle);
-      if (window.Chart && payload.chart.series && payload.chart.series.length) {
-        const canvas = document.createElement("canvas");
-        canvas.id = "agency-report-chart";
-        canvas.setAttribute("aria-label", payload.chart.title_ar || "");
-        canvas.setAttribute("role", "img");
-        const isPie = payload.chart.type === "pie";
-        const horizontal = !isPie; // horizontal bars read long Arabic labels cleanly
-        const premiumPalette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
-        // Semantic colours: incident severity ramps green→red; nursery status has
-        // fixed meanings. Everything else uses the categorical palette.
-        const SEVERITY_RAMP = { "منخفضة": "#16a34a", "متوسطة": "#f59e0b", "عالية": "#ea580c", "حرجة": "#dc2626" };
-        const STATUS_COLORS = { "نشطة": "#16a34a", "مجمّدة": "#0ea5e9", "غير نشطة": "#94a3b8", "مسودة": "#cbd5e1", "محذوفة": "#ef4444" };
-        const colorFor = (label, i) => SEVERITY_RAMP[label] || STATUS_COLORS[label] || premiumPalette[i % premiumPalette.length];
+      const chartContainer = document.createElement("div");
+      chartContainer.id = "agency-plotly-chart";
+      chartContainer.setAttribute("role", "img");
+      chartContainer.setAttribute("aria-label", payload.chart.title_ar || "");
+      chartSection.appendChild(chartContainer);
+      if (window.Plotly && payload.chart.series && payload.chart.series.length) {
         const labels = payload.chart.series.map((s) => s.label);
         const values = payload.chart.series.map((s) => s.value);
         const total = values.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
-        const colors = payload.chart.series.map((s, i) => colorFor(s.label, i));
-        // Fixed-height, position:relative wrapper so Chart.js (maintainAspectRatio:
-        // false) has a bounded box — otherwise the canvas grows unbounded.
-        const chartHeight = horizontal ? Math.min(620, Math.max(300, labels.length * 40 + 60)) : 380;
-        const chartWrap = document.createElement("div");
-        chartWrap.style.position = "relative";
-        chartWrap.style.width = "100%";
-        chartWrap.style.height = chartHeight + "px";
-        chartWrap.appendChild(canvas);
-        chartSection.appendChild(chartWrap);
-        const ctx = canvas.getContext("2d");
-
-        // Dark-mode aware axis colours (labels invisible otherwise on a dark card).
-        const prefersDark = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
-        const axisTick = prefersDark ? "#94a3b8" : "#64748b";
-        const axisInk = prefersDark ? "#e2e8f0" : "#0f172a";
-        const axisGrid = prefersDark ? "#334155" : "#eef2f7";
-
-        if (window.Chart) {
-          window.Chart.defaults.font.family = "'Inter', 'Segoe UI', system-ui, sans-serif";
-          window.Chart.defaults.color = axisTick;
-        }
-
-        const chartInst = new window.Chart(ctx, {
-          type: isPie ? "doughnut" : "bar",
-          data: {
-            labels: labels,
-            datasets: [{
-              label: payload.chart.title_ar || "",
-              data: values,
-              backgroundColor: colors,
-              borderColor: "#ffffff",
-              borderWidth: isPie ? 2 : 0,
-              borderRadius: isPie ? 0 : 6,
-              borderSkipped: false,
-              maxBarThickness: 34,
-              hoverOffset: isPie ? 8 : 0
-            }]
-          },
-          options: {
-            indexAxis: horizontal ? "y" : "x",
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: { duration: 900, easing: 'easeOutQuart' },
-            layout: { padding: 8 },
-            cutout: isPie ? "58%" : undefined,
-            plugins: {
-              legend: {
-                display: isPie,
-                position: "bottom",
-                rtl: true,
-                labels: { padding: 16, usePointStyle: true, pointStyle: 'circle', font: { size: 12 } }
-              },
-              tooltip: {
-                rtl: true,
-                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                titleFont: { size: 13 },
-                bodyFont: { size: 13 },
-                padding: 12,
-                cornerRadius: 10,
-                boxPadding: 6,
-                usePointStyle: true,
-                callbacks: {
-                  // Count + share of total — the meaningful pair for a breakdown.
-                  label: function (c) {
-                    const v = isPie ? c.parsed : (c.parsed && c.parsed.x != null ? c.parsed.x : c.parsed);
-                    const pct = total ? Math.round((v / total) * 1000) / 10 : 0;
-                    const prefix = isPie && c.label ? c.label + ": " : "";
-                    return prefix + v + " (" + pct + "%)";
-                  }
-                }
-              }
-            },
-            scales: isPie ? {} : {
-              x: { beginAtZero: true, ticks: { precision: 0, color: axisTick }, grid: { color: axisGrid, drawBorder: false } },
-              y: { ticks: { color: axisInk, font: { size: 12 } }, grid: { display: false, drawBorder: false } }
-            }
-          }
+        const exportBtn = document.createElement("button");
+        exportBtn.type = "button";
+        exportBtn.className = "admin-btn admin-btn-secondary agency-chart-export-btn";
+        exportBtn.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i> ' + t("تصدير الرسم البياني", "Export Chart");
+        exportBtn.disabled = true;
+        exportBtn.setAttribute("aria-disabled", "true");
+        exportBtn.setAttribute("aria-live", "polite");
+        exportBtn.setAttribute("aria-label", t("تصدير الرسم البياني كصورة", "Export the current chart as an image"));
+        const chartStatus = document.createElement("div");
+        chartStatus.className = "visually-hidden";
+        chartStatus.setAttribute("aria-live", "polite");
+        chartStatus.id = "agency-chart-export-status";
+        exportBtn.addEventListener("click", function () {
+          if (!window.Plotly || !chartContainer.__chartReady || exportBtn.classList.contains("is-loading")) return;
+          exportBtn.disabled = true;
+          exportBtn.classList.add("is-loading");
+          chartStatus.textContent = t("جارٍ تجهيز ملف الصورة...", "Preparing chart image...");
+          window.Plotly.toImage(chartContainer, { format: "png", height: 600, width: 900, scale: 2 })
+            .then((dataUrl) => {
+              const link = document.createElement("a");
+              const generatedAt = payload.metadata.generated_at || payload.metadata.created_at;
+              const dateStr = formatDateForFilename(generatedAt);
+              link.href = dataUrl;
+              link.download = (payload.metadata.report_code || "report") + "_chart_" + dateStr + ".png";
+              link.click();
+              exportBtn.disabled = false;
+              exportBtn.classList.remove("is-loading");
+              chartStatus.textContent = t("تم تنزيل الرسم البياني.", "Chart downloaded.");
+              chartStatus.focus();
+            })
+            .catch(() => {
+              exportBtn.disabled = false;
+              exportBtn.classList.remove("is-loading");
+              chartStatus.textContent = t("تعذر تصدير الرسم البياني.", "Unable to export chart.");
+              alert(t("تعذر تصدير الرسم البياني. يرجى المحاولة مرة أخرى.", "Unable to export chart. Please try again."));
+            });
         });
-        // Chart export button
-        const chartExportBtn = document.createElement("button");
-        chartExportBtn.type = "button";
-        chartExportBtn.className = "admin-btn admin-btn-secondary agency-chart-export-btn";
-        chartExportBtn.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i> ' + t("تصدير الرسم البياني", "Export Chart");
-        chartExportBtn.addEventListener("click", function () {
-          const date = new Date().toISOString().slice(0, 10);
-          const link = document.createElement("a");
-          link.href = canvas.toDataURL("image/png");
-          link.download = (payload.metadata.report_code || "report") + "_chart_" + date + ".png";
-          link.click();
+        chartSection.appendChild(chartStatus);
+        chartSection.appendChild(exportBtn);
+        root.appendChild(chartSection);
+
+        const isPie = payload.chart.type === "pie";
+        const plotData = [{
+          type: isPie ? "pie" : "bar",
+          name: payload.chart.title_ar || payload.chart.title_en || "",
+          labels: labels,
+          values: values,
+          orientation: !isPie ? "h" : undefined,
+          textinfo: isPie ? "label+percent" : "value",
+          hovertemplate: "%{label}: %{value} (" + (total ? "%{percent:.1%}" : "0%") + ")<extra></extra>",
+        }];
+        const layout = {
+          margin: { l: 80, r: 30, t: 40, b: 80 },
+          height: !isPie ? Math.max(360, labels.length * 36) : 460,
+          paper_bgcolor: "transparent",
+          plot_bgcolor: "transparent",
+          font: { family: "'Inter', 'Segoe UI', system-ui, sans-serif" },
+          title: { text: payload.chart.title_ar || payload.chart.title_en || "" },
+          xaxis: !isPie ? { tickfont: { size: 13 }, zeroline: false, gridcolor: "rgba(148, 163, 184, 0.25)" } : undefined,
+          yaxis: !isPie ? { tickfont: { size: 13 }, automargin: true } : undefined,
+        };
+        const config = { displaylogo: false, responsive: true, locale: lang === "ar" ? "ar" : "en" };
+        window.Plotly.newPlot(chartContainer, plotData, layout, config).then(() => {
+          chartContainer.__chartReady = true;
+          exportBtn.disabled = false;
+          exportBtn.removeAttribute("aria-disabled");
+        }).catch(() => {
+          exportBtn.remove();
+          chartSection.appendChild(document.createTextNode(t("تعذر عرض الرسم البياني.", "Unable to render chart.")));
         });
-        chartSection.appendChild(chartExportBtn);
+      } else {
+        chartSection.appendChild(document.createTextNode(t("لا تتوفر بيانات للرسم البياني.", "No chart data available.")));
         root.appendChild(chartSection);
       }
     }
@@ -532,7 +564,7 @@
       [t("الأساس الجغرافي", "Geographic basis"), meta.geography_basis_ar],
       [t("وحدات القياس", "Units"), meta.units_note_ar],
       [t("الرموز", "Symbols"), meta.symbols_note_ar],
-      [t("تاريخ الإصدار", "Generated"), meta.generated_at ? new Date(meta.generated_at).toLocaleString(lang === "en" ? "en-GB" : "ar-JO") : null]
+      [t("تاريخ الإصدار", "Generated"), meta.generated_at ? new Date(meta.generated_at).toLocaleString(LOCALE, { dateStyle: "medium", timeStyle: "short" }) : null]
     ].filter(function (p) { return p[1]; });
     if (provItems.length) {
       const prov = document.createElement("section");

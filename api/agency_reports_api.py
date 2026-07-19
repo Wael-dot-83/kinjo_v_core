@@ -133,7 +133,7 @@ def immunization_schedule_upload(
         raise HTTPException(status_code=400, detail="يجب أن يكون الملف بصيغة Excel (.xlsx)")
     max_upload = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
     if file.size is not None and file.size > max_upload:
-        raise HTTPException(status_code=413, detail="Uploaded workbook is too large")
+        raise HTTPException(status_code=413, detail=f"حجم الملف يتجاوز الحد المسموح ({settings.MAX_UPLOAD_SIZE_MB} ميجابايت)")
     raw = file.file.read()
     validate_xlsx_archive(raw, max_compressed_bytes=max_upload)
     if not raw:

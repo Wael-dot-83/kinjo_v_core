@@ -1,0 +1,74 @@
+/* ============================================================================
+   Product-wide dark mode for the KinJo admin.
+
+   Strategy: redefine the existing surface/text/border tokens for dark so every
+   token-driven component (layout, components.css, cards, tables, forms) adapts,
+   and re-point the few hardcoded shell/component colours at tokens. Dedicated
+   --shell-* tokens carry the exact original light values for the hand-styled
+   shell (top nav, header) so LIGHT MODE IS BYTE-FOR-BYTE UNCHANGED and dark flips
+   only the surfaces/text. Responds to the OS preference; :root[data-theme] wins
+   if an in-app toggle is added. Loaded last so these declarations take effect.
+   ========================================================================= */
+
+/* ---- Shell tokens: light = the original hand-coded values, dark = flipped ---- */
+:root{
+  --shell-surface:#ffffff; --shell-hover:#f9fafb;
+  --shell-ink:#111827; --shell-ink-2:#374151; --shell-ink-3:#6b7280;
+}
+
+/* ---- Dark token values (both --kinjo-color-* and --kinjo-* namespaces) ---- */
+@media (prefers-color-scheme: dark){
+  :root{
+    --kinjo-color-bg-body:#0b1220; --kinjo-color-bg-surface:#1e293b;
+    --kinjo-color-bg-hover:#0f172a; --kinjo-color-bg-active:#334155;
+    --kinjo-color-text-primary:#f1f5f9; --kinjo-color-text-secondary:#cbd5e1;
+    --kinjo-color-text-muted:#94a3b8; --kinjo-color-border:#334155;
+    --kinjo-color-border-hover:#475569;
+    --kinjo-surface:#1e293b; --kinjo-surface-muted:#0f172a; --kinjo-bg-light:#0b1220;
+    --kinjo-text-primary:#f1f5f9; --kinjo-text-secondary:#94a3b8; --kinjo-text-muted:#94a3b8;
+    --kinjo-border-color:#334155; --kinjo-border-light:#293548;
+    --shell-surface:#1e293b; --shell-hover:#0f172a;
+    --shell-ink:#f1f5f9; --shell-ink-2:#cbd5e1; --shell-ink-3:#94a3b8;
+  }
+}
+:root[data-theme="dark"]{
+  --kinjo-color-bg-body:#0b1220; --kinjo-color-bg-surface:#1e293b;
+  --kinjo-color-bg-hover:#0f172a; --kinjo-color-bg-active:#334155;
+  --kinjo-color-text-primary:#f1f5f9; --kinjo-color-text-secondary:#cbd5e1;
+  --kinjo-color-text-muted:#94a3b8; --kinjo-color-border:#334155;
+  --kinjo-color-border-hover:#475569;
+  --kinjo-surface:#1e293b; --kinjo-surface-muted:#0f172a; --kinjo-bg-light:#0b1220;
+  --kinjo-text-primary:#f1f5f9; --kinjo-text-secondary:#94a3b8; --kinjo-text-muted:#94a3b8;
+  --kinjo-border-color:#334155; --kinjo-border-light:#293548;
+  --shell-surface:#1e293b; --shell-hover:#0f172a;
+  --shell-ink:#f1f5f9; --shell-ink-2:#cbd5e1; --shell-ink-3:#94a3b8;
+}
+/* :root[data-theme="light"] keeps the base light values — no override needed. */
+
+/* ---- Shell: top nav + header (hardcoded), re-pointed at --shell-* tokens ---- */
+.admin-top-nav{background-color:var(--shell-surface)}
+.top-menu-link{color:var(--shell-ink-2)}
+.top-menu-link i{color:var(--shell-ink-3)}
+.top-menu-item:hover > .top-menu-link,.top-menu-link:hover{background-color:var(--shell-hover);color:var(--shell-ink)}
+.btn-header-action,.btn-header-user{color:var(--shell-ink-2)}
+.btn-header-action:hover,.btn-header-user:hover{color:var(--shell-ink)}
+.header-user-name{color:var(--shell-ink)}
+.header-user-role{color:var(--shell-ink-3)}
+.header-divider{background:var(--kinjo-color-border)}
+
+/* ---- Dropdowns / menus (hardcoded surfaces) ---- */
+.dropdown-menu{background:var(--kinjo-color-bg-surface);border-color:var(--kinjo-color-border);color:var(--kinjo-color-text-primary)}
+.dropdown-item{color:var(--kinjo-color-text-primary)}
+.dropdown-item:hover,.dropdown-item:focus{background:var(--kinjo-color-bg-hover);color:var(--kinjo-color-text-primary)}
+.header-user-dropdown .dropdown-item{color:var(--shell-ink-2)}
+.header-user-dropdown .dropdown-item:hover{color:var(--shell-ink);background:var(--shell-hover)}
+
+/* ---- Secondary button (bg only; keep its brand text colour) ---- */
+.admin-btn-secondary{background:var(--kinjo-color-bg-surface);border-color:var(--kinjo-color-border)}
+
+/* ---- Dashboard cards (kd-*) and classification page (hardcoded) ---- */
+.kd-kpi-card,.kd-chart-card,.kd-health-item{background:var(--kinjo-color-bg-surface);color:var(--kinjo-color-text-primary)}
+.kd-feed-icon-gray{background:var(--kinjo-color-bg-hover);color:var(--kinjo-color-text-muted)}
+.classification-page .classification-chart-panel{background:var(--kinjo-color-bg-surface)}
+.classification-page .classification-kpi-value,.classification-page .classification-chart-header h2{color:var(--kinjo-color-text-primary)}
+.classification-page .classification-kpi-label,.classification-page .classification-chart-header span{color:var(--kinjo-color-text-muted)}

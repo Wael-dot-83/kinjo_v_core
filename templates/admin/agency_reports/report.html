@@ -30,6 +30,7 @@
       <i class="bi bi-shield-check" aria-hidden="true"></i>
       {% if ui_lang == 'en' %}Aggregated data only — no personal data{% else %}بيانات تجميعية فقط - لا توجد بيانات شخصية{% endif %}
     </div>
+    <div id="agency-data-quality-badge" class="agency-dq-badge" aria-live="polite"></div>
   </header>
 
   <!-- Help Panel -->
@@ -153,7 +154,8 @@
 <script>
 window.JORDAN_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";
 </script>
-<script src="/static/js/admin_agency_reports.js?v=3.1"></script>
+<script src="/static/js/plotly-locale-ar.js"></script>
+<script src="/static/js/admin_agency_reports.js?v=3.2"></script>
 <script src="/static/js/agency_report_location_filter.js?v=1.0"></script>
 {% if agency_code == 'moh' and report_code == 'vaccination_due_children' %}
 <script>

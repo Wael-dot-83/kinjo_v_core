@@ -4,8 +4,8 @@
   if (!root) return;
   const lang = window.KINJO_LANG === "en" ? "en" : "ar";
   const text = {
-    ar: { agencies: "جهات رسمية", reports: "تقارير", ready: "جاهزة", data: "تحتاج بيانات منظمة" },
-    en: { agencies: "Agencies", reports: "Reports", ready: "Ready", data: "Need structured data" },
+    ar: { agencies: "جهات رسمية", reports: "تقارير", ready: "جاهزة", data: "تحتاج بيانات منظمة", updated: "آخر تحديث" },
+    en: { agencies: "Agencies", reports: "Reports", ready: "Ready", data: "Need structured data", updated: "Last updated" },
   }[lang];
   fetch("/api/admin/agency-reports/summary", { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
     .then((response) => {
@@ -19,6 +19,7 @@
         [text.reports, data.report_count],
         [text.ready, data.ready_report_count],
         [text.data, data.requires_data_count],
+        [text.updated, data.generated_at ? new Date(data.generated_at).toLocaleString(lang === "ar" ? "ar-JO" : "en-US", { dateStyle: "medium", timeStyle: "short" }) : "—"],
       ].forEach(([label, value]) => {
         const item = document.createElement("div");
         item.className = "agency-summary-pill";

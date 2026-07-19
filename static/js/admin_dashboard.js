@@ -196,10 +196,10 @@ class AdminDashboard {
             refreshIcon.classList.add("bi-check2");
         }
         
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString(lang === "en" ? "en-US" : "ar-SA", { hour: '2-digit', minute: '2-digit' });
+        const generatedAt = data.generated_at ? new Date(data.generated_at) : new Date();
+        const timeStr = generatedAt.toLocaleTimeString(lang === "en" ? "en-US" : "ar-SA", { hour: '2-digit', minute: '2-digit' });
         if (lastUpdatedLabel) {
-          this._lastUpdatedAt = new Date();
+          this._lastUpdatedAt = generatedAt;
           this._renderRelativeTime();
         }
 
@@ -588,8 +588,30 @@ class AdminDashboard {
 
   renderCharts(charts) {
     if (typeof Chart === "undefined") return;
-    if (charts.attendance)       this.renderAttendanceChart(charts.attendance);
-    if (charts.data_submissions) this.renderSubmissionsChart(charts.data_submissions);
+    const attendanceCtx = document.getElementById("attendance-chart");
+    const submissionsCtx = document.getElementById("enrollment-status-chart");
+
+    if (charts.attendance && charts.attendance.labels && charts.attendance.labels.length) {
+      this.renderAttendanceChart(charts.attendance);
+    } else if (attendanceCtx) {
+      this.showChartEmpty(attendanceCtx, this.t("dashboard.no_attendance_data", "No attendance data for the selected period"));
+    }
+
+    if (charts.data_submissions && charts.data_submissions.labels && charts.data_submissions.labels.length) {
+      this.renderSubmissionsChart(charts.data_submissions);
+    } else if (submissionsCtx) {
+      this.showChartEmpty(submissionsCtx, this.t("dashboard.no_enrollment_data", "No enrollment data for the selected period"));
+    }
+  }
+
+  showChartEmpty(canvas, message) {
+    const container = canvas.closest(".admin-card-body");
+    if (!container) return;
+    canvas.style.display = "none";
+    const empty = document.createElement("div");
+    empty.className = "agency-alert agency-alert--info";
+    empty.textContent = message;
+    container.appendChild(empty);
   }
 
   /**

@@ -399,23 +399,25 @@ class AgencyReportsService:
         self._expected_cache: dict[Any, tuple[int, dict[int, int]]] = {}
 
     def catalog(self) -> dict[str, Any]:
+        generated_at = _now_iso()
         agencies = []
         for code, agency in AGENCY_REPORT_REGISTRY.items():
             reports = []
             for report_code, report in agency["reports"].items():
-                reports.append({
-                    "agency_code": code,
-                    "report_code": report_code,
-                    "title_ar": report.get("title_ar"),
-                    "title_en": report.get("title_en"),
-                    "description_ar": report.get("description_ar"),
-                    "status": report.get("status", "ready"),
-                    "privacy_level": report.get("privacy_level", "aggregated_only"),
-                    "filters": report.get("filters", []),
-                    "exports": report.get("exports", []),
-                    "data_sources": report.get("data_sources", []),
-                    "reason_ar": report.get("reason_ar"),
-                })
+            reports.append({
+                "agency_code": code,
+                "report_code": report_code,
+                "title_ar": report.get("title_ar"),
+                "title_en": report.get("title_en"),
+                "description_ar": report.get("description_ar"),
+                "status": report.get("status", "ready"),
+                "privacy_level": report.get("privacy_level", "aggregated_only"),
+                "filters": report.get("filters", []),
+                "exports": report.get("exports", []),
+                "data_sources": report.get("data_sources", []),
+                "reason_ar": report.get("reason_ar"),
+                "generated_at": generated_at,
+            })
             agencies.append({
                 "code": code,
                 "name_ar": agency["name_ar"],
@@ -424,18 +426,20 @@ class AgencyReportsService:
                 "icon": agency.get("icon", "bi-bank"),
                 "report_count": len(reports),
                 "ready_report_count": sum(1 for r in reports if r["status"] == "ready"),
-                "requires_data_count": sum(1 for r in reports if r["status"] != "ready"),
+            "requires_data_count": sum(1 for r in reports if r["status"] != "ready"),
                 "reports": reports,
+                "generated_at": generated_at,
             })
-        return {"generated_at": _now_iso(), "agencies": agencies}
+        return {"generated_at": generated_at, "agencies": agencies}
 
     def summary(self) -> dict[str, Any]:
-        catalog = self.catalog()["agencies"]
+        catalog_data = self.catalog()
+        catalog = catalog_data["agencies"]
         total_reports = sum(a["report_count"] for a in catalog)
         ready_reports = sum(a["ready_report_count"] for a in catalog)
         requires_data = sum(a["requires_data_count"] for a in catalog)
         return {
-            "generated_at": _now_iso(),
+            "generated_at": catalog_data["generated_at"],
             "agency_count": len(catalog),
             "report_count": total_reports,
             "ready_report_count": ready_reports,
@@ -457,13 +461,22 @@ class AgencyReportsService:
         }
 
     def reports_for_agency(self, agency_code: str) -> dict[str, Any]:
+        catalog = self.catalog()
         agency = self._agency(agency_code)
+        agency_entry = next((a for a in catalog["agencies"] if a["code"] == agency_code), None)
+        reports = []
+        if agency_entry:
+            for report in agency_entry["reports"]:
+                report_copy = dict(report)
+                report_copy.setdefault("generated_at", catalog.get("generated_at"))
+                reports.append(report_copy)
         return {
             "agency_code": agency_code,
             "agency_name_ar": agency["name_ar"],
             "agency_name_en": agency.get("name_en"),
             "description_ar": agency.get("description_ar"),
-            "reports": self.catalog()["agencies"][[a["code"] for a in self.catalog()["agencies"]].index(agency_code)]["reports"],
+            "generated_at": catalog.get("generated_at"),
+            "reports": reports,
         }
 
     def generate_report(self, agency_code: str, report_code: str, filters: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -626,7 +639,7 @@ class AgencyReportsService:
         return q
 
     def _kg2_eligibility(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
-        admission_year = int(filters.get("admission_year") or date.today().year)
+        admission_year = int(filters.get("admission_year") or datetime.now(_JORDAN_TZ).year)
         cutoff = date(admission_year - 5, 12, 31)
         q = (
             self.db.query(

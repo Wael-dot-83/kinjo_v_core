@@ -22,6 +22,10 @@
       <div>
         <h1 id="agency-reports-title">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</h1>
         <p>{% if ui_lang == 'en' %}Browse aggregated reports for official agencies, check data readiness, or build a custom report to support decisions.{% else %}استعرض التقارير التجميعية للجهات الرسمية، وتحقق من جاهزية البيانات، أو أنشئ تقريرًا مخصصًا لدعم القرار.{% endif %}</p>
+        <p class="agency-card-updated" id="agency-index-updated" aria-live="polite">
+          <i class="bi bi-clock" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Last updated: &mdash;{% else %}آخر تحديث: ـ{% endif %}
+        </p>
       </div>
     </div>
     <div class="agency-header-actions">
@@ -175,6 +179,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/admin_agency_reports.js?v=3.1"></script>
+<script src="/static/js/admin_agency_reports.js?v=3.2"></script>
 <script src="/static/js/admin_agency_reports_custom.js?v=3.2"></script>
 {% endblock %}

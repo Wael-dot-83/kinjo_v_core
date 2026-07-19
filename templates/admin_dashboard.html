@@ -283,7 +283,8 @@
               </h3>
             </div>
             <div class="admin-card-body">
-              <canvas id="attendance-chart" width="400" height="200"></canvas>
+              <canvas id="attendance-chart" width="400" height="200" aria-label="{% if ui_lang == 'en' %}Daily attendance chart{% else %}رسم بياني للحضور اليومي{% endif %}" role="img"></canvas>
+              <p class="visually-hidden">{% if ui_lang == 'en' %}Chart showing daily attendance trends over time{% else %}رسم بياني يظهر اتجاهات الحضور اليومي عبر الوقت{% endif %}</p>
             </div>
           </div>
         </div>
@@ -296,7 +297,8 @@
               </h3>
             </div>
             <div class="admin-card-body">
-              <canvas id="enrollment-status-chart" width="400" height="200"></canvas>
+              <canvas id="enrollment-status-chart" width="400" height="200" aria-label="{% if ui_lang == 'en' %}Enrollment status chart{% else %}رسم بياني لحالة التسجيل{% endif %}" role="img"></canvas>
+              <p class="visually-hidden">{% if ui_lang == 'en' %}Chart showing enrollment status distribution{% else %}رسم بياني يظهر توزيع حالة التسجيل{% endif %}</p>
             </div>
           </div>
         </div>

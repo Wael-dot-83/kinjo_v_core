@@ -186,7 +186,7 @@
     const row1 = el("div", { class: "custom-report-row" });
     row1.append(
       labelledSelect("cr-level", t("النطاق الجغرافي", "Geographic scope"), schema.levels, "code"),
-      labelledSelect("cr-period", t("مستوى التجميع", "Aggregation level"), schema.periods, "code"),
+      labelledSelect("cr-period", t("فترة تجميع البيانات", "Data aggregation period"), schema.periods, "code"),
     );
     p.appendChild(row1);
     // National-scope note (shown when no geographic narrowing applies).
@@ -464,7 +464,7 @@
       line("المحافظة", "Governorate", valueOf("cr-governorate")),
       line("قصبة / لواء", "District", valueOf("cr-city")),
       line("الحضانة", "Kindergarten", selectedText("cr-kindergarten")),
-      line("مستوى التجميع", "Aggregation level", period ? period.name_ar : ""),
+      line("فترة تجميع البيانات", "Data aggregation period", period ? period.name_ar : ""),
       valueOf("cr-period") === "custom" ? line("الفترة", "Period", (valueOf("cr-start") || "—") + " → " + (valueOf("cr-end") || "—"), true) : null,
       line("عدد المؤشرات", "Indicators selected", String(indicators.length)),
     ].forEach((n) => n && dl.appendChild(n));
