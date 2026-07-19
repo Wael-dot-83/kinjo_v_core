@@ -139,6 +139,60 @@ def _attendance_status_ar(value: Any) -> str:
     return _ATTENDANCE_STATUS_AR.get(raw or "", raw or "غير محدد")
 
 
+def _is_rate_key(key: Any) -> bool:
+    """A column that is a rate/ratio/percentage — which must never be summed in a
+    totals row (you total counts, not rates: standard statistical practice)."""
+    kl = str(key).lower()
+    ks = str(key)
+    return (
+        "rate" in kl or "ratio" in kl or "pct" in kl or "percent" in kl
+        or "per_" in kl or "_per_" in kl or "نسبة" in ks or "معدل" in ks or "لكل" in ks
+    )
+
+
+def _finalize_breakdowns(breakdowns: list[dict[str, Any]]) -> tuple[str | None, dict[str, Any] | None]:
+    """Professionalize a breakdown table in place: add a share-of-total column to
+    count breakdowns and build a totals row (المجموع). Returns
+    (value_col_for_chart, total_row).
+
+    - Counts are summed; rate/ratio columns show '—' in the total (never summed).
+    - Share (النسبة %) is added only when a plain 'count' column exists.
+    - The chart value column is 'count' when present (robust to the added share
+      column), else the last column (prior behaviour) — so charts do not change.
+    """
+    if not breakdowns:
+        return None, None
+    keys = list(breakdowns[0].keys())
+
+    def _num(v: Any) -> bool:
+        return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+    numeric = {k for k in keys if any(_num(b.get(k)) for b in breakdowns)}
+
+    if "count" in keys:
+        total = sum(_safe_int(b.get("count")) for b in breakdowns)
+        for b in breakdowns:
+            b["النسبة %"] = round(_safe_int(b.get("count")) / total * 100, 1) if total else 0.0
+        value_col = "count"
+    else:
+        value_col = keys[-1] if keys else None
+
+    label_col = keys[0]
+    total_row: dict[str, Any] = {}
+    for k in breakdowns[0].keys():  # includes the just-added share column
+        if k == label_col:
+            total_row[k] = "المجموع"
+        elif k == "النسبة %":
+            total_row[k] = 100.0
+        elif _is_rate_key(k):
+            total_row[k] = "—"
+        elif k in numeric:
+            total_row[k] = sum(_safe_int(b.get(k)) for b in breakdowns)
+        else:
+            total_row[k] = ""
+    return value_col, total_row
+
+
 def _safe_int(value: Any) -> int:
     try:
         return int(value or 0)
@@ -189,6 +243,7 @@ _FIELD_LABELS: dict[str, str] = {
     "trend_years": "سنوات القياس",
 
     # table columns
+    "النسبة %": "النسبة %",
     "governorate": "المحافظة",
     "city": "المدينة/اللواء",
     "district": "اللواء",
@@ -882,15 +937,15 @@ class AgencyReportsService:
         return self._payload(agency_code, agency, report_code, report, filters, {"trend_years": len(breakdowns)}, breakdowns)
 
     def _payload(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any], summary: dict[str, Any], breakdowns: list[dict[str, Any]], chart: dict[str, Any] | None = None) -> dict[str, Any]:
-        table = {"caption_ar": report.get("title_ar"), "rows": breakdowns}
-        
-        if chart is None and breakdowns:
-            keys = list(breakdowns[0].keys())
-            label_col = keys[0] if keys else ""
-            val_col = keys[-1] if keys else ""
-            if label_col and val_col:
-                series = [{"label": str(b.get(label_col, "")), "value": b.get(val_col, 0)} for b in breakdowns[:15]]
-                chart = {"type": "bar", "title_ar": report.get("title_ar"), "series": series}
+        # Professionalize the table: add a share column (count breakdowns) and a
+        # totals row (المجموع), and pick a robust chart value column.
+        value_col, total_row = _finalize_breakdowns(breakdowns)
+        table = {"caption_ar": report.get("title_ar"), "rows": breakdowns, "total_row": total_row}
+
+        if chart is None and breakdowns and value_col:
+            label_col = list(breakdowns[0].keys())[0]
+            series = [{"label": str(b.get(label_col, "")), "value": b.get(value_col, 0)} for b in breakdowns[:15]]
+            chart = {"type": "bar", "title_ar": report.get("title_ar"), "series": series}
 
         payload = {
             "metadata": self._metadata(agency_code, agency, report_code, report, filters),
@@ -898,6 +953,7 @@ class AgencyReportsService:
             "summary_labels": _label_map(summary.keys()),
             "column_labels": _label_map(breakdowns[0].keys() if breakdowns else []),
             "breakdowns": breakdowns,
+            "total_row": total_row,
             "tables": [table],
             "unavailable_indicators": [],
             "exports": {"csv": "csv" in report.get("exports", []), "json": "json" in report.get("exports", [])},

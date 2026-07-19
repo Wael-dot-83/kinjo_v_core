@@ -473,6 +473,23 @@
       const tbody = document.createElement("tbody");
       rows.forEach((row) => { const r = document.createElement("tr"); headers.forEach((h) => { const td = document.createElement("td"); td.textContent = row[h] == null ? "—" : String(row[h]); r.appendChild(td); }); tbody.appendChild(r); });
       table.appendChild(tbody);
+      // Totals footer — a standard statistical table always closes with a total.
+      // Counts are summed; rate/ratio columns show "—" (never summed).
+      const totalRow = payload.total_row;
+      if (totalRow) {
+        const tfoot = document.createElement("tfoot");
+        const ftr = document.createElement("tr");
+        ftr.className = "agency-table-total";
+        headers.forEach((h) => {
+          const td = document.createElement("td");
+          const v = totalRow[h];
+          td.textContent = (v == null || v === "") ? "" : String(v);
+          td.style.fontWeight = "700";
+          ftr.appendChild(td);
+        });
+        tfoot.appendChild(ftr);
+        table.appendChild(tfoot);
+      }
       tableSection.appendChild(table);
       root.appendChild(tableSection);
     } else {
