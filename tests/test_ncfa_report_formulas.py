@@ -85,7 +85,10 @@ def test_small_cell_suppression_blanks_small_counts(test_db, monkeypatch):
     """Category counts below the disclosure threshold are suppressed: chart
     points become a gap (None, never 0), table cells show "محجوب", and the count
     is reported in metadata. Values at/above the threshold are untouched."""
-    monkeypatch.setenv("AGENCY_REPORT_MIN_CELL_SIZE", "5")
+    # _min_cell_size() reads settings (not os.getenv, since the app has no
+    # load_dotenv), so patch the settings attribute to exercise suppression.
+    from config import settings
+    monkeypatch.setattr(settings, "AGENCY_REPORT_MIN_CELL_SIZE", 5)
     svc = AgencyReportsService(test_db)
     charts = [{"type": "bar", "series": [
         {"label": "CRITICAL", "value": 2},

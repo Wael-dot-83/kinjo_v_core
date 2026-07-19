@@ -44,6 +44,23 @@ def _gender_ar(value: Any) -> str:
     return {"MALE": "ذكر", "FEMALE": "أنثى"}.get(raw or "", "غير محدد")
 
 
+_ENROLLMENT_STATUS_AR = {
+    "DRAFT": "مسودة",
+    "SUBMITTED": "مُقدَّم",
+    "PENDING_REVIEW": "قيد المراجعة",
+    "ACCEPTED": "مقبول",
+    "REJECTED": "مرفوض",
+    "WITHDRAWN": "منسحب",
+    "WAITLISTED": "قائمة الانتظار",
+    "ACTIVE": "نشط",
+}
+
+
+def _enrollment_status_ar(value: Any) -> str:
+    raw = _enum_value(value)
+    return _ENROLLMENT_STATUS_AR.get(raw or "", raw or "غير محدد")
+
+
 def _safe_int(value: Any) -> int:
     try:
         return int(value or 0)
@@ -1056,10 +1073,17 @@ class AgencyReportsService:
         q = self.db.query(models.Child.gender, func.count(models.Child.id)).filter(models.Child.deleted_at.is_(None))
         if kg_ids is not None:
             q = q.filter(models.Child.id.in_(self._enrolled_child_ids_subq(kg_ids)))
-        rows = q.group_by(models.Child.gender).all()
-        series = [{"label": _gender_ar(g), "value": _safe_int(c)} for g, c in rows]
+        counts = {_enum_value(g): _safe_int(c) for g, c in q.group_by(models.Child.gender).all()}
+        # Always show both genders (zero-filled); keep any null/other gender visible.
+        series = [
+            {"label": "ذكر", "value": counts.get("MALE", 0)},
+            {"label": "أنثى", "value": counts.get("FEMALE", 0)},
+        ]
+        other = sum(v for k, v in counts.items() if k not in ("MALE", "FEMALE"))
+        if other:
+            series.append({"label": "غير محدد", "value": other})
         total = sum(s["value"] for s in series)
-        males = next((s["value"] for s in series if s["label"] == "ذكر"), 0)
+        males = counts.get("MALE", 0)
         return {
             "kpi": self._kpi("gender_distribution", "نسبة الذكور", _safe_pct(males, total), "%"),
             "chart": {"type": "pie", "title_ar": "التوزيع حسب الجنس", "series": series},
@@ -1072,7 +1096,13 @@ class AgencyReportsService:
         # invalid date of birth stay visible as a data-quality category rather
         # than being silently dropped from the distribution.
         ref = end
-        buckets: dict[str, int] = defaultdict(int)
+        # Fixed 6-month bands across the 0–60 month early-childhood range, always
+        # present and zero-filled so every band shows even when it has no children
+        # (a partial distribution is misleading — "each 6 months" must be visible).
+        MAX_MONTHS = 60
+        buckets: dict[str, int] = {f"{low}-{low + 6} شهر": 0 for low in range(0, MAX_MONTHS, 6)}
+        over_label = f"{MAX_MONTHS} شهر فأكثر"
+        over = 0
         unknown = 0
         for (dob,) in self._child_base_query(kg_ids).with_entities(models.Child.date_of_birth).all():
             if not dob:
@@ -1083,9 +1113,16 @@ class AgencyReportsService:
                 months -= 1
             months = max(months, 0)
             low = (months // 6) * 6
-            buckets[f"{low}-{low + 6} شهر"] += 1
-        series = [{"label": k, "value": v} for k, v in sorted(buckets.items(), key=lambda kv: int(kv[0].split("-")[0]))]
-        band_count = len(series)
+            if low >= MAX_MONTHS:
+                over += 1
+            else:
+                buckets[f"{low}-{low + 6} شهر"] += 1
+        # Dict preserves insertion order (0-6 … 54-60), so no re-sort is needed.
+        series = [{"label": k, "value": v} for k, v in buckets.items()]
+        if over:
+            series.append({"label": over_label, "value": over})
+        # KPI reports how many bands actually contain children, not the fixed 10.
+        band_count = sum(1 for s in series if s["value"] > 0)
         if unknown:
             series.append({"label": "غير معروف", "value": unknown})
         return {
@@ -1099,9 +1136,14 @@ class AgencyReportsService:
         q = self.db.query(models.EnrollmentApplication.status, func.count(models.EnrollmentApplication.id))
         if kg_ids is not None:
             q = q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
-        rows = q.group_by(models.EnrollmentApplication.status).all()
-        series = [{"label": _enum_value(s), "value": _safe_int(c)} for s, c in rows]
-        active = next((s["value"] for s in series if s["label"] == "ACTIVE"), 0)
+        counts = {_enum_value(s): _safe_int(c) for s, c in q.group_by(models.EnrollmentApplication.status).all()}
+        # Show every enrollment status (zero-filled, localized) for a complete view
+        # instead of only the statuses that happen to appear, with raw enum labels.
+        series = [
+            {"label": _enrollment_status_ar(st.value), "value": counts.get(st.value, 0)}
+            for st in models.EnrollmentStatus
+        ]
+        active = counts.get("ACTIVE", 0)
         return {
             "kpi": self._kpi("enrollment_status", "التسجيلات النشطة", active, "تسجيل"),
             "chart": {"type": "bar", "title_ar": "حالة التسجيل", "series": series},
