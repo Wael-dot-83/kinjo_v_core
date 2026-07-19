@@ -387,9 +387,15 @@
         chartSection.appendChild(chartWrap);
         const ctx = canvas.getContext("2d");
 
+        // Dark-mode aware axis colours (labels invisible otherwise on a dark card).
+        const prefersDark = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        const axisTick = prefersDark ? "#94a3b8" : "#64748b";
+        const axisInk = prefersDark ? "#e2e8f0" : "#0f172a";
+        const axisGrid = prefersDark ? "#334155" : "#eef2f7";
+
         if (window.Chart) {
           window.Chart.defaults.font.family = "'Inter', 'Segoe UI', system-ui, sans-serif";
-          window.Chart.defaults.color = "#475569";
+          window.Chart.defaults.color = axisTick;
         }
 
         const chartInst = new window.Chart(ctx, {
@@ -443,8 +449,8 @@
               }
             },
             scales: isPie ? {} : {
-              x: { beginAtZero: true, ticks: { precision: 0, color: "#64748b" }, grid: { color: "#eef2f7", drawBorder: false } },
-              y: { ticks: { color: "#0f172a", font: { size: 12 } }, grid: { display: false, drawBorder: false } }
+              x: { beginAtZero: true, ticks: { precision: 0, color: axisTick }, grid: { color: axisGrid, drawBorder: false } },
+              y: { ticks: { color: axisInk, font: { size: 12 } }, grid: { display: false, drawBorder: false } }
             }
           }
         });

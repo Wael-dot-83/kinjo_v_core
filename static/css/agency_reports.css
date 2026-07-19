@@ -376,3 +376,55 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
 /* Totals row emphasis via a class, not inline styles (consistency, state-clarity). */
 .agency-table tfoot .agency-table-total td{font-weight:700;background:#f1f5f9;border-top:2px solid #e2e8f0;color:#0f172a}
 @media (max-width:640px){.agency-provenance-list{grid-template-columns:1fr}}
+
+/* ============================================================================
+   Dark mode (agency reports) — light & dark designed together via tokens.
+   Responds to the OS preference; :root[data-theme] wins if a toggle is added.
+   Light token values equal the original colours, so light rendering is unchanged.
+   ========================================================================= */
+:root{
+  --ag-surface:#ffffff; --ag-surface-sunken:#f8fafc; --ag-surface-raised:#f1f5f9;
+  --ag-page:transparent; --ag-ink:#0f172a; --ag-ink-2:#475569; --ag-ink-3:#64748b;
+  --ag-border:#e2e8f0; --ag-border-2:#f1f5f9; --ag-link:#1d4ed8;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ag-surface:#1e293b; --ag-surface-sunken:#0f172a; --ag-surface-raised:#334155;
+    --ag-page:#0b1220; --ag-ink:#f1f5f9; --ag-ink-2:#94a3b8; --ag-ink-3:#94a3b8;
+    --ag-border:#334155; --ag-border-2:#293548; --ag-link:#93c5fd;
+  }
+}
+:root[data-theme="light"]{
+  --ag-surface:#ffffff; --ag-surface-sunken:#f8fafc; --ag-surface-raised:#f1f5f9;
+  --ag-page:transparent; --ag-ink:#0f172a; --ag-ink-2:#475569; --ag-ink-3:#64748b;
+  --ag-border:#e2e8f0; --ag-border-2:#f1f5f9; --ag-link:#1d4ed8;
+}
+:root[data-theme="dark"]{
+  --ag-surface:#1e293b; --ag-surface-sunken:#0f172a; --ag-surface-raised:#334155;
+  --ag-page:#0b1220; --ag-ink:#f1f5f9; --ag-ink-2:#94a3b8; --ag-ink-3:#94a3b8;
+  --ag-border:#334155; --ag-border-2:#293548; --ag-link:#93c5fd;
+}
+/* Surfaces & text driven by tokens (identical in light, adapts in dark). */
+.agency-reports-page{background:var(--ag-page)}
+.agency-report-summary,.agency-table,.agency-filter-panel,.agency-provenance,.agency-chart-section,.agency-card,.agency-reports-dashboard-card,.agency-help-panel{background:var(--ag-surface);border-color:var(--ag-border);color:var(--ag-ink)}
+.agency-report-summary h2,.agency-chart-title,.agency-provenance h2,.agency-page-header h1,.agency-table-section h2,.agency-card h2{color:var(--ag-ink)}
+.agency-report-summary dt,.agency-provenance-list dt{color:var(--ag-ink-2)}
+.agency-report-summary dd,.agency-provenance-list dd,.agency-table td{color:var(--ag-ink)}
+.agency-page-header p,.agency-reports-subtitle,.agency-breadcrumb,.agency-card-desc{color:var(--ag-ink-2)}
+.agency-breadcrumb a{color:var(--ag-link)}
+.agency-table caption{background:var(--ag-surface-sunken);color:var(--ag-ink);border-bottom-color:var(--ag-border)}
+.agency-table th{background:var(--ag-surface-sunken);color:var(--ag-ink-2)}
+.agency-table th,.agency-table td{border-bottom-color:var(--ag-border-2)}
+.agency-table tbody tr:hover{background-color:var(--ag-surface-sunken)}
+.agency-table tfoot .agency-table-total td{background:var(--ag-surface-raised);color:var(--ag-ink);border-top-color:var(--ag-border)}
+.agency-filter-field label{color:var(--ag-ink-2)}
+.agency-filter-field select,.agency-filter-field input{background:var(--ag-surface-sunken);border-color:var(--ag-border);color:var(--ag-ink)}
+.agency-summary-pill{background:var(--ag-surface-sunken);border-color:var(--ag-border)}
+.agency-summary-pill strong{color:var(--ag-ink)}
+.agency-summary-pill span{color:var(--ag-ink-2)}
+.agency-status{background:var(--ag-surface-sunken);border-color:var(--ag-border);color:var(--ag-ink)}
+/* Alerts: keep the semantic left border, neutral surface so tints don't glow in dark. */
+@media (prefers-color-scheme: dark){
+  .agency-alert{background:var(--ag-surface-sunken);color:var(--ag-ink)}
+}
+:root[data-theme="dark"] .agency-alert{background:var(--ag-surface-sunken);color:var(--ag-ink)}

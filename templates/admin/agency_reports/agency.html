@@ -3,7 +3,7 @@
 {% block title %}{% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهة الرسمية{% endif %}{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/agency_reports.css?v=3.3" />
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=3.4" />
 {% if agency_code == 'ncfa' %}
 <link rel="stylesheet" href="/static/css/ncfa_strong_reports.css?v=1.0" />
 {% endif %}
@@ -149,7 +149,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/admin_agency_reports.js?v=2.0"></script>
+<script src="/static/js/admin_agency_reports.js?v=3.1"></script>
 {% if agency_code == 'ncfa' %}
 <script>
 window.NCFA_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";
