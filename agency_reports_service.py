@@ -88,6 +88,57 @@ def _severity_ar(value: Any) -> str:
     return _SEVERITY_AR.get(raw or "", raw or "غير محدد")
 
 
+_ROLE_AR = {
+    "ADMIN": "مدير النظام",
+    "MANAGER": "مدير حضانة",
+    "SUPERVISOR": "مشرفة",
+    "PARENT": "ولي أمر",
+}
+
+
+def _role_ar(value: Any) -> str:
+    raw = _enum_value(value)
+    return _ROLE_AR.get(raw or "", raw or "غير محدد")
+
+
+_TRAINING_STATUS_AR = {
+    "PENDING": "قيد الانتظار",
+    "COMPLETED": "مكتمل",
+    "OVERDUE": "متأخر",
+}
+
+
+def _training_status_ar(value: Any) -> str:
+    raw = _enum_value(value)
+    return _TRAINING_STATUS_AR.get(raw or "", raw or "غير محدد")
+
+
+_THREAD_TYPE_AR = {
+    "DIRECT": "مباشرة",
+    "ANNOUNCEMENT": "إعلان",
+    "CLASS": "رسائل الصف",
+    "BROADCAST": "بث عام",
+}
+
+
+def _thread_type_ar(value: Any) -> str:
+    raw = _enum_value(value)
+    return _THREAD_TYPE_AR.get(raw or "", raw or "غير محدد")
+
+
+_ATTENDANCE_STATUS_AR = {
+    "PRESENT": "حاضر",
+    "ABSENT": "غائب",
+    "LATE": "متأخر",
+    "EXCUSED": "غياب بعذر",
+}
+
+
+def _attendance_status_ar(value: Any) -> str:
+    raw = _enum_value(value)
+    return _ATTENDANCE_STATUS_AR.get(raw or "", raw or "غير محدد")
+
+
 def _safe_int(value: Any) -> int:
     try:
         return int(value or 0)
@@ -544,11 +595,12 @@ class AgencyReportsService:
             q = q.filter(models.Kindergarten.status == models.KindergartenStatus(filters["status"]))
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.Kindergarten.status).all()
         breakdowns = [
-            {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "status": _enum_value(r.status), "count": _safe_int(r.count)}
+            {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "status": _kindergarten_status_ar(r.status), "count": _safe_int(r.count)}
             for r in rows
         ]
         total = sum(r["count"] for r in breakdowns)
-        active = sum(r["count"] for r in breakdowns if r.get("status") == "ACTIVE")
+        # Aggregate from the raw enum, not the localized display label.
+        active = sum(_safe_int(r.count) for r in rows if _enum_value(r.status) == "ACTIVE")
         return self._payload(agency_code, agency, report_code, report, filters, {"total_kindergartens": total, "active_kindergartens": active}, breakdowns)
 
     def _workforce_summary(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
@@ -560,17 +612,18 @@ class AgencyReportsService:
         q = self._apply_kindergarten_geo_filters(q, filters)
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.User.role).all()
         breakdowns = [
-            {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "role": _enum_value(r.role), "count": _safe_int(r.count)}
+            {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "role": _role_ar(r.role), "count": _safe_int(r.count)}
             for r in rows
         ]
-        supervisors = sum(r["count"] for r in breakdowns if r.get("role") == "SUPERVISOR")
-        managers = sum(r["count"] for r in breakdowns if r.get("role") == "MANAGER")
+        # Aggregate from the raw enum, not the localized display label.
+        supervisors = sum(_safe_int(r.count) for r in rows if _enum_value(r.role) == "SUPERVISOR")
+        managers = sum(_safe_int(r.count) for r in rows if _enum_value(r.role) == "MANAGER")
         return self._payload(agency_code, agency, report_code, report, filters, {"managers": managers, "supervisors": supervisors, "total_staff": managers + supervisors}, breakdowns)
 
     def _training_compliance(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
         total = self.db.query(func.count(models.StaffTrainingCompletion.id)).scalar() or 0
         completed = self.db.query(func.count(models.StaffTrainingCompletion.id)).filter(models.StaffTrainingCompletion.status == models.TrainingStatus.COMPLETED).scalar() or 0
-        breakdowns = [{"status": "COMPLETED", "count": _safe_int(completed)}, {"status": "TOTAL", "count": _safe_int(total)}]
+        breakdowns = [{"status": "مكتمل", "count": _safe_int(completed)}, {"status": "الإجمالي", "count": _safe_int(total)}]
         return self._payload(agency_code, agency, report_code, report, filters, {"training_records": _safe_int(total), "completed": _safe_int(completed), "completion_rate_pct": _safe_pct(completed, total)}, breakdowns)
 
     def _family_communication_counts(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
@@ -578,7 +631,7 @@ class AgencyReportsService:
         if filters.get("kindergarten_id"):
             q = q.filter(models.Message.kindergarten_id == int(filters["kindergarten_id"]))
         rows = q.group_by(models.Message.thread_type).all()
-        breakdowns = [{"thread_type": _enum_value(r.thread_type), "count": _safe_int(r.count)} for r in rows]
+        breakdowns = [{"thread_type": _thread_type_ar(r.thread_type), "count": _safe_int(r.count)} for r in rows]
         return self._payload(agency_code, agency, report_code, report, filters, {"message_count": sum(r["count"] for r in breakdowns)}, breakdowns)
 
     def _child_safety(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
@@ -591,7 +644,7 @@ class AgencyReportsService:
         if filters.get("severity"):
             q = q.filter(models.Incident.severity_level == models.SeverityLevel(filters["severity"]))
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.Incident.severity_level).all()
-        breakdowns = [{"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "severity": _enum_value(r.severity_level), "count": _safe_int(r.count)} for r in rows]
+        breakdowns = [{"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "severity": _severity_ar(r.severity_level), "count": _safe_int(r.count)} for r in rows]
         return self._payload(agency_code, agency, report_code, report, filters, {"incident_count": sum(r["count"] for r in breakdowns)}, breakdowns)
 
     def _service_access_gaps(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
@@ -714,11 +767,12 @@ class AgencyReportsService:
             q = q.filter(models.Kindergarten.status == models.KindergartenStatus(filters["status"]))
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.Kindergarten.status).all()
         breakdowns = [
-            {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "status": _enum_value(r.status), "count": _safe_int(r.count)}
+            {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "status": _kindergarten_status_ar(r.status), "count": _safe_int(r.count)}
             for r in rows
         ]
         total = sum(r["count"] for r in breakdowns)
-        active = sum(r["count"] for r in breakdowns if r.get("status") == "ACTIVE")
+        # Aggregate from the raw enum, not the localized display label.
+        active = sum(_safe_int(r.count) for r in rows if _enum_value(r.status) == "ACTIVE")
         return self._payload(agency_code, agency, report_code, report, filters, {"total_institutions": total, "active_institutions": active}, breakdowns)
 
     def _dos_capacity_occupancy(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
@@ -761,7 +815,7 @@ class AgencyReportsService:
         q = self._apply_kindergarten_geo_filters(q, filters)
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.AttendanceLog.status).all()
         breakdowns = [
-            {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "status": _enum_value(r.status), "count": _safe_int(r.count)}
+            {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "status": _attendance_status_ar(r.status), "count": _safe_int(r.count)}
             for r in rows
         ]
         total_attendance = sum(r["count"] for r in breakdowns)
@@ -804,7 +858,7 @@ class AgencyReportsService:
         if filters.get("severity"):
             q = q.filter(models.Incident.severity_level == models.SeverityLevel(filters["severity"]))
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.Incident.severity_level).all()
-        breakdowns = [{"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "severity": _enum_value(r.severity_level), "count": _safe_int(r.count)} for r in rows]
+        breakdowns = [{"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "severity": _severity_ar(r.severity_level), "count": _safe_int(r.count)} for r in rows]
         return self._payload(agency_code, agency, report_code, report, filters, {"incident_count": sum(r["count"] for r in breakdowns)}, breakdowns)
 
     def _dos_data_quality(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
