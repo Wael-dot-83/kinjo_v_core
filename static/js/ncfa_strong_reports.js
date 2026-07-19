@@ -531,7 +531,20 @@
               rtl: rtl,
               labels: { color: VIZ_INK, usePointStyle: true, pointStyle: "circle", boxWidth: 8, padding: 14, font: { size: 12 } }
             },
-            tooltip: { rtl: rtl, backgroundColor: "#0f172a", padding: 10, cornerRadius: 8, titleFont: { size: 12 }, bodyFont: { size: 13 } }
+            tooltip: {
+              rtl: rtl, backgroundColor: "#0f172a", padding: 10, cornerRadius: 8,
+              titleFont: { size: 12 }, bodyFont: { size: 13 },
+              callbacks: {
+                // Show count and share of total — the meaningful pair for a breakdown.
+                label: function (ctx) {
+                  const val = isPie ? ctx.parsed : (ctx.parsed && ctx.parsed.x != null ? ctx.parsed.x : ctx.parsed);
+                  const total = (ctx.dataset.data || []).reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
+                  const pct = total ? Math.round((val / total) * 1000) / 10 : 0;
+                  const prefix = isPie && ctx.label ? ctx.label + ": " : "";
+                  return prefix + val + " (" + pct + "%)";
+                }
+              }
+            }
           },
           scales: isPie ? {} : {
             x: { beginAtZero: true, ticks: { precision: 0, color: VIZ_TICK, font: { size: 11 } }, grid: { color: VIZ_GRID, drawBorder: false } },
