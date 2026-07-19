@@ -453,8 +453,15 @@
   function chartColorsFor(chart) {
     const labels = (chart.series || []).map((s) => String(s.label));
     const severity = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+    const ramp = [VIZ_STATUS.LOW, VIZ_STATUS.MEDIUM, VIZ_STATUS.HIGH, VIZ_STATUS.CRITICAL];
+    // Raw enum labels -> status ramp by label.
     if (labels.length && labels.every((l) => severity.includes(l))) {
-      return labels.map((l) => VIZ_STATUS[l] || VIZ_CATEGORICAL[0]); // severity -> status ramp
+      return labels.map((l) => VIZ_STATUS[l] || VIZ_CATEGORICAL[0]);
+    }
+    // Localized severity charts (labels are Arabic) -> status ramp by position;
+    // the series is always ordered LOW→CRITICAL so index maps green→red.
+    if ((chart.title_ar || "").indexOf("الخطورة") !== -1) {
+      return (chart.series || []).map((_, i) => ramp[i] || VIZ_CATEGORICAL[i % VIZ_CATEGORICAL.length]);
     }
     if ((chart.title_ar || "").indexOf("العمري") !== -1) {
       return VIZ_BRAND; // ordinal age bands -> one hue
