@@ -203,6 +203,54 @@ def _is_rate_key(key: Any) -> bool:
     )
 
 
+_GEO_KEYS = {"governorate", "city", "district", "year"}
+
+
+def _build_chart(breakdowns: list[dict[str, Any]], value_col: str | None, title: str | None) -> dict[str, Any] | None:
+    """Build a meaningful, aggregated chart from a multi-dimensional breakdown.
+
+    The raw breakdown has one row per (governorate, city, category), so plotting it
+    directly produces duplicate/garbled labels (البلقاء twice, إربد×roles). Instead,
+    aggregate the value by the single most informative dimension:
+    - a category column (status/severity/role/gender/…) when it has ≥2 distinct
+      values → a true distribution (e.g. staff by role, incidents by severity);
+    - otherwise the governorate → a geographic distribution.
+    Bars are sorted by value (largest first) and capped so the chart stays readable.
+    """
+    if not breakdowns or not value_col:
+        return None
+    keys = list(breakdowns[0].keys())
+
+    def _num(v: Any) -> bool:
+        return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+    # A categorical dimension: a text column that is not geography/share/rate.
+    cat_col = None
+    for k in keys:
+        if k in _GEO_KEYS or k == "النسبة %" or _is_rate_key(k):
+            continue
+        vals = [b.get(k) for b in breakdowns]
+        if any(isinstance(v, str) for v in vals) and not any(_num(v) for v in vals):
+            cat_col = k
+            break
+
+    if cat_col and len({b.get(cat_col) for b in breakdowns}) >= 2:
+        group_col = cat_col
+    elif "governorate" in keys:
+        group_col = "governorate"
+    else:
+        group_col = keys[0]
+
+    agg: dict[str, float] = {}
+    for b in breakdowns:
+        g = str(b.get(group_col, "") or "غير محدد")
+        v = b.get(value_col, 0)
+        agg[g] = agg.get(g, 0) + (v if _num(v) else 0)
+    series = [{"label": g, "value": v} for g, v in agg.items()]
+    series.sort(key=lambda s: s["value"], reverse=True)
+    return {"type": "bar", "title_ar": title, "series": series[:15], "group_by": group_col}
+
+
 def _finalize_breakdowns(breakdowns: list[dict[str, Any]]) -> tuple[str | None, dict[str, Any] | None]:
     """Professionalize a breakdown table in place: add a share-of-total column to
     count breakdowns and build a totals row (المجموع). Returns
@@ -228,7 +276,10 @@ def _finalize_breakdowns(breakdowns: list[dict[str, Any]]) -> tuple[str | None, 
             b["النسبة %"] = round(_safe_int(b.get("count")) / total * 100, 1) if total else 0.0
         value_col = "count"
     else:
-        value_col = keys[-1] if keys else None
+        # A summable value for the chart: last numeric column that is not a rate
+        # (rates can't be aggregated across rows), else the last column.
+        non_rate_numeric = [k for k in keys if k in numeric and not _is_rate_key(k)]
+        value_col = non_rate_numeric[-1] if non_rate_numeric else (keys[-1] if keys else None)
 
     label_col = keys[0]
     total_row: dict[str, Any] = {}
@@ -1006,9 +1057,7 @@ class AgencyReportsService:
         table = {"caption_ar": report.get("title_ar"), "rows": breakdowns, "total_row": total_row}
 
         if chart is None and breakdowns and value_col:
-            label_col = list(breakdowns[0].keys())[0]
-            series = [{"label": str(b.get(label_col, "")), "value": b.get(value_col, 0)} for b in breakdowns[:15]]
-            chart = {"type": "bar", "title_ar": report.get("title_ar"), "series": series}
+            chart = _build_chart(breakdowns, value_col, report.get("title_ar"))
 
         payload = {
             "metadata": self._metadata(agency_code, agency, report_code, report, filters),

@@ -364,69 +364,87 @@
         canvas.id = "agency-report-chart";
         canvas.setAttribute("aria-label", payload.chart.title_ar || "");
         canvas.setAttribute("role", "img");
-        chartSection.appendChild(canvas);
-        canvas.style.minHeight = "350px";
         const isPie = payload.chart.type === "pie";
-        const premiumPalette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
+        const horizontal = !isPie; // horizontal bars read long Arabic labels cleanly
+        const premiumPalette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
+        // Semantic colours: incident severity ramps green→red; nursery status has
+        // fixed meanings. Everything else uses the categorical palette.
+        const SEVERITY_RAMP = { "منخفضة": "#16a34a", "متوسطة": "#f59e0b", "عالية": "#ea580c", "حرجة": "#dc2626" };
+        const STATUS_COLORS = { "نشطة": "#16a34a", "مجمّدة": "#0ea5e9", "غير نشطة": "#94a3b8", "مسودة": "#cbd5e1", "محذوفة": "#ef4444" };
+        const colorFor = (label, i) => SEVERITY_RAMP[label] || STATUS_COLORS[label] || premiumPalette[i % premiumPalette.length];
+        const labels = payload.chart.series.map((s) => s.label);
+        const values = payload.chart.series.map((s) => s.value);
+        const total = values.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
+        const colors = payload.chart.series.map((s, i) => colorFor(s.label, i));
+        // Fixed-height, position:relative wrapper so Chart.js (maintainAspectRatio:
+        // false) has a bounded box — otherwise the canvas grows unbounded.
+        const chartHeight = horizontal ? Math.min(620, Math.max(300, labels.length * 40 + 60)) : 380;
+        const chartWrap = document.createElement("div");
+        chartWrap.style.position = "relative";
+        chartWrap.style.width = "100%";
+        chartWrap.style.height = chartHeight + "px";
+        chartWrap.appendChild(canvas);
+        chartSection.appendChild(chartWrap);
         const ctx = canvas.getContext("2d");
-        const bgColors = payload.chart.series.map((_, i) => {
-            if (isPie) return premiumPalette[i % premiumPalette.length];
-            const g = ctx.createLinearGradient(0, 0, 0, 400);
-            const baseColor = premiumPalette[i % premiumPalette.length];
-            g.addColorStop(0, baseColor);
-            g.addColorStop(1, baseColor + "80");
-            return g;
-        });
 
         if (window.Chart) {
           window.Chart.defaults.font.family = "'Inter', 'Segoe UI', system-ui, sans-serif";
-          window.Chart.defaults.color = "#64748b";
+          window.Chart.defaults.color = "#475569";
         }
 
         const chartInst = new window.Chart(ctx, {
-          type: isPie ? "pie" : "bar",
+          type: isPie ? "doughnut" : "bar",
           data: {
-            labels: payload.chart.series.map((s) => s.label),
-            datasets: [{ 
-              label: payload.chart.title_ar || "", 
-              data: payload.chart.series.map((s) => s.value), 
-              backgroundColor: bgColors,
-              borderWidth: isPie ? 2 : 0,
+            labels: labels,
+            datasets: [{
+              label: payload.chart.title_ar || "",
+              data: values,
+              backgroundColor: colors,
               borderColor: "#ffffff",
-              borderRadius: isPie ? 0 : 8,
+              borderWidth: isPie ? 2 : 0,
+              borderRadius: isPie ? 0 : 6,
               borderSkipped: false,
+              maxBarThickness: 34,
               hoverOffset: isPie ? 8 : 0
             }]
           },
-          options: { 
-            responsive: true, 
+          options: {
+            indexAxis: horizontal ? "y" : "x",
+            responsive: true,
             maintainAspectRatio: false,
-            animation: { duration: 1200, easing: 'easeOutQuart' },
-            layout: { padding: { top: 20, bottom: 20 } },
-            plugins: { 
-              legend: { 
-                position: isPie ? "bottom" : "top",
-                labels: { padding: 20, usePointStyle: true, pointStyle: 'circle' }
+            animation: { duration: 900, easing: 'easeOutQuart' },
+            layout: { padding: 8 },
+            cutout: isPie ? "58%" : undefined,
+            plugins: {
+              legend: {
+                display: isPie,
+                position: "bottom",
+                rtl: true,
+                labels: { padding: 16, usePointStyle: true, pointStyle: 'circle', font: { size: 12 } }
               },
               tooltip: {
+                rtl: true,
                 backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                titleFont: { size: 14, family: "'Inter', sans-serif" },
-                bodyFont: { size: 14, family: "'Inter', sans-serif" },
-                padding: 14,
-                cornerRadius: 12,
+                titleFont: { size: 13 },
+                bodyFont: { size: 13 },
+                padding: 12,
+                cornerRadius: 10,
                 boxPadding: 6,
-                usePointStyle: true
+                usePointStyle: true,
+                callbacks: {
+                  // Count + share of total — the meaningful pair for a breakdown.
+                  label: function (c) {
+                    const v = isPie ? c.parsed : (c.parsed && c.parsed.x != null ? c.parsed.x : c.parsed);
+                    const pct = total ? Math.round((v / total) * 1000) / 10 : 0;
+                    const prefix = isPie && c.label ? c.label + ": " : "";
+                    return prefix + v + " (" + pct + "%)";
+                  }
+                }
               }
             },
             scales: isPie ? {} : {
-                x: {
-                    grid: { display: false, drawBorder: false },
-                    ticks: { font: { weight: '500' } }
-                },
-                y: {
-                    grid: { color: '#e2e8f0', borderDash: [5, 5], drawBorder: false },
-                    beginAtZero: true
-                }
+              x: { beginAtZero: true, ticks: { precision: 0, color: "#64748b" }, grid: { color: "#eef2f7", drawBorder: false } },
+              y: { ticks: { color: "#0f172a", font: { size: 12 } }, grid: { display: false, drawBorder: false } }
             }
           }
         });
