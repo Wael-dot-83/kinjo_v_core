@@ -502,7 +502,6 @@
           const td = document.createElement("td");
           const v = totalRow[h];
           td.textContent = (v == null || v === "") ? "" : String(v);
-          td.style.fontWeight = "700";
           ftr.appendChild(td);
         });
         tfoot.appendChild(ftr);

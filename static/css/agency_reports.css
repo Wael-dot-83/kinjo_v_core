@@ -352,3 +352,27 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
   color: #64748b;
   font-size: 1.5rem;
 }
+
+/* ============================================================================
+   Design-consistency pass: elevation scale, provenance panel, totals row.
+   ========================================================================= */
+:root{
+  --agency-elev-1:0 1px 2px rgba(15,23,42,.06);
+  --agency-elev-2:0 4px 6px -1px rgba(15,23,42,.07),0 2px 4px -2px rgba(15,23,42,.05);
+  --agency-elev-3:0 14px 24px -8px rgba(15,23,42,.14),0 4px 8px -4px rgba(15,23,42,.06);
+}
+/* One consistent elevation scale for every card/section (elevation-consistent). */
+.agency-report-summary,.agency-table,.agency-filter-panel,.agency-provenance{box-shadow:var(--agency-elev-2)}
+.agency-chart-section{box-shadow:var(--agency-elev-3)}
+.agency-card,.agency-reports-dashboard-card{box-shadow:var(--agency-elev-1)}
+.agency-card:hover,.agency-reports-dashboard-card:hover{box-shadow:var(--agency-elev-3)}
+.agency-summary-pill{box-shadow:none}
+/* Methodology / provenance panel — matches the summary card (consistency). */
+.agency-provenance{border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin:8px 0 24px;background:#fff}
+.agency-provenance h2{font-size:1.15rem;margin:0 0 14px;font-weight:700;color:#0f172a}
+.agency-provenance-list{display:grid;grid-template-columns:minmax(140px,220px) 1fr;gap:10px 16px;margin:0}
+.agency-provenance-list dt{font-weight:600;color:#475569}
+.agency-provenance-list dd{margin:0;color:#0f172a;line-height:1.7}
+/* Totals row emphasis via a class, not inline styles (consistency, state-clarity). */
+.agency-table tfoot .agency-table-total td{font-weight:700;background:#f1f5f9;border-top:2px solid #e2e8f0;color:#0f172a}
+@media (max-width:640px){.agency-provenance-list{grid-template-columns:1fr}}
