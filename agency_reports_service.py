@@ -139,6 +139,59 @@ def _attendance_status_ar(value: Any) -> str:
     return _ATTENDANCE_STATUS_AR.get(raw or "", raw or "غير محدد")
 
 
+_SOURCE_AR = {
+    "Child": "سجل الأطفال",
+    "ParentProfile": "ملفات أولياء الأمور",
+    "EnrollmentApplication": "سجلات التسجيل",
+    "Kindergarten": "سجل الحضانات",
+    "Class": "سجل الصفوف",
+    "Incident": "سجل الحوادث والسلامة",
+    "AttendanceLog": "سجل الحضور والغياب",
+    "DailyReport": "التقارير اليومية",
+    "User": "سجل الكوادر (المستخدمين)",
+    "AbsenceRequest": "طلبات الغياب",
+    "StaffTrainingCompletion": "سجل إتمام التدريب",
+    "Message": "سجل المراسلات",
+    "NationalImmunizationSchedule": "الجدول الوطني للمطاعيم",
+    "ChildVaccinationRecord": "سجل مطاعيم الطفل",
+    "AbsenceReasonCategory": "تصنيف أسباب الغياب",
+    "OperatingCalendar": "التقويم التشغيلي",
+    "SupervisorAssignment": "سجل إسناد الإشراف",
+    "StaffTraining": "برامج التدريب",
+}
+
+_GEO_BASIS_AR = {
+    "parent_residence": "حسب سكن ولي الأمر",
+    "kindergarten_location": "حسب موقع الحضانة",
+}
+
+# Factual methodology definitions, written to match what each report actually
+# computes (not the broad title) so figures are interpreted without assumptions.
+_REPORT_DEFINITIONS = {
+    "children_demographics": "توزيع الأطفال المسجّلين حسب المحافظة واللواء والجنس، اعتمادًا على سكن ولي الأمر.",
+    "enrollment_participation_0_60": "أعداد الأطفال (0–60 شهرًا) ذوي التسجيل النشط، موزّعين حسب الموقع والفئة العمرية (بخطوات 12 شهرًا).",
+    "institutions_active_licensed": "عدد مؤسسات الطفولة المبكرة حسب حالتها التشغيلية والموقع الجغرافي.",
+    "capacity_occupancy_overcrowding": "الطاقة الاستيعابية الصفّية مقابل عدد المسجّلين النشطين ونسبة الإشغال، لكل موقع.",
+    "monthly_attendance_absence": "توزيع سجلات الحضور والغياب حسب الحالة (حاضر/غائب/متأخر/غياب بعذر) والموقع.",
+    "supervisors_child_ratio": "عدد المشرفات مقابل الأطفال المسجّلين ومعدّل الأطفال لكل مشرفة، لكل موقع.",
+    "incidents_safety_1000_child_days": "حوادث السلامة المسجّلة حسب درجة الخطورة والموقع، مع معدّل الحوادث لكل 1000 يوم حضور طفل.",
+    "geographic_service_gaps": "توزيع الأطفال مقابل الحضانات النشطة ومعدّل الأطفال لكل حضانة، لإبراز الفجوات الجغرافية في الخدمة.",
+    "data_quality_completeness": "مؤشر اكتمال البيانات: عدد الأطفال بدون تاريخ ميلاد مسجّل، موزّعين حسب الموقع.",
+    "annual_quarterly_trends": "عدد الحضانات النشطة موزّعة حسب سنة الإنشاء، لإبراز الاتجاه الزمني.",
+    "kindergarten_registry": "الحضانات المسجّلة حسب حالتها التشغيلية والموقع الجغرافي.",
+    "child_safety_protection": "حوادث السلامة وحماية الطفل المسجّلة حسب درجة الخطورة والموقع الجغرافي.",
+    "workforce_summary": "عدد الكوادر (المدراء والمشرفات) العاملين في الحضانات حسب الدور والموقع الجغرافي.",
+    "training_compliance": "عدد سجلات التدريب المكتملة مقابل إجمالي السجلات ونسبة الإكمال.",
+    "family_communication_counts": "عدد الرسائل موزّعة حسب نوع المحادثة.",
+}
+
+
+def _sources_ar(models_list: list[str]) -> str:
+    """Human-readable Arabic data-source attribution from the registry model names."""
+    names = [_SOURCE_AR.get(m, m) for m in (models_list or [])]
+    return "، ".join(dict.fromkeys(names)) if names else "منصة KinJo"
+
+
 def _is_rate_key(key: Any) -> bool:
     """A column that is a rate/ratio/percentage — which must never be summed in a
     totals row (you total counts, not rates: standard statistical practice)."""
@@ -466,6 +519,16 @@ class AgencyReportsService:
             "privacy_level": report.get("privacy_level", "aggregated_only"),
             "data_quality_status": "sufficient" if status == "ready" else status,
             "data_sources": report.get("data_sources", []),
+            # Human-readable provenance (standardized official-statistics practice):
+            # source, geography basis, definition, units, and a missing-data legend,
+            # so a reader can trust and interpret the figures without assumptions.
+            "data_source_ar": _sources_ar(report.get("data_sources", [])),
+            "geography_basis_ar": _GEO_BASIS_AR.get(
+                filters.get("geography_basis") or report.get("default_geography_basis", ""), ""
+            ),
+            "definition_ar": report.get("description_ar") or _REPORT_DEFINITIONS.get(report_code),
+            "units_note_ar": "الأعداد بالأرقام المطلقة، والنسب بالنسبة المئوية (%).",
+            "symbols_note_ar": "«—» تعني غير متوفر أو لا ينطبق · «0» تعني لا يوجد (صفر فعلي).",
             "excluded_sensitive_fields": sorted(SENSITIVE_FIELD_DENYLIST),
             "limitations": [],
             "accessibility_status": "wcag_2_1_aa_review_required",

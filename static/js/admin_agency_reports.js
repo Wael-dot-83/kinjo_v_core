@@ -499,6 +499,37 @@
       root.appendChild(empty);
     }
 
+    // Methodology & provenance — standardized official-statistics practice: state
+    // the definition, source, geographic basis, units, symbols and generation time
+    // so figures can be trusted and interpreted without assumptions.
+    const meta = payload.metadata || {};
+    const provItems = [
+      [t("تعريف التقرير", "Definition"), meta.definition_ar],
+      [t("مصدر البيانات", "Data source"), meta.data_source_ar],
+      [t("الأساس الجغرافي", "Geographic basis"), meta.geography_basis_ar],
+      [t("وحدات القياس", "Units"), meta.units_note_ar],
+      [t("الرموز", "Symbols"), meta.symbols_note_ar],
+      [t("تاريخ الإصدار", "Generated"), meta.generated_at ? new Date(meta.generated_at).toLocaleString(lang === "en" ? "en-GB" : "ar-JO") : null]
+    ].filter(function (p) { return p[1]; });
+    if (provItems.length) {
+      const prov = document.createElement("section");
+      prov.className = "agency-provenance";
+      prov.setAttribute("aria-labelledby", "agency-prov-title");
+      const ph = document.createElement("h2");
+      ph.id = "agency-prov-title";
+      ph.textContent = t("معلومات ومنهجية التقرير", "Report information & methodology");
+      prov.appendChild(ph);
+      const pdl = document.createElement("dl");
+      pdl.className = "agency-provenance-list";
+      provItems.forEach(function (p) {
+        const dt = document.createElement("dt"); dt.textContent = p[0];
+        const dd = document.createElement("dd"); dd.textContent = p[1];
+        pdl.appendChild(dt); pdl.appendChild(dd);
+      });
+      prov.appendChild(pdl);
+      root.appendChild(prov);
+    }
+
     // Export controls — CSV only (no JSON, PDF, Excel, Print)
     const exports = document.createElement("div");
     exports.className = "agency-export-actions";
