@@ -446,9 +446,12 @@
   const VIZ_CATEGORICAL = ["#2a78d6", "#1baf7a", "#eda100", "#008300", "#4a3aa7", "#e34948", "#e87ba4", "#eb6834"];
   const VIZ_STATUS = { LOW: "#0ca30c", MEDIUM: "#fab219", HIGH: "#ec835a", CRITICAL: "#d03b3b" };
   const VIZ_BRAND = "#176b4d";
-  const VIZ_GRID = "#e2e8f0";
-  const VIZ_TICK = "#64748b";
-  const VIZ_INK = "#0f172a";
+  // Axis chrome adapts to the OS colour scheme so labels stay legible in dark mode
+  // (ink was black-on-dark otherwise); series hues above read on both backgrounds.
+  const _prefersDark = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const VIZ_GRID = _prefersDark ? "#334155" : "#e2e8f0";
+  const VIZ_TICK = _prefersDark ? "#94a3b8" : "#64748b";
+  const VIZ_INK = _prefersDark ? "#e2e8f0" : "#0f172a";
 
   function chartColorsFor(chart) {
     const labels = (chart.series || []).map((s) => String(s.label));

@@ -407,3 +407,43 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================================
+   Dark mode (NCFA reports) — same token approach as agency_reports.css.
+   Defines the --admin-* tokens the file already references (light = originals,
+   dark = dark surface), then overrides the hardcoded colours. Light unchanged.
+   ========================================================================= */
+:root{
+  --admin-surface:#ffffff; --admin-surface-muted:#f8fafc;
+  --admin-text:#0f172a; --admin-text-muted:#475569; --admin-border:#cbd5e1;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --admin-surface:#1e293b; --admin-surface-muted:#0f172a;
+    --admin-text:#f1f5f9; --admin-text-muted:#94a3b8; --admin-border:#334155;
+  }
+}
+:root[data-theme="light"]{
+  --admin-surface:#ffffff; --admin-surface-muted:#f8fafc;
+  --admin-text:#0f172a; --admin-text-muted:#475569; --admin-border:#cbd5e1;
+}
+:root[data-theme="dark"]{
+  --admin-surface:#1e293b; --admin-surface-muted:#0f172a;
+  --admin-text:#f1f5f9; --admin-text-muted:#94a3b8; --admin-border:#334155;
+}
+@media (prefers-color-scheme: dark){
+  .ncfa-strong-header{background:linear-gradient(135deg,#0f2a1f 0%,#0f2137 100%)}
+  .ncfa-report-result,.ncfa-bundle-card,.ncfa-chart-card,.ncfa-data-table{background:var(--admin-surface);border-color:var(--admin-border)}
+  .ncfa-bundle-card__icon{background:#0f2942;color:#93c5fd}
+  .ncfa-bundle-card ul{color:var(--admin-text-muted)}
+  .ncfa-scope-field select{background:#0f172a;color:#f1f5f9;border-color:#334155}
+  .ncfa-scope-field select:disabled{background:#1e293b;color:#64748b}
+  .ncfa-scope-summary,.ncfa-kpi-card,.ncfa-chart-empty,.ncfa-empty{background:#0f172a;color:#e2e8f0;border-color:#334155}
+  .ncfa-kpi-card strong,.ncfa-chart-card h4,.ncfa-table-wrap h4{color:#f1f5f9}
+  .ncfa-kpi-card span{color:#94a3b8}
+  .ncfa-data-table th{background:#0f172a;color:#f1f5f9;border-color:#334155}
+  .ncfa-data-table td{color:#e2e8f0;border-color:#334155}
+  .ncfa-evidence-note{background:#1e293b;color:#cbd5e1;border-color:#334155}
+  .ncfa-caveat{background:#241a06;color:#fcd9a5;border-color:#a16207}
+  .ncfa-quality-notes{background:#2a1414;color:#fca5a5;border-color:#b91c1c}
+}
