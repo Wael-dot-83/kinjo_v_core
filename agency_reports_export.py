@@ -74,12 +74,30 @@ def to_csv(payload: dict[str, Any]) -> str:
     writer.writerow(["report_code", escape_csv_formula(metadata.get("report_code", ""))])
     writer.writerow(["report_title_ar", escape_csv_formula(metadata.get("report_title_ar", ""))])
     writer.writerow(["generated_at", escape_csv_formula(metadata.get("generated_at", ""))])
+    # Provenance & methodology (official-statistics practice): source, basis,
+    # definition, units and the missing-data symbols legend travel with the data.
+    for key, label in (
+        ("definition_ar", "تعريف التقرير"),
+        ("data_source_ar", "مصدر البيانات"),
+        ("geography_basis_ar", "الأساس الجغرافي"),
+        ("units_note_ar", "وحدات القياس"),
+        ("symbols_note_ar", "الرموز"),
+    ):
+        val = metadata.get(key)
+        if val:
+            writer.writerow([label, escape_csv_formula(val)])
     writer.writerow([])
     if not rows:
         writer.writerow(["status", "لا توجد بيانات متاحة للتصدير"])
         return output.getvalue()
     headers = list(rows[0].keys())
-    writer.writerow(headers)
+    # Localize the column headers (المحافظة، الحالة، …) to match the on-screen table.
+    col_labels = payload.get("column_labels", {}) or {}
+    writer.writerow([col_labels.get(h, h) for h in headers])
     for row in rows:
         writer.writerow([escape_csv_formula(row.get(h, "")) for h in headers])
+    # Totals row (المجموع), mirroring the on-screen table footer.
+    total_row = payload.get("total_row")
+    if isinstance(total_row, dict):
+        writer.writerow([escape_csv_formula(total_row.get(h, "")) for h in headers])
     return output.getvalue()
