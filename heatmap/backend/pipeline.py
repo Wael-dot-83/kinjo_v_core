@@ -369,13 +369,17 @@ def compute_main_indicators(sub: Dict[str, float]) -> Dict[str, float]:
     safety_score = max(0.0, 100.0 - safety_penalty)
 
     # Reports & attendance: real report completeness
-    reports_submitted = sub.get("reports_submitted", 0) or 0
-    active_nurseries = sub.get("active_nurseries", 0) or 0
-    report_completeness = min(1.0, reports_submitted / max(active_nurseries * 30, 1)) if reports_submitted is not None else None
-    if report_completeness is not None:
-        reports_attendance_score = report_completeness * 100.0
-    else:
+    reports_submitted = sub.get("reports_submitted")
+    active_nurseries = sub.get("active_nurseries") or 0
+    # Expected reports = one per active nursery per day. With no active nurseries
+    # the denominator is 0 and completeness is undefined; the previous
+    # max(..., 1) invented a denominator of 1, so a governorate with no nurseries
+    # reported 0% completeness as though it had failed to file.
+    expected_reports = active_nurseries * 30
+    if reports_submitted is None or expected_reports <= 0:
         reports_attendance_score = None
+    else:
+        reports_attendance_score = min(1.0, reports_submitted / expected_reports) * 100.0
 
     # Tasks & governance: real governance score only
     governance_score = sub.get("governance_score")

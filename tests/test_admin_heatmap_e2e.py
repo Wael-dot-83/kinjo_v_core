@@ -161,7 +161,10 @@ def test_e2e_snapshot_tables_populated(e2e_db):
     # never snapshotted (see heatmap/backend/pipeline.py).
     assert db.query(func.count(models.MapIndicatorSnapshot.id)).scalar() == 12 * 7 * 5
     # 12 × 7 × 26 sub-indicators = 2184
-    assert db.query(func.count(models.MapSubIndicatorValue.id)).scalar() == 12 * 7 * 26
+    # 16 of the 26 declared sub-indicators have a real KinJo source; the other 10
+    # are excluded by the data-integrity policy in heatmap/backend/etl/compute.py
+    # rather than being written as fabricated values.
+    assert db.query(func.count(models.MapSubIndicatorValue.id)).scalar() == 12 * 7 * 16
     # Risk: 12 × 7
     assert db.query(func.count(models.MapRiskSnapshot.id)).scalar() == 12 * 7
     # Daily run log: 7 runs

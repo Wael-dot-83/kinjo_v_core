@@ -378,17 +378,23 @@ class TestAdminContextRoutes:
     def test_all_context_paths_registered(self):
         """Every admin page context path must have a corresponding route."""
         from scripts.compat.frontend_orig import router
-        registered_paths = set()
-        for route in router.routes:
-            if hasattr(route, "path") and route.path.startswith(("/admin", "/dashboard")):
-                registered_paths.add(route.path)
+        # Collect every registered path, not just /admin and /dashboard: the
+        # context list also covers top-level pages such as /daily-reports, which
+        # the old prefix filter excluded from the set it then validated against.
+        registered_paths = {
+            route.path for route in router.routes if hasattr(route, "path")
+        }
 
         for ctx_path in self.CONTEXT_ROUTES:
             if ctx_path.endswith("/{dimension_type}/{dimension_id}"):
                 continue
             # Check by prefix match for parameterized routes
+            # Guard the prefix match against near-empty roots: "/" would rstrip to
+            # "" and make startswith() true for everything, silently passing the
+            # assertion for paths that are not registered at all.
             found = any(
-                ctx_path == rp or ctx_path.startswith(rp.rstrip("/"))
+                ctx_path == rp
+                or (len(rp.rstrip("/")) > 1 and ctx_path.startswith(rp.rstrip("/")))
                 for rp in registered_paths
             )
             assert found, f"Context path {ctx_path} has no matching route"

@@ -54,10 +54,11 @@ def test_batched_daily_rates_match_per_day(test_db, sample_kindergarten, sample_
         assert batched[cursor] == reference, f"mismatch on {cursor}: {batched[cursor]} != {reference}"
         cursor = date.fromordinal(cursor.toordinal() + 1)
 
-    # every day in the range is present (missing => 0.0), including the weekend
+    # every day in the range is a key; days with no expected attendance are None
+    # ("nothing was expected") rather than 0.0 ("nobody turned up")
     assert (WIN_END.toordinal() - WIN_START.toordinal() + 1) == len(batched)
-    assert batched[date(2026, 6, 4)] == 0.0   # closed day
-    assert batched[date(2026, 6, 6)] == 0.0   # Saturday, no data
+    assert batched[date(2026, 6, 4)] is None   # closed day
+    assert batched[date(2026, 6, 6)] is None   # Saturday, no data
 
 
 def test_batched_daily_rates_query_count_bounded(test_db, sample_kindergarten, sample_child,

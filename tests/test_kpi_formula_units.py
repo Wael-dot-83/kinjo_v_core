@@ -246,6 +246,12 @@ class TestReportsAttendance:
         assert result["reports_attendance"] >= 99.0
 
     def test_zero_reports_zero_children_no_crash(self):
+        """No active nurseries means no expected-report denominator.
+
+        Completeness is then unavailable (None) rather than a fabricated 0%,
+        which would read as "filed nothing" for a governorate that has nothing
+        to file.
+        """
         sub = _make_sub(
             active_nurseries=0,
             reports_submitted=0,
@@ -254,7 +260,7 @@ class TestReportsAttendance:
             registered_children=0,
         )
         result = _compute_main_indicators(sub)
-        assert 0.0 <= result["reports_attendance"] <= 100.0
+        assert result["reports_attendance"] is None
 
     def test_score_ignores_unmeasurable_health_and_absence_inputs(self):
         """reports_attendance is report completeness only.

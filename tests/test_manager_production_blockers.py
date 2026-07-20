@@ -1,4 +1,5 @@
 """Regression tests for final manager-module production blockers."""
+import secrets
 from datetime import date, timedelta
 
 import pytest
@@ -10,7 +11,14 @@ from messaging_permissions import AudienceDefinition, resolve_recipients
 
 
 def _bearer(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
+    # Admin write endpoints enforce double-submit CSRF (_validate_csrf_token),
+    # so the token pair must accompany every request. Harmless on safe methods.
+    csrf = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {token}",
+        "X-CSRF-Token": csrf,
+        "Cookie": f"kinjo_csrf_token={csrf}",
+    }
 
 
 def test_active_kindergarten_manager_cannot_be_deleted(

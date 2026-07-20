@@ -74,16 +74,20 @@ class ManagerAnalyticsService:
         kindergarten_id: int,
         start_date: date,
         end_date: date,
-    ) -> Dict[date, float]:
+    ) -> Dict[date, Optional[float]]:
         """Per-day attendance rate (%) for every day in [start_date, end_date].
 
         Each value equals ``KPIService.compute_attendance_rate(db, kg, d, d)`` — it
         reuses the canonical working-day / expected-child-day / attended-child-day
         definitions so the forecast & anomaly series stay consistent with the
         headline attendance KPI — but computes the whole range with a bounded
-        number of queries (3) instead of one set per day (B3). Closed days and
-        days with no expected child-days are 0.0, and every day in the range is
-        present (missing attendance => 0.0).
+        number of queries (3) instead of one set per day (B3).
+
+        Every day in the range is a key. Closed days and days with no expected
+        child-days map to None ("no attendance was expected"), matching the
+        scalar helper. They previously mapped to 0.0, which the forecast and
+        anomaly series consumed as a genuine 0% attendance day — so every weekend
+        dragged the forecast down and registered as an anomaly.
         """
         from collections import defaultdict
         from kpi_service import KPIService
@@ -124,7 +128,7 @@ class ManagerAnalyticsService:
         cursor = start_date
         while cursor <= end_date:
             if cursor not in working_set:
-                result[cursor] = 0.0
+                result[cursor] = None
                 cursor += timedelta(days=1)
                 continue
             # expected = enrollment rows whose effective window covers this day;
@@ -136,7 +140,7 @@ class ManagerAnalyticsService:
                 if covers:
                     expected += covers
                     attended += attended_by_day_child.get((cursor, child_id), 0)
-            result[cursor] = round(attended / expected * 100, 2) if expected else 0.0
+            result[cursor] = round(attended / expected * 100, 2) if expected else None
             cursor += timedelta(days=1)
         return result
 
@@ -428,9 +432,13 @@ class ManagerAnalyticsService:
         current = start_date
         rates = []
         while current <= today:
-            rate = daily.get(current, 0.0)
+            rate = daily.get(current)
             historical.append({"date": current.isoformat(), "rate": rate})
-            rates.append(rate)
+            # Days with no expected attendance (closed days, weekends, no active
+            # enrolment) carry no signal. Regressing over them as 0% pulled the
+            # trend line down by roughly two days in seven.
+            if rate is not None:
+                rates.append(rate)
             current += timedelta(days=1)
 
         # Simple linear regression
@@ -511,7 +519,12 @@ class ManagerAnalyticsService:
         current = start_date
         rates = []
         while current <= today:
-            rates.append({"date": current, "rate": daily.get(current, 0.0)})
+            # Skip days with no expected attendance: treating a closed day as a
+            # 0% rate made every weekend a multi-sigma "anomaly" and inflated the
+            # baseline standard deviation, masking genuine dips.
+            rate = daily.get(current)
+            if rate is not None:
+                rates.append({"date": current, "rate": rate})
             current += timedelta(days=1)
 
         if len(rates) < 3:

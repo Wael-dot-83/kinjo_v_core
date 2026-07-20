@@ -159,12 +159,23 @@ class TestNormalizeSubIndicatorBehavior:
         assert result["unavailable"] is not True
 
     def test_positive_input_calculated_correctly(self):
-        """Positive input must calculate score relative to threshold."""
+        """Status is scored relative to the indicator's own threshold_high.
+
+        active_nurseries has threshold_high=200, so the score is value/200*100:
+        160 -> 80% -> normal, while 80 -> 40% -> risk. (This test previously
+        asserted 80 was "normal", which assumed a threshold of 100.)
+        """
         from heatmap.backend.kindergarten_data import normalize_sub_indicator_value
-        result = normalize_sub_indicator_value("active_nurseries", 80, True)
-        assert result["value"] == 80
-        assert result["status"] == "normal"
-        assert result["unavailable"] is not True
+
+        good = normalize_sub_indicator_value("active_nurseries", 160, True)
+        assert good["value"] == 160
+        assert good["status"] == "normal"
+        assert good["unavailable"] is False
+
+        short = normalize_sub_indicator_value("active_nurseries", 80, True)
+        assert short["value"] == 80
+        assert short["status"] == "risk"
+        assert short["unavailable"] is False
 
 
 # =============================================================================
