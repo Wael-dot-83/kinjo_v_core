@@ -89,10 +89,12 @@ def test_history_includes_main_indicators(app):
         r = client.get("/api/admin/heat-map/governorate/aqaba/history?days=7")
         assert r.status_code == 200
         data = r.json()
-        # The first entry should have the 6 main indicators
+        # 5 measurable main indicators — children_registration is unavailable
+        # (no defensible population denominator) and so is never snapshotted.
         for entry in data["history"]:
             assert "main_indicators" in entry
-            assert len(entry["main_indicators"]) == 6
+            assert len(entry["main_indicators"]) == 5
+            assert "children_registration" not in entry["main_indicators"]
 
 
 def test_history_unknown_governorate_404(app):

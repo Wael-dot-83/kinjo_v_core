@@ -181,7 +181,12 @@ class TestAttendanceRateContract:
         import inspect
         source = inspect.getsource(KPIService.compute_attendance_rate)
         assert "if expected_days == 0:" in source
-        assert "return None" in source.split("if expected_days == 0:")[1].split("\n")[0]
+        # The guard's body sits on the following line, so slicing the remainder
+        # of the `if` line itself could never contain the return.
+        guard_body = source.split("if expected_days == 0:")[1].lstrip()
+        assert guard_body.startswith("return None"), (
+            "zero expected days must return None, not fall through to a rate"
+        )
 
     def test_expected_zero_return_type_is_optional(self):
         """compute_attendance_rate must return Optional[float]."""
@@ -207,7 +212,9 @@ class TestAttendanceRateContract:
         from kpi_service import KPIService
         hints = typing.get_type_hints(KPIService.compute_attendance_rates_bulk)
         ret = hints.get("return", str)
-        assert "Optional" in str(ret), (
+        args = typing.get_args(ret)
+        value_type = args[1] if len(args) == 2 else None
+        assert value_type is not None and type(None) in typing.get_args(value_type), (
             f"Return type must be Dict[int, Optional[float]], got {ret}"
         )
 

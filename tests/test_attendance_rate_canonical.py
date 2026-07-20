@@ -107,14 +107,18 @@ def test_rate_is_stable_across_window_width(
 
 
 # ── 3. zero-child and zero-expected windows are explicit ─────────────────────
-def test_zero_children_returns_zero(test_db, sample_kindergarten):
-    """No enrollments -> no expected days -> 0.0, not a ZeroDivisionError."""
+def test_zero_children_returns_none(test_db, sample_kindergarten):
+    """No enrollments -> no expected days -> None ("no data"), not 0.0.
+
+    compute_attendance_rate reserves 0.0 for "days were expected but nobody
+    attended"; reporting 0.0 here would show an empty kindergarten as having
+    total absenteeism."""
     rate = KPIService.compute_attendance_rate(
         test_db, sample_kindergarten.id, date(2026, 7, 1), date(2026, 7, 31))
-    assert rate == 0.0
+    assert rate is None
 
 
-def test_zero_expected_days_returns_zero(
+def test_zero_expected_days_returns_none(
     test_db, admin_user, sample_kindergarten, sample_class, sample_child
 ):
     """A window containing only weekend days has zero expected child-days even with an
@@ -125,15 +129,15 @@ def test_zero_expected_days_returns_zero(
              [date(2026, 7, 10), date(2026, 7, 11)])
     rate = KPIService.compute_attendance_rate(
         test_db, sample_kindergarten.id, date(2026, 7, 10), date(2026, 7, 11))
-    assert rate == 0.0, f"weekend-only window has no expected days, got {rate}"
+    assert rate is None, f"weekend-only window has no expected days, got {rate}"
 
 
-def test_reversed_window_is_zero(test_db, admin_user, sample_kindergarten, sample_class, sample_child):
-    """period_start > period_end has no working days -> 0.0, no crash."""
+def test_reversed_window_is_none(test_db, admin_user, sample_kindergarten, sample_class, sample_child):
+    """period_start > period_end has no working days -> None, no crash."""
     _enroll(test_db, sample_kindergarten, sample_child)
     rate = KPIService.compute_attendance_rate(
         test_db, sample_kindergarten.id, date(2026, 7, 31), date(2026, 7, 1))
-    assert rate == 0.0
+    assert rate is None
 
 
 # ── 4. scalar / bulk agree (kg-overview uses bulk) ───────────────────────────

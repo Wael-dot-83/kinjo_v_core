@@ -454,7 +454,16 @@ def compute_risk_score(main: Dict[str, float], sub: Dict[str, float],
                     contribution = 0.0
             sub_risk += contribution * weights.get(f"{main_key}.{sub_key}", 1.0)
             available_sub_count += 1
-    sub_risk = min(100.0, sub_risk / max(available_sub_count, 1)) if available_sub_count > 0 else 0.0
+    # Each per-sub contribution is capped at 20, so the mean lands in [0, 20].
+    # It is then combined at line ~461 as if it were a 0-100 risk component, which
+    # capped the whole formula at 0.65*100 + 0.35*20 + 3 = 75 — leaving "critical"
+    # (>= 75) effectively unreachable, so the top escalation tier could never fire.
+    # Rescale the mean back onto the 0-100 risk scale.
+    _SUB_CONTRIBUTION_CAP = 20.0
+    if available_sub_count > 0:
+        sub_risk = min(100.0, (sub_risk / available_sub_count) * (100.0 / _SUB_CONTRIBUTION_CAP))
+    else:
+        sub_risk = 0.0
 
     # Score: weighted average of available indicator risk + sub-indicator risk
     avg_indicator_risk = sum(indicator_risk.values()) / max(len(indicator_risk), 1)
@@ -561,6 +570,11 @@ def _upsert_indicator_snapshot(db: Session, today: date, gov_code: str,
     ).scalars().all()
     existing_by_ind = {r.main_indicator: r for r in existing_rows}
     for indicator_key, value in main.items():
+        # MapIndicatorSnapshot.value is NOT NULL: an indicator that could not be
+        # computed for the day has no snapshot rather than a fabricated 0, which
+        # would read downstream as a genuine measurement of zero.
+        if value is None:
+            continue
         previous = previous_main.get(indicator_key) if previous_main else None
         trend_pct = None
         if previous is not None and previous > 0:
@@ -600,9 +614,20 @@ def _upsert_sub_indicator_value(db: Session, today: date, gov_code: str,
         )
         if not sub_def:
             continue
+        # MapSubIndicatorValue.raw_value is NOT NULL, so a sub-indicator with no
+        # data for the day gets no row rather than a fabricated 0. Previously the
+        # None reached the comparison below and raised, aborting the entire daily
+        # pipeline — one missing sub-indicator wrote zero rows for every
+        # governorate.
+        if raw is None:
+            continue
         th = sub_def.get("threshold_high", 0)
         higher_is_better = sub_def.get("higher_is_better", True)
-        above = (raw > th) if not higher_is_better else (raw < th)
+        # An unconfigured threshold cannot be breached.
+        if th is None:
+            above = False
+        else:
+            above = (raw > th) if not higher_is_better else (raw < th)
         existing = existing_by_sub.get(sub_key)
         if existing:
             existing.raw_value = raw

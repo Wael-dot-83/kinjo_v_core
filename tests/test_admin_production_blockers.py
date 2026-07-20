@@ -25,7 +25,7 @@ import models
 class TestAttendanceRateBounds:
     """Attendance percentage must never exceed 100% under any condition."""
 
-    def test_attendance_rate_clamped_at_100(self, client, test_db, sample_kindergarten, sample_class, sample_child, admin_token, auth_headers_admin):
+    def test_attendance_rate_clamped_at_100(self, client, test_db, sample_kindergarten, sample_class, sample_child, admin_token, admin_user, auth_headers_admin):
         """Create many PRESENT attendance logs for one child to test clamping."""
         from models import AttendanceLog, AttendanceStatus, EnrollmentApplication, EnrollmentStatus
 
@@ -39,18 +39,31 @@ class TestAttendanceRateBounds:
         test_db.add(enrollment)
         test_db.commit()
 
-        # Create multiple PRESENT logs for same child on same day (simulating duplicate)
+        # Duplicate same-day logs were the original route to a >100% rate. That is
+        # now structurally impossible: attendance_logs carries a UNIQUE(child_id,
+        # date) constraint, so the double-count cannot be created in the first
+        # place. Assert the constraint holds, then confirm the rate stays bounded.
         today = date.today()
-        for _ in range(5):
-            log = AttendanceLog(
-                child_id=sample_child.id,
-                class_id=sample_class.id,
-                kindergarten_id=sample_kindergarten.id,
-                date=today,
-                status=AttendanceStatus.PRESENT,
-            )
-            test_db.add(log)
+        test_db.add(AttendanceLog(
+            child_id=sample_child.id,
+            class_id=sample_class.id,
+            date=today,
+            status=AttendanceStatus.PRESENT,
+            recorded_by=admin_user.id,
+        ))
         test_db.commit()
+
+        from sqlalchemy.exc import IntegrityError
+        test_db.add(AttendanceLog(
+            child_id=sample_child.id,
+            class_id=sample_class.id,
+            date=today,
+            status=AttendanceStatus.PRESENT,
+            recorded_by=admin_user.id,
+        ))
+        with pytest.raises(IntegrityError):
+            test_db.commit()
+        test_db.rollback()
 
         r = client.get(
             "/api/admin/dashboard",
@@ -64,7 +77,7 @@ class TestAttendanceRateBounds:
         if rate is not None:
             assert 0.0 <= rate <= 100.0, f"Attendance rate {rate} exceeds 100% bound"
 
-    def test_attendance_rate_with_absent_only(self, client, test_db, sample_kindergarten, sample_class, sample_child, auth_headers_admin):
+    def test_attendance_rate_with_absent_only(self, client, test_db, sample_kindergarten, sample_class, sample_child, admin_user, auth_headers_admin):
         """Attendance rate should be 0 when only ABSENT records exist."""
         from models import AttendanceLog, AttendanceStatus, EnrollmentApplication, EnrollmentStatus
 
@@ -82,9 +95,9 @@ class TestAttendanceRateBounds:
         log = AttendanceLog(
             child_id=sample_child.id,
             class_id=sample_class.id,
-            kindergarten_id=sample_kindergarten.id,
             date=today,
             status=AttendanceStatus.ABSENT,
+            recorded_by=admin_user.id,
         )
         test_db.add(log)
         test_db.commit()
@@ -165,6 +178,7 @@ class TestSoftDeleteExclusion:
             governorate="عمان",
             district="Test",
             area="Test",
+            address_line="Test street",  # NOT NULL on kindergartens
             contact_phone="+962799999999",
             contact_email="deleted@kg.jo",
             status=KindergartenStatus.ACTIVE,
