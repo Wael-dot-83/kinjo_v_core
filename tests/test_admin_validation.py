@@ -94,7 +94,15 @@ def _make_kg(db, name_en="TestKG"):
 def _tok(client, username, password="Admin123!"):
     r = client.post("/token", data={"username": username, "password": password})
     assert r.status_code == 200, f"Login failed for {username}: {r.text}"
-    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+    # Admin write endpoints enforce double-submit CSRF (_validate_csrf_token),
+    # so the token pair must accompany every request, mirroring conftest's
+    # auth_headers_* fixtures. Harmless on safe methods.
+    csrf = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {r.json()['access_token']}",
+        "X-CSRF-Token": csrf,
+        "Cookie": f"kinjo_csrf_token={csrf}",
+    }
 
 
 def _admin_tok_with_csrf(client, username, password="Admin123!"):
@@ -204,10 +212,12 @@ class TestPasswordResetConfirmSuccess:
         from api.auth.password_reset_service import issue_password_reset_token
         token_str = issue_password_reset_token(test_db, admin_user)
         assert token_str
+        # Unauthenticated, but still a state-changing POST behind _validate_csrf_token.
+        csrf = secrets.token_hex(32)
         r = client.post("/api/admin/password-reset-confirm", json={
             "token": token_str,
             "new_password": "NewPass999!",
-        })
+        }, headers={"X-CSRF-Token": csrf, "Cookie": f"kinjo_csrf_token={csrf}"})
         assert r.status_code == 200
         assert "reset" in r.json().get("message", "").lower()
 

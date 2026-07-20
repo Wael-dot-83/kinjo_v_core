@@ -209,6 +209,29 @@ def get_task_status(task_id: str) -> TaskStatus:
 # GET /admin/charts/dashboard (HTML page)
 # ---------------------------------------------------------------------------
 
+# Bilingual display labels for the source and chart-type pickers. Kept beside the
+# route that renders them so the template's context stays complete.
+_SOURCE_LABELS_AR = {
+    "incidents": "الحوادث", "attendance": "الحضور",
+    "daily_reports": "التقارير اليومية", "enrollments": "التسجيلات",
+    "kindergartens": "الحضانات",
+}
+_SOURCE_LABELS_EN = {
+    "incidents": "Incidents", "attendance": "Attendance",
+    "daily_reports": "Daily Reports", "enrollments": "Enrollments",
+    "kindergartens": "Kindergartens",
+}
+_CHART_LABELS_AR = {
+    "line": "خطي", "bar": "أعمدة", "scatter": "مبعثر", "pie": "دائري",
+    "histogram": "مدرج تكراري", "box": "مربع", "heatmap": "خريطة حرارية",
+    "funnel": "قمعي", "treemap": "شجري",
+}
+_CHART_LABELS_EN = {
+    "line": "Line", "bar": "Bar", "scatter": "Scatter", "pie": "Pie",
+    "histogram": "Histogram", "box": "Box", "heatmap": "Heatmap",
+    "funnel": "Funnel", "treemap": "Treemap",
+}
+
 @router.get(
     "/admin/charts/dashboard",
     response_class=HTMLResponse,
@@ -227,6 +250,12 @@ def charts_dashboard(
             "chart_types": [t.value for t in ChartType],
             "ui_lang": request.cookies.get("ui_lang", "ar"),
             "ui_dir": request.cookies.get("ui_dir", "rtl"),
+            # The template renders both label sets behind a ui_lang guard, so all
+            # four must be supplied or the page raises UndefinedError and 500s.
+            "SOURCE_LABELS_AR": _SOURCE_LABELS_AR,
+            "SOURCE_LABELS_EN": _SOURCE_LABELS_EN,
+            "CHART_LABELS_AR": _CHART_LABELS_AR,
+            "CHART_LABELS_EN": _CHART_LABELS_EN,
         },
     )
 

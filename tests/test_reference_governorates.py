@@ -3,6 +3,7 @@
 The governorate dropdown (kindergarten filter + create/edit form) must list ALL
 of Jordan's official governorates, not only the ones that already have data.
 """
+import secrets
 import models
 from auth import get_password_hash
 from config import settings
@@ -25,7 +26,15 @@ def _make_admin(db, username="ref_admin"):
 def _tok(client, username, password="Admin123!"):
     r = client.post("/token", data={"username": username, "password": password})
     assert r.status_code == 200, r.text
-    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+    # Admin write endpoints enforce double-submit CSRF (_validate_csrf_token),
+    # so the token pair must accompany every request, mirroring conftest's
+    # auth_headers_* fixtures. Harmless on safe methods.
+    csrf = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {r.json()['access_token']}",
+        "X-CSRF-Token": csrf,
+        "Cookie": f"kinjo_csrf_token={csrf}",
+    }
 
 
 def _make_kg(db, name_ar, governorate, district):

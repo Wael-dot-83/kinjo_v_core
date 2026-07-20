@@ -25,7 +25,7 @@ from sqlalchemy.pool import StaticPool
 from database import Base
 import models
 from heatmap.backend import pipeline
-from heatmap.backend.constants import GOVERNORATES, MAIN_INDICATORS
+from heatmap.backend.constants import GOVERNORATES, MAIN_INDICATORS, SUB_INDICATORS
 from heatmap.scripts.seed_snapshot_data import seed_governorates
 
 
@@ -73,11 +73,18 @@ class TestPipeline:
             .filter(models.MapIndicatorSnapshot.snapshot_date == today)
             .all()
         )
-        # 12 × 6 = 72 rows
-        assert len(rows) == 12 * 6
+        # One row per governorate per *measurable* indicator. children_registration
+        # has no defensible population denominator and is reported as unavailable
+        # (see heatmap/backend/pipeline.py), so it yields no snapshot rather than a
+        # fabricated value. 12 governorates × 5 measurable = 60.
+        unavailable = {"children_registration"}
+        expected_keys = {m["key"] for m in MAIN_INDICATORS} - unavailable
+        assert {r.main_indicator for r in rows} == expected_keys
+        assert len(rows) == 12 * len(expected_keys)
         for r in rows:
+            assert r.value is not None
             assert 0 <= r.value <= 100
-            assert r.main_indicator in {m["key"] for m in MAIN_INDICATORS}
+            assert r.main_indicator in expected_keys
 
     def test_sub_indicator_snapshot_populated(self, in_memory_db):
         today = date.today()
@@ -87,8 +94,21 @@ class TestPipeline:
             .filter(models.MapSubIndicatorValue.snapshot_date == today)
             .all()
         )
-        # 12 × 26 = 312 rows
-        assert len(rows) == 12 * 26
+        # Only sub-indicators with a real KinJo source are written. These ten have
+        # no defensible source and are excluded by the data-integrity policy in
+        # heatmap/backend/etl/compute.py; writing them would mean fabricating.
+        unavailable = {
+            "unregistered_children", "absence_rate", "health_absences",
+            "repeated_health", "training_completion", "compliance_status",
+            "protection_cases", "delayed_tasks", "registration_rate",
+            "child_teacher_ratio",
+        }
+        declared = {sd["key"] for subs in SUB_INDICATORS.values() for sd in subs}
+        expected_keys = declared - unavailable
+        assert {r.sub_indicator for r in rows} == expected_keys
+        assert len(rows) == 12 * len(expected_keys)
+        for r in rows:
+            assert r.raw_value is not None
 
     def test_risk_snapshot_populated(self, in_memory_db):
         today = date.today()
@@ -173,7 +193,8 @@ class TestPipeline:
             .scalar()
         )
         assert first_count == second_count
-        assert first_count == 12 * 6
+        # children_registration is unavailable, so 5 measurable indicators.
+        assert first_count == 12 * (len(MAIN_INDICATORS) - 1)
 
     def test_trend_computed(self, in_memory_db):
         """After 2 days, the second day should have a previous_value set."""

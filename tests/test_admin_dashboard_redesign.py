@@ -54,12 +54,55 @@ def test_dashboard_no_hardcoded_english_only_strings():
     # Check that user-facing text uses ui_lang conditionals
     # Skip: HTML attributes, CSS, JS, comments, Jinja tags
     lines = text.splitlines()
+    in_css_comment = False
+    in_jinja_comment = False
+    in_style_or_script = False
+    in_html_comment = False
     for line in lines:
         stripped = line.strip()
         if not stripped:
             continue
-        # Skip Jinja tags, HTML tags, CSS, JS, comments
-        if stripped.startswith("{%") or stripped.startswith("{{"):
+        # Multi-line HTML comments: same gap as CSS/Jinja comments — only the
+        # opening line starts with "<!--".
+        if in_html_comment:
+            if "-->" in stripped:
+                in_html_comment = False
+            continue
+        if stripped.startswith("<!--") and "-->" not in stripped:
+            in_html_comment = True
+            continue
+        # <style>/<script> bodies are CSS and JS, never user-facing prose. Only
+        # the opening tag starts with "<", so the block's contents (selectors,
+        # declarations, statements) were previously scanned as markup.
+        lowered = stripped.lower()
+        if in_style_or_script:
+            if "</style>" in lowered or "</script>" in lowered:
+                in_style_or_script = False
+            continue
+        if (lowered.startswith("<style") or lowered.startswith("<script")) and not (
+            "</style>" in lowered or "</script>" in lowered
+        ):
+            in_style_or_script = True
+            continue
+        # Track multi-line comment blocks. Only the *opening* line starts with
+        # "/*" or "{#", so continuation lines used to be scanned as though they
+        # were markup — a prose sentence inside a CSS comment failed this test.
+        if in_css_comment:
+            if "*/" in stripped:
+                in_css_comment = False
+            continue
+        if in_jinja_comment:
+            if "#}" in stripped:
+                in_jinja_comment = False
+            continue
+        if stripped.startswith("/*") and "*/" not in stripped:
+            in_css_comment = True
+            continue
+        if stripped.startswith("{#") and "#}" not in stripped:
+            in_jinja_comment = True
+            continue
+        # Skip Jinja tags, HTML tags, CSS, JS, single-line comments
+        if stripped.startswith("{%") or stripped.startswith("{{") or stripped.startswith("{#"):
             continue
         if stripped.startswith("<") or stripped.startswith("/*") or stripped.startswith("//"):
             continue
