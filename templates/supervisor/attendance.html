@@ -177,12 +177,7 @@
     let pendingAbsentChildId = null;
     let absentModal = null;
 
-    function getHeaders() {
-        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-        const h = { 'Content-Type': 'application/json' };
-        if (t) h['Authorization'] = `Bearer ${t}`;
-        return h;
-    }
+
 
     // Init date picker
     const picker = document.getElementById('attendanceDatePicker');
@@ -213,7 +208,7 @@
         document.getElementById('tableWrap').classList.add('d-none');
 
         try {
-            const r = await fetch(`/api/supervisor/attendance?date=${date}`, { headers: getHeaders() });
+            const r = await fetchWithAuth(`/api/supervisor/attendance?date=${date}`);
             if (!r.ok) throw new Error('HTTP ' + r.status);
             const data = await r.json();
             const children = data.children || [];
@@ -307,9 +302,9 @@
     window.checkIn = async function (childId, name) {
         setActionLoading(childId, true);
         try {
-            const r = await fetch('/api/supervisor/attendance', {
+            const r = await fetchWithAuth('/api/supervisor/attendance', {
                 method: 'POST',
-                headers: getHeaders(),
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ child_id: childId, action: 'check_in' })
             });
             if (!r.ok) throw new Error();
@@ -324,9 +319,9 @@
     window.checkOut = async function (childId, name) {
         setActionLoading(childId, true);
         try {
-            const r = await fetch('/api/supervisor/attendance', {
+            const r = await fetchWithAuth('/api/supervisor/attendance', {
                 method: 'POST',
-                headers: getHeaders(),
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ child_id: childId, action: 'check_out' })
             });
             if (!r.ok) throw new Error();
@@ -352,9 +347,9 @@
         btn.disabled = true;
 
         try {
-            const r = await fetch('/api/supervisor/attendance', {
+            const r = await fetchWithAuth('/api/supervisor/attendance', {
                 method: 'POST',
-                headers: getHeaders(),
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ child_id: pendingAbsentChildId, action: 'mark_absent' })
             });
             if (!r.ok) throw new Error();

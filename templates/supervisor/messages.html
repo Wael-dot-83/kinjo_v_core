@@ -150,15 +150,7 @@
     let msgModal = null;
     const messageStore = new Map();
 
-    function getHeaders() {
-        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-        return { 'Authorization': `Bearer ${t}` };
-    }
 
-    function jsonHeaders() {
-        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` };
-    }
 
     document.addEventListener('DOMContentLoaded', () => {
         msgModal = new bootstrap.Modal(document.getElementById('msgModal'));
@@ -180,7 +172,7 @@
         document.getElementById('inboxList').classList.add('d-none');
 
         try {
-            const r = await fetch('/api/supervisor/messages/inbox', { headers: getHeaders() });
+            const r = await fetchWithAuth('/api/supervisor/messages/inbox');
             if (!r.ok) throw new Error();
             const data = await r.json();
             const messages = data.messages || [];
@@ -256,9 +248,9 @@
         msgModal.show();
 
         // Mark as read
-        fetch(`/api/supervisor/messages/${id}/read`, {
+        fetchWithAuth(`/api/supervisor/messages/${id}/read`, {
             method: 'PUT',
-            headers: jsonHeaders()
+            headers: { 'Content-Type': 'application/json' }
         }).catch(() => {});
     };
 
@@ -289,18 +281,17 @@
                 formData.append('attachment', fileInput.files[0]);
             }
 
-            const token = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-            const r = await fetch('/api/supervisor/messages', {
+            const r = await fetchWithAuth('/api/supervisor/messages', {
                 method: 'POST',
-                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
                 body: formData
             });
 
             if (!r.ok) {
-                const err = await r.json().catch(() => ({}));
-                showError(err.detail || '{{ _("فشل إرسال الرسالة") }}');
-                setLoading(btn, false);
-                return;
+                // Because fetchWithAuth throws on error, this block might be unreachable,
+                // but let's just leave it or rely on the try-catch block below
+                // Actually, let's keep it clean since it throws
+                // Wait, it throws so it goes straight to the catch block!
+                throw new Error();
             }
 
             showToast('{{ _("تم إرسال الرسالة بنجاح") }}', 'success');
@@ -308,8 +299,8 @@
             document.getElementById('bodyCount').textContent = '0 / 2000';
             await loadInbox();
 
-        } catch {
-            showError('{{ _("حدث خطأ في الاتصال بالخادم") }}');
+        } catch (error) {
+            showError(error.message || '{{ _("حدث خطأ في الاتصال بالخادم") }}');
         } finally {
             setLoading(btn, false);
         }

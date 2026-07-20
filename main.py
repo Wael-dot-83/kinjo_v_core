@@ -212,7 +212,6 @@ from api.absence_requests import router as absence_requests_router
 from api.users import router as users_router
 from api.tasks import router as tasks_router
 from api.manager import router as manager_router
-from api.supervisor import router as supervisor_router
 from api.portfolio import router as portfolio_router
 from routers.supervisor import router as supervisor_scoped_router
 from routers.manager import router as manager_scoped_router
@@ -1240,7 +1239,6 @@ app.include_router(absence_requests_router, prefix="/api", tags=["Absence Reques
 app.include_router(users_router, prefix="/api", tags=["Users"])
 app.include_router(tasks_router, prefix="/api", tags=["Tasks"])
 app.include_router(manager_router, prefix="/api", tags=["Manager"])
-app.include_router(supervisor_router, prefix="/api", tags=["Supervisor"])
 app.include_router(supervisor_scoped_router)        # prefix /api/supervisor already in router
 app.include_router(manager_scoped_router)           # prefix /api/manager already in router
 app.include_router(admin_impersonation_router, prefix="/api/admin", tags=["Admin"])

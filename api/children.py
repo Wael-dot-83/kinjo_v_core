@@ -521,3 +521,185 @@ def export_children(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=children_export.csv"},
     )
+
+
+# --- Migrated from api/supervisor.py ---
+@router.get("/children")
+def list_children(
+    kindergarten_id: Optional[int] = None,
+    class_id: Optional[int] = None,
+    enrollment_status: Optional[str] = None,
+    search: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = "asc",
+    page: int = 1,
+    page_size: int = 50,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List children with optional filtering by kindergarten or class"""
+    query = db.query(models.Child).join(
+        models.EnrollmentApplication,
+        models.Child.id == models.EnrollmentApplication.child_id
+    )
+
+    # Status filter
+    if enrollment_status:
+        try:
+            status_enum = models.EnrollmentStatus(enrollment_status)
+        except ValueError:
+            status_enum = models.EnrollmentStatus.ACTIVE
+        query = query.filter(models.EnrollmentApplication.status == status_enum)
+    else:
+        query = query.filter(
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        )
+
+    # Filter by kindergarten for non-admins
+    if current_user.role != models.UserRole.ADMIN:
+        if current_user.role == models.UserRole.PARENT:
+            raise HTTPException(status_code=403, detail="Parents cannot access this endpoint")
+        query = query.filter(models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id)
+    elif kindergarten_id:
+        query = query.filter(models.EnrollmentApplication.kindergarten_id == kindergarten_id)
+
+    if class_id:
+        query = query.filter(models.EnrollmentApplication.class_id == class_id)
+
+    # Search
+    if search:
+        query = query.filter(
+            or_(
+                models.Child.first_name.ilike(f"%{search}%"),
+                models.Child.last_name.ilike(f"%{search}%"),
+            )
+        )
+
+    # Sorting
+    if sort_by == "name":
+        order_col = models.Child.first_name
+    elif sort_by == "date_of_birth":
+        order_col = models.Child.date_of_birth
+    else:
+        order_col = models.Child.id
+
+    if sort_order == "desc":
+        query = query.order_by(order_col.desc())
+    else:
+        query = query.order_by(order_col.asc())
+
+    # Pagination
+    total_count = query.count()
+    total_pages = max(1, (total_count + page_size - 1) // page_size)
+    children = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    child_ids = [c.id for c in children]
+    enrollments_by_child = {}
+    if child_ids:
+        enrollments_by_child = {
+            e.child_id: e
+            for e in db.query(models.EnrollmentApplication).filter(
+                models.EnrollmentApplication.child_id.in_(child_ids),
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            ).all()
+        }
+
+    result = []
+    for child in children:
+        enrollment = enrollments_by_child.get(child.id)
+
+        child_info = {
+            "id": child.id,
+            "first_name": child.first_name,
+            "last_name": child.last_name,
+            "first_name_ar": getattr(child, "first_name_ar", None),
+            "last_name_ar": getattr(child, "last_name_ar", None),
+            "gender": child.gender.value if child.gender else None,
+            "date_of_birth": child.date_of_birth.isoformat() if child.date_of_birth else None,
+            "photo_url": child.photo_url,
+        }
+        if enrollment:
+            child_info["enrollment_id"] = enrollment.id
+            child_info["class_id"] = enrollment.class_id
+            child_info["kindergarten_id"] = enrollment.kindergarten_id
+
+        result.append(child_info)
+
+    return {
+        "children": result,
+        "pagination": {
+            "total_count": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+        },
+    }
+
+@router.get("/children/{child_id}/observations")
+def get_child_observations(
+    child_id: int,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    response: Response = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all observations for a specific child"""
+    # Verify access
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    # Parents can only see their own child's observations
+    if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        
+        if not parent_profile or child.parent_id != parent_profile.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    # Supervisors can only see observations for children in their assigned class
+    if current_user.role == models.UserRole.SUPERVISOR:
+        active_enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == child_id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        ).first()
+        if active_enrollment:
+            today = datetime.now(_JORDAN_TZ).date()
+            assignment = db.query(models.SupervisorAssignment).filter(
+                models.SupervisorAssignment.supervisor_id == current_user.id,
+                models.SupervisorAssignment.class_id == active_enrollment.class_id,
+                models.SupervisorAssignment.start_date <= today,
+                or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= today)
+            ).first()
+            if not assignment:
+                raise HTTPException(status_code=403, detail="Not assigned to child's class")
+        else:
+            raise HTTPException(status_code=403, detail="Child not enrolled in any active class")
+
+    observations_query = db.query(models.Observation).filter(
+        models.Observation.child_id == child_id
+    )
+    total_count = observations_query.count()
+    observations = observations_query.order_by(models.Observation.observed_at.desc()).offset(offset).limit(limit).all()
+
+    if response is not None:
+        response.headers["X-Total-Count"] = str(total_count)
+        response.headers["X-Limit"] = str(limit)
+        response.headers["X-Offset"] = str(offset)
+
+    # Return list directly (backwards compatible with tests)
+    return [
+        {
+            "id": o.id,
+            "child_id": o.child_id,
+            "domain": o.domain.value,
+            "observation_text": o.observation_text,
+            "mastery_level": o.mastery_level.value if o.mastery_level else None,
+            "observed_at": o.observed_at.isoformat() if o.observed_at else None,
+            "observed_by": o.observed_by
+        }
+        for o in observations
+    ]
+
