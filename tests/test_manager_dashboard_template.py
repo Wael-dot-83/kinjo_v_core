@@ -102,3 +102,17 @@ def test_loading_element_has_no_display_utility():
     # a d-* display utility would be `display:… !important` and override `hidden`
     bad = [c for c in classes if re.fullmatch(r"d-(flex|grid|inline|inline-block|block|table)", c)]
     assert not bad, f"dashLoading must not carry a display utility that overrides [hidden]: {bad}"
+
+
+def test_admin_content_has_no_stacking_context_z_index():
+    """.admin-content is a flex item of .admin-main; any z-index on it creates a
+    stacking context that traps Bootstrap modals (z-index 1055) rendered inside
+    it BELOW the body-level .modal-backdrop (z-index 1050), leaving every modal
+    (e.g. manager/supervisors "Add Supervisor") dimmed and unclickable."""
+    layout_css = (Path(__file__).resolve().parents[1] / "static" / "css" / "layout.css").read_text(encoding="utf-8")
+    m = re.search(r"\.admin-content\s*\{([^}]*)\}", layout_css)
+    assert m, ".admin-content rule not found in layout.css"
+    body = m.group(1)
+    assert not re.search(r"z-index\s*:", body), (
+        ".admin-content must not set z-index - it traps modals under the backdrop"
+    )

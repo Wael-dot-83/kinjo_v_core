@@ -198,9 +198,14 @@ body.admin-container {
   /* Scroll padding ensures fragment identifiers account for sticky header */
   scroll-padding-top: var(--scroll-padding-sticky);
   scroll-behavior: smooth;
-  /* Establish a stacking context for child sticky elements */
+  /* position:relative anchors absolutely-positioned descendants — but this
+     element must NOT carry a z-index. As a flex item of .admin-main, any
+     z-index creates a stacking context that traps Bootstrap modals rendered
+     inside it (z-index 1055) BELOW the body-level .modal-backdrop
+     (z-index 1050), making every modal unclickable and fully dimmed.
+     Sticky children do not need a parent stacking context: position:sticky
+     establishes its own. */
   position: relative;
-  z-index: 1;
 }
 
 /* Page title — shared across admin pages (analytics, dashboard, help
