@@ -208,12 +208,7 @@
         'SENT_TO_PARENT': `<span class="badge badge-soft badge-soft-secondary">{{ _('أُرسل للوالدين') }}</span>`,
     };
 
-    function getHeaders() {
-        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-        const h = { 'Content-Type': 'application/json' };
-        if (t) h['Authorization'] = `Bearer ${t}`;
-        return h;
-    }
+
 
     // Set default date range: this week
     function setDefaultDates() {
@@ -257,7 +252,7 @@
         if (status) url += `status=${status}&`;
 
         try {
-            const r = await fetch(url, { headers: getHeaders() });
+            const r = await fetchWithAuth(url);
             if (!r.ok) throw new Error();
             const data = await r.json();
             const reports = data.reports || [];
@@ -340,9 +335,9 @@
         btn.disabled = true;
 
         try {
-            const r = await fetch(`/api/supervisor/daily-reports/${pendingSubmitId}/submit`, {
+            const r = await fetchWithAuth(`/api/supervisor/daily-reports/${pendingSubmitId}/submit`, {
                 method: 'PUT',
-                headers: getHeaders(),
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'SUBMITTED' })
             });
             if (!r.ok) throw new Error();

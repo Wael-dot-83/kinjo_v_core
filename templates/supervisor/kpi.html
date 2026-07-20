@@ -237,11 +237,6 @@
 
     let trendChartInst = null;
 
-    function getHeaders() {
-        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-        return { 'Authorization': `Bearer ${t}` };
-    }
-
     function setRange(days) {
         const to   = new Date();
         const from = new Date();
@@ -268,7 +263,7 @@
         document.getElementById('exportBtn').href = `/api/supervisor/kpi/export?from=${from}&to=${to}`;
 
         try {
-            const r = await fetch(`/api/supervisor/kpi?from_date=${from}&to_date=${to}`, { headers: getHeaders() });
+            const r = await fetchWithAuth(`/api/supervisor/kpi?from_date=${from}&to_date=${to}`);
             if (!r.ok) throw new Error();
             const data = await r.json();
 
