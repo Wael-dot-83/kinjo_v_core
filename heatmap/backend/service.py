@@ -96,7 +96,19 @@ def _names_for_slug(slug: str) -> list:
     # Arabic normalisation variants (hamza and taa marbuta)
     variants.add(ar.replace("أ", "ا").replace("إ", "ا"))  # أ إ → ا
     variants.add(ar.replace("ة", "ه"))  # ة → ه
-    return list(variants)
+    # Bridge the heatmap's English spelling to config's, keyed on the shared
+    # Arabic name (the one value both subsystems agree on). The heatmap uses
+    # "Tafileh" while config.JORDAN_GOVERNORATES_ENGLISH uses "Tafilah"; without
+    # this, a kindergarten stored under the config English spelling would be
+    # invisible to the heatmap. Canonical bridge, not a per-slug special case.
+    from config import settings as _settings
+    ar_list = _settings.JORDAN_GOVERNORATES
+    en_list = _settings.JORDAN_GOVERNORATES_ENGLISH
+    if ar in ar_list:
+        idx = ar_list.index(ar)
+        if idx < len(en_list):
+            variants.add(en_list[idx])
+    return [v for v in variants if v]
 
 
 def _query_kindergarten_count(db: Session, slug: str) -> int:
