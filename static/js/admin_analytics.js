@@ -3762,7 +3762,7 @@ function renderActionQueue(actions) {
                     </div>
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="badge bg-${priorityClass}">${action.priority}</span>
+                            <span class="badge bg-${priorityClass}">${adminAnalyticsEscape(formatAnomalySeverity(action.priority))}</span>
                             <small class="text-muted">
                                 <i class="bi bi-calendar-event me-1"></i>
                                 ${adminAnalyticsText('الموعد النهائي:', 'Deadline:')} ${deadline}
@@ -3867,7 +3867,7 @@ function renderInsights(insights) {
                     </div>
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="badge bg-${severityClass}">${insight.severity}</span>
+                            <span class="badge bg-${severityClass}">${adminAnalyticsEscape(formatAnomalySeverity(insight.severity))}</span>
                             ${insight.affected_count > 0 ? `
                                 <small class="text-muted">
                                     <i class="bi bi-building me-1"></i>
@@ -3938,7 +3938,7 @@ function renderPredictiveAlerts(alerts) {
                     <div class="insight-icon"><i class="bi ${a.icon} text-${sev} fs-4"></i></div>
                     <div class="flex-grow-1 min-w-0">
                         <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                            <span class="badge bg-${sev}">${a.severity}</span>
+                            <span class="badge bg-${sev}">${escapeHtml(formatAnomalySeverity(a.severity))}</span>
                             <small class="text-muted"><i class="bi bi-calendar-event me-1"></i>${adminAnalyticsText('خلال', 'in')} ${a.days_until_breach} ${adminAnalyticsText('يوم', 'days')}</small>
                             <small class="text-muted ms-2"><i class="bi bi-bullseye me-1"></i>${adminAnalyticsText('الثقة', 'confidence')}: ${conf}</small>
                         </div>
@@ -4020,14 +4020,14 @@ function renderDataLineage(sources) {
     container.innerHTML = sources.map(s => {
         const name = lang === 'en' ? s.name_en : s.name_ar;
         const updated = s.last_updated
-            ? `${adminAnalyticsText('آخر تحديث', 'Updated')}: ${s.last_updated}${s.freshness_days != null ? ` (${s.freshness_days} ${adminAnalyticsText('يوم', 'd')})` : ''}`
+            ? `${adminAnalyticsText('آخر تحديث', 'Updated')}: ${new Date(s.last_updated).toLocaleDateString(adminAnalyticsLocale())}${s.freshness_days != null ? ` (${adminAnalyticsText(`منذ ${s.freshness_days} يوم`, `${s.freshness_days}d ago`)})` : ''}`
             : adminAnalyticsText('لا توجد سجلات', 'No records');
         return `<div class="lineage-source">
             <div class="d-flex justify-content-between align-items-start mb-1 gap-2">
                 <span class="fw-bold">${escapeHtml(name)}</span>
-                <span class="lineage-status lineage-status--${s.status}"><i class="bi ${statusIcon[s.status] || 'bi-question-circle'}"></i>${statusLabel[s.status] || s.status}</span>
+                <span class="lineage-status lineage-status--${s.status}"><i class="bi ${statusIcon[s.status] || 'bi-question-circle'}"></i>${escapeHtml(statusLabel[s.status] || s.status)}</span>
             </div>
-            <div class="lineage-source__count">${Number(s.record_count).toLocaleString(lang === 'en' ? 'en-US' : 'ar-EG')}</div>
+            <div class="lineage-source__count">${Number(s.record_count).toLocaleString(adminAnalyticsLocale())}</div>
             <div class="small text-muted"><code>${escapeHtml(s.table)}</code></div>
             <div class="small text-muted mt-1">${escapeHtml(updated)}</div>
         </div>`;
