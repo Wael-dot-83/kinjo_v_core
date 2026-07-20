@@ -80,11 +80,18 @@ class TestAttendanceRate:
         expected = round(3 / 7 * 100, 2)
         assert rate == expected
 
-    def test_no_enrollments_returns_zero(self, test_db, sample_kindergarten):
+    def test_no_enrollments_returns_none_not_zero(self, test_db, sample_kindergarten):
+        """No scheduled attendance opportunity is "no data", not a 0% rate.
+
+        compute_attendance_rate documents this distinction explicitly: None when
+        expected days == 0, and 0.0 only when days were expected but nothing was
+        recorded. Reporting 0.0 here would show a kindergarten with no enrolments
+        as having perfect absenteeism.
+        """
         rate = KPIService.compute_attendance_rate(
             test_db, sample_kindergarten.id, PERIOD_START, PERIOD_END
         )
-        assert rate == 0.0
+        assert rate is None
 
 
 class TestIncidentRate:

@@ -23,6 +23,7 @@ Targets:
   Lines 553     export_users role filter
   Lines 633     get_user manager IDOR
 """
+import secrets
 import pytest
 from datetime import date, timedelta
 from unittest.mock import patch, MagicMock
@@ -79,7 +80,15 @@ def _make_kg(db, name_ar="حضانة", name_en="KG", governorate="Amman"):
 def _tok(client, username, password="Admin123!"):
     r = client.post("/token", data={"username": username, "password": password})
     assert r.status_code == 200, f"Login failed for {username}: {r.text}"
-    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+    # Admin write endpoints enforce double-submit CSRF (_validate_csrf_token),
+    # so the token pair must accompany every request, mirroring conftest's
+    # auth_headers_* fixtures. Harmless on safe methods.
+    csrf = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {r.json()['access_token']}",
+        "X-CSRF-Token": csrf,
+        "Cookie": f"kinjo_csrf_token={csrf}",
+    }
 
 
 # ---------------------------------------------------------------------------

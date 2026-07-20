@@ -91,14 +91,23 @@ class TestComputeMainIndicatorsShape:
         }
         assert set(result.keys()) == expected
 
-    def test_all_values_are_floats(self):
-        result = _compute_main_indicators(_make_sub())
-        for k, v in result.items():
-            assert isinstance(v, float), f"{k} should be float, got {type(v)}"
+    def test_all_values_are_floats_or_unavailable(self):
+        """Indicators are floats, or None where no defensible source exists.
 
-    def test_all_values_in_0_100_range(self):
+        See heatmap/backend/etl/compute.py: fabricated estimates are never used
+        in composite calculations, so an indicator with no measurable input is
+        reported as unavailable rather than as a number.
+        """
         result = _compute_main_indicators(_make_sub())
         for k, v in result.items():
+            assert v is None or isinstance(v, float), \
+                f"{k} should be float or None, got {type(v)}"
+
+    def test_available_values_in_0_100_range(self):
+        result = _compute_main_indicators(_make_sub())
+        for k, v in result.items():
+            if v is None:
+                continue
             assert 0.0 <= v <= 100.0, f"{k}={v} is out of [0, 100]"
 
 
@@ -136,20 +145,24 @@ class TestNurseryStatus:
 
 class TestChildrenRegistration:
 
-    def test_fully_registered(self):
-        sub = _make_sub(registered_children=500, unregistered_children=0)
-        result = _compute_main_indicators(sub)
-        assert result["children_registration"] == 100.0
+    """children_registration is deliberately unavailable.
 
-    def test_zero_children_no_crash(self):
-        sub = _make_sub(registered_children=0, unregistered_children=0)
-        result = _compute_main_indicators(sub)
-        assert result["children_registration"] == 0.0
+    The old formula was registered / (registered + unregistered). KinJo has no
+    defensible population denominator — nothing counts children who were never
+    enrolled — and `unregistered_children` is hardcoded to 0 upstream, so that
+    formula reported 100% registration unconditionally. The indicator is now
+    reported as None rather than as a number that is always perfect.
+    See heatmap/backend/pipeline.py (`no defensible population denominator`).
+    """
 
-    def test_half_registered(self):
-        sub = _make_sub(registered_children=250, unregistered_children=250)
-        result = _compute_main_indicators(sub)
-        assert abs(result["children_registration"] - 50.0) < 0.1
+    def test_unavailable_regardless_of_inputs(self):
+        for reg, unreg in ((500, 0), (0, 0), (250, 250)):
+            sub = _make_sub(registered_children=reg, unregistered_children=unreg)
+            result = _compute_main_indicators(sub)
+            assert result["children_registration"] is None, (
+                f"children_registration must stay unavailable "
+                f"(registered={reg}, unregistered={unreg})"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -233,6 +246,12 @@ class TestReportsAttendance:
         assert result["reports_attendance"] >= 99.0
 
     def test_zero_reports_zero_children_no_crash(self):
+        """No active nurseries means no expected-report denominator.
+
+        Completeness is then unavailable (None) rather than a fabricated 0%,
+        which would read as "filed nothing" for a governorate that has nothing
+        to file.
+        """
         sub = _make_sub(
             active_nurseries=0,
             reports_submitted=0,
@@ -241,47 +260,38 @@ class TestReportsAttendance:
             registered_children=0,
         )
         result = _compute_main_indicators(sub)
-        assert 0.0 <= result["reports_attendance"] <= 100.0
+        assert result["reports_attendance"] is None
 
-    def test_health_alert_rate_uses_registered_children(self):
+    def test_score_ignores_unmeasurable_health_and_absence_inputs(self):
+        """reports_attendance is report completeness only.
+
+        The health-alert and absence components were removed in 49b85238
+        ("port data-integrity fixes to service.py live read path") because
+        absences_total / health_absences have no defensible KinJo source — see
+        heatmap/backend/etl/compute.py. Holding reports_submitted fixed while
+        varying those inputs must therefore not move the score; if it does, a
+        fabricated component has been reintroduced.
         """
-        The health_alert_rate denominator must be registered_children, not
-        health_absences+1.  With 10 health absences and 1000 children:
-          correct rate = 10/1000 = 1%
-          old buggy rate = 10/11 = 91%
-
-        With the bug, the health component would be ~0 regardless of child count.
-        With the fix, high child count keeps the rate small and the component
-        contributes meaningfully to the score.
-        """
-        sub_few_children = _make_sub(
-            active_nurseries=10,
-            reports_submitted=300,
-            absence_rate=5.0,
-            health_absences=10,
-            registered_children=11,   # only 11 children → rate = 10/11 = 91%
-        )
-        sub_many_children = _make_sub(
-            active_nurseries=10,
-            reports_submitted=300,
-            absence_rate=5.0,
-            health_absences=10,
-            registered_children=1000,  # 1000 children → rate = 10/1000 = 1%
-        )
-        score_few = _compute_main_indicators(sub_few_children)["reports_attendance"]
-        score_many = _compute_main_indicators(sub_many_children)["reports_attendance"]
-        # More children relative to health absences → lower rate → higher score
-        assert score_many > score_few, (
-            f"Expected score_many ({score_many:.2f}) > score_few ({score_few:.2f}). "
-            "health_alert_rate denominator may be health_absences+1 instead of registered_children."
-        )
-
-    def test_high_absence_rate_reduces_score(self):
-        sub_low = _make_sub(absence_rate=2.0, health_absences=10, registered_children=500)
-        sub_high = _make_sub(absence_rate=40.0, health_absences=10, registered_children=500)
-        score_low = _compute_main_indicators(sub_low)["reports_attendance"]
-        score_high = _compute_main_indicators(sub_high)["reports_attendance"]
-        assert score_low > score_high
+        baseline = _compute_main_indicators(
+            _make_sub(active_nurseries=10, reports_submitted=300,
+                      absence_rate=5.0, health_absences=10, registered_children=11)
+        )["reports_attendance"]
+        for absence_rate, health_absences, registered in (
+            (40.0, 10, 500),
+            (2.0, 999, 1000),
+            (0.0, 0, 0),
+        ):
+            score = _compute_main_indicators(
+                _make_sub(active_nurseries=10, reports_submitted=300,
+                          absence_rate=absence_rate, health_absences=health_absences,
+                          registered_children=registered)
+            )["reports_attendance"]
+            assert score == baseline, (
+                "reports_attendance moved with an unmeasurable input "
+                f"(absence_rate={absence_rate}, health_absences={health_absences}, "
+                f"registered_children={registered}) — a fabricated component "
+                "appears to have been reintroduced."
+            )
 
     def test_missing_reports_reduces_score(self):
         sub_complete = _make_sub(active_nurseries=10, reports_submitted=300)
@@ -366,6 +376,8 @@ class TestEmptyDBEdgeCases:
         )
         result = _compute_main_indicators(sub)
         for k, v in result.items():
+            if v is None:  # unavailable indicator (no defensible source)
+                continue
             assert not math.isnan(v), f"{k} is NaN"
             assert not math.isinf(v), f"{k} is inf"
             assert 0.0 <= v <= 100.0, f"{k}={v} out of [0, 100]"
@@ -383,9 +395,11 @@ class TestEmptyDBEdgeCases:
         )
         result = _compute_main_indicators(sub)
         for k, v in result.items():
+            if v is None:  # unavailable indicator (no defensible source)
+                continue
             assert 0.0 <= v <= 100.0, f"{k}={v} out of range"
         assert result["nursery_status"] == 100.0
-        assert result["children_registration"] == 100.0
+        assert result["children_registration"] is None
         assert result["safety_incidents"] == 100.0
 
     def test_large_values_no_overflow(self):
@@ -402,6 +416,8 @@ class TestEmptyDBEdgeCases:
         )
         result = _compute_main_indicators(sub)
         for k, v in result.items():
+            if v is None:  # unavailable indicator (no defensible source)
+                continue
             assert not math.isnan(v), f"{k} is NaN with large inputs"
             assert 0.0 <= v <= 100.0, f"{k}={v} out of [0, 100] with large inputs"
 

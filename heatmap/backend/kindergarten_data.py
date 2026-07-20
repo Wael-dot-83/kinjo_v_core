@@ -68,6 +68,9 @@ def normalize_sub_indicator_value(
         "color": status_to_color(status),
         "threshold_high": threshold_high,
         "threshold_low": threshold_low,
+        # Always present so callers can branch on it without a KeyError; the
+        # unavailable branch above sets True.
+        "unavailable": False,
     }
 
 

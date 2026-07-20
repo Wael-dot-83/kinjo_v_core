@@ -124,13 +124,11 @@
 {% block extra_js %}
 <script>
 (function(){
-    const h = () => { const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token'); return t ? { 'Authorization': `Bearer ${t}` } : {}; };
-
     function fmtLang(code) {
         return code === 'en' ? 'English' : 'العربية';
     }
 
-    fetch('/api/supervisor/profile', { headers: h() })
+    fetchWithAuth('/api/supervisor/profile')
         .then(r => r.ok ? r.json() : Promise.reject(r))
         .then(p => {
             document.getElementById('profileFullName').textContent = p.full_name || p.username;

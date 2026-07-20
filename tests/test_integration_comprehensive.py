@@ -630,7 +630,9 @@ class TestKPIGovernanceIntegration:
         assert response.status_code == 200
         kpi = response.json()
         assert "attendance_rate" in kpi
-        assert 0 <= kpi["attendance_rate"] <= 100
+        # None means "no scheduled attendance opportunity" rather than 0%.
+        if kpi["attendance_rate"] is not None:
+            assert 0 <= kpi["attendance_rate"] <= 100
 
     def test_governance_score_calculation(
         self, client, test_db, auth_headers_admin, sample_kindergarten

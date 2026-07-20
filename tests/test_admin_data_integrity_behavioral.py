@@ -159,12 +159,23 @@ class TestNormalizeSubIndicatorBehavior:
         assert result["unavailable"] is not True
 
     def test_positive_input_calculated_correctly(self):
-        """Positive input must calculate score relative to threshold."""
+        """Status is scored relative to the indicator's own threshold_high.
+
+        active_nurseries has threshold_high=200, so the score is value/200*100:
+        160 -> 80% -> normal, while 80 -> 40% -> risk. (This test previously
+        asserted 80 was "normal", which assumed a threshold of 100.)
+        """
         from heatmap.backend.kindergarten_data import normalize_sub_indicator_value
-        result = normalize_sub_indicator_value("active_nurseries", 80, True)
-        assert result["value"] == 80
-        assert result["status"] == "normal"
-        assert result["unavailable"] is not True
+
+        good = normalize_sub_indicator_value("active_nurseries", 160, True)
+        assert good["value"] == 160
+        assert good["status"] == "normal"
+        assert good["unavailable"] is False
+
+        short = normalize_sub_indicator_value("active_nurseries", 80, True)
+        assert short["value"] == 80
+        assert short["status"] == "risk"
+        assert short["unavailable"] is False
 
 
 # =============================================================================
@@ -181,7 +192,12 @@ class TestAttendanceRateContract:
         import inspect
         source = inspect.getsource(KPIService.compute_attendance_rate)
         assert "if expected_days == 0:" in source
-        assert "return None" in source.split("if expected_days == 0:")[1].split("\n")[0]
+        # The guard's body sits on the following line, so slicing the remainder
+        # of the `if` line itself could never contain the return.
+        guard_body = source.split("if expected_days == 0:")[1].lstrip()
+        assert guard_body.startswith("return None"), (
+            "zero expected days must return None, not fall through to a rate"
+        )
 
     def test_expected_zero_return_type_is_optional(self):
         """compute_attendance_rate must return Optional[float]."""
@@ -207,7 +223,9 @@ class TestAttendanceRateContract:
         from kpi_service import KPIService
         hints = typing.get_type_hints(KPIService.compute_attendance_rates_bulk)
         ret = hints.get("return", str)
-        assert "Optional" in str(ret), (
+        args = typing.get_args(ret)
+        value_type = args[1] if len(args) == 2 else None
+        assert value_type is not None and type(None) in typing.get_args(value_type), (
             f"Return type must be Dict[int, Optional[float]], got {ret}"
         )
 

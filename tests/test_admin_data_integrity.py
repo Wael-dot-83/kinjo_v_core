@@ -261,17 +261,24 @@ class TestAttendanceZeroDenominator:
     def test_zero_expected_returns_none(self):
         """compute_attendance_rate must return None when expected_days == 0."""
         from kpi_service import KPIService
-        assert KPIService.compute_attendance_rate.__doc__ is not None
-        assert "Optional" in KPIService.compute_attendance_rate.__annotations__.get("return", str) or \
-               KPIService.compute_attendance_rate.__doc__ is not None, (
-            "compute_attendance_rate should document Optional[float] return"
+        from typing import get_args, get_type_hints
+        # Structural check: on Python 3.14 Optional[float] renders as
+        # "float | None", so string-matching "Optional" raises TypeError. The
+        # previous `or __doc__ is not None` clause also made this vacuous.
+        ret = get_type_hints(KPIService.compute_attendance_rate).get("return")
+        assert type(None) in get_args(ret), (
+            f"compute_attendance_rate must return Optional[float], got {ret}"
         )
 
     def test_bulk_zero_expected_returns_none(self):
         """compute_attendance_rates_bulk must return None for KGs with zero expected days."""
         from kpi_service import KPIService
-        assert "Optional" in str(KPIService.compute_attendance_rates_bulk.__annotations__.get("return", "")), (
-            "compute_attendance_rates_bulk should return Dict[int, Optional[float]]"
+        from typing import get_args, get_type_hints
+        ret = get_type_hints(KPIService.compute_attendance_rates_bulk).get("return")
+        args = get_args(ret)
+        value_type = args[1] if len(args) == 2 else None
+        assert value_type is not None and type(None) in get_args(value_type), (
+            f"compute_attendance_rates_bulk must return Dict[int, Optional[float]], got {ret}"
         )
 
     def test_genuine_zero_still_possible(self):
@@ -371,17 +378,23 @@ class TestAdminContextRoutes:
     def test_all_context_paths_registered(self):
         """Every admin page context path must have a corresponding route."""
         from scripts.compat.frontend_orig import router
-        registered_paths = set()
-        for route in router.routes:
-            if hasattr(route, "path") and route.path.startswith(("/admin", "/dashboard")):
-                registered_paths.add(route.path)
+        # Collect every registered path, not just /admin and /dashboard: the
+        # context list also covers top-level pages such as /daily-reports, which
+        # the old prefix filter excluded from the set it then validated against.
+        registered_paths = {
+            route.path for route in router.routes if hasattr(route, "path")
+        }
 
         for ctx_path in self.CONTEXT_ROUTES:
             if ctx_path.endswith("/{dimension_type}/{dimension_id}"):
                 continue
             # Check by prefix match for parameterized routes
+            # Guard the prefix match against near-empty roots: "/" would rstrip to
+            # "" and make startswith() true for everything, silently passing the
+            # assertion for paths that are not registered at all.
             found = any(
-                ctx_path == rp or ctx_path.startswith(rp.rstrip("/"))
+                ctx_path == rp
+                or (len(rp.rstrip("/")) > 1 and ctx_path.startswith(rp.rstrip("/")))
                 for rp in registered_paths
             )
             assert found, f"Context path {ctx_path} has no matching route"

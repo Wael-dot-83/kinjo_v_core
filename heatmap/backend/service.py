@@ -407,10 +407,15 @@ def _compute_main_indicators(sub: Dict[str, Any]) -> Dict[str, Optional[float]]:
     safety_penalty = min(100.0, _g("incidents_critical", 0) * 10.0)
     safety_score = max(0.0, 100.0 - safety_penalty)
 
-    # Reports & attendance: only real report completeness
-    reports_submitted = _g("reports_submitted", 0)
-    report_completeness = min(1.0, reports_submitted / max(active_kg * 30, 1))
-    reports_attendance_score = report_completeness * 100.0
+    # Reports & attendance: only real report completeness. Mirrors pipeline.py —
+    # with no active kindergartens there is no expected-report denominator, so
+    # completeness is unavailable rather than a fabricated 0%.
+    reports_submitted = sub.get("reports_submitted")
+    expected_reports = active_kg * 30
+    if reports_submitted is None or expected_reports <= 0:
+        reports_attendance_score = None
+    else:
+        reports_attendance_score = min(1.0, reports_submitted / expected_reports) * 100.0
 
     # Governance
     governance_score = _g("governance_score")
@@ -421,7 +426,7 @@ def _compute_main_indicators(sub: Dict[str, Any]) -> Dict[str, Optional[float]]:
         "children_registration": children_registration,
         "staff_classrooms":      round(supervised_ratio, 2),
         "safety_incidents":      round(safety_score, 2),
-        "reports_attendance":    round(reports_attendance_score, 2),
+        "reports_attendance":    round(reports_attendance_score, 2) if reports_attendance_score is not None else None,
         "tasks_governance":      round(tasks_governance_score, 2) if tasks_governance_score is not None else None,
     }
 
