@@ -105,6 +105,25 @@ def _make_kg(db, name_en="OpKG", governorate="Amman", license_valid_until=None):
 def _tok(client, username, password="Admin123!"):
     r = client.post("/token", data={"username": username, "password": password})
     assert r.status_code == 200, f"Login failed for {username}: {r.text}"
+    # Admin write endpoints enforce double-submit CSRF (_validate_csrf_token),
+    # so the token pair must accompany every request, mirroring conftest's
+    # auth_headers_* fixtures. Harmless on safe methods.
+    csrf = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {r.json()['access_token']}",
+        "X-CSRF-Token": csrf,
+        "Cookie": f"kinjo_csrf_token={csrf}",
+    }
+
+
+def _tok_without_csrf(client, username, password="Admin123!"):
+    """Auth header only, deliberately omitting the CSRF pair.
+
+    For tests that assert CSRF enforcement itself — they must not be handed the
+    token they are trying to prove is required.
+    """
+    r = client.post("/token", data={"username": username, "password": password})
+    assert r.status_code == 200, f"Login failed for {username}: {r.text}"
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
@@ -1098,8 +1117,6 @@ class TestAdminAlerts:
         admin = _make_admin(test_db, "alrt_adm", "6")
         alert = _make_alert(test_db, scope_type="GOVERNORATE", scope_id="Amman")
         headers = _tok(client, "alrt_adm6")
-        headers["X-CSRF-Token"] = "test"
-        client.cookies.set("kinjo_csrf_token", "test")
         r = client.patch(f"/api/admin/alerts/{alert.id}/acknowledge", headers=headers)
         assert r.status_code == 200
         data = r.json()
@@ -1113,8 +1130,6 @@ class TestAdminAlerts:
         """PATCH /api/admin/alerts/999999/acknowledge returns 404."""
         admin = _make_admin(test_db, "alrt_adm", "7")
         headers = _tok(client, "alrt_adm7")
-        headers["X-CSRF-Token"] = "test"
-        client.cookies.set("kinjo_csrf_token", "test")
         r = client.patch("/api/admin/alerts/999999/acknowledge", headers=headers)
         assert r.status_code == 404
 
@@ -1150,7 +1165,7 @@ class TestHeatmapCsrf:
     def test_refresh_requires_csrf(self, client, test_db):
         """POST /admin/heat-map/refresh must reject requests without valid CSRF."""
         admin = _make_admin(test_db, "hm_csrf_adm", "1")
-        auth_headers = _tok(client, "hm_csrf_adm1")
+        auth_headers = _tok_without_csrf(client, "hm_csrf_adm1")
 
         r = client.post("/api/admin/heat-map/refresh", headers=auth_headers)
         assert r.status_code == 400

@@ -4,6 +4,7 @@ backing the admin Kindergartens list page's summary cards.
 Covers: admin gets the expected envelope + shape, counts reflect real status,
 and non-admin roles are forbidden (403).
 """
+import secrets
 import models
 from auth import get_password_hash
 
@@ -39,7 +40,15 @@ def _make_user(db, username, role=models.UserRole.SUPERVISOR):
 def _tok(client, username, password="Admin123!"):
     r = client.post("/token", data={"username": username, "password": password})
     assert r.status_code == 200, f"Login failed for {username}: {r.text}"
-    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+    # Admin write endpoints enforce double-submit CSRF (_validate_csrf_token),
+    # so the token pair must accompany every request, mirroring conftest's
+    # auth_headers_* fixtures. Harmless on safe methods.
+    csrf = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {r.json()['access_token']}",
+        "X-CSRF-Token": csrf,
+        "Cookie": f"kinjo_csrf_token={csrf}",
+    }
 
 
 def _make_kg(db, name_ar, status=models.KindergartenStatus.ACTIVE, capacity=100):

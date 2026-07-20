@@ -83,7 +83,15 @@ def _make_kg(db, name_en="MsgKG", governorate="Amman"):
 def _tok(client, username, password="Admin123!"):
     r = client.post("/token", data={"username": username, "password": password})
     assert r.status_code == 200, f"Login failed for {username}: {r.text}"
-    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+    # Admin write endpoints enforce double-submit CSRF (_validate_csrf_token),
+    # so the token pair must accompany every request, mirroring conftest's
+    # auth_headers_* fixtures. Harmless on safe methods.
+    csrf = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {r.json()['access_token']}",
+        "X-CSRF-Token": csrf,
+        "Cookie": f"kinjo_csrf_token={csrf}",
+    }
 
 
 def _admin_csrf_headers(client, username, password="Admin123!"):
