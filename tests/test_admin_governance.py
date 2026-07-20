@@ -6,11 +6,18 @@ Verifies:
 - Admin can access KPIs, leaderboard, and reminders
 - Reminder POST requires a valid kindergarten
 """
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from auth import get_password_hash
 import models
+
+
+def _csrf_pair() -> dict:
+    """Double-submit CSRF pair required by admin write endpoints."""
+    csrf = secrets.token_hex(32)
+    return {"X-CSRF-Token": csrf, "Cookie": f"kinjo_csrf_token={csrf}"}
 
 
 def _create_admin(db):
@@ -118,7 +125,7 @@ class TestGovernanceReminders:
                 "target_id": 999999,
                 "reminder_type": "low_submission_rate",
             },
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {token}", **_csrf_pair()},
         )
         assert r.status_code == 404
 
@@ -132,7 +139,7 @@ class TestGovernanceReminders:
                 "target_id": admin.id,
                 "reminder_type": "low_submission_rate",
             },
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {token}", **_csrf_pair()},
         )
         assert r.status_code == 404
 

@@ -1,6 +1,7 @@
 """
 Unit tests for Missing Endpoints
 """
+import secrets
 import pytest
 from datetime import date, datetime, timedelta
 from unittest.mock import Mock, patch
@@ -404,7 +405,12 @@ class TestUserEndpoints:
 
         payload = {"new_password": "ResetPass123!", "admin_password": "Admin123!"}
 
-        response = client.post(f"/api/users/{test_user.id}/admin-reset-password", json=payload)
+        csrf = secrets.token_hex(32)
+        response = client.post(
+            f"/api/users/{test_user.id}/admin-reset-password",
+            json=payload,
+            headers={"X-CSRF-Token": csrf, "Cookie": f"kinjo_csrf_token={csrf}"},
+        )
         assert response.status_code == 200
         data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert "message" in data
