@@ -6457,7 +6457,12 @@ class HeatmapGovernorateData(BaseModel):
     balqa: Dict[str, Any] = {}
     madaba: Dict[str, Any] = {}
     karak: Dict[str, Any] = {}
-    tafilah: Dict[str, Any] = {}
+    # Canonical slug is "tafileh" (heatmap.backend.constants.GOVERNORATES). The
+    # field was spelled "tafilah", so with extra='allow' the real data landed in
+    # an undeclared "tafileh" key while this one stayed permanently {} — Tafilah
+    # rendered blank for any client reading the declared field.
+    # test_heatmap_data_endpoint pins these names to the canonical slug set.
+    tafileh: Dict[str, Any] = {}
     maan: Dict[str, Any] = {}
     aqaba: Dict[str, Any] = {}
 
@@ -6507,12 +6512,28 @@ def get_heatmap_data(
 
         data: Dict[str, Dict[str, Any]] = {}
         for g in overview.get("governorates", []):
+            indicators = g.get("main_indicators", {}) or {}
+
+            def _num(value, default=0):
+                """Coerce an indicator to a number, tolerating unavailable (None).
+
+                dict.get(key, default) returns None when the key is present with a
+                None value, so a plain .get(..., 0) does NOT protect the int()
+                calls below. children_registration has been unavailable by design
+                since 49b85238, which made this endpoint raise TypeError and
+                return 500.
+                """
+                return default if value is None else value
+
             data[g["slug"]] = {
                 "name": g.get("name_en", g["slug"].capitalize()),
-                "kindergarten_count": int(g.get("main_indicators", {}).get("nursery_status", 0)),
-                "children_count": int(g.get("main_indicators", {}).get("children_registration", 0)),
-                "governance_score": g.get("main_indicators", {}).get("tasks_governance", 0),
-                "incidents_total": int(100 - g.get("main_indicators", {}).get("safety_incidents", 0)),
+                # Counts come from their own fields, not decoded back out of a
+                # 0-100 indicator slot: nursery_status is a percentage, and
+                # children_registration is an unavailable indicator, never a count.
+                "kindergarten_count": int(_num(g.get("kg_count"))),
+                "children_count": int(_num(g.get("student_count"))),
+                "governance_score": _num(indicators.get("tasks_governance")),
+                "incidents_total": int(100 - _num(indicators.get("safety_incidents"), 100)),
                 "risk_score": g.get("risk_score", 0),
                 "last_update": overview.get("last_update"),
                 "main_indicators": g.get("main_indicators", {}),
@@ -6600,10 +6621,19 @@ def _fallback_map_overview(db: Session) -> Dict[str, Any]:
         data.append({
             "slug": gov,
             "name_en": gov_name,
+            # Raw counts travel in their own fields, matching the heatmap
+            # service's payload. They were previously smuggled through the
+            # main_indicators slots (which are 0-100 scores), so the reader had
+            # to decode a count back out of an indicator — and broke as soon as
+            # children_registration became correctly unavailable.
+            "kg_count": total_kgs,
+            "student_count": children_count,
             "main_indicators": {
                 "tasks_governance": round(avg_governance, 1),
                 "nursery_status": total_kgs,
-                "children_registration": children_count,
+                # children_registration is unavailable by design (no defensible
+                # population denominator) — never fabricate it from a count.
+                "children_registration": None,
                 "safety_incidents": max(0, 100 - incident_count * 5),
             },
             "risk_score": risk_score,

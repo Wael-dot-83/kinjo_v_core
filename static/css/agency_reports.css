@@ -428,3 +428,27 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
   .agency-alert{background:var(--ag-surface-sunken);color:var(--ag-ink)}
 }
 :root[data-theme="dark"] .agency-alert{background:var(--ag-surface-sunken);color:var(--ag-ink)}
+
+/* ---------------------------------------------------------------------------
+   Classes rendered by admin_agency_reports.js and the agency templates that had
+   no style rule. `.agency-card-usage` / `.agency-card-updated` arrived with the
+   unified agency card (4f98904d) but were never styled, so the "how to use" and
+   freshness lines rendered as unstyled body text. Token-driven so light and dark
+   both follow the existing scheme; logical properties keep RTL correct.
+   --------------------------------------------------------------------------- */
+.agency-card-usage{margin:0;font-size:.875rem;line-height:1.7;color:var(--ag-ink-2);background:var(--ag-surface-sunken);border:1px solid var(--ag-border-2);border-radius:10px;padding:10px 12px}
+.agency-card-usage strong{color:var(--ag-ink)}
+.agency-card-updated{margin:0;font-size:.8125rem;color:var(--ag-ink-3);display:flex;align-items:center;gap:6px}
+.agency-report-card{gap:12px}
+.agency-dq-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;border:1px solid var(--ag-border);background:var(--ag-surface-sunken);color:var(--ag-ink);padding:4px 12px;font-size:.8125rem;font-weight:600}
+.agency-dq-badge--success{border-color:#15803d;background:#f0fdf4;color:#166534}
+.agency-dq-badge--warning{border-color:#b45309;background:#fffbeb;color:#92400e}
+.agency-dq-badge--danger{border-color:#b91c1c;background:#fef2f2;color:#991b1b}
+:root[data-theme="dark"] .agency-dq-badge--success{background:rgba(22,101,52,.18);color:#86efac}
+:root[data-theme="dark"] .agency-dq-badge--warning{background:rgba(146,64,14,.18);color:#fcd34d}
+:root[data-theme="dark"] .agency-dq-badge--danger{background:rgba(153,27,27,.18);color:#fca5a5}
+@media (prefers-color-scheme: dark){
+  .agency-dq-badge--success{background:rgba(22,101,52,.18);color:#86efac}
+  .agency-dq-badge--warning{background:rgba(146,64,14,.18);color:#fcd34d}
+  .agency-dq-badge--danger{background:rgba(153,27,27,.18);color:#fca5a5}
+}

@@ -18,8 +18,13 @@ os.environ["TESTING"] = "true"
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "kinjo-ci-testing-secret-key-not-for-production-use-9x7z")
 
+from config import settings as _settings
 from database import Base, get_db
 from main import app
+
+# Track the production cookie name rather than hardcoding it, so renaming the
+# setting cannot leave the tests satisfying a cookie the app no longer reads.
+CSRF_COOKIE_NAME = _settings.CSRF_COOKIE_NAME
 from auth import get_password_hash
 import models
 
@@ -355,56 +360,87 @@ def parent_token(client, parent_user):
     return response.json()["access_token"]
 
 
+# ---------------------------------------------------------------------------
+# Canonical CSRF helpers
+#
+# State-changing admin endpoints enforce double-submit CSRF via
+# `_validate_csrf_token` (admin_endpoints.py, heatmap/backend/admin_router.py),
+# which compares the X-CSRF-Token header against the kinjo_csrf_token cookie with
+# secrets.compare_digest. That validator is a real security boundary and is
+# deliberately NOT bypassed under TESTING — tests must satisfy it, not disable it.
+#
+# These are the single source of truth. Test modules must import them rather than
+# rebuilding the pair inline; a scattered pair is how call sites silently drifted
+# to auth-only headers and produced ~103 spurious 400s.
+# ---------------------------------------------------------------------------
+
+def csrf_pair(token: str | None = None) -> dict:
+    """Matching CSRF header+cookie. Pass `token` to force a specific value."""
+    csrf_token = token or secrets.token_hex(32)
+    return {
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"{CSRF_COOKIE_NAME}={csrf_token}",
+    }
+
+
+def bearer_headers(token: str, *, with_csrf: bool = True) -> dict:
+    """Authorization header, plus the CSRF pair unless explicitly opted out.
+
+    `with_csrf=False` is for tests asserting that CSRF is *required*; they must
+    not be handed the token they are proving is necessary.
+    """
+    headers = {"Authorization": f"Bearer {token}"}
+    if with_csrf:
+        headers.update(csrf_pair())
+    return headers
+
+
 @pytest.fixture
 def auth_headers_admin(admin_token):
-    """
-    Get authentication headers for admin
-    """
-    csrf_token = secrets.token_hex(32)
-    return {
-        "Authorization": f"Bearer {admin_token}",
-        "X-CSRF-Token": csrf_token,
-        "Cookie": f"kinjo_csrf_token={csrf_token}"
-    }
+    """Authentication + CSRF headers for admin."""
+    return bearer_headers(admin_token)
 
 
 @pytest.fixture
 def auth_headers_manager(manager_token):
-    """
-    Get authentication headers for manager
-    """
-    csrf_token = secrets.token_hex(32)
-    return {
-        "Authorization": f"Bearer {manager_token}",
-        "X-CSRF-Token": csrf_token,
-        "Cookie": f"kinjo_csrf_token={csrf_token}"
-    }
+    """Authentication + CSRF headers for manager."""
+    return bearer_headers(manager_token)
 
 
 @pytest.fixture
 def auth_headers_supervisor(supervisor_token):
-    """
-    Get authentication headers for supervisor
-    """
-    csrf_token = secrets.token_hex(32)
-    return {
-        "Authorization": f"Bearer {supervisor_token}",
-        "X-CSRF-Token": csrf_token,
-        "Cookie": f"kinjo_csrf_token={csrf_token}"
-    }
+    """Authentication + CSRF headers for supervisor."""
+    return bearer_headers(supervisor_token)
 
 
 @pytest.fixture
 def auth_headers_parent(parent_token):
+    """Authentication + CSRF headers for parent."""
+    return bearer_headers(parent_token)
+
+
+@pytest.fixture(scope="function")
+def in_memory_db():
+    """Fresh in-memory SQLite with the schema applied and governorates seeded.
+
+    Shared here rather than duplicated per-module: the heatmap pipeline tests and
+    the unavailable-data regression tests both need an isolated, seeded database.
     """
-    Get authentication headers for parent
-    """
-    csrf_token = secrets.token_hex(32)
-    return {
-        "Authorization": f"Bearer {parent_token}",
-        "X-CSRF-Token": csrf_token,
-        "Cookie": f"kinjo_csrf_token={csrf_token}"
-    }
+    from heatmap.scripts.seed_snapshot_data import seed_governorates
+
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    Session_ = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    db = Session_()
+    seed_governorates(db)
+    db.commit()
+    yield db
+    db.close()
+    engine.dispose()
 
 
 @pytest.fixture
