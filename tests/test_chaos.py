@@ -207,17 +207,34 @@ class TestHeatmapTimeoutChaos:
 # ---------------------------------------------------------------------------
 
 class TestDiskFullChaos:
-    def test_backup_returns_error_when_disk_full(self, client, test_db):
-        """If disk is full during backup, the endpoint must return 500 or 507 with a message."""
+    def test_backup_failure_returns_structured_error_not_a_raw_crash(self, client, test_db):
+        """When the backup subsystem is unavailable, the endpoint must return a
+        server error with a human-readable message — never a bare stack trace.
+
+        This previously sent auth-only headers and accepted 400 in the pass set,
+        so it passed on the CSRF rejection and never reached the backup code at
+        all (the endpoint enqueues asynchronously, so the disk-full mock also
+        never applied). It now sends a valid CSRF pair — 400 is no longer an
+        acceptable outcome — and asserts the genuine failure envelope.
+        """
+        import secrets
+
         _make_admin(test_db)
-        headers = _tok(client)
+        csrf = secrets.token_hex(32)
+        headers = {
+            **_tok(client),
+            "X-CSRF-Token": csrf,
+            "Cookie": f"kinjo_csrf_token={csrf}",
+        }
 
         with patch("backup_manager.BackupManager.create_database_backup") as mock_backup:
             mock_backup.side_effect = OSError(28, "No space left on device")
 
             r = client.post("/api/admin/backup/create", headers=headers)
-            assert r.status_code in (500, 507, 503, 400), (
-                f"Backup during disk-full returned {r.status_code} — expected server error"
+            # A valid, authorised, CSRF-bearing request must not be CSRF-rejected.
+            assert r.status_code != 400, r.text
+            assert r.status_code in (500, 507, 503), (
+                f"Backup failure returned {r.status_code} — expected a server error"
             )
             if r.headers.get("content-type", "").startswith("application/json"):
                 body = r.json()
