@@ -734,6 +734,18 @@ _LINEAGE_SOURCES = [
 ]
 
 
+def _gov_en(gov: str) -> str:
+    """Map a stored (Arabic) governorate name to its English label so English
+    output never carries Arabic place names. Falls back to the original value."""
+    if not gov:
+        return ""
+    if gov in settings.JORDAN_GOVERNORATES:
+        idx = settings.JORDAN_GOVERNORATES.index(gov)
+        if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
+            return settings.JORDAN_GOVERNORATES_ENGLISH[idx]
+    return gov
+
+
 def _lineage_status(count: int, freshness_days: Optional[int]) -> str:
     if count == 0:
         return "empty"
@@ -840,7 +852,7 @@ def get_narrative_summary(
     if breakdown:
         if below:
             names = "، ".join(g.governorate for g in below[:3])
-            names_en = ", ".join(g.governorate for g in below[:3])
+            names_en = ", ".join(_gov_en(g.governorate) for g in below[:3])
             sentences.append({
                 "tone": "warning", "icon": "bi-geo-alt",
                 "ar": f"{len(below)} من {len(breakdown)} محافظة دون خط الحضور 80% (أبرزها: {names}).",
@@ -7867,6 +7879,13 @@ class AnalyticsService:
                 value, band = KPIService.compute_governance_score(db, kg.id, period_start, period_end)
             else:
                 value = 0
+
+            # The KPI computers return None when the kindergarten has no data for
+            # the period. Such a kindergarten cannot be ranked: coercing it to 0
+            # would place it artificially at the top or bottom of the table (and
+            # None would break both the sort below and RankingEntry validation).
+            if value is None:
+                continue
 
             rankings.append({
                 "kindergarten_id": kg.id,

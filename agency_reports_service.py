@@ -404,20 +404,20 @@ class AgencyReportsService:
         for code, agency in AGENCY_REPORT_REGISTRY.items():
             reports = []
             for report_code, report in agency["reports"].items():
-            reports.append({
-                "agency_code": code,
-                "report_code": report_code,
-                "title_ar": report.get("title_ar"),
-                "title_en": report.get("title_en"),
-                "description_ar": report.get("description_ar"),
-                "status": report.get("status", "ready"),
-                "privacy_level": report.get("privacy_level", "aggregated_only"),
-                "filters": report.get("filters", []),
-                "exports": report.get("exports", []),
-                "data_sources": report.get("data_sources", []),
-                "reason_ar": report.get("reason_ar"),
-                "generated_at": generated_at,
-            })
+                reports.append({
+                    "agency_code": code,
+                    "report_code": report_code,
+                    "title_ar": report.get("title_ar"),
+                    "title_en": report.get("title_en"),
+                    "description_ar": report.get("description_ar"),
+                    "status": report.get("status", "ready"),
+                    "privacy_level": report.get("privacy_level", "aggregated_only"),
+                    "filters": report.get("filters", []),
+                    "exports": report.get("exports", []),
+                    "data_sources": report.get("data_sources", []),
+                    "reason_ar": report.get("reason_ar"),
+                    "generated_at": generated_at,
+                })
             agencies.append({
                 "code": code,
                 "name_ar": agency["name_ar"],
@@ -426,7 +426,7 @@ class AgencyReportsService:
                 "icon": agency.get("icon", "bi-bank"),
                 "report_count": len(reports),
                 "ready_report_count": sum(1 for r in reports if r["status"] == "ready"),
-            "requires_data_count": sum(1 for r in reports if r["status"] != "ready"),
+                "requires_data_count": sum(1 for r in reports if r["status"] != "ready"),
                 "reports": reports,
                 "generated_at": generated_at,
             })

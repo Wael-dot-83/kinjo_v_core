@@ -315,7 +315,7 @@ class TestAttendanceJordanWeekend:
         from datetime import date
         # 2026-07-18 is a Saturday
         saturday = date(2026, 7, 18)
-        assert saturday.weekday() == 5, "Expected Saturday (weekday 5)")
+        assert saturday.weekday() == 5, "Expected Saturday (weekday 5)"
         # Saturday is not a working day in Jordan
 
 

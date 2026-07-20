@@ -5483,7 +5483,11 @@ def get_kpi_network_summary(
         })
 
     def _avg(lst: list) -> float:
-        return round(sum(lst) / len(lst), 2) if lst else 0.0
+        # A kindergarten with no data for the period yields None from the KPI
+        # computers. Exclude those rather than coercing them to 0.0, which would
+        # silently drag the network average down.
+        vals = [v for v in lst if v is not None]
+        return round(sum(vals) / len(vals), 2) if vals else 0.0
 
     return {
         "kindergarten_count": len(kindergartens),
