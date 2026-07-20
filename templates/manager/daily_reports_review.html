@@ -356,20 +356,14 @@
         try {
             const r = await fetch(url, { headers: getHeaders() });
             if (!r.ok) throw new Error();
-            const reports = await r.json();
+            const data = await r.json();
+            const reports = data.reports || [];
+            const stats = data.stats || {};
 
-            // Compute stats from the returned list
-            const today = new Date().toISOString().slice(0, 10);
-            const weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
-            const statPending = reports.filter(x => x.status === 'SUBMITTED').length;
-            const statSent    = reports.filter(x => x.status === 'SENT_TO_PARENT').length;
-            const statToday   = reports.filter(x => x.date === today).length;
-            const statWeek    = reports.filter(x => x.date >= weekAgo).length;
-
-            document.getElementById('statPending').textContent = statPending;
-            document.getElementById('statSent').textContent    = statSent;
-            document.getElementById('statToday').textContent   = statToday;
-            document.getElementById('statWeek').textContent    = statWeek;
+            document.getElementById('statPending').textContent = stats.pending ?? 0;
+            document.getElementById('statSent').textContent    = stats.sent ?? 0;
+            document.getElementById('statToday').textContent   = stats.today ?? 0;
+            document.getElementById('statWeek').textContent    = stats.week ?? 0;
 
             const cnt = document.getElementById('reportsCount');
             if (cnt) cnt.textContent = `(${Array.isArray(reports) ? reports.length : 0} {{ _('تقرير') }})`;

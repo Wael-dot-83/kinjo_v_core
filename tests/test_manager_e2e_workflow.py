@@ -211,7 +211,7 @@ class TestManagerE2EWorkflow:
         # 6. Review queue shows the submitted report; edit it.
         r = client.get("/api/manager/daily-reports")
         assert r.status_code == 200
-        assert any(rep["id"] == A["report"].id for rep in r.json())
+        assert any(rep["id"] == A["report"].id for rep in r.json()["reports"])
 
         r = client.put(f"/api/manager/daily-reports/{A['report'].id}",
                        json={"notes": "ملاحظات المدير"})
@@ -275,7 +275,7 @@ class TestManagerE2EWorkflow:
         r = client.post(f"/api/absence-requests/{B['absence'].id}/approve", json={})
         assert r.status_code in _DENIED
         r = client.get("/api/manager/daily-reports")
-        assert all(rep["id"] != B["report"].id for rep in r.json())
+        assert all(rep["id"] != B["report"].id for rep in r.json()["reports"])
 
         # KG B state is untouched.
         test_db.refresh(B["report"]); test_db.refresh(B["absence"])

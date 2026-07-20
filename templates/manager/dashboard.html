@@ -43,7 +43,7 @@
       <i class="bi bi-bell-fill text-gold me-2"></i>
       {% if ui_lang == 'en' %}Needs your action today{% else %}بانتظار إجراءاتك اليوم{% endif %}
     </h2>
-    <ul class="row g-4">
+    <ul class="row g-4 list-unstyled">
       <li class="col-12 col-md-6 col-lg-3">
         <div class="card h-100 shadow-sm bg-primary-subtle border-primary border-opacity-25">
           <div class="card-body text-center">
@@ -101,7 +101,7 @@
       <i class="bi bi-building me-2"></i>
       {% if ui_lang == 'en' %}Kindergarten Snapshot{% else %}نظرة عامة على الحضانة{% endif %}
     </h2>
-    <ul class="row g-4">
+    <ul class="row g-4 list-unstyled">
       <li class="col-12 col-md-6 col-lg-4">
         <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2">
           <div class="p-2 bg-primary-subtle text-primary rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
@@ -141,7 +141,56 @@
     </ul>
   </section>
 
-  <!-- Operational alerts -->
+  <!-- Today's Activity -->
+  <section aria-labelledby="activityHeading" class="mb-5">
+    <h2 id="activityHeading" class="h3 fw-bold mb-3 text-primary d-flex align-items-center">
+      <i class="bi bi-calendar-check me-2"></i>
+      {% if ui_lang == 'en' %}Today's Activity{% else %}نشاط اليوم{% endif %}
+    </h2>
+    <ul class="row g-4 list-unstyled">
+      <li class="col-12 col-md-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-people-fill text-success fs-1 mb-1"></i>
+            <p class="fs-1 fw-bolder display-5 m-0 text-success" id="statAttendanceToday">0</p>
+            <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Present today{% else %}حاضرون اليوم{% endif %}</p>
+          </div>
+        </div>
+      </li>
+      <li class="col-12 col-md-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-person-plus text-warning fs-1 mb-1"></i>
+            <p class="fs-1 fw-bolder display-5 m-0 text-warning" id="statWaitlisted">0</p>
+            <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Waitlisted{% else %}قائمة الانتظار{% endif %}</p>
+          </div>
+        </div>
+      </li>
+      <li class="col-12 col-md-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-exclamation-triangle text-danger fs-1 mb-1"></i>
+            <p class="fs-1 fw-bolder display-5 m-0 text-danger" id="statIncidents">0</p>
+            <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Incidents (7 days){% else %}حوادث (7 أيام){% endif %}</p>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <!-- Attendance Trend Chart -->
+  <section aria-labelledby="chartHeading" class="mb-5">
+    <h2 id="chartHeading" class="h3 fw-bold mb-3 text-primary d-flex align-items-center">
+      <i class="bi bi-graph-up me-2"></i>
+      {% if ui_lang == 'en' %}Attendance Trend (7 days){% else %}اتجاه الحضور (7 أيام){% endif %}
+    </h2>
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <canvas id="attendanceTrendChart" style="max-height:300px;" aria-label="{{ _('Attendance trend chart') }}"></canvas>
+      </div>
+    </div>
+  </section>
+
   <section aria-labelledby="alertsHeading">
     <h2 id="alertsHeading" class="h3 fw-bold mb-2">
       {% if ui_lang == 'en' %}Operational alerts{% else %}تنبيهات تشغيلية{% endif %}
@@ -187,6 +236,46 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 
 function nameOf(item) { item = item || {}; return UI_EN ? (item.name_en || item.name_ar || '') : (item.name_ar || item.name_en || ''); }
 
+let _trendChart = null;
+function renderAttendanceTrendChart(data) {
+    const canvas = document.getElementById('attendanceTrendChart');
+    if (!canvas) return;
+    if (_trendChart) _trendChart.destroy();
+    const labels = data.map(p => {
+        const d = new Date(p.date);
+        return d.toLocaleDateString(UI_EN ? 'en-JO' : 'ar-JO', { weekday: 'short', month: 'short', day: 'numeric' });
+    });
+    const values = data.map(p => p.count);
+    _trendChart = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: UI_EN ? 'Attending children' : 'الأطفال الحاضرون',
+                data: values,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16,185,129,0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+                pointBackgroundColor: '#10b981',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { rtl: !UI_EN, titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { font: { family: 'Cairo' }, stepSize: 1 } },
+                x: { ticks: { font: { family: 'Cairo', size: 10 } } }
+            }
+        }
+    });
+}
+
 // Hard ceiling on the loading state: even if the request hangs or the network
 // stalls, the spinner is replaced by the error/retry card after this timeout,
 // so the dashboard can never sit on "Loading…" forever.
@@ -224,6 +313,11 @@ async function loadDashboard() {
         document.getElementById('statClasses').textContent = (d.classes || []).length;
         document.getElementById('statChildren').textContent = s.active_enrollments ?? 0;
         document.getElementById('statSupervisors').textContent = s.supervisors_count ?? 0;
+        document.getElementById('statAttendanceToday').textContent = s.attendance_today ?? 0;
+        document.getElementById('statWaitlisted').textContent = s.waitlisted_children ?? 0;
+        document.getElementById('statIncidents').textContent = s.recent_incidents ?? 0;
+
+        renderAttendanceTrendChart(d.charts?.attendance || []);
 
         const noSup = d.classes_without_supervisor || [];
         if (noSup.length) {

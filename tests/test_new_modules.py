@@ -707,7 +707,7 @@ class TestDailyReportWorkflow:
             headers=_hdr(manager_token),
         )
         assert r.status_code == 200, r.text
-        reports = r.json()
+        reports = r.json()["reports"]
         assert len(reports) >= 1
         report = next(x for x in reports if x["id"] == sample_daily_report.id)
         assert report["class_name"] == sample_class.name_ar

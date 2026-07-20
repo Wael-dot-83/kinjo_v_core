@@ -208,7 +208,7 @@
                     <tr>
                         <td>${i + 1}</td>
                         <td class="fw-bold">${escHtml(cname)}</td>
-                        <td>-</td>
+                        <td>${escHtml(r.parent_name || '-')}</td>
                         <td>${escHtml(r.start_date)}</td>
                         <td>${escHtml(r.end_date)}</td>
                         <td class="text-truncate-2" style="max-width:220px" title="${escHtml(r.reason)}">${escHtml(r.reason)}</td>

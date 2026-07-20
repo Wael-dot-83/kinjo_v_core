@@ -306,12 +306,15 @@ actions=refresh_action
         section.classList.remove('d-none');
         document.getElementById('alertsCount').textContent = alerts.length;
         const cls = { high: 'alert-danger', medium: 'alert-warning', low: 'alert-info' };
-        list.innerHTML = alerts.map(a => `
+        list.innerHTML = alerts.map(a => {
+            const text = IS_AR ? (a.message_ar || a.message) : (a.message_en || a.message);
+            return `
             <div class="alert ${cls[a.priority] || 'alert-info'} mb-1">
                 <div>
-                    <p class="mb-0">${esc(a.message)}</p>
+                    <p class="mb-0">${esc(text)}</p>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
     function renderKPICards(data) {
@@ -452,7 +455,6 @@ actions=refresh_action
                 scales: {
                     y: {
                         beginAtZero: true,
-                        max: 100,
                         ticks: { font: { family: 'Cairo' }, callback: v => v + '%' },
                     },
                     x: { ticks: { font: { family: 'Cairo', size: 10 } } },

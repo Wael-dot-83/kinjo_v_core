@@ -457,28 +457,48 @@ def list_daily_reports_for_review(
         for u in db.query(User).filter(User.id.in_(submitter_ids)).all():
             supervisor_name_by_id[u.id] = u.full_name or u.username
 
-    return [
-        {
-            "id": r.id,
-            "child_id": r.child_id,
-            "child_name": f"{child_map[r.child_id].first_name} {child_map[r.child_id].last_name}" if r.child_id in child_map else "",
-            "date": str(r.date),
-            "status": r.status.value,
-            "submitted_by": r.submitted_by,
-            "submitted_at": r.submitted_at.isoformat() if r.submitted_at else None,
-            "supervisor_name": supervisor_name_by_id.get(r.submitted_by, ""),
-            "class_name": class_name_by_id.get(child_class_map.get(r.child_id), ""),
-            "notes": r.notes,
-            "activities": r.activities,
-            "arrival_time": r.arrival_time,
-            "leave_time": r.leave_time,
-            "breakfast": r.breakfast,
-            "snack": r.snack,
-            "milk": r.milk,
-            "lunch": r.lunch,
+    # Compute stats from the full KG context (not filtered) so the stat cards
+    # remain accurate even when filters are active.
+    stats_q = db.query(DailyReport).filter(DailyReport.kindergarten_id == kg_id)
+    stats_total = stats_q.count()
+    stats_pending = stats_q.filter(DailyReport.status == DailyReportStatus.SUBMITTED).count()
+    stats_sent = stats_q.filter(DailyReport.status == DailyReportStatus.SENT_TO_PARENT).count()
+    today_date = date.today()
+    week_ago_date = today_date - timedelta(days=6)
+    stats_today = stats_q.filter(DailyReport.date == today_date).count()
+    stats_week = stats_q.filter(DailyReport.date >= week_ago_date).count()
+
+    return {
+        "reports": [
+            {
+                "id": r.id,
+                "child_id": r.child_id,
+                "child_name": f"{child_map[r.child_id].first_name} {child_map[r.child_id].last_name}" if r.child_id in child_map else "",
+                "date": str(r.date),
+                "status": r.status.value,
+                "submitted_by": r.submitted_by,
+                "submitted_at": r.submitted_at.isoformat() if r.submitted_at else None,
+                "supervisor_name": supervisor_name_by_id.get(r.submitted_by, ""),
+                "class_name": class_name_by_id.get(child_class_map.get(r.child_id), ""),
+                "notes": r.notes,
+                "activities": r.activities,
+                "arrival_time": r.arrival_time,
+                "leave_time": r.leave_time,
+                "breakfast": r.breakfast,
+                "snack": r.snack,
+                "milk": r.milk,
+                "lunch": r.lunch,
+            }
+            for r in reports
+        ],
+        "stats": {
+            "total": stats_total,
+            "pending": stats_pending,
+            "sent": stats_sent,
+            "today": stats_today,
+            "week": stats_week,
         }
-        for r in reports
-    ]
+    }
 
 
 class DailyReportManagerPatch(BaseModel):

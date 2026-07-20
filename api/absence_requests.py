@@ -89,6 +89,8 @@ def _serialize_request(req: models.AbsenceRequest, include_child_name: bool = Fa
     }
     if include_child_name and req.child:
         data["child_name"] = f"{req.child.first_name} {req.child.last_name}"
+    if req.parent and req.parent.user:
+        data["parent_name"] = req.parent.user.full_name or req.parent.user.username
     return data
 
 

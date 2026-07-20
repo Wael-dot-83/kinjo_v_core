@@ -1,4 +1,7 @@
 (function () {
+  const IS_AR = (document.documentElement.lang || 'ar') !== 'en';
+  const tr = (ar, en) => IS_AR ? ar : en;
+
   async function apiRequest(url) {
     // Auth is the httpOnly session cookie (kinjo_session), sent automatically
     // on same-origin fetch. Benchmarking is read-only, so no CSRF token needed (F2).
@@ -8,7 +11,7 @@
     if (typeof window.fetchWithAuth === "function") {
       response = await window.fetchWithAuth(url, { headers });
       if (!response) {
-        throw new Error("يتطلب تسجيل الدخول");
+        throw new Error(tr("يتطلب تسجيل الدخول", "Sign-in is required"));
       }
     } else {
       response = await fetch(url, { headers });
@@ -16,7 +19,7 @@
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(text || "تعذر تحميل البيانات");
+      throw new Error(text || tr("تعذر تحميل البيانات", "Unable to load data"));
     }
     return response.json();
   }
@@ -84,16 +87,16 @@
     }
 
     finalScoreEl.textContent =
-      data.final_score === null ? "غير متاح" : formatNumber(data.final_score);
+      data.final_score === null ? tr("غير متاح", "Not available") : formatNumber(data.final_score);
     percentileEl.textContent =
       data.percentile === null ? "--" : `${formatNumber(data.percentile)}%`;
-    bandEl.textContent = data.band_label || "غير مصنف";
+    bandEl.textContent = data.band_label || tr("غير مصنف", "Unclassified");
     peerSizeEl.textContent = String(data.peer_group_size ?? 0);
 
     const peers = data.anonymized_peers || [];
     if (peers.length === 0) {
       tableBody.innerHTML =
-        '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات ندية كافية</td></tr>';
+        `<tr><td colspan="5" class="text-center text-muted">${tr("لا توجد بيانات ندية كافية", "Insufficient peer data")}</td></tr>`;
       return;
     }
     tableBody.innerHTML = peers
@@ -103,7 +106,7 @@
         <td>${escapeHtml(peer.peer_code)}</td>
         <td>${peer.rank ?? "--"}</td>
         <td>${peer.percentile === null ? "--" : `${formatNumber(peer.percentile)}%`}</td>
-        <td>${escapeHtml(peer.band_label || "غير مصنف")}</td>
+        <td>${escapeHtml(peer.band_label || tr("غير مصنف", "Unclassified"))}</td>
         <td>${peer.final_score === null ? "--" : formatNumber(peer.final_score)}</td>
       </tr>
     `
@@ -118,10 +121,10 @@
       const data = await apiRequest(`/api/manager/benchmarking/summary?${params.toString()}`);
       renderSummary(data);
       if (data.insufficient_data && data.insufficient_reason) {
-        showError(`البيانات غير كافية للمقارنة: ${data.insufficient_reason}`);
+        showError(`${tr("البيانات غير كافية للمقارنة: ", "Insufficient data for comparison: ")}${data.insufficient_reason}`);
       }
     } catch (error) {
-      showError("تعذر تحميل المقارنة المعيارية حالياً.");
+      showError(tr("تعذر تحميل المقارنة المعيارية حالياً.", "Unable to load benchmarking data at this time."));
     }
   }
 

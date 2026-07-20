@@ -242,10 +242,10 @@
             if (reportsRole === 'MANAGER') {
                 // /api/daily-reports/submitted was never registered — the manager
                 // review list is served by /api/manager/daily-reports, which
-                // defaults to SUBMITTED and returns a bare array.
+                // defaults to SUBMITTED and returns {reports: [...], stats: {...}}.
                 const day = encodeURIComponent(selectedDate);
                 const payload = await fetchJson(`/api/manager/daily-reports?from_date=${day}&to_date=${day}`);
-                renderManagerReports(Array.isArray(payload) ? payload : [], selectedDate);
+                renderManagerReports(payload?.reports || [], selectedDate);
                 return;
             }
 
