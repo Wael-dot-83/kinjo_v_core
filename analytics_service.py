@@ -7880,6 +7880,13 @@ class AnalyticsService:
             else:
                 value = 0
 
+            # The KPI computers return None when the kindergarten has no data for
+            # the period. Such a kindergarten cannot be ranked: coercing it to 0
+            # would place it artificially at the top or bottom of the table (and
+            # None would break both the sort below and RankingEntry validation).
+            if value is None:
+                continue
+
             rankings.append({
                 "kindergarten_id": kg.id,
                 "kindergarten_name": kg.name_ar,

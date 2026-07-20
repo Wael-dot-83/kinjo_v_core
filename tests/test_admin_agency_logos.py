@@ -23,14 +23,16 @@ def test_kinjo_logo_asset_exists():
 
 
 def test_kinjo_logo_component_renders():
+    # kinjo_logo.html exposes a macro; rendering the module itself yields an
+    # empty string, so import the macro and call it with the sizes it defines.
     from jinja2 import Environment, FileSystemLoader
     env = Environment(loader=FileSystemLoader(str(TEMPLATES)))
-    tmpl = env.get_template("components/kinjo_logo.html")
-    # Should render without error for each size
-    for size in ("small", "medium", "large"):
-        html = tmpl.render(size=size, variant="full", showText=True)
-        assert "kinjo-logo" in html
+    kinjo_logo = env.get_template("components/kinjo_logo.html").module.kinjo_logo
+    for size in ("navbar", "sidebar", "login"):
+        html = str(kinjo_logo(size=size))
+        assert f"kinjo-logo--{size}" in html
         assert 'alt="شعار KinJo"' in html
+        assert "/static/img/kinjo-logo.png" in html
 
 
 def test_agency_logo_assets_exist():

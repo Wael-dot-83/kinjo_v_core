@@ -103,8 +103,16 @@ def test_agency_report_payload_ships_arabic_labels(client, test_db):
         assert payload["column_labels"]["governorate"] != "governorate"
 
 
-def test_mosd_card_custom_design_applied():
+def test_agency_cards_use_unified_design():
+    """Agency cards render uniformly: MOSD is no longer special-cased.
+
+    The card layout was unified so every agency shows logo + description +
+    usage; the earlier `agency.code !== "mosd"` branch that suppressed MOSD's
+    description was removed deliberately.
+    """
     source = AGENCY_REPORTS_JS.read_text(encoding="utf-8")
-    assert 'agency.code !== "mosd"' in source
     assert 'renderAgencyLogo(agency, 80)' in source
+    # The logo map still keys on "mosd"; what must be gone is the card branching.
+    assert 'agency.code !== "mosd"' not in source
+    assert 'agency.code === "mosd"' not in source
 
