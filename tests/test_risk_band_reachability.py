@@ -203,3 +203,61 @@ class TestInsufficientData:
             "excluding an unavailable indicator must not change the score of the "
             "remaining healthy ones; a None treated as 0 would spike risk"
         )
+
+    def test_single_bad_indicator_cannot_reach_critical(self):
+        """Thin evidence must not escalate: one worst indicator, no subs.
+
+        The composite requires both indicator (0.65) and sub-indicator (0.35)
+        evidence to cross 75. A lone worst indicator caps at 0.65*100 = 65 (high),
+        so a governorate with almost no data cannot be flagged critical.
+        """
+        score, level, _, _ = compute_risk_score({MAIN_KEYS[0]: 0.0}, {})
+        assert level != "critical", f"thin evidence reached critical: {score}"
+
+
+class TestWeightInvariance:
+    """The weighted mean must not depend on the magnitude of the weights."""
+
+    def _weights(self, c):
+        return {
+            f"{main_key}.{d['key']}": c
+            for main_key, defs in C.SUB_INDICATORS.items()
+            for d in defs
+        }
+
+    @pytest.mark.parametrize("factor", [0.001, 0.5, 7.3, 1000.0])
+    def test_score_is_invariant_to_proportional_weight_scaling(self, factor):
+        """Scaling every weight by a constant must not change the score at all."""
+        base, _, _, _ = compute_risk_score(
+            _main(0), _subs_at_worst(), regression_weights=self._weights(1.0)
+        )
+        scaled, _, _, _ = compute_risk_score(
+            _main(0), _subs_at_worst(), regression_weights=self._weights(factor)
+        )
+        assert abs(scaled - base) < 1e-9, (
+            f"weight×{factor} changed the score {base} -> {scaled}; the sub-risk "
+            "term is not a true weighted mean"
+        )
+
+    def test_score_stays_in_range_over_random_inputs(self):
+        """Fuzz: mixed availability, thresholds and weights stay within [0, 100]."""
+        import random
+
+        rng = random.Random(1)
+        for _ in range(1000):
+            m = {
+                k: (None if rng.random() < 0.2 else rng.uniform(0, 100))
+                for k in MAIN_KEYS
+            }
+            sv = {
+                d["key"]: (
+                    None if rng.random() < 0.2
+                    else rng.uniform(0, (d.get("threshold_high") or 100)) * rng.choice([1, 3])
+                )
+                for defs in C.SUB_INDICATORS.values()
+                for d in defs
+            }
+            score, _, _, _ = compute_risk_score(
+                m, sv, regression_weights=self._weights(rng.uniform(0.01, 2))
+            )
+            assert 0.0 <= score <= 100.0, f"score {score} outside [0, 100]"
