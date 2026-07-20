@@ -6617,11 +6617,16 @@ def _fallback_map_overview(db: Session) -> Dict[str, Any]:
         gov_name = gov.capitalize()
 
         total_kgs = int(kg_counts.get(gov_name, 0) or 0)
-        avg_governance = float(governance_avgs.get(gov_name, 0.0) or 0.0)
+        # Distinguish "no governance data" from a genuine 0 score: None is carried
+        # into the indicator (0 is the worst band, so defaulting to it renders
+        # un-assessed governorates as failing), while the risk math still needs a
+        # number and treats absent data as neutral 0.
+        raw_governance = governance_avgs.get(gov_name)
+        avg_governance = None if raw_governance is None else float(raw_governance)
         incident_count = int(incident_counts.get(gov_name, 0) or 0)
         children_count = int(children_counts.get(gov_name, 0) or 0)
 
-        risk_score = calculate_governorate_risk_score(avg_governance, incident_count)
+        risk_score = calculate_governorate_risk_score(avg_governance or 0.0, incident_count)
         data.append({
             "slug": gov,
             "name_en": gov_name,
@@ -6634,7 +6639,7 @@ def _fallback_map_overview(db: Session) -> Dict[str, Any]:
             "student_count": children_count,
             "incident_count": incident_count,
             "main_indicators": {
-                "tasks_governance": round(avg_governance, 1),
+                "tasks_governance": round(avg_governance, 1) if avg_governance is not None else None,
                 "nursery_status": total_kgs,
                 # children_registration is unavailable by design (no defensible
                 # population denominator) — never fabricate it from a count.

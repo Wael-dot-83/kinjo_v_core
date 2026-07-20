@@ -54,13 +54,18 @@ class TestHeatmapDataEndpoint:
         """
         r = client.get("/api/admin/heatmap-data", headers=auth_headers_admin)
         assert r.status_code == 200, r.text
-        for slug, entry in r.json()["data"].items():
+        data = r.json()["data"]
+        # The seed DB has no GovernanceScore rows, so governance is unavailable
+        # everywhere. Assert it unconditionally: not one governorate may report a
+        # fabricated numeric governance_score (0 would render as the worst band).
+        assert data, "expected governorate data"
+        for slug, entry in data.items():
             indicator = (entry.get("main_indicators") or {}).get("tasks_governance")
-            if indicator is None:
-                assert entry["governance_score"] is None, (
-                    f"{slug}: governance unavailable but reported as "
-                    f"{entry['governance_score']!r}"
-                )
+            assert indicator is None, f"{slug}: expected unavailable governance in seed state"
+            assert entry["governance_score"] is None, (
+                f"{slug}: governance unavailable but reported as "
+                f"{entry['governance_score']!r} (0 would read as 'failing')"
+            )
 
     def test_incidents_total_is_a_count_not_a_decoded_score(self, client, auth_headers_admin):
         """incidents_total must come from the real count field.
@@ -75,11 +80,45 @@ class TestHeatmapDataEndpoint:
         for slug, entry in r.json()["data"].items():
             total = entry["incidents_total"]
             assert isinstance(total, int) and total >= 0, f"{slug}: {total!r}"
-            safety = (entry.get("main_indicators") or {}).get("safety_incidents")
-            if safety is not None and total != 0:
-                assert total != int(100 - safety) or safety == 100 - total, (
-                    f"{slug}: incidents_total still looks decoded from safety_incidents"
-                )
+
+    def test_incidents_total_reflects_real_count(
+        self, client, test_db, sample_kindergarten, sample_class, sample_child,
+        admin_user, auth_headers_admin,
+    ):
+        """Seed real incidents and assert the reported total equals their count.
+
+        Non-vacuous by construction: 3 NON-critical incidents in Amman (the
+        sample kindergarten's governorate).
+          * old service decode 100 - (100 - critical*10) = critical*10 -> 0
+          * old fallback decode total*5                                -> 15
+          * correct count                                              -> 3
+        Only the real count passes.
+        """
+        from datetime import datetime, timezone
+
+        import models
+
+        for i in range(3):
+            test_db.add(models.Incident(
+                child_id=sample_child.id,
+                kindergarten_id=sample_kindergarten.id,
+                class_id=sample_class.id,
+                type="injury",
+                severity_level=models.SeverityLevel.LOW,
+                description=f"non-critical incident {i}",
+                occurred_at=datetime.now(timezone.utc),
+                reported_by=admin_user.id,
+                status=models.IncidentStatus.OPEN,
+            ))
+        test_db.commit()
+
+        r = client.get("/api/admin/heatmap-data", headers=auth_headers_admin)
+        assert r.status_code == 200, r.text
+        amman = r.json()["data"]["amman"]
+        assert amman["incidents_total"] == 3, (
+            f"expected the real incident count 3, got {amman['incidents_total']} "
+            "— looks decoded from a 0-100 score rather than counted"
+        )
 
     def test_requires_admin(self, client):
         r = client.get("/api/admin/heatmap-data")

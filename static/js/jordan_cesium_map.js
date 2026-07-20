@@ -632,7 +632,7 @@ function renderRadarChart(perfIndicators) {
         <polygon points="${poly}" fill="${fc}" fill-opacity=".18" stroke="${fc}" stroke-width="1.5" stroke-linejoin="round"/>
         ${dots}${lbls}
         <text x="${CX}" y="${CY}" text-anchor="middle" dominant-baseline="middle"
-              font-size="12" font-weight="700" fill="${fc}" font-family="system-ui,sans-serif">${avg.toFixed(0)}</text>
+              font-size="12" font-weight="700" fill="${fc}" font-family="system-ui,sans-serif">${avg == null ? '—' : avg.toFixed(0)}</text>
       </svg>
     </div>`;
 }
