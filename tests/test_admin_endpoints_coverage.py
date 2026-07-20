@@ -499,14 +499,14 @@ class TestHeatmapEndpoints:
             "risk_legend": [],
         }):
             r = client.get("/api/admin/heatmap-data", headers=headers)
-        assert r.status_code in (200, 500)
+        assert r.status_code == 200, r.text
 
     def test_heatmap_data_uses_fallback_when_service_errors(self, client, test_db):
         admin = _make_admin(test_db, "heat_admin", "2")
         headers = _tok(client, "heat_admin2")
         with patch("heatmap.backend.service.get_map_overview", side_effect=RuntimeError("unavailable")):
             r = client.get("/api/admin/heatmap-data", headers=headers)
-        assert r.status_code in (200, 500)
+        assert r.status_code == 200, r.text
 
     def test_heatmap_data_fallback_runs_with_empty_db(self, client, test_db):
         # Force the fallback path by making the service import raise
@@ -517,7 +517,7 @@ class TestHeatmapEndpoints:
         try:
             with patch.dict(sys.modules, {"heatmap.backend.service": None}):
                 r = client.get("/api/admin/heatmap-data", headers=headers)
-            assert r.status_code in (200, 500)
+            assert r.status_code == 200, r.text
         finally:
             if saved is not None:
                 sys.modules["heatmap.backend.service"] = saved

@@ -70,7 +70,10 @@ class TestDoubleSubmitContract:
             WRITE_URL.format(user_id=csrf_target.id),
             headers=bearer_headers(_token(client)),
         )
-        # Any non-CSRF outcome proves the validator let the request through.
+        # A valid pair passes the CSRF gate: the delete succeeds (204) or is
+        # rejected for a non-CSRF reason, but never returns a 4xx CSRF error and
+        # never a 500. (`!= 400` alone would pass on a 500, so pin it tighter.)
+        assert r.status_code < 500, r.text
         assert r.status_code != 400, r.text
         assert "CSRF" not in r.text
 
@@ -154,3 +157,20 @@ class TestValidatorHasNoBypass:
         pair = csrf_pair()
         assert pair["Cookie"].startswith(f"{settings.CSRF_COOKIE_NAME}=")
         assert pair["X-CSRF-Token"] == pair["Cookie"].split("=", 1)[1]
+
+    def test_csrf_cookie_name_not_drifted(self):
+        """Older test modules build the pair inline with the literal cookie name.
+
+        The canonical helper reads settings.CSRF_COOKIE_NAME, but many modules
+        still hardcode "kinjo_csrf_token". If that setting is ever renamed, those
+        inline pairs would satisfy a cookie the app no longer reads and pass
+        vacuously. Pin the literal to the setting so a rename fails loudly here,
+        pointing at the modules to update, instead of silently.
+        """
+        from config import settings
+
+        assert settings.CSRF_COOKIE_NAME == "kinjo_csrf_token", (
+            "CSRF cookie name changed. Inline pairs in the test suite hardcode "
+            "'kinjo_csrf_token'; update them (or route them through "
+            "conftest.csrf_pair) before changing this assertion."
+        )

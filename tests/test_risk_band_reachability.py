@@ -99,6 +99,57 @@ class TestBandReachability:
             f"critical must be reachable with no trend history, got {level} ({score})"
         )
 
+    @pytest.mark.parametrize("beta", [1.0, 0.5, 0.3, 0.2, 0.1, 0.01])
+    def test_critical_reachable_under_regression_weights(self, beta):
+        """Reachability must not depend on the magnitude of regression weights.
+
+        run_daily_pipeline always passes regression_weights built from
+        MapRegressionSnapshot.beta_std once snapshots exist, and standardized
+        betas are routinely well below 1. An earlier fix divided the *weighted*
+        contribution sum by the plain count, so the mean shrank with the weights:
+        at beta_std = 0.2 the ceiling fell back to exactly 72.0 — the original
+        unreachable-critical bug, returning precisely in the mature-data state.
+        """
+        weights = {
+            f"{main_key}.{d['key']}": beta
+            for main_key, defs in C.SUB_INDICATORS.items()
+            for d in defs
+        }
+        score, level, _, _ = compute_risk_score(
+            _main(0), _subs_at_worst(), regression_weights=weights
+        )
+        assert level == "critical", (
+            f"critical unreachable with beta_std={beta}: score={score}"
+        )
+
+    def test_weighted_best_case_is_still_zero(self):
+        """The weighted mean must not inflate a healthy score either."""
+        weights = {
+            f"{main_key}.{d['key']}": 0.2
+            for main_key, defs in C.SUB_INDICATORS.items()
+            for d in defs
+        }
+        score, level, _, _ = compute_risk_score(
+            _main(100), _subs_at_best(), regression_weights=weights
+        )
+        assert score == 0.0
+        assert level == "low"
+
+    def test_non_uniform_weights_do_not_break_the_ceiling(self):
+        """Real beta_std values differ per sub-indicator, not a single constant."""
+        import random
+
+        rng = random.Random(7)
+        weights = {
+            f"{main_key}.{d['key']}": rng.uniform(0.05, 0.9)
+            for main_key, defs in C.SUB_INDICATORS.items()
+            for d in defs
+        }
+        score, level, _, _ = compute_risk_score(
+            _main(0), _subs_at_worst(), regression_weights=weights
+        )
+        assert level == "critical", f"score={score} with non-uniform weights"
+
     def test_critical_threshold_not_lowered(self):
         """The fix must be the scale, not a moved goalpost."""
         critical = next(r for r in C.RISK_LEVELS if r["key"] == "critical")

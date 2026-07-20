@@ -6532,8 +6532,12 @@ def get_heatmap_data(
                 # children_registration is an unavailable indicator, never a count.
                 "kindergarten_count": int(_num(g.get("kg_count"))),
                 "children_count": int(_num(g.get("student_count"))),
-                "governance_score": _num(indicators.get("tasks_governance")),
-                "incidents_total": int(100 - _num(indicators.get("safety_incidents"), 100)),
+                # Unavailable stays unavailable: tasks_governance is legitimately
+                # None when no governance score exists, and 0 is the *worst* band —
+                # rendering "not measured" as "failing".
+                "governance_score": indicators.get("tasks_governance"),
+                # Real count from its own field, not decoded from a 0-100 score.
+                "incidents_total": int(_num(g.get("incident_count"))),
                 "risk_score": g.get("risk_score", 0),
                 "last_update": overview.get("last_update"),
                 "main_indicators": g.get("main_indicators", {}),
@@ -6628,6 +6632,7 @@ def _fallback_map_overview(db: Session) -> Dict[str, Any]:
             # children_registration became correctly unavailable.
             "kg_count": total_kgs,
             "student_count": children_count,
+            "incident_count": incident_count,
             "main_indicators": {
                 "tasks_governance": round(avg_governance, 1),
                 "nursery_status": total_kgs,

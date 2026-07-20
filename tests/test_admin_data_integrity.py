@@ -246,7 +246,10 @@ class TestMainIndicatorsHandleNone:
             "training_completion": None, "compliance_status": None,
         }
         result = _compute_main_indicators(sub)
-        assert result["nursery_status"] == 0.0
+        # Empty governorate: active/total and the supervised ratio are undefined,
+        # so both are unavailable rather than a fabricated 0 / 100.
+        assert result["nursery_status"] is None
+        assert result["staff_classrooms"] is None
         assert result["children_registration"] is None
         assert result["tasks_governance"] is None
 
@@ -455,7 +458,9 @@ class TestNullSafety:
             "training_completion": None, "compliance_status": None,
         }
         result = compute_main_indicators(sub)
-        assert result["nursery_status"] == 0.0
+        # Empty governorate: undefined denominators are unavailable, not 0 / 100.
+        assert result["nursery_status"] is None
+        assert result["staff_classrooms"] is None
         assert result["children_registration"] is None
         assert result["reports_attendance"] is None
         assert result["tasks_governance"] is None

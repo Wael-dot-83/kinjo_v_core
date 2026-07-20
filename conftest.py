@@ -369,9 +369,13 @@ def parent_token(client, parent_user):
 # secrets.compare_digest. That validator is a real security boundary and is
 # deliberately NOT bypassed under TESTING — tests must satisfy it, not disable it.
 #
-# These are the single source of truth. Test modules must import them rather than
-# rebuilding the pair inline; a scattered pair is how call sites silently drifted
-# to auth-only headers and produced ~103 spurious 400s.
+# These are the canonical helpers; the auth_headers_* fixtures and the CSRF
+# contract test are built on them. New tests should import csrf_pair/bearer_headers
+# rather than rebuilding the pair inline — a scattered pair is how call sites
+# silently drifted to auth-only headers and produced ~103 spurious 400s. Some
+# older modules still construct the pair inline with the cookie-name literal;
+# test_csrf_cookie_name_not_drifted (tests/test_csrf_double_submit_contract.py)
+# guards those against a settings rename so a stale cookie cannot pass unnoticed.
 # ---------------------------------------------------------------------------
 
 def csrf_pair(token: str | None = None) -> dict:

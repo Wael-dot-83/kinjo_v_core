@@ -46,6 +46,41 @@ class TestHeatmapDataEndpoint:
                 f"denominator and must be reported unavailable, got {value!r}"
             )
 
+    def test_governance_score_stays_unavailable_not_zero(self, client, auth_headers_admin):
+        """0 is the worst governance band — it must not stand in for 'unmeasured'.
+
+        tasks_governance is legitimately None when no GovernanceScore rows exist.
+        Defaulting it to 0 reported every un-assessed governorate as failing.
+        """
+        r = client.get("/api/admin/heatmap-data", headers=auth_headers_admin)
+        assert r.status_code == 200, r.text
+        for slug, entry in r.json()["data"].items():
+            indicator = (entry.get("main_indicators") or {}).get("tasks_governance")
+            if indicator is None:
+                assert entry["governance_score"] is None, (
+                    f"{slug}: governance unavailable but reported as "
+                    f"{entry['governance_score']!r}"
+                )
+
+    def test_incidents_total_is_a_count_not_a_decoded_score(self, client, auth_headers_admin):
+        """incidents_total must come from the real count field.
+
+        It was derived as 100 - safety_incidents. On the service path
+        safety_incidents = 100 - critical*10, so the result was ten times the
+        *critical* count, ignored every non-critical incident, and saturated at
+        100 — three different ways of not being the incident total.
+        """
+        r = client.get("/api/admin/heatmap-data", headers=auth_headers_admin)
+        assert r.status_code == 200, r.text
+        for slug, entry in r.json()["data"].items():
+            total = entry["incidents_total"]
+            assert isinstance(total, int) and total >= 0, f"{slug}: {total!r}"
+            safety = (entry.get("main_indicators") or {}).get("safety_incidents")
+            if safety is not None and total != 0:
+                assert total != int(100 - safety) or safety == 100 - total, (
+                    f"{slug}: incidents_total still looks decoded from safety_incidents"
+                )
+
     def test_requires_admin(self, client):
         r = client.get("/api/admin/heatmap-data")
         assert r.status_code in (401, 403)

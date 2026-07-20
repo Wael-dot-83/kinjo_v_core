@@ -343,28 +343,41 @@ def _seed_sub_indicators(governorate_en: str, today: date) -> Dict[str, float]:
 # Main-indicator computation
 # ---------------------------------------------------------------------------
 def compute_main_indicators(sub: Dict[str, float]) -> Dict[str, float]:
-    """Aggregate 22 sub-indicators into 6 main indicators (0-100).
-    
-    Unavailable (None) sub-indicators are excluded from their main-indicator
-    calculation. Remaining weights are renormalized proportionally.
+    """Aggregate sub-indicators into 6 main indicators (0-100), or None.
+
+    An indicator whose inputs are unavailable — a missing value, or an undefined
+    denominator (no kindergartens, no classrooms) — is reported as None rather
+    than a fabricated number. children_registration is always None (no defensible
+    population denominator).
     """
-    kg_active_ratio = (sub.get("active_nurseries", 0) / max(sub.get("total_nurseries", sub.get("active_nurseries", 0) + sub.get("inactive_nurseries", 0)), 1)) * 100.0
-
-    def _safe_sum(*args):
-        return sum(v for v in args if v is not None)
-
-    # Nursery status: based on active / total real ratio
-    nursery_status = kg_active_ratio
+    # Nursery status: active / total real ratio. With no kindergartens at all the
+    # ratio is 0/0 — undefined, not 0% activity — so report it unavailable rather
+    # than manufacturing a denominator of 1 (which scored an empty governorate as
+    # worst-health). Same undefined-denominator rule that makes reports_attendance
+    # unavailable below.
+    total_nurseries = sub.get("total_nurseries",
+                              sub.get("active_nurseries", 0) + sub.get("inactive_nurseries", 0))
+    if total_nurseries and total_nurseries > 0:
+        nursery_status = (sub.get("active_nurseries", 0) / total_nurseries) * 100.0
+    else:
+        nursery_status = None
 
     # Children registration: unavailable since we can't measure unregistered
     children_registration = None
 
-    # Staff & classrooms: real supervision coverage
-    supervised_ratio = 100.0 * (1.0 - sub.get("classrooms_no_supervisor", 0) / max(sub.get("classrooms_count", 1), 1))
-    supervised_ratio = max(0.0, min(100.0, supervised_ratio))
-    staff_classrooms = supervised_ratio
+    # Staff & classrooms: real supervision coverage. With no classrooms the
+    # supervised ratio is undefined, not perfect supervision — unavailable rather
+    # than a fabricated 100.
+    classrooms_count = sub.get("classrooms_count")
+    if classrooms_count and classrooms_count > 0:
+        supervised_ratio = 100.0 * (1.0 - sub.get("classrooms_no_supervisor", 0) / classrooms_count)
+        staff_classrooms = max(0.0, min(100.0, supervised_ratio))
+    else:
+        staff_classrooms = None
 
-    # Safety & incidents: real incident counts
+    # Safety & incidents: incidents are counted events, so the absence of any is a
+    # real zero (perfectly safe), NOT a missing denominator — this legitimately
+    # defaults to 0 incidents, matching how genuine-zero attendance is handled.
     safety_penalty = min(100.0, (sub.get("incidents_critical", 0) or 0) * 10.0)
     safety_score = max(0.0, 100.0 - safety_penalty)
 
@@ -388,13 +401,16 @@ def compute_main_indicators(sub: Dict[str, float]) -> Dict[str, float]:
     else:
         tasks_governance_score = None
 
+    def _round(value):
+        return round(value, 2) if value is not None else None
+
     return {
-        "nursery_status":        round(nursery_status, 2),
+        "nursery_status":        _round(nursery_status),
         "children_registration": children_registration,
-        "staff_classrooms":      round(staff_classrooms, 2),
-        "safety_incidents":      round(safety_score, 2),
-        "reports_attendance":    round(reports_attendance_score, 2) if reports_attendance_score is not None else None,
-        "tasks_governance":      round(tasks_governance_score, 2) if tasks_governance_score is not None else None,
+        "staff_classrooms":      _round(staff_classrooms),
+        "safety_incidents":      _round(safety_score),
+        "reports_attendance":    _round(reports_attendance_score),
+        "tasks_governance":      _round(tasks_governance_score),
     }
 
 
@@ -419,7 +435,8 @@ def compute_risk_score(main: Dict[str, float], sub: Dict[str, float],
 
     indicator_risk = {k: max(0.0, min(100.0, 100.0 - v)) for k, v in available.items()}
 
-    # Trend penalty: up to 30 risk points for worsening trends
+    # Trend penalty: accumulates up to 30 (applied at *0.1 below, so at most 3
+    # points are added to the final score) for worsening trends.
     trend_penalty = 0.0
     if previous_main:
         for k, v in available.items():
@@ -435,6 +452,7 @@ def compute_risk_score(main: Dict[str, float], sub: Dict[str, float],
     sub_risk = 0.0
     weights = regression_weights or {}
     available_sub_count = 0
+    sub_weight_total = 0.0
     for main_key, subs in INDICATOR_MAP.items():
         for sub_key in subs:
             raw = sub.get(sub_key)
@@ -456,16 +474,28 @@ def compute_risk_score(main: Dict[str, float], sub: Dict[str, float],
                     contribution = min(20.0, excess * 30.0)
                 else:
                     contribution = 0.0
-            sub_risk += contribution * weights.get(f"{main_key}.{sub_key}", 1.0)
+            weight = weights.get(f"{main_key}.{sub_key}", 1.0)
+            sub_risk += contribution * weight
+            sub_weight_total += weight
             available_sub_count += 1
-    # Each per-sub contribution is capped at 20, so the mean lands in [0, 20].
-    # It is then combined at line ~461 as if it were a 0-100 risk component, which
-    # capped the whole formula at 0.65*100 + 0.35*20 + 3 = 75 — leaving "critical"
-    # (>= 75) effectively unreachable, so the top escalation tier could never fire.
-    # Rescale the mean back onto the 0-100 risk scale.
+    # Each per-sub contribution is capped at _SUB_CONTRIBUTION_CAP, so a *weighted
+    # mean* also lands in [0, cap] regardless of the weight magnitudes. Rescale that
+    # onto the 0-100 scale the term is combined on below.
+    #
+    # Two distinct bugs have lived here:
+    #   1. No rescale at all: the mean stayed in [0, 20] while being weighted as a
+    #      0-100 component, capping the formula at 0.65*100 + 0.35*20 + 3 = 75 and
+    #      making "critical" (>= 75) unreachable.
+    #   2. Dividing the *weighted* sum by the plain count: regression weights are
+    #      standardized betas, routinely < 1, so the mean shrank with them. At
+    #      beta_std = 0.2 the ceiling returned to exactly 72.0 — the original bug,
+    #      reappearing precisely once regression snapshots exist (the mature-data
+    #      state, not the first run). Dividing by the summed weight makes the
+    #      ceiling weight-independent, which is what a weighted mean must do.
     _SUB_CONTRIBUTION_CAP = 20.0
-    if available_sub_count > 0:
-        sub_risk = min(100.0, (sub_risk / available_sub_count) * (100.0 / _SUB_CONTRIBUTION_CAP))
+    if available_sub_count > 0 and sub_weight_total > 0:
+        weighted_mean = sub_risk / sub_weight_total
+        sub_risk = min(100.0, weighted_mean * (100.0 / _SUB_CONTRIBUTION_CAP))
     else:
         sub_risk = 0.0
 

@@ -13,12 +13,8 @@ import secrets
 import pytest
 from auth import get_password_hash
 import models
+from conftest import csrf_pair
 
-
-def _csrf_pair() -> dict:
-    """Double-submit CSRF pair required by admin write endpoints."""
-    csrf = secrets.token_hex(32)
-    return {"X-CSRF-Token": csrf, "Cookie": f"kinjo_csrf_token={csrf}"}
 
 
 def _create_admin(db):
@@ -88,7 +84,7 @@ class TestImportSizeLimit:
         r = client.post(
             "/api/admin/users/import-csv?dry_run=true",
             files={"file": ("users.csv", csv_bytes, "text/csv")},
-            headers={"Authorization": f"Bearer {token}", **_csrf_pair()},
+            headers={"Authorization": f"Bearer {token}", **csrf_pair()},
         )
         assert r.status_code == 200
 
@@ -101,7 +97,7 @@ class TestImportDryRun:
         r = client.post(
             "/api/admin/users/import-csv?dry_run=true",
             files={"file": ("users.csv", csv_bytes, "text/csv")},
-            headers={"Authorization": f"Bearer {token}", **_csrf_pair()},
+            headers={"Authorization": f"Bearer {token}", **csrf_pair()},
         )
         assert r.status_code == 200
         data = r.json()
@@ -116,7 +112,7 @@ class TestImportDryRun:
         r = client.post(
             "/api/admin/users/import-csv?dry_run=true",
             files={"file": ("users.csv", csv_bytes, "text/csv")},
-            headers={"Authorization": f"Bearer {token}", **_csrf_pair()},
+            headers={"Authorization": f"Bearer {token}", **csrf_pair()},
         )
         assert r.status_code == 200
         data = r.json()

@@ -190,9 +190,15 @@ class TestConsumersExcludeClosedDays:
         assert all(r == 100.0 for r in observed), (
             f"perfect attendance polluted by closed days: {sorted(set(observed))}"
         )
-        assert result["trend"] != "declining", (
-            "weekends must not manufacture a declining attendance trend"
+        # Uniform 100% attendance has zero slope. Before the fix, weekend 0%s made
+        # the slope negative and the trend "decreasing".
+        assert result["trend"] == "stable", (
+            f"weekends manufactured a non-stable trend: {result['trend']} "
+            f"(slope={result.get('slope')})"
         )
+        assert all(
+            f["predicted_rate"] == 100.0 for f in result["forecast"]
+        ), "forecast should hold at 100% for a perfect history"
 
     def test_closed_days_are_null_in_the_series_not_zero(
         self, test_db, sample_kindergarten, sample_class, sample_child, admin_user

@@ -16,14 +16,22 @@ const API_GOV_HISTORY = slug => `/api/admin/heat-map/governorate/${slug}/history
 const API_CITY_DATA   = slug => `/api/admin/heat-map/governorate/${slug}/cities`;
 const WS_URL          = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws/heatmap`;
 
+// Unavailable indicators return null, never a number. `?? 100` used to make
+// "no data" evaluate to 100 - 100 = 0 risk, i.e. the healthiest green on the map:
+// children_registration is unavailable by design, so Jordan rendered uniformly
+// healthy on that layer. riskHex() paints null in neutral grey instead.
+function _indRisk(value) {
+  return value == null ? null : 100 - value;
+}
+
 const IND_RISK_GETTER = {
-  'overall_risk':          g => g.risk_score ?? 0,
-  'nursery_status':        g => 100 - (g.main_indicators?.nursery_status        ?? 100),
-  'children_registration': g => 100 - (g.main_indicators?.children_registration ?? 100),
-  'staff_classrooms':      g => 100 - (g.main_indicators?.staff_classrooms       ?? 100),
-  'safety_incidents':      g => 100 - (g.main_indicators?.safety_incidents       ?? 100),
-  'reports_attendance':    g => 100 - (g.main_indicators?.reports_attendance     ?? 100),
-  'tasks_governance':      g => 100 - (g.main_indicators?.tasks_governance       ?? 100),
+  'overall_risk':          g => g.risk_score ?? null,
+  'nursery_status':        g => _indRisk(g.main_indicators?.nursery_status),
+  'children_registration': g => _indRisk(g.main_indicators?.children_registration),
+  'staff_classrooms':      g => _indRisk(g.main_indicators?.staff_classrooms),
+  'safety_incidents':      g => _indRisk(g.main_indicators?.safety_incidents),
+  'reports_attendance':    g => _indRisk(g.main_indicators?.reports_attendance),
+  'tasks_governance':      g => _indRisk(g.main_indicators?.tasks_governance),
 };
 
 const IND_LABELS = {
@@ -47,7 +55,11 @@ function getRiskLevel(score) {
   if (score < 75) return 'high';
   return 'critical';
 }
+const RISK_UNAVAILABLE_HEX = '#94A3B8'; // neutral grey — matches the backend's
+                                        // "unavailable" colour in kindergarten_data.py
 function riskHex(score) {
+  // Unmeasured data must not be painted as healthy; it gets its own neutral tone.
+  if (score == null || Number.isNaN(score)) return RISK_UNAVAILABLE_HEX;
   if (score >= 75) return '#ef4444';
   if (score >= 50) return '#f97316';
   if (score >= 25) return '#f59e0b';
@@ -591,10 +603,15 @@ function renderRadarChart(perfIndicators) {
     return `<line x1="${CX}" y1="${CY}" x2="${p.x}" y2="${p.y}" stroke="rgba(255,255,255,.12)" stroke-width=".75"/>`;
   }).join('');
 
-  const vals = IND_ORDER.map(k => perfIndicators?.[k] ?? 0);
+  // Unavailable indicators collapse to the centre for geometry, but must not
+  // enter the average — counting them as 0 reported a healthy governorate as
+  // failing purely because one indicator is unmeasurable by design.
+  const rawVals = IND_ORDER.map(k => perfIndicators?.[k]);
+  const vals = rawVals.map(v => v ?? 0);
   const poly = vals.map((v, i) => { const p = pt(MAX_R * v / 100, i); return `${p.x},${p.y}`; }).join(' ');
-  const avg  = vals.reduce((s, v) => s + v, 0) / vals.length;
-  const fc   = riskHex(100 - avg);
+  const measured = rawVals.filter(v => v != null);
+  const avg  = measured.length ? measured.reduce((s, v) => s + v, 0) / measured.length : null;
+  const fc   = avg == null ? RISK_UNAVAILABLE_HEX : riskHex(100 - avg);
 
   const dots = vals.map((v, i) => {
     const p = pt(MAX_R * v / 100, i);
@@ -646,10 +663,12 @@ function renderIntelPanel(d) {
     : '';
 
   const indHtml = IND_ORDER.map(key => {
-    const perf  = d.main_indicators?.[key] ?? 0;
+    const rawPerf = d.main_indicators?.[key];
+    const available = rawPerf != null;
+    const perf  = available ? rawPerf : 0;
     const meta  = IND_LABELS[key] || {};
     const trend = d.trends?.[key];
-    const color = meta.color || riskHex(100 - perf);
+    const color = available ? (meta.color || riskHex(100 - perf)) : RISK_UNAVAILABLE_HEX;
     const trendIcon = !trend ? '' :
       trend.direction === 'up'   ? `<i class="bi bi-arrow-up-short" style="color:#22c55e" aria-hidden="true"></i><small style="color:#22c55e;font-size:.65rem">${trend.pct != null ? trend.pct.toFixed(1)+'%' : ''}</small>` :
       trend.direction === 'down' ? `<i class="bi bi-arrow-down-short" style="color:#ef4444" aria-hidden="true"></i><small style="color:#ef4444;font-size:.65rem">${trend.pct != null ? trend.pct.toFixed(1)+'%' : ''}</small>` : '';
@@ -657,7 +676,7 @@ function renderIntelPanel(d) {
       <div class="intel-ind-row" style="flex-direction:column;align-items:stretch;margin-bottom:.625rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
           <span class="intel-ind-label">${meta.ar || key}</span>
-          <span style="display:flex;align-items:center;gap:.15rem;font-size:.75rem;font-weight:700;color:${color}">${perf.toFixed(1)}${trendIcon}</span>
+          <span style="display:flex;align-items:center;gap:.15rem;font-size:.75rem;font-weight:700;color:${color}">${available ? perf.toFixed(1) : 'غير متوفر'}${trendIcon}</span>
         </div>
         <div class="intel-ind-bar">
           <div class="intel-ind-track">
@@ -877,9 +896,12 @@ function showKgDetail(kg) {
 
   const indHtml = IND_ORDER.map(key => {
     const ind   = mainInds[key];
-    const perf  = ind?.score ?? 0;
+    const availableIntel = ind?.score != null;
+    const perf  = availableIntel ? ind.score : 0;
     const meta  = IND_LABELS[key] || {};
-    const color = ind?.color || meta.color || riskHex(100 - perf);
+    const color = availableIntel
+      ? (ind?.color || meta.color || riskHex(100 - perf))
+      : RISK_UNAVAILABLE_HEX;
     return `
       <div class="intel-ind-row" style="flex-direction:column;align-items:stretch;margin-bottom:.5rem">
         <div style="display:flex;justify-content:space-between;margin-bottom:2px">
