@@ -577,14 +577,15 @@ class TestChartService:
         df = pd.DataFrame({"mood": ["happy", "sad"], "count": [10, 5]})
         req = ChartRequest(source=ChartSource.DAILY_REPORTS)
 
-        with patch.object(svc, "get_data", return_value=df), \
-             patch("charts.service.chart_cache.get_render", return_value=None), \
-             patch("charts.service.chart_cache.set_render"):
+        with patch.object(svc, "get_data", return_value=df):
             resp = svc.render(self._mock_db(), req)
 
         assert isinstance(resp, ChartResponse)
-        assert resp.row_count == 2
-        assert len(resp.html) > 0
+        # Structured contract: the server returns data series; HTML rendering moved to the frontend.
+        assert resp.quality.record_count == 2
+        assert resp.summary["total_records"] == 2
+        assert len(resp.series) == 2
+        assert resp.scope.level == "national"
 
     def test_render_uses_cache_hit(self):
         from charts.schemas import ChartRequest, ChartSource
@@ -593,11 +594,14 @@ class TestChartService:
         svc = ChartService()
         req = ChartRequest(source=ChartSource.INCIDENTS)
 
-        with patch("charts.service.chart_cache.get_render", return_value="<div>cached</div>"):
+        cached_json = pd.DataFrame({"label": ["A", "B"], "count": [3, 4]}).to_json(orient="split")
+        with patch("charts.service.chart_cache.get_raw", return_value=cached_json):
             resp = svc.render(self._mock_db(), req)
 
-        assert resp.cached is True
-        assert resp.html == "<div>cached</div>"
+        # Caching moved to the raw-data layer: a cache hit serves rows without invoking a loader.
+        assert resp.quality.record_count == 2
+        assert resp.summary["total_records"] == 2
+        assert len(resp.series) == 2
 
     def test_render_heavy_dataset_submits_task(self):
         from charts.schemas import ChartRequest, ChartSource
@@ -612,7 +616,9 @@ class TestChartService:
             resp = svc.render(self._mock_db(), req)
 
         assert resp.task_id == "fake-task-id"
-        assert resp.html == ""
+        # Heavy dataset defers rendering to an async task: no inline series yet.
+        assert resp.series == []
+        assert resp.quality.status == "processing"
 
     def test_suggest_returns_suggest_response(self):
         from charts.schemas import SuggestRequest, SuggestResponse, ChartSource
@@ -682,14 +688,16 @@ class TestChartsAPI:
         assert "suggestions" in body
         assert "row_count" in body
 
-    def test_render_incidents_returns_html(self, client, auth_headers_admin):
+    def test_render_incidents_returns_structured(self, client, auth_headers_admin):
         resp = client.get(
             "/admin/charts/render?source=incidents&chart_type=bar",
             headers=auth_headers_admin,
         )
         assert resp.status_code == 200
         body = resp.json()
-        assert "html" in body
+        # Structured contract: series + scope replace the old server-rendered html field.
+        assert "series" in body
+        assert "scope" in body
         assert "chart_type" in body
         assert body["chart_type"] == "bar"
 

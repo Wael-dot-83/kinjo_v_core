@@ -232,30 +232,10 @@ _CHART_LABELS_EN = {
     "funnel": "Funnel", "treemap": "Treemap",
 }
 
-@router.get(
-    "/admin/analytics/charts",
-    response_class=HTMLResponse,
-    summary="Charts explorer dashboard (Canonical)",
-    dependencies=[Depends(require_admin_or_manager)],
-)
-def charts_dashboard(
-    request: Request,
-    _: Any = Depends(require_admin_or_manager),
-) -> HTMLResponse:
-    return templates.TemplateResponse(
-        request=request,
-        name="admin/analytics/charts_dashboard.html",
-        context={
-            "sources": [s.value for s in ChartSource],
-            "chart_types": [t.value for t in ChartType],
-            "ui_lang": request.cookies.get("ui_lang", "ar"),
-            "ui_dir": request.cookies.get("ui_dir", "rtl"),
-            "SOURCE_LABELS_AR": _SOURCE_LABELS_AR,
-            "SOURCE_LABELS_EN": _SOURCE_LABELS_EN,
-            "CHART_LABELS_AR": _CHART_LABELS_AR,
-            "CHART_LABELS_EN": _CHART_LABELS_EN,
-        },
-    )
+# NOTE: GET /admin/analytics/charts (the explorer PAGE) is served by
+# frontend_orig.admin_charts_explorer, which the admin sidebar contract expects to own it.
+# charts_api owns only the data / render / redirect endpoints below — declaring the page
+# route here as well produced a duplicate registration for the same method+path.
 
 @router.get(
     "/admin/charts/dashboard",
