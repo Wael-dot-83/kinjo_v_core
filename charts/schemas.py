@@ -58,45 +58,12 @@ class ChartRequest(BaseModel):
         return str(v)
 
 
-class MetricMeta(BaseModel):
-    key: str
-    label: str
-    unit: str
-    higher_is_better: bool
-
-class ScopeMeta(BaseModel):
-    level: str
-    parent_key: Optional[str] = None
-
-class PeriodMeta(BaseModel):
-    start: Optional[str] = None
-    end: Optional[str] = None
-    comparison_start: Optional[str] = None
-    comparison_end: Optional[str] = None
-
-class DrilldownMeta(BaseModel):
-    enabled: bool
-    next_level: Optional[str] = None
-
-class QualityMeta(BaseModel):
-    status: str
-    record_count: int
-    missing_count: int
-    freshness_at: str
-
 class ChartResponse(BaseModel):
-    metric: MetricMeta
-    scope: ScopeMeta
-    period: PeriodMeta
-    summary: Dict[str, Any]
-    series: List[Dict[str, Any]]
-    table: List[Dict[str, Any]]
-    drilldown: DrilldownMeta
-    quality: QualityMeta
-    
     chart_type: ChartType
     source: ChartSource
+    html: str
     title: str
+    row_count: int
     cached: bool = False
     task_id: Optional[str] = None
 

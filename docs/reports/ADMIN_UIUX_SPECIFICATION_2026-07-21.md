@@ -41,10 +41,11 @@ codebase.
   *one assigned class of a few children*, and their core job is **filling in the daily report**
   (one per present child). Hard-scoped server-side to one `kindergarten_id` *and* one assigned
   `class_id`; not an oversight/cluster role.
-- **Daily-report workflow & approval is Manager-owned** — Supervisor drafts & submits →
-  Manager reviews (may edit/correct), approves, and sends to the Parent → Parent sees it only
-  after sending. The Admin monitors but *never* approves. Real statuses:
-  `DRAFT → SUBMITTED → APPROVED → SENT_TO_PARENT` (or `REJECTED` back to the Supervisor).
+- **Daily-report workflow & approval is Manager-owned** (approved *target* rule) — Supervisor
+  drafts & submits → Manager reviews/edits and sends to the Parent → Parent sees it only after
+  sending; the Admin monitors but never approves. *The codebase only partially enforces this
+  today* — §05 splits verified behavior from the gaps (legacy Admin-permitting `/approve`, no
+  mandatory approve gate, no reject/return endpoint, report events not wired to the WS channel).
 - **Real-time: yes** — alerts and dashboard values are pushed live over a persistent
   transport (WebSocket, SSE fallback), not polled. The 30s cache backs the initial paint
   and cold loads; live events invalidate and repaint affected widgets.
@@ -282,38 +283,123 @@ can't act on.
 | **Supervisor** | Run *my class* today; take attendance and **draft + submit** one daily report per present child. | My-class dashboard · Attendance (take) · Daily report (draft/submit) · My children · Class messages | Today's class attendance, my children's status, per-report draft/submitted/returned state, unread class messages. | **Everything outside their one class** — no governorate/KG selector, no other classes or children; hard-scoped server-side to one `kindergarten_id` + one `class_id`. Cannot approve or send reports; no analytics/admin. |
 | **Parent** | Check my child's day; read the report once the Manager sends it. | Child(ren) · Attendance · Enrollments · Messages/announcements · Sent daily reports | Child attendance streak, enrollment status, unread messages, reports in `SENT_TO_PARENT` only. | Everything operational/administrative; no KPIs, no other families' data. Scoped server-side to their own children only. |
 
-### Server-side scope enforcement
+### Daily-report workflow — implemented vs. target
 
-Scope is enforced in the query layer, not the UI. Every request is filtered at the source by
-the caller's role; the live push channel subscribes each user only to events inside their scope.
+The core operational loop. Because the codebase mixes the *approved target* with what is
+*actually shipped*, every element is tagged with an exact `file:line` source. Tags:
+**IMPLEMENTED** (verified in code), **TARGET** (approved, not yet enforced), **GAP** (current
+behavior violates the target), **WORK** (backend/schema/event change needed).
 
-| Role | Server-enforced scope | Can see reports in state |
-|---|---|---|
-| Admin | Platform-wide (monitoring, governance, audit, analytics) | All states — read-only oversight |
-| Manager | One `kindergarten_id` (all its classes) | `SUBMITTED` → approve/edit/reject → `SENT_TO_PARENT` |
-| Supervisor | One `kindergarten_id` + one assigned `class_id` | `DRAFT` / `SUBMITTED` / `REJECTED` for own class |
-| Parent | Their own children only | `SENT_TO_PARENT` only |
+#### Server-side scope enforcement
 
-### Daily-report workflow
+| Role | Enforced scope | Report states visible | Status · source |
+|---|---|---|---|
+| Admin | Platform-wide oversight (no KG binding) | All (read); *also* currently `/approve` | **GAP** can approve — see C1 |
+| Manager | One `kindergarten_id`; cross-KG → 404 | `SUBMITTED` → send | **IMPLEMENTED** `dependencies.py:376`, `manager.py:62-79` |
+| Supervisor | Assigned class only (child-ownership) | own-class `DRAFT`/`SUBMITTED` | **IMPLEMENTED** `rbac.py:79-86`, `supervisor.py:131` |
+| Parent | Own children only | `SENT_TO_PARENT` only | **IMPLEMENTED** `api/daily_reports_routes.py:247, 264-265` |
 
-The core operational loop. The Supervisor authors; the **Manager owns approval and delivery**;
-the Admin never participates in the routine chain.
+#### Workflow steps
 
-| # | Actor | Action | Status after | Emits |
+| # | Actor | Action | Status after | Impl · source |
 |---|---|---|---|---|
-| 1 | Supervisor | Records attendance; prepares one report per *present* child in the assigned class. | `DRAFT` | — |
-| 2 | Supervisor | Submits the reports to the Manager. | `SUBMITTED` | `report.submitted` → Manager |
-| 3 | Manager | Reviews each report; may edit/correct. | `SUBMITTED` | — |
-| 4a | Manager | Approves and sends to the child's Parent. | `APPROVED` → `SENT_TO_PARENT` | `report.sent` → Parent |
-| 4b | Manager | Rejects, returning it to the Supervisor to fix. | `REJECTED` | `report.returned` → Supervisor |
-| 5 | Parent | Views the report — only now visible to them. | `SENT_TO_PARENT` | — |
-| 6 | Admin | Monitors, audits, and reports across all of the above; does not approve. | — | — |
+| 1 | Supervisor | Attendance + one report per present child (own class) | `DRAFT` | **IMPLEMENTED** `supervisor.py:807-842` |
+| 2 | Supervisor | Submit to Manager (only `DRAFT` submittable) | `SUBMITTED` | **IMPLEMENTED** `supervisor.py:967-990` |
+| 3 | Manager | Review; may edit (`SUBMITTED` only) | `SUBMITTED` | **IMPLEMENTED** `manager.py:515-545` |
+| 4 | Manager | Optional internal approve | `APPROVED` | **GAP** legacy, Admin-permitted `api/daily_reports_routes.py:192-214` |
+| 5 | Manager | Send to Parent (accepts `SUBMITTED` *or* `APPROVED` — no mandatory approve) | `SENT_TO_PARENT` | **IMPLEMENTED** manager-only `manager.py:548-608` |
+| 6 | Parent | Views report — visible only now | `SENT_TO_PARENT` | **IMPLEMENTED** `api/daily_reports_routes.py:264-265` |
+| — | Manager | Reject / return to Supervisor to fix | `REJECTED` | **TARGET / WORK** no endpoint/audit/notification/test |
+
+**Status enum** (`models.py:131-137`): `DRAFT · SUBMITTED · APPROVED · SENT_TO_PARENT ·
+REJECTED · RETURNED`. `RETURNED` is a backward-compat alias treated as equivalent to `REJECTED`
+in analytics and edit-guards (`daily_report_analytics.py:249`, `models.py:875, 883`); no endpoint
+currently sets either value.
+
+#### A · Current implemented & verified behavior
+
+- Supervisor authoring is creator/assigned-class-scoped: `assert_supervisor_owns_child` raises
+  403 for a child outside the supervisor's classes (`rbac.py:79-86`, called at
+  `supervisor.py:814, 977`); the role gate is supervisor-only (`supervisor.py:131-134`).
+- Supervisor may only save `DRAFT`/`SUBMITTED`; submit transitions `DRAFT → SUBMITTED` and
+  writes a `DAILY_REPORT_SUBMITTED` audit row (`supervisor.py:839-842, 967-990`).
+- Manager edit is limited to `SUBMITTED` reports (`manager.py:525`); the review list defaults
+  to `SUBMITTED` (`manager.py:432`).
+- Manager send is **manager-only** (`require_manager`, `dependencies.py:376-392`) and
+  cross-KG-safe (404, `manager.py:62-79`); it atomically sets `SENT_TO_PARENT`, stamps
+  `approved_by`/`approved_at`/`sent_to_parent_at`, and writes a parent `Message` + two audit
+  rows in one transaction (`manager.py:548-608`).
+- Parent visibility is gated to `SENT_TO_PARENT` only (`api/daily_reports_routes.py:264-265`),
+  behind a parent-ownership check (`:247`).
+- Real-time infra exists: per-user Redis-pub/sub WS at `/ws/notify` (`main.py:1385`), plus
+  `/ws/dashboard` & `/ws/heatmap` (`main.py:1271, 1320`) and `/ws/analytics/dashboard`
+  (`analytics_ws.py:68`); publisher `realtime_service.publish_notification` (`realtime_service.py:229`).
+
+#### B · Approved target behavior (not yet enforced)
+
+- **Admin never performs operational approval/send** — Admin is monitoring / governance /
+  audit / analytics only.
+- **Explicit reject/return path** — Manager can return a `SUBMITTED` report to the authoring
+  Supervisor with a reason; the Supervisor revises and resubmits.
+- **Lifecycle emits real-time events** to the scoped recipient (submit → Manager; send →
+  Parent; return → Supervisor) over the existing WS channel.
+- *Decision required:* whether `APPROVED` becomes a mandatory gate before send or stays an
+  optional internal state.
+
+#### C · Identified implementation gaps
+
+- **C1 — Admin can approve.** Legacy `POST /api/daily-reports/{id}/approve` calls
+  `validate_manager_role`, which permits `ADMIN` and `MANAGER` (`api/daily_reports_routes.py:192-199`,
+  `validators.py:374-380`), and explicitly skips KG-scoping for admin (`:212-214`). Violates
+  "Admin never approves"; exercised as-is by `tests/test_integration_comprehensive.py:524`.
+- **C2 — No mandatory approve gate.** Send accepts `SUBMITTED` *or* `APPROVED` and jumps
+  straight to `SENT_TO_PARENT` (`manager.py:559-566`); the 400 message says "must be in
+  SUBMITTED state" while the code also accepts `APPROVED` — copy/logic mismatch.
+- **C3 — Reject/return not implemented.** `REJECTED`/`RETURNED` exist as enum values only;
+  there is no manager reject endpoint, no `DAILY_REPORT_REJECTED` *AuditAction*
+  (`audit_actions.py:100-105` defines none), and no notification or test.
+- **C4 — Lifecycle not wired to real-time.** The send flow writes a `Message` row but does
+  *not* call `publish_notification`; that publisher is only invoked by the Celery task
+  `notification_tasks._push_to_ws` (`notification_tasks.py:22-36`). No `report.*` event reaches
+  the parent's WS channel today.
+
+#### D · Required backend / schema / event work
+
+- **D1** — Restrict operational approval/send to `MANAGER`: change the legacy `/approve` guard
+  from `validate_manager_role` to a manager-only dependency (or deprecate the endpoint).
+  Separate, explicitly-scoped task with its own tests.
+- **D2** — Decide and enforce the approve gate (mandatory vs optional); align the send-endpoint
+  validation and its 400 message with the decision.
+- **D3** — Add a manager reject/return endpoint (e.g. `PUT /api/manager/daily-reports/{id}/reject`)
+  with a reason field, a new `DAILY_REPORT_REJECTED` AuditAction, a supervisor notification, and
+  a decision on `REJECTED` vs `RETURNED` (recommend consolidating on `REJECTED`, keeping
+  `RETURNED` read-only for legacy rows).
+- **D4** — Emit lifecycle events by publishing a typed `models.Notification` (which already
+  flows to `/ws/notify`) on submit/send/return, scoped to the recipient; define the payloads as
+  an explicit contract (§07).
+
+#### Required test coverage
+
+Specified here for a follow-up, explicitly-scoped test task — no test files were created in this
+documentation change.
+
+| Test | Assertion | Anchors on |
+|---|---|---|
+| Supervisor assigned-class enforcement | 403 when a supervisor acts on a child outside their classes | `rbac.py:79` |
+| Creator-only submission | Only the authoring supervisor (own class) can submit a `DRAFT` | `supervisor.py:967-979` |
+| Manager-only send | Non-manager (incl. Admin) → 403 on send-to-parents | `dependencies.py:376` |
+| Cross-kindergarten 404 | Manager acting on another KG's report → 404 (not 403) | `manager.py:62-79` |
+| Parent visibility | Parent sees a report only after `SENT_TO_PARENT` | `api/daily_reports_routes.py:264` |
+| Admin blocked from approval (final rule) | Admin → 403 on `/approve` once D1 lands (today it's 200 — a test asserting the gap) | C1 / D1 |
+| Reject/return transition | Manager return sets `REJECTED`, notifies supervisor, audits — once D3 lands | D3 |
+| Valid/invalid status transitions | Reject illegal jumps (e.g. `DRAFT → SENT_TO_PARENT`); allow legal ones | state machine |
 
 > **Security invariant.** Role filtering is a UI convenience, never the enforcement boundary.
 > Every admin endpoint keeps `require_admin`; ownership checks must not short-circuit when a
-> profile is `None` (a known IDOR shape). Scoping is enforced in the query layer per the table
-> above, and a report becomes Parent-visible **only** once the Manager moves it to
-> `SENT_TO_PARENT`. The nav hiding an item does not authorize the API.
+> profile is `None` (a known IDOR shape). Scoping is enforced in the query layer per the tables
+> above, and a report becomes Parent-visible **only** once a Manager moves it to
+> `SENT_TO_PARENT`. Note the open gap C1 — the legacy `/approve` route still admits `ADMIN` —
+> until D1 lands. The nav hiding an item does not authorize the API.
 
 ---
 
@@ -415,20 +501,26 @@ keys UPPERCASE to match JS. Tone: plain, active, operational.
 
 ### Real-time transport & notifications
 
-Live delivery is a first-class requirement. Transport: **WebSocket** with an **SSE fallback**;
-on connect the client subscribes to channels scoped by role — Admin to their selected
-governorate/all, **Manager to their single `kindergarten_id`**, **Supervisor to their single
-`class_id`**. Server emits a typed event; the client invalidates the 30s cache for the affected
-widget and repaints just that widget (no full reload).
+**What exists today (IMPLEMENTED)** — a per-user notification WebSocket at `/ws/notify` backed
+by Redis pub/sub (`main.py:1385`), fed by `realtime_service.publish_notification(user_id, payload)`
+(`realtime_service.py:229`), currently called only by the Celery task
+`notification_tasks._push_to_ws` for `models.Notification` rows (`notification_tasks.py:22-36`).
+Dashboard/analytics sockets also exist (`main.py:1271, 1320`; `analytics_ws.py:68`).
 
-| Channel / event | Payload | Client effect |
-|---|---|---|
-| `alert.created` | Alert | Prepend to alerts panel; bump badge; toast if severity ≥ warning. |
-| `kpi.updated` | { key, value, delta, band? } | Repaint the one KPI card (`aria-live` announces new value). |
-| `report.submitted` | { report_id, class_id, child_id } | **→ Manager**: +1 approval queue; toast; feed row. |
-| `report.sent` | { report_id, child_id } | **→ Parent**: report now visible; badge + toast. |
-| `report.returned` | { report_id, reason } | **→ Supervisor**: report back to `REJECTED`; toast to fix. |
-| `notification.new` | Notification | Live badge + toast; enters notification center. |
+**Target contract (TARGET)** — the daily-report lifecycle should publish scoped events over that
+channel, with the client subscribing by role (Manager → `kindergarten_id`, Supervisor →
+`class_id`, Parent → own children). These report events are *not* emitted yet (§05 gap C4); the
+send flow only writes a `Message` row. The table below is the proposed contract, to be wired per
+§05 D4 with tests.
+
+| Channel / event | Payload | Client effect | Status |
+|---|---|---|---|
+| `notification.new` | Notification | Live badge + toast; enters notification center. | IMPLEMENTED |
+| `alert.created` | Alert | Prepend to alerts panel; bump badge; toast if severity ≥ warning. | TARGET |
+| `kpi.updated` | { key, value, delta, band? } | Repaint the one KPI card (`aria-live` announces new value). | TARGET |
+| `report.submitted` | { report_id, class_id, child_id } | **→ Manager**: +1 approval queue; toast; feed row. | TARGET / WORK |
+| `report.sent` | { report_id, child_id } | **→ Parent**: report now visible; badge + toast. | TARGET / WORK |
+| `report.returned` | { report_id, reason } | **→ Supervisor**: report back to `REJECTED`; toast to fix. | TARGET / WORK |
 
 ### Example data models (widget contracts)
 
@@ -481,9 +573,10 @@ class Notification(BaseModel):
 class DailyReportStatus(str, Enum):
     DRAFT = "DRAFT"                    # supervisor authoring, not yet submitted
     SUBMITTED = "SUBMITTED"            # sent to manager, awaiting review
-    APPROVED = "APPROVED"              # manager approved (internal)
-    SENT_TO_PARENT = "SENT_TO_PARENT"  # parent-visible ONLY in this state
-    REJECTED = "REJECTED"             # returned to supervisor to fix
+    APPROVED = "APPROVED"              # optional internal state — NOT a mandatory gate (gap C2)
+    SENT_TO_PARENT = "SENT_TO_PARENT"  # parent-visible ONLY in this state (verified)
+    REJECTED = "REJECTED"             # target reject state — no endpoint sets it yet (gap C3)
+    RETURNED = "RETURNED"             # backward-compat alias, == REJECTED in analytics; legacy rows only
 
 class DailyReport(BaseModel):
     id: str
@@ -492,10 +585,11 @@ class DailyReport(BaseModel):
     kindergarten_id: str
     status: DailyReportStatus
     authored_by: str          # supervisor user_id
-    approved_by: str | None   # manager user_id (set on send)
+    approved_by: str | None   # manager user_id (stamped on send, manager.py:567)
     report_date: date         # Jordan date (UTC+3)
-    # Guard: only role=MANAGER of this kindergarten_id may set
-    # SENT_TO_PARENT; only then is the row returned to the Parent query.
+    # VERIFIED: send-to-parents is manager-only (dependencies.py:376) and the Parent
+    # query filters status == SENT_TO_PARENT (api/daily_reports_routes.py:264).
+    # GAP: legacy /approve still admits ADMIN (api/daily_reports_routes.py:199) — see C1/D1.
 ```
 
 > **Build guardrails.** Jordan time (UTC+3) for every operational date and cache key — never

@@ -4,303 +4,197 @@
 
 {% block extra_head %}
 <style>
-  .help-shell { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
-  .help-aside { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow: auto; }
-  .help-aside a { display: block; padding: .5rem .75rem; border-radius: .5rem; text-decoration: none; color: inherit; }
-  .help-aside a:hover, .help-aside a:focus-visible, .help-aside a.is-active { background: var(--admin-bg-subtle, #f3f4f6); }
-  .help-topic { scroll-margin-top: 6rem; }
-  .help-topic[data-hidden="true"], [data-help-row][hidden] { display: none !important; }
-  .help-meta-badge { font-size: .825rem; }
-  .help-search-wrap { max-width: 44rem; }
-  .help-toolbar { gap: .75rem; }
-  .help-results-count { min-width: 12ch; }
-  .help-topic-nav a, .help-top-link { text-decoration: none; }
-  .help-topic h2 { margin-bottom: .35rem; }
-  .help-topic .section-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
-  .help-topic .definition-list dt { font-weight: 600; }
-  .help-topic .definition-list dd { margin-bottom: .75rem; }
-  .help-metadata-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
-  .help-metadata-grid .meta-card { border: 1px solid var(--bs-border-color); border-radius: .75rem; padding: .75rem; background: var(--bs-body-bg); }
-  .help-mobile-nav { display: none; }
-  mark.help-match { background: #fff3a3; color: inherit; padding: 0 .05em; }
-  @media (max-width: 991px) {
-    .help-shell { grid-template-columns: 1fr; }
-    .help-aside { position: static; max-height: none; }
-    .help-metadata-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .help-mobile-nav { display: block; }
-  }
-  @media (max-width: 576px) {
-    .help-metadata-grid { grid-template-columns: 1fr; }
-  }
-  @media print {
-    .admin-sidebar, .admin-navbar, .help-aside, .help-search-wrap, .help-toolbar, .help-mobile-nav, .help-topic-nav, .help-top-link, .help-no-print { display: none !important; }
-    .help-shell { display: block; }
-    .card { border: 1px solid #d1d5db !important; box-shadow: none !important; }
-    .help-topic { break-inside: avoid; }
-  }
+  .help-layout { display:grid; grid-template-columns:minmax(220px,260px) minmax(0,1fr); gap:1.5rem; align-items:start; }
+  .help-toc { position:sticky; top:1rem; max-height:calc(100vh - 8rem); overflow:auto; }
+  .help-toc a { display:flex; gap:.5rem; align-items:center; padding:.55rem .7rem; border-radius:.5rem; color:inherit; text-decoration:none; }
+  .help-toc a:hover, .help-toc a:focus-visible { background:var(--admin-bg-subtle,#f3f4f6); }
+  .help-section { scroll-margin-top:6rem; }
+  .metric-definition { border-inline-start:.25rem solid var(--bs-primary); padding-inline-start:1rem; }
+  .help-search { max-width:32rem; }
+  @media (max-width:991px) { .help-layout { grid-template-columns:1fr; } .help-toc { position:static; max-height:none; } }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-container" id="helpTop">
+<div class="admin-page-container">
   <header class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
-    <div class="flex-grow-1">
-      <p class="section-label text-muted mb-2">{% if ui_lang == 'en' %}Administrative guide{% else %}دليل إداري{% endif %}</p>
-      <h1 class="admin-page-title mb-2">
+    <div>
+      <h1 class="admin-page-title mb-1">
         <i class="bi bi-life-preserver me-2 text-primary" aria-hidden="true"></i>
         {% if ui_lang == 'en' %}Admin Help Center{% else %}مركز مساعدة المسؤول{% endif %}
       </h1>
-      <p class="admin-page-subtitle text-muted mb-3">
-        {% if ui_lang == 'en' %}Task-oriented guidance for the live Admin navigation, workflows, metrics, and troubleshooting.{% else %}إرشادات عملية مهيكلة بحسب صفحات الإدارة الحية، ومسارات العمل، والمؤشرات، واستكشاف الأخطاء.{% endif %}
+      <p class="admin-page-subtitle text-muted mb-0">
+        {% if ui_lang == 'en' %}Verified guidance for administrative tasks, metric interpretation, and troubleshooting.{% else %}إرشادات موثقة لتنفيذ المهام الإدارية وفهم المؤشرات ومعالجة المشكلات.{% endif %}
       </p>
-      <div class="d-flex flex-wrap gap-2">
-        <span class="badge rounded-pill text-bg-primary help-meta-badge">{% if ui_lang == 'en' %}Version{% else %}الإصدار{% endif %}: {{ help_meta.help_version }}</span>
-        <span class="badge rounded-pill text-bg-secondary help-meta-badge">{% if ui_lang == 'en' %}Last reviewed{% else %}آخر مراجعة{% endif %}: {{ help_meta.last_reviewed }}</span>
-        <span class="badge rounded-pill text-bg-info help-meta-badge text-dark">{% if ui_lang == 'en' %}Product{% else %}المنتج{% endif %}: {{ help_meta.product_version }}</span>
-        <span class="badge rounded-pill text-bg-light border help-meta-badge">{% if ui_lang == 'en' %}Owner{% else %}المالك{% endif %}: {{ help_meta.content_owner[ui_lang] }}</span>
-      </div>
-      <div class="d-flex flex-wrap gap-2 mt-3 help-no-print">
-        <a class="btn btn-outline-secondary btn-sm" href="#support">{% if ui_lang == 'en' %}Report inaccurate content{% else %}الإبلاغ عن محتوى غير دقيق{% endif %}</a>
-        <a class="btn btn-outline-primary btn-sm" href="#helpCoverageTitle">{% if ui_lang == 'en' %}View coverage matrix{% else %}عرض مصفوفة التغطية{% endif %}</a>
-      </div>
     </div>
-
-    <div class="help-search-wrap w-100">
-      <label class="visually-hidden" for="helpSearch">{% if ui_lang == 'en' %}Search help topics{% else %}البحث في موضوعات المساعدة{% endif %}</label>
-      <div class="input-group help-toolbar">
+    <div class="help-search w-100">
+      <label class="visually-hidden" for="helpSearch">{% if ui_lang == 'en' %}Search help{% else %}البحث في المساعدة{% endif %}</label>
+      <div class="input-group">
         <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
-        <input id="helpSearch" type="search" class="form-control" autocomplete="off" inputmode="search"
-               placeholder="{% if ui_lang == 'en' %}Search topics, steps, FAQs, glossary terms…{% else %}ابحث في الموضوعات والخطوات والأسئلة والمصطلحات…{% endif %}">
-        <button id="helpClear" type="button" class="btn btn-outline-secondary" hidden>{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</button>
+        <input id="helpSearch" type="search" class="form-control" placeholder="{% if ui_lang == 'en' %}Search this guide…{% else %}ابحث في هذا الدليل…{% endif %}">
       </div>
-      <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
-        <span id="helpResultsCount" class="help-results-count">{% if ui_lang == 'en' %}All topics shown{% else %}تظهر كل الموضوعات{% endif %}</span>
-        <a href="#support" class="help-top-link">{% if ui_lang == 'en' %}Need support?{% else %}تحتاج دعماً؟{% endif %}</a>
-      </div>
-      <div id="helpLiveRegion" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
     </div>
   </header>
 
-  <section class="card p-4 mb-4" aria-labelledby="helpCoverageTitle">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-      <div>
-        <h2 id="helpCoverageTitle" class="h4 mb-1">{% if ui_lang == 'en' %}Coverage matrix{% else %}مصفوفة التغطية{% endif %}</h2>
-        <p class="text-muted mb-0">{% if ui_lang == 'en' %}Every primary Admin destination has a direct Help topic below.{% else %}كل وجهة رئيسية في الإدارة لها موضوع مساعدة مباشر أدناه.{% endif %}</p>
-      </div>
-      <a class="btn btn-outline-primary btn-sm" href="#topics">{% if ui_lang == 'en' %}Jump to topics{% else %}الانتقال إلى الموضوعات{% endif %}</a>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-sm align-middle mb-0">
-        <caption class="visually-hidden">{% if ui_lang == 'en' %}Mapping of navigation destinations to help topics{% else %}ربط وجهات التنقل بموضوعات المساعدة{% endif %}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{% if ui_lang == 'en' %}Admin page{% else %}الصفحة الإدارية{% endif %}</th>
-            <th scope="col">{% if ui_lang == 'en' %}Help topic{% else %}موضوع المساعدة{% endif %}</th>
-            <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in help_coverage %}
-          <tr data-help-row data-help-coverage-row data-search-text="{{ row.title[ui_lang] }} {{ row.route }} {{ row.status[ui_lang] }}">
-            <td><code>{{ row.route }}</code></td>
-            <td><a href="#{{ row.id }}">{{ row.title[ui_lang] }}</a></td>
-            <td>{{ row.status[ui_lang] }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
+  <div class="help-layout">
+    <nav class="help-toc card p-3" aria-label="{% if ui_lang == 'en' %}Help topics{% else %}موضوعات المساعدة{% endif %}">
+      <strong class="small text-muted mb-2">{% if ui_lang == 'en' %}Topics{% else %}الموضوعات{% endif %}</strong>
+      <a href="#about"><i class="bi bi-info-circle" aria-hidden="true"></i>{% if ui_lang == 'en' %}About the Admin module{% else %}نبذة عن وحدة الإدارة{% endif %}</a>
+      <a href="#dashboard"><i class="bi bi-speedometer2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Dashboard metrics{% else %}مؤشرات لوحة التحكم{% endif %}</a>
+      <a href="#users"><i class="bi bi-people" aria-hidden="true"></i>{% if ui_lang == 'en' %}Users{% else %}المستخدمون{% endif %}</a>
+      <a href="#kindergartens"><i class="bi bi-building" aria-hidden="true"></i>{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}</a>
+      <a href="#imports"><i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>{% if ui_lang == 'en' %}Data imports{% else %}استيراد البيانات{% endif %}</a>
+      <a href="#communication"><i class="bi bi-envelope" aria-hidden="true"></i>{% if ui_lang == 'en' %}Communication{% else %}التواصل{% endif %}</a>
+      <a href="#daily-reports"><i class="bi bi-calendar2-data" aria-hidden="true"></i>{% if ui_lang == 'en' %}Daily reports{% else %}التقارير اليومية{% endif %}</a>
+      <a href="#safety"><i class="bi bi-shield-check" aria-hidden="true"></i>{% if ui_lang == 'en' %}Incidents and safety{% else %}الحوادث والسلامة{% endif %}</a>
+      <a href="#analytics"><i class="bi bi-graph-up" aria-hidden="true"></i>{% if ui_lang == 'en' %}Analytics and reports{% else %}التحليلات والتقارير{% endif %}</a>
+      <a href="#governance"><i class="bi bi-bank" aria-hidden="true"></i>{% if ui_lang == 'en' %}Governance{% else %}الحوكمة{% endif %}</a>
+      <a href="#security"><i class="bi bi-shield-lock" aria-hidden="true"></i>{% if ui_lang == 'en' %}Security and audit{% else %}الأمان والتدقيق{% endif %}</a>
+      <a href="#faq"><i class="bi bi-question-circle" aria-hidden="true"></i>{% if ui_lang == 'en' %}Frequently asked questions{% else %}الأسئلة الشائعة{% endif %}</a>
+      <a href="#glossary"><i class="bi bi-book" aria-hidden="true"></i>{% if ui_lang == 'en' %}Glossary{% else %}دليل المصطلحات{% endif %}</a>
+      <a href="#support"><i class="bi bi-headset" aria-hidden="true"></i>{% if ui_lang == 'en' %}Support{% else %}الدعم{% endif %}</a>
+    </nav>
 
-  <div class="help-shell">
-    <aside class="help-aside card p-3 d-none d-lg-block" aria-label="{% if ui_lang == 'en' %}Help topics{% else %}موضوعات المساعدة{% endif %}">
-      <strong class="small text-muted d-block mb-2">{% if ui_lang == 'en' %}Topics{% else %}الموضوعات{% endif %}</strong>
-      <nav id="helpTocDesktop">
-        {% for topic in help_topics %}
-        <a href="#{{ topic.id }}" data-help-nav-link data-search-text="{{ topic.search_terms }}">{{ topic.title[ui_lang] }}</a>
-        {% endfor %}
-      </nav>
-    </aside>
+    <main id="helpTopics">
+      <section id="about" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}About the Admin module{% else %}نبذة عن وحدة الإدارة{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}The Admin module brings together platform monitoring, users, kindergartens, communication, daily reports, safety, analytics, governance, and audit tools. Access is enforced by the server; hiding a control is never an authorization boundary.{% else %}تجمع وحدة الإدارة أدوات مراقبة المنصة والمستخدمين والحضانات والتواصل والتقارير اليومية والسلامة والتحليلات والحوكمة والتدقيق. يفرض الخادم صلاحيات الوصول؛ وإخفاء عنصر في الواجهة ليس وسيلة تفويض.{% endif %}</p>
+        <p class="mb-0">{% if ui_lang == 'en' %}Use the reference ID shown with an error when escalating a problem so support can correlate the browser request with server logs.{% else %}استخدم الرقم المرجعي الظاهر مع الخطأ عند تصعيد المشكلة لربط طلب المتصفح بسجلات الخادم.{% endif %}</p>
+      </section>
 
-    <div>
-      <details class="help-mobile-nav card p-3 mb-4">
-        <summary class="fw-semibold">{% if ui_lang == 'en' %}Topics{% else %}الموضوعات{% endif %}</summary>
-        <nav id="helpTocMobile" class="mt-3">
-          {% for topic in help_topics %}
-          <a href="#{{ topic.id }}" data-help-nav-link data-search-text="{{ topic.search_terms }}">{{ topic.title[ui_lang] }}</a>
-          {% endfor %}
-        </nav>
-      </details>
+      <section id="dashboard" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Dashboard metrics{% else %}مؤشرات لوحة التحكم{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}The dashboard contains seven operational indicators with different stated windows: current totals, today, the selected report period, or the fixed seven-day coverage window. They are measured results, not fixed targets.{% else %}تعرض لوحة التحكم سبعة مؤشرات تشغيلية بنوافذ زمنية موضحة ومختلفة: الإجماليات الحالية أو اليوم أو فترة التقارير المحددة أو نافذة التغطية الثابتة لسبعة أيام. وهي نتائج مقاسة وليست أهدافًا ثابتة.{% endif %}</p>
+        <div class="metric-definition"><dl class="row mb-0">
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Total users{% else %}إجمالي المستخدمين{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}All user accounts counted by the dashboard query.{% else %}جميع حسابات المستخدمين التي يحتسبها استعلام لوحة التحكم.{% endif %}</dd>
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Users logged in today{% else %}المستخدمون الذين سجلوا الدخول اليوم{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Distinct users with a successful login since the start of today in Amman time.{% else %}عدد المستخدمين المميزين الذين سجلوا دخولًا ناجحًا منذ بداية اليوم بتوقيت عمّان.{% endif %}</dd>
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Total/active kindergartens{% else %}إجمالي الحضانات / النشطة{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Registered kindergartens and the subset currently marked active.{% else %}الحضانات المسجلة والجزء المصنف منها بالحالة النشطة حاليًا.{% endif %}</dd>
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Reports in period{% else %}التقارير خلال الفترة{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Daily reports whose dates fall inside the selected period.{% else %}التقارير اليومية التي تقع تواريخها ضمن الفترة المحددة.{% endif %}</dd>
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Pending reports{% else %}التقارير المعلّقة{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}Daily reports currently in the submitted/pending state defined by the API.{% else %}التقارير اليومية الموجودة حاليًا في حالة التقديم أو الانتظار التي تعرفها الواجهة البرمجية.{% endif %}</dd>
+          <dt class="col-md-4">{% if ui_lang == 'en' %}Data quality{% else %}جودة البيانات{% endif %}</dt><dd class="col-md-8">{% if ui_lang == 'en' %}The share of currently active kindergartens with at least one daily report in the last seven days.{% else %}نسبة الحضانات النشطة حاليًا التي لديها تقرير يومي واحد على الأقل خلال آخر سبعة أيام.{% endif %}</dd>
+        </dl></div>
+      </section>
 
-      <div id="topics">
-        {% for topic in help_topics %}
-        <article id="{{ topic.id }}" class="help-topic card p-4 mb-4" data-help-topic data-search-text="{{ topic.search_terms }}">
-          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-            <div>
-              <h2 class="mb-1">{{ topic.title[ui_lang] }}</h2>
-              <div class="text-muted small">{% if ui_lang == 'en' %}Direct link:{% else %}الرابط المباشر:{% endif %} <code>{{ topic.route }}</code></div>
-            </div>
-            <span class="badge text-bg-success">{{ topic.status[ui_lang] }}</span>
-          </div>
+      <section id="users" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Users{% else %}إدارة المستخدمين{% endif %}</h2>
+        <ol><li>{% if ui_lang == 'en' %}Open Users and filter by role, status, or kindergarten.{% else %}افتح المستخدمين وصفِّ النتائج حسب الدور أو الحالة أو الحضانة.{% endif %}</li><li>{% if ui_lang == 'en' %}Create or edit an account within your permitted scope. A role sets the general access level; the server applies detailed restrictions.{% else %}أنشئ حسابًا أو عدله ضمن نطاق صلاحيتك. يحدد الدور مستوى الوصول العام ويطبق الخادم القيود التفصيلية.{% endif %}</li><li>{% if ui_lang == 'en' %}For an Admin reset, enter the new password and your own current administrator password. This is not an emailed reset-link workflow.{% else %}لإعادة التعيين الإداري أدخل كلمة المرور الجديدة وكلمة مرورك الحالية كمسؤول. هذه ليست عملية إرسال رابط بالبريد الإلكتروني.{% endif %}</li></ol>
+        <p class="mb-0"><a href="/admin/users">{% if ui_lang == 'en' %}Open User Management{% else %}فتح إدارة المستخدمين{% endif %}</a></p>
+      </section>
 
-          <p class="mb-3">{{ topic.purpose[ui_lang] }}</p>
+      <section id="kindergartens" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Kindergartens{% else %}إدارة الحضانات{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Use Kindergarten Overview for network monitoring and Kindergarten Records for create, view, edit, freeze, activate, manager-assignment, licence, location, and capacity information. Required create fields include the Arabic name, governorate, district, area, address line, and contact phone.{% else %}استخدم نظرة الحضانات لمراقبة الشبكة وسجل الحضانات للإنشاء والعرض والتعديل والتجميد والتفعيل وتعيين المدير وبيانات الترخيص والموقع والطاقة الاستيعابية. تشمل حقول الإنشاء المطلوبة الاسم العربي والمحافظة واللواء والمنطقة والعنوان ورقم الاتصال.{% endif %}</p>
+        <p class="mb-0"><a href="/admin/kg-overview">{% if ui_lang == 'en' %}Open Kindergarten Overview{% else %}فتح نظرة الحضانات{% endif %}</a></p>
+      </section>
 
-          <dl class="row definition-list mb-3">
-            <dt class="col-lg-3">{% if ui_lang == 'en' %}Who can use it{% else %}من يمكنه استخدامه{% endif %}</dt>
-            <dd class="col-lg-9">{{ topic.who[ui_lang] }}</dd>
+      <section id="imports" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Data imports{% else %}استيراد البيانات{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Download the provided template, validate the file, and review created, updated, skipped, and error rows returned for that import type. Imported Kindergarten Data is a review list, while Import History records each job and its row/error counts.{% else %}نزّل النموذج المتاح وتحقق من الملف ثم راجع الصفوف المنشأة والمحدثة والمتجاوزة والخاطئة التي يعيدها نوع الاستيراد. صفحة بيانات الحضانات المستوردة قائمة للمراجعة، بينما يسجل سجل الاستيراد كل عملية وأعداد الصفوف والأخطاء.{% endif %}</p>
+        <p class="mb-0"><a href="/admin/import-logs">{% if ui_lang == 'en' %}Open Import History{% else %}فتح سجل الاستيراد{% endif %}</a></p>
+      </section>
 
-            <dt class="col-lg-3">{% if ui_lang == 'en' %}Data scope{% else %}نطاق البيانات{% endif %}</dt>
-            <dd class="col-lg-9">{{ topic.scope[ui_lang] }}</dd>
+      <section id="communication" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Communication{% else %}التواصل{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Compose Message lets you choose a target mode, location or kindergarten, and applicable roles. Preview is an estimate; the server recalculates recipients when sending. The Message List currently shows the latest 25 messages. Contact Messages can be reviewed and marked resolved, but it is not a ticket-reply system.{% else %}تتيح صفحة إنشاء رسالة تحديد طريقة الاستهداف والموقع أو الحضانة والأدوار المناسبة. المعاينة تقديرية ويعيد الخادم حساب المستلمين عند الإرسال. تعرض قائمة الرسائل أحدث 25 رسالة حاليًا. يمكن مراجعة رسائل التواصل ووضع علامة تمت المعالجة، لكنها ليست نظام تذاكر وردود.{% endif %}</p>
+        <p class="mb-0"><a href="/admin/messages/compose">{% if ui_lang == 'en' %}Compose a message{% else %}إنشاء رسالة{% endif %}</a></p>
+      </section>
 
-            <dt class="col-lg-3">{% if ui_lang == 'en' %}Before you begin{% else %}قبل أن تبدأ{% endif %}</dt>
-            <dd class="col-lg-9">{{ topic.before[ui_lang] }}</dd>
-          </dl>
+      <section id="daily-reports" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Daily reports{% else %}التقارير اليومية{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Daily Reports Analytics covers attendance, meals, naps, health indicators, and report workflow by period and kindergarten. Daily Report Organization searches, groups, sorts, and reviews reports; it does not create report schedules. Governance measures submission, delivery, viewing, acceptance, and timing according to each displayed definition.{% else %}تشمل تحليلات التقارير اليومية الحضور والوجبات والقيلولة والمؤشرات الصحية ومسار التقرير حسب الفترة والحضانة. تبحث صفحة تنظيم التقارير اليومية في التقارير وتجمعها وتفرزها وتراجعها؛ ولا تنشئ جداول إرسال. تقيس الحوكمة التقديم والتسليم والمشاهدة والقبول والتوقيت وفق تعريف كل مؤشر ظاهر.{% endif %}</p>
+        <p class="mb-0"><a href="/reports/analytics">{% if ui_lang == 'en' %}Open Daily Reports Analytics{% else %}فتح تحليلات التقارير اليومية{% endif %}</a></p>
+      </section>
 
-          <div class="mb-3">
-            <h3 class="h6">{% if ui_lang == 'en' %}Step-by-step procedure{% else %}خطوات التنفيذ{% endif %}</h3>
-            <ol class="mb-0">
-              {% for step in topic.steps %}
-              <li>{{ step[ui_lang] }}</li>
-              {% endfor %}
-            </ol>
-          </div>
+      <section id="safety" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Incidents and safety{% else %}الحوادث والسلامة{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Generated Incident Reports are analytical snapshots, not the live incident queue. Incident Analytics shows open/closed totals, severity, type, parent-notification state, and repeated-child patterns. Treat child-level information as confidential and export only for an approved purpose.{% else %}تقارير الحوادث المنشأة لقطات تحليلية وليست قائمة الحوادث الحية. تعرض تحليلات الحوادث الإجمالي والمفتوح والمغلق والخطورة والنوع وحالة إبلاغ ولي الأمر وأنماط تكرار الحالات لدى الأطفال. تعامل مع معلومات الطفل بسرية ولا تصدرها إلا لغرض معتمد.{% endif %}</p>
+      </section>
 
-          <div class="mb-3">
-            <h3 class="h6">{% if ui_lang == 'en' %}Expected result{% else %}النتيجة المتوقعة{% endif %}</h3>
-            <p class="mb-0">{{ topic.expected[ui_lang] }}</p>
-          </div>
+      <section id="analytics" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Analytics and reports{% else %}التحليلات والتقارير{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Before interpreting a rate, confirm its numerator, denominator, period, entity scope, unit, data coverage, and last update. Predictions, benchmarks, anomaly detection, and what-if results are analytical outputs rather than observed facts. Export only formats offered by the selected report; availability differs by report.{% else %}قبل تفسير أي نسبة تحقق من البسط والمقام والفترة ونطاق الجهة والوحدة وتغطية البيانات ووقت آخر تحديث. التنبؤات والمقارنات وكشف القيم غير الاعتيادية ونتائج السيناريوهات مخرجات تحليلية وليست حقائق مرصودة. صدّر فقط الصيغ التي يتيحها التقرير المحدد؛ إذ تختلف الصيغ حسب التقرير.{% endif %}</p>
+      </section>
 
-          <div class="mb-3">
-            <h3 class="h6">{% if ui_lang == 'en' %}Status definitions{% else %}تعريفات الحالة{% endif %}</h3>
-            <ul class="mb-0">
-              {% for status_item in topic.status_defs %}
-              <li>{{ status_item[ui_lang] }}</li>
-              {% endfor %}
-            </ul>
-          </div>
+      <section id="governance" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Governance and classification{% else %}الحوكمة والتصنيف{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Daily Report Governance explains reporting rates and reminder eligibility. Compliance Reminders is a sending-history page; the send action is available from Governance Reports. Classification and Benchmarks must show score composition and coverage, and entities with insufficient coverage must not receive a misleading rank.{% else %}تشرح حوكمة التقارير اليومية نسب التقارير وأهلية إرسال التذكير. صفحة تذكيرات الالتزام سجل للإرسال؛ ويتوفر إجراء الإرسال من تقارير الحوكمة. يجب أن يوضح التصنيف والمقارنات مكونات الدرجة والتغطية، وألا تحصل الجهات ذات التغطية غير الكافية على ترتيب مضلل.{% endif %}</p>
+      </section>
 
-          <div class="mb-3">
-            <h3 class="h6">{% if ui_lang == 'en' %}Common errors{% else %}الأخطاء الشائعة{% endif %}</h3>
-            <ul class="mb-0">
-              {% for error in topic.common_errors %}
-              <li>{{ error[ui_lang] }}</li>
-              {% endfor %}
-            </ul>
-          </div>
+      <section id="security" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Security and audit{% else %}الأمان والتدقيق{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Unsafe requests require a matching CSRF cookie and header. Audit export is available from the Audit Log page and respects the selected filters and period. Retention and authorized cleanup are operational controls, so do not describe logs as impossible to remove. Controlled User Access is only for an approved support case and records start/end activity and reason.{% else %}تتطلب الطلبات المعدلة للبيانات تطابق ملف تعريف ارتباط CSRF مع الترويسة. يتوفر تصدير التدقيق من صفحة سجل التدقيق ويحترم المرشحات والفترة المحددة. الاحتفاظ والتنظيف المصرح به ضوابط تشغيلية، لذلك لا توصف السجلات بأنها غير قابلة للإزالة. يستخدم الدخول المقيّد بصفة مستخدم لحالة دعم معتمدة فقط ويسجل البدء والانتهاء والسبب.{% endif %}</p>
+        <p class="mb-0"><a href="/admin/audit-logs">{% if ui_lang == 'en' %}Open Audit Log{% else %}فتح سجل التدقيق{% endif %}</a></p>
+      </section>
 
-          <div class="mb-3">
-            <h3 class="h6">{% if ui_lang == 'en' %}Privacy and security notes{% else %}ملاحظات الخصوصية والأمان{% endif %}</h3>
-            <p class="mb-0">{{ topic.privacy[ui_lang] }}</p>
-          </div>
-
-          <div class="d-flex flex-wrap gap-2 align-items-center help-topic-nav">
-            <span class="text-muted small">{% if ui_lang == 'en' %}Related links{% else %}روابط ذات صلة{% endif %}:</span>
-            {% for link in topic.related_links %}
-            <a href="{{ link.href }}" class="btn btn-sm btn-outline-secondary">{{ link.label[ui_lang] }}</a>
-            {% endfor %}
-          </div>
-
-          <nav class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 pt-3 border-top help-topic-nav">
-            <div>
-              {% if not loop.first %}
-              {% set prev = loop.previtem %}
-              <a href="#{{ prev.id }}" class="btn btn-link px-0" data-help-prev-link>{% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}: {{ prev.title[ui_lang] }}</a>
-              {% endif %}
-            </div>
-            <div class="d-flex align-items-center gap-3">
-              {% if not loop.last %}
-              {% set nxt = loop.nextitem %}
-              <a href="#{{ nxt.id }}" class="btn btn-link px-0" data-help-next-link>{% if ui_lang == 'en' %}Next{% else %}التالي{% endif %}: {{ nxt.title[ui_lang] }}</a>
-              {% endif %}
-              <a href="#helpTop" class="help-top-link small">{% if ui_lang == 'en' %}Back to top{% else %}العودة للأعلى{% endif %}</a>
-            </div>
-          </nav>
-        </article>
-        {% endfor %}
-      </div>
-
-      <section id="faq" class="help-topic card p-4 mb-4" data-help-topic data-search-text="{% for faq in help_faqs %}{{ faq.question[ui_lang] }} {{ faq.answer[ui_lang] }} {% endfor %}">
-        <h2 class="mb-3">{% if ui_lang == 'en' %}Frequently asked questions{% else %}الأسئلة الشائعة{% endif %}</h2>
+      {% set faqs = [
+        {"ar":"لماذا لا أرى صفحة إدارية؟","en":"Why can’t I see an Admin page?","aar":"تحقق من الجلسة والدور. يفرض الخادم الصلاحية حتى لو كان الرابط معروفًا.","aen":"Check your session and role. The server enforces access even when the URL is known."},
+        {"ar":"ماذا يعني المستخدمون الذين سجلوا الدخول اليوم؟","en":"What does Users Logged In Today mean?","aar":"عدد المستخدمين المميزين الذين لديهم تسجيل دخول ناجح منذ بداية اليوم بتوقيت عمّان.","aen":"Distinct users with a successful login since today began in Amman time."},
+        {"ar":"لماذا تظهر شرطة بدل صفر؟","en":"Why is a dash shown instead of zero?","aar":"الشرطة تعني أن القيمة غير متاحة؛ أما الصفر فهو نتيجة مقاسة.","aen":"A dash means unavailable; zero is a measured result."},
+        {"ar":"كيف أعيد تعيين كلمة مرور مستخدم؟","en":"How do I reset a user password?","aar":"افتح تعديل المستخدم وأدخل كلمة المرور الجديدة وكلمة مرورك الحالية كمسؤول.","aen":"Open Edit User and enter the new password plus your current administrator password."},
+        {"ar":"هل ترسل إعادة التعيين رابطًا بالبريد؟","en":"Does Admin reset email a link?","aar":"لا، مسار المسؤول الحالي إعادة تعيين مباشرة ومحمية.","aen":"No. The current Admin flow is a protected direct reset."},
+        {"ar":"كيف أحدد مستلمي الرسالة؟","en":"How do I target message recipients?","aar":"اختر طريقة الاستهداف ثم الموقع أو الحضانة والأدوار المناسبة وراجع المعاينة.","aen":"Choose a target mode, then location or kindergarten and applicable roles, and review the preview."},
+        {"ar":"هل عدد المعاينة نهائي؟","en":"Is the preview count final?","aar":"لا، يعيد الخادم حساب المستلمين عند الإرسال.","aen":"No. The server recalculates recipients when sending."},
+        {"ar":"أين أجد رسائل التواصل؟","en":"Where are contact messages?","aar":"من التواصل والبيانات ← رسائل التواصل.","aen":"Open Communication & Data → Contact Messages."},
+        {"ar":"هل يمكن الرد على رسالة التواصل؟","en":"Can I reply to a contact message?","aar":"الواجهة الحالية تتيح المراجعة ووضع علامة تمت المعالجة، ولا توفر نظام ردود.","aen":"The current page supports review and resolution state, not a reply workflow."},
+        {"ar":"أين تحليلات التقارير اليومية الحقيقية؟","en":"Where is the real Daily Reports Analytics page?","aar":"من التحليلات والتقارير ← تحليلات التقارير اليومية.","aen":"Open Analytics & Reporting → Daily Reports Analytics."},
+        {"ar":"هل تنظيم التقارير ينشئ جدولًا؟","en":"Does Daily Report Organization create schedules?","aar":"لا، الصفحة تبحث وتجمع وتفرز وتراجع التقارير.","aen":"No. It searches, groups, sorts, and reviews reports."},
+        {"ar":"ما الفرق بين الحادث وتقرير الحادث؟","en":"What is the difference between an incident and an incident report?","aar":"الحادث سجل تشغيلي؛ أما التقرير فهو لقطة تحليلية منشأة لنطاق وفترة.","aen":"An incident is an operational record; a report is a generated analytical snapshot."},
+        {"ar":"كيف أفسر النسبة؟","en":"How should I interpret a rate?","aar":"راجع البسط والمقام والفترة والنطاق والوحدة والتغطية.","aen":"Review the numerator, denominator, period, scope, unit, and coverage."},
+        {"ar":"ماذا تعني بيانات غير كافية؟","en":"What does Insufficient data mean?","aar":"التغطية لا تكفي لنتيجة أو ترتيب موثوق.","aen":"Coverage is too low for a reliable result or ranking."},
+        {"ar":"أين أرسل تذكير الحوكمة؟","en":"Where do I send a governance reminder?","aar":"من صفحة حوكمة التقارير اليومية؛ صفحة التذكيرات تعرض سجل الإرسال.","aen":"Use Daily Report Governance; Compliance Reminders displays sending history."},
+        {"ar":"أين أصدر سجل التدقيق؟","en":"Where do I export audit logs?","aar":"من صفحة سجل التدقيق بعد اختيار المرشحات والفترة.","aen":"From Audit Log after selecting filters and period."},
+        {"ar":"لماذا حصلت على 403؟","en":"Why did I receive 403?","aar":"الجلسة صحيحة لكن الدور أو النطاق لا يسمح بالإجراء، أو فشل تحقق CSRF للطلب المعدّل.","aen":"You are authenticated, but role/scope disallows the action, or CSRF validation failed for a write."},
+        {"ar":"لماذا حصلت على 422؟","en":"Why did I receive 422?","aar":"تحقق من الحقول المطلوبة وصيغة التاريخ والمعرف والقيم المسموحة.","aen":"Check required fields and the date, identifier, and allowed-value formats."},
+        {"ar":"ماذا أفعل عند تعذر التحميل؟","en":"What should I do when data cannot load?","aar":"أعد المحاولة وسجل الرقم المرجعي ووقت المشكلة والصفحة والفلاتر المستخدمة.","aen":"Retry and record the reference ID, time, page, and filters used."},
+        {"ar":"كيف أطلب الدعم؟","en":"How do I request support?","aar":"استخدم قناة الدعم المعتمدة لدى مؤسستك وأرفق الرقم المرجعي دون مشاركة كلمة المرور أو الرموز.","aen":"Use your organization’s approved support channel and include the reference ID without sharing passwords or tokens."}
+      ] %}
+      <section id="faq" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Frequently asked questions{% else %}الأسئلة الشائعة{% endif %}</h2>
         <div class="accordion" id="helpFaq">
-          {% for faq in help_faqs %}
-          <div class="accordion-item help-faq-item" data-help-faq-item data-search-text="{{ faq.question[ui_lang] }} {{ faq.answer[ui_lang] }}">
-            <h3 class="accordion-header" id="faqHeading{{ loop.index }}">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq{{ loop.index }}" aria-expanded="false" aria-controls="faq{{ loop.index }}">{{ faq.question[ui_lang] }}</button>
-            </h3>
-            <div id="faq{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="faqHeading{{ loop.index }}" data-bs-parent="#helpFaq">
-              <div class="accordion-body">{{ faq.answer[ui_lang] }}</div>
-            </div>
+          {% for item in faqs %}
+          <div class="accordion-item faq-item">
+            <h3 class="accordion-header" id="faqHeading{{ loop.index }}"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq{{ loop.index }}" aria-expanded="false" aria-controls="faq{{ loop.index }}">{% if ui_lang == 'en' %}{{ item.en }}{% else %}{{ item.ar }}{% endif %}</button></h3>
+            <div id="faq{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="faqHeading{{ loop.index }}" data-bs-parent="#helpFaq"><div class="accordion-body">{% if ui_lang == 'en' %}{{ item.aen }}{% else %}{{ item.aar }}{% endif %}</div></div>
           </div>
           {% endfor %}
         </div>
       </section>
 
-      <section id="glossary" class="help-topic card p-4 mb-4" data-help-topic data-search-text="{% for item in help_glossary %}{{ item.term[ui_lang] }} {{ item.meaning[ui_lang] }} {% endfor %}">
-        <h2 class="mb-3">{% if ui_lang == 'en' %}Glossary{% else %}دليل المصطلحات{% endif %}</h2>
-        <div class="table-responsive">
-          <table class="table table-bordered align-middle glossary-table mb-0">
-            <caption class="visually-hidden">{% if ui_lang == 'en' %}Administrative metric glossary{% else %}دليل مصطلحات المؤشرات الإدارية{% endif %}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{% if ui_lang == 'en' %}Term{% else %}المصطلح{% endif %}</th>
-                <th scope="col">{% if ui_lang == 'en' %}Meaning{% else %}المعنى{% endif %}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in help_glossary %}
-              <tr data-help-row data-search-text="{{ item.term[ui_lang] }} {{ item.meaning[ui_lang] }}">
-                <td>{{ item.term[ui_lang] }}</td>
-                <td>{{ item.meaning[ui_lang] }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+      <section id="glossary" class="help-section card p-4 mb-4">
+        <h2>{% if ui_lang == 'en' %}Glossary{% else %}دليل المصطلحات{% endif %}</h2>
+        <div class="table-responsive"><table class="table table-bordered glossary-table mb-0">
+          <caption class="visually-hidden">{% if ui_lang == 'en' %}Administrative metric glossary{% else %}دليل مصطلحات المؤشرات الإدارية{% endif %}</caption>
+          <thead><tr><th scope="col">{% if ui_lang == 'en' %}Term{% else %}المصطلح{% endif %}</th><th scope="col">{% if ui_lang == 'en' %}Meaning{% else %}المعنى{% endif %}</th></tr></thead>
+          <tbody>
+            <tr><td>{% if ui_lang == 'en' %}Scope{% else %}النطاق{% endif %}</td><td>{% if ui_lang == 'en' %}The organizations, locations, or records included in a result.{% else %}الجهات أو المواقع أو السجلات المشمولة في النتيجة.{% endif %}</td></tr>
+            <tr><td>{% if ui_lang == 'en' %}Coverage{% else %}التغطية{% endif %}</td><td>{% if ui_lang == 'en' %}The share of expected data available for calculation.{% else %}نسبة البيانات المتوقعة المتاحة للحساب.{% endif %}</td></tr>
+            <tr><td>{% if ui_lang == 'en' %}Freshness{% else %}حداثة البيانات{% endif %}</td><td>{% if ui_lang == 'en' %}When source data was last updated successfully.{% else %}وقت آخر تحديث ناجح للبيانات المصدرية.{% endif %}</td></tr>
+            <tr><td>{% if ui_lang == 'en' %}Reference ID{% else %}الرقم المرجعي{% endif %}</td><td>{% if ui_lang == 'en' %}An identifier used to correlate a browser request with server logs.{% else %}معرف يستخدم لربط طلب المتصفح بسجلات الخادم.{% endif %}</td></tr>
+          </tbody>
+        </table></div>
       </section>
 
-      <section id="support" class="help-topic card p-4 mb-0" data-help-topic data-search-text="{% if support_contact_email %}{{ support_contact_email }} {% endif %}{% if support_contact_phone %}{{ support_contact_phone }} {% endif %}{% if ui_lang == 'en' %}report inaccurate content support and escalation approved channel working hours page time action selected filters reference id passwords cookies csrf reset tokens child data{% else %}الإبلاغ عن محتوى غير دقيق الدعم والتصعيد قناة معتمدة ساعات العمل الصفحة الوقت الإجراء المرشحات المحددة الرقم المرجعي كلمات المرور ملفات تعريف الارتباط CSRF رموز إعادة التعيين بيانات الطفل{% endif %}">
-        <h2 class="mb-3">{% if ui_lang == 'en' %}Support and escalation{% else %}الدعم والتصعيد{% endif %}</h2>
-        <p>{% if ui_lang == 'en' %}Use the approved support channel in your organization. Include the page, time, action, selected filters, and reference ID. Never send passwords, session cookies, CSRF tokens, reset tokens, or private child data through an unapproved channel.{% else %}استخدم قناة الدعم المعتمدة في مؤسستك. أرفق الصفحة والوقت والإجراء والمرشحات المحددة والرقم المرجعي. لا ترسل كلمات المرور أو ملفات تعريف الارتباط للجلسة أو رموز CSRF أو رموز إعادة التعيين أو بيانات الطفل الخاصة عبر قناة غير معتمدة.{% endif %}</p>
-
-        <div class="row g-3 mb-3">
-          {% if support_contact_email %}
-          <div class="col-md-6">
-            <div class="meta-card">
-              <div class="small text-muted">{% if ui_lang == 'en' %}Support email{% else %}بريد الدعم{% endif %}</div>
-              <a href="mailto:{{ support_contact_email }}">{{ support_contact_email }}</a>
-            </div>
-          </div>
-          {% endif %}
-          {% if support_contact_phone %}
-          <div class="col-md-6">
-            <div class="meta-card">
-              <div class="small text-muted">{% if ui_lang == 'en' %}Support phone{% else %}هاتف الدعم{% endif %}</div>
-              <a href="tel:{{ support_contact_phone }}" dir="ltr">{{ support_contact_phone }}</a>
-            </div>
-          </div>
-          {% endif %}
-        </div>
-
-        <div class="alert alert-light border mb-3">
-          <strong>{% if ui_lang == 'en' %}What to include{% else %}ما الذي يجب إرفاقه{% endif %}:</strong>
-          {% if ui_lang == 'en' %}
-          page, time, action, selected filters, reference ID, and a brief description of the problem.
-          {% else %}
-          الصفحة والوقت والإجراء والمرشحات المحددة والرقم المرجعي ووصفًا موجزًا للمشكلة.
-          {% endif %}
-        </div>
-
-        <p class="mb-0 small text-muted">{% if ui_lang == 'en' %}If you need a security escalation, use the organization's approved emergency path. This page does not publish any private support credential or secret token.{% else %}إذا احتجت تصعيدًا أمنيًا، فاستخدم مسار الطوارئ المعتمد في مؤسستك. هذه الصفحة لا تنشر أي بيانات اعتماد دعم خاصة أو رمزًا سريًا.{% endif %}</p>
+      <section id="support" class="help-section card p-4 mb-0">
+        <h2>{% if ui_lang == 'en' %}Support{% else %}الدعم{% endif %}</h2>
+        <p>{% if ui_lang == 'en' %}Use your organization’s approved support channel. Include the page, time, action, selected filters, and reference ID. Never send passwords, session cookies, CSRF tokens, reset tokens, or private child data through an unapproved channel.{% else %}استخدم قناة الدعم المعتمدة لدى مؤسستك. أرفق الصفحة والوقت والإجراء والمرشحات المحددة والرقم المرجعي. لا ترسل كلمات المرور أو ملفات تعريف ارتباط الجلسة أو رموز CSRF أو رموز إعادة التعيين أو بيانات الأطفال الخاصة عبر قناة غير معتمدة.{% endif %}</p>
+        <p class="mb-0"><a href="/admin/observability">{% if ui_lang == 'en' %}Check System Health{% else %}فحص حالة النظام{% endif %}</a> · <a href="/admin/audit-logs">{% if ui_lang == 'en' %}Open Audit Log{% else %}فتح سجل التدقيق{% endif %}</a></p>
       </section>
-    </div>
-  </div>
-
-  <div id="helpNoResults" class="alert alert-warning mt-4" hidden role="status">
-    {% if ui_lang == 'en' %}No topics match your search. Try a broader term or clear the search box.{% else %}لا توجد موضوعات مطابقة لبحثك. جرّب مصطلحًا أوسع أو امسح مربع البحث.{% endif %}
+    </main>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script defer src="/static/js/admin_help_center.js?v=1.0"></script>
+<script>
+(() => {
+  const input = document.getElementById('helpSearch');
+  if (!input) return;
+  input.addEventListener('input', () => {
+    const term = input.value.trim().toLocaleLowerCase(document.documentElement.lang || 'ar');
+    document.querySelectorAll('#helpTopics > .help-section').forEach(section => {
+      section.hidden = Boolean(term) && !section.textContent.toLocaleLowerCase(document.documentElement.lang || 'ar').includes(term);
+    });
+  });
+})();
+</script>
 {% endblock %}

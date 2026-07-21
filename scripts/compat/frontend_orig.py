@@ -18,13 +18,6 @@ from config import settings
 from validators import validate_jordan_governorate
 from services.jordan_locations import get_all_governorates
 from admin_security import can_admin_access_user
-from help_center_manifest import (
-    HELP_CENTER_COVERAGE,
-    HELP_CENTER_FAQS,
-    HELP_CENTER_GLOSSARY,
-    HELP_CENTER_META,
-    HELP_CENTER_TOPICS,
-)
 
 SUPPORTED_UI_LANGUAGES = {"ar", "en"}
 
@@ -103,11 +96,6 @@ def _jinja_gettext(ctx, message, **kwargs):
 templates.env.globals['_'] = _jinja_gettext
 # Ensure auto_reload for development
 templates.env.auto_reload = True
-templates.env.globals['help_meta'] = HELP_CENTER_META
-templates.env.globals['help_coverage'] = HELP_CENTER_COVERAGE
-templates.env.globals['help_topics'] = HELP_CENTER_TOPICS
-templates.env.globals['help_glossary'] = HELP_CENTER_GLOSSARY
-templates.env.globals['help_faqs'] = HELP_CENTER_FAQS
 
 # Custom Jinja2 filters
 def status_color(status: str) -> str:
