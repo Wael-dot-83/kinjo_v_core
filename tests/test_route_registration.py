@@ -33,3 +33,12 @@ def test_no_duplicate_route_method_registrations():
         if len(endpoints) > 1
     }
     assert duplicates == {}
+
+
+def test_openapi_schema_generation_succeeds():
+    """Every documented route must use OpenAPI-compatible parameter types."""
+    app.openapi_schema = None
+    schema = app.openapi()
+
+    assert schema["openapi"]
+    assert "/api/analytics/predict/{metric}" in schema["paths"]
