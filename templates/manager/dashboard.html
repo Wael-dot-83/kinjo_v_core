@@ -201,18 +201,18 @@
     <h2 id="alertsHeading" class="h3 fw-bold mb-2">
       {% if ui_lang == 'en' %}Operational alerts{% else %}تنبيهات تشغيلية{% endif %}
     </h2>
-    <div id="alertNoSupervisor" class="alert alert-warning" hidden>
-      <div>
-        <h3 class="alert-heading">{% if ui_lang == 'en' %}Classes without a supervisor{% else %}شعب صفية بلا مشرف{% endif %}</h3>
-        <p class="mb-0" id="alertNoSupervisorList"></p>
+    <a href="/classes" id="alertNoSupervisor" class="text-decoration-none d-block mb-3" hidden>
+      <div class="alert alert-warning mb-0">
+        <h3 class="alert-heading h5">{% if ui_lang == 'en' %}Classes without a supervisor{% else %}شعب صفية بلا مشرف{% endif %}</h3>
+        <p class="mb-0 text-dark" id="alertNoSupervisorList"></p>
       </div>
-    </div>
-    <div id="alertNearCapacity" class="alert alert-warning" hidden>
-      <div>
-        <h3 class="alert-heading">{% if ui_lang == 'en' %}Classes at or near capacity{% else %}شعب صفية ممتلئة أو شبه ممتلئة{% endif %}</h3>
-        <p class="mb-0" id="alertNearCapacityList"></p>
+    </a>
+    <a href="/classes" id="alertNearCapacity" class="text-decoration-none d-block mb-3" hidden>
+      <div class="alert alert-warning mb-0">
+        <h3 class="alert-heading h5">{% if ui_lang == 'en' %}Classes at or near capacity{% else %}شعب صفية ممتلئة أو شبه ممتلئة{% endif %}</h3>
+        <p class="mb-0 text-dark" id="alertNearCapacityList"></p>
       </div>
-    </div>
+    </a>
     <!-- Alerts the API reports that have no dedicated block above: licence expiry,
          pending applications, pending reports. Rendered from the `alerts` payload so
          a new server-side alert type shows up here instead of vanishing. -->
@@ -353,8 +353,19 @@ async function loadDashboard() {
                 // English-only compatibility alias, so it is the last resort.
                 const text = isEn ? (a.message_en || a.message) : (a.message_ar || a.message);
                 const cls = PRIORITY_CLASS[a.priority] || 'alert-info';
+                
+                let linkUrl = '';
+                if (a.type === 'pending_applications') linkUrl = '/enrollments';
+                else if (a.type === 'pending_reports') linkUrl = '/daily-reports';
+                
+                if (linkUrl) {
+                    return `<a href="${linkUrl}" class="text-decoration-none d-block mb-3">
+                              <div class="alert ${cls} mb-0">${esc(text)}</div>
+                            </a>`;
+                }
+                
                 const div = document.createElement('div');
-                div.className = `alert ${cls}`;
+                div.className = `alert ${cls} mb-3`;
                 div.textContent = text || '';
                 return div.outerHTML;
             }).join('');
