@@ -39,6 +39,45 @@
 }
 
 /* Card Components (for KPIs and Panels) */
+.icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--kinjo-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.icon-circle-md {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--kinjo-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-circle-lg {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--kinjo-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rank-circle {
+  background-color: var(--kinjo-color-bg-surface);
+  border: 1px solid var(--kinjo-color-border);
+  border-radius: var(--kinjo-radius-lg);
+  box-shadow: var(--kinjo-shadow-sm);
+  padding: var(--kinjo-spacing-5);
+}
+
 .k-card {
   background-color: var(--kinjo-color-bg-surface);
   border: 1px solid var(--kinjo-color-border);

@@ -20,10 +20,10 @@
 
     {% if current_user.role.value in ['ADMIN', 'MANAGER'] and enrollment.status in ['submitted', 'pending_review'] %}
     <div class="page-header-actions">
-        <button class="btn btn-success" onclick="updateStatus('accepted')">
+        <button class="btn btn-success" id="btnAcceptEnrollment">
             <i class="bi bi-check-circle me-2"></i>{% if ui_lang == 'en' %}Accept{% else %}قبول{% endif %}
         </button>
-        <button class="btn btn-outline-danger" onclick="updateStatus('rejected')">
+        <button class="btn btn-outline-danger" id="btnRejectEnrollment">
             <i class="bi bi-x-circle me-2"></i>{% if ui_lang == 'en' %}Reject{% else %}رفض{% endif %}
         </button>
     </div>
@@ -268,7 +268,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button" class="btn btn-success" onclick="confirmAccept()">
+                <button type="button" class="btn btn-success" id="btnConfirmAccept">
                     {% if ui_lang == 'en' %}Confirm Acceptance & Register{% else %}تأكيد القبول والتسجيل{% endif %}
                 </button>
             </div>
@@ -292,7 +292,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button" class="btn btn-danger" onclick="confirmReject()">{% if ui_lang == 'en' %}Confirm Rejection{% else %}تأكيد الرفض{% endif %}</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmReject">{% if ui_lang == 'en' %}Confirm Rejection{% else %}تأكيد الرفض{% endif %}</button>
             </div>
         </div>
     </div>
@@ -319,18 +319,18 @@
         return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
-    // Helper to get headers with token
-    function getHeaders() {
-        // Use centralized auth system
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        const btnAccept = document.getElementById('btnAcceptEnrollment');
+        const btnReject = document.getElementById('btnRejectEnrollment');
+        const btnConfirmAcceptBtn = document.getElementById('btnConfirmAccept');
+        const btnConfirmRejectBtn = document.getElementById('btnConfirmReject');
 
-        const token = AuthService.getToken();
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        return headers;
-    }
+        if (btnAccept) btnAccept.addEventListener('click', () => updateStatus('accepted'));
+        if (btnReject) btnReject.addEventListener('click', () => updateStatus('rejected'));
+        if (btnConfirmAcceptBtn) btnConfirmAcceptBtn.addEventListener('click', confirmAccept);
+        if (btnConfirmRejectBtn) btnConfirmRejectBtn.addEventListener('click', confirmReject);
+    });
 
     function updateStatus(status) {
         if (status === 'rejected') {
@@ -349,10 +349,8 @@
         // Load classes
         try {
             select.innerHTML = `<option value="" disabled selected>${enrollmentViewText('common.loading', 'جارٍ تحميل البيانات، يرجى الانتظار.', 'Loading...')}</option>`;
-            const res = await fetch(`/api/classes?kindergarten_id=${kindergartenId}&is_active=true`, {
-                headers: getHeaders()
-            });
-            const data = await res.json();
+            
+            const data = await window.api.get(`/api/classes?kindergarten_id=${kindergartenId}&is_active=true`);
             const classes = data.classes || [];
 
             if (classes.length === 0) {
@@ -377,26 +375,16 @@
         const classId = classSelect.value;
 
         if (!classId) {
-            alert(enrollmentViewText('classes.select_required', 'يرجى اختيار شعبة صفية', 'Please select a class'));
+            showToast(enrollmentViewText('classes.select_required', 'يرجى اختيار شعبة صفية', 'Please select a class'), 'warning');
             return; // Enforce class assignment
         }
 
         try {
             // 1. Accept Enrollment
-            const reviewRes = await fetch(`/api/enrollment/${enrollmentId}/review?decision=accept`, {
-                method: 'POST',
-                headers: getHeaders()
-            });
-
-            if (!reviewRes.ok) throw new Error(enrollmentViewText('enrollment.accept_failed', 'فشل قبول الطلب', 'Failed to accept enrollment'));
+            await window.api.post(`/api/enrollment/${enrollmentId}/review?decision=accept`);
 
             // 2. Assign Class
-            const assignRes = await fetch(`/api/enrollments/${enrollmentId}/assign-class?class_id=${classId}`, {
-                method: 'POST',
-                headers: getHeaders()
-            });
-
-            if (!assignRes.ok) throw new Error(enrollmentViewText('enrollment.accepted_assign_failed', 'تم قبول الطلب ولكن فشل تعيين الشعبة', 'Enrollment accepted but class assignment failed'));
+            await window.api.post(`/api/enrollments/${enrollmentId}/assign-class?class_id=${classId}`);
 
             showToast(enrollmentViewText('enrollment.accept_assign_success', 'تم تسجيل الطالب وتعيين الشعبة بنجاح', 'Child registered and class assigned successfully'), 'success');
             setTimeout(() => location.reload(), 1000);
@@ -406,26 +394,20 @@
         }
     }
 
-    function confirmReject() {
+    async function confirmReject() {
         const reason = document.getElementById('rejectReason').value;
         if (!reason.trim()) {
-            alert(enrollmentViewText('enrollment.reject_reason_required', 'يرجى ذكر سبب الرفض', 'Please provide a rejection reason'));
+            showToast(enrollmentViewText('enrollment.reject_reason_required', 'يرجى ذكر سبب الرفض', 'Please provide a rejection reason'), 'warning');
             return;
         }
 
-        fetch(`/api/enrollment/${enrollmentId}/review?decision=reject&reason=${encodeURIComponent(reason)}`, {
-            method: 'POST',
-            headers: getHeaders()
-        })
-            .then(res => {
-                if (res.ok) {
-                    showToast(enrollmentViewText('enrollment.rejected', 'تم رفض الطلب', 'Enrollment request rejected'), 'info');
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showToast(enrollmentViewText('common.operation_failed', 'فشل العملية', 'Operation failed'), 'error');
-                }
-            })
-            .catch(e => showToast(enrollmentViewText('common.connection_error', 'خطأ في الاتصال', 'Connection error'), 'error'));
+        try {
+            await window.api.post(`/api/enrollment/${enrollmentId}/review?decision=reject&reason=${encodeURIComponent(reason)}`);
+            showToast(enrollmentViewText('enrollment.rejected', 'تم رفض الطلب', 'Enrollment request rejected'), 'info');
+            setTimeout(() => location.reload(), 1000);
+        } catch (error) {
+            showToast(error.message || enrollmentViewText('common.operation_failed', 'فشل العملية', 'Operation failed'), 'error');
+        }
     }
 </script>
 {% endblock %}
