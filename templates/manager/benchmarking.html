@@ -1,24 +1,18 @@
 {% extends 'manager_base.html' %}
+{% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="mb-4 d-flex flex-justify align-items-start flex-wrap g-2">
-    <div class="mb-3">
-        <h1 class="fs-1 fw-bold mt-0 mb-1">
-            {% if ui_lang == 'en' %}Manager Benchmarking{% else %}مقارنة معيارية لمدير الحضانة{% endif %}
-        </h1>
-        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}" class="admin-breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard" class="">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %}</li>
-            </ol>
-        </nav>
-        <p class="text-secondary mt-2">
-            {% if ui_lang == 'en' %}Shows percentile and band within a similar peer group with anonymized names.{% else %}تظهر النسبة المئوية والمجال ضمن مجموعة ندية مماثلة مع إخفاء أسماء الجهات الأخرى.{% endif %}
-        </p>
-    </div>
-</div>
+{{ page_header(
+title='Manager Benchmarking' if ui_lang == 'en' else 'مقارنة معيارية لمدير الحضانة',
+icon='bi-bar-chart-steps',
+breadcrumbs=[
+{"label": 'Dashboard' if ui_lang == 'en' else 'لوحة التحكم', "url": "/dashboard"},
+{"label": 'Benchmarking' if ui_lang == 'en' else 'المقارنة المعيارية'}
+],
+subtitle='Shows percentile and band within a similar peer group with anonymized names.' if ui_lang == 'en' else 'تظهر النسبة المئوية والمجال ضمن مجموعة ندية مماثلة مع إخفاء أسماء الجهات الأخرى.'
+) }}
 {% endblock %}
 
 {% block content %}

@@ -1,25 +1,20 @@
-{% extends 'base.html' %}
+{% extends 'manager_base.html' %}
+{% from 'components/page-header.html' import page_header %}
 {% block title %}{{ _('تفاصيل الحادثة') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow"><i class="bi bi-shield-exclamation"></i> {{ _('السلامة') }}</div>
-        <h1 class="page-header-title">{{ _('تفاصيل الحادثة') }} #{{ incident.id }}</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0 breadcrumb-sm">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
-                <li class="breadcrumb-item"><a href="/safety" class="text-decoration-none">{{ _('السلامة') }}</a></li>
-                <li class="breadcrumb-item active">{{ _('الحادثة') }} #{{ incident.id }}</li>
-            </ol>
-        </nav>
-    </div>
-    <div class="page-header-actions">
-        <a href="/safety" class="btn btn-ghost btn-sm">
-            <i class="bi bi-arrow-right me-1"></i>{{ _('العودة') }}
-        </a>
-    </div>
-</div>
+{{ page_header(
+title=_('تفاصيل الحادثة') ~ ' #' ~ incident.id,
+icon="bi-shield-exclamation",
+breadcrumbs=[
+{"label": _('لوحة التحكم'), "url": "/dashboard"},
+{"label": _('السلامة'), "url": "/safety"},
+{"label": _('الحادثة') ~ ' #' ~ incident.id, "url": None}
+],
+actions=[
+{"label": _('العودة'), "url": "/safety", "icon": "bi-arrow-right", "class": "btn-ghost btn-sm"}
+]
+) }}
 {% endblock %}
 
 {% block content %}

@@ -130,6 +130,14 @@ const h = () => {
 };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+const IS_EN = document.documentElement.lang === 'en';
+const TS = (ar, en) => IS_EN ? en : ar;
+const notify = (ar, en, type) => {
+    const msg = TS(ar, en);
+    if (typeof showToast === 'function') showToast(msg, type || 'info');
+    else alert(msg);
+};
+
 let _allChildren = [];
 let _classes = [];
 
@@ -159,7 +167,7 @@ async function loadChildren() {
         document.getElementById('totalBadge').textContent = data.total || 0;
         renderTable(_allChildren);
     } catch {
-        alert('تعذّر تحميل الأطفال');
+        notify('تعذّر تحميل الأطفال', 'Unable to load children', 'error');
     }
 }
 
@@ -228,7 +236,7 @@ async function confirmMoveChild() {
     const toClassId   = parseInt(document.getElementById('moveToClassSelect').value);
     
     if (!toClassId) {
-        alert('يجب اختيار شعبة');
+        notify('يجب اختيار شعبة', 'Please select a class', 'warning');
         return;
     }
     
@@ -240,14 +248,14 @@ async function confirmMoveChild() {
             body: JSON.stringify({ child_id: childId, from_class_id: fromClassId, to_class_id: toClassId }),
         });
         if (res.ok) {
-            alert('تم نقل الطفل بنجاح');
+            notify('تم نقل الطفل بنجاح', 'Child moved successfully', 'success');
             document.querySelector('#moveChildModal .usa-modal__close').click();
             loadChildren();
         } else {
             const err = await res.json().catch(() => ({}));
-            alert(err.detail || 'فشل النقل');
+            notify(err.detail || 'فشل النقل', err.detail || 'Move failed', 'error');
         }
-    } catch { alert('خطأ في الشبكة'); }
+    } catch { notify('خطأ في الشبكة', 'Network error', 'error'); }
     finally { btn.disabled = false; }
 }
 
@@ -291,7 +299,7 @@ function wireEvents() {
     if (moveForm) moveForm.addEventListener('submit', e => { e.preventDefault(); confirmMoveChild(); });
     document.getElementById('editChildForm')?.addEventListener('submit', async e => {
         e.preventDefault();
-        try { await saveChild(); } catch (err) { alert(err.message); }
+        try { await saveChild(); } catch (err) { notify(err.message, err.message, 'error'); }
     });
 
     // Delegated: the move button is re-rendered with each table refresh.

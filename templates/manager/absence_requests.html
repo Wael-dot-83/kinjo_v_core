@@ -23,20 +23,12 @@
 
 <!-- Status Filter Tabs -->
 <div class="mb-4">
-    <ul class="btn btn-group" id="statusTabs">
-        <li class="btn">
-            <button class="btn btn-primary tab-btn border-radius-left-lg" data-status="SUBMITTED">{% if ui_lang == 'en' %}Awaiting Manager Review{% else %}بانتظار مراجعة المدير{% endif %}</button>
-        </li>
-        <li class="btn">
-            <button class="btn btn-outline-primary tab-btn" data-status="APPROVED">{% if ui_lang == 'en' %}Approved{% else %}معتمد{% endif %}</button>
-        </li>
-        <li class="btn">
-            <button class="btn btn-outline-primary tab-btn" data-status="REJECTED">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</button>
-        </li>
-        <li class="btn">
-            <button class="btn btn-outline-primary tab-btn border-radius-right-lg" data-status="all">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</button>
-        </li>
-    </ul>
+    <div class="btn-group w-100 w-md-auto shadow-sm" role="group" aria-label="{% if ui_lang == 'en' %}Filter by status{% else %}تصفية حسب الحالة{% endif %}">
+        <button type="button" class="btn btn-primary tab-btn" data-status="SUBMITTED">{% if ui_lang == 'en' %}Awaiting Manager Review{% else %}بانتظار مراجعة المدير{% endif %}</button>
+        <button type="button" class="btn btn-outline-primary tab-btn" data-status="APPROVED">{% if ui_lang == 'en' %}Approved{% else %}معتمد{% endif %}</button>
+        <button type="button" class="btn btn-outline-primary tab-btn" data-status="REJECTED">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</button>
+        <button type="button" class="btn btn-outline-primary tab-btn" data-status="all">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</button>
+    </div>
 </div>
 
 <!-- Requests Table -->
@@ -157,11 +149,13 @@
         }
 
         function notifySuccess(message) {
-            alert(message);
+            if (typeof showToast === 'function') showToast(message, 'success');
+            else alert(message);
         }
 
         function notifyError(message) {
-            alert(message);
+            if (typeof showToast === 'function') showToast(message, 'error');
+            else alert(message);
         }
 
         function statusBadge(s) {
@@ -289,9 +283,11 @@
             tab.addEventListener('click', function (e) {
                 e.preventDefault();
                 document.querySelectorAll('.tab-btn').forEach(t => {
-                    t.classList.add('btn btn-outline-primary');
+                    t.classList.remove('btn-primary');
+                    t.classList.add('btn-outline-primary');
                 });
-                this.classList.remove('btn btn-outline-primary');
+                this.classList.remove('btn-outline-primary');
+                this.classList.add('btn-primary');
                 currentFilter = this.dataset.status;
                 loadRequests();
             });
