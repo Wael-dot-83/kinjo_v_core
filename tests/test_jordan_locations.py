@@ -46,12 +46,12 @@ class TestCanonicalData:
     def test_lookup_by_key(self):
         g = get_governorate_by_key("amman")
         assert g is not None
-        assert g["name_ar"] == "عمان"
+        assert g["name_ar"] == "العاصمة"
 
     def test_lookup_by_key_case_insensitive(self):
         g = get_governorate_by_key("AMMAN")
         assert g is not None
-        assert g["name_ar"] == "عمان"
+        assert g["name_ar"] == "العاصمة"
 
     def test_lookup_by_name_ar(self):
         g = get_governorate_by_name("عمان")
@@ -76,16 +76,18 @@ class TestCanonicalData:
 
 class TestNormalization:
     def test_normalize_governorate_english(self):
-        assert normalize_governorate("Amman") == "عمان"
+        assert normalize_governorate("Amman") == "العاصمة"
 
     def test_normalize_governorate_alias(self):
-        assert normalize_governorate("العاصمة") == "عمان"
+        assert normalize_governorate("العاصمة") == "العاصمة"
 
-    def test_normalize_governorate_already_canonical(self):
-        assert normalize_governorate("عمان") == "عمان"
+    def test_normalize_governorate_legacy_city_name_form(self):
+        # "عمان" was historically stored in the governorate column; it must
+        # normalize to the canonical governorate name, not stay as the city name.
+        assert normalize_governorate("عمان") == "العاصمة"
 
     def test_normalize_governorate_case_insensitive(self):
-        assert normalize_governorate("AMMAN") == "عمان"
+        assert normalize_governorate("AMMAN") == "العاصمة"
 
     def test_normalize_governorate_none(self):
         assert normalize_governorate(None) is None
@@ -120,7 +122,7 @@ class TestValidation:
         assert is_valid_area_for_governorate("amman", "NotAnArea") is False
 
     def test_validate_governorate_success(self):
-        assert validate_governorate("Amman") == "عمان"
+        assert validate_governorate("Amman") == "العاصمة"
 
     def test_validate_governorate_failure(self):
         with pytest.raises(ValueError):
@@ -141,7 +143,7 @@ class TestValidation:
 
     def test_validate_governorate_area_pair_success(self):
         gov, area = validate_governorate_area_pair("Amman", "Jubeiha")
-        assert gov == "عمان"
+        assert gov == "العاصمة"
         assert area == "الجبيهة"
 
     def test_validate_governorate_area_pair_invalid_area(self):
@@ -189,7 +191,7 @@ class TestApiEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["valid"] is True
-        assert data["governorate"] == "عمان"
+        assert data["governorate"] == "العاصمة"
 
     def test_jordan_validate_invalid_governorate(self):
         response = client.get("/api/locations/jordan/validate?governorate=NotAGov")
@@ -203,7 +205,7 @@ class TestApiEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["valid"] is True
-        assert data["governorate"] == "عمان"
+        assert data["governorate"] == "العاصمة"
         assert data["area"] == "الجبيهة"
 
     def test_jordan_validate_pair_invalid(self):

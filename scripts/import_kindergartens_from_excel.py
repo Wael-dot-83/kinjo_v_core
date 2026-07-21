@@ -55,8 +55,12 @@ MISSING_DB_TEXT = "غير محدد"
 MISSING_PHONE_TEXT = "غير متوفر"
 
 GOVERNORATE_CANONICAL = {
-    "amman": "عمان",
-    "عمان": "عمان",
+    # The capital's canonical governorate name is "العاصمة"; "عمان" is the city and
+    # a legacy alias. Importing must store the governorate name, not the city name.
+    "amman": "العاصمة",
+    "عمان": "العاصمة",
+    "العاصمة": "العاصمة",
+    "عاصمة": "العاصمة",
     "irbid": "إربد",
     "إربد": "إربد",
     "اربد": "إربد",
@@ -94,7 +98,8 @@ GOVERNORATE_CANONICAL = {
 }
 
 LANDLINE_AREA_CODE_BY_GOV = {
-    "عمان": "06",
+    "العاصمة": "06",
+    "عمان": "06",  # legacy city-name form for the capital
     "الزرقاء": "05",
     "البلقاء": "05",
     "مادبا": "05",

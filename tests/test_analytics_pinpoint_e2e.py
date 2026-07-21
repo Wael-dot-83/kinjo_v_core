@@ -208,10 +208,12 @@ class TestAnalyticsAPIContract:
         second_ids = [row["id"] for row in second_resp.json()["governorates"]]
         assert second_ids == ids
 
-        amman = next((row for row in data["governorates"] if row["id"] == "عمان"), None)
+        amman = next((row for row in data["governorates"] if row["id"] == "العاصمة"), None)
         assert amman is not None
-        assert amman["name_ar"] == "عمان"
+        assert amman["name_ar"] == "العاصمة"
         assert amman["name_en"] == "Amman"
+        # The city "عمان" must never be offered as a governorate option.
+        assert not any(row["id"] == "عمان" for row in data["governorates"])
 
     def test_governance_distribution_schema(self):
         resp = self._dashboard_resp()

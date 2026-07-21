@@ -94,8 +94,11 @@ def test_get_kpi_filters_arabic(client, admin_user, sample_kindergarten):
     data = response.json()
     assert "kindergartens" in data
     assert "governorates" in data
-    # Check that governorates are in Arabic
-    assert any("عمان" in gov["name"] for gov in data["governorates"])
+    # Check that governorates are in Arabic; the capital appears as "العاصمة",
+    # never as the city name "عمان".
+    names = [gov["name"] for gov in data["governorates"]]
+    assert "العاصمة" in names
+    assert "عمان" not in names
 
 
 def test_get_kpi_filters_english(client, admin_user, sample_kindergarten):

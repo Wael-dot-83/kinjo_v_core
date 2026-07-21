@@ -31,8 +31,10 @@ def seed_divisions():
         print("Cleared existing administrative divisions.")
         
         # Insert new data
-        # Normalize governorate aliases so DB matches KG data (e.g. العاصمة → عمان)
-        GOV_NORMALIZE = {"العاصمة": "عمان", "عاصمة": "عمان"}
+        # Normalize governorate aliases to the canonical governorate name so DB matches
+        # KG data. The capital's governorate name is "العاصمة" (the city "عمان" belongs in
+        # the district/area columns, not the governorate column).
+        GOV_NORMALIZE = {"عمان": "العاصمة", "عاصمة": "العاصمة"}
 
         records = []
         for index, row in df.iterrows():

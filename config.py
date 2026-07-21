@@ -203,19 +203,23 @@ class Settings(BaseSettings):
 
     # Jordan-specific
     JORDAN_PHONE_PATTERN: str = r"^(\+962|00962|0)[0-9]{9}$"
+    # Index-aligned with JORDAN_GOVERNORATES_ENGLISH. The capital's canonical Arabic
+    # governorate name is "العاصمة"; the city "عمان" lives under JORDAN_CITIES below.
     JORDAN_GOVERNORATES: List[str] = [
-        "عمان", "إربد", "الزرقاء", "العقبة", "المفرق",
+        "العاصمة", "إربد", "الزرقاء", "العقبة", "المفرق",
         "جرش", "عجلون", "الطفيلة", "الكرك", "معان", "البلقاء", "مادبا"
     ]
     JORDAN_GOVERNORATES_ENGLISH: List[str] = [
         "Amman", "Irbid", "Zarqa", "Aqaba", "Mafraq",
         "Jerash", "Ajloun", "Tafilah", "Karak", "Ma'an", "Balqa", "Madaba"
     ]
+    # Every accepted free-form form of a governorate maps to its canonical Arabic name.
+    # The capital resolves to "العاصمة"; the legacy city-name form "عمان" is accepted too.
     JORDAN_GOVERNORATE_ALIASES: Dict[str, str] = {
-        "amman": "عمان",
-        "عمان": "عمان",
-        "العاصمة": "عمان",  # official admin name for Amman governorate
-        "عاصمة": "عمان",
+        "amman": "العاصمة",
+        "عمان": "العاصمة",  # legacy city-name form once stored in the governorate column
+        "العاصمة": "العاصمة",
+        "عاصمة": "العاصمة",
         "irbid": "إربد",
         "إربد": "إربد",
         "zarqa": "الزرقاء",
@@ -246,7 +250,8 @@ class Settings(BaseSettings):
         "مادبا": "مادبا"
     }
     JORDAN_CITIES: Dict[str, List[str]] = {
-        "عمان": ["عمان", "الجبيهة", "القويسمة", "وادي السير", "صويلح", "ماركا", "أبو نصير", "طبربور"],
+        # Keyed by canonical governorate name. "عمان" is the capital's main city.
+        "العاصمة": ["عمان", "الجبيهة", "القويسمة", "وادي السير", "صويلح", "ماركا", "أبو نصير", "طبربور"],
         "إربد": ["إربد", "الحصن", "الرمثا", "الكورة", "بني كنانة", "الأغوار الشمالية"],
         "الزرقاء": ["الزرقاء", "الرصيفة", "الهاشمية", "الأزرق"],
         "العقبة": ["العقبة", "وادي رم", "القويرة"],
