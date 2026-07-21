@@ -291,8 +291,12 @@ const METRIC_TYPE_LABELS = {
 };
 
 function formatMetricType(metricType) {
-  const labels = METRIC_TYPE_LABELS[metricType] || { ar: metricType.replace(/_/g, " "), en: metricType.replace(/_/g, " ") };
-  return adminAnalyticsText(labels.ar, labels.en);
+  const labels = METRIC_TYPE_LABELS[metricType];
+  if (labels) {
+    return adminAnalyticsText(labels.ar, labels.en);
+  }
+  const fallback = metricType.replace(/_/g, " ");
+  return adminAnalyticsText(fallback, fallback);
 }
 
 function normalizeGovernorateOption(option, locale) {

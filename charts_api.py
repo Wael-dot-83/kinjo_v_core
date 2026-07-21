@@ -274,11 +274,13 @@ def legacy_charts_dashboard(request: Request) -> RedirectResponse:
 # retained for compatibility with existing pages.
 @router.get(
     "/api/admin/charts/data",
-    summary="Raw chart data as JSON",
+    response_model=ChartResponse,
+    summary="Render a Plotly chart as JSON data",
     dependencies=[Depends(require_admin_or_manager)],
 )
 def get_admin_chart_data(
     source: str = Query(..., description="One of: incidents, attendance, daily_reports, enrollments, kindergartens"),
+    chart_type: Optional[str] = Query(None, description="Override auto-selection"),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
     kindergarten_id: Optional[int] = Query(None),
@@ -286,20 +288,25 @@ def get_admin_chart_data(
     granularity: str = Query("month"),
     group_by: Optional[str] = Query(None),
     top_n: Optional[int] = Query(None),
+    title: Optional[str] = Query(None),
     lang: str = Query("ar", pattern="^(ar|en)$"),
     db: Session = Depends(get_db),
-) -> Dict[str, Any]:
-    return get_chart_data(
-        source=source,
-        date_from=date_from,
-        date_to=date_to,
-        kindergarten_id=kindergarten_id,
-        governorate=governorate,
-        granularity=granularity,
-        group_by=group_by,
-        top_n=top_n,
-        lang=lang,
-        db=db,
+) -> ChartResponse:
+    return _svc.render(
+        db,
+        ChartRequest(
+            source=_parse_source(source),
+            chart_type=_parse_chart_type(chart_type),
+            date_from=date_from,
+            date_to=date_to,
+            kindergarten_id=kindergarten_id,
+            governorate=governorate,
+            granularity=Granularity(granularity) if granularity else Granularity.MONTH,
+            group_by=group_by,
+            top_n=top_n,
+            title=title,
+            lang=lang,
+        ),
     )
 
 

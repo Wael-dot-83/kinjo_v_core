@@ -2,7 +2,7 @@
 Analytics and Reporting Services for Admin Dashboard
 Implements drill-down analytics from Network → Governorate → Kindergarten → Class → Child
 """
-from fastapi import APIRouter, Depends, Query, HTTPException, status, BackgroundTasks, Response
+from fastapi import APIRouter, Depends, Query, HTTPException, status, BackgroundTasks, Response, Request
 from fastapi import Path as FastAPIPath
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any, Tuple
@@ -13,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from enum import Enum
 import os
 import hashlib
+import secrets
 from pathlib import Path
 import csv
 import io
@@ -31,7 +32,7 @@ from kpi_service import KPIService
 from data_quality_enhanced import enhanced_data_quality_service
 import validators
 from audit_actions import AuditAction
-from admin_security import log_audit_event
+from admin_security import log_audit_event, validation_error
 from cache_service import cache_service
 from config import settings
 from analytics_domain import (
@@ -62,6 +63,13 @@ from api.analytics.scope_domain import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _validate_csrf_token(request: Request) -> None:
+    header_token = request.headers.get("x-csrf-token")
+    cookie_token = request.cookies.get(settings.CSRF_COOKIE_NAME)
+    if not header_token or not cookie_token or not secrets.compare_digest(header_token, cookie_token):
+        raise validation_error("Invalid CSRF token", fields={"csrf_token": "invalid"})
 
 
 def _utcnow_naive() -> datetime:
@@ -373,7 +381,9 @@ def predict_metric(
     req: PredictRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
+    _validate_csrf_token(request)
     _ensure_admin_only(current_user)
     metric = metric.lower()
     if metric not in {"attendance", "incidents", "enrollment"}:
@@ -1106,7 +1116,9 @@ def acknowledge_alert(
     alert_id: int,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
+    _validate_csrf_token(request)
     _ensure_admin_only(current_user)
     alert = db.query(models.ActiveAlert).filter(models.ActiveAlert.id == alert_id).first()
     if not alert:
@@ -1123,7 +1135,9 @@ def upsert_threshold(
     req: ThresholdRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
+    _validate_csrf_token(request)
     _ensure_admin_only(current_user)
     scope_type = _normalize_scope(req.scope_type)
     threshold = models.AlertThreshold(
@@ -1198,7 +1212,9 @@ def set_target(
     req: TargetRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
+    _validate_csrf_token(request)
     _ensure_admin_only(current_user)
     target = models.PerformanceTarget(
         metric_type=req.metric_type,
@@ -1396,7 +1412,9 @@ def create_action_plan(
     req: ActionPlanRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
+    _validate_csrf_token(request)
     _ensure_admin_only(current_user)
     plan = models.ActionPlan(
         recommendation_id=req.recommendation_id,
@@ -1506,8 +1524,10 @@ def get_advanced_analytics_cache(
 def invalidate_advanced_analytics_cache(
     req: InvalidateCacheRequest,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
+    _validate_csrf_token(request)
     if current_user.role != models.UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admin only")
     count = AnalyticsService.invalidate_advanced_analytics_cache(
@@ -1524,8 +1544,10 @@ def invalidate_advanced_analytics_cache(
 def warm_advanced_analytics_cache(
     req: WarmCacheRequest,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
+    _validate_csrf_token(request)
     if current_user.role != models.UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admin only")
     count = AnalyticsService.warm_advanced_analytics_cache(
@@ -2612,17 +2634,19 @@ def get_risk_radar_endpoint(
 
 @router.post("/export/sync")
 def export_analytics_data(
-    request: ExportRequest,
+    request_body: ExportRequest,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
     """
     Export analytics reports (CSV or Excel) with memory streaming for large datasets.
     """
+    _validate_csrf_token(request)
     validators.validate_admin_role(current_user)
 
-    start_str = request.filters.get("period_start") if request.filters else None
-    end_str = request.filters.get("period_end") if request.filters else None
+    start_str = request_body.filters.get("period_start") if request_body.filters else None
+    end_str = request_body.filters.get("period_end") if request_body.filters else None
     
     if not start_str or not end_str:
          end_date = _jordan_today()
@@ -2634,8 +2658,8 @@ def export_analytics_data(
         except ValueError:
             _log_analytics_export_audit(
                 db, action=AuditAction.ANALYTICS_EXPORT_SYNC_FAILED, actor=current_user,
-                report_type=request.report_type, export_format=request.export_format,
-                filters=request.filters, status_value="failed", error_message="Invalid date format", sensitivity_level=3
+                report_type=request_body.report_type, export_format=request_body.export_format,
+                filters=request_body.filters, status_value="failed", error_message="Invalid date format", sensitivity_level=3
             )
             raise HTTPException(status_code=400, detail="Invalid date format")
 
@@ -2647,7 +2671,7 @@ def export_analytics_data(
     headers = []
     
     def row_generator():
-        if request.report_type == "attendance":
+        if request_body.report_type == "attendance":
             headers.extend(["Kindergarten", "Children Count", "Capacity", "Attendance Rate %"])
             yield headers
             kgs = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE).yield_per(100)
@@ -2655,7 +2679,7 @@ def export_analytics_data(
                 rate = KPIService.compute_attendance_rate(db, kg.id, start_date, end_date)
                 yield [kg.name_ar, len(kg.enrollments), "N/A", rate]
                 
-        elif request.report_type == "incidents":
+        elif request_body.report_type == "incidents":
             headers.extend(["Date", "Kindergarten", "Type", "Severity", "Description", "Child"])
             yield headers
             incidents = db.query(models.Incident).filter(
@@ -2666,7 +2690,7 @@ def export_analytics_data(
                 ch_name = f"{inc.child.first_name} {inc.child.last_name}" if inc.child else "Unknown"
                 yield [inc.occurred_at.strftime("%Y-%m-%d"), inc.kindergarten.name_ar if inc.kindergarten else "", inc.type.value, inc.severity_level.value, inc.description, ch_name]
 
-        elif request.report_type == "compliance":
+        elif request_body.report_type == "compliance":
             headers.extend(["Kindergarten", "Ratio Compliance %", "Governance Score"])
             yield headers
             kgs = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE).yield_per(100)
@@ -2678,14 +2702,14 @@ def export_analytics_data(
                     gov_score = 0
                 yield [kg.name_ar, ratio, gov_score]
 
-        elif request.report_type == "governorate":
+        elif request_body.report_type == "governorate":
             headers.extend(["Governorate", "Kindergartens", "Children", "Attendance %", "Incident Rate", "Governance Score"])
             yield headers
             data = AnalyticsService.get_governorate_breakdown(db, start_date, end_date, None, None, None)
             for item in data:
                 yield [item.governorate, item.kindergarten_count, item.children_count, item.attendance_rate, item.incident_rate, item.governance_score]
 
-        elif request.report_type == "full_audit":
+        elif request_body.report_type == "full_audit":
             headers.extend(["Timestamp", "User", "Action", "Entity", "Details", "IP"])
             yield headers
             
@@ -2717,18 +2741,18 @@ def export_analytics_data(
     except ValueError:
         _log_analytics_export_audit(
             db, action=AuditAction.ANALYTICS_EXPORT_SYNC_FAILED, actor=current_user,
-            report_type=request.report_type, export_format=request.export_format,
-            filters=request.filters, status_value="failed", error_message="Invalid report type", sensitivity_level=3
+            report_type=request_body.report_type, export_format=request_body.export_format,
+            filters=request_body.filters, status_value="failed", error_message="Invalid report type", sensitivity_level=3
         )
         raise HTTPException(status_code=400, detail="Invalid report type")
 
     # Excel Export
-    if request.export_format and request.export_format.lower() == "excel":
+    if request_body.export_format and request_body.export_format.lower() == "excel":
         if openpyxl is None:
             raise HTTPException(status_code=500, detail="Excel export is not supported (openpyxl missing)")
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = request.report_type.capitalize()
+        ws.title = request_body.report_type.capitalize()
         
         ws.append(first_row_headers)
         for row in gen:
@@ -2737,8 +2761,8 @@ def export_analytics_data(
         output = io.BytesIO()
         wb.save(output)
         
-        filename = f"{request.report_type}_report_{start_date}_{end_date}.xlsx"
-        _log_analytics_export_audit(db, action=AuditAction.ANALYTICS_EXPORT_SYNC, actor=current_user, report_type=request.report_type, export_format="EXCEL", filters=request.filters, status_value="completed", file_path=filename)
+        filename = f"{request_body.report_type}_report_{start_date}_{end_date}.xlsx"
+        _log_analytics_export_audit(db, action=AuditAction.ANALYTICS_EXPORT_SYNC, actor=current_user, report_type=request_body.report_type, export_format="EXCEL", filters=request_body.filters, status_value="completed", file_path=filename)
         return Response(
             content=output.getvalue(),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -2746,8 +2770,8 @@ def export_analytics_data(
         )
         
     # Default: CSV Export (Streaming)
-    filename = f"{request.report_type}_report_{start_date}_{end_date}.csv"
-    _log_analytics_export_audit(db, action=AuditAction.ANALYTICS_EXPORT_SYNC, actor=current_user, report_type=request.report_type, export_format="CSV", filters=request.filters, status_value="completed", file_path=filename)
+    filename = f"{request_body.report_type}_report_{start_date}_{end_date}.csv"
+    _log_analytics_export_audit(db, action=AuditAction.ANALYTICS_EXPORT_SYNC, actor=current_user, report_type=request_body.report_type, export_format="CSV", filters=request_body.filters, status_value="completed", file_path=filename)
 
     def iter_csv():
         output = io.StringIO()
@@ -3633,11 +3657,15 @@ def get_kpi_analytics(
 ):
     """Get KPI analytics summary for dashboard displays."""
     period_start, period_end = get_date_range(start_date, end_date)
-    
-    # Scope by user role
+
+    # Scope by user role — use the standard scope helpers
     kg_id = kindergarten_id
     if current_user.role not in [models.UserRole.ADMIN]:
-        kg_id = current_user.kindergarten_id
+        allowed_kgs = _allowed_kindergarten_ids(current_user, db)
+        if kg_id is None and allowed_kgs and len(allowed_kgs) == 1:
+            kg_id = allowed_kgs[0]
+        elif kg_id is not None and allowed_kgs and kg_id not in allowed_kgs:
+            raise HTTPException(status_code=403, detail="Not allowed to access this kindergarten")
     
     # Get attendance rate
     attendance_rate = 0.0
@@ -4647,9 +4675,11 @@ def request_export(
     request_body: ExportRequest,
     background_tasks: BackgroundTasks,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
     """Request an async export job"""
+    _validate_csrf_token(request)
     validators.validate_admin_role(current_user)
 
     if request_body.retry_job_id:
@@ -5781,8 +5811,10 @@ def preview_report(
     payload: Dict[str, Any],
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
     """Generate a preview payload for the requested report configuration."""
+    _validate_csrf_token(request)
     validators.validate_admin_role(current_user)
     report_type = payload.get("report_type")
     period_start = payload.get("period_start")
@@ -6740,8 +6772,10 @@ def create_report_template(
     payload: ReportTemplateCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
     """Save a report configuration as a reusable template."""
+    _validate_csrf_token(request)
     validators.validate_admin_role(current_user)
     template = models.ReportTemplate(
         name=payload.name,
@@ -6798,8 +6832,10 @@ def create_scheduled_report(
     payload: ScheduledReportCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    request: Request = Depends(),
 ):
     """Create a scheduled report."""
+    _validate_csrf_token(request)
     validators.validate_admin_role(current_user)
     schedule = models.ScheduledReport(
         name=payload.name,
