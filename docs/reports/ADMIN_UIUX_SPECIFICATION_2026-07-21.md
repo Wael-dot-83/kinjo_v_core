@@ -38,21 +38,24 @@ codebase.
 - **Manager = one kindergarten** — sees *only their own KG* (all its classes). No
   governorate selector, no cross-KG data; server-enforced, not just hidden.
 - **Supervisor = one classroom** — belongs to a single kindergarten, is responsible for
-  *one class of a few children*, and their core job is **filling in the daily report**.
-  Hard-scoped server-side to one `class_id`; not an oversight/cluster role.
+  *one assigned class of a few children*, and their core job is **filling in the daily report**
+  (one per present child). Hard-scoped server-side to one `kindergarten_id` *and* one assigned
+  `class_id`; not an oversight/cluster role.
+- **Daily-report workflow & approval is Manager-owned** — Supervisor drafts & submits →
+  Manager reviews (may edit/correct), approves, and sends to the Parent → Parent sees it only
+  after sending. The Admin monitors but *never* approves. Real statuses:
+  `DRAFT → SUBMITTED → APPROVED → SENT_TO_PARENT` (or `REJECTED` back to the Supervisor).
 - **Real-time: yes** — alerts and dashboard values are pushed live over a persistent
   transport (WebSocket, SSE fallback), not polled. The 30s cache backs the initial paint
   and cold loads; live events invalidate and repaint affected widgets.
 - **Notifications: yes** — an active notification system: real-time in-app center
   (badge + toast on arrival) plus per-user delivery preferences; every notification is
   backed by an audit/alert record and deep-links to its source.
+- **Governorate selector is Admin-only** — Manager and Supervisor are both hard-scoped and
+  see no selector; Admin is the only role with cross-KG / cross-governorate scope.
 
 ### Still open (confirm)
 
-- **Governorate selector is Admin-only** — Manager and Supervisor are both hard-scoped and
-  see no selector. Confirm Admin is the only role needing cross-KG / cross-governorate scope.
-- **Report approval chain** — assumed: Supervisor *submits* the daily report → Manager
-  *reviews/approves* → it reaches the Parent. Confirm the Manager is the approver (not Admin).
 - **Notification channels beyond in-app** — email / SMS / push are specced as opt-in per
   user; confirm which are wired for launch vs. roadmap.
 - **Ranked pain points** are inferred from prior audits; confirm your own top-3.
@@ -276,15 +279,41 @@ can't act on.
 |---|---|---|---|---|
 | **Admin** | Govern the whole platform; catch systemic gaps. | Dashboard · Analytics · Alerts · Institutions · People · Governance | All 7 KPIs; missed-reporting alerts; agency-report queue; user/audit activity. | Operational entry (can't create incidents/attendance/reports — by design). |
 | **Manager** | Run *my* kindergarten; **review & approve** the daily reports my supervisors submit. | KG dashboard · Attendance (all classes) · Daily reports (approve) · Children · Incidents · Communication | My-KG attendance %, pending-report approval queue, today's incidents; class & child roster. | **Everything outside their own KG** — no governorate selector, no cross-KG data; hard-scoped server-side to a single `kindergarten_id`. Also platform analytics, user admin. |
-| **Supervisor** | Run *my class* today; take attendance and **fill the daily report** for my few children. | My-class dashboard · Attendance (take) · Daily report (fill/submit) · My children · Class messages | Today's class attendance, my children's status, draft/submitted report state, unread class messages. | **Everything outside their one class** — no governorate/KG selector, no other classes or children; hard-scoped server-side to a single `class_id`. No approval queue, analytics, or admin. |
-| **Parent** | Check my child's day; stay in the loop. | Child(ren) · Attendance · Enrollments · Messages/announcements | Child attendance streak, enrollment status, unread messages. | Everything operational/administrative; no KPIs, no other families' data. |
+| **Supervisor** | Run *my class* today; take attendance and **draft + submit** one daily report per present child. | My-class dashboard · Attendance (take) · Daily report (draft/submit) · My children · Class messages | Today's class attendance, my children's status, per-report draft/submitted/returned state, unread class messages. | **Everything outside their one class** — no governorate/KG selector, no other classes or children; hard-scoped server-side to one `kindergarten_id` + one `class_id`. Cannot approve or send reports; no analytics/admin. |
+| **Parent** | Check my child's day; read the report once the Manager sends it. | Child(ren) · Attendance · Enrollments · Messages/announcements · Sent daily reports | Child attendance streak, enrollment status, unread messages, reports in `SENT_TO_PARENT` only. | Everything operational/administrative; no KPIs, no other families' data. Scoped server-side to their own children only. |
+
+### Server-side scope enforcement
+
+Scope is enforced in the query layer, not the UI. Every request is filtered at the source by
+the caller's role; the live push channel subscribes each user only to events inside their scope.
+
+| Role | Server-enforced scope | Can see reports in state |
+|---|---|---|
+| Admin | Platform-wide (monitoring, governance, audit, analytics) | All states — read-only oversight |
+| Manager | One `kindergarten_id` (all its classes) | `SUBMITTED` → approve/edit/reject → `SENT_TO_PARENT` |
+| Supervisor | One `kindergarten_id` + one assigned `class_id` | `DRAFT` / `SUBMITTED` / `REJECTED` for own class |
+| Parent | Their own children only | `SENT_TO_PARENT` only |
+
+### Daily-report workflow
+
+The core operational loop. The Supervisor authors; the **Manager owns approval and delivery**;
+the Admin never participates in the routine chain.
+
+| # | Actor | Action | Status after | Emits |
+|---|---|---|---|---|
+| 1 | Supervisor | Records attendance; prepares one report per *present* child in the assigned class. | `DRAFT` | — |
+| 2 | Supervisor | Submits the reports to the Manager. | `SUBMITTED` | `report.submitted` → Manager |
+| 3 | Manager | Reviews each report; may edit/correct. | `SUBMITTED` | — |
+| 4a | Manager | Approves and sends to the child's Parent. | `APPROVED` → `SENT_TO_PARENT` | `report.sent` → Parent |
+| 4b | Manager | Rejects, returning it to the Supervisor to fix. | `REJECTED` | `report.returned` → Supervisor |
+| 5 | Parent | Views the report — only now visible to them. | `SENT_TO_PARENT` | — |
+| 6 | Admin | Monitors, audits, and reports across all of the above; does not approve. | — | — |
 
 > **Security invariant.** Role filtering is a UI convenience, never the enforcement boundary.
 > Every admin endpoint keeps `require_admin`; ownership checks must not short-circuit when a
-> profile is `None` (a known IDOR shape). **Scoping is enforced in the query layer per role** —
-> Manager requests are filtered to their own `kindergarten_id`, Supervisor requests to their own
-> `class_id`, at the source; the live push channel only subscribes each to the events for their
-> scope. The nav hiding an item does not authorize the API.
+> profile is `None` (a known IDOR shape). Scoping is enforced in the query layer per the table
+> above, and a report becomes Parent-visible **only** once the Manager moves it to
+> `SENT_TO_PARENT`. The nav hiding an item does not authorize the API.
 
 ---
 
@@ -396,7 +425,9 @@ widget and repaints just that widget (no full reload).
 |---|---|---|
 | `alert.created` | Alert | Prepend to alerts panel; bump badge; toast if severity ≥ warning. |
 | `kpi.updated` | { key, value, delta, band? } | Repaint the one KPI card (`aria-live` announces new value). |
-| `report.status_changed` | { kg_id, status } | Update pending-review count + activity feed row. |
+| `report.submitted` | { report_id, class_id, child_id } | **→ Manager**: +1 approval queue; toast; feed row. |
+| `report.sent` | { report_id, child_id } | **→ Parent**: report now visible; badge + toast. |
+| `report.returned` | { report_id, reason } | **→ Supervisor**: report back to `REJECTED`; toast to fix. |
 | `notification.new` | Notification | Live badge + toast; enters notification center. |
 
 ### Example data models (widget contracts)
@@ -443,6 +474,28 @@ class Notification(BaseModel):
     read: bool = False
     channels: list[Literal["in_app", "email", "sms", "push"]]  # resolved from user prefs
     created_at: datetime     # Jordan tz (+03:00)
+```
+
+```python
+# DailyReport — one per present child per day; status drives visibility
+class DailyReportStatus(str, Enum):
+    DRAFT = "DRAFT"                    # supervisor authoring, not yet submitted
+    SUBMITTED = "SUBMITTED"            # sent to manager, awaiting review
+    APPROVED = "APPROVED"              # manager approved (internal)
+    SENT_TO_PARENT = "SENT_TO_PARENT"  # parent-visible ONLY in this state
+    REJECTED = "REJECTED"             # returned to supervisor to fix
+
+class DailyReport(BaseModel):
+    id: str
+    child_id: str
+    class_id: str
+    kindergarten_id: str
+    status: DailyReportStatus
+    authored_by: str          # supervisor user_id
+    approved_by: str | None   # manager user_id (set on send)
+    report_date: date         # Jordan date (UTC+3)
+    # Guard: only role=MANAGER of this kindergarten_id may set
+    # SENT_TO_PARENT; only then is the row returned to the Parent query.
 ```
 
 > **Build guardrails.** Jordan time (UTC+3) for every operational date and cache key — never
