@@ -122,3 +122,21 @@ def test_heatmap_pipeline_default_does_not_disclose_host_path(client):
     csv_path = next(parameter for parameter in parameters if parameter["name"] == "csv_path")
 
     assert csv_path["schema"]["default"] == "test_data.csv"
+
+
+def test_heatmap_indicators_match_the_documented_nullable_schema(
+    client, auth_headers_admin
+):
+    response = client.get(
+        "/api/heatmap/indicators",
+        headers=auth_headers_admin,
+    )
+
+    assert response.status_code == 200
+    assert response.json()
+    assert response.json()[0]["children_enrollment"] is None
+
+    schema = client.get("/openapi.json").json()["components"]["schemas"][
+        "IndicatorResponse"
+    ]
+    assert {"children_enrollment", "tasks_governance"} <= set(schema["required"])
