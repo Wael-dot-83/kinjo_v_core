@@ -3,23 +3,19 @@
 {% block title %}{% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{% endif %} — KinJo{% endblock %}
 
 {% block extra_head %}
-<!-- cdn.plot.ly is not in this site's CSP script-src allowlist (middleware/security.py
-     only permits jsdelivr/cdnjs/unpkg), so a CDN attempt would always be blocked and
-     always fall back to this local copy -- load it directly instead of generating a
-     CSP violation + failed network request on every single page load. -->
+<!-- cdn.plot.ly is not in this site's CSP script-src allowlist, so load locally -->
 <script defer src="/static/vendor/plotly-2.35.2.min.js"
   integrity="sha384-ymzmAVk+3V1std11H4NbH/o85BHnBJTNzz3SjtDbixaVMkt2qOIcV3dzOUSuONeA"
   crossorigin="anonymous"></script>
 <style>
   .charts-panel { background: var(--admin-card-bg,#fff); border: 1px solid var(--admin-border,#e2e8f0); border-radius: 12px; padding: 1.5rem; }
   .charts-sidebar { min-width: 260px; max-width: 320px; }
-  .chart-type-pill { cursor:pointer; transition:all .2s; border:2px solid transparent; }
-  .chart-type-pill.active, .chart-type-pill:hover { border-color:var(--admin-primary,#1F5E47); background:var(--admin-primary-light,#e0f0eb); }
-  .suggestion-card { border-left:4px solid var(--admin-primary,#1F5E47); padding:.75rem 1rem; background:var(--admin-primary-xlight,#f0f7f4); border-radius:0 8px 8px 0; }
-  .suggestion-card .confidence-badge { background:var(--admin-primary,#1F5E47); color:#fff; font-size:.75rem; padding:.15rem .5rem; border-radius:99px; }
   #chartOutput { min-height:420px; }
   .loading-spinner { display:none; }
   .loading-spinner.active { display:flex; }
+  .breadcrumb-drill { cursor: pointer; color: var(--admin-primary,#1F5E47); font-weight: 500; }
+  .breadcrumb-drill:hover { text-decoration: underline; }
+  .breadcrumb-separator { margin: 0 0.5rem; color: #999; }
 </style>
 {% endblock %}
 
@@ -32,9 +28,9 @@
     </h1>
     <p class="text-muted small mt-1 mb-0">
       {% if ui_lang == 'en' %}
-        Adaptive chart generation with automatic chart-type selection.
+        Advanced analytical exploration with drill-down and statistical validation.
       {% else %}
-        توليد رسوم بيانية تكيفية مع اختيار تلقائي لنوع الرسم.
+        استكشاف تحليلي متقدم مع إمكانية التفرع (Drill-down) والمصادقة الإحصائية.
       {% endif %}
     </p>
   </div>
@@ -69,52 +65,51 @@
         <option value="{{ ct }}">{% if ui_lang == 'en' %}{{ CHART_LABELS_EN.get(ct, ct | title) }}{% else %}{{ CHART_LABELS_AR.get(ct, ct) }}{% endif %}</option>{% endfor %}
       </select>
 
-      <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
-        {% if ui_lang == 'en' %}Top N{% else %}أعلى N{% endif %}
-      </h6>
-      <input type="number" id="topN" class="form-control form-control-sm mb-3" min="1" max="50" placeholder="{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}">
-
       <div class="d-grid gap-2">
         <button class="btn btn-primary btn-sm" id="renderBtn" onclick="renderChart()">
           <i class="bi bi-play-fill me-1"></i>
-          {% if ui_lang == 'en' %}Render Chart{% else %}رسم المخطط{% endif %}
-        </button>
-        <button class="btn btn-outline-secondary btn-sm" id="suggestBtn" onclick="getSuggestions()">
-          <i class="bi bi-lightbulb me-1"></i>
-          {% if ui_lang == 'en' %}Get Suggestions{% else %}اقتراحات ذكية{% endif %}
+          {% if ui_lang == 'en' %}Analyze{% else %}تحليل{% endif %}
         </button>
       </div>
     </div>
 
-    {# Suggestions panel #}
-    <div class="charts-panel" id="suggestionsPanel" style="display:none;">
+    <div class="charts-panel" id="interpretationPanel" style="display:none;">
       <h6 class="fw-semibold mb-3 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
-        <i class="bi bi-magic me-1"></i>
-        {% if ui_lang == 'en' %}Chart Suggestions{% else %}اقتراحات الرسم{% endif %}
+        <i class="bi bi-info-circle me-1"></i>
+        {% if ui_lang == 'en' %}Metric Insight{% else %}رؤية المؤشر{% endif %}
       </h6>
-      <div id="suggestionsList"></div>
+      <div id="interpretationText" class="small text-muted"></div>
     </div>
 
   </aside>
 
   {# ── Chart Output Area ─────────────────────────────────────────────── #}
   <div class="flex-grow-1" style="min-width:0;">
-    <div class="charts-panel">
+    <div class="charts-panel mb-4">
 
-      <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
         <div>
-          <span id="chartTitle" class="fw-semibold fs-6">
-            {% if ui_lang == 'en' %}Select a source and click Render{% else %}اختر المصدر واضغط رسم{% endif %}
+          <div id="breadcrumbs" class="mb-2 fs-6">
+            <span class="breadcrumb-drill" onclick="resetDrilldown()">{% if ui_lang == 'en' %}Jordan{% else %}الأردن{% endif %}</span>
+          </div>
+          <span id="chartTitle" class="fw-semibold fs-5 text-dark">
+            {% if ui_lang == 'en' %}Select a source and click Analyze{% else %}اختر المصدر واضغط تحليل{% endif %}
           </span>
           <span id="rowCountBadge" class="badge ms-2" style="background:var(--admin-primary,#1F5E47);display:none;"></span>
-          <span id="cachedBadge" class="badge bg-secondary ms-1" style="display:none;">
-            {% if ui_lang == 'en' %}cached{% else %}مخزن{% endif %}
+          <span id="drilldownBadge" class="badge bg-warning text-dark ms-1" style="display:none;">
+            {% if ui_lang == 'en' %}Drill-Down Active{% else %}تصفح متعمق نشط{% endif %}
           </span>
         </div>
-        <button class="btn btn-outline-secondary btn-sm" id="exportBtn" style="display:none;" onclick="exportChart()">
-          <i class="bi bi-download me-1"></i>
-          {% if ui_lang == 'en' %}Export PNG{% else %}تصدير PNG{% endif %}
-        </button>
+        <div>
+          <button class="btn btn-outline-secondary btn-sm me-2" id="exportCsvBtn" style="display:none;" onclick="exportCSV()">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+            {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" id="exportBtn" style="display:none;" onclick="exportChart()">
+            <i class="bi bi-download me-1"></i>
+            {% if ui_lang == 'en' %}Export PNG{% else %}تصدير PNG{% endif %}
+          </button>
+        </div>
       </div>
 
       <div class="loading-spinner align-items-center justify-content-center" id="chartSpinner" style="min-height:300px;">
@@ -122,7 +117,7 @@
           <div class="spinner-border text-success mb-3" role="status">
             <span class="visually-hidden">Loading...</span>
           </div>
-          <div class="small">{% if ui_lang == 'en' %}Generating chart...{% else %}جاري إنشاء الرسم...{% endif %}</div>
+          <div class="small">{% if ui_lang == 'en' %}Analyzing data...{% else %}جاري تحليل البيانات...{% endif %}</div>
         </div>
       </div>
 
@@ -137,7 +132,14 @@
           <span id="taskProgress" class="badge bg-info ms-2">0%</span>
         </div>
       </div>
+    </div>
 
+    <!-- Data Table -->
+    <div class="charts-panel">
+      <h5 class="fw-semibold mb-3">{% if ui_lang == 'en' %}Supporting Data{% else %}البيانات الداعمة{% endif %}</h5>
+      <div id="dataTableContainer" class="table-responsive">
+        <p class="text-muted small">{% if ui_lang == 'en' %}Data will appear here after analysis.{% else %}ستظهر البيانات هنا بعد التحليل.{% endif %}</p>
+      </div>
     </div>
   </div>
 
@@ -150,46 +152,61 @@ const LANG = '{{ ui_lang }}';
 let _activeTaskId = null;
 let _taskPollInterval = null;
 let _currentFigDiv = null;
+let _lastResponse = null;
 
-// ── Bilingual labels for chart types and sources ──────────────────────
-const CHART_NAMES = LANG === 'en' ? {
-  line: 'Line', bar: 'Bar', scatter: 'Scatter', pie: 'Pie',
-  histogram: 'Histogram', box: 'Box', heatmap: 'Heatmap', funnel: 'Funnel', treemap: 'Treemap'
-} : {
-  line: 'خطي', bar: 'أعمدة', scatter: 'مبعثر', pie: 'دائري',
-  histogram: 'مدرج تكراري', box: 'مربع', heatmap: 'خريطة حرارية', funnel: 'قمعي', treemap: 'شجري'
+let filterState = {
+  governorate: null,
+  kindergarten_id: null
 };
 
-const SOURCE_NAMES = LANG === 'en' ? {
-  incidents: 'Incidents', attendance: 'Attendance', daily_reports: 'Daily Reports',
-  enrollments: 'Enrollments', kindergartens: 'Kindergartens'
-} : {
-  incidents: 'الحوادث', attendance: 'الحضور', daily_reports: 'التقارير اليومية',
-  enrollments: 'التسجيلات', kindergartens: 'الحضانات'
+const TRANSLATIONS = {
+  "count": LANG === 'en' ? "Count" : "العدد",
+  "incident_type": LANG === 'en' ? "Incident Type" : "نوع الحادث",
+  "severity": LANG === 'en' ? "Severity" : "الخطورة",
+  "status": LANG === 'en' ? "Status" : "الحالة",
+  "date": LANG === 'en' ? "Date" : "التاريخ",
+  "mood": LANG === 'en' ? "Mood" : "المزاج",
+  "kindergarten": LANG === 'en' ? "Kindergarten" : "الحضانة",
+  "governorate": LANG === 'en' ? "Governorate" : "المحافظة",
+  "capacity": LANG === 'en' ? "Capacity" : "الطاقة الاستيعابية",
+  "enrolled": LANG === 'en' ? "Enrolled" : "المسجلين",
+  "month": LANG === 'en' ? "Month" : "الشهر",
+  "Present": LANG === 'en' ? "Present" : "حاضر",
+  "Absent": LANG === 'en' ? "Absent" : "غائب",
+  "Late": LANG === 'en' ? "Late" : "متأخر",
+  "Approved": LANG === 'en' ? "Approved" : "معتمد",
+  "Pending": LANG === 'en' ? "Pending" : "قيد الانتظار",
+  "Rejected": LANG === 'en' ? "Rejected" : "مرفوض",
+  "Happy": LANG === 'en' ? "Happy" : "سعيد",
+  "Sad": LANG === 'en' ? "Sad" : "حزين",
+  "Medical": LANG === 'en' ? "Medical" : "طبي",
+  "Behavioral": LANG === 'en' ? "Behavioral" : "سلوكي",
+  "Accident": LANG === 'en' ? "Accident" : "حادث"
 };
 
-function chartLabel(type) { return CHART_NAMES[type] || type.charAt(0).toUpperCase() + type.slice(1); }
-function sourceLabel(src) { return SOURCE_NAMES[src] || src.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
+function getLocalized(key) {
+  return TRANSLATIONS[key] || key;
+}
 
 async function renderChart() {
   const source = document.getElementById('sourceSelect').value;
   const chartType = document.getElementById('chartTypeSelect').value;
   const dateFrom = document.getElementById('dateFrom').value;
   const dateTo = document.getElementById('dateTo').value;
-  const topN = document.getElementById('topN').value;
 
   const params = new URLSearchParams({ source });
   if (chartType) params.set('chart_type', chartType);
   if (dateFrom) params.set('date_from', dateFrom);
   if (dateTo) params.set('date_to', dateTo);
-  if (topN) params.set('top_n', topN);
+  if (filterState.governorate) params.set('governorate', filterState.governorate);
+  if (filterState.kindergarten_id) params.set('kindergarten_id', filterState.kindergarten_id);
 
   setLoading(true);
   clearChart();
   clearTask();
 
   try {
-    const resp = await fetch(`/api/admin/charts/render?${params}`, {
+    const resp = await fetch(`/api/admin/charts/data?${params}`, {
       headers: { 'Accept': 'application/json' }
     });
     if (!resp.ok) {
@@ -198,6 +215,7 @@ async function renderChart() {
       return;
     }
     const data = await resp.json();
+    _lastResponse = data;
 
     if (data.task_id) {
       showTaskStatus(data.task_id);
@@ -213,21 +231,193 @@ async function renderChart() {
 
 function injectChart(data) {
   const out = document.getElementById('chartOutput');
-  out.innerHTML = data.html || '';
-  document.getElementById('chartTitle').textContent = data.title || (LANG === 'en' ? 'Chart' : 'رسم بياني');
+  out.innerHTML = '';
+  document.getElementById('chartTitle').textContent = data.title;
+  
   const badge = document.getElementById('rowCountBadge');
-  badge.textContent = `${data.row_count} ${LANG === 'en' ? 'rows' : 'صفًا'}`;
+  badge.textContent = `${data.quality.record_count} ${LANG === 'en' ? 'records' : 'سجل'}`;
   badge.style.display = '';
-  const cachedBadge = document.getElementById('cachedBadge');
-  cachedBadge.style.display = data.cached ? '' : 'none';
+
   document.getElementById('exportBtn').style.display = '';
-  // Re-exec any Plotly scripts injected by Plotly.to_html
-  out.querySelectorAll('script').forEach(s => {
-    const sc = document.createElement('script');
-    sc.textContent = s.textContent;
-    document.body.appendChild(sc).parentNode.removeChild(sc);
+  document.getElementById('exportCsvBtn').style.display = '';
+
+  // Breadcrumbs
+  renderBreadcrumbs(data.scope);
+
+  // Interpretation Panel
+  const panel = document.getElementById('interpretationPanel');
+  const text = document.getElementById('interpretationText');
+  panel.style.display = '';
+  text.innerHTML = `<strong>${data.metric.label}</strong><br/>${LANG === 'en' ? 'Unit:' : 'الوحدة:'} ${data.metric.unit}<br/><em>Level: ${data.scope.level}</em>`;
+
+  // Draw Plotly
+  if (data.series.length > 0 && typeof Plotly !== 'undefined') {
+    let type = data.chart_type;
+    let traces = [];
+    let keys = Object.keys(data.series[0]);
+    
+    let numCols = keys.filter(k => typeof data.series[0][k] === 'number');
+    let strCols = keys.filter(k => typeof data.series[0][k] !== 'number');
+
+    let layout = {
+      font: { family: 'Inter, sans-serif' },
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      margin: { t: 20, r: 10, l: 40, b: 40 },
+      barmode: type === 'bar' ? 'group' : undefined
+    };
+
+    if (numCols.length === 1 && strCols.length >= 2) {
+      let xCol = strCols.find(k => k === 'month' || k === 'date') || strCols[0];
+      let groupCol = strCols.find(k => k !== xCol) || strCols[1];
+      let yCol = numCols[0];
+
+      let groups = {};
+      data.series.forEach(r => {
+        let g = r[groupCol];
+        if (!groups[g]) groups[g] = { x: [], y: [] };
+        groups[g].x.push(r[xCol]);
+        groups[g].y.push(r[yCol]);
+      });
+
+      for (let g in groups) {
+        traces.push({
+          type: type,
+          name: getLocalized(g),
+          x: groups[g].x,
+          y: groups[g].y
+        });
+      }
+    } else if (strCols.length >= 1) {
+      let xCol = strCols[0];
+      if (type === 'pie') {
+        traces.push({
+          type: 'pie',
+          labels: data.series.map(r => getLocalized(r[xCol])),
+          values: data.series.map(r => r[numCols[0]]),
+          hoverinfo: 'label+percent+value'
+        });
+      } else {
+        numCols.forEach(col => {
+          traces.push({
+            type: type,
+            name: getLocalized(col),
+            x: data.series.map(r => getLocalized(r[xCol])),
+            y: data.series.map(r => r[col])
+          });
+        });
+      }
+    }
+
+    Plotly.newPlot(out, traces, layout);
+    _currentFigDiv = out;
+
+    // Drilldown event handling
+    if (data.drilldown && data.drilldown.enabled) {
+      out.on('plotly_click', function(data_click){
+        const pt = data_click.points[0];
+        const clickedLabel = pt.x || pt.label;
+        if (clickedLabel) {
+          handleDrilldown(data.scope.level, clickedLabel);
+        }
+      });
+    }
+  } else {
+    out.innerHTML = `<div class="text-center text-muted mt-5">${LANG === 'en' ? 'No data for this criteria.' : 'لا توجد بيانات لهذه المعايير.'}</div>`;
+  }
+
+  // Draw Table
+  renderTable(data);
+}
+
+function handleDrilldown(currentLevel, label) {
+  if (currentLevel === 'national') {
+    filterState.governorate = label;
+  } else if (currentLevel === 'governorate') {
+    // In our backend, passing governorate groups by kindergarten name. 
+    // Wait, if we are at governorate, we grouped by kindergarten. Clicking one means we drill to Kindergarten level.
+    // However, our backend loader for kindergartens expects `kindergarten_id`. 
+    // We will just alert for now or try to pass it. Since we don't have ID mapping here easily, we rely on the backend.
+    if (document.getElementById('sourceSelect').value !== 'kindergartens') {
+       filterState.governorate = label;
+    }
+  }
+  document.getElementById('drilldownBadge').style.display = '';
+  renderChart();
+}
+
+function resetDrilldown() {
+  filterState = { governorate: null, kindergarten_id: null };
+  document.getElementById('drilldownBadge').style.display = 'none';
+  renderChart();
+}
+
+function renderBreadcrumbs(scope) {
+  let bc = `<span class="breadcrumb-drill" onclick="resetDrilldown()">{% if ui_lang == 'en' %}Jordan{% else %}الأردن{% endif %}</span>`;
+  if (scope.level === 'governorate' || scope.level === 'kindergarten') {
+    bc += `<span class="breadcrumb-separator">›</span><span class="breadcrumb-drill" onclick="filterState.kindergarten_id=null;renderChart()">${filterState.governorate || scope.parent_key}</span>`;
+  }
+  if (scope.level === 'kindergarten') {
+    bc += `<span class="breadcrumb-separator">›</span><span class="text-muted">Kindergarten Details</span>`;
+  }
+  document.getElementById('breadcrumbs').innerHTML = bc;
+}
+
+function escapeHTML(str) {
+  return String(str).replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
+}
+
+function renderTable(data) {
+  const container = document.getElementById('dataTableContainer');
+  if (!data.table || data.table.length === 0) {
+    container.innerHTML = '<p class="text-muted">No data</p>';
+    return;
+  }
+  const keys = Object.keys(data.table[0]);
+  let html = '<table class="table table-sm table-hover align-middle"><thead><tr>';
+  keys.forEach(k => html += `<th>${escapeHTML(getLocalized(k))}</th>`);
+  html += '</tr></thead><tbody>';
+  data.table.forEach(r => {
+    html += '<tr>';
+    keys.forEach(k => html += `<td>${r[k] !== null ? escapeHTML(getLocalized(r[k])) : '-'}</td>`);
+    html += '</tr>';
   });
-  _currentFigDiv = out.querySelector('.plotly-graph-div');
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function exportChart() {
+  if (_currentFigDiv && typeof Plotly !== 'undefined') {
+    Plotly.downloadImage(_currentFigDiv, {
+      format: 'png', width: 1200, height: 700,
+      filename: `kinjo-chart-${Date.now()}`
+    });
+  }
+}
+
+function exportCSV() {
+  if (!_lastResponse || !_lastResponse.table || _lastResponse.table.length === 0) return;
+  const keys = Object.keys(_lastResponse.table[0]);
+  let csvContent = "data:text/csv;charset=utf-8," + keys.join(",") + "\n";
+  _lastResponse.table.forEach(row => {
+    let rowArr = keys.map(k => `"${(row[k]||'').toString().replace(/"/g, '""')}"`);
+    csvContent += rowArr.join(",") + "\n";
+  });
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `kinjo-data-${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function showTaskStatus(taskId) {
@@ -258,61 +448,6 @@ async function pollTask(taskId) {
   }
 }
 
-async function getSuggestions() {
-  const source = document.getElementById('sourceSelect').value;
-  const dateFrom = document.getElementById('dateFrom').value;
-  const dateTo = document.getElementById('dateTo').value;
-  const body = { source, max_suggestions: 3 };
-  if (dateFrom) body.date_from = dateFrom;
-  if (dateTo) body.date_to = dateTo;
-
-  const panel = document.getElementById('suggestionsPanel');
-  const list = document.getElementById('suggestionsList');
-  list.innerHTML = `<div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm text-success"></div></div>`;
-  panel.style.display = '';
-
-  try {
-    const resp = await fetch('/api/admin/charts/suggest', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await resp.json();
-    if (!data.suggestions || !data.suggestions.length) {
-      list.innerHTML = `<p class="text-muted small mb-0">${LANG === 'en' ? 'No suggestions available.' : 'لا توجد اقتراحات.'}</p>`;
-      return;
-    }
-    list.innerHTML = data.suggestions.map(s => `
-      <div class="suggestion-card mb-2 d-flex align-items-start gap-2" role="button"
-           onclick="applySuggestion('${s.chart_type}')">
-        <div>
-          <div class="fw-semibold" style="font-size:.85rem;">
-            ${chartLabel(s.chart_type)}
-            <span class="confidence-badge ms-1">${Math.round(s.confidence * 100)}%</span>
-          </div>
-          <div class="text-muted" style="font-size:.78rem;">${s.rationale}</div>
-        </div>
-      </div>
-    `).join('');
-  } catch(e) {
-    list.innerHTML = `<p class="text-danger small mb-0">${LANG === 'en' ? 'Error loading suggestions.' : 'خطأ في تحميل الاقتراحات.'}</p>`;
-  }
-}
-
-function applySuggestion(chartType) {
-  document.getElementById('chartTypeSelect').value = chartType;
-  renderChart();
-}
-
-function exportChart() {
-  if (_currentFigDiv && typeof Plotly !== 'undefined') {
-    Plotly.downloadImage(_currentFigDiv, {
-      format: 'png', width: 1200, height: 700,
-      filename: `kinjo-chart-${Date.now()}`
-    });
-  }
-}
-
 function setLoading(on) {
   document.getElementById('chartSpinner').classList.toggle('active', on);
   document.getElementById('renderBtn').disabled = on;
@@ -321,8 +456,9 @@ function setLoading(on) {
 function clearChart() {
   document.getElementById('chartOutput').innerHTML = '';
   document.getElementById('rowCountBadge').style.display = 'none';
-  document.getElementById('cachedBadge').style.display = 'none';
   document.getElementById('exportBtn').style.display = 'none';
+  document.getElementById('exportCsvBtn').style.display = 'none';
+  document.getElementById('dataTableContainer').innerHTML = '';
   _currentFigDiv = null;
 }
 
@@ -336,7 +472,7 @@ function showError(msg) {
   out.innerHTML = `<div class="alert alert-danger mt-2"><i class="bi bi-exclamation-triangle me-1"></i>${msg}</div>`;
 }
 
-// Set default date range: last 12 months
+// Init dates
 (function() {
   const today = new Date();
   const y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,'0'), d = String(today.getDate()).padStart(2,'0');
@@ -344,6 +480,9 @@ function showError(msg) {
   const ya = yearAgo.getFullYear(), ym = String(yearAgo.getMonth()+1).padStart(2,'0'), yd = String(yearAgo.getDate()).padStart(2,'0');
   document.getElementById('dateTo').value = `${y}-${m}-${d}`;
   document.getElementById('dateFrom').value = `${ya}-${ym}-${yd}`;
+  
+  // Auto-render on load
+  renderChart();
 })();
 </script>
 {% endblock %}

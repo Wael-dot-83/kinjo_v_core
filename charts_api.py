@@ -15,7 +15,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -233,9 +233,9 @@ _CHART_LABELS_EN = {
 }
 
 @router.get(
-    "/admin/charts/dashboard",
+    "/admin/analytics/charts",
     response_class=HTMLResponse,
-    summary="Charts explorer dashboard",
+    summary="Charts explorer dashboard (Canonical)",
     dependencies=[Depends(require_admin_or_manager)],
 )
 def charts_dashboard(
@@ -250,14 +250,24 @@ def charts_dashboard(
             "chart_types": [t.value for t in ChartType],
             "ui_lang": request.cookies.get("ui_lang", "ar"),
             "ui_dir": request.cookies.get("ui_dir", "rtl"),
-            # The template renders both label sets behind a ui_lang guard, so all
-            # four must be supplied or the page raises UndefinedError and 500s.
             "SOURCE_LABELS_AR": _SOURCE_LABELS_AR,
             "SOURCE_LABELS_EN": _SOURCE_LABELS_EN,
             "CHART_LABELS_AR": _CHART_LABELS_AR,
             "CHART_LABELS_EN": _CHART_LABELS_EN,
         },
     )
+
+@router.get(
+    "/admin/charts/dashboard",
+    summary="Legacy charts explorer dashboard",
+    dependencies=[Depends(require_admin_or_manager)],
+)
+def legacy_charts_dashboard(request: Request) -> RedirectResponse:
+    query_string = request.url.query
+    dest = "/admin/analytics/charts"
+    if query_string:
+        dest += f"?{query_string}"
+    return RedirectResponse(url=dest, status_code=status.HTTP_301_MOVED_PERMANENTLY)
 
 
 # Canonical admin API namespace. The legacy `/admin/charts/*` paths above are
@@ -352,12 +362,12 @@ def get_admin_chart_task_status(task_id: str) -> TaskStatus:
 
 @router.get(
     "/api/admin/charts/dashboard",
-    response_class=HTMLResponse,
-    summary="Charts explorer dashboard",
+    summary="Legacy charts explorer dashboard",
     dependencies=[Depends(require_admin_or_manager)],
 )
-def admin_charts_dashboard(
-    request: Request,
-    _: Any = Depends(require_admin_or_manager),
-) -> HTMLResponse:
-    return charts_dashboard(request=request, _=_)
+def api_admin_charts_dashboard(request: Request) -> RedirectResponse:
+    query_string = request.url.query
+    dest = "/admin/analytics/charts"
+    if query_string:
+        dest += f"?{query_string}"
+    return RedirectResponse(url=dest, status_code=status.HTTP_301_MOVED_PERMANENTLY)
