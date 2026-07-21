@@ -32,22 +32,8 @@ from heatmap.scripts.seed_snapshot_data import seed_governorates
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
-@pytest.fixture(scope="function")
-def in_memory_db():
-    """Create a fresh in-memory SQLite database with the schema applied."""
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(engine)
-    Session_ = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-    db = Session_()
-    seed_governorates(db)
-    db.commit()
-    yield db
-    db.close()
-    engine.dispose()
+# `in_memory_db` now lives in the root conftest so the heatmap pipeline tests and
+# the unavailable-data regression tests share one seeded-database fixture.
 
 
 # ---------------------------------------------------------------------------
@@ -56,12 +42,13 @@ def in_memory_db():
 class TestPipeline:
     def test_governorates_seeded(self, in_memory_db):
         count = in_memory_db.query(func.count(models.Governorate.code)).scalar()
-        assert count == 12
+        # Derived from the canonical Jordan administrative set, not hardcoded.
+        assert count == len(GOVERNORATES)
 
     def test_one_day_pipeline_runs(self, in_memory_db):
         summary = pipeline.run_daily_pipeline(in_memory_db, snapshot_date=date.today())
         assert summary["status"] == "success"
-        assert summary["governorates"] == 12
+        assert summary["governorates"] == len(GOVERNORATES)
         # 12 governors × (26 sub + 6 main) = 312 + 72 = wait, rows_processed counts only the
         # unique upserted rows: 26 sub + 6 main per governorate.
 

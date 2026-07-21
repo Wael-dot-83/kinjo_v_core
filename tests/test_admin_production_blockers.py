@@ -12,7 +12,7 @@ Verifies fixes applied during production-readiness hardening:
 import pytest
 import json
 import secrets
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 
 from auth import get_password_hash
 import models
@@ -150,7 +150,7 @@ class TestSoftDeleteExclusion:
             hashed_password=get_password_hash("Test123!"),
             role=models.UserRole.PARENT,
             status=models.UserStatus.ACTIVE,
-            deleted_at=datetime.utcnow(),
+            deleted_at=datetime.now(timezone.utc),
         )
         test_db.add(deleted_user)
         test_db.commit()
@@ -182,7 +182,7 @@ class TestSoftDeleteExclusion:
             contact_phone="+962799999999",
             contact_email="deleted@kg.jo",
             status=KindergartenStatus.ACTIVE,
-            deleted_at=datetime.utcnow(),
+            deleted_at=datetime.now(timezone.utc),
         )
         test_db.add(deleted_kg)
         test_db.commit()
@@ -207,7 +207,7 @@ class TestSoftDeleteExclusion:
             kindergarten_id=sample_kindergarten.id,
             class_id=sample_class.id,
             status=EnrollmentStatus.ACTIVE,
-            deleted_at=datetime.utcnow(),
+            deleted_at=datetime.now(timezone.utc),
         )
         test_db.add(deleted_enrollment)
         test_db.commit()

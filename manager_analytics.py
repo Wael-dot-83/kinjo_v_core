@@ -430,16 +430,19 @@ class ManagerAnalyticsService:
         )
         historical = []
         current = start_date
-        rates = []
+        # (calendar-day offset, rate) for each observed day. Closed days carry no
+        # signal and are excluded from the fit, but the x-axis stays in CALENDAR
+        # days — using a dense 0..n-1 index would make the slope "per open day"
+        # while the forecast horizon below advances in calendar days, inflating
+        # the projection by ~7/5.
+        observations = []
         while current <= today:
             rate = daily.get(current)
             historical.append({"date": current.isoformat(), "rate": rate})
-            # Days with no expected attendance (closed days, weekends, no active
-            # enrolment) carry no signal. Regressing over them as 0% pulled the
-            # trend line down by roughly two days in seven.
             if rate is not None:
-                rates.append(rate)
+                observations.append(((current - start_date).days, rate))
             current += timedelta(days=1)
+        rates = [r for _, r in observations]
 
         # Simple linear regression
         if len(rates) < 2:
@@ -450,19 +453,26 @@ class ManagerAnalyticsService:
             }
 
         n = len(rates)
-        x = list(range(n))
+        # x is the calendar-day offset of each observation, so the slope is
+        # per-calendar-day and lines up with the forecast horizon.
+        x = [offset for offset, _ in observations]
         x_mean = sum(x) / n
         y_mean = sum(rates) / n
 
-        slope = sum((x[i] - x_mean) * (rates[i] - y_mean) for i in range(n)) / sum(
-            (x[i] - x_mean) ** 2 for i in range(n)
-        )
+        denom = sum((xi - x_mean) ** 2 for xi in x)
+        if denom == 0:
+            # All observations fell on the same day — no slope is defined.
+            slope = 0.0
+        else:
+            slope = sum((x[i] - x_mean) * (rates[i] - y_mean) for i in range(n)) / denom
         intercept = y_mean - slope * x_mean
 
-        # Generate forecast
+        # Generate forecast. future offset is calendar days from start_date, the
+        # same unit x is measured in.
+        last_offset = (today - start_date).days
         forecast = []
         for i in range(1, forecast_days + 1):
-            future_x = n + i - 1
+            future_x = last_offset + i
             predicted = slope * future_x + intercept
             # Clamp to 0-100
             predicted = max(0, min(100, predicted))

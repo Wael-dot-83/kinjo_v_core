@@ -207,20 +207,67 @@ class TestHeatmapTimeoutChaos:
 # ---------------------------------------------------------------------------
 
 class TestDiskFullChaos:
-    def test_backup_returns_error_when_disk_full(self, client, test_db):
-        """If disk is full during backup, the endpoint must return 500 or 507 with a message."""
+    def test_backup_endpoint_failure_returns_structured_error_not_a_raw_crash(self, client, test_db):
+        """The admin endpoint must return a structured server error (not a raw
+        crash, and not a CSRF 400) when the backup subsystem is unavailable.
+
+        The endpoint enqueues the backup asynchronously, so this covers the
+        request-path envelope only; the disk-full fault itself is exercised
+        directly in test_create_database_backup_surfaces_disk_full below (the
+        endpoint can't reach it because the copy runs in a worker).
+        """
+        import secrets
+
         _make_admin(test_db)
-        headers = _tok(client)
+        csrf = secrets.token_hex(32)
+        headers = {
+            **_tok(client),
+            "X-CSRF-Token": csrf,
+            "Cookie": f"kinjo_csrf_token={csrf}",
+        }
 
-        with patch("backup_manager.BackupManager.create_database_backup") as mock_backup:
-            mock_backup.side_effect = OSError(28, "No space left on device")
-
-            r = client.post("/api/admin/backup/create", headers=headers)
-            assert r.status_code in (500, 507, 503, 400), (
-                f"Backup during disk-full returned {r.status_code} — expected server error"
+        r = client.post("/api/admin/backup/create", headers=headers)
+        # A valid, authorised, CSRF-bearing request must not be CSRF-rejected.
+        assert r.status_code != 400, r.text
+        assert r.status_code in (200, 202, 500, 507, 503), r.text
+        if r.status_code >= 500 and r.headers.get("content-type", "").startswith("application/json"):
+            body = r.json()
+            assert "detail" in body or "message" in body or "error" in body, (
+                "Error response has no human-readable message"
             )
-            if r.headers.get("content-type", "").startswith("application/json"):
-                body = r.json()
-                assert "detail" in body or "message" in body or "error" in body, (
-                    "Error response has no human-readable message"
-                )
+
+    def test_backup_endpoint_requires_csrf(self, client, test_db):
+        """Same endpoint, auth but no CSRF pair, must be rejected at the gate."""
+        _make_admin(test_db)
+        r = client.post("/api/admin/backup/create", headers=_tok(client))
+        assert r.status_code == 400, r.text
+        assert "CSRF" in r.text
+
+    def test_create_database_backup_surfaces_disk_full(self, tmp_path, monkeypatch):
+        """The real disk-full fault path: shutil.copy2 raises ENOSPC.
+
+        This reaches the actual backup code (unlike the async endpoint) and
+        proves the fault surfaces rather than being swallowed. It fails if the
+        ENOSPC injection is removed — copy2 would then succeed and no error is
+        raised — which is exactly the guarantee concern #6 asks for.
+        """
+        import shutil
+
+        import backup_manager as bm
+
+        # Point the manager at a real source DB in a temp dir so it gets past the
+        # existence check and into the copy that a full disk would fail.
+        src = tmp_path / "app.db"
+        src.write_bytes(b"SQLite format 3\x00")
+        monkeypatch.setattr(bm, "_DB_PATH", str(src))
+        monkeypatch.setattr(bm, "_BACKUP_DIR", str(tmp_path / "backups"))
+
+        def _no_space(*_a, **_k):
+            raise OSError(28, "No space left on device")
+
+        monkeypatch.setattr(shutil, "copy2", _no_space)
+
+        manager = bm.BackupManager()
+        with pytest.raises(OSError) as exc_info:
+            manager.create_database_backup(backup_type="manual")
+        assert exc_info.value.errno == 28, "expected the ENOSPC disk-full error to surface"

@@ -127,11 +127,15 @@ class TestNurseryStatus:
         result = _compute_main_indicators(sub)
         assert result["nursery_status"] == 50.0
 
-    def test_zero_total_kg_no_crash(self):
-        """Empty DB: no kindergartens. Should return 0 not ZeroDivisionError."""
+    def test_zero_total_kg_is_unavailable_not_zero(self):
+        """No kindergartens means active/total is 0/0 — undefined, not 0% activity.
+
+        Previously forced to 0.0 (worst health) by a max(total, 1) denominator;
+        an empty governorate is unmeasured, not failing.
+        """
         sub = _make_sub(active_nurseries=0, inactive_nurseries=0)
         result = _compute_main_indicators(sub)
-        assert result["nursery_status"] == 0.0
+        assert result["nursery_status"] is None
 
     def test_typical_95_percent(self):
         sub = _make_sub(active_nurseries=95, inactive_nurseries=5)
@@ -176,10 +180,15 @@ class TestStaffClassrooms:
         result = _compute_main_indicators(sub)
         assert result["staff_classrooms"] == 100.0
 
-    def test_zero_classrooms_no_crash(self):
+    def test_zero_classrooms_is_unavailable_not_perfect(self):
+        """No classrooms means the supervised ratio is undefined, not 100%.
+
+        Previously fabricated as 100.0 (perfect supervision) by a max(count, 1)
+        denominator — an empty governorate cannot be perfectly supervised.
+        """
         sub = _make_sub(classrooms_count=0, classrooms_no_supervisor=0)
         result = _compute_main_indicators(sub)
-        assert result["staff_classrooms"] == 100.0
+        assert result["staff_classrooms"] is None
 
     def test_half_unsupervised(self):
         sub = _make_sub(classrooms_count=60, classrooms_no_supervisor=30)

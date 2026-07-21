@@ -13,12 +13,8 @@ import secrets
 import pytest
 from auth import get_password_hash
 import models
+from conftest import csrf_pair
 
-
-def _csrf_pair() -> dict:
-    """Double-submit CSRF pair required by admin write endpoints."""
-    csrf = secrets.token_hex(32)
-    return {"X-CSRF-Token": csrf, "Cookie": f"kinjo_csrf_token={csrf}"}
 
 
 def _create_admin(db):
@@ -88,7 +84,7 @@ class TestImportSizeLimit:
         r = client.post(
             "/api/admin/users/import-csv?dry_run=true",
             files={"file": ("users.csv", csv_bytes, "text/csv")},
-            headers={"Authorization": f"Bearer {token}", **_csrf_pair()},
+            headers={"Authorization": f"Bearer {token}", **csrf_pair()},
         )
         assert r.status_code == 200
 
@@ -101,7 +97,7 @@ class TestImportDryRun:
         r = client.post(
             "/api/admin/users/import-csv?dry_run=true",
             files={"file": ("users.csv", csv_bytes, "text/csv")},
-            headers={"Authorization": f"Bearer {token}", **_csrf_pair()},
+            headers={"Authorization": f"Bearer {token}", **csrf_pair()},
         )
         assert r.status_code == 200
         data = r.json()
@@ -116,7 +112,7 @@ class TestImportDryRun:
         r = client.post(
             "/api/admin/users/import-csv?dry_run=true",
             files={"file": ("users.csv", csv_bytes, "text/csv")},
-            headers={"Authorization": f"Bearer {token}", **_csrf_pair()},
+            headers={"Authorization": f"Bearer {token}", **csrf_pair()},
         )
         assert r.status_code == 200
         data = r.json()
@@ -286,11 +282,12 @@ class TestImportErrorReport:
         token = _get_admin_token(client)
         csrf = secrets.token_hex(32)
         errors = [{"row_number": 1, "field": "email", "error_code": "INVALID_EMAIL", "message": "Bad email"}]
+        # Set the CSRF cookie on the client (starlette deprecates per-request cookies=).
+        client.cookies.set("kinjo_csrf_token", csrf)
         r = client.post(
             "/api/admin/users/import-csv/error-report",
             json={"errors": errors},
             headers={"Authorization": f"Bearer {token}", "X-CSRF-Token": csrf},
-            cookies={"kinjo_csrf_token": csrf},
         )
         assert r.status_code == 200
         assert "text/csv" in r.headers.get("content-type", "")

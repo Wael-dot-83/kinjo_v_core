@@ -14,12 +14,8 @@ import pytest
 from datetime import datetime, timezone
 from auth import get_password_hash
 import models
+from conftest import csrf_pair
 
-
-def _csrf_pair() -> dict:
-    """Double-submit CSRF pair required by admin write endpoints."""
-    csrf = secrets.token_hex(32)
-    return {"X-CSRF-Token": csrf, "Cookie": f"kinjo_csrf_token={csrf}"}
 
 
 def _create_admin(db):
@@ -200,6 +196,6 @@ class TestContactMessagesResolve:
         token = _get_admin_token(client)
         r = client.post(
             "/api/admin/contact-messages/999999/resolve",
-            headers={"Authorization": f"Bearer {token}", **_csrf_pair()},
+            headers={"Authorization": f"Bearer {token}", **csrf_pair()},
         )
         assert r.status_code == 404

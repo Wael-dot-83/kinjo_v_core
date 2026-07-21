@@ -240,7 +240,7 @@ def test_freeze_and_unfreeze_cycle(client, auth_headers_admin, test_db, sample_k
         json={"reason": "Test freeze"}, headers=auth_headers_admin)
     assert r.status_code == 200, r.text
     test_db.expire_all()
-    kg = test_db.query(models.Kindergarten).get(kg_id)
+    kg = test_db.get(models.Kindergarten, kg_id)
     assert kg.status == models.KindergartenStatus.FROZEN
     assert kg.frozen_at is not None
     test_db.refresh(mgr)
@@ -253,7 +253,7 @@ def test_freeze_and_unfreeze_cycle(client, auth_headers_admin, test_db, sample_k
     r3 = client.patch(f"/api/admin/kindergartens/{kg_id}/activate", headers=auth_headers_admin)
     assert r3.status_code == 200
     test_db.expire_all()
-    kg = test_db.query(models.Kindergarten).get(kg_id)
+    kg = test_db.get(models.Kindergarten, kg_id)
     assert kg.status == models.KindergartenStatus.ACTIVE
     assert kg.frozen_at is None
     test_db.refresh(mgr)

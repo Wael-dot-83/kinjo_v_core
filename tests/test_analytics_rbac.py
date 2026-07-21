@@ -96,3 +96,16 @@ class TestAnalyticsAdminOnly:
             headers=auth_headers_supervisor
         )
         assert sup_resp.status_code == 403
+
+    def test_rankings_rejects_unknown_metric(self, client, auth_headers_admin):
+        """An unrecognized metric must 422, not silently return an all-zeros table.
+
+        The handler's `else: value = 0` branch would rank every kindergarten at 0
+        and answer with a 200 — the "silent lie" class where the response looks
+        valid but answers a different question than asked.
+        """
+        resp = client.get(
+            "/api/analytics/rankings/not_a_real_metric",
+            headers=auth_headers_admin,
+        )
+        assert resp.status_code == 422, resp.text

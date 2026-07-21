@@ -50,7 +50,7 @@ def _parse_source(source: str) -> ChartSource:
         return ChartSource(source)
     except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,  # 422 literal: Starlette deprecated the ENTITY constant name
             detail=f"Invalid source '{source}'. Valid: {[s.value for s in ChartSource]}",
         )
 
@@ -61,7 +61,7 @@ def _parse_chart_type(ct: Optional[str]) -> Optional[ChartType]:
         return ChartType(ct)
     except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,  # 422 literal: Starlette deprecated the ENTITY constant name
             detail=f"Invalid chart_type '{ct}'. Valid: {[t.value for t in ChartType]}",
         )
 

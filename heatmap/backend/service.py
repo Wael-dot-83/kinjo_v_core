@@ -96,7 +96,19 @@ def _names_for_slug(slug: str) -> list:
     # Arabic normalisation variants (hamza and taa marbuta)
     variants.add(ar.replace("أ", "ا").replace("إ", "ا"))  # أ إ → ا
     variants.add(ar.replace("ة", "ه"))  # ة → ه
-    return list(variants)
+    # Bridge the heatmap's English spelling to config's, keyed on the shared
+    # Arabic name (the one value both subsystems agree on). The heatmap uses
+    # "Tafileh" while config.JORDAN_GOVERNORATES_ENGLISH uses "Tafilah"; without
+    # this, a kindergarten stored under the config English spelling would be
+    # invisible to the heatmap. Canonical bridge, not a per-slug special case.
+    from config import settings as _settings
+    ar_list = _settings.JORDAN_GOVERNORATES
+    en_list = _settings.JORDAN_GOVERNORATES_ENGLISH
+    if ar in ar_list:
+        idx = ar_list.index(ar)
+        if idx < len(en_list):
+            variants.add(en_list[idx])
+    return [v for v in variants if v]
 
 
 def _query_kindergarten_count(db: Session, slug: str) -> int:
@@ -380,30 +392,39 @@ def _compute_sub_indicators(db: Session, slug: str) -> Dict[str, Any]:
 
 
 def _compute_main_indicators(sub: Dict[str, Any]) -> Dict[str, Optional[float]]:
-    """Aggregate main indicators (0-100) from sub-indicator values.
+    """Aggregate main indicators (0-100) from sub-indicator values, or None.
 
-    Unavailable (None) sub-indicators are excluded.  Remaining weights are
-    renormalized proportionally so missing data does not distort the score.
+    Mirrors pipeline.compute_main_indicators: an indicator with a missing value
+    or an undefined denominator is reported None rather than a fabricated number,
+    so missing data reads as "unavailable" rather than distorting the score.
     """
     def _g(key, default=None):
         val = sub.get(key, default)
         return val if val is not None else default
 
+    # Mirrors pipeline.compute_main_indicators: undefined denominators are
+    # unavailable (None), not a fabricated 0 or 100. See that function for the
+    # rationale on each indicator.
     total_kg = _g("total_nurseries") or _g("active_nurseries", 0) + _g("inactive_nurseries", 0)
     active_kg = _g("active_nurseries", 0)
-    kg_active_ratio = (active_kg / max(total_kg, 1)) * 100.0
-    nursery_status = kg_active_ratio
+    if total_kg and total_kg > 0:
+        nursery_status = (active_kg / total_kg) * 100.0
+    else:
+        nursery_status = None
 
     # Children registration: unavailable (no population denominator)
     children_registration = None
 
-    # Staff classrooms
-    classrooms_no_sup = _g("classrooms_no_supervisor", 0)
-    classrooms_count = _g("classrooms_count", 1)
-    supervised_ratio = 100.0 * (1.0 - classrooms_no_sup / max(classrooms_count, 1))
-    supervised_ratio = max(0.0, min(100.0, supervised_ratio))
+    # Staff classrooms: undefined with no classrooms, not perfect supervision.
+    classrooms_count = _g("classrooms_count", 0)
+    if classrooms_count and classrooms_count > 0:
+        classrooms_no_sup = _g("classrooms_no_supervisor", 0)
+        supervised_ratio = 100.0 * (1.0 - classrooms_no_sup / classrooms_count)
+        supervised_ratio = max(0.0, min(100.0, supervised_ratio))
+    else:
+        supervised_ratio = None
 
-    # Safety
+    # Safety: incidents are counted events, so no incidents is a real zero.
     safety_penalty = min(100.0, _g("incidents_critical", 0) * 10.0)
     safety_score = max(0.0, 100.0 - safety_penalty)
 
@@ -421,13 +442,16 @@ def _compute_main_indicators(sub: Dict[str, Any]) -> Dict[str, Optional[float]]:
     governance_score = _g("governance_score")
     tasks_governance_score = governance_score if governance_score is not None else None
 
+    def _round(value):
+        return round(value, 2) if value is not None else None
+
     return {
-        "nursery_status":        round(nursery_status, 2),
+        "nursery_status":        _round(nursery_status),
         "children_registration": children_registration,
-        "staff_classrooms":      round(supervised_ratio, 2),
-        "safety_incidents":      round(safety_score, 2),
-        "reports_attendance":    round(reports_attendance_score, 2) if reports_attendance_score is not None else None,
-        "tasks_governance":      round(tasks_governance_score, 2) if tasks_governance_score is not None else None,
+        "staff_classrooms":      _round(supervised_ratio),
+        "safety_incidents":      _round(safety_score),
+        "reports_attendance":    _round(reports_attendance_score),
+        "tasks_governance":      _round(tasks_governance_score),
     }
 
 
@@ -1064,6 +1088,14 @@ def get_map_overview(db: Session) -> Dict:
                 },
                 "kg_count": int(sub.get("active_nurseries", 0)),
                 "student_count": int(sub.get("registered_children", 0)),
+                # Real counts, carried alongside the 0-100 indicators. Consumers
+                # previously recovered an "incident total" as
+                # 100 - safety_incidents, which is not the incident count: on this
+                # path safety_incidents = 100 - critical*10, so the result was ten
+                # times the *critical* count and ignored every non-critical
+                # incident, while saturating at 100.
+                "incident_count": int(sub.get("incidents_total") or 0),
+                "critical_incident_count": int(sub.get("incidents_critical") or 0),
             })
             overall_risk_total += risk_score
         except Exception as exc:

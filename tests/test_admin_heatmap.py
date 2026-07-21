@@ -6,6 +6,7 @@ import sys
 from datetime import date, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -173,6 +174,22 @@ from heatmap.backend.admin_router import router as heat_map_router
 app = FastAPI()
 app.include_router(heat_map_router, prefix="/api")
 app.dependency_overrides[dependencies.get_current_user] = override_current_user
+
+
+@pytest.fixture(autouse=True)
+def _ensure_db_override():
+    """Point get_db at this file's seeded in-memory engine for EVERY test.
+
+    test_api_data / test_api_governorate_detail previously relied on the override
+    leaking in from another test's setup: run in isolation they hit the real
+    get_db (an empty in-memory DB with no tables), every governorate's
+    sub-indicator query raised, all 12 were skipped, and the endpoint returned 0
+    governorates. Setting the override per-test makes the whole file deterministic
+    regardless of order.
+    """
+    app.dependency_overrides[get_db] = override_get_db
+    yield
+    app.dependency_overrides.pop(get_db, None)
 
 
 # ---------------------------------------------------------------------------

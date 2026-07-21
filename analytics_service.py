@@ -3,6 +3,7 @@ Analytics and Reporting Services for Admin Dashboard
 Implements drill-down analytics from Network → Governorate → Kindergarten → Class → Child
 """
 from fastapi import APIRouter, Depends, Query, HTTPException, status, BackgroundTasks, Response
+from fastapi import Path as FastAPIPath
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import date, datetime, time, timedelta, timezone
@@ -3544,7 +3545,7 @@ def compare_endpoint(
 
 @router.get("/rankings/{metric}")
 def get_metric_rankings(
-    metric: str,
+    metric: str = FastAPIPath(..., pattern="^(attendance_rate|incident_rate|ratio_compliance|governance_score)$"),
     top_n: int = Query(10, ge=1, le=50),
     bottom: bool = Query(False),
     period_start: Optional[date] = Query(None),
