@@ -282,11 +282,12 @@ class TestImportErrorReport:
         token = _get_admin_token(client)
         csrf = secrets.token_hex(32)
         errors = [{"row_number": 1, "field": "email", "error_code": "INVALID_EMAIL", "message": "Bad email"}]
+        # Set the CSRF cookie on the client (starlette deprecates per-request cookies=).
+        client.cookies.set("kinjo_csrf_token", csrf)
         r = client.post(
             "/api/admin/users/import-csv/error-report",
             json={"errors": errors},
             headers={"Authorization": f"Bearer {token}", "X-CSRF-Token": csrf},
-            cookies={"kinjo_csrf_token": csrf},
         )
         assert r.status_code == 200
         assert "text/csv" in r.headers.get("content-type", "")

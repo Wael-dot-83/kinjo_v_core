@@ -244,22 +244,26 @@ def seeded_scenario(db_sessionmaker):
 # Test
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(
+@pytest.mark.skipif(
     _BACKEND == "sqlite-wal",
     reason=(
-        "SQLite WAL uses snapshot isolation: two concurrent sessions both read "
-        "enrolled_count=0 before either commits, so both succeed. "
-        "Row-level locking (SELECT ... FOR UPDATE) only serialises on PostgreSQL. "
-        "Run with a real PostgreSQL to validate the lock."
+        "Row-level locking (SELECT ... FOR UPDATE) is a PostgreSQL guarantee that "
+        "SQLite cannot reproduce, so on SQLite this race is non-deterministic — "
+        "measured at 1 xfail / 4 xpass over 5 runs, which surfaced as a flaky "
+        "xpassed under a non-strict xfail. It is skipped on SQLite (no capability "
+        "to test the lock) and runs deterministically on PostgreSQL, where it "
+        "passes; provide POSTGRES_TEST_DATABASE_URL (or run under the CI postgres "
+        "service) to execute it. Mirrors the skip-on-SQLite policy in "
+        "test_migration_column_drift.py."
     ),
-    strict=False,
 )
 def test_concurrent_assign_class_only_one_succeeds(db_sessionmaker, seeded_scenario):
     """Two threads race for the single seat — exactly one must win.
 
     Backend used: {_BACKEND!r}.
-    PostgreSQL: validated via SELECT ... FOR UPDATE row lock.
-    SQLite WAL: xfail — snapshot isolation means both sessions see stale count.
+    PostgreSQL: validated via SELECT ... FOR UPDATE row lock; deterministic pass.
+    SQLite WAL: skipped — cannot reproduce PostgreSQL row-level locking (the race
+    is non-deterministic there, which is what previously produced a flaky xpass).
     """
     from fastapi import HTTPException
     from api.classes import assign_child_to_class

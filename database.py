@@ -1,6 +1,7 @@
 """
 Database configuration and session management
 """
+import datetime as _dt
 import logging
 import sqlite3
 import uuid
@@ -10,6 +11,14 @@ from sqlalchemy.pool import StaticPool, NullPool
 from config import settings
 
 logger = logging.getLogger(__name__)
+
+# Python 3.12 deprecated sqlite3's built-in date/datetime adapters (removed in a
+# future release). Register explicit ISO adapters — the same representation the
+# defaults produced — so date/datetime binds against SQLite stay warning-free.
+# register_adapter is process-global, so this one registration covers the app
+# engine and every test-local SQLite engine; PostgreSQL is unaffected.
+sqlite3.register_adapter(_dt.date, lambda v: v.isoformat())
+sqlite3.register_adapter(_dt.datetime, lambda v: v.isoformat())
 
 # Validate production database configuration
 def _validate_production_database():

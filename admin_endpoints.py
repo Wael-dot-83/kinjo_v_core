@@ -568,7 +568,7 @@ def export_users(
 
     if len(users) > MAX_EXPORT_ROWS:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,  # 422 literal: Starlette deprecated the ENTITY constant name
             detail=(
                 f"Export would return more than {MAX_EXPORT_ROWS:,} rows. "
                 "Apply role, status, or kindergarten filters to narrow the result set."
@@ -4343,22 +4343,22 @@ def get_admin_dashboard_activity(
     allowed_modules = {mapping[3] for mapping in _ACTIVITY_MAP.values()}
     if activity_type is not None and activity_type not in allowed_activity_types:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,  # 422 literal: Starlette deprecated the ENTITY constant name
             detail=f"Unsupported activity_type: {activity_type}",
         )
     if module is not None and module not in allowed_modules:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,  # 422 literal: Starlette deprecated the ENTITY constant name
             detail=f"Unsupported module: {module}",
         )
     if status_filter is not None and status_filter not in {"success", "failed"}:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,  # 422 literal: Starlette deprecated the ENTITY constant name
             detail=f"Unsupported status: {status_filter}",
         )
     if severity is not None and severity not in {"low", "medium", "high", "critical"}:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,  # 422 literal: Starlette deprecated the ENTITY constant name
             detail=f"Unsupported severity: {severity}",
         )
 

@@ -131,7 +131,13 @@ def ols_standardized(
     s2 = float(np.dot(residuals, residuals)) / df_resid
     try:
         cov_matrix = s2 * np.linalg.inv(XtX)
-        se = np.sqrt(np.diag(cov_matrix))
+        # A near-singular XtX can yield tiny negative variance estimates on the
+        # diagonal (numerical error). sqrt of those is meaningless — treat them as
+        # unavailable (nan) explicitly rather than taking sqrt of a negative, which
+        # both raises a RuntimeWarning and produces the same nan. Downstream already
+        # maps se <= 0 to nan.
+        diag = np.diag(cov_matrix)
+        se = np.sqrt(np.where(diag >= 0.0, diag, np.nan))
     except np.linalg.LinAlgError:
         se = np.full(k, np.nan)
 
