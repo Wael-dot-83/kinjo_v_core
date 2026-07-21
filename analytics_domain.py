@@ -370,11 +370,17 @@ def z_score_anomalies(series: List[SeriesPoint]) -> List[Tuple[SeriesPoint, floa
     return anomalies
 
 
+def _governorate_match_values(scope_id: str) -> List[str]:
+    """All accepted stored forms of a governorate scope value (alias-aware drill-down)."""
+    from services.jordan_locations import governorate_query_aliases
+    return governorate_query_aliases(scope_id) or [scope_id]
+
+
 def scoped_kindergarten_ids(db: Session, scope_type: str, scope_id: Optional[str]) -> List[int]:
     if scope_type == "NETWORK":
         return [kg.id for kg in db.query(models.Kindergarten.id).all()]
     if scope_type == "GOVERNORATE" and scope_id:
-        return [kg.id for kg in db.query(models.Kindergarten.id).filter(models.Kindergarten.governorate == scope_id).all()]
+        return [kg.id for kg in db.query(models.Kindergarten.id).filter(models.Kindergarten.governorate.in_(_governorate_match_values(scope_id))).all()]
     if scope_type == "KINDERGARTEN" and scope_id:
         return [int(scope_id)]
     return []
@@ -430,7 +436,7 @@ def incident_series(db: Session, scope_type: str, scope_id: Optional[str], start
         elif scope_type == "CHILD" and scope_id:
             incident_q = incident_q.filter(models.Incident.child_id == int(scope_id))
         elif scope_type == "GOVERNORATE" and scope_id:
-            incident_q = incident_q.join(models.Kindergarten).filter(models.Kindergarten.governorate == scope_id)
+            incident_q = incident_q.join(models.Kindergarten).filter(models.Kindergarten.governorate.in_(_governorate_match_values(scope_id)))
         count = incident_q.scalar() or 0
         series.append(SeriesPoint(date=current, value=float(count)))
         current += timedelta(days=1)
@@ -449,7 +455,7 @@ def enrollment_series(db: Session, scope_type: str, scope_id: Optional[str], sta
         elif scope_type == "CHILD" and scope_id:
             enroll_q = enroll_q.filter(models.EnrollmentApplication.child_id == int(scope_id))
         elif scope_type == "GOVERNORATE" and scope_id:
-            enroll_q = enroll_q.join(models.Kindergarten).filter(models.Kindergarten.governorate == scope_id)
+            enroll_q = enroll_q.join(models.Kindergarten).filter(models.Kindergarten.governorate.in_(_governorate_match_values(scope_id)))
         count = enroll_q.scalar() or 0
         series.append(SeriesPoint(date=current, value=float(count)))
         current += timedelta(days=1)

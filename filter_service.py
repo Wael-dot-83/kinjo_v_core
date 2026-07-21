@@ -165,10 +165,17 @@ class DashboardFilterService:
         if kindergarten_ids:
             query = query.filter(models.Kindergarten.id.in_(kindergarten_ids))
 
-        # Governorate filter
+        # Governorate filter — alias-aware so a filter value can be a stable key
+        # ("amman"), the canonical name ("العاصمة"), or a legacy/bookmarked form
+        # ("عمان", "Amman") and still match however the row is stored.
         governorates = filters.get("governorates", [])
         if governorates:
-            query = query.filter(models.Kindergarten.governorate.in_(governorates))
+            from services.jordan_locations import governorate_query_aliases
+            match_values: List[str] = []
+            for gov in governorates:
+                expanded = governorate_query_aliases(gov)
+                match_values.extend(expanded if expanded else [gov])
+            query = query.filter(models.Kindergarten.governorate.in_(sorted(set(match_values))))
 
         # City filter
         cities = filters.get("cities", [])

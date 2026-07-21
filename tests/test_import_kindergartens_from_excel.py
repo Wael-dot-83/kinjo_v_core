@@ -23,7 +23,7 @@ def _kindergarten(
     *,
     name_ar="روضة الأمل",
     name_en="Hope KG",
-    governorate="عمان",
+    governorate="العاصمة",
     district="عمان",
     area="وسط البلد",
     address_line="عنوان قديم",
@@ -62,7 +62,9 @@ def test_phone_normalization():
 
 
 def test_governorate_normalization():
-    assert normalize_governorate("Amman") == "عمان"
+    # The capital normalizes to its governorate name "العاصمة", not the city "عمان".
+    assert normalize_governorate("Amman") == "العاصمة"
+    assert normalize_governorate("عمان") == "العاصمة"
     assert normalize_governorate("اربد") == "إربد"
     assert normalize_governorate("Irbid") == "إربد"
 
@@ -95,7 +97,7 @@ def test_duplicate_matching_by_license_number(test_db, tmp_path):
 
 
 def test_duplicate_matching_by_arabic_name_and_governorate(test_db, tmp_path):
-    existing = _kindergarten(test_db, name_ar="روضة الأمل", governorate="عمان", district="عمان")
+    existing = _kindergarten(test_db, name_ar="روضة الأمل", governorate="العاصمة", district="عمان")
     file_path = _write_excel(
         tmp_path,
         [
@@ -117,7 +119,7 @@ def test_duplicate_matching_by_arabic_name_and_governorate(test_db, tmp_path):
 
 
 def test_invalid_phone_does_not_overwrite_existing_phone(test_db, tmp_path):
-    existing = _kindergarten(test_db, name_ar="روضة الهاتف", governorate="عمان", contact_phone="0791234567")
+    existing = _kindergarten(test_db, name_ar="روضة الهاتف", governorate="العاصمة", contact_phone="0791234567")
     file_path = _write_excel(
         tmp_path,
         [
@@ -161,8 +163,8 @@ def test_create_new_kindergarten_when_no_match(test_db, tmp_path):
 
 
 def test_ambiguous_match_is_skipped(test_db, tmp_path):
-    _kindergarten(test_db, name_ar="روضة مشتركة", governorate="عمان", district="عمان", contact_phone="0795555551")
-    _kindergarten(test_db, name_ar="روضه مشتركه", governorate="عمان", district="خلدا", contact_phone="0795555552")
+    _kindergarten(test_db, name_ar="روضة مشتركة", governorate="العاصمة", district="عمان", contact_phone="0795555551")
+    _kindergarten(test_db, name_ar="روضه مشتركه", governorate="العاصمة", district="خلدا", contact_phone="0795555552")
     file_path = _write_excel(tmp_path, [{"name_ar": "روضة مشتركة", "governorate": "عمان"}])
 
     plan = build_import_plan(test_db, file_path, mode="dry-run")
@@ -176,7 +178,7 @@ def test_existing_record_first_excel_match_wins_for_idempotency(test_db, tmp_pat
     existing = _kindergarten(
         test_db,
         name_ar="روضة مكررة",
-        governorate="عمان",
+        governorate="العاصمة",
         district="عمان",
         area="الجبيهة",
         address_line="العنوان الأول",

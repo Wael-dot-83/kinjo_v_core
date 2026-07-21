@@ -126,7 +126,7 @@ class TestPhoneValidation:
 class TestGovernorateValidation:
     def test_valid_governorate(self):
         result = validate_jordan_governorate("Amman")
-        assert result in ("عمان", "Amman")  # Canonical name
+        assert result in ("العاصمة", "Amman")  # Canonical capital name
 
     def test_invalid_governorate(self):
         with pytest.raises(ValidationError):

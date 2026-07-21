@@ -589,7 +589,8 @@ class TestKindergartenEndpoints:
         assert response.status_code == 201
         data = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
         assert data["name_ar"] == "New Kindergarten"
-        assert data["governorate"] == "عمان"
+        # "عمان" in the governorate field normalizes to the canonical capital name.
+        assert data["governorate"] == "العاصمة"
 
         app.dependency_overrides.clear()
 

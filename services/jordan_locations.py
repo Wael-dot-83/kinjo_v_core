@@ -10,8 +10,11 @@ from typing import Any, Dict, List, Optional
 
 GOVERNORATES: List[Dict[str, Any]] = [
     {
+        # The Amman governorate's official Arabic administrative name is "العاصمة"
+        # (The Capital). "عمان" is the *city* within it, kept in AREAS below and
+        # accepted here only as a legacy alias for backward-compatible lookups.
         "key": "amman",
-        "name_ar": "عمان",
+        "name_ar": "العاصمة",
         "name_en": "Amman",
         "aliases": [
             "amman", "عمان", "العاصمة", "عاصمة", "Amman", "AMMAN",
@@ -211,10 +214,24 @@ def get_governorate_by_key(key: str) -> Optional[Dict[str, Any]]:
 
 
 def get_governorate_by_name(name: str, locale: str = "ar") -> Optional[Dict[str, Any]]:
-    """Return a governorate by Arabic or English name."""
+    """Return a governorate by Arabic or English name (canonical or legacy alias)."""
+    if not name:
+        return None
     if locale == "en":
-        return _GOVERNORATE_BY_NAME_EN.get(name)
-    return _GOVERNORATE_BY_NAME_AR.get(name)
+        found = _GOVERNORATE_BY_NAME_EN.get(name)
+        if found:
+            return found
+    else:
+        found = _GOVERNORATE_BY_NAME_AR.get(name)
+        if found:
+            return found
+    # Fall back to alias resolution so legacy values (e.g. "عمان" for the
+    # capital governorate) still resolve to their canonical governorate.
+    v = str(name).strip().lower()
+    for gov in GOVERNORATES:
+        if v in (alias.lower() for alias in gov["aliases"]):
+            return gov
+    return None
 
 
 def get_areas_for_governorate(governorate_key: str) -> List[Dict[str, Any]]:
@@ -238,7 +255,11 @@ def get_area_by_name(governorate_key: str, area_name: str, locale: str = "ar") -
 
 
 def normalize_governorate(value: Optional[str]) -> Optional[str]:
-    """Normalize a governorate value to its canonical Arabic name."""
+    """Normalize a governorate value to its canonical Arabic name.
+
+    For the capital this returns "العاصمة" (never the city name "عمان").
+    Unknown values are returned unchanged (callers decide how to handle them).
+    """
     if not value:
         return None
     v = str(value).strip()
@@ -249,6 +270,73 @@ def normalize_governorate(value: Optional[str]) -> Optional[str]:
         if v_lower in (alias.lower() for alias in gov["aliases"]):
             return gov["name_ar"]
     return v
+
+
+def normalize_governorate_key(value: Optional[str]) -> Optional[str]:
+    """Normalize any governorate value (name/alias/key) to its stable key.
+
+    normalize_governorate_key("عمان")    -> "amman"
+    normalize_governorate_key("العاصمة") -> "amman"
+    normalize_governorate_key("Amman")   -> "amman"
+    Returns None for empty input and the lower-cased original for unknown values.
+    """
+    if not value:
+        return None
+    v = str(value).strip()
+    if not v:
+        return None
+    v_lower = v.lower()
+    for gov in GOVERNORATES:
+        if v_lower in (alias.lower() for alias in gov["aliases"]):
+            return gov["key"]
+    return v_lower
+
+
+def governorate_name_ar(key: Optional[str]) -> Optional[str]:
+    """Canonical Arabic governorate label for a key -> "العاصمة" for "amman"."""
+    gov = get_governorate_by_key(key) if key else None
+    return gov["name_ar"] if gov else None
+
+
+def governorate_name_en(key: Optional[str]) -> Optional[str]:
+    """Canonical English governorate label for a key -> "Amman" for "amman"."""
+    gov = get_governorate_by_key(key) if key else None
+    return gov["name_en"] if gov else None
+
+
+def city_name_ar(governorate_key: str, city_key: str) -> Optional[str]:
+    """Canonical Arabic city/area label -> "عمان" for ("amman", "amman")."""
+    area = get_area_by_key(governorate_key, city_key) if (governorate_key and city_key) else None
+    return area["name_ar"] if area else None
+
+
+def governorate_display_ar(value: Optional[str]) -> Optional[str]:
+    """Map any stored/legacy governorate value to its canonical Arabic display.
+
+    Identical to normalize_governorate but named for use at serialization
+    boundaries where a raw DB value must be shown to a user as "العاصمة".
+    """
+    return normalize_governorate(value)
+
+
+def governorate_query_aliases(value: Optional[str]) -> List[str]:
+    """Return every accepted stored form of a governorate for alias-aware DB filters.
+
+    Given "العاصمة", "عمان", "amman" or "Amman", returns the full alias list
+    (["amman", "عمان", "العاصمة", "عاصمة", "Amman", "AMMAN"]) so an ``IN (...)``
+    filter matches rows regardless of which legacy form is persisted. Unknown
+    values yield ``[value]`` so callers can still filter on the raw input.
+    """
+    if not value:
+        return []
+    v = str(value).strip()
+    if not v:
+        return []
+    v_lower = v.lower()
+    for gov in GOVERNORATES:
+        if v_lower in (alias.lower() for alias in gov["aliases"]):
+            return list(gov["aliases"])
+    return [v]
 
 
 def normalize_area(governorate_key: str, value: Optional[str]) -> Optional[str]:

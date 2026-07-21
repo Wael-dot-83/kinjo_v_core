@@ -22,7 +22,7 @@ from typing import Dict, List, Tuple
 #   name_ar — Arabic label used in UI (RTL)
 #   center  — (longitude, latitude) for map centroid / marker placement
 GOVERNORATES: List[Dict] = [
-    {"code": "JO-AM", "slug": "amman",   "name_en": "Amman",   "name_ar": "عمان",     "center": [35.95, 31.95], "display_order": 1},
+    {"code": "JO-AM", "slug": "amman",   "name_en": "Amman",   "name_ar": "العاصمة",   "center": [35.95, 31.95], "display_order": 1},
     {"code": "JO-IR", "slug": "irbid",   "name_en": "Irbid",   "name_ar": "إربد",     "center": [35.85, 32.55], "display_order": 2},
     {"code": "JO-ZA", "slug": "zarqa",   "name_en": "Zarqa",   "name_ar": "الزرقاء",  "center": [36.10, 32.07], "display_order": 3},
     {"code": "JO-MA", "slug": "mafraq",  "name_en": "Mafraq",  "name_ar": "المفرق",   "center": [36.20, 32.34], "display_order": 4},
@@ -49,9 +49,11 @@ for g in GOVERNORATES:
     GOVERNORATE_NAME_ALIASES[g["name_ar"]] = g["slug"]
     GOVERNORATE_NAME_ALIASES[g["name_ar"].replace("أ", "ا").replace("إ", "ا")] = g["slug"]
     GOVERNORATE_NAME_ALIASES[g["name_ar"].replace("ة", "ه")] = g["slug"]
-# Official Jordanian admin name for Amman governorate
+# Official Jordanian admin name for Amman governorate is "العاصمة" (set as name_ar above).
+# "عمان" is the city and the legacy governorate-column form — keep it mapping to the slug.
 GOVERNORATE_NAME_ALIASES["العاصمة"] = "amman"
 GOVERNORATE_NAME_ALIASES["عاصمة"] = "amman"
+GOVERNORATE_NAME_ALIASES["عمان"] = "amman"
 
 
 def normalize_governorate(value: str) -> str:

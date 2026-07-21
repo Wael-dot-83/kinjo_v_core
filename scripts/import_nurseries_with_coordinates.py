@@ -86,8 +86,11 @@ def parse_coordinate(value: Any, field_name: str) -> tuple[float | None, str | N
 
 
 GOVERNORATE_CANONICAL = {
-    "amman": "عمان",
-    "عمان": "عمان",
+    # Capital governorate name is "العاصمة"; "عمان" is the city / legacy alias.
+    "amman": "العاصمة",
+    "عمان": "العاصمة",
+    "العاصمة": "العاصمة",
+    "عاصمة": "العاصمة",
     "irbid": "إربد",
     "إربد": "إربد",
     "اربد": "إربد",

@@ -21,8 +21,9 @@ EXPECTED_ARABIC_LABEL_ORDER = [
     "التحليلات والتقارير", "نظرة عامة على التحليلات", "مؤشرات أداء الشبكة",
     "مركز التقارير", "دعم القرار", "تنظيم التقارير اليومية",
     "تحليلات التقارير اليومية", "مستكشف الرسوم البيانية",
-    "تقارير الجهات الرسمية", "الحوكمة", "حوكمة التقارير اليومية",
-    "تذكيرات الالتزام", "التصنيف والمقارنات", "الأمان والحساب",
+    "الحوكمة", "حوكمة التقارير اليومية",
+    "تذكيرات الالتزام", "التصنيف والمقارنات", "تقارير الجهات الرسمية",
+    "الأمان والحساب",
     "سجل التدقيق", "الدخول المقيّد بصفة مستخدم", "الملف الشخصي للمسؤول",
     "إعدادات النظام", "مركز المساعدة",
 ]
@@ -36,9 +37,10 @@ EXPECTED_VISIBLE_HREFS = [
     "/admin/reports/incidents", "/admin/safety-analytics", "/admin/heatmap",
     "/admin/analytics", "/admin/kpi", "/admin/analytics/reports",
     "/admin/analytics/decision-support", "/admin/daily-reports-organization",
-    "/reports/analytics", "/admin/analytics/charts", "/admin/agency-reports",
+    "/reports/analytics", "/admin/analytics/charts",
     "/admin/governance-reports", "/admin/governance/reminders",
-    "/admin/classification", "/admin/audit-logs", "/admin/impersonate",
+    "/admin/classification", "/admin/agency-reports",
+    "/admin/audit-logs", "/admin/impersonate",
     "/admin/profile", "/admin/settings", "/admin/help",
 ]
 

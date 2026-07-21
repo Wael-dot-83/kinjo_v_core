@@ -370,7 +370,11 @@ def test_upgrade_downgrade_upgrade_is_clean(
 ) -> None:
     db_url = request.getfixturevalue("fresh_pg" if engine_name == "postgres" else "fresh_sqlite")
 
-    r = _alembic(db_url, "downgrade", "-1")
+    # Downgrade to the revision *before* c7d9e1a4b820 (which added the incidents/reports
+    # columns asserted below). A relative "-1" would only undo whichever migration is
+    # currently the head, so target the parent revision explicitly to stay correct as
+    # new migrations (e.g. canon_gov_cap_01) are stacked on top.
+    r = _alembic(db_url, "downgrade", "1417f512f696")
     assert r.returncode == 0, f"downgrade failed:\n{r.stderr[-3000:]}"
     assert "status" not in _cols(db_url, "incidents"), "downgrade left incidents.status"
     assert "owner_id" not in _cols(db_url, "incidents"), "downgrade left incidents.owner_id"

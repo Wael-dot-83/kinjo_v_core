@@ -226,17 +226,17 @@ class TestBulkStatusForbiddenAuditLog:
 
 class TestNormalizeGovernorates:
     def test_english_amman_expands_to_arabic_and_english(self):
-        """Lines 1972-1976: 'Amman' → both 'عمان' and 'Amman' in result."""
+        """'Amman' → canonical governorate name 'العاصمة' plus the English form."""
         from admin_endpoints import _normalize_governorates
         result = _normalize_governorates(["Amman"])
-        assert "عمان" in result
+        assert "العاصمة" in result
         assert "Amman" in result
 
     def test_arabic_amman_also_expands(self):
-        """Lines 1972-1976: Arabic input 'عمان' → expanded forms."""
+        """Legacy city-name input 'عمان' normalizes to the capital 'العاصمة'."""
         from admin_endpoints import _normalize_governorates
         result = _normalize_governorates(["عمان"])
-        assert "عمان" in result
+        assert "العاصمة" in result
 
     def test_none_input_returns_empty_list(self):
         """Edge case: None → []."""
@@ -250,16 +250,16 @@ class TestNormalizeGovernorates:
 
 class TestCanonicalGovernorates:
     def test_valid_gov_returns_arabic_form(self):
-        """Lines 1985-1986: valid English gov → Arabic canonical form."""
+        """Valid English gov → canonical Arabic form (capital is 'العاصمة')."""
         from admin_endpoints import _canonical_governorates
         result = _canonical_governorates(["Amman"])
-        assert "عمان" in result
+        assert "العاصمة" in result
 
     def test_empty_string_is_skipped(self):
-        """Lines 1983-1984: empty string in list → continue."""
+        """Empty string in list → continue; 'Amman' → 'العاصمة'."""
         from admin_endpoints import _canonical_governorates
         result = _canonical_governorates(["", "Amman"])
-        assert "عمان" in result
+        assert "العاصمة" in result
         assert "" not in result
 
     def test_invalid_gov_causes_400_in_create_message(self, client, test_db,
@@ -584,15 +584,18 @@ class TestCreateAdminMessageBranches:
 
 class TestGovernorateOptionsWithKG:
     def test_active_kg_with_amman_produces_option(self, client, test_db, sample_kindergarten):
-        """Lines 2772-2789: KG.governorate='Amman' → normalized option with English label."""
+        """Governorate options come from the canonical source: the capital is
+        offered once as 'العاصمة' (never the city 'عمان') with English label 'Amman'."""
         admin = _make_admin(test_db, "gopt2789a")
         headers = _tok(client, "gopt2789a")
         r = client.get("/api/admin/options/governorates", headers=headers)
         assert r.status_code == 200
         govs = r.json().get("governorates", [])
-        amman = next((g for g in govs if g.get("id") == "عمان"), None)
+        amman = next((g for g in govs if g.get("id") == "العاصمة"), None)
         assert amman is not None
         assert amman.get("name_en") == "Amman"
+        # The city name must never appear as a governorate option.
+        assert not any(g.get("id") == "عمان" for g in govs)
 
 
 # ---------------------------------------------------------------------------

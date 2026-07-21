@@ -57,15 +57,20 @@ def allowed_kindergarten_ids(current_user: models.User, db: Session) -> Optional
 
 
 def kg_ids_for_governorate(db: Session, governorate: Optional[str]) -> Optional[List[int]]:
-    """Return active kindergarten IDs for a governorate; None means no governorate filter."""
+    """Return active kindergarten IDs for a governorate; None means no governorate filter.
+
+    Alias-aware: a drill-down value in any accepted form (stable key "amman",
+    canonical name "العاصمة", or a legacy/bookmarked form "عمان"/"Amman") matches
+    rows however the governorate is stored, so old and new query values both resolve.
+    """
     if not governorate:
         return None
-    from config import settings
-    normalized = settings.JORDAN_GOVERNORATE_ALIASES.get(governorate, governorate)
+    from services.jordan_locations import governorate_query_aliases
+    match_values = governorate_query_aliases(governorate) or [governorate]
     rows = (
         db.query(models.Kindergarten.id)
         .filter(
-            models.Kindergarten.governorate == normalized,
+            models.Kindergarten.governorate.in_(match_values),
             models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
         )
         .all()
