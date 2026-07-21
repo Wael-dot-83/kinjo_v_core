@@ -166,8 +166,9 @@ def resolve_announcement_scope(
                 "المحافظة المختارة غير صالحة.",
                 fields={"governorate_id": "invalid"}
             )
+        from services.jordan_locations import governorate_query_aliases
         kg_rows = db.query(models.Kindergarten.id).filter(
-            models.Kindergarten.governorate == governorate_name,
+            models.Kindergarten.governorate.in_(governorate_query_aliases(governorate_name) or [governorate_name]),
             models.Kindergarten.status == models.KindergartenStatus.ACTIVE
         ).all()
         scope_ids = [row[0] for row in kg_rows]
@@ -187,8 +188,9 @@ def resolve_announcement_scope(
                 "المحافظة المختارة غير صالحة.",
                 fields={"governorate": "invalid"}
             )
+        from services.jordan_locations import governorate_query_aliases
         kg_rows = db.query(models.Kindergarten.id).filter(
-            models.Kindergarten.governorate == governorate_trimmed,
+            models.Kindergarten.governorate.in_(governorate_query_aliases(governorate_trimmed) or [governorate_trimmed]),
             models.Kindergarten.status == models.KindergartenStatus.ACTIVE
         ).all()
         scope_ids = [row[0] for row in kg_rows]
@@ -528,33 +530,39 @@ def validate_direct_permissions(
 
 def _resolve_governorate_filter_values(audience: "AudienceDefinition") -> List[str]:
     """Extract governorate filter values from audience definition (supports both
-    legacy governorate_id field and new filters-based approach)."""
+    legacy governorate_id field and new filters-based approach).
+
+    Each requested governorate is validated and then expanded to every accepted
+    stored form (stable key, canonical name, and legacy aliases) so scoping matches
+    kindergarten rows regardless of which form the governorate is persisted under —
+    e.g. the capital targeted as "العاصمة"/"عمان"/"amman" all match the same rows.
+    """
+    from services.jordan_locations import governorate_query_aliases
+
     governorates: List[str] = []
+
+    def _add(raw_value: str, field: str) -> None:
+        try:
+            canonical = validators.validate_jordan_governorate(str(raw_value))
+        except validators.ValidationError:
+            raise validation_error("المحافظة غير صالحة", fields={field: "invalid"})
+        governorates.extend(governorate_query_aliases(canonical) or [canonical])
 
     # Legacy field (single governorate string)
     if audience.governorate_id:
         raw = str(audience.governorate_id).strip()
         if raw:
-            try:
-                governorates.append(validators.validate_jordan_governorate(raw))
-            except validators.ValidationError:
-                raise validation_error("المحافظة غير صالحة", fields={"governorate_id": "invalid"})
+            _add(raw, "governorate_id")
 
     # Check filters for governorate.EQ / governorate.IN
     for fc in audience.filters or []:
         if fc.field == "kindergarten.governorate":
             op_val = fc.op.value if hasattr(fc.op, "value") else str(fc.op)
             if op_val == "EQ" and fc.value:
-                try:
-                    governorates.append(validators.validate_jordan_governorate(str(fc.value)))
-                except validators.ValidationError:
-                    raise validation_error("المحافظة غير صالحة", fields={"governorate": "invalid"})
+                _add(fc.value, "governorate")
             elif op_val == "IN" and isinstance(fc.value, list):
                 for v in fc.value:
-                    try:
-                        governorates.append(validators.validate_jordan_governorate(str(v)))
-                    except validators.ValidationError:
-                        raise validation_error("المحافظة غير صالحة", fields={"governorate": "invalid"})
+                    _add(v, "governorate")
     return list(dict.fromkeys(governorates))
 
 
@@ -813,12 +821,17 @@ def _apply_kindergarten_filter(query, field: str, op: FilterOperator, value):
     query = query.outerjoin(models.Kindergarten, models.User.kindergarten_id == models.Kindergarten.id)
 
     if field == "governorate":
+        from services.jordan_locations import governorate_query_aliases
         if op == FilterOperator.EQ:
-            normalized_gov = validators.validate_jordan_governorate(value)
-            query = query.filter(models.Kindergarten.governorate == normalized_gov)
+            validators.validate_jordan_governorate(value)  # reject unknown governorates
+            match_values = governorate_query_aliases(value) or [value]
+            query = query.filter(models.Kindergarten.governorate.in_(match_values))
         elif op == FilterOperator.IN:
-            normalized_govs = [validators.validate_jordan_governorate(g) for g in value]
-            query = query.filter(models.Kindergarten.governorate.in_(normalized_govs))
+            match_values = []
+            for g in value:
+                validators.validate_jordan_governorate(g)  # reject unknown governorates
+                match_values.extend(governorate_query_aliases(g) or [g])
+            query = query.filter(models.Kindergarten.governorate.in_(sorted(set(match_values))))
     elif field == "id":
         if op == FilterOperator.EQ:
             query = query.filter(models.Kindergarten.id == value)
