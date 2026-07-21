@@ -32,9 +32,14 @@ codebase.
 
 ### Confirmed with stakeholder (2026-07-21)
 
-- **Manager scope is a hard boundary** — a Manager sees *only their own kindergarten*.
-  No governorate selector, no cross-KG data anywhere in their UI; scope is server-enforced,
-  not just hidden.
+- **Role hierarchy is nested by scope** — Admin (platform) ⊃ Manager (one whole
+  kindergarten) ⊃ Supervisor (one class within that KG) ⊃ Parent (own child). Each level
+  sees strictly less than the one above.
+- **Manager = one kindergarten** — sees *only their own KG* (all its classes). No
+  governorate selector, no cross-KG data; server-enforced, not just hidden.
+- **Supervisor = one classroom** — belongs to a single kindergarten, is responsible for
+  *one class of a few children*, and their core job is **filling in the daily report**.
+  Hard-scoped server-side to one `class_id`; not an oversight/cluster role.
 - **Real-time: yes** — alerts and dashboard values are pushed live over a persistent
   transport (WebSocket, SSE fallback), not polled. The 30s cache backs the initial paint
   and cold loads; live events invalidate and repaint affected widgets.
@@ -44,8 +49,10 @@ codebase.
 
 ### Still open (confirm)
 
-- **Governorate selector** remains the top-level scope for Admin/Supervisor (Manager
-  excluded). Confirm whether Supervisors scope by *cluster* rather than a single governorate.
+- **Governorate selector is Admin-only** — Manager and Supervisor are both hard-scoped and
+  see no selector. Confirm Admin is the only role needing cross-KG / cross-governorate scope.
+- **Report approval chain** — assumed: Supervisor *submits* the daily report → Manager
+  *reviews/approves* → it reaches the Parent. Confirm the Manager is the approver (not Admin).
 - **Notification channels beyond in-app** — email / SMS / push are specced as opt-in per
   user; confirm which are wired for launch vs. roadmap.
 - **Ranked pain points** are inferred from prior audits; confirm your own top-3.
@@ -101,7 +108,7 @@ item they can't act on.
 
 | Element | Placement (LTR / RTL mirror) | Behavior |
 |---|---|---|
-| Governorate / KG scope selector | Top bar, leading edge | Primary scoping control; persists across pages (session). Canonical governorate names (e.g. `العاصمة`, not city `عمان`); alias-aware. Admin sees all; **Manager is hard-scoped to their own KG** (no selector). |
+| Governorate / KG scope selector | Top bar, leading edge | **Admin-only.** Primary scoping control; persists across pages (session). Canonical governorate names (e.g. `العاصمة`, not city `عمان`); alias-aware. Manager and Supervisor never see it — hard-scoped server-side to their KG and class respectively. |
 | Date-range picker | Top bar, after scope | Presets (Today, 7d, 30d, Custom). "Custom" **must** transmit its dates. Jordan time (UTC+3). |
 | Global search | Top bar, center | Typeahead across kindergartens, users, reports. Role-scoped. `⌘/Ctrl-K`. |
 | Notification center | Top bar, trailing edge | **Real-time.** Live badge over the push channel; toast on arrival. Grouped by severity; each deep-links to source. Gear opens per-user delivery prefs (in-app always on; email/SMS/push opt-in). |
@@ -268,16 +275,16 @@ can't act on.
 | Role | Primary daily goal | Essential sections | Signature KPIs / lists | Hidden / deemphasized |
 |---|---|---|---|---|
 | **Admin** | Govern the whole platform; catch systemic gaps. | Dashboard · Analytics · Alerts · Institutions · People · Governance | All 7 KPIs; missed-reporting alerts; agency-report queue; user/audit activity. | Operational entry (can't create incidents/attendance/reports — by design). |
-| **Manager** | Run *my* kindergarten today; keep reports flowing. | KG dashboard · Attendance · Daily reports · Children · Incidents · Communication | My-KG attendance %, pending reports, today's incidents; child roster. | **Everything outside their own KG** — no governorate selector, no cross-KG data; hard-scoped server-side to a single `kindergarten_id`. Also platform analytics, user admin. |
-| **Supervisor** | Oversee a cluster; review & approve; observe performance. | Supervisor dashboard · Observations · Performance · Attendance review · Reports | KGs under review, approval queue, benchmarking, observation notes. | System settings; import tools; cross-cluster admin. |
+| **Manager** | Run *my* kindergarten; **review & approve** the daily reports my supervisors submit. | KG dashboard · Attendance (all classes) · Daily reports (approve) · Children · Incidents · Communication | My-KG attendance %, pending-report approval queue, today's incidents; class & child roster. | **Everything outside their own KG** — no governorate selector, no cross-KG data; hard-scoped server-side to a single `kindergarten_id`. Also platform analytics, user admin. |
+| **Supervisor** | Run *my class* today; take attendance and **fill the daily report** for my few children. | My-class dashboard · Attendance (take) · Daily report (fill/submit) · My children · Class messages | Today's class attendance, my children's status, draft/submitted report state, unread class messages. | **Everything outside their one class** — no governorate/KG selector, no other classes or children; hard-scoped server-side to a single `class_id`. No approval queue, analytics, or admin. |
 | **Parent** | Check my child's day; stay in the loop. | Child(ren) · Attendance · Enrollments · Messages/announcements | Child attendance streak, enrollment status, unread messages. | Everything operational/administrative; no KPIs, no other families' data. |
 
 > **Security invariant.** Role filtering is a UI convenience, never the enforcement boundary.
 > Every admin endpoint keeps `require_admin`; ownership checks must not short-circuit when a
-> profile is `None` (a known IDOR shape). **Manager KG-scoping is enforced in the query layer** —
-> every Manager request is filtered to their own `kindergarten_id` at the source, and the live
-> push channel only subscribes them to their own KG's events. The nav hiding an item does not
-> authorize the API.
+> profile is `None` (a known IDOR shape). **Scoping is enforced in the query layer per role** —
+> Manager requests are filtered to their own `kindergarten_id`, Supervisor requests to their own
+> `class_id`, at the source; the live push channel only subscribes each to the events for their
+> scope. The nav hiding an item does not authorize the API.
 
 ---
 
@@ -380,10 +387,10 @@ keys UPPERCASE to match JS. Tone: plain, active, operational.
 ### Real-time transport & notifications
 
 Live delivery is a first-class requirement. Transport: **WebSocket** with an **SSE fallback**;
-on connect the client subscribes to channels scoped by role — Admin/Supervisor to their
-governorate/cluster, **Manager to their single `kindergarten_id` only**. Server emits a typed
-event; the client invalidates the 30s cache for the affected widget and repaints just that
-widget (no full reload).
+on connect the client subscribes to channels scoped by role — Admin to their selected
+governorate/all, **Manager to their single `kindergarten_id`**, **Supervisor to their single
+`class_id`**. Server emits a typed event; the client invalidates the 30s cache for the affected
+widget and repaints just that widget (no full reload).
 
 | Channel / event | Payload | Client effect |
 |---|---|---|
