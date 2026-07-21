@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from fastapi.responses import JSONResponse, StreamingResponse
 import io
 
@@ -24,9 +24,21 @@ from ..etl.compute import compute_dataframe, impute_missing, INDICATOR_MAP
 from ..analytics.stats import compute_full_stats, stats_to_csv, rolling_health_alert_hotspot
 from ..alerts.engine import get_alerts, acknowledge_alert, evaluate_alerts
 from ..etl.pipeline import run_pipeline
+from admin_security import require_admin_role
+from dependencies import get_current_user
+import models
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["heatmap"])
+
+
+def _require_admin(
+    current_user: models.User = Depends(get_current_user),
+) -> models.User:
+    """Protect the legacy ETL surface with the canonical admin policy."""
+    return require_admin_role(current_user)
+
+
+router = APIRouter(tags=["heatmap"], dependencies=[Depends(_require_admin)])
 
 DATA_DIR   = Path(__file__).parent.parent.parent / "data"
 STATIC_DIR = Path("static/heatmap")
@@ -197,10 +209,22 @@ async def ingest_indicators(
 
 
 @router.post("/pipeline/run", response_model=PipelineResult)
-async def trigger_pipeline(csv_path: str = Query(str(DATA_DIR / "test_data.csv"))):
+async def trigger_pipeline(csv_path: str = Query("test_data.csv")):
     """Manually trigger the full ETL pipeline (for testing/admin use)."""
     global _computed_cache, _stats_cache
-    result = run_pipeline(csv_path, source_type="csv")
+    data_root = DATA_DIR.resolve()
+    supplied_path = Path(csv_path)
+    requested_path = (
+        supplied_path.resolve()
+        if supplied_path.is_absolute()
+        else (data_root / supplied_path).resolve()
+    )
+    if requested_path.suffix.lower() != ".csv" or not requested_path.is_relative_to(data_root):
+        raise HTTPException(400, "csv_path must reference a CSV file inside the heatmap data directory")
+    if not requested_path.is_file():
+        raise HTTPException(404, "CSV file not found")
+
+    result = run_pipeline(str(requested_path), source_type="csv")
     _computed_cache = pd.DataFrame()  # force reload
     _stats_cache    = pd.DataFrame()
     return result

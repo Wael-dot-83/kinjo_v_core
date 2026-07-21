@@ -12,7 +12,13 @@ from fastapi.responses import JSONResponse
 from config import settings
 
 CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-CSRF_MFA_EXEMPT_PATHS = {"/api/auth/mfa/setup", "/api/auth/mfa/verify"}
+CSRF_PRE_AUTH_EXEMPT_PATHS = {
+    "/token",
+    "/api/auth/login",
+    "/api/auth/register",
+    "/api/auth/mfa/setup",
+    "/api/auth/mfa/verify",
+}
 
 # Browser telemetry collectors are fire-and-forget reporters with no user-controlled
 # state changes, so forging a POST against them has negligible security impact.
@@ -73,12 +79,22 @@ async def csrf_protection_middleware(request: Request, call_next: Callable):
             )
         return response
 
-    # Skip CSRF for MFA setup/verify endpoints (user has kinjo_mfa_ticket but no session)
-    if request.url.path in CSRF_MFA_EXEMPT_PATHS:
+    # Pre-authentication endpoints cannot present a session-bound CSRF pair.
+    # Login/register are safe to exempt because they do not rely on an ambient
+    # authenticated cookie, and successful login rotates the session cookie.
+    if request.url.path in CSRF_PRE_AUTH_EXEMPT_PATHS:
         return await call_next(request)
 
     # Skip CSRF for browser telemetry collectors (no state changes, negligible forgery risk)
     if request.url.path in CSRF_TELEMETRY_EXEMPT_PATHS:
+        return await call_next(request)
+
+    # Explicit bearer credentials are not ambient browser authority and cannot
+    # be attached by a cross-origin HTML form. This keeps Swagger's Authorize +
+    # Try it out workflow usable while cookie-authenticated writes still require
+    # the double-submit token below.
+    authorization = request.headers.get("authorization", "").strip()
+    if authorization.lower().startswith("bearer ") and authorization[7:].strip():
         return await call_next(request)
 
     if not _same_origin_allowed(request):

@@ -10,6 +10,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, status, Request, Response, Form, APIRouter, WebSocket
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.openapi.docs import (
+    get_redoc_html,
+    get_swagger_ui_html,
+    get_swagger_ui_oauth2_redirect_html,
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from fastapi.templating import Jinja2Templates
@@ -279,14 +284,68 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI application
 api_docs_enabled = settings.API_DOCS_ENABLED and settings.ENVIRONMENT.lower() != "production"
+openapi_tags = [
+    {"name": "Authentication", "description": "Login, logout, MFA, token refresh, and registration."},
+    {"name": "Monitoring", "description": "Health, runtime metrics, and scaling status."},
+    {"name": "Predictive Analytics", "description": "Forecasts, trends, and predictive insights."},
+    {"name": "heatmap", "description": "Admin-only heatmap ETL and analytical operations."},
+    {"name": "Development", "description": "Development-only helpers; disabled in production."},
+]
 app = FastAPI(
     title="KinJo - Kindergarten Management Platform",
     description="Enterprise-grade management system for kindergartens in Jordan",
     version="2.0.0",
-    docs_url="/docs" if api_docs_enabled else None,
-    redoc_url="/redoc" if api_docs_enabled else None,
+    openapi_tags=openapi_tags,
+    openapi_url=("/openapi.json" if api_docs_enabled else None),
+    docs_url=None,
+    redoc_url=None,
+    swagger_ui_oauth2_redirect_url=("/docs/oauth2-redirect" if api_docs_enabled else None),
     lifespan=lifespan
 )
+
+_default_openapi = app.openapi
+
+
+def openapi_with_auth_responses():
+    """Document the authentication failures shared by secured operations."""
+    schema = _default_openapi()
+    for path_item in schema.get("paths", {}).values():
+        for operation in path_item.values():
+            if not isinstance(operation, dict) or not operation.get("security"):
+                continue
+            responses = operation.setdefault("responses", {})
+            responses.setdefault("401", {"description": "Not authenticated"})
+            responses.setdefault("403", {"description": "Not authorized"})
+    return schema
+
+
+app.openapi = openapi_with_auth_responses
+
+
+if api_docs_enabled:
+    @app.get("/docs", include_in_schema=False)
+    async def custom_swagger_ui_html():
+        """Serve Swagger UI with a CSP-compatible local favicon."""
+        return get_swagger_ui_html(
+            openapi_url=app.openapi_url,
+            title=f"{app.title} - Swagger UI",
+            oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
+            swagger_favicon_url="/static/favicon.svg",
+            swagger_ui_parameters=app.swagger_ui_parameters,
+        )
+
+    @app.get(app.swagger_ui_oauth2_redirect_url, include_in_schema=False)
+    async def swagger_ui_redirect():
+        return get_swagger_ui_oauth2_redirect_html()
+
+    @app.get("/redoc", include_in_schema=False)
+    async def custom_redoc_html():
+        """Serve ReDoc with the same local application favicon."""
+        return get_redoc_html(
+            openapi_url=app.openapi_url,
+            title=f"{app.title} - ReDoc",
+            redoc_favicon_url="/static/favicon.svg",
+        )
 
 # Add rate limiter to app state
 app.state.limiter = limiter
@@ -993,7 +1052,7 @@ class MFACodeRequest(BaseModel):
     code: str
 
 
-@app.post("/token")
+@app.post("/token", tags=["Authentication"])
 @limiter.limit("5/minute")  # Rate limit: 5 login attempts per minute per IP
 async def token_login(
     request: Request,
@@ -1005,7 +1064,7 @@ async def token_login(
     return _issue_auth_response(payload, status_code=202 if payload.get("mfa_required") else 200)
 
 
-@app.post("/api/auth/login")
+@app.post("/api/auth/login", tags=["Authentication"])
 @limiter.limit("5/minute")  # Rate limit: 5 login attempts per minute per IP
 async def api_login(
     request: Request,
@@ -1017,7 +1076,7 @@ async def api_login(
     return _issue_auth_response(payload, status_code=202 if payload.get("mfa_required") else 200)
 
 
-@app.post("/api/auth/logout")
+@app.post("/api/auth/logout", tags=["Authentication"])
 async def logout(
     request: Request,
     current_user: Optional[models.User] = Depends(get_current_user_optional),
@@ -1038,7 +1097,7 @@ async def logout(
     return response
 
 
-@app.post("/api/auth/mfa/setup")
+@app.post("/api/auth/mfa/setup", tags=["Authentication"])
 @limiter.limit("5/minute")
 async def mfa_setup(
     request: Request,
@@ -1074,7 +1133,7 @@ async def mfa_setup(
     }
 
 
-@app.post("/api/auth/mfa/verify")
+@app.post("/api/auth/mfa/verify", tags=["Authentication"])
 @limiter.limit("5/minute")
 async def mfa_verify(
     request: Request,
@@ -1156,7 +1215,7 @@ async def mfa_verify(
     return _issue_auth_response(auth_payload)
 
 
-@app.post("/api/auth/refresh")
+@app.post("/api/auth/refresh", tags=["Authentication"])
 @limiter.limit("30/minute")
 async def refresh_token(
     request: Request,
@@ -1478,7 +1537,11 @@ async def notify_websocket(websocket: WebSocket):
         pass
 
 
-@app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
+@app.post(
+    "/api/auth/register",
+    status_code=status.HTTP_201_CREATED,
+    tags=["Authentication"],
+)
 @limiter.limit("10/hour")
 async def register(
     request: Request,
@@ -1554,7 +1617,7 @@ async def register(
 # Health Check
 # =============================================================================
 
-@app.get("/health")
+@app.get("/health", tags=["Monitoring"])
 async def health_check(db: Session = Depends(get_db)):
     """Basic health check endpoint with DB connectivity verification"""
     try:
@@ -1568,7 +1631,7 @@ async def health_check(db: Session = Depends(get_db)):
         )
 
 
-@app.head("/api/health")
+@app.head("/api/health", tags=["Monitoring"])
 async def api_health_check_head(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
@@ -1583,7 +1646,7 @@ async def api_health_check_head(
     return Response(status_code=200, headers={"X-Health": "OK"})
 
 
-@app.get("/api/health")
+@app.get("/api/health", tags=["Monitoring"])
 async def api_health_check(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
@@ -1651,7 +1714,7 @@ async def api_health_check(
     return response
 
 
-@app.get("/api/metrics")
+@app.get("/api/metrics", tags=["Monitoring"])
 async def get_system_metrics(
     minutes: int = 60,
     current_user: models.User = Depends(get_current_user),
@@ -1709,7 +1772,7 @@ async def get_system_metrics(
         return {"error": str(e)}
 
 
-@app.get("/api/scaling/history")
+@app.get("/api/scaling/history", tags=["Monitoring"])
 async def get_scaling_history(
     hours: int = 24,
     current_user: models.User = Depends(get_current_user),
@@ -1744,7 +1807,7 @@ async def get_scaling_history(
 # Predictive Analytics Endpoints
 # =============================================================================
 
-@app.get("/api/analytics/predict/attendance")
+@app.get("/api/analytics/predict/attendance", tags=["Predictive Analytics"])
 async def predict_attendance_rate(
     kindergarten_id: int,
     days_ahead: int = 7,
@@ -1786,7 +1849,7 @@ async def predict_attendance_rate(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.get("/api/analytics/predict/incidents")
+@app.get("/api/analytics/predict/incidents", tags=["Predictive Analytics"])
 async def predict_incident_trend(
     kindergarten_id: int,
     days_ahead: int = 30,
@@ -1828,7 +1891,7 @@ async def predict_incident_trend(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.get("/api/analytics/predict/capacity")
+@app.get("/api/analytics/predict/capacity", tags=["Predictive Analytics"])
 async def predict_capacity_utilization(
     kindergarten_id: int,
     days_ahead: int = 90,
@@ -1870,7 +1933,7 @@ async def predict_capacity_utilization(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.get("/api/analytics/predict/enrollment")
+@app.get("/api/analytics/predict/enrollment", tags=["Predictive Analytics"])
 async def predict_enrollment_trend(
     kindergarten_id: int,
     days_ahead: int = 30,
@@ -1914,7 +1977,7 @@ async def predict_enrollment_trend(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.get("/api/analytics/trends/{metric_type}")
+@app.get("/api/analytics/trends/{metric_type}", tags=["Predictive Analytics"])
 async def analyze_trends(
     kindergarten_id: int,
     metric_type: str,
@@ -1963,7 +2026,7 @@ async def analyze_trends(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.get("/api/analytics/predictive-insights")
+@app.get("/api/analytics/predictive-insights", tags=["Predictive Analytics"])
 async def get_predictive_insights(
     kindergarten_id: int,
     current_user: models.User = Depends(get_current_user),
@@ -1994,7 +2057,7 @@ async def get_predictive_insights(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.get("/api/dev/auto-login")
+@app.get("/api/dev/auto-login", tags=["Development"])
 async def dev_auto_login(
     request: Request,
     role: str = "admin",

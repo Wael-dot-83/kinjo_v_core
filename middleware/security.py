@@ -166,6 +166,13 @@ def _restore_response_body(response: Response, body: bytes) -> None:
 async def sanitize_json_response_middleware(request: Request, call_next: Callable):
     """Remove secret fields from JSON responses defensively."""
     response = await call_next(request)
+    # OpenAPI documents field *definitions*, not application data. Running the
+    # generic secret scrubber over the schema removes legitimate keys such as
+    # the OAuth2 ``password`` flow and password request properties, leaving
+    # Swagger UI unable to authenticate or render those inputs.
+    if request.url.path == "/openapi.json":
+        return response
+
     content_type = (response.headers.get("content-type") or "").lower()
     if "application/json" not in content_type:
         return response
