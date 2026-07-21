@@ -3,6 +3,7 @@ from datetime import date, timedelta, datetime
 
 import models
 from auth import get_password_hash
+from conftest import bearer_headers
 
 
 def _login_admin(client, admin_user):
@@ -22,7 +23,7 @@ def test_predictive_endpoint(client, admin_user):
     }
     response = client.post(
         "/api/analytics/predict/attendance",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
         json=payload,
     )
     assert response.status_code == 200
@@ -46,7 +47,7 @@ def test_anomalies_endpoint(client, admin_user, sample_kindergarten, sample_clas
 
     response = client.get(
         f"/api/analytics/anomalies?scope_type=NETWORK&metric_type=attendance&from={start_date.isoformat()}&to={date.today().isoformat()}",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
     )
     assert response.status_code == 200
     data = response.json()
@@ -57,7 +58,7 @@ def test_alert_thresholds(client, admin_user):
     token = _login_admin(client, admin_user)
     response = client.put(
         "/api/analytics/alerts/thresholds",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
         json={
             "metric_type": "attendance_rate",
             "scope_type": "NETWORK",
@@ -72,7 +73,7 @@ def test_alert_thresholds(client, admin_user):
 
     alert_response = client.get(
         "/api/analytics/alerts",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
     )
     assert alert_response.status_code == 200
     assert "alerts" in alert_response.json()
@@ -82,7 +83,7 @@ def test_targets_endpoint(client, admin_user):
     token = _login_admin(client, admin_user)
     response = client.put(
         "/api/analytics/targets",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
         json={
             "metric_type": "attendance_rate",
             "scope_type": "NETWORK",
@@ -95,7 +96,7 @@ def test_targets_endpoint(client, admin_user):
 
     get_response = client.get(
         "/api/analytics/targets",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
     )
     assert get_response.status_code == 200
     assert len(get_response.json()["targets"]) >= 1
@@ -117,7 +118,7 @@ def test_benchmarks_endpoint(client, admin_user, sample_kindergarten, test_db):
 
     response = client.get(
         f"/api/analytics/benchmarks/{sample_kindergarten.id}",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
     )
     assert response.status_code == 200
     data = response.json()
@@ -129,7 +130,7 @@ def test_recommendations_endpoint(client, admin_user, sample_kindergarten):
     token = _login_admin(client, admin_user)
     response = client.get(
         f"/api/analytics/recommendations/{sample_kindergarten.id}",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
     )
     assert response.status_code == 200
     data = response.json()
@@ -140,7 +141,7 @@ def test_action_plan_progress(client, admin_user, sample_kindergarten):
     token = _login_admin(client, admin_user)
     create_response = client.post(
         "/api/analytics/actions",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
         json={
             "kindergarten_id": sample_kindergarten.id,
             "title": "رفع نسبة الحضور",
@@ -152,7 +153,7 @@ def test_action_plan_progress(client, admin_user, sample_kindergarten):
 
     progress_response = client.get(
         f"/api/analytics/actions/{action_id}/progress",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
     )
     assert progress_response.status_code == 200
     assert progress_response.json()["progress_percent"] == 0
@@ -162,13 +163,13 @@ def test_data_quality_report(client, admin_user):
     token = _login_admin(client, admin_user)
     response = client.get(
         "/api/analytics/data-quality",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
     )
     assert response.status_code == 200
 
     report_response = client.get(
         "/api/analytics/data-quality/report",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
     )
     assert report_response.status_code == 200
     assert "reports" in report_response.json()
