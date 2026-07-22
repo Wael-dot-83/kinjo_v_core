@@ -235,8 +235,7 @@ function injectChart(data) {
   document.getElementById('chartTitle').textContent = data.title;
   
   const badge = document.getElementById('rowCountBadge');
-  const recordCount = data.quality?.record_count ?? data.row_count ?? 0;
-  badge.textContent = `${recordCount.toLocaleString()} ${LANG === 'en' ? 'records' : 'سجل'}`;
+  badge.textContent = `${data.quality.record_count} ${LANG === 'en' ? 'records' : 'سجل'}`;
   badge.style.display = '';
 
   document.getElementById('exportBtn').style.display = '';

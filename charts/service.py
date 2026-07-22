@@ -1,4 +1,4 @@
-"""ChartService — orchestrates data loading, advisor, caching, and rendering.
+"""ChartService — orchestrates data loading, advisor, caching, and payload building.
 
 Data source registry:
   Each loader accepts (db, req) and returns a pandas DataFrame.
@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import datetime
 from datetime import date, timedelta
 from utils.time_utils import today_amman as _today
 from typing import Callable, Dict, Optional, Tuple
@@ -25,7 +26,7 @@ from sqlalchemy.orm import Session
 
 from charts import cache as chart_cache
 from charts.advisor import ChartAdvisor
-from charts.builders import get_builder
+from charts.registry import METRIC_REGISTRY
 from charts.schemas import (
     ChartRequest,
     ChartResponse,
@@ -34,6 +35,11 @@ from charts.schemas import (
     DataProfile,
     SuggestRequest,
     SuggestResponse,
+    MetricMeta,
+    ScopeMeta,
+    PeriodMeta,
+    DrilldownMeta,
+    QualityMeta,
 )
 
 logger = logging.getLogger(__name__)
@@ -190,27 +196,51 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
     from sqlalchemy import func, and_
     import models
 
-    q = (
-        db.query(
-            models.Kindergarten.name_ar.label("kindergarten"),
-            models.Kindergarten.governorate.label("governorate"),
-            func.coalesce(func.sum(models.Class.capacity_total), 0).label("capacity"),
-            func.coalesce(func.sum(models.Class.enrolled_children_count), 0).label("enrolled"),
-        )
-        .outerjoin(
-            models.Class,
-            and_(
-                models.Class.kindergarten_id == models.Kindergarten.id,
-                models.Class.deleted_at.is_(None),
-            ),
-        )
-        .group_by(models.Kindergarten.id, models.Kindergarten.name_ar, models.Kindergarten.governorate)
+    base_query = db.query(
+        func.coalesce(func.sum(models.Class.capacity_total), 0).label("capacity"),
+        func.coalesce(func.sum(models.Class.enrolled_children_count), 0).label("enrolled"),
+        func.count(models.Kindergarten.id.distinct()).label("count")
+    ).outerjoin(
+        models.Class,
+        and_(
+            models.Class.kindergarten_id == models.Kindergarten.id,
+            models.Class.deleted_at.is_(None),
+        ),
     )
-    if req.governorate:
-        q = q.filter(models.Kindergarten.governorate == req.governorate)
+
+    if req.kindergarten_id:
+        q = base_query.add_columns(models.Kindergarten.name_ar.label("kindergarten"))
+        q = q.filter(models.Kindergarten.id == req.kindergarten_id)
+        q = q.group_by(models.Kindergarten.name_ar)
+        cols = ["kindergarten", "capacity", "enrolled", "count"]
+    elif req.governorate:
+        gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
+        q = base_query.add_columns(models.Kindergarten.name_ar.label("kindergarten"))
+        q = q.filter(models.Kindergarten.governorate == gov)
+        q = q.group_by(models.Kindergarten.name_ar)
+        cols = ["kindergarten", "capacity", "enrolled", "count"]
+    else:
+        q = base_query.add_columns(models.Kindergarten.governorate.label("governorate"))
+        q = q.group_by(models.Kindergarten.governorate)
+        cols = ["governorate", "capacity", "enrolled", "count"]
+
     rows = q.all()
-    df = pd.DataFrame(rows, columns=["kindergarten", "governorate", "capacity", "enrolled"])
-    return df
+
+    # We must re-order dictionary output manually based on mapped columns
+    data = []
+    for r in rows:
+        d = {
+            "capacity": r.capacity,
+            "enrolled": r.enrolled,
+            "count": r.count
+        }
+        if req.kindergarten_id or req.governorate:
+            d["kindergarten"] = getattr(r, "kindergarten", "")
+        else:
+            d["governorate"] = getattr(r, "governorate", "")
+        data.append(d)
+
+    return pd.DataFrame(data)
 
 
 _LOADERS: Dict[ChartSource, Callable[[Session, ChartRequest], pd.DataFrame]] = {
@@ -243,69 +273,112 @@ class ChartService:
         if loader is None:
             raise ValueError(f"Unknown chart source: {req.source}")
         df = loader(db, req)
-        
-        # Localize column names
-        def _localized(ar: str, en: str) -> str:
-            return ar if req.lang == "ar" else en
-            
-        column_translations = {
-            "count": _localized("العدد", "Count"),
-            "incident_type": _localized("نوع الحادث", "Incident Type"),
-            "severity": _localized("الخطورة", "Severity"),
-            "status": _localized("الحالة", "Status"),
-            "date": _localized("التاريخ", "Date"),
-            "mood": _localized("المزاج", "Mood"),
-            "kindergarten": _localized("الحضانة", "Kindergarten"),
-            "governorate": _localized("المحافظة", "Governorate"),
-            "capacity": _localized("الطاقة الاستيعابية", "Capacity"),
-            "enrolled": _localized("المسجلين", "Enrolled"),
-            "month": _localized("الشهر", "Month"),
-        }
-        df = df.rename(columns=column_translations)
 
+        # Removed translation of column names to keep stable internal keys for JSON.
+        # Localization will be handled by the frontend.
         chart_cache.set_raw(cache_params, df.to_json(orient="split", date_format="iso"))
         return df
 
     def render(self, db: Session, req: ChartRequest) -> ChartResponse:
         """
-        Render a chart as HTML.  Returns immediately for small datasets.
-        For large datasets (>10k rows) submit a Celery task and return task_id.
+        Return structured JSON payload. The HTML rendering has been moved to frontend.
         """
         cache_params = {**req.model_dump(), "chart_type": req.chart_type}
-        cached_html = chart_cache.get_render(cache_params)
-        if cached_html:
-            return ChartResponse(
-                chart_type=req.chart_type or ChartType.BAR,
-                source=req.source,
-                html=cached_html,
-                title=req.title or "",
-                row_count=0,
-                cached=True,
+
+        metric_def = METRIC_REGISTRY.get(req.source.value)
+        if not metric_def:
+            from charts.registry import MetricDefinition
+            metric_def = MetricDefinition(
+                key=req.source.value,
+                label_ar=req.source.value,
+                label_en=req.source.value,
+                business_meaning="",
+                unit="count",
+                higher_is_better=True,
+                supported_chart_types=["bar", "line", "pie"]
             )
+
+        metric_meta = MetricMeta(
+            key=metric_def.key,
+            label=metric_def.label_ar if req.lang == "ar" else metric_def.label_en,
+            unit=metric_def.unit,
+            higher_is_better=metric_def.higher_is_better
+        )
+
+        # Determine scope
+        if req.kindergarten_id:
+            level = "kindergarten"
+            parent_key = req.governorate or "jordan"
+        elif req.governorate:
+            level = "governorate"
+            parent_key = "jordan"
+        else:
+            level = "national"
+            parent_key = None
+
+        scope_meta = ScopeMeta(level=level, parent_key=parent_key)
+
+        # Drilldown
+        levels = metric_def.supported_levels
+        try:
+            idx = levels.index(level)
+            next_level = levels[idx+1] if idx + 1 < len(levels) else None
+        except ValueError:
+            next_level = None
+
+        drilldown_meta = DrilldownMeta(enabled=bool(next_level), next_level=next_level)
+
+        period_meta = PeriodMeta(start=req.date_from, end=req.date_to)
 
         df = self.get_data(db, req)
 
         if len(df) >= self.HEAVY_ROW_THRESHOLD:
             task_id = self._submit_task(req)
+            quality = QualityMeta(status="processing", record_count=len(df), missing_count=0, freshness_at=datetime.datetime.now().isoformat())
             return ChartResponse(
+                metric=metric_meta,
+                scope=scope_meta,
+                period=period_meta,
+                summary={},
+                series=[],
+                table=[],
+                drilldown=drilldown_meta,
+                quality=quality,
                 chart_type=req.chart_type or ChartType.BAR,
                 source=req.source,
-                html="",
-                title=req.title or "",
-                row_count=len(df),
-                task_id=task_id,
+                title=req.title or metric_meta.label,
+                task_id=task_id
             )
 
         chart_type = req.chart_type or self._auto_type(df, req.source)
-        html = self._build_html(df, req, chart_type)
 
-        chart_cache.set_render(cache_params, html)
+        df_copy = df.copy()
+        for col in df_copy.columns:
+            if pd.api.types.is_datetime64_any_dtype(df_copy[col]):
+                df_copy[col] = df_copy[col].dt.strftime("%Y-%m-%d")
+
+        series = df_copy.to_dict(orient="records")
+        table = series.copy()
+
+        quality = QualityMeta(
+            status="complete",
+            record_count=len(df),
+            missing_count=0,
+            freshness_at=datetime.datetime.now().isoformat()
+        )
+
         return ChartResponse(
+            metric=metric_meta,
+            scope=scope_meta,
+            period=period_meta,
+            summary={"total_records": len(df)},
+            series=series,
+            table=table,
+            drilldown=drilldown_meta,
+            quality=quality,
             chart_type=chart_type,
             source=req.source,
-            html=html,
-            title=req.title or "",
-            row_count=len(df),
+            title=req.title or metric_meta.label
         )
 
     def suggest(self, db: Session, req: SuggestRequest) -> SuggestResponse:
@@ -331,31 +404,6 @@ class ChartService:
     def _auto_type(self, df: pd.DataFrame, source: ChartSource) -> ChartType:
         suggestions, _ = _advisor.suggest(df, source, max_suggestions=1)
         return suggestions[0].chart_type if suggestions else ChartType.BAR
-
-    def _build_html(self, df: pd.DataFrame, req: ChartRequest, chart_type: ChartType) -> str:
-        group_by = req.group_by
-        if group_by:
-            def _localized(ar: str, en: str) -> str:
-                return ar if req.lang == "ar" else en
-                
-            column_translations = {
-                "count": _localized("العدد", "Count"),
-                "incident_type": _localized("نوع الحادث", "Incident Type"),
-                "severity": _localized("الخطورة", "Severity"),
-                "status": _localized("الحالة", "Status"),
-                "date": _localized("التاريخ", "Date"),
-                "mood": _localized("المزاج", "Mood"),
-                "kindergarten": _localized("الحضانة", "Kindergarten"),
-                "governorate": _localized("المحافظة", "Governorate"),
-                "capacity": _localized("الطاقة الاستيعابية", "Capacity"),
-                "enrolled": _localized("المسجلين", "Enrolled"),
-                "month": _localized("الشهر", "Month"),
-            }
-            group_by = column_translations.get(group_by, group_by)
-
-        patched_req = req.model_copy(update={"chart_type": chart_type, "group_by": group_by})
-        builder = get_builder(chart_type)
-        return builder.render(df, patched_req)
 
     def _submit_task(self, req: ChartRequest) -> str:
         from charts.tasks import render_chart_task

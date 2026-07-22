@@ -381,7 +381,7 @@ def predict_metric(
     req: PredictRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     _validate_csrf_token(request)
     _ensure_admin_only(current_user)
@@ -1116,7 +1116,7 @@ def acknowledge_alert(
     alert_id: int,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     _validate_csrf_token(request)
     _ensure_admin_only(current_user)
@@ -1135,7 +1135,7 @@ def upsert_threshold(
     req: ThresholdRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     _validate_csrf_token(request)
     _ensure_admin_only(current_user)
@@ -1212,7 +1212,7 @@ def set_target(
     req: TargetRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     _validate_csrf_token(request)
     _ensure_admin_only(current_user)
@@ -1412,7 +1412,7 @@ def create_action_plan(
     req: ActionPlanRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     _validate_csrf_token(request)
     _ensure_admin_only(current_user)
@@ -1525,7 +1525,7 @@ def invalidate_advanced_analytics_cache(
     req: InvalidateCacheRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     _validate_csrf_token(request)
     if current_user.role != models.UserRole.ADMIN:
@@ -1545,7 +1545,7 @@ def warm_advanced_analytics_cache(
     req: WarmCacheRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     _validate_csrf_token(request)
     if current_user.role != models.UserRole.ADMIN:
@@ -2637,7 +2637,7 @@ def export_analytics_data(
     request_body: ExportRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     """
     Export analytics reports (CSV or Excel) with memory streaming for large datasets.
@@ -4676,7 +4676,7 @@ def request_export(
     background_tasks: BackgroundTasks,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     """Request an async export job"""
     _validate_csrf_token(request)
@@ -5811,7 +5811,7 @@ def preview_report(
     payload: Dict[str, Any],
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     """Generate a preview payload for the requested report configuration."""
     _validate_csrf_token(request)
@@ -6772,7 +6772,7 @@ def create_report_template(
     payload: ReportTemplateCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     """Save a report configuration as a reusable template."""
     _validate_csrf_token(request)
@@ -6832,7 +6832,7 @@ def create_scheduled_report(
     payload: ScheduledReportCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    request: Request = Depends(),
+    request: Request = None,
 ):
     """Create a scheduled report."""
     _validate_csrf_token(request)

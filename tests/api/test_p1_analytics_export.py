@@ -5,6 +5,7 @@ import pytest
 import analytics_service
 import models
 from audit_actions import AuditAction
+from conftest import csrf_pair
 from dependencies import get_current_user
 from main import app
 
@@ -41,7 +42,7 @@ def test_export_sync_admin_csv(client, admin_user, auth_user, sample_kindergarte
         "export_format": "CSV",
         "filters": _date_filters(),
     }
-    response = client.post("/api/analytics/export/sync", json=payload)
+    response = client.post("/api/analytics/export/sync", json=payload, headers=csrf_pair())
     assert response.status_code == 200
     assert response.headers.get("content-type", "").startswith("text/csv")
     assert "Content-Disposition" in response.headers
@@ -63,7 +64,7 @@ def test_export_async_request_admin(client, admin_user, auth_user, stub_process_
         "export_format": "CSV",
         "filters": {},
     }
-    response = client.post("/api/analytics/export", json=payload)
+    response = client.post("/api/analytics/export", json=payload, headers=csrf_pair())
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == models.ExportStatus.PENDING.value
@@ -87,7 +88,7 @@ def test_export_async_request_invalid_format_logs_failure(client, admin_user, au
         "export_format": "DOCX",
         "filters": {},
     }
-    response = client.post("/api/analytics/export", json=payload)
+    response = client.post("/api/analytics/export", json=payload, headers=csrf_pair())
     assert response.status_code == 400
 
     audit_log = (
@@ -148,7 +149,7 @@ def test_export_sync_invalid_date_logs_failure(client, admin_user, auth_user, sa
             "period_end": "2026-01-31",
         },
     }
-    response = client.post("/api/analytics/export/sync", json=payload)
+    response = client.post("/api/analytics/export/sync", json=payload, headers=csrf_pair())
     assert response.status_code == 400
 
     audit_log = (

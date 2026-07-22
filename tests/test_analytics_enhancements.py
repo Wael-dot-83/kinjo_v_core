@@ -3,6 +3,7 @@ from datetime import date, timedelta, datetime
 
 import models
 from auth import get_password_hash
+from conftest import bearer_headers
 
 
 def _login_admin(client, admin_user):
@@ -22,7 +23,7 @@ def test_predictive_endpoint(client, admin_user):
     }
     response = client.post(
         "/api/analytics/predict/attendance",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
         json=payload,
     )
     assert response.status_code == 200
@@ -57,7 +58,7 @@ def test_alert_thresholds(client, admin_user):
     token = _login_admin(client, admin_user)
     response = client.put(
         "/api/analytics/alerts/thresholds",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
         json={
             "metric_type": "attendance_rate",
             "scope_type": "NETWORK",
@@ -82,7 +83,7 @@ def test_targets_endpoint(client, admin_user):
     token = _login_admin(client, admin_user)
     response = client.put(
         "/api/analytics/targets",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
         json={
             "metric_type": "attendance_rate",
             "scope_type": "NETWORK",
@@ -140,7 +141,7 @@ def test_action_plan_progress(client, admin_user, sample_kindergarten):
     token = _login_admin(client, admin_user)
     create_response = client.post(
         "/api/analytics/actions",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=bearer_headers(token),
         json={
             "kindergarten_id": sample_kindergarten.id,
             "title": "رفع نسبة الحضور",

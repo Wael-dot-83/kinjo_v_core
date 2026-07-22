@@ -577,27 +577,32 @@ class TestChartService:
         df = pd.DataFrame({"mood": ["happy", "sad"], "count": [10, 5]})
         req = ChartRequest(source=ChartSource.DAILY_REPORTS)
 
-        with patch.object(svc, "get_data", return_value=df), \
-             patch("charts.service.chart_cache.get_render", return_value=None), \
-             patch("charts.service.chart_cache.set_render"):
+        with patch.object(svc, "get_data", return_value=df):
             resp = svc.render(self._mock_db(), req)
 
         assert isinstance(resp, ChartResponse)
-        assert resp.row_count == 2
-        assert len(resp.html) > 0
+        # The redesign returns a structured JSON payload, not rendered HTML.
+        assert resp.summary["total_records"] == 2
+        assert len(resp.series) == 2
+        assert resp.quality.record_count == 2
 
-    def test_render_uses_cache_hit(self):
+    def test_get_data_uses_cache_hit(self):
         from charts.schemas import ChartRequest, ChartSource
         from charts.service import ChartService
 
         svc = ChartService()
         req = ChartRequest(source=ChartSource.INCIDENTS)
+        cached_df = pd.DataFrame({"incident_type": ["A"], "count": [3]})
 
-        with patch("charts.service.chart_cache.get_render", return_value="<div>cached</div>"):
-            resp = svc.render(self._mock_db(), req)
+        # Caching now lives at the raw-data layer (get_raw). A cache hit must
+        # short-circuit before any data loader runs.
+        with patch("charts.service.chart_cache.get_raw",
+                   return_value=cached_df.to_json(orient="split", date_format="iso")), \
+             patch("charts.service._LOADERS") as loaders:
+            out = svc.get_data(self._mock_db(), req)
 
-        assert resp.cached is True
-        assert resp.html == "<div>cached</div>"
+        loaders.get.assert_not_called()
+        assert list(out["count"]) == [3]
 
     def test_render_heavy_dataset_submits_task(self):
         from charts.schemas import ChartRequest, ChartSource
@@ -612,7 +617,11 @@ class TestChartService:
             resp = svc.render(self._mock_db(), req)
 
         assert resp.task_id == "fake-task-id"
-        assert resp.html == ""
+        # Heavy datasets are offloaded to a task: the payload ships empty and the
+        # quality block flags the deferred state.
+        assert resp.series == []
+        assert resp.summary == {}
+        assert resp.quality.status == "processing"
 
     def test_suggest_returns_suggest_response(self):
         from charts.schemas import SuggestRequest, SuggestResponse, ChartSource
@@ -682,14 +691,15 @@ class TestChartsAPI:
         assert "suggestions" in body
         assert "row_count" in body
 
-    def test_render_incidents_returns_html(self, client, auth_headers_admin):
+    def test_render_incidents_returns_payload(self, client, auth_headers_admin):
         resp = client.get(
             "/admin/charts/render?source=incidents&chart_type=bar",
             headers=auth_headers_admin,
         )
         assert resp.status_code == 200
         body = resp.json()
-        assert "html" in body
+        # Structured JSON payload (series/table/metric), rendered client-side.
+        assert "series" in body
         assert "chart_type" in body
         assert body["chart_type"] == "bar"
 
