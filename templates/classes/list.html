@@ -43,14 +43,14 @@ breadcrumbs=[
             {% if current_user.role.value == 'ADMIN' %}
             <div class="col-md-3">
                 <label for="filterKindergarten" class="form-label small text-muted">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
-                <select id="filterKindergarten" class="form-select form-select-sm" onchange="loadClasses()">
+                <select id="filterKindergarten" class="form-select form-select-sm">
                     <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الحضانات{% endif %}</option>
                 </select>
             </div>
             {% endif %}
             <div class="col-md-3">
                 <label for="filterStatus" class="form-label small text-muted">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
-                <select id="filterStatus" class="form-select form-select-sm" onchange="loadClasses()">
+                <select id="filterStatus" class="form-select form-select-sm">
                     <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
                     <option value="true" selected>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
                     <option value="false">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</option>
@@ -58,8 +58,7 @@ breadcrumbs=[
             </div>
             <div class="col-md-3">
                 <label for="searchInput" class="form-label small text-muted">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</label>
-                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="{% if ui_lang == 'en' %}Class name...{% else %}اسم الشعبة...{% endif %}"
-                    oninput="filterTable()">
+                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="{% if ui_lang == 'en' %}Class name...{% else %}اسم الشعبة...{% endif %}">
             </div>
             <div class="col-md-3 text-end">
                 <a href="/classes/create" class="btn btn-primary btn-sm">
@@ -127,6 +126,19 @@ breadcrumbs=[
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
     document.addEventListener('DOMContentLoaded', async () => {
+        const filterKg = document.getElementById('filterKindergarten');
+        if (filterKg) filterKg.addEventListener('change', loadClasses);
+        const filterStatus = document.getElementById('filterStatus');
+        if (filterStatus) filterStatus.addEventListener('change', loadClasses);
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.addEventListener('input', filterTable);
+
+        const tbody = document.getElementById('classesBody');
+        if (tbody) tbody.addEventListener('click', e => {
+            const delBtn = e.target.closest('.js-delete-class');
+            if (delBtn) deleteClass(parseInt(delBtn.dataset.classId, 10), delBtn.dataset.className);
+        });
+
         if (isAdmin) {
             await loadKindergartenFilter();
         }
@@ -223,7 +235,7 @@ breadcrumbs=[
                     <a href="/classes/${c.id}/edit" class="btn btn-outline-warning" title="${T('تعديل', 'Edit')}">
                         <i class="bi bi-pencil"></i>
                     </a>
-                    <button class="btn btn-outline-danger" title="${isAdmin ? T('حذف', 'Delete') : T('إلغاء تفعيل', 'Deactivate')}" onclick="deleteClass(${c.id}, ${JSON.stringify(c.name_ar || '')})">
+                    <button class="btn btn-outline-danger js-delete-class" title="${isAdmin ? T('حذف', 'Delete') : T('إلغاء تفعيل', 'Deactivate')}" data-class-id="${c.id}" data-class-name="${escHtml(c.name_ar || '')}">
                         <i class="bi ${isAdmin ? 'bi-trash' : 'bi-pause-circle'}"></i>
                     </button>
                 </div>

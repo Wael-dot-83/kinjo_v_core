@@ -28,11 +28,11 @@ class IndicatorResponse(BaseModel):
     date: str
     admin_id: str
     kindergarten_status: float
-    children_enrollment: float
+    children_enrollment: Optional[float]
     staff_classrooms: float
     safety_incidents: float
     reports_attendance: float
-    tasks_governance: float
+    tasks_governance: Optional[float]
 
 
 class CorrelationRow(BaseModel):

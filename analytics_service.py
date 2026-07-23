@@ -1589,7 +1589,7 @@ class NetworkSummary(BaseModel):
     incident_rate: float
     report_submission_rate: float
     report_approval_rate: float
-    report_completion_rate: float = Field(alias="report_approval_rate")  # Backward compatibility
+    report_completion_rate: float
     governance_avg_score: float
     previous_period: Dict[str, Any] = Field(default_factory=dict)
     deltas: Dict[str, MetricDelta] = Field(default_factory=dict)
@@ -1626,7 +1626,7 @@ class KindergartenMetrics(BaseModel):
     incident_rate: float
     report_submission_rate: float
     report_approval_rate: float
-    report_completion_rate: float = Field(alias="report_approval_rate")  # Backward compatibility
+    report_completion_rate: float
     ratio_compliance: float
     governance_score: float
     governance_band: str
@@ -7165,6 +7165,7 @@ class AnalyticsService:
             incident_rate=incident_rate,
             report_submission_rate=report_submission_rate,
             report_approval_rate=report_approval_rate,
+            report_completion_rate=report_submission_rate,
             governance_avg_score=governance_avg_score
         )
 

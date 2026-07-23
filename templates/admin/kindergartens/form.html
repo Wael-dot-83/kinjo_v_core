@@ -39,6 +39,7 @@
   <div id="form-error" class="alert alert-danger d-none"></div>
 
   <form id="kg-form" class="needs-validation" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <!-- Basic Identity -->
     <div class="glass-card card mb-3" id="sec-identity">
       <div class="card-header fw-semibold"><i class="bi bi-card-text me-2"></i>{% if ui_lang == 'en' %}Basic Identity{% else %}الهوية الأساسية{% endif %}</div>

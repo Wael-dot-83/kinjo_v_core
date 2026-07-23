@@ -35,6 +35,7 @@
     </div>
     <div class="card-body">
       <form id="filterForm" class="row g-3">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="col-12 col-md-3">
           <label for="searchInput" class="form-label small text-muted mb-1">{% if ui_lang == 'en' %}Search by name or phone{% else %}بحث بالاسم أو الهاتف{% endif %}</label>
           <input type="text" class="form-control form-control-sm" id="searchInput"

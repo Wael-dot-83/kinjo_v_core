@@ -75,7 +75,7 @@
                 placeholder="{% if ui_lang == 'en' %}Search...{% else %}بحث...{% endif %}"
                 aria-label="{% if ui_lang == 'en' %}Search enrollments{% else %}بحث في طلبات التسجيل{% endif %}">
         </div>
-        <button class="btn btn-sm btn-outline-secondary" onclick="exportEnrollments()"
+        <button class="btn btn-sm btn-outline-secondary js-export-enrollments"
             aria-label="{% if ui_lang == 'en' %}Export enrollments{% else %}تصدير طلبات التسجيل{% endif %}">
             <i class="bi bi-download me-1" aria-hidden="true"></i>{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
         </button>
@@ -123,13 +123,13 @@
                 <div class="mb-3">
                     <label class="form-label">{% if ui_lang == 'en' %}Decision{% else %}القرار{% endif %}</label>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-success flex-fill" onclick="submitDecision('accepted')">
+                        <button type="button" class="btn btn-success flex-fill js-submit-decision" data-decision="accepted">
                             <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Accept{% else %}قبول{% endif %}
                         </button>
-                        <button type="button" class="btn btn-warning flex-fill" onclick="submitDecision('waitlisted')">
+                        <button type="button" class="btn btn-warning flex-fill js-submit-decision" data-decision="waitlisted">
                             <i class="bi bi-hourglass me-1"></i>{% if ui_lang == 'en' %}Waitlist{% else %}انتظار{% endif %}
                         </button>
-                        <button type="button" class="btn btn-danger flex-fill" onclick="submitDecision('rejected')">
+                        <button type="button" class="btn btn-danger flex-fill js-submit-decision" data-decision="rejected">
                             <i class="bi bi-x-circle me-1"></i>{% if ui_lang == 'en' %}Reject{% else %}رفض{% endif %}
                         </button>
                     </div>
@@ -189,6 +189,37 @@
     let currentFilter = '';
 
     document.addEventListener('DOMContentLoaded', async () => {
+        // Wiring buttons
+        const exportBtn = document.querySelector('.js-export-enrollments');
+        if (exportBtn) exportBtn.addEventListener('click', exportEnrollments);
+
+        document.querySelectorAll('.js-submit-decision').forEach(btn => {
+            btn.addEventListener('click', e => submitDecision(e.currentTarget.dataset.decision));
+            btn.addEventListener('mouseenter', e => {
+                const decision = e.currentTarget.dataset.decision;
+                const reasonGroup = document.getElementById('reasonGroup');
+                if (reasonGroup) {
+                    reasonGroup.style.display = decision === 'rejected' ? 'block' : 'none';
+                }
+            });
+        });
+
+        const tableBody = document.getElementById('enrollmentsTable');
+        if (tableBody) {
+            tableBody.addEventListener('click', e => {
+                const viewBtn = e.target.closest('.js-view-enrollment');
+                if (viewBtn) {
+                    viewEnrollment(parseInt(viewBtn.dataset.id, 10));
+                    return;
+                }
+                const reviewBtn = e.target.closest('.js-open-review');
+                if (reviewBtn) {
+                    openReviewModal(parseInt(reviewBtn.dataset.id, 10));
+                    return;
+                }
+            });
+        }
+
         await waitForAuthentication();
         await loadEnrollments();
         setupTabHandlers();
@@ -278,11 +309,11 @@
                 <td>${getStatusBadge(e.status)}</td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary" onclick="viewEnrollment(${e.id})" title="عرض">
+                        <button class="btn btn-outline-primary js-view-enrollment" data-id="${e.id}" title="عرض">
                             <i class="bi bi-eye"></i>
                         </button>
                         ${['PENDING_REVIEW', 'SUBMITTED'].includes(String(e.status).toUpperCase()) ? `
-                            <button class="btn btn-outline-success" onclick="openReviewModal(${e.id})" title="مراجعة">
+                            <button class="btn btn-outline-success js-open-review" data-id="${e.id}" title="مراجعة">
                                 <i class="bi bi-check-square"></i>
                             </button>
                         ` : ''}
@@ -351,14 +382,7 @@
         }
     }
     
-    // Show reason field for reject decision
-    document.querySelectorAll('[onclick*="submitDecision"]').forEach(btn => {
-        btn.addEventListener('mouseenter', function() {
-            const decision = this.onclick.toString().match(/'(\w+)'/)[1];
-            document.getElementById('reasonGroup').style.display = 
-                decision === 'rejected' ? 'block' : 'none';
-        });
-    });
+    // Show reason field for reject decision logic moved to DOMContentLoaded listener
     
     // Search functionality
     document.getElementById('searchInput').addEventListener('input', (e) => {

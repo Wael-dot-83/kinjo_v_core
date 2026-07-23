@@ -53,6 +53,7 @@
 
   <!-- Filters -->
   <form id="agency-report-filters" class="agency-filter-panel" aria-label="{% if ui_lang == 'en' %}Report filters{% else %}فلاتر التقرير{% endif %}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="agency-filter-field">
       <label for="filter-governorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
       <select id="filter-governorate" name="governorate">

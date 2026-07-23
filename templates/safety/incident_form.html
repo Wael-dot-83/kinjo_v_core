@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'manager_base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if ui_lang == 'en' %}Report New Incident{% else %}تسجيل حادث جديد{% endif %}{% endblock %}
@@ -23,7 +23,7 @@ breadcrumbs=[
     <div class="col-lg-8">
         <div class="card shadow-sm">
             <div class="card-body p-4">
-                <form id="incidentForm" onsubmit="submitIncident(event)">
+                <form id="incidentForm">
                     <div class="mb-3">
                         <label for="childId" class="form-label">{% if ui_lang == 'en' %}Child ID{% else %}رقم الطفل (المعرّف){% endif %}</label>
                         <input type="number" class="form-control" id="childId" required
@@ -90,29 +90,34 @@ breadcrumbs=[
 
     document.getElementById('occurredAt').value = new Date().toISOString().slice(0, 16);
 
-    async function submitIncident(e) {
-        e.preventDefault();
+    const incidentForm = document.getElementById('incidentForm');
+    if (incidentForm) {
+        incidentForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
 
-        const data = {
-            child_id: parseInt(document.getElementById('childId').value),
-            type: document.getElementById('type').value,
-            severity_level: document.getElementById('severity').value,
-            description: document.getElementById('description').value,
-            occurred_at: new Date(document.getElementById('occurredAt').value).toISOString(),
-            followup_required_flag: document.getElementById('followupRequired').checked
-        };
+            const data = {
+                child_id: parseInt(document.getElementById('childId').value),
+                type: document.getElementById('type').value,
+                severity_level: document.getElementById('severity').value,
+                description: document.getElementById('description').value,
+                occurred_at: new Date(document.getElementById('occurredAt').value).toISOString(),
+                followup_required_flag: document.getElementById('followupRequired').checked
+            };
 
-        try {
-            const response = await window.api.post('/api/incidents', data);
+            try {
+                const response = await window.api.post('/api/incidents', data);
 
-            if (response) {
-                alert(T('تم تسجيل الحادث بنجاح', 'Incident reported successfully'));
-                window.location.href = '/safety';
+                if (response) {
+                    showToast(T('تم تسجيل الحادث بنجاح', 'Incident reported successfully'), 'success');
+                    setTimeout(() => {
+                        window.location.href = '/safety';
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error(error);
+                showToast(T('حدث خطأ في الاتصال: ', 'Connection error: ') + error.message, 'error');
             }
-        } catch (error) {
-            console.error(error);
-            alert(T('حدث خطأ في الاتصال: ', 'Connection error: ') + error.message);
-        }
+        });
     }
 </script>
 {% endblock %}

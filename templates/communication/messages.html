@@ -40,12 +40,9 @@
             </div>
             <div class="col-md-8 text-md-end mt-2 mt-md-0">
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary active"
-                        onclick="filterMsgs('all', this)">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</button>
-                    <button type="button" class="btn btn-outline-secondary"
-                        onclick="filterMsgs('direct', this)">{% if ui_lang == 'en' %}Direct{% else %}مباشرة{% endif %}</button>
-                    <button type="button" class="btn btn-outline-secondary"
-                        onclick="filterMsgs('announcement', this)">{% if ui_lang == 'en' %}Announcements{% else %}الإعلانات{% endif %}</button>
+                    <button type="button" class="btn btn-outline-secondary active js-filter-msgs" data-filter="all">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</button>
+                    <button type="button" class="btn btn-outline-secondary js-filter-msgs" data-filter="direct">{% if ui_lang == 'en' %}Direct{% else %}مباشرة{% endif %}</button>
+                    <button type="button" class="btn btn-outline-secondary js-filter-msgs" data-filter="announcement">{% if ui_lang == 'en' %}Announcements{% else %}الإعلانات{% endif %}</button>
                 </div>
                 <div class="form-check form-switch d-inline-block ms-3 align-middle">
                     <input class="form-check-input" type="checkbox" id="unreadOnlyToggle">
@@ -171,6 +168,11 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.js-filter-msgs').forEach(btn => {
+            btn.addEventListener('click', e => {
+                filterMsgs(e.currentTarget.dataset.filter, e.currentTarget);
+            });
+        });
         loadMessages();
         refreshTimer = setInterval(loadMessages, 30000);
         document.getElementById('refreshMessagesBtn').addEventListener('click', () => loadMessages());
@@ -213,13 +215,13 @@
         try {
             // Use centralized auth system instead of direct localStorage access
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">${T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.')}</div>`;
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">${T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.')}</div>`;
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
@@ -435,13 +437,13 @@
 
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
@@ -449,7 +451,7 @@
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                alert(err.error?.message || err.detail || T('تعذر تحميل الرسالة', 'Failed to load message'));
+                showToast(err.error?.message || err.detail || T('تعذر تحميل الرسالة', 'Failed to load message'), 'error');
                 return;
             }
 
@@ -490,7 +492,7 @@
             }
         } catch (error) {
             console.error(error);
-            alert(T('فشل في فتح الرسالة', 'Failed to open message'));
+            showToast(T('فشل في فتح الرسالة', 'Failed to open message'), 'error');
         }
     }
 
@@ -599,19 +601,19 @@
         }
         const body = document.getElementById('messageReplyBody').value.trim();
         if (!body) {
-            alert(T('لا يمكن أن يكون الرد فارغًا', 'Reply cannot be empty'));
+            showToast(T('لا يمكن أن يكون الرد فارغًا', 'Reply cannot be empty'), 'warning');
             return;
         }
         try {
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
@@ -625,7 +627,7 @@
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                alert(err.error?.message || err.detail || T('فشل في إرسال الرد', 'Failed to send reply'));
+                showToast(err.error?.message || err.detail || T('فشل في إرسال الرد', 'Failed to send reply'), 'error');
                 return;
             }
             const created = await response.json();
@@ -638,7 +640,7 @@
             loadMessages();
         } catch (error) {
             console.error(error);
-            alert(T('فشل في إرسال الرد', 'Failed to send reply'));
+            showToast(T('فشل في إرسال الرد', 'Failed to send reply'), 'error');
         }
     }
 
@@ -649,13 +651,13 @@
         try {
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
@@ -666,7 +668,7 @@
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                alert(err.error?.message || err.detail || T('فشل في تحديث حالة الأرشفة', 'Failed to update archive status'));
+                showToast(err.error?.message || err.detail || T('فشل في تحديث حالة الأرشفة', 'Failed to update archive status'), 'error');
                 return;
             }
 
@@ -675,28 +677,31 @@
             loadMessages();
         } catch (error) {
             console.error(error);
-            alert(T('فشل في تحديث حالة الأرشفة', 'Failed to update archive status'));
+            showToast(T('فشل في تحديث حالة الأرشفة', 'Failed to update archive status'), 'error');
         }
     }
 
     async function bulkAction(action) {
         if (selectedMessageIds.size === 0) {
-            alert(T('يرجى تحديد رسالة واحدة على الأقل', 'Please select at least one message'));
+            showToast(T('يرجى تحديد رسالة واحدة على الأقل', 'Please select at least one message'), 'warning');
             return;
         }
-        if (action === 'delete' && !confirm(T('هل أنت متأكد من حذف الرسائل المحددة؟', 'Are you sure you want to delete the selected messages?'))) {
-            return;
+        if (action === 'delete') {
+            const isConfirmed = await AdminUtils.confirm({
+                title: T('هل أنت متأكد من حذف الرسائل المحددة؟', 'Are you sure you want to delete the selected messages?')
+            });
+            if (!isConfirmed) return;
         }
         try {
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
@@ -713,7 +718,7 @@
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                alert(err.error?.message || err.detail || T('فشل تنفيذ العملية الجماعية', 'Bulk operation failed'));
+                showToast(err.error?.message || err.detail || T('فشل تنفيذ العملية الجماعية', 'Bulk operation failed'), 'error');
                 return;
             }
 
@@ -722,7 +727,7 @@
             loadMessages();
         } catch (error) {
             console.error(error);
-            alert(T('فشل تنفيذ العملية الجماعية', 'Bulk operation failed'));
+            showToast(T('فشل تنفيذ العملية الجماعية', 'Bulk operation failed'), 'error');
         }
     }
 
@@ -730,19 +735,21 @@
         if (!currentOpenMessageId) {
             return;
         }
-        if (!confirm(T('هل أنت متأكد من حذف هذه الرسالة؟', 'Are you sure you want to delete this message?'))) {
-            return;
-        }
+        const isConfirmed = await AdminUtils.confirm({
+            title: T('هل أنت متأكد من حذف هذه الرسالة؟', 'Are you sure you want to delete this message?')
+        });
+        if (!isConfirmed) return;
+
         try {
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                showToast(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'), 'warning');
                 return;
             }
 
@@ -752,7 +759,7 @@
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                alert(err.error?.message || err.detail || T('فشل في حذف الرسالة', 'Failed to delete message'));
+                showToast(err.error?.message || err.detail || T('فشل في حذف الرسالة', 'Failed to delete message'), 'error');
                 return;
             }
 
@@ -764,7 +771,7 @@
             loadMessages();
         } catch (error) {
             console.error(error);
-            alert(T('فشل في حذف الرسالة', 'Failed to delete message'));
+            showToast(T('فشل في حذف الرسالة', 'Failed to delete message'), 'error');
         }
     }
 

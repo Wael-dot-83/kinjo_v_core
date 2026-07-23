@@ -20,6 +20,7 @@
             </div>
             <div class="card-body p-4">
                 <form id="generateReportForm" onsubmit="generateReport(event)">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <!-- Scope Selection -->
                     <div class="mb-4">
                         <label class="form-label fw-bold">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>

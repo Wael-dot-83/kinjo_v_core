@@ -604,7 +604,7 @@
   async function loadInitialFilters() {
     const [governoratesResponse, kindergartensResponse] = await Promise.all([
       apiGet("/api/reference/governorates"),
-      apiGet("/api/kindergartens", { limit: 500, include_inactive: true }),
+      apiGet("/api/kindergartens", { limit: 200, include_inactive: true }),
     ]);
 
     const governorates = governoratesResponse?.governorates || [];

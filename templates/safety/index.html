@@ -18,8 +18,8 @@
         </nav>
     </div>
     <div class="page-header-actions d-flex gap-2">
-        <button class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i> {% if ui_lang == 'en' %}Print{% else %}طباعة{% endif %}</button>
-        <button class="btn btn-outline-success" onclick="exportCSV()"><i class="bi bi-file-earmark-excel me-1"></i> {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}</button>
+        <button class="btn btn-outline-secondary" id="btnPrint"><i class="bi bi-printer me-1"></i> {% if ui_lang == 'en' %}Print{% else %}طباعة{% endif %}</button>
+        <button class="btn btn-outline-success" id="btnExportCSV"><i class="bi bi-file-earmark-excel me-1"></i> {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}</button>
         <a href="/safety/incidents/new" class="btn btn-danger">
             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Report Incident{% else %}تسجيل حادث{% endif %}
@@ -100,7 +100,7 @@
             </div>
             
             <div class="card-body bg-light border-bottom">
-                <form id="filterForm" class="row g-3" onsubmit="event.preventDefault(); applyFilters();">
+                <form id="filterForm" class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</label>
                         <input type="text" id="filterSearch" class="form-control" placeholder="{% if ui_lang == 'en' %}Description or child name...{% else %}ابحث في الوصف أو الطفل...{% endif %}">
@@ -135,10 +135,10 @@
                         </div>
                     </div>
                     <div class="col-md-2 d-flex align-items-end gap-2">
-                        <button type="button" class="btn btn-primary w-100" onclick="applyFilters()">
+                        <button type="button" class="btn btn-primary w-100" id="btnApplyFilters">
                             <i class="bi bi-funnel"></i> {% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}
                         </button>
-                        <button type="button" class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                        <button type="button" class="btn btn-outline-secondary w-100" id="btnResetFilters">
                             <i class="bi bi-x-circle"></i> {% if ui_lang == 'en' %}Reset{% else %}مسح{% endif %}
                         </button>
                     </div>
@@ -216,6 +216,23 @@
                 applySorting();
                 renderTable(0); // This just re-sorts current page, full sorting needs server
             });
+        });
+
+        document.getElementById('btnPrint')?.addEventListener('click', () => window.print());
+        document.getElementById('btnExportCSV')?.addEventListener('click', exportCSV);
+        document.getElementById('filterForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            applyFilters();
+        });
+        document.getElementById('btnApplyFilters')?.addEventListener('click', applyFilters);
+        document.getElementById('btnResetFilters')?.addEventListener('click', resetFilters);
+
+        // Delegated pagination listener
+        document.getElementById('paginationControls')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.js-page-btn');
+            if (btn) {
+                goToPage(parseInt(btn.dataset.page, 10));
+            }
         });
     });
 
@@ -399,7 +416,7 @@
                     <span class="badge badge-soft badge-soft-${getStatusClass(inc.status)}">${T(getStatusNameAr(inc.status), inc.status)}</span>
                 </td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(${inc.id})">${T('التفاصيل', 'Details')}</button>
+                    <a class="btn btn-sm btn-outline-primary" href="/safety/incidents/${inc.id}">${T('التفاصيل', 'Details')}</a>
                 </td>
             </tr>
         `).join('');
@@ -415,13 +432,13 @@
         let html = '';
         
         html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-            <button class="page-link" onclick="goToPage(${currentPage - 1})">${T('السابق', 'Prev')}</button>
+            <button class="page-link js-page-btn" data-page="${currentPage - 1}">${T('السابق', 'Prev')}</button>
         </li>`;
         
         for (let i = 1; i <= totalPages; i++) {
             if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
                 html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
-                    <button class="page-link" onclick="goToPage(${i})">${i}</button>
+                    <button class="page-link js-page-btn" data-page="${i}">${i}</button>
                 </li>`;
             } else if (i === currentPage - 2 || i === currentPage + 2) {
                 html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
@@ -429,7 +446,7 @@
         }
         
         html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-            <button class="page-link" onclick="goToPage(${currentPage + 1})">${T('التالي', 'Next')}</button>
+            <button class="page-link js-page-btn" data-page="${currentPage + 1}">${T('التالي', 'Next')}</button>
         </li>`;
         
         ul.innerHTML = html;

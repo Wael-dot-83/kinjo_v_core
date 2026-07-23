@@ -462,7 +462,9 @@
               exportBtn.disabled = false;
               exportBtn.classList.remove("is-loading");
               chartStatus.textContent = t("تعذر تصدير الرسم البياني.", "Unable to export chart.");
-              alert(t("تعذر تصدير الرسم البياني. يرجى المحاولة مرة أخرى.", "Unable to export chart. Please try again."));
+              const msg = t("تعذر تصدير الرسم البياني. يرجى المحاولة مرة أخرى.", "Unable to export chart. Please try again.");
+              if (typeof Swal !== 'undefined') Swal.fire(t('خطأ', 'Error'), msg, 'error');
+              else if (typeof window.showToast === 'function') window.showToast(msg, 'error');
             });
         });
         chartSection.appendChild(chartStatus);

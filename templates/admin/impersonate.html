@@ -53,6 +53,7 @@
             </div>
             <div class="card-body">
                 <form id="impersonateForm" novalidate autocomplete="off">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
                     <div class="mb-3">
                         <label class="field-label" for="managerSearch">{% if ui_lang == 'en' %}Search & Filter Managers{% else %}بحث وتصفية المديرين{% endif %}</label>

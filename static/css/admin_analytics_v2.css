@@ -241,13 +241,13 @@
 
 /* ── 4. Filter Bar ─────────────────────────────────────────────────────────── */
 .glass-filter-bar {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--slate-200, #e2e8f0);
   border-radius: var(--r-xl);
   padding: var(--sp-3) var(--sp-5);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
   /* Sticks to the top of .admin-content — the actual scroll container
      (the 64px header lives outside it). Negative top cancels the
      scroller's own padding so the bar pins flush with the visible edge

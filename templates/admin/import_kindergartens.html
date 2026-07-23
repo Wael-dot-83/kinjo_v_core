@@ -41,6 +41,7 @@
         </div>
 
         <form id="importForm" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="mb-3">
                 <label for="excelFile" class="form-label fw-semibold">
                     <i class="bi bi-file-earmark-excel me-1 text-success"></i>

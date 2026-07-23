@@ -55,16 +55,17 @@
                 return;
             }
 
-            const token = AuthService.getToken();
-            const response = await fetch('/comm/surveys?active_only=true', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                const surveys = await response.json();
+            if (window.api && typeof window.api.get === 'function') {
+                const surveys = await window.api.get('/comm/surveys?active_only=true');
                 renderSurveys(surveys);
             } else {
-                document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">${T('فشل تحميل الاستبيانات', 'Failed to load surveys')}</div>`;
+                const response = await fetchWithAuth('/comm/surveys?active_only=true');
+                if (response && response.ok) {
+                    const surveys = await response.json();
+                    renderSurveys(surveys);
+                } else {
+                    document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">${T('فشل تحميل الاستبيانات', 'Failed to load surveys')}</div>`;
+                }
             }
         } catch (error) {
             console.error(error);
@@ -100,7 +101,7 @@
                     <p class="card-text text-secondary">${escHtml(survey.description || '')}</p>
                     
                     <hr>
-                    <form onsubmit="submitSurvey(event, ${survey.id})">
+                    <form class="js-survey-form" data-survey-id="${survey.id}">
                         ${survey.nps_question_enabled ? `
                         <div class="mb-3">
                             <label class="form-label fw-bold" id="nps_label_${survey.id}">${T('ما مدى رضاك (0 - 10)؟', 'How satisfied are you (0 - 10)?')}</label>
@@ -130,47 +131,39 @@
         });
     }
 
-    async function submitSurvey(e, surveyId) {
-        e.preventDefault();
-        const form = e.target;
-        const npsInput = form.querySelector(`input[name="nps_${surveyId}"]:checked`);
-        const feedback = form.querySelector('textarea[name="feedback"]').value;
+    document.addEventListener('submit', async function(e) {
+        if (e.target && e.target.classList.contains('js-survey-form')) {
+            e.preventDefault();
+            const form = e.target;
+            const surveyId = form.dataset.surveyId;
+            const npsInput = form.querySelector(`input[name="nps_${surveyId}"]:checked`);
+            const feedback = form.querySelector('textarea[name="feedback"]').value;
 
-        const data = {
-            nps_score: npsInput ? parseInt(npsInput.value) : null,
-            feedback_text: feedback
-        };
+            const data = {
+                nps_score: npsInput ? parseInt(npsInput.value) : null,
+                feedback_text: feedback
+            };
 
-        try {
-            // Use centralized auth system
-            if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert(T('يرجى تسجيل الدخول لإرسال الاستبيان', 'Please log in to submit the survey'));
-                return;
+            try {
+                if (!window.AuthService || !AuthService.isAuthenticated()) {
+                    showToast(T('يرجى تسجيل الدخول لإرسال الاستبيان', 'Please log in to submit the survey'), 'warning');
+                    return;
+                }
+
+                if (window.api && typeof window.api.post === 'function') {
+                    await window.api.post(`/comm/surveys/${surveyId}/submit`, data);
+                    showToast(T('شكراً لمشاركتك!', 'Thank you for your response!'), 'success');
+                    form.reset();
+                } else {
+                    showToast(T('تعذر الوصول إلى واجهة برمجة التطبيقات', 'API is not accessible'), 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                const msg = error.message || T('خطأ في الاتصال', 'Connection error');
+                showToast(msg, 'error');
             }
-
-            const token = AuthService.getToken();
-            const response = await fetch(`/comm/surveys/${surveyId}/submit`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (response.ok) {
-                alert(T('شكراً لمشاركتك!', 'Thank you for your response!'));
-                form.reset();
-            } else {
-                const err = await response.json();
-                alert(T('خطأ', 'Error') + ': ' + (err.detail || T('فشل الإرسال', 'Submission failed')));
-            }
-
-        } catch (error) {
-            console.error(error);
-            alert(T('خطأ في الاتصال', 'Connection error'));
         }
-    }
+    });
 
     function escHtml(s) {
         return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

@@ -246,6 +246,14 @@
 (function () {
     'use strict';
 
+    const IS_EN = document.documentElement.lang === 'en';
+    const TS = (ar, en) => IS_EN ? en : ar;
+    const notify = (ar, en, type) => {
+        const msg = TS(ar, en);
+        if (typeof showToast === 'function') showToast(msg, type || 'info');
+        else alert(msg);
+    };
+
     let pendingSendId    = null;
     let pendingDeleteId  = null;
     let reportsById      = new Map();
@@ -462,7 +470,7 @@
         });
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
-            alert(error.detail || '{% if ui_lang == "en" %}Unable to save report{% else %}تعذر حفظ التقرير{% endif %}');
+            notify(error.detail || 'تعذر حفظ التقرير', error.detail || 'Unable to save report', 'error');
             return;
         }
         bootstrap.Modal.getOrCreateInstance(document.getElementById('editReportModal')).hide();
@@ -479,11 +487,11 @@
                 headers: getHeaders()
             });
             if (!r.ok) throw new Error();
-            alert('{{ _("تم إرسال التقرير للوالدين بنجاح") }}');
+            notify('تم إرسال التقرير للوالدين بنجاح', 'Report sent to parents successfully', 'success');
             document.querySelector('#sendParentsModal .usa-modal__close').click();
             await loadReports();
         } catch {
-            alert('{{ _("حدث خطأ في الإرسال") }}');
+            notify('حدث خطأ في الإرسال', 'Error sending report', 'error');
         } finally {
             btn.disabled = false;
             window.pendingSendId = null;
@@ -500,11 +508,11 @@
                 headers: getHeaders()
             });
             if (!r.ok) throw new Error();
-            alert('{{ _("تم حذف التقرير") }}');
+            notify('تم حذف التقرير', 'Report deleted', 'success');
             document.querySelector('#deleteReportModal .usa-modal__close').click();
             await loadReports();
         } catch {
-            alert('{{ _("حدث خطأ في الحذف") }}');
+            notify('حدث خطأ في الحذف', 'Error deleting report', 'error');
         } finally {
             btn.disabled = false;
             window.pendingDeleteId = null;

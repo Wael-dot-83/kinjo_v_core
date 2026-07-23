@@ -148,17 +148,24 @@ def immunization_schedule_upload(
             detail += " " + " | ".join(errors[:10])
         raise HTTPException(status_code=422, detail=detail)
 
-    written = immunization_service.replace_schedule(db, rows, current_user.id)
-    log_audit_event(
-        db,
-        AuditAction.IMMUNIZATION_SCHEDULE_UPLOAD,
-        current_user,
-        target_type="NationalImmunizationSchedule",
-        after_state={"rows": written, "filename": file.filename},
-        metadata={"skipped_rows": len(errors)},
-        sensitivity_level=1,
-    )
-    db.commit()
+    try:
+        written = immunization_service.replace_schedule(db, rows, current_user.id)
+        log_audit_event(
+            db,
+            AuditAction.IMMUNIZATION_SCHEDULE_UPLOAD,
+            current_user,
+            target_type="NationalImmunizationSchedule",
+            after_state={"rows": written, "filename": file.filename},
+            metadata={"skipped_rows": len(errors)},
+            sensitivity_level=1,
+        )
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="فشل تحديث جدول المطاعيم") from exc
     return {
         "success": True,
         "imported": written,

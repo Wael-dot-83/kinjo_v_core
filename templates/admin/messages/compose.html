@@ -19,6 +19,7 @@
             </div>
             <div class="card-body">
                 <form id="composeForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <div id="composeStatus" class="visually-hidden text-danger small mb-2" role="status"
                         aria-live="polite"></div>
                     <!-- Subject -->
