@@ -741,10 +741,11 @@
   async function loadReportPreview({ silent = false } = {}) {
     const period = getPeriod();
     if (!period.start || !period.end) {
-      if (!silent)
-        alert(
-          reportsText("يرجى تحديد نطاق التاريخ", "Please select a date range"),
-        );
+      if (!silent) {
+        const msg = reportsText("يرجى تحديد نطاق التاريخ", "Please select a date range");
+        if (typeof Swal !== "undefined") Swal.fire(reportsText("تنبيه", "Notice"), msg, "warning");
+        else if (typeof showToast === "function") showToast(msg, "warning");
+      }
       return;
     }
 
@@ -1008,9 +1009,9 @@
   async function exportCurrentReport() {
     const period = getPeriod();
     if (!period.start || !period.end) {
-      alert(
-        reportsText("يرجى تحديد نطاق التاريخ", "Please select a date range"),
-      );
+      const msg = reportsText("يرجى تحديد نطاق التاريخ", "Please select a date range");
+      if (typeof Swal !== "undefined") Swal.fire(reportsText("تنبيه", "Notice"), msg, "warning");
+      else if (typeof showToast === "function") showToast(msg, "warning");
       return;
     }
 
@@ -1027,7 +1028,9 @@
       window.location.href = `${STRATEGIC_API_BASE}/export?${params.toString()}`;
     } catch (e) {
       console.error("Export failed", e);
-      alert(reportsText("فشل بدء التصدير", "Export failed to start"));
+      const msg = reportsText("فشل بدء التصدير", "Export failed to start");
+      if (typeof Swal !== "undefined") Swal.fire(reportsText("خطأ", "Error"), msg, "error");
+      else if (typeof showToast === "function") showToast(msg, "error");
     }
   }
 
@@ -1207,9 +1210,9 @@
   async function saveAsTemplate() {
     const name = getEl("templateName")?.value?.trim();
     if (!name) {
-      alert(
-        reportsText("يرجى إدخال اسم القالب", "Please enter a template name"),
-      );
+      const msg = reportsText("يرجى إدخال اسم القالب", "Please enter a template name");
+      if (typeof showToast === "function") showToast(msg, "warning");
+      else if (typeof Swal !== "undefined") Swal.fire(reportsText("تنبيه", "Notice"), msg, "warning");
       return;
     }
 
@@ -1234,13 +1237,17 @@
         getEl("saveTemplateModal"),
       );
       if (modal) modal.hide();
-      showToast(
-        reportsText("تم حفظ القالب بنجاح", "Template saved successfully"),
-      );
+      if (typeof showToast === "function") {
+        showToast(
+          reportsText("تم حفظ القالب بنجاح", "Template saved successfully"),
+        );
+      }
       loadSavedTemplates();
     } catch (e) {
       console.error("Save template failed", e);
-      alert(reportsText("فشل حفظ القالب", "Failed to save template"));
+      const msg = reportsText("فشل حفظ القالب", "Failed to save template");
+      if (typeof Swal !== "undefined") Swal.fire(reportsText("خطأ", "Error"), msg, "error");
+      else if (typeof showToast === "function") showToast(msg, "error");
     }
   }
 
@@ -1250,9 +1257,9 @@
   async function scheduleReport() {
     const name = getEl("scheduleName")?.value?.trim();
     if (!name) {
-      alert(
-        reportsText("يرجى إدخال اسم الجدولة", "Please enter a schedule name"),
-      );
+      const msg = reportsText("يرجى إدخال اسم الجدولة", "Please enter a schedule name");
+      if (typeof showToast === "function") showToast(msg, "warning");
+      else if (typeof Swal !== "undefined") Swal.fire(reportsText("تنبيه", "Notice"), msg, "warning");
       return;
     }
 
@@ -1284,11 +1291,15 @@
         getEl("scheduleModal"),
       );
       if (modal) modal.hide();
-      alert(reportsText("تمت الجدولة بنجاح", "Report scheduled successfully"));
+      const successMsg = reportsText("تمت الجدولة بنجاح", "Report scheduled successfully");
+      if (typeof showToast === "function") showToast(successMsg, "success");
+      else if (typeof Swal !== "undefined") Swal.fire(reportsText("نجاح", "Success"), successMsg, "success");
       loadRecentHistory();
     } catch (e) {
       console.error("Schedule failed", e);
-      alert(reportsText("فشل جدولة التقرير", "Failed to schedule report"));
+      const msg = reportsText("فشل جدولة التقرير", "Failed to schedule report");
+      if (typeof Swal !== "undefined") Swal.fire(reportsText("خطأ", "Error"), msg, "error");
+      else if (typeof showToast === "function") showToast(msg, "error");
     }
   }
 

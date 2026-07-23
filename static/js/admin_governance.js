@@ -69,7 +69,11 @@ function showMessage({ icon = "info", title = "", text = "", timer = 0 } = {}) {
       showConfirmButton: !timer,
     });
   }
-  window.alert([title, text].filter(Boolean).join("\n"));
+  if (typeof window.showToast === "function") {
+    window.showToast([title, text].filter(Boolean).join(" - "), icon || "info");
+  } else {
+    console.log("[Notice]", title, text);
+  }
   return Promise.resolve();
 }
 

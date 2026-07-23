@@ -22,6 +22,7 @@ breadcrumbs=[
             <div class="card-body p-4">
                 <form id="userForm"class="needs-validation"novalidate
                     data-user-id="{{ user_obj.id if user_obj else '' }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <h5 class="mb-4 text-muted">{% if ui_lang == 'en' %}Account Details{% else %}بيانات الحساب{% endif %}</h5>
 
                     <div class="row g-3 mb-3">

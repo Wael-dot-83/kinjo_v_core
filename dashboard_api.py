@@ -14,6 +14,8 @@ from dependencies import get_current_user
 from kpi_service import KPIService
 from database import get_db
 from dashboard_customization import dashboard_customization
+from audit_actions import AuditAction
+from admin_security import log_audit_event
 import models
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard Customization"])
@@ -41,16 +43,29 @@ async def get_user_widgets(
 async def update_user_widgets(
     widgets: List[Dict],
     current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     try:
         success = dashboard_customization.update_user_widgets(current_user.id, widgets)
         if not success:
             raise HTTPException(status_code=400, detail="Invalid widget configuration")
 
+        log_audit_event(
+            db,
+            AuditAction.SETTINGS_UPDATED,
+            current_user,
+            target_type="DashboardWidgets",
+            target_ids=current_user.id,
+            after_state={"widget_count": len(widgets)},
+            sensitivity_level=1,
+        )
+        db.commit()
         return {"message": "Dashboard widget configuration updated"}
     except HTTPException:
+        db.rollback()
         raise
     except (TypeError, ValueError) as e:
+        db.rollback()
         logger.warning("Invalid dashboard widget update request for user_id=%s: %s", current_user.id, str(e))
         raise HTTPException(status_code=500, detail="Failed to update dashboard widget configuration")
 
@@ -58,14 +73,26 @@ async def update_user_widgets(
 @router.post("/widgets/reset")
 async def reset_user_widgets(
     current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     try:
         success = dashboard_customization.reset_user_widgets(current_user.id, current_user.role.value.lower())
         if not success:
             raise HTTPException(status_code=500, detail="Failed to reset dashboard widget configuration")
 
+        log_audit_event(
+            db,
+            AuditAction.SETTINGS_UPDATED,
+            current_user,
+            target_type="DashboardWidgets",
+            target_ids=current_user.id,
+            after_state={"reset": True},
+            sensitivity_level=1,
+        )
+        db.commit()
         return {"message": "Dashboard widgets reset to role defaults"}
     except (TypeError, ValueError) as e:
+        db.rollback()
         logger.warning("Invalid dashboard reset request for user_id=%s: %s", current_user.id, str(e))
         raise HTTPException(status_code=500, detail="Failed to reset dashboard widget configuration")
 

@@ -858,7 +858,9 @@ function applyComparison() {
   }
 
   if (!compareStart || !compareEnd) {
-    alert(adminAnalyticsText('يرجى تحديد نطاق المقارنة', 'Please select comparison range'));
+    const msg = adminAnalyticsText('يرجى تحديد نطاق المقارنة', 'Please select comparison range');
+    if (typeof Swal !== 'undefined') Swal.fire(adminAnalyticsText('تنبيه', 'Notice'), msg, 'warning');
+    else if (typeof window.showToast === 'function') window.showToast(msg, 'warning');
     return;
   }
 
