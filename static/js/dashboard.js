@@ -939,6 +939,14 @@ async function dashboardFetch(url, options = {}) {
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
+      const method = (options.method || "GET").toUpperCase();
+      if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+        const csrfToken = (window.AuthStorage && window.AuthStorage.getCookie && window.AuthStorage.getCookie("kinjo_csrf")) ||
+                          document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+        if (csrfToken) {
+          headers["X-CSRF-Token"] = csrfToken;
+        }
+      }
       response = await fetch(url, { ...options, headers });
     }
 

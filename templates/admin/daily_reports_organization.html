@@ -23,6 +23,7 @@
 
 <div class="daily-reports-org-page" dir="{{ ui_dir }}" lang="{{ ui_lang }}">
   <form id="dailyReportsFilterForm" class="cyberlume-card filter-cyberlume-card mb-4" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="card-body">
       <div class="row g-3">
         <div class="col-12 col-lg-3">

@@ -72,6 +72,7 @@
     </header>
 
     <form id="ncfa-report-scope" class="ncfa-scope-panel" aria-label="{% if ui_lang == 'en' %}NCFA report scope{% else %}نطاق تقارير المجلس{% endif %}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="ncfa-scope-field">
         <label for="ncfa-period">{% if ui_lang == 'en' %}Reporting period{% else %}الفترة الزمنية{% endif %}</label>
         <select id="ncfa-period" name="period">

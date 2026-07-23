@@ -15,6 +15,7 @@
 </div>
 <!-- Filters -->
 <form method="get" action="/admin/contact-messages" class="glass-card fade-in mb-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
         <div class="input-group input-group-sm input-group-icon" style="max-width:280px;">
             <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>

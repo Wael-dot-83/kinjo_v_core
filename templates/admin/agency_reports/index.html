@@ -127,6 +127,7 @@
       </header>
 
       <form id="custom-report-form" class="custom-report-form" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div id="custom-report-controls" class="custom-report-controls" aria-busy="true" role="status" aria-live="polite">
           {% if ui_lang == 'en' %}Loading report options...{% else %}جارٍ تحميل خيارات التقرير...{% endif %}
         </div>

@@ -832,21 +832,25 @@ def update_user(
             if user_data.kindergarten_id is not None:
                 user.kindergarten_id = user_data.kindergarten_id
 
-    db.commit()
-    db.refresh(user)
-
-    # Capture after state
-    after_state = model_to_dict(user)
-
-    # Audit log with diff
-    log_audit_event(
-        db, AuditAction.USER_UPDATED, current_user, "User",
-        target_ids=user.id,
-        before_state=before_state,
-        after_state=after_state,
-        sensitivity_level=3
-    )
-    db.commit()
+    try:
+        db.flush()
+        after_state = model_to_dict(user)
+        log_audit_event(
+            db, AuditAction.USER_UPDATED, current_user, "User",
+            target_ids=user.id,
+            before_state=before_state,
+            after_state=after_state,
+            sensitivity_level=3
+        )
+        db.commit()
+        db.refresh(user)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        logger.error(f"Failed to update user {user.id}: {exc}", exc_info=True)
+        raise APIError(status_code=500, code=ErrorCode.INTERNAL_ERROR, message="Failed to update user") from exc
 
     return {
         "id": user.id,
