@@ -349,7 +349,7 @@
         // Load classes
         try {
             select.innerHTML = `<option value="" disabled selected>${enrollmentViewText('common.loading', 'جارٍ تحميل البيانات، يرجى الانتظار.', 'Loading...')}</option>`;
-            
+
             const data = await window.api.get(`/api/classes?kindergarten_id=${kindergartenId}&is_active=true`);
             const classes = data.classes || [];
 

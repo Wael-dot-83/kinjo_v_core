@@ -6,7 +6,7 @@
     if (!window.api || typeof window.api.get !== "function") {
       throw new Error(tr("تعذر تحميل البيانات", "Unable to load data"));
     }
-    // Remove query string from url as window.api.get takes endpoint and params optionally, 
+    // Remove query string from url as window.api.get takes endpoint and params optionally,
     // but we can just pass the full URL string to request().
     return window.api.request(url, { method: "GET" });
   }

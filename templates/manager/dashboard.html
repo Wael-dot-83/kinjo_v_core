@@ -353,17 +353,17 @@ async function loadDashboard() {
                 // English-only compatibility alias, so it is the last resort.
                 const text = isEn ? (a.message_en || a.message) : (a.message_ar || a.message);
                 const cls = PRIORITY_CLASS[a.priority] || 'alert-info';
-                
+
                 let linkUrl = '';
                 if (a.type === 'pending_applications') linkUrl = '/enrollments';
                 else if (a.type === 'pending_reports') linkUrl = '/daily-reports';
-                
+
                 if (linkUrl) {
                     return `<a href="${linkUrl}" class="text-decoration-none d-block mb-3">
                               <div class="alert ${cls} mb-0">${esc(text)}</div>
                             </a>`;
                 }
-                
+
                 const div = document.createElement('div');
                 div.className = `alert ${cls} mb-3`;
                 div.textContent = text || '';
