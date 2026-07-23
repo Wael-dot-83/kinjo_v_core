@@ -17,7 +17,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "kg2_eligibility": {
                 "title_ar": "تقرير الأطفال المؤهلين للالتحاق بالمستوى الثاني KG2",
                 "title_en": "KG2 eligibility report",
-                "description_ar": "عدد الأطفال الذين أتموا خمس سنوات حسب تاريخ الحسم، مصنفين حسب محافظة وقصبة/لواء وسكن ولي الأمر والجنس.",
+                "description_ar": "عدد الأطفال البالغين خمس سنوات بحلول تاريخ الحسم، مصنّفين حسب المحافظة واللواء وسكن ولي الأمر والجنس.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "geography_basis": ["parent_residence"],
@@ -71,6 +71,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "children_demographics": {
                 "title_ar": "التركيبة الديموغرافية للأطفال",
                 "title_en": "Children demographics",
+                "description_ar": "توزيع الأطفال المسجّلين حسب المحافظة والجنس والفئة العمرية، استناداً إلى سكن ولي الأمر.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "parent_residence",
@@ -81,6 +82,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "enrollment_participation_0_60": {
                 "title_ar": "مشاركة والتحاق الأطفال (0-60 شهراً)",
                 "title_en": "Enrollment participation 0-60 months",
+                "description_ar": "أعداد الأطفال (0–60 شهراً) ذوي التسجيل النشط، موزّعين حسب الموقع الجغرافي والفئة العمرية.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "parent_residence",
@@ -91,6 +93,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "institutions_active_licensed": {
                 "title_ar": "مؤسسات الطفولة المبكرة النشطة والمرخصة",
                 "title_en": "Active licensed institutions",
+                "description_ar": "عدد مؤسسات الطفولة المبكرة حسب حالتها التشغيلية (نشطة/معلقة/مغلقة) والموقع الجغرافي.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "kindergarten_location",
@@ -101,6 +104,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "capacity_occupancy_overcrowding": {
                 "title_ar": "السعة الاستيعابية ومعدلات الإشغال والاكتظاظ",
                 "title_en": "Capacity occupancy & overcrowding",
+                "description_ar": "الطاقة الاستيعابية الصفّية مقابل عدد المسجّلين النشطين ونسبة الإشغال، مصنّفةً حسب الموقع.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "kindergarten_location",
@@ -111,6 +115,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "monthly_attendance_absence": {
                 "title_ar": "معدلات الحضور والغياب الشهرية",
                 "title_en": "Monthly attendance & absence",
+                "description_ar": "توزيع سجلات الحضور حسب الحالة (حاضر/غائب/متأخر/بعذر) والموقع الجغرافي خلال الفترة المحددة.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "kindergarten_location",
@@ -121,6 +126,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "supervisors_child_ratio": {
                 "title_ar": "معدل الأطفال لكل مشرفة",
                 "title_en": "Supervisors child ratio",
+                "description_ar": "عدد المشرفات مقابل الأطفال المسجّلين ومعدّل الأطفال لكل مشرفة، موزّعاً حسب الموقع.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "kindergarten_location",
@@ -131,6 +137,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "incidents_safety_1000_child_days": {
                 "title_ar": "معدل حوادث السلامة لكل 1000 يوم طفل",
                 "title_en": "Incidents safety 1000 child days",
+                "description_ar": "حوادث السلامة المسجّلة حسب درجة الخطورة والموقع، مع معدّل الحوادث لكل 1000 يوم حضور طفل.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "kindergarten_location",
@@ -141,6 +148,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "geographic_service_gaps": {
                 "title_ar": "فجوات الخدمة الجغرافية والتوزيع المكاني",
                 "title_en": "Geographic service gaps",
+                "description_ar": "توزيع الأطفال مقابل الحضانات النشطة ومعدّل الأطفال لكل حضانة، لإبراز الفجوات الجغرافية في خدمات الطفولة.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "parent_residence",
@@ -151,6 +159,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "data_quality_completeness": {
                 "title_ar": "مؤشر جودة واكتمال البيانات",
                 "title_en": "Data quality completeness",
+                "description_ar": "نسبة اكتمال البيانات: عدد الأطفال بدون تاريخ ميلاد أو جنس مسجّل، موزّعين حسب الموقع الجغرافي.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "kindergarten_location",
@@ -161,6 +170,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "annual_quarterly_trends": {
                 "title_ar": "الاتجاهات السنوية والربعية للمؤشرات الرئيسية",
                 "title_en": "Annual quarterly trends",
+                "description_ar": "عدد الحضانات النشطة والأطفال المسجّلين موزّعين حسب سنة الإنشاء، لإبراز الاتجاه الزمني للقطاع.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "national",
@@ -179,6 +189,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "child_family_profile": {
                 "title_ar": "تقرير الأسرة والطفل",
                 "title_en": "Child and family profile",
+                "description_ar": "الملف الديموغرافي للأطفال المسجّلين وأسرهم: التوزيع حسب الجنس والعمر والمحافظة وحالة التسجيل.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "parent_residence",
@@ -189,6 +200,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "family_communication_counts": {
                 "title_ar": "التواصل العددي مع الأسرة",
                 "title_en": "Family communication counts",
+                "description_ar": "عدد الرسائل والمحادثات بين الحضانة والأسرة، موزّعةً حسب نوع المحادثة والفترة الزمنية.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "filters": ["period", "governorate", "kindergarten_id"],
@@ -206,6 +218,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "workforce_summary": {
                 "title_ar": "ملخص القوى العاملة في الحضانات",
                 "title_en": "Kindergarten workforce summary",
+                "description_ar": "عدد المدراء والمشرفات العاملين في الحضانات حسب الدور والموقع الجغرافي.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "kindergarten_location",
@@ -216,6 +229,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "training_compliance": {
                 "title_ar": "التدريب والتأهيل",
                 "title_en": "Training compliance",
+                "description_ar": "نسبة إكمال التدريب: سجلات التدريب المكتملة مقابل الإجمالي لكل حضانة وفترة زمنية.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "filters": ["period", "governorate", "kindergarten_id"],
@@ -233,6 +247,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "kindergarten_registry": {
                 "title_ar": "الحضانات المسجلة وحالتها",
                 "title_en": "Kindergarten registry and status",
+                "description_ar": "الحضانات المسجّلة وفق حالتها التشغيلية والموقع الجغرافي، لدعم الرقابة والترخيص.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "kindergarten_location",
@@ -243,6 +258,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "child_safety_protection": {
                 "title_ar": "السلامة وحماية الطفل",
                 "title_en": "Child safety and protection",
+                "description_ar": "حوادث السلامة وحماية الطفل المسجّلة حسب درجة الخطورة والموقع، لدعم متطلبات التقارير الرقابية.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "filters": ["period", "governorate", "city", "severity", "aggregation_level"],
@@ -260,6 +276,7 @@ AGENCY_REPORT_REGISTRY: dict[str, dict[str, Any]] = {
             "service_access_gaps": {
                 "title_ar": "فجوات الوصول لخدمات الطفولة المبكرة",
                 "title_en": "Early childhood service access gaps",
+                "description_ar": "مقارنة بين توزيع الأطفال وتوافر الحضانات، لتحديد المناطق ذات الطلب العالي وشُحّ الخدمة.",
                 "status": "ready",
                 "privacy_level": "aggregated_only",
                 "default_geography_basis": "parent_residence",

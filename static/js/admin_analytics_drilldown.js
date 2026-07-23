@@ -39,18 +39,17 @@ function drilldownLiteral(value) {
   return typeof window.escapeHtml === "function" ? window.escapeHtml(result) : result;
 }
 
-<<<<<<< HEAD
 function drilldownNumber(value, digits = null, suffix = "") {
   if (value === null || value === undefined || value === "") return "—";
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return "—";
   return `${digits === null ? numeric : numeric.toFixed(digits)}${suffix}`;
-=======
+}
+
 // Build the drill-down URL for the next level. `id` may be an Arabic geographic
 // name (governorate/city) so it must be URL-encoded.
 function drillHref(nextType, id) {
   return `/admin/analytics/drilldown/${nextType}/${encodeURIComponent(id)}`;
->>>>>>> 12e87a06790210a742276570a24b874d0b35addd
 }
 
 async function loadDrilldownData() {
@@ -117,33 +116,6 @@ function populateSummaryCards(metrics, type) {
   if (!container) return;
   const t = type.toUpperCase();
   let cardsHtml = "";
-<<<<<<< HEAD
-  if (type.toUpperCase() === "GOVERNORATE") {
-    cardsHtml = `
-            <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("عدد الحضانات", "Number of kindergartens")}</h6><h3 class="fw-bold">${metrics.kindergarten_count}</h3>
-            </div></div></div>
-            <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("إجمالي الأطفال", "Total children")}</h6><h3 class="fw-bold">${drilldownNumber(metrics.children_count)}</h3>
-            </div></div></div>
-            <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("متوسط الحوكمة", "Average governance")}</h6><h3 class="fw-bold">${drilldownNumber(metrics.governance_score, 1)}</h3>
-            </div></div></div>
-        `;
-  } else if (type.toUpperCase() === "CLASS") {
-    cardsHtml = `
-            <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("الأطفال", "Children")}</h6><h3 class="fw-bold">${metrics.children_count}</h3>
-            </div></div></div>
-            <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("السعة", "Capacity")}</h6><h3 class="fw-bold">${metrics.capacity}</h3>
-            </div></div></div>
-            <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("الفئة العمرية", "Age group")}</h6><h3 class="fw-bold">${drilldownLiteral(metrics.age_group)}</h3>
-            </div></div></div>
-        `;
-=======
-
   if (t === "NETWORK") {
     cardsHtml =
       summaryCard("عدد المحافظات", "Governorates", metrics.governorate_count) +
@@ -179,7 +151,6 @@ function populateSummaryCards(metrics, type) {
       summaryCard("نسبة الحضور", "Attendance rate", attendance) +
       summaryCard("أيام الحضور", "Attendance days", suppressed ? withheld : metrics.attendance_days) +
       summaryCard("الأيام المسجّلة", "Logged days", suppressed ? withheld : metrics.logged_days);
->>>>>>> 12e87a06790210a742276570a24b874d0b35addd
   } else {
     // KINDERGARTEN (Nursery)
     cardsHtml = `

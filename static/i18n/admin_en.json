@@ -109,15 +109,9 @@
     "welcome": "Welcome to KinJo Admin",
     "subtitle": "Monitor system performance and manage operations",
     "total_users": "Total Users",
-<<<<<<< HEAD
     "active_users": "Users Logged In Today",
     "total_kindergartens": "Total Kindergartens",
     "active_kindergartens": "Active Kindergartens",
-=======
-    "active_users": "Active Users",
-    "total_kindergartens": "Total Nurseries",
-    "active_kindergartens": "Active Nurseries",
->>>>>>> 12e87a06790210a742276570a24b874d0b35addd
     "total_submissions": "Total Submissions",
     "pending_submissions": "Pending Submissions",
     "data_quality_score": "Data Quality",

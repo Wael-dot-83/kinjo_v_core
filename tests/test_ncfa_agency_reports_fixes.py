@@ -2,8 +2,9 @@
 
 1. Malformed enum filter values (e.g. lowercase "male") must not 500 the report
    (was: uncaught ValueError from models.Gender("male")).
-2. The admin interactive custom-report view must NOT apply small-cell
-   suppression (admins see real values); exports still suppress.
+2. Admin surfaces must NOT apply small-cell suppression: the interactive
+   custom-report view and the CSV export both show real, complete values —
+   no masked ("محجوب") cells anywhere an authorized admin reviews the data.
 3. Report catalog exposes localized data-source names (no raw English model
    names like "Child"/"ParentProfile" leaking into the UI).
 """
@@ -52,7 +53,7 @@ def test_child_family_profile_gender_filter_never_500(client, admin_user, gender
 
 
 # --------------------------------------------------------------------------
-# Issue 2 — suppression off for the admin interactive view, on for export
+# Issue 2 — suppression off on every admin surface (view + CSV export)
 # --------------------------------------------------------------------------
 def test_custom_report_interactive_endpoint_does_not_suppress(client, admin_user):
     app.dependency_overrides[get_current_user] = lambda: admin_user
@@ -65,15 +66,28 @@ def test_custom_report_interactive_endpoint_does_not_suppress(client, admin_user
         app.dependency_overrides.clear()
 
 
+def test_custom_report_export_csv_does_not_suppress(client, admin_user, sample_child):
+    """The CSV export must carry the same complete values as the on-screen
+    view: with one recorded child the gender breakdown has small cells (< 5),
+    which must appear as real numbers — never as "محجوب"."""
+    app.dependency_overrides[get_current_user] = lambda: admin_user
+    try:
+        resp = client.post("/api/admin/agency-reports/custom/export.csv", json=VALID_SCOPE)
+        assert resp.status_code == 200, resp.text
+        assert "محجوب" not in resp.text
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_custom_report_suppress_flag_gates_disclosure_control(test_db):
     svc = AgencyReportsService(test_db)
     with patch.object(svc, "_apply_small_cell_suppression", return_value=0) as m:
         svc.custom_report(dict(VALID_SCOPE), suppress=False)
-    assert not m.called, "admin interactive view must not run small-cell suppression"
+    assert not m.called, "admin surfaces must not run small-cell suppression"
 
     with patch.object(svc, "_apply_small_cell_suppression", return_value=0) as m:
         svc.custom_report(dict(VALID_SCOPE), suppress=True)
-    assert m.called, "official export must run small-cell suppression"
+    assert m.called, "the suppress flag must still gate disclosure control at the service level"
 
 
 # --------------------------------------------------------------------------

@@ -147,7 +147,6 @@ jobs:
           python scripts/manual-diagnostics/verify_postgres_migration_state.py
           alembic downgrade -1
           alembic upgrade head
-<<<<<<< HEAD
           python scripts/manual-diagnostics/verify_postgres_migration_state.py
           alembic downgrade base
           alembic upgrade head
@@ -159,7 +158,6 @@ jobs:
         env:
           MIGRATION_TEST_POSTGRES_URL: postgresql://kinjo:kinjo@localhost:5432/kinjo_test
         run: pytest tests/test_migration_column_drift.py -q
-=======
 
   analytics-postgres:
     # Postgres E2E for the admin analytics work (registry, data-state, drill-down,
@@ -208,4 +206,3 @@ jobs:
             tests/api/test_p1_analytics_summary.py \
             tests/api/test_p1_analytics_export.py \
             --timeout=60
->>>>>>> 12e87a06790210a742276570a24b874d0b35addd

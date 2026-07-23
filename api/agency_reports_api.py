@@ -278,8 +278,8 @@ def custom_report(
     db: Session = Depends(get_db),
 ):
     try:
-        # Admin interactive view: show real values (suppression applies only to
-        # the official agency export below).
+        # Admin surface: always show the real, complete values — no small-cell
+        # suppression anywhere an authorized admin reviews the data.
         return {"success": True, "data": AgencyReportsService(db).custom_report(scope, suppress=False)}
     except AgencyReportError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
@@ -292,7 +292,9 @@ def custom_report_export_csv(
     db: Session = Depends(get_db),
 ):
     try:
-        payload = AgencyReportsService(db).custom_report(scope)
+        # Admin export: same complete data as the on-screen view (suppress=False)
+        # so downloaded CSVs never contain masked ("محجوب") cells.
+        payload = AgencyReportsService(db).custom_report(scope, suppress=False)
         csv_payload = custom_report_to_csv(payload)
         _scope = payload.get("scope", {})
         _audit_export(db, current_user, _scope.get("agency"), None, "csv", {

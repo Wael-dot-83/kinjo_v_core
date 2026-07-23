@@ -303,7 +303,9 @@
 
       const indicators = document.createElement("p");
       indicators.className = "agency-card-meta";
-      const _sourcesText = report.data_source_ar || ((report.data_sources || []).join(", ")) || "—";
+      const _srcAr = report.data_sources_ar && report.data_sources_ar.length ? report.data_sources_ar.join("، ") : null;
+      const _srcEn = report.data_sources && report.data_sources.length ? report.data_sources.join(", ") : null;
+      const _sourcesText = lang === "ar" ? (_srcAr || _srcEn || "—") : (_srcEn || _srcAr || "—");
       indicators.innerHTML = '<strong>' + t("المؤشرات المتاحة", "Available indicators") + ':</strong> ' + _sourcesText;
 
       const updated = document.createElement("p");
