@@ -489,9 +489,7 @@
       if (!displayable.length) {
         card.appendChild(createElement("p", {
           className: "ncfa-chart-empty",
-          text: series.some((s) => s.suppressed)
-            ? t("القيم ضمن هذه الفئة محجوبة لحماية الخصوصية.", "Values in this breakdown are suppressed to protect privacy.")
-            : t("لا توجد بيانات كافية للعرض ضمن النطاق المحدد.", "Not enough data to display for the selected scope.")
+          text: t("لا توجد بيانات كافية للعرض ضمن النطاق المحدد.", "Not enough data to display for the selected scope.")
         }));
         grid.appendChild(card);
         return;
