@@ -303,8 +303,8 @@
 
       const indicators = document.createElement("p");
       indicators.className = "agency-card-meta";
-      const _sources = (report.data_sources_ar && report.data_sources_ar.length) ? report.data_sources_ar : (report.data_sources || []);
-      indicators.innerHTML = '<strong>' + t("المؤشرات المتاحة", "Available indicators") + ':</strong> ' + (_sources.length ? _sources.join(", ") : "—");
+      const _sourcesText = report.data_source_ar || ((report.data_sources || []).join(", ")) || "—";
+      indicators.innerHTML = '<strong>' + t("المؤشرات المتاحة", "Available indicators") + ':</strong> ' + _sourcesText;
 
       const updated = document.createElement("p");
       updated.className = "agency-card-updated";
@@ -424,7 +424,7 @@
       chartContainer.setAttribute("role", "img");
       chartContainer.setAttribute("aria-label", payload.chart.title_ar || "");
       chartSection.appendChild(chartContainer);
-      if (window.Plotly && payload.chart.series && payload.chart.series.length) {
+      if (window.Plotly && typeof window.Plotly.newPlot === "function" && payload.chart.series && payload.chart.series.length) {
         const labels = payload.chart.series.map((s) => s.label);
         const values = payload.chart.series.map((s) => s.value);
         const total = values.reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
