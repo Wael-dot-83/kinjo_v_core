@@ -278,7 +278,9 @@ def custom_report(
     db: Session = Depends(get_db),
 ):
     try:
-        return {"success": True, "data": AgencyReportsService(db).custom_report(scope)}
+        # Admin interactive view: show real values (suppression applies only to
+        # the official agency export below).
+        return {"success": True, "data": AgencyReportsService(db).custom_report(scope, suppress=False)}
     except AgencyReportError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 

@@ -303,7 +303,8 @@
 
       const indicators = document.createElement("p");
       indicators.className = "agency-card-meta";
-      indicators.innerHTML = '<strong>' + t("المؤشرات المتاحة", "Available indicators") + ':</strong> ' + (report.data_sources && report.data_sources.length ? report.data_sources.join(", ") : "—");
+      const _sources = (report.data_sources_ar && report.data_sources_ar.length) ? report.data_sources_ar : (report.data_sources || []);
+      indicators.innerHTML = '<strong>' + t("المؤشرات المتاحة", "Available indicators") + ':</strong> ' + (_sources.length ? _sources.join(", ") : "—");
 
       const updated = document.createElement("p");
       updated.className = "agency-card-updated";

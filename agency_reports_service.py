@@ -139,6 +139,19 @@ def _attendance_status_ar(value: Any) -> str:
     return _ATTENDANCE_STATUS_AR.get(raw or "", raw or "غير محدد")
 
 
+def _coerce_enum(enum_cls: type, value: Any):
+    """Case-insensitively coerce a filter string to an enum member, or None when
+    the value is empty or invalid. Guards report queries so a malformed filter
+    value (e.g. lowercase "male") is ignored rather than raising ValueError and
+    500-ing the whole report."""
+    if value in (None, "", "null", "undefined"):
+        return None
+    try:
+        return enum_cls(str(value).upper())
+    except ValueError:
+        return None
+
+
 _SOURCE_AR = {
     "Child": "سجل الأطفال",
     "ParentProfile": "ملفات أولياء الأمور",
@@ -415,6 +428,7 @@ class AgencyReportsService:
                     "filters": report.get("filters", []),
                     "exports": report.get("exports", []),
                     "data_sources": report.get("data_sources", []),
+                    "data_sources_ar": [_SOURCE_AR.get(s, s) for s in report.get("data_sources", [])],
                     "reason_ar": report.get("reason_ar"),
                     "generated_at": generated_at,
                 })
@@ -653,8 +667,9 @@ class AgencyReportsService:
             .filter(models.Child.date_of_birth <= cutoff)
         )
         q = self._apply_parent_geo_filters(q, filters)
-        if filters.get("gender"):
-            q = q.filter(models.Child.gender == models.Gender(filters["gender"]))
+        _gender = _coerce_enum(models.Gender, filters.get("gender"))
+        if _gender is not None:
+            q = q.filter(models.Child.gender == _gender)
         rows = q.group_by(models.ParentProfile.home_governorate, models.ParentProfile.home_district, models.Child.gender).all()
         breakdowns = [
             {
@@ -679,8 +694,9 @@ class AgencyReportsService:
             .filter(models.Child.deleted_at.is_(None), models.ParentProfile.deleted_at.is_(None))
         )
         q = self._apply_parent_geo_filters(q, filters)
-        if filters.get("gender"):
-            q = q.filter(models.Child.gender == models.Gender(filters["gender"]))
+        _gender = _coerce_enum(models.Gender, filters.get("gender"))
+        if _gender is not None:
+            q = q.filter(models.Child.gender == _gender)
         rows = q.group_by(models.ParentProfile.home_governorate, models.ParentProfile.home_district, models.Child.gender).all()
         breakdowns = [
             {"governorate": r.home_governorate or "غير محدد", "city": r.home_district or "غير محدد", "gender": _gender_ar(r.gender), "count": _safe_int(r.count)}
@@ -713,12 +729,9 @@ class AgencyReportsService:
             .filter(models.Child.deleted_at.is_(None), models.ParentProfile.deleted_at.is_(None))
         )
         q = self._apply_parent_geo_filters(q, filters)
-        gender_filter = filters.get("gender")
-        if gender_filter:
-            try:
-                q = q.filter(models.Child.gender == models.Gender(str(gender_filter).upper()))
-            except ValueError:
-                pass  # unknown gender value → ignore filter rather than 500
+        _gender = _coerce_enum(models.Gender, filters.get("gender"))
+        if _gender is not None:
+            q = q.filter(models.Child.gender == _gender)
 
         children = q.all()
         children_considered = len(children)
@@ -773,8 +786,9 @@ class AgencyReportsService:
     def _kindergarten_registry(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
         q = self.db.query(models.Kindergarten.governorate, models.Kindergarten.district, models.Kindergarten.status, func.count(models.Kindergarten.id).label("count"))
         q = self._apply_kindergarten_geo_filters(q, filters)
-        if filters.get("status"):
-            q = q.filter(models.Kindergarten.status == models.KindergartenStatus(filters["status"]))
+        _kg_status = _coerce_enum(models.KindergartenStatus, filters.get("status"))
+        if _kg_status is not None:
+            q = q.filter(models.Kindergarten.status == _kg_status)
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.Kindergarten.status).all()
         breakdowns = [
             {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "status": _kindergarten_status_ar(r.status), "count": _safe_int(r.count)}
@@ -823,8 +837,9 @@ class AgencyReportsService:
             .filter(models.Incident.deleted_at.is_(None))
         )
         q = self._apply_kindergarten_geo_filters(q, filters)
-        if filters.get("severity"):
-            q = q.filter(models.Incident.severity_level == models.SeverityLevel(filters["severity"]))
+        _severity = _coerce_enum(models.SeverityLevel, filters.get("severity"))
+        if _severity is not None:
+            q = q.filter(models.Incident.severity_level == _severity)
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.Incident.severity_level).all()
         breakdowns = [{"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "severity": _severity_ar(r.severity_level), "count": _safe_int(r.count)} for r in rows]
         return self._payload(agency_code, agency, report_code, report, filters, {"incident_count": sum(r["count"] for r in breakdowns)}, breakdowns)
@@ -859,8 +874,9 @@ class AgencyReportsService:
             .filter(models.Child.deleted_at.is_(None), models.ParentProfile.deleted_at.is_(None))
         )
         q = self._apply_parent_geo_filters(q, filters)
-        if filters.get("gender"):
-            q = q.filter(models.Child.gender == models.Gender(filters["gender"]))
+        _gender = _coerce_enum(models.Gender, filters.get("gender"))
+        if _gender is not None:
+            q = q.filter(models.Child.gender == _gender)
         rows = q.group_by(models.ParentProfile.home_governorate, models.ParentProfile.home_district, models.Child.gender).all()
         breakdowns = [
             {"governorate": r.home_governorate or "غير محدد", "city": r.home_district or "غير محدد", "gender": _gender_ar(r.gender), "count": _safe_int(r.count)}
@@ -885,8 +901,9 @@ class AgencyReportsService:
             )
         )
         q = self._apply_parent_geo_filters(q, filters)
-        if filters.get("gender"):
-            q = q.filter(models.Child.gender == models.Gender(filters["gender"]))
+        _gender = _coerce_enum(models.Gender, filters.get("gender"))
+        if _gender is not None:
+            q = q.filter(models.Child.gender == _gender)
         
         rows = q.all()
         
@@ -945,8 +962,9 @@ class AgencyReportsService:
     def _dos_institutions_active(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
         q = self.db.query(models.Kindergarten.governorate, models.Kindergarten.district, models.Kindergarten.status, func.count(models.Kindergarten.id).label("count"))
         q = self._apply_kindergarten_geo_filters(q, filters)
-        if filters.get("status"):
-            q = q.filter(models.Kindergarten.status == models.KindergartenStatus(filters["status"]))
+        _kg_status = _coerce_enum(models.KindergartenStatus, filters.get("status"))
+        if _kg_status is not None:
+            q = q.filter(models.Kindergarten.status == _kg_status)
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.Kindergarten.status).all()
         breakdowns = [
             {"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "status": _kindergarten_status_ar(r.status), "count": _safe_int(r.count)}
@@ -1037,8 +1055,9 @@ class AgencyReportsService:
             .filter(models.Incident.deleted_at.is_(None))
         )
         q = self._apply_kindergarten_geo_filters(q, filters)
-        if filters.get("severity"):
-            q = q.filter(models.Incident.severity_level == models.SeverityLevel(filters["severity"]))
+        _severity = _coerce_enum(models.SeverityLevel, filters.get("severity"))
+        if _severity is not None:
+            q = q.filter(models.Incident.severity_level == _severity)
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.Incident.severity_level).all()
         breakdowns = [{"governorate": r.governorate or "غير محدد", "city": r.district or "غير محدد", "severity": _severity_ar(r.severity_level), "count": _safe_int(r.count)} for r in rows]
         return self._payload(agency_code, agency, report_code, report, filters, {"incident_count": sum(r["count"] for r in breakdowns)}, breakdowns)
@@ -1111,8 +1130,13 @@ class AgencyReportsService:
         from agency_reports_registry import custom_report_schema
         return custom_report_schema()
 
-    def custom_report(self, scope: dict[str, Any] | None) -> dict[str, Any]:
+    def custom_report(self, scope: dict[str, Any] | None, suppress: bool = True) -> dict[str, Any]:
         """Build an aggregated custom report from a validated scope.
+
+        ``suppress`` applies small-cell statistical disclosure control (used for
+        official agency exports). The admin's in-app interactive view passes
+        ``suppress=False`` so authorized reviewers see the real values/charts;
+        exports keep it on.
 
         Every indicator is computed from real data. Indicators whose data is
         not structurally available are never fabricated — they are reported in
@@ -1205,8 +1229,9 @@ class AgencyReportsService:
             "end_date": end_date.isoformat(),
         }
         # Statistical disclosure control: blank identifying small category counts
-        # before the payload leaves the service (applies to JSON and CSV alike).
-        suppressed_cells = self._apply_small_cell_suppression(charts, table)
+        # before the payload leaves the service (agency exports). The admin
+        # interactive view opts out (suppress=False) to show real values.
+        suppressed_cells = self._apply_small_cell_suppression(charts, table) if suppress else 0
         if suppressed_cells:
             quality_notes.append(
                 f"تم حجب {suppressed_cells} خلية بأعداد صغيرة لحماية الخصوصية (الحد الأدنى {_min_cell_size()})."
