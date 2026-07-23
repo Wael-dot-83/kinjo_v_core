@@ -32,10 +32,12 @@
   }
 
   function updateFilterVisibility() {
-    const reportType = getReportType();
-    const allFilters = [
-      "filterGovContainer",
-      "filterKgContainer",
+    // Only Governorate and Kindergarten are actually applied by the strategic
+    // report endpoints (see buildStrategicQuery()). The remaining tab-specific
+    // filters (status/severity/incident-type/SLA/district/sensitivity/…) were
+    // never sent to the backend and had zero effect, so they are kept hidden
+    // rather than presenting controls that silently do nothing.
+    const deadFilters = [
       "filterStatusContainer",
       "filterSeverityContainer",
       "filterSourceContainer",
@@ -49,71 +51,15 @@
       "filterActorRoleContainer",
       "filterTrainingStatusContainer",
     ];
-    allFilters.forEach((id) => {
+    deadFilters.forEach((id) => {
       const el = getEl(id);
       if (el) el.classList.add("d-none");
     });
 
-    const show = (...ids) =>
-      ids.forEach((id) => {
-        const el = getEl(id);
-        if (el) el.classList.remove("d-none");
-      });
-
-    if (reportType === "attendance") {
-      show(
-        "filterGovContainer",
-        "filterKgContainer",
-        "filterAbsenceReasonContainer",
-      );
-    } else if (reportType === "compliance") {
-      show("filterGovContainer", "filterKgContainer");
-    } else if (reportType === "incidents") {
-      show(
-        "filterGovContainer",
-        "filterKgContainer",
-        "filterStatusContainer",
-        "filterSeverityContainer",
-        "filterIncidentTypeContainer",
-        "filterSlaContainer",
-        "filterParentInformedContainer",
-      );
-    } else if (reportType === "enrollment") {
-      show(
-        "filterStatusContainer",
-        "filterSourceContainer",
-        "filterReviewerContainer",
-        "filterDistrictContainer",
-      );
-    } else if (reportType === "full_audit") {
-      show("filterSensitivityContainer", "filterActorRoleContainer");
-    } else if (reportType === "staff_training") {
-      show(
-        "filterGovContainer",
-        "filterKgContainer",
-        "filterTrainingStatusContainer",
-      );
-    } else if (reportType === "welfare") {
-      show(
-        "filterGovContainer",
-        "filterKgContainer",
-        "filterIncidentTypeContainer",
-        "filterSlaContainer",
-        "filterParentInformedContainer",
-      );
-    } else if (reportType === "trends") {
-      show("filterGovContainer", "filterKgContainer");
-    } else if (reportType === "capacity") {
-      show(
-        "filterGovContainer",
-        "filterKgContainer",
-        "filterDistrictContainer",
-      );
-    } else if (reportType === "parent_engagement") {
-      show("filterGovContainer", "filterKgContainer");
-    } else if (reportType === "data_quality") {
-      show("filterGovContainer", "filterKgContainer");
-    }
+    ["filterGovContainer", "filterKgContainer"].forEach((id) => {
+      const el = getEl(id);
+      if (el) el.classList.remove("d-none");
+    });
   }
 
   // ===========================================================================
@@ -520,6 +466,26 @@
     minute: "2-digit",
     timeZone: _AMMAN_TZ,
   });
+  const _TIME_FMT_AR = new Intl.DateTimeFormat("ar-JO", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: _AMMAN_TZ,
+  });
+  const _TIME_FMT_EN = new Intl.DateTimeFormat("en-JO", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: _AMMAN_TZ,
+  });
+
+  /** Format the time-of-day only (Asia/Amman). Returns "-" for empty/unparseable. */
+  function formatTimeSafe(val) {
+    if (val == null || val === "") return "-";
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return "-";
+    const lang =
+      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+    return (lang === "en" ? _TIME_FMT_EN : _TIME_FMT_AR).format(d);
+  }
 
   /**
    * Safely format a date/datetime value for display in Asia/Amman timezone.
@@ -646,7 +612,7 @@
       areas.forEach(a => {
         const opt = document.createElement("option");
         opt.value = a.key;
-        opt.textContent = a.name_ar;
+        opt.textContent = reportsText(a.name_ar, a.name_en || a.name_ar);
         citySelect.appendChild(opt);
       });
       citySelect.disabled = false;
@@ -1320,7 +1286,7 @@
 
     // Filter
     const filtered = historyItems.filter((item) => {
-      const name = (item.report_name || item.report_type).toLowerCase();
+      const name = (item.report_name || item.report_type || "").toLowerCase();
       const format = (item.format || "").toLowerCase();
       const status = (item.status || "").toLowerCase();
       const query = historySearchText.toLowerCase();
@@ -1468,12 +1434,7 @@
       if (items.length > 0) {
         const latest = items[0];
         setText("statLastGenerated", formatDateSafe(latest.generated_at));
-        setText(
-          "statLastGeneratedTime",
-          formatDateSafe(latest.generated_at, { time: true })
-            .split(",")[1]
-            ?.trim() || formatDateSafe(latest.generated_at, { time: true }),
-        );
+        setText("statLastGeneratedTime", formatTimeSafe(latest.generated_at));
       }
     } catch (e) {
       console.error("Stats load failed", e);
