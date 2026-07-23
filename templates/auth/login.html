@@ -57,8 +57,8 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
 
   .auth-brand-logo-wrap {
-    width: 84px;
-    height: 84px;
+    width: 100px;
+    height: 100px;
     border-radius: 1.375rem;
     background: rgba(255, 255, 255, 0.14);
     border: 1px solid rgba(255, 255, 255, 0.22);
@@ -66,7 +66,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 1.75rem;
+    margin-bottom: 2rem;
     flex-shrink: 0;
   }
   .auth-brand-logo-wrap i {
@@ -74,14 +74,14 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
 
   .auth-brand-name {
-    font-size: 2.5rem;
+    font-size: 2.75rem;
     font-weight: 800;
     letter-spacing: -0.03em;
     line-height: 1;
     margin-bottom: 0.625rem;
   }
   .auth-brand-tagline {
-    font-size: 1.0625rem;
+    font-size: 1.125rem;
     opacity: 0.82;
     line-height: 1.65;
     max-width: 310px;
@@ -281,7 +281,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     color: #94a3b8;
     cursor: pointer;
     padding: 0.3rem 0.4rem;
-    font-size: 1.0625rem;
+    font-size: 1.125rem;
     z-index: 5;
     border-radius: 0.375rem;
     line-height: 1;
@@ -785,7 +785,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   {% from 'components/kinjo_logo.html' import kinjo_logo %}
   <aside class="auth-brand-panel" aria-hidden="true">
     <div class="auth-brand-logo-wrap">
-      <img src="/static/img/kinjo-logo.png" alt="KinJo" style="height: 42px; width: auto; object-fit: contain;">
+      <img src="/static/img/kinjo-logo.png" alt="KinJo" style="height: 80px; width: auto; object-fit: contain;">
     </div>
 
     <p class="auth-brand-tagline">
@@ -861,7 +861,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
       {# Welcome heading & Expired state #}
       <div class="auth-heading-wrap af-anim af-delay1" id="headingWrap">
 
-        <img src="/static/img/kinjo-logo.png" alt="KinJo" class="mb-4 mx-auto" style="width: 180px; height: auto; max-width: 100%; object-fit: contain; display: block;">
+        <img src="/static/img/kinjo-logo.png" alt="KinJo" class="mb-4 mx-auto" style="width: 260px; height: auto; max-width: 100%; object-fit: contain; display: block;">
 
         <h1 class="auth-heading" id="authHeading" {% if session_expired %}style="color: #d97706;"{% endif %}>
           {% if session_expired %}
@@ -1484,3 +1484,12 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   })();
 </script>
 {% endblock %}
+
+
+
+
+
+
+
+
+
