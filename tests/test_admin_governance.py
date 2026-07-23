@@ -153,7 +153,13 @@ class TestGovernanceReminders:
 
     def test_reminder_stats_count_today_without_fabricated_fields(self, client, test_db):
         admin = _create_admin(test_db)
-        now = datetime.now(timezone.utc)
+        # Production writes GovernanceReminder.sent_at in Jordan time
+        # (governance_kpi_service uses datetime.now(_JORDAN_TZ)), and the stats
+        # endpoint's "today" boundary is Jordan midnight. Seed with the same
+        # Jordan offset so the comparison is consistent on SQLite too — a UTC
+        # seed misorders lexicographically against a +03:00 boundary in the
+        # 21:00-24:00 UTC window (SQLite stores datetimes as ISO strings).
+        now = datetime.now(timezone(timedelta(hours=3)))
         test_db.add_all([
             models.GovernanceReminder(
                 target_type="supervisor", target_id=admin.id,
