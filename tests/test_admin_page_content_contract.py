@@ -127,7 +127,10 @@ def test_profile_age_card_label_matches_what_it_computes():
 
 def test_metric_names_match_implemented_behavior():
     assert "Average Staff-to-Child Ratio Compliance" in source("templates/admin/kpi.html")
-    assert "Charts Explorer" in source("templates/admin/analytics/charts_dashboard.html")
+    charts = source("templates/admin/analytics/charts_dashboard.html")
+    assert "Charts Explorer" in charts
+    # The page must not overclaim capabilities it does not perform (no "statistical validation").
+    assert "statistical validation" not in charts
     heatmap = source("templates/admin/heatmap.html")
     assert "Covered Governorates" in heatmap
     # The average-risk card's wording is asserted in

@@ -8,6 +8,7 @@ from audit_actions import AuditAction
 from conftest import csrf_pair
 from dependencies import get_current_user
 from main import app
+from conftest import csrf_pair
 
 pytestmark = [pytest.mark.integration, pytest.mark.p1]
 

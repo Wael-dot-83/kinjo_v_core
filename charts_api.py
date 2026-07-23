@@ -15,7 +15,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -208,10 +208,34 @@ def get_task_status(task_id: str) -> TaskStatus:
 # ---------------------------------------------------------------------------
 # GET /admin/charts/dashboard (HTML page)
 # ---------------------------------------------------------------------------
-# NOTE: The canonical charts-explorer PAGE at /admin/analytics/charts is owned by
-# scripts/compat/frontend_orig.py (admin_charts_explorer). This router owns only
-# the DATA/render/suggest/task endpoints. The legacy /admin/charts/dashboard path
-# below redirects to that canonical page.
+
+# Bilingual display labels for the source and chart-type pickers. Kept beside the
+# route that renders them so the template's context stays complete.
+_SOURCE_LABELS_AR = {
+    "incidents": "الحوادث", "attendance": "الحضور",
+    "daily_reports": "التقارير اليومية", "enrollments": "التسجيلات",
+    "kindergartens": "الحضانات",
+}
+_SOURCE_LABELS_EN = {
+    "incidents": "Incidents", "attendance": "Attendance",
+    "daily_reports": "Daily Reports", "enrollments": "Enrollments",
+    "kindergartens": "Kindergartens",
+}
+_CHART_LABELS_AR = {
+    "line": "خطي", "bar": "أعمدة", "scatter": "مبعثر", "pie": "دائري",
+    "histogram": "مدرج تكراري", "box": "مربع", "heatmap": "خريطة حرارية",
+    "funnel": "قمعي", "treemap": "شجري",
+}
+_CHART_LABELS_EN = {
+    "line": "Line", "bar": "Bar", "scatter": "Scatter", "pie": "Pie",
+    "histogram": "Histogram", "box": "Box", "heatmap": "Heatmap",
+    "funnel": "Funnel", "treemap": "Treemap",
+}
+
+# NOTE: GET /admin/analytics/charts (the explorer PAGE) is served by
+# frontend_orig.admin_charts_explorer, which the admin sidebar contract expects to own it.
+# charts_api owns only the data / render / redirect endpoints below — declaring the page
+# route here as well produced a duplicate registration for the same method+path.
 
 @router.get(
     "/admin/charts/dashboard",
@@ -230,11 +254,13 @@ def legacy_charts_dashboard(request: Request) -> RedirectResponse:
 # retained for compatibility with existing pages.
 @router.get(
     "/api/admin/charts/data",
-    summary="Raw chart data as JSON",
+    response_model=ChartResponse,
+    summary="Render a Plotly chart as JSON data",
     dependencies=[Depends(require_admin_or_manager)],
 )
 def get_admin_chart_data(
     source: str = Query(..., description="One of: incidents, attendance, daily_reports, enrollments, kindergartens"),
+    chart_type: Optional[str] = Query(None, description="Override auto-selection"),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
     kindergarten_id: Optional[int] = Query(None),
@@ -242,20 +268,25 @@ def get_admin_chart_data(
     granularity: str = Query("month"),
     group_by: Optional[str] = Query(None),
     top_n: Optional[int] = Query(None),
+    title: Optional[str] = Query(None),
     lang: str = Query("ar", pattern="^(ar|en)$"),
     db: Session = Depends(get_db),
-) -> Dict[str, Any]:
-    return get_chart_data(
-        source=source,
-        date_from=date_from,
-        date_to=date_to,
-        kindergarten_id=kindergarten_id,
-        governorate=governorate,
-        granularity=granularity,
-        group_by=group_by,
-        top_n=top_n,
-        lang=lang,
-        db=db,
+) -> ChartResponse:
+    return _svc.render(
+        db,
+        ChartRequest(
+            source=_parse_source(source),
+            chart_type=_parse_chart_type(chart_type),
+            date_from=date_from,
+            date_to=date_to,
+            kindergarten_id=kindergarten_id,
+            governorate=governorate,
+            granularity=Granularity(granularity) if granularity else Granularity.MONTH,
+            group_by=group_by,
+            top_n=top_n,
+            title=title,
+            lang=lang,
+        ),
     )
 
 
