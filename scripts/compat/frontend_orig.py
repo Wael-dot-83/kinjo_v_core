@@ -1322,18 +1322,22 @@ async def admin_audit_logs_page(request: Request, current_user: User = Depends(g
 @router.get("/admin/users", response_class=HTMLResponse)
 async def list_users_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Admin user list page"""
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
          return RedirectResponse("/")
     return templates.TemplateResponse(request=request, name="admin/users/list.html", context={"current_user": current_user})
 
 @router.get("/admin/users/create", response_class=HTMLResponse)
 async def create_user_page(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
          return RedirectResponse("/")
-    
-    selected_id = request.query_params.get("kindergarten_id")
-    kgs = db.query(Kindergarten).filter(Kindergarten.id == int(selected_id)).all() if selected_id and selected_id.isdigit() else []
-    is_manager_user = False
+
+    if current_user.role == UserRole.MANAGER:
+        kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
+        is_manager_user = True
+    else:
+        selected_id = request.query_params.get("kindergarten_id")
+        kgs = db.query(Kindergarten).filter(Kindergarten.id == int(selected_id)).all() if selected_id and selected_id.isdigit() else []
+        is_manager_user = False
 
     return templates.TemplateResponse(request=request, name="admin/users/form.html", context={
         "current_user": current_user, 
@@ -1345,9 +1349,9 @@ async def create_user_page(request: Request, db: Session = Depends(get_db), curr
 
 @router.get("/admin/users/{user_id}/edit", response_class=HTMLResponse)
 async def edit_user_page(request: Request, user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
          return RedirectResponse("/")
-    
+
     user_obj = db.query(User).filter(
         User.id == user_id, User.deleted_at.is_(None)
     ).first()
@@ -1355,9 +1359,16 @@ async def edit_user_page(request: Request, user_id: int, db: Session = Depends(g
         return templates.TemplateResponse(request=request, name="404.html", status_code=404)
     if not can_admin_access_user(current_user, user_obj):
         return templates.TemplateResponse(request=request, name="404.html", status_code=404)
-    
-    kgs = db.query(Kindergarten).filter(Kindergarten.id == user_obj.kindergarten_id).all() if user_obj.kindergarten_id else []
-    is_manager_user = False
+
+    # Check permission for Manager
+    if current_user.role == UserRole.MANAGER:
+        if user_obj.kindergarten_id != current_user.kindergarten_id:
+             return RedirectResponse("/")
+        kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
+        is_manager_user = True
+    else:
+        kgs = db.query(Kindergarten).filter(Kindergarten.id == user_obj.kindergarten_id).all() if user_obj.kindergarten_id else []
+        is_manager_user = False
 
     return templates.TemplateResponse(request=request, name="admin/users/form.html", context={
         "current_user": current_user, 

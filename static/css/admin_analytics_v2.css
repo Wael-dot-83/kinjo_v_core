@@ -248,9 +248,14 @@
   border-radius: var(--r-xl);
   padding: var(--sp-3) var(--sp-5);
   box-shadow: 0 4px 16px rgba(0,0,0,0.04);
-  position: relative;
-  z-index: 10;
-  margin-top: 0;
+  /* Sticks to the top of .admin-content — the actual scroll container
+     (the 64px header lives outside it). Negative top cancels the
+     scroller's own padding so the bar pins flush with the visible edge
+     instead of leaving a see-through strip above it. */
+  position: sticky;
+  top: calc(-1 * var(--kinjo-spacing-6, 1.5rem));
+  z-index: 1000;
+  margin-top: calc(-1 * var(--sp-4));
   margin-bottom: var(--sp-6);
   transition: background-color .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
