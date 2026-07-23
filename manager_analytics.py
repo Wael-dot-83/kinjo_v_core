@@ -46,14 +46,18 @@ class ManagerAnalyticsService:
         """
         if end_date < start_date:
             return 0
-        rows = db.query(
-            models.OperatingCalendar.date,
-            models.OperatingCalendar.is_open,
-        ).filter(
-            models.OperatingCalendar.kindergarten_id == kindergarten_id,
-            models.OperatingCalendar.date >= start_date,
-            models.OperatingCalendar.date <= end_date,
-        ).all()
+        rows = (
+            db.query(
+                models.OperatingCalendar.date,
+                models.OperatingCalendar.is_open,
+            )
+            .filter(
+                models.OperatingCalendar.kindergarten_id == kindergarten_id,
+                models.OperatingCalendar.date >= start_date,
+                models.OperatingCalendar.date <= end_date,
+            )
+            .all()
+        )
         explicit = {row[0]: bool(row[1]) for row in rows}
 
         count = 0
@@ -97,14 +101,10 @@ class ManagerAnalyticsService:
             return result
 
         # Query 1: working days (Jordan Sun–Thu + explicit OperatingCalendar).
-        working_set = set(
-            KPIService._list_working_days(db, kindergarten_id, start_date, end_date)
-        )
+        working_set = set(KPIService._list_working_days(db, kindergarten_id, start_date, end_date))
         # Query 2: active enrollments overlapping the window, with effective
         # per-child date ranges (a child may hold several overlapping rows).
-        enrollments = KPIService._get_overlapping_active_enrollments(
-            db, kindergarten_id, start_date, end_date
-        )
+        enrollments = KPIService._get_overlapping_active_enrollments(db, kindergarten_id, start_date, end_date)
         child_windows: Dict[int, list] = defaultdict(list)
         for child_id, eff_start, eff_end in enrollments:
             child_windows[child_id].append((eff_start, eff_end))
@@ -113,16 +113,21 @@ class ManagerAnalyticsService:
         attended_by_day_child: Dict[Tuple[date, int], int] = {}
         child_ids = list(child_windows.keys())
         if child_ids:
-            rows = db.query(
-                models.AttendanceLog.date,
-                models.AttendanceLog.child_id,
-                func.count(models.AttendanceLog.id),
-            ).filter(
-                models.AttendanceLog.child_id.in_(child_ids),
-                models.AttendanceLog.date >= start_date,
-                models.AttendanceLog.date <= end_date,
-                models.AttendanceLog.status.in_(_ATTENDED_STATUSES),
-            ).group_by(models.AttendanceLog.date, models.AttendanceLog.child_id).all()
+            rows = (
+                db.query(
+                    models.AttendanceLog.date,
+                    models.AttendanceLog.child_id,
+                    func.count(models.AttendanceLog.id),
+                )
+                .filter(
+                    models.AttendanceLog.child_id.in_(child_ids),
+                    models.AttendanceLog.date >= start_date,
+                    models.AttendanceLog.date <= end_date,
+                    models.AttendanceLog.status.in_(_ATTENDED_STATUSES),
+                )
+                .group_by(models.AttendanceLog.date, models.AttendanceLog.child_id)
+                .all()
+            )
             attended_by_day_child = {(row[0], row[1]): row[2] for row in rows}
 
         cursor = start_date
@@ -159,7 +164,8 @@ class ManagerAnalyticsService:
             .join(models.EnrollmentApplication, models.EnrollmentApplication.class_id == models.Class.id)
             .join(models.Child, models.Child.id == models.EnrollmentApplication.child_id)
             .filter(
-                SA.supervisor_id.in_(sup_ids), *primary,
+                SA.supervisor_id.in_(sup_ids),
+                *primary,
                 models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
             )
             .group_by(SA.supervisor_id)
@@ -180,7 +186,7 @@ class ManagerAnalyticsService:
         kindergarten_id: int,
         start_date: date,
         end_date: date,
-        grouping: str = "daily"  # daily, weekly, monthly
+        grouping: str = "daily",  # daily, weekly, monthly
     ) -> List[Dict]:
         """
         Compute enrollment trend over a period, grouped by day, ISO week, or month.
@@ -196,14 +202,15 @@ class ManagerAnalyticsService:
             grouping = "daily"
 
         # Get all enrollments in date range
-        enrollments = db.query(
-            models.EnrollmentApplication.created_at,
-            models.EnrollmentApplication.status
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.EnrollmentApplication.created_at >= start_date,
-            models.EnrollmentApplication.created_at <= end_date
-        ).all()
+        enrollments = (
+            db.query(models.EnrollmentApplication.created_at, models.EnrollmentApplication.status)
+            .filter(
+                models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+                models.EnrollmentApplication.created_at >= start_date,
+                models.EnrollmentApplication.created_at <= end_date,
+            )
+            .all()
+        )
 
         def _period_start(d: date) -> date:
             if grouping == "weekly":
@@ -238,26 +245,24 @@ class ManagerAnalyticsService:
         while current <= end_date:
             bucket = periods.get(current, {"new": 0, "active": 0})
             cumulative_active += bucket["active"]
-            result.append({
-                "date": _label(current),
-                "new_enrollments": bucket["new"],
-                "active_enrollments": bucket["active"],
-                "cumulative_active": cumulative_active,
-            })
+            result.append(
+                {
+                    "date": _label(current),
+                    "new_enrollments": bucket["new"],
+                    "active_enrollments": bucket["active"],
+                    "cumulative_active": cumulative_active,
+                }
+            )
             current = _next(current)
         return result
 
     @staticmethod
-    def compute_attendance_rate(
-        db: Session,
-        kindergarten_id: int,
-        start_date: date,
-        end_date: date
-    ) -> float:
+    def compute_attendance_rate(db: Session, kindergarten_id: int, start_date: date, end_date: date) -> float:
         """
         Compute attendance rate using the centralized KPIService logic.
         """
         from kpi_service import KPIService
+
         return KPIService.compute_attendance_rate(db, kindergarten_id, start_date, end_date)
 
     @staticmethod
@@ -266,7 +271,7 @@ class ManagerAnalyticsService:
         kindergarten_id: int,
         start_date: date,
         end_date: date,
-        per_children: int = 100  # retained for backward compatibility; unused
+        per_children: int = 100,  # retained for backward compatibility; unused
     ) -> float:
         """Compute incident rate using the centralized KPIService logic.
 
@@ -276,45 +281,43 @@ class ManagerAnalyticsService:
         compatibility.
         """
         from kpi_service import KPIService
+
         return KPIService.compute_incident_rate(db, kindergarten_id, start_date, end_date)
 
     @staticmethod
-    def compute_absenteeism_rate(
-        db: Session,
-        kindergarten_id: int,
-        start_date: date,
-        end_date: date
-    ) -> float:
+    def compute_absenteeism_rate(db: Session, kindergarten_id: int, start_date: date, end_date: date) -> float:
         """
         Compute absenteeism rate: (absences / expected) * 100
         """
-        active_enrollments = db.query(
-            func.count(models.EnrollmentApplication.id)
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).scalar() or 0
+        active_enrollments = (
+            db.query(func.count(models.EnrollmentApplication.id))
+            .filter(
+                models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            )
+            .scalar()
+            or 0
+        )
 
         if active_enrollments == 0:
             return 0.0
 
         # Count absences (AttendanceStatus.ABSENT)
-        absences = db.query(
-            func.count(models.AttendanceLog.id)
-        ).join(
-            models.Child
-        ).join(
-            models.EnrollmentApplication
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.AttendanceLog.status == models.AttendanceStatus.ABSENT,
-            models.AttendanceLog.date >= start_date,
-            models.AttendanceLog.date <= end_date
-        ).scalar() or 0
-
-        operating_days = ManagerAnalyticsService._count_operating_days(
-            db, kindergarten_id, start_date, end_date
+        absences = (
+            db.query(func.count(models.AttendanceLog.id))
+            .join(models.Child)
+            .join(models.EnrollmentApplication)
+            .filter(
+                models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+                models.AttendanceLog.status == models.AttendanceStatus.ABSENT,
+                models.AttendanceLog.date >= start_date,
+                models.AttendanceLog.date <= end_date,
+            )
+            .scalar()
+            or 0
         )
+
+        operating_days = ManagerAnalyticsService._count_operating_days(db, kindergarten_id, start_date, end_date)
         expected = active_enrollments * operating_days
 
         if expected == 0:
@@ -325,49 +328,50 @@ class ManagerAnalyticsService:
         return round(absenteeism_rate, 2)
 
     @staticmethod
-    def compute_class_capacity_utilization(
-        db: Session,
-        kindergarten_id: int
-    ) -> float:
+    def compute_class_capacity_utilization(db: Session, kindergarten_id: int) -> float:
         """
         Compute average class capacity utilization: sum(enrolled) / sum(capacity) * 100
         """
         # Sum total capacity
-        total_capacity = db.query(
-            func.sum(models.Class.capacity_total)
-        ).filter(
-            models.Class.kindergarten_id == kindergarten_id,
-            models.Class.is_active == True
-        ).scalar() or 0
+        total_capacity = (
+            db.query(func.sum(models.Class.capacity_total))
+            .filter(models.Class.kindergarten_id == kindergarten_id, models.Class.is_active == True)
+            .scalar()
+            or 0
+        )
 
         if total_capacity == 0:
             return 0.0
 
         # Sum enrolled children
-        total_enrolled = db.query(
-            func.count(models.EnrollmentApplication.id)
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).scalar() or 0
+        total_enrolled = (
+            db.query(func.count(models.EnrollmentApplication.id))
+            .filter(
+                models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            )
+            .scalar()
+            or 0
+        )
 
         utilization = (total_enrolled / total_capacity) * 100
         return round(utilization, 2)
 
     @staticmethod
-    def compute_supervisor_workload(
-        db: Session,
-        kindergarten_id: int
-    ) -> List[Dict]:
+    def compute_supervisor_workload(db: Session, kindergarten_id: int) -> List[Dict]:
         """
         Compute supervisor workload: children per supervisor, reports per day
         Returns list of {supervisor_id, name, children_count, classes_count, reports_per_day}
         """
-        supervisors = db.query(models.User).filter(
-            models.User.kindergarten_id == kindergarten_id,
-            models.User.role == models.UserRole.SUPERVISOR,
-            models.User.status == models.UserStatus.ACTIVE
-        ).all()
+        supervisors = (
+            db.query(models.User)
+            .filter(
+                models.User.kindergarten_id == kindergarten_id,
+                models.User.role == models.UserRole.SUPERVISOR,
+                models.User.status == models.UserStatus.ACTIVE,
+            )
+            .all()
+        )
 
         today = _today()
         sup_ids = [s.id for s in supervisors]
@@ -393,27 +397,26 @@ class ManagerAnalyticsService:
             children_count = children_by_sup.get(supervisor.id, 0)
             classes_count = classes_by_sup.get(supervisor.id, 0)
             reports_today = reports_today_by_sup.get(supervisor.id, 0)
-            result.append({
-                "supervisor_id": supervisor.id,
-                "name": supervisor.username,
-                "children_count": children_count,
-                "classes_count": classes_count,
-                "children_per_supervisor": children_count,
-                "reports_submitted_today": reports_today
-            })
+            result.append(
+                {
+                    "supervisor_id": supervisor.id,
+                    "name": supervisor.username,
+                    "children_count": children_count,
+                    "classes_count": classes_count,
+                    "children_per_supervisor": children_count,
+                    "reports_submitted_today": reports_today,
+                }
+            )
 
         return result
 
     @staticmethod
     def compute_attendance_forecast(
-        db: Session,
-        kindergarten_id: int,
-        lookback_days: int = 30,
-        forecast_days: int = 7
+        db: Session, kindergarten_id: int, lookback_days: int = 30, forecast_days: int = 7
     ) -> Dict:
         """
         Simple linear regression forecast for attendance.
-        
+
         Returns {
             historical: [{date, rate}],
             forecast: [{date, predicted_rate, confidence_interval}],
@@ -425,9 +428,7 @@ class ManagerAnalyticsService:
 
         # Get historical attendance rates — one batched query set, not one per
         # day (B3).
-        daily = ManagerAnalyticsService._compute_daily_attendance_rates(
-            db, kindergarten_id, start_date, today
-        )
+        daily = ManagerAnalyticsService._compute_daily_attendance_rates(db, kindergarten_id, start_date, today)
         historical = []
         current = start_date
         # (calendar-day offset, rate) for each observed day. Closed days carry no
@@ -446,11 +447,7 @@ class ManagerAnalyticsService:
 
         # Simple linear regression
         if len(rates) < 2:
-            return {
-                "historical": historical,
-                "forecast": [],
-                "trend": "insufficient_data"
-            }
+            return {"historical": historical, "forecast": [], "trend": "insufficient_data"}
 
         n = len(rates)
         # x is the calendar-day offset of each observation, so the slope is
@@ -479,14 +476,16 @@ class ManagerAnalyticsService:
             forecast_date = today + timedelta(days=i)
 
             # Simple confidence interval (±5%)
-            forecast.append({
-                "date": forecast_date.isoformat(),
-                "predicted_rate": round(predicted, 1),
-                "confidence_interval": {
-                    "lower": round(max(0, predicted - 5), 1),
-                    "upper": round(min(100, predicted + 5), 1)
+            forecast.append(
+                {
+                    "date": forecast_date.isoformat(),
+                    "predicted_rate": round(predicted, 1),
+                    "confidence_interval": {
+                        "lower": round(max(0, predicted - 5), 1),
+                        "upper": round(min(100, predicted + 5), 1),
+                    },
                 }
-            })
+            )
 
         # Determine trend
         if slope > 0.5:
@@ -496,23 +495,18 @@ class ManagerAnalyticsService:
         else:
             trend = "stable"
 
-        return {
-            "historical": historical,
-            "forecast": forecast,
-            "trend": trend,
-            "slope": round(slope, 3)
-        }
+        return {"historical": historical, "forecast": forecast, "trend": trend, "slope": round(slope, 3)}
 
     @staticmethod
     def detect_anomalies(
         db: Session,
         kindergarten_id: int,
         lookback_days: int = 30,
-        threshold: float = 2.0  # Standard deviations
+        threshold: float = 2.0,  # Standard deviations
     ) -> Dict:
         """
         Detect anomalies in attendance using z-score method.
-        
+
         Returns {
             anomalies: [{date, metric, value, z_score, severity}],
             baseline_mean: float,
@@ -523,9 +517,7 @@ class ManagerAnalyticsService:
         start_date = today - timedelta(days=lookback_days)
 
         # Collect attendance rates — one batched query set, not one per day (B3).
-        daily = ManagerAnalyticsService._compute_daily_attendance_rates(
-            db, kindergarten_id, start_date, today
-        )
+        daily = ManagerAnalyticsService._compute_daily_attendance_rates(db, kindergarten_id, start_date, today)
         current = start_date
         rates = []
         while current <= today:
@@ -538,12 +530,7 @@ class ManagerAnalyticsService:
             current += timedelta(days=1)
 
         if len(rates) < 3:
-            return {
-                "anomalies": [],
-                "baseline_mean": 0,
-                "baseline_std": 0,
-                "status": "insufficient_data"
-            }
+            return {"anomalies": [], "baseline_mean": 0, "baseline_std": 0, "status": "insufficient_data"}
 
         # Calculate mean and std deviation
         values = [r["rate"] for r in rates]
@@ -552,12 +539,7 @@ class ManagerAnalyticsService:
         std_dev = math.sqrt(variance)
 
         if std_dev == 0:
-            return {
-                "anomalies": [],
-                "baseline_mean": round(mean, 2),
-                "baseline_std": 0,
-                "status": "no_variation"
-            }
+            return {"anomalies": [], "baseline_mean": round(mean, 2), "baseline_std": 0, "status": "no_variation"}
 
         # Detect anomalies
         anomalies = []
@@ -565,37 +547,35 @@ class ManagerAnalyticsService:
             z_score = (record["rate"] - mean) / std_dev
             if abs(z_score) > threshold:
                 severity = "critical" if abs(z_score) > 3 else "warning"
-                anomalies.append({
-                    "date": record["date"].isoformat(),
-                    "metric": "attendance_rate",
-                    "value": record["rate"],
-                    "z_score": round(z_score, 2),
-                    "severity": severity
-                })
+                anomalies.append(
+                    {
+                        "date": record["date"].isoformat(),
+                        "metric": "attendance_rate",
+                        "value": record["rate"],
+                        "z_score": round(z_score, 2),
+                        "severity": severity,
+                    }
+                )
 
         return {
             "anomalies": anomalies,
             "baseline_mean": round(mean, 2),
             "baseline_std": round(std_dev, 2),
             "threshold": threshold,
-            "status": "ok"
+            "status": "ok",
         }
 
     @staticmethod
-    def get_drilldown_by_class(
-        db: Session,
-        kindergarten_id: int,
-        start_date: date,
-        end_date: date
-    ) -> List[Dict]:
+    def get_drilldown_by_class(db: Session, kindergarten_id: int, start_date: date, end_date: date) -> List[Dict]:
         """
         Drill-down view: KG -> Classes -> Statistics
         Returns list of classes with their KPIs
         """
-        classes = db.query(models.Class).filter(
-            models.Class.kindergarten_id == kindergarten_id,
-            models.Class.is_active == True
-        ).all()
+        classes = (
+            db.query(models.Class)
+            .filter(models.Class.kindergarten_id == kindergarten_id, models.Class.is_active == True)
+            .all()
+        )
 
         class_ids = [c.id for c in classes]
         if not class_ids:
@@ -604,9 +584,9 @@ class ManagerAnalyticsService:
         # class_id -> primary supervisor_id from SupervisorAssignment (D1/B5).
         primary_by_class = validators.active_primary_supervisor_map(db, class_ids)
         sup_id_set = set(primary_by_class.values())
-        supervisors_by_id = {
-            u.id: u for u in db.query(models.User).filter(models.User.id.in_(sup_id_set)).all()
-        } if sup_id_set else {}
+        supervisors_by_id = (
+            {u.id: u for u in db.query(models.User).filter(models.User.id.in_(sup_id_set)).all()} if sup_id_set else {}
+        )
 
         enrolled_by_class = dict(
             db.query(models.EnrollmentApplication.class_id, func.count(models.EnrollmentApplication.id))
@@ -655,9 +635,7 @@ class ManagerAnalyticsService:
 
         # Calendar-aware operating days (Jordan Sun–Thu + OperatingCalendar), so
         # the per-class attendance rate agrees with the KG-level KPI (B2).
-        operating_days = ManagerAnalyticsService._count_operating_days(
-            db, kindergarten_id, start_date, end_date
-        )
+        operating_days = ManagerAnalyticsService._count_operating_days(db, kindergarten_id, start_date, end_date)
 
         result = []
         for class_obj in classes:
@@ -671,39 +649,40 @@ class ManagerAnalyticsService:
             attendance_rate = max(0.0, min(100.0, attendance_rate))
             utilization = (enrolled_count / class_obj.capacity_total * 100) if class_obj.capacity_total > 0 else 0
 
-            result.append({
-                "class_id": class_obj.id,
-                "class_name": class_obj.name_ar or class_obj.name_en,
-                "supervisor_id": supervisor.id if supervisor else None,
-                "supervisor_name": supervisor.username if supervisor else "Unassigned",
-                "age_range": f"{class_obj.min_age_months}-{class_obj.max_age_months} months",
-                "capacity": class_obj.capacity_total,
-                "enrolled": enrolled_count,
-                "utilization_percent": round(utilization, 1),
-                "attendance_rate": round(attendance_rate, 1),
-                "incidents": incidents,
-                "period_start": start_date.isoformat(),
-                "period_end": end_date.isoformat()
-            })
+            result.append(
+                {
+                    "class_id": class_obj.id,
+                    "class_name": class_obj.name_ar or class_obj.name_en,
+                    "supervisor_id": supervisor.id if supervisor else None,
+                    "supervisor_name": supervisor.username if supervisor else "Unassigned",
+                    "age_range": f"{class_obj.min_age_months}-{class_obj.max_age_months} months",
+                    "capacity": class_obj.capacity_total,
+                    "enrolled": enrolled_count,
+                    "utilization_percent": round(utilization, 1),
+                    "attendance_rate": round(attendance_rate, 1),
+                    "incidents": incidents,
+                    "period_start": start_date.isoformat(),
+                    "period_end": end_date.isoformat(),
+                }
+            )
 
         return result
 
     @staticmethod
-    def get_drilldown_by_supervisor(
-        db: Session,
-        kindergarten_id: int,
-        start_date: date,
-        end_date: date
-    ) -> List[Dict]:
+    def get_drilldown_by_supervisor(db: Session, kindergarten_id: int, start_date: date, end_date: date) -> List[Dict]:
         """
         Drill-down view: KG -> Supervisors -> Statistics
         Returns list of supervisors with their KPIs
         """
-        supervisors = db.query(models.User).filter(
-            models.User.kindergarten_id == kindergarten_id,
-            models.User.role == models.UserRole.SUPERVISOR,
-            models.User.status == models.UserStatus.ACTIVE
-        ).all()
+        supervisors = (
+            db.query(models.User)
+            .filter(
+                models.User.kindergarten_id == kindergarten_id,
+                models.User.role == models.UserRole.SUPERVISOR,
+                models.User.status == models.UserStatus.ACTIVE,
+            )
+            .all()
+        )
 
         sup_ids = [s.id for s in supervisors]
         if not sup_ids:
@@ -730,7 +709,8 @@ class ManagerAnalyticsService:
             .join(models.Class, models.Class.id == SA.class_id)
             .join(models.Incident, models.Incident.class_id == models.Class.id)
             .filter(
-                SA.supervisor_id.in_(sup_ids), *_primary,
+                SA.supervisor_id.in_(sup_ids),
+                *_primary,
                 # occurred_at is a DateTime; compare on DATE so end_date incidents count.
                 func.date(models.Incident.occurred_at) >= start_date,
                 func.date(models.Incident.occurred_at) <= end_date,
@@ -741,19 +721,21 @@ class ManagerAnalyticsService:
 
         result = []
         for supervisor in supervisors:
-            result.append({
-                "supervisor_id": supervisor.id,
-                "supervisor_name": supervisor.username,
-                "classes_managed": classes_by_sup.get(supervisor.id, 0),
-                "children_supervised": children_by_sup.get(supervisor.id, 0),
-                "reports_submitted": reports_by_sup.get(supervisor.id, 0),
-                "incidents_reported": incidents_by_sup.get(supervisor.id, 0),
-                "period_start": start_date.isoformat(),
-                "period_end": end_date.isoformat()
-            })
+            result.append(
+                {
+                    "supervisor_id": supervisor.id,
+                    "supervisor_name": supervisor.username,
+                    "classes_managed": classes_by_sup.get(supervisor.id, 0),
+                    "children_supervised": children_by_sup.get(supervisor.id, 0),
+                    "reports_submitted": reports_by_sup.get(supervisor.id, 0),
+                    "incidents_reported": incidents_by_sup.get(supervisor.id, 0),
+                    "period_start": start_date.isoformat(),
+                    "period_end": end_date.isoformat(),
+                }
+            )
 
         return result
 
 
 # Export for use in routers
-__all__ = ['ManagerAnalyticsService']
+__all__ = ["ManagerAnalyticsService"]

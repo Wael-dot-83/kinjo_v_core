@@ -1,26 +1,40 @@
 {% extends 'manager_base.html' %}
-{% block title %}{{ _('الأطفال') }} — KinJo{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Children Roster — KinJo{% else %}سجل الأطفال — كنجو{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="mb-4 d-flex flex-justify align-items-start flex-wrap g-2">
-    <div class="mb-3">
+<div class="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
         <h1 class="fs-1 fw-bold mt-0 mb-1">
-            <i class="bi bi-people-fill text-primary"></i> {{ _('الأطفال') }}
+            <i class="bi bi-people-fill text-primary"></i> {% if ui_lang == 'en' %}Children Roster{% else %}سجل الأطفال{% endif %}
         </h1>
         <nav aria-label="Breadcrumb" class="admin-breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard" class="">{{ _('لوحة التحكم') }}</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ _('الأطفال') }}</li>
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{% if ui_lang == 'en' %}Children{% else %}الأطفال{% endif %}</li>
             </ol>
         </nav>
     </div>
-    <div class="mt-1">
-        <form class="js-noreload">
-            <label class="visually-hidden" for="classFilter">تصفية بالشعبة</label>
-            <select class="form-select mt-0" id="classFilter" name="classFilter">
-                <option value="">{{ _('كل الشعب') }}</option>
+    <div>
+        <form class="js-noreload d-flex align-items-center gap-2">
+            <label class="form-label mb-0 fw-bold small text-muted d-none d-sm-inline" for="classFilter">{% if ui_lang == 'en' %}Filter by Class:{% else %}تصفية بالشعبة:{% endif %}</label>
+            <select class="form-select" id="classFilter" name="classFilter">
+                <option value="">{% if ui_lang == 'en' %}All Classes{% else %}جميع الشعب{% endif %}</option>
             </select>
         </form>
+    </div>
+</div>
+
+<div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4" role="region" aria-label="{% if ui_lang == 'en' %}Page instructions{% else %}إرشادات الصفحة{% endif %}">
+    <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+    <div>
+        <strong>{% if ui_lang == 'en' %}Children Roster Management{% else %}إدارة سجل الأطفال{% endif %}</strong>
+        <p class="mb-0 small text-secondary">
+            {% if ui_lang == 'en' %}
+                View enrolled children in your kindergarten. Use filters to search by class or name, update profile details, or transfer children between classes.
+            {% else %}
+                عرض جميع الأطفال المسجلين بالحضانة. يمكنك تصفية الأقسام، أو البحث بالاسم، أو تعديل البيانات الشخصية، أو نقل الطفل بين الشعب المختلفة بسهولة.
+            {% endif %}
+        </p>
     </div>
 </div>
 {% endblock %}
@@ -28,39 +42,39 @@
 {% block content %}
 
 <div class="card h-100 shadow-sm p-3 mb-4 bg-white border border-base-lighter shadow-2">
-    <div class="row mb-3 flex-justify align-items-center g-2">
+    <div class="row mb-3 justify-content-between align-items-center g-2">
         <div class="col-auto">
             <h2 class="h3 fw-bold my-0 text-primary d-flex align-items-center">
-                <i class="bi bi-list-ul me-2 text-primary"></i> {{ _('قائمة الأطفال') }}
+                <i class="bi bi-list-ul me-2 text-primary"></i> {% if ui_lang == 'en' %}Children Roster{% else %}قائمة الأطفال{% endif %}
                 <span class="badge text-bg-primary text-white ms-3 px-3 border-radius-pill" id="totalBadge">—</span>
             </h2>
         </div>
         <div class="col-auto col-md-5">
             <form class="d-flex gap-2 js-noreload" role="search">
-              <label class="visually-hidden" for="searchInput">{{ _('بحث باسم الطفل…') }}</label>
-              <input class="form-control border-base-lighter" id="searchInput" type="search" name="search" placeholder="{{ _('بحث باسم الطفل…') }}">
+              <label class="visually-hidden" for="searchInput">{% if ui_lang == 'en' %}Search child name…{% else %}بحث باسم الطفل…{% endif %}</label>
+              <input class="form-control border-base-lighter" id="searchInput" type="search" name="search" placeholder="{% if ui_lang == 'en' %}Search child name…{% else %}بحث باسم الطفل…{% endif %}">
               <button class="btn btn-primary bg-primary hover:bg-primary-dark" type="submit">
-                <span class="visually-hidden">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</span>
+                <i class="bi bi-search me-1"></i> {% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
               </button>
             </form>
         </div>
     </div>
     
     <div class="overflow-x-auto">
-        <table class="table table-hover align-middle align-middle--striped w-100 border-base-lighter border-1px" aria-label="{{ _('قائمة الأطفال في الحضانة') }}">
-            <caption class="visually-hidden">{{ _('قائمة الأطفال') }}</caption>
+        <table class="table table-hover align-middle align-middle--striped w-100 border-base-lighter border-1px" aria-label="{% if ui_lang == 'en' %}Kindergarten Children Roster{% else %}قائمة الأطفال في الحضانة{% endif %}">
+            <caption class="visually-hidden">{% if ui_lang == 'en' %}Children Roster{% else %}قائمة الأطفال{% endif %}</caption>
             <thead class="bg-primary-subtle text-primary">
                 <tr>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('اسم الطفل') }}</th>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('الجنس') }}</th>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('تاريخ الميلاد') }}</th>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{{ _('الشعبة') }}</th>
-                    <th scope="col" class="text-center border-bottom-2px border-primary border-opacity-25">{{ _('الإجراءات') }}</th>
+                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %}</th>
+                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}Gender{% else %}الجنس{% endif %}</th>
+                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}Date of Birth{% else %}تاريخ الميلاد{% endif %}</th>
+                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}Class{% else %}الشعبة{% endif %}</th>
+                    <th scope="col" class="text-center border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                 </tr>
             </thead>
             <tbody id="childrenTableBody">
                 <tr><td colspan="5" class="text-center py-5 text-secondary">
-                    {{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}
+                    {% if ui_lang == 'en' %}Loading data, please wait…{% else %}جارٍ تحميل البيانات، يرجى الانتظار…{% endif %}
                 </td></tr>
             </tbody>
         </table>
@@ -73,9 +87,9 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2 class="modal-title" id="moveModalLabel">
-          <i class="bi bi-arrow-left-right me-2 text-primary"></i> {{ _('نقل طفل إلى شعبة أخرى') }}
+          <i class="bi bi-arrow-left-right me-2 text-primary"></i> {% if ui_lang == 'en' %}Transfer Child to Another Class{% else %}نقل طفل إلى شعبة أخرى{% endif %}
         </h2>
-        <button type="button" class="btn-close usa-modal__close" aria-label="Close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" aria-label="Close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <p id="moveChildName" class="fw-bold mb-3"></p>
@@ -83,19 +97,19 @@
         <input type="hidden" id="moveFromClassId">
 
         <div class="mb-3">
-            <label class="fw-bold text-uppercase small text-muted">{{ _('الشعبة الحالية') }}</label>
+            <label class="fw-bold text-uppercase small text-muted">{% if ui_lang == 'en' %}Current Class{% else %}الشعبة الحالية{% endif %}</label>
             <p id="moveFromClassName" class="text-secondary mt-2"></p>
         </div>
 
         <form id="moveChildForm">
-          <label class="form-label" for="moveToClassSelect">{{ _('الشعبة الجديدة') }}</label>
+          <label class="form-label" for="moveToClassSelect">{% if ui_lang == 'en' %}New Class{% else %}الشعبة الجديدة{% endif %}</label>
           <select class="form-select" id="moveToClassSelect" name="moveToClassSelect"></select>
 
           <div class="d-flex gap-2 mt-4">
             <button type="submit" class="btn btn-primary" id="confirmMoveBtn">
-                <i class="bi bi-arrow-left-right me-2"></i>{{ _('نقل') }}
+                <i class="bi bi-arrow-left-right me-2"></i>{% if ui_lang == 'en' %}Transfer{% else %}نقل{% endif %}
             </button>
-            <button type="button" class="btn btn-link text-decoration-none px-3 text-center" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+            <button type="button" class="btn btn-link text-decoration-none px-3 text-center" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
           </div>
         </form>
       </div>
@@ -103,6 +117,7 @@
   </div>
 </div>
 
+<!-- Edit Child Modal -->
 <div class="modal fade" id="editChildModal" tabindex="-1" aria-labelledby="editChildLabel" aria-hidden="true">
   <div class="modal-dialog"><div class="modal-content">
     <div class="modal-header"><h2 class="modal-title" id="editChildLabel">{% if ui_lang == 'en' %}Edit child profile{% else %}تعديل ملف الطفل{% endif %}</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
@@ -120,9 +135,14 @@
 
 {% block extra_js %}
 <script>
-// Auth is the httpOnly session cookie (kinjo_session), sent automatically on
-// same-origin fetch. For state-changing requests we add the CSRF double-submit
-// token read from the JS-readable kinjo_csrf_token cookie (F2).
+const UI_EN = {{ 'true' if ui_lang == 'en' else 'false' }};
+const tr = (ar, en) => UI_EN ? en : ar;
+const notify = (ar, en, type) => {
+    const msg = tr(ar, en);
+    if (typeof showToast === 'function') showToast(msg, type || 'info');
+    else alert(msg);
+};
+
 const h = () => {
     let csrf = '';
     try { csrf = AuthStorage.getCookie(CSRF_CONFIG.cookieName) || ''; } catch (e) {}
@@ -141,7 +161,8 @@ async function init() {
         const sel = document.getElementById('classFilter');
         _classes.forEach(c => {
             const opt = document.createElement('option');
-            opt.value = c.id; opt.textContent = c.name_ar;
+            opt.value = c.id;
+            opt.textContent = UI_EN ? (c.name_en || c.name_ar) : (c.name_ar || c.name_en);
             sel.appendChild(opt);
         });
     }
@@ -159,7 +180,7 @@ async function loadChildren() {
         document.getElementById('totalBadge').textContent = data.total || 0;
         renderTable(_allChildren);
     } catch {
-        alert('تعذّر تحميل الأطفال');
+        notify('تعذّر تحميل الأطفال', 'Unable to load children roster', 'error');
     }
 }
 
@@ -174,19 +195,16 @@ function filterTable() {
 function renderTable(children) {
     const tbody = document.getElementById('childrenTableBody');
     if (!children.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-secondary">لا يوجد أطفال</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-secondary">${tr('لا يوجد أطفال', 'No children found')}</td></tr>`;
         return;
     }
     tbody.innerHTML = children.map(c => {
-        const gender = c.gender === 'MALE' ? 'ذكر' : (c.gender === 'FEMALE' ? 'أنثى' : '—');
+        const gender = c.gender === 'MALE' ? tr('ذكر', 'Male') : (c.gender === 'FEMALE' ? tr('أنثى', 'Female') : '—');
         const rawName = c.first_name + ' ' + c.last_name;
-        const rawClass = c.class_name_ar || '';
+        const rawClass = UI_EN ? (c.class_name_en || c.class_name_ar || '') : (c.class_name_ar || c.class_name_en || '');
         const fullName = esc(rawName);
-        const className = esc(c.class_name_ar || '—');
+        const className = esc(rawClass || '—');
         const dob = esc(c.date_of_birth || '—');
-        // User-supplied values go into data-* attributes via esc() (HTML-attribute
-        // safe); the delegated listener reads them back through dataset. With no
-        // inline handler, an injected event-handler payload in a name cannot execute.
         return `<tr>
             <td class="fw-bold">${fullName}</td>
             <td>${gender}</td>
@@ -198,13 +216,13 @@ function renderTable(children) {
                         data-bs-toggle="modal" data-bs-target="#moveChildModal"
                         data-child-id="${c.id}" data-child-name="${fullName}"
                         data-from-class-id="${c.class_id}" data-from-class-name="${esc(rawClass)}">
-                    <i class="bi bi-arrow-left-right me-2"></i>نقل
+                    <i class="bi bi-arrow-left-right me-2"></i>${tr('نقل', 'Transfer')}
                 </a>
                 <button type="button" class="btn btn-outline-secondary py-2 js-edit-child" data-bs-toggle="modal" data-bs-target="#editChildModal"
                     data-child-id="${c.id}" data-first-name="${esc(c.first_name)}" data-last-name="${esc(c.last_name)}" data-dob="${dob}" data-gender="${esc(c.gender || '')}">
-                    <i class="bi bi-pencil me-1"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}
+                    <i class="bi bi-pencil me-1"></i>${tr('تعديل', 'Edit')}
                 </button>
-                <a class="btn btn-outline-secondary py-2" href="/children/${c.id}"><i class="bi bi-eye me-1"></i>{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}</a>
+                <a class="btn btn-outline-secondary py-2" href="/children/${c.id}"><i class="bi bi-eye me-1"></i>${tr('عرض', 'View')}</a>
             </td>
         </tr>`;
     }).join('');
@@ -218,7 +236,7 @@ function setupMoveModal(childId, childName, fromClassId, fromClassName) {
     const sel = document.getElementById('moveToClassSelect');
     sel.innerHTML = _classes
         .filter(c => c.id !== fromClassId)
-        .map(c => `<option value="${c.id}">${esc(c.name_ar)}</option>`)
+        .map(c => `<option value="${c.id}">${esc(UI_EN ? (c.name_en || c.name_ar) : (c.name_ar || c.name_en))}</option>`)
         .join('');
 }
 
@@ -228,7 +246,7 @@ async function confirmMoveChild() {
     const toClassId   = parseInt(document.getElementById('moveToClassSelect').value);
     
     if (!toClassId) {
-        alert('يجب اختيار شعبة');
+        notify('يجب اختيار شعبة', 'Please select a target class', 'warning');
         return;
     }
     
@@ -240,18 +258,27 @@ async function confirmMoveChild() {
             body: JSON.stringify({ child_id: childId, from_class_id: fromClassId, to_class_id: toClassId }),
         });
         if (res.ok) {
-            alert('تم نقل الطفل بنجاح');
-            document.querySelector('#moveChildModal .usa-modal__close').click();
+            notify('تم نقل الطفل بنجاح', 'Child transferred successfully', 'success');
+            const modalEl = document.getElementById('moveChildModal');
+            if (window.bootstrap && window.bootstrap.Modal) {
+                const instance = window.bootstrap.Modal.getInstance(modalEl) || new window.bootstrap.Modal(modalEl);
+                instance.hide();
+            } else {
+                const closeBtn = modalEl.querySelector('[data-bs-dismiss="modal"]');
+                if (closeBtn) closeBtn.click();
+            }
             loadChildren();
         } else {
             const err = await res.json().catch(() => ({}));
-            alert(err.detail || 'فشل النقل');
+            const msg = err.detail || tr('فشل النقل', 'Transfer failed');
+            notify(msg, msg, 'error');
         }
-    } catch { alert('خطأ في الشبكة'); }
+    } catch {
+        notify('خطأ في الشبكة', 'Network error', 'error');
+    }
     finally { btn.disabled = false; }
 }
 
-// Delegated event wiring (replaces inline on* handlers — F1/CSP).
 function setupEditChild(btn) {
     document.getElementById('editChildId').value = btn.dataset.childId;
     document.getElementById('editChildFirstName').value = btn.dataset.firstName || '';
@@ -271,8 +298,9 @@ async function saveChild() {
     const res = await fetch(`/api/children/${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(payload) });
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || '{% if ui_lang == "en" %}Unable to save child{% else %}تعذر حفظ بيانات الطفل{% endif %}');
+        throw new Error(err.detail || tr('تعذر حفظ بيانات الطفل', 'Unable to save child profile'));
     }
+    notify('تم حفظ البيانات بنجاح', 'Child profile updated successfully', 'success');
     bootstrap.Modal.getOrCreateInstance(document.getElementById('editChildModal')).hide();
     await loadChildren();
 }
@@ -291,10 +319,9 @@ function wireEvents() {
     if (moveForm) moveForm.addEventListener('submit', e => { e.preventDefault(); confirmMoveChild(); });
     document.getElementById('editChildForm')?.addEventListener('submit', async e => {
         e.preventDefault();
-        try { await saveChild(); } catch (err) { alert(err.message); }
+        try { await saveChild(); } catch (err) { notify(err.message, err.message, 'error'); }
     });
 
-    // Delegated: the move button is re-rendered with each table refresh.
     const tbody = document.getElementById('childrenTableBody');
     if (tbody) tbody.addEventListener('click', e => {
         const moveBtn = e.target.closest('.js-move-child');

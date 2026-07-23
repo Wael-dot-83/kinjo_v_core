@@ -16,6 +16,7 @@ __all__ = ["ManagerScope", "ManagerScopeError"]
 
 class ManagerScopeError(Exception):
     """Exception raised for manager scoping violations."""
+
     def __init__(self, message: str, status_code: int = status.HTTP_403_FORBIDDEN):
         self.message = message
         self.status_code = status_code
