@@ -87,6 +87,12 @@
   color: #0f172a;
 }
 
+.ncfa-scope-field select:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 1px;
+  border-color: #1d4ed8;
+}
+
 .ncfa-scope-field select:disabled {
   background: #e2e8f0;
   color: #64748b;
@@ -120,6 +126,17 @@
   transform: translateY(-2px);
   border-color: #60a5fa;
   box-shadow: 0 10px 24px rgba(30, 64, 175, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ncfa-bundle-card {
+    transition: none;
+  }
+
+  .ncfa-bundle-card:hover,
+  .ncfa-bundle-card:focus-within {
+    transform: none;
+  }
 }
 
 .ncfa-bundle-card__head {
@@ -197,6 +214,14 @@
   font-size: 1.35rem;
 }
 
+/* Programmatically focused after a report loads (screen-reader announcement) —
+   a soft, intentional ring instead of the harsh browser default. */
+#ncfa-result-title:focus {
+  outline: 2px solid #93c5fd;
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
 .ncfa-result-toolbar p {
   margin: 0;
   color: var(--admin-text-muted, #475569);
@@ -267,6 +292,7 @@
   color: #0f172a;
   font-size: 1.45rem;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
 .ncfa-kpi-card span {
@@ -336,17 +362,37 @@
   background: #ffffff;
 }
 
+.ncfa-data-table caption {
+  text-align: start;
+  padding: 0 0 8px;
+  color: var(--admin-text-muted, #475569);
+  font-size: 0.86rem;
+}
+
 .ncfa-data-table th,
 .ncfa-data-table td {
-  border: 1px solid #cbd5e1;
-  padding: 9px 10px;
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 12px;
   text-align: start;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .ncfa-data-table th {
-  background: #f1f5f9;
+  background: #f8fafc;
   color: #0f172a;
+  border-bottom: 2px solid #cbd5e1;
+  font-size: 0.9rem;
+}
+
+.ncfa-data-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* Zero-value breakdown rows: truthful but visually secondary. */
+.ncfa-row-zero td {
+  color: #94a3b8;
 }
 
 .ncfa-loading,

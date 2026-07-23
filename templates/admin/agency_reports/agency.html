@@ -5,7 +5,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="/static/css/agency_reports.css?v=3.4" />
 {% if agency_code == 'ncfa' %}
-<link rel="stylesheet" href="/static/css/ncfa_strong_reports.css?v=1.1" />
+<link rel="stylesheet" href="/static/css/ncfa_strong_reports.css?v=1.2" />
 {% endif %}
 {% endblock %}
 
@@ -27,13 +27,13 @@
         <p id="agency-description"></p>
         <p class="agency-card-updated" id="agency-header-updated" aria-live="polite">
           <i class="bi bi-clock" aria-hidden="true"></i>
-          {% if ui_lang == 'en' %}Last updated: &mdash;{% else %}آخر تحديث: ـ{% endif %}
+          {% if ui_lang == 'en' %}Last updated: &mdash;{% else %}آخر تحديث: &mdash;{% endif %}
         </p>
       </div>
     </div>
     <div class="agency-privacy-badge" aria-label="{% if ui_lang == 'en' %}Aggregated data only{% else %}بيانات تجميعية فقط{% endif %}">
       <i class="bi bi-shield-check" aria-hidden="true"></i>
-      {% if ui_lang == 'en' %}Aggregated data only — no direct identifiers{% else %}بيانات تجميعية فقط - دون معرّفات مباشرة{% endif %}
+      {% if ui_lang == 'en' %}Aggregated data only — no direct identifiers{% else %}بيانات تجميعية فقط — دون معرّفات مباشرة{% endif %}
     </div>
   </header>
 
@@ -53,9 +53,9 @@
         </h2>
         <p>
           {% if ui_lang == 'en' %}
-          Generate focused NCFA administrative reports from KinJo's recorded nursery, enrolment, attendance, care, safety, staffing, and reporting data.
+          Generate focused NCFA administrative reports from <span translate="no">KinJo</span>&rsquo;s recorded nursery, enrolment, attendance, care, safety, staffing, and reporting data.
           {% else %}
-          أنشئ تقارير إدارية موجهة للمجلس من بيانات KinJo المسجلة حول الحضانات والتسجيل والحضور والرعاية والسلامة والكوادر وجودة الإبلاغ.
+          أنشئ تقارير إدارية موجهة للمجلس من بيانات <span translate="no">KinJo</span> المسجلة حول الحضانات والتسجيل والحضور والرعاية والسلامة والكوادر وجودة الإبلاغ.
           {% endif %}
         </p>
       </div>
@@ -141,7 +141,7 @@
   </details>
 
   <div id="agency-reports-root" role="status" aria-live="polite">
-    {% if ui_lang == 'en' %}Loading reports...{% else %}جارٍ تحميل التقارير...{% endif %}
+    {% if ui_lang == 'en' %}Loading reports&hellip;{% else %}جارٍ تحميل التقارير&hellip;{% endif %}
   </div>
 
   <!-- Footer Privacy Note -->
@@ -158,6 +158,6 @@
 <script>
 window.NCFA_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";
 </script>
-<script src="/static/js/ncfa_strong_reports.js?v=1.1"></script>
+<script src="/static/js/ncfa_strong_reports.js?v=1.2"></script>
 {% endif %}
 {% endblock %}

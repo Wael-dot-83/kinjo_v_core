@@ -317,6 +317,25 @@
     resultStatus.textContent = text;
   }
 
+  // One digit style for the whole page: KPI values, tooltips and scope dates all
+  // render through Intl formatters in the active locale (ar-JO / en-GB).
+  function formatNumber(value, { maximumFractionDigits = 2 } = {}) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
+    return new Intl.NumberFormat(lang === "ar" ? "ar-JO" : "en-GB", { maximumFractionDigits }).format(value);
+  }
+
+  // ISO "YYYY-MM-DD" → localized long date. Built from the split parts (never
+  // `new Date(string)`) so parsing stays unambiguous across engines.
+  function formatScopeDate(iso) {
+    const parts = String(iso ?? "").split("-");
+    if (parts.length !== 3) return String(iso ?? "—");
+    const [year, month, day] = parts.map(Number);
+    if (!year || !month || !day) return String(iso ?? "—");
+    return new Intl.DateTimeFormat(lang === "ar" ? "ar-JO" : "en-GB", {
+      day: "numeric", month: "long", year: "numeric",
+    }).format(new Date(Date.UTC(year, month - 1, day)));
+  }
+
   function showLoading(bundle) {
     clearCharts();
     resultSection.hidden = false;
@@ -328,7 +347,7 @@
     resultBody.innerHTML = "";
     resultBody.appendChild(createElement("div", {
       className: "ncfa-loading",
-      text: t("جارٍ احتساب المؤشرات من البيانات المسجلة...", "Calculating indicators from recorded data...")
+      text: t("جارٍ احتساب المؤشرات من البيانات المسجلة…", "Calculating indicators from recorded data…")
     }));
     resultTitle.focus();
   }
@@ -388,7 +407,7 @@
     const scopeParts = [scope.level_name_ar || scope.level || ""];
     if (scope.governorate) scopeParts.push(scope.governorate);
     if (scope.city) scopeParts.push(scope.city);
-    if (scope.start_date && scope.end_date) scopeParts.push(scope.start_date + " → " + scope.end_date);
+    if (scope.start_date && scope.end_date) scopeParts.push(formatScopeDate(scope.start_date) + " – " + formatScopeDate(scope.end_date));
     resultBody.appendChild(createElement("div", {
       className: "ncfa-scope-summary",
       text: t("النطاق: ", "Scope: ") + scopeParts.filter(Boolean).join(" · ")
@@ -400,7 +419,7 @@
       kpis.forEach((kpi) => {
         const label = pickLocale(KPI_LABELS, kpi.code) || kpi.label_ar || kpi.code || "";
         const unit = (kpi.unit_ar ? (pickLocale(UNIT_LABELS, kpi.unit_ar) || kpi.unit_ar) : "");
-        const value = String(kpi.value == null ? "—" : kpi.value) + (unit ? " " + unit : "");
+        const value = (kpi.value == null ? "—" : formatNumber(kpi.value)) + (unit ? " " + unit : "");
         grid.appendChild(createElement("div", {
           className: "ncfa-kpi-card",
           children: [
@@ -542,7 +561,7 @@
                   const total = (ctx.dataset.data || []).reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
                   const pct = total ? Math.round((val / total) * 1000) / 10 : 0;
                   const prefix = isPie && ctx.label ? ctx.label + ": " : "";
-                  return prefix + val + " (" + pct + "%)";
+                  return prefix + formatNumber(val) + " (" + formatNumber(pct, { maximumFractionDigits: 1 }) + "%)";
                 }
               }
             }
@@ -576,8 +595,16 @@
     table.appendChild(thead);
     const tbody = createElement("tbody");
     rows.forEach((row) => {
-      const tr = createElement("tr");
-      headers.forEach((header) => tr.appendChild(createElement("td", { text: row[header] == null ? "—" : localizeCategory(row[header]) })));
+      // Zero-value breakdown rows are truthful but visually secondary — mute
+      // them so the rows that carry signal stand out at a glance.
+      const tr = createElement("tr", { className: row["القيمة"] === 0 ? "ncfa-row-zero" : "" });
+      headers.forEach((header) => {
+        const raw = row[header];
+        // Numbers render in the page's digit style (same as KPI cards and dates);
+        // categories pass through the bilingual label map.
+        const cell = raw == null ? "—" : (typeof raw === "number" ? formatNumber(raw, { maximumFractionDigits: 1 }) : localizeCategory(raw));
+        tr.appendChild(createElement("td", { text: cell }));
+      });
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
