@@ -315,7 +315,7 @@ class Settings(BaseSettings):
     # are suppressed ("محجوبة لحماية الخصوصية"). A value <= 1 disables suppression so
     # every breakdown value is shown. Read via settings (not os.getenv) because the
     # app has no load_dotenv() — os.getenv would never see this .env value.
-    AGENCY_REPORT_MIN_CELL_SIZE: int = 5
+    AGENCY_REPORT_MIN_CELL_SIZE: int = 1
 
     @field_validator("DEBUG", mode="before")
     @classmethod
@@ -503,3 +503,4 @@ def validate_production_settings():
 
 settings = Settings()
 validate_production_settings()
+

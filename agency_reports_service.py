@@ -1133,10 +1133,11 @@ class AgencyReportsService:
     def custom_report(self, scope: dict[str, Any] | None, suppress: bool = True) -> dict[str, Any]:
         """Build an aggregated custom report from a validated scope.
 
-        ``suppress`` applies small-cell statistical disclosure control (used for
-        official agency exports). The admin's in-app interactive view passes
-        ``suppress=False`` so authorized reviewers see the real values/charts;
-        exports keep it on.
+        ``suppress`` applies small-cell statistical disclosure control. All
+        admin surfaces — the interactive in-app view and the CSV export — pass
+        ``suppress=False`` so authorized admins always see the real, complete
+        values/charts; the flag remains available for future external
+        data-sharing contexts.
 
         Every indicator is computed from real data. Indicators whose data is
         not structurally available are never fabricated — they are reported in
@@ -1228,9 +1229,9 @@ class AgencyReportsService:
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
         }
-        # Statistical disclosure control: blank identifying small category counts
-        # before the payload leaves the service (agency exports). The admin
-        # interactive view opts out (suppress=False) to show real values.
+        # Statistical disclosure control is opt-in via ``suppress``. Admin
+        # surfaces (interactive view and CSV export) pass suppress=False so the
+        # payload always carries the real, complete values.
         suppressed_cells = self._apply_small_cell_suppression(charts, table) if suppress else 0
         if suppressed_cells:
             quality_notes.append(
