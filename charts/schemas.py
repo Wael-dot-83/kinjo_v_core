@@ -93,7 +93,7 @@ class ChartResponse(BaseModel):
     table: List[Dict[str, Any]]
     drilldown: DrilldownMeta
     quality: QualityMeta
-    
+
     chart_type: ChartType
     source: ChartSource
     title: str

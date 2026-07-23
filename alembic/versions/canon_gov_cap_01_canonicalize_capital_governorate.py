@@ -65,7 +65,7 @@ def upgrade() -> None:
             f"UPDATE {table} SET governorate = :canonical WHERE governorate IN :legacy"
         ).bindparams(sa.bindparam("legacy", expanding=True))
         result = bind.execute(bound, {"canonical": _CANONICAL_AR, "legacy": list(_LEGACY_FORMS)})
-        print(f"[canonicalize-capital] {table}.governorate: {result.rowcount} row(s) -> '{_CANONICAL_AR}'")
+        print(f"[canonicalize-capital] {table}.governorate: {result.rowcount} row(s) normalized to the canonical capital governorate name")
 
 
 def downgrade() -> None:
@@ -78,4 +78,4 @@ def downgrade() -> None:
             f"UPDATE {table} SET governorate = :city WHERE governorate = :canonical"
         )
         result = bind.execute(bound, {"city": "عمان", "canonical": _CANONICAL_AR})
-        print(f"[canonicalize-capital:down] {table}.governorate: {result.rowcount} row(s) -> 'عمان'")
+        print(f"[canonicalize-capital:down] {table}.governorate: {result.rowcount} row(s) restored to the city-name form")

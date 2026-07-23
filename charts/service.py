@@ -223,9 +223,9 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
         q = base_query.add_columns(models.Kindergarten.governorate.label("governorate"))
         q = q.group_by(models.Kindergarten.governorate)
         cols = ["governorate", "capacity", "enrolled", "count"]
-        
+
     rows = q.all()
-    
+
     # We must re-order dictionary output manually based on mapped columns
     data = []
     for r in rows:
@@ -239,7 +239,7 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
         else:
             d["governorate"] = getattr(r, "governorate", "")
         data.append(d)
-        
+
     return pd.DataFrame(data)
 
 
@@ -273,7 +273,7 @@ class ChartService:
         if loader is None:
             raise ValueError(f"Unknown chart source: {req.source}")
         df = loader(db, req)
-        
+
         # Removed translation of column names to keep stable internal keys for JSON.
         # Localization will be handled by the frontend.
         chart_cache.set_raw(cache_params, df.to_json(orient="split", date_format="iso"))
@@ -284,7 +284,7 @@ class ChartService:
         Return structured JSON payload. The HTML rendering has been moved to frontend.
         """
         cache_params = {**req.model_dump(), "chart_type": req.chart_type}
-        
+
         metric_def = METRIC_REGISTRY.get(req.source.value)
         if not metric_def:
             from charts.registry import MetricDefinition
@@ -297,14 +297,14 @@ class ChartService:
                 higher_is_better=True,
                 supported_chart_types=["bar", "line", "pie"]
             )
-            
+
         metric_meta = MetricMeta(
             key=metric_def.key,
             label=metric_def.label_ar if req.lang == "ar" else metric_def.label_en,
             unit=metric_def.unit,
             higher_is_better=metric_def.higher_is_better
         )
-        
+
         # Determine scope
         if req.kindergarten_id:
             level = "kindergarten"
@@ -315,9 +315,9 @@ class ChartService:
         else:
             level = "national"
             parent_key = None
-            
+
         scope_meta = ScopeMeta(level=level, parent_key=parent_key)
-        
+
         # Drilldown
         levels = metric_def.supported_levels
         try:
@@ -325,13 +325,13 @@ class ChartService:
             next_level = levels[idx+1] if idx + 1 < len(levels) else None
         except ValueError:
             next_level = None
-            
+
         drilldown_meta = DrilldownMeta(enabled=bool(next_level), next_level=next_level)
-        
+
         period_meta = PeriodMeta(start=req.date_from, end=req.date_to)
-        
+
         df = self.get_data(db, req)
-        
+
         if len(df) >= self.HEAVY_ROW_THRESHOLD:
             task_id = self._submit_task(req)
             quality = QualityMeta(status="processing", record_count=len(df), missing_count=0, freshness_at=datetime.datetime.now().isoformat())
@@ -351,22 +351,22 @@ class ChartService:
             )
 
         chart_type = req.chart_type or self._auto_type(df, req.source)
-        
+
         df_copy = df.copy()
         for col in df_copy.columns:
             if pd.api.types.is_datetime64_any_dtype(df_copy[col]):
                 df_copy[col] = df_copy[col].dt.strftime("%Y-%m-%d")
-                
+
         series = df_copy.to_dict(orient="records")
         table = series.copy()
-        
+
         quality = QualityMeta(
             status="complete",
             record_count=len(df),
             missing_count=0,
             freshness_at=datetime.datetime.now().isoformat()
         )
-        
+
         return ChartResponse(
             metric=metric_meta,
             scope=scope_meta,

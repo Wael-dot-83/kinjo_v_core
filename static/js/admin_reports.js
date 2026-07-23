@@ -31,88 +31,116 @@
     }
   }
 
-  function updateFilterVisibility() {
-    const reportType = getReportType();
-    const allFilters = [
-      "filterGovContainer",
-      "filterKgContainer",
+  // The shared #statusFilter shows Incident statuses on the Incidents tab and
+  // Enrollment statuses on the Enrollment tab; the values match the backend
+  // enum NAMES so the filter actually applies.
+  const _INCIDENT_STATUS_OPTIONS = [
+    { value: "OPEN", label_ar: "مفتوحة", label_en: "Open" },
+    { value: "UNDER_INVESTIGATION", label_ar: "قيد التحقيق", label_en: "Under Investigation" },
+    { value: "ACTION_REQUIRED", label_ar: "تتطلب إجراء", label_en: "Action Required" },
+    { value: "RESOLVED", label_ar: "تم الحل", label_en: "Resolved" },
+    { value: "CLOSED", label_ar: "مغلقة", label_en: "Closed" },
+  ];
+  const _ENROLLMENT_STATUS_OPTIONS = [
+    { value: "DRAFT", label_ar: "غير مكتمل", label_en: "Incomplete" },
+    { value: "SUBMITTED", label_ar: "قيد التحقق", label_en: "Under Verification" },
+    { value: "PENDING_REVIEW", label_ar: "قيد المراجعة", label_en: "Pending Review" },
+    { value: "ACCEPTED", label_ar: "موافق عليه", label_en: "Approved" },
+    { value: "REJECTED", label_ar: "مرفوض", label_en: "Rejected" },
+    { value: "ACTIVE", label_ar: "نشط", label_en: "Active" },
+    { value: "WAITLISTED", label_ar: "قائمة انتظار", label_en: "Waitlisted" },
+    { value: "WITHDRAWN", label_ar: "منسحب", label_en: "Withdrawn" },
+  ];
+
+  function populateStatusOptions(reportType) {
+    const select = getEl("statusFilter");
+    if (!select) return;
+    const opts =
+      reportType === "incidents"
+        ? _INCIDENT_STATUS_OPTIONS
+        : _ENROLLMENT_STATUS_OPTIONS;
+    const lang =
+      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+    const labelKey = lang === "en" ? "label_en" : "label_ar";
+    while (select.options.length > 1) select.remove(1);
+    opts.forEach((s) => {
+      const opt = document.createElement("option");
+      opt.value = s.value;
+      opt.textContent = s[labelKey];
+      select.appendChild(opt);
+    });
+  }
+
+  // Tab-specific filters the report engine honors. Governorate + Kindergarten
+  // are always shown; scope controls the engine ignores (level/city/district)
+  // and filters with no backing data (absence reason) stay hidden.
+  const _FILTERS_BY_REPORT = {
+    attendance: [],
+    compliance: [],
+    incidents: [
       "filterStatusContainer",
       "filterSeverityContainer",
-      "filterSourceContainer",
-      "filterReviewerContainer",
-      "filterAbsenceReasonContainer",
       "filterIncidentTypeContainer",
       "filterSlaContainer",
       "filterParentInformedContainer",
-      "filterDistrictContainer",
-      "filterSensitivityContainer",
-      "filterActorRoleContainer",
-      "filterTrainingStatusContainer",
-    ];
-    allFilters.forEach((id) => {
+    ],
+    enrollment: [
+      "filterStatusContainer",
+      "filterSourceContainer",
+      "filterReviewerContainer",
+    ],
+    full_audit: ["filterSensitivityContainer", "filterActorRoleContainer"],
+    staff_training: ["filterTrainingStatusContainer"],
+    welfare: [
+      "filterIncidentTypeContainer",
+      "filterSlaContainer",
+      "filterParentInformedContainer",
+    ],
+    trends: [],
+    capacity: [],
+    parent_engagement: [],
+    data_quality: [],
+  };
+
+  const _ALWAYS_HIDDEN_FILTERS = [
+    "scopeLevelCityRow",
+    "filterDistrictContainer",
+    "filterAbsenceReasonContainer",
+  ];
+
+  const _ALL_TAB_FILTERS = [
+    "filterStatusContainer",
+    "filterSeverityContainer",
+    "filterSourceContainer",
+    "filterReviewerContainer",
+    "filterIncidentTypeContainer",
+    "filterSlaContainer",
+    "filterParentInformedContainer",
+    "filterSensitivityContainer",
+    "filterActorRoleContainer",
+    "filterTrainingStatusContainer",
+  ];
+
+  function updateFilterVisibility() {
+    const reportType = getReportType();
+
+    _ALWAYS_HIDDEN_FILTERS.concat(_ALL_TAB_FILTERS).forEach((id) => {
       const el = getEl(id);
       if (el) el.classList.add("d-none");
     });
 
-    const show = (...ids) =>
-      ids.forEach((id) => {
-        const el = getEl(id);
-        if (el) el.classList.remove("d-none");
-      });
+    ["filterGovContainer", "filterKgContainer"].forEach((id) => {
+      const el = getEl(id);
+      if (el) el.classList.remove("d-none");
+    });
 
-    if (reportType === "attendance") {
-      show(
-        "filterGovContainer",
-        "filterKgContainer",
-        "filterAbsenceReasonContainer",
-      );
-    } else if (reportType === "compliance") {
-      show("filterGovContainer", "filterKgContainer");
-    } else if (reportType === "incidents") {
-      show(
-        "filterGovContainer",
-        "filterKgContainer",
-        "filterStatusContainer",
-        "filterSeverityContainer",
-        "filterIncidentTypeContainer",
-        "filterSlaContainer",
-        "filterParentInformedContainer",
-      );
-    } else if (reportType === "enrollment") {
-      show(
-        "filterStatusContainer",
-        "filterSourceContainer",
-        "filterReviewerContainer",
-        "filterDistrictContainer",
-      );
-    } else if (reportType === "full_audit") {
-      show("filterSensitivityContainer", "filterActorRoleContainer");
-    } else if (reportType === "staff_training") {
-      show(
-        "filterGovContainer",
-        "filterKgContainer",
-        "filterTrainingStatusContainer",
-      );
-    } else if (reportType === "welfare") {
-      show(
-        "filterGovContainer",
-        "filterKgContainer",
-        "filterIncidentTypeContainer",
-        "filterSlaContainer",
-        "filterParentInformedContainer",
-      );
-    } else if (reportType === "trends") {
-      show("filterGovContainer", "filterKgContainer");
-    } else if (reportType === "capacity") {
-      show(
-        "filterGovContainer",
-        "filterKgContainer",
-        "filterDistrictContainer",
-      );
-    } else if (reportType === "parent_engagement") {
-      show("filterGovContainer", "filterKgContainer");
-    } else if (reportType === "data_quality") {
-      show("filterGovContainer", "filterKgContainer");
+    (_FILTERS_BY_REPORT[reportType] || []).forEach((id) => {
+      const el = getEl(id);
+      if (el) el.classList.remove("d-none");
+    });
+
+    if (reportType === "incidents" || reportType === "enrollment") {
+      populateStatusOptions(reportType);
     }
   }
 
@@ -343,140 +371,9 @@
     return "attendance";
   }
 
-  function getStrategicEndpoint(reportType) {
-    const map = {
-      attendance: "/children/summary",
-      incidents: "/risk-ranking",
-      compliance: "/compliance",
-      enrollment: "/children/geography",
-      full_audit: "/data-quality",
-      staff_training: "/supervisors/coverage",
-      welfare: "/children/gender",
-      trends: "/overview",
-      capacity: "/kindergartens/summary",
-      parent_engagement: "/children/age-buckets",
-      data_quality: "/data-quality",
-    };
-    return map[reportType] || "/overview";
-  }
-
-  function getStrategicReportType(reportType) {
-    const map = {
-      attendance: "children_summary",
-      incidents: "risk_ranking",
-      compliance: "compliance",
-      enrollment: "children_geography",
-      full_audit: "data_quality",
-      staff_training: "supervisors_coverage",
-      welfare: "children_gender",
-      trends: "overview",
-      capacity: "kindergartens_summary",
-      parent_engagement: "children_age_buckets",
-      data_quality: "data_quality",
-    };
-    return map[reportType] || "overview";
-  }
-
-  function buildStrategicQuery() {
-    const period = getPeriod();
-    const params = new URLSearchParams();
-    const reportLang = getEl("reportLang")?.value;
-    params.set(
-      "lang",
-      reportLang || (document.documentElement.getAttribute("lang") === "en" ? "en" : "ar"),
-    );
-    params.set("level", getReportLevel());
-    if (period.start) params.set("date_from", period.start);
-    if (period.end) params.set("date_to", period.end);
-
-    const gov = getGovernorate();
-    if (gov) params.set("governorate", gov);
-    const city = getCityFilter();
-    if (city) params.set("city", city);
-
-    const kgVals = getMultiSelectValues("kindergartenFilter");
-    if (kgVals.length) params.set("kindergarten_id", kgVals[0]);
-    return params.toString();
-  }
-
-  function toPreviewPayloadFromStrategic(data) {
-    const kpis = [];
-    if (data.kpis) {
-      Object.entries(data.kpis).forEach(([key, value]) => {
-        if (typeof value === "number") {
-          const hit = COLUMN_LABELS[key.toLowerCase()];
-          const labelAr = hit ? hit[0] : key;
-          const labelEn = hit ? hit[1] : key;
-          kpis.push({
-            label_ar: labelAr,
-            label_en: labelEn,
-            value,
-            unit: key.includes("pct") || key.includes("score") ? "%" : "",
-          });
-        }
-      });
-    }
-
-    const charts = [];
-    if (data.charts?.children_by_governorate) {
-      charts.push({
-        id: "children_by_governorate",
-        type: "bar",
-        label_ar: "الأطفال حسب المحافظة",
-        label_en: "Children by Governorate",
-        data: data.charts.children_by_governorate,
-      });
-    }
-    if (data.charts?.children_by_city) {
-      charts.push({
-        id: "children_by_city",
-        type: "bar",
-        label_ar: "الأطفال حسب المدينة",
-        label_en: "Children by City",
-        data: data.charts.children_by_city,
-      });
-    }
-    if (data.charts?.age_distribution) {
-      charts.push({
-        id: "age_distribution",
-        type: "bar",
-        label_ar: "توزيع الفئات العمرية",
-        label_en: "Age Buckets",
-        data: data.charts.age_distribution,
-      });
-    }
-
-    let sample_data = [];
-    if (Array.isArray(data)) {
-      sample_data = data;
-    } else {
-      sample_data =
-        data.tables?.risk_ranking ||
-        data.tables?.city_breakdown ||
-        data.tables?.governorate_breakdown ||
-        data.supervisors ||
-        data.ranking ||
-        data.cities ||
-        data.governorates ||
-        data.age_buckets ||
-        [];
-    }
-
-    const insights = [];
-    if (data.interpretation?.summary)
-      insights.push(data.interpretation.summary);
-    if (data.interpretation?.recommended_action)
-      insights.push(data.interpretation.recommended_action);
-
-    return {
-      total_records: Array.isArray(sample_data) ? sample_data.length : 0,
-      kpis,
-      charts,
-      sample_data,
-      insights,
-      warnings: [],
-    };
-  }
+  // Preview and export are served by the accurate per-domain engine at
+  // POST /api/analytics/reports/preview and POST /api/analytics/export.
+  // The former strategic-geographic adapter has been removed.
 
   /**
    * Debounce a function to delay execution until after `ms` milliseconds
@@ -520,6 +417,26 @@
     minute: "2-digit",
     timeZone: _AMMAN_TZ,
   });
+  const _TIME_FMT_AR = new Intl.DateTimeFormat("ar-JO", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: _AMMAN_TZ,
+  });
+  const _TIME_FMT_EN = new Intl.DateTimeFormat("en-JO", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: _AMMAN_TZ,
+  });
+
+  /** Format the time-of-day only (Asia/Amman). Returns "-" for empty/unparseable. */
+  function formatTimeSafe(val) {
+    if (val == null || val === "") return "-";
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return "-";
+    const lang =
+      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+    return (lang === "en" ? _TIME_FMT_EN : _TIME_FMT_AR).format(d);
+  }
 
   /**
    * Safely format a date/datetime value for display in Asia/Amman timezone.
@@ -646,7 +563,7 @@
       areas.forEach(a => {
         const opt = document.createElement("option");
         opt.value = a.key;
-        opt.textContent = a.name_ar;
+        opt.textContent = reportsText(a.name_ar, a.name_en || a.name_ar);
         citySelect.appendChild(opt);
       });
       citySelect.disabled = false;
@@ -702,39 +619,6 @@
     }
   }
 
-  async function loadStatuses() {
-    const select = getEl("statusFilter");
-    if (!select) return;
-    const fallback = [
-      { value: "DRAFT", label_ar: "غير مكتمل", label_en: "Incomplete" },
-      {
-        value: "SUBMITTED",
-        label_ar: "قيد التحقق",
-        label_en: "Under Verification",
-      },
-      {
-        value: "PENDING_REVIEW",
-        label_ar: "قيد المراجعة",
-        label_en: "Pending Review",
-      },
-      { value: "ACCEPTED", label_ar: "موافق عليه", label_en: "Approved" },
-      { value: "REJECTED", label_ar: "مرفوض", label_en: "Rejected" },
-      { value: "ACTIVE", label_ar: "نشط", label_en: "Active" },
-      { value: "WAITLISTED", label_ar: "قائمة انتظار", label_en: "Waitlisted" },
-      { value: "WITHDRAWN", label_ar: "منسحب", label_en: "Withdrawn" },
-    ];
-    const lang =
-      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
-    const labelKey = lang === "en" ? "label_en" : "label_ar";
-    while (select.options.length > 1) select.remove(1);
-    fallback.forEach((s) => {
-      const opt = document.createElement("option");
-      opt.value = s.value;
-      opt.textContent = s[labelKey];
-      select.appendChild(opt);
-    });
-  }
-
   // ===========================================================================
   // Preview
   // ===========================================================================
@@ -760,15 +644,19 @@
     );
 
     try {
-      const endpoint = getStrategicEndpoint(reportType);
-      const query = buildStrategicQuery();
-      const res = await fetchWithAuth(
-        `${STRATEGIC_API_BASE}${endpoint}?${query}`,
-      );
+      const res = await fetchWithAuth(`${API_BASE}/reports/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          report_type: reportType,
+          period_start: period.start,
+          period_end: period.end,
+          filters: getFilters(),
+        }),
+      });
       if (!res) return;
-      const raw = await res.json();
-      const adapted = toPreviewPayloadFromStrategic(raw);
-      renderPreview(adapted);
+      const data = await res.json();
+      renderPreview(data);
       setText(
         "reportsLastUpdated",
         reportsText("تم تحديث المعاينة", "Preview updated"),
@@ -899,6 +787,51 @@
     previewSortColumn = "";
 
     renderPreviewTable();
+
+    // Insights, warnings, and the data-quality banner (from the report engine).
+    const pickText = (o) =>
+      o && typeof o === "object"
+        ? reportsText(o.ar != null ? o.ar : o.en, o.en != null ? o.en : o.ar)
+        : o;
+
+    const insights = Array.isArray(data.insights) ? data.insights : [];
+    const insightsList = getEl("insightsList");
+    if (insightsList && insights.length) {
+      insightsList.innerHTML = insights
+        .map((i) => `<li class="list-group-item bg-transparent">${escapeHtml(pickText(i))}</li>`)
+        .join("");
+      showEl("previewInsights");
+    } else {
+      hideEl("previewInsights");
+    }
+
+    const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+    const warningsList = getEl("warningsList");
+    if (warningsList && warnings.length) {
+      warningsList.innerHTML = warnings
+        .map((w) => `<li class="list-group-item bg-transparent">${escapeHtml(pickText(w))}</li>`)
+        .join("");
+      showEl("previewWarnings");
+    } else {
+      hideEl("previewWarnings");
+    }
+
+    const dq = data.data_quality;
+    if (dq && typeof dq.completeness_percent === "number") {
+      setText("dataQualityScore", String(dq.completeness_percent));
+      const warnEl = getEl("dataQualityWarnings");
+      if (warnEl) {
+        const bits = [];
+        if (dq.missing_fields)
+          bits.push(reportsText(`حقول ناقصة: ${dq.missing_fields}`, `Missing: ${dq.missing_fields}`));
+        if (dq.duplicate_records)
+          bits.push(reportsText(`مكرر: ${dq.duplicate_records}`, `Duplicates: ${dq.duplicate_records}`));
+        warnEl.textContent = bits.join("  •  ");
+      }
+      showEl("dataQualityBanner");
+    } else {
+      hideEl("dataQualityBanner");
+    }
   }
 
   function renderPreviewTable() {
@@ -1015,16 +948,25 @@
     }
 
     const reportType = getReportType();
-    const format = getEl("exportFormat")?.value || "CSV";
+    const format = (getEl("exportFormat")?.value || "CSV").toUpperCase();
     try {
-      const endpoint = getStrategicEndpoint(reportType);
-      const params = new URLSearchParams(buildStrategicQuery());
-      params.set("report_type", getStrategicReportType(reportType));
-      params.set(
-        "export_format",
-        format.toLowerCase() === "json" ? "json" : "csv",
-      );
-      window.location.href = `${STRATEGIC_API_BASE}/export?${params.toString()}`;
+      const res = await fetchWithAuth(`${API_BASE}/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          report_type: reportType,
+          export_format: format,
+          filters: Object.assign(
+            { period_start: period.start, period_end: period.end },
+            getFilters(),
+          ),
+        }),
+      });
+      if (!res) return;
+      const job = await res.json();
+      showToast(reportsText("تم بدء تصدير التقرير", "Export job started"));
+      await loadRecentHistory();
+      if (job && job.job_id) pollExportStatus(job.job_id);
     } catch (e) {
       console.error("Export failed", e);
       alert(reportsText("فشل بدء التصدير", "Export failed to start"));
@@ -1320,7 +1262,7 @@
 
     // Filter
     const filtered = historyItems.filter((item) => {
-      const name = (item.report_name || item.report_type).toLowerCase();
+      const name = (item.report_name || item.report_type || "").toLowerCase();
       const format = (item.format || "").toLowerCase();
       const status = (item.status || "").toLowerCase();
       const query = historySearchText.toLowerCase();
@@ -1468,12 +1410,7 @@
       if (items.length > 0) {
         const latest = items[0];
         setText("statLastGenerated", formatDateSafe(latest.generated_at));
-        setText(
-          "statLastGeneratedTime",
-          formatDateSafe(latest.generated_at, { time: true })
-            .split(",")[1]
-            ?.trim() || formatDateSafe(latest.generated_at, { time: true }),
-        );
+        setText("statLastGeneratedTime", formatTimeSafe(latest.generated_at));
       }
     } catch (e) {
       console.error("Stats load failed", e);
@@ -1498,7 +1435,6 @@
   async function init() {
     await loadGovernorates();
     await loadKindergartens();
-    await loadStatuses();
     await loadReviewers();
     await loadSummaryStats();
     await loadScheduledCount();

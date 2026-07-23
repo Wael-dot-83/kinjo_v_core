@@ -138,45 +138,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     }
   }
 
-  /* Mobile logo */
-  .auth-mobile-logo-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
-  }
-  @media (min-width: 992px) {
-    .auth-mobile-logo-row {
-      display: none;
-    }
-  }
-
-  .auth-mobile-logo-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 0.75rem;
-    background: linear-gradient(135deg, #1F5E47, #163d2e);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 14px rgba(31, 94, 71, 0.28);
-    flex-shrink: 0;
-  }
-  .auth-mobile-logo-icon i {
-    font-size: 1.5rem;
-    color: #fff;
-  }
-  .auth-mobile-logo-text-name {
-    font-weight: 700;
-    font-size: 1.125rem;
-    color: #0f172a;
-    line-height: 1.25;
-  }
-  .auth-mobile-logo-text-sub {
-    font-size: 0.78rem;
-    color: #64748b;
-    line-height: 1.3;
-  }
+  /* Mobile logo removed as it is now in the global header */
 
   /* ── Language toggle ── */
   .auth-lang-row {
@@ -212,18 +174,22 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
 
   /* ── Welcome heading ── */
+  .auth-heading-wrap {
+    text-align: center;
+  }
   .auth-heading {
-    font-size: 1.625rem;
-    font-weight: 700;
+    font-size: 1.75rem;
+    font-weight: 800;
     color: #0f172a;
     line-height: 1.25;
-    margin-bottom: 0.375rem;
+    margin-bottom: 0.5rem;
+    transition: color 0.3s ease;
   }
   .auth-subheading {
-    font-size: 0.9375rem;
+    font-size: 1rem;
     color: #64748b;
     line-height: 1.6;
-    margin-bottom: 1.875rem;
+    margin-bottom: 2rem;
   }
 
   /* ── Alerts ── */
@@ -819,8 +785,9 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   {% from 'components/kinjo_logo.html' import kinjo_logo %}
   <aside class="auth-brand-panel" aria-hidden="true">
     <div class="auth-brand-logo-wrap">
-      {{ kinjo_logo(size='login') }}
+      <img src="/static/img/kinjo-logo.png" alt="KinJo" style="height: 42px; width: auto; object-fit: contain;">
     </div>
+
     <p class="auth-brand-tagline">
       {% if ui_lang == 'en' %} The complete kindergarten management platform for
       administrators, directors, supervisors, and parents. {% else %} منصة
@@ -889,39 +856,41 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
         {% endif %}
       </div>
 
-      {# Mobile logo — only shown when brand panel is hidden #}
-      <div class="auth-mobile-logo-row af-anim">
-        {{ kinjo_logo(size='navbar', extra_class='auth-mobile-logo-img') }}
-      </div>
 
-      {# Welcome heading #}
-      <div class="af-anim af-delay1">
-        <h1 class="auth-heading" id="authHeading">
-          {% if ui_lang == 'en' %}Welcome back{% else %}مرحباً بعودتك{% endif %}
+
+      {# Welcome heading & Expired state #}
+      <div class="auth-heading-wrap af-anim af-delay1" id="headingWrap">
+
+        <img src="/static/img/kinjo-logo.png" alt="KinJo" class="mb-4 mx-auto" style="width: 180px; height: auto; max-width: 100%; object-fit: contain; display: block;">
+
+        <h1 class="auth-heading" id="authHeading" {% if session_expired %}style="color: #d97706;"{% endif %}>
+          {% if session_expired %}
+            {% if ui_lang == 'en' %}Session Expired{% else %}انتهت الجلسة{% endif %}
+          {% else %}
+            {% if ui_lang == 'en' %}Welcome back{% else %}مرحباً بعودتك{% endif %}
+          {% endif %}
         </h1>
-        <p class="auth-subheading">
-          {% if ui_lang == 'en' %} Sign in to your account. {% else %} سجّل
-          الدخول إلى حسابك. {% endif %}
+        <p class="auth-subheading" id="authSubheading">
+          {% if session_expired %}
+            {% if ui_lang == 'en' %}For your security, you've been signed out due to inactivity. Please sign in again.{% else %}لحماية حسابك، تم تسجيل خروجك بسبب عدم النشاط. يرجى تسجيل الدخول مجدداً.{% endif %}
+          {% else %}
+            {% if ui_lang == 'en' %} Sign in to your account. {% else %} سجّل الدخول إلى حسابك. {% endif %}
+          {% endif %}
         </p>
       </div>
 
-      {# ── Session expired alert ── #}
+      {# ── Session-expired banner ── Server-rendered so it works without JS and
+         never flashes in after paint. `session_expired` is a trusted boolean
+         derived from the ?expired flag, never reflected as HTML. Hidden by
+         default (d-none); the .auth-alert-warning styling is defined above. #}
       <div
-        id="sessionExpiredAlert"
         class="auth-alert auth-alert-warning{% if not session_expired %} d-none{% endif %}"
+        id="sessionExpiredBanner"
         role="status"
         aria-live="polite"
-        aria-atomic="true"
-        style="border-inline-start: 4px solid #d97706;"
       >
-        <i class="bi bi-clock-history" aria-hidden="true"></i>
-        <span>
-          {% if ui_lang == 'en' %}<strong>Your session has ended.</strong> To
-          keep your account secure, you were signed out after a period of
-          inactivity. Please sign in again to continue.{% else %}<strong>انتهت
-          جلستك.</strong> حفاظاً على أمان حسابك، تم تسجيل خروجك بعد فترة من عدم
-          النشاط. سجّل الدخول للمتابعة.{% endif %}
-        </span>
+        <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+        <span>{% if ui_lang == 'en' %}For the security of your account, you were signed out after a period of inactivity. Please sign in again.{% else %}حفاظاً على أمان حسابك، تم تسجيل خروجك بعد فترة من عدم النشاط. يرجى تسجيل الدخول مجدداً.{% endif %}</span>
       </div>
 
       {# ── Login error alert ── #}
@@ -1465,8 +1434,20 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
      Session expired banner
      ───────────────────────────────────────── */
     if (new URLSearchParams(window.location.search).get("expired") === "true") {
-      const banner = document.getElementById("sessionExpiredAlert");
-      if (banner) banner.classList.remove("d-none");
+      const authHeading = document.getElementById("authHeading");
+      if (authHeading) {
+        authHeading.innerHTML = tr("انتهت الجلسة", "Session Expired");
+        authHeading.style.color = "#d97706";
+      }
+
+      const authSubheading = document.getElementById("authSubheading");
+      if (authSubheading) {
+        authSubheading.innerHTML = tr(
+          "لحماية حسابك، تم تسجيل خروجك بسبب عدم النشاط. يرجى تسجيل الدخول مجدداً.",
+          "For your security, you've been signed out due to inactivity. Please sign in again."
+        );
+      }
+
       try {
         const lastId = sessionStorage.getItem("kinjo_last_identifier");
         const usernameInput = document.getElementById("username");
