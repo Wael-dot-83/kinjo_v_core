@@ -15,46 +15,46 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
 
   /* ── Brand Panel ── */
-  .auth-brand-panel {
-    display: none;
-    flex: 0 0 42%;
-    max-width: 42%;
-    position: relative;
-    background: linear-gradient(155deg, #163d2e 0%, #1F5E47 50%, #2F7D62 100%);
-    overflow: hidden;
-    padding: 3.5rem 3rem;
-    flex-direction: column;
-    justify-content: center;
-    color: #fff;
-  }
+.auth-brand-panel {
+     display: none;
+     flex: 0 0 42%;
+     max-width: 42%;
+     position: relative;
+     background: linear-gradient(145deg, #0f2e22 0%, #163d2e 30%, #1F5E47 65%, #2F7D62 100%);
+     overflow: hidden;
+     padding: 4rem 3.5rem;
+     flex-direction: column;
+     justify-content: center;
+     color: #fff;
+   }
   @media (min-width: 992px) {
     .auth-brand-panel {
       display: flex;
     }
   }
 
-  .auth-brand-panel::before {
-    content: "";
-    position: absolute;
-    top: -130px;
-    inset-inline-end: -90px;
-    width: 380px;
-    height: 380px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.06);
-    pointer-events: none;
-  }
-  .auth-brand-panel::after {
-    content: "";
-    position: absolute;
-    bottom: -110px;
-    inset-inline-start: -70px;
-    width: 300px;
-    height: 300px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.04);
-    pointer-events: none;
-  }
+.auth-brand-panel::before {
+     content: "";
+     position: absolute;
+     top: -150px;
+     inset-inline-end: -100px;
+     width: 420px;
+     height: 420px;
+     border-radius: 50%;
+     background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 70%, transparent 100%);
+     pointer-events: none;
+   }
+   .auth-brand-panel::after {
+     content: "";
+     position: absolute;
+     bottom: -120px;
+     inset-inline-start: -80px;
+     width: 350px;
+     height: 350px;
+     border-radius: 50%;
+     background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 70%, transparent 100%);
+     pointer-events: none;
+   }
 
   .auth-brand-logo-wrap {
     width: 100px;
@@ -108,15 +108,16 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     opacity: 0.9;
   }
 
-  /* ── Form Panel ── */
-  .auth-form-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background: #fff;
-    overflow-y: auto;
-    min-width: 0;
-  }
+/* ── Form Panel ── */
+   .auth-form-panel {
+     flex: 1;
+     display: flex;
+     flex-direction: column;
+     background: linear-gradient(180deg, #fafbff 0%, #fff 100%);
+     overflow-y: auto;
+     min-width: 0;
+     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.06);
+   }
   .auth-form-inner {
     flex: 1;
     display: flex;
@@ -173,24 +174,26 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     outline-offset: 2px;
   }
 
-  /* ── Welcome heading ── */
-  .auth-heading-wrap {
-    text-align: center;
-  }
-  .auth-heading {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: #0f172a;
-    line-height: 1.25;
-    margin-bottom: 0.5rem;
-    transition: color 0.3s ease;
-  }
-  .auth-subheading {
-    font-size: 1rem;
-    color: #64748b;
-    line-height: 1.6;
-    margin-bottom: 2rem;
-  }
+/* ── Welcome heading ── */
+   .auth-heading-wrap {
+     text-align: center;
+     margin-bottom: 2rem;
+   }
+   .auth-heading {
+     font-size: 1.875rem;
+     font-weight: 800;
+     color: #0f172a;
+     line-height: 1.2;
+     margin-bottom: 0.625rem;
+     transition: color 0.3s ease;
+     letter-spacing: -0.02em;
+   }
+   .auth-subheading {
+     font-size: 1.0625rem;
+     color: #64748b;
+     line-height: 1.65;
+     margin-bottom: 0;
+   }
 
   /* ── Alerts ── */
   .auth-alert {
