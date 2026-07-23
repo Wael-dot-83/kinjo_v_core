@@ -445,7 +445,7 @@ def list_kindergartens(
     max_attendance: Optional[float] = None,
     include_deleted: bool = False,
     skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=200),
+    limit: int = Query(20, ge=1, le=1000),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
