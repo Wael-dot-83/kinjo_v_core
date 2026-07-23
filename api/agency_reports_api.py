@@ -71,7 +71,7 @@ def agency_report_catalog(
     current_user: models.User = Depends(_require_admin),
     db: Session = Depends(get_db),
 ):
-    return AgencyReportsService(db).catalog()
+    return AgencyReportsService(db, is_admin=True).catalog()
 
 
 @router.get("/admin/agency-reports/summary")
@@ -79,7 +79,7 @@ def agency_report_summary(
     current_user: models.User = Depends(_require_admin),
     db: Session = Depends(get_db),
 ):
-    return AgencyReportsService(db).summary()
+    return AgencyReportsService(db, is_admin=True).summary()
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +175,7 @@ def agency_reports_for_agency(
     db: Session = Depends(get_db),
 ):
     try:
-        return AgencyReportsService(db).reports_for_agency(agency_code)
+        return AgencyReportsService(db, is_admin=True).reports_for_agency(agency_code)
     except AgencyReportError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
@@ -203,7 +203,7 @@ def agency_report_detail(
     db: Session = Depends(get_db),
 ):
     try:
-        return AgencyReportsService(db).generate_report(agency_code, report_code, _filters(request, admission_year, period, date_from, date_to, governorate, city, kindergarten_id, gender, age_group, enrollment_status, aggregation_level, geography_basis, status, severity))
+        return AgencyReportsService(db, is_admin=True).generate_report(agency_code, report_code, _filters(request, admission_year, period, date_from, date_to, governorate, city, kindergarten_id, gender, age_group, enrollment_status, aggregation_level, geography_basis, status, severity))
     except AgencyReportError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
@@ -232,7 +232,7 @@ def agency_report_export_json(
     db: Session = Depends(get_db),
 ):
     try:
-        payload = AgencyReportsService(db).generate_report(agency_code, report_code, dict(request.query_params))
+        payload = AgencyReportsService(db, is_admin=True).generate_report(agency_code, report_code, dict(request.query_params))
         _audit_export(db, current_user, agency_code, report_code, "json", dict(request.query_params))
         return JSONResponse(content=payload)
     except AgencyReportError as exc:
@@ -248,7 +248,7 @@ def agency_report_export_csv(
     db: Session = Depends(get_db),
 ):
     try:
-        payload = AgencyReportsService(db).generate_report(agency_code, report_code, dict(request.query_params))
+        payload = AgencyReportsService(db, is_admin=True).generate_report(agency_code, report_code, dict(request.query_params))
         if not payload.get("exports", {}).get("csv"):
             raise HTTPException(status_code=409, detail="CSV export is not available for this report")
         csv_payload = to_csv(payload)
@@ -268,7 +268,7 @@ def custom_report_schema(
     current_user: models.User = Depends(_require_admin),
     db: Session = Depends(get_db),
 ):
-    return {"success": True, "data": AgencyReportsService(db).custom_report_schema()}
+    return {"success": True, "data": AgencyReportsService(db, is_admin=True).custom_report_schema()}
 
 
 @router.post("/admin/agency-reports/custom")
@@ -278,7 +278,7 @@ def custom_report(
     db: Session = Depends(get_db),
 ):
     try:
-        return {"success": True, "data": AgencyReportsService(db).custom_report(scope)}
+        return {"success": True, "data": AgencyReportsService(db, is_admin=True).custom_report(scope)}
     except AgencyReportError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
@@ -290,7 +290,7 @@ def custom_report_export_csv(
     db: Session = Depends(get_db),
 ):
     try:
-        payload = AgencyReportsService(db).custom_report(scope)
+        payload = AgencyReportsService(db, is_admin=True).custom_report(scope)
         csv_payload = custom_report_to_csv(payload)
         _scope = payload.get("scope", {})
         _audit_export(db, current_user, _scope.get("agency"), None, "csv", {

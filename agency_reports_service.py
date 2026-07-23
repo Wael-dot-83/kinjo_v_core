@@ -392,8 +392,13 @@ class AgencyReportsService:
     blocked centrally before the payload is returned or exported.
     """
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, is_admin: bool = False):
         self.db = db
+        # Admins always see the full, un-suppressed data regardless of the
+        # AGENCY_REPORT_MIN_CELL_SIZE setting.  Non-admin users (if this service
+        # is ever exposed to them) are subject to the statistical-disclosure
+        # threshold configured in settings.
+        self._is_admin = is_admin
         # Per-request memo for expected-child-day computation, which several
         # indicators (attendance, daily reports, incident rate) share.
         self._expected_cache: dict[Any, tuple[int, dict[int, int]]] = {}
@@ -415,9 +420,11 @@ class AgencyReportsService:
                     "filters": report.get("filters", []),
                     "exports": report.get("exports", []),
                     "data_sources": report.get("data_sources", []),
+                    "data_source_ar": _sources_ar(report.get("data_sources", [])),
                     "reason_ar": report.get("reason_ar"),
                     "generated_at": generated_at,
                 })
+
             agencies.append({
                 "code": code,
                 "name_ar": agency["name_ar"],
@@ -680,7 +687,10 @@ class AgencyReportsService:
         )
         q = self._apply_parent_geo_filters(q, filters)
         if filters.get("gender"):
-            q = q.filter(models.Child.gender == models.Gender(filters["gender"]))
+            try:
+                q = q.filter(models.Child.gender == models.Gender(str(filters["gender"]).upper()))
+            except ValueError:
+                pass  # unknown gender value → ignore filter rather than 500
         rows = q.group_by(models.ParentProfile.home_governorate, models.ParentProfile.home_district, models.Child.gender).all()
         breakdowns = [
             {"governorate": r.home_governorate or "غير محدد", "city": r.home_district or "غير محدد", "gender": _gender_ar(r.gender), "count": _safe_int(r.count)}
@@ -1761,7 +1771,11 @@ class AgencyReportsService:
         control). Counts in (0, threshold) are blanked: chart points become a gap
         (None, never 0) and table breakdown cells show "محجوب". Returns the number
         of suppressed table cells. Headline KPI totals/rates are not suppressed;
-        complementary suppression is a documented follow-up."""
+        complementary suppression is a documented follow-up.
+
+        Admin users always see the full dataset regardless of threshold."""
+        if self._is_admin:
+            return 0  # Admins see everything — no statistical disclosure control
         threshold = _min_cell_size()
         if threshold <= 1:
             return 0
