@@ -20,7 +20,15 @@ class MetricResponse(BaseModel):
     value: Any
     chart: ChartConfig
     locale: str = "en"
-    
+    # Explicit data-state so a genuine 0 is never confused with absent/insufficient data.
+    # One of: valid | missing | insufficient_data | suppressed | not_applicable.
+    # Defaults to "valid" for backward compatibility with existing producers.
+    data_state: str = "valid"
+    # Optional evidence for the state: {"denominator": int, "minimum": int, "sample_size": int}
+    coverage: Optional[Dict[str, Any]] = None
+    # Optional pre-formatted, localized display value {"en": "...", "ar": "..."}.
+    display: Optional[Dict[str, str]] = None
+
 class LayerMetricsResponse(BaseModel):
     layer: str
     metrics: List[MetricResponse]

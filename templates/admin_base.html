@@ -17,7 +17,7 @@
     <meta name="session-timeout-minutes" content="{{ session_timeout_minutes | default(30) }}" />
     <meta
       name="description"
-      content="{% if ui_lang == 'en' %}KinJo Admin - Professional Kindergarten Management System{% else %}KinJo - إدارة احترافية للحضانات{% endif %}"
+      content="{% if ui_lang == 'en' %}KinJo Admin - Professional Nursery Management System{% else %}KinJo - إدارة احترافية للحضانات{% endif %}"
     />
     <meta name="author" content="KinJo Team" />
     <meta name="theme-color" content="#2563eb" />
@@ -191,9 +191,16 @@
               "label_ar": "نظرة عامة",
               "label_en": "Overview",
               "items": [
+<<<<<<< HEAD
                 {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم الإدارية", "label_en": "Admin Dashboard", "active_paths": ["/admin/dashboard", "/dashboard"]},
                 {"href": "/admin/observability", "icon": "bi-activity", "label_ar": "مراقبة النظام", "label_en": "System Health", "active_paths": ["/admin/observability"]},
                 {"href": "/admin/alerts", "icon": "bi-bell", "label_ar": "التنبيهات", "label_en": "Alerts", "active_paths": ["/admin/alerts"]}
+=======
+                {"href": "/admin/users", "icon": "bi-people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users"], "active_prefixes": ["/admin/users/"]},
+                {"href": "/admin/messages", "icon": "bi-send", "label_ar": "التواصل", "label_en": "Communication", "active_paths": ["/admin/messages", "/admin/contact-messages"], "active_prefixes": ["/admin/messages/"]},
+                {"href": "/admin/kg-overview", "icon": "bi-building", "label_ar": "الحضانات", "label_en": "Nurseries", "active_paths": ["/admin/kg-overview", "/admin/kindergartens", "/admin/kindergartens/new"], "active_prefixes": ["/admin/kindergartens/"]},
+                {"href": "/admin/imported-kindergartens", "icon": "bi-database", "label_ar": "البيانات", "label_en": "Data Management", "active_paths": ["/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs"]}
+>>>>>>> 12e87a06790210a742276570a24b874d0b35addd
               ]
             },
             {

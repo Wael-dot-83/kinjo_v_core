@@ -16,11 +16,11 @@ celery==5.4.0
 # CVE-2026-28684 fixed in 1.2.2
 python-dotenv>=1.2.2
 httpx==0.28.1
-bleach==6.1.0
+bleach==6.4.0
 jinja2==3.1.6
 pyotp==2.9.0
 qrcode[pil]==8.2
-Pillow>=11.0,<12
+Pillow>=12.2,<13
 cryptography>=43.0
 supervisor==4.2.5
 boto3==1.35.0

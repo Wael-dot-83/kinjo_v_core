@@ -1,0 +1,631 @@
+{
+  "_meta": {
+    "schema_version": "1.0.0",
+    "generated_from": "analytics_gap_service.py (verified) + kpi_standards.STANDARDS",
+    "total_metrics": 33,
+    "layers": {
+      "network": 7,
+      "geographic": 7,
+      "kindergarten": 8,
+      "child": 5,
+      "predictive": 4,
+      "governance": 2
+    },
+    "notes": "Canonical catalog. Thresholds/bands live in kpi_standards.STANDARDS (linked via kpi_standard_key). AREA dimension is surfaced to users as 'City'."
+  },
+  "metrics": {
+    "equity_index": {
+      "metric_key": "equity_index",
+      "ordinal": 1,
+      "layer": "network",
+      "title_en": "Network Equity Index",
+      "title_ar": "مؤشر إنصاف الشبكة",
+      "value_type": "index",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_network_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:212",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "capacity_pressure": {
+      "metric_key": "capacity_pressure",
+      "ordinal": 2,
+      "layer": "network",
+      "title_en": "Capacity Pressure",
+      "title_ar": "ضغط السعة الاستيعابية",
+      "value_type": "percent",
+      "direction": "lower_is_better",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_network_metrics",
+      "kpi_standard_key": "capacity_utilization_rate",
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:238",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "digital_engagement": {
+      "metric_key": "digital_engagement",
+      "ordinal": 3,
+      "layer": "network",
+      "title_en": "Digital Engagement",
+      "title_ar": "المشاركة الرقمية",
+      "value_type": "percent",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_network_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:260",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "license_expiry_distribution": {
+      "metric_key": "license_expiry_distribution",
+      "ordinal": 4,
+      "layer": "network",
+      "title_en": "License Expiry Distribution",
+      "title_ar": "توزيع انتهاء التراخيص",
+      "value_type": "distribution",
+      "direction": "neutral",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_network_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:283",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "network_attendance_rate": {
+      "metric_key": "network_attendance_rate",
+      "ordinal": 5,
+      "layer": "network",
+      "title_en": "Network Attendance Rate",
+      "title_ar": "معدل حضور الشبكة",
+      "value_type": "percent",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_network_metrics",
+      "kpi_standard_key": "physical_attendance_rate",
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:315",
+      "definition_version": "1.0.0",
+      "owner": "analytics",
+      "minimum_denominator": 30
+    },
+    "staff_turnover_proxy": {
+      "metric_key": "staff_turnover_proxy",
+      "ordinal": 6,
+      "layer": "network",
+      "title_en": "Staff Attrition Rate",
+      "title_ar": "معدل استنزاف الموظفين",
+      "value_type": "percent",
+      "direction": "lower_is_better",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_network_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:348",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "network_improvement_velocity": {
+      "metric_key": "network_improvement_velocity",
+      "ordinal": 7,
+      "layer": "network",
+      "title_en": "Network Improvement Velocity",
+      "title_ar": "سرعة تحسّن الشبكة",
+      "value_type": "velocity",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_network_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:383",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "interkg_variance": {
+      "metric_key": "interkg_variance",
+      "ordinal": 8,
+      "layer": "geographic",
+      "title_en": "Inter-Nursery Attendance Variance",
+      "title_ar": "تباين الحضور بين الحضانات",
+      "value_type": "index",
+      "direction": "lower_is_better",
+      "supported_dimensions": [
+        "GOVERNORATE",
+        "DISTRICT",
+        "AREA"
+      ],
+      "producer": "_get_geographic_layer_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:489",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "chronic_absenteeism_rate": {
+      "metric_key": "chronic_absenteeism_rate",
+      "ordinal": 9,
+      "layer": "geographic",
+      "title_en": "Chronic Absenteeism Rate",
+      "title_ar": "معدل التغيب المزمن",
+      "value_type": "percent",
+      "direction": "lower_is_better",
+      "supported_dimensions": [
+        "GOVERNORATE",
+        "DISTRICT",
+        "AREA"
+      ],
+      "producer": "_get_geographic_layer_metrics",
+      "kpi_standard_key": "chronic_absence_rate",
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:538",
+      "definition_version": "1.0.0",
+      "owner": "analytics",
+      "minimum_denominator": 30
+    },
+    "parent_nps": {
+      "metric_key": "parent_nps",
+      "ordinal": 10,
+      "layer": "geographic",
+      "title_en": "Parent NPS",
+      "title_ar": "صافي نقاط ترويج أولياء الأمور",
+      "value_type": "score",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "GOVERNORATE",
+        "DISTRICT",
+        "AREA"
+      ],
+      "producer": "_get_geographic_layer_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:569",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "incident_density": {
+      "metric_key": "incident_density",
+      "ordinal": 11,
+      "layer": "geographic",
+      "title_en": "Incident Density (per 100 child-days)",
+      "title_ar": "كثافة الحوادث (لكل 100 يوم طفل)",
+      "value_type": "rate",
+      "direction": "lower_is_better",
+      "supported_dimensions": [
+        "GOVERNORATE",
+        "DISTRICT",
+        "AREA"
+      ],
+      "producer": "_get_geographic_layer_metrics",
+      "kpi_standard_key": "incident_rate",
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:640",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "report_submission_rate": {
+      "metric_key": "report_submission_rate",
+      "ordinal": 12,
+      "layer": "geographic",
+      "title_en": "Report Submission Rate",
+      "title_ar": "معدل تقديم التقارير",
+      "value_type": "percent",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "GOVERNORATE",
+        "DISTRICT",
+        "AREA"
+      ],
+      "producer": "_get_geographic_layer_metrics",
+      "kpi_standard_key": "report_submission_rate",
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:677",
+      "definition_version": "1.0.0",
+      "owner": "analytics",
+      "minimum_denominator": 30
+    },
+    "enrollment_growth_rate": {
+      "metric_key": "enrollment_growth_rate",
+      "ordinal": 13,
+      "layer": "geographic",
+      "title_en": "Enrollment Growth Rate",
+      "title_ar": "معدل نمو التسجيل",
+      "value_type": "velocity",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "GOVERNORATE",
+        "DISTRICT",
+        "AREA"
+      ],
+      "producer": "_get_geographic_layer_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:714",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "avg_gqi": {
+      "metric_key": "avg_gqi",
+      "ordinal": 14,
+      "layer": "geographic",
+      "title_en": "Average GQI per Nursery",
+      "title_ar": "متوسط مؤشر جودة الحوكمة لكل حضانة",
+      "value_type": "index",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "GOVERNORATE",
+        "DISTRICT",
+        "AREA"
+      ],
+      "producer": "_get_geographic_layer_metrics",
+      "kpi_standard_key": "gqi_score",
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:753",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "child_risk_composite": {
+      "metric_key": "child_risk_composite",
+      "ordinal": 15,
+      "layer": "kindergarten",
+      "title_en": "Child Risk Score Distribution",
+      "title_ar": "توزيع درجة مخاطر الأطفال",
+      "value_type": "distribution",
+      "direction": "lower_is_better",
+      "supported_dimensions": [
+        "KINDERGARTEN"
+      ],
+      "producer": "get_kg_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:855",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "parent_engagement_rate": {
+      "metric_key": "parent_engagement_rate",
+      "ordinal": 16,
+      "layer": "kindergarten",
+      "title_en": "Parent Engagement Rate",
+      "title_ar": "معدل مشاركة أولياء الأمور",
+      "value_type": "percent",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "KINDERGARTEN"
+      ],
+      "producer": "get_kg_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:896",
+      "definition_version": "1.0.0",
+      "owner": "analytics",
+      "minimum_denominator": 30
+    },
+    "teacher_timeliness_score": {
+      "metric_key": "teacher_timeliness_score",
+      "ordinal": 17,
+      "layer": "kindergarten",
+      "title_en": "Teacher Report Timeliness",
+      "title_ar": "درجة توقيت تقارير المعلمات",
+      "value_type": "percent",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "KINDERGARTEN"
+      ],
+      "producer": "get_kg_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:928",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "meal_compliance_rate": {
+      "metric_key": "meal_compliance_rate",
+      "ordinal": 18,
+      "layer": "kindergarten",
+      "title_en": "Meal Compliance Rate",
+      "title_ar": "معدل الالتزام بالوجبات",
+      "value_type": "percent",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "KINDERGARTEN"
+      ],
+      "producer": "get_kg_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:971",
+      "definition_version": "1.0.0",
+      "owner": "analytics",
+      "minimum_denominator": 30
+    },
+    "health_alert_density": {
+      "metric_key": "health_alert_density",
+      "ordinal": 19,
+      "layer": "kindergarten",
+      "title_en": "Health Alert Density",
+      "title_ar": "كثافة التنبيهات الصحية",
+      "value_type": "percent",
+      "direction": "lower_is_better",
+      "supported_dimensions": [
+        "KINDERGARTEN"
+      ],
+      "producer": "get_kg_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:1015",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "data_quality_score": {
+      "metric_key": "data_quality_score",
+      "ordinal": 20,
+      "layer": "kindergarten",
+      "title_en": "Data Quality Score",
+      "title_ar": "درجة جودة البيانات",
+      "value_type": "percent",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "KINDERGARTEN"
+      ],
+      "producer": "get_kg_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:1063",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "age_appropriateness_index": {
+      "metric_key": "age_appropriateness_index",
+      "ordinal": 21,
+      "layer": "kindergarten",
+      "title_en": "Age Appropriateness Index",
+      "title_ar": "مؤشر الملاءمة العمرية",
+      "value_type": "percent",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "KINDERGARTEN"
+      ],
+      "producer": "get_kg_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:1111",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "safeguarding_resolution_rate": {
+      "metric_key": "safeguarding_resolution_rate",
+      "ordinal": 22,
+      "layer": "kindergarten",
+      "title_en": "Safeguarding Resolution Rate",
+      "title_ar": "معدل حل قضايا الحماية",
+      "value_type": "percent",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "KINDERGARTEN"
+      ],
+      "producer": "get_kg_metrics",
+      "kpi_standard_key": "incident_followup_sla",
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:1142",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "child_attendance_pattern": {
+      "metric_key": "child_attendance_pattern",
+      "ordinal": 23,
+      "layer": "child",
+      "title_en": "Attendance Pattern (last 30 days)",
+      "title_ar": "نمط الحضور (آخر 30 يوماً)",
+      "value_type": "distribution",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "CHILD"
+      ],
+      "producer": "get_child_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "restricted",
+      "source": "analytics_gap_service.py:1191",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "child_development_profile": {
+      "metric_key": "child_development_profile",
+      "ordinal": 24,
+      "layer": "child",
+      "title_en": "Development Profile by Domain",
+      "title_ar": "ملف التطور بحسب المجال",
+      "value_type": "index",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "CHILD"
+      ],
+      "producer": "get_child_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "restricted",
+      "source": "analytics_gap_service.py:1245",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "child_engagement_score": {
+      "metric_key": "child_engagement_score",
+      "ordinal": 25,
+      "layer": "child",
+      "title_en": "Child Engagement Score",
+      "title_ar": "درجة مشاركة الطفل",
+      "value_type": "score",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "CHILD"
+      ],
+      "producer": "get_child_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "restricted",
+      "source": "analytics_gap_service.py:1296",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "child_incident_history": {
+      "metric_key": "child_incident_history",
+      "ordinal": 26,
+      "layer": "child",
+      "title_en": "Incidents by Severity (last 90 days)",
+      "title_ar": "الحوادث بحسب الخطورة (آخر 90 يوماً)",
+      "value_type": "distribution",
+      "direction": "lower_is_better",
+      "supported_dimensions": [
+        "CHILD"
+      ],
+      "producer": "get_child_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "restricted",
+      "source": "analytics_gap_service.py:1347",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "child_health_alerts": {
+      "metric_key": "child_health_alerts",
+      "ordinal": 27,
+      "layer": "child",
+      "title_en": "Child Health Alerts",
+      "title_ar": "التنبيهات الصحية للطفل",
+      "value_type": "count",
+      "direction": "lower_is_better",
+      "supported_dimensions": [
+        "CHILD"
+      ],
+      "producer": "get_child_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "restricted",
+      "source": "analytics_gap_service.py:1379",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "dropout_risk": {
+      "metric_key": "dropout_risk",
+      "ordinal": 28,
+      "layer": "predictive",
+      "title_en": "Dropout / Disengagement Risk Score",
+      "title_ar": "درجة خطر التسرب / عدم المشاركة",
+      "value_type": "score",
+      "direction": "lower_is_better",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_predictive_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:1465",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "performance_trajectory": {
+      "metric_key": "performance_trajectory",
+      "ordinal": 29,
+      "layer": "predictive",
+      "title_en": "Nursery Performance Trajectory",
+      "title_ar": "مسار أداء الحضانات",
+      "value_type": "timeseries",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_predictive_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:1526",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "enrollment_forecast": {
+      "metric_key": "enrollment_forecast",
+      "ordinal": 30,
+      "layer": "predictive",
+      "title_en": "Enrollment Forecast",
+      "title_ar": "توقعات التسجيل",
+      "value_type": "forecast",
+      "direction": "neutral",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_predictive_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:1571",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "anomaly_cross_correlation": {
+      "metric_key": "anomaly_cross_correlation",
+      "ordinal": 31,
+      "layer": "predictive",
+      "title_en": "Anomaly Cross-Correlation",
+      "title_ar": "الارتباط المتقاطع للحالات الشاذة",
+      "value_type": "index",
+      "direction": "neutral",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_predictive_metrics",
+      "kpi_standard_key": null,
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:1643",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "enhanced_gqi": {
+      "metric_key": "enhanced_gqi",
+      "ordinal": 32,
+      "layer": "governance",
+      "title_en": "Enhanced Governance Quality Index",
+      "title_ar": "مؤشر جودة الحوكمة المحسّن",
+      "value_type": "index",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_governance_metrics",
+      "kpi_standard_key": "gqi_score",
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:1815",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    },
+    "network_health_composite": {
+      "metric_key": "network_health_composite",
+      "ordinal": 33,
+      "layer": "governance",
+      "title_en": "Network Health Composite Score",
+      "title_ar": "درجة صحة الشبكة الإجمالية",
+      "value_type": "index",
+      "direction": "higher_is_better",
+      "supported_dimensions": [
+        "NETWORK"
+      ],
+      "producer": "get_governance_metrics",
+      "kpi_standard_key": "overall_gcei",
+      "privacy_level": "internal",
+      "source": "analytics_gap_service.py:1857",
+      "definition_version": "1.0.0",
+      "owner": "analytics"
+    }
+  }
+}

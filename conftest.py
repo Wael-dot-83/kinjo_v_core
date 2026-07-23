@@ -29,14 +29,27 @@ from auth import get_password_hash
 import models
 
 
-# Create in-memory SQLite database for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+# Test database engine.
+#
+# Default (and every existing run): in-memory SQLite with a shared StaticPool.
+# Opt-in Postgres: set TEST_DATABASE_URL=postgresql://... to run the suite against
+# a real Postgres (used by the CI Postgres E2E job). This is fully backward
+# compatible — with TEST_DATABASE_URL unset the engine below is byte-for-byte the
+# previous SQLite configuration.
+_TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "").strip()
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+if _TEST_DATABASE_URL.startswith("postgres"):
+    SQLALCHEMY_DATABASE_URL = _TEST_DATABASE_URL
+    # Route the app's own DATABASE_URL to the same Postgres so app-side sessions match.
+    os.environ["DATABASE_URL"] = _TEST_DATABASE_URL
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
+else:
+    SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

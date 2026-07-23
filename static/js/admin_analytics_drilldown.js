@@ -39,11 +39,18 @@ function drilldownLiteral(value) {
   return typeof window.escapeHtml === "function" ? window.escapeHtml(result) : result;
 }
 
+<<<<<<< HEAD
 function drilldownNumber(value, digits = null, suffix = "") {
   if (value === null || value === undefined || value === "") return "—";
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return "—";
   return `${digits === null ? numeric : numeric.toFixed(digits)}${suffix}`;
+=======
+// Build the drill-down URL for the next level. `id` may be an Arabic geographic
+// name (governorate/city) so it must be URL-encoded.
+function drillHref(nextType, id) {
+  return `/admin/analytics/drilldown/${nextType}/${encodeURIComponent(id)}`;
+>>>>>>> 12e87a06790210a742276570a24b874d0b35addd
 }
 
 async function loadDrilldownData() {
@@ -79,10 +86,15 @@ async function loadDrilldownData() {
 }
 
 function updateBreadcrumbsAndTitle(name, type) {
+  // Country -> Governorate -> City -> Nursery -> Class -> Child
   const typeLabelMap = {
+    NETWORK: drilldownText("الشبكة", "Network"),
     GOVERNORATE: drilldownText("محافظة", "Governorate"),
-    KINDERGARTEN: drilldownText("حضانة", "Kindergarten"),
+    DISTRICT: drilldownText("لواء", "District"),
+    AREA: drilldownText("مدينة", "City"),
+    KINDERGARTEN: drilldownText("حضانة", "Nursery"),
     CLASS: drilldownText("صف", "Class"),
+    CHILD: drilldownText("طفل", "Child"),
   };
   const typeLabel = typeLabelMap[type.toUpperCase()] || typeLabelMap.KINDERGARTEN;
   const displayName = drilldownLiteral(name);
@@ -93,11 +105,19 @@ function updateBreadcrumbsAndTitle(name, type) {
   if (breadcrumbEl) breadcrumbEl.textContent = displayName;
 }
 
+function summaryCard(labelAr, labelEn, value) {
+  return `
+            <div class="col-md-4"><div class="card"><div class="card-body">
+                <h6 class="text-muted">${drilldownText(labelAr, labelEn)}</h6><h3 class="fw-bold">${value}</h3>
+            </div></div></div>`;
+}
+
 function populateSummaryCards(metrics, type) {
   const container = document.getElementById("summaryCardRow");
   if (!container) return;
-
+  const t = type.toUpperCase();
   let cardsHtml = "";
+<<<<<<< HEAD
   if (type.toUpperCase() === "GOVERNORATE") {
     cardsHtml = `
             <div class="col-md-4"><div class="card"><div class="card-body">
@@ -122,8 +142,46 @@ function populateSummaryCards(metrics, type) {
                 <h6 class="text-muted">${drilldownText("الفئة العمرية", "Age group")}</h6><h3 class="fw-bold">${drilldownLiteral(metrics.age_group)}</h3>
             </div></div></div>
         `;
+=======
+
+  if (t === "NETWORK") {
+    cardsHtml =
+      summaryCard("عدد المحافظات", "Governorates", metrics.governorate_count) +
+      summaryCard("عدد الحضانات", "Nurseries", metrics.nursery_count) +
+      summaryCard("إجمالي الأطفال", "Total children", metrics.children_count ?? "N/A");
+  } else if (t === "GOVERNORATE" || t === "DISTRICT") {
+    cardsHtml =
+      summaryCard("عدد المدن", "Cities", metrics.city_count) +
+      summaryCard("عدد الحضانات", "Nurseries", metrics.nursery_count) +
+      summaryCard("إجمالي الأطفال", "Total children", metrics.children_count ?? "N/A");
+  } else if (t === "AREA") {
+    cardsHtml =
+      summaryCard("عدد الحضانات", "Nurseries", metrics.nursery_count) +
+      summaryCard("إجمالي الأطفال", "Total children", metrics.children_count ?? "N/A") +
+      summaryCard(
+        "متوسط الحوكمة", "Average governance",
+        metrics.governance_score ? metrics.governance_score.toFixed(1) : "N/A"
+      );
+  } else if (t === "CLASS") {
+    cardsHtml =
+      summaryCard("الأطفال", "Children", metrics.children_count) +
+      summaryCard("السعة", "Capacity", metrics.capacity) +
+      summaryCard("الفئة العمرية", "Age group", drilldownLiteral(metrics.age_group));
+  } else if (t === "CHILD") {
+    const suppressed = metrics.data_state === "suppressed";
+    const withheld = drilldownText("محجوب لحماية الخصوصية", "Withheld for privacy");
+    const attendance = suppressed
+      ? withheld
+      : metrics.attendance_rate == null
+        ? drilldownText("بيانات غير كافية", "Insufficient data")
+        : metrics.attendance_rate.toFixed(1) + "%";
+    cardsHtml =
+      summaryCard("نسبة الحضور", "Attendance rate", attendance) +
+      summaryCard("أيام الحضور", "Attendance days", suppressed ? withheld : metrics.attendance_days) +
+      summaryCard("الأيام المسجّلة", "Logged days", suppressed ? withheld : metrics.logged_days);
+>>>>>>> 12e87a06790210a742276570a24b874d0b35addd
   } else {
-    // KINDERGARTEN
+    // KINDERGARTEN (Nursery)
     cardsHtml = `
             <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body">
                 <h6 class="text-muted">${drilldownText("الأطفال", "Children")}</h6><h3 class="fw-bold">${metrics.children_count}</h3>
@@ -142,33 +200,66 @@ function populateSummaryCards(metrics, type) {
   container.innerHTML = cardsHtml;
 }
 
+// Geographic list (Network->Governorates, Governorate/District->Cities): a name +
+// nursery count + children count, each row drilling to `row.dimension_type`.
+function geoListTable(children, firstColAr, firstColEn, titleAr, titleEn) {
+  document.getElementById("tableTitle").textContent = drilldownText(titleAr, titleEn);
+  const headers = `
+            <tr>
+                <th scope="col" role="button">${drilldownText(firstColAr, firstColEn)}</th>
+                <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("عدد الحضانات", "Nurseries")}</th>
+                <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("الأطفال", "Children")}</th>
+            </tr>`;
+  const rows = children
+    .map(
+      (r) => `
+            <tr style="cursor:pointer;" onclick="window.location.href=drillHref('${r.dimension_type}', ${JSON.stringify(String(r.id))})">
+                <td class="fw-bold">${drilldownLiteral(r.name)}</td>
+                <td class="text-center" data-sort="${r.nursery_count}">${r.nursery_count}</td>
+                <td class="text-center" data-sort="${r.children_count}">${r.children_count}</td>
+            </tr>`
+    )
+    .join("");
+  return { headers, rows };
+}
+
 function populateTable(children, type) {
   const table = document.getElementById("drilldownTable");
   const thead = document.getElementById("drilldownThead");
   const tbody = document.getElementById("drilldownTbody");
   if (!thead || !tbody) return;
 
+  const t = type.toUpperCase();
   let headers = "";
   let rows = "";
 
-  if (type.toUpperCase() === "GOVERNORATE") {
+  if (t === "NETWORK") {
+    ({ headers, rows } = geoListTable(
+      children, "المحافظة", "Governorate",
+      "المحافظات في الشبكة", "Governorates in the network"
+    ));
+  } else if (t === "GOVERNORATE" || t === "DISTRICT") {
+    ({ headers, rows } = geoListTable(
+      children, "المدينة", "City",
+      "المدن في المحافظة", "Cities in the governorate"
+    ));
+  } else if (t === "AREA") {
+    // City -> Nurseries (with per-nursery performance), drilling to Nursery.
     document.getElementById("tableTitle").textContent = drilldownText(
-      "أداء الحضانات في المحافظة",
-      "Kindergarten performance in the governorate"
+      "أداء الحضانات في المدينة", "Nursery performance in the city"
     );
     headers = `
             <tr>
-                <th scope="col" role="button">${drilldownText("الحضانة", "Kindergarten")}</th>
+                <th scope="col" role="button">${drilldownText("الحضانة", "Nursery")}</th>
                 <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("الأطفال", "Children")}</th>
                 <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("نسبة الحضور", "Attendance rate")}</th>
                 <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("معدل الحوادث /1K", "Incident rate /1K")}</th>
                 <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("الحوكمة", "Governance")}</th>
-            </tr>
-        `;
+            </tr>`;
     rows = children
       .map(
         (kg) => `
-            <tr data-kg-id="${kg.id}" style="cursor:pointer;" onclick="window.location.href='/kindergartens/${kg.id}'">
+            <tr data-kg-id="${kg.id}" style="cursor:pointer;" onclick="window.location.href=drillHref('KINDERGARTEN', ${kg.id})">
                 <td class="fw-bold">${drilldownLiteral(kg.name)}</td>
                 <td class="text-center">${kg.children_count}</td>
                 <td class="text-center" data-sort="${kg.attendance_rate ?? ""}"><span class="badge ${getScoreColor(kg.attendance_rate, true)}">${drilldownNumber(kg.attendance_rate, 1, "%")}</span></td>
@@ -177,14 +268,12 @@ function populateTable(children, type) {
                     <span class="fw-bold me-2">${drilldownNumber(kg.governance_score, 1)}</span>
                     <span class="badge ${kg.governance_band === "INSUFFICIENT" ? "bg-secondary" : getScoreColor(kg.governance_score)}">${kg.governance_band === "INSUFFICIENT" ? drilldownText("بيانات غير كافية", "Insufficient data") : drilldownLiteral(kg.governance_band)}</span>
                 </td>
-            </tr>
-        `
+            </tr>`
       )
       .join("");
-  } else if (type.toUpperCase() === "KINDERGARTEN") {
+  } else if (t === "KINDERGARTEN") {
     document.getElementById("tableTitle").textContent = drilldownText(
-      "الصفوف في الحضانة",
-      "Classes in the kindergarten"
+      "الصفوف في الحضانة", "Classes in the nursery"
     );
     headers = `
             <tr>
@@ -192,50 +281,52 @@ function populateTable(children, type) {
                 <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("الأطفال", "Children")}</th>
                 <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("السعة", "Capacity")}</th>
                 <th scope="col" role="button">${drilldownText("الفئة العمرية", "Age group")}</th>
-            </tr>
-        `;
+            </tr>`;
     rows = children
       .map(
         (cls) => `
-            <tr data-class-id="${cls.id}" style="cursor:pointer;" onclick="window.location.href='/admin/analytics/drilldown/CLASS/${cls.id}'">
+            <tr data-class-id="${cls.id}" style="cursor:pointer;" onclick="window.location.href=drillHref('CLASS', ${cls.id})">
                 <td class="fw-bold">${drilldownLiteral(cls.name)}</td>
                 <td class="text-center" data-sort="${cls.children_count}">${cls.children_count}</td>
                 <td class="text-center" data-sort="${cls.capacity}">${cls.capacity}</td>
                 <td>${drilldownLiteral(cls.age_group)}</td>
-            </tr>
-        `
+            </tr>`
       )
       .join("");
-  } else if (type.toUpperCase() === "CLASS") {
+  } else if (t === "CLASS") {
     document.getElementById("tableTitle").textContent = drilldownText(
-      "الأطفال في الصف",
-      "Children in the class"
+      "الأطفال في الصف", "Children in the class"
     );
     headers = `
             <tr>
                 <th scope="col" role="button">${drilldownText("الطفل", "Child")}</th>
                 <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("نسبة الحضور", "Attendance rate")}</th>
                 <th scope="col" class="text-center" role="button" data-sort-method="number">${drilldownText("أيام الحضور", "Attendance days")}</th>
-            </tr>
-        `;
+            </tr>`;
     rows = children
       .map(
         (child) => `
-            <tr>
+            <tr style="cursor:pointer;" onclick="window.location.href=drillHref('CHILD', ${child.id})">
                 <td class="fw-bold">${drilldownLiteral(child.name)}</td>
                 <td class="text-center" data-sort="${child.attendance_rate ?? ""}"><span class="badge ${getScoreColor(child.attendance_rate, true)}">${drilldownNumber(child.attendance_rate, 1, "%")}</span></td>
                 <td class="text-center">${child.attendance_days}</td>
-            </tr>
-        `
+            </tr>`
       )
       .join("");
+  } else if (t === "CHILD") {
+    // Leaf level: no further drill-down. Detail is shown in the summary cards.
+    document.getElementById("tableTitle").textContent = drilldownText(
+      "تفاصيل الطفل", "Child details"
+    );
+    headers = "";
+    rows = "";
   }
 
   thead.innerHTML = headers;
   tbody.innerHTML = rows;
 
   if (tableSorter) tableSorter.destroy();
-  tableSorter = new Tablesort(table);
+  if (table && headers) tableSorter = new Tablesort(table);
 }
 
 function getScoreColor(score, isAttendance = false) {

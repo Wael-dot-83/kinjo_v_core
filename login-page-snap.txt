@@ -1,0 +1,70 @@
+- generic [active] [ref=e1]:
+  - link "تخطي إلى نموذج تسجيل الدخول" [ref=e2] [cursor=pointer]:
+    - /url: "#loginForm"
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - paragraph [ref=e7]: منصة الإدارة المتكاملة للحضانات — للمديرين والمشرفين وأولياء الأمور.
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - generic [ref=e10]: 
+          - generic [ref=e11]: إدارة الأطفال والكوادر وأولياء الأمور
+        - listitem [ref=e12]:
+          - generic [ref=e13]: 
+          - generic [ref=e14]: تقارير وإحصاءات فورية
+        - listitem [ref=e15]:
+          - generic [ref=e16]: 
+          - generic [ref=e17]: صلاحيات آمنة حسب الدور الوظيفي
+        - listitem [ref=e18]:
+          - generic [ref=e19]: 
+          - generic [ref=e20]: إشعارات ذكية وتنبيهات فورية
+    - generic [ref=e21]:
+      - main [ref=e22]:
+        - link "Switch to English" [ref=e24] [cursor=pointer]:
+          - /url: "?lang=en&redirect=/admin/analytics/charts"
+          - generic [ref=e25]: 
+          - generic [ref=e26]: English
+        - generic [ref=e27]:
+          - img "KinJo" [ref=e28]
+          - heading "مرحباً بعودتك" [level=1] [ref=e29]
+          - paragraph [ref=e30]: سجّل الدخول إلى حسابك.
+        - text: 
+        - form "مرحباً بعودتك" [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: رقم الهاتف أو البريد الإلكتروني *
+            - generic [ref=e34]:
+              - generic: 
+              - textbox "رقم الهاتف أو البريد الإلكتروني *" [ref=e35]:
+                - /placeholder: "مثال: 07XXXXXXXX أو name@example.com"
+              - generic: 
+            - paragraph [ref=e36]:
+              - generic [ref=e37]: 
+              - text: يمكنك أيضاً استخدام اسم المستخدم الخاص بحسابك.
+          - generic [ref=e38]:
+            - generic [ref=e39]: كلمة المرور *
+            - generic [ref=e40]:
+              - generic: 
+              - textbox "كلمة المرور *" [ref=e41]:
+                - /placeholder: أدخل كلمة المرور
+              - button "إظهار كلمة المرور" [ref=e42] [cursor=pointer]:
+                - generic [ref=e43]: 
+            - text: 
+          - generic [ref=e44]:
+            - generic [ref=e45] [cursor=pointer]:
+              - checkbox "إبقائي مسجّل الدخول" [ref=e46]
+              - text: إبقائي مسجّل الدخول
+            - link "هل نسيت كلمة المرور؟" [ref=e47] [cursor=pointer]:
+              - /url: /forgot-password
+          - paragraph [ref=e48]:
+            - generic [ref=e49]: 
+            - text: لا تستخدم هذا الخيار على جهاز عام أو مشترك.
+          - button [ref=e50] [cursor=pointer]:
+            - generic [ref=e51]:
+              - generic [ref=e52]: 
+              - text: تسجيل الدخول
+        - generic [ref=e53]:
+          - generic [ref=e54]: 
+          - generic [ref=e55]:
+            - paragraph [ref=e56]: ليس لديك حساب؟
+            - paragraph [ref=e57]: يتم إنشاء الحسابات من خلال إدارة المنصة. تواصل مع المسؤول في مؤسستك للحصول على حساب.
+      - contentinfo "روابط التذييل" [ref=e58]:
+        - paragraph [ref=e59]: © 2026 KinJo — جميع الحقوق محفوظة
