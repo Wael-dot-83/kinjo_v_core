@@ -2799,8 +2799,16 @@ def get_enrollment_analytics(
     status_filter: Optional[str] = None,
     source_filter: Optional[str] = None,
     reviewer_id: Optional[int] = None,
+    statuses: Optional[List[str]] = None,
+    sources: Optional[List[str]] = None,
+    reviewer_ids: Optional[List[int]] = None,
 ) -> Dict[str, Any]:
-        """Get comprehensive enrollment/registration analytics"""
+        """Get comprehensive enrollment/registration analytics.
+
+        Accepts either singular filters (status_filter/source_filter/reviewer_id)
+        or multi-select lists (statuses/sources/reviewer_ids); the lists win when
+        provided so the Reports Center multi-select filters apply.
+        """
         query = db.query(models.EnrollmentApplication)
 
         if kindergarten_ids:
@@ -2808,16 +2816,29 @@ def get_enrollment_analytics(
         elif kindergarten_id:
             query = query.filter(models.EnrollmentApplication.kindergarten_id == kindergarten_id)
 
-        if status_filter:
+        if statuses:
+            _status_enums = []
+            for s in statuses:
+                try:
+                    _status_enums.append(models.EnrollmentStatus(str(s).upper()))
+                except ValueError:
+                    continue
+            if _status_enums:
+                query = query.filter(models.EnrollmentApplication.status.in_(_status_enums))
+        elif status_filter:
             try:
                 query = query.filter(models.EnrollmentApplication.status == models.EnrollmentStatus(status_filter.upper()))
             except ValueError:
                 pass
 
-        if source_filter:
+        if sources:
+            query = query.filter(models.EnrollmentApplication.source.in_(sources))
+        elif source_filter:
             query = query.filter(models.EnrollmentApplication.source == source_filter)
 
-        if reviewer_id:
+        if reviewer_ids:
+            query = query.filter(models.EnrollmentApplication.decision_by.in_(reviewer_ids))
+        elif reviewer_id:
             query = query.filter(models.EnrollmentApplication.decision_by == reviewer_id)
 
         # Period filter on created_at for "new applications"
@@ -4884,22 +4905,32 @@ def process_export_job(job_id: int):
             period_end = _jordan_today()
             period_start = period_end - timedelta(days=30)
 
-        data_list = []
-        if job.report_type == "attendance":
-            data = AnalyticsService.get_governorate_breakdown(db, period_start, period_end)
-            for item in data:
-                data_list.append({
-                    "Kindergarten": item["kindergarten_name"],
-                    "Children Count": item["children_count"],
-                    "Capacity": item["capacity"],
-                    "Attendance Rate %": round(item["attendance_rate"] * 100, 1)
-                })
-        elif job.report_type == "incidents":
-            data = AnalyticsService.get_incidents_timeline(db, period_start, period_end)
-            for date_key, count in data.items():
-                data_list.append({"Date": date_key, "Incident Count": count})
-        else:
-            data_list.append({"Status": "Demo Data Export", "Message": "This export contains placeholder structural data."})
+        # Export uses the SAME per-domain engine as the preview, so downloads
+        # match exactly what the user previewed (all rows, honoring all filters).
+        job_user = db.query(models.User).filter(models.User.id == job.user_id).first()
+        lang = filters.get("lang") or "en"
+        try:
+            result = compute_report_preview(
+                db, job_user, job.report_type, period_start, period_end, filters,
+                sample_limit=None,
+            )
+            data_list = list(result.sample_data or [])
+            if not data_list:
+                # Aggregate reports have no per-record rows; export the KPI summary.
+                label_key = "label_en" if lang == "en" else "label_ar"
+                data_list = [
+                    {
+                        "Metric": k.get(label_key) or k.get("label_en") or k.get("id"),
+                        "Value": k.get("value"),
+                        "Unit": k.get("unit", ""),
+                    }
+                    for k in (result.kpis or [])
+                ]
+        except Exception as exc:
+            logger.error("export dataset build failed for %s: %s", job.report_type, exc, exc_info=True)
+            data_list = []
+        if not data_list:
+            data_list = [{"Message": "No data for the selected report and filters."}]
 
         import uuid
         filename = f"{job.report_type}_{job.id}_{uuid.uuid4().hex[:8]}"
@@ -5806,42 +5837,25 @@ def get_report_types(lang: str = Query("ar", pattern="^(ar|en)$")):
     return result
 
 
-@router.post("/reports/preview", response_model=ReportPreviewResponse)
-def preview_report(
-    payload: Dict[str, Any],
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    request: Request = None,
+def compute_report_preview(
+    db,
+    current_user,
+    report_type,
+    period_start,
+    period_end,
+    filters,
+    *,
+    sample_limit=10,
 ):
-    """Generate a preview payload for the requested report configuration."""
-    _validate_csrf_token(request)
-    validators.validate_admin_role(current_user)
-    report_type = payload.get("report_type")
-    period_start = payload.get("period_start")
-    period_end = payload.get("period_end")
-    filters = payload.get("filters", {}) or {}
+    """Compute a report preview/dataset for the given type + filters.
 
-    if not report_type or not period_start or not period_end:
-        raise HTTPException(status_code=400, detail="report_type, period_start, and period_end are required")
-
+    Shared by the preview endpoint (sample_limit=10) and the export worker
+    (sample_limit=None -> all rows). Scope/role must already be established by
+    the caller; this function only reads data.
+    """
     from datetime import datetime, timezone
-    import zoneinfo
-    
-    if isinstance(period_start, str):
-        try:
-            period_start = datetime.strptime(period_start, "%Y-%m-%d").date()
-        except ValueError:
-            period_start = datetime.strptime(period_start[:10], "%Y-%m-%d").date()
-            
-    if isinstance(period_end, str):
-        try:
-            period_end = datetime.strptime(period_end, "%Y-%m-%d").date()
-        except ValueError:
-            period_end = datetime.strptime(period_end[:10], "%Y-%m-%d").date()
-
     from utils.time_utils import get_amman_tz
     amman_tz = get_amman_tz()
-
     utc_start = datetime.combine(period_start, datetime.min.time()).replace(tzinfo=amman_tz).astimezone(timezone.utc)
     utc_end = datetime.combine(period_end, datetime.max.time()).replace(tzinfo=amman_tz).astimezone(timezone.utc)
 
@@ -5967,29 +5981,69 @@ def preview_report(
             {"id": "incidents_by_severity", "type": "doughnut", "label_ar": "حسب الخطورة", "label_en": "By Severity"},
         ]
         try:
-            from sqlalchemy import func
+            from sqlalchemy import func, or_
+            # Filter by the Amman-day bounds expressed in UTC (utc_start/utc_end)
+            # rather than PostgreSQL's timezone() function, so this works on both
+            # SQLite (dev) and PostgreSQL (prod).
             inc_base = db.query(models.Incident).filter(
-                func.date(func.timezone('Asia/Amman', models.Incident.occurred_at)) >= period_start,
-                func.date(func.timezone('Asia/Amman', models.Incident.occurred_at)) <= period_end
+                models.Incident.occurred_at >= utc_start,
+                models.Incident.occurred_at <= utc_end,
             )
             if kg_filter: inc_base = inc_base.filter(models.Incident.kindergarten_id.in_(kg_filter))
-            
+
             statuses = filters.get("statuses", [])
             if statuses:
-                inc_base = inc_base.filter(models.Incident.status.in_(statuses))
-                
+                # Resolve incoming values to IncidentStatus members by NAME
+                # (e.g. "OPEN") so the filter matches regardless of the enum's
+                # display value ("Open").
+                _inc_statuses = [
+                    getattr(models.IncidentStatus, str(s).upper(), None) for s in statuses
+                ]
+                _inc_statuses = [m for m in _inc_statuses if m is not None]
+                if _inc_statuses:
+                    inc_base = inc_base.filter(models.Incident.status.in_(_inc_statuses))
+
             severities = filters.get("severities", [])
             if severities:
                 inc_base = inc_base.filter(models.Incident.severity_level.in_(severities))
+
+            incident_types = filters.get("incident_types", [])
+            if incident_types:
+                inc_base = inc_base.filter(models.Incident.type.in_(incident_types))
+
+            sla_status = (filters.get("sla_status") or "").strip()
+            if sla_status == "overdue":
+                inc_base = inc_base.filter(
+                    models.Incident.closed_at.is_(None),
+                    models.Incident.followup_sla_deadline.isnot(None),
+                    models.Incident.followup_sla_deadline < _jordan_now(),
+                )
+            elif sla_status == "on_track":
+                inc_base = inc_base.filter(
+                    or_(
+                        models.Incident.closed_at.isnot(None),
+                        models.Incident.followup_sla_deadline.is_(None),
+                        models.Incident.followup_sla_deadline >= _jordan_now(),
+                    )
+                )
+
+            parent_informed = (filters.get("parent_informed") or "").strip()
+            if parent_informed == "yes":
+                inc_base = inc_base.filter(models.Incident.parent_informed.is_(True))
+            elif parent_informed == "no":
+                inc_base = inc_base.filter(models.Incident.parent_informed.is_(False))
 
             kpis[0]["value"] = inc_base.count()
             kpis[1]["value"] = inc_base.filter(models.Incident.status == models.IncidentStatus.OPEN).count()
             kpis[2]["value"] = inc_base.filter(models.Incident.severity_level == models.SeverityLevel.CRITICAL).count()
             total_records = kpis[0]["value"]
 
-            trend_data = db.query(func.date(func.timezone('Asia/Amman', models.Incident.occurred_at)).label("d"), func.count(models.Incident.id)).filter(
-                func.date(func.timezone('Asia/Amman', models.Incident.occurred_at)) >= period_start,
-                func.date(func.timezone('Asia/Amman', models.Incident.occurred_at)) <= period_end
+            trend_data = db.query(
+                func.date(models.Incident.occurred_at).label("d"),
+                func.count(models.Incident.id),
+            ).filter(
+                models.Incident.occurred_at >= utc_start,
+                models.Incident.occurred_at <= utc_end,
             )
             if kg_filter: trend_data = trend_data.filter(models.Incident.kindergarten_id.in_(kg_filter))
             trend_data = trend_data.group_by("d").order_by("d").all()
@@ -6065,12 +6119,20 @@ def preview_report(
             {"id": "source_breakdown", "type": "doughnut", "label_ar": "توزيع المصادر", "label_en": "Source Breakdown"},
         ]
         try:
+            # District narrows the kindergarten scope for enrollment.
+            effective_kgs = kg_filter
+            district = (filters.get("district") or "").strip()
+            if district:
+                dq = db.query(models.Kindergarten.id).filter(models.Kindergarten.district == district)
+                if kg_filter:
+                    dq = dq.filter(models.Kindergarten.id.in_(kg_filter))
+                effective_kgs = [r[0] for r in dq.all()]
             analytics = get_enrollment_analytics(
                 db, period_start, period_end,
-                kindergarten_ids=kg_filter,
-                status_filter=filters.get("status"),
-                source_filter=filters.get("source"),
-                reviewer_id=filters.get("reviewer_id"),
+                kindergarten_ids=effective_kgs,
+                statuses=filters.get("statuses"),
+                sources=filters.get("sources"),
+                reviewer_ids=[int(r) for r in (filters.get("reviewer_ids") or []) if str(r).strip()],
             )
             kpis[0]["value"] = analytics.get("total_applications", 0)
             kpis[1]["value"] = analytics.get("status_breakdown", {}).get("ACCEPTED", 0)
@@ -6087,7 +6149,7 @@ def preview_report(
                 func.date(models.EnrollmentApplication.created_at) >= period_start,
                 func.date(models.EnrollmentApplication.created_at) <= period_end
             )
-            if kg_filter: source_q = source_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
+            if effective_kgs: source_q = source_q.filter(models.EnrollmentApplication.kindergarten_id.in_(effective_kgs))
             source_data = source_q.group_by(models.EnrollmentApplication.source).all()
             charts[1]["data"] = {
                 "labels": [{"ar": row[0].value if hasattr(row[0], 'value') else str(row[0]), "en": row[0].value if hasattr(row[0], 'value') else str(row[0])} for row in source_data],
@@ -6105,18 +6167,37 @@ def preview_report(
             {"id": "actions_by_module", "type": "bar", "label_ar": "حسب الوحدة", "label_en": "By Module"},
         ]
         try:
+            from sqlalchemy import func
             query = db.query(models.AuditLog).filter(
                 models.AuditLog.created_at >= utc_start,
                 models.AuditLog.created_at <= utc_end,
             )
-            if kg_filter:
-                # AuditLog doesn't have direct kindergarten_id; skip kindergarten filtering for audit preview
-                pass
+            # AuditLog has no kindergarten_id, so governorate/kindergarten scope
+            # cannot apply here; audit is filtered by sensitivity and actor role.
+            sensitivity_level = filters.get("sensitivity_level")
+            if sensitivity_level not in (None, ""):
+                try:
+                    query = query.filter(models.AuditLog.sensitivity_level == int(sensitivity_level))
+                except (TypeError, ValueError):
+                    pass
+            actor_role = (filters.get("actor_role") or "").strip()
+            if actor_role:
+                query = query.filter(models.AuditLog.actor_role == actor_role)
+
             total_records = query.count()
             kpis[0]["value"] = total_records
             # Count high sensitivity as "failed" proxy
             high_risk = query.filter(models.AuditLog.sensitivity_level >= 3).count()
             kpis[1]["value"] = high_risk
+
+            # Actions by module (entity type)
+            mod_data = query.with_entities(
+                models.AuditLog.entity_type, func.count(models.AuditLog.id)
+            ).group_by(models.AuditLog.entity_type).all()
+            charts[0]["data"] = {
+                "labels": [{"ar": (m[0] or "—"), "en": (m[0] or "—")} for m in mod_data],
+                "datasets": [{"label": {"ar": "الإجراءات", "en": "Actions"}, "data": [m[1] for m in mod_data], "backgroundColor": "#4F46E5"}],
+            }
         except Exception:
             warnings.append({"ar": "تعذر تحميل سجل التدقيق", "en": "Failed to load audit log data"})
 
@@ -6134,11 +6215,26 @@ def preview_report(
         ]
         try:
             from sqlalchemy import func
-            stc_q = db.query(func.count(models.StaffTrainingCompletion.id)).filter(
-                models.StaffTrainingCompletion.completed_at >= utc_start,
-                models.StaffTrainingCompletion.completed_at <= utc_end,
-                models.StaffTrainingCompletion.passed == True,
+            # Map the UI training-status filter (passed/failed) onto the real
+            # TrainingStatus enum. Default to COMPLETED (the "trained" definition).
+            _ts_map = {
+                "PASSED": models.TrainingStatus.COMPLETED,
+                "COMPLETED": models.TrainingStatus.COMPLETED,
+                "FAILED": models.TrainingStatus.OVERDUE,
+                "OVERDUE": models.TrainingStatus.OVERDUE,
+                "PENDING": models.TrainingStatus.PENDING,
+            }
+            _completion_status = _ts_map.get(
+                (filters.get("training_status") or "").strip().upper(),
+                models.TrainingStatus.COMPLETED,
             )
+            stc_q = db.query(func.count(models.StaffTrainingCompletion.id)).filter(
+                models.StaffTrainingCompletion.completion_date >= period_start,
+                models.StaffTrainingCompletion.completion_date <= period_end,
+                models.StaffTrainingCompletion.status == _completion_status,
+            )
+            if kg_filter:
+                stc_q = stc_q.filter(models.StaffTrainingCompletion.kindergarten_id.in_(kg_filter))
             kpis[0]["value"] = stc_q.scalar() or 0
 
             # Total staff (users with SUPERVISOR role)
@@ -6148,19 +6244,25 @@ def preview_report(
             ).scalar() or 0
             kpis[1]["value"] = round(kpis[0]["value"] / total_supervisors * 100, 1) if total_supervisors > 0 else 0.0
 
-            rc_q = db.query(models.RatioCompliance)
+            # Ratio compliance derived from operating vs. compliant minutes.
+            rc_q = db.query(models.RatioCompliance).filter(
+                models.RatioCompliance.date >= period_start,
+                models.RatioCompliance.date <= period_end,
+            )
             if kg_filter:
                 rc_q = rc_q.filter(models.RatioCompliance.kindergarten_id.in_(kg_filter))
-            rc_q = rc_q.filter(
-                models.RatioCompliance.checked_at >= utc_start,
-                models.RatioCompliance.checked_at <= utc_end,
-            )
             rc_rows = rc_q.all()
             total_rc = len(rc_rows)
-            compliant = sum(1 for r in rc_rows if getattr(r, 'is_compliant', False))
+            compliant = sum(
+                1 for r in rc_rows
+                if (r.operating_minutes or 0) > 0 and r.compliant_minutes >= r.operating_minutes
+            )
             kpis[2]["value"] = compliant
             kpis[3]["value"] = total_rc - compliant
-            scores = [float(getattr(r, 'compliance_score', 0) or 0) for r in rc_rows]
+            scores = [
+                (r.compliant_minutes / r.operating_minutes) * 100
+                for r in rc_rows if (r.operating_minutes or 0) > 0
+            ]
             kpis[4]["value"] = round(sum(scores) / len(scores), 1) if scores else 0.0
             total_records = kpis[0]["value"]
 
@@ -6173,8 +6275,9 @@ def preview_report(
                 models.StaffTrainingCompletion.kindergarten_id == models.Kindergarten.id,
                 isouter=True,
             ).filter(
-                models.StaffTrainingCompletion.completed_at >= utc_start,
-                models.StaffTrainingCompletion.completed_at <= utc_end,
+                models.StaffTrainingCompletion.completion_date >= period_start,
+                models.StaffTrainingCompletion.completion_date <= period_end,
+                models.StaffTrainingCompletion.status == _completion_status,
             )
             if kg_filter:
                 tby_kg = tby_kg.filter(models.Kindergarten.id.in_(kg_filter))
@@ -6204,7 +6307,7 @@ def preview_report(
             {"id": "welfare_trend", "type": "line", "label_ar": "اتجاه الرفاهية", "label_en": "Welfare Trend"},
         ]
         try:
-            from sqlalchemy import func
+            from sqlalchemy import func, or_
             now_dt = _jordan_now()
             inc_q = db.query(models.Incident).filter(
                 models.Incident.occurred_at >= utc_start,
@@ -6213,6 +6316,32 @@ def preview_report(
             )
             if kg_filter:
                 inc_q = inc_q.filter(models.Incident.kindergarten_id.in_(kg_filter))
+
+            incident_types = filters.get("incident_types", [])
+            if incident_types:
+                inc_q = inc_q.filter(models.Incident.type.in_(incident_types))
+
+            sla_status = (filters.get("sla_status") or "").strip()
+            if sla_status == "overdue":
+                inc_q = inc_q.filter(
+                    models.Incident.closed_at.is_(None),
+                    models.Incident.followup_sla_deadline.isnot(None),
+                    models.Incident.followup_sla_deadline < now_dt,
+                )
+            elif sla_status == "on_track":
+                inc_q = inc_q.filter(
+                    or_(
+                        models.Incident.closed_at.isnot(None),
+                        models.Incident.followup_sla_deadline.is_(None),
+                        models.Incident.followup_sla_deadline >= now_dt,
+                    )
+                )
+
+            parent_informed = (filters.get("parent_informed") or "").strip()
+            if parent_informed == "yes":
+                inc_q = inc_q.filter(models.Incident.parent_informed.is_(True))
+            elif parent_informed == "no":
+                inc_q = inc_q.filter(models.Incident.parent_informed.is_(False))
 
             all_incs = inc_q.all()
             total_records = len(all_incs)
@@ -6370,17 +6499,28 @@ def preview_report(
             )
             if kg_filter:
                 kg_q = kg_q.filter(models.Kindergarten.id.in_(kg_filter))
+            district = (filters.get("district") or "").strip()
+            if district:
+                kg_q = kg_q.filter(models.Kindergarten.district == district)
             kgs = kg_q.all()
+            kg_ids = [kg.id for kg in kgs]
 
-            total_cap = sum(getattr(kg, 'capacity', 0) or 0 for kg in kgs)
+            total_cap = sum((kg.total_capacity or 0) for kg in kgs)
             kpis[0]["value"] = total_cap
 
-            enrolled = db.query(func.count(models.EnrollmentApplication.id)).filter(
-                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-            )
-            if kg_filter:
-                enrolled = enrolled.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
-            enrolled_cnt = enrolled.scalar() or 0
+            # Per-kindergarten active enrollment, so utilization is accurate.
+            enrolled_by_kg = {}
+            if kg_ids:
+                enrolled_by_kg = dict(
+                    db.query(
+                        models.EnrollmentApplication.kindergarten_id,
+                        func.count(models.EnrollmentApplication.id),
+                    ).filter(
+                        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+                        models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
+                    ).group_by(models.EnrollmentApplication.kindergarten_id).all()
+                )
+            enrolled_cnt = sum(enrolled_by_kg.values())
             kpis[1]["value"] = enrolled_cnt
             kpis[2]["value"] = round(enrolled_cnt / total_cap * 100, 1) if total_cap > 0 else 0.0
             kpis[4]["value"] = max(0, total_cap - enrolled_cnt)
@@ -6388,8 +6528,8 @@ def preview_report(
             waitlist = db.query(func.count(models.EnrollmentApplication.id)).filter(
                 models.EnrollmentApplication.status == models.EnrollmentStatus.PENDING_REVIEW,
             )
-            if kg_filter:
-                waitlist = waitlist.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
+            if kg_ids:
+                waitlist = waitlist.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
             kpis[3]["value"] = waitlist.scalar() or 0
 
             total_records = len(kgs)
@@ -6398,16 +6538,25 @@ def preview_report(
             gov_cap = {}
             for kg in kgs:
                 gov = kg.governorate or "Other"
-                gov_cap[gov] = gov_cap.get(gov, 0) + (getattr(kg, 'capacity', 0) or 0)
+                gov_cap[gov] = gov_cap.get(gov, 0) + (kg.total_capacity or 0)
             charts[0]["data"] = {
                 "labels": [{"ar": g, "en": g} for g in gov_cap],
                 "datasets": [{"label": {"ar": "السعة", "en": "Capacity"}, "data": list(gov_cap.values()), "backgroundColor": "#4F46E5"}],
             }
 
-            # Utilization distribution: low/medium/high
-            low = sum(1 for kg in kgs if (getattr(kg, 'capacity', 1) or 1) > 0 and enrolled_cnt / (getattr(kg, 'capacity', 1) or 1) < 0.5)
-            med = sum(1 for kg in kgs if 0.5 <= enrolled_cnt / (getattr(kg, 'capacity', 1) or 1) < 0.85)
-            high = len(kgs) - low - med
+            # Utilization distribution: low/medium/high, computed per kindergarten.
+            low = med = high = 0
+            for kg in kgs:
+                cap = kg.total_capacity or 0
+                if cap <= 0:
+                    continue
+                ratio = enrolled_by_kg.get(kg.id, 0) / cap
+                if ratio < 0.5:
+                    low += 1
+                elif ratio < 0.85:
+                    med += 1
+                else:
+                    high += 1
             charts[1]["data"] = {
                 "labels": [{"ar": "منخفض <50%", "en": "Low <50%"}, {"ar": "متوسط 50-85%", "en": "Medium 50-85%"}, {"ar": "مرتفع >85%", "en": "High >85%"}],
                 "datasets": [{"data": [low, med, high], "backgroundColor": ["#198754", "#ffc107", "#dc3545"]}],
@@ -6515,7 +6664,7 @@ def preview_report(
             )
             if kg_filter:
                 att_days_q = att_days_q.join(models.Class).filter(models.Class.kindergarten_id.in_(kg_filter))
-            if att_days_q.scalar() or 0 == 0:
+            if (att_days_q.scalar() or 0) == 0:
                 kpis[3]["value"] = period_days
 
             kpis[4]["value"] = kpis[1]["value"]
@@ -6559,7 +6708,7 @@ def preview_report(
                 logs = logs.join(models.Child).join(models.EnrollmentApplication).filter(
                     models.EnrollmentApplication.kindergarten_id.in_(kg_filter)
                 )
-            logs = logs.limit(10).all()
+            logs = logs.limit(sample_limit).all()
             for log in logs:
                 sample_data.append({
                     "date": log.date.isoformat(),
@@ -6578,7 +6727,7 @@ def preview_report(
             )
             if kg_filter:
                 incs = incs.filter(models.Incident.kindergarten_id.in_(kg_filter))
-            incs = incs.limit(10).all()
+            incs = incs.limit(sample_limit).all()
             _inc_kg_ids = list({inc.kindergarten_id for inc in incs if inc.kindergarten_id})
             _inc_kg_map = {k.id: k for k in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(_inc_kg_ids)).all()}
             for inc in incs:
@@ -6600,7 +6749,7 @@ def preview_report(
             )
             if kg_filter:
                 apps = apps.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
-            apps = apps.limit(10).all()
+            apps = apps.limit(sample_limit).all()
             _app_cids = [a.child_id for a in apps if a.child_id]
             _app_kgids = list({a.kindergarten_id for a in apps if a.kindergarten_id})
             _app_children = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(_app_cids)).all()}
@@ -6626,7 +6775,7 @@ def preview_report(
             logs = db.query(models.AuditLog).filter(
                 models.AuditLog.created_at >= datetime.combine(period_start, datetime.min.time()),
                 models.AuditLog.created_at <= datetime.combine(period_end, datetime.max.time()),
-            ).limit(10).all()
+            ).limit(sample_limit).all()
             for log in logs:
                 user = db.query(models.User).filter(models.User.id == log.user_id).first()
                 sample_data.append({
@@ -6660,6 +6809,41 @@ def preview_report(
         warnings=warnings,
         insights=insights,
     )
+
+
+@router.post("/reports/preview", response_model=ReportPreviewResponse)
+def preview_report(
+    payload: Dict[str, Any],
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None,
+):
+    """Generate a preview payload for the requested report configuration."""
+    _validate_csrf_token(request)
+    validators.validate_admin_role(current_user)
+    report_type = payload.get("report_type")
+    period_start = payload.get("period_start")
+    period_end = payload.get("period_end")
+    filters = payload.get("filters", {}) or {}
+
+    if not report_type or not period_start or not period_end:
+        raise HTTPException(status_code=400, detail="report_type, period_start, and period_end are required")
+
+    from datetime import datetime
+
+    if isinstance(period_start, str):
+        try:
+            period_start = datetime.strptime(period_start, "%Y-%m-%d").date()
+        except ValueError:
+            period_start = datetime.strptime(period_start[:10], "%Y-%m-%d").date()
+
+    if isinstance(period_end, str):
+        try:
+            period_end = datetime.strptime(period_end, "%Y-%m-%d").date()
+        except ValueError:
+            period_end = datetime.strptime(period_end[:10], "%Y-%m-%d").date()
+
+    return compute_report_preview(db, current_user, report_type, period_start, period_end, filters)
 
 
 

@@ -144,7 +144,7 @@
         <form id="reportBuilderForm"novalidate>
           <input type="hidden" aria-label="{% if ui_lang == 'en' %}Report Type{% else %}نوع التقرير{% endif %}" id="reportType" value="attendance">
 
-          <div class="row g-2 mb-3">
+          <div class="row g-2 mb-3" id="scopeLevelCityRow">
             <div class="col-6">
               <label class="form-label fw-bold" for="reportLevel">{% if ui_lang == 'en' %}Reporting Level{% else %}مستوى التقرير{% endif %}</label>
               <select class="form-select" id="reportLevel">
