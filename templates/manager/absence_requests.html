@@ -157,11 +157,15 @@
         }
 
         function notifySuccess(message) {
-            alert(message);
+            if (typeof showToast === 'function') showToast(message, 'success');
+            else if (window.Swal) window.Swal.fire({ icon: 'success', text: message, timer: 2000, showConfirmButton: false });
+            else alert(message);
         }
 
         function notifyError(message) {
-            alert(message);
+            if (typeof showToast === 'function') showToast(message, 'error');
+            else if (window.Swal) window.Swal.fire({ icon: 'error', text: message });
+            else alert(message);
         }
 
         function statusBadge(s) {

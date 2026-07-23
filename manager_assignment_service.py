@@ -48,25 +48,29 @@ class ManagerAssignmentError(HTTPException):
         super().__init__(status_code=status_code, detail={"code": code, "message": message})
 
 
-def _audit(db: Session, actor_id: Optional[int], action: str, entity_type: str,
-           entity_id: Optional[int], details: str) -> None:
+def _audit(
+    db: Session, actor_id: Optional[int], action: str, entity_type: str, entity_id: Optional[int], details: str
+) -> None:
     """Stage an audit row without committing the assignment transaction."""
     from audit_actions import AuditAction  # local import avoids cycles
 
     resolved = getattr(AuditAction, action, action)
-    db.add(models.AuditLog(
-        user_id=actor_id,
-        action=resolved,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        details=details,
-        sensitivity_level=3,
-    ))
+    db.add(
+        models.AuditLog(
+            user_id=actor_id,
+            action=resolved,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            details=details,
+            sensitivity_level=3,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
 # Supervisor-role stripping (C4 / C5)
 # ---------------------------------------------------------------------------
+
 
 def guard_supervisor_coverage(db: Session, user: models.User) -> None:
     """Block the cascade if removing this user as a supervisor would leave
@@ -81,9 +85,7 @@ def guard_supervisor_coverage(db: Session, user: models.User) -> None:
     if user.status != models.UserStatus.ACTIVE:
         return
     try:
-        validators.validate_kg_has_supervisor(
-            db, user.kindergarten_id, exclude_user_id=user.id
-        )
+        validators.validate_kg_has_supervisor(db, user.kindergarten_id, exclude_user_id=user.id)
     except validators.ValidationError as exc:
         raise ManagerAssignmentError(
             status_code=422,
@@ -131,7 +133,11 @@ def strip_supervisor_role(db: Session, user: models.User, *, actor_id: Optional[
 
     if assignments_removed or classes_cleared or profile_removed:
         _audit(
-            db, actor_id, "SUPERVISOR_ROLE_REMOVED", "user", user.id,
+            db,
+            actor_id,
+            "SUPERVISOR_ROLE_REMOVED",
+            "user",
+            user.id,
             f"Stripped supervisor role from user {user.id} "
             f"(assignments={assignments_removed}, classes_cleared={classes_cleared}, "
             f"profile_removed={profile_removed})",
@@ -147,6 +153,7 @@ def strip_supervisor_role(db: Session, user: models.User, *, actor_id: Optional[
 # ---------------------------------------------------------------------------
 # Manager assignment cascade (C1 / C2 / C3)
 # ---------------------------------------------------------------------------
+
 
 def assign_user_as_manager(
     db: Session,
@@ -171,9 +178,7 @@ def assign_user_as_manager(
     # Lock every kindergarten whose manager coverage may change.  The stable
     # order prevents concurrent activation/reassignment flows from observing
     # an intermediate managerless ACTIVE kindergarten.
-    kindergarten_ids = sorted(
-        {kg_id for kg_id in (target_kindergarten_id, previous_kg_id) if kg_id}
-    )
+    kindergarten_ids = sorted({kg_id for kg_id in (target_kindergarten_id, previous_kg_id) if kg_id})
     locked_kindergartens = {
         kg.id: kg
         for kg in (
@@ -204,12 +209,7 @@ def assign_user_as_manager(
             code="kindergarten_frozen",
         )
 
-    locked_user = (
-        db.query(models.User)
-        .filter(models.User.id == user.id)
-        .with_for_update()
-        .first()
-    )
+    locked_user = db.query(models.User).filter(models.User.id == user.id).with_for_update().first()
     if locked_user is None or locked_user.deleted_at is not None:
         raise ManagerAssignmentError(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -228,8 +228,7 @@ def assign_user_as_manager(
     was_supervisor = user.role == models.UserRole.SUPERVISOR
 
     # No-op: user is already the active manager of this exact KG.
-    if was_manager and previous_kg_id == target_kindergarten_id \
-            and user.status == models.UserStatus.ACTIVE:
+    if was_manager and previous_kg_id == target_kindergarten_id and user.status == models.UserStatus.ACTIVE:
         return {"changed": False, "reason": "already_active_manager"}
 
     if was_manager and previous_kg_id and previous_kg_id != target_kindergarten_id:
@@ -277,7 +276,11 @@ def assign_user_as_manager(
         existing_manager.status = models.UserStatus.INACTIVE
         replaced_manager_id = existing_manager.id
         _audit(
-            db, actor_id, "MANAGER_DETACHED", "user", existing_manager.id,
+            db,
+            actor_id,
+            "MANAGER_DETACHED",
+            "user",
+            existing_manager.id,
             f"Manager {existing_manager.id} vacated from kindergarten "
             f"{target_kindergarten_id} to allow replacement by user {user.id}",
         )
@@ -285,7 +288,11 @@ def assign_user_as_manager(
     # C3.1 — detach from previous kindergarten (log the transition).
     if was_manager and previous_kg_id and previous_kg_id != target_kindergarten_id:
         _audit(
-            db, actor_id, "MANAGER_DETACHED", "user", user.id,
+            db,
+            actor_id,
+            "MANAGER_DETACHED",
+            "user",
+            user.id,
             f"User {user.id} detached from previous kindergarten {previous_kg_id} "
             f"before reassignment to {target_kindergarten_id}",
         )
@@ -300,7 +307,11 @@ def assign_user_as_manager(
 
     action = "MANAGER_REASSIGNED" if (was_manager or was_supervisor) else "MANAGER_ASSIGNED"
     _audit(
-        db, actor_id, action, "user", user.id,
+        db,
+        actor_id,
+        action,
+        "user",
+        user.id,
         f"User {user.id} assigned as manager of kindergarten {target_kindergarten_id} "
         f"(previous_kg={previous_kg_id}, was_manager={was_manager}, "
         f"was_supervisor={was_supervisor}, replaced_manager={replaced_manager_id})",
