@@ -1010,7 +1010,8 @@ class AgencyReportsService:
                 models.AttendanceLog.status,
                 func.count(models.AttendanceLog.id).label("count")
             )
-            .join(models.Kindergarten, models.Kindergarten.id == models.AttendanceLog.kindergarten_id)
+            .join(models.Class, models.Class.id == models.AttendanceLog.class_id)
+            .join(models.Kindergarten, models.Kindergarten.id == models.Class.kindergarten_id)
         )
         q = self._apply_kindergarten_geo_filters(q, filters)
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.AttendanceLog.status).all()
