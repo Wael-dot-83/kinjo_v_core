@@ -360,7 +360,7 @@ class Settings(BaseSettings):
         return self.is_production
 
     model_config = ConfigDict(
-        env_file=".env",
+        env_file=os.path.join(_PROJECT_ROOT, ".env"),
         case_sensitive=True,
         extra="ignore"
     )
