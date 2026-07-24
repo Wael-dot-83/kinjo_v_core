@@ -4,9 +4,11 @@ Manager-scoped API endpoints.
 All routes enforce MANAGER role and that every resource belongs to
 the manager's own kindergarten(s).
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime, timezone, timedelta
+
 _JORDAN_TZ = timezone(timedelta(hours=3))
 from utils.time_utils import today_amman as _today
 from typing import Optional
@@ -68,12 +70,7 @@ def _get_daily_report_for_manager_or_404(report_id: int, manager: User, db: Sess
     in another kindergarten returns 404 (never 403) so we don't leak that it
     exists (#6/#14).
     """
-    report = (
-        db.query(DailyReport)
-        .filter(DailyReport.id == report_id)
-        .with_for_update()
-        .first()
-    )
+    report = db.query(DailyReport).filter(DailyReport.id == report_id).with_for_update().first()
     if not report or report.kindergarten_id != manager.kindergarten_id:
         raise HTTPException(status_code=404, detail="Report not found.")
     return report
@@ -98,9 +95,7 @@ def list_classes(
     )
     result = []
     for c in classes:
-        active_sups = [
-            a for a in c.supervisor_assignments if a.deleted_at is None
-        ]
+        active_sups = [a for a in c.supervisor_assignments if a.deleted_at is None]
         result.append(
             {
                 "id": c.id,
@@ -211,13 +206,15 @@ def assign_supervisor_to_class(
         start_date=_today(),
     )
     db.add(assignment)
-    db.add(AuditLog(
-        user_id=current_user.id,
-        action=AuditAction.SUPERVISOR_ASSIGNED,
-        entity_type="class",
-        entity_id=body.class_id,
-        details=f"Manager assigned supervisor {body.supervisor_id} to class {body.class_id} (primary={body.is_primary})",
-    ))
+    db.add(
+        AuditLog(
+            user_id=current_user.id,
+            action=AuditAction.SUPERVISOR_ASSIGNED,
+            entity_type="class",
+            entity_id=body.class_id,
+            details=f"Manager assigned supervisor {body.supervisor_id} to class {body.class_id} (primary={body.is_primary})",
+        )
+    )
     db.commit()
     db.refresh(assignment)
 
@@ -253,13 +250,15 @@ def unassign_supervisor_from_class(
     # Soft-deleting the assignment above is sufficient; the retired legacy
     # Class.supervisor_id column is no longer maintained (D1/B5).
 
-    db.add(AuditLog(
-        user_id=current_user.id,
-        action=AuditAction.SUPERVISOR_UNASSIGNED,
-        entity_type="class",
-        entity_id=class_id,
-        details=f"Manager removed supervisor {supervisor_id} from class {class_id}",
-    ))
+    db.add(
+        AuditLog(
+            user_id=current_user.id,
+            action=AuditAction.SUPERVISOR_UNASSIGNED,
+            entity_type="class",
+            entity_id=class_id,
+            details=f"Manager removed supervisor {supervisor_id} from class {class_id}",
+        )
+    )
     db.commit()
 
 
@@ -288,13 +287,15 @@ def swap_supervisor(
 
     a = SupervisorAssignment(class_id=class_id, supervisor_id=body.supervisor_id, is_primary=True, start_date=_today())
     db.add(a)
-    db.add(AuditLog(
-        user_id=current_user.id,
-        action=AuditAction.REPLACEMENT_SUPERVISOR_ASSIGNED,
-        entity_type="class",
-        entity_id=class_id,
-        details=f"Manager swapped class {class_id} supervisors to new primary {body.supervisor_id}",
-    ))
+    db.add(
+        AuditLog(
+            user_id=current_user.id,
+            action=AuditAction.REPLACEMENT_SUPERVISOR_ASSIGNED,
+            entity_type="class",
+            entity_id=class_id,
+            details=f"Manager swapped class {class_id} supervisors to new primary {body.supervisor_id}",
+        )
+    )
     db.commit()
     return {"class_id": class_id, "new_supervisor_id": body.supervisor_id}
 
@@ -320,12 +321,7 @@ def move_child_between_classes(
     _get_class_or_403(body.to_class_id, current_user, db, require_active=True)
     # Serialize capacity allocation on the destination class. PostgreSQL locks
     # this row until commit; SQLite safely ignores FOR UPDATE in local/test use.
-    to_cls = (
-        db.query(Class)
-        .filter(Class.id == body.to_class_id, Class.deleted_at.is_(None))
-        .with_for_update()
-        .one()
-    )
+    to_cls = db.query(Class).filter(Class.id == body.to_class_id, Class.deleted_at.is_(None)).with_for_update().one()
 
     enrollment = (
         db.query(EnrollmentApplication)
@@ -355,13 +351,15 @@ def move_child_between_classes(
         )
 
     enrollment.class_id = body.to_class_id
-    db.add(AuditLog(
-        user_id=current_user.id,
-        action=AuditAction.CHILD_MOVED_CLASS,
-        entity_type="enrollment",
-        entity_id=enrollment.id,
-        details=f"Manager moved child {body.child_id} from class {body.from_class_id} to class {body.to_class_id}",
-    ))
+    db.add(
+        AuditLog(
+            user_id=current_user.id,
+            action=AuditAction.CHILD_MOVED_CLASS,
+            entity_type="enrollment",
+            entity_id=enrollment.id,
+            details=f"Manager moved child {body.child_id} from class {body.from_class_id} to class {body.to_class_id}",
+        )
+    )
     db.commit()
     return {"child_id": body.child_id, "new_class_id": body.to_class_id}
 
@@ -437,12 +435,16 @@ def list_daily_reports_for_review(
         q = q.filter(DailyReport.date <= to_date)
 
     if supervisor_id:
-        supervisor = db.query(User.id).filter(
-            User.id == supervisor_id,
-            User.role == UserRole.SUPERVISOR,
-            User.kindergarten_id == kg_id,
-            User.deleted_at.is_(None),
-        ).first()
+        supervisor = (
+            db.query(User.id)
+            .filter(
+                User.id == supervisor_id,
+                User.role == UserRole.SUPERVISOR,
+                User.kindergarten_id == kg_id,
+                User.deleted_at.is_(None),
+            )
+            .first()
+        )
         if not supervisor:
             raise HTTPException(status_code=404, detail="Supervisor not found.")
         q = q.filter(DailyReport.submitted_by == supervisor_id)
@@ -463,7 +465,7 @@ def list_daily_reports_for_review(
     stats_total = stats_q.count()
     stats_pending = stats_q.filter(DailyReport.status == DailyReportStatus.SUBMITTED).count()
     stats_sent = stats_q.filter(DailyReport.status == DailyReportStatus.SENT_TO_PARENT).count()
-    today_date = date.today()
+    today_date = _today()
     week_ago_date = today_date - timedelta(days=6)
     stats_today = stats_q.filter(DailyReport.date == today_date).count()
     stats_week = stats_q.filter(DailyReport.date >= week_ago_date).count()
@@ -473,7 +475,9 @@ def list_daily_reports_for_review(
             {
                 "id": r.id,
                 "child_id": r.child_id,
-                "child_name": f"{child_map[r.child_id].first_name} {child_map[r.child_id].last_name}" if r.child_id in child_map else "",
+                "child_name": f"{child_map[r.child_id].first_name} {child_map[r.child_id].last_name}"
+                if r.child_id in child_map
+                else "",
                 "date": str(r.date),
                 "status": r.status.value,
                 "submitted_by": r.submitted_by,
@@ -497,7 +501,7 @@ def list_daily_reports_for_review(
             "sent": stats_sent,
             "today": stats_today,
             "week": stats_week,
-        }
+        },
     }
 
 
@@ -528,19 +532,20 @@ def edit_daily_report(
             detail="Only submitted reports can be edited during manager review.",
         )
 
-    for field in ("notes", "activities", "arrival_time", "leave_time",
-                  "breakfast", "snack", "milk", "lunch"):
+    for field in ("notes", "activities", "arrival_time", "leave_time", "breakfast", "snack", "milk", "lunch"):
         val = getattr(body, field)
         if val is not None:
             setattr(report, field, val)
 
-    db.add(AuditLog(
-        user_id=current_user.id,
-        action=AuditAction.DAILY_REPORT_EDITED,
-        entity_type="daily_report",
-        entity_id=report.id,
-        details=f"Manager edited daily report for child {report.child_id}",
-    ))
+    db.add(
+        AuditLog(
+            user_id=current_user.id,
+            action=AuditAction.DAILY_REPORT_EDITED,
+            entity_type="daily_report",
+            entity_id=report.id,
+            details=f"Manager edited daily report for child {report.child_id}",
+        )
+    )
     db.commit()
     return {"id": report.id, "status": report.status.value}
 
@@ -567,13 +572,15 @@ def send_report_to_parents(
         report.approved_by = current_user.id
         report.approved_at = datetime.now(_JORDAN_TZ)
         report.sent_to_parent_at = report.approved_at
-        db.add(AuditLog(
-            user_id=current_user.id,
-            action=AuditAction.DAILY_REPORT_SENT_TO_PARENT,
-            entity_type="daily_report",
-            entity_id=report.id,
-            details=f"Manager sent daily report for child {report.child_id} to parent",
-        ))
+        db.add(
+            AuditLog(
+                user_id=current_user.id,
+                action=AuditAction.DAILY_REPORT_SENT_TO_PARENT,
+                entity_type="daily_report",
+                entity_id=report.id,
+                details=f"Manager sent daily report for child {report.child_id} to parent",
+            )
+        )
 
         parent_user_id = child.parent.user_id if child.parent else None
         if parent_user_id:
@@ -587,13 +594,15 @@ def send_report_to_parents(
             )
             db.add(notification)
             db.flush()  # assign notification.id before the audit row references it
-            db.add(AuditLog(
-                user_id=current_user.id,
-                action=AuditAction.MESSAGE_SENT,
-                entity_type="message",
-                entity_id=notification.id,
-                details=f"Manager sent daily-report notification to parent {parent_user_id} for child {report.child_id}",
-            ))
+            db.add(
+                AuditLog(
+                    user_id=current_user.id,
+                    action=AuditAction.MESSAGE_SENT,
+                    entity_type="message",
+                    entity_id=notification.id,
+                    details=f"Manager sent daily-report notification to parent {parent_user_id} for child {report.child_id}",
+                )
+            )
 
         db.commit()
     except HTTPException:
@@ -619,13 +628,15 @@ def delete_report(
     if report.status == DailyReportStatus.SENT_TO_PARENT:
         raise HTTPException(status_code=409, detail="Cannot delete a report that has been sent to parents.")
 
-    db.add(AuditLog(
-        user_id=current_user.id,
-        action=AuditAction.DAILY_REPORT_DELETED,
-        entity_type="daily_report",
-        entity_id=report.id,
-        details=f"Manager deleted daily report for child {report.child_id} dated {report.date}",
-    ))
+    db.add(
+        AuditLog(
+            user_id=current_user.id,
+            action=AuditAction.DAILY_REPORT_DELETED,
+            entity_type="daily_report",
+            entity_id=report.id,
+            details=f"Manager deleted daily report for child {report.child_id} dated {report.date}",
+        )
+    )
     db.delete(report)
     db.commit()
 
@@ -651,12 +662,16 @@ class ManagerSupervisorUpdate(BaseModel):
 
 
 def _manager_supervisor_or_404(db: Session, supervisor_id: int, manager: User) -> User:
-    supervisor = db.query(User).filter(
-        User.id == supervisor_id,
-        User.role == UserRole.SUPERVISOR,
-        User.kindergarten_id == manager.kindergarten_id,
-        User.deleted_at.is_(None),
-    ).first()
+    supervisor = (
+        db.query(User)
+        .filter(
+            User.id == supervisor_id,
+            User.role == UserRole.SUPERVISOR,
+            User.kindergarten_id == manager.kindergarten_id,
+            User.deleted_at.is_(None),
+        )
+        .first()
+    )
     if not supervisor:
         raise HTTPException(status_code=404, detail="Supervisor not found.")
     return supervisor
@@ -674,10 +689,16 @@ def create_supervisor(
         validators.validate_password_policy(body.password)
     except validators.ValidationError as exc:
         raise HTTPException(status_code=400, detail=exc.message)
-    duplicate = db.query(User.id).filter(or_(
-        User.username == body.username.strip(),
-        User.email == str(body.email) if body.email else False,
-    )).first()
+    duplicate = (
+        db.query(User.id)
+        .filter(
+            or_(
+                User.username == body.username.strip(),
+                User.email == str(body.email) if body.email else False,
+            )
+        )
+        .first()
+    )
     if duplicate:
         raise HTTPException(status_code=409, detail="Username or email already exists.")
 
@@ -696,11 +717,15 @@ def create_supervisor(
     try:
         db.flush()
         validators.ensure_supervisor_profile(db, supervisor, current_user.kindergarten_id)
-        db.add(AuditLog(
-            user_id=current_user.id, action=AuditAction.STAFF_CREATED,
-            entity_type="user", entity_id=supervisor.id,
-            details=f"Manager created supervisor {supervisor.id}",
-        ))
+        db.add(
+            AuditLog(
+                user_id=current_user.id,
+                action=AuditAction.STAFF_CREATED,
+                entity_type="user",
+                entity_id=supervisor.id,
+                details=f"Manager created supervisor {supervisor.id}",
+            )
+        )
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -743,11 +768,15 @@ def update_supervisor(
                 SupervisorAssignment.deleted_at.is_(None),
             ).update({"deleted_at": now, "end_date": now.date(), "deleted_by": current_user.id})
         supervisor.status = new_status
-    db.add(AuditLog(
-        user_id=current_user.id, action=AuditAction.USER_UPDATED,
-        entity_type="user", entity_id=supervisor.id,
-        details=f"Manager updated supervisor {supervisor.id}",
-    ))
+    db.add(
+        AuditLog(
+            user_id=current_user.id,
+            action=AuditAction.USER_UPDATED,
+            entity_type="user",
+            entity_id=supervisor.id,
+            details=f"Manager updated supervisor {supervisor.id}",
+        )
+    )
     db.commit()
     return {"id": supervisor.id, "status": supervisor.status.value}
 
@@ -772,11 +801,15 @@ def delete_supervisor(
     supervisor.status = models.UserStatus.INACTIVE
     supervisor.deleted_at = now
     supervisor.deleted_by = current_user.id
-    db.add(AuditLog(
-        user_id=current_user.id, action=AuditAction.USER_DELETED,
-        entity_type="user", entity_id=supervisor.id,
-        details=f"Manager removed supervisor {supervisor.id}",
-    ))
+    db.add(
+        AuditLog(
+            user_id=current_user.id,
+            action=AuditAction.USER_DELETED,
+            entity_type="user",
+            entity_id=supervisor.id,
+            details=f"Manager removed supervisor {supervisor.id}",
+        )
+    )
     db.commit()
 
 
@@ -798,23 +831,24 @@ def list_supervisors(
     )
     result = []
     for sup in supervisors:
-        assignments = [
-            a for a in sup.supervisor_assignments if a.deleted_at is None
-        ]
+        assignments = [a for a in sup.supervisor_assignments if a.deleted_at is None]
         classes = [
             {"id": a.class_.id, "name_ar": a.class_.name_ar, "is_primary": a.is_primary}
-            for a in assignments if a.class_
+            for a in assignments
+            if a.class_
         ]
-        result.append({
-            "id": sup.id,
-            "username": sup.username,
-            "full_name": sup.full_name or sup.username,
-            "email": sup.email or "",
-            "phone_number": sup.phone_number or "",
-            "status": sup.status.value,
-            "classes": classes,
-            "last_login_at": sup.last_login_at.isoformat() if sup.last_login_at else None,
-        })
+        result.append(
+            {
+                "id": sup.id,
+                "username": sup.username,
+                "full_name": sup.full_name or sup.username,
+                "email": sup.email or "",
+                "phone_number": sup.phone_number or "",
+                "status": sup.status.value,
+                "classes": classes,
+                "last_login_at": sup.last_login_at.isoformat() if sup.last_login_at else None,
+            }
+        )
     return {"supervisors": result}
 
 
@@ -836,13 +870,17 @@ def list_children(
         filter_class_ids = set(class_ids.keys())
 
     enrollments = (
-        db.query(EnrollmentApplication)
-        .filter(
-            EnrollmentApplication.class_id.in_(filter_class_ids),
-            EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+        (
+            db.query(EnrollmentApplication)
+            .filter(
+                EnrollmentApplication.class_id.in_(filter_class_ids),
+                EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+            )
+            .all()
         )
-        .all()
-    ) if filter_class_ids else []
+        if filter_class_ids
+        else []
+    )
 
     child_ids = [e.child_id for e in enrollments]
     enrollment_map = {e.child_id: e for e in enrollments}
@@ -853,15 +891,17 @@ def list_children(
     for c in children:
         enrollment = enrollment_map.get(c.id)
         class_obj = class_ids.get(enrollment.class_id) if enrollment else None
-        result.append({
-            "id": c.id,
-            "first_name": c.first_name,
-            "last_name": c.last_name,
-            "gender": c.gender.value if c.gender else None,
-            "date_of_birth": str(c.date_of_birth) if c.date_of_birth else None,
-            "class_id": enrollment.class_id if enrollment else None,
-            "class_name_ar": class_obj.name_ar if class_obj else "",
-        })
+        result.append(
+            {
+                "id": c.id,
+                "first_name": c.first_name,
+                "last_name": c.last_name,
+                "gender": c.gender.value if c.gender else None,
+                "date_of_birth": str(c.date_of_birth) if c.date_of_birth else None,
+                "class_id": enrollment.class_id if enrollment else None,
+                "class_name_ar": class_obj.name_ar if class_obj else "",
+            }
+        )
     return {"children": result, "total": len(result)}
 
 

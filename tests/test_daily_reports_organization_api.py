@@ -1,6 +1,8 @@
 from datetime import date, timedelta
 
 import models
+from main import app
+from dependencies import get_current_user
 
 
 def _auth_headers(token: str) -> dict:
@@ -499,3 +501,32 @@ def test_all_kindergartens_filter_respects_pagination(
     assert len(kg["reports"]) == 10
     assert body["pagination"]["total_reports_returned_this_request"] == 10
     assert body["pagination"]["has_more_pages"] is True
+
+
+def test_daily_report_submit_enforces_jordan_deadline(
+    client, test_db, supervisor_user, sample_child, active_enrollment
+):
+    from freezegun import freeze_time
+
+    report = models.DailyReport(
+        child_id=sample_child.id,
+        kindergarten_id=active_enrollment.kindergarten_id,
+        date=date.today(),
+        status=models.DailyReportStatus.DRAFT,
+        submitted_by=supervisor_user.id,
+        arrival_time="08:00",
+    )
+    test_db.add(report)
+    test_db.commit()
+    test_db.refresh(report)
+
+    app.dependency_overrides[get_current_user] = lambda: supervisor_user
+    try:
+        with freeze_time("2026-07-25 16:01:00"):
+            response = client.post(
+                f"/api/daily-reports/{report.id}/submit",
+            )
+        assert response.status_code == 400
+        assert "4:00 PM" in response.text or "deadline" in response.text.lower()
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)

@@ -1,6 +1,7 @@
 """
 Classes domain endpoints
 """
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -28,23 +29,23 @@ def _validate_capacity(capacity_total: int) -> None:
     if capacity_total < lo or capacity_total > hi:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"سعة الصف يجب أن تكون بين {lo} و {hi}. / "
-                f"Class capacity must be between {lo} and {hi}."
-            ),
+            detail=(f"سعة الصف يجب أن تكون بين {lo} و {hi}. / Class capacity must be between {lo} and {hi}."),
         )
 
 
-def _validate_supervisor_for_kindergarten(
-    db: Session, supervisor_id: int, kindergarten_id: int
-) -> models.User:
+def _validate_supervisor_for_kindergarten(db: Session, supervisor_id: int, kindergarten_id: int) -> models.User:
     """Return the supervisor iff they are an ACTIVE, non-deleted SUPERVISOR in the
     same kindergarten; otherwise raise a clear 400. Rejects admins/managers/parents,
     inactive, and soft-deleted users being assigned as a class supervisor (#3)."""
-    supervisor = db.query(models.User).filter(
-        models.User.id == supervisor_id,
-        models.User.deleted_at.is_(None),
-    ).with_for_update().first()
+    supervisor = (
+        db.query(models.User)
+        .filter(
+            models.User.id == supervisor_id,
+            models.User.deleted_at.is_(None),
+        )
+        .with_for_update()
+        .first()
+    )
     if (
         not supervisor
         or supervisor.role != models.UserRole.SUPERVISOR
@@ -82,6 +83,7 @@ def _ensure_supervisor_available(
     if query.first():
         raise HTTPException(status_code=409, detail="Supervisor is already assigned to another class")
 
+
 class ClassCreate(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -95,12 +97,14 @@ class ClassCreate(BaseModel):
     max_age_months: int
     supervisor_id: int
 
+
 class ClassResponse(ClassCreate):
     id: int
     is_active: bool
     supervisor_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class ClassUpdate(BaseModel):
     name_ar: Optional[str] = None
@@ -116,21 +120,19 @@ def _class_response(db: Session, class_obj: models.Class) -> "ClassResponse":
     """Serialize a Class, sourcing supervisor_id from the active primary
     SupervisorAssignment rather than the retired Class.supervisor_id column (D1/B5)."""
     resp = ClassResponse.model_validate(class_obj)
-    resp.supervisor_id = validators.active_primary_supervisor_map(
-        db, [class_obj.id]
-    ).get(class_obj.id)
+    resp.supervisor_id = validators.active_primary_supervisor_map(db, [class_obj.id]).get(class_obj.id)
     return resp
 
 
 @router.post("/classes", status_code=status.HTTP_201_CREATED, response_model=ClassResponse)
 def create_class(
-    class_data: ClassCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    class_data: ClassCreate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Create new class (Manager or Admin)"""
     validators.validate_manager_role(current_user)
-    validators.validate_kindergarten_scope(current_user, class_data.kindergarten_id)
+    from dependencies import ManagerScope
+
+    ManagerScope.assert_kindergarten_access(current_user, class_data.kindergarten_id)
 
     if class_data.max_age_months < class_data.min_age_months:
         raise HTTPException(status_code=400, detail="Max age must be >= min age")
@@ -138,16 +140,11 @@ def create_class(
     _validate_capacity(class_data.capacity_total)
 
     # Supervisor must be an ACTIVE, non-deleted SUPERVISOR in the same kindergarten (#3).
-    _validate_supervisor_for_kindergarten(
-        db, class_data.supervisor_id, class_data.kindergarten_id
-    )
+    _validate_supervisor_for_kindergarten(db, class_data.supervisor_id, class_data.kindergarten_id)
     _ensure_supervisor_available(db, class_data.supervisor_id)
 
     class_dict = class_data.model_dump(exclude={"supervisor_id"})
-    class_obj = models.Class(
-        **class_dict,
-        is_active=True
-    )
+    class_obj = models.Class(**class_dict, is_active=True)
     # The retired legacy Class.supervisor_id column is no longer written; the
     # primary supervisor is recorded only as a SupervisorAssignment below (D1/B5).
 
@@ -161,7 +158,7 @@ def create_class(
             supervisor_id=class_data.supervisor_id,
             is_primary=True,
             full_time_dedication=True,
-            start_date=datetime.now(_JORDAN_TZ).date()
+            start_date=datetime.now(_JORDAN_TZ).date(),
         )
         db.add(assignment)
 
@@ -171,7 +168,7 @@ def create_class(
         action=AuditAction.CLASS_CREATED,
         entity_type="Class",
         entity_id=class_obj.id,
-        sensitivity_level=2
+        sensitivity_level=2,
     )
     db.refresh(class_obj)
 
@@ -185,7 +182,7 @@ def list_classes(
     kindergarten_id: Optional[int] = None,
     is_active: Optional[bool] = None,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """List classes with filtering and current supervisor info"""
     # Soft-deleted classes never appear in normal APIs (#4).
@@ -208,16 +205,21 @@ def list_classes(
     primary_assignments: dict = {}
     if class_ids:
         from sqlalchemy import or_ as _or
-        for assignment in db.query(models.SupervisorAssignment).filter(
-            models.SupervisorAssignment.class_id.in_(class_ids),
-            models.SupervisorAssignment.is_primary == True,
-            models.SupervisorAssignment.deleted_at.is_(None),
-            models.SupervisorAssignment.start_date <= today,
-            _or(
-                models.SupervisorAssignment.end_date == None,
-                models.SupervisorAssignment.end_date >= today,
-            ),
-        ).all():
+
+        for assignment in (
+            db.query(models.SupervisorAssignment)
+            .filter(
+                models.SupervisorAssignment.class_id.in_(class_ids),
+                models.SupervisorAssignment.is_primary == True,
+                models.SupervisorAssignment.deleted_at.is_(None),
+                models.SupervisorAssignment.start_date <= today,
+                _or(
+                    models.SupervisorAssignment.end_date == None,
+                    models.SupervisorAssignment.end_date >= today,
+                ),
+            )
+            .all()
+        ):
             # Keep first (earliest) match per class
             if assignment.class_id not in primary_assignments:
                 primary_assignments[assignment.class_id] = assignment
@@ -230,16 +232,18 @@ def list_classes(
             s_user = assignment.supervisor
             current_supervisor = {"id": s_user.id, "name": s_user.username}
 
-        result.append({
-            "id": c.id,
-            "name_ar": c.name_ar,
-            "name_en": c.name_en,
-            "min_age_months": c.min_age_months,
-            "max_age_months": c.max_age_months,
-            "capacity_total": c.capacity_total,
-            "is_active": c.is_active,
-            "current_supervisor": current_supervisor,
-        })
+        result.append(
+            {
+                "id": c.id,
+                "name_ar": c.name_ar,
+                "name_en": c.name_en,
+                "min_age_months": c.min_age_months,
+                "max_age_months": c.max_age_months,
+                "capacity_total": c.capacity_total,
+                "is_active": c.is_active,
+                "current_supervisor": current_supervisor,
+            }
+        )
 
     return {"classes": result}
 
@@ -254,12 +258,19 @@ def get_class_required_supervisors(
     # Enforce role + kindergarten scope; cross-tenant/soft-deleted -> 404 (#2).
     cls = get_class_for_user_or_404(db, class_id, current_user)
     age_group = cls.age_group or "AGE_2_4"
-    children_count = cls.enrolled_children_count if hasattr(cls, 'enrolled_children_count') and cls.enrolled_children_count else 0
+    children_count = (
+        cls.enrolled_children_count if hasattr(cls, "enrolled_children_count") and cls.enrolled_children_count else 0
+    )
     try:
         count = validators.calculate_required_supervisors(age_group, children_count)
     except (validators.ValidationError, ValueError, TypeError) as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return {"required_supervisors": count, "age_group": age_group, "children_count": children_count, "class_id": class_id}
+    return {
+        "required_supervisors": count,
+        "age_group": age_group,
+        "children_count": children_count,
+        "class_id": class_id,
+    }
 
 
 @router.get("/classes/required-supervisors")
@@ -267,7 +278,7 @@ def get_required_supervisors(
     age_group: str = Query(...),
     children_count: int = Query(...),
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Preview policy-based required supervisor count for an age group and children count."""
     validators.validate_manager_role(current_user)
@@ -283,54 +294,60 @@ def get_eligible_supervisors(
     kindergarten_id: int = Query(...),
     class_id: Optional[int] = Query(None),
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """List supervisors eligible for assignment. Filters out those already assigned to another class."""
     validators.validate_manager_role(current_user)
-    validators.validate_kindergarten_scope(current_user, kindergarten_id)
+    from dependencies import ManagerScope
+
+    ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
 
     today = datetime.now(_JORDAN_TZ).date()
     # Get all supervisors in this kindergarten
-    supervisors = db.query(models.User).filter(
-        models.User.kindergarten_id == kindergarten_id,
-        models.User.role == models.UserRole.SUPERVISOR,
-        models.User.status == models.UserStatus.ACTIVE
-    ).all()
+    supervisors = (
+        db.query(models.User)
+        .filter(
+            models.User.kindergarten_id == kindergarten_id,
+            models.User.role == models.UserRole.SUPERVISOR,
+            models.User.status == models.UserStatus.ACTIVE,
+        )
+        .all()
+    )
 
     # Get IDs of supervisors currently assigned to any class (active assignments).
     # A soft-deleted assignment must NOT make a supervisor look ineligible (#16).
     assigned_query = db.query(models.SupervisorAssignment.supervisor_id).filter(
         models.SupervisorAssignment.deleted_at.is_(None),
         models.SupervisorAssignment.start_date <= today,
-        or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= today)
+        or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= today),
     )
     # If class_id specified, exclude assignments TO that class (they remain eligible)
     if class_id is not None:
         assigned_query = assigned_query.filter(models.SupervisorAssignment.class_id != class_id)
     assigned_ids = {row[0] for row in assigned_query.all()}
 
-    result = [
-        {"id": s.id, "username": s.username, "email": s.email}
-        for s in supervisors if s.id not in assigned_ids
-    ]
+    result = [{"id": s.id, "username": s.username, "email": s.email} for s in supervisors if s.id not in assigned_ids]
     return {"supervisors": result}
 
 
 @router.get("/classes/{class_id}/capacity-status")
 def get_class_capacity_status(
-    class_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    class_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get current enrollment vs capacity for a class"""
     # Enforce role + kindergarten scope; cross-tenant/soft-deleted -> 404 (#1).
     class_obj = get_class_for_user_or_404(db, class_id, current_user)
 
     # Count active enrollments assigned to this class
-    enrolled_count = db.query(func.count(models.EnrollmentApplication.id)).filter(
-        models.EnrollmentApplication.class_id == class_id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-    ).scalar() or 0
+    enrolled_count = (
+        db.query(func.count(models.EnrollmentApplication.id))
+        .filter(
+            models.EnrollmentApplication.class_id == class_id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        )
+        .scalar()
+        or 0
+    )
 
     return {
         "class_id": class_id,
@@ -338,16 +355,14 @@ def get_class_capacity_status(
         "capacity_total": class_obj.capacity_total,
         "enrolled_count": enrolled_count,
         "available_spots": class_obj.capacity_total - enrolled_count,
-        "utilization_percent": round((enrolled_count / class_obj.capacity_total) * 100, 2) if class_obj.capacity_total > 0 else 0
+        "utilization_percent": round((enrolled_count / class_obj.capacity_total) * 100, 2)
+        if class_obj.capacity_total > 0
+        else 0,
     }
 
 
 @router.get("/classes/{class_id}", response_model=ClassResponse)
-def get_class(
-    class_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+def get_class(class_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get a specific class by ID"""
     # Cross-tenant / soft-deleted -> 404 (no existence leak); wrong role -> 403 (#4/#14).
     class_obj = get_class_for_user_or_404(db, class_id, current_user)
@@ -359,7 +374,7 @@ def update_class(
     class_id: int,
     class_data: ClassUpdate,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Update class details (Manager or Admin)"""
     validators.validate_manager_role(current_user)
@@ -368,7 +383,7 @@ def update_class(
     class_obj = get_class_for_user_or_404(db, class_id, current_user)
 
     # Validate age range if provided
-    if hasattr(class_data, 'max_age_months') and hasattr(class_data, 'min_age_months'):
+    if hasattr(class_data, "max_age_months") and hasattr(class_data, "min_age_months"):
         if class_data.max_age_months is not None and class_data.min_age_months is not None:
             if class_data.max_age_months < class_data.min_age_months:
                 raise HTTPException(status_code=400, detail="Max age must be >= min age")
@@ -381,12 +396,8 @@ def update_class(
     if class_data.supervisor_id is not None:
         if not class_obj.is_active:
             raise HTTPException(status_code=409, detail="Cannot assign a supervisor to an inactive class")
-        _validate_supervisor_for_kindergarten(
-            db, class_data.supervisor_id, class_obj.kindergarten_id
-        )
-        _ensure_supervisor_available(
-            db, class_data.supervisor_id, exclude_class_id=class_obj.id
-        )
+        _validate_supervisor_for_kindergarten(db, class_data.supervisor_id, class_obj.kindergarten_id)
+        _ensure_supervisor_available(db, class_data.supervisor_id, exclude_class_id=class_obj.id)
 
     # supervisor_id is handled separately: the primary supervisor lives only in
     # SupervisorAssignment now (the legacy Class.supervisor_id column is retired).
@@ -397,26 +408,26 @@ def update_class(
         setattr(class_obj, field, value)
 
     if supervisor_id_changed:
-        current_primary = validators.active_primary_supervisor_map(
-            db, [class_obj.id]
-        ).get(class_obj.id)
+        current_primary = validators.active_primary_supervisor_map(db, [class_obj.id]).get(class_obj.id)
         if new_supervisor_id != current_primary:
             validators.retire_active_primary_assignment(db, class_obj.id)
             if new_supervisor_id is not None:
-                db.add(models.SupervisorAssignment(
-                    class_id=class_obj.id,
-                    supervisor_id=new_supervisor_id,
-                    is_primary=True,
-                    full_time_dedication=True,
-                    start_date=datetime.now(_JORDAN_TZ).date(),
-                ))
+                db.add(
+                    models.SupervisorAssignment(
+                        class_id=class_obj.id,
+                        supervisor_id=new_supervisor_id,
+                        is_primary=True,
+                        full_time_dedication=True,
+                        start_date=datetime.now(_JORDAN_TZ).date(),
+                    )
+                )
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
         action=AuditAction.CLASS_UPDATED,
         entity_type="Class",
         entity_id=class_obj.id,
-        sensitivity_level=2
+        sensitivity_level=2,
     )
     db.refresh(class_obj)
 
@@ -425,9 +436,7 @@ def update_class(
 
 @router.put("/classes/{class_id}/deactivate")
 def deactivate_class(
-    class_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    class_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Deactivate class (soft delete - Manager or Admin)"""
     validators.validate_manager_role(current_user)
@@ -446,15 +455,19 @@ def deactivate_class(
     if not active_like_statuses:
         active_like_statuses = [models.EnrollmentStatus.ACTIVE]
 
-    active_like_enrollments = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.class_id == class_id,
-        models.EnrollmentApplication.status.in_(active_like_statuses)
-    ).count()
+    active_like_enrollments = (
+        db.query(models.EnrollmentApplication)
+        .filter(
+            models.EnrollmentApplication.class_id == class_id,
+            models.EnrollmentApplication.status.in_(active_like_statuses),
+        )
+        .count()
+    )
 
     if active_like_enrollments > 0:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot deactivate class with {active_like_enrollments} active enrollment(s). Move children to other classes first."
+            detail=f"Cannot deactivate class with {active_like_enrollments} active enrollment(s). Move children to other classes first.",
         )
 
     class_obj.is_active = False
@@ -466,18 +479,14 @@ def deactivate_class(
         action=AuditAction.CLASS_DEACTIVATED,
         entity_type="Class",
         entity_id=class_obj.id,
-        sensitivity_level=2
+        sensitivity_level=2,
     )
 
     return {"message": "Class deactivated successfully", "class_id": class_id}
 
 
 @router.delete("/classes/{class_id}")
-def delete_class(
-    class_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+def delete_class(class_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Hard delete class (Admin only, when no dependencies exist)"""
     if current_user.role != models.UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admin access required for permanent deletion")
@@ -487,18 +496,18 @@ def delete_class(
         raise HTTPException(status_code=404, detail="Class not found")
 
     # Check for any dependencies
-    enrollment_count = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.class_id == class_id
-    ).count()
+    enrollment_count = (
+        db.query(models.EnrollmentApplication).filter(models.EnrollmentApplication.class_id == class_id).count()
+    )
 
-    supervisor_assignment_count = db.query(models.SupervisorAssignment).filter(
-        models.SupervisorAssignment.class_id == class_id
-    ).count()
+    supervisor_assignment_count = (
+        db.query(models.SupervisorAssignment).filter(models.SupervisorAssignment.class_id == class_id).count()
+    )
 
     if enrollment_count > 0 or supervisor_assignment_count > 0:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot delete class with existing dependencies: {enrollment_count} enrollment(s), {supervisor_assignment_count} supervisor assignment(s)"
+            detail=f"Cannot delete class with existing dependencies: {enrollment_count} enrollment(s), {supervisor_assignment_count} supervisor assignment(s)",
         )
 
     db.delete(class_obj)
@@ -510,7 +519,7 @@ def delete_class(
         action=AuditAction.CLASS_DELETED,
         entity_type="Class",
         entity_id=class_id,
-        sensitivity_level=3
+        sensitivity_level=3,
     )
 
     return {"message": "Class permanently deleted", "class_id": class_id}
@@ -520,27 +529,32 @@ def delete_class(
 # Class Assignment Endpoint
 # ============================================================================
 
+
 @router.post("/enrollments/{enrollment_id}/assign-class")
 def assign_child_to_class(
     enrollment_id: int,
     class_id: int,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Assign an accepted or active enrollment to a class (Manager only)."""
     validators.validate_manager_role(current_user)
 
     # Get enrollment
-    enrollment = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.id == enrollment_id
-    ).with_for_update().first()
+    enrollment = (
+        db.query(models.EnrollmentApplication)
+        .filter(models.EnrollmentApplication.id == enrollment_id)
+        .with_for_update()
+        .first()
+    )
 
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
 
-
     # Scope before lifecycle validation to avoid a cross-tenant status oracle.
-    validators.validate_kindergarten_scope(current_user, enrollment.kindergarten_id)
+    from dependencies import ManagerScope
+
+    ManagerScope.assert_kindergarten_access(current_user, enrollment.kindergarten_id)
 
     if enrollment.status not in {
         models.EnrollmentStatus.ACCEPTED,
@@ -551,14 +565,21 @@ def assign_child_to_class(
     # Auto-mark profiles complete if all required data is present
     profile_complete, missing_fields = validators.mark_profile_complete_if_ready(db, enrollment.child_id)
     if not profile_complete:
-        raise HTTPException(status_code=400, detail={"message": "Child profile incomplete", "missing_fields": missing_fields})
+        raise HTTPException(
+            status_code=400, detail={"message": "Child profile incomplete", "missing_fields": missing_fields}
+        )
 
     # Get class — row-level lock prevents double-booking (see api/enrollment.py review_enrollment).
     # Soft-deleted classes are not assignable (#4).
-    class_obj = db.query(models.Class).filter(
-        models.Class.id == class_id,
-        models.Class.deleted_at.is_(None),
-    ).with_for_update().first()
+    class_obj = (
+        db.query(models.Class)
+        .filter(
+            models.Class.id == class_id,
+            models.Class.deleted_at.is_(None),
+        )
+        .with_for_update()
+        .first()
+    )
 
     if not class_obj:
         raise HTTPException(status_code=404, detail="Class not found")
@@ -571,18 +592,21 @@ def assign_child_to_class(
     child = enrollment.child
     try:
         validators.validate_age_band_eligibility(
-            child.date_of_birth,
-            class_obj.min_age_months,
-            class_obj.max_age_months
+            child.date_of_birth, class_obj.min_age_months, class_obj.max_age_months
         )
     except validators.ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     # Check capacity
-    enrolled_count = db.query(func.count(models.EnrollmentApplication.id)).filter(
-        models.EnrollmentApplication.class_id == class_id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-    ).scalar() or 0
+    enrolled_count = (
+        db.query(func.count(models.EnrollmentApplication.id))
+        .filter(
+            models.EnrollmentApplication.class_id == class_id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        )
+        .scalar()
+        or 0
+    )
 
     if enrolled_count >= class_obj.capacity_total:
         raise HTTPException(status_code=400, detail="Class is at full capacity")
@@ -590,7 +614,9 @@ def assign_child_to_class(
     # Assign to class
     before_state = {
         "class_id": enrollment.class_id,
-        "class_assignment_date": enrollment.class_assignment_date.isoformat() if enrollment.class_assignment_date else None,
+        "class_assignment_date": enrollment.class_assignment_date.isoformat()
+        if enrollment.class_assignment_date
+        else None,
     }
     enrollment.class_id = class_id
     enrollment.class_assignment_date = datetime.now(_JORDAN_TZ).date()
@@ -609,7 +635,10 @@ def assign_child_to_class(
         details=f"Child {child.first_name} {child.last_name} assigned to class {class_obj.name_en}",
         sensitivity_level=2,
         old_data=before_state,
-        new_data={"class_id": enrollment.class_id, "class_assignment_date": enrollment.class_assignment_date.isoformat()}
+        new_data={
+            "class_id": enrollment.class_id,
+            "class_assignment_date": enrollment.class_assignment_date.isoformat(),
+        },
     )
 
     return {
@@ -617,5 +646,5 @@ def assign_child_to_class(
         "child_id": enrollment.child_id,
         "class_id": class_id,
         "class_name": class_obj.name_en or class_obj.name_ar,
-        "assignment_date": enrollment.class_assignment_date
+        "assignment_date": enrollment.class_assignment_date,
     }

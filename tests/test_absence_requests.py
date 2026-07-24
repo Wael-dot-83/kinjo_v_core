@@ -406,6 +406,7 @@ class TestManagerApprove:
 
     def test_decision_state_changes_use_atomic_conditional_updates(self):
         import api.absence_requests as endpoint
+        import inspect
 
         for handler in (
             endpoint.cancel_absence_request,
@@ -414,7 +415,7 @@ class TestManagerApprove:
         ):
             source = inspect.getsource(handler)
             assert "AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED" in source
-            assert ").update(" in source
+            assert ".update(" in source
             assert "transitioned != 1" in source
 
 
@@ -756,4 +757,11 @@ class TestCrossKGScope:
             json={},
             headers=other_headers,
         )
-        assert approve_resp.status_code == 403
+        assert approve_resp.status_code == 404
+
+        reject_resp = client.post(
+            f"/api/absence-requests/{rid}/reject",
+            json={},
+            headers=other_headers,
+        )
+        assert reject_resp.status_code == 404
