@@ -171,6 +171,41 @@ class TestInstitutionsActiveLicensed:
         assert "active_institutions" in payload["summary"]
         assert payload["summary"]["active_institutions"] <= payload["summary"]["total_institutions"]
 
+    def test_license_summary_uses_real_license_fields(self, test_db):
+        """The report title claims 'active AND licensed'. Verify licensing is
+        computed from license_valid_until — licensed(valid)/expired/missing must
+        partition every institution, and active∩licensed is bounded correctly."""
+        from datetime import date as _date, timedelta as _td
+
+        def _kg(name, phone, status, valid_until):
+            return models.Kindergarten(
+                name_ar=name, governorate="العاصمة", district="عمان", area="a",
+                address_line="a", contact_phone=phone, status=status,
+                license_valid_until=valid_until,
+            )
+
+        today = _date.today()
+        test_db.add_all([
+            _kg("نشطة سارية", "0790000201", models.KindergartenStatus.ACTIVE, today + _td(days=365)),
+            _kg("نشطة منتهية", "0790000202", models.KindergartenStatus.ACTIVE, today - _td(days=10)),
+            _kg("غير نشطة سارية", "0790000203", models.KindergartenStatus.INACTIVE, today + _td(days=365)),
+            _kg("نشطة بلا ترخيص", "0790000204", models.KindergartenStatus.ACTIVE, None),
+        ])
+        test_db.commit()
+        s = AgencyReportsService(test_db).generate_report(
+            "dos", "institutions_active_licensed", {}
+        )["summary"]
+        assert s["total_institutions"] == 4
+        assert s["active_institutions"] == 3
+        assert s["licensed_institutions"] == 2      # two valid, unexpired
+        assert s["active_and_licensed"] == 1        # only the active+valid one
+        assert s["expired_licenses"] == 1
+        assert s["missing_license_data"] == 1
+        # valid + expired + missing must partition the whole population
+        assert (s["licensed_institutions"] + s["expired_licenses"]
+                + s["missing_license_data"]) == s["total_institutions"]
+        assert s["active_and_licensed"] <= min(s["active_institutions"], s["licensed_institutions"])
+
     def test_governorate_filter_drill_down(self, client, test_db):
         _make_admin(test_db)
         _seed_kindergartens(test_db)

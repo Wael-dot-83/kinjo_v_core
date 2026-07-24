@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session
 
 import models
@@ -386,6 +386,10 @@ _FIELD_LABELS: dict[str, str] = {
     "enrolled_children": "الأطفال المسجلون",
     "total_institutions": "إجمالي المؤسسات",
     "active_institutions": "المؤسسات النشطة",
+    "licensed_institutions": "المؤسسات المرخّصة (سارية)",
+    "active_and_licensed": "نشطة ومرخّصة",
+    "expired_licenses": "تراخيص منتهية",
+    "missing_license_data": "بدون بيانات ترخيص",
     "total_capacity": "الطاقة الاستيعابية",
     "total_enrolled": "العدد الفعلي للمسجلين",
     "occupancy_rate_pct": "نسبة الإشغال %",
@@ -1031,7 +1035,35 @@ class AgencyReportsService:
         total = sum(r["count"] for r in breakdowns)
         # Aggregate from the raw enum, not the localized display label.
         active = sum(_safe_int(r.count) for r in rows if _enum_value(r.status) == "ACTIVE")
-        return self._payload(agency_code, agency, report_code, report, filters, {"total_institutions": total, "active_institutions": active}, breakdowns)
+
+        # Licensing (the "المرخّصة" half of the title): computed from the real
+        # license_valid_until field over the same filtered population. A license
+        # is "licensed/valid" when it has not expired; "expired" when a past
+        # expiry date exists; "missing" when there is no license record at all —
+        # missing is never silently folded into unlicensed=valid or into zero.
+        today = datetime.now(_JORDAN_TZ).date()
+        _active = models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+        _valid = models.Kindergarten.license_valid_until >= today
+        lic_q = self.db.query(
+            func.sum(case((_valid, 1), else_=0)).label("licensed"),
+            func.sum(case((and_(_active, _valid), 1), else_=0)).label("active_licensed"),
+            func.sum(case((models.Kindergarten.license_valid_until < today, 1), else_=0)).label("expired"),
+            func.sum(case((models.Kindergarten.license_valid_until.is_(None), 1), else_=0)).label("missing"),
+        )
+        lic_q = self._apply_kindergarten_geo_filters(lic_q, filters)
+        if _kg_status is not None:
+            lic_q = lic_q.filter(models.Kindergarten.status == _kg_status)
+        lic = lic_q.one()
+
+        summary = {
+            "total_institutions": total,
+            "active_institutions": active,
+            "licensed_institutions": _safe_int(lic.licensed),
+            "active_and_licensed": _safe_int(lic.active_licensed),
+            "expired_licenses": _safe_int(lic.expired),
+            "missing_license_data": _safe_int(lic.missing),
+        }
+        return self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns)
 
     def _dos_capacity_occupancy(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
         q = (
