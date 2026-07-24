@@ -1,6 +1,7 @@
 """
 Daily Reports domain endpoints
 """
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -20,6 +21,7 @@ from database import get_db
 from dependencies import get_current_user
 
 router = APIRouter(tags=["Daily Reports"])
+
 
 class DailyReportCreateRequest(BaseModel):
     child_id: int
@@ -49,7 +51,7 @@ class DailyReportCreateRequest(BaseModel):
     @field_validator("arrival_time", "leave_time")
     @classmethod
     def time_format_hhmm(cls, v: str) -> str:
-        if not re.match(r'^([01]\d|2[0-3]):[0-5]\d$', v):
+        if not re.match(r"^([01]\d|2[0-3]):[0-5]\d$", v):
             raise ValueError("time must be in HH:MM format (24-hour)")
         return v
 
@@ -58,28 +60,32 @@ class DailyReportCreateRequest(BaseModel):
 def create_daily_report(
     report_data: DailyReportCreateRequest,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Create a new daily report (Supervisor only)"""
     if current_user.role != models.UserRole.SUPERVISOR:
         raise HTTPException(status_code=403, detail="Only supervisors can create daily reports")
-    
+
     # Verify child exists
     child = db.query(models.Child).filter(models.Child.id == report_data.child_id).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
-        
+
     # Verify active enrollment and scope
-    active_enrollment = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.child_id == report_data.child_id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-    ).first()
-    
+    active_enrollment = (
+        db.query(models.EnrollmentApplication)
+        .filter(
+            models.EnrollmentApplication.child_id == report_data.child_id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        )
+        .first()
+    )
+
     if not active_enrollment:
-         raise HTTPException(status_code=400, detail="Child not active in any class")
-         
+        raise HTTPException(status_code=400, detail="Child not active in any class")
+
     validators.validate_kindergarten_scope(current_user, active_enrollment.kindergarten_id)
-    
+
     # Validate date
     report_date = date.fromisoformat(report_data.date)
     if report_date > datetime.now(_JORDAN_TZ).date():
@@ -95,23 +101,27 @@ def create_daily_report(
         raise HTTPException(status_code=400, detail="Date is not a working day for this kindergarten")
 
     # Ensure only one report per child per day
-    existing = db.query(models.DailyReport).filter(
-        models.DailyReport.child_id == report_data.child_id,
-        models.DailyReport.date == report_date
-    ).first()
+    existing = (
+        db.query(models.DailyReport)
+        .filter(models.DailyReport.child_id == report_data.child_id, models.DailyReport.date == report_date)
+        .first()
+    )
     if existing:
         raise HTTPException(status_code=409, detail="Daily report for this child and date already exists")
 
     # If supervisor, ensure they are assigned to the child's class on that date
     if current_user.role == models.UserRole.SUPERVISOR:
-        assignment = db.query(models.SupervisorAssignment).join(
-            models.Class, models.Class.id == models.SupervisorAssignment.class_id
-        ).filter(
-            models.SupervisorAssignment.supervisor_id == current_user.id,
-            models.SupervisorAssignment.class_id == active_enrollment.class_id,
-            models.SupervisorAssignment.start_date <= report_date,
-            (models.SupervisorAssignment.end_date == None) | (models.SupervisorAssignment.end_date >= report_date)
-        ).first()
+        assignment = (
+            db.query(models.SupervisorAssignment)
+            .join(models.Class, models.Class.id == models.SupervisorAssignment.class_id)
+            .filter(
+                models.SupervisorAssignment.supervisor_id == current_user.id,
+                models.SupervisorAssignment.class_id == active_enrollment.class_id,
+                models.SupervisorAssignment.start_date <= report_date,
+                (models.SupervisorAssignment.end_date == None) | (models.SupervisorAssignment.end_date >= report_date),
+            )
+            .first()
+        )
         if not assignment:
             raise HTTPException(status_code=403, detail="Supervisor not assigned to this class on the report date")
     report = models.DailyReport(
@@ -129,7 +139,7 @@ def create_daily_report(
         nap_start=report_data.nap_start,
         nap_end=report_data.nap_end,
         activities=report_data.activities,
-        notes=report_data.notes
+        notes=report_data.notes,
     )
     db.add(report)
     try:
@@ -147,26 +157,19 @@ def create_daily_report(
         "id": report.id,
         "child_id": report.child_id,
         "date": report.date.isoformat(),
-        "status": report.status.value.lower()
+        "status": report.status.value.lower(),
     }
 
 
 @router.post("/daily-reports/{report_id}/submit")
 def submit_daily_report(
-    report_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    report_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Submit daily report for approval — Supervisor only, must own the report."""
     if current_user.role != models.UserRole.SUPERVISOR:
         raise HTTPException(status_code=403, detail="Only supervisors can submit daily reports")
 
-    report = (
-        db.query(models.DailyReport)
-        .filter(models.DailyReport.id == report_id)
-        .with_for_update()
-        .first()
-    )
+    report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).with_for_update().first()
 
     if not report:
         raise HTTPException(status_code=404, detail="Daily report not found")
@@ -176,34 +179,29 @@ def submit_daily_report(
 
     if report.status != models.DailyReportStatus.DRAFT:
         raise HTTPException(status_code=400, detail="Only draft reports can be submitted")
-    
+
+    validators.validate_daily_report_deadline()
+
     report.status = models.DailyReportStatus.SUBMITTED
     report.submitted_at = datetime.now(_JORDAN_TZ)
     db.commit()
     db.refresh(report)
-    
+
     return {
         "id": report.id,
         "status": report.status.value.lower(),
-        "submitted_at": report.submitted_at.isoformat() if report.submitted_at else None
+        "submitted_at": report.submitted_at.isoformat() if report.submitted_at else None,
     }
 
 
 @router.post("/daily-reports/{report_id}/approve")
 def approve_daily_report(
-    report_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    report_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Approve a daily report (Manager only)"""
     validators.validate_manager_role(current_user)
-    
-    report = (
-        db.query(models.DailyReport)
-        .filter(models.DailyReport.id == report_id)
-        .with_for_update()
-        .first()
-    )
+
+    report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).with_for_update().first()
 
     if not report:
         raise HTTPException(status_code=404, detail="Daily report not found")
@@ -215,25 +213,23 @@ def approve_daily_report(
 
     if report.status != models.DailyReportStatus.SUBMITTED:
         raise HTTPException(status_code=400, detail="Only submitted reports can be approved")
-    
+
     report.status = models.DailyReportStatus.APPROVED
     report.approved_by = current_user.id
     report.approved_at = datetime.now(_JORDAN_TZ)
     db.commit()
     db.refresh(report)
-    
+
     return {
         "id": report.id,
         "status": report.status.value.lower(),
-        "approved_at": report.approved_at.isoformat() if report.approved_at else None
+        "approved_at": report.approved_at.isoformat() if report.approved_at else None,
     }
 
 
 @router.get("/daily-reports/child/{child_id}")
 def get_child_daily_reports(
-    child_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    child_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get daily reports for a child (parents only see approved reports)"""
     # Verify child exists
@@ -248,24 +244,28 @@ def get_child_daily_reports(
             raise HTTPException(status_code=403, detail="Forbidden")
     elif current_user.role != models.UserRole.ADMIN:
         # Supervisors and managers are scoped to their kindergarten
-        enrollment = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == child_id,
-            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
-            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
-        ).first()
+        enrollment = (
+            db.query(models.EnrollmentApplication)
+            .filter(
+                models.EnrollmentApplication.child_id == child_id,
+                models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+                models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+            )
+            .first()
+        )
         if not enrollment:
             raise HTTPException(status_code=403, detail="Child not in your kindergarten scope")
 
     query = db.query(models.DailyReport).filter(models.DailyReport.child_id == child_id)
     if current_user.role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
         query = query.filter(models.DailyReport.kindergarten_id == current_user.kindergarten_id)
-    
+
     # Explicit manager delivery is the publication boundary.
     if current_user.role == models.UserRole.PARENT:
         query = query.filter(models.DailyReport.status == models.DailyReportStatus.SENT_TO_PARENT)
-    
+
     reports = query.order_by(models.DailyReport.date.desc()).all()
-    
+
     return {
         "reports": [
             {
@@ -275,7 +275,7 @@ def get_child_daily_reports(
                 "arrival_time": r.arrival_time,
                 "leave_time": r.leave_time,
                 "activities": r.activities,
-                "notes": r.notes
+                "notes": r.notes,
             }
             for r in reports
         ]
@@ -284,9 +284,7 @@ def get_child_daily_reports(
 
 @router.get("/daily-reports/{report_id}")
 def get_daily_report_by_id(
-    report_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    report_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get a single daily report by ID"""
     report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()
@@ -298,9 +296,7 @@ def get_daily_report_by_id(
     # current enrollment, so transfers cannot create cross-tenant disclosure.
     if current_user.role == models.UserRole.PARENT:
         child = db.query(models.Child).filter(models.Child.id == report.child_id).first()
-        parent_profile = db.query(models.ParentProfile).filter(
-            models.ParentProfile.user_id == current_user.id
-        ).first()
+        parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
         if not parent_profile or not child or child.parent_id != parent_profile.id:
             raise HTTPException(status_code=403, detail="Forbidden")
         if report.status != models.DailyReportStatus.SENT_TO_PARENT:
@@ -355,16 +351,18 @@ def record_daily_report_view(
     if not child:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
+    parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
     if not parent_profile or child.parent_id != parent_profile.id:
         raise HTTPException(status_code=403, detail="Access denied to this report")
 
-    existing = db.query(models.DailyReportView).filter(
-        models.DailyReportView.daily_report_id == report_id,
-        models.DailyReportView.parent_user_id == current_user.id,
-    ).first()
+    existing = (
+        db.query(models.DailyReportView)
+        .filter(
+            models.DailyReportView.daily_report_id == report_id,
+            models.DailyReportView.parent_user_id == current_user.id,
+        )
+        .first()
+    )
     if existing:
         return {"status": "already_recorded"}
 

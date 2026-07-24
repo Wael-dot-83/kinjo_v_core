@@ -677,13 +677,13 @@ class TestAbsenceDecisionScope:
     def test_foreign_manager_cannot_approve(self, client, manager_kg_b, absence_kg_a):
         app.dependency_overrides[get_current_user] = lambda: manager_kg_b
         r = client.post(f"/api/absence-requests/{absence_kg_a.id}/approve", json={})
-        assert r.status_code == 403
+        assert r.status_code == 404
         app.dependency_overrides.clear()
 
     def test_foreign_manager_cannot_reject(self, client, manager_kg_b, absence_kg_a):
         app.dependency_overrides[get_current_user] = lambda: manager_kg_b
         r = client.post(f"/api/absence-requests/{absence_kg_a.id}/reject", json={})
-        assert r.status_code == 403
+        assert r.status_code == 404
         app.dependency_overrides.clear()
 
     def test_own_manager_approve_writes_audit(
@@ -1300,6 +1300,86 @@ class TestManagerProductionBlockers:
             "full_name": "Forbidden Update",
         })
         assert foreign.status_code == 404
+        app.dependency_overrides.clear()
+
+
+class TestCrossKindergarten404Policy:
+    """P1 — cross-tenant access must return 404, not 403, to avoid existence leaks."""
+
+    def test_create_class_cross_kg_returns_404(self, client, manager_kg_a, kg_b, supervisor_kg_b):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        resp = client.post("/api/classes", json={
+            "kindergarten_id": kg_b.id,
+            "name_ar": "صف أخرى",
+            "name_en": "Other Class",
+            "class_code": "C-XKG",
+            "age_group": "AGE_1_2",
+            "capacity_total": 5,
+            "min_age_months": 12,
+            "max_age_months": 36,
+            "supervisor_id": supervisor_kg_b.id,
+        })
+        assert resp.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_eligible_supervisors_cross_kg_returns_404(self, client, manager_kg_a, kg_b):
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        resp = client.get(f"/api/classes/eligible-supervisors?kindergarten_id={kg_b.id}")
+        assert resp.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_assign_class_cross_kg_returns_404(self, client, test_db, manager_kg_a, kg_b, sample_child):
+        other_enrollment = models.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=kg_b.id,
+            status=models.EnrollmentStatus.ACCEPTED,
+        )
+        test_db.add(other_enrollment)
+        test_db.commit()
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        resp = client.post(f"/api/enrollments/{other_enrollment.id}/assign-class?class_id=1")
+        assert resp.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_portfolio_publish_cross_kg_returns_404(self, client, test_db, manager_kg_a, kg_b, sample_child):
+        other_enrollment = models.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=kg_b.id,
+            status=models.EnrollmentStatus.ACTIVE,
+        )
+        test_db.add(other_enrollment)
+        test_db.commit()
+        portfolio = models.Portfolio(
+            child_id=sample_child.id,
+            title="Test Portfolio",
+            status=models.PortfolioStatus.DRAFT,
+        )
+        test_db.add(portfolio)
+        test_db.commit()
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        resp = client.post(f"/api/portfolios/{portfolio.id}/publish")
+        assert resp.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_delete_health_alert_cross_kg_returns_404(self, client, test_db, manager_kg_a, kg_b, sample_child):
+        other_enrollment = models.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=kg_b.id,
+            status=models.EnrollmentStatus.ACTIVE,
+        )
+        test_db.add(other_enrollment)
+        test_db.commit()
+        alert = models.HealthAlert(
+            child_id=sample_child.id,
+            alert_type="allergy",
+            description="test",
+            severity=models.SeverityLevel.MEDIUM,
+        )
+        test_db.add(alert)
+        test_db.commit()
+        app.dependency_overrides[get_current_user] = lambda: manager_kg_a
+        resp = client.delete(f"/api/health-alerts/{alert.id}")
+        assert resp.status_code == 404
         app.dependency_overrides.clear()
 
 if __name__ == "__main__":

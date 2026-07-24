@@ -10,14 +10,16 @@ def calculate_required_supervisors(age_group: str, children_count: int) -> int:
     """
     if children_count < 0 or children_count > 40:
         raise ValidationError("Children count must be between 0 and 40.")
-    if age_group == 'AGE_0_1':
+    if age_group == "AGE_0_1":
         return max(1, (children_count + 3) // 4)
-    elif age_group == 'AGE_1_2':
+    elif age_group == "AGE_1_2":
         return max(1, (children_count + 5) // 6)
-    elif age_group == 'AGE_2_4':
+    elif age_group == "AGE_2_4":
         return max(1, (children_count + 7) // 8)
     else:
         raise ValidationError("Invalid age group.")
+
+
 """
 Validation utilities and audit logging for KinJo platform
 """
@@ -25,6 +27,7 @@ import logging
 import re
 import unicodedata
 from datetime import date, datetime, timezone, timedelta
+
 _JORDAN_TZ = timezone(timedelta(hours=3))
 from utils.time_utils import today_amman as _today
 from typing import Optional, List
@@ -58,7 +61,7 @@ class ManagerRuleError(Exception):
         status_code: int,
         field: Optional[str] = None,
         kindergarten_id: Optional[int] = None,
-        existing_manager_id: Optional[int] = None
+        existing_manager_id: Optional[int] = None,
     ):
         self.message = message
         self.status_code = status_code
@@ -91,12 +94,7 @@ def _coerce_user_status(status_value):
 
 
 def validate_manager_rules(
-    db: Session,
-    *,
-    role,
-    kindergarten_id: Optional[int],
-    status_value,
-    exclude_user_id: Optional[int] = None
+    db: Session, *, role, kindergarten_id: Optional[int], status_value, exclude_user_id: Optional[int] = None
 ) -> None:
     """Validate manager assignment rules and active manager uniqueness."""
     role = _coerce_user_role(role)
@@ -109,12 +107,10 @@ def validate_manager_rules(
         raise ManagerRuleError(
             message="Manager must be assigned to a kindergarten",
             status_code=status.HTTP_400_BAD_REQUEST,
-            field="kindergarten_id"
+            field="kindergarten_id",
         )
 
-    kindergarten = db.query(models.Kindergarten).filter(
-        models.Kindergarten.id == kindergarten_id
-    ).first()
+    kindergarten = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
     if kindergarten is None or kindergarten.status == models.KindergartenStatus.DELETED:
         raise ManagerRuleError(
             message="Kindergarten not found or deleted",
@@ -152,7 +148,7 @@ def validate_manager_rules(
             status_code=status.HTTP_409_CONFLICT,
             field="kindergarten_id",
             kindergarten_id=kindergarten_id,
-            existing_manager_id=existing_manager.id
+            existing_manager_id=existing_manager.id,
         )
 
 
@@ -166,8 +162,10 @@ def validate_password_policy(password: str) -> None:
     """Enforce full password policy from config. Raises ValidationError on failure."""
     errors = []
     if len(password) < settings.PASSWORD_MIN_LENGTH:
-        errors.append(f"يجب أن تكون كلمة المرور {settings.PASSWORD_MIN_LENGTH} أحرف على الأقل / "
-                       f"Password must be at least {settings.PASSWORD_MIN_LENGTH} characters")
+        errors.append(
+            f"يجب أن تكون كلمة المرور {settings.PASSWORD_MIN_LENGTH} أحرف على الأقل / "
+            f"Password must be at least {settings.PASSWORD_MIN_LENGTH} characters"
+        )
     if settings.PASSWORD_REQUIRE_UPPERCASE and not re.search(r"[A-Z]", password):
         errors.append("يجب أن تحتوي على حرف كبير / Must contain an uppercase letter")
     if settings.PASSWORD_REQUIRE_LOWERCASE and not re.search(r"[a-z]", password):
@@ -180,21 +178,23 @@ def validate_password_policy(password: str) -> None:
         raise ValidationError("; ".join(errors))
 
 
-def validate_identity_by_nationality(nationality: str, national_id: Optional[str], passport_number: Optional[str]) -> None:
+def validate_identity_by_nationality(
+    nationality: str, national_id: Optional[str], passport_number: Optional[str]
+) -> None:
     """Jordanians must provide national_id; non-Jordanians must provide passport_number."""
-    is_jordanian = nationality and nationality.strip().lower() in (
-        "jordanian", "أردني", "أردنية", "jordan", "jo"
-    )
+    is_jordanian = nationality and nationality.strip().lower() in ("jordanian", "أردني", "أردنية", "jordan", "jo")
     if is_jordanian:
         if not national_id or not national_id.strip():
-            raise ValidationError("الرقم الوطني مطلوب للمواطنين الأردنيين / "
-                                  "National ID is required for Jordanian citizens")
+            raise ValidationError(
+                "الرقم الوطني مطلوب للمواطنين الأردنيين / National ID is required for Jordanian citizens"
+            )
         if not validate_national_id(national_id):
             raise ValidationError("الرقم الوطني يجب أن يكون 10 أرقام / National ID must be 10 digits")
     else:
         if not passport_number or not passport_number.strip():
-            raise ValidationError("رقم جواز السفر مطلوب لغير الأردنيين / "
-                                  "Passport number is required for non-Jordanian citizens")
+            raise ValidationError(
+                "رقم جواز السفر مطلوب لغير الأردنيين / Passport number is required for non-Jordanian citizens"
+            )
 
 
 def _normalize_governorate_input(value: str) -> str:
@@ -266,6 +266,7 @@ def validate_jordan_governorate(governorate: str) -> str:
 
     try:
         from services.jordan_locations import normalize_governorate, is_valid_governorate
+
         if is_valid_governorate(raw):
             return normalize_governorate(raw)
     except Exception:
@@ -374,36 +375,22 @@ def get_child_age_info(date_of_birth: date) -> dict:
 def validate_manager_role(user: models.User) -> None:
     """Validate user has manager or admin role"""
     if user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Manager or Admin role required"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager or Admin role required")
 
 
-def require_manager_with_kindergarten(
-    user: models.User,
-    *,
-    allow_admin: bool = False
-) -> Optional[int]:
+def require_manager_with_kindergarten(user: models.User, *, allow_admin: bool = False) -> Optional[int]:
     """Require manager role and return manager kindergarten_id."""
     if user.role == models.UserRole.ADMIN:
         if allow_admin:
             return None
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Manager role required"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager role required")
 
     if user.role != models.UserRole.MANAGER:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Manager role required"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager role required")
 
     if not user.kindergarten_id:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Manager must be assigned to a kindergarten"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Manager must be assigned to a kindergarten"
         )
 
     return user.kindergarten_id
@@ -412,36 +399,26 @@ def require_manager_with_kindergarten(
 def validate_supervisor_role(user: models.User) -> None:
     """Validate user has supervisor, manager, or admin role"""
     if user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Supervisor, Manager, or Admin role required"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Supervisor, Manager, or Admin role required")
 
 
 def ensure_supervisor_profile(db: Session, supervisor: models.User, kindergarten_id: int) -> models.SupervisorProfile:
     """Create or reuse SupervisorProfile to satisfy composite FK constraints."""
     if kindergarten_id is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Kindergarten assignment required for supervisor"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Kindergarten assignment required for supervisor"
         )
 
-    profile = db.query(models.SupervisorProfile).filter(
-        models.SupervisorProfile.user_id == supervisor.id
-    ).first()
+    profile = db.query(models.SupervisorProfile).filter(models.SupervisorProfile.user_id == supervisor.id).first()
 
     if profile:
         if profile.kindergarten_id != kindergarten_id:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Supervisor already assigned to a different kindergarten"
+                status_code=status.HTTP_409_CONFLICT, detail="Supervisor already assigned to a different kindergarten"
             )
         return profile
 
-    profile = models.SupervisorProfile(
-        user_id=supervisor.id,
-        kindergarten_id=kindergarten_id
-    )
+    profile = models.SupervisorProfile(user_id=supervisor.id, kindergarten_id=kindergarten_id)
     db.add(profile)
     db.flush()
     return profile
@@ -450,10 +427,7 @@ def ensure_supervisor_profile(db: Session, supervisor: models.User, kindergarten
 def validate_admin_role(user: models.User) -> None:
     """Validate user has admin role"""
     if user.role != models.UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin role required"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
 
 
 def validate_kindergarten_scope(user: models.User, kindergarten_id: int) -> None:
@@ -462,10 +436,7 @@ def validate_kindergarten_scope(user: models.User, kindergarten_id: int) -> None
         return  # Admins can access all kindergartens
 
     if user.kindergarten_id != kindergarten_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this kindergarten"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this kindergarten")
 
 
 def validate_child_kindergarten_scope(db: Session, user: models.User, child_id: int) -> None:
@@ -479,24 +450,28 @@ def validate_child_kindergarten_scope(db: Session, user: models.User, child_id: 
         return  # Parent scoping is via ownership, not KG
 
     active_statuses = [models.EnrollmentStatus.ACTIVE, models.EnrollmentStatus.ACCEPTED]
-    enrollment = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.child_id == child_id,
-        models.EnrollmentApplication.kindergarten_id == user.kindergarten_id,
-        models.EnrollmentApplication.status.in_(active_statuses)
-    ).first()
+    enrollment = (
+        db.query(models.EnrollmentApplication)
+        .filter(
+            models.EnrollmentApplication.child_id == child_id,
+            models.EnrollmentApplication.kindergarten_id == user.kindergarten_id,
+            models.EnrollmentApplication.status.in_(active_statuses),
+        )
+        .first()
+    )
 
     if not enrollment:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Child not enrolled in your kindergarten"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Child not enrolled in your kindergarten")
 
 
 def ensure_child_in_range(db: Session, child_id: int) -> models.Child:
     """Ensure child exists and is within global age bounds."""
-    child = db.query(models.Child).execution_options(
-        include_out_of_range_children=True
-    ).filter(models.Child.id == child_id).first()
+    child = (
+        db.query(models.Child)
+        .execution_options(include_out_of_range_children=True)
+        .filter(models.Child.id == child_id)
+        .first()
+    )
 
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
@@ -515,10 +490,7 @@ def validate_class_kindergarten_scope(db: Session, user: models.User, class_id: 
 
     class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()
     if not class_obj or class_obj.kindergarten_id != user.kindergarten_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this class"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this class")
 
 
 def validate_enrollment_kindergarten_scope(db: Session, user: models.User, enrollment_id: int) -> None:
@@ -526,14 +498,9 @@ def validate_enrollment_kindergarten_scope(db: Session, user: models.User, enrol
     if user.role == models.UserRole.ADMIN:
         return
 
-    enrollment = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.id == enrollment_id
-    ).first()
+    enrollment = db.query(models.EnrollmentApplication).filter(models.EnrollmentApplication.id == enrollment_id).first()
     if not enrollment or enrollment.kindergarten_id != user.kindergarten_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this enrollment"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this enrollment")
 
 
 def validate_national_id(national_id: str) -> bool:
@@ -546,15 +513,11 @@ def validate_enrollment_dates(start_date: date, end_date: Optional[date]) -> Non
     """Validate enrollment dates are valid"""
     if start_date < _today():
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Enrollment start date cannot be in the past"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Enrollment start date cannot be in the past"
         )
 
     if end_date and end_date <= start_date:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="End date must be after start date"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="End date must be after start date")
 
 
 def validate_age_band_eligibility(date_of_birth: date, min_months: int, max_months: int) -> None:
@@ -562,9 +525,7 @@ def validate_age_band_eligibility(date_of_birth: date, min_months: int, max_mont
     age_months = calculate_age_months(date_of_birth)
 
     if not (min_months <= age_months <= max_months):
-        raise ValidationError(
-            f"Child age {age_months} months is outside class range {min_months}-{max_months} months"
-        )
+        raise ValidationError(f"Child age {age_months} months is outside class range {min_months}-{max_months} months")
 
 
 def validate_age_months(date_of_birth: date) -> int:
@@ -583,10 +544,12 @@ def is_working_day(db, kindergarten_id: int, check_date: date) -> bool:
         return True
     # Try to find explicit calendar entry
     from models import OperatingCalendar
-    row = db.query(OperatingCalendar).filter(
-        OperatingCalendar.kindergarten_id == kindergarten_id,
-        OperatingCalendar.date == check_date
-    ).first()
+
+    row = (
+        db.query(OperatingCalendar)
+        .filter(OperatingCalendar.kindergarten_id == kindergarten_id, OperatingCalendar.date == check_date)
+        .first()
+    )
     if row is not None:
         return bool(row.is_open)
 
@@ -606,36 +569,34 @@ def check_profile_complete(db, child_id: int) -> (bool, list):
 
     # Required child fields
     required_child_fields = [
-        ('first_name', child.first_name),
-        ('last_name', child.last_name),
-        ('date_of_birth', child.date_of_birth),
-        ('gender', child.gender),
-        ('father_name', child.father_name),
-        ('mother_first_name', child.mother_first_name),
-        ('mother_last_name', child.mother_last_name),
-        ('mother_nationality', child.mother_nationality)
+        ("first_name", child.first_name),
+        ("last_name", child.last_name),
+        ("date_of_birth", child.date_of_birth),
+        ("gender", child.gender),
+        ("father_name", child.father_name),
+        ("mother_first_name", child.mother_first_name),
+        ("mother_last_name", child.mother_last_name),
+        ("mother_nationality", child.mother_nationality),
     ]
     for fname, val in required_child_fields:
         if val is None or (isinstance(val, str) and not val.strip()):
-            missing.append(f'child.{fname}')
+            missing.append(f"child.{fname}")
 
     # Parent required fields
     parent = child.parent
     if not parent and child.parent_id:
-        parent = db.query(models.ParentProfile).filter(
-            models.ParentProfile.user_id == child.parent_id
-        ).first()
+        parent = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == child.parent_id).first()
 
     required_parent_fields = [
-        ('first_name', parent.first_name if parent else None),
-        ('last_name', parent.last_name if parent else None),
-        ('phone_number', parent.phone_number if parent else None),
-        ('home_address_line', parent.home_address_line if parent else None),
-        ('home_district', parent.home_district if parent else None)
+        ("first_name", parent.first_name if parent else None),
+        ("last_name", parent.last_name if parent else None),
+        ("phone_number", parent.phone_number if parent else None),
+        ("home_address_line", parent.home_address_line if parent else None),
+        ("home_district", parent.home_district if parent else None),
     ]
     for fname, val in required_parent_fields:
         if val is None or (isinstance(val, str) and not val.strip()):
-            missing.append(f'parent.{fname}')
+            missing.append(f"parent.{fname}")
 
     return (len(missing) == 0, missing)
 
@@ -643,6 +604,7 @@ def check_profile_complete(db, child_id: int) -> (bool, list):
 def mark_profile_complete_if_ready(db, child_id: int):
     """Mark child and parent profile_complete true when ready."""
     from models import Child, ParentProfile
+
     ok, missing = check_profile_complete(db, child_id)
     if not ok:
         return False, missing
@@ -650,12 +612,11 @@ def mark_profile_complete_if_ready(db, child_id: int):
     child = db.query(Child).filter(Child.id == child_id).first()
     parent = child.parent
     if not parent and child and child.parent_id:
-        parent = db.query(ParentProfile).filter(
-            ParentProfile.user_id == child.parent_id
-        ).first()
+        parent = db.query(ParentProfile).filter(ParentProfile.user_id == child.parent_id).first()
     if not parent:
         return False, ["parent.profile"]
     from datetime import datetime, timezone
+
     child.profile_complete = True
     child.profile_completed_at = datetime.now(_JORDAN_TZ)
     parent.profile_complete = True
@@ -670,13 +631,11 @@ def validate_required_documents(db: Session, child_id: int) -> tuple:
     Returns (is_complete: bool, missing_types: list[str]).
     """
     from config import settings
+
     required_types = settings.REQUIRED_ENROLLMENT_DOCUMENTS
 
     existing_docs = (
-        db.query(models.ChildDocument.document_type)
-        .filter(models.ChildDocument.child_id == child_id)
-        .distinct()
-        .all()
+        db.query(models.ChildDocument.document_type).filter(models.ChildDocument.child_id == child_id).distinct().all()
     )
     existing_types = {row[0] for row in existing_docs}
     missing = [dt for dt in required_types if dt not in existing_types]
@@ -706,8 +665,7 @@ def validate_kg_has_supervisor(
     count = query.count()
     if count < 1:
         raise ValidationError(
-            "يجب أن تحتفظ الحضانة بمشرف نشط واحد على الأقل / "
-            "Kindergarten must retain at least one active supervisor"
+            "يجب أن تحتفظ الحضانة بمشرف نشط واحد على الأقل / Kindergarten must retain at least one active supervisor"
         )
 
 
@@ -741,25 +699,30 @@ def active_primary_supervisor_map(db: Session, class_ids) -> dict:
     if not ids:
         return {}
     today = datetime.now(_JORDAN_TZ).date()
-    rows = db.query(
-        models.SupervisorAssignment.class_id,
-        models.SupervisorAssignment.supervisor_id,
-    ).filter(
-        models.SupervisorAssignment.class_id.in_(ids),
-        models.SupervisorAssignment.is_primary.is_(True),
-        models.SupervisorAssignment.deleted_at.is_(None),
-        # "Currently in effect": not past its end_date. Consistent with the
-        # date-range definition used in classification_service (finding #2).
-        or_(
-            models.SupervisorAssignment.end_date.is_(None),
-            models.SupervisorAssignment.end_date >= today,
-        ),
-    ).order_by(
-        # Deterministic winner if a class somehow has >1 active primary: newest
-        # assignment wins (finding #1 mitigation on the read side).
-        models.SupervisorAssignment.start_date.desc(),
-        models.SupervisorAssignment.id.desc(),
-    ).all()
+    rows = (
+        db.query(
+            models.SupervisorAssignment.class_id,
+            models.SupervisorAssignment.supervisor_id,
+        )
+        .filter(
+            models.SupervisorAssignment.class_id.in_(ids),
+            models.SupervisorAssignment.is_primary.is_(True),
+            models.SupervisorAssignment.deleted_at.is_(None),
+            # "Currently in effect": not past its end_date. Consistent with the
+            # date-range definition used in classification_service (finding #2).
+            or_(
+                models.SupervisorAssignment.end_date.is_(None),
+                models.SupervisorAssignment.end_date >= today,
+            ),
+        )
+        .order_by(
+            # Deterministic winner if a class somehow has >1 active primary: newest
+            # assignment wins (finding #1 mitigation on the read side).
+            models.SupervisorAssignment.start_date.desc(),
+            models.SupervisorAssignment.id.desc(),
+        )
+        .all()
+    )
     # Dict comprehension keeps the FIRST row per class_id; with the ordering above
     # that is the most recent active primary.
     result: dict = {}
@@ -778,7 +741,7 @@ def log_audit_action(
     ip_address: Optional[str] = None,
     sensitivity_level: int = 1,
     old_data: Optional[dict] = None,
-    new_data: Optional[dict] = None
+    new_data: Optional[dict] = None,
 ) -> models.AuditLog:
     """Log an audit action"""
     audit_log = models.AuditLog(
@@ -790,7 +753,7 @@ def log_audit_action(
         old_data=old_data,
         new_data=new_data,
         ip_address=ip_address,
-        sensitivity_level=sensitivity_level
+        sensitivity_level=sensitivity_level,
     )
     db.add(audit_log)
     db.commit()
@@ -800,12 +763,14 @@ def log_audit_action(
 def sanitize_input(text: str) -> str:
     """Sanitize user input to prevent XSS — strips ALL HTML tags"""
     import bleach
+
     return bleach.clean(text, tags=[], attributes={}, strip=True)
 
 
 def sanitize_model_strings(values: dict) -> dict:
     """Sanitize all string values in a Pydantic model dict (for use in model_validator)"""
     import bleach
+
     _SKIP_FIELDS = {"password", "new_password", "current_password", "hashed_password", "token"}
     for key, val in values.items():
         if isinstance(val, str) and key not in _SKIP_FIELDS:
@@ -839,10 +804,14 @@ def validate_time_format(time_str: str) -> bool:
 
 def validate_class_size(db: Session, class_id: int) -> None:
     """Validate that a class has between 4 and 10 children"""
-    active_enrollments = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.class_id == class_id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-    ).count()
+    active_enrollments = (
+        db.query(models.EnrollmentApplication)
+        .filter(
+            models.EnrollmentApplication.class_id == class_id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        )
+        .count()
+    )
 
     if active_enrollments < 4:
         raise ValidationError(f"Class must have at least 4 children (currently has {active_enrollments})")
@@ -854,17 +823,21 @@ def validate_class_size(db: Session, class_id: int) -> None:
 def validate_child_class_assignment(db: Session, child_id: int, class_id: int, assignment_date: date) -> None:
     """Validate that a child is not assigned to multiple classes on the same date"""
     # Check for overlapping enrollments
-    overlapping_enrollments = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.child_id == child_id,
-        models.EnrollmentApplication.class_id != class_id,  # Different class
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-        # Check date overlap
-        models.EnrollmentApplication.enrollment_start_date <= assignment_date,
-        or_(
-            models.EnrollmentApplication.enrollment_end_date == None,
-            models.EnrollmentApplication.enrollment_end_date >= assignment_date
+    overlapping_enrollments = (
+        db.query(models.EnrollmentApplication)
+        .filter(
+            models.EnrollmentApplication.child_id == child_id,
+            models.EnrollmentApplication.class_id != class_id,  # Different class
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            # Check date overlap
+            models.EnrollmentApplication.enrollment_start_date <= assignment_date,
+            or_(
+                models.EnrollmentApplication.enrollment_end_date == None,
+                models.EnrollmentApplication.enrollment_end_date >= assignment_date,
+            ),
         )
-    ).all()
+        .all()
+    )
 
     if overlapping_enrollments:
         class_names = [f"Class {e.class_id}" for e in overlapping_enrollments]
@@ -874,44 +847,45 @@ def validate_child_class_assignment(db: Session, child_id: int, class_id: int, a
 def validate_supervisor_class_access(db: Session, supervisor: models.User, class_id: int, access_date: date) -> None:
     """Validate that a supervisor has access to a specific class on a given date"""
     if supervisor.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: insufficient role"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: insufficient role")
 
     # Admins and managers can access all classes in their kindergarten
     if supervisor.role in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
         class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()
         if not class_obj or class_obj.kindergarten_id != supervisor.kindergarten_id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: class not in your kindergarten"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: class not in your kindergarten"
             )
         return
 
     # Supervisors can only access their assigned classes
-    assignment = db.query(models.SupervisorAssignment).filter(
-        models.SupervisorAssignment.supervisor_id == supervisor.id,
-        models.SupervisorAssignment.class_id == class_id,
-        models.SupervisorAssignment.start_date <= access_date,
-        or_(
-            models.SupervisorAssignment.end_date == None,
-            models.SupervisorAssignment.end_date >= access_date
+    assignment = (
+        db.query(models.SupervisorAssignment)
+        .filter(
+            models.SupervisorAssignment.supervisor_id == supervisor.id,
+            models.SupervisorAssignment.class_id == class_id,
+            models.SupervisorAssignment.start_date <= access_date,
+            or_(models.SupervisorAssignment.end_date == None, models.SupervisorAssignment.end_date >= access_date),
         )
-    ).first()
+        .first()
+    )
 
     if not assignment:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: not assigned to this class"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: not assigned to this class")
 
 
 def validate_daily_report_completeness(report_data: dict) -> List[str]:
     """Validate daily report completeness and return list of missing required fields"""
     required_fields = [
-        'arrival_time', 'leave_time', 'mood', 'health_notes',
-        'breakfast', 'snack', 'milk', 'lunch', 'activities'
+        "arrival_time",
+        "leave_time",
+        "mood",
+        "health_notes",
+        "breakfast",
+        "snack",
+        "milk",
+        "lunch",
+        "activities",
     ]
 
     missing_fields = []

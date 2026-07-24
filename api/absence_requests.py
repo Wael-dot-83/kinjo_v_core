@@ -1,6 +1,7 @@
 """
 Absence Request endpoints
 """
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
@@ -62,8 +63,7 @@ class CreateAbsenceRequest(BaseModel):
             raise ValueError("end_date must not be before start_date")
         if start and (v - start).days + 1 > MAX_ABSENCE_SPAN_DAYS:
             raise ValueError(
-                f"absence span must not exceed {MAX_ABSENCE_SPAN_DAYS} days "
-                f"(requested {(v - start).days + 1})"
+                f"absence span must not exceed {MAX_ABSENCE_SPAN_DAYS} days (requested {(v - start).days + 1})"
             )
         return v
 
@@ -96,6 +96,7 @@ def _serialize_request(req: models.AbsenceRequest, include_child_name: bool = Fa
 
 # ── POST /absence-requests (Parent only) ─────────────────────────────
 
+
 @router.post("/absence-requests", status_code=201)
 def create_absence_request(
     payload: CreateAbsenceRequest,
@@ -105,36 +106,48 @@ def create_absence_request(
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail="Only parents can create absence requests")
 
-    parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
+    parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
     if not parent_profile:
         raise HTTPException(status_code=400, detail="Parent profile not found")
 
-    child = db.query(models.Child).filter(
-        models.Child.id == payload.child_id,
-        models.Child.parent_id == parent_profile.id,
-    ).first()
+    child = (
+        db.query(models.Child)
+        .filter(
+            models.Child.id == payload.child_id,
+            models.Child.parent_id == parent_profile.id,
+        )
+        .first()
+    )
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
-    enrollment = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.child_id == child.id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-    ).first()
+    enrollment = (
+        db.query(models.EnrollmentApplication)
+        .filter(
+            models.EnrollmentApplication.child_id == child.id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        )
+        .first()
+    )
     if not enrollment:
         raise HTTPException(status_code=400, detail="No active enrollment for this child")
 
     # Overlap check
-    overlap = db.query(models.AbsenceRequest).filter(
-        models.AbsenceRequest.child_id == child.id,
-        models.AbsenceRequest.status.in_([
-            models.AbsenceRequestStatus.SUBMITTED,
-            models.AbsenceRequestStatus.APPROVED,
-        ]),
-        models.AbsenceRequest.start_date <= payload.end_date,
-        models.AbsenceRequest.end_date >= payload.start_date,
-    ).first()
+    overlap = (
+        db.query(models.AbsenceRequest)
+        .filter(
+            models.AbsenceRequest.child_id == child.id,
+            models.AbsenceRequest.status.in_(
+                [
+                    models.AbsenceRequestStatus.SUBMITTED,
+                    models.AbsenceRequestStatus.APPROVED,
+                ]
+            ),
+            models.AbsenceRequest.start_date <= payload.end_date,
+            models.AbsenceRequest.end_date >= payload.start_date,
+        )
+        .first()
+    )
     if overlap:
         raise HTTPException(status_code=409, detail="Overlapping absence request exists")
 
@@ -157,6 +170,7 @@ def create_absence_request(
 
 # ── GET /absence-requests ────────────────────────────────────────────
 
+
 @router.get("/absence-requests")
 def list_absence_requests(
     # Aliased: a bare `status` parameter would shadow the imported `fastapi.status`
@@ -168,14 +182,10 @@ def list_absence_requests(
     db: Session = Depends(get_db),
 ):
     if current_user.role == models.UserRole.PARENT:
-        parent_profile = db.query(models.ParentProfile).filter(
-            models.ParentProfile.user_id == current_user.id
-        ).first()
+        parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
         if not parent_profile:
             return []
-        query = db.query(models.AbsenceRequest).filter(
-            models.AbsenceRequest.parent_id == parent_profile.id
-        )
+        query = db.query(models.AbsenceRequest).filter(models.AbsenceRequest.parent_id == parent_profile.id)
         if status_filter is not None:
             query = query.filter(models.AbsenceRequest.status == status_filter)
         requests = query.order_by(models.AbsenceRequest.created_at.desc()).all()
@@ -199,6 +209,7 @@ def list_absence_requests(
 
 # ── GET /absence-requests/{id} ──────────────────────────────────────
 
+
 @router.get("/absence-requests/{request_id}")
 def get_absence_request(
     request_id: int,
@@ -206,29 +217,27 @@ def get_absence_request(
     db: Session = Depends(get_db),
 ):
     if current_user.role == models.UserRole.PARENT:
-        absence = db.query(models.AbsenceRequest).filter(
-            models.AbsenceRequest.id == request_id
-        ).first()
+        absence = db.query(models.AbsenceRequest).filter(models.AbsenceRequest.id == request_id).first()
         if not absence:
             raise HTTPException(status_code=404, detail="Absence request not found")
-        parent_profile = db.query(models.ParentProfile).filter(
-            models.ParentProfile.user_id == current_user.id
-        ).first()
+        parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
         if not parent_profile or absence.parent_id != parent_profile.id:
             raise HTTPException(status_code=404, detail="Absence request not found")
     elif current_user.role == models.UserRole.MANAGER:
         if current_user.kindergarten_id is None:
             raise HTTPException(status_code=403, detail="No kindergarten is associated with this manager account")
-        absence = db.query(models.AbsenceRequest).filter(
-            models.AbsenceRequest.id == request_id,
-            models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id,
-        ).first()
+        absence = (
+            db.query(models.AbsenceRequest)
+            .filter(
+                models.AbsenceRequest.id == request_id,
+                models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id,
+            )
+            .first()
+        )
         if not absence:
             raise HTTPException(status_code=404, detail="Absence request not found")
     elif current_user.role == models.UserRole.ADMIN:
-        absence = db.query(models.AbsenceRequest).filter(
-            models.AbsenceRequest.id == request_id
-        ).first()
+        absence = db.query(models.AbsenceRequest).filter(models.AbsenceRequest.id == request_id).first()
         if not absence:
             raise HTTPException(status_code=404, detail="Absence request not found")
     else:
@@ -240,6 +249,7 @@ def get_absence_request(
 
 # ── POST /absence-requests/{id}/cancel (Parent) ─────────────────────
 
+
 @router.post("/absence-requests/{request_id}/cancel")
 def cancel_absence_request(
     request_id: int,
@@ -249,16 +259,18 @@ def cancel_absence_request(
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail="Only parents can cancel")
 
-    parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
+    parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
     if parent_profile is None:
         raise HTTPException(status_code=404, detail="Not found")
 
-    absence = db.query(models.AbsenceRequest).filter(
-        models.AbsenceRequest.id == request_id,
-        models.AbsenceRequest.parent_id == parent_profile.id,
-    ).first()
+    absence = (
+        db.query(models.AbsenceRequest)
+        .filter(
+            models.AbsenceRequest.id == request_id,
+            models.AbsenceRequest.parent_id == parent_profile.id,
+        )
+        .first()
+    )
     if not absence:
         raise HTTPException(status_code=404, detail="Not found")
     if absence.status != models.AbsenceRequestStatus.SUBMITTED:
@@ -267,13 +279,17 @@ def cancel_absence_request(
             detail="Only submitted requests can be cancelled",
         )
 
-    transitioned = db.query(models.AbsenceRequest).filter(
-        models.AbsenceRequest.id == absence.id,
-        models.AbsenceRequest.parent_id == parent_profile.id,
-        models.AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED,
-    ).update(
-        {models.AbsenceRequest.status: models.AbsenceRequestStatus.CANCELLED},
-        synchronize_session=False,
+    transitioned = (
+        db.query(models.AbsenceRequest)
+        .filter(
+            models.AbsenceRequest.id == absence.id,
+            models.AbsenceRequest.parent_id == parent_profile.id,
+            models.AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED,
+        )
+        .update(
+            {models.AbsenceRequest.status: models.AbsenceRequestStatus.CANCELLED},
+            synchronize_session=False,
+        )
     )
     if transitioned != 1:
         db.rollback()
@@ -285,6 +301,7 @@ def cancel_absence_request(
 
 # ── POST /absence-requests/{id}/approve (Manager) ───────────────────
 
+
 @router.post("/absence-requests/{request_id}/approve")
 def approve_absence_request(
     request_id: int,
@@ -294,27 +311,35 @@ def approve_absence_request(
 ):
     _require_scoped_manager(current_user)
 
-    absence = db.query(models.AbsenceRequest).filter(
-        models.AbsenceRequest.id == request_id,
-    ).first()
+    absence = (
+        db.query(models.AbsenceRequest)
+        .filter(
+            models.AbsenceRequest.id == request_id,
+        )
+        .first()
+    )
     if not absence:
         raise HTTPException(status_code=404, detail="Not found")
 
     # Cross-KG check
     if absence.kindergarten_id != current_user.kindergarten_id:
-        raise HTTPException(status_code=403, detail="Not in your kindergarten scope")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Absence request not found")
 
     if absence.status == models.AbsenceRequestStatus.APPROVED:
         raise HTTPException(status_code=400, detail="Already approved")
     if absence.status != models.AbsenceRequestStatus.SUBMITTED:
         raise HTTPException(status_code=400, detail="Only submitted requests can be approved")
 
-    conflicting_attendance = db.query(models.AttendanceLog).filter(
-        models.AttendanceLog.child_id == absence.child_id,
-        models.AttendanceLog.date >= absence.start_date,
-        models.AttendanceLog.date <= absence.end_date,
-        models.AttendanceLog.status != models.AttendanceStatus.ABSENT,
-    ).first()
+    conflicting_attendance = (
+        db.query(models.AttendanceLog)
+        .filter(
+            models.AttendanceLog.child_id == absence.child_id,
+            models.AttendanceLog.date >= absence.start_date,
+            models.AttendanceLog.date <= absence.end_date,
+            models.AttendanceLog.status != models.AttendanceStatus.ABSENT,
+        )
+        .first()
+    )
     if conflicting_attendance is not None:
         raise HTTPException(
             status_code=409,
@@ -322,29 +347,35 @@ def approve_absence_request(
         )
 
     decided_at = datetime.now(_JORDAN_TZ)
-    transitioned = db.query(models.AbsenceRequest).filter(
-        models.AbsenceRequest.id == absence.id,
-        models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id,
-        models.AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED,
-    ).update(
-        {
-            models.AbsenceRequest.status: models.AbsenceRequestStatus.APPROVED,
-            models.AbsenceRequest.manager_id: current_user.id,
-            models.AbsenceRequest.decision_note: payload.decision_note,
-            models.AbsenceRequest.decided_at: decided_at,
-        },
-        synchronize_session=False,
+    transitioned = (
+        db.query(models.AbsenceRequest)
+        .filter(
+            models.AbsenceRequest.id == absence.id,
+            models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id,
+            models.AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED,
+        )
+        .update(
+            {
+                models.AbsenceRequest.status: models.AbsenceRequestStatus.APPROVED,
+                models.AbsenceRequest.manager_id: current_user.id,
+                models.AbsenceRequest.decision_note: payload.decision_note,
+                models.AbsenceRequest.decided_at: decided_at,
+            },
+            synchronize_session=False,
+        )
     )
     if transitioned != 1:
         db.rollback()
         raise HTTPException(status_code=409, detail="Request was already decided")
-    db.add(models.AuditLog(
-        user_id=current_user.id,
-        action=AuditAction.ABSENCE_REQUEST_APPROVED,
-        entity_type="absence_request",
-        entity_id=absence.id,
-        details=f"Manager approved absence request {absence.id} for child {absence.child_id} ({absence.start_date}..{absence.end_date})",
-    ))
+    db.add(
+        models.AuditLog(
+            user_id=current_user.id,
+            action=AuditAction.ABSENCE_REQUEST_APPROVED,
+            entity_type="absence_request",
+            entity_id=absence.id,
+            details=f"Manager approved absence request {absence.id} for child {absence.child_id} ({absence.start_date}..{absence.end_date})",
+        )
+    )
     db.flush()
 
     # Create attendance records for each day in range
@@ -367,10 +398,14 @@ def approve_absence_request(
     records_created = 0
     current_date = absence.start_date
     while current_date <= absence.end_date:
-        existing = db.query(models.AttendanceLog).filter(
-            models.AttendanceLog.child_id == absence.child_id,
-            models.AttendanceLog.date == current_date,
-        ).first()
+        existing = (
+            db.query(models.AttendanceLog)
+            .filter(
+                models.AttendanceLog.child_id == absence.child_id,
+                models.AttendanceLog.date == current_date,
+            )
+            .first()
+        )
         if not existing:
             att = models.AttendanceLog(
                 child_id=absence.child_id,
@@ -402,6 +437,7 @@ def approve_absence_request(
 
 # ── POST /absence-requests/{id}/reject (Manager) ────────────────────
 
+
 @router.post("/absence-requests/{request_id}/reject")
 def reject_absence_request(
     request_id: int,
@@ -411,44 +447,54 @@ def reject_absence_request(
 ):
     _require_scoped_manager(current_user)
 
-    absence = db.query(models.AbsenceRequest).filter(
-        models.AbsenceRequest.id == request_id,
-    ).first()
+    absence = (
+        db.query(models.AbsenceRequest)
+        .filter(
+            models.AbsenceRequest.id == request_id,
+        )
+        .first()
+    )
     if not absence:
         raise HTTPException(status_code=404, detail="Not found")
 
     # Cross-KG check
     if absence.kindergarten_id != current_user.kindergarten_id:
-        raise HTTPException(status_code=403, detail="Not in your kindergarten scope")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Absence request not found")
 
     if absence.status != models.AbsenceRequestStatus.SUBMITTED:
         # Rejecting an APPROVED request would strand the attendance
         # records approval created; only pending requests are decidable.
         raise HTTPException(status_code=400, detail="Only submitted requests can be rejected")
 
-    transitioned = db.query(models.AbsenceRequest).filter(
-        models.AbsenceRequest.id == absence.id,
-        models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id,
-        models.AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED,
-    ).update(
-        {
-            models.AbsenceRequest.status: models.AbsenceRequestStatus.REJECTED,
-            models.AbsenceRequest.manager_id: current_user.id,
-            models.AbsenceRequest.decision_note: payload.decision_note,
-            models.AbsenceRequest.decided_at: datetime.now(_JORDAN_TZ),
-        },
-        synchronize_session=False,
+    transitioned = (
+        db.query(models.AbsenceRequest)
+        .filter(
+            models.AbsenceRequest.id == absence.id,
+            models.AbsenceRequest.kindergarten_id == current_user.kindergarten_id,
+            models.AbsenceRequest.status == models.AbsenceRequestStatus.SUBMITTED,
+        )
+        .update(
+            {
+                models.AbsenceRequest.status: models.AbsenceRequestStatus.REJECTED,
+                models.AbsenceRequest.manager_id: current_user.id,
+                models.AbsenceRequest.decision_note: payload.decision_note,
+                models.AbsenceRequest.decided_at: datetime.now(_JORDAN_TZ),
+            },
+            synchronize_session=False,
+        )
     )
     if transitioned != 1:
         db.rollback()
         raise HTTPException(status_code=409, detail="Request was already decided")
-    db.add(models.AuditLog(
-        user_id=current_user.id,
-        action=AuditAction.ABSENCE_REQUEST_REJECTED,
-        entity_type="absence_request",
-        entity_id=absence.id,
-        details=f"Manager rejected absence request {absence.id} for child {absence.child_id}",
-    ))
+    db.add(
+        models.AuditLog(
+            user_id=current_user.id,
+            action=AuditAction.ABSENCE_REQUEST_REJECTED,
+            entity_type="absence_request",
+            entity_id=absence.id,
+            details=f"Manager rejected absence request {absence.id} for child {absence.child_id}",
+        )
+    )
     db.commit()
     db.refresh(absence)
 
