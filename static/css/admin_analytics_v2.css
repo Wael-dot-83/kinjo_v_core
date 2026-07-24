@@ -241,29 +241,132 @@
 
 /* ── 4. Filter Bar ─────────────────────────────────────────────────────────── */
 .glass-filter-bar {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: var(--r-xl);
   padding: var(--sp-3) var(--sp-5);
   box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-  /* Sticks to the top of .admin-content — the actual scroll container
-     (the 64px header lives outside it). Negative top cancels the
-     scroller's own padding so the bar pins flush with the visible edge
-     instead of leaving a see-through strip above it. */
   position: sticky;
-  top: calc(-1 * var(--kinjo-spacing-6, 1.5rem));
+  top: 0;
   z-index: 1000;
-  margin-top: calc(-1 * var(--sp-4));
+  margin-top: 0;
   margin-bottom: var(--sp-6);
-  transition: background-color .2s ease, box-shadow .2s ease, border-color .2s ease;
+  transition: background-color .25s ease, box-shadow .25s ease, border-color .25s ease, transform .25s ease;
 }
 /* Pinned state (toggled by scroll watcher in the analytics template) */
 .glass-filter-bar.is-stuck {
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.97);
   border-color: var(--slate-200);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 10px 24px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.06);
+  border-bottom-color: var(--slate-300);
+}
+/* Active-filter indicator */
+.glass-filter-bar .filter-dropdown-glass select.has-value,
+.glass-filter-bar .filter-dropdown-glass select:not([value=""]) {
+  border-color: var(--az-primary);
+  background-color: rgba(37,99,235,0.04);
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.08);
+}
+
+/* ── 4.1 Filter Bar — visual hierarchy ────────────────────────────────────── */
+/* Field labels above controls: consistent, scannable hierarchy */
+.glass-filter-bar .form-label {
+  font: 600 0.75rem/1.3 var(--font-ar);
+  color: var(--slate-600);
+  letter-spacing: 0.01em;
+  margin-bottom: 4px;
+}
+/* Comfortable touch targets for every interactive control (WCAG 2.5.8) */
+.glass-filter-bar .btn,
+.glass-filter-bar .form-select,
+.glass-filter-bar .form-control {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+}
+.glass-filter-bar input.form-control { display: block; }
+/* Unambiguous keyboard focus on every control */
+.glass-filter-bar .btn:focus-visible,
+.glass-filter-bar .form-select:focus-visible,
+.glass-filter-bar .form-control:focus-visible,
+.glass-filter-bar .az-filter-bar-toggle:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+/* Date validation error state */
+.glass-filter-bar .form-control.is-invalid {
+  border-color: var(--az-danger);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.10);
+}
+.filter-date-error {
+  font: 500 0.75rem/1.4 var(--font-ar);
+  color: var(--az-danger);
+  margin-top: 4px;
+}
+/* Active-filter summary pill + reset */
+.filter-active-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: var(--az-primary-light);
+  border: 1px solid var(--az-primary-mid);
+  color: var(--az-primary-hover);
+  border-radius: var(--r-full);
+  padding: 6px 12px;
+  font: 600 0.8125rem/1.2 var(--font-ar);
+  white-space: nowrap;
+}
+.filter-active-pill .az-filter-reset-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--az-primary-hover);
+  font: 600 0.8125rem/1.2 var(--font-ar);
+  padding: 2px 6px;
+  border-radius: var(--r-full);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.filter-active-pill .az-filter-reset-all:hover { color: var(--az-primary); }
+/* ── 4.2 Filter Bar — mobile collapse ─────────────────────────────────────── */
+.az-filter-bar-toggle {
+  display: none;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  background: transparent;
+  border: none;
+  padding: var(--sp-2) var(--sp-3);
+  font: 600 0.875rem/1.4 var(--font-ar);
+  color: var(--slate-700);
+  cursor: pointer;
+  border-radius: var(--r-md);
+  min-height: 44px;
+}
+.az-filter-bar-toggle:hover { background: rgba(37, 99, 235, 0.06); }
+.az-filter-bar-toggle .az-filter-bar-toggle__chevron { transition: transform 0.25s ease; }
+.glass-filter-bar.is-open .az-filter-bar-toggle .az-filter-bar-toggle__chevron { transform: rotate(180deg); }
+.az-filter-bar-toggle .filter-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--r-full);
+  background: var(--az-primary);
+  color: #fff;
+  font: 700 0.75rem/1 var(--font-ar);
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass-filter-bar, .az-filter-bar-toggle .az-filter-bar-toggle__chevron { transition: none; }
 }
 .filter-dropdown-glass select {
   background-color: rgba(255,255,255,0.7);
@@ -1042,9 +1145,36 @@
   text-align: center;
 }
 
+/* ── 23.5 Scroll margin for sticky filter bar ─────────────────────────────── */
+/* Ensure hash-linked sections are fully visible below the sticky filter bar */
+#tabOverview .mb-section,
+#tabOverview .insights-widget,
+#tabOverview .kpi-grid-v2,
+#tabOverview .kpi-card-v2,
+#tabOverview .action-queue-widget,
+#tabOverview .forecast-grid,
+#tabOverview .gov-distribution {
+  scroll-margin-top: 200px;
+}
+
 /* ── 24. Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .glass-filter-bar { padding: var(--sp-2) var(--sp-3); }
+  /* Collapsible filter body on small screens: the toggle row stays pinned,
+     controls expand on demand so the sticky bar never swallows the viewport. */
+  .az-filter-bar-toggle { display: flex; }
+  .glass-filter-bar__body { display: none; margin-top: var(--sp-2); }
+  .glass-filter-bar.is-open .glass-filter-bar__body { display: block; }
+  /* Controls go full-width in a tidy 2-col grid; date group spans both */
+  .glass-filter-bar__body .row > [class*="col"] { width: 100%; }
+  .glass-filter-bar__body .filter-dropdown-glass,
+  .glass-filter-bar__body .filter-dropdown-glass select { width: 100%; min-width: 0; }
+  .glass-filter-bar__body .d-flex.gap-3.flex-wrap {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-3);
+  }
+  .glass-filter-bar__body .btn { justify-content: center; }
   .exec-banner { padding: var(--sp-4); }
   .exec-banner__inner { flex-direction: column; }
   .exec-banner__meta { align-items: flex-start; }
@@ -1057,6 +1187,7 @@
   .az-card__body { padding: var(--sp-4); }
 }
 @media (max-width: 480px) {
+  .glass-filter-bar__body .d-flex.gap-3.flex-wrap { grid-template-columns: 1fr; }
   .kpi-grid-v2 { grid-template-columns: 1fr; }
   .forecast-grid { grid-template-columns: 1fr; }
 }

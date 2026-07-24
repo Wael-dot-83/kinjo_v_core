@@ -5,7 +5,7 @@
 {% block title %}{% if ui_lang == 'en' %}Analytics Intelligence Center{% else %}مركز الذكاء التحليلي{% endif %} — KinJo{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=2.1">
+<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=2.2">
 <style>
   /* Suppress Bootstrap's default card styling where we use az-card */
   .kpi-grid, .kpi-card { display: none !important; }
@@ -79,6 +79,18 @@
   {% endif %}
 
   <div class="glass-filter-bar" role="search" aria-label="{% if ui_lang == 'en' %}Analytics filters{% else %}مرشحات التحليلات{% endif %}">
+    {# Mobile collapse toggle (visible < md). Keeps filters one tap away without
+       letting the sticky bar swallow a small viewport. #}
+    <button type="button" class="az-filter-bar-toggle" id="filterBarToggle"
+            aria-expanded="false" aria-controls="analyticsFilterBody">
+      <span class="d-inline-flex align-items-center gap-2">
+        <i class="bi bi-funnel-fill" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Filters{% else %}الفلاتر{% endif %}
+        <span class="filter-count-badge d-none" id="filterCountBadgeMobile" aria-hidden="true">0</span>
+      </span>
+      <i class="bi bi-chevron-down az-filter-bar-toggle__chevron" aria-hidden="true"></i>
+    </button>
+    <div class="glass-filter-bar__body" id="analyticsFilterBody">
     <div class="row g-3 align-items-center">
       <div class="col-12 col-xl-auto flex-grow-1">
         {{ date_range_filter(
@@ -90,11 +102,15 @@
           export_modal_id="exportModal",
           user_role=current_user.role
         ) }}
+        <div class="filter-date-error d-none" id="filterDateError" role="alert">
+          {% if ui_lang == 'en' %}Start date must be before end date.{% else %}يجب أن يكون تاريخ البدء قبل تاريخ الانتهاء.{% endif %}
+        </div>
       </div>
       <div class="col-12 col-xl-auto">
-        <div class="d-flex gap-3 flex-wrap">
-          <div class="filter-dropdown-glass">
-            <select aria-label="{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}" class="form-select form-select-sm" id="regStatusFilter">
+        <div class="d-flex gap-3 flex-wrap align-items-end">
+          <div class="filter-dropdown-glass d-flex flex-column">
+            <label for="regStatusFilter" class="form-label">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+            <select class="form-select form-select-sm" id="regStatusFilter">
               <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
               <option value="DRAFT">{% if ui_lang == 'en' %}Incomplete{% else %}غير مكتمل{% endif %}</option>
               <option value="SUBMITTED">{% if ui_lang == 'en' %}Submitted{% else %}مُقدَّم{% endif %}</option>
@@ -104,25 +120,39 @@
               <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
             </select>
           </div>
-          <div class="filter-dropdown-glass">
-            <select aria-label="{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}" class="form-select form-select-sm" id="regSourceFilter">
+          <div class="filter-dropdown-glass d-flex flex-column">
+            <label for="regSourceFilter" class="form-label">{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</label>
+            <select class="form-select form-select-sm" id="regSourceFilter">
               <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
               <option value="WEB">{% if ui_lang == 'en' %}Web{% else %}الموقع الإلكتروني{% endif %}</option>
               <option value="MOBILE">{% if ui_lang == 'en' %}Mobile{% else %}تطبيق الهاتف{% endif %}</option>
               <option value="OFFICE">{% if ui_lang == 'en' %}Office{% else %}المكتب{% endif %}</option>
             </select>
           </div>
-          <div class="filter-dropdown-glass">
-            <select aria-label="{% if ui_lang == 'en' %}Reviewer{% else %}المراجع{% endif %}" class="form-select form-select-sm" id="regReviewerFilter">
+          <div class="filter-dropdown-glass d-flex flex-column">
+            <label for="regReviewerFilter" class="form-label">{% if ui_lang == 'en' %}Reviewer{% else %}المراجع{% endif %}</label>
+            <select class="form-select form-select-sm" id="regReviewerFilter">
               <option value="">{% if ui_lang == 'en' %}All Reviewers{% else %}كل المراجعين{% endif %}</option>
             </select>
           </div>
-          <button class="btn btn-sm btn-outline-secondary" id="comparePeriodBtn" data-bs-toggle="modal" data-bs-target="#comparePeriodModal" aria-label="{% if ui_lang == 'en' %}Compare Period{% else %}مقارنة الفترة{% endif %}">
-            <i class="bi bi-arrow-left-right me-1"></i>{% if ui_lang == 'en' %}Compare Period{% else %}مقارنة الفترة{% endif %}
-          </button>
+          <div class="d-flex flex-column">
+            <span class="form-label" aria-hidden="true">&nbsp;</span>
+            <button class="btn btn-sm btn-outline-secondary" id="comparePeriodBtn" data-bs-toggle="modal" data-bs-target="#comparePeriodModal" aria-label="{% if ui_lang == 'en' %}Compare Period{% else %}مقارنة الفترة{% endif %}">
+              <i class="bi bi-arrow-left-right me-1"></i>{% if ui_lang == 'en' %}Compare Period{% else %}مقارنة الفترة{% endif %}
+            </button>
+          </div>
+          <div class="filter-active-pill d-none" id="filterActivePill" role="status">
+            <i class="bi bi-funnel-fill" aria-hidden="true"></i>
+            <span id="filterActiveText"></span>
+            <button type="button" class="az-filter-reset-all" id="resetAllFilters">
+              <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+              {% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
+            </button>
+          </div>
         </div>
       </div>
     </div>
+    </div>{# /glass-filter-bar__body #}
   </div>
 
   {# ══ SECTION 3 — Tab Navigation ══════════════════════════════════════════ #}
@@ -234,7 +264,7 @@
           </article>
 
           {# Card 4: Incident Rate #}
-          <article class="kpi-card-v2" style="--kpi-accent:var(--kpi-accent-incident);--kpi-icon-bg:var(--kpi-icon-bg-incident);"
+          <article class="kpi-card-v2" id="incidents" style="--kpi-accent:var(--kpi-accent-incident);--kpi-icon-bg:var(--kpi-icon-bg-incident);"
                    aria-label="{% if ui_lang == 'ar' %}معدل الحوادث{% else %}Incident Rate{% endif %}">
             <div class="kpi-card-v2__header">
               <p class="kpi-card-v2__label">{% if ui_lang == 'en' %}Safety Incidents{% else %}حوادث السلامة{% endif %}</p>
@@ -1355,6 +1385,18 @@
     });
   }());
 
+  /* Hash navigation for incident card */
+  (function () {
+    const hash = window.location.hash;
+    if (hash === '#incidents') {
+      const overviewBtn = document.getElementById('tab-overview-btn');
+      if (overviewBtn) bootstrap.Tab.getOrCreateInstance(overviewBtn).show();
+      setTimeout(function () {
+        document.getElementById('incidents')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
+  }());
+
   /* Sticky filter bar: elevate styling while pinned to the scrollport top.
      A scroll listener (not an IntersectionObserver sentinel) because the
      page container is a flex column with gap — an inserted sentinel would
@@ -1366,13 +1408,145 @@
     let ticking = false;
     const update = function () {
       ticking = false;
-      const stuck = bar.getBoundingClientRect().top <= scroller.getBoundingClientRect().top + 1;
+      const scrollerPadding = parseFloat(getComputedStyle(scroller).paddingTop) || 0;
+      const threshold = scroller.getBoundingClientRect().top + scrollerPadding;
+      const stuck = bar.getBoundingClientRect().top <= threshold + 4;
       bar.classList.toggle('is-stuck', stuck);
     };
     scroller.addEventListener('scroll', function () {
       if (!ticking) { ticking = true; requestAnimationFrame(update); }
     }, { passive: true });
     update();
+  }());
+
+  /* Active-filter visual indicator */
+  (function () {
+    const selects = document.querySelectorAll('.glass-filter-bar .filter-dropdown-glass select');
+    const update = function () {
+      selects.forEach(function (sel) {
+        sel.classList.toggle('has-value', sel.value !== '');
+      });
+    };
+    selects.forEach(function (sel) {
+      sel.addEventListener('change', update);
+    });
+    update();
+  }());
+
+  /* ── Filter bar UX: collapse toggle, active-count, reset-all, Apply wiring ──
+     The component's own Apply button (applyFilter) historically had no handler
+     on this page, so changing dates then clicking it did nothing. Wire it here
+     with start<=end validation, and keep the active-filter summary in sync. */
+  (function () {
+    const isAr = (window.KINJO_LANG || 'ar') === 'ar';
+    const SELECT_IDS = ['governorateFilter', 'regStatusFilter', 'regSourceFilter', 'regReviewerFilter'];
+    const startEl = document.getElementById('periodStart');
+    const endEl = document.getElementById('periodEnd');
+    const dateErr = document.getElementById('filterDateError');
+    const pill = document.getElementById('filterActivePill');
+    const pillText = document.getElementById('filterActiveText');
+    const mobileBadge = document.getElementById('filterCountBadgeMobile');
+    const bar = document.querySelector('.glass-filter-bar');
+    const toggle = document.getElementById('filterBarToggle');
+
+    const fmt = function (d) {
+      const p = function (n) { return String(n).padStart(2, '0'); };
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    };
+    const defaultRange = function () {
+      const now = new Date();
+      return { start: fmt(new Date(now.getFullYear(), now.getMonth(), 1)), end: fmt(now) };
+    };
+    const datesModified = function () {
+      if (!startEl || !endEl || !startEl.value || !endEl.value) return false;
+      const def = defaultRange();
+      return startEl.value !== def.start || endEl.value !== def.end;
+    };
+    const activeCount = function () {
+      let n = 0;
+      SELECT_IDS.forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el && el.value) n++;
+      });
+      if (datesModified()) n++;
+      return n;
+    };
+    const refreshSummary = function () {
+      const n = activeCount();
+      if (pill) {
+        pill.classList.toggle('d-none', n === 0);
+        if (pillText) {
+          pillText.textContent = isAr
+            ? (n + ' ' + (n === 1 ? 'فلتر نشط' : 'فلاتر نشطة'))
+            : (n + ' active filter' + (n === 1 ? '' : 's'));
+        }
+      }
+      if (mobileBadge) {
+        mobileBadge.classList.toggle('d-none', n === 0);
+        mobileBadge.textContent = String(n);
+      }
+    };
+
+    /* Reset every filter group back to the page default (month-to-date,
+       no governorate, no registration filters) and reload once. */
+    const resetAll = function () {
+      const def = defaultRange();
+      if (startEl) { startEl.value = def.start; startEl.classList.remove('is-invalid'); }
+      if (endEl) { endEl.value = def.end; endEl.classList.remove('is-invalid'); }
+      dateErr?.classList.add('d-none');
+      SELECT_IDS.forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      if (window.AnalyticsFilterState) {
+        window.AnalyticsFilterState.syncFromDOM();
+        window.AnalyticsFilterState.setState({ source: 'dashboard' });
+      }
+      if (typeof loadAdminAnalytics === 'function') loadAdminAnalytics();
+      if (typeof loadRegistrationAnalytics === 'function') {
+        /* keep the Registrations tab table consistent with cleared selects */
+        try { loadRegistrationAnalytics(); } catch (e) { /* non-fatal */ }
+      }
+      refreshSummary();
+    };
+    document.getElementById('resetAllFilters')?.addEventListener('click', resetAll);
+
+    /* Mobile collapse toggle */
+    toggle?.addEventListener('click', function () {
+      const open = bar.classList.toggle('is-open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    /* Date validation + the previously-unwired Apply button */
+    const applyDates = function () {
+      if (!startEl || !endEl) return;
+      const invalid = startEl.value && endEl.value && startEl.value > endEl.value;
+      startEl.classList.toggle('is-invalid', invalid);
+      endEl.classList.toggle('is-invalid', invalid);
+      dateErr?.classList.toggle('d-none', !invalid);
+      if (invalid) return;
+      if (window.AnalyticsFilterState) {
+        window.AnalyticsFilterState.syncFromDOM();
+        window.AnalyticsFilterState.setState({ source: 'dashboard' });
+      }
+      if (typeof loadAdminAnalytics === 'function') loadAdminAnalytics();
+      refreshSummary();
+    };
+    document.getElementById('applyFilter')?.addEventListener('click', applyDates);
+    [startEl, endEl].forEach(function (el) {
+      el?.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); applyDates(); }
+      });
+    });
+
+    /* Keep the summary in sync with every filter control */
+    SELECT_IDS.forEach(function (id) {
+      document.getElementById(id)?.addEventListener('change', refreshSummary);
+    });
+    [startEl, endEl].forEach(function (el) {
+      el?.addEventListener('change', refreshSummary);
+    });
+    refreshSummary();
   }());
 
   /* Governorate table in-page search */

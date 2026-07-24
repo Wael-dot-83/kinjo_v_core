@@ -49,16 +49,19 @@ def test_decision_support_charts_have_fallback_paths():
 def test_analytics_filter_bar_sticks_to_scrollport_top():
     """The analytics filter bar must pin flush to the top of .admin-content.
 
-    .admin-content is the real scroll container (the header sits outside it),
-    so the sticky offset must cancel the scroller's own padding — a positive
-    header-height offset leaves the bar floating mid-page.
+    .admin-content is the real scroll container (the header sits outside it).
+    `top: 0` pins the bar at the scroller's content edge — i.e. flush with the
+    visible top, since the scroller's own padding is above it. The earlier
+    `top: calc(-1 * var(--kinjo-spacing-6))` offset made the bar stick only
+    after scrolling past the container top, so it appeared to never pin.
     """
     css = ANALYTICS_V2_CSS.read_text(encoding="utf-8")
     match = re.search(r"\.glass-filter-bar\s*\{(?P<body>[^}]+)\}", css)
     assert match is not None
     body = match.group("body")
     assert re.search(r"position\s*:\s*sticky", body)
-    assert re.search(r"top\s*:\s*calc\(-1 \* var\(--kinjo-spacing-6", body)
+    assert re.search(r"top\s*:\s*0\b", body)
+    assert not re.search(r"top\s*:\s*calc\(-1", body)
     assert re.search(r"z-index\s*:\s*1000", body)
     assert ".glass-filter-bar.is-stuck" in css
 

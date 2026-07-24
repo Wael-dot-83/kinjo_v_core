@@ -201,3 +201,48 @@ def test_dead_advanced_metrics_container_removed():
     js = JS_FILE.read_text(encoding="utf-8")
     assert "advancedMetricsContainer" not in html
     assert "advancedMetricsContainer" not in js
+
+def test_filter_bar_controls_have_visible_labels():
+    """The Status/Source/Reviewer selects shipped with only aria-labels while
+    date/governorate fields had visible labels -- inconsistent hierarchy and
+    higher cognitive load. Every select in the bar must have a <label for=...>.
+    """
+    html = TEMPLATE.read_text(encoding="utf-8")
+    for field_id in ("regStatusFilter", "regSourceFilter", "regReviewerFilter"):
+        assert f'<label for="{field_id}"' in html, f"missing visible label for {field_id}"
+
+
+def test_filter_bar_apply_button_is_wired_with_date_validation():
+    """#applyFilter (rendered by the shared date-range-filter component) had no
+    click binding on this page -- changing dates then clicking Apply did
+    nothing. It must call loadAdminAnalytics and block start>end ranges."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert "getElementById('applyFilter')?.addEventListener('click'" in html
+    assert "startEl.value > endEl.value" in html
+    assert 'id="filterDateError"' in html
+
+
+def test_filter_bar_active_summary_and_reset_all_present():
+    """Users need at-a-glance feedback that filters are active and a one-click
+    way back to the default view (the component's Clear button only clears
+    dates, not the four selects)."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert 'id="filterActivePill"' in html
+    assert 'id="resetAllFilters"' in html
+    assert "getElementById('resetAllFilters')?.addEventListener('click'" in html
+    for field_id in ("governorateFilter", "regStatusFilter", "regSourceFilter", "regReviewerFilter"):
+        assert field_id in html
+
+
+def test_filter_bar_mobile_collapse_toggle_present():
+    """At 390px the fully-expanded bar measured 409px tall -- over half the
+    viewport while stuck. On small screens the bar must collapse behind a
+    toggle showing the active-filter count."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert 'id="filterBarToggle"' in html
+    assert 'aria-controls="analyticsFilterBody"' in html
+    assert 'id="filterCountBadgeMobile"' in html
+    css = (ROOT / "static" / "css" / "admin_analytics_v2.css").read_text(encoding="utf-8")
+    assert ".glass-filter-bar.is-open .glass-filter-bar__body" in css
+    assert ".az-filter-bar-toggle" in css
+
