@@ -135,6 +135,12 @@ class AdminDashboard {
     this.intervalId = null;
     this.charts = {};
     this.chartRuntimeBroken = false;
+    this.chartRuntimeProbeEnabled = this.readRuntimeFlag(
+      "chartRuntimeProbeEnabled",
+      true,
+    );
+    this.telemetryEnabled = this.readRuntimeFlag("dashboardTelemetryEnabled", true);
+    this._chartRuntimeFailureReported = false;
     this.isLoading = false;
     this._listeners = {};
 
@@ -213,10 +219,70 @@ class AdminDashboard {
     Chart.defaults.plugins.legend.display = true;
     Chart.defaults.plugins.legend.position = "bottom";
 
-    // Probe Chart.js once at startup. In some browser/runtime combinations the
-    // global Chart runtime can throw during scriptable option resolution;
-    // avoid breaking dashboard rendering by falling back to text empty states.
-    this.chartRuntimeBroken = !this._probeChartRuntime();
+    // Probe Chart.js once at startup (default on). This can be disabled via
+    // window.KINJO_ADMIN_FLAGS.chartRuntimeProbeEnabled or localStorage key
+    // kinjo.admin.chartRuntimeProbeEnabled for vendor isolation diagnostics.
+    if (this.chartRuntimeProbeEnabled) {
+      this.chartRuntimeBroken = !this._probeChartRuntime("init");
+    }
+  }
+
+  readRuntimeFlag(name, defaultValue) {
+    const fromWindow =
+      typeof window !== "undefined" &&
+      window.KINJO_ADMIN_FLAGS &&
+      Object.prototype.hasOwnProperty.call(window.KINJO_ADMIN_FLAGS, name)
+        ? window.KINJO_ADMIN_FLAGS[name]
+        : undefined;
+
+    if (typeof fromWindow === "boolean") return fromWindow;
+
+    try {
+      const fromStorage = localStorage.getItem(`kinjo.admin.${name}`);
+      if (fromStorage === "true") return true;
+      if (fromStorage === "false") return false;
+    } catch (_err) {
+      // Ignore storage access restrictions and use defaults.
+    }
+
+    return defaultValue;
+  }
+
+  emitTelemetry(eventName, payload = {}) {
+    const details = {
+      event: eventName,
+      at: new Date().toISOString(),
+      page: window.location.pathname,
+      lang: window.KINJO_LANG === "en" ? "en" : "ar",
+      dir: document?.documentElement?.dir || "rtl",
+      ...payload,
+    };
+
+    try {
+      window.dispatchEvent(
+        new CustomEvent("kinjo:dashboard:telemetry", {
+          detail: details,
+        }),
+      );
+    } catch (_err) {
+      // Ignore environments where CustomEvent is unavailable.
+    }
+
+    if (this.telemetryEnabled) {
+      console.info("[AdminDashboard][telemetry]", details);
+    }
+  }
+
+  reportChartRuntimeFailure(reason, payload = {}) {
+    if (this._chartRuntimeFailureReported) return;
+    this._chartRuntimeFailureReported = true;
+    this.emitTelemetry("chart_runtime_failure", {
+      reason,
+      probeEnabled: this.chartRuntimeProbeEnabled,
+      chartRuntimeBroken: this.chartRuntimeBroken,
+      userAgent: navigator?.userAgent,
+      ...payload,
+    });
   }
 
   hardenChartScriptableGuards() {
@@ -252,7 +318,7 @@ class AdminDashboard {
     walk(Chart.defaults);
   }
 
-  _probeChartRuntime() {
+  _probeChartRuntime(source = "runtime") {
     if (typeof Chart === "undefined") return false;
     try {
       const canvas = document.createElement("canvas");
@@ -269,6 +335,10 @@ class AdminDashboard {
       return true;
     } catch (error) {
       console.error("[AdminDashboard] Chart.js runtime probe failed:", error);
+      this.reportChartRuntimeFailure("probe_failed", {
+        source,
+        errorMessage: error?.message || String(error),
+      });
       return false;
     }
   }
@@ -811,9 +881,12 @@ class AdminDashboard {
     this.clearChartEmptyState(attendanceCtx);
     this.clearChartEmptyState(submissionsCtx);
 
-    // Re-check runtime health before each draw cycle. In some sessions the
-    // Chart.js resolver becomes unstable after language/layout transitions.
-    if (!this.chartRuntimeBroken && !this._probeChartRuntime()) {
+    // Re-check runtime health before each draw cycle when probing is enabled.
+    if (
+      this.chartRuntimeProbeEnabled &&
+      !this.chartRuntimeBroken &&
+      !this._probeChartRuntime("render-cycle")
+    ) {
       this.chartRuntimeBroken = true;
     }
 
@@ -849,6 +922,9 @@ class AdminDashboard {
       } catch (error) {
         console.error("[AdminDashboard] attendance chart render error:", error);
         this.chartRuntimeBroken = true;
+        this.reportChartRuntimeFailure("attendance_render_failed", {
+          errorMessage: error?.message || String(error),
+        });
         if (attendanceCtx) {
           this.showChartEmpty(
             attendanceCtx,
@@ -882,6 +958,9 @@ class AdminDashboard {
           error,
         );
         this.chartRuntimeBroken = true;
+        this.reportChartRuntimeFailure("submissions_render_failed", {
+          errorMessage: error?.message || String(error),
+        });
         if (submissionsCtx) {
           this.showChartEmpty(
             submissionsCtx,
