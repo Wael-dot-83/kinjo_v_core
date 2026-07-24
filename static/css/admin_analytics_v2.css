@@ -262,12 +262,15 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.06);
   border-bottom-color: var(--slate-300);
 }
-/* Active-filter indicator */
-.glass-filter-bar .filter-dropdown-glass select.has-value,
-.glass-filter-bar .filter-dropdown-glass select:not([value=""]) {
-  border-color: var(--az-primary);
-  background-color: rgba(37,99,235,0.04);
-  box-shadow: 0 0 0 2px rgba(37,99,235,0.08);
+/* Active-filter indicator (class toggled by JS in the analytics template;
+   no attribute selector — <select> has no value attribute, so
+   select:not([value=""]) would match every control permanently).
+   !important is required: kinjo.css pins border-color/box-shadow on
+   .form-control/.form-select globally with !important. */
+.glass-filter-bar .filter-dropdown-glass select.has-value {
+  border-color: var(--az-primary) !important;
+  background-color: rgba(37,99,235,0.04) !important;
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.08) !important;
 }
 
 /* ── 4.1 Filter Bar — visual hierarchy ────────────────────────────────────── */

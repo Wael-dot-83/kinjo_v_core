@@ -5,7 +5,7 @@
 {% block title %}{% if ui_lang == 'en' %}Analytics Intelligence Center{% else %}مركز الذكاء التحليلي{% endif %} — KinJo{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=2.2">
+<link rel="stylesheet" href="/static/css/admin_analytics_v2.css?v=2.4">
 <style>
   /* Suppress Bootstrap's default card styling where we use az-card */
   .kpi-grid, .kpi-card { display: none !important; }
@@ -1419,21 +1419,8 @@
     update();
   }());
 
-  /* Active-filter visual indicator */
-  (function () {
-    const selects = document.querySelectorAll('.glass-filter-bar .filter-dropdown-glass select');
-    const update = function () {
-      selects.forEach(function (sel) {
-        sel.classList.toggle('has-value', sel.value !== '');
-      });
-    };
-    selects.forEach(function (sel) {
-      sel.addEventListener('change', update);
-    });
-    update();
-  }());
-
-  /* ── Filter bar UX: collapse toggle, active-count, reset-all, Apply wiring ──
+  /* ── Filter bar UX: collapse toggle, active-count + has-value highlight,
+     reset-all, Apply wiring ──
      The component's own Apply button (applyFilter) historically had no handler
      on this page, so changing dates then clicking it did nothing. Wire it here
      with start<=end validation, and keep the active-filter summary in sync. */
@@ -1472,6 +1459,10 @@
       return n;
     };
     const refreshSummary = function () {
+      SELECT_IDS.forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('has-value', el.value !== '');
+      });
       const n = activeCount();
       if (pill) {
         pill.classList.toggle('d-none', n === 0);
