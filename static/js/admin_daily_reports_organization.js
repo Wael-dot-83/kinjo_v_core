@@ -604,11 +604,13 @@
   async function loadInitialFilters() {
     const [governoratesResponse, kindergartensResponse] = await Promise.all([
       apiGet("/api/reference/governorates"),
-      apiGet("/api/kindergartens", { limit: 500, include_inactive: true }),
+      // Full network list (635+) for client-side governorate grouping; the
+      // endpoint envelope nests rows under data.items.
+      apiGet("/api/kindergartens", { limit: 1000, include_inactive: true }),
     ]);
 
     const governorates = governoratesResponse?.governorates || [];
-    const kindergartens = kindergartensResponse?.kindergartens || [];
+    const kindergartens = kindergartensResponse?.data?.items || kindergartensResponse?.items || [];
 
     state.allKindergartens = kindergartens;
     renderGovernorates(governorates);

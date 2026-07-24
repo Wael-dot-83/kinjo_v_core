@@ -2923,8 +2923,8 @@ async function loadKindergartensOverview() {
   if (!tableBody) return;
 
   try {
-    const data = await dashboardFetch(DASHBOARD_API.admin.kindergartens);
-    const kindergartens = data.kindergartens || data.items || data || [];
+    const data = await dashboardFetch(DASHBOARD_API.admin.kindergartens + "?limit=1000");
+    const kindergartens = (data.data && data.data.items) || data.items || [];
 
     if (!Array.isArray(kindergartens) || kindergartens.length === 0) {
       tableBody.innerHTML = dashboardTemplate(

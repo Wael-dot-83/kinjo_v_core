@@ -87,3 +87,46 @@ def test_child_analytics_endpoint_is_hard_gated_admin():
     handler = source[source.index("async def get_child_analytics"):source.index("@router.get", source.index("async def get_child_analytics"))]
     assert "Depends(require_admin)" in handler
     assert "get_current_user" not in handler
+
+
+# --------------------------------------------------------------------------
+# /api/kindergartens list ecosystem — the cap must cover the platform's real
+# scale (635 kindergartens) and every consumer must read the envelope's
+# data.items rows (several read a non-existent top-level "kindergartens" key
+# and silently rendered empty filters/wizards).
+# --------------------------------------------------------------------------
+def test_kindergartens_list_limit_covers_platform_scale(client, admin_token):
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    ok = client.get("/api/kindergartens?limit=1000", headers=headers)
+    assert ok.status_code == 200, ok.text
+    body = ok.json()["data"]
+    assert set(body) >= {"items", "total", "skip", "limit", "returned"}
+
+    too_much = client.get("/api/kindergartens?limit=1001", headers=headers)
+    assert too_much.status_code == 422
+
+
+def test_kindergartens_consumers_read_envelope_items():
+    expectations = {
+        "static/js/admin_daily_reports_organization.js": ["data?.items", "limit: 1000"],
+        "templates/communication/modals/new_message.html": ["data.data.items", "limit=1000"],
+        "templates/admin/incident_reports_list.html": ["data.data.items", "limit=1000"],
+        "templates/admin/safety_analytics.html": ["data.data.items", "limit=1000"],
+        "templates/parent/wizard/kindergarten_select.html": ["data.data.items", "limit=1000"],
+        "templates/enrollment/create.html": ["data.data.items"],
+        "static/js/dashboard.js": ["data.data.items", "limit=1000"],
+    }
+    for rel_path, needles in expectations.items():
+        source = (ROOT / rel_path).read_text(encoding="utf-8")
+        for needle in needles:
+            assert needle in source, f"{rel_path} missing {needle!r}"
+
+
+def test_search_kindergartens_uses_real_parameter_names():
+    source = (ROOT / "static/js/kinjo-api.js").read_text(encoding="utf-8")
+    start = source.index("async searchKindergartens")
+    end = source.index("}", source.index("return this.get(\"/api/kindergartens\"", start))
+    helper = source[start:end]
+    assert "queryParams.q = params.search" in helper
+    assert "queryParams.name" not in helper
+    assert "queryParams.city" not in helper

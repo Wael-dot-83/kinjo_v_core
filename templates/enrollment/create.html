@@ -726,7 +726,7 @@ breadcrumbs=[
             if (gov) params.governorate = gov;
             if (district) params.district = district;
             const data = await api.searchKindergartens(params);
-            kgResults = data.kindergartens || [];
+            kgResults = (data.data && data.data.items) || data.kindergartens || [];
             renderKgResults(kgResults, query);
         } catch (err) {
             console.error('KG search error:', err);

@@ -418,10 +418,10 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
     /* ── Load kindergartens into the filter dropdown ── */
     async function loadKindergartenOptions() {
         try {
-            const r = await fetch('/api/kindergartens');
+            const r = await fetch('/api/kindergartens?limit=1000');
             if (!r.ok) return;
             const data = await r.json();
-            const list = data.kindergartens || data || [];
+            const list = (data.data && data.data.items) || data.items || [];
             const sel = document.getElementById('filterKg');
             list.forEach(kg => {
                 const opt = document.createElement('option');

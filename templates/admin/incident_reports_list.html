@@ -261,10 +261,10 @@
 
     async function loadKindergartens() {
         try {
-            const response = await fetch('/api/kindergartens?limit=200');
+            const response = await fetch('/api/kindergartens?limit=1000');
             if (!response.ok) return;
             const data = await response.json();
-            const kindergartens = Array.isArray(data) ? data : (data.kindergartens || []);
+            const kindergartens = Array.isArray(data) ? data : ((data.data && data.data.items) || data.kindergartens || []);
             const selects = ['reportKindergarten', 'kindergartenFilter'];
             selects.forEach(selectId => {
                 const select = document.getElementById(selectId);

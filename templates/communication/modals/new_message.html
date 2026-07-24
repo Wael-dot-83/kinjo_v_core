@@ -779,7 +779,7 @@
 
         const token = AuthService.getToken();
         try {
-            const response = await fetch('/api/kindergartens?limit=500&status=active', {
+            const response = await fetch('/api/kindergartens?limit=1000&status=active', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) {
@@ -787,7 +787,7 @@
                 return;
             }
             const data = await response.json();
-            const kindergartens = Array.isArray(data) ? data : (data.kindergartens || []);
+            const kindergartens = Array.isArray(data) ? data : ((data.data && data.data.items) || data.kindergartens || []);
             populateKindergartenCheckboxes(kindergartens);
         } catch (err) {
             console.error('Error loading kindergartens:', err);
@@ -987,7 +987,7 @@
 
         const token = AuthService.getToken();
         const params = new URLSearchParams();
-        params.append('limit', '200');
+        params.append('limit', '1000');
         try {
             const response = await fetch(`/api/kindergartens?${params.toString()}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -996,7 +996,7 @@
                 return;
             }
             const data = await response.json();
-            const kindergartens = Array.isArray(data) ? data : (data.kindergartens || []);
+            const kindergartens = Array.isArray(data) ? data : ((data.data && data.data.items) || data.kindergartens || []);
             directKindergartenCache = kindergartens;
             populateDirectKindergartenFilter(kindergartens);
         } catch (err) {
@@ -1214,7 +1214,7 @@
         const result = {};
         try {
             const params = new URLSearchParams();
-            params.append('limit', '200');
+            params.append('limit', '1000');
             const response = await fetch(`/api/kindergartens?${params.toString()}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -1222,7 +1222,7 @@
                 return result;
             }
             const data = await response.json();
-            const items = Array.isArray(data) ? data : (data.kindergartens || []);
+            const items = Array.isArray(data) ? data : ((data.data && data.data.items) || data.kindergartens || []);
             const needed = new Set(kindergartenIds.map(id => Number(id)));
             items.forEach(kg => {
                 if (!needed.has(Number(kg.id))) {
@@ -1673,7 +1673,7 @@
         if (!window.AuthService || !AuthService.isAuthenticated()) return;
         const token = AuthService.getToken();
         try {
-            const response = await fetch('/api/kindergartens?limit=500&status=active', {
+            const response = await fetch('/api/kindergartens?limit=1000&status=active', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) {
@@ -1681,7 +1681,7 @@
                 return;
             }
             const data = await response.json();
-            const kindergartens = Array.isArray(data) ? data : (data.kindergartens || []);
+            const kindergartens = Array.isArray(data) ? data : ((data.data && data.data.items) || data.kindergartens || []);
             if (!kindergartens.length) {
                 container.innerHTML = `<div class="text-muted">${T('لا توجد حضانات متاحة', 'No kindergartens available')}</div>`;
                 return;

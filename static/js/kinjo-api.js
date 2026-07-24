@@ -376,11 +376,15 @@ class KinJoAPI {
 
   async searchKindergartens(params = {}) {
     const queryParams = {};
-    if (params.search) queryParams.name = params.search;
+    // The endpoint's real parameter names: q (name search) and district
+    // (post city→district migration) — `name`/`city` were silently ignored.
+    if (params.search) queryParams.q = params.search;
     if (params.governorate) queryParams.governorate = params.governorate;
-    if (params.city) queryParams.city = params.city;
+    if (params.district) queryParams.district = params.district;
+    if (params.city) queryParams.district = params.city;
     if (params.phone) queryParams.phone = params.phone;
     if (params.status) queryParams.status = params.status;
+    if (params.limit) queryParams.limit = params.limit;
     return this.get("/api/kindergartens", queryParams);
   }
 
