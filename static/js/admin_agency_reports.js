@@ -366,6 +366,26 @@
     const breadcrumbReport = document.getElementById("breadcrumb-report-name");
     if (breadcrumbReport) breadcrumbReport.textContent = payload.metadata.report_title_ar || payload.metadata.report_code;
 
+    // Drill-down breadcrumb
+    const drill = window.__agencyDrillDown || {};
+    const drillBc = document.getElementById("agency-drill-breadcrumb");
+    if (drillBc) {
+      if (drill.governorate || drill.city || drill.district || drill.kindergarten_id) {
+        drillBc.classList.remove("d-none");
+        const label = document.getElementById("agency-drill-label");
+        if (label) {
+          const parts = [];
+          if (drill.governorate) parts.push(t("المحافظة:", "Governorate:") + " " + drill.governorate);
+          if (drill.city) parts.push(t("المدينة:", "City:") + " " + drill.city);
+          if (drill.district) parts.push(t("اللواء:", "District:") + " " + drill.district);
+          if (drill.kindergarten_id) parts.push(t("الحضانة:", "Kindergarten:") + " #" + drill.kindergarten_id);
+          label.textContent = parts.join(" › ");
+        }
+      } else {
+        drillBc.classList.add("d-none");
+      }
+    }
+
     // Agency logo in report header
     const logoEl = document.getElementById("report-agency-logo");
     if (logoEl && window.renderAgencyLogo) {
@@ -496,14 +516,16 @@
           chartContainer.__chartReady = true;
           exportBtn.disabled = false;
           exportBtn.removeAttribute("aria-disabled");
+          attachChartDrillDown(chartContainer, payload);
         }).catch(() => {
-          exportBtn.remove();
+          chartContainer.remove();
           chartSection.appendChild(document.createTextNode(t("تعذر عرض الرسم البياني.", "Unable to render chart.")));
         });
       } else {
         chartSection.appendChild(document.createTextNode(t("لا تتوفر بيانات للرسم البياني.", "No chart data available.")));
         root.appendChild(chartSection);
       }
+    }
     }
 
     // Data table
@@ -550,6 +572,8 @@
       }
       tableSection.appendChild(table);
       root.appendChild(tableSection);
+      const groupBy = (payload.chart && payload.chart.group_by) || "";
+      attachTableDrillDown(tableSection, groupBy);
     } else {
       const empty = document.createElement("div");
       empty.className = "agency-alert";
@@ -609,14 +633,21 @@
     const reportCode = page.dataset.reportCode;
     const form = document.getElementById("agency-report-filters");
     const formData = form ? new FormData(form) : new FormData();
-    // Remove empty values
     const params = new URLSearchParams();
     formData.forEach((v, k) => { if (v && v.trim()) params.set(k, v.trim()); });
+
+    const drill = window.__agencyDrillDown || {};
+    if (drill.governorate) params.set("governorate", drill.governorate);
+    if (drill.city) params.set("city", drill.city);
+    if (drill.district) params.set("district", drill.district);
+    if (drill.kindergarten_id) params.set("kindergarten_id", String(drill.kindergarten_id));
+
     const query = params.toString();
+    const url = "/api/admin/agency-reports/" + encodeURIComponent(agencyCode) + "/reports/" + encodeURIComponent(reportCode) + (query ? "?" + query : "");
 
     if (root) root.innerHTML = '<div class="agency-loading" role="status"><i class="bi bi-hourglass-split" aria-hidden="true"></i> ' + t("جاري تحميل البيانات...", "Loading data...") + "</div>";
 
-    api("/api/admin/agency-reports/" + encodeURIComponent(agencyCode) + "/reports/" + encodeURIComponent(reportCode) + (query ? "?" + query : ""))
+    api(url)
       .then(renderReport)
       .catch(() => {
         if (root) root.innerHTML = '<div class="agency-alert agency-alert--error"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> ' + t("تعذر تحميل التقرير. يرجى المحاولة مرة أخرى أو التواصل مع مسؤول النظام.", "Unable to load the report. Please try again or contact the system administrator.") + "</div>";
@@ -651,7 +682,71 @@
     });
   }
 
-  // -------- Usage-guide drawer (native <dialog>: focus trap + Esc) --------
+  // -------- Drill-down ---------------------------------------------------
+  function initDrillDown() {
+    const resetBtn = document.getElementById("agency-drill-reset");
+    if (resetBtn) {
+      resetBtn.addEventListener("click", () => {
+        window.__agencyDrillDown = {};
+        const url = new URL(window.location.href);
+        url.search = "";
+        window.history.replaceState({}, "", url.toString());
+        loadReport();
+      });
+    }
+  }
+
+  function attachChartDrillDown(chartContainer, payload) {
+    if (!chartContainer || !window.Plotly) return;
+    chartContainer.on("plotly_click", (eventData) => {
+      if (!eventData || !eventData.points || !eventData.points.length) return;
+      const pt = eventData.points[0];
+      const groupBy = payload.chart.group_by || "";
+      const drill: Record<string, string> = {};
+      if (groupBy === "governorate") drill.governorate = pt.label;
+      else if (groupBy === "city") drill.city = pt.label;
+      else if (groupBy === "status") drill.status = pt.label;
+      else if (groupBy === "severity") drill.severity = pt.label;
+      else if (groupBy === "role") drill.role = pt.label;
+      else if (groupBy === "gender") drill.gender = pt.label;
+      if (Object.keys(drill).length) {
+        window.__agencyDrillDown = drill;
+        const url = new URL(window.location.href);
+        Object.entries(drill).forEach(([k, v]) => url.searchParams.set(k, v));
+        window.history.replaceState({}, "", url.toString());
+        loadReport();
+      }
+    });
+  }
+
+  function attachTableDrillDown(tableSection, groupBy) {
+    if (!tableSection) return;
+    const rows = tableSection.querySelectorAll(".agency-table tbody tr");
+    rows.forEach((row) => {
+      row.style.cursor = "pointer";
+      row.setAttribute("tabindex", "0");
+      row.setAttribute("role", "button");
+      const cells = row.querySelectorAll("td");
+      if (!cells.length) return;
+      const drill: Record<string, string> = {};
+      if (groupBy === "governorate") drill.governorate = cells[0]?.textContent?.trim() || "";
+      else if (groupBy === "city") drill.city = cells[0]?.textContent?.trim() || "";
+      else if (groupBy === "status") drill.status = cells[0]?.textContent?.trim() || "";
+      else if (groupBy === "severity") drill.severity = cells[0]?.textContent?.trim() || "";
+      else if (groupBy === "role") drill.role = cells[0]?.textContent?.trim() || "";
+      else if (groupBy === "gender") drill.gender = cells[0]?.textContent?.trim() || "";
+      const activate = () => {
+        if (!Object.keys(drill).length) return;
+        window.__agencyDrillDown = drill;
+        const url = new URL(window.location.href);
+        Object.entries(drill).forEach(([k, v]) => url.searchParams.set(k, v));
+        window.history.replaceState({}, "", url.toString());
+        loadReport();
+      };
+      row.addEventListener("click", activate);
+      row.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(); } });
+    });
+  }
   function initDrawer() {
     const dlg = document.getElementById("usage-guide-dialog");
     const openBtn = document.getElementById("open-usage-guide");
@@ -816,7 +911,6 @@
   if (type === "report") {
     const filtersForm = document.getElementById("agency-report-filters");
     if (filtersForm) {
-      // Pre-fill date_from/date_to from URL query string if present
       const urlParams = new URLSearchParams(window.location.search);
       const df = urlParams.get("date_from");
       const dt = urlParams.get("date_to");
@@ -824,6 +918,7 @@
       if (dt) { const el = filtersForm.querySelector("[name=date_to]"); if (el) el.value = dt; }
       filtersForm.addEventListener("submit", (e) => { e.preventDefault(); loadReport(); });
     }
+    initDrillDown();
     loadReport();
   }
 })();
