@@ -525,6 +525,12 @@
           /* ── Language switcher ─────────────────────────────────── */
           window.setAdminLanguage = function (lang) {
             if (lang !== "ar" && lang !== "en") return;
+            try {
+              localStorage.setItem("admin_language", lang);
+              localStorage.setItem("kinjo_lang", lang);
+            } catch (_error) {
+              // Ignore storage failures and still persist via cookie.
+            }
             document.cookie =
               "kinjo_lang=" + lang + "; path=/; max-age=31536000; SameSite=Lax";
             window.location.reload();

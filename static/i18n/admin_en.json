@@ -150,6 +150,8 @@
     "enrollment_draft": "Draft",
     "no_alerts_hint": "You'll be notified when important system events occur",
     "enrollment_status": "Enrollment Status",
+    "no_attendance_data": "No attendance data for the selected period",
+    "no_enrollment_data": "No enrollment data for the selected period",
     "time_minutes_ago": "{{count}} minutes ago",
     "time_hours_ago": "{{count}} hours ago",
     "time_days_ago": "{{count}} days ago",

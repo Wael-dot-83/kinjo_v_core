@@ -134,6 +134,7 @@ class AdminDashboard {
     this.refreshInterval = 300000; // 5 minutes
     this.intervalId = null;
     this.charts = {};
+    this.chartRuntimeBroken = false;
     this.isLoading = false;
     this._listeners = {};
 
@@ -204,10 +205,72 @@ class AdminDashboard {
 
   initChartDefaults() {
     if (typeof Chart === "undefined") return;
+
+    this.hardenChartScriptableGuards();
+
     Chart.defaults.responsive = true;
     Chart.defaults.maintainAspectRatio = false;
     Chart.defaults.plugins.legend.display = true;
     Chart.defaults.plugins.legend.position = "bottom";
+
+    // Probe Chart.js once at startup. In some browser/runtime combinations the
+    // global Chart runtime can throw during scriptable option resolution;
+    // avoid breaking dashboard rendering by falling back to text empty states.
+    this.chartRuntimeBroken = !this._probeChartRuntime();
+  }
+
+  hardenChartScriptableGuards() {
+    if (typeof Chart === "undefined" || !Chart.defaults) return;
+
+    const mark = "__kinjoScriptableGuard";
+    const seen = new WeakSet();
+
+    const walk = (node) => {
+      if (!node || typeof node !== "object" || seen.has(node)) return;
+      seen.add(node);
+
+      if (
+        typeof node._scriptable === "function" &&
+        !node._scriptable[mark]
+      ) {
+        const original = node._scriptable.bind(node);
+        const guarded = (key) =>
+          typeof key === "string" ? original(key) : true;
+        Object.defineProperty(guarded, mark, {
+          value: true,
+          enumerable: false,
+        });
+        node._scriptable = guarded;
+      }
+
+      Reflect.ownKeys(node).forEach((key) => {
+        const value = node[key];
+        if (value && typeof value === "object") walk(value);
+      });
+    };
+
+    walk(Chart.defaults);
+  }
+
+  _probeChartRuntime() {
+    if (typeof Chart === "undefined") return false;
+    try {
+      const canvas = document.createElement("canvas");
+      const probe = new Chart(canvas, {
+        type: "bar",
+        data: { labels: ["x"], datasets: [{ label: "x", data: [1] }] },
+        options: {
+          responsive: false,
+          animation: false,
+          plugins: { legend: { display: false } },
+        },
+      });
+      probe.destroy();
+      return true;
+    } catch (error) {
+      console.error("[AdminDashboard] Chart.js runtime probe failed:", error);
+      return false;
+    }
   }
 
   // ── State Machine ─────────────────────────────────────────────────────────
@@ -748,12 +811,54 @@ class AdminDashboard {
     this.clearChartEmptyState(attendanceCtx);
     this.clearChartEmptyState(submissionsCtx);
 
+    // Re-check runtime health before each draw cycle. In some sessions the
+    // Chart.js resolver becomes unstable after language/layout transitions.
+    if (!this.chartRuntimeBroken && !this._probeChartRuntime()) {
+      this.chartRuntimeBroken = true;
+    }
+
+    if (this.chartRuntimeBroken) {
+      if (attendanceCtx) {
+        this.showChartEmpty(
+          attendanceCtx,
+          this.t(
+            "dashboard.no_attendance_data",
+            "No attendance data for the selected period",
+          ),
+        );
+      }
+      if (submissionsCtx) {
+        this.showChartEmpty(
+          submissionsCtx,
+          this.t(
+            "dashboard.no_enrollment_data",
+            "No enrollment data for the selected period",
+          ),
+        );
+      }
+      return;
+    }
+
     if (
       charts.attendance &&
       charts.attendance.labels &&
       charts.attendance.labels.length
     ) {
-      this.renderAttendanceChart(charts.attendance);
+      try {
+        this.renderAttendanceChart(charts.attendance);
+      } catch (error) {
+        console.error("[AdminDashboard] attendance chart render error:", error);
+        this.chartRuntimeBroken = true;
+        if (attendanceCtx) {
+          this.showChartEmpty(
+            attendanceCtx,
+            this.t(
+              "dashboard.no_attendance_data",
+              "No attendance data for the selected period",
+            ),
+          );
+        }
+      }
     } else if (attendanceCtx) {
       this.showChartEmpty(
         attendanceCtx,
@@ -769,7 +874,24 @@ class AdminDashboard {
       charts.data_submissions.labels &&
       charts.data_submissions.labels.length
     ) {
-      this.renderSubmissionsChart(charts.data_submissions);
+      try {
+        this.renderSubmissionsChart(charts.data_submissions);
+      } catch (error) {
+        console.error(
+          "[AdminDashboard] submissions chart render error:",
+          error,
+        );
+        this.chartRuntimeBroken = true;
+        if (submissionsCtx) {
+          this.showChartEmpty(
+            submissionsCtx,
+            this.t(
+              "dashboard.no_enrollment_data",
+              "No enrollment data for the selected period",
+            ),
+          );
+        }
+      }
     } else if (submissionsCtx) {
       this.showChartEmpty(
         submissionsCtx,

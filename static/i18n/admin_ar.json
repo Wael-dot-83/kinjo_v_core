@@ -145,6 +145,8 @@
     "enrollment_draft": "مسودة",
     "no_alerts_hint": "سيتم إخطارك عند وقوع أحداث مهمة في النظام",
     "enrollment_status": "حالة التسجيل",
+    "no_attendance_data": "لا تتوفر بيانات حضور للفترة المحددة",
+    "no_enrollment_data": "لا تتوفر بيانات تسجيل للفترة المحددة",
     "time_minutes_ago": "منذ {{count}} دقيقة",
     "time_hours_ago": "منذ {{count}} ساعة",
     "time_days_ago": "منذ {{count}} يوم",

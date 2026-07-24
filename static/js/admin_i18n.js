@@ -19,8 +19,9 @@ class AdminI18n {
       ...options,
     };
 
+    this.clientPreferredLanguage = this.getSavedLanguage();
     this.currentLanguage =
-      this.getSavedLanguage() || this.options.defaultLanguage;
+      this.clientPreferredLanguage || this.options.defaultLanguage;
     this.translations = {};
     this.isLoading = false;
     this.literalTranslations = { en: {} };
@@ -41,12 +42,32 @@ class AdminI18n {
   init() {
     this.setupLanguageSwitcher();
     this.setupEventListeners();
+    const pageLang = (document.documentElement.lang || "").toLowerCase();
+    const normalizedPageLang = pageLang.startsWith("en") ? "en" : "ar";
+    if (
+      this.options.supportedLanguages.includes(normalizedPageLang) &&
+      this.currentLanguage !== normalizedPageLang
+    ) {
+      this.currentLanguage = normalizedPageLang;
+      this.clientPreferredLanguage = normalizedPageLang;
+      this.saveLanguage(normalizedPageLang);
+    }
     this.loadTranslations()
       .then(() => this.loadServerLanguagePreference())
       .then((serverLanguage) => {
-        if (serverLanguage) {
+        if (serverLanguage && !this.clientPreferredLanguage) {
           this.currentLanguage = serverLanguage;
           this.saveLanguage(serverLanguage);
+        } else if (
+          this.clientPreferredLanguage &&
+          this.options.supportedLanguages.includes(this.clientPreferredLanguage) &&
+          serverLanguage !== this.clientPreferredLanguage
+        ) {
+          this.persistServerLanguagePreference(this.clientPreferredLanguage).catch(
+            () => {
+              // Best-effort sync only.
+            },
+          );
         }
       })
       .then(() => this.applyLanguage(this.currentLanguage))
@@ -783,6 +804,9 @@ class AdminI18n {
             if (node.parentElement?.closest("[data-i18n]")) {
               return NodeFilter.FILTER_REJECT;
             }
+            if (node.parentElement?.closest(".header-lang-dropdown")) {
+              return NodeFilter.FILTER_REJECT;
+            }
             return NodeFilter.FILTER_ACCEPT;
           },
         },
@@ -802,6 +826,9 @@ class AdminI18n {
 
       ["placeholder", "title", "aria-label"].forEach((attr) => {
         document.querySelectorAll(`[${attr}]`).forEach((element) => {
+          if (element.closest(".header-lang-dropdown")) {
+            return;
+          }
           if (
             element.hasAttribute(
               `data-i18n-${attr === "aria-label" ? "aria" : attr}`,
@@ -853,7 +880,9 @@ class AdminI18n {
    * Setup language switcher component
    */
   setupLanguageSwitcher() {
-    const switcher = document.querySelector(".language-switcher");
+    const switcher =
+      document.querySelector(".language-switcher") ||
+      document.querySelector(".header-lang-dropdown");
     if (!switcher) return;
 
     // Options must go inside .dropdown-menu so they stay hidden until opened
@@ -918,6 +947,7 @@ class AdminI18n {
    * Save language preference
    */
   saveLanguage(language) {
+    this.clientPreferredLanguage = language;
     if (this.options.persistLanguage) {
       try {
         localStorage.setItem("admin_language", language);
