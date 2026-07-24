@@ -526,8 +526,6 @@
         root.appendChild(chartSection);
       }
     }
-    }
-
     // Data table
     const rows = payload.breakdowns || [];
     if (rows.length) {
@@ -702,7 +700,7 @@
       if (!eventData || !eventData.points || !eventData.points.length) return;
       const pt = eventData.points[0];
       const groupBy = payload.chart.group_by || "";
-      const drill: Record<string, string> = {};
+      const drill = {};
       if (groupBy === "governorate") drill.governorate = pt.label;
       else if (groupBy === "city") drill.city = pt.label;
       else if (groupBy === "status") drill.status = pt.label;
@@ -728,7 +726,7 @@
       row.setAttribute("role", "button");
       const cells = row.querySelectorAll("td");
       if (!cells.length) return;
-      const drill: Record<string, string> = {};
+      const drill = {};
       if (groupBy === "governorate") drill.governorate = cells[0]?.textContent?.trim() || "";
       else if (groupBy === "city") drill.city = cells[0]?.textContent?.trim() || "";
       else if (groupBy === "status") drill.status = cells[0]?.textContent?.trim() || "";
