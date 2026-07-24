@@ -364,6 +364,9 @@ def submit_enrollment(
 
 
 @router.post("/enrollment/{enrollment_id}/review")
+# Documented compatibility alias: early clients used the plural path; kept
+# (hidden from the OpenAPI schema) so those integrations keep working. The
+# canonical path is the singular one above.
 @router.post("/enrollments/{enrollment_id}/review", include_in_schema=False)
 def review_enrollment(
     enrollment_id: int,

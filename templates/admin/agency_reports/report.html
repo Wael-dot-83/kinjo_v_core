@@ -169,10 +169,6 @@ window.JORDAN_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";
   var fileEl = document.getElementById("immunization-file");
   var btn = document.getElementById("immunization-upload-btn");
   var feedback = document.getElementById("immunization-upload-feedback");
-  function getCookie(name) {
-    var m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
-    return m ? decodeURIComponent(m[1]) : "";
-  }
   function refreshStatus() {
     fetch(base, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
       .then(function (r) { return r.json(); })
@@ -196,26 +192,25 @@ window.JORDAN_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";
     fd.append("file", fileEl.files[0]);
     btn.disabled = true;
     feedback.innerHTML = t("جارٍ الرفع...", "Uploading...");
-    fetch(base, {
+    // fetchWithAuth auto-injects X-CSRF-Token (via the global fetch wrapper),
+    // redirects on expired sessions (401), and surfaces real backend detail
+    // messages — the canonical path for state-changing admin requests.
+    fetchWithAuth(base, {
       method: "POST",
       credentials: "same-origin",
-      headers: { "X-CSRF-Token": getCookie("kinjo_csrf_token"), "X-Requested-With": "XMLHttpRequest" },
       body: fd
     }).then(function (r) {
-      return r.json().then(function (d) { return { ok: r.ok, d: d }; });
-    }).then(function (res) {
+      return r ? r.json() : null;
+    }).then(function (d) {
+      if (!d) { return; } // 401 redirect already handled by fetchWithAuth
       btn.disabled = false;
-      if (!res.ok) {
-        var msg = (res.d && res.d.detail) ? res.d.detail : t("فشل الرفع.", "Upload failed.");
-        feedback.innerHTML = '<span style="color:#b91c1c;">' + msg + "</span>";
-        return;
-      }
-      feedback.innerHTML = '<span style="color:#1f7a4d;">' + (res.d.message_ar || t("تم الرفع.", "Uploaded.")) +
+      feedback.innerHTML = '<span style="color:#1f7a4d;">' + (d.message_ar || t("تم الرفع.", "Uploaded.")) +
         " " + t("جارٍ إعادة تحميل التقرير...", "Reloading report...") + "</span>";
       setTimeout(function () { window.location.reload(); }, 900);
-    }).catch(function () {
+    }).catch(function (e) {
       btn.disabled = false;
-      feedback.innerHTML = '<span style="color:#b91c1c;">' + t("تعذّر الاتصال بالخادم.", "Could not reach the server.") + "</span>";
+      var msg = (e && e.message && e.message !== "Failed to fetch") ? e.message : t("تعذّر الاتصال بالخادم.", "Could not reach the server.");
+      feedback.innerHTML = '<span style="color:#b91c1c;">' + msg + "</span>";
     });
   }
   btn.addEventListener("click", upload);

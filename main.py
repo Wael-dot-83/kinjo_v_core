@@ -379,6 +379,11 @@ async def add_security_headers(request: Request, call_next):
 @app.middleware("http")
 async def enforce_admin_surface_rate_limit(request: Request, call_next):
     path = request.url.path
+    # /api/telemetry is deliberately absent: its beacon endpoints (vitals/errors/
+    # api) are public, high-frequency browser calls (CSRF-exempt below) that must
+    # not be throttled by the admin-surface policy; its admin-only endpoints
+    # (/stats, /cache) carry Depends(require_admin) individually, and /health is
+    # an aggregate-only probe with no user data.
     protected_prefixes = ("/api/admin", "/api/observability", "/api/analytics", "/admin/charts")
     if path.startswith(protected_prefixes):
         allowed, limit_value = check_admin_surface_limit(request)

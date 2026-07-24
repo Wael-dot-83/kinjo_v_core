@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 import models
 from database import get_db
-from dependencies import require_admin, get_current_user
+from dependencies import require_admin
 from api.analytics.scope_domain import can_view_child_detail
 from cache_service import dashboard_cache
 
@@ -171,16 +171,17 @@ async def get_child_analytics(
     child_id: int = Path(..., description="Child numeric ID"),
     locale: str = Query("ar"),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin),
 ) -> dict:
     """
     Returns 5 child-level metrics: attendance pattern, development
     profile (radar), engagement score, incident history, and health alerts.
 
-    These metrics are ``privacy_level=restricted`` (individual-child PII). Access is
-    governed by the ``analytics:child_detail`` capability (ADMIN-only). Authenticated
-    callers without it receive the metric shapes with ``data_state=suppressed`` and no
-    underlying values, rather than a hard 403 — so the UI degrades gracefully.
+    These metrics are ``privacy_level=restricted`` (individual-child PII) and the
+    capability is ADMIN-only, so the route is hard-gated with ``require_admin``
+    like every sibling in this router — a non-admin caller receives 403, not a
+    graceful payload. The ``data_state=suppressed`` machinery in the calculator
+    layer remains as defense-in-depth for any future role-gated caller.
     """
     authorized = can_view_child_detail(current_user)
     cache_key = f"adv_analytics:child:{child_id}:{locale}:{int(authorized)}"

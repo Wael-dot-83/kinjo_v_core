@@ -1598,6 +1598,7 @@ def bulk_create_users(
                 db.flush()
                 succeeded.append({"row": row_num, "id": new_user.id, "username": new_user.username})
             except (SQLAlchemyError, AttributeError, ValueError, KeyError) as e:  # pragma: no cover — db.flush() failure here would also break the shared auth session; tested defensively
+                logger.warning("Bulk user import row %s failed: %s", row_num, e)
                 failed.append(row_num)
                 errors.append({
                     "row": row_num,

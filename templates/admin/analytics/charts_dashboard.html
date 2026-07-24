@@ -115,9 +115,9 @@
       <div class="loading-spinner align-items-center justify-content-center" id="chartSpinner" style="min-height:300px;">
         <div class="text-center text-muted">
           <div class="spinner-border text-success mb-3" role="status">
-            <span class="visually-hidden">Loading...</span>
+            <span class="visually-hidden">{% if ui_lang == 'en' %}Loading&hellip;{% else %}جارٍ التحميل&hellip;{% endif %}</span>
           </div>
-          <div class="small">{% if ui_lang == 'en' %}Analyzing data...{% else %}جاري تحليل البيانات...{% endif %}</div>
+          <div class="small">{% if ui_lang == 'en' %}Analyzing data&hellip;{% else %}جاري تحليل البيانات&hellip;{% endif %}</div>
         </div>
       </div>
 
@@ -168,6 +168,7 @@ const TRANSLATIONS = {
   "mood": LANG === 'en' ? "Mood" : "المزاج",
   "kindergarten": LANG === 'en' ? "Kindergarten" : "الحضانة",
   "governorate": LANG === 'en' ? "Governorate" : "المحافظة",
+  "network": LANG === 'en' ? "Network" : "الشبكة",
   "capacity": LANG === 'en' ? "Capacity" : "الطاقة الاستيعابية",
   "enrolled": LANG === 'en' ? "Enrolled" : "المسجلين",
   "month": LANG === 'en' ? "Month" : "الشهر",
@@ -249,7 +250,7 @@ function injectChart(data) {
   const panel = document.getElementById('interpretationPanel');
   const text = document.getElementById('interpretationText');
   panel.style.display = '';
-  text.innerHTML = `<strong>${data.metric.label}</strong><br/>${LANG === 'en' ? 'Unit:' : 'الوحدة:'} ${data.metric.unit}<br/><em>Level: ${data.scope.level}</em>`;
+  text.innerHTML = `<strong>${data.metric.label}</strong><br/>${LANG === 'en' ? 'Unit:' : 'الوحدة:'} ${data.metric.unit}<br/><em>${LANG === 'en' ? 'Level:' : 'المستوى:'} ${getLocalized(data.scope.level)}</em>`;
 
   // Draw Plotly
   if (data.series.length > 0 && typeof Plotly !== 'undefined') {
@@ -359,7 +360,7 @@ function renderBreadcrumbs(scope) {
     bc += `<span class="breadcrumb-separator">›</span><span class="breadcrumb-drill" onclick="filterState.kindergarten_id=null;renderChart()">${filterState.governorate || scope.parent_key}</span>`;
   }
   if (scope.level === 'kindergarten') {
-    bc += `<span class="breadcrumb-separator">›</span><span class="text-muted">Kindergarten Details</span>`;
+    bc += `<span class="breadcrumb-separator">›</span><span class="text-muted">{% if ui_lang == 'en' %}Kindergarten Details{% else %}تفاصيل الحضانة{% endif %}</span>`;
   }
   document.getElementById('breadcrumbs').innerHTML = bc;
 }
@@ -379,7 +380,7 @@ function escapeHTML(str) {
 function renderTable(data) {
   const container = document.getElementById('dataTableContainer');
   if (!data.table || data.table.length === 0) {
-    container.innerHTML = '<p class="text-muted">No data</p>';
+    container.innerHTML = '<p class="text-muted">{% if ui_lang == 'en' %}No data{% else %}لا تتوفر بيانات{% endif %}</p>';
     return;
   }
   const keys = Object.keys(data.table[0]);

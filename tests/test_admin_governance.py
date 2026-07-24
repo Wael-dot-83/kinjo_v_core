@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from auth import get_password_hash
+from governance_kpi_service import _JORDAN_TZ
 import models
 from conftest import csrf_pair
 
@@ -153,7 +154,11 @@ class TestGovernanceReminders:
 
     def test_reminder_stats_count_today_without_fabricated_fields(self, client, test_db):
         admin = _create_admin(test_db)
-        now = datetime.now(timezone.utc)
+        # Records are written in Jordan-local time (governance_kpi_service) and the
+        # endpoint counts "today" against Jordan-local midnight. Seeding in UTC made
+        # this test fail between 00:00 and 03:00 local, when the two frames' dates
+        # differ on SQLite's naive wall-clock storage.
+        now = datetime.now(_JORDAN_TZ)
         test_db.add_all([
             models.GovernanceReminder(
                 target_type="supervisor", target_id=admin.id,
