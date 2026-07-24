@@ -318,6 +318,31 @@ class TestAnnualQuarterlyTrends:
             table_total = sum(r.get(chart_col_name, 0) for r in payload["breakdowns"])
             assert chart_total == table_total
 
+    def test_periods_sorted_chronologically_not_lexicographically(self, test_db):
+        """Regression: periods were sorted by the raw "Q{q}-{year}" string, which
+        orders quarter-major (Q1-2020 lands before Q2-2019). A trends report must
+        present periods in true chronological order (year, then quarter)."""
+        from datetime import datetime, timezone
+
+        def _kg(name, phone, created):
+            return models.Kindergarten(
+                name_ar=name, governorate="العاصمة", district="عمان", area="a",
+                address_line="a", contact_phone=phone,
+                status=models.KindergartenStatus.ACTIVE, created_at=created,
+            )
+
+        test_db.add_all([
+            _kg("ك4-2018", "0790000101", datetime(2018, 11, 1, tzinfo=timezone.utc)),  # Q4-2018
+            _kg("ك2-2019", "0790000102", datetime(2019, 5, 15, tzinfo=timezone.utc)),  # Q2-2019
+            _kg("ك1-2020", "0790000103", datetime(2020, 2, 10, tzinfo=timezone.utc)),  # Q1-2020
+        ])
+        test_db.commit()
+        payload = AgencyReportsService(test_db).generate_report(
+            "dos", "annual_quarterly_trends", {}
+        )
+        periods = [r["period"] for r in payload["breakdowns"] if r["period"] != "غير محدد"]
+        assert periods == ["Q4-2018", "Q2-2019", "Q1-2020"], periods
+
 
 # ---------------------------------------------------------------------------
 # 5. Registry consistency

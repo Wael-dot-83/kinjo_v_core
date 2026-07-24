@@ -1168,6 +1168,17 @@ class AgencyReportsService:
             bucket["new_kindergartens"] += 1
             bucket["enrolled_children"] += enrolled_map.get(kid, 0)
 
+        def _chrono_key(item: tuple[str, dict[str, Any]]) -> tuple[int, int, int]:
+            # Sort chronologically by (year, quarter), NOT by the "Q{q}-{year}"
+            # string (which orders quarter-major, e.g. Q1-2020 before Q2-2019).
+            # Undefined-creation-date periods sort last.
+            _, v = item
+            yr, qr = v.get("year"), v.get("quarter") or ""
+            if not (isinstance(yr, str) and yr.isdigit()):
+                return (1, 0, 0)
+            quarter = int(qr[1:]) if qr.startswith("Q") and qr[1:].isdigit() else 0
+            return (0, int(yr), quarter)
+
         breakdowns = [
             {
                 "period": period,
@@ -1176,7 +1187,7 @@ class AgencyReportsService:
                 "new_kindergartens": v["new_kindergartens"],
                 "enrolled_children": v["enrolled_children"],
             }
-            for period, v in sorted(by_period.items())
+            for period, v in sorted(by_period.items(), key=_chrono_key)
         ]
         total_kg = sum(r["new_kindergartens"] for r in breakdowns)
         total_enr = sum(r["enrolled_children"] for r in breakdowns)
