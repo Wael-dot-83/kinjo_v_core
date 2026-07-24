@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session
 
 import models
@@ -386,10 +386,21 @@ _FIELD_LABELS: dict[str, str] = {
     "enrolled_children": "الأطفال المسجلون",
     "total_institutions": "إجمالي المؤسسات",
     "active_institutions": "المؤسسات النشطة",
+    "licensed_institutions": "المؤسسات المرخّصة (سارية)",
+    "active_and_licensed": "نشطة ومرخّصة",
+    "expired_licenses": "تراخيص منتهية",
+    "missing_license_data": "بدون بيانات ترخيص",
     "total_capacity": "الطاقة الاستيعابية",
     "total_enrolled": "العدد الفعلي للمسجلين",
     "occupancy_rate_pct": "نسبة الإشغال %",
+    "occupancy_rate": "نسبة الإشغال %",
+    "overcrowded_kindergartens": "الحضانات المكتظة",
+    "overcrowding_rate_pct": "نسبة الاكتظاظ %",
     "total_records": "إجمالي السجلات",
+    "present_records": "سجلات الحضور",
+    "absent_records": "سجلات الغياب",
+    "attendance_rate_pct": "نسبة الحضور %",
+    "absence_rate_pct": "نسبة الغياب %",
     "total_supervisors": "إجمالي المشرفين",
     "children_missing_dob": "أطفال بدون تاريخ ميلاد",
     "trend_years": "سنوات القياس",
@@ -1031,11 +1042,43 @@ class AgencyReportsService:
         total = sum(r["count"] for r in breakdowns)
         # Aggregate from the raw enum, not the localized display label.
         active = sum(_safe_int(r.count) for r in rows if _enum_value(r.status) == "ACTIVE")
-        return self._payload(agency_code, agency, report_code, report, filters, {"total_institutions": total, "active_institutions": active}, breakdowns)
+
+        # Licensing (the "المرخّصة" half of the title): computed from the real
+        # license_valid_until field over the same filtered population. A license
+        # is "licensed/valid" when it has not expired; "expired" when a past
+        # expiry date exists; "missing" when there is no license record at all —
+        # missing is never silently folded into unlicensed=valid or into zero.
+        today = datetime.now(_JORDAN_TZ).date()
+        _active = models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+        _valid = models.Kindergarten.license_valid_until >= today
+        lic_q = self.db.query(
+            func.sum(case((_valid, 1), else_=0)).label("licensed"),
+            func.sum(case((and_(_active, _valid), 1), else_=0)).label("active_licensed"),
+            func.sum(case((models.Kindergarten.license_valid_until < today, 1), else_=0)).label("expired"),
+            func.sum(case((models.Kindergarten.license_valid_until.is_(None), 1), else_=0)).label("missing"),
+        )
+        lic_q = self._apply_kindergarten_geo_filters(lic_q, filters)
+        if _kg_status is not None:
+            lic_q = lic_q.filter(models.Kindergarten.status == _kg_status)
+        lic = lic_q.one()
+
+        summary = {
+            "total_institutions": total,
+            "active_institutions": active,
+            "licensed_institutions": _safe_int(lic.licensed),
+            "active_and_licensed": _safe_int(lic.active_licensed),
+            "expired_licenses": _safe_int(lic.expired),
+            "missing_license_data": _safe_int(lic.missing),
+        }
+        return self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns)
 
     def _dos_capacity_occupancy(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        # Roll up capacity/enrolment PER kindergarten first, so overcrowding
+        # (enrolled > capacity) is judged per institution — not lost inside a
+        # governorate-wide sum where a full KG can mask an over-full one.
         q = (
             self.db.query(
+                models.Kindergarten.id,
                 models.Kindergarten.governorate,
                 models.Kindergarten.district,
                 func.sum(models.Class.capacity_total).label("capacity"),
@@ -1045,20 +1088,46 @@ class AgencyReportsService:
             .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE, models.Class.is_active == True, models.Class.deleted_at.is_(None))
         )
         q = self._apply_kindergarten_geo_filters(q, filters)
-        rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district).all()
+        rows = q.group_by(models.Kindergarten.id, models.Kindergarten.governorate, models.Kindergarten.district).all()
+
+        agg: dict[tuple[str, str], dict[str, int]] = {}
+        overcrowded_total = 0
+        kgs_with_capacity = 0
+        for r in rows:
+            cap, enr = _safe_int(r.capacity), _safe_int(r.enrolled)
+            key = (r.governorate or "غير محدد", r.district or "غير محدد")
+            a = agg.setdefault(key, {"capacity": 0, "enrolled": 0, "overcrowded": 0})
+            a["capacity"] += cap
+            a["enrolled"] += enr
+            if cap > 0:
+                kgs_with_capacity += 1
+                if enr > cap:
+                    a["overcrowded"] += 1
+                    overcrowded_total += 1
+
         breakdowns = [
             {
-                "governorate": r.governorate or "غير محدد",
-                "city": r.district or "غير محدد",
-                "total_capacity": _safe_int(r.capacity),
-                "total_enrolled": _safe_int(r.enrolled),
-                "occupancy_rate": _safe_pct(r.enrolled, r.capacity)
+                "governorate": g,
+                "city": d,
+                "total_capacity": v["capacity"],
+                "total_enrolled": v["enrolled"],
+                # Missing capacity is undefined occupancy (rendered "—"), never a
+                # misleading 0%.
+                "occupancy_rate": _safe_pct(v["enrolled"], v["capacity"]) if v["capacity"] else None,
+                "overcrowded_kindergartens": v["overcrowded"],
             }
-            for r in rows
+            for (g, d), v in agg.items()
         ]
         total_cap = sum(r["total_capacity"] for r in breakdowns)
         total_enr = sum(r["total_enrolled"] for r in breakdowns)
-        return self._payload(agency_code, agency, report_code, report, filters, {"total_capacity": total_cap, "total_enrolled": total_enr, "occupancy_rate_pct": _safe_pct(total_enr, total_cap)}, breakdowns)
+        summary = {
+            "total_capacity": total_cap,
+            "total_enrolled": total_enr,
+            "occupancy_rate_pct": _safe_pct(total_enr, total_cap) if total_cap else None,
+            "overcrowded_kindergartens": overcrowded_total,
+            "overcrowding_rate_pct": _safe_pct(overcrowded_total, kgs_with_capacity) if kgs_with_capacity else None,
+        }
+        return self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns)
 
     def _dos_monthly_attendance(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
         start, end = _resolve_dos_period(filters)
@@ -1080,7 +1149,19 @@ class AgencyReportsService:
             for r in rows
         ]
         total_attendance = sum(r["count"] for r in breakdowns)
-        summary = {"total_records": total_attendance, "period_start": start.isoformat(), "period_end": end.isoformat()}
+        # Rates the title promises ("معدلات"), as a share of recorded logs. Missing
+        # records are NOT invented as absences — only logged statuses are counted.
+        present = sum(_safe_int(r.count) for r in rows if _enum_value(r.status) == "PRESENT")
+        absent = sum(_safe_int(r.count) for r in rows if _enum_value(r.status) == "ABSENT")
+        summary = {
+            "total_records": total_attendance,
+            "present_records": present,
+            "absent_records": absent,
+            "attendance_rate_pct": _safe_pct(present, total_attendance),
+            "absence_rate_pct": _safe_pct(absent, total_attendance),
+            "period_start": start.isoformat(),
+            "period_end": end.isoformat(),
+        }
         return self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns)
 
     def _dos_supervisors_child_ratio(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
@@ -1168,6 +1249,17 @@ class AgencyReportsService:
             bucket["new_kindergartens"] += 1
             bucket["enrolled_children"] += enrolled_map.get(kid, 0)
 
+        def _chrono_key(item: tuple[str, dict[str, Any]]) -> tuple[int, int, int]:
+            # Sort chronologically by (year, quarter), NOT by the "Q{q}-{year}"
+            # string (which orders quarter-major, e.g. Q1-2020 before Q2-2019).
+            # Undefined-creation-date periods sort last.
+            _, v = item
+            yr, qr = v.get("year"), v.get("quarter") or ""
+            if not (isinstance(yr, str) and yr.isdigit()):
+                return (1, 0, 0)
+            quarter = int(qr[1:]) if qr.startswith("Q") and qr[1:].isdigit() else 0
+            return (0, int(yr), quarter)
+
         breakdowns = [
             {
                 "period": period,
@@ -1176,7 +1268,7 @@ class AgencyReportsService:
                 "new_kindergartens": v["new_kindergartens"],
                 "enrolled_children": v["enrolled_children"],
             }
-            for period, v in sorted(by_period.items())
+            for period, v in sorted(by_period.items(), key=_chrono_key)
         ]
         total_kg = sum(r["new_kindergartens"] for r in breakdowns)
         total_enr = sum(r["enrolled_children"] for r in breakdowns)

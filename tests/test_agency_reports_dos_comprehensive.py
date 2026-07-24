@@ -171,6 +171,41 @@ class TestInstitutionsActiveLicensed:
         assert "active_institutions" in payload["summary"]
         assert payload["summary"]["active_institutions"] <= payload["summary"]["total_institutions"]
 
+    def test_license_summary_uses_real_license_fields(self, test_db):
+        """The report title claims 'active AND licensed'. Verify licensing is
+        computed from license_valid_until — licensed(valid)/expired/missing must
+        partition every institution, and active∩licensed is bounded correctly."""
+        from datetime import date as _date, timedelta as _td
+
+        def _kg(name, phone, status, valid_until):
+            return models.Kindergarten(
+                name_ar=name, governorate="العاصمة", district="عمان", area="a",
+                address_line="a", contact_phone=phone, status=status,
+                license_valid_until=valid_until,
+            )
+
+        today = _date.today()
+        test_db.add_all([
+            _kg("نشطة سارية", "0790000201", models.KindergartenStatus.ACTIVE, today + _td(days=365)),
+            _kg("نشطة منتهية", "0790000202", models.KindergartenStatus.ACTIVE, today - _td(days=10)),
+            _kg("غير نشطة سارية", "0790000203", models.KindergartenStatus.INACTIVE, today + _td(days=365)),
+            _kg("نشطة بلا ترخيص", "0790000204", models.KindergartenStatus.ACTIVE, None),
+        ])
+        test_db.commit()
+        s = AgencyReportsService(test_db).generate_report(
+            "dos", "institutions_active_licensed", {}
+        )["summary"]
+        assert s["total_institutions"] == 4
+        assert s["active_institutions"] == 3
+        assert s["licensed_institutions"] == 2      # two valid, unexpired
+        assert s["active_and_licensed"] == 1        # only the active+valid one
+        assert s["expired_licenses"] == 1
+        assert s["missing_license_data"] == 1
+        # valid + expired + missing must partition the whole population
+        assert (s["licensed_institutions"] + s["expired_licenses"]
+                + s["missing_license_data"]) == s["total_institutions"]
+        assert s["active_and_licensed"] <= min(s["active_institutions"], s["licensed_institutions"])
+
     def test_governorate_filter_drill_down(self, client, test_db):
         _make_admin(test_db)
         _seed_kindergartens(test_db)
@@ -229,6 +264,88 @@ class TestMonthlyAttendanceAbsence:
         payload = _call(client, "/api/admin/agency-reports/dos/reports/monthly_attendance_absence", headers)
         for row in payload["breakdowns"]:
             assert row["status"] in {"حاضر", "غائب", "متأخر", "غياب بعذر", "غير محدد"}
+
+    def test_attendance_and_absence_rates(self, test_db):
+        """The title promises 'معدلات' (rates). Verify present/absent rates are
+        computed as a share of recorded logs (missing logs are NOT invented as
+        absences). Fixture: 3 present + 1 absent -> 75% / 25%."""
+        from datetime import date as _date, timedelta as _td
+        _seed_kindergartens(test_db)
+        children = _seed_children(test_db)
+        cids = [c.id for c in children]
+        cls = models.Class(
+            name_ar="صف الحضور", kindergarten_id=1, class_code="C-ATT-1",
+            age_group="AGE_2_4", capacity_total=20, enrolled_children_count=0,
+            min_age_months=24, max_age_months=48, is_active=True,
+        )
+        test_db.add(cls)
+        test_db.commit()
+        test_db.refresh(cls)
+        st = models.AttendanceStatus
+        today = _date.today()
+        yday = today - _td(days=1)
+        for cid, day, status in [
+            (cids[0], today, st.PRESENT),
+            (cids[1], today, st.PRESENT),
+            (cids[0], yday, st.PRESENT),
+            (cids[1], yday, st.ABSENT),
+        ]:
+            test_db.add(models.AttendanceLog(child_id=cid, class_id=cls.id,
+                                             date=day, status=status, recorded_by=1))
+        test_db.commit()
+        s = AgencyReportsService(test_db).generate_report(
+            "dos", "monthly_attendance_absence",
+            {"date_from": (today - _td(days=7)).isoformat(), "date_to": today.isoformat()},
+        )["summary"]
+        assert s["total_records"] == 4
+        assert s["present_records"] == 3
+        assert s["absent_records"] == 1
+        assert s["attendance_rate_pct"] == 75.0
+        assert s["absence_rate_pct"] == 25.0
+
+
+# ---------------------------------------------------------------------------
+# 2b. capacity_occupancy_overcrowding — overcrowding + honest occupancy
+# ---------------------------------------------------------------------------
+class TestCapacityOccupancyOvercrowding:
+    def _kg_with_class(self, db, name, phone, gov, cap, enrolled):
+        kg = models.Kindergarten(
+            name_ar=name, governorate=gov, district=gov, area="a",
+            address_line="a", contact_phone=phone,
+            status=models.KindergartenStatus.ACTIVE,
+        )
+        db.add(kg)
+        db.commit()
+        db.refresh(kg)
+        db.add(models.Class(
+            name_ar="صف", kindergarten_id=kg.id, class_code=f"C-{phone}",
+            age_group="AGE_2_4", capacity_total=cap, enrolled_children_count=enrolled,
+            min_age_months=24, max_age_months=48, is_active=True,
+        ))
+        db.commit()
+        return kg
+
+    def test_overcrowding_counted_per_kindergarten(self, test_db):
+        self._kg_with_class(test_db, "مكتظة", "0790001001", "العاصمة", 20, 25)  # over
+        self._kg_with_class(test_db, "طبيعية", "0790001002", "إربد", 30, 10)    # under
+        s = AgencyReportsService(test_db).generate_report(
+            "dos", "capacity_occupancy_overcrowding", {}
+        )["summary"]
+        assert s["total_capacity"] == 50
+        assert s["total_enrolled"] == 35
+        assert s["occupancy_rate_pct"] == 70.0
+        assert s["overcrowded_kindergartens"] == 1
+        assert s["overcrowding_rate_pct"] == 50.0
+
+    def test_missing_capacity_is_na_not_zero_percent(self, test_db):
+        self._kg_with_class(test_db, "بلا سعة", "0790001003", "الكرك", 0, 0)
+        payload = AgencyReportsService(test_db).generate_report(
+            "dos", "capacity_occupancy_overcrowding", {}
+        )
+        row = next(r for r in payload["breakdowns"] if r["governorate"] == "الكرك")
+        assert row["occupancy_rate"] is None            # N/A, never a misleading 0%
+        assert payload["summary"]["occupancy_rate_pct"] is None
+        assert payload["summary"]["overcrowding_rate_pct"] is None  # no KG has capacity
 
 
 # ---------------------------------------------------------------------------
@@ -317,6 +434,61 @@ class TestAnnualQuarterlyTrends:
             chart_col_name = "enrolled_children"
             table_total = sum(r.get(chart_col_name, 0) for r in payload["breakdowns"])
             assert chart_total == table_total
+
+    def test_periods_sorted_chronologically_not_lexicographically(self, test_db):
+        """Regression: periods were sorted by the raw "Q{q}-{year}" string, which
+        orders quarter-major (Q1-2020 lands before Q2-2019). A trends report must
+        present periods in true chronological order (year, then quarter)."""
+        from datetime import datetime, timezone
+
+        def _kg(name, phone, created):
+            return models.Kindergarten(
+                name_ar=name, governorate="العاصمة", district="عمان", area="a",
+                address_line="a", contact_phone=phone,
+                status=models.KindergartenStatus.ACTIVE, created_at=created,
+            )
+
+        test_db.add_all([
+            _kg("ك4-2018", "0790000101", datetime(2018, 11, 1, tzinfo=timezone.utc)),  # Q4-2018
+            _kg("ك2-2019", "0790000102", datetime(2019, 5, 15, tzinfo=timezone.utc)),  # Q2-2019
+            _kg("ك1-2020", "0790000103", datetime(2020, 2, 10, tzinfo=timezone.utc)),  # Q1-2020
+        ])
+        test_db.commit()
+        payload = AgencyReportsService(test_db).generate_report(
+            "dos", "annual_quarterly_trends", {}
+        )
+        periods = [r["period"] for r in payload["breakdowns"] if r["period"] != "غير محدد"]
+        assert periods == ["Q4-2018", "Q2-2019", "Q1-2020"], periods
+
+
+# ---------------------------------------------------------------------------
+# 4b. Exports use the same canonical calculation as the page
+# ---------------------------------------------------------------------------
+class TestExportsCanonical:
+    def test_export_json_equals_page_and_csv_reconciles(self, client, test_db):
+        _make_admin(test_db)
+        _seed_kindergartens(test_db)
+        headers = _tok(client, "dos_test_admin")
+        code = "institutions_active_licensed"
+        base = "/api/admin/agency-reports/dos/reports/" + code
+        page = _call(client, base, headers)
+        export_json = _call(client, base + "/export.json", headers)
+        # export.json is the SAME canonical payload as the page (no second engine).
+        assert export_json["summary"] == page["summary"]
+        assert export_json["breakdowns"] == page["breakdowns"]
+        # CSV is a projection of that same payload: BOM + Arabic totals row that
+        # reconciles with the page's total institutions.
+        r = client.get(base + "/export.csv", headers=headers)
+        assert r.status_code == 200
+        assert r.content[:3] == b"\xef\xbb\xbf"  # UTF-8 BOM for Arabic
+        body = r.content.decode("utf-8-sig")
+        assert "المجموع" in body
+        assert str(page["summary"]["total_institutions"]) in body
+
+    def test_exports_require_admin(self, client, test_db):
+        base = "/api/admin/agency-reports/dos/reports/institutions_active_licensed"
+        assert client.get(base + "/export.csv").status_code in (401, 403)
+        assert client.get(base + "/export.json").status_code in (401, 403)
 
 
 # ---------------------------------------------------------------------------
