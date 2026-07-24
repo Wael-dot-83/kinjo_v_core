@@ -393,7 +393,14 @@ _FIELD_LABELS: dict[str, str] = {
     "total_capacity": "الطاقة الاستيعابية",
     "total_enrolled": "العدد الفعلي للمسجلين",
     "occupancy_rate_pct": "نسبة الإشغال %",
+    "occupancy_rate": "نسبة الإشغال %",
+    "overcrowded_kindergartens": "الحضانات المكتظة",
+    "overcrowding_rate_pct": "نسبة الاكتظاظ %",
     "total_records": "إجمالي السجلات",
+    "present_records": "سجلات الحضور",
+    "absent_records": "سجلات الغياب",
+    "attendance_rate_pct": "نسبة الحضور %",
+    "absence_rate_pct": "نسبة الغياب %",
     "total_supervisors": "إجمالي المشرفين",
     "children_missing_dob": "أطفال بدون تاريخ ميلاد",
     "trend_years": "سنوات القياس",
@@ -1066,8 +1073,12 @@ class AgencyReportsService:
         return self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns)
 
     def _dos_capacity_occupancy(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        # Roll up capacity/enrolment PER kindergarten first, so overcrowding
+        # (enrolled > capacity) is judged per institution — not lost inside a
+        # governorate-wide sum where a full KG can mask an over-full one.
         q = (
             self.db.query(
+                models.Kindergarten.id,
                 models.Kindergarten.governorate,
                 models.Kindergarten.district,
                 func.sum(models.Class.capacity_total).label("capacity"),
@@ -1077,20 +1088,46 @@ class AgencyReportsService:
             .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE, models.Class.is_active == True, models.Class.deleted_at.is_(None))
         )
         q = self._apply_kindergarten_geo_filters(q, filters)
-        rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district).all()
+        rows = q.group_by(models.Kindergarten.id, models.Kindergarten.governorate, models.Kindergarten.district).all()
+
+        agg: dict[tuple[str, str], dict[str, int]] = {}
+        overcrowded_total = 0
+        kgs_with_capacity = 0
+        for r in rows:
+            cap, enr = _safe_int(r.capacity), _safe_int(r.enrolled)
+            key = (r.governorate or "غير محدد", r.district or "غير محدد")
+            a = agg.setdefault(key, {"capacity": 0, "enrolled": 0, "overcrowded": 0})
+            a["capacity"] += cap
+            a["enrolled"] += enr
+            if cap > 0:
+                kgs_with_capacity += 1
+                if enr > cap:
+                    a["overcrowded"] += 1
+                    overcrowded_total += 1
+
         breakdowns = [
             {
-                "governorate": r.governorate or "غير محدد",
-                "city": r.district or "غير محدد",
-                "total_capacity": _safe_int(r.capacity),
-                "total_enrolled": _safe_int(r.enrolled),
-                "occupancy_rate": _safe_pct(r.enrolled, r.capacity)
+                "governorate": g,
+                "city": d,
+                "total_capacity": v["capacity"],
+                "total_enrolled": v["enrolled"],
+                # Missing capacity is undefined occupancy (rendered "—"), never a
+                # misleading 0%.
+                "occupancy_rate": _safe_pct(v["enrolled"], v["capacity"]) if v["capacity"] else None,
+                "overcrowded_kindergartens": v["overcrowded"],
             }
-            for r in rows
+            for (g, d), v in agg.items()
         ]
         total_cap = sum(r["total_capacity"] for r in breakdowns)
         total_enr = sum(r["total_enrolled"] for r in breakdowns)
-        return self._payload(agency_code, agency, report_code, report, filters, {"total_capacity": total_cap, "total_enrolled": total_enr, "occupancy_rate_pct": _safe_pct(total_enr, total_cap)}, breakdowns)
+        summary = {
+            "total_capacity": total_cap,
+            "total_enrolled": total_enr,
+            "occupancy_rate_pct": _safe_pct(total_enr, total_cap) if total_cap else None,
+            "overcrowded_kindergartens": overcrowded_total,
+            "overcrowding_rate_pct": _safe_pct(overcrowded_total, kgs_with_capacity) if kgs_with_capacity else None,
+        }
+        return self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns)
 
     def _dos_monthly_attendance(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
         start, end = _resolve_dos_period(filters)
@@ -1112,7 +1149,19 @@ class AgencyReportsService:
             for r in rows
         ]
         total_attendance = sum(r["count"] for r in breakdowns)
-        summary = {"total_records": total_attendance, "period_start": start.isoformat(), "period_end": end.isoformat()}
+        # Rates the title promises ("معدلات"), as a share of recorded logs. Missing
+        # records are NOT invented as absences — only logged statuses are counted.
+        present = sum(_safe_int(r.count) for r in rows if _enum_value(r.status) == "PRESENT")
+        absent = sum(_safe_int(r.count) for r in rows if _enum_value(r.status) == "ABSENT")
+        summary = {
+            "total_records": total_attendance,
+            "present_records": present,
+            "absent_records": absent,
+            "attendance_rate_pct": _safe_pct(present, total_attendance),
+            "absence_rate_pct": _safe_pct(absent, total_attendance),
+            "period_start": start.isoformat(),
+            "period_end": end.isoformat(),
+        }
         return self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns)
 
     def _dos_supervisors_child_ratio(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:

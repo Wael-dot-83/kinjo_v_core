@@ -265,6 +265,88 @@ class TestMonthlyAttendanceAbsence:
         for row in payload["breakdowns"]:
             assert row["status"] in {"حاضر", "غائب", "متأخر", "غياب بعذر", "غير محدد"}
 
+    def test_attendance_and_absence_rates(self, test_db):
+        """The title promises 'معدلات' (rates). Verify present/absent rates are
+        computed as a share of recorded logs (missing logs are NOT invented as
+        absences). Fixture: 3 present + 1 absent -> 75% / 25%."""
+        from datetime import date as _date, timedelta as _td
+        _seed_kindergartens(test_db)
+        children = _seed_children(test_db)
+        cids = [c.id for c in children]
+        cls = models.Class(
+            name_ar="صف الحضور", kindergarten_id=1, class_code="C-ATT-1",
+            age_group="AGE_2_4", capacity_total=20, enrolled_children_count=0,
+            min_age_months=24, max_age_months=48, is_active=True,
+        )
+        test_db.add(cls)
+        test_db.commit()
+        test_db.refresh(cls)
+        st = models.AttendanceStatus
+        today = _date.today()
+        yday = today - _td(days=1)
+        for cid, day, status in [
+            (cids[0], today, st.PRESENT),
+            (cids[1], today, st.PRESENT),
+            (cids[0], yday, st.PRESENT),
+            (cids[1], yday, st.ABSENT),
+        ]:
+            test_db.add(models.AttendanceLog(child_id=cid, class_id=cls.id,
+                                             date=day, status=status, recorded_by=1))
+        test_db.commit()
+        s = AgencyReportsService(test_db).generate_report(
+            "dos", "monthly_attendance_absence",
+            {"date_from": (today - _td(days=7)).isoformat(), "date_to": today.isoformat()},
+        )["summary"]
+        assert s["total_records"] == 4
+        assert s["present_records"] == 3
+        assert s["absent_records"] == 1
+        assert s["attendance_rate_pct"] == 75.0
+        assert s["absence_rate_pct"] == 25.0
+
+
+# ---------------------------------------------------------------------------
+# 2b. capacity_occupancy_overcrowding — overcrowding + honest occupancy
+# ---------------------------------------------------------------------------
+class TestCapacityOccupancyOvercrowding:
+    def _kg_with_class(self, db, name, phone, gov, cap, enrolled):
+        kg = models.Kindergarten(
+            name_ar=name, governorate=gov, district=gov, area="a",
+            address_line="a", contact_phone=phone,
+            status=models.KindergartenStatus.ACTIVE,
+        )
+        db.add(kg)
+        db.commit()
+        db.refresh(kg)
+        db.add(models.Class(
+            name_ar="صف", kindergarten_id=kg.id, class_code=f"C-{phone}",
+            age_group="AGE_2_4", capacity_total=cap, enrolled_children_count=enrolled,
+            min_age_months=24, max_age_months=48, is_active=True,
+        ))
+        db.commit()
+        return kg
+
+    def test_overcrowding_counted_per_kindergarten(self, test_db):
+        self._kg_with_class(test_db, "مكتظة", "0790001001", "العاصمة", 20, 25)  # over
+        self._kg_with_class(test_db, "طبيعية", "0790001002", "إربد", 30, 10)    # under
+        s = AgencyReportsService(test_db).generate_report(
+            "dos", "capacity_occupancy_overcrowding", {}
+        )["summary"]
+        assert s["total_capacity"] == 50
+        assert s["total_enrolled"] == 35
+        assert s["occupancy_rate_pct"] == 70.0
+        assert s["overcrowded_kindergartens"] == 1
+        assert s["overcrowding_rate_pct"] == 50.0
+
+    def test_missing_capacity_is_na_not_zero_percent(self, test_db):
+        self._kg_with_class(test_db, "بلا سعة", "0790001003", "الكرك", 0, 0)
+        payload = AgencyReportsService(test_db).generate_report(
+            "dos", "capacity_occupancy_overcrowding", {}
+        )
+        row = next(r for r in payload["breakdowns"] if r["governorate"] == "الكرك")
+        assert row["occupancy_rate"] is None            # N/A, never a misleading 0%
+        assert payload["summary"]["occupancy_rate_pct"] is None
+        assert payload["summary"]["overcrowding_rate_pct"] is None  # no KG has capacity
+
 
 # ---------------------------------------------------------------------------
 # 3. geographic_service_gaps — governorate normalization, ratio correctness
@@ -377,6 +459,36 @@ class TestAnnualQuarterlyTrends:
         )
         periods = [r["period"] for r in payload["breakdowns"] if r["period"] != "غير محدد"]
         assert periods == ["Q4-2018", "Q2-2019", "Q1-2020"], periods
+
+
+# ---------------------------------------------------------------------------
+# 4b. Exports use the same canonical calculation as the page
+# ---------------------------------------------------------------------------
+class TestExportsCanonical:
+    def test_export_json_equals_page_and_csv_reconciles(self, client, test_db):
+        _make_admin(test_db)
+        _seed_kindergartens(test_db)
+        headers = _tok(client, "dos_test_admin")
+        code = "institutions_active_licensed"
+        base = "/api/admin/agency-reports/dos/reports/" + code
+        page = _call(client, base, headers)
+        export_json = _call(client, base + "/export.json", headers)
+        # export.json is the SAME canonical payload as the page (no second engine).
+        assert export_json["summary"] == page["summary"]
+        assert export_json["breakdowns"] == page["breakdowns"]
+        # CSV is a projection of that same payload: BOM + Arabic totals row that
+        # reconciles with the page's total institutions.
+        r = client.get(base + "/export.csv", headers=headers)
+        assert r.status_code == 200
+        assert r.content[:3] == b"\xef\xbb\xbf"  # UTF-8 BOM for Arabic
+        body = r.content.decode("utf-8-sig")
+        assert "المجموع" in body
+        assert str(page["summary"]["total_institutions"]) in body
+
+    def test_exports_require_admin(self, client, test_db):
+        base = "/api/admin/agency-reports/dos/reports/institutions_active_licensed"
+        assert client.get(base + "/export.csv").status_code in (401, 403)
+        assert client.get(base + "/export.json").status_code in (401, 403)
 
 
 # ---------------------------------------------------------------------------
