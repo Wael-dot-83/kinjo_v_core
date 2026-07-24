@@ -17,6 +17,13 @@
     <span aria-hidden="true">/</span>
     <span aria-current="page" id="breadcrumb-report-name">{{ report_code }}</span>
   </nav>
+  <div id="agency-drill-breadcrumb" class="agency-drill-breadcrumb d-none" role="navigation" aria-label="{% if ui_lang == 'en' %}Drill-down path{% else %}مسار التصفح المتعمق{% endif %}">
+    <button type="button" class="admin-btn admin-btn-secondary admin-btn-sm" id="agency-drill-reset" aria-label="{% if ui_lang == 'en' %}Reset drill-down{% else %}إعادة تعيين التصفح المتعمق{% endif %}">
+      <i class="bi bi-arrow-left" aria-hidden="true"></i>
+      {% if ui_lang == 'en' %}Back to all{% else %}عرض الكل{% endif %}
+    </button>
+    <span id="agency-drill-label" class="agency-drill-label"></span>
+  </div>
 
   <header class="agency-page-header">
     <div class="agency-logo-lockup">

@@ -452,3 +452,8 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
   .agency-dq-badge--warning{background:rgba(146,64,14,.18);color:#fcd34d}
   .agency-dq-badge--danger{background:rgba(153,27,27,.18);color:#fca5a5}
 }
+
+/* Drill-down breadcrumb */
+.agency-drill-breadcrumb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc}
+.agency-drill-label{color:#334155;font-size:.9rem;font-weight:600}
+.agency-table tbody tr:hover{background:#f1f5f9}

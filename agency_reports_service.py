@@ -152,6 +152,41 @@ def _coerce_enum(enum_cls: type, value: Any):
         return None
 
 
+_DOS_PERIOD_DAYS = {
+    "day": 1,
+    "week": 7,
+    "month": 30,
+    "quarter": 90,
+    "half_year": 180,
+    "year": 365,
+}
+
+
+def _resolve_dos_period(filters: dict[str, Any]) -> tuple[date, date]:
+    """Resolve the ``period``/``date_from``/``date_to`` filter pair to an
+    inclusive (start_date, end_date) range. Falls back to the last 30 days
+    when no usable period is supplied so time-series reports never return
+    the entire history silently."""
+    today = datetime.now(_JORDAN_TZ).date()
+    raw_period = filters.get("period")
+    raw_start = filters.get("date_from")
+    raw_end = filters.get("date_to")
+    if raw_period == "custom" and raw_start and raw_end:
+        try:
+            return date.fromisoformat(str(raw_start)), date.fromisoformat(str(raw_end))
+        except (TypeError, ValueError):
+            pass
+    if raw_period and raw_period != "custom" and _DOS_PERIOD_DAYS.get(raw_period):
+        days = _DOS_PERIOD_DAYS[raw_period]
+        return today - timedelta(days=days), today
+    if raw_start and raw_end:
+        try:
+            return date.fromisoformat(str(raw_start)), date.fromisoformat(str(raw_end))
+        except (TypeError, ValueError):
+            pass
+    return today - timedelta(days=30), today
+
+
 _SOURCE_AR = {
     "Child": "سجل الأطفال",
     "ParentProfile": "ملفات أولياء الأمور",
@@ -358,6 +393,13 @@ _FIELD_LABELS: dict[str, str] = {
     "total_supervisors": "إجمالي المشرفين",
     "children_missing_dob": "أطفال بدون تاريخ ميلاد",
     "trend_years": "سنوات القياس",
+    "period_start": "بداية الفترة",
+    "period_end": "نهاية الفترة",
+    "total_kindergartens": "إجمالي الحضانات",
+    "total_enrolled_children": "إجمالي الأطفال المسجلين",
+    "period": "الفترة",
+    "quarter": "الربع",
+    "enrolled_children": "الأطفال المسجلون",
 
     # table columns
     "النسبة %": "النسبة %",
@@ -845,6 +887,14 @@ class AgencyReportsService:
         return self._payload(agency_code, agency, report_code, report, filters, {"incident_count": sum(r["count"] for r in breakdowns)}, breakdowns)
 
     def _service_access_gaps(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        aliases = settings.JORDAN_GOVERNORATE_ALIASES
+
+        def _normalize_gov(name: Any) -> str:
+            if not name:
+                return name or "غير محدد"
+            s = str(name)
+            return aliases.get(s) or aliases.get(s.lower(), s)
+
         child_rows = (
             self.db.query(models.ParentProfile.home_governorate, models.ParentProfile.home_district, func.count(models.Child.id).label("children"))
             .join(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
@@ -858,14 +908,22 @@ class AgencyReportsService:
             .group_by(models.Kindergarten.governorate, models.Kindergarten.district)
             .all()
         )
-        kg_index = {(r.governorate, r.district): _safe_int(r.kindergartens) for r in kg_rows}
+        kg_index: dict[tuple[str, str], int] = {}
+        for r in kg_rows:
+            key = (_normalize_gov(r.governorate), r.district or "غير محدد")
+            kg_index[key] = kg_index.get(key, 0) + _safe_int(r.kindergartens)
         breakdowns = []
         for r in child_rows:
-            key = (r.home_governorate, r.home_district)
+            gov = _normalize_gov(r.home_governorate)
+            dist = r.home_district or "غير محدد"
+            key = (gov, dist)
             children = _safe_int(r.children)
             kgs = kg_index.get(key, 0)
-            breakdowns.append({"governorate": r.home_governorate or "غير محدد", "city": r.home_district or "غير محدد", "children": children, "active_kindergartens": kgs, "children_per_kindergarten": round(children / max(kgs, 1), 2)})
-        return self._payload(agency_code, agency, report_code, report, filters, {"areas": len(breakdowns), "children": sum(r["children"] for r in breakdowns), "active_kindergartens": sum(r["active_kindergartens"] for r in breakdowns)}, sorted(breakdowns, key=lambda x: x["children_per_kindergarten"], reverse=True))
+            ratio = round(children / kgs, 2) if kgs else None
+            breakdowns.append({"governorate": gov, "city": dist, "children": children, "active_kindergartens": kgs, "children_per_kindergarten": ratio})
+        total_children = sum(r["children"] for r in breakdowns)
+        total_kgs = sum(r["active_kindergartens"] for r in breakdowns)
+        return self._payload(agency_code, agency, report_code, report, filters, {"areas": len(breakdowns), "children": total_children, "active_kindergartens": total_kgs}, sorted(breakdowns, key=lambda x: x["children_per_kindergarten"] if x["children_per_kindergarten"] is not None else -1, reverse=True))
 
     def _dos_children_demographics(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
         q = (
@@ -1003,6 +1061,7 @@ class AgencyReportsService:
         return self._payload(agency_code, agency, report_code, report, filters, {"total_capacity": total_cap, "total_enrolled": total_enr, "occupancy_rate_pct": _safe_pct(total_enr, total_cap)}, breakdowns)
 
     def _dos_monthly_attendance(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
+        start, end = _resolve_dos_period(filters)
         q = (
             self.db.query(
                 models.Kindergarten.governorate,
@@ -1012,6 +1071,7 @@ class AgencyReportsService:
             )
             .join(models.Class, models.Class.id == models.AttendanceLog.class_id)
             .join(models.Kindergarten, models.Kindergarten.id == models.Class.kindergarten_id)
+            .filter(models.AttendanceLog.date >= start, models.AttendanceLog.date <= end)
         )
         q = self._apply_kindergarten_geo_filters(q, filters)
         rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district, models.AttendanceLog.status).all()
@@ -1020,7 +1080,8 @@ class AgencyReportsService:
             for r in rows
         ]
         total_attendance = sum(r["count"] for r in breakdowns)
-        return self._payload(agency_code, agency, report_code, report, filters, {"total_records": total_attendance}, breakdowns)
+        summary = {"total_records": total_attendance, "period_start": start.isoformat(), "period_end": end.isoformat()}
+        return self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns)
 
     def _dos_supervisors_child_ratio(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
         q = (
@@ -1075,13 +1136,51 @@ class AgencyReportsService:
         return self._payload(agency_code, agency, report_code, report, filters, {"children_missing_dob": sum(r["missing_dob"] for r in breakdowns)}, breakdowns)
 
     def _dos_annual_trends(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
-        q = (
-            self.db.query(func.extract('year', models.Kindergarten.created_at).label("year"), func.count(models.Kindergarten.id).label("count"))
+        active_kgs = (
+            self.db.query(models.Kindergarten.id, models.Kindergarten.created_at)
             .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+            .all()
         )
-        rows = q.group_by(func.extract('year', models.Kindergarten.created_at)).all()
-        breakdowns = [{"year": str(int(r.year)) if r.year else "غير محدد", "new_kindergartens": _safe_int(r.count)} for r in rows]
-        return self._payload(agency_code, agency, report_code, report, filters, {"trend_years": len(breakdowns)}, breakdowns)
+        kg_ids = [kid for kid, _ in active_kgs]
+        enrolled_map: dict[int, int] = {}
+        if kg_ids:
+            enrolled_rows = (
+                self.db.query(models.EnrollmentApplication.kindergarten_id, func.count(func.distinct(models.EnrollmentApplication.child_id)).label("enrolled"))
+                .filter(
+                    models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
+                    models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+                )
+                .group_by(models.EnrollmentApplication.kindergarten_id)
+                .all()
+            )
+            for kid, cnt in enrolled_rows:
+                enrolled_map[kid] = _safe_int(cnt)
+
+        by_period: dict[str, dict[str, int]] = {}
+        for kid, created_at in active_kgs:
+            if not created_at:
+                period = "غير محدد"
+            else:
+                year = created_at.year
+                quarter = (created_at.month - 1) // 3 + 1
+                period = f"Q{quarter}-{year}"
+            bucket = by_period.setdefault(period, {"year": str(year) if created_at else "غير محدد", "quarter": f"Q{(created_at.month - 1) // 3 + 1}" if created_at else "", "new_kindergartens": 0, "enrolled_children": 0})
+            bucket["new_kindergartens"] += 1
+            bucket["enrolled_children"] += enrolled_map.get(kid, 0)
+
+        breakdowns = [
+            {
+                "period": period,
+                "year": v["year"],
+                "quarter": v["quarter"],
+                "new_kindergartens": v["new_kindergartens"],
+                "enrolled_children": v["enrolled_children"],
+            }
+            for period, v in sorted(by_period.items())
+        ]
+        total_kg = sum(r["new_kindergartens"] for r in breakdowns)
+        total_enr = sum(r["enrolled_children"] for r in breakdowns)
+        return self._payload(agency_code, agency, report_code, report, filters, {"trend_years": len(breakdowns), "total_kindergartens": total_kg, "total_enrolled_children": total_enr}, breakdowns)
 
     def _payload(self, agency_code: str, agency: dict[str, Any], report_code: str, report: dict[str, Any], filters: dict[str, Any], summary: dict[str, Any], breakdowns: list[dict[str, Any]], chart: dict[str, Any] | None = None) -> dict[str, Any]:
         # Professionalize the table: add a share column (count breakdowns) and a
