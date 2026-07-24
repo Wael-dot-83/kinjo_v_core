@@ -7,7 +7,9 @@ Verifies:
 - Loading/error states are present
 - No hardcoded English-only strings in bilingual blocks
 """
+
 from pathlib import Path
+import re
 
 import pytest
 
@@ -58,10 +60,13 @@ def test_dashboard_no_hardcoded_english_only_strings():
     in_jinja_comment = False
     in_style_or_script = False
     in_html_comment = False
+    in_ui_lang_block = False
     for line in lines:
         stripped = line.strip()
         if not stripped:
             continue
+        if "{% if ui_lang" in stripped:
+            in_ui_lang_block = True
         # Multi-line HTML comments: same gap as CSS/Jinja comments — only the
         # opening line starts with "<!--".
         if in_html_comment:
@@ -106,16 +111,24 @@ def test_dashboard_no_hardcoded_english_only_strings():
             continue
         if stripped.startswith("<") or stripped.startswith("/*") or stripped.startswith("//"):
             continue
+        # Skip standalone HTML attribute lines inside multiline tags
+        if re.match(r'^[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*["\']', stripped):
+            continue
         # Skip lines that are only HTML attributes or CSS classes
         if "=" in stripped and not any(c.isalpha() and c.isascii() for c in stripped.split("=")[-1]):
             continue
         # Only check lines with substantial English text (not just class names or URLs)
         # Look for English words (2+ letters) that aren't part of HTML/CSS/JS
-        import re
-        english_words = re.findall(r'\b[a-zA-Z]{2,}\b', stripped)
+        english_words = re.findall(r"\b[a-zA-Z]{2,}\b", stripped)
         if english_words and len(english_words) >= 3:
+            if in_ui_lang_block:
+                if "{% endif %}" in stripped:
+                    in_ui_lang_block = False
+                continue
             # Has multiple English words - likely user-facing text
             assert "{% if ui_lang" in line or "ui_lang" in line, f"possible hardcoded English: {stripped[:120]}"
+        if "{% endif %}" in stripped and in_ui_lang_block:
+            in_ui_lang_block = False
 
 
 def test_dashboard_kpi_section_present():

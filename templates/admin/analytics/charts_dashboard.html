@@ -3,24 +3,79 @@
 {% block title %}{% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{% endif %} — KinJo{% endblock %}
 
 {% block extra_head %}
-<!-- cdn.plot.ly is not in this site's CSP script-src allowlist, so load locally -->
 <script defer src="/static/vendor/plotly-2.35.2.min.js"
   integrity="sha384-ymzmAVk+3V1std11H4NbH/o85BHnBJTNzz3SjtDbixaVMkt2qOIcV3dzOUSuONeA"
   crossorigin="anonymous"></script>
 <style>
-  .charts-panel { background: var(--admin-card-bg,#fff); border: 1px solid var(--admin-border,#e2e8f0); border-radius: 12px; padding: 1.5rem; }
-  .charts-sidebar { min-width: 260px; max-width: 320px; }
-  #chartOutput { min-height:420px; }
-  .loading-spinner { display:none; }
-  .loading-spinner.active { display:flex; }
-  .breadcrumb-drill { cursor: pointer; color: var(--admin-primary,#1F5E47); font-weight: 500; }
-  .breadcrumb-drill:hover { text-decoration: underline; }
-  .breadcrumb-separator { margin: 0 0.5rem; color: #999; }
+  .ce-layout { display:flex; gap:1.5rem; align-items:flex-start; min-height:600px; }
+  .ce-sidebar { min-width:280px; max-width:340px; flex-shrink:0; display:flex; flex-direction:column; gap:1rem; }
+  .ce-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:1.25rem; }
+  .ce-source-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; }
+  .ce-source-card { background:#fff; border:2px solid var(--slate-200); border-radius:var(--r-md); padding:0.75rem 0.625rem; cursor:pointer; transition:all .15s ease; text-align:center; display:flex; flex-direction:column; align-items:center; gap:0.35rem; }
+  .ce-source-card:hover { border-color:var(--az-primary-mid); background:var(--az-primary-light); }
+  .ce-source-card.is-active { border-color:var(--az-primary); background:var(--az-primary-light); box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+  .ce-source-card i { font-size:1.35rem; color:var(--az-primary); }
+  .ce-source-card.is-active i { color:var(--az-primary-hover); }
+  .ce-source-card__label { font:600 0.75rem/1.3 var(--font-ar); color:var(--slate-700); }
+  .ce-source-card__count { font:600 0.625rem/1 var(--font-ar); color:var(--slate-400); }
+  .ce-presets { display:flex; flex-wrap:wrap; gap:0.375rem; }
+  .ce-preset-btn { background:var(--slate-100); border:1px solid var(--slate-200); border-radius:var(--r-full); padding:0.35rem 0.75rem; font:500 0.6875rem/1 var(--font-ar); color:var(--slate-600); cursor:pointer; transition:all .12s ease; white-space:nowrap; }
+  .ce-preset-btn:hover { background:var(--az-primary-light); color:var(--az-primary); border-color:var(--az-primary-mid); }
+  .ce-preset-btn.is-active { background:var(--az-primary); color:#fff; border-color:var(--az-primary); }
+  .ce-date-row { display:flex; gap:0.5rem; }
+  .ce-date-row .form-control { flex:1; }
+  .ce-chart-types { display:flex; flex-wrap:wrap; gap:0.375rem; }
+  .ce-ct-btn { background:#fff; border:1.5px solid var(--slate-200); border-radius:var(--r-sm); padding:0.35rem 0.55rem; font:500 0.6875rem/1 var(--font-ar); color:var(--slate-600); cursor:pointer; transition:all .12s ease; display:flex; align-items:center; gap:0.25rem; }
+  .ce-ct-btn:hover { border-color:var(--az-primary-mid); color:var(--az-primary); }
+  .ce-ct-btn.is-active { border-color:var(--az-primary); color:var(--az-primary); background:var(--az-primary-light); }
+  .ce-ct-btn i { font-size:0.85rem; }
+  .ce-filter-pill { display:inline-flex; align-items:center; gap:0.375rem; background:var(--az-primary-light); border:1px solid var(--az-primary-mid); color:var(--az-primary-hover); border-radius:var(--r-full); padding:0.3rem 0.75rem; font:600 0.75rem/1.2 var(--font-ar); }
+  .ce-filter-pill__remove { background:none; border:none; color:var(--az-primary-hover); cursor:pointer; padding:0; display:flex; align-items:center; font-size:1rem; line-height:1; border-radius:50%; }
+  .ce-filter-pill__remove:hover { color:var(--az-danger); }
+  .ce-empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:320px; text-align:center; padding:3rem 2rem; }
+  .ce-empty-state__icon { font-size:3rem; color:var(--slate-300); margin-bottom:1rem; }
+  .ce-empty-state__title { font:600 1.125rem/1.4 var(--font-ar); color:var(--slate-600); margin-bottom:0.5rem; }
+  .ce-empty-state__hint { font:400 0.8125rem/1.5 var(--font-ar); color:var(--slate-400); max-width:400px; margin-bottom:1.25rem; }
+  .ce-empty-state__actions { display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; }
+  .ce-skeleton { background:linear-gradient(90deg,var(--slate-100) 25%,var(--slate-50) 50%,var(--slate-100) 75%); background-size:200% 100%; animation:ce-shimmer 1.5s infinite; border-radius:var(--r-sm); }
+  @keyframes ce-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .ce-skeleton--title { height:1.25rem; width:60%; margin-bottom:0.75rem; }
+  .ce-skeleton--chart { height:340px; width:100%; }
+  .ce-skeleton--row { height:1rem; width:100%; margin-bottom:0.5rem; }
+  .ce-skeleton--badge { height:1.5rem; width:5rem; }
+  .ce-interpretation-gauge { width:100%; height:6px; background:var(--slate-100); border-radius:var(--r-full); overflow:hidden; }
+  .ce-interpretation-gauge__fill { height:100%; border-radius:var(--r-full); transition:width .4s ease; }
+  .ce-toolbar { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+  .ce-toolbar .btn { font-size:0.75rem; }
+  .ce-table-search { max-width:260px; }
+  .ce-data-table th { font:600 0.6875rem/1 var(--font-ar); color:var(--slate-500); text-transform:uppercase; letter-spacing:.04em; background:var(--slate-50); border-bottom:2px solid var(--slate-200); cursor:pointer; user-select:none; white-space:nowrap; }
+  .ce-data-table th:hover { color:var(--az-primary); }
+  .ce-data-table th.is-sorted { color:var(--az-primary); }
+  .ce-data-table th .sort-icon { font-size:0.65rem; margin-left:0.25rem; opacity:0.4; }
+  .ce-data-table th.is-sorted .sort-icon { opacity:1; }
+  .ce-data-table td { font:400 0.8125rem/1.5 var(--font-ar); color:var(--slate-700); vertical-align:middle; }
+  .ce-data-table tbody tr { transition:background .1s; }
+  .ce-data-table tbody tr:hover { background:var(--slate-50); }
+  .ce-data-table tbody tr.clickable { cursor:pointer; }
+  .ce-recommendations { display:flex; flex-wrap:wrap; gap:0.5rem; }
+  .ce-rec-chip { display:inline-flex; align-items:center; gap:0.375rem; background:#fff; border:1px solid var(--slate-200); border-radius:var(--r-full); padding:0.35rem 0.75rem; font:500 0.75rem/1.2 var(--font-ar); color:var(--slate-600); cursor:pointer; transition:all .12s; }
+  .ce-rec-chip:hover { border-color:var(--az-primary-mid); background:var(--az-primary-light); color:var(--az-primary); }
+  .ce-rec-chip i { font-size:0.75rem; }
+  .ce-rec-chip__confidence { font-size:0.6rem; color:var(--slate-400); }
+  .ce-breadcrumbs { font:500 0.8125rem/1.4 var(--font-ar); color:var(--slate-500); }
+  .ce-breadcrumb-root { color:var(--az-primary) !important; font-weight:600; }
+  .ce-breadcrumb-root:hover { text-decoration:underline !important; }
+  .ce-scope-badge { font:600 0.6875rem/1 var(--font-ar); padding:0.2rem 0.6rem; border-radius:var(--r-full); }
+  @media (max-width:768px) {
+    .ce-layout { flex-direction:column; }
+    .ce-sidebar { max-width:100%; min-width:100%; }
+    .ce-source-grid { grid-template-columns:repeat(3, 1fr); }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
+<div class="page-header mb-3 d-flex align-items-start justify-content-between flex-wrap gap-3">
   <div>
     <h1 class="page-title mb-0">
       <i class="bi bi-graph-up-arrow me-2"></i>
@@ -36,111 +91,275 @@
   </div>
 </div>
 
-<div class="d-flex gap-4 flex-wrap align-items-start">
+<div class="ce-layout" id="chartsExplorerRoot">
 
-  {# ── Control Sidebar ───────────────────────────────────────────────── #}
-  <aside class="charts-sidebar">
+  {# ── Sidebar ─────────────────────────────────────────────────────────── #}
+  <aside class="ce-sidebar" role="complementary" aria-label="{% if ui_lang == 'en' %}Chart controls{% else %}أدوات الرسم البياني{% endif %}">
 
-    <div class="charts-panel mb-3">
-      <h6 class="fw-semibold mb-3 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
-        {% if ui_lang == 'en' %}Data Source{% else %}مصدر البيانات{% endif %}
-      </h6>
-      <select id="sourceSelect" class="form-select form-select-sm mb-3" aria-label="{% if ui_lang == 'en' %}Data Source{% else %}مصدر البيانات{% endif %}">{% for src in sources %}
-        <option value="{{ src }}">{% if ui_lang == 'en' %}{{ SOURCE_LABELS_EN.get(src, src | replace('_', ' ') | title) }}{% else %}{{ SOURCE_LABELS_AR.get(src, src) }}{% endif %}</option>{% endfor %}
-      </select>
-
-      <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
-        {% if ui_lang == 'en' %}Date Range{% else %}نطاق التاريخ{% endif %}
-      </h6>
-      <div class="d-flex gap-2 mb-3 flex-column">
-        <input type="date" id="dateFrom" class="form-control form-control-sm" placeholder="{% if ui_lang == 'en' %}From{% else %}من{% endif %}">
-        <input type="date" id="dateTo" class="form-control form-control-sm" placeholder="{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}">
+    {# Data Source Cards #}
+    <div class="az-card">
+      <div class="az-card__header">
+        <h6 class="az-card__title"><i class="bi bi-database"></i>{% if ui_lang == 'en' %}Data Source{% else %}مصدر البيانات{% endif %}</h6>
       </div>
-
-      <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
-        {% if ui_lang == 'en' %}Chart Type{% else %}نوع الرسم{% endif %}
-      </h6>
-      <select id="chartTypeSelect" class="form-select form-select-sm mb-3" aria-label="{% if ui_lang == 'en' %}Chart Type{% else %}نوع الرسم{% endif %}">
-        <option value="">{% if ui_lang == 'en' %}Auto (Recommended){% else %}تلقائي (موصى به){% endif %}</option>{% for ct in chart_types %}
-        <option value="{{ ct }}">{% if ui_lang == 'en' %}{{ CHART_LABELS_EN.get(ct, ct | title) }}{% else %}{{ CHART_LABELS_AR.get(ct, ct) }}{% endif %}</option>{% endfor %}
-      </select>
-
-      <div class="d-grid gap-2">
-        <button class="btn btn-primary btn-sm" id="renderBtn" onclick="renderChart()">
-          <i class="bi bi-play-fill me-1"></i>
-          {% if ui_lang == 'en' %}Analyze{% else %}تحليل{% endif %}
-        </button>
+      <div class="az-card__body az-card__body--compact">
+        <div class="ce-source-grid" role="radiogroup" aria-label="{% if ui_lang == 'en' %}Data source{% else %}مصدر البيانات{% endif %}">
+          {% for src in sources %}
+          <button type="button" class="ce-source-card"
+            role="radio" aria-checked="false"
+            data-source="{{ src }}"
+            onclick="selectSource('{{ src }}')"
+            aria-label="{% if ui_lang == 'en' %}{{ SOURCE_LABELS_EN.get(src, src | replace('_', ' ') | title) }}{% else %}{{ SOURCE_LABELS_AR.get(src, src) }}{% endif %}">
+            <i class="bi {{ {'incidents':'bi-exclamation-triangle','attendance':'bi-person-check','daily_reports':'bi-journal-text','enrollments':'bi-people','kindergartens':'bi-buildings'}.get(src, 'bi-bar-chart') }}"></i>
+            <span class="ce-source-card__label">{% if ui_lang == 'en' %}{{ SOURCE_LABELS_EN.get(src, src | replace('_', ' ') | title) }}{% else %}{{ SOURCE_LABELS_AR.get(src, src) }}{% endif %}</span>
+          </button>
+          {% endfor %}
+        </div>
       </div>
     </div>
 
-    <div class="charts-panel" id="interpretationPanel" style="display:none;">
-      <h6 class="fw-semibold mb-3 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
-        <i class="bi bi-info-circle me-1"></i>
-        {% if ui_lang == 'en' %}Metric Insight{% else %}رؤية المؤشر{% endif %}
-      </h6>
-      <div id="interpretationText" class="small text-muted"></div>
+    {# Date Range #}
+    <div class="az-card">
+      <div class="az-card__header">
+        <h6 class="az-card__title"><i class="bi bi-calendar-range"></i>{% if ui_lang == 'en' %}Date Range{% else %}نطاق التاريخ{% endif %}</h6>
+      </div>
+      <div class="az-card__body az-card__body--compact">
+        <div class="ce-presets mb-3" role="group" aria-label="{% if ui_lang == 'en' %}Quick date presets{% else %}إعدادات التاريخ السريعة{% endif %}">
+          <button type="button" class="ce-preset-btn" data-preset="today" onclick="applyDatePreset('today')">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</button>
+          <button type="button" class="ce-preset-btn" data-preset="this_week" onclick="applyDatePreset('this_week')">{% if ui_lang == 'en' %}This Week{% else %}هذا الأسبوع{% endif %}</button>
+          <button type="button" class="ce-preset-btn" data-preset="this_month" onclick="applyDatePreset('this_month')">{% if ui_lang == 'en' %}This Month{% else %}هذا الشهر{% endif %}</button>
+          <button type="button" class="ce-preset-btn" data-preset="last_month" onclick="applyDatePreset('last_month')">{% if ui_lang == 'en' %}Last Month{% else %}الشهر الماضي{% endif %}</button>
+          <button type="button" class="ce-preset-btn" data-preset="last_3m" onclick="applyDatePreset('last_3m')">{% if ui_lang == 'en' %}Last 3M{% else %}آخر 3 أشهر{% endif %}</button>
+          <button type="button" class="ce-preset-btn" data-preset="ytd" onclick="applyDatePreset('ytd')">{% if ui_lang == 'en' %}YTD{% else %}منذ بداية العام{% endif %}</button>
+          <button type="button" class="ce-preset-btn" data-preset="1y" onclick="applyDatePreset('1y')">{% if ui_lang == 'en' %}1 Year{% else %}سنة{% endif %}</button>
+        </div>
+        <div class="ce-date-row">
+          <input type="date" id="dateFrom" class="form-control form-control-sm" aria-label="{% if ui_lang == 'en' %}Start date{% else %}تاريخ البداية{% endif %}" title="{% if ui_lang == 'en' %}Start date{% else %}تاريخ البداية{% endif %}">
+          <span class="align-self-center text-muted">&ndash;</span>
+          <input type="date" id="dateTo" class="form-control form-control-sm" aria-label="{% if ui_lang == 'en' %}End date{% else %}تاريخ النهاية{% endif %}" title="{% if ui_lang == 'en' %}End date{% else %}تاريخ النهاية{% endif %}">
+        </div>
+      </div>
+    </div>
+
+    {# Chart Type #}
+    <div class="az-card">
+      <div class="az-card__header">
+        <h6 class="az-card__title"><i class="bi bi-pie-chart"></i>{% if ui_lang == 'en' %}Chart Type{% else %}نوع الرسم{% endif %}</h6>
+      </div>
+      <div class="az-card__body az-card__body--compact">
+        <div class="ce-chart-types" role="radiogroup" aria-label="{% if ui_lang == 'en' %}Chart type{% else %}نوع الرسم البياني{% endif %}">
+          <button type="button" class="ce-ct-btn is-active" role="radio" aria-checked="true" data-ct="" onclick="selectChartType('')"><i class="bi bi-magic"></i>{% if ui_lang == 'en' %}Auto{% else %}تلقائي{% endif %}</button>
+          {% for ct in chart_types %}
+          <button type="button" class="ce-ct-btn" role="radio" aria-checked="false" data-ct="{{ ct }}" onclick="selectChartType('{{ ct }}')"><i class="bi {{ {'line':'bi-graph-up','bar':'bi-bar-chart','pie':'bi-pie-chart-fill','scatter':'bi-scatter-chart','histogram':'bi-bar-chart-steps','box':'bi-bounding-box','heatmap':'bi-grid-3x3-gap','funnel':'bi-funnel','treemap':'bi-grid-1x2'}.get(ct, 'bi-bar-chart') }}"></i>{% if ui_lang == 'en' %}{{ CHART_LABELS_EN.get(ct, ct | title) }}{% else %}{{ CHART_LABELS_AR.get(ct, ct) }}{% endif %}</button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# Actions #}
+    <div class="d-grid gap-2">
+      <button class="btn btn-primary" id="renderBtn" onclick="renderChart()">
+        <i class="bi bi-play-fill me-1"></i>
+        {% if ui_lang == 'en' %}Analyze{% else %}تحليل{% endif %}
+      </button>
+    </div>
+
+    {# Recommendations #}
+    <div class="az-card" id="recommendationsPanel" style="display:none;">
+      <div class="az-card__header">
+        <h6 class="az-card__title"><i class="bi bi-lightbulb"></i>{% if ui_lang == 'en' %}Recommended{% else %}مقترحات{% endif %}</h6>
+      </div>
+      <div class="az-card__body az-card__body--compact">
+        <div class="ce-recommendations" id="recommendationsContent"></div>
+      </div>
     </div>
 
   </aside>
 
-  {# ── Chart Output Area ─────────────────────────────────────────────── #}
-  <div class="flex-grow-1" style="min-width:0;">
-    <div class="charts-panel mb-4">
+  {# ── Main Area ────────────────────────────────────────────────────────── #}
+  <div class="ce-main" aria-live="polite" aria-label="{% if ui_lang == 'en' %}Chart output area{% else %}منطقة عرض الرسم البياني{% endif %}">
 
-      <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
-        <div>
-          <div id="breadcrumbs" class="mb-2 fs-6">
-            <span class="breadcrumb-drill" onclick="resetDrilldown()">{% if ui_lang == 'en' %}Jordan{% else %}الأردن{% endif %}</span>
-          </div>
-          <span id="chartTitle" class="fw-semibold fs-5 text-dark">
-            {% if ui_lang == 'en' %}Select a source and click Analyze{% else %}اختر المصدر واضغط تحليل{% endif %}
-          </span>
-          <span id="rowCountBadge" class="badge ms-2" style="background:var(--admin-primary,#1F5E47);display:none;"></span>
-          <span id="drilldownBadge" class="badge bg-warning text-dark ms-1" style="display:none;">
-            {% if ui_lang == 'en' %}Drill-Down Active{% else %}تصفح متعمق نشط{% endif %}
+    {# Chart Card #}
+    <div class="az-card">
+      <div class="az-card__header flex-column align-items-stretch gap-2">
+        {# Row 1: Breadcrumbs + scope badge #}
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <nav id="chartBreadcrumbs" class="ce-breadcrumbs" aria-label="{% if ui_lang == 'en' %}Drill-down path{% else %}مسار التفرع{% endif %}" style="display:none;">
+            <span id="breadcrumbsDisplay" class="d-flex align-items-center gap-1 flex-wrap"></span>
+          </nav>
+          <span id="scopeLevelBadge" class="badge" style="display:none;"></span>
+          <span id="drilldownHint" class="small text-muted" style="display:none;">
+            <i class="bi bi-hand-index-thumb"></i>
+            {% if ui_lang == 'en' %}Click chart bars to drill down{% else %}انقر على أعمدة الرسم للتفرع{% endif %}
           </span>
         </div>
-        <div>
-          <button class="btn btn-outline-secondary btn-sm me-2" id="exportCsvBtn" style="display:none;" onclick="exportCSV()">
-            <i class="bi bi-file-earmark-spreadsheet me-1"></i>
-            {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
-          </button>
-          <button class="btn btn-outline-secondary btn-sm" id="exportBtn" style="display:none;" onclick="exportChart()">
-            <i class="bi bi-download me-1"></i>
-            {% if ui_lang == 'en' %}Export PNG{% else %}تصدير PNG{% endif %}
-          </button>
+        {# Row 2: Title + badges + toolbar #}
+        <div class="d-flex align-items-center gap-3 flex-wrap w-100 justify-content-between">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span id="chartTitleDisplay" class="fw-semibold fs-6 text-dark">
+              <i class="bi bi-bar-chart me-1 text-primary"></i>
+              {% if ui_lang == 'en' %}Select a source and click Analyze{% else %}اختر المصدر واضغط تحليل{% endif %}
+            </span>
+            <span id="rowCountBadge" class="badge rounded-pill" style="background:var(--az-primary,#2563EB);display:none;"></span>
+          </div>
+          <div class="ce-toolbar">
+            <button class="btn btn-outline-secondary btn-sm" id="exportCsvBtn" disabled onclick="exportCSV()">
+              <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+              {% if ui_lang == 'en' %}CSV{% else %}CSV{% endif %}
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="exportPngBtn" disabled onclick="exportChart()">
+              <i class="bi bi-download me-1"></i>
+              {% if ui_lang == 'en' %}PNG{% else %}PNG{% endif %}
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="shareBtn" disabled onclick="shareChart()" title="{% if ui_lang == 'en' %}Copy shareable link{% else %}نسخ رابط المشاركة{% endif %}">
+              <i class="bi bi-share"></i>
+            </button>
+          </div>
         </div>
       </div>
+      <div class="az-card__body">
 
-      <div class="loading-spinner align-items-center justify-content-center" id="chartSpinner" style="min-height:300px;">
-        <div class="text-center text-muted">
-          <div class="spinner-border text-success mb-3" role="status">
-            <span class="visually-hidden">{% if ui_lang == 'en' %}Loading&hellip;{% else %}جارٍ التحميل&hellip;{% endif %}</span>
+        {# Empty State #}
+        <div class="ce-empty-state" id="emptyState">
+          <div class="ce-empty-state__icon">
+            <i class="bi bi-bar-chart-steps"></i>
           </div>
-          <div class="small">{% if ui_lang == 'en' %}Analyzing data&hellip;{% else %}جاري تحليل البيانات&hellip;{% endif %}</div>
+          <div class="ce-empty-state__title">
+            {% if ui_lang == 'en' %}Start Exploring Your Data{% else %}ابدأ استكشاف بياناتك{% endif %}
+          </div>
+          <div class="ce-empty-state__hint">
+            {% if ui_lang == 'en' %}
+              Choose a data source from the sidebar, pick a date range, and click <strong>Analyze</strong> to generate interactive charts with drill-down support.
+            {% else %}
+              اختر مصدر البيانات من الشريط الجانبي، حدد نطاق التاريخ، وانقر على <strong>تحليل</strong> لإنشاء رسوم بيانية تفاعلية مع إمكانية التفرّع.
+            {% endif %}
+          </div>
+          <div class="ce-empty-state__actions">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="quickStart('incidents')">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              {% if ui_lang == 'en' %}View Incidents{% else %}عرض الحوادث{% endif %}
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="quickStart('attendance')">
+              <i class="bi bi-person-check me-1"></i>
+              {% if ui_lang == 'en' %}View Attendance{% else %}عرض الحضور{% endif %}
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="quickStart('kindergartens')">
+              <i class="bi bi-buildings me-1"></i>
+              {% if ui_lang == 'en' %}View Kindergartens{% else %}عرض الحضانات{% endif %}
+            </button>
+          </div>
         </div>
+
+        {# Skeleton Loading #}
+        <div id="chartSkeleton" style="display:none;">
+          <div class="ce-skeleton ce-skeleton--title"></div>
+          <div class="ce-skeleton ce-skeleton--chart mb-3"></div>
+          <div class="d-flex gap-2 align-items-center mb-3">
+            <div class="ce-skeleton ce-skeleton--badge"></div>
+            <div class="ce-skeleton" style="height:1.25rem; width:40%;"></div>
+          </div>
+        </div>
+
+        {# Chart Output #}
+        <div id="chartOutput"></div>
+
+        {# Task Status #}
+        <div id="taskStatus" class="mt-2" style="display:none;">
+          <div class="d-flex align-items-center gap-3 p-2 rounded" style="background:var(--slate-50);">
+            <div class="spinner-border spinner-border-sm text-primary" role="status">
+              <span class="visually-hidden">{% if ui_lang == 'en' %}Processing...{% else %}معالجة...{% endif %}</span>
+            </div>
+            <div>
+              <div class="small fw-semibold text-dark" id="taskStatusText">
+                {% if ui_lang == 'en' %}Processing large dataset...{% else %}معالجة مجموعة بيانات كبيرة...{% endif %}
+              </div>
+              <div class="progress mt-1" style="height:4px; width:200px;">
+                <div class="progress-bar" id="taskProgressBar" role="progressbar" style="width:0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# Error Display #}
+        <div id="chartError" class="alert alert-danger mt-3 d-none align-items-center gap-2" role="alert">
+          <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+          <span id="chartErrorText"></span>
+        </div>
+
       </div>
+    </div>
 
-      <div id="chartOutput"></div>
-
-      <div id="taskStatus" class="mt-2" style="display:none;">
-        <div class="alert alert-info py-2 mb-0">
-          <i class="bi bi-hourglass-split me-1"></i>
-          <span id="taskStatusText">
-            {% if ui_lang == 'en' %}Large dataset — processing in background...{% else %}مجموعة بيانات كبيرة — المعالجة في الخلفية...{% endif %}
-          </span>
-          <span id="taskProgress" class="badge bg-info ms-2">0%</span>
+    {# Active Filters Bar #}
+    <div class="az-card" id="activeFiltersCard" style="display:none;">
+      <div class="az-card__body az-card__body--compact">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div id="activeFilterPills" class="d-flex gap-1 flex-wrap align-items-center">
+            <span class="small fw-semibold text-muted me-2">
+              <i class="bi bi-funnel-fill"></i>
+              {% if ui_lang == 'en' %}Active Filters{% else %}الفلاتر النشطة{% endif %}:
+            </span>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm" id="resetDrilldownBtn" onclick="resetDrilldown()" title="{% if ui_lang == 'en' %}Reset to national view{% else %}العودة للمستوى الوطني{% endif %}">
+            <i class="bi bi-arrow-counterclockwise"></i>
+            {% if ui_lang == 'en' %}Reset All{% else %}إعادة تعيين الكل{% endif %}
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Data Table -->
-    <div class="charts-panel">
-      <h5 class="fw-semibold mb-3">{% if ui_lang == 'en' %}Supporting Data{% else %}البيانات الداعمة{% endif %}</h5>
-      <div id="dataTableContainer" class="table-responsive">
-        <p class="text-muted small">{% if ui_lang == 'en' %}Data will appear here after analysis.{% else %}ستظهر البيانات هنا بعد التحليل.{% endif %}</p>
+    {# Interpretation Panel #}
+    <div class="az-card" id="interpretationPanel" style="display:none;" aria-label="{% if ui_lang == 'en' %}Metric insight{% else %}رؤية المؤشر{% endif %}">
+      <div class="az-card__header">
+        <h6 class="az-card__title"><i class="bi bi-info-circle"></i>{% if ui_lang == 'en' %}Metric Insight{% else %}رؤية المؤشر{% endif %}</h6>
+      </div>
+      <div class="az-card__body az-card__body--compact">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-8">
+            <div id="interpretationText" class="small text-muted"></div>
+          </div>
+          <div class="col-md-4">
+            <div class="d-flex flex-column gap-2">
+              <div class="d-flex align-items-center justify-content-between">
+                <span class="small text-muted">{% if ui_lang == 'en' %}Data Quality{% else %}جودة البيانات{% endif %}</span>
+                <span class="small fw-semibold" id="qualityScore"></span>
+              </div>
+              <div class="ce-interpretation-gauge">
+                <div class="ce-interpretation-gauge__fill bg-success" id="qualityGauge" style="width:0%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+
+    {# Data Table #}
+    <div class="az-card">
+      <div class="az-card__header">
+        <h6 class="az-card__title"><i class="bi bi-table"></i>{% if ui_lang == 'en' %}Supporting Data{% else %}البيانات الداعمة{% endif %}</h6>
+        <div class="d-flex align-items-center gap-2">
+          <span class="small text-muted" id="tableRowCount" style="display:none;"></span>
+          <input type="search" class="form-control form-control-sm ce-table-search" id="tableSearch" style="display:none;"
+            placeholder="{% if ui_lang == 'en' %}Search records...{% else %}بحث في السجلات...{% endif %}"
+            aria-label="{% if ui_lang == 'en' %}Search table data{% else %}بحث في بيانات الجدول{% endif %}"
+            oninput="filterTable()">
+        </div>
+      </div>
+      <div class="az-card__body az-card__body--compact p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle mb-0 ce-data-table" id="dataTable">
+            <thead id="dataTableHead" style="display:none;"></thead>
+            <tbody id="dataTableBody">
+              <tr>
+                <td class="text-center text-muted py-4">
+                  <i class="bi bi-info-circle me-1"></i>
+                  {% if ui_lang == 'en' %}Data will appear here after analysis.{% else %}ستظهر البيانات هنا بعد التحليل.{% endif %}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </div>
@@ -153,11 +372,15 @@ let _activeTaskId = null;
 let _taskPollInterval = null;
 let _currentFigDiv = null;
 let _lastResponse = null;
+let _currentSource = '{{ sources[0] if sources else "incidents" }}';
+let _currentChartType = '';
+let _tableSortColumn = null;
+let _tableSortAsc = true;
+let _allTableRows = [];
 
-let filterState = {
-  governorate: null,
-  kindergarten_id: null
-};
+let filterState = { governorate: null, kindergarten_id: null };
+
+const SOURCE_ICONS = { incidents:'bi-exclamation-triangle', attendance:'bi-person-check', daily_reports:'bi-journal-text', enrollments:'bi-people', kindergartens:'bi-buildings' };
 
 const TRANSLATIONS = {
   "count": LANG === 'en' ? "Count" : "العدد",
@@ -182,40 +405,138 @@ const TRANSLATIONS = {
   "Sad": LANG === 'en' ? "Sad" : "حزين",
   "Medical": LANG === 'en' ? "Medical" : "طبي",
   "Behavioral": LANG === 'en' ? "Behavioral" : "سلوكي",
-  "Accident": LANG === 'en' ? "Accident" : "حادث"
+  "Accident": LANG === 'en' ? "Accident" : "حادث",
+  "capacity": LANG === 'en' ? "Capacity" : "الطاقة",
+  "governorate": LANG === 'en' ? "Governorate" : "المحافظة"
 };
 
-function getLocalized(key) {
-  return TRANSLATIONS[key] || key;
+function getLocalized(key) { return TRANSLATIONS[key] || key; }
+function tEn(en, ar) { return LANG === 'en' ? en : ar; }
+
+// ── Source Selection ─────────────────────────────────────────────────────
+function selectSource(source) {
+  _currentSource = source;
+  document.querySelectorAll('.ce-source-card').forEach(function(card) {
+    var isActive = card.dataset.source === source;
+    card.classList.toggle('is-active', isActive);
+    card.setAttribute('aria-checked', isActive);
+  });
 }
 
-async function renderChart() {
-  const source = document.getElementById('sourceSelect').value;
-  const chartType = document.getElementById('chartTypeSelect').value;
-  const dateFrom = document.getElementById('dateFrom').value;
-  const dateTo = document.getElementById('dateTo').value;
+// ── Chart Type Selection ─────────────────────────────────────────────────
+function selectChartType(ct) {
+  _currentChartType = ct;
+  document.querySelectorAll('.ce-ct-btn').forEach(function(btn) {
+    var isActive = btn.dataset.ct === ct;
+    btn.classList.toggle('is-active', isActive);
+    btn.setAttribute('aria-checked', isActive);
+  });
+}
 
-  const params = new URLSearchParams({ source });
+// ── Date Presets ─────────────────────────────────────────────────────────
+function applyDatePreset(preset) {
+  var today = new Date();
+  var from = new Date(today);
+  var to = new Date(today);
+  switch(preset) {
+    case 'today': break;
+    case 'this_week':
+      var day = today.getDay(); var diff = day === 0 ? 6 : day - 1;
+      from.setDate(today.getDate() - diff); to = today;
+      break;
+    case 'this_month':
+      from = new Date(today.getFullYear(), today.getMonth(), 1);
+      break;
+    case 'last_month':
+      from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      to = new Date(today.getFullYear(), today.getMonth(), 0);
+      break;
+    case 'last_3m':
+      from.setMonth(today.getMonth() - 3); to = today;
+      break;
+    case 'ytd':
+      from = new Date(today.getFullYear(), 0, 1);
+      break;
+    case '1y':
+      from.setFullYear(today.getFullYear() - 1);
+      break;
+  }
+  document.getElementById('dateFrom').value = formatDateStr(from);
+  document.getElementById('dateTo').value = formatDateStr(to);
+  updatePresetHighlight(preset);
+}
+
+function formatDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function updatePresetHighlight(preset) {
+  document.querySelectorAll('.ce-preset-btn').forEach(function(b) {
+    b.classList.toggle('is-active', b.dataset.preset === preset);
+  });
+}
+
+// ── Quick Start ──────────────────────────────────────────────────────────
+function quickStart(source) {
+  selectSource(source);
+  renderChart();
+}
+
+// ── URL State ────────────────────────────────────────────────────────────
+function updateURLState() {
+  var params = new URLSearchParams();
+  if (_currentSource) params.set('source', _currentSource);
+  if (_currentChartType) params.set('chart_type', _currentChartType);
+  var df = document.getElementById('dateFrom').value;
+  var dt = document.getElementById('dateTo').value;
+  if (df) params.set('date_from', df);
+  if (dt) params.set('date_to', dt);
+  if (filterState.governorate) params.set('governorate', filterState.governorate);
+  if (filterState.kindergarten_id) params.set('kindergarten_id', filterState.kindergarten_id);
+  var qs = params.toString();
+  var url = window.location.pathname + (qs ? '?' + qs : '');
+  window.history.replaceState({}, '', url);
+}
+
+function shareChart() {
+  updateURLState();
+  navigator.clipboard.writeText(window.location.href).then(function() {
+    showBanner(tEn('Link copied to clipboard!', 'تم نسخ الرابط!'), 'success');
+  }).catch(function() {
+    showBanner(tEn('Could not copy link', 'تعذر نسخ الرابط'), 'warning');
+  });
+}
+
+// ── Render Button ────────────────────────────────────────────────────────
+async function renderChart() {
+  var source = _currentSource || document.getElementById('sourceSelect')?.value;
+  if (!source) return;
+  var chartType = _currentChartType;
+  var dateFrom = document.getElementById('dateFrom').value;
+  var dateTo = document.getElementById('dateTo').value;
+
+  var params = new URLSearchParams({ source: source });
   if (chartType) params.set('chart_type', chartType);
   if (dateFrom) params.set('date_from', dateFrom);
   if (dateTo) params.set('date_to', dateTo);
   if (filterState.governorate) params.set('governorate', filterState.governorate);
   if (filterState.kindergarten_id) params.set('kindergarten_id', filterState.kindergarten_id);
 
+  updateURLState();
   setLoading(true);
   clearChart();
   clearTask();
 
   try {
-    const resp = await fetch(`/api/admin/charts/data?${params}`, {
+    var resp = await fetch('/api/admin/charts/data?' + params, {
       headers: { 'Accept': 'application/json' }
     });
     if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      showError(err.detail || (LANG === 'en' ? 'Request failed' : 'فشل الطلب'));
+      var err = await resp.json().catch(function() { return { detail: resp.statusText }; });
+      showError(err.detail || tEn('Request failed', 'فشل الطلب'));
       return;
     }
-    const data = await resp.json();
+    var data = await resp.json();
     _lastResponse = data;
 
     if (data.task_id) {
@@ -224,244 +545,448 @@ async function renderChart() {
       injectChart(data);
     }
   } catch (e) {
-    showError(e.message || (LANG === 'en' ? 'Network error' : 'خطأ في الشبكة'));
+    showError(e.message || tEn('Network error', 'خطأ في الشبكة'));
   } finally {
     setLoading(false);
   }
 }
 
+// ── Inject Chart ─────────────────────────────────────────────────────────
 function injectChart(data) {
-  const out = document.getElementById('chartOutput');
+  var out = document.getElementById('chartOutput');
   out.innerHTML = '';
-  document.getElementById('chartTitle').textContent = data.title;
-  
-  const badge = document.getElementById('rowCountBadge');
-  const recordCount = data.quality?.record_count ?? data.row_count ?? 0;
-  badge.textContent = `${recordCount.toLocaleString()} ${LANG === 'en' ? 'records' : 'سجل'}`;
+  document.getElementById('emptyState').style.display = 'none';
+
+  var titleEl = document.getElementById('chartTitleDisplay');
+  var icon = SOURCE_ICONS[data.source] || 'bi-bar-chart';
+  titleEl.innerHTML = '<i class="bi ' + icon + ' me-2 text-primary"></i>' + escapeHTML(data.title);
+
+  // Scope level badge
+  var scopeBadge = document.getElementById('scopeLevelBadge');
+  var scopeLevel = data.scope ? data.scope.level : 'national';
+  var scopeLabels = { 'national': tEn('National', 'وطني'), 'governorate': tEn('Governorate', 'محافظة'), 'kindergarten': tEn('Kindergarten', 'حضانة'), 'city': tEn('City', 'مدينة') };
+  var scopeColors = { 'national': '#2563EB', 'governorate': '#16A34A', 'kindergarten': '#7C3AED', 'city': '#D97706' };
+  if (scopeLevel && scopeLevel !== 'national') {
+    scopeBadge.textContent = scopeLabels[scopeLevel] || scopeLevel;
+    scopeBadge.style.background = scopeColors[scopeLevel] || '#64748B';
+    scopeBadge.style.color = '#fff';
+    scopeBadge.style.display = '';
+  } else {
+    scopeBadge.style.display = 'none';
+  }
+
+  // Drill-down hint
+  var drilldownHint = document.getElementById('drilldownHint');
+  if (data.drilldown && data.drilldown.enabled && data.drilldown.next_level) {
+    drilldownHint.style.display = '';
+    var nextLabels = { 'governorate': tEn('governorate', 'المحافظة'), 'kindergarten': tEn('kindergarten', 'الحضانة'), 'city': tEn('city', 'المدينة') };
+    drilldownHint.innerHTML = '<i class="bi bi-hand-index-thumb me-1"></i>' + tEn('Click bars to drill into', 'انقر على الأعمدة للتفرع إلى') + ' ' + (nextLabels[data.drilldown.next_level] || data.drilldown.next_level);
+  } else {
+    drilldownHint.style.display = 'none';
+  }
+
+  var badge = document.getElementById('rowCountBadge');
+  var recordCount = data.quality?.record_count ?? data.row_count ?? 0;
+  badge.textContent = recordCount.toLocaleString() + ' ' + tEn('records', 'سجل');
   badge.style.display = '';
 
-  document.getElementById('exportBtn').style.display = '';
-  document.getElementById('exportCsvBtn').style.display = '';
+  document.getElementById('exportCsvBtn').disabled = false;
+  document.getElementById('exportPngBtn').disabled = false;
+  document.getElementById('shareBtn').disabled = false;
 
-  // Breadcrumbs
   renderBreadcrumbs(data.scope);
+  renderFilterPills();
 
-  // Interpretation Panel
-  const panel = document.getElementById('interpretationPanel');
-  const text = document.getElementById('interpretationText');
+  // Interpretation
+  var panel = document.getElementById('interpretationPanel');
+  var text = document.getElementById('interpretationText');
   panel.style.display = '';
-  text.innerHTML = `<strong>${data.metric.label}</strong><br/>${LANG === 'en' ? 'Unit:' : 'الوحدة:'} ${data.metric.unit}<br/><em>${LANG === 'en' ? 'Level:' : 'المستوى:'} ${getLocalized(data.scope.level)}</em>`;
+  text.innerHTML = '<strong>' + escapeHTML(data.metric.label) + '</strong><br/>'
+    + tEn('Unit:', 'الوحدة:') + ' ' + escapeHTML(data.metric.unit)
+    + '<br/><em>' + tEn('Level:', 'المستوى:') + ' ' + getLocalized(data.scope.level) + '</em>';
+
+  // Quality gauge
+  var qualScore = data.quality?.record_count ?? 0;
+  var scoreEl = document.getElementById('qualityScore');
+  var gaugeEl = document.getElementById('qualityGauge');
+  if (qualScore > 0) {
+    scoreEl.textContent = qualScore.toLocaleString() + ' ' + tEn('rows', 'صف');
+    scoreEl.className = 'small fw-semibold text-success';
+    gaugeEl.style.width = '100%';
+    gaugeEl.className = 'ce-interpretation-gauge__fill bg-success';
+  } else {
+    scoreEl.textContent = tEn('No data', 'بدون بيانات');
+    scoreEl.className = 'small fw-semibold text-warning';
+    gaugeEl.style.width = '20%';
+    gaugeEl.className = 'ce-interpretation-gauge__fill bg-warning';
+  }
+
+  // Recommendations
+  loadRecommendations(data.source);
 
   // Draw Plotly
-  if (data.series.length > 0 && typeof Plotly !== 'undefined') {
-    let type = data.chart_type;
-    let traces = [];
-    let keys = Object.keys(data.series[0]);
-    
-    let numCols = keys.filter(k => typeof data.series[0][k] === 'number');
-    let strCols = keys.filter(k => typeof data.series[0][k] !== 'number');
+  if (data.series && data.series.length > 0 && typeof Plotly !== 'undefined') {
+    var type = data.chart_type || 'bar';
+    var traces = [];
+    var keys = Object.keys(data.series[0]);
+    var numCols = keys.filter(function(k) { return typeof data.series[0][k] === 'number'; });
+    var strCols = keys.filter(function(k) { return typeof data.series[0][k] !== 'number'; });
 
-    let layout = {
-      font: { family: 'Inter, sans-serif' },
+    var layout = {
+      font: { family: 'Inter, "Noto Sans Arabic", sans-serif' },
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
-      margin: { t: 20, r: 10, l: 40, b: 40 },
-      barmode: type === 'bar' ? 'group' : undefined
+      margin: { t: 20, r: 10, l: 50, b: 50 },
+      barmode: type === 'bar' ? 'group' : undefined,
+      colorway: ['#2563EB','#16A34A','#D97706','#DC2626','#7C3AED','#0891B2','#DB2777','#4F46E5','#CA8A04','#059669']
     };
 
     if (numCols.length === 1 && strCols.length >= 2) {
-      let xCol = strCols.find(k => k === 'month' || k === 'date') || strCols[0];
-      let groupCol = strCols.find(k => k !== xCol) || strCols[1];
-      let yCol = numCols[0];
-
-      let groups = {};
-      data.series.forEach(r => {
-        let g = r[groupCol];
+      var xCol = strCols.find(function(k) { return k === 'month' || k === 'date'; }) || strCols[0];
+      var groupCol = strCols.find(function(k) { return k !== xCol; }) || strCols[1];
+      var yCol = numCols[0];
+      var groups = {};
+      data.series.forEach(function(r) {
+        var g = r[groupCol];
         if (!groups[g]) groups[g] = { x: [], y: [] };
         groups[g].x.push(r[xCol]);
         groups[g].y.push(r[yCol]);
       });
-
-      for (let g in groups) {
-        traces.push({
-          type: type,
-          name: getLocalized(g),
-          x: groups[g].x,
-          y: groups[g].y
-        });
-      }
+      Object.keys(groups).forEach(function(g) {
+        traces.push({ type: type, name: getLocalized(g), x: groups[g].x, y: groups[g].y });
+      });
     } else if (strCols.length >= 1) {
-      let xCol = strCols[0];
+      var xCol = strCols[0];
       if (type === 'pie') {
         traces.push({
           type: 'pie',
-          labels: data.series.map(r => getLocalized(r[xCol])),
-          values: data.series.map(r => r[numCols[0]]),
-          hoverinfo: 'label+percent+value'
+          labels: data.series.map(function(r) { return getLocalized(r[xCol]); }),
+          values: data.series.map(function(r) { return r[numCols[0]]; }),
+          hoverinfo: 'label+percent+value',
+          textinfo: 'percent'
         });
       } else {
-        numCols.forEach(col => {
+        numCols.forEach(function(col) {
           traces.push({
             type: type,
             name: getLocalized(col),
-            x: data.series.map(r => getLocalized(r[xCol])),
-            y: data.series.map(r => r[col])
+            x: data.series.map(function(r) { return getLocalized(r[xCol]); }),
+            y: data.series.map(function(r) { return r[col]; })
           });
         });
       }
     }
 
-    Plotly.newPlot(out, traces, layout);
+    Plotly.newPlot(out, traces, layout, { responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['sendDataToCloud'] });
     _currentFigDiv = out;
 
-    // Drilldown event handling
     if (data.drilldown && data.drilldown.enabled) {
-      out.on('plotly_click', function(data_click){
-        const pt = data_click.points[0];
-        const clickedLabel = pt.x || pt.label;
-        if (clickedLabel) {
-          handleDrilldown(data.scope.level, clickedLabel);
-        }
+      out.on('plotly_click', function(data_click) {
+        var pt = data_click.points[0];
+        var clickedLabel = pt.x || pt.label;
+        if (clickedLabel) handleDrilldown(data.scope.level, clickedLabel);
       });
     }
-  } else {
-    out.innerHTML = `<div class="text-center text-muted mt-5">${LANG === 'en' ? 'No data for this criteria.' : 'لا توجد بيانات لهذه المعايير.'}</div>`;
+  } else if (data.series && data.series.length === 0) {
+    out.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>' + tEn('No data for this criteria.', 'لا توجد بيانات لهذه المعايير.') + '</div>';
   }
 
-  // Draw Table
   renderTable(data);
 }
 
+// ── Drilldown ────────────────────────────────────────────────────────────
 function handleDrilldown(currentLevel, label) {
   if (currentLevel === 'national') {
     filterState.governorate = label;
+    filterState.kindergarten_id = null;
   } else if (currentLevel === 'governorate') {
-    // In our backend, passing governorate groups by kindergarten name. 
-    // Wait, if we are at governorate, we grouped by kindergarten. Clicking one means we drill to Kindergarten level.
-    // However, our backend loader for kindergartens expects `kindergarten_id`. 
-    // We will just alert for now or try to pass it. Since we don't have ID mapping here easily, we rely on the backend.
-    if (document.getElementById('sourceSelect').value !== 'kindergartens') {
-       filterState.governorate = label;
-    }
+    filterState.governorate = filterState.governorate || label;
   }
-  document.getElementById('drilldownBadge').style.display = '';
   renderChart();
 }
 
 function resetDrilldown() {
   filterState = { governorate: null, kindergarten_id: null };
-  document.getElementById('drilldownBadge').style.display = 'none';
+  showBreadcrumbs(false);
+  showActiveFilters(false);
   renderChart();
 }
 
+function renderFilterPills() {
+  var container = document.getElementById('activeFilterPills');
+  var filtersCard = document.getElementById('activeFiltersCard');
+  var hasFilters = false;
+  // Preserve the label prefix row inside the container
+  var html = '';
+  if (filterState.governorate) {
+    hasFilters = true;
+    html += '<span class="ce-filter-pill"><i class="bi bi-geo-alt"></i>' + escapeHTML(filterState.governorate) + '<button type="button" class="ce-filter-pill__remove" onclick="filterState.governorate=null;renderChart();" aria-label="' + tEn('Remove governorate filter','إزالة فلتر المحافظة') + '">&times;</button></span>';
+  }
+  if (filterState.kindergarten_id) {
+    hasFilters = true;
+    html += '<span class="ce-filter-pill"><i class="bi bi-buildings"></i>KG #' + filterState.kindergarten_id + '<button type="button" class="ce-filter-pill__remove" onclick="filterState.kindergarten_id=null;renderChart();" aria-label="' + tEn('Remove kindergarten filter','إزالة فلتر الحضانة') + '">&times;</button></span>';
+  }
+  showActiveFilters(hasFilters, html);
+}
+
+function showActiveFilters(show, pillsHtml) {
+  var filtersCard = document.getElementById('activeFiltersCard');
+  if (show && pillsHtml !== undefined) {
+    var container = document.getElementById('activeFilterPills');
+    var labelRow = container.querySelector('.small.fw-semibold');
+    container.innerHTML = '';
+    if (labelRow) container.appendChild(labelRow);
+    if (pillsHtml) {
+      var wrapper = document.createElement('span');
+      wrapper.className = 'd-flex gap-1 flex-wrap';
+      wrapper.innerHTML = pillsHtml;
+      container.appendChild(wrapper);
+    }
+  }
+  filtersCard.style.display = show ? '' : 'none';
+}
+
+function showBreadcrumbs(show) {
+  document.getElementById('chartBreadcrumbs').style.display = show ? '' : 'none';
+}
+
 function renderBreadcrumbs(scope) {
-  let bc = `<span class="breadcrumb-drill" onclick="resetDrilldown()">{% if ui_lang == 'en' %}Jordan{% else %}الأردن{% endif %}</span>`;
-  if (scope.level === 'governorate' || scope.level === 'kindergarten') {
-    bc += `<span class="breadcrumb-separator">›</span><span class="breadcrumb-drill" onclick="filterState.kindergarten_id=null;renderChart()">${filterState.governorate || scope.parent_key}</span>`;
-  }
-  if (scope.level === 'kindergarten') {
-    bc += `<span class="breadcrumb-separator">›</span><span class="text-muted">{% if ui_lang == 'en' %}Kindergarten Details{% else %}تفاصيل الحضانة{% endif %}</span>`;
-  }
-  document.getElementById('breadcrumbs').innerHTML = bc;
-}
-
-function escapeHTML(str) {
-  return String(str).replace(/[&<>'"]/g, 
-    tag => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    }[tag] || tag)
-  );
-}
-
-function renderTable(data) {
-  const container = document.getElementById('dataTableContainer');
-  if (!data.table || data.table.length === 0) {
-    container.innerHTML = '<p class="text-muted">{% if ui_lang == 'en' %}No data{% else %}لا تتوفر بيانات{% endif %}</p>';
+  var container = document.getElementById('breadcrumbsDisplay');
+  var rootLabel = tEn('Jordan', 'الأردن');
+  var bc = '<button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold ce-breadcrumb-root" onclick="resetDrilldown()">' + rootLabel + '</button>';
+  if (scope.level === 'governorate') {
+    bc += '<span class="text-muted mx-1">&rsaquo;</span>';
+    bc += '<span class="fw-semibold text-dark">' + escapeHTML(filterState.governorate || scope.parent_key || '') + '</span>';
+  } else if (scope.level === 'kindergarten') {
+    bc += '<span class="text-muted mx-1">&rsaquo;</span>';
+    bc += '<button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold ce-breadcrumb-root" onclick="filterState.kindergarten_id=null;renderChart();">' + escapeHTML(filterState.governorate || scope.parent_key || '') + '</button>';
+    bc += '<span class="text-muted mx-1">&rsaquo;</span>';
+    bc += '<span class="text-muted">' + tEn('Kindergartens', 'الحضانات') + '</span>';
+  } else {
+    // National level — show root only
+    showBreadcrumbs(false);
+    document.getElementById('breadcrumbsDisplay').innerHTML = '';
     return;
   }
-  const keys = Object.keys(data.table[0]);
-  let html = '<table class="table table-sm table-hover align-middle"><thead><tr>';
-  keys.forEach(k => html += `<th>${escapeHTML(getLocalized(k))}</th>`);
-  html += '</tr></thead><tbody>';
-  data.table.forEach(r => {
-    html += '<tr>';
-    keys.forEach(k => html += `<td>${r[k] !== null ? escapeHTML(getLocalized(r[k])) : '-'}</td>`);
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
-  container.innerHTML = html;
+  container.innerHTML = bc;
+  showBreadcrumbs(true);
 }
 
-function exportChart() {
-  if (_currentFigDiv && typeof Plotly !== 'undefined') {
-    Plotly.downloadImage(_currentFigDiv, {
-      format: 'png', width: 1200, height: 700,
-      filename: `kinjo-chart-${Date.now()}`
-    });
-  }
+// ── Error Handling ───────────────────────────────────────────────────────
+function showError(msg) {
+  var errDiv = document.getElementById('chartError');
+  var errText = document.getElementById('chartErrorText');
+  errDiv.classList.remove('d-none');
+  errText.textContent = msg;
+  setTimeout(function() { errDiv.classList.add('d-none'); }, 8000);
 }
 
-function exportCSV() {
-  if (!_lastResponse || !_lastResponse.table || _lastResponse.table.length === 0) return;
-  const keys = Object.keys(_lastResponse.table[0]);
-  let csvContent = "data:text/csv;charset=utf-8," + keys.join(",") + "\n";
-  _lastResponse.table.forEach(row => {
-    let rowArr = keys.map(k => `"${(row[k]||'').toString().replace(/"/g, '""')}"`);
-    csvContent += rowArr.join(",") + "\n";
-  });
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `kinjo-data-${Date.now()}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+function showBanner(msg, type) {
+  var div = document.createElement('div');
+  div.className = 'alert alert-' + (type === 'success' ? 'success' : 'warning') + ' alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-2 shadow-lg';
+  div.style.cssText = 'z-index:9999; max-width:500px;';
+  div.setAttribute('role', 'alert');
+  div.innerHTML = msg + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+  document.body.appendChild(div);
+  setTimeout(function() { div.remove(); }, 4000);
 }
 
-function showTaskStatus(taskId) {
-  _activeTaskId = taskId;
-  document.getElementById('taskStatus').style.display = '';
-  clearTask();
-  _taskPollInterval = setInterval(() => pollTask(taskId), 2000);
-}
-
-async function pollTask(taskId) {
-  try {
-    const resp = await fetch(`/api/admin/charts/task/${taskId}`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    const data = await resp.json();
-    document.getElementById('taskProgress').textContent = `${data.progress}%`;
-    if (data.status === 'SUCCESS' && data.result) {
-      clearTask();
-      document.getElementById('taskStatus').style.display = 'none';
-      injectChart(data.result);
-    } else if (data.status === 'FAILURE') {
-      clearTask();
-      showError(data.error || (LANG === 'en' ? 'Background task failed' : 'فشلت المهمة الخلفية'));
-    }
-  } catch (e) {
-    clearTask();
-    showError(LANG === 'en' ? 'Failed to poll task status' : 'فشل في متابعة حالة المهمة');
-  }
-}
-
+// ── Loading ──────────────────────────────────────────────────────────────
 function setLoading(on) {
-  document.getElementById('chartSpinner').classList.toggle('active', on);
+  document.getElementById('chartOutput').style.display = on ? 'none' : '';
+  document.getElementById('emptyState').style.display = on ? 'none' : '';
+  document.getElementById('chartSkeleton').style.display = on ? 'block' : 'none';
+  document.getElementById('chartError').classList.add('d-none');
   document.getElementById('renderBtn').disabled = on;
 }
 
 function clearChart() {
   document.getElementById('chartOutput').innerHTML = '';
   document.getElementById('rowCountBadge').style.display = 'none';
-  document.getElementById('exportBtn').style.display = 'none';
-  document.getElementById('exportCsvBtn').style.display = 'none';
-  document.getElementById('dataTableContainer').innerHTML = '';
+  document.getElementById('exportCsvBtn').disabled = true;
+  document.getElementById('exportPngBtn').disabled = true;
+  document.getElementById('shareBtn').disabled = true;
+  document.getElementById('emptyState').style.display = '';
+  document.getElementById('interpretationPanel').style.display = 'none';
+  document.getElementById('scopeLevelBadge').style.display = 'none';
+  document.getElementById('drilldownHint').style.display = 'none';
+  showBreadcrumbs(false);
+  showActiveFilters(false);
   _currentFigDiv = null;
+  _allTableRows = [];
+  document.getElementById('dataTableHead').style.display = 'none';
+  document.getElementById('dataTableBody').innerHTML = '<tr><td class="text-center text-muted py-4">' + tEn('Data will appear here after analysis.', 'ستظهر البيانات هنا بعد التحليل.') + '</td></tr>';
+  document.getElementById('tableSearch').style.display = 'none';
+  document.getElementById('tableRowCount').style.display = 'none';
+}
+
+// ── Escape ───────────────────────────────────────────────────────────────
+function escapeHTML(str) {
+  return String(str).replace(/[&<>'"]/g, function(tag) {
+    return ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' })[tag] || tag;
+  });
+}
+
+// ── Data Table ───────────────────────────────────────────────────────────
+function renderTable(data) {
+  var thead = document.getElementById('dataTableHead');
+  var tbody = document.getElementById('dataTableBody');
+  var search = document.getElementById('tableSearch');
+  var rowCount = document.getElementById('tableRowCount');
+  var rows = data.table || [];
+  _allTableRows = rows;
+
+  if (rows.length === 0) {
+    thead.style.display = 'none';
+    tbody.innerHTML = '<tr><td class="text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>' + tEn('No data available', 'لا تتوفر بيانات') + '</td></tr>';
+    search.style.display = 'none';
+    rowCount.style.display = 'none';
+    return;
+  }
+
+  var keys = Object.keys(rows[0]);
+  thead.style.display = '';
+  var headHtml = '<tr>';
+  keys.forEach(function(k) {
+    headHtml += '<th data-col="' + escapeHTML(k) + '" onclick="sortTable(\'' + escapeHTML(k).replace(/'/g, "\\'") + '\')" tabindex="0" role="columnheader" aria-sort="none">' + escapeHTML(getLocalized(k)) + ' <span class="sort-icon"><i class="bi bi-arrow-down-up"></i></span></th>';
+  });
+  headHtml += '</tr>';
+  thead.innerHTML = headHtml;
+
+  search.style.display = '';
+  rowCount.style.display = '';
+  rowCount.textContent = rows.length.toLocaleString() + ' ' + tEn('rows', 'صف');
+
+  renderTableRows(rows);
+}
+
+function renderTableRows(rows) {
+  var tbody = document.getElementById('dataTableBody');
+  var keys = rows.length > 0 ? Object.keys(rows[0]) : [];
+  var html = '';
+  rows.forEach(function(r) {
+    html += '<tr>';
+    keys.forEach(function(k) { html += '<td>' + (r[k] !== null ? escapeHTML(getLocalized(String(r[k]))) : '-') + '</td>'; });
+    html += '</tr>';
+  });
+  tbody.innerHTML = html || '<tr><td class="text-center text-muted py-3">' + tEn('No matching records', 'لا توجد سجلات مطابقة') + '</td></tr>';
+}
+
+function sortTable(col) {
+  if (_tableSortColumn === col) {
+    _tableSortAsc = !_tableSortAsc;
+  } else {
+    _tableSortColumn = col;
+    _tableSortAsc = true;
+  }
+  var sorted = _allTableRows.slice().sort(function(a, b) {
+    var va = a[col], vb = b[col];
+    if (va == null) return 1; if (vb == null) return -1;
+    if (typeof va === 'number' && typeof vb === 'number') return _tableSortAsc ? va - vb : vb - va;
+    return _tableSortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+  });
+  renderTableRows(sorted);
+
+  var thead = document.getElementById('dataTableHead');
+  thead.querySelectorAll('th').forEach(function(th) {
+    th.classList.remove('is-sorted');
+    var icon = th.querySelector('.sort-icon i');
+    if (icon) icon.className = 'bi bi-arrow-down-up';
+    th.setAttribute('aria-sort', 'none');
+  });
+  var activeTh = thead.querySelector('th[data-col="' + escapeHTML(col).replace(/"/g, '\\"') + '"]');
+  if (activeTh) {
+    activeTh.classList.add('is-sorted');
+    var activeIcon = activeTh.querySelector('.sort-icon i');
+    if (activeIcon) activeIcon.className = _tableSortAsc ? 'bi bi-sort-up' : 'bi bi-sort-down';
+    activeTh.setAttribute('aria-sort', _tableSortAsc ? 'ascending' : 'descending');
+  }
+}
+
+function filterTable() {
+  var query = document.getElementById('tableSearch').value.toLowerCase().trim();
+  if (!query) { renderTableRows(_allTableRows); return; }
+  var keys = _allTableRows.length > 0 ? Object.keys(_allTableRows[0]) : [];
+  var filtered = _allTableRows.filter(function(r) {
+    return keys.some(function(k) { return String(r[k] || '').toLowerCase().indexOf(query) !== -1; });
+  });
+  renderTableRows(filtered);
+  document.getElementById('tableRowCount').textContent = filtered.length.toLocaleString() + ' / ' + _allTableRows.length.toLocaleString() + ' ' + tEn('rows', 'صف');
+}
+
+// ── Export ───────────────────────────────────────────────────────────────
+function exportChart() {
+  if (_currentFigDiv && typeof Plotly !== 'undefined') {
+    Plotly.downloadImage(_currentFigDiv, { format: 'png', width: 1200, height: 700, filename: 'kinjo-chart-' + Date.now() });
+  }
+}
+
+function exportCSV() {
+  if (!_lastResponse || !_lastResponse.table || _lastResponse.table.length === 0) return;
+  var keys = Object.keys(_lastResponse.table[0]);
+  var csv = "data:text/csv;charset=utf-8," + keys.join(",") + "\n";
+  _lastResponse.table.forEach(function(row) {
+    csv += keys.map(function(k) { return '"' + String(row[k] || '').replace(/"/g, '""') + '"'; }).join(",") + "\n";
+  });
+  var link = document.createElement("a");
+  link.setAttribute("href", encodeURI(csv));
+  link.setAttribute("download", 'kinjo-data-' + Date.now() + '.csv');
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+}
+
+// ── Recommendations ──────────────────────────────────────────────────────
+async function loadRecommendations(source) {
+  var panel = document.getElementById('recommendationsPanel');
+  var content = document.getElementById('recommendationsContent');
+  try {
+    var resp = await fetch('/api/admin/charts/suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ source: source, max_suggestions: 4 })
+    });
+    if (!resp.ok) return;
+    var data = await resp.json();
+    var suggestions = data.suggestions || [];
+    if (suggestions.length === 0) { panel.style.display = 'none'; return; }
+    panel.style.display = '';
+    content.innerHTML = suggestions.map(function(s, i) {
+      return '<button type="button" class="ce-rec-chip" onclick="selectChartType(\'' + s.chart_type + '\');renderChart();" title="' + escapeHTML(s.rationale) + '">'
+        + '<i class="bi bi-lightbulb text-warning"></i>'
+        + escapeHTML(s.title)
+        + '<span class="ce-rec-chip__confidence">' + Math.round(s.confidence*100) + '%</span>'
+        + '</button>';
+    }).join('');
+  } catch (e) {
+    panel.style.display = 'none';
+  }
+}
+
+// ── Task Polling ─────────────────────────────────────────────────────────
+function showTaskStatus(taskId) {
+  _activeTaskId = taskId;
+  document.getElementById('taskStatus').style.display = '';
+  clearTask();
+  _taskPollInterval = setInterval(function() { pollTask(taskId); }, 2000);
+}
+
+async function pollTask(taskId) {
+  try {
+    var resp = await fetch('/api/admin/charts/task/' + taskId, { headers: { 'Accept': 'application/json' } });
+    var data = await resp.json();
+    document.getElementById('taskProgressBar').style.width = data.progress + '%';
+    document.getElementById('taskProgressBar').setAttribute('aria-valuenow', data.progress);
+    if (data.status === 'SUCCESS' && data.result) {
+      clearTask();
+      document.getElementById('taskStatus').style.display = 'none';
+      injectChart(data.result);
+    } else if (data.status === 'FAILURE') {
+      clearTask();
+      showError(data.error || tEn('Background task failed', 'فشلت المهمة الخلفية'));
+    }
+  } catch (e) {
+    clearTask();
+    showError(tEn('Failed to poll task status', 'فشل في متابعة حالة المهمة'));
+  }
 }
 
 function clearTask() {
@@ -469,22 +994,42 @@ function clearTask() {
   _activeTaskId = null;
 }
 
-function showError(msg) {
-  const out = document.getElementById('chartOutput');
-  out.innerHTML = `<div class="alert alert-danger mt-2"><i class="bi bi-exclamation-triangle me-1"></i>${msg}</div>`;
-}
-
-// Init dates
+// ── Init ─────────────────────────────────────────────────────────────────
 (function() {
-  const today = new Date();
-  const y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,'0'), d = String(today.getDate()).padStart(2,'0');
-  const yearAgo = new Date(today); yearAgo.setFullYear(yearAgo.getFullYear()-1);
-  const ya = yearAgo.getFullYear(), ym = String(yearAgo.getMonth()+1).padStart(2,'0'), yd = String(yearAgo.getDate()).padStart(2,'0');
-  document.getElementById('dateTo').value = `${y}-${m}-${d}`;
-  document.getElementById('dateFrom').value = `${ya}-${ym}-${yd}`;
-  
-  // Auto-render on load
-  renderChart();
+  var today = new Date();
+  var y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,'0'), d = String(today.getDate()).padStart(2,'0');
+  var yearAgo = new Date(today); yearAgo.setFullYear(yearAgo.getFullYear()-1);
+  var ya = yearAgo.getFullYear(), ym = String(yearAgo.getMonth()+1).padStart(2,'0'), yd = String(yearAgo.getDate()).padStart(2,'0');
+  document.getElementById('dateTo').value = y + '-' + m + '-' + d;
+  document.getElementById('dateFrom').value = ya + '-' + ym + '-' + yd;
+
+  // Activate default source
+  {% if sources %}
+  selectSource('{{ sources[0] }}');
+  {% endif %}
+
+  // Restore from URL
+  var urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('source')) {
+    var src = urlParams.get('source');
+    selectSource(src);
+    _currentSource = src;
+  }
+  if (urlParams.has('chart_type')) {
+    var ct = urlParams.get('chart_type');
+    selectChartType(ct); _currentChartType = ct;
+  }
+  if (urlParams.has('date_from')) document.getElementById('dateFrom').value = urlParams.get('date_from');
+  if (urlParams.has('date_to')) document.getElementById('dateTo').value = urlParams.get('date_to');
+  if (urlParams.has('governorate')) { filterState.governorate = urlParams.get('governorate'); renderFilterPills(); }
+  if (urlParams.has('kindergarten_id')) { filterState.kindergarten_id = urlParams.get('kindergarten_id'); renderFilterPills(); }
+
+  // Keyboard: Enter on date fields triggers render
+  document.getElementById('dateFrom').addEventListener('keydown', function(e) { if (e.key === 'Enter') renderChart(); });
+  document.getElementById('dateTo').addEventListener('keydown', function(e) { if (e.key === 'Enter') renderChart(); });
+
+  // Auto-render if URL params present
+  if (urlParams.has('source')) renderChart();
 })();
 </script>
 {% endblock %}

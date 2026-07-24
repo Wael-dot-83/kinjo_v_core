@@ -179,6 +179,7 @@
     "severity_critical": "Critical",
     "system_actor": "System",
     "activity_filter_bar": "Filter recent activity",
+    "activity_loading": "Loading activity...",
     "activity_user": "User ID",
     "activity_start_date": "Start date",
     "activity_end_date": "End date",

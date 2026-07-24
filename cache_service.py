@@ -2,6 +2,7 @@
 Cache service for KPI dashboard and analytics
 Supports both Redis and in-memory fallback
 """
+
 import json
 import logging
 import threading
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 # Import monitoring for cache metrics
 try:
     from monitoring_service import performance_monitor
+
     MONITORING_AVAILABLE = True
 except ImportError:
     MONITORING_AVAILABLE = False
@@ -34,7 +36,7 @@ class CacheService:
     def _init_redis(self):
         """Initialize Redis connection with fallback to memory cache"""
         try:
-            if hasattr(settings, 'REDIS_URL') and settings.REDIS_URL:
+            if hasattr(settings, "REDIS_URL") and settings.REDIS_URL:
                 self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
                 # Test connection
                 self.redis_client.ping()
@@ -59,13 +61,13 @@ class CacheService:
                 data = self.redis_client.get(cache_key)
                 if data:
                     cached_data = json.loads(data)
-                    expires = datetime.fromisoformat(cached_data['expires'])
+                    expires = datetime.fromisoformat(cached_data["expires"])
                     if expires > datetime.now(timezone.utc):
                         logger.debug(f"Cache hit (Redis): {key}")
                         self._record_hit()
                         if MONITORING_AVAILABLE:
                             performance_monitor.collector.record_cache_request(is_hit=True)
-                        return cached_data['value']
+                        return cached_data["value"]
                     else:
                         # Expired, remove it
                         self.redis_client.delete(cache_key)
@@ -85,12 +87,12 @@ class CacheService:
         # Fall back to memory cache
         entry = self.memory_cache.get(key)
         if entry:
-            if entry['expires'] > datetime.now(timezone.utc):
+            if entry["expires"] > datetime.now(timezone.utc):
                 logger.debug(f"Cache hit (Memory): {key}")
                 self._record_hit()
                 if MONITORING_AVAILABLE:
                     performance_monitor.collector.record_cache_request(is_hit=True)
-                return entry['value']
+                return entry["value"]
             else:
                 del self.memory_cache[key]
                 logger.debug(f"Cache expired (Memory): {key}")
@@ -108,15 +110,16 @@ class CacheService:
         """Set value in cache with Redis priority"""
         cache_key = self._make_key(key)
         expires = datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)
-        cache_data = {
-            'value': value,
-            'expires': expires.isoformat()
-        }
+        cache_data = {"value": value, "expires": expires.isoformat()}
 
         # Try Redis first
         if self.redis_client:
             try:
-                self.redis_client.setex(cache_key, ttl_seconds, json.dumps(cache_data))
+                self.redis_client.set(
+                    cache_key,
+                    json.dumps(cache_data),
+                    ex=ttl_seconds,
+                )
                 logger.debug(f"Cache set (Redis): {key} (TTL: {ttl_seconds}s)")
                 self._record_sets()
                 return
@@ -126,16 +129,11 @@ class CacheService:
                 logger.warning("Cache value for key %s could not be serialized for Redis: %s", key, str(e))
 
         # Fallback to memory cache
-        self.memory_cache[key] = {
-            'value': value,
-            'expires': expires
-        }
+        self.memory_cache[key] = {"value": value, "expires": expires}
         logger.debug(f"Cache set (Memory): {key} (TTL: {ttl_seconds}s)")
         self._record_sets()
 
-    def add_if_absent(
-        self, key: str, value: Any, ttl_seconds: int = 300
-    ) -> Optional[bool]:
+    def add_if_absent(self, key: str, value: Any, ttl_seconds: int = 300) -> Optional[bool]:
         """Atomically reserve a key; return None when a required shared store fails."""
         cache_key = self._make_key(key)
         expires = datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)
@@ -227,24 +225,24 @@ class CacheService:
     def get_stats(self) -> dict:
         """Get cache statistics"""
         stats = {
-            'memory_entries': len(self.memory_cache),
-            'redis_available': self.redis_client is not None,
-            'cache_hits': getattr(self, '_cache_hits', 0),
-            'cache_misses': getattr(self, '_cache_misses', 0),
-            'cache_sets': getattr(self, '_cache_sets', 0)
+            "memory_entries": len(self.memory_cache),
+            "redis_available": self.redis_client is not None,
+            "cache_hits": getattr(self, "_cache_hits", 0),
+            "cache_misses": getattr(self, "_cache_misses", 0),
+            "cache_sets": getattr(self, "_cache_sets", 0),
         }
 
         if self.redis_client:
             try:
                 redis_keys = self.redis_client.keys("kinjo:*")
-                stats['redis_entries'] = len(redis_keys)
+                stats["redis_entries"] = len(redis_keys)
             except RedisError as e:
                 logger.warning("Redis stats error: %s", str(e))
-                stats['redis_entries'] = 0
+                stats["redis_entries"] = 0
 
         # Calculate hit rate
-        total_requests = stats['cache_hits'] + stats['cache_misses']
-        stats['hit_rate'] = (stats['cache_hits'] / total_requests * 100) if total_requests > 0 else 0
+        total_requests = stats["cache_hits"] + stats["cache_misses"]
+        stats["hit_rate"] = (stats["cache_hits"] / total_requests * 100) if total_requests > 0 else 0
 
         return stats
 
@@ -265,9 +263,9 @@ class CacheService:
                 for key, data in zip(keys, redis_data):
                     if data:
                         cached_data = json.loads(data)
-                        expires = datetime.fromisoformat(cached_data['expires'])
+                        expires = datetime.fromisoformat(cached_data["expires"])
                         if expires > datetime.now(timezone.utc):
-                            result[key] = cached_data['value']
+                            result[key] = cached_data["value"]
                             self._record_hit()
                         else:
                             # Expired, will be fetched fresh
@@ -292,8 +290,8 @@ class CacheService:
         # Fallback to memory cache for missing keys
         for key in missing_keys:
             entry = self.memory_cache.get(key)
-            if entry and entry['expires'] > datetime.now(timezone.utc):
-                result[key] = entry['value']
+            if entry and entry["expires"] > datetime.now(timezone.utc):
+                result[key] = entry["value"]
                 self._record_hit()
             else:
                 self._record_miss()
@@ -313,10 +311,7 @@ class CacheService:
                 redis_data = {}
                 for key, value in key_value_pairs.items():
                     cache_key = self._make_key(key)
-                    cache_data = {
-                        'value': value,
-                        'expires': expires.isoformat()
-                    }
+                    cache_data = {"value": value, "expires": expires.isoformat()}
                     redis_data[cache_key] = json.dumps(cache_data)
 
                 self.redis_client.mset(redis_data)
@@ -335,10 +330,7 @@ class CacheService:
 
         # Fallback to memory cache
         for key, value in key_value_pairs.items():
-            self.memory_cache[key] = {
-                'value': value,
-                'expires': expires
-            }
+            self.memory_cache[key] = {"value": value, "expires": expires}
 
         self._record_sets(len(key_value_pairs))
         logger.debug(f"Cache mset (Memory): {len(key_value_pairs)} keys")
@@ -362,19 +354,19 @@ class CacheService:
 
     def _record_hit(self):
         """Record a cache hit for statistics"""
-        if not hasattr(self, '_cache_hits'):
+        if not hasattr(self, "_cache_hits"):
             self._cache_hits = 0
         self._cache_hits += 1
 
     def _record_miss(self):
         """Record a cache miss for statistics"""
-        if not hasattr(self, '_cache_misses'):
+        if not hasattr(self, "_cache_misses"):
             self._cache_misses = 0
         self._cache_misses += 1
 
     def _record_sets(self, count: int = 1):
         """Record cache sets for statistics"""
-        if not hasattr(self, '_cache_sets'):
+        if not hasattr(self, "_cache_sets"):
             self._cache_sets = 0
         self._cache_sets += count
 
@@ -394,7 +386,7 @@ class CacheService:
         # Fallback to memory cache
         entry = self.memory_cache.get(key)
         if entry:
-            remaining = int((entry['expires'] - datetime.now(timezone.utc)).total_seconds())
+            remaining = int((entry["expires"] - datetime.now(timezone.utc)).total_seconds())
             return max(0, remaining)
 
         return None

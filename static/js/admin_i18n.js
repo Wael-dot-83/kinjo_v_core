@@ -19,7 +19,8 @@ class AdminI18n {
       ...options,
     };
 
-    this.currentLanguage = this.getSavedLanguage() || this.options.defaultLanguage;
+    this.currentLanguage =
+      this.getSavedLanguage() || this.options.defaultLanguage;
     this.translations = {};
     this.isLoading = false;
     this.literalTranslations = { en: {} };
@@ -28,7 +29,7 @@ class AdminI18n {
     this.isApplyingLiteral = false;
     this.languageApiStateKey = "kinjo_lang_api_state";
     this.serverLanguageApiState = this.resolveServerLanguageApiState();
-    this.literalCacheVersion = "2026-02-18-v2";
+    this.literalCacheVersion = "2026-07-24-v3";
     this.literalCacheKey = `kinjo_admin_literal_pairs_${this.literalCacheVersion}`;
     this.literalTranslationsReady = false;
     this.literalBuildPromise = null;
@@ -69,7 +70,9 @@ class AdminI18n {
       // Load all supported languages in parallel
       const loadPromises = this.options.supportedLanguages.map(async (lang) => {
         try {
-          const response = await fetch(`/static/i18n/admin_${lang}.json`, { cache: "no-cache" });
+          const response = await fetch(`/static/i18n/admin_${lang}.json`, {
+            cache: "no-cache",
+          });
           if (response.ok) {
             this.translations[lang] = await response.json();
             // Signals "real JSON catalog loaded" — consumers (e.g. the
@@ -77,7 +80,9 @@ class AdminI18n {
             // because the inline defaults also contain most keys.
             this.loadedFromFiles = true;
           } else {
-            console.warn(`Translation file for ${lang} not found — keeping defaults`);
+            console.warn(
+              `Translation file for ${lang} not found — keeping defaults`,
+            );
             // Do NOT overwrite defaults with {} — leave whatever was set already
           }
         } catch (error) {
@@ -136,8 +141,11 @@ class AdminI18n {
       }
       this.setServerLanguageApiState("available");
       const data = await response.json();
-      const userLang = typeof data?.user_lang === "string" ? data.user_lang.toLowerCase() : "";
-      return this.options.supportedLanguages.includes(userLang) ? userLang : null;
+      const userLang =
+        typeof data?.user_lang === "string" ? data.user_lang.toLowerCase() : "";
+      return this.options.supportedLanguages.includes(userLang)
+        ? userLang
+        : null;
     } catch (_error) {
       return null;
     }
@@ -150,7 +158,9 @@ class AdminI18n {
       }
       const csrfToken =
         (window.AuthStorage && AuthStorage.getCookie("kinjo_csrf_token")) ||
-        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
+        document
+          .querySelector('meta[name="csrf-token"]')
+          ?.getAttribute("content") ||
         "";
       const headers = { "Content-Type": "application/json" };
       if (csrfToken) {
@@ -247,7 +257,7 @@ class AdminI18n {
     const title = this.translate("page.title", "KinJo Admin");
     const description = this.translate(
       "page.description",
-      "Professional Kindergarten Management System"
+      "Professional Kindergarten Management System",
     );
 
     // Update title
@@ -331,7 +341,10 @@ class AdminI18n {
       return fallback || key;
     }
 
-    let translation = this.getNestedValue(this.translations[this.currentLanguage], key);
+    let translation = this.getNestedValue(
+      this.translations[this.currentLanguage],
+      key,
+    );
 
     if (!translation) {
       // Try fallback language if available
@@ -339,7 +352,10 @@ class AdminI18n {
         this.options.defaultLanguage !== this.currentLanguage &&
         this.translations[this.options.defaultLanguage]
       ) {
-        translation = this.getNestedValue(this.translations[this.options.defaultLanguage], key);
+        translation = this.getNestedValue(
+          this.translations[this.options.defaultLanguage],
+          key,
+        );
       }
 
       if (!translation) {
@@ -487,7 +503,9 @@ class AdminI18n {
     }
     this.literalTranslations.en[normalizedAr] = normalizedEn;
     if (!normalizedAr.endsWith(":")) {
-      this.literalTranslations.en[`${normalizedAr}:`] = normalizedEn.endsWith(":")
+      this.literalTranslations.en[`${normalizedAr}:`] = normalizedEn.endsWith(
+        ":",
+      )
         ? normalizedEn
         : `${normalizedEn}:`;
     } else {
@@ -545,12 +563,19 @@ class AdminI18n {
         return false;
       }
       const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== "object" || !parsed.en || typeof parsed.en !== "object") {
+      if (
+        !parsed ||
+        typeof parsed !== "object" ||
+        !parsed.en ||
+        typeof parsed.en !== "object"
+      ) {
         return false;
       }
       this.literalTranslations.en = parsed.en;
       this.literalTranslationEntries = {
-        en: Object.entries(this.literalTranslations.en).sort((a, b) => b[0].length - a[0].length),
+        en: Object.entries(this.literalTranslations.en).sort(
+          (a, b) => b[0].length - a[0].length,
+        ),
       };
       this.literalTranslationsReady = true;
       return true;
@@ -563,7 +588,7 @@ class AdminI18n {
     try {
       sessionStorage.setItem(
         this.literalCacheKey,
-        JSON.stringify({ en: this.literalTranslations.en })
+        JSON.stringify({ en: this.literalTranslations.en }),
       );
     } catch (_error) {
       // Ignore cache persistence failures (quota/security).
@@ -634,7 +659,7 @@ class AdminI18n {
         } catch (_error) {
           // Ignore source-harvest failures to avoid blocking UI startup.
         }
-      })
+      }),
     );
 
     document.querySelectorAll("script:not([src])").forEach((script) => {
@@ -655,26 +680,36 @@ class AdminI18n {
         return;
       }
       this.literalTranslations = { en: {} };
-      this.ingestCatalogLiteralPairs(this.translations.ar || {}, this.translations.en || {});
+      this.ingestCatalogLiteralPairs(
+        this.translations.ar || {},
+        this.translations.en || {},
+      );
 
-      const [appAr, appEn, literalOverrides, literalQualityOverrides] = await Promise.all([
-        this.loadJsonCatalog("/static/i18n/app_ar.json"),
-        this.loadJsonCatalog("/static/i18n/app_en.json"),
-        this.loadJsonCatalog("/static/i18n/literal_en_overrides.json"),
-        this.loadJsonCatalog("/static/i18n/literal_en_quality_overrides.json"),
-      ]);
+      const [appAr, appEn, literalOverrides, literalQualityOverrides] =
+        await Promise.all([
+          this.loadJsonCatalog("/static/i18n/app_ar.json"),
+          this.loadJsonCatalog("/static/i18n/app_en.json"),
+          this.loadJsonCatalog("/static/i18n/literal_en_overrides.json"),
+          this.loadJsonCatalog(
+            "/static/i18n/literal_en_quality_overrides.json",
+          ),
+        ]);
       this.ingestCatalogLiteralPairs(appAr, appEn);
       Object.entries(literalOverrides || {}).forEach(([arText, enText]) => {
         this.addLiteralTranslationPair(arText, enText);
       });
-      Object.entries(literalQualityOverrides || {}).forEach(([arText, enText]) => {
-        this.addLiteralTranslationPair(arText, enText);
-      });
+      Object.entries(literalQualityOverrides || {}).forEach(
+        ([arText, enText]) => {
+          this.addLiteralTranslationPair(arText, enText);
+        },
+      );
 
       await this.loadScriptLiteralPairs();
 
       this.literalTranslationEntries = {
-        en: Object.entries(this.literalTranslations.en).sort((a, b) => b[0].length - a[0].length),
+        en: Object.entries(this.literalTranslations.en).sort(
+          (a, b) => b[0].length - a[0].length,
+        ),
       };
       this.literalTranslationsReady = true;
       this.persistLiteralPairsCache();
@@ -726,24 +761,32 @@ class AdminI18n {
   }
 
   translateLiteralText() {
-    if (this.currentLanguage !== "en" || this.isApplyingLiteral || !document.body) {
+    if (
+      this.currentLanguage !== "en" ||
+      this.isApplyingLiteral ||
+      !document.body
+    ) {
       return;
     }
     this.isApplyingLiteral = true;
     try {
       const blockedTags = new Set(["SCRIPT", "STYLE", "NOSCRIPT"]);
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-        acceptNode: (node) => {
-          const parentTag = node.parentElement?.tagName;
-          if (!node.nodeValue || !parentTag || blockedTags.has(parentTag)) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          if (node.parentElement?.closest("[data-i18n]")) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          return NodeFilter.FILTER_ACCEPT;
+      const walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        {
+          acceptNode: (node) => {
+            const parentTag = node.parentElement?.tagName;
+            if (!node.nodeValue || !parentTag || blockedTags.has(parentTag)) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            if (node.parentElement?.closest("[data-i18n]")) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            return NodeFilter.FILTER_ACCEPT;
+          },
         },
-      });
+      );
       const textNodes = [];
       let current = walker.nextNode();
       while (current) {
@@ -759,7 +802,11 @@ class AdminI18n {
 
       ["placeholder", "title", "aria-label"].forEach((attr) => {
         document.querySelectorAll(`[${attr}]`).forEach((element) => {
-          if (element.hasAttribute(`data-i18n-${attr === "aria-label" ? "aria" : attr}`)) {
+          if (
+            element.hasAttribute(
+              `data-i18n-${attr === "aria-label" ? "aria" : attr}`,
+            )
+          ) {
             return;
           }
           const currentValue = element.getAttribute(attr);
@@ -816,8 +863,8 @@ class AdminI18n {
     menu.innerHTML = ""; // clear before populating to prevent duplicates on re-init
 
     const languages = [
-      { code: "en", name: "English",  nameAr: "الإنجليزية", flag: "🇬🇧" },
-      { code: "ar", name: "العربية",  nameAr: "العربية",    flag: "🇯🇴" },
+      { code: "en", name: "English", nameAr: "الإنجليزية", flag: "🇬🇧" },
+      { code: "ar", name: "العربية", nameAr: "العربية", flag: "🇯🇴" },
     ];
 
     languages.forEach((lang) => {
@@ -830,7 +877,8 @@ class AdminI18n {
       option.setAttribute("data-language", lang.code);
       option.setAttribute("type", "button");
 
-      const displayName = this.currentLanguage === "ar" ? lang.nameAr : lang.name;
+      const displayName =
+        this.currentLanguage === "ar" ? lang.nameAr : lang.name;
       const flagSpan = document.createElement("span");
       flagSpan.className = "admin-language-flag";
       flagSpan.setAttribute("aria-hidden", "true");
@@ -887,11 +935,15 @@ class AdminI18n {
   getSavedLanguage() {
     if (this.options.persistLanguage) {
       try {
-        const saved = localStorage.getItem("admin_language") || localStorage.getItem("kinjo_lang");
+        const saved =
+          localStorage.getItem("admin_language") ||
+          localStorage.getItem("kinjo_lang");
         if (this.options.supportedLanguages.includes(saved)) {
           return saved;
         }
-        const cookieMatch = document.cookie.match(/(?:^|;\s*)kinjo_lang=(ar|en)(?:;|$)/i);
+        const cookieMatch = document.cookie.match(
+          /(?:^|;\s*)kinjo_lang=(ar|en)(?:;|$)/i,
+        );
         const cookieLang = cookieMatch ? cookieMatch[1].toLowerCase() : "";
         if (this.options.supportedLanguages.includes(cookieLang)) {
           return cookieLang;
@@ -953,7 +1005,10 @@ class AdminI18n {
     return {
       code: this.currentLanguage,
       direction: this.getDirection(this.currentLanguage),
-      name: this.translate(`language.${this.currentLanguage}`, this.currentLanguage.toUpperCase()),
+      name: this.translate(
+        `language.${this.currentLanguage}`,
+        this.currentLanguage.toUpperCase(),
+      ),
     };
   }
 
@@ -1002,11 +1057,11 @@ const defaultEnglishTranslations = {
     security: "Security",
   },
   a11y: {
-    skip_nav: "Skip to navigation"
+    skip_nav: "Skip to navigation",
   },
   components: {
     error_title: "Error",
-    background_error: "A background error occurred"
+    background_error: "A background error occurred",
   },
   common: {
     save: "Save",
@@ -1071,6 +1126,7 @@ const defaultEnglishTranslations = {
     compliance_rate: "Compliance Rate",
     overview: "Overview",
     activity_filter_bar: "Filter recent activity",
+    activity_loading: "Loading activity...",
     activity_user: "User ID",
     activity_module: "Module",
     activity_entity: "Affected Entity",
@@ -1100,7 +1156,7 @@ const defaultEnglishTranslations = {
     view_data_management: "Data Management",
   },
   errors: {
-    generic_error:   "An error occurred. Please try again.",
+    generic_error: "An error occurred. Please try again.",
     request_timeout: "Request timed out. Please try again.",
   },
 };
@@ -1127,11 +1183,11 @@ const defaultArabicTranslations = {
     security: "الأمان",
   },
   a11y: {
-    skip_nav: "تخطي إلى التصفح"
+    skip_nav: "تخطي إلى التصفح",
   },
   components: {
     error_title: "خطأ",
-    background_error: "حدث خطأ في الخلفية"
+    background_error: "حدث خطأ في الخلفية",
   },
   common: {
     save: "حفظ",
@@ -1144,7 +1200,8 @@ const defaultArabicTranslations = {
     export: "تصدير",
     import: "استيراد",
     loading: "جارٍ تحميل البيانات، يرجى الانتظار.",
-    no_data: "لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.",
+    no_data:
+      "لا تتوفر بيانات للفترة أو المعايير المحددة. يرجى تعديل عوامل التصفية أو اختيار نطاق زمني مختلف.",
     confirm: "تأكيد",
     yes: "نعم",
     no: "لا",
@@ -1196,6 +1253,7 @@ const defaultArabicTranslations = {
     compliance_rate: "معدل الامتثال",
     overview: "نظرة عامة",
     activity_filter_bar: "تصفية النشاط الأخير",
+    activity_loading: "جارٍ تحميل النشاط...",
     activity_user: "رقم المستخدم",
     activity_module: "القسم",
     activity_entity: "الكيان المتأثر",
@@ -1225,7 +1283,7 @@ const defaultArabicTranslations = {
     view_data_management: "إدارة البيانات",
   },
   errors: {
-    generic_error:   "حدث خطأ. يرجى المحاولة مرة أخرى.",
+    generic_error: "حدث خطأ. يرجى المحاولة مرة أخرى.",
     request_timeout: "انتهت مهلة الطلب. يرجى المحاولة مرة أخرى.",
   },
 };
