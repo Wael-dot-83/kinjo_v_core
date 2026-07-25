@@ -21,6 +21,11 @@ block extra_head %}
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    position: sticky;
+    top: 88px;
+    max-height: calc(100vh - 112px);
+    overflow: auto;
+    padding-inline-end: 0.15rem;
   }
   .ce-main {
     flex: 1;
@@ -28,6 +33,11 @@ block extra_head %}
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+  }
+  .ce-main .az-card,
+  .ce-sidebar .az-card {
+    border: 1px solid var(--slate-200);
+    box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
   }
   .ce-source-grid {
     display: grid;
@@ -246,6 +256,22 @@ block extra_head %}
     gap: 0.5rem;
     flex-wrap: wrap;
   }
+  .ce-render-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 40px;
+  }
+  .ce-render-btn__loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  #chartOutput {
+    min-height: 330px;
+    transition: opacity 0.2s ease;
+  }
   .ce-toolbar .btn {
     font-size: 0.75rem;
   }
@@ -344,6 +370,10 @@ block extra_head %}
     .ce-sidebar {
       max-width: 100%;
       min-width: 100%;
+      position: static;
+      max-height: none;
+      overflow: visible;
+      padding-inline-end: 0;
     }
     .ce-source-grid {
       grid-template-columns: repeat(3, 1fr);
@@ -551,9 +581,15 @@ block extra_head %}
 
     {# Actions #}
     <div class="d-grid gap-2">
-      <button class="btn btn-primary" id="renderBtn" onclick="renderChart()">
-        <i class="bi bi-play-fill me-1"></i>
-        {% if ui_lang == 'en' %}Analyze{% else %}تحليل{% endif %}
+      <button class="btn btn-primary ce-render-btn" id="renderBtn" onclick="renderChart()">
+        <span class="ce-render-btn__label">
+          <i class="bi bi-play-fill me-1"></i>
+          {% if ui_lang == 'en' %}Analyze{% else %}تحليل{% endif %}
+        </span>
+        <span class="ce-render-btn__loading d-none" aria-hidden="true">
+          <span class="spinner-border spinner-border-sm" role="status"></span>
+          {% if ui_lang == 'en' %}Analyzing...{% else %}جارٍ التحليل...{% endif %}
+        </span>
       </button>
     </div>
 
@@ -989,6 +1025,7 @@ block extra_head %}
   // ── Quick Start ──────────────────────────────────────────────────────────
   function quickStart(source) {
     selectSource(source);
+    applyDatePreset('this_month');
     renderChart();
   }
 
@@ -1047,6 +1084,11 @@ block extra_head %}
     var chartType = _currentChartType;
     var dateFrom = document.getElementById('dateFrom').value;
     var dateTo = document.getElementById('dateTo').value;
+
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      showError(tEn('Start date must be before end date.', 'يجب أن يكون تاريخ البداية قبل تاريخ النهاية.'));
+      return;
+    }
 
     var params = new URLSearchParams({ source: source });
     if (chartType) params.set('chart_type', chartType);
@@ -1341,11 +1383,20 @@ block extra_head %}
 
   // ── Loading ──────────────────────────────────────────────────────────────
   function setLoading(on) {
-    document.getElementById('chartOutput').style.display = on ? 'none' : '';
+    var chartOutput = document.getElementById('chartOutput');
+    chartOutput.style.display = on ? 'none' : '';
     document.getElementById('emptyState').style.display = on ? 'none' : '';
     document.getElementById('chartSkeleton').style.display = on ? 'block' : 'none';
     document.getElementById('chartError').classList.add('d-none');
-    document.getElementById('renderBtn').disabled = on;
+    var renderBtn = document.getElementById('renderBtn');
+    renderBtn.disabled = on;
+    renderBtn.setAttribute('aria-busy', on ? 'true' : 'false');
+    var lbl = renderBtn.querySelector('.ce-render-btn__label');
+    var loading = renderBtn.querySelector('.ce-render-btn__loading');
+    if (lbl && loading) {
+      lbl.classList.toggle('d-none', on);
+      loading.classList.toggle('d-none', !on);
+    }
   }
 
   function clearChart() {
@@ -1403,7 +1454,16 @@ block extra_head %}
 
     search.style.display = '';
     rowCount.style.display = '';
-    rowCount.textContent = rows.length.toLocaleString() + ' ' + tEn('rows', 'صف');
+    rowCount.textContent = rows.length.toLocaleString() + ' ' + tEn('records', 'سجل');
+
+    thead.querySelectorAll('th').forEach(function(th) {
+      th.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          sortTable(th.getAttribute('data-col') || '');
+        }
+      });
+    });
 
     renderTableRows(rows);
   }
@@ -1464,7 +1524,7 @@ block extra_head %}
       return keys.some(function(k) { return String(r[k] || '').toLowerCase().indexOf(query) !== -1; });
     });
     renderTableRows(filtered);
-    document.getElementById('tableRowCount').textContent = filtered.length.toLocaleString() + ' / ' + _allTableRows.length.toLocaleString() + ' ' + tEn('rows', 'صف');
+    document.getElementById('tableRowCount').textContent = filtered.length.toLocaleString() + ' / ' + _allTableRows.length.toLocaleString() + ' ' + tEn('records', 'سجل');
   }
 
   // ── Export ───────────────────────────────────────────────────────────────
@@ -1580,6 +1640,14 @@ block extra_head %}
     // Keyboard: Enter on date fields triggers render
     document.getElementById('dateFrom').addEventListener('keydown', function(e) { if (e.key === 'Enter') renderChart(); });
     document.getElementById('dateTo').addEventListener('keydown', function(e) { if (e.key === 'Enter') renderChart(); });
+
+    // Shortcut: Ctrl/Cmd + Enter triggers Analyze.
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        renderChart();
+      }
+    });
 
     // Auto-render if URL params present
     if (urlParams.has('source')) renderChart();
