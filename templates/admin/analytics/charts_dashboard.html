@@ -902,6 +902,7 @@ block extra_head %}
     "mood": LANG === 'en' ? "Mood" : "المزاج",
     "kindergarten": LANG === 'en' ? "Kindergarten" : "الحضانة",
     "governorate": LANG === 'en' ? "Governorate" : "المحافظة",
+    "kindergarten_id": LANG === 'en' ? "Kindergarten ID" : "معرّف الحضانة",
     "network": LANG === 'en' ? "Network" : "الشبكة",
     "capacity": LANG === 'en' ? "Capacity" : "الطاقة الاستيعابية",
     "enrolled": LANG === 'en' ? "Enrolled" : "المسجلين",
@@ -916,9 +917,7 @@ block extra_head %}
     "Sad": LANG === 'en' ? "Sad" : "حزين",
     "Medical": LANG === 'en' ? "Medical" : "طبي",
     "Behavioral": LANG === 'en' ? "Behavioral" : "سلوكي",
-    "Accident": LANG === 'en' ? "Accident" : "حادث",
-    "capacity": LANG === 'en' ? "Capacity" : "الطاقة",
-    "governorate": LANG === 'en' ? "Governorate" : "المحافظة"
+    "Accident": LANG === 'en' ? "Accident" : "حادث"
   };
 
   function getLocalized(key) { return TRANSLATIONS[key] || key; }
@@ -1011,16 +1010,39 @@ block extra_head %}
 
   function shareChart() {
     updateURLState();
-    navigator.clipboard.writeText(window.location.href).then(function() {
-      showBanner(tEn('Link copied to clipboard!', 'تم نسخ الرابط!'), 'success');
-    }).catch(function() {
+    var url = window.location.href;
+    // Clipboard API requires a secure context in most browsers.
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(function() {
+        showBanner(tEn('Link copied to clipboard!', 'تم نسخ الرابط!'), 'success');
+      }).catch(function() {
+        showBanner(tEn('Could not copy link', 'تعذر نسخ الرابط'), 'warning');
+      });
+      return;
+    }
+
+    // Fallback for HTTP/local contexts.
+    var ta = document.createElement('textarea');
+    ta.value = url;
+    ta.setAttribute('readonly', 'readonly');
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    try {
+      var ok = document.execCommand('copy');
+      showBanner(ok ? tEn('Link copied to clipboard!', 'تم نسخ الرابط!') : tEn('Could not copy link', 'تعذر نسخ الرابط'), ok ? 'success' : 'warning');
+    } catch (_e) {
       showBanner(tEn('Could not copy link', 'تعذر نسخ الرابط'), 'warning');
-    });
+    } finally {
+      document.body.removeChild(ta);
+    }
   }
 
   // ── Render Button ────────────────────────────────────────────────────────
   async function renderChart() {
-    var source = _currentSource || document.getElementById('sourceSelect')?.value;
+    var source = _currentSource;
     if (!source) return;
     var chartType = _currentChartType;
     var dateFrom = document.getElementById('dateFrom').value;
@@ -1088,7 +1110,7 @@ block extra_head %}
 
     // Drill-down hint
     var drilldownHint = document.getElementById('drilldownHint');
-    if (data.drilldown && data.drilldown.enabled && data.drilldown.next_level) {
+    if (data.source === 'kindergartens' && data.drilldown && data.drilldown.enabled && data.drilldown.next_level) {
       drilldownHint.style.display = '';
       var nextLabels = { 'governorate': tEn('governorate', 'المحافظة'), 'kindergarten': tEn('kindergarten', 'الحضانة'), 'city': tEn('city', 'المدينة') };
       drilldownHint.innerHTML = '<i class="bi bi-hand-index-thumb me-1"></i>' + tEn('Click bars to drill into', 'انقر على الأعمدة للتفرع إلى') + ' ' + (nextLabels[data.drilldown.next_level] || data.drilldown.next_level);
@@ -1191,7 +1213,7 @@ block extra_head %}
       Plotly.newPlot(out, traces, layout, { responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['sendDataToCloud'] });
       _currentFigDiv = out;
 
-      if (data.drilldown && data.drilldown.enabled) {
+      if (data.drilldown && data.drilldown.enabled && data.source === 'kindergartens') {
         out.on('plotly_click', function(data_click) {
           var pt = data_click.points[0];
           var clickedLabel = pt.x || pt.label;
@@ -1207,11 +1229,26 @@ block extra_head %}
 
   // ── Drilldown ────────────────────────────────────────────────────────────
   function handleDrilldown(currentLevel, label) {
+    // Drilldown is valid only for the kindergartens source where X-axis categories
+    // are geography/kindergarten entities.
+    if (_currentSource !== 'kindergartens') return;
+
     if (currentLevel === 'national') {
       filterState.governorate = label;
       filterState.kindergarten_id = null;
     } else if (currentLevel === 'governorate') {
-      filterState.governorate = filterState.governorate || label;
+      var selectedKgId = null;
+      if (_lastResponse && Array.isArray(_lastResponse.series)) {
+        var match = _lastResponse.series.find(function(row) {
+          return String(row.kindergarten || '').trim() === String(label || '').trim();
+        });
+        if (match && match.kindergarten_id != null && String(match.kindergarten_id).trim() !== '') {
+          selectedKgId = match.kindergarten_id;
+        }
+      }
+      if (selectedKgId != null) {
+        filterState.kindergarten_id = selectedKgId;
+      }
     }
     renderChart();
   }
@@ -1405,7 +1442,12 @@ block extra_head %}
       if (icon) icon.className = 'bi bi-arrow-down-up';
       th.setAttribute('aria-sort', 'none');
     });
-    var activeTh = thead.querySelector('th[data-col="' + escapeHTML(col).replace(/"/g, '\\"') + '"]');
+    var activeTh = null;
+    thead.querySelectorAll('th').forEach(function(th) {
+      if (th.getAttribute('data-col') === col) {
+        activeTh = th;
+      }
+    });
     if (activeTh) {
       activeTh.classList.add('is-sorted');
       var activeIcon = activeTh.querySelector('.sort-icon i');

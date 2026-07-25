@@ -35,3 +35,15 @@ def test_plotly_loads_from_local_vendor_file_not_a_blocked_cdn():
     html = TEMPLATE.read_text(encoding="utf-8")
     assert "https://cdn.plot.ly" not in html
     assert 'src="/static/vendor/plotly-2.35.2.min.js"' in html
+
+
+def test_share_chart_has_clipboard_fallback_for_non_secure_contexts():
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert "navigator.clipboard && window.isSecureContext" in html
+    assert "document.execCommand('copy')" in html
+
+
+def test_drilldown_is_scoped_to_kindergartens_source():
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert "if (_currentSource !== 'kindergartens') return;" in html
+    assert "data.source === 'kindergartens' && data.drilldown" in html

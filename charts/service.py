@@ -209,16 +209,22 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
     )
 
     if req.kindergarten_id:
-        q = base_query.add_columns(models.Kindergarten.name_ar.label("kindergarten"))
+        q = base_query.add_columns(
+            models.Kindergarten.id.label("kindergarten_id"),
+            models.Kindergarten.name_ar.label("kindergarten"),
+        )
         q = q.filter(models.Kindergarten.id == req.kindergarten_id)
-        q = q.group_by(models.Kindergarten.name_ar)
-        cols = ["kindergarten", "capacity", "enrolled", "count"]
+        q = q.group_by(models.Kindergarten.id, models.Kindergarten.name_ar)
+        cols = ["kindergarten_id", "kindergarten", "capacity", "enrolled", "count"]
     elif req.governorate:
         gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
-        q = base_query.add_columns(models.Kindergarten.name_ar.label("kindergarten"))
+        q = base_query.add_columns(
+            models.Kindergarten.id.label("kindergarten_id"),
+            models.Kindergarten.name_ar.label("kindergarten"),
+        )
         q = q.filter(models.Kindergarten.governorate == gov)
-        q = q.group_by(models.Kindergarten.name_ar)
-        cols = ["kindergarten", "capacity", "enrolled", "count"]
+        q = q.group_by(models.Kindergarten.id, models.Kindergarten.name_ar)
+        cols = ["kindergarten_id", "kindergarten", "capacity", "enrolled", "count"]
     else:
         q = base_query.add_columns(models.Kindergarten.governorate.label("governorate"))
         q = q.group_by(models.Kindergarten.governorate)
@@ -235,6 +241,7 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
             "count": r.count
         }
         if req.kindergarten_id or req.governorate:
+            d["kindergarten_id"] = getattr(r, "kindergarten_id", None)
             d["kindergarten"] = getattr(r, "kindergarten", "")
         else:
             d["governorate"] = getattr(r, "governorate", "")

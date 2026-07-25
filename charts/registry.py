@@ -59,6 +59,7 @@ METRIC_REGISTRY: Dict[str, MetricDefinition] = {
         business_meaning="Total kindergartens, their capacity and enrollments.",
         unit="count",
         higher_is_better=True,
+        supported_levels=["national", "governorate", "kindergarten"],
         supported_chart_types=["bar", "scatter"]
     )
 }

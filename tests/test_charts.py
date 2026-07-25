@@ -755,6 +755,18 @@ class TestChartsAPI:
         )
         assert resp.status_code == 200
 
+    def test_render_kindergartens_governorate_scope_includes_kindergarten_id(self, client, auth_headers_admin):
+        resp = client.get(
+            "/admin/charts/render?source=kindergartens&governorate=العاصمة",
+            headers=auth_headers_admin,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["drilldown"]["next_level"] == "kindergarten"
+        series = body.get("series", [])
+        if series:
+            assert "kindergarten_id" in series[0]
+
     def test_dashboard_page_loads(self, client, auth_headers_admin):
         resp = client.get("/admin/charts/dashboard", headers=auth_headers_admin)
         assert resp.status_code == 200
