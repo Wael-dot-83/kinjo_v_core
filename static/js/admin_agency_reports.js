@@ -580,7 +580,10 @@
         drill.governorate ||
         drill.city ||
         drill.district ||
-        drill.kindergarten_id
+        drill.kindergarten_id ||
+        drill.period ||
+        drill.year ||
+        drill.quarter
       ) {
         drillBc.classList.remove("d-none");
         const label = document.getElementById("agency-drill-label");
@@ -597,6 +600,12 @@
             parts.push(
               t("الحضانة:", "Kindergarten:") + " #" + drill.kindergarten_id,
             );
+          if (drill.period)
+            parts.push(t("الفترة:", "Period:") + " " + drill.period);
+          if (drill.year)
+            parts.push(t("السنة:", "Year:") + " " + drill.year);
+          if (drill.quarter)
+            parts.push(t("الربع:", "Quarter:") + " " + drill.quarter);
           label.textContent = parts.join(" › ");
         }
       } else {
@@ -707,6 +716,11 @@
       ) {
         const labels = payload.chart.series.map((s) => s.label);
         const values = payload.chart.series.map((s) => s.value);
+        const colors = payload.chart.series.map((s) => s.color || null);
+        const hasSeriesColors = colors.some((c) => typeof c === "string" && c);
+        const sharePcts = payload.chart.series.map((s) =>
+          typeof s.share_pct === "number" ? s.share_pct : null,
+        );
         const total = values.reduce(
           (a, b) => a + (typeof b === "number" ? b : 0),
           0,
@@ -793,9 +807,21 @@
         const isPie = payload.chart.type === "pie";
         const isVerticalBar =
           !isPie && payload.chart.orientation === "vertical";
+        const showSharePct =
+          !isPie &&
+          payload.chart.show_share_pct === true &&
+          sharePcts.some((v) => typeof v === "number");
         const valueSuffix = isPie
           ? ""
           : payload.chart.value_suffix || (isVerticalBar ? "" : "");
+        const barText = values.map((v, idx) => {
+          if (typeof v !== "number") return "";
+          if (showSharePct && typeof sharePcts[idx] === "number") {
+            return `${v}${valueSuffix} (${sharePcts[idx]}%)`;
+          }
+          return `${v}${valueSuffix}`;
+        });
+
         const plotData = [
           {
             type: isPie ? "pie" : "bar",
@@ -805,12 +831,32 @@
               : isVerticalBar
                 ? { x: labels, y: values }
                 : { x: values, y: labels, orientation: "h" }),
+            ...(isPie
+              ? {}
+              : {
+                  customdata: sharePcts,
+                  text: barText,
+                  textposition: "outside",
+                  cliponaxis: false,
+                  marker: {
+                    color: hasSeriesColors ? colors : undefined,
+                    line: { color: "rgba(15, 23, 42, 0.15)", width: 1 },
+                  },
+                }),
             textinfo: isPie ? "label+percent" : "value",
             hovertemplate: isPie
               ? "%{label}: %{value} (%{percent:.1%})<extra></extra>"
               : isVerticalBar
-                ? "%{x}: %{y}" + valueSuffix + "<extra></extra>"
-                : "%{y}: %{x}" + valueSuffix + "<extra></extra>",
+                ? showSharePct
+                  ? "%{x}: %{y}" +
+                    valueSuffix +
+                    " (%{customdata:.1f}%)<extra></extra>"
+                  : "%{x}: %{y}" + valueSuffix + "<extra></extra>"
+                : showSharePct
+                  ? "%{y}: %{x}" +
+                    valueSuffix +
+                    " (%{customdata:.1f}%)<extra></extra>"
+                  : "%{y}: %{x}" + valueSuffix + "<extra></extra>",
           },
         ];
         const layout = {
@@ -822,13 +868,20 @@
           title: {
             text: payload.chart.title_ar || payload.chart.title_en || "",
           },
+          uniformtext: !isPie ? { mode: "hide", minsize: 11 } : undefined,
+          bargap: !isPie ? 0.3 : undefined,
           xaxis: !isPie
             ? isVerticalBar
-              ? { tickfont: { size: 13 }, automargin: true }
+              ? {
+                  tickfont: { size: 13 },
+                  automargin: true,
+                  title: payload.chart.x_axis_title_ar || undefined,
+                }
               : {
                   tickfont: { size: 13 },
                   zeroline: false,
                   gridcolor: "rgba(148, 163, 184, 0.25)",
+                  title: payload.chart.x_axis_title_ar || undefined,
                 }
             : undefined,
           yaxis: !isPie
@@ -839,8 +892,13 @@
                   gridcolor: "rgba(148, 163, 184, 0.25)",
                   rangemode: "tozero",
                   ticksuffix: valueSuffix,
+                  title: payload.chart.y_axis_title_ar || undefined,
                 }
-              : { tickfont: { size: 13 }, automargin: true }
+              : {
+                  tickfont: { size: 13 },
+                  automargin: true,
+                  title: payload.chart.y_axis_title_ar || undefined,
+                }
             : undefined,
         };
         const config = {
@@ -1093,11 +1151,24 @@
     });
 
     const drill = window.__agencyDrillDown || {};
-    if (drill.governorate) params.set("governorate", drill.governorate);
-    if (drill.city) params.set("city", drill.city);
-    if (drill.district) params.set("district", drill.district);
-    if (drill.kindergarten_id)
-      params.set("kindergarten_id", String(drill.kindergarten_id));
+    [
+      "governorate",
+      "city",
+      "district",
+      "kindergarten_id",
+      "status",
+      "severity",
+      "role",
+      "gender",
+      "period",
+      "year",
+      "quarter",
+    ].forEach((k) => {
+      const v = drill[k];
+      if (v !== undefined && v !== null && String(v).trim() !== "") {
+        params.set(k, String(v));
+      }
+    });
 
     const query = params.toString();
     const url =
@@ -1192,18 +1263,33 @@
       "severity",
       "role",
       "gender",
+      "period",
+      "year",
+      "quarter",
     ]);
     if (!supportedGroupBy.has(groupBy)) return; // No drill-down for unmapped dimensions.
     chartContainer.on("plotly_click", (eventData) => {
       if (!eventData || !eventData.points || !eventData.points.length) return;
       const pt = eventData.points[0];
+      const series = Array.isArray(payload.chart?.series) ? payload.chart.series : [];
+      const pointIndex = Number.isInteger(pt.pointNumber) ? pt.pointNumber : -1;
+      const seriesItem = pointIndex >= 0 ? series[pointIndex] : null;
+      const clickedCategory =
+        seriesItem?.drill_value ??
+        pt.label ??
+        (typeof pt.y === "string" ? pt.y : null) ??
+        (typeof pt.x === "string" ? pt.x : null) ??
+        "";
       const drill = {};
-      if (groupBy === "governorate") drill.governorate = pt.label;
-      else if (groupBy === "city") drill.city = pt.label;
-      else if (groupBy === "status") drill.status = pt.label;
-      else if (groupBy === "severity") drill.severity = pt.label;
-      else if (groupBy === "role") drill.role = pt.label;
-      else if (groupBy === "gender") drill.gender = pt.label;
+      if (groupBy === "governorate") drill.governorate = clickedCategory;
+      else if (groupBy === "city") drill.city = clickedCategory;
+      else if (groupBy === "status") drill.status = clickedCategory;
+      else if (groupBy === "severity") drill.severity = clickedCategory;
+      else if (groupBy === "role") drill.role = clickedCategory;
+      else if (groupBy === "gender") drill.gender = clickedCategory;
+      else if (groupBy === "period") drill.period = clickedCategory;
+      else if (groupBy === "year") drill.year = clickedCategory;
+      else if (groupBy === "quarter") drill.quarter = clickedCategory;
       if (Object.keys(drill).length) {
         window.__agencyDrillDown = drill;
         const url = new URL(window.location.href);
@@ -1223,6 +1309,9 @@
       "severity",
       "role",
       "gender",
+      "period",
+      "year",
+      "quarter",
     ]);
     if (!supportedGroupBy.has(groupBy)) return; // No drill-down for unmapped dimensions.
     const rows = tableSection.querySelectorAll(".agency-table tbody tr");
@@ -1233,18 +1322,34 @@
       const cells = row.querySelectorAll("td");
       if (!cells.length) return;
       const drill = {};
+      const colIdxByGroup = {
+        governorate: 0,
+        city: 0,
+        status: 0,
+        severity: 0,
+        role: 0,
+        gender: 0,
+        period: 0,
+        year: 1,
+        quarter: 2,
+      };
+      const cellVal =
+        cells[colIdxByGroup[groupBy]]?.textContent?.trim() || "";
       if (groupBy === "governorate")
-        drill.governorate = cells[0]?.textContent?.trim() || "";
+        drill.governorate = cellVal;
       else if (groupBy === "city")
-        drill.city = cells[0]?.textContent?.trim() || "";
+        drill.city = cellVal;
       else if (groupBy === "status")
-        drill.status = cells[0]?.textContent?.trim() || "";
+        drill.status = cellVal;
       else if (groupBy === "severity")
-        drill.severity = cells[0]?.textContent?.trim() || "";
+        drill.severity = cellVal;
       else if (groupBy === "role")
-        drill.role = cells[0]?.textContent?.trim() || "";
+        drill.role = cellVal;
       else if (groupBy === "gender")
-        drill.gender = cells[0]?.textContent?.trim() || "";
+        drill.gender = cellVal;
+      else if (groupBy === "period") drill.period = cellVal;
+      else if (groupBy === "year") drill.year = cellVal;
+      else if (groupBy === "quarter") drill.quarter = cellVal;
       const activate = () => {
         if (!Object.keys(drill).length) return;
         window.__agencyDrillDown = drill;
@@ -1523,18 +1628,38 @@
 
   if (type === "report") {
     const filtersForm = document.getElementById("agency-report-filters");
+    const drillKeys = [
+      "governorate",
+      "city",
+      "district",
+      "kindergarten_id",
+      "status",
+      "severity",
+      "role",
+      "gender",
+      "period",
+      "year",
+      "quarter",
+    ];
     if (filtersForm) {
       const urlParams = new URLSearchParams(window.location.search);
-      const df = urlParams.get("date_from");
-      const dt = urlParams.get("date_to");
-      if (df) {
-        const el = filtersForm.querySelector("[name=date_from]");
-        if (el) el.value = df;
+      const initialDrill = {};
+
+      ["date_from", "date_to", ...drillKeys].forEach((key) => {
+        const value = urlParams.get(key);
+        if (!value || !value.trim()) return;
+
+        const el = filtersForm.querySelector(`[name="${key}"]`);
+        if (el) el.value = value;
+        if (drillKeys.includes(key)) {
+          initialDrill[key] = value;
+        }
+      });
+
+      if (Object.keys(initialDrill).length) {
+        window.__agencyDrillDown = initialDrill;
       }
-      if (dt) {
-        const el = filtersForm.querySelector("[name=date_to]");
-        if (el) el.value = dt;
-      }
+
       filtersForm.addEventListener("submit", (e) => {
         e.preventDefault();
         loadReport();

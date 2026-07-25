@@ -35,6 +35,8 @@ def _filters(
     request: Request,
     admission_year: Optional[int] = None,
     period: Optional[str] = None,
+    year: Optional[str] = None,
+    quarter: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     governorate: Optional[str] = None,
@@ -51,6 +53,8 @@ def _filters(
     return {
         "admission_year": admission_year,
         "period": period,
+        "year": year,
+        "quarter": quarter,
         "date_from": date_from,
         "date_to": date_to,
         "governorate": governorate,
@@ -187,6 +191,8 @@ def agency_report_detail(
     request: Request,
     admission_year: Optional[int] = None,
     period: Optional[str] = None,
+    year: Optional[str] = None,
+    quarter: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     governorate: Optional[str] = None,
@@ -203,7 +209,29 @@ def agency_report_detail(
     db: Session = Depends(get_db),
 ):
     try:
-        return AgencyReportsService(db).generate_report(agency_code, report_code, _filters(request, admission_year, period, date_from, date_to, governorate, city, kindergarten_id, gender, age_group, enrollment_status, aggregation_level, geography_basis, status, severity))
+        return AgencyReportsService(db).generate_report(
+            agency_code,
+            report_code,
+            _filters(
+                request,
+                admission_year,
+                period,
+                year,
+                quarter,
+                date_from,
+                date_to,
+                governorate,
+                city,
+                kindergarten_id,
+                gender,
+                age_group,
+                enrollment_status,
+                aggregation_level,
+                geography_basis,
+                status,
+                severity,
+            ),
+        )
     except AgencyReportError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 

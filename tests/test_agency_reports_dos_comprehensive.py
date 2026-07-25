@@ -480,6 +480,12 @@ class TestGeographicServiceGaps:
             chart_labels = {s["label"] for s in payload["chart"]["series"]}
             table_governorates = {r["governorate"] for r in payload["breakdowns"]}
             assert chart_labels.issubset(table_governorates)
+            assert payload["chart"].get("group_by") == "governorate"
+            assert payload["chart"].get("value_suffix") == " طفل/حضانة"
+            assert payload["chart"].get("x_axis_title_ar") == "الأطفال لكل حضانة نشطة"
+            assert payload["chart"].get("y_axis_title_ar") == "المحافظة"
+            for s in payload["chart"]["series"]:
+                assert "color" in s
 
     def test_no_fabricated_ratios(self, client, test_db):
         _make_admin(test_db)
@@ -575,6 +581,85 @@ class TestGeographicServiceGaps:
         for row in payload["breakdowns"]:
             assert row["governorate"] == "العاصمة"
 
+    def test_governorate_filter_accepts_display_alias_from_chart_drilldown(self, test_db):
+        """Chart drill-down sends displayed governorate labels. Filtering must
+        still match records when parent and kindergarten tables use alias variants
+        (e.g. 'عمان' vs 'العاصمة')."""
+        _make_admin(test_db)
+
+        kg = models.Kindergarten(
+            name_ar="روضة العاصمة",
+            governorate="العاصمة",
+            district="عمان",
+            area="a",
+            address_line="a",
+            contact_phone="0790000111",
+            status=models.KindergartenStatus.ACTIVE,
+        )
+        test_db.add(kg)
+        test_db.commit()
+
+        pu = models.User(
+            username="gap_alias_parent",
+            email="gap_alias_parent@example.com",
+            hashed_password=get_password_hash("Admin123!"),
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
+        )
+        test_db.add(pu)
+        test_db.commit()
+        test_db.refresh(pu)
+
+        parent = models.ParentProfile(
+            user_id=pu.id,
+            first_name="ولي",
+            last_name="أمر",
+            phone_number="0790000112",
+            gender=models.Gender.MALE,
+            nationality="أردني",
+            home_governorate="عمان",  # alias variant
+            home_district="عمان",
+            home_area="عمان",
+            home_address_line="عمان",
+            correspondence_preference=True,
+            notification_language="ar",
+            profile_complete=True,
+        )
+        test_db.add(parent)
+        test_db.commit()
+        test_db.refresh(parent)
+
+        child = models.Child(
+            parent_id=parent.id,
+            first_name="طفل",
+            last_name="اختبار",
+            gender=models.Gender.MALE,
+            date_of_birth=date(2024, 1, 1),
+            father_name="أب",
+            mother_first_name="أم",
+            mother_last_name="اختبار",
+            mother_nationality="أردنية",
+            media_consent=True,
+            correspondence_flag=True,
+            profile_complete=True,
+        )
+        test_db.add(child)
+        test_db.commit()
+
+        payload = AgencyReportsService(test_db).generate_report(
+            "dos", "geographic_service_gaps", {"governorate": "العاصمة"}
+        )
+        assert payload["summary"]["children"] >= 1
+        assert payload["summary"]["active_kindergartens"] >= 1
+
+    def test_data_quality_note_label_is_localized(self, client, test_db):
+        _make_admin(test_db)
+        _seed_kindergartens(test_db)
+        _seed_children(test_db)
+        headers = _tok(client, "dos_test_admin")
+        payload = _call(client, "/api/admin/agency-reports/dos/reports/geographic_service_gaps", headers)
+        assert payload["summary_labels"].get("data_quality_note_ar") == "ملاحظة جودة البيانات"
+
 
 # ---------------------------------------------------------------------------
 # 4. annual_quarterly_trends — quarterly breakdown, children data
@@ -616,6 +701,94 @@ class TestAnnualQuarterlyTrends:
             chart_col_name = "enrolled_children"
             table_total = sum(r.get(chart_col_name, 0) for r in payload["breakdowns"])
             assert chart_total == table_total
+
+    def test_chart_is_drilldown_ready_by_year(self, client, test_db):
+        _make_admin(test_db)
+        _seed_kindergartens(test_db)
+        headers = _tok(client, "dos_test_admin")
+        payload = _call(client, "/api/admin/agency-reports/dos/reports/annual_quarterly_trends", headers)
+        if payload.get("chart"):
+            assert payload["chart"].get("group_by") == "year"
+            assert payload["chart"].get("orientation") == "vertical"
+            assert payload["chart"].get("value_suffix") == " طفل"
+
+    def test_api_year_filter_switches_chart_to_quarter(self, client, test_db):
+        _make_admin(test_db)
+        _seed_kindergartens(test_db)
+        headers = _tok(client, "dos_test_admin")
+        base = _call(client, "/api/admin/agency-reports/dos/reports/annual_quarterly_trends", headers)
+        assert base["breakdowns"]
+        yr = str(base["breakdowns"][0]["year"])
+        payload = _call(
+            client,
+            "/api/admin/agency-reports/dos/reports/annual_quarterly_trends",
+            headers,
+            {"year": yr},
+        )
+        assert payload["metadata"]["filters"].get("year") == yr
+        assert payload["chart"].get("group_by") == "quarter"
+
+    def test_quarter_chart_uses_arabic_labels_with_canonical_drill_values(self, client, test_db):
+        _make_admin(test_db)
+        _seed_kindergartens(test_db)
+        headers = _tok(client, "dos_test_admin")
+        base = _call(client, "/api/admin/agency-reports/dos/reports/annual_quarterly_trends", headers)
+        assert base["breakdowns"]
+        yr = str(base["breakdowns"][0]["year"])
+
+        payload = _call(
+            client,
+            "/api/admin/agency-reports/dos/reports/annual_quarterly_trends",
+            headers,
+            {"year": yr},
+        )
+
+        assert payload["chart"].get("group_by") == "quarter"
+        series = payload["chart"].get("series") or []
+        assert series
+        arabic_quarter_labels = {"الربع الأول", "الربع الثاني", "الربع الثالث", "الربع الرابع"}
+        canonical_quarters = {"Q1", "Q2", "Q3", "Q4"}
+
+        for item in series:
+            assert item.get("label") in arabic_quarter_labels
+            assert item.get("drill_value") in canonical_quarters
+
+    def test_data_quality_note_label_is_localized(self, client, test_db):
+        _make_admin(test_db)
+        _seed_kindergartens(test_db)
+        headers = _tok(client, "dos_test_admin")
+        payload = _call(client, "/api/admin/agency-reports/dos/reports/annual_quarterly_trends", headers)
+        assert payload["summary_labels"].get("data_quality_note_ar") == "ملاحظة جودة البيانات"
+
+    def test_year_filter_returns_quarter_drill_chart(self, test_db):
+        from datetime import datetime, timezone
+
+        def _kg(name, phone, created):
+            return models.Kindergarten(
+                name_ar=name,
+                governorate="العاصمة",
+                district="عمان",
+                area="a",
+                address_line="a",
+                contact_phone=phone,
+                status=models.KindergartenStatus.ACTIVE,
+                created_at=created,
+            )
+
+        test_db.add_all(
+            [
+                _kg("ك1-2019", "0790000301", datetime(2019, 2, 1, tzinfo=timezone.utc)),
+                _kg("ك2-2019", "0790000302", datetime(2019, 5, 1, tzinfo=timezone.utc)),
+                _kg("ك1-2020", "0790000303", datetime(2020, 2, 1, tzinfo=timezone.utc)),
+            ]
+        )
+        test_db.commit()
+
+        payload = AgencyReportsService(test_db).generate_report("dos", "annual_quarterly_trends", {"year": "2019"})
+        assert payload.get("chart")
+        assert payload["chart"].get("group_by") == "quarter"
+        for row in payload["breakdowns"]:
+            assert row["year"] == "2019"
 
     def test_periods_sorted_chronologically_not_lexicographically(self, test_db):
         """Regression: periods were sorted by the raw "Q{q}-{year}" string, which
@@ -716,6 +889,37 @@ class TestIncidentsSafety1000ChildDays:
             reported_by=admin.id,
         )
         test_db.add(incident)
+        test_db.add_all(
+            [
+                models.Incident(
+                    child_id=child.id,
+                    kindergarten_id=kg.id,
+                    type=models.IncidentType.OTHER,
+                    severity_level=models.SeverityLevel.MEDIUM,
+                    occurred_at=date.today(),
+                    description="test-medium",
+                    reported_by=admin.id,
+                ),
+                models.Incident(
+                    child_id=child.id,
+                    kindergarten_id=kg.id,
+                    type=models.IncidentType.OTHER,
+                    severity_level=models.SeverityLevel.HIGH,
+                    occurred_at=date.today(),
+                    description="test-high",
+                    reported_by=admin.id,
+                ),
+                models.Incident(
+                    child_id=child.id,
+                    kindergarten_id=kg.id,
+                    type=models.IncidentType.OTHER,
+                    severity_level=models.SeverityLevel.CRITICAL,
+                    occurred_at=date.today(),
+                    description="test-critical",
+                    reported_by=admin.id,
+                ),
+            ]
+        )
         test_db.commit()
 
         cls = models.Class(
@@ -754,14 +958,27 @@ class TestIncidentsSafety1000ChildDays:
         test_db.commit()
 
         payload = AgencyReportsService(test_db).generate_report("dos", "incidents_safety_1000_child_days", {})
-        assert payload["summary"]["incident_count"] == 1
+        assert payload["summary"]["incident_count"] == 4
         assert payload["summary"]["eligible_child_days"] >= 1
         assert payload["summary"]["incident_rate_per_1000_child_days"] == round(
-            1000 / payload["summary"]["eligible_child_days"], 3
+            4000 / payload["summary"]["eligible_child_days"], 3
         )
+        assert payload["summary_labels"]["eligible_child_days"] == "أيام الأطفال المؤهلة"
+        assert payload["summary_labels"]["incident_rate_per_1000_child_days"] == "معدل الحوادث لكل 1000 يوم طفل"
         assert payload.get("chart")
-        assert payload["chart"]["title_ar"] == "الحوادث حسب درجة الخطورة"
-        assert sum(s["value"] for s in payload["chart"]["series"] if isinstance(s["value"], (int, float))) == payload["summary"]["incident_count"]
+        assert payload["chart"]["title_ar"] == "توزيع الحوادث حسب درجة الخطورة"
+        assert payload["chart"]["orientation"] == "vertical"
+        assert payload["chart"]["show_share_pct"] is True
+        assert payload["chart"]["value_suffix"] == " حادثة"
+
+        chart_series = payload["chart"]["series"]
+        assert [s["label"] for s in chart_series] == ["حرجة", "عالية", "متوسطة", "منخفضة"]
+        assert [s["color"] for s in chart_series] == ["#dc2626", "#f97316", "#f59e0b", "#22c55e"]
+        assert round(sum(s["share_pct"] for s in chart_series), 1) == 100.0
+        assert (
+            sum(s["value"] for s in payload["chart"]["series"] if isinstance(s["value"], (int, float)))
+            == payload["summary"]["incident_count"]
+        )
 
     def test_rate_is_none_when_no_eligible_child_days(self, test_db):
         _make_admin(test_db, "dos_inc_admin3")

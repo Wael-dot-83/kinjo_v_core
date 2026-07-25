@@ -98,10 +98,30 @@ _SEVERITY_AR = {
     "CRITICAL": "حرجة",
 }
 
+_QUARTER_AR = {
+    "Q1": "الربع الأول",
+    "Q2": "الربع الثاني",
+    "Q3": "الربع الثالث",
+    "Q4": "الربع الرابع",
+}
+
+_SEVERITY_COLOR = {
+    "LOW": "#22c55e",
+    "MEDIUM": "#f59e0b",
+    "HIGH": "#f97316",
+    "CRITICAL": "#dc2626",
+    "UNKNOWN": "#64748b",
+}
+
 
 def _severity_ar(value: Any) -> str:
     raw = _enum_value(value)
     return _SEVERITY_AR.get(raw or "", raw or "غير محدد")
+
+
+def _quarter_ar(value: Any) -> str:
+    raw = str(value or "").strip().upper()
+    return _QUARTER_AR.get(raw, raw or "غير محدد")
 
 
 _ROLE_AR = {
@@ -404,6 +424,8 @@ _FIELD_LABELS: dict[str, str] = {
     "completion_rate_pct": "نسبة الإكمال %",
     "message_count": "عدد الرسائل",
     "incident_count": "عدد الحوادث",
+    "eligible_child_days": "أيام الأطفال المؤهلة",
+    "incident_rate_per_1000_child_days": "معدل الحوادث لكل 1000 يوم طفل",
     "areas": "عدد المناطق",
     "children": "الأطفال",
     "enrolled_children": "الأطفال المسجلون",
@@ -426,6 +448,7 @@ _FIELD_LABELS: dict[str, str] = {
     "absence_rate_pct": "نسبة الغياب %",
     "total_supervisors": "إجمالي المشرفين",
     "children_missing_dob": "أطفال بدون تاريخ ميلاد",
+    "data_quality_note_ar": "ملاحظة جودة البيانات",
     "trend_years": "سنوات القياس",
     "period_start": "بداية الفترة",
     "period_end": "نهاية الفترة",
@@ -747,19 +770,48 @@ class AgencyReportsService:
 
     def _apply_parent_geo_filters(self, q, filters: dict[str, Any]):
         if filters.get("governorate"):
-            q = q.filter(models.ParentProfile.home_governorate == filters["governorate"])
+            gov_values = self._governorate_filter_values(filters["governorate"])
+            q = q.filter(models.ParentProfile.home_governorate.in_(gov_values))
         if filters.get("city"):
             q = q.filter(models.ParentProfile.home_district == filters["city"])
         return q
 
     def _apply_kindergarten_geo_filters(self, q, filters: dict[str, Any]):
         if filters.get("governorate"):
-            q = q.filter(models.Kindergarten.governorate == filters["governorate"])
+            gov_values = self._governorate_filter_values(filters["governorate"])
+            q = q.filter(models.Kindergarten.governorate.in_(gov_values))
         if filters.get("city"):
             q = q.filter(models.Kindergarten.district == filters["city"])
         if filters.get("kindergarten_id"):
             q = q.filter(models.Kindergarten.id == int(filters["kindergarten_id"]))
         return q
+
+    def _governorate_filter_values(self, value: Any) -> list[str]:
+        """Return canonical + alias variants for robust geo filtering.
+
+        This keeps chart/table drill-down stable even when display labels use one
+        governorate form (e.g., "العاصمة") while stored records use another
+        alias (e.g., "عمان").
+        """
+        if not isinstance(value, str) or not value.strip():
+            return [str(value)] if value is not None else []
+
+        gov = value.strip()
+        aliases = settings.JORDAN_GOVERNORATE_ALIASES
+        variants: set[str] = {gov}
+
+        mapped = aliases.get(gov) or aliases.get(gov.lower())
+        if isinstance(mapped, str) and mapped.strip():
+            variants.add(mapped.strip())
+
+        gov_l = gov.lower()
+        for alias_key, canonical in aliases.items():
+            if not isinstance(alias_key, str) or not isinstance(canonical, str):
+                continue
+            if canonical.strip().lower() == gov_l:
+                variants.add(alias_key.strip())
+
+        return [v for v in variants if v]
 
     def _kg2_eligibility(
         self,
@@ -1214,11 +1266,40 @@ class AgencyReportsService:
                 for gov in gov_children
             ]
             chart_series.sort(key=lambda s: s["value"] if s["value"] is not None else -1, reverse=True)
+
+            # Color-code burden tiers so high service pressure is immediately visible.
+            ratios = [float(s["value"]) for s in chart_series if isinstance(s.get("value"), (int, float))]
+            max_ratio = max(ratios) if ratios else 0.0
+            for s in chart_series:
+                v = s.get("value")
+                if not isinstance(v, (int, float)) or max_ratio <= 0:
+                    s["color"] = "#64748b"
+                elif float(v) >= max_ratio * 0.75:
+                    s["color"] = "#dc2626"  # high pressure
+                elif float(v) >= max_ratio * 0.45:
+                    s["color"] = "#f59e0b"  # medium pressure
+                else:
+                    s["color"] = "#22c55e"  # lower pressure
+
             chart = {
                 "type": "bar",
-                "title_ar": "أطفال لكل حضانة نشطة حسب المحافظة",
+                "title_ar": "فجوة الوصول للخدمة: أطفال لكل حضانة نشطة حسب المحافظة",
                 "series": chart_series,
+                "group_by": "governorate",
+                "value_suffix": " طفل/حضانة",
+                "x_axis_title_ar": "الأطفال لكل حضانة نشطة",
+                "y_axis_title_ar": "المحافظة",
             }
+
+        summary = {
+            "areas": len(breakdowns),
+            "children": total_children,
+            "active_kindergartens": total_kgs,
+            "data_quality_note_ar": (
+                "يتم حساب نسبة الأطفال لكل حضانة على أساس سكن ولي الأمر مقابل الحضانات النشطة في نفس المنطقة. "
+                "قد تختلف الخدمة الفعلية إذا كان الآباء يسجلون أطفالهم في حضانات خارج منطقتهم."
+            ),
+        }
 
         payload = self._payload(
             agency_code,
@@ -1226,17 +1307,13 @@ class AgencyReportsService:
             report_code,
             report,
             filters,
-            {"areas": len(breakdowns), "children": total_children, "active_kindergartens": total_kgs},
+            summary,
             sorted(
                 breakdowns,
                 key=lambda x: x["children_per_kindergarten"] if x["children_per_kindergarten"] is not None else -1,
                 reverse=True,
             ),
             chart=chart,
-        )
-        payload["summary"]["data_quality_note_ar"] = (
-            "يتم حساب نسبة الأطفال لكل حضانة على أساس سكن ولي الأمر مقابل الحضانات النشطة في نفس المنطقة. "
-            "قد تختلف الخدمة الفعلية إذا كان الآباء يسجلون أطفالهم في حضانات خارج منطقتهم."
         )
         return payload
 
@@ -1749,16 +1826,37 @@ class AgencyReportsService:
         if rate is None:
             summary["data_quality_note_ar"] = "لا توجد أيام دوام متاحة ضمن الفترة لاحتساب معدل الحوادث لكل 1000 يوم."
 
-        # Build a bar chart for severity distribution (not the rate, which is a single scalar).
+        # Build a severity chart ordered by risk (critical -> low) with a clear
+        # color scale and percentage share for immediate interpretation.
         severity_counts: dict[str, int] = {}
         for r in rows:
-            label = _severity_ar(_enum_value(r.severity_level))
-            severity_counts[label] = severity_counts.get(label, 0) + _safe_int(r.count)
-        severity_series = [{"label": label, "value": severity_counts.get(label, 0)} for label in severity_counts]
+            code = _enum_value(r.severity_level) or "UNKNOWN"
+            severity_counts[code] = severity_counts.get(code, 0) + _safe_int(r.count)
+
+        severity_order = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]
+        severity_series: list[dict[str, Any]] = []
+        for code in severity_order:
+            count = severity_counts.get(code, 0)
+            if count <= 0:
+                continue
+            severity_series.append(
+                {
+                    "label": _severity_ar(code),
+                    "value": count,
+                    "share_pct": round(count / total_incidents * 100, 1) if total_incidents else 0.0,
+                    "color": _SEVERITY_COLOR.get(code, _SEVERITY_COLOR["UNKNOWN"]),
+                }
+            )
+
         chart = {
             "type": "bar",
-            "title_ar": "الحوادث حسب درجة الخطورة",
+            "title_ar": "توزيع الحوادث حسب درجة الخطورة",
             "series": severity_series,
+            "orientation": "vertical",
+            "value_suffix": " حادثة",
+            "show_share_pct": True,
+            "x_axis_title_ar": "درجة الخطورة",
+            "y_axis_title_ar": "عدد الحوادث",
         }
 
         return self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns, chart=chart)
@@ -1808,11 +1906,40 @@ class AgencyReportsService:
         report: dict[str, Any],
         filters: dict[str, Any],
     ) -> dict[str, Any]:
-        active_kgs = (
-            self.db.query(models.Kindergarten.id, models.Kindergarten.created_at)
-            .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
-            .all()
+        year_filter: int | None = None
+        raw_year = filters.get("year")
+        if isinstance(raw_year, str) and raw_year.isdigit():
+            year_filter = int(raw_year)
+        elif isinstance(raw_year, int):
+            year_filter = raw_year
+
+        quarter_filter: int | None = None
+        raw_quarter = filters.get("quarter")
+        if isinstance(raw_quarter, str):
+            rq = raw_quarter.strip().upper()
+            if rq.startswith("Q") and rq[1:].isdigit():
+                qn = int(rq[1:])
+                quarter_filter = qn if 1 <= qn <= 4 else None
+            elif rq.isdigit():
+                qn = int(rq)
+                quarter_filter = qn if 1 <= qn <= 4 else None
+        elif isinstance(raw_quarter, int) and 1 <= raw_quarter <= 4:
+            quarter_filter = raw_quarter
+
+        q = self.db.query(models.Kindergarten.id, models.Kindergarten.created_at).filter(
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE
         )
+        if year_filter is not None:
+            q = q.filter(func.extract("year", models.Kindergarten.created_at) == year_filter)
+        if quarter_filter is not None:
+            start_month = (quarter_filter - 1) * 3 + 1
+            end_month = start_month + 2
+            q = q.filter(
+                func.extract("month", models.Kindergarten.created_at) >= start_month,
+                func.extract("month", models.Kindergarten.created_at) <= end_month,
+            )
+
+        active_kgs = q.all()
         kg_ids = [kid for kid, _ in active_kgs]
         enrolled_map: dict[int, int] = {}
         if kg_ids:
@@ -1877,15 +2004,63 @@ class AgencyReportsService:
 
         chart = None
         if breakdowns:
-            # Explicit chart: enrolled children by period (matches the original
-            # auto-built chart's value column so the reconciliation test holds).
-            period_labels = [b["period"] for b in breakdowns]
-            enr_by_period = {b["period"]: b["enrolled_children"] for b in breakdowns}
-            chart = {
-                "type": "bar",
-                "title_ar": "الاتجاهات السنوية والربعية — الأطفال المسجلون",
-                "series": [{"label": p, "value": enr_by_period.get(p, 0)} for p in period_labels],
-            }
+            if year_filter is None:
+                # First level: yearly trend for clear time-series overview.
+                by_year: dict[str, int] = {}
+                for b in breakdowns:
+                    y = b.get("year") or "غير محدد"
+                    by_year[str(y)] = by_year.get(str(y), 0) + _safe_int(b.get("enrolled_children"))
+
+                def _year_sort_key(item: tuple[str, int]) -> tuple[int, int]:
+                    y, _ = item
+                    return (0, int(y)) if y.isdigit() else (1, 0)
+
+                chart = {
+                    "type": "bar",
+                    "title_ar": "الاتجاهات السنوية — الأطفال المسجلون",
+                    "series": [{"label": y, "value": v} for y, v in sorted(by_year.items(), key=_year_sort_key)],
+                    "group_by": "year",
+                    "orientation": "vertical",
+                    "value_suffix": " طفل",
+                    "x_axis_title_ar": "السنة",
+                    "y_axis_title_ar": "الأطفال المسجلون",
+                }
+            else:
+                # Second level after drilling into a year: quarter trend.
+                q_order = ["Q1", "Q2", "Q3", "Q4"]
+                by_quarter: dict[str, int] = {}
+                for b in breakdowns:
+                    qv = str(b.get("quarter") or "").upper()
+                    if qv.startswith("Q"):
+                        by_quarter[qv] = by_quarter.get(qv, 0) + _safe_int(b.get("enrolled_children"))
+                chart = {
+                    "type": "bar",
+                    "title_ar": f"الاتجاهات الربعية — الأطفال المسجلون ({year_filter})",
+                    "series": [
+                        {
+                            "label": _quarter_ar(qn),
+                            "drill_value": qn,
+                            "value": by_quarter.get(qn, 0),
+                        }
+                        for qn in q_order
+                        if qn in by_quarter
+                    ],
+                    "group_by": "quarter",
+                    "orientation": "vertical",
+                    "value_suffix": " طفل",
+                    "x_axis_title_ar": "الربع",
+                    "y_axis_title_ar": "الأطفال المسجلون",
+                }
+
+        summary = {
+            "trend_years": len(breakdowns),
+            "total_kindergartens": total_kg,
+            "total_enrolled_children": total_enr,
+            "data_quality_note_ar": (
+                "الأرقام تعكس الحالة الحالية للحضانات النشطة والأطفال المسجلين، مصنّفة حسب سنة إنشاء الحضانة. "
+                "هذه أرقام رصيد وليست قياس تدفّق خلال فترة زمنية."
+            ),
+        }
 
         payload = self._payload(
             agency_code,
@@ -1893,13 +2068,9 @@ class AgencyReportsService:
             report_code,
             report,
             filters,
-            {"trend_years": len(breakdowns), "total_kindergartens": total_kg, "total_enrolled_children": total_enr},
+            summary,
             breakdowns,
             chart=chart,
-        )
-        payload["summary"]["data_quality_note_ar"] = (
-            "الأرقام تعكس الحالة الحالية للحضانات النشطة والأطفال المسجلين، مصنّفة حسب سنة إنشاء الحضانة. "
-            "هذه أرقام رصيد (stock) وليست تدفق (flow) فترة."
         )
         return payload
 
