@@ -19,12 +19,16 @@
         [text.reports, data.report_count],
         [text.ready, data.ready_report_count],
         [text.data, data.requires_data_count],
-        [text.updated, data.generated_at ? new Date(data.generated_at).toLocaleString(lang === "ar" ? "ar-JO" : "en-US", { dateStyle: "medium", timeStyle: "short" }) : "—"],
-      ].forEach(([label, value]) => {
+        // Not a count — pass the formatted date string through verbatim so it
+        // is not coerced to NaN by the numeric formatter below.
+        [text.updated, data.generated_at ? new Date(data.generated_at).toLocaleString(lang === "ar" ? "ar-JO" : "en-US", { dateStyle: "medium", timeStyle: "short" }) : "—", false],
+      ].forEach(([label, value, isNumeric = true]) => {
         const item = document.createElement("div");
         item.className = "agency-summary-pill";
         const number = document.createElement("strong");
-        number.textContent = new Intl.NumberFormat(lang === "ar" ? "ar-JO" : "en-US").format(Number(value || 0));
+        number.textContent = isNumeric
+          ? new Intl.NumberFormat(lang === "ar" ? "ar-JO" : "en-US").format(Number(value || 0))
+          : value;
         const span = document.createElement("span");
         span.textContent = label;
         item.append(number, span);
