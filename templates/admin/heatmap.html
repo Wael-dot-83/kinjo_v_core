@@ -309,9 +309,12 @@
 
 /* ── PRINT ───────────────────────────────────────────────────────── */
 @media print {
-  .cc-filters, .cs-scene, #geoTooltip, .cs-layer-toggles { display:none !important; }
+  .cc-filters, #geoTooltip, .cs-layer-toggles { display:none !important; }
+  .cs-scene { height:auto !important; min-height:400px !important; background:#fff !important; }
+  #googleMapContainer { background:#fff !important; height:400px !important; }
   .geo-cc { background:#fff !important; color:#000 !important; }
   .kpi-strip, .rankings-section, .risk-legend { display:block; }
+  body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
 </style>
 {% endblock %}

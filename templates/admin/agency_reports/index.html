@@ -1,39 +1,81 @@
-{% extends "admin_base.html" %}
-
-{% block title %}{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}{% endblock %}
-
-{% block extra_head %}
+{% extends "admin_base.html" %} {% block title %}{% if ui_lang == 'en'
+%}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}{% endblock
+%} {% block extra_head %}
 <link rel="stylesheet" href="/static/css/agency_reports.css?v=3.4" />
-{% endblock %}
-
-{% block content %}
-<section class="agency-reports-page" data-agency-reports-page="index" aria-labelledby="agency-reports-title">
-  <nav class="agency-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-    <a href="/admin/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a>
+{% endblock %} {% block content %}
+<section
+  class="agency-reports-page"
+  data-agency-reports-page="index"
+  aria-labelledby="agency-reports-title"
+>
+  <nav
+    class="agency-breadcrumb"
+    aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}"
+  >
+    <a href="/admin/dashboard"
+      >{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a
+    >
     <span aria-hidden="true">/</span>
-    <a href="/admin/analytics">{% if ui_lang == 'en' %}Reports &amp; Analytics{% else %}التقارير والتحليل{% endif %}</a>
+    <a href="/admin/analytics"
+      >{% if ui_lang == 'en' %}Reports &amp; Analytics{% else %}التقارير
+      والتحليل{% endif %}</a
+    >
     <span aria-hidden="true">/</span>
-    <span aria-current="page">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</span>
+    <span aria-current="page"
+      >{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات
+      الرسمية{% endif %}</span
+    >
   </nav>
 
   <header class="agency-page-header agency-page-header--flex">
     <div class="agency-logo-lockup">
-      <img src="/static/img/official-agencies-logo.svg" width="72" height="72" alt="" aria-hidden="true" class="agency-logo" />
+      <img
+        src="/static/img/official-agencies-logo.svg"
+        width="72"
+        height="72"
+        alt=""
+        aria-hidden="true"
+        class="agency-logo"
+      />
       <div>
-        <h1 id="agency-reports-title">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</h1>
-        <p>{% if ui_lang == 'en' %}Browse aggregated reports for official agencies, check data readiness, or build a custom report to support decisions.{% else %}استعرض التقارير التجميعية للجهات الرسمية، وتحقق من جاهزية البيانات، أو أنشئ تقريرًا مخصصًا لدعم القرار.{% endif %}</p>
-        <p class="agency-card-updated" id="agency-index-updated" aria-live="polite">
+        <h1 id="agency-reports-title">
+          {% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات
+          الرسمية{% endif %}
+        </h1>
+        <p>
+          {% if ui_lang == 'en' %}Browse aggregated reports for official
+          agencies, check data readiness, or build a custom report to support
+          decisions.{% else %}استعرض التقارير التجميعية للجهات الرسمية، وتحقق من
+          جاهزية البيانات، أو أنشئ تقريرًا مخصصًا لدعم القرار.{% endif %}
+        </p>
+        <p
+          class="agency-card-updated"
+          id="agency-index-updated"
+          aria-live="polite"
+        >
           <i class="bi bi-clock" aria-hidden="true"></i>
-          {% if ui_lang == 'en' %}Last updated: &mdash;{% else %}آخر تحديث: ـ{% endif %}
+          {% if ui_lang == 'en' %}Last updated: &mdash;{% else %}آخر تحديث: ـ{%
+          endif %}
         </p>
       </div>
     </div>
     <div class="agency-header-actions">
-      <button type="button" class="admin-btn admin-btn-primary" id="cta-create-custom">
+      <button
+        type="button"
+        class="admin-btn admin-btn-primary"
+        id="cta-create-custom"
+      >
         <i class="bi bi-plus-circle" aria-hidden="true"></i>
-        {% if ui_lang == 'en' %}Create custom report{% else %}إنشاء تقرير مخصص{% endif %}
+        {% if ui_lang == 'en' %}Create custom report{% else %}إنشاء تقرير مخصص{%
+        endif %}
       </button>
-      <button type="button" class="admin-btn admin-btn-secondary" id="open-usage-guide" aria-haspopup="dialog" aria-controls="usage-guide-dialog">
+      <button
+        type="button"
+        class="admin-btn admin-btn-secondary"
+        id="open-usage-guide"
+        aria-haspopup="dialog"
+        aria-controls="usage-guide-dialog"
+      >
         <i class="bi bi-question-circle" aria-hidden="true"></i>
         {% if ui_lang == 'en' %}Usage guide{% else %}دليل الاستخدام{% endif %}
       </button>
@@ -42,69 +84,166 @@
 
   <!-- Compact privacy & security notice -->
   <div class="agency-privacy-notice" role="note">
-    <span class="agency-privacy-notice__icon" aria-hidden="true"><i class="bi bi-shield-fill-check"></i></span>
+    <span class="agency-privacy-notice__icon" aria-hidden="true"
+      ><i class="bi bi-shield-fill-check"></i
+    ></span>
     <span class="agency-privacy-notice__text">
-      {% if ui_lang == 'en' %}This page displays statistical and aggregated data only to support decision-making. No personal or sensitive data is displayed.{% else %}تعرض هذه الصفحة بيانات إحصائية وتجميعية فقط لدعم القرار، ولا تعرض أي بيانات شخصية أو حساسة.{% endif %}
+      {% if ui_lang == 'en' %}This page displays statistical and aggregated data
+      only to support decision-making. No personal or sensitive data is
+      displayed.{% else %}تعرض هذه الصفحة بيانات إحصائية وتجميعية فقط لدعم
+      القرار، ولا تعرض أي بيانات شخصية أو حساسة.{% endif %}
     </span>
   </div>
 
   <!-- Tabs -->
-  <div class="agency-tabs" role="tablist" aria-label="{% if ui_lang == 'en' %}Agency reports sections{% else %}أقسام تقارير الجهات{% endif %}">
-    <button type="button" role="tab" id="tab-agencies" class="agency-tab" aria-selected="true" aria-controls="panel-agencies">
+  <div
+    class="agency-tabs"
+    role="tablist"
+    aria-label="{% if ui_lang == 'en' %}Agency reports sections{% else %}أقسام تقارير الجهات{% endif %}"
+  >
+    <button
+      type="button"
+      role="tab"
+      id="tab-agencies"
+      class="agency-tab"
+      aria-selected="true"
+      aria-controls="panel-agencies"
+    >
       <i class="bi bi-buildings" aria-hidden="true"></i>
       {% if ui_lang == 'en' %}Agency reports{% else %}تقارير الجهات{% endif %}
     </button>
-    <button type="button" role="tab" id="tab-custom" class="agency-tab" aria-selected="false" aria-controls="panel-custom" tabindex="-1">
+    <button
+      type="button"
+      role="tab"
+      id="tab-custom"
+      class="agency-tab"
+      aria-selected="false"
+      aria-controls="panel-custom"
+      tabindex="-1"
+    >
       <i class="bi bi-sliders" aria-hidden="true"></i>
-      {% if ui_lang == 'en' %}Create custom report{% else %}إنشاء تقرير مخصص{% endif %}
+      {% if ui_lang == 'en' %}Create custom report{% else %}إنشاء تقرير مخصص{%
+      endif %}
     </button>
   </div>
 
   <!-- ===================== Panel 1: Agency Reports ===================== -->
-  <div id="panel-agencies" class="agency-tabpanel" role="tabpanel" aria-labelledby="tab-agencies" tabindex="0">
+  <div
+    id="panel-agencies"
+    class="agency-tabpanel"
+    role="tabpanel"
+    aria-labelledby="tab-agencies"
+    tabindex="0"
+  >
     <!-- KPI summary -->
-    <ul id="agency-kpi-grid" class="agency-kpi-grid" aria-label="{% if ui_lang == 'en' %}Reporting summary{% else %}ملخص التقارير{% endif %}">
+    <ul
+      id="agency-kpi-grid"
+      class="agency-kpi-grid"
+      aria-label="{% if ui_lang == 'en' %}Reporting summary{% else %}ملخص التقارير{% endif %}"
+    >
       <!-- Populated by JS from catalog API -->
     </ul>
 
     <!-- Toolbar -->
-    <div id="agency-toolbar" class="agency-toolbar" role="search" aria-label="{% if ui_lang == 'en' %}Filter agencies{% else %}تصفية الجهات{% endif %}" hidden>
+    <div
+      id="agency-toolbar"
+      class="agency-toolbar"
+      role="search"
+      aria-label="{% if ui_lang == 'en' %}Filter agencies{% else %}تصفية الجهات{% endif %}"
+      hidden
+    >
       <div class="agency-toolbar__search">
-        <label for="agency-search" class="visually-hidden">{% if ui_lang == 'en' %}Search agencies or reports{% else %}ابحث عن جهة أو تقرير{% endif %}</label>
-        <i class="bi bi-search agency-toolbar__search-icon" aria-hidden="true"></i>
-        <input type="search" id="agency-search" class="agency-toolbar__input" autocomplete="off"
-               placeholder="{% if ui_lang == 'en' %}Search for an agency or report...{% else %}ابحث عن جهة أو تقرير...{% endif %}" />
+        <label for="agency-search" class="visually-hidden"
+          >{% if ui_lang == 'en' %}Search agencies or reports{% else %}ابحث عن
+          جهة أو تقرير{% endif %}</label
+        >
+        <i
+          class="bi bi-search agency-toolbar__search-icon"
+          aria-hidden="true"
+        ></i>
+        <input
+          type="search"
+          id="agency-search"
+          class="agency-toolbar__input"
+          autocomplete="off"
+          placeholder="{% if ui_lang == 'en' %}Search for an agency or report...{% else %}ابحث عن جهة أو تقرير...{% endif %}"
+        />
       </div>
       <div class="agency-toolbar__control">
-        <label for="agency-status-filter">{% if ui_lang == 'en' %}Readiness{% else %}الجاهزية{% endif %}</label>
+        <label for="agency-status-filter"
+          >{% if ui_lang == 'en' %}Readiness{% else %}الجاهزية{% endif %}</label
+        >
         <select id="agency-status-filter">
-          <option value="all">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
-          <option value="ready">{% if ui_lang == 'en' %}Ready{% else %}جاهز{% endif %}</option>
-          <option value="partial">{% if ui_lang == 'en' %}Partially ready{% else %}جاهز جزئيًا{% endif %}</option>
-          <option value="needs_data">{% if ui_lang == 'en' %}Needs data{% else %}يحتاج إلى بيانات{% endif %}</option>
+          <option value="all">
+            {% if ui_lang == 'en' %}All{% else %}الكل{% endif %}
+          </option>
+          <option value="ready">
+            {% if ui_lang == 'en' %}Ready{% else %}جاهز{% endif %}
+          </option>
+          <option value="partial">
+            {% if ui_lang == 'en' %}Partially ready{% else %}جاهز جزئيًا{% endif
+            %}
+          </option>
+          <option value="needs_data">
+            {% if ui_lang == 'en' %}Needs data{% else %}يحتاج إلى بيانات{% endif
+            %}
+          </option>
         </select>
       </div>
       <div class="agency-toolbar__control">
-        <label for="agency-sort">{% if ui_lang == 'en' %}Sort by{% else %}الترتيب{% endif %}</label>
+        <label for="agency-sort"
+          >{% if ui_lang == 'en' %}Sort by{% else %}الترتيب{% endif %}</label
+        >
         <select id="agency-sort">
-          <option value="name">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</option>
-          <option value="reports">{% if ui_lang == 'en' %}Report count{% else %}عدد التقارير{% endif %}</option>
-          <option value="readiness">{% if ui_lang == 'en' %}Readiness{% else %}مستوى الجاهزية{% endif %}</option>
+          <option value="name">
+            {% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}
+          </option>
+          <option value="reports">
+            {% if ui_lang == 'en' %}Report count{% else %}عدد التقارير{% endif
+            %}
+          </option>
+          <option value="readiness">
+            {% if ui_lang == 'en' %}Readiness{% else %}مستوى الجاهزية{% endif %}
+          </option>
         </select>
       </div>
       <div class="agency-toolbar__date">
-        <label for="agency-date-from">{% if ui_lang == 'en' %}From{% else %}من{% endif %}</label>
-        <input type="date" id="agency-date-from" class="form-control form-control-sm" aria-label="{% if ui_lang == 'en' %}Start date{% else %}تاريخ البداية{% endif %}">
+        <label for="agency-date-from"
+          >{% if ui_lang == 'en' %}From{% else %}من{% endif %}</label
+        >
+        <input
+          type="date"
+          id="agency-date-from"
+          class="form-control form-control-sm"
+          aria-label="{% if ui_lang == 'en' %}Start date{% else %}تاريخ البداية{% endif %}"
+        />
       </div>
       <div class="agency-toolbar__date">
-        <label for="agency-date-to">{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}</label>
-        <input type="date" id="agency-date-to" class="form-control form-control-sm" aria-label="{% if ui_lang == 'en' %}End date{% else %}تاريخ النهاية{% endif %}">
+        <label for="agency-date-to"
+          >{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}</label
+        >
+        <input
+          type="date"
+          id="agency-date-to"
+          class="form-control form-control-sm"
+          aria-label="{% if ui_lang == 'en' %}End date{% else %}تاريخ النهاية{% endif %}"
+        />
       </div>
       <div class="agency-toolbar__meta">
-        <span id="agency-result-count" class="agency-result-count" aria-live="polite"></span>
-        <button type="button" class="agency-clear-btn" id="agency-clear-filters" hidden>
+        <span
+          id="agency-result-count"
+          class="agency-result-count"
+          aria-live="polite"
+        ></span>
+        <button
+          type="button"
+          class="agency-clear-btn"
+          id="agency-clear-filters"
+          hidden
+        >
           <i class="bi bi-x-circle" aria-hidden="true"></i>
-          {% if ui_lang == 'en' %}Clear filters{% else %}مسح عوامل التصفية{% endif %}
+          {% if ui_lang == 'en' %}Clear filters{% else %}مسح عوامل التصفية{%
+          endif %}
         </button>
       </div>
     </div>
@@ -114,71 +253,151 @@
   </div>
 
   <!-- ===================== Panel 2: Custom Reports ===================== -->
-  <div id="panel-custom" class="agency-tabpanel" role="tabpanel" aria-labelledby="tab-custom" tabindex="0" hidden>
-    <section class="agency-custom-reports" id="custom-reports" aria-labelledby="custom-reports-title">
+  <div
+    id="panel-custom"
+    class="agency-tabpanel"
+    role="tabpanel"
+    aria-labelledby="tab-custom"
+    tabindex="0"
+    hidden
+  >
+    <section
+      class="agency-custom-reports"
+      id="custom-reports"
+      aria-labelledby="custom-reports-title"
+    >
       <header class="agency-section-header">
         <h2 id="custom-reports-title">
-          {% if ui_lang == 'en' %}Custom Reports{% else %}التقارير المخصصة{% endif %}
-          <span class="agency-section-subtitle">{% if ui_lang == 'en' %}Flexible aggregated decision-support reports{% else %}تقارير تجميعية مرنة لدعم القرار{% endif %}</span>
+          {% if ui_lang == 'en' %}Custom Reports{% else %}التقارير المخصصة{%
+          endif %}
+          <span class="agency-section-subtitle"
+            >{% if ui_lang == 'en' %}Flexible aggregated decision-support
+            reports{% else %}تقارير تجميعية مرنة لدعم القرار{% endif %}</span
+          >
         </h2>
         <p>
-          {% if ui_lang == 'en' %}Build a flexible, aggregated report for an official agency by choosing the scope, period, geography and indicators. Aggregated data only — no personal data.{% else %}ابنِ تقريرًا تجميعيًا مرنًا لجهة رسمية باختيار النطاق الجغرافي وفترة تجميع البيانات والمؤشرات. بيانات تجميعية فقط دون أي بيانات شخصية.{% endif %}
+          {% if ui_lang == 'en' %}Build a flexible, aggregated report for an
+          official agency by choosing the scope, period, geography and
+          indicators. Aggregated data only — no personal data.{% else %}ابنِ
+          تقريرًا تجميعيًا مرنًا لجهة رسمية باختيار النطاق الجغرافي وفترة تجميع
+          البيانات والمؤشرات. بيانات تجميعية فقط دون أي بيانات شخصية.{% endif %}
         </p>
       </header>
 
       <form id="custom-report-form" class="custom-report-form" novalidate>
-        <div id="custom-report-controls" class="custom-report-controls" aria-busy="true" role="status" aria-live="polite">
-          {% if ui_lang == 'en' %}Loading report options...{% else %}جارٍ تحميل خيارات التقرير...{% endif %}
+        <div
+          id="custom-report-controls"
+          class="custom-report-controls"
+          aria-busy="true"
+          role="status"
+          aria-live="polite"
+        >
+          {% if ui_lang == 'en' %}Loading report options...{% else %}جارٍ تحميل
+          خيارات التقرير...{% endif %}
         </div>
-        <div id="cr-agency-preview" class="custom-agency-preview" aria-live="polite" hidden></div>
+        <div
+          id="cr-agency-preview"
+          class="custom-agency-preview"
+          aria-live="polite"
+          hidden
+        ></div>
         <div class="custom-report-actions" hidden id="custom-report-action-bar">
-          <button type="submit" class="admin-btn admin-btn-primary" id="custom-report-run">
+          <button
+            type="submit"
+            class="admin-btn admin-btn-primary"
+            id="custom-report-run"
+          >
             <i class="bi bi-play-circle" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Generate report{% else %}إنشاء التقرير{% endif %}
+            {% if ui_lang == 'en' %}Generate report{% else %}إنشاء التقرير{%
+            endif %}
           </button>
-          <button type="button" class="admin-btn admin-btn-secondary" id="custom-report-reset">
+          <button
+            type="button"
+            class="admin-btn admin-btn-secondary"
+            id="custom-report-reset"
+          >
             {% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
           </button>
         </div>
       </form>
 
-      <div id="custom-report-result" class="custom-report-result" role="region" aria-live="polite"
-           aria-label="{% if ui_lang == 'en' %}Custom report result{% else %}نتيجة التقرير المخصص{% endif %}"></div>
+      <div
+        id="custom-report-result"
+        class="custom-report-result"
+        role="region"
+        aria-live="polite"
+        aria-label="{% if ui_lang == 'en' %}Custom report result{% else %}نتيجة التقرير المخصص{% endif %}"
+      ></div>
     </section>
   </div>
 
   <!-- Footer Privacy Note -->
   <footer class="agency-footer-privacy" role="contentinfo">
     <i class="bi bi-lock-fill" aria-hidden="true"></i>
-    {% if ui_lang == 'en' %}This page displays statistical and aggregated data only to support decision-making. No personal or sensitive data is displayed.{% else %}تعرض هذه الصفحة بيانات إحصائية وتجميعية فقط لدعم القرار، ولا تعرض أي بيانات شخصية أو حساسة.{% endif %}
+    {% if ui_lang == 'en' %}This page displays statistical and aggregated data
+    only to support decision-making. No personal or sensitive data is
+    displayed.{% else %}تعرض هذه الصفحة بيانات إحصائية وتجميعية فقط لدعم القرار،
+    ولا تعرض أي بيانات شخصية أو حساسة.{% endif %}
   </footer>
 </section>
 
 <!-- Usage guide drawer (native dialog: focus trap + Esc + backdrop) -->
-<dialog id="usage-guide-dialog" class="agency-drawer" aria-labelledby="usage-guide-title">
+<dialog
+  id="usage-guide-dialog"
+  class="agency-drawer"
+  aria-labelledby="usage-guide-title"
+>
   <div class="agency-drawer__head">
-    <h2 id="usage-guide-title">{% if ui_lang == 'en' %}How to Use Official Agency Reports{% else %}دليل استخدام تقارير الجهات الرسمية{% endif %}</h2>
-    <button type="button" class="agency-drawer__close" id="close-usage-guide" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}">
+    <h2 id="usage-guide-title">
+      {% if ui_lang == 'en' %}How to Use Official Agency Reports{% else %}دليل
+      استخدام تقارير الجهات الرسمية{% endif %}
+    </h2>
+    <button
+      type="button"
+      class="agency-drawer__close"
+      id="close-usage-guide"
+      aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"
+    >
       <i class="bi bi-x-lg" aria-hidden="true"></i>
     </button>
   </div>
   <div class="agency-drawer__body">
     <ol>
-      <li>{% if ui_lang == 'en' %}Pick an official agency to see its available aggregated reports.{% else %}اختر جهة رسمية لعرض تقاريرها التجميعية المتاحة.{% endif %}</li>
-      <li>{% if ui_lang == 'en' %}Use the readiness badge to tell ready reports from those still needing data.{% else %}استخدم شارة الجاهزية للتمييز بين التقارير الجاهزة وتلك التي تحتاج إلى بيانات.{% endif %}</li>
-      <li>{% if ui_lang == 'en' %}Set a date range in the toolbar to filter reports by period.{% else %}حدد نطاقًا زمنيًا في شريط الأدوات لتصفية التقارير حسب الفترة.{% endif %}</li>
-      <li>{% if ui_lang == 'en' %}Open an agency, set the period and geographic scope, then export as CSV.{% else %}افتح الجهة، وحدّد الفترة الزمنية والنطاق الجغرافي، ثم صدّر النتائج بصيغة CSV.{% endif %}</li>
-      <li>{% if ui_lang == 'en' %}To combine indicators across a scope, use “Create custom report”.{% else %}لدمج مؤشرات ضمن نطاق محدد، استخدم «إنشاء تقرير مخصص».{% endif %}</li>
+      <li>
+        {% if ui_lang == 'en' %}Pick an official agency to see its available
+        aggregated reports.{% else %}اختر جهة رسمية لعرض تقاريرها التجميعية
+        المتاحة.{% endif %}
+      </li>
+      <li>
+        {% if ui_lang == 'en' %}Use the readiness badge to tell ready reports
+        from those still needing data.{% else %}استخدم شارة الجاهزية للتمييز بين
+        التقارير الجاهزة وتلك التي تحتاج إلى بيانات.{% endif %}
+      </li>
+      <li>
+        {% if ui_lang == 'en' %}Set a date range in the toolbar to filter
+        reports by period.{% else %}حدد نطاقًا زمنيًا في شريط الأدوات لتصفية
+        التقارير حسب الفترة.{% endif %}
+      </li>
+      <li>
+        {% if ui_lang == 'en' %}Open an agency, set the period and geographic
+        scope, then export as CSV.{% else %}افتح الجهة، وحدّد الفترة الزمنية
+        والنطاق الجغرافي، ثم صدّر النتائج بصيغة CSV.{% endif %}
+      </li>
+      <li>
+        {% if ui_lang == 'en' %}To combine indicators across a scope, use
+        “Create custom report”.{% else %}لدمج مؤشرات ضمن نطاق محدد، استخدم
+        «إنشاء تقرير مخصص».{% endif %}
+      </li>
     </ol>
     <p class="agency-drawer__note">
       <i class="bi bi-shield-check" aria-hidden="true"></i>
-      {% if ui_lang == 'en' %}All reports are aggregated only — no personal or sensitive fields are ever exposed.{% else %}جميع التقارير تجميعية فقط، ولا تُعرض أي حقول شخصية أو حساسة.{% endif %}
+      {% if ui_lang == 'en' %}All reports are aggregated only — no personal or
+      sensitive fields are ever exposed.{% else %}جميع التقارير تجميعية فقط، ولا
+      تُعرض أي حقول شخصية أو حساسة.{% endif %}
     </p>
   </div>
 </dialog>
-{% endblock %}
-
-{% block extra_scripts %}
-<script src="/static/js/admin_agency_reports.js?v=3.2"></script>
+{% endblock %} {% block extra_scripts %}
+<script src="/static/js/admin_agency_reports.js?v=3.3"></script>
 <script src="/static/js/admin_agency_reports_custom.js?v=3.2"></script>
 {% endblock %}

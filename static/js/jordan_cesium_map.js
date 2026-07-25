@@ -113,6 +113,16 @@ document.addEventListener('DOMContentLoaded', () => {
   ensureMapLoadingState();
   bindUiEvents();
   // initGoogleMap() is called by _gmapsLoaded() once the API script loads
+
+  // Ensure print/export does not capture transient loading overlays.
+  window.addEventListener('beforeprint', () => {
+    const loading = document.querySelector('.map-loading-state');
+    if (loading) loading.style.display = 'none';
+  });
+  window.addEventListener('afterprint', () => {
+    const loading = document.querySelector('.map-loading-state');
+    if (loading) loading.style.display = '';
+  });
 });
 
 function _gmapsLoaded() {
@@ -1194,7 +1204,25 @@ function exportAllCSV() {
 
 function exportToPDF() {
   showHeatmapToast('جاري تجهيز التقرير للطباعة...', 'info');
-  setTimeout(() => window.print(), 800);
+  // Wait for map data, KG pins, AND a short tile-render delay before printing.
+  const ready = () => {
+    if (CsApp.dataLoaded && CsApp.kgLoaded) {
+      // Hide transient UI that should not appear in the printed output.
+      const tooltip = document.getElementById('geoTooltip');
+      if (tooltip) tooltip.style.display = 'none';
+      const warnings = document.getElementById('dataQualityStrip');
+      if (warnings) warnings.style.display = 'none';
+      window.print();
+      // Restore transient UI after the print dialog closes.
+      setTimeout(() => {
+        if (tooltip) tooltip.style.display = '';
+        if (warnings) warnings.style.display = '';
+      }, 300);
+    } else {
+      setTimeout(ready, 200);
+    }
+  };
+  setTimeout(ready, 400);
 }
 
 function exportGovReport(slug, name) {

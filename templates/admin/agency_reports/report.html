@@ -1,24 +1,50 @@
-{% extends "admin_base.html" %}
-
-{% block title %}{% if ui_lang == 'en' %}Official Report{% else %}تقرير رسمي{% endif %}{% endblock %}
-
-{% block extra_head %}
+{% extends "admin_base.html" %} {% block title %}{% if ui_lang == 'en'
+%}Official Report{% else %}تقرير رسمي{% endif %}{% endblock %} {% block
+extra_head %}
 <link rel="stylesheet" href="/static/css/agency_reports.css?v=3.4" />
-{% endblock %}
-
-{% block content %}
-<section class="agency-reports-page" data-agency-reports-page="report" data-agency-code="{{ agency_code }}" data-report-code="{{ report_code }}" aria-labelledby="agency-report-title">
-  <nav class="agency-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-    <a href="/admin/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a>
+{% endblock %} {% block content %}
+<section
+  class="agency-reports-page"
+  data-agency-reports-page="report"
+  data-agency-code="{{ agency_code }}"
+  data-report-code="{{ report_code }}"
+  aria-labelledby="agency-report-title"
+>
+  <nav
+    class="agency-breadcrumb"
+    aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}"
+  >
+    <a href="/admin/dashboard"
+      >{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a
+    >
     <span aria-hidden="true">/</span>
-    <a href="/admin/agency-reports">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</a>
+    <a href="/admin/agency-reports"
+      >{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات
+      الرسمية{% endif %}</a
+    >
     <span aria-hidden="true">/</span>
-    <a href="/admin/agency-reports/{{ agency_code }}" id="breadcrumb-agency-name">{{ agency_code }}</a>
+    <a
+      href="/admin/agency-reports/{{ agency_code }}"
+      id="breadcrumb-agency-name"
+      >{{ agency_code }}</a
+    >
     <span aria-hidden="true">/</span>
-    <span aria-current="page" id="breadcrumb-report-name">{{ report_code }}</span>
+    <span aria-current="page" id="breadcrumb-report-name"
+      >{{ report_code }}</span
+    >
   </nav>
-  <div id="agency-drill-breadcrumb" class="agency-drill-breadcrumb d-none" role="navigation" aria-label="{% if ui_lang == 'en' %}Drill-down path{% else %}مسار التصفح المتعمق{% endif %}">
-    <button type="button" class="admin-btn admin-btn-secondary admin-btn-sm" id="agency-drill-reset" aria-label="{% if ui_lang == 'en' %}Reset drill-down{% else %}إعادة تعيين التصفح المتعمق{% endif %}">
+  <div
+    id="agency-drill-breadcrumb"
+    class="agency-drill-breadcrumb d-none"
+    role="navigation"
+    aria-label="{% if ui_lang == 'en' %}Drill-down path{% else %}مسار التصفح المتعمق{% endif %}"
+  >
+    <button
+      type="button"
+      class="admin-btn admin-btn-secondary admin-btn-sm"
+      id="agency-drill-reset"
+      aria-label="{% if ui_lang == 'en' %}Reset drill-down{% else %}إعادة تعيين التصفح المتعمق{% endif %}"
+    >
       <i class="bi bi-arrow-left" aria-hidden="true"></i>
       {% if ui_lang == 'en' %}Back to all{% else %}عرض الكل{% endif %}
     </button>
@@ -29,81 +55,172 @@
     <div class="agency-logo-lockup">
       <div id="report-agency-logo"></div>
       <div>
-        <h1 id="agency-report-title">{% if ui_lang == 'en' %}Official Report{% else %}تقرير رسمي{% endif %}</h1>
+        <h1 id="agency-report-title">
+          {% if ui_lang == 'en' %}Official Report{% else %}تقرير رسمي{% endif %}
+        </h1>
         <p id="agency-report-description"></p>
       </div>
     </div>
-    <div class="agency-privacy-badge" aria-label="{% if ui_lang == 'en' %}Aggregated data only{% else %}بيانات تجميعية فقط{% endif %}">
+    <div
+      class="agency-privacy-badge"
+      aria-label="{% if ui_lang == 'en' %}Aggregated data only{% else %}بيانات تجميعية فقط{% endif %}"
+    >
       <i class="bi bi-shield-check" aria-hidden="true"></i>
-      {% if ui_lang == 'en' %}Aggregated data only — no personal data{% else %}بيانات تجميعية فقط - لا توجد بيانات شخصية{% endif %}
+      {% if ui_lang == 'en' %}Aggregated data only — no personal data{% else
+      %}بيانات تجميعية فقط - لا توجد بيانات شخصية{% endif %}
     </div>
-    <div id="agency-data-quality-badge" class="agency-dq-badge" aria-live="polite"></div>
+    <div
+      id="agency-data-quality-badge"
+      class="agency-dq-badge"
+      aria-live="polite"
+    ></div>
   </header>
 
   <!-- Help Panel -->
   <details class="agency-help-panel">
     <summary class="agency-help-summary">
       <i class="bi bi-question-circle" aria-hidden="true"></i>
-      {% if ui_lang == 'en' %}How to Use This Report{% else %}كيفية استخدام التقرير{% endif %}
+      {% if ui_lang == 'en' %}How to Use This Report{% else %}كيفية استخدام
+      التقرير{% endif %}
     </summary>
     <div class="agency-help-body">
       <ol>
-        <li>{% if ui_lang == 'en' %}Select the data aggregation period.{% else %}اختر فترة تجميع البيانات.{% endif %}</li>
-        <li>{% if ui_lang == 'en' %}Select a governorate when needed.{% else %}حدد المحافظة عند الحاجة.{% endif %}</li>
-        <li>{% if ui_lang == 'en' %}Then select a district and area if available.{% else %}اختر قصبة / لواء ثم المنطقة إذا كانت متاحة.{% endif %}</li>
-        <li>{% if ui_lang == 'en' %}Click Apply Filters.{% else %}اضغط تطبيق الفلاتر.{% endif %}</li>
-        <li>{% if ui_lang == 'en' %}Review the summary and chart.{% else %}راجع الملخص والرسم البياني.{% endif %}</li>
-        <li>{% if ui_lang == 'en' %}Use CSV export or chart export as needed.{% else %}استخدم تصدير CSV أو تصدير الرسم البياني عند الحاجة.{% endif %}</li>
+        <li>
+          {% if ui_lang == 'en' %}Select the data aggregation period.{% else
+          %}اختر فترة تجميع البيانات.{% endif %}
+        </li>
+        <li>
+          {% if ui_lang == 'en' %}Select a governorate when needed.{% else %}حدد
+          المحافظة عند الحاجة.{% endif %}
+        </li>
+        <li>
+          {% if ui_lang == 'en' %}Then select a district and area if
+          available.{% else %}اختر قصبة / لواء ثم المنطقة إذا كانت متاحة.{%
+          endif %}
+        </li>
+        <li>
+          {% if ui_lang == 'en' %}Click Apply Filters.{% else %}اضغط تطبيق
+          الفلاتر.{% endif %}
+        </li>
+        <li>
+          {% if ui_lang == 'en' %}Review the summary and chart.{% else %}راجع
+          الملخص والرسم البياني.{% endif %}
+        </li>
+        <li>
+          {% if ui_lang == 'en' %}Use CSV export or chart export as needed.{%
+          else %}استخدم تصدير CSV أو تصدير الرسم البياني عند الحاجة.{% endif %}
+        </li>
       </ol>
     </div>
   </details>
 
   <!-- Filters -->
-  <form id="agency-report-filters" class="agency-filter-panel" aria-label="{% if ui_lang == 'en' %}Report filters{% else %}فلاتر التقرير{% endif %}">
+  <form
+    id="agency-report-filters"
+    class="agency-filter-panel"
+    aria-label="{% if ui_lang == 'en' %}Report filters{% else %}فلاتر التقرير{% endif %}"
+  >
     <div class="agency-filter-field">
-      <label for="filter-governorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+      <label for="filter-governorate"
+        >{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label
+      >
       <select id="filter-governorate" name="governorate">
-        <option value="">{% if ui_lang == 'en' %}All governorates{% else %}كل المحافظات{% endif %}</option>
-        <option value="العاصمة">{% if ui_lang == 'en' %}العاصمة (Amman){% else %}العاصمة{% endif %}</option>
-        <option value="إربد">{% if ui_lang == 'en' %}إربد (Irbid){% else %}إربد{% endif %}</option>
-        <option value="الزرقاء">{% if ui_lang == 'en' %}الزرقاء (Zarqa){% else %}الزرقاء{% endif %}</option>
-        <option value="البلقاء">{% if ui_lang == 'en' %}البلقاء (Balqa){% else %}البلقاء{% endif %}</option>
-        <option value="مادبا">{% if ui_lang == 'en' %}مادبا (Madaba){% else %}مادبا{% endif %}</option>
-        <option value="الكرك">{% if ui_lang == 'en' %}الكرك (Karak){% else %}الكرك{% endif %}</option>
-        <option value="الطفيلة">{% if ui_lang == 'en' %}الطفيلة (Tafilah){% else %}الطفيلة{% endif %}</option>
-        <option value="معان">{% if ui_lang == 'en' %}معان (Ma'an){% else %}معان{% endif %}</option>
-        <option value="العقبة">{% if ui_lang == 'en' %}العقبة (Aqaba){% else %}العقبة{% endif %}</option>
-        <option value="جرش">{% if ui_lang == 'en' %}جرش (Jerash){% else %}جرش{% endif %}</option>
-        <option value="عجلون">{% if ui_lang == 'en' %}عجلون (Ajloun){% else %}عجلون{% endif %}</option>
-        <option value="المفرق">{% if ui_lang == 'en' %}المفرق (Mafraq){% else %}المفرق{% endif %}</option>
+        <option value="">
+          {% if ui_lang == 'en' %}All governorates{% else %}كل المحافظات{% endif
+          %}
+        </option>
+        <option value="العاصمة">
+          {% if ui_lang == 'en' %}العاصمة (Amman){% else %}العاصمة{% endif %}
+        </option>
+        <option value="إربد">
+          {% if ui_lang == 'en' %}إربد (Irbid){% else %}إربد{% endif %}
+        </option>
+        <option value="الزرقاء">
+          {% if ui_lang == 'en' %}الزرقاء (Zarqa){% else %}الزرقاء{% endif %}
+        </option>
+        <option value="البلقاء">
+          {% if ui_lang == 'en' %}البلقاء (Balqa){% else %}البلقاء{% endif %}
+        </option>
+        <option value="مادبا">
+          {% if ui_lang == 'en' %}مادبا (Madaba){% else %}مادبا{% endif %}
+        </option>
+        <option value="الكرك">
+          {% if ui_lang == 'en' %}الكرك (Karak){% else %}الكرك{% endif %}
+        </option>
+        <option value="الطفيلة">
+          {% if ui_lang == 'en' %}الطفيلة (Tafilah){% else %}الطفيلة{% endif %}
+        </option>
+        <option value="معان">
+          {% if ui_lang == 'en' %}معان (Ma'an){% else %}معان{% endif %}
+        </option>
+        <option value="العقبة">
+          {% if ui_lang == 'en' %}العقبة (Aqaba){% else %}العقبة{% endif %}
+        </option>
+        <option value="جرش">
+          {% if ui_lang == 'en' %}جرش (Jerash){% else %}جرش{% endif %}
+        </option>
+        <option value="عجلون">
+          {% if ui_lang == 'en' %}عجلون (Ajloun){% else %}عجلون{% endif %}
+        </option>
+        <option value="المفرق">
+          {% if ui_lang == 'en' %}المفرق (Mafraq){% else %}المفرق{% endif %}
+        </option>
       </select>
     </div>
     <div class="agency-filter-field">
-      <label for="filter-district">{% if ui_lang == 'en' %}District / Sub-district{% else %}قصبة / لواء{% endif %}</label>
+      <label for="filter-district"
+        >{% if ui_lang == 'en' %}District / Sub-district{% else %}قصبة / لواء{%
+        endif %}</label
+      >
       <select id="filter-district" name="district" disabled>
-        <option value="">{% if ui_lang == 'en' %}Select governorate first{% else %}اختر المحافظة أولاً{% endif %}</option>
+        <option value="">
+          {% if ui_lang == 'en' %}Select governorate first{% else %}اختر
+          المحافظة أولاً{% endif %}
+        </option>
       </select>
     </div>
     <div class="agency-filter-field">
-      <label for="filter-area">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</label>
+      <label for="filter-area"
+        >{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</label
+      >
       <select id="filter-area" name="area" disabled>
-        <option value="">{% if ui_lang == 'en' %}Select district first{% else %}اختر قصبة / لواء أولاً{% endif %}</option>
+        <option value="">
+          {% if ui_lang == 'en' %}Select district first{% else %}اختر قصبة /
+          لواء أولاً{% endif %}
+        </option>
       </select>
     </div>
     <div class="agency-filter-field">
-      <label for="filter-gender">{% if ui_lang == 'en' %}Gender{% else %}الجنس{% endif %}</label>
+      <label for="filter-gender"
+        >{% if ui_lang == 'en' %}Gender{% else %}الجنس{% endif %}</label
+      >
       <select id="filter-gender" name="gender">
-        <option value="">{% if ui_lang == 'en' %}All genders{% else %}كل الأجناس{% endif %}</option>
-        <option value="male">{% if ui_lang == 'en' %}Male{% else %}ذكر{% endif %}</option>
-        <option value="female">{% if ui_lang == 'en' %}Female{% else %}أنثى{% endif %}</option>
+        <option value="">
+          {% if ui_lang == 'en' %}All genders{% else %}كل الأجناس{% endif %}
+        </option>
+        <option value="male">
+          {% if ui_lang == 'en' %}Male{% else %}ذكر{% endif %}
+        </option>
+        <option value="female">
+          {% if ui_lang == 'en' %}Female{% else %}أنثى{% endif %}
+        </option>
       </select>
     </div>
     <div class="agency-filter-field">
-      <label for="filter-aggregation-level">{% if ui_lang == 'en' %}Aggregation level{% else %}مستوى التجميع{% endif %}</label>
+      <label for="filter-aggregation-level"
+        >{% if ui_lang == 'en' %}Aggregation level{% else %}مستوى التجميع{%
+        endif %}</label
+      >
       <select id="filter-aggregation-level" name="aggregation_level">
-        <option value="governorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</option>
-        <option value="district">{% if ui_lang == 'en' %}District{% else %}قصبة / لواء{% endif %}</option>
-        <option value="area">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</option>
+        <option value="governorate">
+          {% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
+        </option>
+        <option value="district">
+          {% if ui_lang == 'en' %}District{% else %}قصبة / لواء{% endif %}
+        </option>
+        <option value="area">
+          {% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}
+        </option>
       </select>
     </div>
     <div class="agency-filter-actions">
@@ -111,7 +228,11 @@
         <i class="bi bi-funnel" aria-hidden="true"></i>
         {% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}
       </button>
-      <button type="button" class="admin-btn admin-btn-secondary" id="filter-reset-btn">
+      <button
+        type="button"
+        class="admin-btn admin-btn-secondary"
+        id="filter-reset-btn"
+      >
         {% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
       </button>
     </div>
@@ -119,110 +240,198 @@
 
   {% if agency_code == 'moh' and report_code == 'vaccination_due_children' %}
   <!-- National immunization schedule upload (drives this report) -->
-  <section class="agency-upload-panel" aria-labelledby="immunization-upload-title" style="margin:1rem 0;padding:1.25rem;border:1px solid var(--admin-border,#d9dee6);border-radius:12px;background:var(--admin-surface,#fff);">
-    <h2 id="immunization-upload-title" style="margin:0 0 .35rem;font-size:1.05rem;">
+  <section
+    class="agency-upload-panel"
+    aria-labelledby="immunization-upload-title"
+    style="
+      margin: 1rem 0;
+      padding: 1.25rem;
+      border: 1px solid var(--admin-border, #d9dee6);
+      border-radius: 12px;
+      background: var(--admin-surface, #fff);
+    "
+  >
+    <h2
+      id="immunization-upload-title"
+      style="margin: 0 0 0.35rem; font-size: 1.05rem"
+    >
       <i class="bi bi-file-earmark-medical" aria-hidden="true"></i>
-      {% if ui_lang == 'en' %}National Immunization Schedule{% else %}جدول المطاعيم الوطني{% endif %}
+      {% if ui_lang == 'en' %}National Immunization Schedule{% else %}جدول
+      المطاعيم الوطني{% endif %}
     </h2>
-    <p style="margin:0 0 .9rem;color:var(--admin-text-muted,#5a6472);font-size:.9rem;">
-      {% if ui_lang == 'en' %}Download the template, fill in each vaccine and its due age (days / months / years), then upload it to generate the report.{% else %}حمّل القالب، عبّئ كل مطعوم والعمر المستحق له (بالأيام / الأشهر / السنوات)، ثم ارفعه لتوليد التقرير.{% endif %}
+    <p
+      style="
+        margin: 0 0 0.9rem;
+        color: var(--admin-text-muted, #5a6472);
+        font-size: 0.9rem;
+      "
+    >
+      {% if ui_lang == 'en' %}Download the template, fill in each vaccine and
+      its due age (days / months / years), then upload it to generate the
+      report.{% else %}حمّل القالب، عبّئ كل مطعوم والعمر المستحق له (بالأيام /
+      الأشهر / السنوات)، ثم ارفعه لتوليد التقرير.{% endif %}
     </p>
-    <div class="agency-upload-status" id="immunization-status" role="status" aria-live="polite" style="margin-bottom:.9rem;font-size:.9rem;"></div>
-    <div style="display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;">
-      <a class="admin-btn admin-btn-secondary" href="/api/admin/agency-reports/moh/immunization-schedule/template">
+    <div
+      class="agency-upload-status"
+      id="immunization-status"
+      role="status"
+      aria-live="polite"
+      style="margin-bottom: 0.9rem; font-size: 0.9rem"
+    ></div>
+    <div
+      style="display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center"
+    >
+      <a
+        class="admin-btn admin-btn-secondary"
+        href="/api/admin/agency-reports/moh/immunization-schedule/template"
+      >
         <i class="bi bi-download" aria-hidden="true"></i>
-        {% if ui_lang == 'en' %}Download Excel Template{% else %}تنزيل قالب Excel{% endif %}
+        {% if ui_lang == 'en' %}Download Excel Template{% else %}تنزيل قالب
+        Excel{% endif %}
       </a>
-      <input type="file" id="immunization-file" accept=".xlsx" aria-label="{% if ui_lang == 'en' %}Immunization schedule file{% else %}ملف جدول المطاعيم{% endif %}"
-             style="max-width:320px;font-size:.9rem;" />
-      <button type="button" class="admin-btn admin-btn-primary" id="immunization-upload-btn">
+      <input
+        type="file"
+        id="immunization-file"
+        accept=".xlsx"
+        aria-label="{% if ui_lang == 'en' %}Immunization schedule file{% else %}ملف جدول المطاعيم{% endif %}"
+        style="max-width: 320px; font-size: 0.9rem"
+      />
+      <button
+        type="button"
+        class="admin-btn admin-btn-primary"
+        id="immunization-upload-btn"
+      >
         <i class="bi bi-upload" aria-hidden="true"></i>
-        {% if ui_lang == 'en' %}Upload &amp; Generate{% else %}رفع وتوليد التقرير{% endif %}
+        {% if ui_lang == 'en' %}Upload &amp; Generate{% else %}رفع وتوليد
+        التقرير{% endif %}
       </button>
     </div>
-    <div id="immunization-upload-feedback" role="alert" aria-live="assertive" style="margin-top:.7rem;font-size:.9rem;"></div>
+    <div
+      id="immunization-upload-feedback"
+      role="alert"
+      aria-live="assertive"
+      style="margin-top: 0.7rem; font-size: 0.9rem"
+    ></div>
   </section>
   {% endif %}
 
   <!-- Report Result -->
   <div id="agency-report-root" role="status" aria-live="polite">
-    {% if ui_lang == 'en' %}Loading report...{% else %}جارٍ تحميل التقرير...{% endif %}
+    {% if ui_lang == 'en' %}Loading report...{% else %}جارٍ تحميل التقرير...{%
+    endif %}
   </div>
 
   <!-- Footer Privacy Note -->
   <footer class="agency-footer-privacy" role="contentinfo">
     <i class="bi bi-lock-fill" aria-hidden="true"></i>
-    {% if ui_lang == 'en' %}This page displays statistical and aggregated data only to support decision-making. No personal or sensitive data is displayed.{% else %}تعرض هذه الصفحة بيانات إحصائية وتجميعية فقط لدعم القرار، ولا تعرض أي بيانات شخصية أو حساسة.{% endif %}
+    {% if ui_lang == 'en' %}This page displays statistical and aggregated data
+    only to support decision-making. No personal or sensitive data is
+    displayed.{% else %}تعرض هذه الصفحة بيانات إحصائية وتجميعية فقط لدعم القرار،
+    ولا تعرض أي بيانات شخصية أو حساسة.{% endif %}
   </footer>
 </section>
-{% endblock %}
-
-{% block extra_scripts %}
+{% endblock %} {% block extra_scripts %}
 <script>
-window.JORDAN_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";
+  window.JORDAN_ADMIN_DIVISIONS_URL =
+    "/static/data/jordan_admin_divisions.json";
 </script>
 <script src="/static/vendor/plotly-2.35.2.min.js"></script>
 <script src="/static/js/plotly-locale-ar.js"></script>
-<script src="/static/js/admin_agency_reports.js?v=3.2"></script>
+<script src="/static/js/admin_agency_reports.js?v=3.3"></script>
 <script src="/static/js/agency_report_location_filter.js?v=1.0"></script>
 {% if agency_code == 'moh' and report_code == 'vaccination_due_children' %}
 <script>
-(function () {
-  "use strict";
-  var EN = document.documentElement.lang === "en";
-  var t = function (ar, en) { return EN ? en : ar; };
-  var base = "/api/admin/agency-reports/moh/immunization-schedule";
-  var statusEl = document.getElementById("immunization-status");
-  var fileEl = document.getElementById("immunization-file");
-  var btn = document.getElementById("immunization-upload-btn");
-  var feedback = document.getElementById("immunization-upload-feedback");
-  function refreshStatus() {
-    fetch(base, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (d.count > 0) {
-          statusEl.innerHTML = '<span style="color:#1f7a4d;"><i class="bi bi-check-circle-fill"></i> ' +
-            t("الجدول الحالي: ", "Current schedule: ") + d.count + t(" مطعوم.", " vaccines.") + "</span>";
-        } else {
-          statusEl.innerHTML = '<span style="color:#b45309;"><i class="bi bi-exclamation-triangle-fill"></i> ' +
-            t("لا يوجد جدول مطاعيم مرفوع بعد.", "No immunization schedule uploaded yet.") + "</span>";
-        }
+  (function () {
+    "use strict";
+    var EN = document.documentElement.lang === "en";
+    var t = function (ar, en) {
+      return EN ? en : ar;
+    };
+    var base = "/api/admin/agency-reports/moh/immunization-schedule";
+    var statusEl = document.getElementById("immunization-status");
+    var fileEl = document.getElementById("immunization-file");
+    var btn = document.getElementById("immunization-upload-btn");
+    var feedback = document.getElementById("immunization-upload-feedback");
+    function refreshStatus() {
+      fetch(base, {
+        credentials: "same-origin",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
       })
-      .catch(function () { statusEl.textContent = ""; });
-  }
-  function upload() {
-    if (!fileEl.files || !fileEl.files.length) {
-      feedback.innerHTML = '<span style="color:#b91c1c;">' + t("اختر ملف Excel أولاً.", "Select an Excel file first.") + "</span>";
-      return;
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (d) {
+          if (d.count > 0) {
+            statusEl.innerHTML =
+              '<span style="color:#1f7a4d;"><i class="bi bi-check-circle-fill"></i> ' +
+              t("الجدول الحالي: ", "Current schedule: ") +
+              d.count +
+              t(" مطعوم.", " vaccines.") +
+              "</span>";
+          } else {
+            statusEl.innerHTML =
+              '<span style="color:#b45309;"><i class="bi bi-exclamation-triangle-fill"></i> ' +
+              t(
+                "لا يوجد جدول مطاعيم مرفوع بعد.",
+                "No immunization schedule uploaded yet.",
+              ) +
+              "</span>";
+          }
+        })
+        .catch(function () {
+          statusEl.textContent = "";
+        });
     }
-    var fd = new FormData();
-    fd.append("file", fileEl.files[0]);
-    btn.disabled = true;
-    feedback.innerHTML = t("جارٍ الرفع...", "Uploading...");
-    // fetchWithAuth auto-injects X-CSRF-Token (via the global fetch wrapper),
-    // redirects on expired sessions (401), and surfaces real backend detail
-    // messages — the canonical path for state-changing admin requests.
-    fetchWithAuth(base, {
-      method: "POST",
-      credentials: "same-origin",
-      body: fd
-    }).then(function (r) {
-      return r ? r.json() : null;
-    }).then(function (d) {
-      if (!d) { return; } // 401 redirect already handled by fetchWithAuth
-      btn.disabled = false;
-      feedback.innerHTML = '<span style="color:#1f7a4d;">' + (d.message_ar || t("تم الرفع.", "Uploaded.")) +
-        " " + t("جارٍ إعادة تحميل التقرير...", "Reloading report...") + "</span>";
-      setTimeout(function () { window.location.reload(); }, 900);
-    }).catch(function (e) {
-      btn.disabled = false;
-      var msg = (e && e.message && e.message !== "Failed to fetch") ? e.message : t("تعذّر الاتصال بالخادم.", "Could not reach the server.");
-      feedback.innerHTML = '<span style="color:#b91c1c;">' + msg + "</span>";
-    });
-  }
-  btn.addEventListener("click", upload);
-  refreshStatus();
-})();
+    function upload() {
+      if (!fileEl.files || !fileEl.files.length) {
+        feedback.innerHTML =
+          '<span style="color:#b91c1c;">' +
+          t("اختر ملف Excel أولاً.", "Select an Excel file first.") +
+          "</span>";
+        return;
+      }
+      var fd = new FormData();
+      fd.append("file", fileEl.files[0]);
+      btn.disabled = true;
+      feedback.innerHTML = t("جارٍ الرفع...", "Uploading...");
+      // fetchWithAuth auto-injects X-CSRF-Token (via the global fetch wrapper),
+      // redirects on expired sessions (401), and surfaces real backend detail
+      // messages — the canonical path for state-changing admin requests.
+      fetchWithAuth(base, {
+        method: "POST",
+        credentials: "same-origin",
+        body: fd,
+      })
+        .then(function (r) {
+          return r ? r.json() : null;
+        })
+        .then(function (d) {
+          if (!d) {
+            return;
+          } // 401 redirect already handled by fetchWithAuth
+          btn.disabled = false;
+          feedback.innerHTML =
+            '<span style="color:#1f7a4d;">' +
+            (d.message_ar || t("تم الرفع.", "Uploaded.")) +
+            " " +
+            t("جارٍ إعادة تحميل التقرير...", "Reloading report...") +
+            "</span>";
+          setTimeout(function () {
+            window.location.reload();
+          }, 900);
+        })
+        .catch(function (e) {
+          btn.disabled = false;
+          var msg =
+            e && e.message && e.message !== "Failed to fetch"
+              ? e.message
+              : t("تعذّر الاتصال بالخادم.", "Could not reach the server.");
+          feedback.innerHTML =
+            '<span style="color:#b91c1c;">' + msg + "</span>";
+        });
+    }
+    btn.addEventListener("click", upload);
+    refreshStatus();
+  })();
 </script>
-{% endif %}
-{% endblock %}
+{% endif %} {% endblock %}

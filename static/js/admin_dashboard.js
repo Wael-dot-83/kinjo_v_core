@@ -57,6 +57,10 @@ const ENROLLMENT_FALLBACK = {
   },
 };
 
+const ATTENDANCE_CHART_LABELS = {
+  "Recorded Attendance": "سجلات الحضور",
+};
+
 // KPI configuration — single source of truth, order determines render order
 const KPI_CONFIG = [
   {
@@ -139,7 +143,10 @@ class AdminDashboard {
       "chartRuntimeProbeEnabled",
       true,
     );
-    this.telemetryEnabled = this.readRuntimeFlag("dashboardTelemetryEnabled", true);
+    this.telemetryEnabled = this.readRuntimeFlag(
+      "dashboardTelemetryEnabled",
+      true,
+    );
     this._chartRuntimeFailureReported = false;
     this.isLoading = false;
     this._listeners = {};
@@ -186,7 +193,10 @@ class AdminDashboard {
       if (this.isAutoRefreshEnabled()) this.startAutoRefresh();
     };
     this._listeners.autoRefreshToggle = (event) => {
-      localStorage.setItem("autoRefreshEnabled", event.target.checked ? "true" : "false");
+      localStorage.setItem(
+        "autoRefreshEnabled",
+        event.target.checked ? "true" : "false",
+      );
       if (event.target.checked) this.startAutoRefresh();
       else this.stopAutoRefresh();
     };
@@ -295,10 +305,7 @@ class AdminDashboard {
       if (!node || typeof node !== "object" || seen.has(node)) return;
       seen.add(node);
 
-      if (
-        typeof node._scriptable === "function" &&
-        !node._scriptable[mark]
-      ) {
+      if (typeof node._scriptable === "function" && !node._scriptable[mark]) {
         const original = node._scriptable.bind(node);
         const guarded = (key) =>
           typeof key === "string" ? original(key) : true;
@@ -1286,7 +1293,7 @@ class AdminDashboard {
             label:
               window.KINJO_LANG === "en"
                 ? "Recorded Attendance"
-                : "سجلات الحضور",
+                : ATTENDANCE_CHART_LABELS["Recorded Attendance"],
             data: safeChartData(data.values),
             borderColor: "#4F46E5",
             backgroundColor: gradient,
