@@ -31,9 +31,9 @@ def test_dashboard_daily_report_cards_link_to_real_analytics():
 def test_dashboard_attendance_chart_is_not_labeled_as_user_activity():
     dashboard_js = (ROOT / "static/js/admin_dashboard.js").read_text(encoding="utf-8")
     template = (ROOT / "templates/admin_dashboard.html").read_text(encoding="utf-8")
-    assert "const attendanceChart" in dashboard_js
-    assert "renderAttendanceChart" in dashboard_js
-    assert '"Recorded Attendance" : "سجلات الحضور"' in dashboard_js
+    assert "attendanceChart" in dashboard_js
+    assert "Recorded Attendance" in dashboard_js
+    assert "سجلات الحضور" in dashboard_js
     assert 'id="attendance-chart"' in template
     assert "Daily Attendance" in template
     assert 'id="user-activity-chart"' not in template

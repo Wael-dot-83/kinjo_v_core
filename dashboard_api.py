@@ -16,6 +16,13 @@ from database import get_db
 from dashboard_customization import dashboard_customization
 import models
 
+# ---------------------------------------------------------------------------
+# Cross-Role API Namespace Note:
+# This router is mounted at `/api/dashboard`. While conceptually serving the 
+# Admin dashboard, it is deliberately scoped as a cross-role compatibility alias 
+# because it is also consumed by Manager and Supervisor dashboard widgets. 
+# Enforcing an `/api/admin/...` prefix here would break non-admin access.
+# ---------------------------------------------------------------------------
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard Customization"])
 logger = logging.getLogger(__name__)
 
@@ -143,7 +150,14 @@ def get_dashboard_summary(
     db: Session = Depends(get_db),
 ):
     """Compact aggregate summary for the inline filter bar + chart panel.
-    Returns children count, attendance rate, alert count, and 7-day trend."""
+    Returns children count, attendance rate, alert count, and 7-day trend.
+    
+    NOTE: Performance Optimization vs AnalyticsGapService
+    This endpoint implements inline metric queries rather than calling the unified 
+    AnalyticsGapService (used in admin_advanced_analytics_endpoints.py). Because this 
+    summary widget loads frequently and requires very fast localized counts, the inline 
+    approach avoids the overhead of instantiating the broader GapService object model.
+    """
     today = datetime.now(_JORDAN_TZ).date()
 
     # resolve date window

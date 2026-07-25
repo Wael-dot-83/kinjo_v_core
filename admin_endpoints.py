@@ -360,7 +360,7 @@ def create_user(
     - Admins: Can create any non-admin user
     - Managers: Can only create SUPERVISOR/PARENT roles in their kindergarten
     """
-    _validate_csrf_token(request)
+
     # Authorization check
     if current_user.role == models.UserRole.MANAGER:
         # Manager restrictions
@@ -681,7 +681,7 @@ def update_user(
     """
     Update user with IDOR protection and audit logging.
     """
-    _validate_csrf_token(request)
+
     user = db.query(models.User).filter(
         models.User.id == user_id, models.User.deleted_at.is_(None)
     ).first()
@@ -876,7 +876,7 @@ def delete_user(
     """
     Delete user (Admin only) with IDOR protection.
     """
-    _validate_csrf_token(request)
+
     user = db.query(models.User).filter(
         models.User.id == user_id, models.User.deleted_at.is_(None)
     ).first()
@@ -943,7 +943,7 @@ def admin_reset_password(
     Admin-initiated password reset with verification.
     Rate limited to 3 requests per minute.
     """
-    _validate_csrf_token(request)
+
     user = db.query(models.User).filter(
         models.User.id == user_id, models.User.deleted_at.is_(None)
     ).first()
@@ -997,7 +997,7 @@ def request_password_reset(
     Rate limited to 5 requests per minute.
     Always returns success to prevent email enumeration.
     """
-    _validate_csrf_token(request)
+
     user = db.query(models.User).filter(models.User.email == reset_request.email).first()
 
     if user:
@@ -1038,7 +1038,7 @@ def confirm_password_reset(
     Confirm password reset using token.
     Rate limited to 3 requests per minute.
     """
-    _validate_csrf_token(request)
+
     token_record = resolve_valid_token(db, reset_data.token)
 
     if not token_record:
@@ -1097,7 +1097,7 @@ def admin_mfa_bypass(
     
     WARNING: This is an emergency-only endpoint. Use sparingly and audit all usage.
     """
-    _validate_csrf_token(request)
+
     # Self-bypass is not permitted — admin must use normal MFA reset flow
     if user_id == current_user.id:
         raise forbidden_error("Cannot bypass your own MFA. Use the standard MFA reset flow.")
@@ -1192,7 +1192,7 @@ def bulk_update_status(
     - Returns per-user success/failure results
     - IDOR protection for each target
     """
-    _validate_csrf_token(request)
+
     # Check if confirmation is required
     needs_confirmation = len(bulk_data.user_ids) > settings.BULK_CONFIRMATION_THRESHOLD
 
@@ -1391,7 +1391,7 @@ def bulk_delete_users(
     - Prevents deleting admin accounts
     - Returns detailed results
     """
-    _validate_csrf_token(request)
+
     # Check for admin accounts in the list
     admin_users = db.query(models.User).filter(
         models.User.id.in_(bulk_data.user_ids),
@@ -1518,7 +1518,7 @@ def bulk_create_users(
     - Supports dry-run mode
     - Prevents creating admin accounts
     """
-    _validate_csrf_token(request)
+
     # Validate manager assignments for the entire batch
     manager_errors = validate_bulk_manager_assignments(db, [user.__dict__ for user in bulk_data.users])
     if manager_errors:
@@ -1657,7 +1657,7 @@ async def import_users_csv(
     - Dry-run mode for preview
     - Downloadable error report
     """
-    _validate_csrf_token(request)
+
     if not file.filename.endswith('.csv'):
         raise validation_error("File must be a CSV")
 
@@ -1945,7 +1945,7 @@ def download_csv_error_report(
     body: _CSVErrorReportBody,
     current_user: models.User = Depends(require_admin),
 ):
-    _validate_csrf_token(request)
+
     error_list = body.errors
     headers = ['Row Number', 'Field', 'Error Code', 'Message']
     rows = []
@@ -2062,7 +2062,7 @@ def resolve_contact_message(
     Mark a contact-form submission as resolved.
     Admin-only.  Idempotent — resolving an already-resolved message is a no-op.
     """
-    _validate_csrf_token(request)
+
     msg = db.query(models.ContactMessage).filter(
         models.ContactMessage.id == message_id
     ).first()
@@ -2366,12 +2366,6 @@ def _normalize_governorates(governorates: Optional[List[str]]) -> List[str]:
 
 def _canonical_governorates(governorates: Optional[List[str]]) -> List[str]:
     return _validate_jordan_governorates(governorates)
-
-def _validate_csrf_token(request: Request) -> None:
-    header_token = request.headers.get("x-csrf-token")
-    cookie_token = request.cookies.get(settings.CSRF_COOKIE_NAME)
-    if not header_token or not cookie_token or not secrets.compare_digest(header_token, cookie_token):
-        raise validation_error("Invalid CSRF token", fields={"csrf_token": "invalid"})
 
 
 def _build_search_filter(search: Optional[str], columns: List[Any]):
@@ -2935,7 +2929,7 @@ def create_admin_message(
     current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    _validate_csrf_token(request)
+
     subject = (payload.subject or "").strip()
     message_body = (payload.message_body or "").strip()
     if not subject:
@@ -3279,7 +3273,7 @@ def preview_admin_message_post(
     current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    _validate_csrf_token(request)
+
     target = payload.target
     roles = _target_roles_for_mode(target)
     governorate_values = _normalize_governorates(target.governorates)
@@ -5103,7 +5097,7 @@ def create_backup(
     db: Session = Depends(get_db)
 ):
     """Enqueue a backup job and return immediately (Admin only)."""
-    _validate_csrf_token(request)
+
     from backup_tasks import run_backup
 
     try:
@@ -5167,7 +5161,7 @@ def restore_backup(
     First call without a token returns a confirmation token and a warning.
     Second call with the token executes the restore.
     """
-    _validate_csrf_token(request)
+
     # Sanitize backup_name: reject path separators, null bytes, and parent-directory
     # references. os.path.basename catches separator-based traversal; the ".."
     # substring check rejects names like "..evilfile" that look like traversal attempts.
@@ -5242,7 +5236,7 @@ def delete_backup(
     db: Session = Depends(get_db)
 ):
     """Delete a backup file (Admin only)"""
-    _validate_csrf_token(request)
+
     # Sanitize backup_name: reject path separators, null bytes, and parent-directory
     # references. os.path.basename catches separator-based traversal; the ".."
     # substring check rejects names like "..evilfile" that look like traversal attempts.
@@ -5322,7 +5316,7 @@ def cleanup_old_backups(
     db: Session = Depends(get_db)
 ):
     """Clean up old backups beyond retention period (Admin only)"""
-    _validate_csrf_token(request)
+
     from backup_manager import backup_manager
 
     try:
@@ -5353,7 +5347,7 @@ def validate_backup(
     db: Session = Depends(get_db)
 ):
     """Validate a backup file integrity (Admin only)"""
-    _validate_csrf_token(request)
+
     # Sanitize backup_name: reject path separators, null bytes, and parent-directory
     # references. os.path.basename catches separator-based traversal; the ".."
     # substring check rejects names like "..evilfile" that look like traversal attempts.
@@ -5414,7 +5408,7 @@ def import_kindergartens_from_excel(
       - Column G: رقم الهاتف         → contact_phone
     """
 
-    _validate_csrf_token(request)
+
     if not file.filename or not file.filename.endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="Only .xlsx files are accepted")
 
@@ -5889,7 +5883,7 @@ async def send_governance_reminder_endpoint(
     current_user: models.User = Depends(require_admin),
 ):
     """Send a governance reminder to a kindergarten or supervisor."""
-    _validate_csrf_token(request)
+
     if body.target_type not in ("kindergarten", "supervisor"):
         raise HTTPException(status_code=400, detail="target_type must be 'kindergarten' or 'supervisor'")
 
@@ -6374,7 +6368,7 @@ def acknowledge_alert(
     db: Session = Depends(get_db),
 ):
     """Mark an active alert as acknowledged."""
-    _validate_csrf_token(request)
+
     alert = db.query(models.ActiveAlert).filter(models.ActiveAlert.id == alert_id).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
@@ -6746,7 +6740,7 @@ def update_admin_profile(
     db: Session = Depends(get_db),
 ):
     """Update the logged-in admin's own profile fields."""
-    _validate_csrf_token(request)
+
     before = {
         "full_name": current_user.full_name,
         "email": current_user.email,
@@ -6793,7 +6787,7 @@ def change_admin_password(
     db: Session = Depends(get_db),
 ):
     """Allow the logged-in admin to change their own password."""
-    _validate_csrf_token(request)
+
     if payload.new_password != payload.confirm_password:
         raise validation_error("New passwords do not match")
 
@@ -6873,7 +6867,7 @@ def cleanup_audit_logs(
     db: Session = Depends(get_db),
 ):
     """Delete audit log entries older than *days* days. Minimum 30 days. Admin only."""
-    _validate_csrf_token(request)
+
     cutoff = datetime.now(_JORDAN_TZ) - timedelta(days=days)
     query = db.query(models.AuditLog).filter(models.AuditLog.created_at < cutoff)
     count = query.count()

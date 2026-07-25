@@ -36,8 +36,15 @@ from charts.schemas import (
 from charts.service import ChartService
 
 logger = logging.getLogger(__name__)
-# Chart sources can aggregate network-wide operational data. Protect both the
-# canonical API and its compatibility aliases at the router boundary.
+# ---------------------------------------------------------------------------
+# Compatibility Alias Note:
+# Chart sources can aggregate network-wide operational data. The routes below
+# mounted directly at `/admin/charts/...` are intentional legacy compatibility 
+# aliases retained to support existing front-end dashboards without breaking 
+# them during the transition. The canonical API namespace is protected at 
+# `/api/admin/charts/...` at the bottom of this file.
+# Both aliases are fully protected by `require_admin` at the router boundary.
+# ---------------------------------------------------------------------------
 router = APIRouter(tags=["Charts"], dependencies=[Depends(require_admin)])
 _svc = ChartService()
 
