@@ -50,6 +50,7 @@ _advisor = ChartAdvisor()
 # Data loaders
 # ---------------------------------------------------------------------------
 
+
 def _date_bounds(req: ChartRequest) -> Tuple[date, date]:
     today = _today()
     d_from = date.fromisoformat(req.date_from) if req.date_from else today - timedelta(days=365)
@@ -111,24 +112,19 @@ def _load_attendance(db: Session, req: ChartRequest) -> pd.DataFrame:
     import models
 
     d_from, d_to = _date_bounds(req)
-    q = (
-        db.query(
-            models.AttendanceLog.date.label("date"),
-            models.AttendanceLog.status.label("status"),
-            func.count().label("count"),
-        )
-        .filter(
-            models.AttendanceLog.date >= d_from,
-            models.AttendanceLog.date <= d_to,
-        )
+    q = db.query(
+        models.AttendanceLog.date.label("date"),
+        models.AttendanceLog.status.label("status"),
+        func.count().label("count"),
+    ).filter(
+        models.AttendanceLog.date >= d_from,
+        models.AttendanceLog.date <= d_to,
     )
     if req.kindergarten_id:
         q = q.join(models.Class, models.AttendanceLog.class_id == models.Class.id).filter(
             models.Class.kindergarten_id == req.kindergarten_id
         )
-    q = q.group_by(models.AttendanceLog.date, models.AttendanceLog.status).order_by(
-        models.AttendanceLog.date
-    )
+    q = q.group_by(models.AttendanceLog.date, models.AttendanceLog.status).order_by(models.AttendanceLog.date)
     rows = q.all()
     df = pd.DataFrame(rows, columns=["date", "status", "count"])
     df["status"] = df["status"].astype(str).str.replace("AttendanceStatus.", "")
@@ -141,15 +137,12 @@ def _load_daily_reports(db: Session, req: ChartRequest) -> pd.DataFrame:
     import models
 
     d_from, d_to = _date_bounds(req)
-    q = (
-        db.query(
-            models.DailyReport.mood.label("mood"),
-            func.count().label("count"),
-        )
-        .filter(
-            models.DailyReport.date >= d_from,
-            models.DailyReport.date <= d_to,
-        )
+    q = db.query(
+        models.DailyReport.mood.label("mood"),
+        func.count().label("count"),
+    ).filter(
+        models.DailyReport.date >= d_from,
+        models.DailyReport.date <= d_to,
     )
     if req.kindergarten_id:
         q = q.filter(models.DailyReport.kindergarten_id == req.kindergarten_id)
@@ -199,7 +192,7 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
     base_query = db.query(
         func.coalesce(func.sum(models.Class.capacity_total), 0).label("capacity"),
         func.coalesce(func.sum(models.Class.enrolled_children_count), 0).label("enrolled"),
-        func.count(models.Kindergarten.id.distinct()).label("count")
+        func.count(models.Kindergarten.id.distinct()).label("count"),
     ).outerjoin(
         models.Class,
         and_(
@@ -235,11 +228,7 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
     # We must re-order dictionary output manually based on mapped columns
     data = []
     for r in rows:
-        d = {
-            "capacity": r.capacity,
-            "enrolled": r.enrolled,
-            "count": r.count
-        }
+        d = {"capacity": r.capacity, "enrolled": r.enrolled, "count": r.count}
         if req.kindergarten_id or req.governorate:
             d["kindergarten_id"] = getattr(r, "kindergarten_id", None)
             d["kindergarten"] = getattr(r, "kindergarten", "")
@@ -263,6 +252,7 @@ _LOADERS: Dict[ChartSource, Callable[[Session, ChartRequest], pd.DataFrame]] = {
 # ChartService
 # ---------------------------------------------------------------------------
 
+
 class ChartService:
     """Public API for the charting subsystem."""
 
@@ -271,6 +261,7 @@ class ChartService:
     def get_data(self, db: Session, req: ChartRequest) -> pd.DataFrame:
         """Load raw data for the given source, with Redis caching and localization."""
         import io as _io
+
         cache_params = req.model_dump()
         cached = chart_cache.get_raw(cache_params)
         if cached:
@@ -295,6 +286,7 @@ class ChartService:
         metric_def = METRIC_REGISTRY.get(req.source.value)
         if not metric_def:
             from charts.registry import MetricDefinition
+
             metric_def = MetricDefinition(
                 key=req.source.value,
                 label_ar=req.source.value,
@@ -302,14 +294,14 @@ class ChartService:
                 business_meaning="",
                 unit="count",
                 higher_is_better=True,
-                supported_chart_types=["bar", "line", "pie"]
+                supported_chart_types=["bar", "line", "pie"],
             )
 
         metric_meta = MetricMeta(
             key=metric_def.key,
             label=metric_def.label_ar if req.lang == "ar" else metric_def.label_en,
             unit=metric_def.unit,
-            higher_is_better=metric_def.higher_is_better
+            higher_is_better=metric_def.higher_is_better,
         )
 
         # Determine scope
@@ -329,7 +321,7 @@ class ChartService:
         levels = metric_def.supported_levels
         try:
             idx = levels.index(level)
-            next_level = levels[idx+1] if idx + 1 < len(levels) else None
+            next_level = levels[idx + 1] if idx + 1 < len(levels) else None
         except ValueError:
             next_level = None
 
@@ -341,7 +333,12 @@ class ChartService:
 
         if len(df) >= self.HEAVY_ROW_THRESHOLD:
             task_id = self._submit_task(req)
-            quality = QualityMeta(status="processing", record_count=len(df), missing_count=0, freshness_at=datetime.datetime.now().isoformat())
+            quality = QualityMeta(
+                status="processing",
+                record_count=len(df),
+                missing_count=0,
+                freshness_at=datetime.datetime.now().isoformat(),
+            )
             return ChartResponse(
                 metric=metric_meta,
                 scope=scope_meta,
@@ -354,7 +351,7 @@ class ChartService:
                 chart_type=req.chart_type or ChartType.BAR,
                 source=req.source,
                 title=req.title or metric_meta.label,
-                task_id=task_id
+                task_id=task_id,
             )
 
         chart_type = req.chart_type or self._auto_type(df, req.source)
@@ -368,10 +365,7 @@ class ChartService:
         table = series.copy()
 
         quality = QualityMeta(
-            status="complete",
-            record_count=len(df),
-            missing_count=0,
-            freshness_at=datetime.datetime.now().isoformat()
+            status="complete", record_count=len(df), missing_count=0, freshness_at=datetime.datetime.now().isoformat()
         )
 
         return ChartResponse(
@@ -385,7 +379,7 @@ class ChartService:
             quality=quality,
             chart_type=chart_type,
             source=req.source,
-            title=req.title or metric_meta.label
+            title=req.title or metric_meta.label,
         )
 
     def suggest(self, db: Session, req: SuggestRequest) -> SuggestResponse:
@@ -414,5 +408,6 @@ class ChartService:
 
     def _submit_task(self, req: ChartRequest) -> str:
         from charts.tasks import render_chart_task
+
         result = render_chart_task.delay(req.model_dump())
         return result.id

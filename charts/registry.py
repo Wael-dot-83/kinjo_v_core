@@ -3,6 +3,7 @@
 from typing import Dict, List, Optional
 from pydantic import BaseModel
 
+
 class MetricDefinition(BaseModel):
     key: str
     label_ar: str
@@ -14,6 +15,7 @@ class MetricDefinition(BaseModel):
     supported_levels: List[str] = ["national", "governorate", "city", "kindergarten"]
     supported_chart_types: List[str]
 
+
 METRIC_REGISTRY: Dict[str, MetricDefinition] = {
     "incidents": MetricDefinition(
         key="incidents",
@@ -22,7 +24,7 @@ METRIC_REGISTRY: Dict[str, MetricDefinition] = {
         business_meaning="Total number of incidents reported.",
         unit="count",
         higher_is_better=False,
-        supported_chart_types=["bar", "line", "pie", "heatmap"]
+        supported_chart_types=["bar", "line", "pie", "heatmap"],
     ),
     "attendance": MetricDefinition(
         key="attendance",
@@ -32,7 +34,7 @@ METRIC_REGISTRY: Dict[str, MetricDefinition] = {
         unit="percent",
         higher_is_better=True,
         expected_range=(0.0, 100.0),
-        supported_chart_types=["line", "bar", "heatmap"]
+        supported_chart_types=["line", "bar", "heatmap"],
     ),
     "daily_reports": MetricDefinition(
         key="daily_reports",
@@ -41,7 +43,7 @@ METRIC_REGISTRY: Dict[str, MetricDefinition] = {
         business_meaning="Daily reports recorded.",
         unit="count",
         higher_is_better=True,
-        supported_chart_types=["bar", "pie", "line"]
+        supported_chart_types=["bar", "pie", "line"],
     ),
     "enrollments": MetricDefinition(
         key="enrollments",
@@ -50,7 +52,7 @@ METRIC_REGISTRY: Dict[str, MetricDefinition] = {
         business_meaning="Counts of enrollments by status.",
         unit="count",
         higher_is_better=True,
-        supported_chart_types=["bar", "pie", "line"]
+        supported_chart_types=["bar", "pie", "line"],
     ),
     "kindergartens": MetricDefinition(
         key="kindergartens",
@@ -60,6 +62,6 @@ METRIC_REGISTRY: Dict[str, MetricDefinition] = {
         unit="count",
         higher_is_better=True,
         supported_levels=["national", "governorate", "kindergarten"],
-        supported_chart_types=["bar", "scatter"]
-    )
+        supported_chart_types=["bar", "scatter"],
+    ),
 }

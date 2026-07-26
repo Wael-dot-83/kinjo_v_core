@@ -581,14 +581,19 @@ block extra_head %}
 
     {# Actions #}
     <div class="d-grid gap-2">
-      <button class="btn btn-primary ce-render-btn" id="renderBtn" onclick="renderChart()">
+      <button
+        class="btn btn-primary ce-render-btn"
+        id="renderBtn"
+        onclick="renderChart()"
+      >
         <span class="ce-render-btn__label">
           <i class="bi bi-play-fill me-1"></i>
           {% if ui_lang == 'en' %}Analyze{% else %}تحليل{% endif %}
         </span>
         <span class="ce-render-btn__loading d-none" aria-hidden="true">
           <span class="spinner-border spinner-border-sm" role="status"></span>
-          {% if ui_lang == 'en' %}Analyzing...{% else %}جارٍ التحليل...{% endif %}
+          {% if ui_lang == 'en' %}Analyzing...{% else %}جارٍ التحليل...{% endif
+          %}
         </span>
       </button>
     </div>

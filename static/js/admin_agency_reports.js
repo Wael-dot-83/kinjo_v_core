@@ -602,8 +602,7 @@
             );
           if (drill.period)
             parts.push(t("الفترة:", "Period:") + " " + drill.period);
-          if (drill.year)
-            parts.push(t("السنة:", "Year:") + " " + drill.year);
+          if (drill.year) parts.push(t("السنة:", "Year:") + " " + drill.year);
           if (drill.quarter)
             parts.push(t("الربع:", "Quarter:") + " " + drill.quarter);
           label.textContent = parts.join(" › ");
@@ -1271,7 +1270,9 @@
     chartContainer.on("plotly_click", (eventData) => {
       if (!eventData || !eventData.points || !eventData.points.length) return;
       const pt = eventData.points[0];
-      const series = Array.isArray(payload.chart?.series) ? payload.chart.series : [];
+      const series = Array.isArray(payload.chart?.series)
+        ? payload.chart.series
+        : [];
       const pointIndex = Number.isInteger(pt.pointNumber) ? pt.pointNumber : -1;
       const seriesItem = pointIndex >= 0 ? series[pointIndex] : null;
       const clickedCategory =
@@ -1333,20 +1334,13 @@
         year: 1,
         quarter: 2,
       };
-      const cellVal =
-        cells[colIdxByGroup[groupBy]]?.textContent?.trim() || "";
-      if (groupBy === "governorate")
-        drill.governorate = cellVal;
-      else if (groupBy === "city")
-        drill.city = cellVal;
-      else if (groupBy === "status")
-        drill.status = cellVal;
-      else if (groupBy === "severity")
-        drill.severity = cellVal;
-      else if (groupBy === "role")
-        drill.role = cellVal;
-      else if (groupBy === "gender")
-        drill.gender = cellVal;
+      const cellVal = cells[colIdxByGroup[groupBy]]?.textContent?.trim() || "";
+      if (groupBy === "governorate") drill.governorate = cellVal;
+      else if (groupBy === "city") drill.city = cellVal;
+      else if (groupBy === "status") drill.status = cellVal;
+      else if (groupBy === "severity") drill.severity = cellVal;
+      else if (groupBy === "role") drill.role = cellVal;
+      else if (groupBy === "gender") drill.gender = cellVal;
       else if (groupBy === "period") drill.period = cellVal;
       else if (groupBy === "year") drill.year = cellVal;
       else if (groupBy === "quarter") drill.quarter = cellVal;

@@ -1,20 +1,28 @@
-{% extends "admin_base.html" %}
-
-{% block title %}{% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهة الرسمية{% endif %}{% endblock %}
-
-{% block extra_head %}
+{% extends "admin_base.html" %} {% block title %}{% if ui_lang == 'en' %}Agency
+Reports{% else %}تقارير الجهة الرسمية{% endif %}{% endblock %} {% block
+extra_head %}
 <link rel="stylesheet" href="/static/css/agency_reports.css?v=3.4" />
 {% if agency_code == 'ncfa' %}
 <link rel="stylesheet" href="/static/css/ncfa_strong_reports.css?v=1.2" />
-{% endif %}
-{% endblock %}
-
-{% block content %}
-<section class="agency-reports-page" data-agency-reports-page="agency" data-agency-code="{{ agency_code }}" aria-labelledby="agency-reports-title">
-  <nav class="agency-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-    <a href="/admin/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a>
+{% endif %} {% endblock %} {% block content %}
+<section
+  class="agency-reports-page"
+  data-agency-reports-page="agency"
+  data-agency-code="{{ agency_code }}"
+  aria-labelledby="agency-reports-title"
+>
+  <nav
+    class="agency-breadcrumb"
+    aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}"
+  >
+    <a href="/admin/dashboard"
+      >{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a
+    >
     <span aria-hidden="true">/</span>
-    <a href="/admin/agency-reports">{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}</a>
+    <a href="/admin/agency-reports"
+      >{% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات
+      الرسمية{% endif %}</a
+    >
     <span aria-hidden="true">/</span>
     <span aria-current="page" id="agency-current-name">{{ agency_code }}</span>
   </nav>
@@ -23,25 +31,39 @@
     <div class="agency-logo-lockup">
       <div id="agency-logo-container"></div>
       <div>
-        <h1 id="agency-reports-title">{% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهة الرسمية{% endif %}</h1>
+        <h1 id="agency-reports-title">
+          {% if ui_lang == 'en' %}Agency Reports{% else %}تقارير الجهة الرسمية{%
+          endif %}
+        </h1>
         <p id="agency-description"></p>
-        <p class="agency-card-updated" id="agency-header-updated" aria-live="polite">
+        <p
+          class="agency-card-updated"
+          id="agency-header-updated"
+          aria-live="polite"
+        >
           <i class="bi bi-clock" aria-hidden="true"></i>
-          {% if ui_lang == 'en' %}Last updated: &mdash;{% else %}آخر تحديث: &mdash;{% endif %}
+          {% if ui_lang == 'en' %}Last updated: &mdash;{% else %}آخر تحديث:
+          &mdash;{% endif %}
         </p>
       </div>
     </div>
-    <div class="agency-privacy-badge" aria-label="{% if ui_lang == 'en' %}Aggregated data only{% else %}بيانات تجميعية فقط{% endif %}">
+    <div
+      class="agency-privacy-badge"
+      aria-label="{% if ui_lang == 'en' %}Aggregated data only{% else %}بيانات تجميعية فقط{% endif %}"
+    >
       <i class="bi bi-shield-check" aria-hidden="true"></i>
-      {% if ui_lang == 'en' %}Aggregated data only — no direct identifiers{% else %}بيانات تجميعية فقط — دون معرّفات مباشرة{% endif %}
+      {% if ui_lang == 'en' %}Aggregated data only — no direct identifiers{%
+      else %}بيانات تجميعية فقط — دون معرّفات مباشرة{% endif %}
     </div>
   </header>
 
   {% if agency_code == 'ncfa' %}
-  <section id="ncfa-strong-reports"
-           class="ncfa-strong-reports"
-           data-ncfa-strong-reports
-           aria-labelledby="ncfa-strong-title">
+  <section
+    id="ncfa-strong-reports"
+    class="ncfa-strong-reports"
+    data-ncfa-strong-reports
+    aria-labelledby="ncfa-strong-title"
+  >
     <header class="ncfa-strong-header">
       <div>
         <span class="ncfa-rating-badge">
@@ -49,72 +71,114 @@
           {% if ui_lang == 'en' %}Strong alignment{% else %}توافق قوي{% endif %}
         </span>
         <h2 id="ncfa-strong-title">
-          {% if ui_lang == 'en' %}Early Childhood and Nursery Reporting Hub{% else %}مركز تقارير الطفولة المبكرة والحضانات{% endif %}
+          {% if ui_lang == 'en' %}Early Childhood and Nursery Reporting Hub{%
+          else %}مركز تقارير الطفولة المبكرة والحضانات{% endif %}
         </h2>
         <p>
-          {% if ui_lang == 'en' %}
-          Generate focused NCFA administrative reports from <span translate="no">KinJo</span>&rsquo;s recorded nursery, enrolment, attendance, care, safety, staffing, and reporting data.
-          {% else %}
-          أنشئ تقارير إدارية موجهة للمجلس من بيانات <span translate="no">KinJo</span> المسجلة حول الحضانات والتسجيل والحضور والرعاية والسلامة والكوادر وجودة الإبلاغ.
-          {% endif %}
+          {% if ui_lang == 'en' %} Generate focused NCFA administrative reports
+          from <span translate="no">KinJo</span>&rsquo;s recorded nursery,
+          enrolment, attendance, care, safety, staffing, and reporting data. {%
+          else %} أنشئ تقارير إدارية موجهة للمجلس من بيانات
+          <span translate="no">KinJo</span> المسجلة حول الحضانات والتسجيل
+          والحضور والرعاية والسلامة والكوادر وجودة الإبلاغ. {% endif %}
         </p>
       </div>
       <div class="ncfa-evidence-note" role="note">
         <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
         <span>
-          {% if ui_lang == 'en' %}
-          Operational administrative evidence. National publication requires coverage, reconciliation, quality, and disclosure-control approval.
-          {% else %}
-          أدلة إدارية تشغيلية. يتطلب النشر الوطني اعتماد التغطية والمطابقة وجودة البيانات وضوابط الإفصاح.
+          {% if ui_lang == 'en' %} Operational administrative evidence. National
+          publication requires coverage, reconciliation, quality, and
+          disclosure-control approval. {% else %} أدلة إدارية تشغيلية. يتطلب
+          النشر الوطني اعتماد التغطية والمطابقة وجودة البيانات وضوابط الإفصاح.
           {% endif %}
         </span>
       </div>
     </header>
 
-    <form id="ncfa-report-scope" class="ncfa-scope-panel" aria-label="{% if ui_lang == 'en' %}NCFA report scope{% else %}نطاق تقارير المجلس{% endif %}">
+    <form
+      id="ncfa-report-scope"
+      class="ncfa-scope-panel"
+      aria-label="{% if ui_lang == 'en' %}NCFA report scope{% else %}نطاق تقارير المجلس{% endif %}"
+    >
       <div class="ncfa-scope-field">
-        <label for="ncfa-period">{% if ui_lang == 'en' %}Reporting period{% else %}الفترة الزمنية{% endif %}</label>
+        <label for="ncfa-period"
+          >{% if ui_lang == 'en' %}Reporting period{% else %}الفترة الزمنية{%
+          endif %}</label
+        >
         <select id="ncfa-period" name="period">
-          <option value="month">{% if ui_lang == 'en' %}Last 30 days{% else %}آخر 30 يوماً{% endif %}</option>
-          <option value="quarter" selected>{% if ui_lang == 'en' %}Last 3 months{% else %}آخر 3 أشهر{% endif %}</option>
-          <option value="half_year">{% if ui_lang == 'en' %}Last 6 months{% else %}آخر 6 أشهر{% endif %}</option>
-          <option value="year">{% if ui_lang == 'en' %}Last year{% else %}آخر سنة{% endif %}</option>
+          <option value="month">
+            {% if ui_lang == 'en' %}Last 30 days{% else %}آخر 30 يوماً{% endif
+            %}
+          </option>
+          <option value="quarter" selected>
+            {% if ui_lang == 'en' %}Last 3 months{% else %}آخر 3 أشهر{% endif %}
+          </option>
+          <option value="half_year">
+            {% if ui_lang == 'en' %}Last 6 months{% else %}آخر 6 أشهر{% endif %}
+          </option>
+          <option value="year">
+            {% if ui_lang == 'en' %}Last year{% else %}آخر سنة{% endif %}
+          </option>
         </select>
       </div>
       <div class="ncfa-scope-field">
-        <label for="ncfa-governorate">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+        <label for="ncfa-governorate"
+          >{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif
+          %}</label
+        >
         <select id="ncfa-governorate" name="governorate">
-          <option value="">{% if ui_lang == 'en' %}All governorates{% else %}كل المحافظات{% endif %}</option>
+          <option value="">
+            {% if ui_lang == 'en' %}All governorates{% else %}كل المحافظات{%
+            endif %}
+          </option>
         </select>
       </div>
       <div class="ncfa-scope-field">
-        <label for="ncfa-district">{% if ui_lang == 'en' %}District{% else %}اللواء / القصبة{% endif %}</label>
+        <label for="ncfa-district"
+          >{% if ui_lang == 'en' %}District{% else %}اللواء / القصبة{% endif
+          %}</label
+        >
         <select id="ncfa-district" name="city" disabled>
-          <option value="">{% if ui_lang == 'en' %}Select governorate first{% else %}اختر المحافظة أولاً{% endif %}</option>
+          <option value="">
+            {% if ui_lang == 'en' %}Select governorate first{% else %}اختر
+            المحافظة أولاً{% endif %}
+          </option>
         </select>
       </div>
       <div class="ncfa-scope-actions">
-        <button type="button" class="admin-btn admin-btn-secondary" id="ncfa-reset-scope">
+        <button
+          type="button"
+          class="admin-btn admin-btn-secondary"
+          id="ncfa-reset-scope"
+        >
           <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-          {% if ui_lang == 'en' %}Reset scope{% else %}إعادة تعيين النطاق{% endif %}
+          {% if ui_lang == 'en' %}Reset scope{% else %}إعادة تعيين النطاق{%
+          endif %}
         </button>
       </div>
     </form>
 
     <div id="ncfa-report-bundles" class="ncfa-bundle-grid" role="list"></div>
 
-    <section id="ncfa-report-result"
-             class="ncfa-report-result"
-             aria-labelledby="ncfa-result-title"
-             aria-live="polite"
-             hidden>
+    <section
+      id="ncfa-report-result"
+      class="ncfa-report-result"
+      aria-labelledby="ncfa-result-title"
+      aria-live="polite"
+      hidden
+    >
       <div class="ncfa-result-toolbar">
         <div>
           <span id="ncfa-result-status" class="ncfa-result-status"></span>
           <h3 id="ncfa-result-title" tabindex="-1"></h3>
           <p id="ncfa-result-description"></p>
         </div>
-        <button type="button" class="admin-btn admin-btn-secondary" id="ncfa-export-csv" hidden>
+        <button
+          type="button"
+          class="admin-btn admin-btn-secondary"
+          id="ncfa-export-csv"
+          hidden
+        >
           <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
           {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
         </button>
@@ -128,36 +192,51 @@
   <details class="agency-help-panel" open>
     <summary class="agency-help-summary">
       <i class="bi bi-question-circle" aria-hidden="true"></i>
-      {% if ui_lang == 'en' %}How to Use the Reports{% else %}كيفية استخدام التقارير{% endif %}
+      {% if ui_lang == 'en' %}How to Use the Reports{% else %}كيفية استخدام
+      التقارير{% endif %}
     </summary>
     <div class="agency-help-body">
       <ol>
-        <li>{% if ui_lang == 'en' %}Select a report card to view its details.{% else %}اختر بطاقة التقرير لعرض تفاصيله.{% endif %}</li>
-        <li>{% if ui_lang == 'en' %}Apply geographic and time filters as needed.{% else %}طبّق فلاتر النطاق الجغرافي والفترة الزمنية حسب الحاجة.{% endif %}</li>
-        <li>{% if ui_lang == 'en' %}Review the summary and chart.{% else %}راجع الملخص والرسم البياني.{% endif %}</li>
-        <li>{% if ui_lang == 'en' %}Use CSV export or chart export when needed.{% else %}استخدم تصدير CSV أو تصدير الرسم البياني عند الحاجة.{% endif %}</li>
+        <li>
+          {% if ui_lang == 'en' %}Select a report card to view its details.{%
+          else %}اختر بطاقة التقرير لعرض تفاصيله.{% endif %}
+        </li>
+        <li>
+          {% if ui_lang == 'en' %}Apply geographic and time filters as needed.{%
+          else %}طبّق فلاتر النطاق الجغرافي والفترة الزمنية حسب الحاجة.{% endif
+          %}
+        </li>
+        <li>
+          {% if ui_lang == 'en' %}Review the summary and chart.{% else %}راجع
+          الملخص والرسم البياني.{% endif %}
+        </li>
+        <li>
+          {% if ui_lang == 'en' %}Use CSV export or chart export when needed.{%
+          else %}استخدم تصدير CSV أو تصدير الرسم البياني عند الحاجة.{% endif %}
+        </li>
       </ol>
     </div>
   </details>
 
   <div id="agency-reports-root" role="status" aria-live="polite">
-    {% if ui_lang == 'en' %}Loading reports&hellip;{% else %}جارٍ تحميل التقارير&hellip;{% endif %}
+    {% if ui_lang == 'en' %}Loading reports&hellip;{% else %}جارٍ تحميل
+    التقارير&hellip;{% endif %}
   </div>
 
   <!-- Footer Privacy Note -->
   <footer class="agency-footer-privacy" role="contentinfo">
     <i class="bi bi-lock-fill" aria-hidden="true"></i>
-    {% if ui_lang == 'en' %}This page displays statistical and aggregated data only to support decision-making. No direct personal identifiers are displayed.{% else %}تعرض هذه الصفحة بيانات إحصائية وتجميعية لدعم القرار، ولا تعرض معرّفات شخصية مباشرة.{% endif %}
+    {% if ui_lang == 'en' %}This page displays statistical and aggregated data
+    only to support decision-making. No direct personal identifiers are
+    displayed.{% else %}تعرض هذه الصفحة بيانات إحصائية وتجميعية لدعم القرار، ولا
+    تعرض معرّفات شخصية مباشرة.{% endif %}
   </footer>
 </section>
-{% endblock %}
-
-{% block extra_scripts %}
+{% endblock %} {% block extra_scripts %}
 <script src="/static/js/admin_agency_reports.js?v=3.5"></script>
 {% if agency_code == 'ncfa' %}
 <script>
-window.NCFA_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";
+  window.NCFA_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";
 </script>
 <script src="/static/js/ncfa_strong_reports.js?v=1.2"></script>
-{% endif %}
-{% endblock %}
+{% endif %} {% endblock %}

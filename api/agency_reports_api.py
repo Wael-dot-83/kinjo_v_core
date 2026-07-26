@@ -3,6 +3,7 @@
 Mounted through api.missing_endpoints wrapper under /api, yielding paths such as:
 /api/admin/agency-reports/catalog
 """
+
 from __future__ import annotations
 
 from typing import Any, Optional
@@ -137,7 +138,9 @@ def immunization_schedule_upload(
         raise HTTPException(status_code=400, detail="يجب أن يكون الملف بصيغة Excel (.xlsx)")
     max_upload = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
     if file.size is not None and file.size > max_upload:
-        raise HTTPException(status_code=413, detail=f"حجم الملف يتجاوز الحد المسموح ({settings.MAX_UPLOAD_SIZE_MB} ميجابايت)")
+        raise HTTPException(
+            status_code=413, detail=f"حجم الملف يتجاوز الحد المسموح ({settings.MAX_UPLOAD_SIZE_MB} ميجابايت)"
+        )
     raw = file.file.read()
     validate_xlsx_archive(raw, max_compressed_bytes=max_upload)
     if not raw:
@@ -245,8 +248,12 @@ def _audit_export(db, actor, agency, report, fmt, extra=None):
     if extra:
         metadata.update({k: v for k, v in extra.items() if v is not None})
     log_audit_event(
-        db, AuditAction.AGENCY_REPORT_EXPORT, actor,
-        target_type="AgencyReport", metadata=metadata, sensitivity_level=1,
+        db,
+        AuditAction.AGENCY_REPORT_EXPORT,
+        actor,
+        target_type="AgencyReport",
+        metadata=metadata,
+        sensitivity_level=1,
     )
     db.commit()
 
@@ -325,11 +332,21 @@ def custom_report_export_csv(
         payload = AgencyReportsService(db).custom_report(scope, suppress=False)
         csv_payload = custom_report_to_csv(payload)
         _scope = payload.get("scope", {})
-        _audit_export(db, current_user, _scope.get("agency"), None, "csv", {
-            "level": _scope.get("level"), "period": _scope.get("period"),
-            "governorate": _scope.get("governorate"), "city": _scope.get("city"),
-            "start_date": _scope.get("start_date"), "end_date": _scope.get("end_date"),
-        })
+        _audit_export(
+            db,
+            current_user,
+            _scope.get("agency"),
+            None,
+            "csv",
+            {
+                "level": _scope.get("level"),
+                "period": _scope.get("period"),
+                "governorate": _scope.get("governorate"),
+                "city": _scope.get("city"),
+                "start_date": _scope.get("start_date"),
+                "end_date": _scope.get("end_date"),
+            },
+        )
         filename = "custom_agency_report.csv"
         return Response(
             content=csv_payload,
