@@ -87,14 +87,16 @@ def test_admin_sidebar_visible_links_are_exact_unique_and_registered():
 
 def test_exact_navigation_match_precedes_contextual_prefixes():
     sidebar = _admin_sidebar_source()
-    assert "nav_state = namespace(exact_match=false)" in sidebar
-    assert "current_path == item.href" in sidebar
-    assert "not nav_state.exact_match and current_path in item.active_paths" in sidebar
+    assert re.search(r"nav_state\s*=\s*namespace\(\s*exact_match\s*=\s*false\s*\)", sidebar)
+    assert re.search(r"current_path\s*==\s*item\.href", sidebar)
+    assert re.search(r"not\s+nav_state\.exact_match\s+and\s+current_path\s+in\s+item\.active_paths", sidebar)
 
 
 def test_admin_sidebar_markup_avoids_legacy_i18n_and_bad_link_roles():
     sidebar = _admin_sidebar_source()
-    nav = sidebar[sidebar.index("<nav "):sidebar.index("</nav>")]
+    match = re.search(r"<nav\b[^>]*>.*?</nav>", sidebar, re.DOTALL)
+    assert match, "nav element not found"
+    nav = match.group(0)
     assert 'data-i18n="' not in nav
     assert not re.search(r'<a\b[^>]*\brole="listitem"', nav)
     assert 'aria-current="page"' in nav
