@@ -39,6 +39,14 @@ from sqlalchemy.orm import Session
 import models
 from database import get_db
 from dependencies import get_current_user_or_redirect, require_admin
+from services.jordan_locations import (
+    get_all_governorates,
+    governorate_name_ar,
+    governorate_name_en,
+    governorate_query_aliases,
+    is_valid_governorate,
+    normalize_governorate_key,
+)
 from utils.time_utils import get_amman_tz, now_amman, today_amman
 
 # JSON endpoints answer with 401 when unauthenticated, which is what a fetch() caller
@@ -50,13 +58,31 @@ page_router = APIRouter(include_in_schema=False)
 # Default look-back when the caller supplies no window.
 _DEFAULT_WINDOW_DAYS = 90
 
-# Governorate spellings that refer to the same place. The capital appears in the
-# data under both its administrative name (العاصمة) and its common name (عمان) —
-# this database uses the latter — so a filter must match either rather than
-# rewriting one into the other. The legacy loader picked a single winner
-# (`"العاصمة" if governorate.lower() in (...)`), which silently returns zero rows
-# on any deployment that stores the other spelling.
-_GOVERNORATE_SYNONYMS = (("amman", "عمان", "العاصمة"),)
+# Hard ceiling on a reporting period. Without it, `date_from=1900-01-01&date_to=2100-01-01`
+# — reachable by typing a URL — produces a 73,000-point, 6.3 MB response. Ten years is far
+# beyond any real operational question and bounds both the query and the payload.
+_MAX_WINDOW_DAYS = 3653
+
+# Time-series bucket thresholds, in days of span. A daily axis stops being readable long
+# before it stops being cheap, so the bucket widens with the window instead of emitting
+# one point per day forever.
+_BUCKET_DAILY_MAX_DAYS = 62
+_BUCKET_WEEKLY_MAX_DAYS = 400
+
+# Largest kindergarten list the picker will return in one response. A national
+# deployment has thousands; an unbounded <select> is neither usable nor cheap.
+_KINDERGARTEN_PICKER_LIMIT = 200
+
+# Governorate identity is delegated wholesale to services.jordan_locations, the
+# project's canonical location registry. It owns the stable key ("amman"), the
+# canonical Arabic name ("العاصمة"), the English name ("Amman"), and the full set
+# of accepted stored forms for alias-aware `IN (...)` filtering.
+#
+# This module must never carry its own governorate table. Two spellings of the
+# capital exist in the wild — the canonical governorate name "العاصمة" and the
+# legacy city-name form "عمان" that migration `canon_gov_cap_01` corrects — and a
+# local copy of that knowledge would drift from the registry the rest of the
+# platform already uses.
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +143,48 @@ class Window:
         """
         return datetime.combine(self.end + timedelta(days=1), time.min)
 
+    @property
+    def span_days(self) -> int:
+        return (self.end - self.start).days + 1
+
+    @property
+    def bucket(self) -> str:
+        """How wide one point on a time series should be for this window."""
+        if self.span_days <= _BUCKET_DAILY_MAX_DAYS:
+            return "day"
+        if self.span_days <= _BUCKET_WEEKLY_MAX_DAYS:
+            return "week"
+        return "month"
+
+    def bucket_start(self, value: date) -> date:
+        """Snap a date to the first day of its bucket."""
+        if self.bucket == "day":
+            return value
+        if self.bucket == "week":
+            return value - timedelta(days=value.weekday())  # Monday
+        return value.replace(day=1)
+
+    def next_bucket(self, value: date) -> date:
+        if self.bucket == "day":
+            return value + timedelta(days=1)
+        if self.bucket == "week":
+            return value + timedelta(days=7)
+        return (value.replace(day=1) + timedelta(days=32)).replace(day=1)
+
+    def bucket_label(self) -> Text:
+        return {
+            "day": _t("اليوم", "Day"),
+            "week": _t("الأسبوع", "Week"),
+            "month": _t("الشهر", "Month"),
+        }[self.bucket]
+
+    def bucket_unit(self) -> Text:
+        return {
+            "day": _t("عدد الحوادث في اليوم", "Incidents per day"),
+            "week": _t("عدد الحوادث في الأسبوع", "Incidents per week"),
+            "month": _t("عدد الحوادث في الشهر", "Incidents per month"),
+        }[self.bucket]
+
 
 def _resolve_window(date_from: Optional[str], date_to: Optional[str]) -> Window:
     today = today_amman()
@@ -124,6 +192,15 @@ def _resolve_window(date_from: Optional[str], date_to: Optional[str]) -> Window:
     end = _parse_iso_date(date_to, "date_to") or today
     if start > end:
         raise HTTPException(status_code=422, detail="date_from must not be after date_to.")
+    span = (end - start).days + 1
+    if span > _MAX_WINDOW_DAYS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"The reporting period is {span} days, which exceeds the "
+                f"{_MAX_WINDOW_DAYS}-day maximum. Choose a shorter period."
+            ),
+        )
     return Window(start=start, end=end)
 
 
@@ -143,15 +220,20 @@ def _format_period(window: Window) -> Text:
 class Scope:
     """Geographic / organisational narrowing applied to a question."""
 
-    governorate: Optional[str] = None
-    governorate_names: Tuple[str, ...] = ()
+    governorate_key: Optional[str] = None      # stable identity, e.g. "amman"
+    governorate_names: Tuple[str, ...] = ()    # every stored form to match with IN (...)
     kindergarten_id: Optional[int] = None
+
+    @property
+    def governorate(self) -> Optional[str]:
+        """Canonical Arabic name, or None when unscoped."""
+        return governorate_name_ar(self.governorate_key) if self.governorate_key else None
 
     @property
     def level(self) -> str:
         if self.kindergarten_id:
             return "kindergarten"
-        if self.governorate:
+        if self.governorate_key:
             return "governorate"
         return "national"
 
@@ -170,31 +252,55 @@ class Scope:
             ar = name_ar if "حضانة" in name_ar else f"حضانة {name_ar}"
             en = name_en if "kindergarten" in name_en.lower() else f"Kindergarten {name_en}"
             return _t(ar, en)
-        if self.governorate:
-            return _t(f"محافظة {self.governorate}", f"{self.governorate} Governorate")
+        if self.governorate_key:
+            return _governorate_label(self.governorate_key)
         return _t("جميع محافظات المملكة", "All governorates nationwide")
 
     def governorate_filter(self, column):
-        """Match any spelling of the selected governorate."""
+        """Match every stored form of the selected governorate."""
         return column.in_(self.governorate_names)
 
 
+def _escape_like(value: str) -> str:
+    """Neutralise LIKE metacharacters so a search term is matched literally."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _governorate_label(key: str) -> Text:
+    """Bilingual display name for a governorate, from the canonical registry."""
+    name_ar = governorate_name_ar(key) or key
+    name_en = governorate_name_en(key) or name_ar
+    return _t(f"محافظة {name_ar}", f"{name_en} Governorate")
+
+
 def _resolve_scope(governorate: Optional[str], kindergarten_id: Optional[int]) -> Scope:
-    if not governorate:
+    """Resolve free-form scope input to canonical identity.
+
+    Any accepted form of a governorate — stable key, canonical Arabic name, English
+    name, or the legacy city-name form kept for old bookmarks — collapses to one key,
+    and the filter expands back to every stored spelling. That makes the result
+    identical on a database that has had migration ``canon_gov_cap_01`` applied and
+    on one that has not.
+    """
+    if not governorate or not str(governorate).strip():
         return Scope(kindergarten_id=kindergarten_id)
 
-    supplied = governorate.strip()
-    names = (supplied,)
-    for group in _GOVERNORATE_SYNONYMS:
-        if supplied.lower() in group:
-            # Keep only the Arabic spellings — the English alias is an input
-            # convenience, never a stored value.
-            names = tuple(name for name in group if not name.isascii())
-            break
+    supplied = str(governorate).strip()
+    if not is_valid_governorate(supplied):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Unknown governorate {supplied!r}. "
+                f"Expected one of: {[g['name_ar'] for g in get_all_governorates()]}"
+            ),
+        )
 
-    # Display the Arabic spelling the caller actually asked for where possible.
-    shown = supplied if not supplied.isascii() else names[0]
-    return Scope(governorate=shown, governorate_names=names, kindergarten_id=kindergarten_id)
+    key = normalize_governorate_key(supplied)
+    return Scope(
+        governorate_key=key,
+        governorate_names=tuple(governorate_query_aliases(supplied)),
+        kindergarten_id=kindergarten_id,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -506,18 +612,26 @@ def _build_incidents_over_time(db: Session, window: Window, scope: Scope) -> Ans
         .group_by(func.date(models.Incident.occurred_at))
         .all()
     )
-    counts = {str(day): int(count) for day, count in rows if day}
+    # Fold raw days into the window's bucket (day / week / month). The bucket widens
+    # with the period so a long window stays both readable and small — a 200-year
+    # request previously produced 73,000 points and a 6.3 MB response.
+    counts: Dict[date, int] = {}
+    for day, count in rows:
+        if not day:
+            continue
+        parsed = date.fromisoformat(str(day)[:10])
+        bucket = window.bucket_start(parsed)
+        counts[bucket] = counts.get(bucket, 0) + int(count)
 
-    # Emit every day in the window, including zero days. A gap-free axis is what
-    # makes "is this getting worse?" answerable at a glance.
+    # Emit every bucket in the window, including empty ones. A gap-free axis is what
+    # makes "is this getting worse?" answerable at a glance — a missing point would
+    # read as "no data" when it means "no incidents".
     categories: List[Category] = []
-    cursor = window.start
+    cursor = window.bucket_start(window.start)
     while cursor <= window.end:
         iso = cursor.isoformat()
-        categories.append(
-            Category(key=iso, label=_t(iso, iso), value=counts.get(iso, 0))
-        )
-        cursor += timedelta(days=1)
+        categories.append(Category(key=iso, label=_t(iso, iso), value=counts.get(cursor, 0)))
+        cursor = window.next_bucket(cursor)
 
     total = sum(c.value for c in categories)
     half = len(categories) // 2
@@ -548,26 +662,32 @@ def _build_incidents_over_time(db: Session, window: Window, scope: Scope) -> Ans
         records=total,
         headline=headline,
         what=_t(
-            "يعرض هذا الرسم عدد الحوادث المسجَّلة في كل يوم من أيام الفترة المحددة.",
-            "This chart shows how many incidents were recorded on each day of the selected period.",
+            f"يعرض هذا الرسم عدد الحوادث المسجَّلة في كل {window.bucket_label().ar} "
+            "من الفترة المحددة.",
+            "This chart shows how many incidents were recorded in each "
+            f"{window.bucket_label().en.lower()} of the selected period.",
         ),
         how=_t(
-            "١) نأخذ كل حادثة داخل الفترة ونعزو كل واحدة إلى يوم وقوعها. "
-            "٢) نعدّ الحوادث في كل يوم على حدة. "
-            "٣) تظهر الأيام التي لم تقع فيها حوادث بقيمة صفر، ولا تُحذف من الرسم. "
-            "المقارنة في العنوان تقارن مجموع النصف الأول من الفترة بمجموع النصف الثاني.",
-            "1) We take every incident in the period and attribute it to the day it occurred. "
-            "2) We count the incidents on each separate day. "
-            "3) Days with no incidents are shown as zero rather than dropped from the chart. "
-            "The trend statement compares the total of the first half of the period against the second half.",
+            "١) نأخذ كل حادثة داخل الفترة ونعزو كل واحدة إلى تاريخ وقوعها. "
+            f"٢) نجمع الحوادث في كل {window.bucket_label().ar} ونعدّها. "
+            f"٣) تظهر الفترات التي لم تقع فيها حوادث بقيمة صفر، ولا تُحذف من الرسم. "
+            "المقارنة في العنوان تقارن مجموع النصف الأول من الفترة بمجموع النصف الثاني. "
+            "كلما طالت الفترة اتّسعت وحدة التجميع تلقائياً (يوم ← أسبوع ← شهر) ليبقى الرسم مقروءاً.",
+            "1) We take every incident in the period and attribute it to the date it occurred. "
+            f"2) We group the incidents into each {window.bucket_label().en.lower()} and count them. "
+            f"3) A {window.bucket_label().en.lower()} with no incidents is shown as zero rather than "
+            "dropped from the chart. "
+            "The trend statement compares the total of the first half of the period against the second half. "
+            "The longer the period, the wider the grouping becomes automatically "
+            "(day → week → month) so the chart stays readable.",
         ),
         origin=_t(
             "المصدر: حقل «تاريخ وقوع الحادثة» في سجل الحوادث.",
             "Source: the “incident occurred” date field in the incident log.",
         ),
         excluded=_AGE_POLICY_NOTE,
-        value_axis=_t("عدد الحوادث في اليوم", "Incidents per day"),
-        category_axis=_t("اليوم", "Day"),
+        value_axis=window.bucket_unit(),
+        category_axis=window.bucket_label(),
         next_steps=[
             NextStep(
                 label=_t("ما أنواع هذه الحوادث؟", "What types were these incidents?"),
@@ -582,7 +702,7 @@ def _build_incidents_over_time(db: Session, window: Window, scope: Scope) -> Ans
 
 
 def _build_incidents_by_governorate(db: Session, window: Window, scope: Scope) -> Answer:
-    rows = (
+    query = (
         db.query(models.Kindergarten.governorate, func.count(models.Incident.id))
         .join(models.Incident, models.Incident.kindergarten_id == models.Kindergarten.id)
         .filter(
@@ -590,16 +710,36 @@ def _build_incidents_by_governorate(db: Session, window: Window, scope: Scope) -
             models.Incident.occurred_at >= window.dt_start,
             models.Incident.occurred_at < window.dt_end_exclusive,
         )
-        .group_by(models.Kindergarten.governorate)
-        .all()
     )
+    # A geography breakdown still honours a geography filter: scoping to one
+    # governorate and then asking "which governorate?" must not silently widen
+    # back to the whole country.
+    if scope.kindergarten_id:
+        query = query.filter(models.Kindergarten.id == scope.kindergarten_id)
+    elif scope.governorate_key:
+        query = query.filter(scope.governorate_filter(models.Kindergarten.governorate))
+
+    rows = query.group_by(models.Kindergarten.governorate).all()
+
+    # Fold every stored spelling onto its canonical key before counting. On a database
+    # where the capital appears as both "عمان" and "العاصمة" these are one governorate,
+    # and emitting two bars would both mislead and break the national partition.
+    folded: Dict[str, int] = {}
+    for gov, count in rows:
+        key = normalize_governorate_key(gov) if gov else None
+        folded[key or "unknown"] = folded.get(key or "unknown", 0) + int(count)
+
     categories = [
         Category(
-            key=str(gov or "UNKNOWN"),
-            label=_t(str(gov or "غير محدد"), str(gov or "Unspecified")),
-            value=int(count),
+            key=key,
+            label=(
+                _t(governorate_name_ar(key) or key, governorate_name_en(key) or key)
+                if key != "unknown"
+                else _t("غير محدد", "Unspecified")
+            ),
+            value=value,
         )
-        for gov, count in rows
+        for key, value in folded.items()
     ]
     categories.sort(key=lambda c: c.value, reverse=True)
     total = sum(c.value for c in categories)
@@ -879,22 +1019,41 @@ def _build_kindergarten_capacity(db: Session, window: Window, scope: Scope) -> A
 
     rows = query.group_by(models.Kindergarten.governorate).all()
 
+    # Fold onto canonical governorate keys before computing a rate — summing the
+    # numerator and denominator separately is the only correct way to combine two
+    # spellings of the same governorate. Averaging their percentages would not be.
+    folded: Dict[str, List[int]] = {}
+    for gov, capacity, enrolled in rows:
+        key = (normalize_governorate_key(gov) if gov else None) or "unknown"
+        bucket = folded.setdefault(key, [0, 0])
+        bucket[0] += int(capacity or 0)
+        bucket[1] += int(enrolled or 0)
+
     categories: List[Category] = []
     total_capacity = 0
     total_enrolled = 0
-    for gov, capacity, enrolled in rows:
-        capacity, enrolled = int(capacity or 0), int(enrolled or 0)
+    for key, (capacity, enrolled) in folded.items():
         total_capacity += capacity
         total_enrolled += enrolled
-        rate = round(enrolled * 100 / capacity) if capacity else 0
         categories.append(
             Category(
-                key=str(gov or "UNKNOWN"),
-                label=_t(str(gov or "غير محدد"), str(gov or "Unspecified")),
-                value=rate,
+                key=key,
+                label=(
+                    _t(governorate_name_ar(key) or key, governorate_name_en(key) or key)
+                    if key != "unknown"
+                    else _t("غير محدد", "Unspecified")
+                ),
+                value=round(enrolled * 100 / capacity) if capacity else 0,
             )
         )
     categories.sort(key=lambda c: c.value, reverse=True)
+
+    # `records` must stay "underlying rows counted", never "bars drawn" — that
+    # conflation is the defect this whole surface exists to avoid. Here the
+    # underlying entity is the kindergarten.
+    kindergarten_count = query.with_entities(
+        func.count(func.distinct(models.Kindergarten.id))
+    ).order_by(None).scalar() or 0
 
     if total_capacity == 0:
         headline = _t(
@@ -911,7 +1070,7 @@ def _build_kindergarten_capacity(db: Session, window: Window, scope: Scope) -> A
     return Answer(
         chart_type="bar",
         categories=categories,
-        records=len(rows),
+        records=int(kindergarten_count),
         headline=headline,
         what=_t(
             "يعرض هذا الرسم نسبة إشغال المقاعد في كل محافظة: كم مقعداً مشغولاً من كل ١٠٠ مقعد متاح.",
@@ -1027,6 +1186,48 @@ QUESTIONS: Dict[str, Question] = {
 # ---------------------------------------------------------------------------
 
 
+def _available_governorates(db: Session) -> List[Dict[str, Any]]:
+    """Governorates that actually hold kindergartens, as canonical options.
+
+    Raw column values are folded onto their canonical key first, so a database
+    holding both "عمان" and "العاصمة" offers the capital once. Offering it twice
+    would let an operator pick two entries that return the same rows.
+    """
+    rows = (
+        db.query(models.Kindergarten.governorate)
+        .filter(
+            models.Kindergarten.deleted_at.is_(None),
+            models.Kindergarten.governorate.isnot(None),
+        )
+        .distinct()
+        .all()
+    )
+
+    seen: Dict[str, Dict[str, Any]] = {}
+    for (value,) in rows:
+        if not value or not str(value).strip():
+            continue
+        key = normalize_governorate_key(value)
+        if key in seen:
+            continue
+        seen[key] = {
+            "key": key,
+            "name": {
+                "ar": governorate_name_ar(key) or str(value).strip(),
+                "en": governorate_name_en(key) or str(value).strip(),
+            },
+        }
+    return sorted(seen.values(), key=lambda g: g["name"]["ar"])
+
+
+@router.get(
+    "/api/admin/analytics/explorer/governorates",
+    summary="Governorates available as a filter, canonical and de-duplicated",
+)
+def list_governorates(db: Session = Depends(get_db)) -> Dict[str, Any]:
+    return {"governorates": _available_governorates(db)}
+
+
 @router.get("/api/admin/analytics/explorer/questions", summary="Catalogue of answerable questions")
 def list_questions() -> Dict[str, Any]:
     """Everything the operator is allowed to ask, in both languages."""
@@ -1049,12 +1250,14 @@ def list_questions() -> Dict[str, Any]:
 )
 def list_kindergartens(
     governorate: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, max_length=100, description="Match on either name"),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     """Feeds the dependent kindergarten picker.
 
-    Loaded on demand rather than embedded in the page, so the payload stays small
-    on a national deployment with thousands of kindergartens.
+    Loaded on demand rather than embedded in the page, and hard-capped, so the payload
+    stays bounded on a national deployment with thousands of kindergartens. When the cap
+    truncates the list the response says so, and the caller can narrow with ``search``.
     """
     query = db.query(
         models.Kindergarten.id, models.Kindergarten.name_ar, models.Kindergarten.name_en
@@ -1062,9 +1265,21 @@ def list_kindergartens(
     if governorate:
         scope = _resolve_scope(governorate, None)
         query = query.filter(scope.governorate_filter(models.Kindergarten.governorate))
+    if search and search.strip():
+        # LIKE metacharacters must be escaped, not just parameterised. Binding is
+        # enough to stop injection, but an unescaped "%" still matches every row —
+        # a search for a literal percent sign would silently return the whole table.
+        term = f"%{_escape_like(search.strip())}%"
+        query = query.filter(
+            models.Kindergarten.name_ar.ilike(term, escape="\\")
+            | models.Kindergarten.name_en.ilike(term, escape="\\")
+        )
 
-    rows = query.order_by(models.Kindergarten.name_ar).all()
+    total = query.with_entities(func.count(models.Kindergarten.id)).order_by(None).scalar() or 0
+    rows = query.order_by(models.Kindergarten.name_ar).limit(_KINDERGARTEN_PICKER_LIMIT).all()
     return {
+        "total": int(total),
+        "truncated": int(total) > len(rows),
         "kindergartens": [
             {
                 "id": kg_id,
@@ -1097,6 +1312,23 @@ def answer_question(
 
     window = _resolve_window(date_from, date_to)
     scope = _resolve_scope(governorate, kindergarten_id)
+
+    # A kindergarten that does not exist must not answer "0 incidents" — that reads
+    # as a clean safety record rather than as a bad filter.
+    if scope.kindergarten_id:
+        exists = (
+            db.query(models.Kindergarten.id)
+            .filter(
+                models.Kindergarten.id == scope.kindergarten_id,
+                models.Kindergarten.deleted_at.is_(None),
+            )
+            .first()
+        )
+        if not exists:
+            raise HTTPException(
+                status_code=404, detail=f"Kindergarten {scope.kindergarten_id} was not found."
+            )
+
     answer = definition.build(db, window, scope)
 
     return {
@@ -1147,15 +1379,7 @@ def explorer_page(
         return RedirectResponse("/dashboard", status_code=303)
 
     today = today_amman()
-    governorates = [
-        row[0]
-        for row in db.query(models.Kindergarten.governorate)
-        .filter(models.Kindergarten.deleted_at.is_(None), models.Kindergarten.governorate.isnot(None))
-        .distinct()
-        .order_by(models.Kindergarten.governorate)
-        .all()
-        if row[0]
-    ]
+    governorates = _available_governorates(db)
 
     return templates.TemplateResponse(
         request=request,

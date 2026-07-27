@@ -1,7 +1,7 @@
 # Guided Analytics — UX Redesign for Non-Technical Administrators
 
 **Delivered at** `/admin/analytics/explorer` **Branch** `feat/analytics-explorer-redesign`
-**Status** implemented, wired into `main.py`, 26 tests passing
+**Status** implemented, wired into `main.py`, re-audited from zero, 70 tests passing
 
 ---
 
@@ -311,9 +311,11 @@ The browser picks `ar` or `en`. It never translates, never pattern-matches, neve
 |---|---|
 | `analytics_explorer.py` | **new** — question catalogue, builders, bilingual text, API |
 | `templates/admin/analytics/explorer.html` | **new** — the page |
-| `test_analytics_explorer.py` | **new** — 26 tests |
+| `test_analytics_explorer.py` | **new** — 57 tests |
 | `main.py` | +3 lines — router registration |
-| `charts_api.py`, `charts/service.py`, `charts/tasks.py`, `charts/cache.py`, `charts/advisor.py` | audit fixes + dead-code removal |
+| `charts_api.py`, `charts/service.py`, `charts/tasks.py`, `charts/cache.py`, `charts/advisor.py`, `charts/stats.py` | audit fixes + dead-code removal + canonical governorate matching |
+| `models.py` | `ix_incidents_occurred_at` on `Incident` |
+| `alembic/versions/analytics_idx_01_…py` | **new** — that index as a migration |
 | `charts/builders/`, `charts/colors.py`, `charts/service.py.bak` | **deleted** — dead |
 
 **On file placement.** Python modules, tests and reports are at the repository root, matching
@@ -349,36 +351,50 @@ coherent bilingual answer.
 
 ---
 
-## 9. Governorate matching — a defect found while completing the filters
+## 9. Governorate identity — canonical, delegated, deployment-independent
 
-Building the kindergarten picker surfaced a bug in the legacy scoping logic that I had
-initially copied. The capital is stored in this database as **`عمان`**, but the legacy
-loader rewrites every alias to a single winner:
+> **This section replaces an earlier, wrong account.** A previous revision claimed the
+> legacy rewrite `عمان → العاصمة` was itself the bug. It is not: `العاصمة` is the canonical
+> governorate name (`config.py:213`, `services/jordan_locations.py`, migration
+> `canon_gov_cap_01`), and `عمان` is the city inside it. The real defect is an **equality
+> test against one spelling** on a column that holds either form depending on whether the
+> deployment has been migrated. The fix below supersedes the hardcoded synonym group,
+> which would have double-counted the capital on a half-migrated database.
 
-```python
-gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
+`analytics_explorer.py` carries **no governorate knowledge of its own** — a test enforces
+that by parsing the module and failing if any canonical name appears as a live string
+literal. Identity is delegated entirely to `services.jordan_locations`:
+
+| Concern | Delegated to |
+|---|---|
+| stable key (`"amman"`) | `normalize_governorate_key` |
+| canonical Arabic name | `governorate_name_ar` |
+| English name | `governorate_name_en` |
+| every stored form, for `IN (…)` | `governorate_query_aliases` |
+| validity | `is_valid_governorate` |
+
+Three properties follow, each covered by a test:
+
+1. **Every accepted form collapses to one identity.** `عمان`, `العاصمة`, `عاصمة`, `amman`,
+   `Amman`, `AMMAN`, `" amman "` all resolve to key `amman`, canonical name `العاصمة`,
+   English `Amman`, and a filter matching every stored spelling.
+2. **Breakdowns fold onto the canonical key.** A half-migrated database holding both
+   `عمان` and `العاصمة` yields **one** capital option and **one** capital bar, not two.
+   Verified by mutating a copy of the database to hold both spellings simultaneously.
+3. **The partition holds.** The per-governorate slices sum exactly to the national total,
+   for every governorate and every geography-aware question — no row lost, none
+   double-counted, including in the mixed-spelling case.
+
+An unknown governorate is now a `422` naming the valid set, rather than a silently empty
+chart.
+
+The same alias-aware predicate replaced the equality test in all five `charts/service.py`
+loaders, so the legacy explorer is correct on this database too:
+
 ```
-
-So filtering by the capital rewrites `عمان` → `العاصمة`, which matches no row:
-
+before:  'عمان' -> 0    'العاصمة' -> 0    'amman' -> 0
+after:   all spellings -> 2;  legacy partition SUM=6 NATIONAL=6 holds=True
 ```
-BEFORE  input='عمان'    -> resolved='العاصمة'  records=0
-        input='amman'   -> resolved='العاصمة'  records=0
-AFTER   input='عمان'    -> matches ('عمان','العاصمة')  records=2
-        input='amman'   -> matches ('عمان','العاصمة')  records=2
-```
-
-The fix treats the spellings as **synonyms matched with `IN`** rather than picking a winner,
-so it is correct whichever spelling a deployment holds. The English alias is an input
-convenience and never reaches the query. Guarded by
-`test_every_amman_spelling_matches_both_stored_names` and by a partition test asserting that
-the per-governorate slices sum exactly to the national total — no row lost, none
-double-counted.
-
-**The same defect is still live in `charts/service.py`**, in all four loaders
-(`_load_incidents`, `_load_attendance`, `_load_daily_reports`, `_load_enrollments`,
-`_load_kindergartens`). Any governorate drill-down on the legacy page returns zero rows on
-this data. Logged as **[B-18]**.
 
 ---
 
@@ -400,6 +416,8 @@ this data. Logged as **[B-18]**.
   the two can be compared on real usage before anything is retired.
 * **`charts/stats.py`'s six unused exports were left in place** — outside this page's blast
   radius, and removing them belongs with a broader sweep.
-* **[B-18] is documented, not fixed.** Correcting governorate matching inside
-  `charts/service.py` changes what the legacy page returns for every geographic filter; that
-  is a behaviour change on a live surface and should be its own reviewed edit.
+* **`alembic.ini` is absent from this working tree** (one of 312 tracked files deleted
+  before this work began), so migrations cannot be *run* here. The chain itself is healthy —
+  alembic reports a single head — and `analytics_idx_01` is written, verified idempotent and
+  verified reversible against a scratch database. Restoring `alembic.ini` is a one-line
+  `git checkout` the tree owner should make deliberately, not a side effect of this change.

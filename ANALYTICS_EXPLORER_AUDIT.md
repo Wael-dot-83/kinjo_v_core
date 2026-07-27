@@ -268,25 +268,52 @@ else:                        ...group by Incident.severity_level...
 
 `group_by=kindergarten` returns severity data. No error, no warning.
 
-**[B-18, High]** — governorate filtering returns zero rows for the capital. All five
-loaders rewrite every alias to one spelling:
+**[B-18, High]** — governorate filtering returns zero rows for the capital. *(Fixed.)*
+
+> **Correction to an earlier revision of this document.** A previous pass recorded the
+> root cause as "the code rewrites `عمان` → `العاصمة`, which is wrong". That was wrong.
+> `العاصمة` **is** the canonical governorate name for the capital — `config.py:213`
+> (`JORDAN_GOVERNORATES`), `services/jordan_locations.py`, and migration
+> `canon_gov_cap_01` all agree, and `عمان` is the *city* inside it, historically
+> mis-stored in the governorate column. The code applied the project's canonical rule
+> correctly. The defect is elsewhere, and the earlier "synonym group" fix was itself
+> unsafe — see below.
+
+All five loaders rewrote input to the single canonical spelling and compared with `==`:
 
 ```python
 gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
+... models.Kindergarten.governorate == gov
 ```
 
-This database stores the capital as **`عمان`**, so the rewrite produces a value that matches
-nothing:
+That is correct **only on a database where migration `canon_gov_cap_01` has run**. This
+development database has no `alembic_version` table at all — it was built by
+`Base.metadata.create_all()` and seeded, so it still holds the pre-migration form `عمان`:
 
 ```
-input='عمان'  -> resolved='العاصمة'  records=0     (2 kindergartens exist there)
-input='amman' -> resolved='العاصمة'  records=0
+input='عمان'   -> resolved='العاصمة' -> records=0     (2 kindergartens exist there)
+input='amman'  -> resolved='العاصمة' -> records=0
+input='إربد'   -> resolved='إربد'    -> records=1     (unaffected: one spelling only)
 ```
 
-Every governorate drill-down on the legacy page is silently empty for Amman. The correct
-handling is to match the spellings as synonyms (`IN (…)`), which is what the new
-`analytics_explorer.Scope.governorate_filter` does. **Not fixed in `charts/service.py`** —
-it changes live behaviour on the legacy surface and warrants its own reviewed edit.
+**Root cause:** an equality test against one canonical spelling, on a column that legitimately
+holds either form depending on whether the deployment has been migrated.
+
+**Fix:** match every accepted stored form via `services.jordan_locations.governorate_query_aliases`
+— the registry `api/analytics/scope_domain.py` already uses for exactly this reason. Correct
+on migrated and un-migrated databases alike, and no governorate knowledge is duplicated:
+
+```
+after: 'عمان' 'العاصمة' 'amman' 'Amman' 'AMMAN' all -> 2 records
+       legacy partition: SUM=6 NATIONAL=6 holds=True
+```
+
+**Why the earlier "synonym group" fix was rejected.** It hardcoded `("amman","عمان","العاصمة")`
+into `analytics_explorer.py`, duplicating the canonical registry, and it matched with `IN`
+*without folding the breakdown onto a canonical key*. On a half-migrated database holding
+both spellings that yields two "Amman" entries in the picker and two Amman bars — every
+capital row counted twice. Verified against a simulated mixed-spelling database; the
+canonical-key implementation keeps `keys.count("amman") == 1` and the partition intact.
 
 **[B-14, High]** — the `attendance` metric metadata contradicts the data it describes:
 
@@ -457,6 +484,52 @@ Legacy surfaces re-checked after the cleanup, authenticated:
 200  POST /api/admin/charts/suggest   -> 3 suggestions
 200  POST /admin/charts/suggest       -> 3 suggestions
 ```
+
+---
+
+## 7b. Second verification pass — findings not present in the first audit
+
+An independent re-audit from zero (assuming nothing, including this document) found nine
+further defects. All are fixed and covered by tests.
+
+| ID | Sev | Finding | Evidence |
+|---|---|---|---|
+| **V-01** | Critical | **Unbounded reporting period.** `date_from=1900-01-01&date_to=2100-01-01` — typeable in the URL — built a 73,050-point, **6.28 MB** response. Now capped at 3653 days, and the series bucket widens day → week → month with the window. | `73050 categories / 6,282,300 bytes` before; `79 categories / 6,794 bytes` for a 6-year window after |
+| **V-02** | High | **Geography breakdown ignored the geography filter.** Scoping to one governorate and then asking "which governorate has the most incidents?" silently widened back to the whole country. | `_build_incidents_by_governorate` applied no scope predicate |
+| **V-03** | High | **LIKE wildcards were interpreted.** `search=%` matched every kindergarten. Parameter binding stops injection but not metacharacters. Now escaped with an explicit `ESCAPE`. | `search='%' -> total=5` (whole table) before |
+| **V-04** | High | **WCAG 2.2 AA contrast failure.** `--gx-ink-faint` `#94A3B8` measured **2.56:1** on white, used for 11px question subtitles, axis labels and share percentages — none of which qualify as large text. Replaced with `#64748B` (4.76:1 on white, 4.55:1 on the canvas). | computed luminance ratios |
+| **V-05** | High | **Answer changes were silent to screen readers.** No live region; choosing a question replaced the headline with no announcement. Added `aria-live="polite"`, plus focus movement on next-step navigation. | rendered DOM had no `aria-live` |
+| **V-06** | Medium | **Response races.** Neither the answer fetch nor the picker fetch was cancellable, so a slow earlier response could land last and overwrite a newer answer — the chart would disagree with the filters beside it. Both now use `AbortController` with a generation check. | no `AbortController` in the page |
+| **V-07** | Medium | **Back button was broken.** Every answer called `history.replaceState`, so no history entry was ever created and Back left the page. Now `pushState` for user actions, `replaceState` when restoring, plus a `popstate` handler that reapplies the whole filter state. | `history.replaceState` was the only call |
+| **V-08** | Medium | **Two numeral systems on one screen.** Client values used `toLocaleString('ar-JO')` → Arabic-Indic `٦`, while the server composes headlines with Latin digits: `سُجِّلت 6 حادثة` beside a bar reading `٦`. Now `ar-JO-u-nu-latn`. | `(6).toLocaleString('ar-JO') === '٦'` |
+| **V-09** | Medium | **`records` still meant "bars" in one question.** `kindergarten_capacity` reported `len(rows)` — the very conflation this surface exists to avoid. Now counts distinct kindergartens. | `records == groups == 4` before; `records=5, groups=4` after |
+| **V-10** | Low | **A nonexistent kindergarten answered "0 incidents"** rather than 404 — an empty filter reading as a clean safety record. | `kindergarten_id=999999 -> 200, records=0` |
+| **V-11** | Low | **Unbounded picker.** No limit; a national deployment would return every kindergarten into a `<select>`. Now capped at 200 with `total`/`truncated` and a `search` parameter. | no `LIMIT` in the query |
+
+### Corrected from the first pass
+
+* **Migration chain is healthy.** A naive regex over `down_revision` suggested 8 heads;
+  `alembic.script.ScriptDirectory` — the authority — reports **one** (`canon_gov_cap_01`,
+  now `analytics_idx_01`). `upgrade head` would succeed. **D-06 stands**: `alembic.ini`
+  is absent from this working tree, so migrations cannot be *run* here.
+* **B-18's root cause was misdiagnosed.** See the corrected entry in §3.5.
+
+### D-02 resolved
+
+`ix_incidents_occurred_at` added to `models.Incident` and via migration `analytics_idx_01`.
+Measured on a 300,000-row incidents table:
+
+| window | before | after |
+|---|---|---|
+| 7 days | 50.5 ms | 0.0 ms |
+| 30 days | 50.2 ms | 0.0 ms |
+| 90 days *(the explorer default)* | 49.0 ms | 11.3 ms |
+| 10 years | 210 ms | 1290 ms ⚠ |
+
+The wide-range regression is a SQLite planner artifact — it keeps choosing the index where
+a scan would win. Production runs PostgreSQL (`config.py:416` refuses to start on SQLite),
+whose planner has real selectivity statistics, and the explorer caps a period at 3653 days
+regardless. The index is a clear win across every window the UI can actually produce.
 
 ---
 

@@ -13,9 +13,13 @@
      renders correctly no matter which global stylesheets are present.
      --------------------------------------------------------------------- */
   .gx {
-    --gx-ink:        #0F172A;
-    --gx-ink-soft:   #475569;
-    --gx-ink-faint:  #94A3B8;
+    --gx-ink:        #0F172A;   /* 17.85:1 on white */
+    --gx-ink-soft:   #475569;   /*  7.58:1 on white */
+    /* 4.76:1 on white and 4.55:1 on --gx-canvas. The obvious slate for muted text
+       (#94A3B8) measures 2.56:1 — it fails WCAG 2.2 AA outright, and it is used here
+       for 11px subtitles, axis labels and share percentages, none of which qualify
+       as large text. */
+    --gx-ink-faint:  #64748B;
     --gx-line:       #E2E8F0;
     --gx-line-soft:  #F1F5F9;
     --gx-surface:    #FFFFFF;
@@ -294,8 +298,10 @@
             <span class="gx-field__label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</span>
             <select class="gx-input" id="gxGov">
               <option value="">{% if ui_lang == 'en' %}All governorates{% else %}جميع المحافظات{% endif %}</option>
+              {# value is the stable key, so a shared link keeps working whichever
+                 spelling the deployment's database happens to store. #}
               {% for gov in governorates %}
-              <option value="{{ gov }}">{{ gov }}</option>
+              <option value="{{ gov.key }}">{{ gov.name.en if ui_lang == 'en' else gov.name.ar }}</option>
               {% endfor %}
             </select>
           </label>
@@ -348,7 +354,10 @@
           {# Placeholder text keeps the heading and the chart region from ever being
              empty for assistive tech; both are replaced the moment an answer loads,
              and the whole block stays hidden until then. #}
-          <div id="gxAnswer" class="d-none">
+          {# aria-live so the headline is announced when an answer replaces the
+             previous one. Without it a screen-reader user hears nothing after
+             choosing a question — the page changes silently. #}
+          <div id="gxAnswer" class="d-none" aria-live="polite" aria-atomic="false">
             <p class="gx-answer__q" id="gxQTitle"></p>
             <h2 class="gx-headline" id="gxHeadline">
               {% if ui_lang == 'en' %}Preparing the answer{% else %}يجري تجهيز الإجابة{% endif %}
@@ -432,7 +441,11 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
     });
   }
-  function num(value) { return Number(value || 0).toLocaleString(LANG === 'en' ? 'en-US' : 'ar-JO'); }
+  // Latin digits in both languages. The server composes its headline sentences with
+  // Latin numerals, so formatting client-side values as Arabic-Indic ("٦") would put
+  // two numeral systems on the same screen — "سُجِّلت 6 حادثة" beside a bar reading "٦".
+  var NUMBER_LOCALE = LANG === 'en' ? 'en-US' : 'ar-JO-u-nu-latn';
+  function num(value) { return Number(value || 0).toLocaleString(NUMBER_LOCALE); }
   function show(node, visible) { node.classList.toggle('d-none', !visible); }
 
   function setQuestion(key) {
@@ -566,7 +579,23 @@
   }
 
   // ── fetch ────────────────────────────────────────────────────────────────
-  function load() {
+
+  // Only one answer request may be in flight. Without this, switching governorate
+  // twice quickly can let the slower first response land last and overwrite the
+  // newer answer — the chart would then disagree with the filters beside it.
+  var answerRequest = null;
+
+  function currentParams() {
+    var params = new URLSearchParams({ question: current });
+    if (el.from.value) { params.set('date_from', el.from.value); }
+    if (el.to.value)   { params.set('date_to', el.to.value); }
+    if (el.gov.value)  { params.set('governorate', el.gov.value); }
+    if (el.kg.value)   { params.set('kindergarten_id', el.kg.value); }
+    return params;
+  }
+
+  function load(options) {
+    var opts = options || {};
     if (!current) {
       fail(say('Choose a question from the list first.', 'اختر سؤالاً من القائمة أولاً.'));
       return;
@@ -576,20 +605,22 @@
       return;
     }
 
-    var params = new URLSearchParams({ question: current });
-    if (el.from.value) { params.set('date_from', el.from.value); }
-    if (el.to.value)   { params.set('date_to', el.to.value); }
-    if (el.gov.value)  { params.set('governorate', el.gov.value); }
-    if (el.kg.value)   { params.set('kindergarten_id', el.kg.value); }
+    var params = currentParams();
+
+    if (answerRequest) { answerRequest.abort(); }
+    answerRequest = new AbortController();
+    var thisRequest = answerRequest;
 
     busy(true);
     fetch('/api/admin/analytics/explorer/answer?' + params.toString(), {
       headers: { 'Accept': 'application/json' },
-      credentials: 'same-origin'
+      credentials: 'same-origin',
+      signal: thisRequest.signal
     })
       .then(function (res) {
         if (res.status === 401) {
-          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          window.location.href = '/login?redirect='
+            + encodeURIComponent(window.location.pathname + window.location.search);
           throw new Error('unauthenticated');
         }
         return res.json().then(function (body) {
@@ -601,14 +632,22 @@
         show(el.empty, false);
         show(el.answer, true);
         render(payload);
-        history.replaceState({}, '', window.location.pathname + '?' + params.toString());
+        // pushState for a user-initiated change so Back returns to the previous
+        // answer; replaceState when restoring from history, which must not add a
+        // new entry and would otherwise make Back unusable.
+        var url = window.location.pathname + '?' + params.toString();
+        if (opts.fromHistory) { history.replaceState({ explorer: true }, '', url); }
+        else { history.pushState({ explorer: true }, '', url); }
       })
       .catch(function (err) {
+        if (err.name === 'AbortError') { return; }   // superseded, not a failure
         if (err.message !== 'unauthenticated') {
           fail(err.message || say('Something went wrong.', 'حدث خطأ ما.'));
         }
       })
-      .then(function () { busy(false); });
+      .then(function () {
+        if (thisRequest === answerRequest) { answerRequest = null; busy(false); }
+      });
   }
 
   function busy(on) {
@@ -655,37 +694,86 @@
     setQuestion(btn.dataset.goto);
     load();
     document.getElementById('gxAnswerPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Move focus with the eye. Scrolling alone strands a keyboard or screen-reader
+    // user at the old position with no idea the answer changed.
+    el.headline.setAttribute('tabindex', '-1');
+    el.headline.focus({ preventScroll: true });
   });
 
-  el.run.addEventListener('click', load);
+  el.run.addEventListener('click', function () { load(); });
   [el.from, el.to].forEach(function (input) {
     input.addEventListener('change', function () {
       el.chips.forEach(function (c) { c.setAttribute('aria-pressed', 'false'); });
     });
   });
 
-  // The kindergarten list depends on the governorate, so it is refetched rather
-  // than shipped with the page — a national deployment has far too many to embed.
+  // ── kindergarten picker ──────────────────────────────────────────────────
+  // The list depends on the governorate, so it is refetched rather than shipped
+  // with the page — a national deployment has far too many to embed.
+  var kgRequest = null;
+
+  function setKgPlaceholder(text, disabled) {
+    el.kg.innerHTML = '';
+    var opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = text;
+    el.kg.appendChild(opt);
+    el.kg.disabled = !!disabled;
+  }
+
   function loadKindergartens(preselect) {
+    if (kgRequest) { kgRequest.abort(); }
+    kgRequest = new AbortController();
+    var thisRequest = kgRequest;
+
+    setKgPlaceholder(say('Loading…', 'جارٍ التحميل…'), true);
+
     var qs = el.gov.value ? '?governorate=' + encodeURIComponent(el.gov.value) : '';
     return fetch('/api/admin/analytics/explorer/kindergartens' + qs, {
       headers: { 'Accept': 'application/json' },
-      credentials: 'same-origin'
+      credentials: 'same-origin',
+      signal: thisRequest.signal
     })
-      .then(function (res) { return res.ok ? res.json() : { kindergartens: [] }; })
+      .then(function (res) {
+        if (!res.ok) { throw new Error('kindergarten list unavailable'); }
+        return res.json();
+      })
       .then(function (body) {
-        var head = el.kg.options[0];
-        el.kg.innerHTML = '';
-        el.kg.appendChild(head);
-        (body.kindergartens || []).forEach(function (kg) {
+        if (thisRequest !== kgRequest) { return; }   // a newer request already won
+        var list = body.kindergartens || [];
+        setKgPlaceholder(
+          list.length
+            ? say('All kindergartens', 'جميع الحضانات')
+            : say('No kindergartens here', 'لا توجد حضانات هنا'),
+          false
+        );
+        list.forEach(function (kg) {
           var opt = document.createElement('option');
           opt.value = kg.id;
           opt.textContent = pick(kg.name);
           el.kg.appendChild(opt);
         });
+        if (body.truncated) {
+          var note = document.createElement('option');
+          note.disabled = true;
+          note.textContent = say(
+            'Showing the first ' + num(list.length) + ' of ' + num(body.total),
+            'يُعرض أول ' + num(list.length) + ' من ' + num(body.total)
+          );
+          el.kg.appendChild(note);
+        }
         if (preselect) { el.kg.value = preselect; }
       })
-      .catch(function () { /* the filter is optional — a failure must not block the page */ });
+      .catch(function (err) {
+        if (err.name === 'AbortError') { return; }
+        if (thisRequest !== kgRequest) { return; }
+        // The filter is optional, so a failure must not block the page — but it
+        // must say so rather than look like an empty governorate.
+        setKgPlaceholder(say('Could not load the list', 'تعذّر تحميل القائمة'), false);
+      })
+      .then(function () {
+        if (thisRequest === kgRequest) { kgRequest = null; }
+      });
   }
 
   el.gov.addEventListener('change', function () {
@@ -694,18 +782,36 @@
   });
   el.kg.addEventListener('change', function () { if (current) { load(); } });
 
-  // Restore a shared link, otherwise let the operator choose.
-  var incoming = new URLSearchParams(window.location.search);
-  if (incoming.get('date_from')) { el.from.value = incoming.get('date_from'); }
-  if (incoming.get('date_to'))   { el.to.value = incoming.get('date_to'); }
-  if (incoming.get('governorate')) { el.gov.value = incoming.get('governorate'); }
-
-  loadKindergartens(incoming.get('kindergarten_id')).then(function () {
-    if (incoming.get('question')) {
-      setQuestion(incoming.get('question'));
-      load();
+  // ── history + deep links ─────────────────────────────────────────────────
+  function applyState(params) {
+    el.from.value = params.get('date_from') || '{{ default_date_from }}';
+    el.to.value = params.get('date_to') || '{{ default_date_to }}';
+    el.gov.value = params.get('governorate') || '';
+    // Reflect the restored window on the period chips instead of leaving a stale
+    // one highlighted.
+    var days = null;
+    if (params.get('date_from') && params.get('date_to')) {
+      days = Math.round(
+        (new Date(params.get('date_to')) - new Date(params.get('date_from'))) / 86400000
+      );
     }
+    el.chips.forEach(function (c) {
+      c.setAttribute('aria-pressed', String(days !== null && String(days) === c.dataset.days));
+    });
+
+    return loadKindergartens(params.get('kindergarten_id')).then(function () {
+      if (params.get('question')) {
+        setQuestion(params.get('question'));
+        load({ fromHistory: true });
+      }
+    });
+  }
+
+  window.addEventListener('popstate', function () {
+    applyState(new URLSearchParams(window.location.search));
   });
+
+  applyState(new URLSearchParams(window.location.search));
 })();
 </script>
 {% endblock %}

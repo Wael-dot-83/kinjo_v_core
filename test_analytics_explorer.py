@@ -10,6 +10,7 @@ each of which is a defect in the legacy ``charts_api`` path:
 """
 
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -61,26 +62,99 @@ def test_window_rejects_malformed_dates():
     assert exc.value.status_code == 422
 
 
+def test_an_absurd_window_is_refused_rather_than_served():
+    """`date_from=1900-01-01&date_to=2100-01-01` produced a 73,000-point, 6.3 MB response."""
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc:
+        ax._resolve_window("1900-01-01", "2100-01-01")
+    assert exc.value.status_code == 422
+    assert "maximum" in str(exc.value.detail)
+
+
+@pytest.mark.parametrize(
+    "start,end,expected",
+    [
+        ("2026-07-01", "2026-07-27", "day"),
+        ("2026-06-01", "2026-07-27", "day"),
+        ("2026-01-01", "2026-07-27", "week"),
+        ("2020-01-01", "2026-07-27", "month"),
+    ],
+)
+def test_bucket_widens_with_the_window(start, end, expected):
+    assert ax._resolve_window(start, end).bucket == expected
+
+
+def test_time_series_stays_bounded_across_the_whole_legal_range(db):
+    """Even at the maximum window the series must stay small enough to render."""
+    window = ax._resolve_window("2016-08-01", "2026-07-27")
+    answer = ax.QUESTIONS["incidents_over_time"].build(db, window, ax._resolve_scope(None, None))
+    assert window.bucket == "month"
+    assert len(answer.categories) <= 130, "a decade of months, not a decade of days"
+
+
 # ---------------------------------------------------------------------------
 # 2. Scope resolution
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("supplied", ["amman", "Amman", "AMMAN", "عمان", "العاصمة"])
-def test_every_amman_spelling_matches_both_stored_names(supplied):
-    """The capital is stored as عمان here and as العاصمة elsewhere.
+@pytest.mark.parametrize(
+    "supplied", ["amman", "Amman", "AMMAN", " amman ", "عمان", "العاصمة", "عاصمة"]
+)
+def test_every_accepted_form_of_the_capital_resolves_to_one_identity(supplied):
+    """Identity comes from the canonical registry, not from a local table.
 
-    The legacy loader rewrote every alias to a single winner, which returns zero
-    rows on any deployment holding the other spelling. The filter must match either.
+    The capital is persisted either as the canonical governorate name "العاصمة" or as
+    the legacy city-name form "عمان" that migration canon_gov_cap_01 corrects. Every
+    accepted input must collapse to a single key whose filter matches both, so the
+    result is identical on a migrated and an un-migrated database.
     """
     scope = ax._resolve_scope(supplied, None)
-    assert set(scope.governorate_names) == {"عمان", "العاصمة"}
-    # The English alias is an input convenience and must never reach the query.
-    assert all(not name.isascii() for name in scope.governorate_names)
+    assert scope.governorate_key == "amman"
+    assert scope.governorate == "العاصمة"
+    stored_forms = set(scope.governorate_names)
+    assert {"عمان", "العاصمة"} <= stored_forms
 
 
-def test_a_governorate_without_synonyms_matches_itself_only():
-    assert ax._resolve_scope("إربد", None).governorate_names == ("إربد",)
+def test_governorate_names_come_from_the_canonical_registry():
+    """No governorate knowledge may be hardcoded in this module."""
+    from services.jordan_locations import governorate_query_aliases
+
+    for value in ["إربد", "irbid", "العقبة", "الزرقاء"]:
+        assert list(ax._resolve_scope(value, None).governorate_names) == governorate_query_aliases(value)
+
+    # No governorate name may appear as a *live string literal* — prose in comments
+    # and docstrings explaining the design is fine, a hardcoded lookup value is not.
+    import ast
+
+    from services.jordan_locations import get_all_governorates
+
+    tree = ast.parse((Path(__file__).parent / "analytics_explorer.py").read_text(encoding="utf-8"))
+    docstrings = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            doc = ast.get_docstring(node, clean=False)
+            if doc:
+                docstrings.add(doc)
+
+    literals = [
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and node.value not in docstrings
+    ]
+    canonical_names = {g["name_ar"] for g in get_all_governorates()}
+    leaked = sorted({name for name in canonical_names for lit in literals if name in lit})
+    assert not leaked, f"governorate names hardcoded in analytics_explorer.py: {leaked}"
+
+
+def test_an_unknown_governorate_is_rejected_rather_than_silently_empty():
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc:
+        ax._resolve_scope("Atlantis", None)
+    assert exc.value.status_code == 422
 
 
 def test_scope_level_reflects_the_narrowest_filter():
@@ -195,30 +269,104 @@ def test_unknown_question_is_rejected(db):
     assert exc.value.status_code == 404
 
 
+def test_a_nonexistent_kindergarten_is_404_not_an_empty_answer(db):
+    """Answering "0 incidents" for a bad id reads as a clean safety record."""
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc:
+        ax.answer_question(
+            question="incidents_by_type",
+            date_from="2026-07-01",
+            date_to="2026-07-27",
+            governorate=None,
+            kindergarten_id=999_999,
+            db=db,
+        )
+    assert exc.value.status_code == 404
+
+
 def test_as_of_is_reported_in_jordan_time(db):
     as_of = datetime.fromisoformat(_payload(db)["coverage"]["as_of"])
     assert as_of.tzinfo is not None, "as_of must be timezone-aware"
     assert as_of.utcoffset() == timedelta(hours=3), "as_of must be Jordan time (UTC+3)"
 
 
-def test_governorate_scoping_partitions_the_national_total(db):
-    """Every governorate's slice must sum to the national figure — no row lost, none double-counted."""
+@pytest.mark.parametrize(
+    "question_key",
+    ["incidents_by_type", "incidents_by_severity", "incidents_over_time", "enrollment_status"],
+)
+def test_governorate_scoping_partitions_the_national_total(db, question_key):
+    """Every governorate's slice must sum to the national figure.
+
+    No row lost, none double-counted, for every question that supports geography —
+    not only for incidents and not only for the capital.
+    """
     window = ax._resolve_window("2026-01-01", "2026-07-27")
-    build = ax.QUESTIONS["incidents_by_type"].build
+    build = ax.QUESTIONS[question_key].build
 
     national = build(db, window, ax._resolve_scope(None, None)).records
-    governorates = [
-        row[0]
-        for row in db.query(models.Kindergarten.governorate)
-        .filter(models.Kindergarten.deleted_at.is_(None))
-        .distinct()
-        .all()
-        if row[0]
-    ]
     per_governorate = sum(
-        build(db, window, ax._resolve_scope(gov, None)).records for gov in governorates
+        build(db, window, ax._resolve_scope(g["key"], None)).records
+        for g in ax._available_governorates(db)
     )
     assert per_governorate == national
+
+
+def test_partition_holds_when_both_capital_spellings_coexist(db):
+    """The hazard case: a half-migrated database holding عمان AND العاصمة.
+
+    Folding onto the canonical key must merge them into one governorate. Treating
+    them as two would double-count every capital row.
+    """
+    ids = [
+        row[0]
+        for row in db.query(models.Kindergarten.id)
+        .filter(models.Kindergarten.governorate.in_(["عمان", "العاصمة"]))
+        .all()
+    ]
+    if len(ids) < 2:
+        pytest.skip("fixture needs at least two kindergartens in the capital")
+
+    window = ax._resolve_window("2026-01-01", "2026-07-27")
+    build = ax.QUESTIONS["incidents_by_type"].build
+    national = build(db, window, ax._resolve_scope(None, None)).records
+
+    try:
+        # Split the capital across both spellings.
+        db.query(models.Kindergarten).filter(models.Kindergarten.id == ids[0]).update(
+            {"governorate": "العاصمة"}, synchronize_session=False
+        )
+        db.query(models.Kindergarten).filter(models.Kindergarten.id == ids[1]).update(
+            {"governorate": "عمان"}, synchronize_session=False
+        )
+        db.flush()
+        db.expire_all()
+
+        options = ax._available_governorates(db)
+        keys = [g["key"] for g in options]
+        assert keys.count("amman") == 1, "the capital must be offered exactly once"
+
+        assert sum(build(db, window, ax._resolve_scope(k, None)).records for k in keys) == national
+
+        breakdown = ax.QUESTIONS["incidents_by_governorate"].build(
+            db, window, ax._resolve_scope(None, None)
+        )
+        assert [c.key for c in breakdown.categories].count("amman") == 1
+        assert sum(c.value for c in breakdown.categories) == national
+    finally:
+        db.rollback()
+
+
+def test_a_geography_breakdown_honours_a_geography_filter(db):
+    """Scoping to one governorate then asking "which governorate?" must not widen back."""
+    window = ax._resolve_window("2026-01-01", "2026-07-27")
+    build = ax.QUESTIONS["incidents_by_governorate"].build
+
+    national = build(db, window, ax._resolve_scope(None, None))
+    assert len(national.categories) > 1, "fixture needs several governorates"
+
+    scoped = build(db, window, ax._resolve_scope("irbid", None))
+    assert [c.key for c in scoped.categories] == ["irbid"]
 
 
 def test_kindergarten_label_does_not_repeat_the_word_kindergarten(db):
@@ -229,7 +377,8 @@ def test_kindergarten_label_does_not_repeat_the_word_kindergarten(db):
 
 
 def test_kindergarten_list_narrows_with_the_governorate(db):
-    everywhere = ax.list_kindergartens(governorate=None, db=db)["kindergartens"]
+    body = ax.list_kindergartens(governorate=None, search=None, db=db)
+    everywhere = body["kindergartens"]
     assert everywhere, "the fixture database should contain kindergartens"
     for kg in everywhere:
         assert set(kg["name"]) == {"ar", "en"}, "options must be bilingual"
@@ -238,8 +387,81 @@ def test_kindergarten_list_narrows_with_the_governorate(db):
     gov = db.query(models.Kindergarten.governorate).filter(
         models.Kindergarten.deleted_at.is_(None)
     ).first()[0]
-    scoped = ax.list_kindergartens(governorate=gov, db=db)["kindergartens"]
+    scoped = ax.list_kindergartens(governorate=gov, search=None, db=db)["kindergartens"]
     assert 0 < len(scoped) <= len(everywhere)
+
+
+def test_kindergarten_list_is_capped_and_declares_truncation(db):
+    body = ax.list_kindergartens(governorate=None, search=None, db=db)
+    assert len(body["kindergartens"]) <= ax._KINDERGARTEN_PICKER_LIMIT
+    assert body["truncated"] is (body["total"] > len(body["kindergartens"]))
+
+
+def test_kindergarten_search_matches_either_language(db):
+    kg = db.query(models.Kindergarten).filter(models.Kindergarten.deleted_at.is_(None)).first()
+    for term in (kg.name_ar.split()[-1], (kg.name_en or "").split()[0]):
+        if not term:
+            continue
+        found = ax.list_kindergartens(governorate=None, search=term, db=db)["kindergartens"]
+        assert any(k["id"] == kg.id for k in found), f"search {term!r} should find {kg.name_ar!r}"
+
+
+@pytest.mark.parametrize("wildcard", ["%", "_", "%%", "a%b"])
+def test_kindergarten_search_treats_like_wildcards_as_literal_text(db, wildcard):
+    """Binding stops injection; escaping stops '%' from silently matching everything."""
+    everything = ax.list_kindergartens(governorate=None, search=None, db=db)["total"]
+    assert everything > 0, "fixture needs kindergartens"
+
+    found = ax.list_kindergartens(governorate=None, search=wildcard, db=db)["total"]
+    assert found < everything, f"{wildcard!r} was treated as a wildcard, not as text"
+
+
+def test_escape_like_neutralises_every_metacharacter():
+    assert ax._escape_like("100%") == "100\\%"
+    assert ax._escape_like("a_b") == "a\\_b"
+    # The escape character itself must be escaped first, or it corrupts the pattern.
+    assert ax._escape_like("a\\b") == "a\\\\b"
+
+
+def test_capacity_reports_kindergartens_not_bars(db):
+    """`records` must stay "rows counted"; conflating it with bar count is the core defect."""
+    window = ax._resolve_window("2026-01-01", "2026-07-27")
+    answer = ax.QUESTIONS["kindergarten_capacity"].build(db, window, ax._resolve_scope(None, None))
+
+    live = (
+        db.query(models.Kindergarten)
+        .filter(models.Kindergarten.deleted_at.is_(None))
+        .count()
+    )
+    assert answer.records == live
+    assert all(0 <= c.value <= 100 for c in answer.categories), "occupancy is a percentage"
+
+
+def test_governorate_options_are_canonical_and_unique(db):
+    body = ax.list_governorates(db=db)["governorates"]
+    keys = [g["key"] for g in body]
+    assert keys, "fixture needs kindergartens with governorates"
+    assert len(keys) == len(set(keys)), "each governorate may appear only once"
+    for g in body:
+        assert set(g["name"]) == {"ar", "en"}
+        assert g["name"]["ar"].strip() and g["name"]["en"].strip()
+        # The key must round-trip through scope resolution.
+        assert ax._resolve_scope(g["key"], None).governorate_key == g["key"]
+
+
+@pytest.mark.parametrize(
+    "start,end", [("2026-07-01", "2026-07-27"), ("2026-01-01", "2026-07-27"), ("2020-01-01", "2026-07-27")]
+)
+def test_time_series_explanation_matches_the_bucket_in_both_languages(db, start, end):
+    """The wording must describe the grouping actually used, not always say "day"."""
+    window = ax._resolve_window(start, end)
+    answer = ax.QUESTIONS["incidents_over_time"].build(db, window, ax._resolve_scope(None, None))
+
+    assert answer.category_axis.ar == window.bucket_label().ar
+    assert answer.category_axis.en == window.bucket_label().en
+    assert window.bucket_label().en.lower() in answer.what.en.lower()
+    for text in (answer.what, answer.how, answer.value_axis):
+        assert text.ar.strip() and text.en.strip()
 
 
 def test_answer_payload_is_fully_bilingual(db):

@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from charts import cache as chart_cache
 from charts.advisor import ChartAdvisor
 from charts.registry import METRIC_REGISTRY
+from services.jordan_locations import governorate_query_aliases
 from charts.schemas import (
     ChartRequest,
     ChartResponse,
@@ -55,6 +56,18 @@ def _date_bounds(req: ChartRequest) -> Tuple[date, date]:
     return d_from, d_to
 
 
+def _governorate_filter(column, value):
+    """Alias-aware governorate predicate.
+
+    The capital is stored either under its canonical governorate name "العاصمة" or
+    under the legacy city-name form "عمان" that migration ``canon_gov_cap_01``
+    corrects. Rewriting the input to a single spelling (what this module used to do)
+    returns zero rows whenever the database holds the other one, so match them all.
+    Identity comes from services.jordan_locations, never from a local table.
+    """
+    return column.in_(governorate_query_aliases(value))
+
+
 def _load_incidents(db: Session, req: ChartRequest) -> pd.DataFrame:
     from sqlalchemy import func, extract
     import models
@@ -70,14 +83,14 @@ def _load_incidents(db: Session, req: ChartRequest) -> pd.DataFrame:
         base_filter.append(models.Incident.kindergarten_id == req.kindergarten_id)
     elif req.city:
         join_kindergarten = True
-        gov = "العاصمة" if (req.governorate and req.governorate.lower() in ("amman", "عمان", "العاصمة")) else req.governorate
+        gov = req.governorate
         if gov:
-            base_filter.append(models.Kindergarten.governorate == gov)
+            base_filter.append(_governorate_filter(models.Kindergarten.governorate, gov))
         base_filter.append(models.Kindergarten.district == req.city)
     elif req.governorate:
         join_kindergarten = True
-        gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
-        base_filter.append(models.Kindergarten.governorate == gov)
+        gov = req.governorate
+        base_filter.append(_governorate_filter(models.Kindergarten.governorate, gov))
 
     group_by_col = req.group_by or "type"
     if group_by_col == "type":
@@ -142,13 +155,13 @@ def _load_attendance(db: Session, req: ChartRequest) -> pd.DataFrame:
             models.Kindergarten, models.Class.kindergarten_id == models.Kindergarten.id
         )
         if req.city:
-            gov = "العاصمة" if (req.governorate and req.governorate.lower() in ("amman", "عمان", "العاصمة")) else req.governorate
+            gov = req.governorate
             if gov:
-                q = q.filter(models.Kindergarten.governorate == gov)
+                q = q.filter(_governorate_filter(models.Kindergarten.governorate, gov))
             q = q.filter(models.Kindergarten.district == req.city)
         elif req.governorate:
-            gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
-            q = q.filter(models.Kindergarten.governorate == gov)
+            gov = req.governorate
+            q = q.filter(_governorate_filter(models.Kindergarten.governorate, gov))
 
     q = q.group_by(models.AttendanceLog.date, models.AttendanceLog.status).order_by(models.AttendanceLog.date)
     rows = q.all()
@@ -175,13 +188,13 @@ def _load_daily_reports(db: Session, req: ChartRequest) -> pd.DataFrame:
     elif req.city or req.governorate:
         q = q.join(models.Kindergarten, models.DailyReport.kindergarten_id == models.Kindergarten.id)
         if req.city:
-            gov = "العاصمة" if (req.governorate and req.governorate.lower() in ("amman", "عمان", "العاصمة")) else req.governorate
+            gov = req.governorate
             if gov:
-                q = q.filter(models.Kindergarten.governorate == gov)
+                q = q.filter(_governorate_filter(models.Kindergarten.governorate, gov))
             q = q.filter(models.Kindergarten.district == req.city)
         elif req.governorate:
-            gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
-            q = q.filter(models.Kindergarten.governorate == gov)
+            gov = req.governorate
+            q = q.filter(_governorate_filter(models.Kindergarten.governorate, gov))
 
     q = q.group_by(models.DailyReport.mood).order_by(func.count().desc())
     rows = q.all()
@@ -203,14 +216,14 @@ def _load_enrollments(db: Session, req: ChartRequest) -> pd.DataFrame:
         base_filter.append(models.EnrollmentApplication.kindergarten_id == req.kindergarten_id)
     elif req.city:
         join_kindergarten = True
-        gov = "العاصمة" if (req.governorate and req.governorate.lower() in ("amman", "عمان", "العاصمة")) else req.governorate
+        gov = req.governorate
         if gov:
-            base_filter.append(models.Kindergarten.governorate == gov)
+            base_filter.append(_governorate_filter(models.Kindergarten.governorate, gov))
         base_filter.append(models.Kindergarten.district == req.city)
     elif req.governorate:
         join_kindergarten = True
-        gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
-        base_filter.append(models.Kindergarten.governorate == gov)
+        gov = req.governorate
+        base_filter.append(_governorate_filter(models.Kindergarten.governorate, gov))
 
     q = (
         db.query(
@@ -271,19 +284,19 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
         q = q.filter(models.Kindergarten.id == req.kindergarten_id)
         q = q.group_by(models.Kindergarten.id, models.Kindergarten.name_ar)
     elif req.city:
-        gov = "العاصمة" if (req.governorate and req.governorate.lower() in ("amman", "عمان", "العاصمة")) else req.governorate
+        gov = req.governorate
         q = base_query.add_columns(
             models.Kindergarten.id.label("kindergarten_id"),
             models.Kindergarten.name_ar.label("kindergarten"),
         )
         if gov:
-            q = q.filter(models.Kindergarten.governorate == gov)
+            q = q.filter(_governorate_filter(models.Kindergarten.governorate, gov))
         q = q.filter(models.Kindergarten.district == req.city)
         q = q.group_by(models.Kindergarten.id, models.Kindergarten.name_ar)
     elif req.governorate:
-        gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
+        gov = req.governorate
         q = base_query.add_columns(models.Kindergarten.district.label("city"))
-        q = q.filter(models.Kindergarten.governorate == gov)
+        q = q.filter(_governorate_filter(models.Kindergarten.governorate, gov))
         q = q.group_by(models.Kindergarten.district)
     else:
         q = base_query.add_columns(models.Kindergarten.governorate.label("governorate"))
