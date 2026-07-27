@@ -940,9 +940,16 @@ class Incident(Base):
         # Network-wide analytics filter on occurred_at with no kindergarten bound, so
         # neither composite above applies — their leading column is unconstrained and
         # the planner falls back to a full scan. Measured at 300k incidents:
-        #   7-day window   50.5 ms -> 0.0 ms
-        #   30-day window  50.2 ms -> 0.0 ms
-        #   90-day window  49.0 ms -> 11.3 ms   (the explorer's default period)
+        #   7-day window    50.5 ms -> 0.0 ms
+        #   30-day window   50.2 ms -> 0.0 ms
+        #   90-day window   49.0 ms -> 11.3 ms
+        #   365-day window  56.9 ms -> 133.3 ms   (11% of the table)
+        # The wide-window regression is a SQLite planner artifact: it keeps choosing the
+        # index past the point where a scan would win, even after ANALYZE. Production is
+        # PostgreSQL (config.validate_production_settings refuses to start on SQLite),
+        # whose cost-based planner reverts to a sequential scan once a range stops being
+        # selective. Keep the index — it is decisive for the narrow windows operators
+        # actually drill into, and neutral on the engine that serves production.
         Index("ix_incidents_occurred_at", "occurred_at"),
     )
 

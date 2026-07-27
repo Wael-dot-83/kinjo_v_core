@@ -19,13 +19,16 @@ Measured on a 300,000-row incidents table (SQLite, best of 7 runs):
     window      before      after
     7 days      50.5 ms     0.0 ms
     30 days     50.2 ms     0.0 ms
-    90 days     49.0 ms    11.3 ms     <- the explorer's default period
+    90 days     49.0 ms    11.3 ms
+    365 days    56.9 ms   133.3 ms     <- the explorer's default period, 11% of the table
 
-Note on very wide ranges: on SQLite a multi-year window is *slower* with this index
-(the planner keeps choosing it where a scan would win). Production runs PostgreSQL —
-config.validate_production_settings() refuses to start on SQLite — and its planner has
-real selectivity statistics, so it reverts to a sequential scan once the range stops
-being selective. The explorer additionally caps a reporting period at 3653 days.
+Note on wide ranges: past roughly a 10% selectivity SQLite keeps choosing this index where
+a sequential scan would win, even after ANALYZE, so a year-wide window measures slower with
+it than without. Production runs PostgreSQL — config.validate_production_settings() refuses
+to start on SQLite — and its cost-based planner reverts to a sequential scan once a range
+stops being selective, so the regression does not apply there. The index is retained because
+it is decisive for the narrow windows operators drill into (7/30/90 days), which dominate
+interaction after the initial load. The explorer additionally caps a period at 3653 days.
 
 Purely additive and reversible: one index created, no data touched, no DDL on columns.
 

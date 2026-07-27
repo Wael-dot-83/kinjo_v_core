@@ -55,8 +55,10 @@ from utils.time_utils import get_amman_tz, now_amman, today_amman
 router = APIRouter(tags=["Analytics Explorer"], dependencies=[Depends(require_admin)])
 page_router = APIRouter(include_in_schema=False)
 
-# Default look-back when the caller supplies no window.
-_DEFAULT_WINDOW_DAYS = 90
+# Default look-back when the caller supplies no window. A full year is the operational
+# default: it covers a complete academic cycle, so seasonal effects (term start, winter
+# illness peaks) are visible rather than cropped by a short window.
+_DEFAULT_WINDOW_DAYS = 365
 
 # Hard ceiling on a reporting period. Without it, `date_from=1900-01-01&date_to=2100-01-01`
 # — reachable by typing a URL — produces a 73,000-point, 6.3 MB response. Ten years is far

@@ -70,7 +70,7 @@ The rail is numbered, so the workflow is legible without instructions:
 │ ○ How serious…        │   │  common was "Illness" at 33%       │
 │ ○ Are incidents…      │   │  ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬     │
 ├─ 2 Narrow it down ────┤   ├─ How to read this ─────────────────┤
-│ [7d][30d][3m][1y]     │   │ 👁  What this shows                │
+│ [7d][30d][3m][1y*]    │   │ 👁  What this shows                │
 │ From ▤  To ▤          │   │ 🧮  How it is calculated           │
 │ Governorate ▾         │   │ 🗄  Where the data comes from       │
 ├───────────────────────┤   │ ⚠  What is left out                │
@@ -421,7 +421,42 @@ after:   all spellings -> 2;  legacy partition SUM=6 NATIONAL=6 holds=True
 
 ---
 
-## 12. Migrations applied
+## 12. Default reporting period
+
+The explorer opens on a **full year** (`_DEFAULT_WINDOW_DAYS = 365`) and the *Last year*
+preset is preselected. A year covers a complete academic cycle, so seasonal effects — term
+start, winter illness peaks — are visible rather than cropped by a short window.
+
+All four presets remain available: **7 days, 30 days, 3 months, 1 year**. The year option is
+never removed; two tests assert it exists and is the preselected one.
+
+At 365 days the series falls in the weekly band, so the default view is ~54 points and a
+7.5 KB payload rather than a 365-point daily axis:
+
+```
+period : 2025-07-27 to 2026-07-27 (both days included)
+bucket : Week   points: 54   payload: 7,501 bytes   p50: 18.3 ms
+```
+
+**Performance note, measured rather than carried over.** The index benchmark in the audit
+was taken at a 90-day default; changing the default made it worth re-measuring, and the
+picture changes. At 300k incidents a 365-day window selects 11% of the table, and SQLite
+keeps choosing the index past the point where a scan would win:
+
+| window | without index | with index |
+|---|---|---|
+| 7 days | 50.5 ms | 0.0 ms |
+| 30 days | 50.2 ms | 0.0 ms |
+| 90 days | 49.0 ms | 11.3 ms |
+| 365 days *(new default)* | 56.9 ms | 133.3 ms |
+
+The index is retained. Production is PostgreSQL, whose cost-based planner reverts to a
+sequential scan once a range stops being selective, and the narrow windows operators drill
+into after the initial load are exactly where the index is decisive.
+
+---
+
+## 13. Migrations applied
 
 `alembic.ini` was restored from `HEAD` (it was one of 312 tracked files deleted before this
 work began) and the chain was brought up to head against the development database.

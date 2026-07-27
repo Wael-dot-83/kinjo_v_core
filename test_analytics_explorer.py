@@ -46,6 +46,28 @@ def test_single_day_window_spans_exactly_24_hours():
     assert window.dt_end_exclusive - window.dt_start == timedelta(days=1)
 
 
+def test_the_default_period_is_a_full_year():
+    """A full academic cycle, so seasonal effects are visible rather than cropped."""
+    assert ax._DEFAULT_WINDOW_DAYS == 365
+
+    window = ax._resolve_window(None, None)
+    assert window.end == ax.today_amman()
+    assert (window.end - window.start).days == 365
+    # 365 days sits in the weekly band, so the default series stays ~53 points.
+    assert window.bucket == "week"
+
+
+def test_the_default_period_is_offered_as_a_preset_and_preselected():
+    """The default must be reachable and shown as active, not an invisible state."""
+    page = (Path(__file__).parent / "templates/admin/analytics/explorer.html").read_text(
+        encoding="utf-8"
+    )
+    assert 'data-days="365"' in page, "the 1-year preset must exist"
+    assert 'aria-pressed="true" data-days="365"' in page, "the 1-year preset must be preselected"
+    # Exactly one preset may be preselected.
+    assert page.count('aria-pressed="true" data-days=') == 1
+
+
 def test_window_rejects_reversed_dates():
     from fastapi import HTTPException
 

@@ -523,13 +523,19 @@ Measured on a 300,000-row incidents table:
 |---|---|---|
 | 7 days | 50.5 ms | 0.0 ms |
 | 30 days | 50.2 ms | 0.0 ms |
-| 90 days *(the explorer default)* | 49.0 ms | 11.3 ms |
+| 90 days | 49.0 ms | 11.3 ms |
+| 365 days *(the explorer default)* | 56.9 ms | 133.3 ms ⚠ |
 | 10 years | 210 ms | 1290 ms ⚠ |
 
-The wide-range regression is a SQLite planner artifact — it keeps choosing the index where
-a scan would win. Production runs PostgreSQL (`config.py:416` refuses to start on SQLite),
-whose planner has real selectivity statistics, and the explorer caps a period at 3653 days
-regardless. The index is a clear win across every window the UI can actually produce.
+The wide-range regression is a SQLite planner artifact — past roughly 10% selectivity it
+keeps choosing the index where a sequential scan would win, even after `ANALYZE`. Production
+runs PostgreSQL (`config.py:416` refuses to start on SQLite), whose cost-based planner
+reverts to a scan once a range stops being selective, so the regression does not apply there.
+
+The index is retained: it is decisive for the 7/30/90-day windows operators drill into,
+which dominate interaction after the initial page load. **This was measured, not assumed —
+and it is the reason the default period change was worth re-measuring rather than
+assuming the earlier 90-day numbers still applied.**
 
 ---
 
