@@ -504,6 +504,15 @@ _FIELD_LABELS: dict[str, str] = {
     "vaccines_in_schedule": "عدد المطاعيم في الجدول",
     "children_considered": "الأطفال المشمولون",
     "vaccine_doses_due": "إجمالي الجرعات المستحقة",
+    # kg2_eligibility
+    "ineligible_children": "الأطفال غير المؤهلين",
+    "unevaluatable_records": "سجلات تعذر تقييمها",
+    "eligibility_rate": "نسبة المؤهلين %",
+    "data_completeness_rate": "نسبة اكتمال البيانات %",
+    "highest_governorate": "أعلى محافظة",
+    "total_evaluated": "إجمالي السجلات المشمولة",
+    "last_eligible_birth_date": "آخر تاريخ ميلاد مؤهل",
+    "required_age": "العمر المطلوب",
 }
 
 
@@ -842,36 +851,223 @@ class AgencyReportsService:
         filters: dict[str, Any],
     ) -> dict[str, Any]:
         admission_year = int(filters.get("admission_year") or datetime.now(_JORDAN_TZ).year)
-        cutoff = date(admission_year - 5, 12, 31)
+        required_age = settings.MOE_KG2_REQUIRED_AGE
+        cutoff_month = settings.MOE_KG2_CUTOFF_MONTH
+        cutoff_day = settings.MOE_KG2_CUTOFF_DAY
+
+        cutoff_date = date(admission_year, cutoff_month, cutoff_day)
+        latest_eligible_birth_date = date(admission_year - required_age, cutoff_month, cutoff_day)
+
+        aliases = settings.JORDAN_GOVERNORATE_ALIASES
+        def _normalize_gov(name: Any) -> str:
+            if not name:
+                return "غير محدد"
+            s = str(name).strip()
+            return aliases.get(s) or aliases.get(s.lower(), s)
+
         q = (
             self.db.query(
+                models.Child.id,
+                models.Child.date_of_birth,
+                models.Child.gender,
                 models.ParentProfile.home_governorate,
                 models.ParentProfile.home_district,
-                models.Child.gender,
-                func.count(func.distinct(models.Child.id)).label("count"),
+                models.ParentProfile.home_area,
             )
-            .join(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
-            .filter(models.Child.deleted_at.is_(None), models.ParentProfile.deleted_at.is_(None))
-            .filter(models.Child.date_of_birth <= cutoff)
+            .outerjoin(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
+            .filter(models.Child.deleted_at.is_(None))
         )
         q = self._apply_parent_geo_filters(q, filters)
         _gender = _coerce_enum(models.Gender, filters.get("gender"))
         if _gender is not None:
             q = q.filter(models.Child.gender == _gender)
-        rows = q.group_by(
-            models.ParentProfile.home_governorate, models.ParentProfile.home_district, models.Child.gender
-        ).all()
-        breakdowns = [
+
+        children = q.all()
+
+        eligible_count = 0
+        ineligible_count = 0
+        unevaluatable_count = 0
+
+        city_filter = filters.get("city")
+        gov_filter = filters.get("governorate")
+        if city_filter:
+            group_dim = "area"
+        elif gov_filter:
+            group_dim = "district"
+        else:
+            group_dim = "governorate"
+
+        breakdown_data = {}
+
+        for c in children:
+            is_eligible = False
+            is_ineligible = False
+            is_unevaluatable = False
+
+            if c.date_of_birth is None or not c.home_governorate:
+                is_unevaluatable = True
+                unevaluatable_count += 1
+            elif c.date_of_birth <= latest_eligible_birth_date:
+                is_eligible = True
+                eligible_count += 1
+            else:
+                is_ineligible = True
+                ineligible_count += 1
+
+            if group_dim == "area":
+                key = c.home_area or "غير محدد"
+            elif group_dim == "district":
+                key = c.home_district or "غير محدد"
+            else:
+                key = _normalize_gov(c.home_governorate)
+
+            if key not in breakdown_data:
+                breakdown_data[key] = {
+                    "eligible": 0,
+                    "ineligible": 0,
+                    "unevaluatable": 0,
+                    "male": 0,
+                    "female": 0,
+                    "unspecified_gender": 0,
+                }
+
+            if is_eligible:
+                breakdown_data[key]["eligible"] += 1
+            elif is_ineligible:
+                breakdown_data[key]["ineligible"] += 1
+            else:
+                breakdown_data[key]["unevaluatable"] += 1
+
+            if is_eligible:
+                g_str = str(c.gender).lower() if c.gender else ""
+                if "male" in g_str:
+                    breakdown_data[key]["male"] += 1
+                elif "female" in g_str:
+                    breakdown_data[key]["female"] += 1
+                else:
+                    breakdown_data[key]["unspecified_gender"] += 1
+
+        total_evaluated = eligible_count + ineligible_count + unevaluatable_count
+        eval_denominator = eligible_count + ineligible_count
+        eligibility_rate = (eligible_count / eval_denominator * 100) if eval_denominator > 0 else 0.0
+        completeness_rate = (eval_denominator / total_evaluated * 100) if total_evaluated > 0 else 0.0
+
+        # Find highest governorate based on eligible children
+        gov_eligible_counts = {}
+        for c in children:
+            if c.home_governorate and c.date_of_birth and c.date_of_birth <= latest_eligible_birth_date:
+                g = _normalize_gov(c.home_governorate)
+                gov_eligible_counts[g] = gov_eligible_counts.get(g, 0) + 1
+        
+        highest_gov = "غير محدد"
+        if gov_eligible_counts:
+            highest_gov = max(gov_eligible_counts, key=gov_eligible_counts.get)
+
+        # Build dynamic Arabic interpretation text
+        if total_evaluated == 0:
+            interpretation_ar = "لا توجد سجلات أطفال ضمن النطاق والفلاتر المحددة، لذلك لا يمكن حساب عدد الأطفال المؤهلين."
+        elif eval_denominator == 0:
+            interpretation_ar = "تعذر حساب الأهلية بسبب نقص أو عدم صلاحية البيانات المطلوبة للأطفال المتوفرين، مثل تاريخ الميلاد أو تاريخ الحسم."
+        elif eligible_count == 0:
+            interpretation_ar = "لم يتم العثور على أطفال يحققون شرط العمر ضمن الفلاتر المحددة، بعد تنفيذ الحساب بنجاح على البيانات المتاحة."
+        else:
+            interpretation_ar = (
+                f"أظهرت البيانات وجود {eligible_count:,} طفلاً مؤهلاً للقبول في سنة {admission_year} وفق تاريخ الحسم المحدد، "
+                f"من أصل {eval_denominator:,} أطفال أمكن تقييم أعمارهم. "
+                f"وقد تركزت أعلى أعداد الأطفال المؤهلين في محافظة {highest_gov}. "
+                f"في حين تعذر تقييم أهلية {unevaluatable_count:,} طفلاً بسبب غياب تاريخ الميلاد أو نقص البيانات الجغرافية الأساسية، "
+                f"وهو ما يمثل {100.0 - completeness_rate:.1f}% من السجلات. لذلك يجب التعامل مع الإجمالي بوصفه حداً أدنى مبنياً على السجلات المكتملة."
+            )
+
+        # Decision implications matrix
+        decision_implications = [
             {
-                "governorate": r.home_governorate or "غير محدد",
-                "city": r.home_district or "غير محدد",
-                "gender": _gender_ar(r.gender),
-                "count": _safe_int(r.count),
+                "observation": "ارتفاع عدد المؤهلين في منطقة محددة",
+                "evidence": f"وجود {eligible_count:,} طفلاً مؤهلاً يتركز الجزء الأكبر منهم في {highest_gov}",
+                "implication": "طلب متوقع مرتفع قد يسبب ضغطاً على الغرف الصفية المتوفرة",
+                "action": "مقارنة عدد الأطفال المؤهلين بالطاقة الاستيعابية للمدارس ورياض الأطفال القائمة في تلك المناطق"
+            },
+            {
+                "observation": "وجود سجلات غير قابلة للتقييم",
+                "evidence": f"تعذر تقييم {unevaluatable_count:,} سجلاً بنسبة خطأ {100.0 - completeness_rate:.1f}%",
+                "implication": "مستوى الثقة في التقديرات الإجمالية محدود وقد يعرض أرقاماً أقل من الواقع",
+                "action": "توجيه مدراء المديريات لاستكمال تواريخ الميلاد المفقودة وعناوين أولياء الأمور الجغرافية"
             }
-            for r in rows
         ]
-        total = sum(r["count"] for r in breakdowns)
-        return self._payload(
+
+        breakdowns = []
+        for key, counts in breakdown_data.items():
+            total_grp = counts["eligible"] + counts["ineligible"] + counts["unevaluatable"]
+            eval_grp = counts["eligible"] + counts["ineligible"]
+            rate_grp = (counts["eligible"] / eval_grp * 100) if eval_grp > 0 else 0.0
+            comp_grp = (eval_grp / total_grp * 100) if total_grp > 0 else 0.0
+
+            breakdowns.append({
+                group_dim: key,
+                "total_children": total_grp,
+                "eligible_children": counts["eligible"],
+                "ineligible_children": counts["ineligible"],
+                "unevaluatable_records": counts["unevaluatable"],
+                "eligibility_rate": round(rate_grp, 1),
+                "data_completeness_rate": round(comp_grp, 1),
+                "male": counts["male"],
+                "female": counts["female"],
+                "unspecified_gender": counts["unspecified_gender"],
+            })
+
+        chart_series = []
+        for key, counts in breakdown_data.items():
+            chart_series.append({
+                "label": key,
+                "value": counts["eligible"],
+            })
+        chart_series.sort(key=lambda s: s["value"], reverse=True)
+
+        if group_dim == "governorate":
+            chart_title_ar = "توزيع الأطفال المؤهلين حسب المحافظة"
+            x_label = "المحافظة"
+        elif group_dim == "district":
+            chart_title_ar = "توزيع الأطفال المؤهلين حسب اللواء"
+            x_label = "اللواء"
+        else:
+            chart_title_ar = "توزيع الأطفال المؤهلين حسب المنطقة"
+            x_label = "المنطقة"
+
+        chart = {
+            "type": "bar",
+            "title_ar": chart_title_ar,
+            "x_axis_title_ar": x_label,
+            "y_axis_title_ar": "عدد الأطفال المؤهلين",
+            "series": chart_series[:15],
+            "group_by": group_dim,
+            "show_share_pct": True,
+        }
+
+        gender_eligible_counts = {"ذكور": 0, "إناث": 0, "غير محدد": 0}
+        for c in children:
+            if c.date_of_birth and c.date_of_birth <= latest_eligible_birth_date and c.home_governorate:
+                g_str = str(c.gender).lower() if c.gender else ""
+                if "male" in g_str:
+                    gender_eligible_counts["ذكور"] += 1
+                elif "female" in g_str:
+                    gender_eligible_counts["إناث"] += 1
+                else:
+                    gender_eligible_counts["غير محدد"] += 1
+
+        gender_series = [
+            {"label": "ذكور", "value": gender_eligible_counts["ذكور"]},
+            {"label": "إناث", "value": gender_eligible_counts["إناث"]},
+        ]
+        if gender_eligible_counts["غير محدد"] > 0:
+            gender_series.append({"label": "غير محدد", "value": gender_eligible_counts["غير محدد"]})
+
+        license_chart = {
+            "type": "pie",
+            "title_ar": "توزيع الأطفال المؤهلين حسب الجنس",
+            "series": gender_series,
+        }
+
+        payload = self._payload(
             agency_code,
             agency,
             report_code,
@@ -879,11 +1075,24 @@ class AgencyReportsService:
             filters,
             {
                 "admission_year": admission_year,
-                "cutoff_date": date(admission_year, 12, 31).isoformat(),
-                "eligible_children": total,
+                "cutoff_date": cutoff_date.isoformat(),
+                "required_age": required_age,
+                "last_eligible_birth_date": latest_eligible_birth_date.isoformat(),
+                "eligible_children": eligible_count,
+                "ineligible_children": ineligible_count,
+                "unevaluatable_records": unevaluatable_count,
+                "total_evaluated": total_evaluated,
+                "eligibility_rate": round(eligibility_rate, 1),
+                "data_completeness_rate": round(completeness_rate, 1),
+                "highest_governorate": highest_gov,
+                "interpretation_ar": interpretation_ar,
+                "decision_implications": decision_implications,
             },
             breakdowns,
+            chart=chart,
         )
+        payload["license_chart"] = license_chart
+        return payload
 
     def _children_profile(
         self,

@@ -201,6 +201,11 @@ class Settings(BaseSettings):
     MANAGER_TO_MANAGER_ENABLED: bool = False
     MANAGER_TO_MANAGER_SCOPE: str = "same_kg"
 
+    # MOE KG2 Rules
+    MOE_KG2_REQUIRED_AGE: int = 5
+    MOE_KG2_CUTOFF_MONTH: int = 12
+    MOE_KG2_CUTOFF_DAY: int = 31
+
     # Jordan-specific
     JORDAN_PHONE_PATTERN: str = r"^(\+962|00962|0)[0-9]{9}$"
     # Index-aligned with JORDAN_GOVERNORATES_ENGLISH. The capital's canonical Arabic

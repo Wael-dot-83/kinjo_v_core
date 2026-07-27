@@ -668,7 +668,7 @@
     const dl = document.createElement("dl");
     const summaryLabels = payload.summary_labels || {};
     Object.entries(payload.summary || {}).forEach(([key, value]) => {
-      if (key === "message_ar" || key === "data_quality_note_ar") return;
+      if (key === "message_ar" || key === "data_quality_note_ar" || key === "interpretation_ar" || key === "decision_implications" || key === "required_age" || key === "last_eligible_birth_date" || key === "cutoff_date" || key === "admission_year") return;
       const dt = document.createElement("dt");
       dt.textContent = summaryLabels[key] || key;
       const dd = document.createElement("dd");
@@ -1081,6 +1081,82 @@
         "No matching data for the selected filters. Please adjust the governorate, district, area or time period.",
       );
       root.appendChild(empty);
+    }
+
+    // Render Interpretation and Decision support sections for kg2_eligibility
+    if (payload.summary && payload.summary.interpretation_ar) {
+      const interpretSec = document.createElement("section");
+      interpretSec.className = "agency-report-interpretation";
+      interpretSec.style.marginTop = "2rem";
+      interpretSec.style.padding = "1.25rem";
+      interpretSec.style.background = "var(--admin-surface, #fff)";
+      interpretSec.style.border = "1px solid var(--admin-border, #d9dee6)";
+      interpretSec.style.borderRadius = "12px";
+
+      const ih = document.createElement("h2");
+      ih.style.fontSize = "1.15rem";
+      ih.style.marginBottom = "0.75rem";
+      ih.textContent = t("ماذا تعني النتائج؟", "What do the results mean?");
+      interpretSec.appendChild(ih);
+
+      const ip = document.createElement("p");
+      ip.style.fontSize = "0.95rem";
+      ip.style.lineHeight = "1.6";
+      ip.style.color = "var(--admin-text-muted, #5a6472)";
+      ip.textContent = payload.summary.interpretation_ar;
+      interpretSec.appendChild(ip);
+
+      root.appendChild(interpretSec);
+    }
+
+    if (payload.summary && payload.summary.decision_implications) {
+      const decisionSec = document.createElement("section");
+      decisionSec.className = "agency-report-decisions";
+      decisionSec.style.marginTop = "1.5rem";
+      decisionSec.style.padding = "1.25rem";
+      decisionSec.style.background = "var(--admin-surface, #fff)";
+      decisionSec.style.border = "1px solid var(--admin-border, #d9dee6)";
+      decisionSec.style.borderRadius = "12px";
+
+      const dh = document.createElement("h2");
+      dh.style.fontSize = "1.15rem";
+      dh.style.marginBottom = "0.75rem";
+      dh.textContent = t("دلالات النتائج لصانع القرار", "Decision Implications");
+      decisionSec.appendChild(dh);
+
+      const tableWrapper = document.createElement("div");
+      tableWrapper.style.overflowX = "auto";
+
+      const table = document.createElement("table");
+      table.className = "admin-table";
+      table.style.width = "100%";
+      table.style.fontSize = "0.9rem";
+
+      const thead = document.createElement("thead");
+      thead.innerHTML = `<tr>
+        <th style="text-align: right; padding: 8px;">${t("الملاحظة", "Observation")}</th>
+        <th style="text-align: right; padding: 8px;">${t("الدليل", "Evidence")}</th>
+        <th style="text-align: right; padding: 8px;">${t("الدلالة", "Implication")}</th>
+        <th style="text-align: right; padding: 8px;">${t("الإجراء المقترح", "Suggested Action")}</th>
+      </tr>`;
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      payload.summary.decision_implications.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="padding: 8px; border-bottom: 1px solid var(--admin-border, #d9dee6);">${row.observation || ""}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--admin-border, #d9dee6);">${row.evidence || ""}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--admin-border, #d9dee6);">${row.implication || ""}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--admin-border, #d9dee6);">${row.action || ""}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      tableWrapper.appendChild(table);
+      decisionSec.appendChild(tableWrapper);
+
+      root.appendChild(decisionSec);
     }
 
     // Methodology & provenance — standardized official-statistics practice: state
