@@ -999,7 +999,6 @@ def _build_daily_report_moods(db: Session, window: Window, scope: Scope) -> Answ
 
 
 def _build_kindergarten_capacity(db: Session, window: Window, scope: Scope) -> Answer:
-    # Capacity is a present-state question, so the reporting window does not filter it.
     query = (
         db.query(
             models.Kindergarten.governorate,
@@ -1012,11 +1011,18 @@ def _build_kindergarten_capacity(db: Session, window: Window, scope: Scope) -> A
             & (models.Class.deleted_at.is_(None))
             & (models.Class.is_active.is_(True)),
         )
-        .filter(models.Kindergarten.deleted_at.is_(None))
+        .filter(
+            models.Kindergarten.deleted_at.is_(None),
+            # Kindergartens registered inside the reporting period. created_at is a
+            # DateTime, so the window is half-open — comparing against a bare date
+            # would drop everything registered during the final day.
+            models.Kindergarten.created_at >= window.dt_start,
+            models.Kindergarten.created_at < window.dt_end_exclusive,
+        )
     )
     if scope.kindergarten_id:
         query = query.filter(models.Kindergarten.id == scope.kindergarten_id)
-    elif scope.governorate:
+    elif scope.governorate_key:
         query = query.filter(scope.governorate_filter(models.Kindergarten.governorate))
 
     rows = query.group_by(models.Kindergarten.governorate).all()
@@ -1080,16 +1086,21 @@ def _build_kindergarten_capacity(db: Session, window: Window, scope: Scope) -> A
             "available are filled.",
         ),
         how=_t(
-            "١) نجمع الطاقة الاستيعابية لكل الصفوف النشطة في كل محافظة. "
-            "٢) نجمع عدد الأطفال المسجَّلين فعلياً في تلك الصفوف. "
-            "٣) نسبة الإشغال = المسجَّلون ÷ الطاقة الاستيعابية × ١٠٠. "
+            "١) نأخذ الحضانات المسجَّلة داخل الفترة المحددة أعلاه. "
+            "٢) نجمع الطاقة الاستيعابية لكل الصفوف النشطة في كل محافظة. "
+            "٣) نجمع عدد الأطفال المسجَّلين فعلياً في تلك الصفوف. "
+            "٤) نسبة الإشغال = المسجَّلون ÷ الطاقة الاستيعابية × ١٠٠. "
             "الصفوف الموقوفة أو المحذوفة لا تُحتسب. "
-            "هذا السؤال يعكس الوضع الحالي، ولذلك لا يتأثر بالفترة الزمنية المحددة أعلاه.",
-            "1) We sum the capacity of every active class in each governorate. "
-            "2) We sum the children actually enrolled in those classes. "
-            "3) Occupancy = enrolled ÷ capacity × 100. "
+            "تنبيه: الطاقة والإشغال يعكسان الوضع الحالي، أما الفترة الزمنية فتحدد "
+            "أي الحضانات تدخل في الحساب حسب تاريخ تسجيلها — فتوسيع الفترة يضيف حضانات أقدم.",
+            "1) We take the kindergartens registered inside the period selected above. "
+            "2) We sum the capacity of every active class in each governorate. "
+            "3) We sum the children actually enrolled in those classes. "
+            "4) Occupancy = enrolled ÷ capacity × 100. "
             "Inactive or deleted classes are not counted. "
-            "This question reflects the present state, so it is not affected by the date period above.",
+            "Note: capacity and enrolment are current figures; the period decides which "
+            "kindergartens are included, by their registration date — widening the period "
+            "brings older kindergartens into the calculation.",
         ),
         origin=_t(
             "المصدر: سجل الصفوف في كل حضانة (الطاقة الاستيعابية وعدد المسجَّلين).",

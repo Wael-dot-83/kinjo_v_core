@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from sqlalchemy import func
 
 import analytics_explorer as ax
 import models
@@ -447,16 +448,44 @@ def test_escape_like_neutralises_every_metacharacter():
 
 def test_capacity_reports_kindergartens_not_bars(db):
     """`records` must stay "rows counted"; conflating it with bar count is the core defect."""
-    window = ax._resolve_window("2026-01-01", "2026-07-27")
+    window = ax._resolve_window("2020-01-01", "2026-07-27")
     answer = ax.QUESTIONS["kindergarten_capacity"].build(db, window, ax._resolve_scope(None, None))
 
-    live = (
+    live_in_window = (
         db.query(models.Kindergarten)
-        .filter(models.Kindergarten.deleted_at.is_(None))
+        .filter(
+            models.Kindergarten.deleted_at.is_(None),
+            models.Kindergarten.created_at >= window.dt_start,
+            models.Kindergarten.created_at < window.dt_end_exclusive,
+        )
         .count()
     )
-    assert answer.records == live
+    assert answer.records == live_in_window
     assert all(0 <= c.value <= 100 for c in answer.categories), "occupancy is a percentage"
+
+
+def test_capacity_responds_to_the_reporting_period(db):
+    """It used to ignore the period while still displaying one — a misleading label."""
+    build = ax.QUESTIONS["kindergarten_capacity"].build
+    scope = ax._resolve_scope(None, None)
+
+    wide = build(db, ax._resolve_window("2020-01-01", "2026-07-27"), scope)
+    assert wide.records > 0, "fixture needs kindergartens inside a wide window"
+
+    # A window that predates every kindergarten must return nothing, not the same total.
+    earliest = db.query(func.min(models.Kindergarten.created_at)).scalar()
+    assert earliest is not None
+    before = (earliest.date() if hasattr(earliest, "date") else date.fromisoformat(str(earliest)[:10]))
+    empty = build(db, ax._resolve_window("2019-01-01", (before - timedelta(days=1)).isoformat()), scope)
+    assert empty.records == 0
+    assert empty.categories == []
+
+
+def test_capacity_explanation_no_longer_claims_the_period_is_ignored(db):
+    window = ax._resolve_window("2020-01-01", "2026-07-27")
+    answer = ax.QUESTIONS["kindergarten_capacity"].build(db, window, ax._resolve_scope(None, None))
+    assert "not affected by the date period" not in answer.how.en
+    assert "period" in answer.how.en.lower(), "the wording must explain how the period applies"
 
 
 def test_governorate_options_are_canonical_and_unique(db):
