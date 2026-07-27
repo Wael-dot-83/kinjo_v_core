@@ -5973,14 +5973,20 @@ body.admin-container {
      object-fit: contain keeps the square artwork undistorted: it renders at the
      box height and centres, leaving the extra width as even margin on each side.
      Stretching to fill would skew a 1:1 logo. */
-  --kinjo-logo-width-extension: 15px;
+  --kinjo-logo-width-extension: 20px;
   --kinjo-logo-gold: #d4af37;
   --kinjo-logo-gold-deep: #b8912a;
+
+  /* Every pixel spent on chrome is a pixel the mark does not get: the artwork
+     renders at header-height minus 2x border minus 2x padding. 3px is the smallest
+     padding that still clears the inner gold ring (2px ring + 1px breathing room),
+     which buys the mark 54px of the 64px band instead of 50px. */
+  --kinjo-logo-inner-ring: 2px;
 
   block-size: var(--admin-header-height);
   inline-size: calc(var(--admin-header-height) + var(--kinjo-logo-width-extension));
   box-sizing: border-box;
-  padding: 5px;
+  padding: 3px;
   border: 2px solid var(--kinjo-logo-gold);
   border-radius: 10px;
   background: #fff;
@@ -5991,7 +5997,7 @@ body.admin-container {
      therefore the header-height lock above — is untouched. */
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.9),
-    inset 0 0 0 3px var(--kinjo-logo-gold-deep),
+    inset 0 0 0 var(--kinjo-logo-inner-ring) var(--kinjo-logo-gold-deep),
     0 1px 3px rgba(15, 23, 42, 0.14),
     0 0 0 1px rgba(184, 145, 42, 0.25);
 }
@@ -6010,16 +6016,26 @@ body.admin-container {
 }
 
 /* The header brand link: logical properties so the gap sits correctly in RTL and
-   LTR, and a visible focus ring — it is the first tab stop on every admin page. */
+   LTR, and a visible focus ring — it is the first tab stop on every admin page.
+
+   The badge is pushed hard against the header's leading edge — the far right in the
+   Arabic RTL interface, the far left in English — by cancelling the header's own
+   inline padding. A logical margin rather than a fixed side keeps the two directions
+   mirrored, so the logo always sits in the outermost corner of the band. */
 .header-logo {
   display: inline-flex;
   align-items: center;
   text-decoration: none;
+  margin-inline-start: calc(-1 * var(--kinjo-spacing-6));
   margin-inline-end: var(--kinjo-spacing-4);
   border-radius: 6px;
 }
 
+/* Drawn inside the badge, not around it. .admin-layout is overflow: hidden, and the
+   link now sits flush against that clipping edge, so an outward ring would have its
+   leading side cut off. A negative offset lands it on the gold border instead —
+   fully visible in both directions. */
 .header-logo:focus-visible {
   outline: 2px solid var(--kinjo-color-primary, #2563eb);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }

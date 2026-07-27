@@ -21,12 +21,19 @@
 
   The width/height attributes are intrinsic-ratio hints so the browser reserves space
   before the image loads (no layout shift). They describe the rendered box, not the
-  artwork: the navbar box is 79x64 — header height, widened by 15px — while the square
+  artwork: the navbar box is 84x64 — header height, widened by 20px — while the square
   artwork inside it stays undistorted via object-fit: contain.
 
-  Asset: kinjo-logo-320.png is a 320x320 palette PNG — 49 KB against the 997 KB
-  1254x1254 original, which was being downloaded on every admin page to be drawn at
-  64px. 320px still covers the largest use (login, 160px) at 2x device pixel ratio.
+  Asset: kinjo-logo-mark-320.png is a 320x320 palette PNG, 56 KB against the 997 KB
+  1254x1254 original that was being downloaded on every admin page to be drawn at 64px.
+  320px still covers the largest use (sidebar, 120px) at 2x device pixel ratio.
+
+  It is cropped, not merely resized. The source artwork carries roughly 19% baked-in
+  whitespace on every side, so the mark only ever filled 81% of whatever box it was
+  given — the logo looked small in the header no matter what the CSS said. The crop is
+  squared on the content's centre, keeping the 1:1 ratio object-fit relies on, and
+  leaves a 4% margin so the mark never collides with the badge's inner gold ring.
+  Regenerate with scripts/build_logo_asset.py if the source logo ever changes.
 
   alt is intentionally empty: every call site wraps this in an <a> that already carries
   an aria-label, so alt text here would make a screen reader announce the brand twice.
@@ -34,7 +41,7 @@
 {%- macro kinjo_logo(size='navbar', extra_class='') -%}
 {%- if size == 'sidebar' -%}
 <img
-  src="/static/img/kinjo-logo-320.png"
+  src="/static/img/kinjo-logo-mark-320.png"
   alt=""
   role="presentation"
   width="120"
@@ -45,7 +52,7 @@
 />
 {%- elif size == 'login' -%}
 <img
-  src="/static/img/kinjo-logo-320.png"
+  src="/static/img/kinjo-logo-mark-320.png"
   alt=""
   role="presentation"
   width="160"
@@ -56,10 +63,10 @@
 />
 {%- else -%}{# navbar / admin header #}
 <img
-  src="/static/img/kinjo-logo-320.png"
+  src="/static/img/kinjo-logo-mark-320.png"
   alt=""
   role="presentation"
-  width="79"
+  width="84"
   height="64"
   class="kinjo-logo kinjo-logo--navbar {{ extra_class }}"
   loading="eager"
