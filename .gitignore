@@ -195,3 +195,10 @@ htmlcov/
 
 # Google Drive sync temp folder
 .tmp.driveupload/
+
+# SQLite snapshots taken before data migrations/imports. `data/*.db` above does not
+# match these because the timestamp suffix falls after the extension, and SQLite's
+# sidecar -shm/-wal files inherit the same full name.
+data/*.db.backup-*
+data/*.backup-*-shm
+data/*.backup-*-wal
