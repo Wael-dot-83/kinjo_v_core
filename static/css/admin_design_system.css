@@ -5965,14 +5965,19 @@ body.admin-container {
    Consistent size and gold border for navbar logo across all admin pages
    Excludes login page (body.auth-page)
    ============================================================================ */
+body:not(.auth-page) img.kinjo-logo.kinjo-logo--navbar,
 body:not(.auth-page) .kinjo-logo--navbar {
   width: 185px !important;
   height: 67px !important;
-  object-fit: contain;
-  display: inline-block;
-  border: 2px solid #D4AF37;
-  border-radius: 4px;
-  padding: 4px;
-  background: #fff;
-  box-sizing: border-box;
+  min-width: 185px !important;
+  min-height: 67px !important;
+  max-width: 185px !important;
+  max-height: 67px !important;
+  object-fit: contain !important;
+  display: inline-block !important;
+  border: 2px solid #D4AF37 !important;
+  border-radius: 4px !important;
+  padding: 4px !important;
+  background: #fff !important;
+  box-sizing: border-box !important;
 }
