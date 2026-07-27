@@ -548,6 +548,224 @@
     }
   }
 
+  function renderSortablePaginatedTable(container, payload) {
+    const rawRows = payload.breakdowns || [];
+    if (!rawRows.length) return;
+
+    let rows = [...rawRows];
+    let sortKey = "";
+    let sortOrder = "asc";
+    let currentPage = 1;
+    const rowsPerPage = 10;
+
+    const tableTitle = document.createElement("h2");
+    tableTitle.id = "agency-table-title";
+    tableTitle.textContent = t("جدول البيانات التجميعية", "Aggregated Data Table");
+    container.appendChild(tableTitle);
+
+    const tableWrapper = document.createElement("div");
+    tableWrapper.style.overflowX = "auto";
+    tableWrapper.style.maxHeight = "450px";
+    tableWrapper.style.position = "relative";
+    tableWrapper.style.border = "1px solid var(--admin-border, #e2e8f0)";
+    tableWrapper.style.borderRadius = "12px";
+
+    const table = document.createElement("table");
+    table.className = "agency-table";
+    table.style.width = "100%";
+    table.style.border = "none";
+
+    const caption = document.createElement("caption");
+    caption.textContent = payload.metadata.report_title_ar || "";
+    table.appendChild(caption);
+
+    const columnLabels = payload.column_labels || {};
+    const headers = Object.keys(rows[0]);
+
+    const thead = document.createElement("thead");
+    const tr = document.createElement("tr");
+    headers.forEach((h) => {
+      const th = document.createElement("th");
+      th.scope = "col";
+      th.style.position = "sticky";
+      th.style.top = "0";
+      th.style.backgroundColor = "#f8fafc";
+      th.style.zIndex = "2";
+      th.style.cursor = "pointer";
+      th.style.userSelect = "none";
+      th.style.borderBottom = "2px solid var(--admin-border, #e2e8f0)";
+      
+      const textSpan = document.createElement("span");
+      textSpan.textContent = columnLabels[h] || h;
+      th.appendChild(textSpan);
+
+      const iconSpan = document.createElement("span");
+      iconSpan.style.marginInlineStart = "6px";
+      iconSpan.style.fontSize = "0.75rem";
+      iconSpan.innerHTML = '<i class="bi bi-arrow-down-up text-muted"></i>';
+      th.appendChild(iconSpan);
+
+      th.addEventListener("click", () => {
+        if (sortKey === h) {
+          sortOrder = sortOrder === "asc" ? "desc" : "asc";
+        } else {
+          sortKey = h;
+          sortOrder = "asc";
+        }
+        Array.from(tr.children).forEach((child, idx) => {
+          const key = headers[idx];
+          const icon = child.querySelector("span:last-child");
+          if (key === sortKey) {
+            icon.innerHTML = sortOrder === "asc" 
+              ? '<i class="bi bi-sort-up text-primary"></i>' 
+              : '<i class="bi bi-sort-down text-primary"></i>';
+          } else {
+            icon.innerHTML = '<i class="bi bi-arrow-down-up text-muted"></i>';
+          }
+        });
+        sortAndRender();
+      });
+
+      tr.appendChild(th);
+    });
+    thead.appendChild(tr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    table.appendChild(tbody);
+
+    const totalRow = payload.total_row;
+    let tfoot;
+    if (totalRow) {
+      tfoot = document.createElement("tfoot");
+      const ftr = document.createElement("tr");
+      ftr.className = "agency-table-total";
+      ftr.style.position = "sticky";
+      ftr.style.bottom = "0";
+      ftr.style.backgroundColor = "#f8fafc";
+      ftr.style.zIndex = "2";
+      ftr.style.borderTop = "2px solid var(--admin-border, #e2e8f0)";
+      headers.forEach((h) => {
+        const td = document.createElement("td");
+        const v = totalRow[h];
+        td.textContent = v == null || v === "" ? "" : String(v);
+        const isNumeric = typeof v === "number" || (!isNaN(v) && v !== "");
+        if (isNumeric) {
+          td.style.textAlign = "right";
+          td.style.fontVariantNumeric = "tabular-nums";
+        }
+        ftr.appendChild(td);
+      });
+      tfoot.appendChild(ftr);
+      table.appendChild(tfoot);
+    }
+
+    tableWrapper.appendChild(table);
+    container.appendChild(tableWrapper);
+
+    const paginationContainer = document.createElement("div");
+    paginationContainer.style.display = "flex";
+    paginationContainer.style.alignItems = "center";
+    paginationContainer.style.justifyContent = "space-between";
+    paginationContainer.style.marginTop = "14px";
+    paginationContainer.style.gap = "10px";
+    container.appendChild(paginationContainer);
+
+    function sortAndRender() {
+      if (sortKey) {
+        rows.sort((a, b) => {
+          const valA = a[sortKey];
+          const valB = b[sortKey];
+          if (typeof valA === "number" && typeof valB === "number") {
+            return sortOrder === "asc" ? valA - valB : valB - valA;
+          }
+          const strA = String(valA || "");
+          const strB = String(valB || "");
+          return sortOrder === "asc" 
+            ? strA.localeCompare(strB, "ar") 
+            : strB.localeCompare(strA, "ar");
+        });
+      }
+      renderBody();
+    }
+
+    function renderBody() {
+      tbody.innerHTML = "";
+      const startIdx = (currentPage - 1) * rowsPerPage;
+      const endIdx = startIdx + rowsPerPage;
+      const pageRows = rows.slice(startIdx, endIdx);
+
+      pageRows.forEach((row, index) => {
+        const r = document.createElement("tr");
+        if (index % 2 === 1) {
+          r.style.backgroundColor = "#f8fafc";
+        }
+        headers.forEach((h) => {
+          const td = document.createElement("td");
+          const v = row[h];
+          td.textContent = v == null ? "—" : String(v);
+          const isNumeric = typeof v === "number" || (!isNaN(v) && v !== "");
+          if (isNumeric) {
+            td.style.textAlign = "right";
+            td.style.fontVariantNumeric = "tabular-nums";
+          }
+          r.appendChild(td);
+        });
+        tbody.appendChild(r);
+      });
+
+      renderPagination();
+    }
+
+    function renderPagination() {
+      paginationContainer.innerHTML = "";
+      const totalPages = Math.ceil(rows.length / rowsPerPage);
+      if (totalPages <= 1) return;
+
+      const infoSpan = document.createElement("span");
+      infoSpan.className = "small text-muted";
+      infoSpan.textContent = t(
+        `الصفحة ${currentPage} من ${totalPages} (إجمالي ${rows.length} سجل)`,
+        `Page ${currentPage} of ${totalPages} (Total ${rows.length} records)`
+      );
+      paginationContainer.appendChild(infoSpan);
+
+      const btnGroup = document.createElement("div");
+      btnGroup.style.display = "flex";
+      btnGroup.style.gap = "6px";
+
+      const prevBtn = document.createElement("button");
+      prevBtn.type = "button";
+      prevBtn.className = "admin-btn admin-btn-secondary admin-btn-sm";
+      prevBtn.textContent = t("السابق", "Previous");
+      prevBtn.disabled = currentPage === 1;
+      prevBtn.addEventListener("click", () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderBody();
+        }
+      });
+
+      const nextBtn = document.createElement("button");
+      nextBtn.type = "button";
+      nextBtn.className = "admin-btn admin-btn-secondary admin-btn-sm";
+      nextBtn.textContent = t("التالي", "Next");
+      nextBtn.disabled = currentPage === totalPages;
+      nextBtn.addEventListener("click", () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          renderBody();
+        }
+      });
+
+      btnGroup.appendChild(prevBtn);
+      btnGroup.appendChild(nextBtn);
+      paginationContainer.appendChild(btnGroup);
+    }
+
+    renderBody();
+  }
+
   function renderReport(payload) {
     clear(root);
 
@@ -904,6 +1122,8 @@
         const config = {
           displaylogo: false,
           responsive: true,
+          displayModeBar: true,
+          modeBarButtonsToRemove: ["lasso2d", "select2d"],
           locale: lang === "ar" ? "ar" : "en",
         };
         window.Plotly.newPlot(chartContainer, plotData, layout, config)
@@ -977,6 +1197,8 @@
         const config = {
           displaylogo: false,
           responsive: true,
+          displayModeBar: true,
+          modeBarButtonsToRemove: ["lasso2d", "select2d"],
           locale: lang === "ar" ? "ar" : "en",
         };
         window.Plotly.newPlot(extraContainer, plotData, layout, config).catch(
@@ -1017,59 +1239,9 @@
       const tableSection = document.createElement("section");
       tableSection.className = "agency-table-section";
       tableSection.setAttribute("aria-labelledby", "agency-table-title");
-      const tableTitle = document.createElement("h2");
-      tableTitle.id = "agency-table-title";
-      tableTitle.textContent = t(
-        "جدول البيانات التجميعية",
-        "Aggregated Data Table",
-      );
-      tableSection.appendChild(tableTitle);
+      
+      renderSortablePaginatedTable(tableSection, payload);
 
-      const table = document.createElement("table");
-      table.className = "agency-table";
-      const caption = document.createElement("caption");
-      caption.textContent = payload.metadata.report_title_ar;
-      table.appendChild(caption);
-      const columnLabels = payload.column_labels || {};
-      const headers = Object.keys(rows[0]);
-      const thead = document.createElement("thead");
-      const tr = document.createElement("tr");
-      headers.forEach((h) => {
-        const th = document.createElement("th");
-        th.scope = "col";
-        th.textContent = columnLabels[h] || h;
-        tr.appendChild(th);
-      });
-      thead.appendChild(tr);
-      table.appendChild(thead);
-      const tbody = document.createElement("tbody");
-      rows.forEach((row) => {
-        const r = document.createElement("tr");
-        headers.forEach((h) => {
-          const td = document.createElement("td");
-          td.textContent = row[h] == null ? "—" : String(row[h]);
-          r.appendChild(td);
-        });
-        tbody.appendChild(r);
-      });
-      table.appendChild(tbody);
-      // Totals footer — a standard statistical table always closes with a total.
-      // Counts are summed; rate/ratio columns show "—" (never summed).
-      const totalRow = payload.total_row;
-      if (totalRow) {
-        const tfoot = document.createElement("tfoot");
-        const ftr = document.createElement("tr");
-        ftr.className = "agency-table-total";
-        headers.forEach((h) => {
-          const td = document.createElement("td");
-          const v = totalRow[h];
-          td.textContent = v == null || v === "" ? "" : String(v);
-          ftr.appendChild(td);
-        });
-        tfoot.appendChild(ftr);
-        table.appendChild(tfoot);
-      }
-      tableSection.appendChild(table);
       root.appendChild(tableSection);
       const groupBy = (payload.chart && payload.chart.group_by) || "";
       attachTableDrillDown(tableSection, groupBy);
@@ -1268,11 +1440,26 @@
       encodeURIComponent(reportCode) +
       (query ? "?" + query : "");
 
-    if (root)
-      root.innerHTML =
-        '<div class="agency-loading" role="status"><i class="bi bi-hourglass-split" aria-hidden="true"></i> ' +
-        t("جاري تحميل البيانات...", "Loading data...") +
-        "</div>";
+    if (root) {
+      root.innerHTML = `
+        <div class="agency-loading-skeleton" role="status" aria-label="${t("جاري تحميل البيانات...", "Loading data...")}">
+          <div class="agency-kpi-grid agency-card--skeleton" style="margin-bottom: 24px;">
+            <div class="agency-kpi"><div class="sk sk-logo" style="width: 48px; height: 48px; border-radius: 12px;"></div><div class="agency-kpi__body" style="flex: 1; margin-inline-start: 14px;"><div class="sk sk-title" style="height: 18px; width: 60%; margin-bottom: 8px;"></div><div class="sk sk-line" style="height: 14px; width: 40%;"></div></div></div>
+            <div class="agency-kpi"><div class="sk sk-logo" style="width: 48px; height: 48px; border-radius: 12px;"></div><div class="agency-kpi__body" style="flex: 1; margin-inline-start: 14px;"><div class="sk sk-title" style="height: 18px; width: 60%; margin-bottom: 8px;"></div><div class="sk sk-line" style="height: 14px; width: 40%;"></div></div></div>
+          </div>
+          <div class="agency-charts-grid" style="margin-bottom: 24px;">
+            <div class="agency-chart-section agency-card--skeleton" style="flex: 1; padding: 24px;">
+              <div class="sk sk-title" style="height: 20px; width: 40%; margin-bottom: 16px;"></div>
+              <div class="sk" style="height: 300px; width: 100%; border-radius: 12px;"></div>
+            </div>
+            <div class="agency-chart-section agency-card--skeleton" style="flex: 1; padding: 24px;">
+              <div class="sk sk-title" style="height: 20px; width: 40%; margin-bottom: 16px;"></div>
+              <div class="sk" style="height: 300px; width: 100%; border-radius: 12px;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     api(url)
       .then(renderReport)

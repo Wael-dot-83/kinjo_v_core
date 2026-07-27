@@ -1246,9 +1246,62 @@ class AgencyReportsService:
             for r in rows
         ]
         total = sum(r["count"] for r in breakdowns)
-        # Aggregate from the raw enum, not the localized display label.
         active = sum(_safe_int(r.count) for r in rows if _enum_value(r.status) == "ACTIVE")
-        return self._payload(
+
+        gov_filter = filters.get("governorate")
+        if gov_filter:
+            group_dim = "district"
+        else:
+            group_dim = "governorate"
+
+        geo_counts = {}
+        for r in rows:
+            key = r.district if gov_filter else r.governorate
+            key = key or "غير محدد"
+            geo_counts[key] = geo_counts.get(key, 0) + _safe_int(r.count)
+        
+        chart_series = [{"label": k, "value": v} for k, v in geo_counts.items()]
+        chart_series.sort(key=lambda s: s["value"], reverse=True)
+
+        chart_title = "توزيع الحضانات حسب اللواء" if gov_filter else "توزيع الحضانات حسب المحافظة"
+        chart = {
+            "type": "bar",
+            "title_ar": chart_title,
+            "x_axis_title_ar": "اللواء" if gov_filter else "المحافظة",
+            "y_axis_title_ar": "عدد الحضانات",
+            "series": chart_series[:15],
+            "group_by": group_dim,
+            "show_share_pct": True,
+        }
+
+        status_colors = {
+            "نشطة": "#16a34a",
+            "غير نشطة": "#dc2626",
+            "مسودة": "#64748b",
+            "مجمّدة": "#d97706",
+            "غير محدد": "#cbd5e1",
+        }
+        status_counts = {}
+        for r in rows:
+            lbl = _kindergarten_status_ar(r.status)
+            status_counts[lbl] = status_counts.get(lbl, 0) + _safe_int(r.count)
+
+        status_series = []
+        for lbl, v in status_counts.items():
+            status_series.append({
+                "label": lbl,
+                "value": v,
+                "color": status_colors.get(lbl, "#cbd5e1"),
+            })
+        status_series.sort(key=lambda s: s["value"], reverse=True)
+
+        license_chart = {
+            "type": "pie",
+            "title_ar": "توزيع الحضانات حسب الحالة التشغيلية",
+            "series": status_series,
+        }
+
+        payload = self._payload(
             agency_code,
             agency,
             report_code,
@@ -1256,7 +1309,10 @@ class AgencyReportsService:
             filters,
             {"total_kindergartens": total, "active_kindergartens": active},
             breakdowns,
+            chart=chart,
         )
+        payload["license_chart"] = license_chart
+        return payload
 
     def _workforce_summary(
         self,
