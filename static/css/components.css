@@ -127,7 +127,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 16px 0;
-  border-bottom: 1px solid var(--kinjo-color-border, #E5E7EB);
+  border-bottom: 1px solid var(--kinjo-color-border);
 }
 
 .executive-activity-item:last-child {

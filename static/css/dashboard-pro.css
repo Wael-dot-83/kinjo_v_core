@@ -526,7 +526,7 @@
 
 .admin-quick-action-card:hover {
     background: #f1f5f9;
-    border-color: #cbd5e1;
+    border-color: var(--kinjo-color-border-hover);
     transform: translateX(-4px); /* RTL friendly hover */
 }
 

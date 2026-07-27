@@ -7,7 +7,7 @@
 
 :root {
   --kg-radius: 16px;
-  --kg-border: #e2e8f0;
+  --kg-border: var(--kinjo-color-border, #064E32);
   --kg-muted: #64748b;
   --kg-ink: #0f172a;
   --kg-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .06);
@@ -89,8 +89,8 @@
 .kg-badge--active::before { animation: kg-pulse 2s ease-in-out infinite; }
 .kg-badge--frozen   { color: #075985; background: #f0f9ff; border-color: #bae6fd; }
 .kg-badge--draft    { color: #92400e; background: #fffbeb; border-color: #fde68a; }
-.kg-badge--deleted  { color: #475569; background: #f1f5f9; border-color: #cbd5e1; }
-.kg-badge--inactive { color: #475569; background: #f1f5f9; border-color: #cbd5e1; }
+.kg-badge--deleted  { color: #475569; background: #f1f5f9; border-color: var(--kinjo-color-border-hover); }
+.kg-badge--inactive { color: #475569; background: #f1f5f9; border-color: var(--kinjo-color-border-hover); }
 @keyframes kg-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .5); }
   50% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
@@ -109,7 +109,7 @@
 .kg-table th.kg-sortable .kg-sort-ic { opacity: .35; font-size: .75rem; }
 .kg-table th.kg-sortable[aria-sort="ascending"] .kg-sort-ic,
 .kg-table th.kg-sortable[aria-sort="descending"] .kg-sort-ic { opacity: 1; color: #2563eb; }
-.kg-table tbody td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.kg-table tbody td { padding: 12px 14px; border-bottom: 1px solid var(--kinjo-color-border-subtle); vertical-align: middle; }
 .kg-table tbody tr { transition: background .12s ease; }
 .kg-table tbody tr:hover { background: #f8fafc; }
 .kg-table tbody tr:last-child td { border-bottom: 0; }
@@ -159,8 +159,8 @@
 }
 .kg-section-head i { color: #2563eb; }
 .kg-dl { display: grid; grid-template-columns: minmax(130px, 40%) 1fr; margin: 0; }
-.kg-dl dt { padding: 11px 18px; color: var(--kg-muted); font-weight: 600; font-size: .86rem; border-bottom: 1px solid #f1f5f9; }
-.kg-dl dd { padding: 11px 18px; color: var(--kg-ink); margin: 0; border-bottom: 1px solid #f1f5f9; word-break: break-word; }
+.kg-dl dt { padding: 11px 18px; color: var(--kg-muted); font-weight: 600; font-size: .86rem; border-bottom: 1px solid var(--kinjo-color-border-subtle); }
+.kg-dl dd { padding: 11px 18px; color: var(--kg-ink); margin: 0; border-bottom: 1px solid var(--kinjo-color-border-subtle); word-break: break-word; }
 .kg-dl dt:last-of-type, .kg-dl dd:last-of-type { border-bottom: 0; }
 
 /* ---- Audit timeline ----------------------------------------------------- */

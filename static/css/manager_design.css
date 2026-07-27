@@ -64,7 +64,7 @@
   padding: 1rem 1.25rem;
   border-radius: var(--mgr-border-radius-sm);
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--kinjo-color-border);
   color: #1e293b;
   text-decoration: none;
   transition: var(--mgr-transition);
@@ -96,7 +96,7 @@
 .mgr-table-container {
   border-radius: var(--mgr-border-radius);
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--kinjo-color-border);
   background: #ffffff;
 }
 
@@ -112,13 +112,13 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.875rem 1rem;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid var(--kinjo-color-border);
 }
 
 .mgr-table td {
   padding: 0.875rem 1rem;
   vertical-align: middle;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--kinjo-color-border-subtle);
   font-size: 0.925rem;
 }
 
@@ -171,7 +171,7 @@
 
 .mgr-modal .modal-header {
   background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--kinjo-color-border);
   border-top-left-radius: var(--mgr-border-radius);
   border-top-right-radius: var(--mgr-border-radius);
   padding: 1.25rem 1.5rem;
@@ -179,7 +179,7 @@
 
 .mgr-modal .modal-footer {
   background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--kinjo-color-border);
   border-bottom-left-radius: var(--mgr-border-radius);
   border-bottom-right-radius: var(--mgr-border-radius);
   padding: 1rem 1.5rem;

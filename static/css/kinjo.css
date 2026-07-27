@@ -54,8 +54,10 @@
   --kinjo-text-primary: #1e293b;
   --kinjo-text-secondary: #64748b;
   --kinjo-text-muted: #64748b;
-  --kinjo-border-color: #e2e8f0;
-  --kinjo-border-light: #f1f5f9;
+  /* Aliases, not copies — same reason as --kinjo-bg-light above. These held their
+     own #e2e8f0 / #f1f5f9 and were free to drift from the tokens they mirror. */
+  --kinjo-border-color: var(--kinjo-color-border, #064E32);
+  --kinjo-border-light: var(--kinjo-color-border-subtle, #DCEAE3);
   --kinjo-surface: #ffffff;
   --kinjo-surface-muted: #f8fafc;
   --kinjo-navbar-height: 64px;
@@ -2724,7 +2726,7 @@ html[dir="rtl"] .stat-card::before { border-radius: 0 4px 4px 0; }
 }
 .card-header {
   background: #ffffff !important;
-  border-bottom: 1px solid #f1f5f9 !important;
+  border-bottom: 1px solid var(--kinjo-color-border-subtle) !important;
   padding: 1rem 1.25rem !important;
   border-radius: 0.875rem 0.875rem 0 0 !important;
 }
@@ -2736,7 +2738,7 @@ html[dir="rtl"] .stat-card::before { border-radius: 0 4px 4px 0; }
 }
 .card-footer {
   background: #f8fafc !important;
-  border-top: 1px solid #f1f5f9 !important;
+  border-top: 1px solid var(--kinjo-color-border-subtle) !important;
   border-radius: 0 0 0.875rem 0.875rem !important;
 }
 
@@ -2964,7 +2966,7 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 /* ── Form Controls ──────────────────────────────────────────────────────── */
 .form-control, .form-select {
   border-radius: 0.625rem !important;
-  border-color: #e2e8f0 !important;
+  border-color: var(--kinjo-color-border) !important;
   font-size: 0.9rem !important;
   transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
 }
@@ -3020,7 +3022,7 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 
 /* ── List Group ─────────────────────────────────────────────────────────── */
 .list-group-item {
-  border-color: #f1f5f9 !important;
+  border-color: var(--kinjo-color-border-subtle) !important;
   transition: background 0.15s ease !important;
 }
 .list-group-item:hover { background: #f0f7f4 !important; }
@@ -3064,7 +3066,7 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 }
 .dropdown-item:hover { background: #f0f7f4 !important; }
 .dropdown-item:active { background: #e0f0eb !important; color: #163d2e !important; }
-.dropdown-divider { margin: 0.35rem 0 !important; border-color: #f1f5f9 !important; }
+.dropdown-divider { margin: 0.35rem 0 !important; border-color: var(--kinjo-color-border-subtle) !important; }
 
 /* ── Modal Refinements ──────────────────────────────────────────────────── */
 .modal-content {
@@ -3073,11 +3075,11 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
   box-shadow: 0 20px 60px rgba(0,0,0,0.18) !important;
 }
 .modal-header {
-  border-bottom: 1px solid #f1f5f9 !important;
+  border-bottom: 1px solid var(--kinjo-color-border-subtle) !important;
   padding: 1.25rem 1.5rem !important;
 }
 .modal-footer {
-  border-top: 1px solid #f1f5f9 !important;
+  border-top: 1px solid var(--kinjo-color-border-subtle) !important;
   padding: 1rem 1.5rem !important;
   background: #f8fafc !important;
   border-radius: 0 0 1.25rem 1.25rem !important;

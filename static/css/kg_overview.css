@@ -16,7 +16,7 @@
   --ko-bg:          #f4f6fb;
   --ko-surface:     #ffffff;
   --ko-surface2:    #f8f9fc;
-  --ko-border:      #e5e9f0;
+  --ko-border:      var(--kinjo-color-border, #064E32);
   --ko-text:        #1a2233;
   --ko-text-muted:  #6b7a99;
   --ko-text-light:  #a0aec0;

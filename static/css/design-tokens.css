@@ -43,11 +43,30 @@
   --kinjo-color-text-muted: #64748b; /* Better contrast than typical light gray */
   --kinjo-color-text-inverse: #ffffff;
 
-  --kinjo-color-border: #e2e8f0;
-  --kinjo-color-border-hover: #cbd5e1;
+  /* ---- Borders -----------------------------------------------------------
+     Component boundaries are the brand green — the same #064E32 the masthead
+     wears, so the product reads as one material rather than green chrome bolted
+     onto grey components.
+
+     Two weights, and the distinction is load-bearing:
+
+       --kinjo-color-border         the OUTLINE of a component (card, panel,
+                                    input, table, dropdown). Dark green.
+       --kinjo-color-border-subtle  an internal HAIRLINE (table row separators,
+                                    dropdown dividers, list rules). Green-tinted
+                                    but light — at full strength every table would
+                                    become a heavy grid.
+
+     The outline is also an accessibility gain, not just a restyle: WCAG 1.4.11
+     asks 3:1 of a component boundary, and the neutral #e2e8f0 this replaces
+     managed 1.23:1 on white. #064E32 measures 9.80:1 on a white card and 9.31:1
+     on the page canvas behind it. */
+  --kinjo-color-border: #064E32;
+  --kinjo-color-border-hover: #043A25;
+  --kinjo-color-border-subtle: #DCEAE3;
   --kinjo-color-ring: rgba(37, 99, 235, 0.3);
   --agency-chart-surface: #ffffff;
-  --agency-chart-border: #e2e8f0;
+  --agency-chart-border: var(--kinjo-color-border);
 
   /* ---- Admin shell chrome ----------------------------------------------
      The admin wears a two-tier masthead, and the tiers are deliberately
@@ -78,7 +97,7 @@
   --admin-header-avatar-ink: #064E32;   /* 4.66:1 on the gold */
 
   --admin-nav-bg: #ffffff;
-  --admin-nav-border: #E5E7EB;
+  --admin-nav-border: var(--kinjo-color-border);
   --admin-nav-ink: #374151;             /* 10.31:1 */
   --admin-nav-ink-strong: #111827;
   --admin-nav-ink-muted: #6B7280;       /* 4.83:1 */
@@ -145,5 +164,5 @@
 [data-theme="dark"]:root,
 :root[data-theme="dark"]{
   --agency-chart-surface:var(--kinjo-color-bg-surface,#1e293b);
-  --agency-chart-border:var(--kinjo-color-border,#334155);
+  --agency-chart-border:var(--kinjo-color-border,#3d8a67);
 }

@@ -22,15 +22,20 @@
     --kinjo-color-bg-body:#0b1220; --kinjo-color-bg-surface:#1e293b;
     --kinjo-color-bg-hover:#0f172a; --kinjo-color-bg-active:#334155;
     --kinjo-color-text-primary:#f1f5f9; --kinjo-color-text-secondary:#cbd5e1;
-    --kinjo-color-text-muted:#94a3b8; --kinjo-color-border:#334155;
-    --kinjo-color-border-hover:#475569;
+    --kinjo-color-text-muted:#94a3b8;
+    /* Green border scale, lightened for dark: #3d8a67 clears the 3:1 WCAG asks of
+       a component boundary on #1e293b (2.33:1 at the light theme's #064E32). */
+    --kinjo-color-border:#3d8a67; --kinjo-color-border-hover:#469973;
+    --kinjo-color-border-subtle:#284835;
     --kinjo-surface:#1e293b; --kinjo-surface-muted:#0f172a; --kinjo-bg-light:#0b1220;
     --kinjo-text-primary:#f1f5f9; --kinjo-text-secondary:#94a3b8; --kinjo-text-muted:#94a3b8;
-    --kinjo-border-color:#334155; --kinjo-border-light:#293548;
+    /* --kinjo-border-color / --kinjo-border-light are aliases of the two tokens
+     above in kinjo.css, so they flip for dark on their own; the explicit slate
+     values that used to sit here would have pinned them back to grey. */
     --shell-surface:#1e293b; --shell-hover:#0f172a;
     --shell-ink:#f1f5f9; --shell-ink-2:#cbd5e1; --shell-ink-3:#94a3b8;
     /* Tier 2 only. Tier 1 keeps its brand green in both themes. */
-    --admin-nav-bg:#1e293b; --admin-nav-border:#334155;
+    --admin-nav-bg:#1e293b; --admin-nav-border:var(--kinjo-color-border);
     --admin-nav-ink:#cbd5e1; --admin-nav-ink-strong:#f1f5f9;
     --admin-nav-ink-muted:#94a3b8; --admin-nav-hover:#0f172a;
     --admin-nav-accent:#93b4ff; --admin-nav-accent-soft:#24304a;
@@ -40,15 +45,20 @@
   --kinjo-color-bg-body:#0b1220; --kinjo-color-bg-surface:#1e293b;
   --kinjo-color-bg-hover:#0f172a; --kinjo-color-bg-active:#334155;
   --kinjo-color-text-primary:#f1f5f9; --kinjo-color-text-secondary:#cbd5e1;
-  --kinjo-color-text-muted:#94a3b8; --kinjo-color-border:#334155;
-  --kinjo-color-border-hover:#475569;
+  --kinjo-color-text-muted:#94a3b8;
+  /* Green border scale, lightened for dark: #3d8a67 clears the 3:1 WCAG asks of
+     a component boundary on #1e293b (2.33:1 at the light theme's #064E32). */
+  --kinjo-color-border:#3d8a67; --kinjo-color-border-hover:#469973;
+  --kinjo-color-border-subtle:#284835;
   --kinjo-surface:#1e293b; --kinjo-surface-muted:#0f172a; --kinjo-bg-light:#0b1220;
   --kinjo-text-primary:#f1f5f9; --kinjo-text-secondary:#94a3b8; --kinjo-text-muted:#94a3b8;
-  --kinjo-border-color:#334155; --kinjo-border-light:#293548;
+  /* --kinjo-border-color / --kinjo-border-light are aliases of the two tokens
+     above in kinjo.css, so they flip for dark on their own; the explicit slate
+     values that used to sit here would have pinned them back to grey. */
   --shell-surface:#1e293b; --shell-hover:#0f172a;
   --shell-ink:#f1f5f9; --shell-ink-2:#cbd5e1; --shell-ink-3:#94a3b8;
   /* Tier 2 only. Tier 1 keeps its brand green in both themes. */
-  --admin-nav-bg:#1e293b; --admin-nav-border:#334155;
+  --admin-nav-bg:#1e293b; --admin-nav-border:var(--kinjo-color-border);
   --admin-nav-ink:#cbd5e1; --admin-nav-ink-strong:#f1f5f9;
   --admin-nav-ink-muted:#94a3b8; --admin-nav-hover:#0f172a;
   --admin-nav-accent:#93b4ff; --admin-nav-accent-soft:#24304a;
