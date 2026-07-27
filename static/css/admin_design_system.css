@@ -5977,10 +5977,17 @@ body.admin-container {
 }
 
 .kinjo-logo--navbar {
-  /* Square asset, flush with the header band. box-sizing keeps the frame inside
-     the header height instead of pushing the total to height + border + padding. */
+  /* Height stays locked to the header band. Width is that height plus a fixed
+     extension, so the frame reads as a slightly wide badge rather than a tight
+     square — and it still tracks the header at the mobile breakpoint.
+
+     object-fit: contain keeps the square artwork undistorted: it renders at the
+     box height and centres, leaving the extra width as even margin on each side.
+     Stretching to fill would skew a 1:1 logo. */
+  --kinjo-logo-width-extension: 10px;
+
   block-size: var(--admin-header-height);
-  inline-size: var(--admin-header-height);
+  inline-size: calc(var(--admin-header-height) + var(--kinjo-logo-width-extension));
   box-sizing: border-box;
   padding: 4px;
   border: 2px solid #d4af37;

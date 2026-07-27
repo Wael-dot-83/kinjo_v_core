@@ -20,8 +20,9 @@
   markup lets ordinary specificity work.
 
   The width/height attributes are intrinsic-ratio hints so the browser reserves space
-  before the image loads (no layout shift). The asset is square, so both values match on
-  the square variants.
+  before the image loads (no layout shift). They describe the rendered box, not the
+  artwork: the navbar box is 74x64 — header height, widened by 10px — while the square
+  artwork inside it stays undistorted via object-fit: contain.
 
   Asset: kinjo-logo-320.png is a 320x320 palette PNG — 49 KB against the 997 KB
   1254x1254 original, which was being downloaded on every admin page to be drawn at
@@ -58,7 +59,7 @@
   src="/static/img/kinjo-logo-320.png"
   alt=""
   role="presentation"
-  width="64"
+  width="74"
   height="64"
   class="kinjo-logo kinjo-logo--navbar {{ extra_class }}"
   loading="eager"
