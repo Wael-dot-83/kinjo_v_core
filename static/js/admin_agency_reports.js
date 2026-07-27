@@ -52,6 +52,7 @@
     ncfa: "ncfa.png",
     mol: "mol.png",
     mosd: "mosd.jpg",
+    mopic: "mopic.png",
   };
 
   function clear(el) {
@@ -667,7 +668,7 @@
     const dl = document.createElement("dl");
     const summaryLabels = payload.summary_labels || {};
     Object.entries(payload.summary || {}).forEach(([key, value]) => {
-      if (key === "message_ar") return;
+      if (key === "message_ar" || key === "data_quality_note_ar") return;
       const dt = document.createElement("dt");
       dt.textContent = summaryLabels[key] || key;
       const dd = document.createElement("dd");
@@ -967,7 +968,7 @@
         ];
         const layout = {
           margin: { l: 80, r: 30, t: 40, b: 80 },
-          height: 460,
+          height: 420,
           paper_bgcolor: "transparent",
           plot_bgcolor: "transparent",
           font: { family: "'Inter', 'Segoe UI', system-ui, sans-serif" },
@@ -995,7 +996,20 @@
           ),
         );
       }
-      root.appendChild(extraSection);
+
+      // If both the main chart and the license chart exist, place them in a
+      // responsive side-by-side grid so the page doesn't grow unnecessarily
+      // tall on desktop.
+      if (chartSection && chartSection.parentNode === root) {
+        const grid = document.createElement("div");
+        grid.className = "agency-charts-grid";
+        root.insertBefore(grid, chartSection);
+        root.removeChild(chartSection);
+        grid.appendChild(chartSection);
+        grid.appendChild(extraSection);
+      } else {
+        root.appendChild(extraSection);
+      }
     }
     // Data table
     const rows = payload.breakdowns || [];
@@ -1077,6 +1091,7 @@
       [t("تعريف التقرير", "Definition"), meta.definition_ar],
       [t("مصدر البيانات", "Data source"), meta.data_source_ar],
       [t("الأساس الجغرافي", "Geographic basis"), meta.geography_basis_ar],
+      [t("ملاحظات جودة البيانات", "Data Quality Note"), payload.summary ? payload.summary.data_quality_note_ar : null],
       [t("وحدات القياس", "Units"), meta.units_note_ar],
       [t("الرموز", "Symbols"), meta.symbols_note_ar],
       [

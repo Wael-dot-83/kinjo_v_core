@@ -462,6 +462,7 @@ _FIELD_LABELS: dict[str, str] = {
     "governorate": "المحافظة",
     "city": "المدينة/اللواء",
     "district": "اللواء",
+    "area": "المنطقة/الحي",
     "gender": "الجنس",
     "count": "العدد",
     "status": "الحالة",
@@ -482,6 +483,21 @@ _FIELD_LABELS: dict[str, str] = {
     "missing_dob": "بدون تاريخ ميلاد",
     "year": "السنة",
     "new_kindergartens": "حضانات جديدة",
+    "national_ratio": "المعدل الوطني للأطفال لكل حضانة",
+    "unserved_districts_count": "عدد الألوية المحرومة",
+    "unserved_children_count": "الأطفال غير المخدومين في المناطق المحرومة",
+    "is_unserved_zone": "منطقة محرومة",
+    "status_ar": "حالة الخدمة",
+    "available_expansion_capacity": "سعة التوسع المتاحة",
+    "is_overcrowded": "حالة الاكتظاظ",
+    "investment_priority_score": "مؤشر أولوية الاستثمار التنموي",
+    "priority_level_ar": "درجة الأولوية",
+    "priority_rank": "الترتيب التنموي",
+    "governorates_count": "عدد المحافظات المشمولة",
+    "top_priority_governorate": "المحافظة الأعلى أولوية",
+    "average_investment_priority_score": "متوسط درجة الأولوية الوطني",
+    "active_kindergartens": "الحضانات النشطة",
+    "available_expansion_capacity": "سعة التوسع المتاحة",
     # vaccination_due_children
     "vaccine": "المطعوم",
     "due_age": "العمر المستحق",
@@ -677,6 +693,10 @@ class AgencyReportsService:
             payload = self._child_safety(agency_code, agency, report_code, report, filters)
         elif agency_code == "mopic" and report_code == "service_access_gaps":
             payload = self._service_access_gaps(agency_code, agency, report_code, report, filters)
+        elif agency_code == "mopic" and report_code == "regional_capacity_readiness":
+            payload = self._mopic_capacity_readiness(agency_code, agency, report_code, report, filters)
+        elif agency_code == "mopic" and report_code == "development_investment_priorities":
+            payload = self._mopic_investment_priorities(agency_code, agency, report_code, report, filters)
         else:
             payload = self._unavailable_payload(
                 agency_code, agency, report_code, report, filters, status="not_available"
@@ -1206,102 +1226,229 @@ class AgencyReportsService:
             s = str(name)
             return aliases.get(s) or aliases.get(s.lower(), s)
 
-        child_rows = (
-            self.db.query(
+        # 1. Determine dynamic grouping dimension, titles, and query paths based on geo filters
+        if filters.get("city"):
+            group_dim = "area"
+            y_axis_title = "المنطقة / الحي"
+            chart_title = f"فجوة الوصول للخدمة في {filters['city']}: الأطفال لكل حضانة حسب المنطقة"
+
+            child_rows = (
+                self.db.query(
+                    models.ParentProfile.home_governorate,
+                    models.ParentProfile.home_district,
+                    models.ParentProfile.home_area,
+                    func.count(models.Child.id).label("children"),
+                )
+                .join(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
+                .filter(models.Child.deleted_at.is_(None), models.ParentProfile.deleted_at.is_(None))
+            )
+            child_rows = self._apply_parent_geo_filters(child_rows, filters)
+            child_rows = child_rows.group_by(
                 models.ParentProfile.home_governorate,
                 models.ParentProfile.home_district,
-                func.count(models.Child.id).label("children"),
-            )
-            .join(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
-            .filter(models.Child.deleted_at.is_(None), models.ParentProfile.deleted_at.is_(None))
-        )
-        child_rows = self._apply_parent_geo_filters(child_rows, filters)
-        child_rows = child_rows.group_by(
-            models.ParentProfile.home_governorate, models.ParentProfile.home_district
-        ).all()
+                models.ParentProfile.home_area,
+            ).all()
 
-        kg_rows = self.db.query(
-            models.Kindergarten.governorate,
-            models.Kindergarten.district,
-            func.count(models.Kindergarten.id).label("kindergartens"),
-        ).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
-        kg_rows = self._apply_kindergarten_geo_filters(kg_rows, filters)
-        kg_rows = kg_rows.group_by(models.Kindergarten.governorate, models.Kindergarten.district).all()
+            child_index = {}
+            for r in child_rows:
+                key = (_normalize_gov(r.home_governorate), r.home_district or "غير محدد", r.home_area or "غير محدد")
+                child_index[key] = child_index.get(key, 0) + _safe_int(r.children)
 
-        kg_index: dict[tuple[str, str], int] = {}
-        for r in kg_rows:
-            key = (_normalize_gov(r.governorate), r.district or "غير محدد")
-            kg_index[key] = kg_index.get(key, 0) + _safe_int(r.kindergartens)
-        breakdowns = []
-        for r in child_rows:
-            gov = _normalize_gov(r.home_governorate)
-            dist = r.home_district or "غير محدد"
-            key = (gov, dist)
-            children = _safe_int(r.children)
-            kgs = kg_index.get(key, 0)
-            ratio = round(children / kgs, 2) if kgs else None
-            breakdowns.append(
-                {
-                    "governorate": gov,
-                    "city": dist,
-                    "children": children,
-                    "active_kindergartens": kgs,
-                    "children_per_kindergarten": ratio,
-                }
+            kg_rows = self.db.query(
+                models.Kindergarten.governorate,
+                models.Kindergarten.district,
+                models.Kindergarten.area,
+                func.count(models.Kindergarten.id).label("kindergartens"),
+            ).filter(
+                models.Kindergarten.deleted_at.is_(None),
+                models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
             )
+            kg_rows = self._apply_kindergarten_geo_filters(kg_rows, filters)
+            kg_rows = kg_rows.group_by(
+                models.Kindergarten.governorate,
+                models.Kindergarten.district,
+                models.Kindergarten.area,
+            ).all()
+
+            kg_index = {}
+            for r in kg_rows:
+                key = (_normalize_gov(r.governorate), r.district or "غير محدد", r.area or "غير محدد")
+                kg_index[key] = kg_index.get(key, 0) + _safe_int(r.kindergartens)
+
+            all_keys = set(child_index.keys()) | set(kg_index.keys())
+            breakdowns = []
+            unserved_districts_count = 0
+            unserved_children_count = 0
+
+            for gov, dist, area in all_keys:
+                children = child_index.get((gov, dist, area), 0)
+                kgs = kg_index.get((gov, dist, area), 0)
+                ratio = round(children / kgs, 2) if kgs > 0 else None
+                is_unserved = bool(kgs == 0 and children > 0)
+                if is_unserved:
+                    unserved_districts_count += 1
+                    unserved_children_count += children
+
+                breakdowns.append(
+                    {
+                        "governorate": gov,
+                        "city": dist,
+                        "area": area,
+                        "children": children,
+                        "active_kindergartens": kgs,
+                        "children_per_kindergarten": ratio,
+                        "is_unserved_zone": is_unserved,
+                        "status_ar": "محرومة من الخدمة" if is_unserved else ("خدمة متاحة" if kgs > 0 else "بدون أطفال مسجلين"),
+                    }
+                )
+        else:
+            if filters.get("governorate"):
+                group_dim = "city"
+                y_axis_title = "اللواء"
+                chart_title = f"فجوة الوصول للخدمة في محافظة {filters['governorate']}: الأطفال لكل حضانة نشطة حسب اللواء"
+            else:
+                group_dim = "governorate"
+                y_axis_title = "المحافظة"
+                chart_title = "فجوة الوصول للخدمة: أطفال لكل حضانة نشطة حسب المحافظة"
+
+            child_rows = (
+                self.db.query(
+                    models.ParentProfile.home_governorate,
+                    models.ParentProfile.home_district,
+                    func.count(models.Child.id).label("children"),
+                )
+                .join(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
+                .filter(models.Child.deleted_at.is_(None), models.ParentProfile.deleted_at.is_(None))
+            )
+            child_rows = self._apply_parent_geo_filters(child_rows, filters)
+            child_rows = child_rows.group_by(
+                models.ParentProfile.home_governorate, models.ParentProfile.home_district
+            ).all()
+
+            child_index = {}
+            for r in child_rows:
+                key = (_normalize_gov(r.home_governorate), r.home_district or "غير محدد")
+                child_index[key] = child_index.get(key, 0) + _safe_int(r.children)
+
+            kg_rows = self.db.query(
+                models.Kindergarten.governorate,
+                models.Kindergarten.district,
+                func.count(models.Kindergarten.id).label("kindergartens"),
+            ).filter(
+                models.Kindergarten.deleted_at.is_(None),
+                models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+            )
+            kg_rows = self._apply_kindergarten_geo_filters(kg_rows, filters)
+            kg_rows = kg_rows.group_by(models.Kindergarten.governorate, models.Kindergarten.district).all()
+
+            kg_index = {}
+            for r in kg_rows:
+                key = (_normalize_gov(r.governorate), r.district or "غير محدد")
+                kg_index[key] = kg_index.get(key, 0) + _safe_int(r.kindergartens)
+
+            all_keys = set(child_index.keys()) | set(kg_index.keys())
+            breakdowns = []
+            unserved_districts_count = 0
+            unserved_children_count = 0
+
+            for gov, dist in all_keys:
+                children = child_index.get((gov, dist), 0)
+                kgs = kg_index.get((gov, dist), 0)
+                ratio = round(children / kgs, 2) if kgs > 0 else None
+                is_unserved = bool(kgs == 0 and children > 0)
+                if is_unserved:
+                    unserved_districts_count += 1
+                    unserved_children_count += children
+
+                breakdowns.append(
+                    {
+                        "governorate": gov,
+                        "city": dist,
+                        "children": children,
+                        "active_kindergartens": kgs,
+                        "children_per_kindergarten": ratio,
+                        "is_unserved_zone": is_unserved,
+                        "status_ar": "محرومة من الخدمة" if is_unserved else ("خدمة متاحة" if kgs > 0 else "بدون أطفال مسجلين"),
+                    }
+                )
+
         total_children = sum(r["children"] for r in breakdowns)
         total_kgs = sum(r["active_kindergartens"] for r in breakdowns)
+        overall_ratio = round(total_children / total_kgs, 2) if total_kgs > 0 else None
 
+        # 4. Chart building — dynamic grouping dimension
         chart = None
         if breakdowns:
-            # Explicit chart: aggregate ratio per governorate (do NOT sum ratios).
-            gov_children: dict[str, int] = {}
-            gov_kgs: dict[str, int] = {}
-            for b in breakdowns:
-                gov = b["governorate"]
-                gov_children[gov] = gov_children.get(gov, 0) + b["children"]
-                gov_kgs[gov] = gov_kgs.get(gov, 0) + b["active_kindergartens"]
-            chart_series = [
-                {"label": gov, "value": round(gov_children[gov] / gov_kgs[gov], 2) if gov_kgs[gov] else None}
-                for gov in gov_children
-            ]
-            chart_series.sort(key=lambda s: s["value"] if s["value"] is not None else -1, reverse=True)
+            group_children: dict[str, int] = {}
+            group_kgs: dict[str, int] = {}
+            group_unserved: dict[str, bool] = {}
 
-            # Color-code burden tiers so high service pressure is immediately visible.
+            for b in breakdowns:
+                label = b[group_dim]
+                group_children[label] = group_children.get(label, 0) + b["children"]
+                group_kgs[label] = group_kgs.get(label, 0) + b["active_kindergartens"]
+                if b["is_unserved_zone"]:
+                    group_unserved[label] = True
+
+            chart_series = []
+            for label, c_cnt in group_children.items():
+                k_cnt = group_kgs.get(label, 0)
+                val = round(c_cnt / k_cnt, 2) if k_cnt > 0 else None
+                chart_series.append(
+                    {
+                        "label": label,
+                        "value": val,
+                        "children": c_cnt,
+                        "kindergartens": k_cnt,
+                        "is_unserved": group_unserved.get(label, False),
+                    }
+                )
+
+            chart_series.sort(
+                key=lambda s: (s["is_unserved"], s["value"] if s["value"] is not None else -1),
+                reverse=True,
+            )
+
             ratios = [float(s["value"]) for s in chart_series if isinstance(s.get("value"), (int, float))]
             max_ratio = max(ratios) if ratios else 0.0
+
             for s in chart_series:
                 v = s.get("value")
-                if not isinstance(v, (int, float)) or max_ratio <= 0:
+                if s.get("is_unserved"):
+                    s["color"] = "#dc2626"  # Critical red for unserved
+                elif not isinstance(v, (int, float)) or max_ratio <= 0:
                     s["color"] = "#64748b"
                 elif float(v) >= max_ratio * 0.75:
-                    s["color"] = "#dc2626"  # high pressure
+                    s["color"] = "#dc2626"  # High pressure red
                 elif float(v) >= max_ratio * 0.45:
-                    s["color"] = "#f59e0b"  # medium pressure
+                    s["color"] = "#f59e0b"  # Medium pressure orange
                 else:
-                    s["color"] = "#22c55e"  # lower pressure
+                    s["color"] = "#22c55e"  # Lower pressure green
 
             chart = {
                 "type": "bar",
-                "title_ar": "فجوة الوصول للخدمة: أطفال لكل حضانة نشطة حسب المحافظة",
+                "title_ar": chart_title,
                 "series": chart_series,
-                "group_by": "governorate",
+                "group_by": group_dim,
                 "value_suffix": " طفل/حضانة",
                 "x_axis_title_ar": "الأطفال لكل حضانة نشطة",
-                "y_axis_title_ar": "المحافظة",
+                "y_axis_title_ar": y_axis_title,
             }
 
         summary = {
             "areas": len(breakdowns),
             "children": total_children,
             "active_kindergartens": total_kgs,
+            "national_ratio": overall_ratio,
+            "unserved_districts_count": unserved_districts_count,
+            "unserved_children_count": unserved_children_count,
             "data_quality_note_ar": (
-                "يتم حساب نسبة الأطفال لكل حضانة على أساس سكن ولي الأمر مقابل الحضانات النشطة في نفس المنطقة. "
-                "قد تختلف الخدمة الفعلية إذا كان الآباء يسجلون أطفالهم في حضانات خارج منطقتهم."
+                "تم حساب نسبة الأطفال لكل حضانة على أساس سكن ولي الأمر مقابل الحضانات النشطة في نفس المنطقة الجغرافية. "
+                "تمت إضافة إشارة خاصة للمناطق المحرومة (أطفال مسجلون مع 0 حضانة نشطة) لدعم قرارات التخطيط والاستثمار التنموي."
             ),
         }
 
-        payload = self._payload(
+        return self._payload(
             agency_code,
             agency,
             report_code,
@@ -1310,12 +1457,285 @@ class AgencyReportsService:
             summary,
             sorted(
                 breakdowns,
-                key=lambda x: x["children_per_kindergarten"] if x["children_per_kindergarten"] is not None else -1,
+                key=lambda x: (x["is_unserved_zone"], x["children_per_kindergarten"] if x["children_per_kindergarten"] is not None else -1),
                 reverse=True,
             ),
             chart=chart,
         )
-        return payload
+
+    def _mopic_capacity_readiness(
+        self,
+        agency_code: str,
+        agency: dict[str, Any],
+        report_code: str,
+        report: dict[str, Any],
+        filters: dict[str, Any],
+    ) -> dict[str, Any]:
+        aliases = settings.JORDAN_GOVERNORATE_ALIASES
+
+        def _normalize_gov(name: Any) -> str:
+            if not name:
+                return name or "غير محدد"
+            s = str(name)
+            return aliases.get(s) or aliases.get(s.lower(), s)
+
+        # Query Capacity & Enrolled Children from Kindergarten & Class
+        q = (
+            self.db.query(
+                models.Kindergarten.governorate,
+                models.Kindergarten.district,
+                func.count(models.Kindergarten.id.distinct()).label("active_kindergartens"),
+                func.coalesce(func.sum(models.Class.capacity_total), 0).label("capacity"),
+                func.coalesce(func.sum(models.Class.enrolled_children_count), 0).label("enrolled"),
+            )
+            .outerjoin(
+                models.Class,
+                and_(
+                    models.Class.kindergarten_id == models.Kindergarten.id,
+                    models.Class.deleted_at.is_(None),
+                ),
+            )
+            .filter(
+                models.Kindergarten.deleted_at.is_(None),
+                models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+            )
+        )
+        q = self._apply_kindergarten_geo_filters(q, filters)
+        rows = q.group_by(models.Kindergarten.governorate, models.Kindergarten.district).all()
+
+        breakdowns = []
+        total_capacity = 0
+        total_enrolled = 0
+        total_kgs = 0
+        overcrowded_count = 0
+
+        for r in rows:
+            gov = _normalize_gov(r.governorate)
+            dist = r.district or "غير محدد"
+            kgs = _safe_int(r.active_kindergartens)
+            cap = _safe_int(r.capacity)
+            enr = _safe_int(r.enrolled)
+            occ_rate = round((enr / cap) * 100, 1) if cap > 0 else 0.0
+            avail_cap = max(0, cap - enr)
+            is_overcrowded = bool(enr > cap and cap > 0)
+            if is_overcrowded:
+                overcrowded_count += 1
+
+            total_capacity += cap
+            total_enrolled += enr
+            total_kgs += kgs
+
+            breakdowns.append(
+                {
+                    "governorate": gov,
+                    "city": dist,
+                    "active_kindergartens": kgs,
+                    "capacity": cap,
+                    "enrolled": enr,
+                    "occupancy_rate_pct": occ_rate,
+                    "available_expansion_capacity": avail_cap,
+                    "is_overcrowded": is_overcrowded,
+                    "status_ar": "اكتظاظ متجاوز للسعة" if is_overcrowded else ("جاهزية عالية" if occ_rate < 85 else "إشغال مرتفع"),
+                }
+            )
+
+        overall_occ_rate = round((total_enrolled / total_capacity) * 100, 1) if total_capacity > 0 else 0.0
+        total_available = max(0, total_capacity - total_enrolled)
+
+        chart = None
+        if breakdowns:
+            group_dim = "city" if (filters.get("governorate") or filters.get("city")) else "governorate"
+            group_cap: dict[str, int] = {}
+            group_enr: dict[str, int] = {}
+
+            for b in breakdowns:
+                lbl = b[group_dim]
+                group_cap[lbl] = group_cap.get(lbl, 0) + b["capacity"]
+                group_enr[lbl] = group_enr.get(lbl, 0) + b["enrolled"]
+
+            chart_series = []
+            for lbl, c_val in group_cap.items():
+                e_val = group_enr.get(lbl, 0)
+                rate = round((e_val / c_val) * 100, 1) if c_val > 0 else 0.0
+                chart_series.append(
+                    {
+                        "label": lbl,
+                        "value": rate,
+                        "capacity": c_val,
+                        "enrolled": e_val,
+                        "color": "#dc2626" if rate >= 90 else ("#f59e0b" if rate >= 70 else "#22c55e"),
+                    }
+                )
+
+            chart_series.sort(key=lambda s: s["value"], reverse=True)
+
+            chart = {
+                "type": "bar",
+                "title_ar": "معدلات إشغال السعة الاستيعابية حسب المنطقة (%)",
+                "series": chart_series,
+                "group_by": group_dim,
+                "value_suffix": "%",
+                "x_axis_title_ar": "نسبة الإشغال (%)",
+                "y_axis_title_ar": "اللواء / المحافظة" if group_dim == "city" else "المحافظة",
+            }
+
+        summary = {
+            "active_kindergartens": total_kgs,
+            "total_capacity": total_capacity,
+            "total_enrolled": total_enrolled,
+            "overall_occupancy_rate_pct": overall_occ_rate,
+            "total_available_expansion_capacity": total_available,
+            "overcrowded_districts_count": overcrowded_count,
+            "data_quality_note_ar": "تستند السعة الاستيعابية إلى الطاقة الاستيعابية المرخصة المحددة للشُعب الصفية في الحضانات النشطة.",
+        }
+
+        return self._payload(
+            agency_code,
+            agency,
+            report_code,
+            report,
+            filters,
+            summary,
+            sorted(breakdowns, key=lambda x: x["occupancy_rate_pct"], reverse=True),
+            chart=chart,
+        )
+
+    def _mopic_investment_priorities(
+        self,
+        agency_code: str,
+        agency: dict[str, Any],
+        report_code: str,
+        report: dict[str, Any],
+        filters: dict[str, Any],
+    ) -> dict[str, Any]:
+        aliases = settings.JORDAN_GOVERNORATE_ALIASES
+
+        def _normalize_gov(name: Any) -> str:
+            if not name:
+                return name or "غير محدد"
+            s = str(name)
+            return aliases.get(s) or aliases.get(s.lower(), s)
+
+        # 1. Children per governorate
+        child_q = (
+            self.db.query(
+                models.ParentProfile.home_governorate,
+                func.count(models.Child.id).label("children"),
+            )
+            .join(models.ParentProfile, models.ParentProfile.id == models.Child.parent_id)
+            .filter(models.Child.deleted_at.is_(None), models.ParentProfile.deleted_at.is_(None))
+        )
+        child_q = self._apply_parent_geo_filters(child_q, filters)
+        child_rows = child_q.group_by(models.ParentProfile.home_governorate).all()
+
+        child_map = {_normalize_gov(r.home_governorate): _safe_int(r.children) for r in child_rows}
+
+        # 2. Kindergartens & Capacity per governorate
+        kg_q = (
+            self.db.query(
+                models.Kindergarten.governorate,
+                func.count(models.Kindergarten.id.distinct()).label("active_kindergartens"),
+                func.coalesce(func.sum(models.Class.capacity_total), 0).label("capacity"),
+                func.coalesce(func.sum(models.Class.enrolled_children_count), 0).label("enrolled"),
+            )
+            .outerjoin(
+                models.Class,
+                and_(
+                    models.Class.kindergarten_id == models.Kindergarten.id,
+                    models.Class.deleted_at.is_(None),
+                ),
+            )
+            .filter(
+                models.Kindergarten.deleted_at.is_(None),
+                models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+            )
+        )
+        kg_q = self._apply_kindergarten_geo_filters(kg_q, filters)
+        kg_rows = kg_q.group_by(models.Kindergarten.governorate).all()
+
+        kg_map = {
+            _normalize_gov(r.governorate): {
+                "kgs": _safe_int(r.active_kindergartens),
+                "cap": _safe_int(r.capacity),
+                "enr": _safe_int(r.enrolled),
+            }
+            for r in kg_rows
+        }
+
+        all_govs = set(child_map.keys()) | set(kg_map.keys())
+        breakdowns = []
+        scores = []
+
+        for gov in all_govs:
+            c_cnt = child_map.get(gov, 0)
+            k_data = kg_map.get(gov, {"kgs": 0, "cap": 0, "enr": 0})
+            kgs = k_data["kgs"]
+            cap = k_data["cap"]
+            enr = k_data["enr"]
+
+            occ_rate = round((enr / cap) * 100, 1) if cap > 0 else 100.0
+            unserved_factor = 100.0 if kgs == 0 and c_cnt > 0 else (round((c_cnt / (kgs * 25)) * 100, 1) if kgs > 0 else 0.0)
+            unserved_factor = min(100.0, max(0.0, unserved_factor))
+            score = round(0.6 * unserved_factor + 0.4 * min(100.0, occ_rate), 1)
+
+            scores.append(score)
+            breakdowns.append(
+                {
+                    "governorate": gov,
+                    "children": c_cnt,
+                    "active_kindergartens": kgs,
+                    "capacity": cap,
+                    "enrolled": enr,
+                    "occupancy_rate_pct": occ_rate,
+                    "investment_priority_score": score,
+                    "priority_level_ar": "أولوية تنموية قصوى" if score >= 75 else ("أولوية متوسطة" if score >= 45 else "أولوية عادية"),
+                }
+            )
+
+        breakdowns.sort(key=lambda b: b["investment_priority_score"], reverse=True)
+        for rank, b in enumerate(breakdowns, start=1):
+            b["priority_rank"] = rank
+
+        chart = None
+        if breakdowns:
+            chart_series = [
+                {
+                    "label": b["governorate"],
+                    "value": b["investment_priority_score"],
+                    "color": "#dc2626" if b["investment_priority_score"] >= 75 else ("#f59e0b" if b["investment_priority_score"] >= 45 else "#22c55e"),
+                }
+                for b in breakdowns
+            ]
+            chart = {
+                "type": "bar",
+                "title_ar": "مؤشر أولويات الاستثمار التنموي حسب المحافظة (من 100)",
+                "series": chart_series,
+                "group_by": "governorate",
+                "value_suffix": " درجة",
+                "x_axis_title_ar": "درجة الأولوية التنموية",
+                "y_axis_title_ar": "المحافظة",
+            }
+
+        avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
+        top_priority_gov = breakdowns[0]["governorate"] if breakdowns else "غير محدد"
+
+        summary = {
+            "governorates_count": len(breakdowns),
+            "top_priority_governorate": top_priority_gov,
+            "average_investment_priority_score": avg_score,
+            "data_quality_note_ar": "تم احتساب مؤشر الأولوية بدمج عجز السعة ونسبة الأطفال غير المخدومين لمساعدة وزارة التخطيط على توجيه المخصصات.",
+        }
+
+        return self._payload(
+            agency_code,
+            agency,
+            report_code,
+            report,
+            filters,
+            summary,
+            breakdowns,
+            chart=chart,
+        )
 
     def _dos_children_demographics(
         self,
@@ -1512,12 +1932,19 @@ class AgencyReportsService:
             "series": status_series,
         }
 
-        # Second explicit chart: license status distribution (matches summary categories).
+        # Second explicit chart: license status distribution.
+        # Use MUTUALLY EXCLUSIVE slices so the pie chart is statistically valid
+        # (no double-counting). The summary above still exposes the broader
+        # "licensed_institutions" total for context.
+        active_licensed = _safe_int(lic.active_licensed)
+        licensed_but_not_active = _safe_int(lic.licensed) - active_licensed
+        expired = _safe_int(lic.expired)
+        missing = _safe_int(lic.missing)
         lic_series = [
-            {"label": "مرخصة (سارية)", "value": _safe_int(lic.licensed)},
-            {"label": "نشطة ومرخصة", "value": _safe_int(lic.active_licensed)},
-            {"label": "تراخيص منتهية", "value": _safe_int(lic.expired)},
-            {"label": "بدون بيانات ترخيص", "value": _safe_int(lic.missing)},
+            {"label": "نشطة ومرخّصة", "value": active_licensed},
+            {"label": "مرخصة لكن غير نشطة", "value": max(0, licensed_but_not_active)},
+            {"label": "تراخيص منتهية", "value": expired},
+            {"label": "بدون بيانات ترخيص", "value": missing},
         ]
         lic_chart = {
             "type": "pie",

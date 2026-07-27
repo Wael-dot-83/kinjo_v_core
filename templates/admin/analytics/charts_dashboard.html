@@ -1182,7 +1182,7 @@ block extra_head %}
     var text = document.getElementById('interpretationText');
     panel.style.display = '';
     text.innerHTML = '<strong>' + escapeHTML(data.metric.label) + '</strong><br/>'
-      + tEn('Unit:', 'الوحدة:') + ' ' + escapeHTML(data.metric.unit)
+      + tEn('Unit:', 'الوحدة:') + ' ' + escapeHTML(getLocalized(data.metric.unit))
       + '<br/><em>' + tEn('Level:', 'المستوى:') + ' ' + getLocalized(data.scope.level) + '</em>';
 
     // Quality gauge
@@ -1216,9 +1216,19 @@ block extra_head %}
         font: { family: 'Inter, "Noto Sans Arabic", sans-serif' },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
-        margin: { t: 20, r: 10, l: 50, b: 50 },
+        margin: { t: 40, r: 20, l: 60, b: 60 },
         barmode: type === 'bar' ? 'group' : undefined,
-        colorway: ['#2563EB','#16A34A','#D97706','#DC2626','#7C3AED','#0891B2','#DB2777','#4F46E5','#CA8A04','#059669']
+        colorway: ['#2563EB','#16A34A','#D97706','#DC2626','#7C3AED','#0891B2','#DB2777','#4F46E5','#CA8A04','#059669'],
+        xaxis: {
+          tickfont: { size: 12, color: '#475569' },
+          gridcolor: 'rgba(226, 232, 240, 0.6)',
+          zeroline: false
+        },
+        yaxis: {
+          tickfont: { size: 12, color: '#475569' },
+          gridcolor: 'rgba(226, 232, 240, 0.6)',
+          zeroline: false
+        }
       };
 
       if (numCols.length === 1 && strCols.length >= 2) {
@@ -1553,6 +1563,61 @@ block extra_head %}
   }
 
   // ── Recommendations ──────────────────────────────────────────────────────
+  const REC_TRANSLATIONS = {
+    "Incidents": "الحوادث", "Attendance": "الحضور", "Daily Reports": "التقارير اليومية",
+    "Enrollments": "التسجيلات", "Kindergartens": "الحضانات",
+    "Trend Over Time": "اتجاهات زمنية", "Breakdown": "تحليل وتوزيع الفئات",
+    "Correlation": "ارتباط البيانات", "Distribution": "نسب التوزيع",
+    "Frequency Distribution": "مدرج تكراري", "Statistical Spread": "الانتشار الإحصائي",
+    "Correlation Heatmap": "خريطة ارتباط حرارية", "Funnel": "تحليل المراحل",
+    "Treemap": "خريطة هيكلية شجرية"
+  };
+
+  const RATIONALE_TRANSLATIONS = {
+    "Long time span": "نطاق زمني طويل (>6 أشهر) ← الرسم الخطي هو الأفضل لعرض استمرارية الاتجاه.",
+    "Multi-month": "سلسلة زمنية لعدة أشهر ← الرسم الخطي يوضح الاتجاهات أسبوعاً بعد أسبوع.",
+    "Short time window": "فترة زمنية قصيرة ← الرسم العمودي أكثر وضوحاً لعرض مقارنات الفترات.",
+    "Low cardinality": "عدد فئات قليل ← الرسم الدائري يوضح العلاقة بين الجزء والكل بوضوح.",
+    "Moderate cardinality": "عدد فئات متوسط ← الرسم العمودي يحافظ على وضوح وقراءة البيانات.",
+    "High cardinality": "عدد فئات كبير ← الرسم العمودي مع فلترة يضمن أعلى درجة وضوح للبيانات.",
+    "High skewness": "التواء عالٍ في التوزيع ← المدرج التكراري يبرز شكل واتجاه توزيع البيانات.",
+    "Near-normal": "توزيع قريب من الطبيعي ← المدرج التكراري يظهر مدى انتشار وتمركز البيانات.",
+    "numeric columns": "أعمدة رقمية متعددة ← الخريطة الحرارية تكشف الارتباطات الثنائية للمتغيرات.",
+    "Two numeric variables": "متغيران رقميان ← الرسم المبعثر يوضح الارتباط والأنماط التجمعية.",
+    "Incidents by type": "الحوادث حسب النوع ← الرسم العمودي يسهل مقارنة معدل تكرار كل فئة حوادث.",
+    "Incident timeline": "الخط الزمني للحوادث ← الرسم الخطي يوضح تزايد أو تناقص معدلات الحوادث.",
+    "Daily attendance rate": "معدل الحضور اليومي عبر الزمن ← الرسم الخطي يتبع الاتجاهات بدقة.",
+    "Present/Absent/Late": "توزيع الحضور والغياب والتأخير ← الرسم الدائري يظهر النسب بلمحة سريعة.",
+    "Attendance by class": "الحضور حسب الصف أو الحضانة ← الرسم العمودي المجمع يسهل المقارنة التنافسية.",
+    "Mood distribution": "توزيع الحالة المزاجية ← الرسم العمودي يوضح تكرار كل فئة مزاجية للأطفال.",
+    "Mood share": "حصة الحالة المزاجية ← الرسم الدائري يعطي مؤشراً سريعاً لجودة الرعاية والرفاهية.",
+    "Mood trend": "اتجاه المزاج عبر الزمن ← الرسم الخطي يكشف تغيرات مستوى الرفاهية والسعادة.",
+    "Enrollment volume": "حجم التسجيل عبر الزمن ← الرسم الخطي يبرز اتجاهات النمو أو التراجع.",
+    "Enrollment stages": "مراحل التسجيل والقبول ← الرسم القمعي يوضح معدلات التحويل في كل خطوة.",
+    "Applications per": "الطلبات المقدمة لكل حضانة ← الرسم العمودي يسهل مقارنة الإقبال على المواقع.",
+    "Capacity vs. enrollment": "الطاقة الاستيعابية مقابل المسجلين فعلياً ← الرسم العمودي المجمع يبرز نسب الإشغال.",
+    "utilized sites": "مقارنة السعة مقابل التسجيل الفعلي ← الرسم المبعثر يحدد المواقع غير المستغلة أو المكتظة."
+  };
+
+  function translateRecText(title, rationale) {
+    if (LANG === 'en') return { title: title, rationale: rationale };
+    var arTitle = title;
+    var parts = title.split(' — ');
+    if (parts.length === 2) {
+      var sourcePart = REC_TRANSLATIONS[parts[0]] || parts[0];
+      var typePart = REC_TRANSLATIONS[parts[1]] || parts[1];
+      arTitle = sourcePart + ' — ' + typePart;
+    }
+    var arRationale = rationale;
+    for (var key in RATIONALE_TRANSLATIONS) {
+      if (rationale.indexOf(key) !== -1) {
+        arRationale = RATIONALE_TRANSLATIONS[key];
+        break;
+      }
+    }
+    return { title: arTitle, rationale: arRationale };
+  }
+
   async function loadRecommendations(source) {
     var panel = document.getElementById('recommendationsPanel');
     var content = document.getElementById('recommendationsContent');
@@ -1568,9 +1633,10 @@ block extra_head %}
       if (suggestions.length === 0) { panel.style.display = 'none'; return; }
       panel.style.display = '';
       content.innerHTML = suggestions.map(function(s, i) {
-        return '<button type="button" class="ce-rec-chip" onclick="selectChartType(\'' + s.chart_type + '\');renderChart();" title="' + escapeHTML(s.rationale) + '">'
+        var trans = translateRecText(s.title, s.rationale);
+        return '<button type="button" class="ce-rec-chip" onclick="selectChartType(\'' + s.chart_type + '\');renderChart();" title="' + escapeHTML(trans.rationale) + '">'
           + '<i class="bi bi-lightbulb text-warning"></i>'
-          + escapeHTML(s.title)
+          + escapeHTML(trans.title)
           + '<span class="ce-rec-chip__confidence">' + Math.round(s.confidence*100) + '%</span>'
           + '</button>';
       }).join('');

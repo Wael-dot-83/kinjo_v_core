@@ -233,7 +233,8 @@ extra_head %}
   </footer>
 </section>
 {% endblock %} {% block extra_scripts %}
-<script src="/static/js/admin_agency_reports.js?v=3.5"></script>
+<!-- Cache bust version to load latest changes -->
+<script src="/static/js/admin_agency_reports.js?v=3.8"></script>
 {% if agency_code == 'ncfa' %}
 <script>
   window.NCFA_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";

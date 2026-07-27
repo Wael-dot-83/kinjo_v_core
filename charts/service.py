@@ -68,8 +68,19 @@ def _load_incidents(db: Session, req: ChartRequest) -> pd.DataFrame:
         models.Incident.occurred_at >= d_from,
         models.Incident.occurred_at <= d_to,
     ]
+    join_kindergarten = False
     if req.kindergarten_id:
         base_filter.append(models.Incident.kindergarten_id == req.kindergarten_id)
+    elif req.city:
+        join_kindergarten = True
+        gov = "العاصمة" if (req.governorate and req.governorate.lower() in ("amman", "عمان", "العاصمة")) else req.governorate
+        if gov:
+            base_filter.append(models.Kindergarten.governorate == gov)
+        base_filter.append(models.Kindergarten.district == req.city)
+    elif req.governorate:
+        join_kindergarten = True
+        gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
+        base_filter.append(models.Kindergarten.governorate == gov)
 
     group_by_col = req.group_by or "type"
     if group_by_col == "type":
@@ -80,7 +91,11 @@ def _load_incidents(db: Session, req: ChartRequest) -> pd.DataFrame:
                 extract("month", models.Incident.occurred_at).label("mo"),
                 func.count().label("count"),
             )
-            .filter(*base_filter)
+        )
+        if join_kindergarten:
+            q = q.join(models.Kindergarten, models.Incident.kindergarten_id == models.Kindergarten.id)
+        q = (
+            q.filter(*base_filter)
             .group_by(models.Incident.type, "yr", "mo")
             .order_by("yr", "mo")
         )
@@ -98,9 +113,10 @@ def _load_incidents(db: Session, req: ChartRequest) -> pd.DataFrame:
                 models.Incident.severity_level.label("severity"),
                 func.count().label("count"),
             )
-            .filter(*base_filter)
-            .group_by(models.Incident.severity_level)
         )
+        if join_kindergarten:
+            q = q.join(models.Kindergarten, models.Incident.kindergarten_id == models.Kindergarten.id)
+        q = q.filter(*base_filter).group_by(models.Incident.severity_level)
         rows = q.all()
         df = pd.DataFrame(rows, columns=["severity", "count"])
         df["severity"] = df["severity"].astype(str).str.replace("SeverityLevel.", "", regex=False)
@@ -124,6 +140,19 @@ def _load_attendance(db: Session, req: ChartRequest) -> pd.DataFrame:
         q = q.join(models.Class, models.AttendanceLog.class_id == models.Class.id).filter(
             models.Class.kindergarten_id == req.kindergarten_id
         )
+    elif req.city or req.governorate:
+        q = q.join(models.Class, models.AttendanceLog.class_id == models.Class.id).join(
+            models.Kindergarten, models.Class.kindergarten_id == models.Kindergarten.id
+        )
+        if req.city:
+            gov = "العاصمة" if (req.governorate and req.governorate.lower() in ("amman", "عمان", "العاصمة")) else req.governorate
+            if gov:
+                q = q.filter(models.Kindergarten.governorate == gov)
+            q = q.filter(models.Kindergarten.district == req.city)
+        elif req.governorate:
+            gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
+            q = q.filter(models.Kindergarten.governorate == gov)
+
     q = q.group_by(models.AttendanceLog.date, models.AttendanceLog.status).order_by(models.AttendanceLog.date)
     rows = q.all()
     df = pd.DataFrame(rows, columns=["date", "status", "count"])
@@ -146,6 +175,17 @@ def _load_daily_reports(db: Session, req: ChartRequest) -> pd.DataFrame:
     )
     if req.kindergarten_id:
         q = q.filter(models.DailyReport.kindergarten_id == req.kindergarten_id)
+    elif req.city or req.governorate:
+        q = q.join(models.Kindergarten, models.DailyReport.kindergarten_id == models.Kindergarten.id)
+        if req.city:
+            gov = "العاصمة" if (req.governorate and req.governorate.lower() in ("amman", "عمان", "العاصمة")) else req.governorate
+            if gov:
+                q = q.filter(models.Kindergarten.governorate == gov)
+            q = q.filter(models.Kindergarten.district == req.city)
+        elif req.governorate:
+            gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
+            q = q.filter(models.Kindergarten.governorate == gov)
+
     q = q.group_by(models.DailyReport.mood).order_by(func.count().desc())
     rows = q.all()
     df = pd.DataFrame(rows, columns=["mood", "count"])
@@ -161,8 +201,20 @@ def _load_enrollments(db: Session, req: ChartRequest) -> pd.DataFrame:
         models.EnrollmentApplication.created_at >= d_from,
         models.EnrollmentApplication.created_at <= d_to,
     ]
+    join_kindergarten = False
     if req.kindergarten_id:
         base_filter.append(models.EnrollmentApplication.kindergarten_id == req.kindergarten_id)
+    elif req.city:
+        join_kindergarten = True
+        gov = "العاصمة" if (req.governorate and req.governorate.lower() in ("amman", "عمان", "العاصمة")) else req.governorate
+        if gov:
+            base_filter.append(models.Kindergarten.governorate == gov)
+        base_filter.append(models.Kindergarten.district == req.city)
+    elif req.governorate:
+        join_kindergarten = True
+        gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
+        base_filter.append(models.Kindergarten.governorate == gov)
+
     q = (
         db.query(
             models.EnrollmentApplication.status.label("status"),
@@ -170,7 +222,11 @@ def _load_enrollments(db: Session, req: ChartRequest) -> pd.DataFrame:
             extract("month", models.EnrollmentApplication.created_at).label("mo"),
             func.count().label("count"),
         )
-        .filter(*base_filter)
+    )
+    if join_kindergarten:
+        q = q.join(models.Kindergarten, models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id)
+    q = (
+        q.filter(*base_filter)
         .group_by(models.EnrollmentApplication.status, "yr", "mo")
         .order_by("yr", "mo")
     )
@@ -189,6 +245,7 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
     from sqlalchemy import func, and_
     import models
 
+    d_from, d_to = _date_bounds(req)
     base_query = db.query(
         func.coalesce(func.sum(models.Class.capacity_total), 0).label("capacity"),
         func.coalesce(func.sum(models.Class.enrolled_children_count), 0).label("enrolled"),
@@ -198,8 +255,16 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
         and_(
             models.Class.kindergarten_id == models.Kindergarten.id,
             models.Class.deleted_at.is_(None),
+            models.Class.is_active == True,
         ),
+    ).filter(
+        models.Kindergarten.deleted_at.is_(None)
     )
+
+    if req.date_from:
+        base_query = base_query.filter(models.Kindergarten.created_at >= d_from)
+    if req.date_to:
+        base_query = base_query.filter(models.Kindergarten.created_at <= d_to)
 
     if req.kindergarten_id:
         q = base_query.add_columns(
@@ -209,15 +274,23 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
         q = q.filter(models.Kindergarten.id == req.kindergarten_id)
         q = q.group_by(models.Kindergarten.id, models.Kindergarten.name_ar)
         cols = ["kindergarten_id", "kindergarten", "capacity", "enrolled", "count"]
-    elif req.governorate:
-        gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
+    elif req.city:
+        gov = "العاصمة" if (req.governorate and req.governorate.lower() in ("amman", "عمان", "العاصمة")) else req.governorate
         q = base_query.add_columns(
             models.Kindergarten.id.label("kindergarten_id"),
             models.Kindergarten.name_ar.label("kindergarten"),
         )
-        q = q.filter(models.Kindergarten.governorate == gov)
+        if gov:
+            q = q.filter(models.Kindergarten.governorate == gov)
+        q = q.filter(models.Kindergarten.district == req.city)
         q = q.group_by(models.Kindergarten.id, models.Kindergarten.name_ar)
         cols = ["kindergarten_id", "kindergarten", "capacity", "enrolled", "count"]
+    elif req.governorate:
+        gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
+        q = base_query.add_columns(models.Kindergarten.district.label("city"))
+        q = q.filter(models.Kindergarten.governorate == gov)
+        q = q.group_by(models.Kindergarten.district)
+        cols = ["city", "capacity", "enrolled", "count"]
     else:
         q = base_query.add_columns(models.Kindergarten.governorate.label("governorate"))
         q = q.group_by(models.Kindergarten.governorate)
@@ -229,9 +302,11 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
     data = []
     for r in rows:
         d = {"capacity": r.capacity, "enrolled": r.enrolled, "count": r.count}
-        if req.kindergarten_id or req.governorate:
+        if req.kindergarten_id or req.city:
             d["kindergarten_id"] = getattr(r, "kindergarten_id", None)
             d["kindergarten"] = getattr(r, "kindergarten", "")
+        elif req.governorate:
+            d["city"] = getattr(r, "city", "")
         else:
             d["governorate"] = getattr(r, "governorate", "")
         data.append(d)
@@ -307,6 +382,9 @@ class ChartService:
         # Determine scope
         if req.kindergarten_id:
             level = "kindergarten"
+            parent_key = req.city or req.governorate or "jordan"
+        elif req.city:
+            level = "city"
             parent_key = req.governorate or "jordan"
         elif req.governorate:
             level = "governorate"
@@ -390,6 +468,7 @@ class ChartService:
             date_to=req.date_to,
             kindergarten_id=req.kindergarten_id,
             governorate=req.governorate,
+            city=req.city,
         )
         df = self.get_data(db, chart_req)
         suggestions, profile = _advisor.suggest(df, req.source, req.max_suggestions)

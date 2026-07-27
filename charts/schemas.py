@@ -41,6 +41,7 @@ class ChartRequest(BaseModel):
     date_to: Optional[str] = Field(default=None, description="ISO date YYYY-MM-DD")
     kindergarten_id: Optional[int] = None
     governorate: Optional[str] = None
+    city: Optional[str] = None
     granularity: Granularity = Granularity.MONTH
     group_by: Optional[str] = Field(default=None, description="Column to group by")
     top_n: Optional[int] = Field(default=None, ge=1, le=50)
@@ -114,6 +115,7 @@ class SuggestRequest(BaseModel):
     date_to: Optional[str] = None
     kindergarten_id: Optional[int] = None
     governorate: Optional[str] = None
+    city: Optional[str] = None
     max_suggestions: int = Field(default=3, ge=1, le=5)
 
 

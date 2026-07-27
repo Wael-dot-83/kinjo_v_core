@@ -1724,6 +1724,7 @@ async def admin_charts_explorer(request: Request, current_user: User = Depends(g
     if current_user.role != UserRole.ADMIN:
         return RedirectResponse("/dashboard")
     from charts.schemas import ChartSource, ChartType
+    from charts.registry import METRIC_REGISTRY
     SOURCE_LABELS_EN = {
         "incidents": "Incidents", "attendance": "Attendance",
         "daily_reports": "Daily Reports", "enrollments": "Enrollments",
@@ -1744,6 +1745,20 @@ async def admin_charts_explorer(request: Request, current_user: User = Depends(g
         "histogram": "مدرج تكراري", "box": "مربع", "heatmap": "خريطة حرارية",
         "funnel": "قمعي", "treemap": "شجري",
     }
+    SOURCE_DATE_HINTS_EN = {
+        "incidents": "Filters incidents by occurrence date.",
+        "attendance": "Filters attendance logs by date.",
+        "daily_reports": "Filters daily reports by date.",
+        "enrollments": "Filters enrollment applications by submission date.",
+        "kindergartens": "Filters kindergartens by creation date.",
+    }
+    SOURCE_DATE_HINTS_AR = {
+        "incidents": "تصفية الحوادث حسب تاريخ الحدوث.",
+        "attendance": "تصفية سجلات الحضور حسب التاريخ.",
+        "daily_reports": "تصفية التقارير اليومية حسب التاريخ.",
+        "enrollments": "تصفية طلبات التسجيل حسب تاريخ التقديم.",
+        "kindergartens": "تصفية الحضانات حسب تاريخ الإنشاء.",
+    }
     return templates.TemplateResponse(
         request=request,
         name="admin/analytics/charts_dashboard.html",
@@ -1756,6 +1771,13 @@ async def admin_charts_explorer(request: Request, current_user: User = Depends(g
             "SOURCE_LABELS_AR": SOURCE_LABELS_AR,
             "CHART_LABELS_EN": CHART_LABELS_EN,
             "CHART_LABELS_AR": CHART_LABELS_AR,
+            "SOURCE_SUPPORTED_CHART_TYPES": {
+                s.value: METRIC_REGISTRY[s.value].supported_chart_types
+                for s in ChartSource
+                if s.value in METRIC_REGISTRY
+            },
+            "SOURCE_DATE_HINTS_EN": SOURCE_DATE_HINTS_EN,
+            "SOURCE_DATE_HINTS_AR": SOURCE_DATE_HINTS_AR,
         }
     )
 

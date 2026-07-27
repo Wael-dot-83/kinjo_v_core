@@ -457,3 +457,16 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
 .agency-drill-breadcrumb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc}
 .agency-drill-label{color:#334155;font-size:.9rem;font-weight:600}
 .agency-table tbody tr:hover{background:#f1f5f9}
+
+/* Charts grid — side-by-side on desktop, stacked on mobile */
+.agency-charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin:8px 0 24px}
+.agency-charts-grid .agency-chart-section{margin:0}
+
+/* Summary grid — multi-column on desktop for faster scanning */
+.agency-report-summary dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 18px;margin:0}
+.agency-report-summary dt{font-size:.85rem;color:var(--ag-ink-2);margin:0;font-weight:600}
+.agency-report-summary dd{font-size:1.35rem;color:var(--ag-ink);margin:0;font-weight:800;line-height:1.2}
+@media (max-width:640px){
+  .agency-report-summary dl{grid-template-columns:1fr}
+  .agency-charts-grid{grid-template-columns:1fr}
+}
