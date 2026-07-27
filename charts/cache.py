@@ -5,12 +5,11 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 _RAW_TTL = 300      # 5 min — raw query data
-_RENDER_TTL = 600   # 10 min — rendered Plotly HTML
 
 
 def _make_key(namespace: str, params: dict) -> str:
@@ -56,31 +55,11 @@ def set_raw(params: dict, value: str, ttl: int = _RAW_TTL) -> None:
         logger.debug("chart cache set_raw failed: %s", exc)
 
 
-def get_render(params: dict) -> Optional[str]:
-    r = _get_redis()
-    if r is None:
-        return None
-    try:
-        return r.get(_make_key("render", params))
-    except Exception:
-        return None
-
-
-def set_render(params: dict, html: str, ttl: int = _RENDER_TTL) -> None:
-    r = _get_redis()
-    if r is None:
-        return
-    try:
-        r.setex(_make_key("render", params), ttl, html)
-    except Exception as exc:
-        logger.debug("chart cache set_render failed: %s", exc)
-
-
 def invalidate(params: dict) -> None:
     r = _get_redis()
     if r is None:
         return
     try:
-        r.delete(_make_key("raw", params), _make_key("render", params))
+        r.delete(_make_key("raw", params))
     except Exception:
         pass

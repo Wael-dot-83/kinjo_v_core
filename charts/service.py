@@ -14,12 +14,10 @@ Model column facts:
 
 from __future__ import annotations
 
-import json
 import logging
-import datetime
 from datetime import date, timedelta
-from utils.time_utils import today_amman as _today
-from typing import Callable, Dict, Optional, Tuple
+from utils.time_utils import now_amman as _now, today_amman as _today
+from typing import Callable, Dict, Tuple
 
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -32,7 +30,6 @@ from charts.schemas import (
     ChartResponse,
     ChartSource,
     ChartType,
-    DataProfile,
     SuggestRequest,
     SuggestResponse,
     MetricMeta,
@@ -273,7 +270,6 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
         )
         q = q.filter(models.Kindergarten.id == req.kindergarten_id)
         q = q.group_by(models.Kindergarten.id, models.Kindergarten.name_ar)
-        cols = ["kindergarten_id", "kindergarten", "capacity", "enrolled", "count"]
     elif req.city:
         gov = "العاصمة" if (req.governorate and req.governorate.lower() in ("amman", "عمان", "العاصمة")) else req.governorate
         q = base_query.add_columns(
@@ -284,17 +280,14 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
             q = q.filter(models.Kindergarten.governorate == gov)
         q = q.filter(models.Kindergarten.district == req.city)
         q = q.group_by(models.Kindergarten.id, models.Kindergarten.name_ar)
-        cols = ["kindergarten_id", "kindergarten", "capacity", "enrolled", "count"]
     elif req.governorate:
         gov = "العاصمة" if req.governorate.lower() in ("amman", "عمان", "العاصمة") else req.governorate
         q = base_query.add_columns(models.Kindergarten.district.label("city"))
         q = q.filter(models.Kindergarten.governorate == gov)
         q = q.group_by(models.Kindergarten.district)
-        cols = ["city", "capacity", "enrolled", "count"]
     else:
         q = base_query.add_columns(models.Kindergarten.governorate.label("governorate"))
         q = q.group_by(models.Kindergarten.governorate)
-        cols = ["governorate", "capacity", "enrolled", "count"]
 
     rows = q.all()
 
@@ -352,12 +345,13 @@ class ChartService:
         chart_cache.set_raw(cache_params, df.to_json(orient="split", date_format="iso"))
         return df
 
-    def render(self, db: Session, req: ChartRequest) -> ChartResponse:
+    def render(self, db: Session, req: ChartRequest, allow_offload: bool = True) -> ChartResponse:
         """
         Return structured JSON payload. The HTML rendering has been moved to frontend.
-        """
-        cache_params = {**req.model_dump(), "chart_type": req.chart_type}
 
+        ``allow_offload`` exists so the Celery task can call this without re-submitting
+        itself for the same oversized dataset, which would loop forever.
+        """
         metric_def = METRIC_REGISTRY.get(req.source.value)
         if not metric_def:
             from charts.registry import MetricDefinition
@@ -409,13 +403,13 @@ class ChartService:
 
         df = self.get_data(db, req)
 
-        if len(df) >= self.HEAVY_ROW_THRESHOLD:
+        if allow_offload and len(df) >= self.HEAVY_ROW_THRESHOLD:
             task_id = self._submit_task(req)
             quality = QualityMeta(
                 status="processing",
                 record_count=len(df),
                 missing_count=0,
-                freshness_at=datetime.datetime.now().isoformat(),
+                freshness_at=_now().isoformat(),
             )
             return ChartResponse(
                 metric=metric_meta,
@@ -443,7 +437,7 @@ class ChartService:
         table = series.copy()
 
         quality = QualityMeta(
-            status="complete", record_count=len(df), missing_count=0, freshness_at=datetime.datetime.now().isoformat()
+            status="complete", record_count=len(df), missing_count=0, freshness_at=_now().isoformat()
         )
 
         return ChartResponse(

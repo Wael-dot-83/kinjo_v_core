@@ -1,0 +1,665 @@
+{% extends "admin_base.html" %}
+{% block title %}{% if ui_lang == 'en' %}Guided Analytics{% else %}التحليلات الموجَّهة{% endif %} — KinJo{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ---------------------------------------------------------------------
+     Page-scoped tokens.
+
+     Deliberately self-contained: the legacy charts page referenced
+     --az-primary / --slate-* / --r-* / --font-ar, which are defined only in
+     admin_analytics_v2.css — a stylesheet that page never links. Every such
+     declaration silently dropped. Scoping our own tokens here means this page
+     renders correctly no matter which global stylesheets are present.
+     --------------------------------------------------------------------- */
+  .gx {
+    --gx-ink:        #0F172A;
+    --gx-ink-soft:   #475569;
+    --gx-ink-faint:  #94A3B8;
+    --gx-line:       #E2E8F0;
+    --gx-line-soft:  #F1F5F9;
+    --gx-surface:    #FFFFFF;
+    --gx-canvas:     #F8FAFC;
+    --gx-accent:     #1D4ED8;
+    --gx-accent-mid: #3B82F6;
+    --gx-accent-wash:#EFF6FF;
+    --gx-good:       #15803D;
+    --gx-warn:       #B45309;
+    --gx-bad:        #B91C1C;
+    --gx-radius:     14px;
+    --gx-radius-sm:  9px;
+    --gx-shadow:     0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(15,23,42,.18);
+
+    color: var(--gx-ink);
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* ── Layout ─────────────────────────────────────────────────────────── */
+  .gx-shell { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 992px) { .gx-shell { grid-template-columns: 1fr; } }
+
+  .gx-panel {
+    background: var(--gx-surface);
+    border: 1px solid var(--gx-line);
+    border-radius: var(--gx-radius);
+    box-shadow: var(--gx-shadow);
+  }
+  .gx-panel + .gx-panel { margin-top: 16px; }
+  .gx-panel__head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--gx-line-soft);
+    display: flex; align-items: center; gap: 9px;
+    font-size: .8125rem; font-weight: 700; letter-spacing: .01em;
+    color: var(--gx-ink-soft);
+  }
+  .gx-panel__body { padding: 18px; }
+
+  .gx-rail { position: sticky; top: 88px; }
+  @media (max-width: 992px) { .gx-rail { position: static; } }
+
+  /* ── Step markers: makes the workflow legible without instructions ──── */
+  .gx-step { display: flex; align-items: center; gap: 9px; }
+  .gx-step__num {
+    flex: 0 0 auto;
+    width: 21px; height: 21px; border-radius: 50%;
+    background: var(--gx-accent); color: #fff;
+    font-size: .6875rem; font-weight: 700;
+    display: grid; place-items: center;
+  }
+
+  /* ── Question list ──────────────────────────────────────────────────── */
+  .gx-qlist { display: flex; flex-direction: column; gap: 6px; }
+  .gx-q {
+    display: flex; align-items: flex-start; gap: 11px;
+    width: 100%; text-align: start;
+    padding: 11px 13px;
+    background: transparent;
+    border: 1.5px solid transparent;
+    border-radius: var(--gx-radius-sm);
+    cursor: pointer;
+    transition: background .13s ease, border-color .13s ease;
+  }
+  .gx-q:hover { background: var(--gx-canvas); }
+  .gx-q:focus-visible { outline: 2px solid var(--gx-accent); outline-offset: 2px; }
+  .gx-q[aria-pressed="true"] {
+    background: var(--gx-accent-wash);
+    border-color: var(--gx-accent-mid);
+  }
+  .gx-q__icon { color: var(--gx-accent); font-size: 1rem; line-height: 1.35; flex: 0 0 auto; }
+  .gx-q__title { font-size: .8125rem; font-weight: 650; line-height: 1.45; color: var(--gx-ink); }
+  .gx-q__sub { font-size: .6875rem; line-height: 1.45; color: var(--gx-ink-faint); margin-top: 2px; }
+  .gx-q[aria-pressed="true"] .gx-q__title { color: var(--gx-accent); }
+
+  /* ── Controls ───────────────────────────────────────────────────────── */
+  .gx-field { display: block; margin-bottom: 12px; }
+  .gx-field:last-child { margin-bottom: 0; }
+  .gx-field__label {
+    display: block; margin-bottom: 5px;
+    font-size: .6875rem; font-weight: 650; color: var(--gx-ink-soft);
+  }
+  .gx-input {
+    width: 100%;
+    padding: 7px 10px;
+    font-size: .8125rem;
+    color: var(--gx-ink);
+    background: var(--gx-surface);
+    border: 1px solid var(--gx-line);
+    border-radius: var(--gx-radius-sm);
+  }
+  .gx-input:focus { outline: none; border-color: var(--gx-accent-mid); box-shadow: 0 0 0 3px rgba(59,130,246,.14); }
+
+  .gx-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+  .gx-chip {
+    padding: 5px 11px;
+    font-size: .6875rem; font-weight: 600;
+    color: var(--gx-ink-soft);
+    background: var(--gx-canvas);
+    border: 1px solid var(--gx-line);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all .12s ease;
+  }
+  .gx-chip:hover { border-color: var(--gx-accent-mid); color: var(--gx-accent); }
+  .gx-chip[aria-pressed="true"] { background: var(--gx-accent); border-color: var(--gx-accent); color: #fff; }
+
+  .gx-run {
+    width: 100%;
+    padding: 11px;
+    font-size: .875rem; font-weight: 700;
+    color: #fff; background: var(--gx-accent);
+    border: none; border-radius: var(--gx-radius-sm);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background .13s ease;
+  }
+  .gx-run:hover:not(:disabled) { background: #1E40AF; }
+  .gx-run:disabled { opacity: .6; cursor: default; }
+
+  /* ── Answer header ──────────────────────────────────────────────────── */
+  .gx-answer__q { font-size: .75rem; font-weight: 650; color: var(--gx-accent); margin-bottom: 7px; }
+  .gx-headline {
+    font-size: 1.375rem; font-weight: 700; line-height: 1.5;
+    color: var(--gx-ink);
+    margin: 0 0 12px;
+  }
+  @media (max-width: 576px) { .gx-headline { font-size: 1.125rem; } }
+  .gx-meta { display: flex; flex-wrap: wrap; gap: 7px; }
+  .gx-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px;
+    font-size: .6875rem; font-weight: 600;
+    color: var(--gx-ink-soft);
+    background: var(--gx-canvas);
+    border: 1px solid var(--gx-line);
+    border-radius: 999px;
+  }
+
+  /* ── Bar chart: plain CSS, no library, RTL-native ────────────────────── */
+  .gx-bars { display: flex; flex-direction: column; gap: 13px; }
+  .gx-bar__top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 5px; }
+  .gx-bar__name { font-size: .8125rem; font-weight: 600; color: var(--gx-ink); }
+  .gx-bar__val { font-size: .8125rem; font-weight: 700; color: var(--gx-ink); font-variant-numeric: tabular-nums; }
+  .gx-bar__share { font-size: .6875rem; font-weight: 500; color: var(--gx-ink-faint); margin-inline-start: 6px; }
+  .gx-bar__track { height: 9px; background: var(--gx-line-soft); border-radius: 999px; overflow: hidden; }
+  .gx-bar__fill {
+    height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--gx-accent-mid), var(--gx-accent));
+    transition: width .45s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── Line chart: inline SVG ──────────────────────────────────────────── */
+  .gx-line-wrap { position: relative; }
+  .gx-line-svg { width: 100%; height: 210px; display: block; overflow: visible; }
+  .gx-line-axis { display: flex; justify-content: space-between; margin-top: 7px; font-size: .6875rem; color: var(--gx-ink-faint); }
+
+  /* ── Explanation ────────────────────────────────────────────────────── */
+  .gx-explain { display: grid; gap: 14px; }
+  .gx-explain__item { display: flex; gap: 11px; }
+  .gx-explain__icon {
+    flex: 0 0 auto;
+    width: 27px; height: 27px; border-radius: 8px;
+    display: grid; place-items: center;
+    background: var(--gx-accent-wash); color: var(--gx-accent);
+    font-size: .8125rem;
+  }
+  .gx-explain__label { font-size: .6875rem; font-weight: 700; color: var(--gx-ink-soft); margin-bottom: 3px; }
+  .gx-explain__text { font-size: .8125rem; line-height: 1.75; color: var(--gx-ink-soft); }
+  .gx-explain__item--caution .gx-explain__icon { background: #FFFBEB; color: var(--gx-warn); }
+
+  /* ── Next steps ─────────────────────────────────────────────────────── */
+  .gx-next { display: flex; flex-wrap: wrap; gap: 8px; }
+  .gx-next__btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 14px;
+    font-size: .8125rem; font-weight: 600;
+    color: var(--gx-accent);
+    background: var(--gx-surface);
+    border: 1.5px solid var(--gx-accent-mid);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .13s ease;
+  }
+  .gx-next__btn:hover { background: var(--gx-accent-wash); }
+
+  /* ── States ─────────────────────────────────────────────────────────── */
+  .gx-state { text-align: center; padding: 52px 24px; }
+  .gx-state__icon { font-size: 2.25rem; color: var(--gx-ink-faint); margin-bottom: 12px; }
+  .gx-state__title { font-size: 1rem; font-weight: 650; color: var(--gx-ink-soft); margin-bottom: 6px; }
+  .gx-state__hint { font-size: .8125rem; color: var(--gx-ink-faint); max-width: 420px; margin: 0 auto; line-height: 1.7; }
+
+  .gx-ghost { background: var(--gx-line-soft); border-radius: 7px; animation: gx-pulse 1.4s ease-in-out infinite; }
+  @keyframes gx-pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gx-bar__fill, .gx-ghost, .gx-q, .gx-chip, .gx-run, .gx-next__btn { transition: none; animation: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gx">
+  <div class="page-header mb-3">
+    <h1 class="page-title mb-0">
+      <i class="bi bi-compass me-2"></i>
+      {% if ui_lang == 'en' %}Guided Analytics{% else %}التحليلات الموجَّهة{% endif %}
+    </h1>
+    <p class="text-muted small mt-1 mb-0">
+      {% if ui_lang == 'en' %}
+        Pick a question. Get the answer, plus a plain explanation of exactly how it was calculated.
+      {% else %}
+        اختر سؤالاً. احصل على الإجابة، مع شرح واضح لطريقة احتساب الرقم بالضبط.
+      {% endif %}
+    </p>
+  </div>
+
+  <div class="gx-shell">
+    {# ── Rail ──────────────────────────────────────────────────────────── #}
+    <div class="gx-rail">
+      <section class="gx-panel">
+        <div class="gx-panel__head">
+          <span class="gx-step">
+            <span class="gx-step__num">1</span>
+            {% if ui_lang == 'en' %}Choose a question{% else %}اختر سؤالاً{% endif %}
+          </span>
+        </div>
+        <div class="gx-panel__body">
+          <div class="gx-qlist" role="group"
+               aria-label="{% if ui_lang == 'en' %}Available questions{% else %}الأسئلة المتاحة{% endif %}">
+            {% for q in questions %}
+            <button type="button" class="gx-q" aria-pressed="false" data-question="{{ q.key }}">
+              <i class="bi {{ q.icon }} gx-q__icon" aria-hidden="true"></i>
+              <span>
+                <span class="gx-q__title">{{ q.title.en if ui_lang == 'en' else q.title.ar }}</span>
+                <span class="gx-q__sub d-block">{{ q.subtitle.en if ui_lang == 'en' else q.subtitle.ar }}</span>
+              </span>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="gx-panel">
+        <div class="gx-panel__head">
+          <span class="gx-step">
+            <span class="gx-step__num">2</span>
+            {% if ui_lang == 'en' %}Narrow it down{% else %}حدّد النطاق{% endif %}
+          </span>
+        </div>
+        <div class="gx-panel__body">
+          <div class="gx-chips" role="group"
+               aria-label="{% if ui_lang == 'en' %}Quick periods{% else %}فترات سريعة{% endif %}">
+            <button type="button" class="gx-chip" aria-pressed="false" data-days="7">
+              {% if ui_lang == 'en' %}Last 7 days{% else %}آخر ٧ أيام{% endif %}
+            </button>
+            <button type="button" class="gx-chip" aria-pressed="false" data-days="30">
+              {% if ui_lang == 'en' %}Last 30 days{% else %}آخر ٣٠ يوماً{% endif %}
+            </button>
+            <button type="button" class="gx-chip" aria-pressed="true" data-days="90">
+              {% if ui_lang == 'en' %}Last 3 months{% else %}آخر ٣ أشهر{% endif %}
+            </button>
+            <button type="button" class="gx-chip" aria-pressed="false" data-days="365">
+              {% if ui_lang == 'en' %}Last year{% else %}آخر سنة{% endif %}
+            </button>
+          </div>
+
+          <label class="gx-field">
+            <span class="gx-field__label">{% if ui_lang == 'en' %}From{% else %}من تاريخ{% endif %}</span>
+            <input type="date" class="gx-input" id="gxFrom" value="{{ default_date_from }}">
+          </label>
+          <label class="gx-field">
+            <span class="gx-field__label">{% if ui_lang == 'en' %}To{% else %}إلى تاريخ{% endif %}</span>
+            <input type="date" class="gx-input" id="gxTo" value="{{ default_date_to }}">
+          </label>
+          <label class="gx-field">
+            <span class="gx-field__label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</span>
+            <select class="gx-input" id="gxGov">
+              <option value="">{% if ui_lang == 'en' %}All governorates{% else %}جميع المحافظات{% endif %}</option>
+              {% for gov in governorates %}
+              <option value="{{ gov }}">{{ gov }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="gx-panel">
+        <div class="gx-panel__body">
+          <button type="button" class="gx-run" id="gxRun">
+            <i class="bi bi-play-fill" aria-hidden="true"></i>
+            <span id="gxRunLabel">{% if ui_lang == 'en' %}Show the answer{% else %}أظهر الإجابة{% endif %}</span>
+          </button>
+        </div>
+      </section>
+    </div>
+
+    {# ── Stage ─────────────────────────────────────────────────────────── #}
+    <div>
+      <div id="gxAlert" class="alert alert-danger d-none" role="alert"></div>
+
+      <section class="gx-panel" id="gxAnswerPanel">
+        <div class="gx-panel__body">
+          <div class="gx-state" id="gxEmpty">
+            <div class="gx-state__icon"><i class="bi bi-patch-question" aria-hidden="true"></i></div>
+            <div class="gx-state__title">
+              {% if ui_lang == 'en' %}Choose a question to begin{% else %}اختر سؤالاً للبدء{% endif %}
+            </div>
+            <p class="gx-state__hint">
+              {% if ui_lang == 'en' %}
+                Every answer comes with the number, the chart, and a step-by-step explanation of how
+                the figure was worked out and what it leaves out.
+              {% else %}
+                كل إجابة تأتيك مع الرقم والرسم البياني وشرح خطوة بخطوة لطريقة احتساب الرقم وما الذي استُثني منه.
+              {% endif %}
+            </p>
+          </div>
+
+          <div id="gxLoading" class="d-none" aria-hidden="true">
+            <div class="gx-ghost" style="height:16px;width:35%;margin-bottom:14px"></div>
+            <div class="gx-ghost" style="height:30px;width:75%;margin-bottom:20px"></div>
+            <div class="gx-ghost" style="height:170px;width:100%"></div>
+          </div>
+
+          <div id="gxAnswer" class="d-none">
+            <p class="gx-answer__q" id="gxQTitle"></p>
+            <h2 class="gx-headline" id="gxHeadline"></h2>
+            <div class="gx-meta" id="gxMeta"></div>
+            <hr class="my-4" style="border-color:var(--gx-line);opacity:1">
+            <div id="gxChart" role="img" aria-label="" tabindex="0"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="gx-panel d-none" id="gxExplainPanel">
+        <div class="gx-panel__head">
+          <i class="bi bi-mortarboard" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}How to read this{% else %}كيف تقرأ هذا الرسم{% endif %}
+        </div>
+        <div class="gx-panel__body">
+          <div class="gx-explain" id="gxExplain"></div>
+        </div>
+      </section>
+
+      <section class="gx-panel d-none" id="gxNextPanel">
+        <div class="gx-panel__head">
+          <i class="bi bi-signpost-split" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Good next questions{% else %}أسئلة تالية مفيدة{% endif %}
+        </div>
+        <div class="gx-panel__body">
+          <div class="gx-next" id="gxNext"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  'use strict';
+
+  var LANG = '{{ ui_lang }}';
+  var RTL  = document.documentElement.getAttribute('dir') === 'rtl';
+
+  // The server sends every operator-visible string as {ar, en}. The browser only
+  // picks a side — it never translates, never pattern-matches, never falls back.
+  function pick(pair) {
+    if (!pair) { return ''; }
+    return LANG === 'en' ? (pair.en || '') : (pair.ar || '');
+  }
+  function say(en, ar) { return LANG === 'en' ? en : ar; }
+
+  var el = {
+    questions: document.querySelectorAll('.gx-q'),
+    chips:     document.querySelectorAll('.gx-chip'),
+    from:      document.getElementById('gxFrom'),
+    to:        document.getElementById('gxTo'),
+    gov:       document.getElementById('gxGov'),
+    run:       document.getElementById('gxRun'),
+    runLabel:  document.getElementById('gxRunLabel'),
+    alert:     document.getElementById('gxAlert'),
+    empty:     document.getElementById('gxEmpty'),
+    loading:   document.getElementById('gxLoading'),
+    answer:    document.getElementById('gxAnswer'),
+    qTitle:    document.getElementById('gxQTitle'),
+    headline:  document.getElementById('gxHeadline'),
+    meta:      document.getElementById('gxMeta'),
+    chart:     document.getElementById('gxChart'),
+    explainPanel: document.getElementById('gxExplainPanel'),
+    explain:   document.getElementById('gxExplain'),
+    nextPanel: document.getElementById('gxNextPanel'),
+    next:      document.getElementById('gxNext')
+  };
+
+  var current = null;
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+  function num(value) { return Number(value || 0).toLocaleString(LANG === 'en' ? 'en-US' : 'ar-JO'); }
+  function show(node, visible) { node.classList.toggle('d-none', !visible); }
+
+  function setQuestion(key) {
+    current = key;
+    el.questions.forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(btn.dataset.question === key));
+    });
+  }
+
+  function isoDaysAgo(days) {
+    var d = new Date();
+    d.setDate(d.getDate() - days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // ── charts ───────────────────────────────────────────────────────────────
+  function drawBars(chart) {
+    var cats = chart.categories || [];
+    var max = cats.reduce(function (m, c) { return Math.max(m, c.value); }, 0);
+    var total = cats.reduce(function (s, c) { return s + c.value; }, 0);
+    var isPercent = pick(chart.value_axis).indexOf('%') !== -1;
+
+    var html = '<div class="gx-bars">';
+    cats.forEach(function (c) {
+      var width = max > 0 ? (c.value / max) * 100 : 0;
+      var share = (!isPercent && total > 0) ? Math.round((c.value / total) * 100) + '%' : '';
+      html += '<div>'
+        + '<div class="gx-bar__top">'
+        +   '<span class="gx-bar__name">' + esc(pick(c.label)) + '</span>'
+        +   '<span class="gx-bar__val">' + num(c.value) + (isPercent ? '%' : '')
+        +     (share ? '<span class="gx-bar__share">' + share + '</span>' : '')
+        +   '</span>'
+        + '</div>'
+        + '<div class="gx-bar__track"><div class="gx-bar__fill" style="width:' + width.toFixed(1) + '%"></div></div>'
+        + '</div>';
+    });
+    return html + '</div>';
+  }
+
+  function drawLine(chart) {
+    var cats = chart.categories || [];
+    if (cats.length < 2) { return drawBars(chart); }
+
+    var W = 100, H = 44, pad = 3;
+    var max = cats.reduce(function (m, c) { return Math.max(m, c.value); }, 0) || 1;
+    var step = W / (cats.length - 1);
+
+    var pts = cats.map(function (c, i) {
+      var x = RTL ? W - (i * step) : i * step;
+      var y = H - pad - (c.value / max) * (H - pad * 2);
+      return x.toFixed(2) + ',' + y.toFixed(2);
+    });
+
+    var area = 'M' + pts[0] + ' L' + pts.slice(1).join(' L')
+             + ' L' + (RTL ? 0 : W) + ',' + H + ' L' + (RTL ? W : 0) + ',' + H + ' Z';
+
+    var svg = '<div class="gx-line-wrap">'
+      + '<svg class="gx-line-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">'
+      +   '<defs><linearGradient id="gxGrad" x1="0" y1="0" x2="0" y2="1">'
+      +     '<stop offset="0%" stop-color="#3B82F6" stop-opacity=".26"/>'
+      +     '<stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/>'
+      +   '</linearGradient></defs>'
+      +   '<path d="' + area + '" fill="url(#gxGrad)"/>'
+      +   '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#1D4ED8" stroke-width="1.1"'
+      +     ' stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>'
+      + '</svg>'
+      + '<div class="gx-line-axis"><span>' + esc(pick(cats[0].label)) + '</span>'
+      + '<span>' + esc(pick(cats[cats.length - 1].label)) + '</span></div>'
+      + '</div>';
+
+    // Peak day is the one fact an admin actually acts on, so state it in words.
+    var peak = cats.reduce(function (a, b) { return b.value > a.value ? b : a; }, cats[0]);
+    if (peak.value > 0) {
+      svg += '<p class="small text-muted mt-3 mb-0">'
+        + say('Highest day: ', 'أعلى يوم: ') + '<strong>' + esc(pick(peak.label)) + '</strong>'
+        + ' — ' + num(peak.value) + ' ' + say('recorded', 'سجل') + '</p>';
+    }
+    return svg;
+  }
+
+  function describeChart(payload) {
+    var cats = payload.chart.categories || [];
+    var parts = cats.slice(0, 12).map(function (c) { return pick(c.label) + ': ' + c.value; });
+    return pick(payload.question.title) + '. ' + parts.join('. ');
+  }
+
+  // ── render ───────────────────────────────────────────────────────────────
+  function render(payload) {
+    el.qTitle.textContent = pick(payload.question.title);
+    el.headline.textContent = pick(payload.headline);
+
+    var cov = payload.coverage;
+    // `records` and `groups` are separate on purpose — the legacy page showed the
+    // number of bars and labelled it "records".
+    el.meta.innerHTML =
+        tag('bi-calendar3', pick(cov.period))
+      + tag('bi-geo-alt', pick(cov.scope))
+      + tag('bi-database', num(cov.records) + ' ' + say('records counted', 'سجل تم عدّه'))
+      + tag('bi-bar-chart', num(cov.groups) + ' ' + say('groups shown', 'مجموعة معروضة'));
+
+    el.chart.innerHTML = payload.chart.type === 'line' ? drawLine(payload.chart) : drawBars(payload.chart);
+    el.chart.setAttribute('aria-label', describeChart(payload));
+
+    var ex = payload.explanation;
+    el.explain.innerHTML =
+        item('bi-eye', say('What this shows', 'ما الذي يعرضه'), pick(ex.what), false)
+      + item('bi-calculator', say('How it is calculated', 'كيف تم احتسابه'), pick(ex.how), false)
+      + item('bi-database', say('Where the data comes from', 'من أين تأتي البيانات'), pick(ex.origin), false)
+      + item('bi-exclamation-triangle', say('What is left out', 'ما الذي استُثني'), pick(ex.excluded), true);
+
+    var steps = payload.next_steps || [];
+    el.next.innerHTML = steps.map(function (s) {
+      return '<button type="button" class="gx-next__btn" data-goto="' + esc(s.question) + '">'
+        + '<i class="bi bi-arrow-' + (RTL ? 'left' : 'right') + '-short" aria-hidden="true"></i>'
+        + esc(pick(s.label)) + '</button>';
+    }).join('');
+
+    show(el.explainPanel, true);
+    show(el.nextPanel, steps.length > 0);
+  }
+
+  function tag(icon, text) {
+    return '<span class="gx-tag"><i class="bi ' + icon + '" aria-hidden="true"></i>' + esc(text) + '</span>';
+  }
+
+  function item(icon, label, text, caution) {
+    return '<div class="gx-explain__item' + (caution ? ' gx-explain__item--caution' : '') + '">'
+      + '<span class="gx-explain__icon"><i class="bi ' + icon + '" aria-hidden="true"></i></span>'
+      + '<div><div class="gx-explain__label">' + esc(label) + '</div>'
+      + '<div class="gx-explain__text">' + esc(text) + '</div></div></div>';
+  }
+
+  // ── fetch ────────────────────────────────────────────────────────────────
+  function load() {
+    if (!current) {
+      fail(say('Choose a question from the list first.', 'اختر سؤالاً من القائمة أولاً.'));
+      return;
+    }
+    if (el.from.value && el.to.value && el.from.value > el.to.value) {
+      fail(say('The start date must come before the end date.', 'يجب أن يكون تاريخ البداية قبل تاريخ النهاية.'));
+      return;
+    }
+
+    var params = new URLSearchParams({ question: current });
+    if (el.from.value) { params.set('date_from', el.from.value); }
+    if (el.to.value)   { params.set('date_to', el.to.value); }
+    if (el.gov.value)  { params.set('governorate', el.gov.value); }
+
+    busy(true);
+    fetch('/api/admin/analytics/explorer/answer?' + params.toString(), {
+      headers: { 'Accept': 'application/json' },
+      credentials: 'same-origin'
+    })
+      .then(function (res) {
+        if (res.status === 401) {
+          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          throw new Error('unauthenticated');
+        }
+        return res.json().then(function (body) {
+          if (!res.ok) { throw new Error(body.detail || say('Request failed', 'فشل الطلب')); }
+          return body;
+        });
+      })
+      .then(function (payload) {
+        show(el.empty, false);
+        show(el.answer, true);
+        render(payload);
+        history.replaceState({}, '', window.location.pathname + '?' + params.toString());
+      })
+      .catch(function (err) {
+        if (err.message !== 'unauthenticated') {
+          fail(err.message || say('Something went wrong.', 'حدث خطأ ما.'));
+        }
+      })
+      .then(function () { busy(false); });
+  }
+
+  function busy(on) {
+    el.run.disabled = on;
+    el.run.setAttribute('aria-busy', String(on));
+    el.runLabel.textContent = on
+      ? say('Working…', 'جارٍ العمل…')
+      : say('Show the answer', 'أظهر الإجابة');
+    show(el.loading, on);
+    if (on) {
+      show(el.alert, false);
+      el.alert.classList.add('d-none');
+      show(el.answer, false);
+      show(el.empty, false);
+    }
+  }
+
+  function fail(message) {
+    el.alert.textContent = message;
+    el.alert.classList.remove('d-none');
+    show(el.answer, false);
+    show(el.explainPanel, false);
+    show(el.nextPanel, false);
+    show(el.empty, true);
+  }
+
+  // ── wiring ───────────────────────────────────────────────────────────────
+  el.questions.forEach(function (btn) {
+    btn.addEventListener('click', function () { setQuestion(btn.dataset.question); load(); });
+  });
+
+  el.chips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      el.chips.forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
+      el.from.value = isoDaysAgo(parseInt(chip.dataset.days, 10));
+      el.to.value = '{{ default_date_to }}';
+      if (current) { load(); }
+    });
+  });
+
+  el.next.addEventListener('click', function (event) {
+    var btn = event.target.closest('[data-goto]');
+    if (!btn) { return; }
+    setQuestion(btn.dataset.goto);
+    load();
+    document.getElementById('gxAnswerPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  el.run.addEventListener('click', load);
+  [el.from, el.to].forEach(function (input) {
+    input.addEventListener('change', function () {
+      el.chips.forEach(function (c) { c.setAttribute('aria-pressed', 'false'); });
+    });
+  });
+  el.gov.addEventListener('change', function () { if (current) { load(); } });
+
+  // Restore a shared link, otherwise let the operator choose.
+  var incoming = new URLSearchParams(window.location.search);
+  if (incoming.get('date_from')) { el.from.value = incoming.get('date_from'); }
+  if (incoming.get('date_to'))   { el.to.value = incoming.get('date_to'); }
+  if (incoming.get('governorate')) { el.gov.value = incoming.get('governorate'); }
+  if (incoming.get('question')) {
+    setQuestion(incoming.get('question'));
+    load();
+  }
+})();
+</script>
+{% endblock %}

@@ -15,14 +15,13 @@ import logging
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
 from dependencies import require_admin, require_admin_or_manager
 from rate_limiter import limiter
 from config import settings
-from frontend import templates  # use the singleton with globals/filters pre-configured
 from charts.schemas import (
     ChartRequest,
     ChartResponse,
@@ -165,23 +164,35 @@ def render_chart(
 # ---------------------------------------------------------------------------
 # POST /admin/charts/suggest
 
-@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+def _suggest(db: Session, req: SuggestRequest) -> SuggestResponse:
+    """Shared suggestion logic.
 
+    Kept as a plain function so the two routes below can each apply their own rate
+    limit without one endpoint calling the other — chaining them would charge a
+    single client request against the limiter twice.
+    """
+    try:
+        return _svc.suggest(db, req)
+    except Exception:
+        logger.exception("suggest failed source=%s", req.source)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Chart suggestion failed. Use the correlation ID to investigate.",
+        )
+
+
+# Decorator order matters: @router.post must sit ABOVE @limiter.limit so the router
+# registers the rate-limited wrapper. With the two swapped, the router captured the
+# bare function and the limit was never enforced on this path.
 @router.post(
     "/admin/charts/suggest",
     response_model=SuggestResponse,
     summary="Auto-suggest chart types for a data source",
     dependencies=[Depends(require_admin_or_manager)],
 )
-def suggest_charts(request: Request, req: SuggestRequest, db: Session = Depends(get_db),) -> SuggestResponse:
-    try:
-        return _svc.suggest(db, req)
-    except Exception as exc:
-        logger.exception("suggest_charts failed source=%s", req.source)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Chart suggestion failed. Use the correlation ID to investigate.",
-        )
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+def suggest_charts(request: Request, req: SuggestRequest, db: Session = Depends(get_db)) -> SuggestResponse:
+    return _suggest(db, req)
 
 # ---------------------------------------------------------------------------
 # GET /admin/charts/task/{task_id}
@@ -219,29 +230,6 @@ def get_task_status(task_id: str) -> TaskStatus:
 # ---------------------------------------------------------------------------
 # GET /admin/charts/dashboard (HTML page)
 # ---------------------------------------------------------------------------
-
-# Bilingual display labels for the source and chart-type pickers. Kept beside the
-# route that renders them so the template's context stays complete.
-_SOURCE_LABELS_AR = {
-    "incidents": "الحوادث", "attendance": "الحضور",
-    "daily_reports": "التقارير اليومية", "enrollments": "التسجيلات",
-    "kindergartens": "الحضانات",
-}
-_SOURCE_LABELS_EN = {
-    "incidents": "Incidents", "attendance": "Attendance",
-    "daily_reports": "Daily Reports", "enrollments": "Enrollments",
-    "kindergartens": "Kindergartens",
-}
-_CHART_LABELS_AR = {
-    "line": "خطي", "bar": "أعمدة", "scatter": "مبعثر", "pie": "دائري",
-    "histogram": "مدرج تكراري", "box": "مربع", "heatmap": "خريطة حرارية",
-    "funnel": "قمعي", "treemap": "شجري",
-}
-_CHART_LABELS_EN = {
-    "line": "Line", "bar": "Bar", "scatter": "Scatter", "pie": "Pie",
-    "histogram": "Histogram", "box": "Box", "heatmap": "Heatmap",
-    "funnel": "Funnel", "treemap": "Treemap",
-}
 
 # NOTE: GET /admin/analytics/charts (the explorer PAGE) is served by
 # frontend_orig.admin_charts_explorer, which the admin sidebar contract expects to own it.
@@ -349,7 +337,7 @@ def render_admin_chart(
 )
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def suggest_admin_charts(request: Request, req: SuggestRequest, db: Session = Depends(get_db)) -> SuggestResponse:
-    return suggest_charts(request=request, req=req, db=db)
+    return _suggest(db, req)
 
 
 @router.get(

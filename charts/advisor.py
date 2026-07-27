@@ -18,9 +18,6 @@ from charts.stats import profile_dataframe
 class ChartAdvisor:
     """Analyzes a DataFrame and returns up to N chart-type suggestions."""
 
-    # (confidence, rationale_en) pairs for each rule
-    _RULES: List[Tuple[str, ...]] = []  # filled in _score
-
     def suggest(
         self,
         df: pd.DataFrame,

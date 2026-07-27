@@ -5959,3 +5959,20 @@ body.admin-container {
 .ce-sidebar::-webkit-scrollbar-thumb:hover {
   background-color: var(--az-primary);
 }
+
+/* ============================================================================
+   NAVBAR LOGO — Admin Module
+   Consistent size and gold border for navbar logo across all admin pages
+   Excludes login page (body.auth-page)
+   ============================================================================ */
+body:not(.auth-page) .kinjo-logo--navbar {
+  width: 185px !important;
+  height: 67px !important;
+  object-fit: contain;
+  display: inline-block;
+  border: 2px solid #D4AF37;
+  border-radius: 4px;
+  padding: 4px;
+  background: #fff;
+  box-sizing: border-box;
+}

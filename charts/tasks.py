@@ -13,34 +13,23 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, name="charts.render_chart", max_retries=2, default_retry_delay=5)
 def render_chart_task(self, req_dict: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Background chart render for large datasets.
-    Returns a serialised ChartResponse dict on success.
+    Background chart build for large datasets.
+
+    Returns a JSON-serialisable ``ChartResponse`` dict, which is exactly what
+    ``charts_api.get_task_status`` feeds back into ``ChartResponse(**data)``.
     """
     from database import SessionLocal
-    from charts.schemas import ChartRequest, ChartSource, ChartType
+    from charts.schemas import ChartRequest
     from charts.service import ChartService
 
     try:
         req = ChartRequest(**req_dict)
         db = SessionLocal()
         try:
-            svc = ChartService()
-            df = svc.get_data(db, req)
-            chart_type = req.chart_type or svc._auto_type(df, req.source)
-            html = svc._build_html(df, req, chart_type)
-
-            from charts import cache as chart_cache
-            cache_params = {**req_dict, "chart_type": chart_type}
-            chart_cache.set_render(cache_params, html)
-
-            return {
-                "chart_type": chart_type,
-                "source": req.source,
-                "html": html,
-                "title": req.title or "",
-                "row_count": len(df),
-                "cached": False,
-            }
+            # allow_offload=False — this *is* the offloaded run. Letting it offload
+            # again would submit a fresh task for the same data on every attempt.
+            response = ChartService().render(db, req, allow_offload=False)
+            return response.model_dump(mode="json")
         finally:
             db.close()
     except Exception as exc:
