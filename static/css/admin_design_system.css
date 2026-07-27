@@ -5968,11 +5968,11 @@ body.admin-container {
 body:not(.auth-page) img.kinjo-logo.kinjo-logo--navbar,
 body:not(.auth-page) .kinjo-logo--navbar {
   width: 67px !important;
-  height: 67px !important;
+  height: 64px !important;
   min-width: 67px !important;
-  min-height: 67px !important;
+  min-height: 64px !important;
   max-width: 67px !important;
-  max-height: 67px !important;
+  max-height: 64px !important;
   object-fit: contain !important;
   display: inline-block !important;
   border: 2px solid #D4AF37 !important;
