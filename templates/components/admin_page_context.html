@@ -58,7 +58,12 @@
   <div class="d-flex gap-2 align-items-start">
     <i class="bi bi-info-circle text-primary mt-1" aria-hidden="true"></i>
     <div class="flex-grow-1">
-      <h2 id="admin-page-context-title" class="h6 mb-1">{% if ui_lang == 'en' %}About this page{% else %}حول هذه الصفحة{% endif %}</h2>
+      {# Labelled with a <p>, not a heading. This panel renders before {% block content %}
+         on every Admin page, so an <h2> here made the first heading in the document a
+         level-2 that preceded the page's own <h1> — an illogical outline on every single
+         page. aria-labelledby still names the region for assistive tech, and class="h6"
+         keeps the visual weight identical. #}
+      <p id="admin-page-context-title" class="h6 mb-1">{% if ui_lang == 'en' %}About this page{% else %}حول هذه الصفحة{% endif %}</p>
       <p class="mb-2">{% if ui_lang == 'en' %}{{ page_context.value.purpose_en }}{% else %}{{ page_context.value.purpose_ar }}{% endif %}</p>
       <details>
         <summary class="small fw-semibold">{% if ui_lang == 'en' %}How to read the numbers and states{% else %}كيفية قراءة الأرقام والحالات{% endif %}</summary>

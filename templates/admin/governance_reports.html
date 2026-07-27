@@ -8,7 +8,7 @@
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="mb-1"><i class="bi bi-clipboard2-data me-2"></i>{% if ui_lang == 'en' %}Daily Reports Governance{% else %}حوكمة التقارير اليومية{% endif %}</h4>
+        <h1 class="h4 mb-1"><i class="bi bi-clipboard2-data me-2"></i>{% if ui_lang == 'en' %}Daily Reports Governance{% else %}حوكمة التقارير اليومية{% endif %}</h1>
     </div>
     <div class="d-flex gap-2 align-items-center">
         <label for="startDate" class="visually-hidden">{% if ui_lang == 'en' %}Start Date{% else %}تاريخ البدء{% endif %}</label>
@@ -65,11 +65,11 @@
 <!-- GQI Section -->
 <div class="admin-card border-0 mb-4">
     <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">
+        <h2 class="h6 mb-0">
             <i class="bi bi-shield-check me-2 text-success"></i>
             {% if ui_lang == 'en' %}Governance Quality Index (GQI){% else %}مؤشر جودة الحوكمة{% endif %}
             <span class="badge bg-success ms-2 fs-6" id="gqiScore">--</span>
-        </h6>
+        </h2>
         <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Composite of 5 sub-indicators (0–100){% else %}مركّب من 5 مؤشرات فرعية (0–100){% endif %}</small>
     </div>
     <div class="card-body">
@@ -127,7 +127,7 @@
     <div class="col-md-6">
         <div class="admin-card border-0 ">
             <div class="card-header bg-transparent border-0">
-                <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>{% if ui_lang == 'en' %}Daily Reports Funnel{% else %}قمع التقارير اليومية{% endif %}</h6>
+                <h2 class="h6 mb-0"><i class="bi bi-funnel me-2"></i>{% if ui_lang == 'en' %}Daily Reports Funnel{% else %}قمع التقارير اليومية{% endif %}</h2>
             </div>
             <div class="position-relative">
                 <canvas id="funnelChart" height="250" role="img" aria-label="{% if ui_lang == 'en' %}Daily reports funnel: required, submitted, delivered, and viewed counts{% else %}قمع التقارير اليومية: أعداد التقارير المطلوبة والمقدمة والمُسلَّمة والمُشاهدة{% endif %}"></canvas>
@@ -137,7 +137,7 @@
     <div class="col-md-6">
         <div class="admin-card border-0  h-100">
             <div class="card-header bg-transparent border-0">
-                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>{% if ui_lang == 'en' %}Time Metrics{% else %}مقاييس الوقت{% endif %}</h6>
+                <h2 class="h6 mb-0"><i class="bi bi-clock-history me-2"></i>{% if ui_lang == 'en' %}Time Metrics{% else %}مقاييس الوقت{% endif %}</h2>
             </div>
             <div class="position-relative">
                 <div class="mb-3">
@@ -161,7 +161,7 @@
 <!-- 30-Day Submission Trend -->
 <div class="admin-card border-0 mb-4">
     <div class="card-header bg-transparent border-0">
-        <h6 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>{% if ui_lang == 'en' %}30-Day Submission Rate Trend{% else %}اتجاه نسبة التقديم (30 يوم){% endif %}</h6>
+        <h2 class="h6 mb-0"><i class="bi bi-graph-up-arrow me-2"></i>{% if ui_lang == 'en' %}30-Day Submission Rate Trend{% else %}اتجاه نسبة التقديم (30 يوم){% endif %}</h2>
     </div>
     <div class="card-body">
         <canvas id="trendChart" height="120" role="img" aria-label="{% if ui_lang == 'en' %}30-day submission rate trend line chart{% else %}الرسم البياني لاتجاه نسبة التقديم خلال 30 يوماً{% endif %}"></canvas>
@@ -172,10 +172,10 @@
 <div id="safeguardingSection" class="mb-4 d-none">
     <div class="admin-card border-danger border-0">
         <div class="card-header bg-danger bg-opacity-10 border-0 d-flex justify-content-between align-items-center">
-            <h6 class="mb-0 text-danger">
+            <h2 class="h6 mb-0 text-danger">
                 <i class="bi bi-shield-exclamation me-2"></i>
                 {% if ui_lang == 'en' %}Safeguarding Risk — Low Compliance + Open Incidents{% else %}خطر الحماية — امتثال منخفض + حوادث مفتوحة{% endif %}
-            </h6>
+            </h2>
             <span class="badge bg-danger" id="safeguardingCount">0</span>
         </div>
         <div class="card-body">
@@ -188,7 +188,7 @@
 <div id="lowPerformersSection" class="mb-4 d-none">
     <div class="admin-card border-warning border-0 ">
         <div class="card-header bg-warning bg-opacity-10 border-0">
-            <h6 class="mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>{% if ui_lang == 'en' %}Kindergartens Needing Improvement{% else %}حضانات تحتاج إلى تحسين{% endif %}</h6>
+            <h2 class="h6 mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>{% if ui_lang == 'en' %}Kindergartens Needing Improvement{% else %}حضانات تحتاج إلى تحسين{% endif %}</h2>
         </div>
         <div class="position-relative">
             <div id="lowPerformersList" class="row g-2"></div>
@@ -199,7 +199,7 @@
 <!-- Leaderboard Table -->
 <div class="admin-card border-0  mb-4">
     <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-        <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>{% if ui_lang == 'en' %}Kindergarten Ranking (Weighted){% else %}ترتيب الحضانات (ترجيحي){% endif %}</h6>
+        <h2 class="h6 mb-0"><i class="bi bi-trophy me-2"></i>{% if ui_lang == 'en' %}Kindergarten Ranking (Weighted){% else %}ترتيب الحضانات (ترجيحي){% endif %}</h2>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -237,7 +237,7 @@
 <!-- Reminder History -->
 <div class="admin-card border-0  mb-4">
     <div class="card-header bg-transparent border-0">
-        <h6 class="mb-0"><i class="bi bi-bell me-2"></i>{% if ui_lang == 'en' %}Reminders Log{% else %}سجل التذكيرات{% endif %}</h6>
+        <h2 class="h6 mb-0"><i class="bi bi-bell me-2"></i>{% if ui_lang == 'en' %}Reminders Log{% else %}سجل التذكيرات{% endif %}</h2>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">

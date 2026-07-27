@@ -5973,16 +5973,27 @@ body.admin-container {
      object-fit: contain keeps the square artwork undistorted: it renders at the
      box height and centres, leaving the extra width as even margin on each side.
      Stretching to fill would skew a 1:1 logo. */
-  --kinjo-logo-width-extension: 13px;
+  --kinjo-logo-width-extension: 15px;
   --kinjo-logo-gold: #d4af37;
+  --kinjo-logo-gold-deep: #b8912a;
 
   block-size: var(--admin-header-height);
   inline-size: calc(var(--admin-header-height) + var(--kinjo-logo-width-extension));
   box-sizing: border-box;
-  padding: 4px;
+  padding: 5px;
   border: 2px solid var(--kinjo-logo-gold);
-  border-radius: 6px;
+  border-radius: 10px;
   background: #fff;
+
+  /* A defined badge rather than a flat outline: a deeper gold hairline just inside
+     the border reads as a bevelled edge, and a soft warm shadow lifts the mark off
+     the header band. box-shadow is used for the inner line so the box geometry — and
+     therefore the header-height lock above — is untouched. */
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
+    inset 0 0 0 3px var(--kinjo-logo-gold-deep),
+    0 1px 3px rgba(15, 23, 42, 0.14),
+    0 0 0 1px rgba(184, 145, 42, 0.25);
 }
 
 /* No breakpoint override needed: layout.css rebinds --admin-header-height itself at
