@@ -25,7 +25,15 @@
   --kinjo-color-danger: #ef4444;
   --kinjo-color-info: #3b82f6;
   
-  --kinjo-color-bg-body: #f8fafc;
+  /* Page canvas — a warm off-white. The previous #f8fafc was blue-tinted (its blue
+     channel sat above its red), which read as cool grey rather than off-white and
+     fought the green chrome above it.
+
+     Do not darken this further without darkening --kinjo-color-text-muted with it.
+     Muted text measures 4.52:1 here against an AA floor of 4.5; #F8F7F4 drops it to
+     4.44 and #F7F6F2 to 4.40, failing on every page at once. This value is the
+     warmest off-white the current text scale supports. */
+  --kinjo-color-bg-body: #FAF9F6;
   --kinjo-color-bg-surface: #ffffff;
   --kinjo-color-bg-hover: #f1f5f9;
   --kinjo-color-bg-active: #e2e8f0;

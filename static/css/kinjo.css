@@ -45,7 +45,11 @@
   --kinjo-danger-light: #fee2e2;
 
   /* Semantic Colors */
-  --kinjo-bg-light: #f8fafc;
+  /* Aliased, not copied: this and --kinjo-color-bg-body are the same page canvas,
+     and they used to drift — one said #f8fafc while a later rule in this file
+     painted body.kinjo-app #f3f6fb, so the admin shell and every other page had
+     different backgrounds. dark-mode.css still sets both explicitly for dark. */
+  --kinjo-bg-light: var(--kinjo-color-bg-body, #FAF9F6);
   --kinjo-bg-dark: #0f172a;
   --kinjo-text-primary: #1e293b;
   --kinjo-text-secondary: #64748b;
@@ -3168,10 +3172,10 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 /* ── Spinner refinement ─────────────────────────────────────────────────── */
 .spinner-border { border-width: 0.15em; }
 
-/* ── Global body background ─────────────────────────────────────────────── */
-body.kinjo-app {
-  background: #f3f6fb !important;
-}
+/* body.kinjo-app's background was declared twice in this file: once near the top
+   from --kinjo-bg-light, and again here as a hardcoded #f3f6fb with !important to
+   beat it. The !important also meant dark mode could not flip the page canvas on
+   any non-admin page. The single declaration is the token-driven one above. */
 
 /* ── Animated stat counter ──────────────────────────────────────────────── */
 @keyframes kj-count-in {
