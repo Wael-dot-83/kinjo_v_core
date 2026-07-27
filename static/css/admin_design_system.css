@@ -4877,38 +4877,23 @@ html[dir="rtl"] .submenu .nav-link {
 .delay-200 { animation-delay: 0.2s; }
 .delay-300 { animation-delay: 0.3s; }
 
-/* Redesign Dashboard Elements */
-.admin-header {
-    background: rgba(248, 249, 255, 0.8) !important;
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(196, 197, 213, 0.3) !important;
-}
+/* The shell used to be styled twice. A "Redesign Dashboard Elements" block here
+   restated .admin-header, #admin-sidebar, .top-menu-link and its hover/active
+   states — all with !important, because this file loads BEFORE top-menu.css and
+   layout.css and could not otherwise win. The result was two sources of truth per
+   element and an active menu item wearing two different markers at once: a bottom
+   border from top-menu.css and a 4px inline-start border from here.
 
-#admin-sidebar {
-    background: linear-gradient(180deg, #f0f4ff 0%, #eef2ff 100%) !important;
-    border-inline-end: 1px solid rgba(0,0,0,0.05) !important;
-}
+   The block is gone. The header now lives in layout.css, the top nav in
+   top-menu.css, and both read their colours from the --admin-header-* /
+   --admin-nav-* tokens in design-tokens.css. No !important is needed anywhere,
+   because nothing competes any more.
 
-.top-menu-link {
-    border-radius: 8px !important;
-    margin: 4px 8px !important;
-    transition: all 0.3s !important;
-}
+   #admin-sidebar's gradient was dead regardless: .admin-top-nav is its only child
+   and paints an opaque background over the whole box.
 
-.top-menu-link:hover {
-    background: rgba(30, 64, 175, 0.05) !important;
-    transform: scale(1.02) !important;
-}
-
-.top-menu-link.active {
-    background: rgba(30, 64, 175, 0.1) !important;
-    color: #1e40af !important;
-    border-inline-start: 4px solid #1e40af !important;
-}
-
-body.admin-container {
-    background: #f8f9ff !important;
-}
+   body.admin-container's background moved to layout.css, which already declared it
+   from a token and was being overridden here. */
 
 /* Respect reduced-motion preferences: show content immediately, no lifts */
 @media (prefers-reduced-motion: reduce) {
@@ -6034,8 +6019,12 @@ body.admin-container {
 /* Drawn inside the badge, not around it. .admin-layout is overflow: hidden, and the
    link now sits flush against that clipping edge, so an outward ring would have its
    leading side cut off. A negative offset lands it on the gold border instead —
-   fully visible in both directions. */
+   fully visible in both directions.
+
+   The ring is near-black rather than the action blue: it is drawn on the gold
+   border, where blue measures 2.46:1 and would fail as a focus indicator. Near-black
+   gets 8.44:1 on that gold. */
 .header-logo:focus-visible {
-  outline: 2px solid var(--kinjo-color-primary, #2563eb);
+  outline: 2px solid #111827;
   outline-offset: -2px;
 }

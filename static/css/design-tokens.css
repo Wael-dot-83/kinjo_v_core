@@ -40,8 +40,43 @@
   --kinjo-color-ring: rgba(37, 99, 235, 0.3);
   --agency-chart-surface: #ffffff;
   --agency-chart-border: #e2e8f0;
-  --agency-chart-surface: #ffffff;
-  --agency-chart-border: #e2e8f0;
+
+  /* ---- Admin shell chrome ----------------------------------------------
+     The admin wears a two-tier masthead, and the tiers are deliberately
+     different materials rather than two shades of the same one.
+
+     Tier 1 (.admin-header) is the brand band: the deep KinJo green sampled
+     from the wordmark itself (#066136, darkened to #064E32 so white sits at
+     9.8:1 on it). This is the identity slot the rule above reserves for
+     green, and it is what makes the gold-bordered logo read as intentional.
+
+     Tier 2 (.admin-top-nav) stays a light working surface. Its active state
+     uses --kinjo-action, NOT green: green is load-bearing as a status colour
+     in this admin ("ready", healthy KPI), so a green active tab would compete
+     with a meaning that already exists. Identity green above, interaction
+     blue below — the two never touch.
+
+     Single source of truth for both tiers. layout.css owns the header's
+     structure and top-menu.css the nav's; neither hardcodes a colour, and
+     nothing overrides these with !important. */
+  --admin-header-bg: #064E32;
+  --admin-header-border: #043A25;
+  --admin-header-ink: #ffffff;          /* 9.80:1 */
+  --admin-header-ink-muted: #A7CBB8;    /* 5.54:1 — the user's role line */
+  --admin-header-ink-soft: #DCEBE3;     /* 7.95:1 — control icons */
+  --admin-header-hover: rgba(255, 255, 255, 0.12);
+  --admin-header-divider: rgba(255, 255, 255, 0.22);
+  --admin-header-avatar-bg: #D4AF37;    /* the logo badge's gold, reused */
+  --admin-header-avatar-ink: #064E32;   /* 4.66:1 on the gold */
+
+  --admin-nav-bg: #ffffff;
+  --admin-nav-border: #E5E7EB;
+  --admin-nav-ink: #374151;             /* 10.31:1 */
+  --admin-nav-ink-strong: #111827;
+  --admin-nav-ink-muted: #6B7280;       /* 4.83:1 */
+  --admin-nav-hover: #F3F4F6;
+  --admin-nav-accent: var(--kinjo-action);
+  --admin-nav-accent-soft: #EFF3FD;     /* active dropdown row, 7.85:1 with the accent */
 
   /* Typography */
   --kinjo-font-family-en: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -96,10 +131,9 @@
 [lang="en"] {
   --kinjo-font-family: var(--kinjo-font-family-en);
 }
-:root{
-  --agency-chart-surface:#ffffff;
-  --agency-chart-border:#e2e8f0;
-}
+/* The light values for --agency-chart-* are declared once, with the other colour
+   tokens at the top of this file. A second :root block restating them verbatim
+   used to sit here; only the dark override below is actually needed. */
 [data-theme="dark"]:root,
 :root[data-theme="dark"]{
   --agency-chart-surface:var(--kinjo-color-bg-surface,#1e293b);

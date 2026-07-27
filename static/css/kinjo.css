@@ -134,11 +134,12 @@ html {
   outline: none;
 }
 
-/* Skip link for accessibility */
+/* Skip link for accessibility — the only definition; see the note further down
+   about the duplicate that used to fight this one over the offset side. */
 .skip-link {
   position: absolute;
   top: -100%;
-  left: 0;
+  inset-inline-start: 0;
   padding: 0.5rem 1rem;
   background: var(--kinjo-primary);
   color: white;
@@ -2029,20 +2030,11 @@ body.sidebar-open .sidebar-backdrop {
   outline-offset: 2px;
 }
 
-/* Skip Link for Accessibility */
-.skip-link {
-  position: absolute;
-  top: -40px;
-  inset-inline-start: 0;
-  background: var(--kinjo-primary);
-  color: white;
-  padding: 0.5rem 1rem;
-  z-index: 9999;
-  transition: top 0.3s;
-}
-.skip-link:focus {
-  top: 0;
-}
+/* .skip-link was defined a second time here. The two definitions disagreed on the
+   offset side — the first used `left: 0`, this one `inset-inline-start: 0` — and in
+   RTL both applied, pinning the link to left AND right at once so it stretched the
+   full width of the viewport when focused. The single definition now lives with the
+   other accessibility helpers above and uses the logical property only. */
 
 /* Screen Reader Only */
 .sr-only {

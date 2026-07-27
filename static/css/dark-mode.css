@@ -29,6 +29,11 @@
     --kinjo-border-color:#334155; --kinjo-border-light:#293548;
     --shell-surface:#1e293b; --shell-hover:#0f172a;
     --shell-ink:#f1f5f9; --shell-ink-2:#cbd5e1; --shell-ink-3:#94a3b8;
+    /* Tier 2 only. Tier 1 keeps its brand green in both themes. */
+    --admin-nav-bg:#1e293b; --admin-nav-border:#334155;
+    --admin-nav-ink:#cbd5e1; --admin-nav-ink-strong:#f1f5f9;
+    --admin-nav-ink-muted:#94a3b8; --admin-nav-hover:#0f172a;
+    --admin-nav-accent:#93b4ff; --admin-nav-accent-soft:#24304a;
   }
 }
 :root[data-theme="dark"]{
@@ -42,26 +47,33 @@
   --kinjo-border-color:#334155; --kinjo-border-light:#293548;
   --shell-surface:#1e293b; --shell-hover:#0f172a;
   --shell-ink:#f1f5f9; --shell-ink-2:#cbd5e1; --shell-ink-3:#94a3b8;
+  /* Tier 2 only. Tier 1 keeps its brand green in both themes. */
+  --admin-nav-bg:#1e293b; --admin-nav-border:#334155;
+  --admin-nav-ink:#cbd5e1; --admin-nav-ink-strong:#f1f5f9;
+  --admin-nav-ink-muted:#94a3b8; --admin-nav-hover:#0f172a;
+  --admin-nav-accent:#93b4ff; --admin-nav-accent-soft:#24304a;
 }
 /* :root[data-theme="light"] keeps the base light values — no override needed. */
 
-/* ---- Shell: top nav + header (hardcoded), re-pointed at --shell-* tokens ---- */
-.admin-top-nav{background-color:var(--shell-surface)}
-.top-menu-link{color:var(--shell-ink-2)}
-.top-menu-link i{color:var(--shell-ink-3)}
-.top-menu-item:hover > .top-menu-link,.top-menu-link:hover{background-color:var(--shell-hover);color:var(--shell-ink)}
-.btn-header-action,.btn-header-user{color:var(--shell-ink-2)}
-.btn-header-action:hover,.btn-header-user:hover{color:var(--shell-ink)}
-.header-user-name{color:var(--shell-ink)}
-.header-user-role{color:var(--shell-ink-3)}
-.header-divider{background:var(--kinjo-color-border)}
+/* ---- Shell: nothing to re-point any more ----
+   The top nav used to be restyled here element by element, because top-menu.css
+   hardcoded its colours. It now reads --admin-nav-*, which the blocks above flip
+   for dark, so those four rules were duplicating a job the tokens already do —
+   and they missed .top-menu-dropdown and the active accent, which stayed light-on
+   -light in dark mode as a result.
+
+   Tier 1 (.admin-header) is deliberately absent too. It is the brand band, not a
+   surface: the same deep green in both themes, owning its own --admin-header-*
+   tokens. Re-pointing its controls at --shell-ink-* was harmless while the header
+   was white; against green it would paint #374151 text onto a dark band. */
 
 /* ---- Dropdowns / menus (hardcoded surfaces) ---- */
 .dropdown-menu{background:var(--kinjo-color-bg-surface);border-color:var(--kinjo-color-border);color:var(--kinjo-color-text-primary)}
 .dropdown-item{color:var(--kinjo-color-text-primary)}
 .dropdown-item:hover,.dropdown-item:focus{background:var(--kinjo-color-bg-hover);color:var(--kinjo-color-text-primary)}
-.header-user-dropdown .dropdown-item{color:var(--shell-ink-2)}
-.header-user-dropdown .dropdown-item:hover{color:var(--shell-ink);background:var(--shell-hover)}
+/* .header-user-dropdown's items were re-pointed here too. layout.css now styles
+   them from --admin-nav-*, which resolves to exactly these same dark values, so
+   the rules were a second mechanism producing an identical result. */
 
 /* ---- Secondary button (bg only; keep its brand text colour) ---- */
 .admin-btn-secondary{background:var(--kinjo-color-bg-surface);border-color:var(--kinjo-color-border)}

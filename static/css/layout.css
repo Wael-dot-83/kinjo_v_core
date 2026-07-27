@@ -56,10 +56,41 @@ body.admin-container {
 }
 
 /* Header */
+/* The admin and manager shells mark their skip link .admin-skip-link, which no
+   stylesheet defined — so it rendered as an ordinary visible link sitting above the
+   header on every page, rather than appearing only on focus. It uses the header
+   tokens because that is what it lands on top of. */
+.admin-skip-link {
+  position: absolute;
+  top: -100%;
+  inset-inline-start: 0;
+  padding: 0.5rem 1rem;
+  background-color: var(--admin-header-bg);
+  color: var(--admin-header-ink);
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 0 0 6px 6px;
+  z-index: var(--z-toast);
+  transition: top 0.2s ease;
+}
+
+.admin-skip-link:focus {
+  top: 0;
+  color: var(--admin-header-ink);
+  outline: 2px solid var(--admin-header-ink);
+  outline-offset: -4px;
+}
+
+/* Tier 1 — the brand band. Deep KinJo green, from --admin-header-* in
+   design-tokens.css; see the rationale there for why this tier is green and the
+   nav below it is not. Flat rather than gradient on purpose: a gradient makes the
+   effective contrast behind the text depend on where the text happens to sit, and
+   the muted role line has no headroom to spare. */
 .admin-header {
   height: var(--admin-header-height);
-  background-color: var(--kinjo-color-bg-surface);
-  border-block-end: 1px solid var(--kinjo-color-border);
+  background-color: var(--admin-header-bg);
+  color: var(--admin-header-ink);
+  border-block-end: 1px solid var(--admin-header-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -83,13 +114,15 @@ body.admin-container {
   gap: 1.5rem; /* 24px */
 }
 
+/* Controls sit on the green band, so they take their ink from the header tokens
+   rather than the page's grey scale. */
 .btn-header-action,
 .btn-header-user {
   background: transparent;
   border: none;
   display: flex;
   align-items: center;
-  color: #374151;
+  color: var(--admin-header-ink-soft);
   padding: 0.25rem 0.5rem;
   border-radius: 8px;
   transition: background-color 150ms ease, color 150ms ease;
@@ -97,26 +130,36 @@ body.admin-container {
 }
 
 .btn-header-action:hover,
+.btn-header-user:hover {
+  background-color: var(--admin-header-hover);
+  color: var(--admin-header-ink);
+}
+
+/* outline: none was removed. These are real buttons and the header is the first
+   thing a keyboard user reaches; a hover-coloured background is not a focus
+   indicator. */
 .btn-header-action:focus-visible,
-.btn-header-user:hover,
 .btn-header-user:focus-visible {
-  background-color: #F3F4F6;
-  color: #111827;
-  outline: none;
+  background-color: var(--admin-header-hover);
+  color: var(--admin-header-ink);
+  outline: 2px solid var(--admin-header-ink);
+  outline-offset: 2px;
 }
 
 .header-divider {
   width: 1px;
   height: 32px;
-  background-color: #E5E7EB;
+  background-color: var(--admin-header-divider);
 }
 
+/* Gold, echoing the logo badge across the band instead of introducing a third
+   accent. Dark green initials on it clear AA at 4.66:1. */
 .header-user-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1E40AF, #3B82F6);
-  color: #FFFFFF;
+  background-color: var(--admin-header-avatar-bg);
+  color: var(--admin-header-avatar-ink);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -134,17 +177,26 @@ body.admin-container {
   text-align: start;
 }
 
+/* The manager shell's brand is an icon plus a wordmark rather than the badge, so
+   it needs the type styling the admin logo gets from the image itself. */
+.header-logo-wordmark {
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--admin-header-ink);
+}
+
 .header-user-name {
   font-size: 16px;
   font-weight: 600;
-  color: #111827;
+  color: var(--admin-header-ink);
   line-height: 1.2;
 }
 
 .header-user-role {
   font-size: 14px;
   font-weight: 400;
-  color: #6B7280;
+  color: var(--admin-header-ink-muted);
   line-height: 1.2;
   margin-top: 2px;
 }
@@ -154,10 +206,12 @@ body.admin-container {
   margin-inline-start: 4px;
 }
 
-/* Dropdown refinements */
+/* Dropdown refinements. These panels hang below the green band but are not part of
+   it — they are the same light material as the nav's dropdowns, so they share the
+   --admin-nav-* tokens rather than repeating the greys. */
 .header-lang-dropdown .dropdown-menu {
   min-width: 180px;
-  border: 1px solid #E5E7EB;
+  border: 1px solid var(--admin-nav-border);
   border-radius: 8px;
   padding: 0.5rem;
 }
@@ -166,25 +220,25 @@ body.admin-container {
   border-radius: 6px;
   padding: 0.5rem 0.75rem;
   font-weight: 500;
-  color: #374151;
-  transition: all 150ms ease;
+  color: var(--admin-nav-ink);
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
 .header-lang-dropdown .dropdown-item:hover,
 .header-lang-dropdown .dropdown-item:focus {
-  background-color: #F3F4F6;
-  color: #111827;
+  background-color: var(--admin-nav-hover);
+  color: var(--admin-nav-ink-strong);
 }
 
 .header-lang-dropdown .dropdown-item.active {
-  background-color: #EFF6FF;
-  color: #1E40AF;
+  background-color: var(--admin-nav-accent-soft);
+  color: var(--admin-nav-accent);
   font-weight: 600;
 }
 
 .header-user-dropdown .dropdown-menu {
   min-width: 220px;
-  border: 1px solid #E5E7EB;
+  border: 1px solid var(--admin-nav-border);
   border-radius: 8px;
   padding: 0.5rem;
 }
@@ -192,13 +246,13 @@ body.admin-container {
 .header-user-dropdown .dropdown-item {
   border-radius: 6px;
   font-weight: 500;
-  color: #374151;
+  color: var(--admin-nav-ink);
 }
 
 .header-user-dropdown .dropdown-item:hover,
 .header-user-dropdown .dropdown-item:focus {
-  background-color: #F3F4F6;
-  color: #111827;
+  background-color: var(--admin-nav-hover);
+  color: var(--admin-nav-ink-strong);
 }
 
 /* Content */

@@ -1,10 +1,16 @@
 /* ============================================================================
-   TOP NAVIGATION MENU (MAIN MENU)
+   TOP NAVIGATION MENU (MAIN MENU) — Tier 2
+
+   Colours come from the --admin-nav-* tokens in design-tokens.css. This tier is
+   deliberately a light working surface under the green Tier 1 band, and its
+   accent is --kinjo-action (blue), not the brand green: green already carries
+   "ready / healthy" meaning in this admin, so a green active tab would read as a
+   status. See the token block for the full rationale.
    ============================================================================ */
 
 .admin-top-nav {
-  background-color: #FFFFFF;
-  border-block-end: 1px solid #E5E7EB;
+  background-color: var(--admin-nav-bg);
+  border-block-end: 1px solid var(--admin-nav-border);
   position: relative;
   z-index: 900;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -35,41 +41,49 @@
   padding: 12px 16px;
   font-size: 15px;
   font-weight: 500;
-  color: #374151;
+  color: var(--admin-nav-ink);
   text-decoration: none;
   background: transparent;
   border: none;
   border-block-end: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease;
   white-space: nowrap;
 }
 
 .top-menu-link i {
-  color: #6B7280;
+  color: var(--admin-nav-ink-muted);
   font-size: 1.1rem;
 }
 
 /* Hover and Active states */
 .top-menu-link:hover,
 .top-menu-item:hover > .top-menu-link {
-  color: #111827;
-  background-color: #F9FAFB;
+  color: var(--admin-nav-ink-strong);
+  background-color: var(--admin-nav-hover);
 }
 
 .top-menu-link:hover i,
 .top-menu-item:hover > .top-menu-link i {
-  color: #374151;
+  color: var(--admin-nav-ink);
 }
 
+.top-menu-link:focus-visible {
+  outline: 2px solid var(--admin-nav-accent);
+  outline-offset: -2px;
+}
+
+/* One marker for the active tier, not two. The underline used to compete with a
+   4px inline-start bar that another stylesheet added with !important. */
 .top-menu-link.active {
-  color: #1D4ED8;
+  color: var(--admin-nav-accent);
   font-weight: 600;
-  border-block-end-color: #2563EB;
+  border-block-end-color: var(--admin-nav-accent);
 }
 
 .top-menu-link.active i {
-  color: #2563EB;
+  color: var(--admin-nav-accent);
 }
 
 /* ============================================================================
@@ -81,8 +95,8 @@
   top: 100%;
   inset-inline-start: 0; /* Respects RTL */
   min-width: 240px;
-  background-color: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background-color: var(--admin-nav-bg);
+  border: 1px solid var(--admin-nav-border);
   border-radius: 8px;
   padding: 8px 0;
   margin: 0;
@@ -110,44 +124,46 @@
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 500;
-  color: #4B5563;
+  color: var(--admin-nav-ink);
   text-decoration: none;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease,
+    border-color 0.15s ease;
   border-inline-start: 3px solid transparent;
 }
 
 .dropdown-item i {
-  color: #9CA3AF;
+  color: var(--admin-nav-ink-muted);
   font-size: 1.1rem;
 }
 
 .dropdown-item:hover {
-  background-color: #F3F4F6;
-  color: #1F2937;
+  background-color: var(--admin-nav-hover);
+  color: var(--admin-nav-ink-strong);
 }
 
 .dropdown-item:hover i {
-  color: #6B7280;
+  color: var(--admin-nav-ink);
 }
 
 .dropdown-item.active {
-  background-color: #EFF6FF;
-  color: #1D4ED8;
+  background-color: var(--admin-nav-accent-soft);
+  color: var(--admin-nav-accent);
   font-weight: 600;
-  border-inline-start-color: #2563EB;
+  border-inline-start-color: var(--admin-nav-accent);
 }
 
 .dropdown-item.active i {
-  color: #2563EB;
+  color: var(--admin-nav-accent);
 }
 
+/* #9CA3AF was 2.54:1 on white — below AA for this 11px label. */
 .dropdown-group-label {
   padding: 12px 20px 4px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #9CA3AF;
+  color: var(--admin-nav-ink-muted);
 }
 
 /* Responsive adjustments */
