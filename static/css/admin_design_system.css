@@ -5961,23 +5961,57 @@ body.admin-container {
 }
 
 /* ============================================================================
-   NAVBAR LOGO — Admin Module
-   Consistent size and gold border for navbar logo across all admin pages
-   Excludes login page (body.auth-page)
-   ============================================================================ */
-body:not(.auth-page) img.kinjo-logo.kinjo-logo--navbar,
-body:not(.auth-page) .kinjo-logo--navbar {
-  width: 64px !important;
-  height: 64px !important;
-  min-width: 64px !important;
-  min-height: 64px !important;
-  max-width: 64px !important;
-  max-height: 64px !important;
-  object-fit: contain !important;
-  display: inline-block !important;
-  border: 2px solid #D4AF37 !important;
-  border-radius: 4px !important;
-  padding: 4px !important;
-  background: #fff !important;
-  box-sizing: border-box !important;
+    LOGO — all admin pages
+
+    The navbar logo is exactly as tall as the header, derived from
+    --admin-header-height rather than repeated as a magic number, so the two can
+    never drift apart and the mobile breakpoint carries automatically.
+
+    No !important anywhere. The earlier escalation existed only because the macro
+    emitted an inline style attribute, which outranks any stylesheet rule; the
+    markup is class-only now, so ordinary specificity is enough.
+    ============================================================================ */
+.kinjo-logo {
+  object-fit: contain;
+  display: block;
+}
+
+.kinjo-logo--navbar {
+  /* Square asset, flush with the header band. box-sizing keeps the frame inside
+     the header height instead of pushing the total to height + border + padding. */
+  block-size: var(--admin-header-height);
+  inline-size: var(--admin-header-height);
+  box-sizing: border-box;
+  padding: 4px;
+  border: 2px solid #d4af37;
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* No breakpoint override needed: layout.css rebinds --admin-header-height itself at
+   768px, so the logo tracks the header without a second rule to keep in sync. */
+
+.kinjo-logo--sidebar {
+  inline-size: 120px;
+  block-size: auto;
+}
+
+.kinjo-logo--login {
+  block-size: 160px;
+  inline-size: auto;
+}
+
+/* The header brand link: logical properties so the gap sits correctly in RTL and
+   LTR, and a visible focus ring — it is the first tab stop on every admin page. */
+.header-logo {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  margin-inline-end: var(--kinjo-spacing-4);
+  border-radius: 6px;
+}
+
+.header-logo:focus-visible {
+  outline: 2px solid var(--kinjo-color-primary, #2563eb);
+  outline-offset: 2px;
 }

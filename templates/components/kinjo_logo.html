@@ -4,34 +4,65 @@
          {{ kinjo_logo(size='navbar') }}
 
   size values:
-    navbar  — top nav / admin header  (height: 36px, width: auto)
-    sidebar — sidebar header          (width: 120px, height: auto)
-    login   — login brand panel       (height: 160px, width: auto)
+    navbar  — top nav / admin header  (height follows --admin-header-height)
+    sidebar — sidebar header          (width: 120px, height auto)
+    login   — login brand panel       (height: 160px, width auto)
+
+  Every <img> here previously opened with `width=" 60\ height=\60\`, an unterminated
+  attribute that swallowed the next line. An HTML parser resolved it to
+  width=' 60\ height=0  src=' plus three junk attributes named `static`, `img` and
+  `kinjo-logo.png"` — and, critically, **no src at all**. No amount of CSS can size an
+  image the browser never loaded, which is why repeated attempts to set the height
+  appeared to do nothing.
+
+  Sizing lives in CSS, never in a style attribute. An inline style beats every
+  stylesheet rule, which is what forced the escalating !important overrides. Class-only
+  markup lets ordinary specificity work.
+
+  The width/height attributes are intrinsic-ratio hints so the browser reserves space
+  before the image loads (no layout shift). The asset is square, so both values match on
+  the square variants.
+
+  Asset: kinjo-logo-320.png is a 320x320 palette PNG — 49 KB against the 997 KB
+  1254x1254 original, which was being downloaded on every admin page to be drawn at
+  64px. 320px still covers the largest use (login, 160px) at 2x device pixel ratio.
+
+  alt is intentionally empty: every call site wraps this in an <a> that already carries
+  an aria-label, so alt text here would make a screen reader announce the brand twice.
 #}
 {%- macro kinjo_logo(size='navbar', extra_class='') -%}
 {%- if size == 'sidebar' -%}
 <img
-  src="/static/img/kinjo-logo.png"
-  alt="شعار KinJo"
+  src="/static/img/kinjo-logo-320.png"
+  alt=""
+  role="presentation"
+  width="120"
+  height="120"
   class="kinjo-logo kinjo-logo--sidebar {{ extra_class }}"
-  style="width:120px;height:auto;object-fit:contain;display:block"
   loading="eager"
+  decoding="async"
 />
 {%- elif size == 'login' -%}
 <img
-  src="/static/img/kinjo-logo.png"
-  alt="شعار KinJo"
+  src="/static/img/kinjo-logo-320.png"
+  alt=""
+  role="presentation"
+  width="160"
+  height="160"
   class="kinjo-logo kinjo-logo--login {{ extra_class }}"
-  style="width:auto;height:160px;object-fit:contain;display:block"
   loading="eager"
+  decoding="async"
 />
 {%- else -%}{# navbar / admin header #}
 <img
-  src="/static/img/kinjo-logo.png"
-  alt="شعار KinJo"
+  src="/static/img/kinjo-logo-320.png"
+  alt=""
+  role="presentation"
+  width="64"
+  height="64"
   class="kinjo-logo kinjo-logo--navbar {{ extra_class }}"
-  style="height:36px;width:auto;object-fit:contain;display:inline-block"
   loading="eager"
+  decoding="async"
 />
 {%- endif -%}
 {%- endmacro -%}

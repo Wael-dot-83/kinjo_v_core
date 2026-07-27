@@ -118,14 +118,11 @@
           <header class="admin-header">
             <div class="admin-header-left">
               {% from 'components/kinjo_logo.html' import kinjo_logo %}
+              {# Layout lives in .header-logo (admin_design_system.css). Inline styles
+                 here would outrank the stylesheet and restart the specificity war. #}
               <a
                 href="/admin/dashboard"
                 class="header-logo"
-                style="
-                  display: inline-flex;
-                  align-items: center;
-                  text-decoration: none;
-                "
                 aria-label="{% if ui_lang == 'en' %}KinJo — Dashboard{% else %}KinJo — لوحة التحكم{% endif %}"
               >
                 {{ kinjo_logo(size='navbar') }}

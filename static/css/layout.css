@@ -19,6 +19,17 @@
   --scroll-padding-sticky: var(--admin-header-height);
 }
 
+/* --admin-header-height-mobile was declared but never applied anywhere, so the
+   header stayed 64px on phones. Rebinding the base token at the breakpoint — rather
+   than overriding .admin-header directly — means every consumer follows in step:
+   the header itself, the sticky filter-bar offset, the scroll padding, and the
+   navbar logo that is sized from it. */
+@media (max-width: 768px) {
+  :root {
+    --admin-header-height: var(--admin-header-height-mobile);
+  }
+}
+
 body.admin-container {
   margin: 0;
   padding: 0;
