@@ -299,6 +299,12 @@
               {% endfor %}
             </select>
           </label>
+          <label class="gx-field">
+            <span class="gx-field__label">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</span>
+            <select class="gx-input" id="gxKg">
+              <option value="">{% if ui_lang == 'en' %}All kindergartens{% else %}جميع الحضانات{% endif %}</option>
+            </select>
+          </label>
         </div>
       </section>
 
@@ -339,12 +345,18 @@
             <div class="gx-ghost" style="height:170px;width:100%"></div>
           </div>
 
+          {# Placeholder text keeps the heading and the chart region from ever being
+             empty for assistive tech; both are replaced the moment an answer loads,
+             and the whole block stays hidden until then. #}
           <div id="gxAnswer" class="d-none">
             <p class="gx-answer__q" id="gxQTitle"></p>
-            <h2 class="gx-headline" id="gxHeadline"></h2>
+            <h2 class="gx-headline" id="gxHeadline">
+              {% if ui_lang == 'en' %}Preparing the answer{% else %}يجري تجهيز الإجابة{% endif %}
+            </h2>
             <div class="gx-meta" id="gxMeta"></div>
             <hr class="my-4" style="border-color:var(--gx-line);opacity:1">
-            <div id="gxChart" role="img" aria-label="" tabindex="0"></div>
+            <div id="gxChart" role="img" tabindex="0"
+                 aria-label="{% if ui_lang == 'en' %}Chart of the selected question{% else %}رسم بياني للسؤال المحدد{% endif %}"></div>
           </div>
         </div>
       </section>
@@ -395,6 +407,7 @@
     from:      document.getElementById('gxFrom'),
     to:        document.getElementById('gxTo'),
     gov:       document.getElementById('gxGov'),
+    kg:        document.getElementById('gxKg'),
     run:       document.getElementById('gxRun'),
     runLabel:  document.getElementById('gxRunLabel'),
     alert:     document.getElementById('gxAlert'),
@@ -567,6 +580,7 @@
     if (el.from.value) { params.set('date_from', el.from.value); }
     if (el.to.value)   { params.set('date_to', el.to.value); }
     if (el.gov.value)  { params.set('governorate', el.gov.value); }
+    if (el.kg.value)   { params.set('kindergarten_id', el.kg.value); }
 
     busy(true);
     fetch('/api/admin/analytics/explorer/answer?' + params.toString(), {
@@ -649,17 +663,49 @@
       el.chips.forEach(function (c) { c.setAttribute('aria-pressed', 'false'); });
     });
   });
-  el.gov.addEventListener('change', function () { if (current) { load(); } });
+
+  // The kindergarten list depends on the governorate, so it is refetched rather
+  // than shipped with the page — a national deployment has far too many to embed.
+  function loadKindergartens(preselect) {
+    var qs = el.gov.value ? '?governorate=' + encodeURIComponent(el.gov.value) : '';
+    return fetch('/api/admin/analytics/explorer/kindergartens' + qs, {
+      headers: { 'Accept': 'application/json' },
+      credentials: 'same-origin'
+    })
+      .then(function (res) { return res.ok ? res.json() : { kindergartens: [] }; })
+      .then(function (body) {
+        var head = el.kg.options[0];
+        el.kg.innerHTML = '';
+        el.kg.appendChild(head);
+        (body.kindergartens || []).forEach(function (kg) {
+          var opt = document.createElement('option');
+          opt.value = kg.id;
+          opt.textContent = pick(kg.name);
+          el.kg.appendChild(opt);
+        });
+        if (preselect) { el.kg.value = preselect; }
+      })
+      .catch(function () { /* the filter is optional — a failure must not block the page */ });
+  }
+
+  el.gov.addEventListener('change', function () {
+    el.kg.value = '';
+    loadKindergartens().then(function () { if (current) { load(); } });
+  });
+  el.kg.addEventListener('change', function () { if (current) { load(); } });
 
   // Restore a shared link, otherwise let the operator choose.
   var incoming = new URLSearchParams(window.location.search);
   if (incoming.get('date_from')) { el.from.value = incoming.get('date_from'); }
   if (incoming.get('date_to'))   { el.to.value = incoming.get('date_to'); }
   if (incoming.get('governorate')) { el.gov.value = incoming.get('governorate'); }
-  if (incoming.get('question')) {
-    setQuestion(incoming.get('question'));
-    load();
-  }
+
+  loadKindergartens(incoming.get('kindergarten_id')).then(function () {
+    if (incoming.get('question')) {
+      setQuestion(incoming.get('question'));
+      load();
+    }
+  });
 })();
 </script>
 {% endblock %}

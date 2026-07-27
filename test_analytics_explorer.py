@@ -14,6 +14,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 import analytics_explorer as ax
+import models
 
 
 # ---------------------------------------------------------------------------
@@ -66,8 +67,20 @@ def test_window_rejects_malformed_dates():
 
 
 @pytest.mark.parametrize("supplied", ["amman", "Amman", "AMMAN", "عمان", "العاصمة"])
-def test_amman_aliases_resolve_to_the_stored_arabic_name(supplied):
-    assert ax._resolve_scope(supplied, None).governorate == "العاصمة"
+def test_every_amman_spelling_matches_both_stored_names(supplied):
+    """The capital is stored as عمان here and as العاصمة elsewhere.
+
+    The legacy loader rewrote every alias to a single winner, which returns zero
+    rows on any deployment holding the other spelling. The filter must match either.
+    """
+    scope = ax._resolve_scope(supplied, None)
+    assert set(scope.governorate_names) == {"عمان", "العاصمة"}
+    # The English alias is an input convenience and must never reach the query.
+    assert all(not name.isascii() for name in scope.governorate_names)
+
+
+def test_a_governorate_without_synonyms_matches_itself_only():
+    assert ax._resolve_scope("إربد", None).governorate_names == ("إربد",)
 
 
 def test_scope_level_reflects_the_narrowest_filter():
@@ -186,6 +199,47 @@ def test_as_of_is_reported_in_jordan_time(db):
     as_of = datetime.fromisoformat(_payload(db)["coverage"]["as_of"])
     assert as_of.tzinfo is not None, "as_of must be timezone-aware"
     assert as_of.utcoffset() == timedelta(hours=3), "as_of must be Jordan time (UTC+3)"
+
+
+def test_governorate_scoping_partitions_the_national_total(db):
+    """Every governorate's slice must sum to the national figure — no row lost, none double-counted."""
+    window = ax._resolve_window("2026-01-01", "2026-07-27")
+    build = ax.QUESTIONS["incidents_by_type"].build
+
+    national = build(db, window, ax._resolve_scope(None, None)).records
+    governorates = [
+        row[0]
+        for row in db.query(models.Kindergarten.governorate)
+        .filter(models.Kindergarten.deleted_at.is_(None))
+        .distinct()
+        .all()
+        if row[0]
+    ]
+    per_governorate = sum(
+        build(db, window, ax._resolve_scope(gov, None)).records for gov in governorates
+    )
+    assert per_governorate == national
+
+
+def test_kindergarten_label_does_not_repeat_the_word_kindergarten(db):
+    kg = db.query(models.Kindergarten).filter(models.Kindergarten.deleted_at.is_(None)).first()
+    label = ax._resolve_scope(None, kg.id).label(db)
+    assert label.ar.count("حضانة") == 1, label.ar
+    assert label.en.lower().count("kindergarten") == 1, label.en
+
+
+def test_kindergarten_list_narrows_with_the_governorate(db):
+    everywhere = ax.list_kindergartens(governorate=None, db=db)["kindergartens"]
+    assert everywhere, "the fixture database should contain kindergartens"
+    for kg in everywhere:
+        assert set(kg["name"]) == {"ar", "en"}, "options must be bilingual"
+        assert kg["name"]["ar"].strip() and kg["name"]["en"].strip()
+
+    gov = db.query(models.Kindergarten.governorate).filter(
+        models.Kindergarten.deleted_at.is_(None)
+    ).first()[0]
+    scoped = ax.list_kindergartens(governorate=gov, db=db)["kindergartens"]
+    assert 0 < len(scoped) <= len(everywhere)
 
 
 def test_answer_payload_is_fully_bilingual(db):

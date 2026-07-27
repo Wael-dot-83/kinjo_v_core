@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -50,9 +50,13 @@ page_router = APIRouter(include_in_schema=False)
 # Default look-back when the caller supplies no window.
 _DEFAULT_WINDOW_DAYS = 90
 
-# Governorate aliases accepted from the URL. Amman is stored under its Arabic
-# administrative name, so an English "amman" must resolve to it.
-_GOVERNORATE_ALIASES = {"amman": "العاصمة", "عمان": "العاصمة", "العاصمة": "العاصمة"}
+# Governorate spellings that refer to the same place. The capital appears in the
+# data under both its administrative name (العاصمة) and its common name (عمان) —
+# this database uses the latter — so a filter must match either rather than
+# rewriting one into the other. The legacy loader picked a single winner
+# (`"العاصمة" if governorate.lower() in (...)`), which silently returns zero rows
+# on any deployment that stores the other spelling.
+_GOVERNORATE_SYNONYMS = (("amman", "عمان", "العاصمة"),)
 
 
 # ---------------------------------------------------------------------------
@@ -140,6 +144,7 @@ class Scope:
     """Geographic / organisational narrowing applied to a question."""
 
     governorate: Optional[str] = None
+    governorate_names: Tuple[str, ...] = ()
     kindergarten_id: Optional[int] = None
 
     @property
@@ -152,21 +157,44 @@ class Scope:
 
     def label(self, db: Session) -> Text:
         if self.kindergarten_id:
-            name = db.query(models.Kindergarten.name_ar).filter(
+            row = db.query(models.Kindergarten.name_ar, models.Kindergarten.name_en).filter(
                 models.Kindergarten.id == self.kindergarten_id
-            ).scalar()
-            shown = name or f"#{self.kindergarten_id}"
-            return _t(f"حضانة {shown}", f"Kindergarten {shown}")
+            ).first()
+            fallback = f"#{self.kindergarten_id}"
+            name_ar = ((row[0] if row else "") or "").strip() or fallback
+            # name_en is nullable — fall back to the Arabic name rather than to a
+            # bare id, which tells an English reader nothing.
+            name_en = ((row[1] if row else "") or "").strip() or name_ar
+            # Stored names already carry the word "kindergarten" in both languages;
+            # prefixing unconditionally produces "حضانة حضانة الأمل".
+            ar = name_ar if "حضانة" in name_ar else f"حضانة {name_ar}"
+            en = name_en if "kindergarten" in name_en.lower() else f"Kindergarten {name_en}"
+            return _t(ar, en)
         if self.governorate:
             return _t(f"محافظة {self.governorate}", f"{self.governorate} Governorate")
         return _t("جميع محافظات المملكة", "All governorates nationwide")
 
+    def governorate_filter(self, column):
+        """Match any spelling of the selected governorate."""
+        return column.in_(self.governorate_names)
+
 
 def _resolve_scope(governorate: Optional[str], kindergarten_id: Optional[int]) -> Scope:
-    gov = None
-    if governorate:
-        gov = _GOVERNORATE_ALIASES.get(governorate.strip().lower(), governorate.strip())
-    return Scope(governorate=gov, kindergarten_id=kindergarten_id)
+    if not governorate:
+        return Scope(kindergarten_id=kindergarten_id)
+
+    supplied = governorate.strip()
+    names = (supplied,)
+    for group in _GOVERNORATE_SYNONYMS:
+        if supplied.lower() in group:
+            # Keep only the Arabic spellings — the English alias is an input
+            # convenience, never a stored value.
+            names = tuple(name for name in group if not name.isascii())
+            break
+
+    # Display the Arabic spelling the caller actually asked for where possible.
+    shown = supplied if not supplied.isascii() else names[0]
+    return Scope(governorate=shown, governorate_names=names, kindergarten_id=kindergarten_id)
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +353,7 @@ def _scoped_incident_query(db: Session, window: Window, scope: Scope):
     if scope.governorate:
         return query.join(
             models.Kindergarten, models.Incident.kindergarten_id == models.Kindergarten.id
-        ).filter(models.Kindergarten.governorate == scope.governorate)
+        ).filter(scope.governorate_filter(models.Kindergarten.governorate))
     return query
 
 
@@ -636,7 +664,7 @@ def _build_attendance_breakdown(db: Session, window: Window, scope: Scope) -> An
         else:
             query = query.join(
                 models.Kindergarten, models.Class.kindergarten_id == models.Kindergarten.id
-            ).filter(models.Kindergarten.governorate == scope.governorate)
+            ).filter(scope.governorate_filter(models.Kindergarten.governorate))
 
     rows = query.group_by(models.AttendanceLog.status).all()
     categories = [
@@ -705,7 +733,7 @@ def _build_enrollment_status(db: Session, window: Window, scope: Scope) -> Answe
         query = query.join(
             models.Kindergarten,
             models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id,
-        ).filter(models.Kindergarten.governorate == scope.governorate)
+        ).filter(scope.governorate_filter(models.Kindergarten.governorate))
 
     rows = query.group_by(models.EnrollmentApplication.status).all()
     categories = [
@@ -771,7 +799,7 @@ def _build_daily_report_moods(db: Session, window: Window, scope: Scope) -> Answ
     elif scope.governorate:
         query = query.join(
             models.Kindergarten, models.DailyReport.kindergarten_id == models.Kindergarten.id
-        ).filter(models.Kindergarten.governorate == scope.governorate)
+        ).filter(scope.governorate_filter(models.Kindergarten.governorate))
 
     rows = query.group_by(models.DailyReport.mood).all()
     categories = [
@@ -847,7 +875,7 @@ def _build_kindergarten_capacity(db: Session, window: Window, scope: Scope) -> A
     if scope.kindergarten_id:
         query = query.filter(models.Kindergarten.id == scope.kindergarten_id)
     elif scope.governorate:
-        query = query.filter(models.Kindergarten.governorate == scope.governorate)
+        query = query.filter(scope.governorate_filter(models.Kindergarten.governorate))
 
     rows = query.group_by(models.Kindergarten.governorate).all()
 
@@ -1011,6 +1039,42 @@ def list_questions() -> Dict[str, Any]:
                 "icon": q.icon,
             }
             for q in QUESTIONS.values()
+        ]
+    }
+
+
+@router.get(
+    "/api/admin/analytics/explorer/kindergartens",
+    summary="Kindergartens available as a filter, optionally within one governorate",
+)
+def list_kindergartens(
+    governorate: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Feeds the dependent kindergarten picker.
+
+    Loaded on demand rather than embedded in the page, so the payload stays small
+    on a national deployment with thousands of kindergartens.
+    """
+    query = db.query(
+        models.Kindergarten.id, models.Kindergarten.name_ar, models.Kindergarten.name_en
+    ).filter(models.Kindergarten.deleted_at.is_(None))
+    if governorate:
+        scope = _resolve_scope(governorate, None)
+        query = query.filter(scope.governorate_filter(models.Kindergarten.governorate))
+
+    rows = query.order_by(models.Kindergarten.name_ar).all()
+    return {
+        "kindergartens": [
+            {
+                "id": kg_id,
+                "name": {
+                    "ar": (name_ar or "").strip() or f"#{kg_id}",
+                    # name_en is nullable; fall back to Arabic rather than a bare id.
+                    "en": (name_en or "").strip() or (name_ar or "").strip() or f"#{kg_id}",
+                },
+            }
+            for kg_id, name_ar, name_en in rows
         ]
     }
 
