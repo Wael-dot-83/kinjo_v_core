@@ -430,7 +430,7 @@ the normal path, not a corner case.
 | ID | Sev | Finding |
 |---|---|---|
 | **D-05** | Medium | `DailyReport.mood` is `String(20)` free text. The inline comment says `# happy, normal, sad, tired, sick`; production stores `'سعيد 😊'`, `'هادئ 😌'`, `'نشيط 🤸'`. No enum, no constraint, no validation — and the comment is actively misleading. |
-| **D-06** | High | `alembic.ini` is **absent** from this checkout while `alembic/versions/` holds 44 migrations. `alembic upgrade head` cannot run. The migration process is not reproducible from this tree. |
+| **D-06** | High | `alembic.ini` was **absent** from this checkout while `alembic/versions/` held 44 migrations, so `alembic upgrade head` could not run. **Resolved:** restored from `HEAD`; the database was stamped at `c7d9e1a4b820` and upgraded to `analytics_idx_01`. It had no `alembic_version` table at all — `create_all`-built — which is why the capital was still stored in its pre-migration form. |
 
 ---
 

@@ -416,8 +416,55 @@ after:   all spellings -> 2;  legacy partition SUM=6 NATIONAL=6 holds=True
   the two can be compared on real usage before anything is retired.
 * **`charts/stats.py`'s six unused exports were left in place** — outside this page's blast
   radius, and removing them belongs with a broader sweep.
-* **`alembic.ini` is absent from this working tree** (one of 312 tracked files deleted
-  before this work began), so migrations cannot be *run* here. The chain itself is healthy —
-  alembic reports a single head — and `analytics_idx_01` is written, verified idempotent and
-  verified reversible against a scratch database. Restoring `alembic.ini` is a one-line
-  `git checkout` the tree owner should make deliberately, not a side effect of this change.
+* *(resolved — see §12)*
+
+
+---
+
+## 12. Migrations applied
+
+`alembic.ini` was restored from `HEAD` (it was one of 312 tracked files deleted before this
+work began) and the chain was brought up to head against the development database.
+
+The database had **no `alembic_version` table** — it was built by `Base.metadata.create_all()`
+and seeded, which is exactly why the capital was still stored under the pre-migration
+city-name form. Running `upgrade` from zero would have tried to recreate existing tables, so
+the baseline was stamped at the revision immediately preceding the canonicalization:
+
+```
+alembic stamp c7d9e1a4b820
+alembic upgrade head
+  -> canon_gov_cap_01   kindergartens.governorate: 2 row(s) normalized
+                        reports.governorate:       0 row(s)
+  -> analytics_idx_01   ix_incidents_occurred_at created
+alembic_version = analytics_idx_01
+```
+
+A timestamped backup was taken first: `data/kinjo.db.backup-before-migrate-20260727-133838`.
+
+### The migration proved the design claim
+
+The whole point of delegating identity to `services.jordan_locations` is that results must
+not depend on whether a deployment has been migrated. Same queries, before and after:
+
+| input | before migration | after migration |
+|---|---|---|
+| `عمان` | 2 | 2 |
+| `العاصمة` | 2 | 2 |
+| `amman` / `Amman` / `AMMAN` / `" amman "` | 2 | 2 |
+| partition (explorer) | SUM=6 NATIONAL=6 ✓ | SUM=6 NATIONAL=6 ✓ |
+| partition (legacy charts) | SUM=6 NATIONAL=6 ✓ | SUM=6 NATIONAL=6 ✓ |
+
+Stored values moved `['إربد','الزرقاء','العقبة','عمان']` → `['إربد','الزرقاء','العاصمة','العقبة']`,
+while `district` correctly still holds the city `عمان` — the migration is scoped to the
+governorate column only, as its docstring promises.
+
+The index is now live and chosen by the planner:
+
+```
+EXPLAIN QUERY PLAN
+  SEARCH incidents USING INDEX ix_incidents_occurred_at (occurred_at>? AND occurred_at<?)
+```
+
+70 tests pass against the migrated database, and all 12 HTTP surfaces return 200.
+The chart cache was flushed so the corrected governorate results are served immediately.
