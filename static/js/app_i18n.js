@@ -1306,21 +1306,53 @@ class AppI18n {
     chartLib.register({
       id: "kinjoLiteralI18n",
       beforeInit(chart) {
-        if (appI18n.currentLang !== "en") {
-          return;
-        }
-        appI18n.translateObjectLiterals(chart.data);
-        appI18n.translateObjectLiterals(chart.options);
+        appI18n.translateChartLiterals(chart);
       },
       beforeUpdate(chart) {
-        if (appI18n.currentLang !== "en") {
-          return;
-        }
-        appI18n.translateObjectLiterals(chart.data);
-        appI18n.translateObjectLiterals(chart.options);
+        appI18n.translateChartLiterals(chart);
       },
     });
     this.chartTranslationPluginRegistered = true;
+  }
+
+  /**
+   * Translate the Arabic literals a chart displays, in English mode.
+   *
+   * This deliberately walks `chart.config.options` — the plain object the caller
+   * passed to `new Chart(...)` — and never `chart.options`.
+   *
+   * `chart.options` is Chart.js 4's *resolved* options: a Proxy whose get/set
+   * traps resolve scriptable and indexable values on access. Enumerating it with
+   * Object.keys() and assigning each key back (what translateObjectLiterals
+   * does) drives those traps over every option, and Chart.js's own descriptor
+   * for the "scale" scope is
+   *
+   *     _scriptable: (t) => !t.startsWith("before") && !t.startsWith("after") …
+   *
+   * which throws `t.startsWith is not a function` the moment a non-string key
+   * reaches it. Because the hooks only ran when currentLang === "en", the effect
+   * was that EVERY chart in the app threw during construction in English while
+   * Arabic was unaffected — the manager dashboard and manager KPI pages caught it
+   * and rendered their error state instead of any content. Mutating resolved
+   * options was never the intent either: Chart.js rebuilds them from the config
+   * on each update, so edits there are discarded anyway.
+   *
+   * Failures are swallowed: a missing translation must never stop a chart from
+   * rendering.
+   */
+  translateChartLiterals(chart) {
+    if (!chart || this.currentLang !== "en") {
+      return;
+    }
+    try {
+      this.translateObjectLiterals(chart.data);
+      const rawOptions = chart.config && chart.config.options;
+      if (rawOptions) {
+        this.translateObjectLiterals(rawOptions);
+      }
+    } catch (error) {
+      console.warn("Chart literal translation skipped:", error);
+    }
   }
 
   translateExistingCharts() {
@@ -1337,9 +1369,13 @@ class AppI18n {
       if (!chart) {
         return;
       }
-      this.translateObjectLiterals(chart.data);
-      this.translateObjectLiterals(chart.options);
-      chart.update("none");
+      // Same reasoning as translateChartLiterals: never touch chart.options.
+      this.translateChartLiterals(chart);
+      try {
+        chart.update("none");
+      } catch (error) {
+        console.warn("Chart update after translation failed:", error);
+      }
     });
   }
 

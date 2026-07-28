@@ -1,148 +1,187 @@
-"""Contract tests for double-submit CSRF on admin write endpoints.
+"""Contract tests for double-submit CSRF on state-changing requests.
 
 These exist because ~103 test failures were once traced to auth-only headers
-hitting `_validate_csrf_token`, and the tempting "fix" was to bypass the
-validator under TESTING. That would have deleted a real security boundary.
+hitting the CSRF validator, and the tempting "fix" was to bypass the validator
+under TESTING. That would have deleted a real security boundary.
 
-These tests pin the boundary in place instead: a matching pair succeeds, and
-every way of failing to present one is rejected. If someone later adds a
-TESTING/env bypass to `_validate_csrf_token`, the negative cases below start
-returning 2xx and fail.
+**Why this file was rewritten.** It previously imported
+`admin_endpoints._validate_csrf_token`. That per-endpoint validator no longer
+exists — enforcement moved into `middleware.csrf.csrf_protection_middleware` —
+so every test here failed at import with
+
+    ImportError: cannot import name '_validate_csrf_token' from 'admin_endpoints'
+
+which meant the double-submit boundary had *no* working test coverage at all.
+The tests now exercise the middleware that actually enforces it.
+
+The middleware is driven directly rather than through TestClient because
+`csrf_protection_middleware` short-circuits when `settings.TESTING` is true, and
+the whole suite runs with TESTING=true. Flipping that flag around a real request
+would also re-enable Redis-backed caching and other TESTING-gated paths, so the
+middleware is called as the pure function it is: same code, no side effects.
 """
+import inspect
 import secrets
 
 import pytest
+from fastapi.responses import JSONResponse
+from starlette.requests import Request
 
-import models
-from auth import get_password_hash
-from conftest import CSRF_COOKIE_NAME, bearer_headers, csrf_pair
+from config import settings
+from conftest import CSRF_COOKIE_NAME, csrf_pair
+from middleware.csrf import CSRF_SAFE_METHODS, csrf_protection_middleware
 
-# A state-changing admin endpoint guarded by _validate_csrf_token.
-WRITE_URL = "/api/admin/users/{user_id}"
+WRITE_PATH = "/api/admin/users/1"
+
+
+def _make_request(method: str = "DELETE", path: str = WRITE_PATH, *, cookies=None, headers=None):
+    """Build a real Starlette Request with the given cookies/headers."""
+    raw_headers = [(b"host", b"testserver")]
+    for key, value in (headers or {}).items():
+        raw_headers.append((key.lower().encode(), str(value).encode()))
+    if cookies:
+        cookie_header = "; ".join(f"{k}={v}" for k, v in cookies.items())
+        raw_headers.append((b"cookie", cookie_header.encode()))
+    return Request(
+        {
+            "type": "http",
+            "method": method,
+            "path": path,
+            "raw_path": path.encode(),
+            "headers": raw_headers,
+            "query_string": b"",
+            "scheme": "http",
+            "server": ("testserver", 80),
+            "client": ("127.0.0.1", 12345),
+            "root_path": "",
+        }
+    )
+
+
+async def _passthrough(_request):
+    """Stand-in for the rest of the stack; reaching it means CSRF allowed the request."""
+    return JSONResponse({"reached_endpoint": True})
 
 
 @pytest.fixture
-def csrf_admin(test_db):
-    user = models.User(
-        username="csrf_contract_admin",
-        email="csrf_contract_admin@example.com",
-        hashed_password=get_password_hash("Admin123!"),
-        role=models.UserRole.ADMIN,
-        status=models.UserStatus.ACTIVE,
-    )
-    test_db.add(user)
-    test_db.commit()
-    test_db.refresh(user)
-    return user
+def strict_csrf(monkeypatch):
+    """Run the middleware with its production behaviour (TESTING off)."""
+    monkeypatch.setattr(settings, "TESTING", False)
+    return settings
 
 
-@pytest.fixture
-def csrf_target(test_db, sample_kindergarten):
-    user = models.User(
-        username="csrf_contract_target",
-        email="csrf_contract_target@example.com",
-        hashed_password=get_password_hash("Pass123!"),
-        role=models.UserRole.SUPERVISOR,
-        status=models.UserStatus.ACTIVE,
-        kindergarten_id=sample_kindergarten.id,
-    )
-    test_db.add(user)
-    test_db.commit()
-    test_db.refresh(user)
-    return user
+async def _run(request):
+    return await csrf_protection_middleware(request, _passthrough)
 
 
-def _token(client) -> str:
-    r = client.post(
-        "/token",
-        data={"username": "csrf_contract_admin", "password": "Admin123!"},
-    )
-    assert r.status_code == 200, r.text
-    return r.json()["access_token"]
+def _is_rejected(response) -> bool:
+    return response.status_code == 403
 
 
 class TestDoubleSubmitContract:
     """Header and cookie must both be present and must match."""
 
-    def test_matching_pair_is_accepted(self, client, csrf_admin, csrf_target):
-        """The happy path: a matching header/cookie pair passes the validator."""
-        r = client.delete(
-            WRITE_URL.format(user_id=csrf_target.id),
-            headers=bearer_headers(_token(client)),
+    @pytest.mark.asyncio
+    async def test_matching_pair_is_accepted(self, strict_csrf):
+        token = secrets.token_hex(32)
+        response = await _run(
+            _make_request(cookies={CSRF_COOKIE_NAME: token}, headers={"X-CSRF-Token": token})
         )
-        # A valid pair passes the CSRF gate: the delete succeeds (204) or is
-        # rejected for a non-CSRF reason, but never returns a 4xx CSRF error and
-        # never a 500. (`!= 400` alone would pass on a 500, so pin it tighter.)
-        assert r.status_code < 500, r.text
-        assert r.status_code != 400, r.text
-        assert "CSRF" not in r.text
+        assert response.status_code == 200, "a matching CSRF pair must reach the endpoint"
 
-    def test_missing_both_is_rejected(self, client, csrf_admin, csrf_target):
-        r = client.delete(
-            WRITE_URL.format(user_id=csrf_target.id),
-            headers=bearer_headers(_token(client), with_csrf=False),
-        )
-        assert r.status_code == 400
-        assert "CSRF" in r.text
+    @pytest.mark.asyncio
+    async def test_missing_both_is_rejected(self, strict_csrf):
+        assert _is_rejected(await _run(_make_request()))
 
-    def test_header_without_cookie_is_rejected(self, client, csrf_admin, csrf_target):
-        headers = bearer_headers(_token(client), with_csrf=False)
-        headers["X-CSRF-Token"] = secrets.token_hex(32)
-        r = client.delete(WRITE_URL.format(user_id=csrf_target.id), headers=headers)
-        assert r.status_code == 400
-        assert "CSRF" in r.text
+    @pytest.mark.asyncio
+    async def test_header_without_cookie_is_rejected(self, strict_csrf):
+        response = await _run(_make_request(headers={"X-CSRF-Token": secrets.token_hex(32)}))
+        assert _is_rejected(response)
 
-    def test_cookie_without_header_is_rejected(self, client, csrf_admin, csrf_target):
-        headers = bearer_headers(_token(client), with_csrf=False)
-        headers["Cookie"] = f"{CSRF_COOKIE_NAME}={secrets.token_hex(32)}"
-        r = client.delete(WRITE_URL.format(user_id=csrf_target.id), headers=headers)
-        assert r.status_code == 400
-        assert "CSRF" in r.text
+    @pytest.mark.asyncio
+    async def test_cookie_without_header_is_rejected(self, strict_csrf):
+        response = await _run(_make_request(cookies={CSRF_COOKIE_NAME: secrets.token_hex(32)}))
+        assert _is_rejected(response)
 
-    def test_mismatched_pair_is_rejected(self, client, csrf_admin, csrf_target):
+    @pytest.mark.asyncio
+    async def test_mismatched_pair_is_rejected(self, strict_csrf):
         """A forged header cannot be paired with an unrelated cookie."""
-        headers = bearer_headers(_token(client), with_csrf=False)
-        headers["X-CSRF-Token"] = secrets.token_hex(32)
-        headers["Cookie"] = f"{CSRF_COOKIE_NAME}={secrets.token_hex(32)}"
-        r = client.delete(WRITE_URL.format(user_id=csrf_target.id), headers=headers)
-        assert r.status_code == 400
-        assert "CSRF" in r.text
+        response = await _run(
+            _make_request(
+                cookies={CSRF_COOKIE_NAME: secrets.token_hex(32)},
+                headers={"X-CSRF-Token": secrets.token_hex(32)},
+            )
+        )
+        assert _is_rejected(response)
 
-    def test_empty_values_are_rejected(self, client, csrf_admin, csrf_target):
+    @pytest.mark.asyncio
+    async def test_empty_values_are_rejected(self, strict_csrf):
         """Empty strings compare equal — they must not count as a valid pair."""
-        headers = bearer_headers(_token(client), with_csrf=False)
-        headers["X-CSRF-Token"] = ""
-        headers["Cookie"] = f"{CSRF_COOKIE_NAME}="
-        r = client.delete(WRITE_URL.format(user_id=csrf_target.id), headers=headers)
-        assert r.status_code == 400
-        assert "CSRF" in r.text
+        response = await _run(
+            _make_request(cookies={CSRF_COOKIE_NAME: ""}, headers={"X-CSRF-Token": ""})
+        )
+        assert _is_rejected(response)
+
+    @pytest.mark.asyncio
+    async def test_cross_site_origin_is_rejected(self, strict_csrf):
+        """Even a valid pair must not be honoured from a foreign origin."""
+        token = secrets.token_hex(32)
+        response = await _run(
+            _make_request(
+                cookies={CSRF_COOKIE_NAME: token},
+                headers={"X-CSRF-Token": token, "Origin": "https://evil.example"},
+            )
+        )
+        assert _is_rejected(response)
+
+    @pytest.mark.asyncio
+    async def test_cross_site_referer_is_rejected(self, strict_csrf):
+        token = secrets.token_hex(32)
+        response = await _run(
+            _make_request(
+                cookies={CSRF_COOKIE_NAME: token},
+                headers={"X-CSRF-Token": token, "Referer": "https://evil.example/page"},
+            )
+        )
+        assert _is_rejected(response)
+
+    @pytest.mark.parametrize("method", sorted(CSRF_SAFE_METHODS))
+    @pytest.mark.asyncio
+    async def test_safe_methods_are_not_blocked(self, strict_csrf, method):
+        """Reads must never require a token, or the whole UI breaks."""
+        response = await _run(_make_request(method=method, path="/api/admin/users"))
+        assert response.status_code == 200
 
 
 class TestValidatorHasNoBypass:
-    """Static guarantees about the validator itself."""
+    """Static guarantees about the enforcement code itself."""
 
-    def test_validators_use_constant_time_comparison(self):
-        import inspect
+    def test_middleware_uses_constant_time_comparison(self):
+        source = inspect.getsource(csrf_protection_middleware)
+        assert "compare_digest" in source, (
+            "csrf_protection_middleware must compare the double-submit pair in "
+            "constant time"
+        )
 
-        from admin_endpoints import _validate_csrf_token as admin_validator
+    def test_remaining_endpoint_validators_use_constant_time_comparison(self):
+        """Modules that still carry their own validator must also compare safely."""
+        from analytics_service import _validate_csrf_token as analytics_validator
         from heatmap.backend.admin_router import _validate_csrf_token as heatmap_validator
 
-        for validator in (admin_validator, heatmap_validator):
+        for validator in (analytics_validator, heatmap_validator):
             source = inspect.getsource(validator)
             assert "compare_digest" in source, (
                 f"{validator.__module__}._validate_csrf_token must compare in "
                 "constant time"
             )
 
-    def test_validators_contain_no_environment_bypass(self):
-        """No TESTING/DEBUG escape hatch may short-circuit the check."""
-        import inspect
-
-        from admin_endpoints import _validate_csrf_token as admin_validator
+    def test_endpoint_validators_contain_no_environment_bypass(self):
+        """No TESTING/DEBUG escape hatch may short-circuit a per-endpoint check."""
+        from analytics_service import _validate_csrf_token as analytics_validator
         from heatmap.backend.admin_router import _validate_csrf_token as heatmap_validator
 
         forbidden = ("TESTING", "DEBUG", "is_production", "ENVIRONMENT")
-        for validator in (admin_validator, heatmap_validator):
+        for validator in (analytics_validator, heatmap_validator):
             source = inspect.getsource(validator)
             for token in forbidden:
                 assert token not in source, (
@@ -150,10 +189,20 @@ class TestValidatorHasNoBypass:
                     f"{token!r} — CSRF must not be conditional on environment"
                 )
 
+    def test_middleware_test_bypass_cannot_apply_in_production(self):
+        """The middleware's TESTING short-circuit is the one env-conditional path.
+
+        It is deliberate — the suite could not drive authenticated writes without
+        it — but it must never be reachable in production, so it is pinned to
+        `not settings.is_production`.
+        """
+        source = inspect.getsource(csrf_protection_middleware)
+        assert "settings.TESTING and not settings.is_production" in source, (
+            "the CSRF test bypass must remain gated on `not settings.is_production`"
+        )
+
     def test_csrf_pair_helper_matches_production_cookie_name(self):
         """The canonical helper must target the cookie the app actually reads."""
-        from config import settings
-
         pair = csrf_pair()
         assert pair["Cookie"].startswith(f"{settings.CSRF_COOKIE_NAME}=")
         assert pair["X-CSRF-Token"] == pair["Cookie"].split("=", 1)[1]
@@ -167,8 +216,6 @@ class TestValidatorHasNoBypass:
         vacuously. Pin the literal to the setting so a rename fails loudly here,
         pointing at the modules to update, instead of silently.
         """
-        from config import settings
-
         assert settings.CSRF_COOKIE_NAME == "kinjo_csrf_token", (
             "CSRF cookie name changed. Inline pairs in the test suite hardcode "
             "'kinjo_csrf_token'; update them (or route them through "
