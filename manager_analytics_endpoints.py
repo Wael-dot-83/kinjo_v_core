@@ -1,20 +1,30 @@
 """
 Manager Analytics Endpoints
-Provides manager-scoped operational analytics and predictive indicators
+Provides manager-scoped operational analytics and predictive indicators.
+
+These routes return plain dicts and declare no ``response_model``. Nine Pydantic
+classes used to sit here describing the shapes — none was ever wired to a route
+and none was referenced anywhere else, so they enforced nothing and drifted
+freely from the dicts actually returned. They were removed rather than wired up,
+because attaching an unverified model to a live route silently drops any field it
+omits. Publishing real schemas is worthwhile, but each must be checked against
+its endpoint's actual output first.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import date, timedelta
-from utils.time_utils import today_amman as _today
-from typing import Optional, List, Dict
-from pydantic import BaseModel, ConfigDict
+from utils.time_utils import now_amman as _now, today_amman as _today
 
 import models
-from dependencies import get_current_user
 from database import get_db
-from manager_scope import ManagerScope
+# ManagerScope comes straight from its home module. It used to be imported via
+# manager_scope.py, a compatibility shim whose only remaining job — installing a
+# `validate_kindergarten_access` alias — has no callers left anywhere in the tree.
+# The shim itself is kept for now because tests/test_manager_scope.py still asserts
+# on it; retiring the two together is a follow-up, not a drive-by.
+from dependencies import ManagerScope, get_current_user
 from manager_analytics import ManagerAnalyticsService
 
 router = APIRouter(tags=["manager_analytics"])
@@ -57,101 +67,6 @@ class _SafeCsvWriter:
 # =============================================================================
 # Request/Response Models
 # =============================================================================
-
-class KPIMetrics(BaseModel):
-    """Manager operational KPI metrics"""
-    enrollment_rate: float
-    attendance_rate: float
-    absenteeism_rate: float
-    incident_rate: float  # Per 1,000 attended child-days (KPIService canonical)
-    capacity_utilization: float
-    supervisor_workload_avg: float  # Children per supervisor
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class TrendPoint(BaseModel):
-    """Single point in a trend chart"""
-    date: str
-    value: float
-    cumulative: Optional[float] = None
-
-
-class ForecastPoint(BaseModel):
-    """Single point in a forecast"""
-    date: str
-    predicted_value: float
-    lower_bound: float
-    upper_bound: float
-
-
-class AnomalyPoint(BaseModel):
-    """Anomaly detection result"""
-    date: str
-    metric: str
-    value: float
-    z_score: float
-    severity: str  # "critical" or "warning"
-
-
-class AttendanceForecastResponse(BaseModel):
-    """Attendance forecast with historical data and trend"""
-    historical: List[Dict]
-    forecast: List[Dict]
-    trend: str  # "increasing", "decreasing", "stable"
-    slope: float
-    period_start: str
-    period_end: str
-    forecast_start: str
-    forecast_days: int
-
-
-class AnomalyDetectionResponse(BaseModel):
-    """Anomaly detection results"""
-    anomalies: List[Dict]
-    baseline_mean: float
-    baseline_std: float
-    threshold: float
-    status: str
-    period_start: str
-    period_end: str
-
-
-class ClassDrilldown(BaseModel):
-    """Class-level statistics for drill-down"""
-    class_id: int
-    class_name: str
-    supervisor_name: str
-    age_range: str
-    capacity: int
-    enrolled: int
-    utilization_percent: float
-    attendance_rate: float
-    incidents: int
-    period_start: str
-    period_end: str
-
-
-class SupervisorDrilldown(BaseModel):
-    """Supervisor-level statistics for drill-down"""
-    supervisor_id: int
-    supervisor_name: str
-    classes_managed: int
-    children_supervised: int
-    reports_submitted: int
-    incidents_reported: int
-    period_start: str
-    period_end: str
-
-
-class EnrollmentTrendResponse(BaseModel):
-    """Enrollment trend over time"""
-    trend: List[Dict]
-    total_active: int
-    new_this_period: int
-    period_start: str
-    period_end: str
-
 
 # =============================================================================
 # Manager Analytics Endpoints
@@ -225,7 +140,10 @@ def get_manager_kpis(
                 db, kg_id
             )
         },
-        "generated_at": _today().isoformat()
+        # A timestamp, not a date. This returned _today().isoformat(), so every
+        # call within the same Jordan day reported an identical "generated_at"
+        # and a client could not tell a fresh response from a stale one.
+        "generated_at": _now().isoformat()
     }
 
     return kpis

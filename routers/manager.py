@@ -7,23 +7,27 @@ the manager's own kindergarten(s).
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone, timedelta
-
-_JORDAN_TZ = timezone(timedelta(hours=3))
-from utils.time_utils import today_amman as _today
+from datetime import date, timedelta
 from typing import Optional
+
+# One clock for the whole module. This file previously carried its own
+# `_JORDAN_TZ = timezone(timedelta(hours=3))` *and* imported today_amman, so two
+# independent notions of "now" ran side by side in the same request. They agree
+# today only because Jordan dropped DST in 2022; time_utils resolves the real
+# Asia/Amman zone and falls back to UTC if the zoneinfo database is missing,
+# at which point the fixed offset would have silently disagreed by three hours.
+from utils.time_utils import now_amman as _now, today_amman as _today
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import or_, select
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from database import get_db
-from dependencies import get_current_user, require_manager as _require_manager
+from dependencies import require_manager as _require_manager
 import models
 from models import (
-    AuditLog,
     Class,
     Child,
     DailyReport,
@@ -31,17 +35,55 @@ from models import (
     EnrollmentApplication,
     EnrollmentStatus,
     Message,
-    MessageRecipient,
     MessageThreadType,
     SupervisorAssignment,
     User,
     UserRole,
 )
 from rbac import assert_manager_owns_kindergarten
+from admin_security import log_audit_event
 from audit_actions import AuditAction
 import validators
 
 router = APIRouter(prefix="/api/manager", tags=["manager"])
+
+
+def _audit(
+    db: Session,
+    actor: User,
+    action: str,
+    entity_type: str,
+    entity_id: Optional[int],
+    summary: str,
+    *,
+    before: Optional[dict] = None,
+    after: Optional[dict] = None,
+    sensitivity: int = 1,
+):
+    """Record a manager mutation in the audit trail.
+
+    Every write in this module used to construct ``models.AuditLog(...)`` by hand,
+    which can only populate user_id / action / entity_type / entity_id / details.
+    The five forensic columns — ip_address, request_id, actor_role, old_data and
+    new_data — have no model default, so every manager action landed in the audit
+    table with them NULL, while the admin module (which calls log_audit_event)
+    recorded all of them. For a childcare regulator that is the difference between
+    being able and unable to answer "from where, by whom, and what changed".
+
+    log_audit_event add()s and flush()es but deliberately does not commit, which
+    matches the callers here: each owns its own db.commit().
+    """
+    return log_audit_event(
+        db,
+        action=action,
+        actor=actor,
+        target_type=entity_type,
+        target_ids=entity_id,
+        before_state=before,
+        after_state=after,
+        metadata={"summary": summary},
+        sensitivity_level=sensitivity,
+    )
 
 
 def _get_class_or_403(
@@ -206,14 +248,13 @@ def assign_supervisor_to_class(
         start_date=_today(),
     )
     db.add(assignment)
-    db.add(
-        AuditLog(
-            user_id=current_user.id,
-            action=AuditAction.SUPERVISOR_ASSIGNED,
-            entity_type="class",
-            entity_id=body.class_id,
-            details=f"Manager assigned supervisor {body.supervisor_id} to class {body.class_id} (primary={body.is_primary})",
-        )
+    _audit(
+        db,
+        current_user,
+        AuditAction.SUPERVISOR_ASSIGNED,
+        "class",
+        body.class_id,
+        f"Manager assigned supervisor {body.supervisor_id} to class {body.class_id} (primary={body.is_primary})",
     )
     db.commit()
     db.refresh(assignment)
@@ -244,20 +285,19 @@ def unassign_supervisor_from_class(
     )
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found.")
-    now = datetime.now(_JORDAN_TZ)
+    now = _now()
     assignment.deleted_at = now
     assignment.end_date = now.date()
     # Soft-deleting the assignment above is sufficient; the retired legacy
     # Class.supervisor_id column is no longer maintained (D1/B5).
 
-    db.add(
-        AuditLog(
-            user_id=current_user.id,
-            action=AuditAction.SUPERVISOR_UNASSIGNED,
-            entity_type="class",
-            entity_id=class_id,
-            details=f"Manager removed supervisor {supervisor_id} from class {class_id}",
-        )
+    _audit(
+        db,
+        current_user,
+        AuditAction.SUPERVISOR_UNASSIGNED,
+        "class",
+        class_id,
+        f"Manager removed supervisor {supervisor_id} from class {class_id}",
     )
     db.commit()
 
@@ -271,7 +311,7 @@ def swap_supervisor(
 ):
     """Remove all current supervisors from a class and assign a new primary one."""
     _get_class_or_403(class_id, current_user, db, require_active=True)
-    now = datetime.now(_JORDAN_TZ)
+    now = _now()
     # Soft-delete existing assignments
     db.query(SupervisorAssignment).filter(
         SupervisorAssignment.class_id == class_id,
@@ -287,14 +327,13 @@ def swap_supervisor(
 
     a = SupervisorAssignment(class_id=class_id, supervisor_id=body.supervisor_id, is_primary=True, start_date=_today())
     db.add(a)
-    db.add(
-        AuditLog(
-            user_id=current_user.id,
-            action=AuditAction.REPLACEMENT_SUPERVISOR_ASSIGNED,
-            entity_type="class",
-            entity_id=class_id,
-            details=f"Manager swapped class {class_id} supervisors to new primary {body.supervisor_id}",
-        )
+    _audit(
+        db,
+        current_user,
+        AuditAction.REPLACEMENT_SUPERVISOR_ASSIGNED,
+        "class",
+        class_id,
+        f"Manager swapped class {class_id} supervisors to new primary {body.supervisor_id}",
     )
     db.commit()
     return {"class_id": class_id, "new_supervisor_id": body.supervisor_id}
@@ -351,14 +390,13 @@ def move_child_between_classes(
         )
 
     enrollment.class_id = body.to_class_id
-    db.add(
-        AuditLog(
-            user_id=current_user.id,
-            action=AuditAction.CHILD_MOVED_CLASS,
-            entity_type="enrollment",
-            entity_id=enrollment.id,
-            details=f"Manager moved child {body.child_id} from class {body.from_class_id} to class {body.to_class_id}",
-        )
+    _audit(
+        db,
+        current_user,
+        AuditAction.CHILD_MOVED_CLASS,
+        "enrollment",
+        enrollment.id,
+        f"Manager moved child {body.child_id} from class {body.from_class_id} to class {body.to_class_id}",
     )
     db.commit()
     return {"child_id": body.child_id, "new_class_id": body.to_class_id}
@@ -537,14 +575,13 @@ def edit_daily_report(
         if val is not None:
             setattr(report, field, val)
 
-    db.add(
-        AuditLog(
-            user_id=current_user.id,
-            action=AuditAction.DAILY_REPORT_EDITED,
-            entity_type="daily_report",
-            entity_id=report.id,
-            details=f"Manager edited daily report for child {report.child_id}",
-        )
+    _audit(
+        db,
+        current_user,
+        AuditAction.DAILY_REPORT_EDITED,
+        "daily_report",
+        report.id,
+        f"Manager edited daily report for child {report.child_id}",
     )
     db.commit()
     return {"id": report.id, "status": report.status.value}
@@ -562,7 +599,13 @@ def send_report_to_parents(
         raise HTTPException(status_code=404, detail="Report not found.")
 
     if report.status not in (DailyReportStatus.SUBMITTED, DailyReportStatus.APPROVED):
-        raise HTTPException(status_code=400, detail="Report must be in SUBMITTED state to send to parents.")
+        # The message used to say "must be in SUBMITTED state" while the guard also
+        # accepts APPROVED, so a manager sending an approved report saw a reason that
+        # contradicted the code that let it through.
+        raise HTTPException(
+            status_code=400,
+            detail="Report must be SUBMITTED or APPROVED to send to parents.",
+        )
 
     # Atomic: status change, approval fields, parent notification, and both audit
     # rows commit together (#7). If anything fails, roll the whole thing back so
@@ -570,16 +613,15 @@ def send_report_to_parents(
     try:
         report.status = DailyReportStatus.SENT_TO_PARENT
         report.approved_by = current_user.id
-        report.approved_at = datetime.now(_JORDAN_TZ)
+        report.approved_at = _now()
         report.sent_to_parent_at = report.approved_at
-        db.add(
-            AuditLog(
-                user_id=current_user.id,
-                action=AuditAction.DAILY_REPORT_SENT_TO_PARENT,
-                entity_type="daily_report",
-                entity_id=report.id,
-                details=f"Manager sent daily report for child {report.child_id} to parent",
-            )
+        _audit(
+            db,
+            current_user,
+            AuditAction.DAILY_REPORT_SENT_TO_PARENT,
+            "daily_report",
+            report.id,
+            f"Manager sent daily report for child {report.child_id} to parent",
         )
 
         parent_user_id = child.parent.user_id if child.parent else None
@@ -594,14 +636,13 @@ def send_report_to_parents(
             )
             db.add(notification)
             db.flush()  # assign notification.id before the audit row references it
-            db.add(
-                AuditLog(
-                    user_id=current_user.id,
-                    action=AuditAction.MESSAGE_SENT,
-                    entity_type="message",
-                    entity_id=notification.id,
-                    details=f"Manager sent daily-report notification to parent {parent_user_id} for child {report.child_id}",
-                )
+            _audit(
+                db,
+                current_user,
+                AuditAction.MESSAGE_SENT,
+                "message",
+                notification.id,
+                f"Manager sent daily-report notification to parent {parent_user_id} for child {report.child_id}",
             )
 
         db.commit()
@@ -628,14 +669,13 @@ def delete_report(
     if report.status == DailyReportStatus.SENT_TO_PARENT:
         raise HTTPException(status_code=409, detail="Cannot delete a report that has been sent to parents.")
 
-    db.add(
-        AuditLog(
-            user_id=current_user.id,
-            action=AuditAction.DAILY_REPORT_DELETED,
-            entity_type="daily_report",
-            entity_id=report.id,
-            details=f"Manager deleted daily report for child {report.child_id} dated {report.date}",
-        )
+    _audit(
+        db,
+        current_user,
+        AuditAction.DAILY_REPORT_DELETED,
+        "daily_report",
+        report.id,
+        f"Manager deleted daily report for child {report.child_id} dated {report.date}",
     )
     db.delete(report)
     db.commit()
@@ -717,14 +757,13 @@ def create_supervisor(
     try:
         db.flush()
         validators.ensure_supervisor_profile(db, supervisor, current_user.kindergarten_id)
-        db.add(
-            AuditLog(
-                user_id=current_user.id,
-                action=AuditAction.STAFF_CREATED,
-                entity_type="user",
-                entity_id=supervisor.id,
-                details=f"Manager created supervisor {supervisor.id}",
-            )
+        _audit(
+            db,
+            current_user,
+            AuditAction.STAFF_CREATED,
+            "user",
+            supervisor.id,
+            f"Manager created supervisor {supervisor.id}",
         )
         db.commit()
     except IntegrityError:
@@ -762,20 +801,19 @@ def update_supervisor(
                 validators.validate_kg_has_supervisor(db, current_user.kindergarten_id, exclude_user_id=supervisor.id)
             except validators.ValidationError as exc:
                 raise HTTPException(status_code=409, detail=exc.message)
-            now = datetime.now(_JORDAN_TZ)
+            now = _now()
             db.query(SupervisorAssignment).filter(
                 SupervisorAssignment.supervisor_id == supervisor.id,
                 SupervisorAssignment.deleted_at.is_(None),
             ).update({"deleted_at": now, "end_date": now.date(), "deleted_by": current_user.id})
         supervisor.status = new_status
-    db.add(
-        AuditLog(
-            user_id=current_user.id,
-            action=AuditAction.USER_UPDATED,
-            entity_type="user",
-            entity_id=supervisor.id,
-            details=f"Manager updated supervisor {supervisor.id}",
-        )
+    _audit(
+        db,
+        current_user,
+        AuditAction.USER_UPDATED,
+        "user",
+        supervisor.id,
+        f"Manager updated supervisor {supervisor.id}",
     )
     db.commit()
     return {"id": supervisor.id, "status": supervisor.status.value}
@@ -793,7 +831,7 @@ def delete_supervisor(
             validators.validate_kg_has_supervisor(db, current_user.kindergarten_id, exclude_user_id=supervisor.id)
         except validators.ValidationError as exc:
             raise HTTPException(status_code=409, detail=exc.message)
-    now = datetime.now(_JORDAN_TZ)
+    now = _now()
     db.query(SupervisorAssignment).filter(
         SupervisorAssignment.supervisor_id == supervisor.id,
         SupervisorAssignment.deleted_at.is_(None),
@@ -801,14 +839,13 @@ def delete_supervisor(
     supervisor.status = models.UserStatus.INACTIVE
     supervisor.deleted_at = now
     supervisor.deleted_by = current_user.id
-    db.add(
-        AuditLog(
-            user_id=current_user.id,
-            action=AuditAction.USER_DELETED,
-            entity_type="user",
-            entity_id=supervisor.id,
-            details=f"Manager removed supervisor {supervisor.id}",
-        )
+    _audit(
+        db,
+        current_user,
+        AuditAction.USER_DELETED,
+        "user",
+        supervisor.id,
+        f"Manager removed supervisor {supervisor.id}",
     )
     db.commit()
 
