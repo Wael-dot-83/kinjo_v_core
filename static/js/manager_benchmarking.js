@@ -3,25 +3,12 @@
   const tr = (ar, en) => IS_AR ? ar : en;
 
   async function apiRequest(url) {
-    // Auth is the httpOnly session cookie (kinjo_session), sent automatically
-    // on same-origin fetch. Benchmarking is read-only, so no CSRF token needed (F2).
-    const headers = { "Content-Type": "application/json" };
-
-    let response = null;
-    if (typeof window.fetchWithAuth === "function") {
-      response = await window.fetchWithAuth(url, { headers });
-      if (!response) {
-        throw new Error(tr("يتطلب تسجيل الدخول", "Sign-in is required"));
-      }
-    } else {
-      response = await fetch(url, { headers });
+    if (!window.api || typeof window.api.get !== "function") {
+      throw new Error(tr("تعذر تحميل البيانات", "Unable to load data"));
     }
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || tr("تعذر تحميل البيانات", "Unable to load data"));
-    }
-    return response.json();
+    // Remove query string from url as window.api.get takes endpoint and params optionally, 
+    // but we can just pass the full URL string to request().
+    return window.api.request(url, { method: "GET" });
   }
 
   function formatNumber(value, digits = 2) {

@@ -97,12 +97,12 @@ breadcrumbs=[
                                 </div>
                                 <div class="d-flex flex-column gap-1 ms-2">
                                     <button type="button" class="btn btn-sm btn-outline-info"
-                                        onclick="showKgDetails(document.getElementById('kindergartenId').value)"
+                                        id="btnShowKgDetails"
                                         title="{% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %}">
                                         <i class="bi bi-info-circle"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger"
-                                        onclick="clearKgSelection()" title="{% if ui_lang == 'en' %}Change Kindergarten{% else %}تغيير الحضانة{% endif %}">
+                                        id="btnClearKgSelection" title="{% if ui_lang == 'en' %}Change Kindergarten{% else %}تغيير الحضانة{% endif %}">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 </div>
@@ -156,7 +156,7 @@ breadcrumbs=[
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <div id="kgResultsCount" class="text-muted small" style="display:none;"></div>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" id="clearFiltersBtn"
-                                    onclick="clearFilters()" style="display:none;">
+                                    style="display:none;">
                                     <i class="bi bi-x-circle me-1"></i>{% if ui_lang == 'en' %}Clear Filters{% else %}مسح عوامل التصفية{% endif %}
                                 </button>
                             </div>
@@ -193,7 +193,7 @@ breadcrumbs=[
                         </div>
                     </div>
                     <div class="card-footer d-flex justify-content-end">
-                        <button type="button" class="btn btn-primary" onclick="goToStep(2)">
+                        <button type="button" class="btn btn-primary btn-go-step" data-target-step="2">
                             {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-arrow-left ms-2"></i>
                         </button>
                     </div>
@@ -238,11 +238,11 @@ breadcrumbs=[
                     </div>
                     <div class="card-footer d-flex justify-content-between">
                         {% if not is_manager_supervisor %}
-                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(1)">
+                        <button type="button" class="btn btn-outline-secondary btn-go-step" data-target-step="1">
                             <i class="bi bi-arrow-right me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                         </button>
                         {% endif %}
-                        <button type="button" class="btn btn-primary" onclick="goToStep(3)">
+                        <button type="button" class="btn btn-primary btn-go-step" data-target-step="3">
                             {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-arrow-left ms-2"></i>
                         </button>
                     </div>
@@ -323,10 +323,10 @@ breadcrumbs=[
                         {% endif %}
                     </div>
                     <div class="card-footer d-flex justify-content-between">
-                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(2)">
+                        <button type="button" class="btn btn-outline-secondary btn-go-step" data-target-step="2">
                             <i class="bi bi-arrow-right me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                         </button>
-                        <button type="button" class="btn btn-primary" onclick="goToStep(4)">
+                        <button type="button" class="btn btn-primary btn-go-step" data-target-step="4">
                             {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-arrow-left ms-2"></i>
                         </button>
                     </div>
@@ -354,7 +354,7 @@ breadcrumbs=[
                         </div>
                     </div>
                     <div class="card-footer d-flex justify-content-between">
-                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(3)">
+                        <button type="button" class="btn btn-outline-secondary btn-go-step" data-target-step="3">
                             <i class="bi bi-arrow-right me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                         </button>
                         {{ submit_button(label=('Submit Request' if ui_lang == 'en' else 'إرسال الطلب'),
@@ -387,7 +387,7 @@ breadcrumbs=[
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-arrow-right me-1"></i>{% if ui_lang == 'en' %}Back to List{% else %}رجوع للقائمة{% endif %}
                 </button>
-                <button type="button" class="btn btn-success" id="confirmKgBtn" onclick="confirmKgFromModal()">
+                <button type="button" class="btn btn-success" id="confirmKgBtn">
                     <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Confirm Kindergarten Selection{% else %}تأكيد اختيار الحضانة{% endif %}
                 </button>
             </div>
@@ -623,6 +623,72 @@ breadcrumbs=[
     const isParent = {{ 'true' if current_user and current_user.role.value == 'PARENT' else 'false' }};
     const ACTIVE_ENROLLMENT_STATUSES = ['SUBMITTED', 'PENDING_REVIEW', 'ACCEPTED', 'ACTIVE'];
 
+    // Event Listeners for CSP compliance
+    document.addEventListener('DOMContentLoaded', () => {
+        // Step navigation
+        document.querySelectorAll('.btn-go-step').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const step = parseInt(e.currentTarget.dataset.targetStep);
+                if (step) goToStep(step);
+            });
+        });
+
+        // Kindergarten Search Panel
+        const btnShowKgDetails = document.getElementById('btnShowKgDetails');
+        if (btnShowKgDetails) {
+            btnShowKgDetails.addEventListener('click', () => {
+                const kgId = document.getElementById('kindergartenId').value;
+                if (kgId) showKgDetails(kgId);
+            });
+        }
+
+        const btnClearKgSelection = document.getElementById('btnClearKgSelection');
+        if (btnClearKgSelection) {
+            btnClearKgSelection.addEventListener('click', clearKgSelection);
+        }
+
+        const btnClearFiltersBtn = document.getElementById('clearFiltersBtn');
+        if (btnClearFiltersBtn) {
+            btnClearFiltersBtn.addEventListener('click', clearFilters);
+        }
+
+        const btnConfirmKgModal = document.getElementById('confirmKgBtn');
+        if (btnConfirmKgModal) {
+            btnConfirmKgModal.addEventListener('click', confirmKgFromModal);
+        }
+
+        // Delegated events for dynamic KG results
+        const kgResultsList = document.getElementById('kgResultsList');
+        if (kgResultsList) {
+            kgResultsList.addEventListener('click', (e) => {
+                const detailBtn = e.target.closest('.js-show-kg-details');
+                if (detailBtn) {
+                    e.stopPropagation();
+                    showKgDetails(detailBtn.dataset.id);
+                    return;
+                }
+                const item = e.target.closest('.js-select-kg');
+                if (item) {
+                    const idx = item.dataset.index;
+                    if (idx !== undefined && kgResults[idx]) {
+                        selectKg(kgResults[idx]);
+                    }
+                }
+            });
+            kgResultsList.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const item = e.target.closest('.js-select-kg');
+                    if (item) {
+                        const idx = item.dataset.index;
+                        if (idx !== undefined && kgResults[idx]) {
+                            selectKg(kgResults[idx]);
+                        }
+                    }
+                }
+            });
+        }
+    });
+
     /* ========== Auth Headers ========== */
     function getHeaders() {
         if (!window.AuthService || !AuthService.isAuthenticated()) {
@@ -760,7 +826,7 @@ breadcrumbs=[
             const area = kg.area || '';
             const phone = kg.contact_phone || '';
             const locationParts = [gov, district, area].filter(Boolean);
-            return `<div class="kg-item" data-index="${idx}" onclick="selectKg(kgResults[${idx}])" role="button" tabindex="0" onkeydown="if(event.key==='Enter')selectKg(kgResults[${idx}])">
+            return `<div class="kg-item js-select-kg" data-index="${idx}" role="button" tabindex="0">
                 <div class="kg-info">
                     <div class="kg-name">${name}</div>
                     <div class="kg-meta">
@@ -769,7 +835,7 @@ breadcrumbs=[
                     </div>
                 </div>
                 <div class="kg-actions">
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); showKgDetails(${kg.id})" title="${enrollmentText('common.view_details', 'عرض التفاصيل', 'View details')}">
+                    <button type="button" class="btn btn-sm btn-outline-primary js-show-kg-details" data-id="${kg.id}" title="${enrollmentText('common.view_details', 'عرض التفاصيل', 'View details')}">
                         <i class="bi bi-info-circle me-1"></i>${enrollmentText('common.details', 'التفاصيل', 'Details')}
                     </button>
                 </div>

@@ -233,7 +233,7 @@
               {% for item in top_level_items %}
                 {% set item_state = namespace(active=current_path in item.active_paths) %}
                 <li class="top-menu-item" role="presentation">
-                  <a href="{{ item.href }}" class="top-menu-link{% if item_state.active %} active{% endif %}" role="menuitem">
+                  <a href="{{ item.href }}" class="top-menu-link{% if item_state.active %} active{% endif %}" role="menuitem"{% if item_state.active %} aria-current="page"{% endif %}>
                     <i class="bi {{ item.icon }}" aria-hidden="true"></i>
                     <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
                   </a>

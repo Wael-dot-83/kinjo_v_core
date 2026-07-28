@@ -216,11 +216,9 @@ actions=refresh_action
         show('kpiLoading'); hide('kpiError'); hide('kpiContent');
 
         try {
-            const url  = `/api/manager/dashboard/enhanced?period_start=${from}&period_end=${to}&locale=${LOCALE}`;
-            // Auth is the httpOnly session cookie, sent automatically (F2).
-            const resp = await fetch(url);
-            if (!resp.ok) throw new Error(resp.statusText);
-            const data = await resp.json();
+            const url  = `/api/manager/dashboard/enhanced`;
+            const params = { period_start: from, period_end: to, locale: LOCALE };
+            const data = await window.api.get(url, params);
 
             hide('kpiLoading');
             renderGCEI(data.overall_gcei);
@@ -410,7 +408,12 @@ actions=refresh_action
     }
 
     function renderComparisonChart(data) {
-        const ctx = document.getElementById('kpiComparisonChart').getContext('2d');
+        const canvas = document.getElementById('kpiComparisonChart');
+        if (typeof Chart === 'undefined') {
+            canvas.parentElement.innerHTML = `<div class="text-center text-secondary py-4">${IS_AR ? 'تعذر تحميل المخطط البياني.' : 'Unable to load chart.'}</div>`;
+            return;
+        }
+        const ctx = canvas.getContext('2d');
         if (comparisonChart) comparisonChart.destroy();
 
         const labels = KPI_KEYS_ORDERED.map(k => {

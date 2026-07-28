@@ -75,7 +75,7 @@
                         <input type="text" class="form-control" id="kgPhone" placeholder="{% if ui_lang == 'en' %}Phone number...{% else %}رقم الهاتف...{% endif %}">
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
-                        <button class="btn btn-primary w-100" onclick="searchKindergartens()">
+                        <button class="btn btn-primary w-100 js-search-kgs">
                             <i class="bi bi-search me-1"></i>{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
                         </button>
                     </div>
@@ -86,7 +86,7 @@
                     </select>
                 </div>
                 <div class="mt-3 text-end">
-                    <button class="btn btn-success" onclick="nextStep(1)">
+                    <button class="btn btn-success js-next-step" data-step="1">
                         {% if ui_lang == 'en' %}Next: Select Classes <i class="bi bi-arrow-right me-1"></i>{% else %}التالي: اختيار الشعب <i class="bi bi-arrow-left me-1"></i>{% endif %}
                     </button>
                 </div>
@@ -132,11 +132,11 @@
                 </div>
                 <div class="mt-3 d-flex justify-content-between">
                     {% if not is_manager_supervisor %}
-                    <button class="btn btn-outline-secondary" onclick="prevStep(2)">
+                    <button class="btn btn-outline-secondary js-prev-step" data-step="2">
                         {% if ui_lang == 'en' %}<i class="bi bi-arrow-left me-1"></i> Previous{% else %}<i class="bi bi-arrow-right me-1"></i> السابق{% endif %}
                     </button>
                     {% endif %}
-                    <button class="btn btn-success" onclick="nextStep(2)">
+                    <button class="btn btn-success js-next-step" data-step="2">
                         {% if ui_lang == 'en' %}Next: Select Children <i class="bi bi-arrow-right me-1"></i>{% else %}التالي: اختيار الأطفال <i class="bi bi-arrow-left me-1"></i>{% endif %}
                     </button>
                 </div>
@@ -171,10 +171,10 @@
                     </div>
                 </div>
                 <div class="mt-3 d-flex justify-content-between">
-                    <button class="btn btn-outline-secondary" onclick="prevStep(3)">
+                    <button class="btn btn-outline-secondary js-prev-step" data-step="3">
                         {% if ui_lang == 'en' %}<i class="bi bi-arrow-left me-1"></i> Previous{% else %}<i class="bi bi-arrow-right me-1"></i> السابق{% endif %}
                     </button>
-                    <button class="btn btn-success" onclick="nextStep(3)">
+                    <button class="btn btn-success js-next-step" data-step="3">
                         {% if ui_lang == 'en' %}Next: Select Period <i class="bi bi-arrow-right me-1"></i>{% else %}التالي: تحديد الفترة <i class="bi bi-arrow-left me-1"></i>{% endif %}
                     </button>
                 </div>
@@ -185,7 +185,7 @@
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label" for="periodType">{% if ui_lang == 'en' %}Period Type{% else %}نوع الفترة{% endif %}</label>
-                        <select class="form-select" id="periodType" onchange="toggleDateInputs()">
+                        <select class="form-select" id="periodType">
                             <option value="day">{% if ui_lang == 'en' %}Single Day{% else %}يوم واحد{% endif %}</option>
                             <option value="week">{% if ui_lang == 'en' %}Week{% else %}أسبوع{% endif %}</option>
                             <option value="month">{% if ui_lang == 'en' %}Month{% else %}شهر{% endif %}</option>
@@ -206,10 +206,10 @@
                     </div>
                 </div>
                 <div class="mt-3 d-flex justify-content-between">
-                    <button class="btn btn-outline-secondary" onclick="prevStep(4)">
+                    <button class="btn btn-outline-secondary js-prev-step" data-step="4">
                         {% if ui_lang == 'en' %}<i class="bi bi-arrow-left me-1"></i> Previous{% else %}<i class="bi bi-arrow-right me-1"></i> السابق{% endif %}
                     </button>
-                    <button class="btn btn-primary" onclick="generateReport()">
+                    <button class="btn btn-primary js-generate-report">
                         <i class="bi bi-bar-chart me-1"></i> {% if ui_lang == 'en' %}Generate Report{% else %}إنشاء التقرير{% endif %}
                     </button>
                 </div>
@@ -350,6 +350,24 @@
         document.querySelectorAll('input[name="childSelection"]').forEach(radio => {
             radio.addEventListener('change', toggleChildSelection);
         });
+
+        // Wiring buttons
+        const searchBtn = document.querySelector('.js-search-kgs');
+        if (searchBtn) searchBtn.addEventListener('click', searchKindergartens);
+
+        document.querySelectorAll('.js-next-step').forEach(btn => {
+            btn.addEventListener('click', e => nextStep(parseInt(e.currentTarget.dataset.step, 10)));
+        });
+
+        document.querySelectorAll('.js-prev-step').forEach(btn => {
+            btn.addEventListener('click', e => prevStep(parseInt(e.currentTarget.dataset.step, 10)));
+        });
+
+        const periodType = document.getElementById('periodType');
+        if (periodType) periodType.addEventListener('change', toggleDateInputs);
+
+        const genBtn = document.querySelector('.js-generate-report');
+        if (genBtn) genBtn.addEventListener('click', generateReport);
     });
 
     function toggleDateInputs() {
