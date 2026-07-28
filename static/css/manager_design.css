@@ -387,3 +387,82 @@
     padding: var(--kinjo-spacing-2) var(--kinjo-spacing-3);
   }
 }
+
+/* ==========================================================================
+   Header notifications panel
+   The bell lives in .admin-header-right next to the language and user menus.
+   Bootstrap's default dropdown width collapses to the toggle, so message
+   subjects wrapped one word per line; give the panel a real width and cap its
+   height so a long inbox scrolls inside the panel instead of off-screen.
+   ========================================================================== */
+.header-notif-menu {
+  width: 20rem;
+  max-width: calc(100vw - 2rem);
+  max-height: 24rem;
+  overflow-y: auto;
+  padding-block: var(--kinjo-spacing-2, 0.5rem);
+}
+
+.header-notif-menu .dropdown-item {
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* The badge is positioned against the toggle, which therefore has to be a
+   containing block; .btn-header-action is not positioned by default. */
+.header-notif-dropdown .btn-header-action {
+  position: relative;
+}
+
+.header-notif-dropdown .badge {
+  font-size: 0.65rem;
+  min-width: 1.25rem;
+}
+
+/* ==========================================================================
+   Refresh spin
+   Used by the manager dashboard's Refresh button while a reload is in flight.
+   Bootstrap Icons ships no animation of its own, so define one here.
+   ========================================================================== */
+@keyframes kinjo-spin {
+  to { transform: rotate(360deg); }
+}
+
+.bi.spin {
+  display: inline-block;
+  animation: kinjo-spin 0.8s linear infinite;
+}
+
+/* Users who ask for reduced motion still need the busy state to read as busy,
+   so keep a non-animated cue rather than dropping the feedback entirely. */
+@media (prefers-reduced-motion: reduce) {
+  .bi.spin {
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
+/* ==========================================================================
+   Supervisor card removal
+   Brief fade/shrink between a confirmed delete and the list reload, so the
+   grid does not visibly jump. Purely cosmetic: the reload is what establishes
+   the real state.
+   ========================================================================== */
+.supervisor-card {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.supervisor-card-removing {
+  opacity: 0;
+  transform: scale(0.95);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .supervisor-card {
+    transition: opacity 0.25s ease;
+  }
+  .supervisor-card-removing {
+    transform: none;
+  }
+}

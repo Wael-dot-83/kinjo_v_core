@@ -37,6 +37,14 @@ class AuditAction:
     ADMIN_PROFILE_UPDATED = "ADMIN_PROFILE_UPDATED"
     ADMIN_PASSWORD_CHANGED = "ADMIN_PASSWORD_CHANGED"
 
+    # Account self-service, any authenticated role (manager, supervisor, parent).
+    # The ADMIN_* pair above is reachable only through require_admin, so every
+    # non-admin role had no audited path to change its own profile or password.
+    USER_PROFILE_UPDATED = "USER_PROFILE_UPDATED"
+    USER_PASSWORD_CHANGED = "USER_PASSWORD_CHANGED"
+    USER_PASSWORD_CHANGE_FAILED = "USER_PASSWORD_CHANGE_FAILED"
+    USER_NOTIFICATION_PREFS_UPDATED = "USER_NOTIFICATION_PREFS_UPDATED"
+
     # Backup operations
     BACKUP_ENQUEUED = "BACKUP_ENQUEUED"
     BACKUP_FAILED = "BACKUP_FAILED"

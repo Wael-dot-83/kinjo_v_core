@@ -109,6 +109,47 @@
           </div>
 
           <div class="admin-header-right">
+            <!-- Notifications: unread message count + recent list.
+                 Backed by /comm/messages/unread/count and /comm/messages, both
+                 of which authorise on the session user, so the manager only
+                 ever sees their own inbox. -->
+            <div class="dropdown header-notif-dropdown">
+              <button
+                class="btn-header-action dropdown-toggle position-relative"
+                type="button"
+                id="notificationsDropdown"
+                data-bs-toggle="dropdown"
+                data-bs-auto-close="outside"
+                aria-expanded="false"
+                aria-label="{% if ui_lang == 'en' %}Notifications{% else %}الإشعارات{% endif %}"
+              >
+                <i class="bi bi-bell fs-5" aria-hidden="true"></i>
+                <span
+                  id="notifUnreadBadge"
+                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                  hidden
+                >
+                  <span id="notifUnreadCount">0</span>
+                  <span class="visually-hidden">{% if ui_lang == 'en' %}unread messages{% else %}رسائل غير مقروءة{% endif %}</span>
+                </span>
+              </button>
+              <div class="dropdown-menu dropdown-menu-end shadow-sm header-notif-menu" aria-labelledby="notificationsDropdown">
+                <h3 class="dropdown-header">{% if ui_lang == 'en' %}Notifications{% else %}الإشعارات{% endif %}</h3>
+                <div id="notifList">
+                  <p class="dropdown-item-text text-secondary mb-0" id="notifLoading">
+                    {% if ui_lang == 'en' %}Loading…{% else %}جارٍ التحميل…{% endif %}
+                  </p>
+                </div>
+                <hr class="dropdown-divider" />
+                <a class="dropdown-item text-center" href="/messages">
+                  {% if ui_lang == 'en' %}View all messages{% else %}عرض كل الرسائل{% endif %}
+                </a>
+              </div>
+            </div>
+
+            <!-- Vertical Divider -->
+            <div class="header-divider d-none d-md-block"></div>
+
             <!-- Language Switcher Component -->
             <div class="dropdown header-lang-dropdown">
               <button
@@ -368,15 +409,119 @@
             });
           }
         });
+        var IS_EN = document.documentElement.lang === "en";
+        function T(ar, en) { return IS_EN ? en : ar; }
+
         window.AdminUtils = window.AdminUtils || {};
+        /* SweetAlert2 is already loaded on every manager page, but this helper
+           still fell back to window.confirm() — an untranslatable, RTL-unaware
+           browser dialog that ignored the `message`/`confirmText` options its
+           own signature advertises. Use Swal when present, keep window.confirm
+           only for the case where the vendor script failed to load. */
         window.AdminUtils.confirm = function (options) {
           var _i = window.AdminI18n;
           var opts = Object.assign({
-            title: _i ? _i.translate("components.confirm_action", "Confirm Action") : "Confirm Action",
-            confirmText: _i ? _i.translate("components.confirm_text", "Confirm") : "Confirm",
+            title: _i ? _i.translate("components.confirm_action", "Confirm Action") : T("تأكيد الإجراء", "Confirm Action"),
+            message: "",
+            confirmText: _i ? _i.translate("components.confirm_text", "Confirm") : T("تأكيد", "Confirm"),
+            cancelText: T("إلغاء", "Cancel"),
+            danger: false,
           }, options || {});
-          return Promise.resolve(window.confirm(opts.title));
+
+          if (typeof window.Swal === "undefined") {
+            return Promise.resolve(window.confirm(opts.message ? opts.title + "\n\n" + opts.message : opts.title));
+          }
+          return window.Swal.fire({
+            title: opts.title,
+            text: opts.message || undefined,
+            icon: opts.danger ? "warning" : "question",
+            showCancelButton: true,
+            confirmButtonText: opts.confirmText,
+            cancelButtonText: opts.cancelText,
+            reverseButtons: true,
+            focusCancel: opts.danger,
+            customClass: { confirmButton: opts.danger ? "btn btn-danger" : "btn btn-primary", cancelButton: "btn btn-outline-secondary" },
+            buttonsStyling: false,
+          }).then(function (result) { return Boolean(result.isConfirmed); });
         };
+
+        /* ── Notifications (unread messages) ───────────────────── */
+        function escapeHtml(s) {
+          return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+          });
+        }
+
+        function setupNotifications() {
+          var toggle = document.getElementById("notificationsDropdown");
+          if (!toggle) return;
+          var badge = document.getElementById("notifUnreadBadge");
+          var countEl = document.getElementById("notifUnreadCount");
+          var list = document.getElementById("notifList");
+
+          function refreshCount() {
+            fetch("/comm/messages/unread/count", { headers: { Accept: "application/json" } })
+              .then(function (r) { return r.ok ? r.json() : null; })
+              .then(function (data) {
+                if (!data) return;
+                var n = Number(data.unread_count) || 0;
+                countEl.textContent = n > 99 ? "99+" : String(n);
+                badge.hidden = n === 0;
+              })
+              .catch(function () { /* header badge is non-critical; stay silent */ });
+          }
+
+          function loadRecent() {
+            list.innerHTML =
+              '<p class="dropdown-item-text text-secondary mb-0">' +
+              T("جارٍ التحميل…", "Loading…") + "</p>";
+            fetch("/comm/messages?page=1&page_size=5", { headers: { Accept: "application/json" } })
+              .then(function (r) { return r.ok ? r.json() : null; })
+              .then(function (data) {
+                var items = (data && data.items) || [];
+                if (!items.length) {
+                  list.innerHTML =
+                    '<p class="dropdown-item-text text-secondary mb-0">' +
+                    T("لا توجد رسائل", "No messages") + "</p>";
+                  return;
+                }
+                list.innerHTML = items.map(function (m) {
+                  var unread = !m.is_read;
+                  var subject = escapeHtml(m.subject || T("(بدون عنوان)", "(no subject)"));
+                  var when = "";
+                  if (m.created_at) {
+                    var d = new Date(m.created_at);
+                    if (!isNaN(d)) when = d.toLocaleDateString(IS_EN ? "en-JO" : "ar-JO");
+                  }
+                  return (
+                    '<a class="dropdown-item d-flex align-items-start gap-2" href="/messages">' +
+                    '<i class="bi ' + (unread ? "bi-envelope-fill text-primary" : "bi-envelope-open text-secondary") +
+                    ' mt-1" aria-hidden="true"></i>' +
+                    '<span class="flex-grow-1">' +
+                    '<span class="d-block' + (unread ? " fw-semibold" : "") + '">' + subject + "</span>" +
+                    '<small class="text-secondary">' + escapeHtml(when) + "</small>" +
+                    "</span></a>"
+                  );
+                }).join("");
+              })
+              .catch(function () {
+                list.innerHTML =
+                  '<p class="dropdown-item-text text-danger mb-0">' +
+                  T("تعذّر تحميل الرسائل", "Could not load messages") + "</p>";
+              });
+          }
+
+          refreshCount();
+          // Refresh while the tab is visible; pause in the background so a
+          // parked tab does not poll the API every minute forever.
+          setInterval(function () {
+            if (document.visibilityState === "visible") refreshCount();
+          }, 60000);
+
+          // Fetch the list only when the panel is actually opened.
+          toggle.addEventListener("show.bs.dropdown", loadRecent);
+          toggle.addEventListener("hidden.bs.dropdown", refreshCount);
+        }
 
         /* ── Nav group collapsible ──────────────────────────────── */
         function setupNavGroups() {
@@ -404,6 +549,7 @@
 
         document.addEventListener("DOMContentLoaded", function () {
           setupNavGroups();
+          setupNotifications();
         });
 
         /* ── Anti-FOUC: reveal page ──────────────────────────── */

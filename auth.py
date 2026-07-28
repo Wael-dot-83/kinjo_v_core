@@ -233,7 +233,18 @@ def requires_password_change(user: models.User) -> bool:
 
     max_age = settings.PASSWORD_MAX_AGE_DAYS
     if max_age > 0 and hasattr(user, "password_changed_at") and user.password_changed_at:
-        age = datetime.now(timezone.utc) - user.password_changed_at
+        changed_at = user.password_changed_at
+        # `password_changed_at` is declared DateTime(timezone=True), but SQLite
+        # has no native tz-aware type and hands the value back naive. Subtracting
+        # it from an aware "now" raised
+        #   TypeError: can't subtract offset-naive and offset-aware datetimes
+        # which surfaced as a 500 on *every* authenticated page for any account
+        # that had ever changed its password — the field is NULL for seeded
+        # users, which is the only reason this stayed hidden. Every writer
+        # stores an aware UTC instant, so a naive value read back is UTC.
+        if changed_at.tzinfo is None:
+            changed_at = changed_at.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - changed_at
         if age > timedelta(days=max_age):
             return True
 

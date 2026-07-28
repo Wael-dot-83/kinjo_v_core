@@ -217,6 +217,7 @@ from routers.supervisor import router as supervisor_scoped_router
 from routers.manager import router as manager_scoped_router
 from routers.admin_impersonation import router as admin_impersonation_router
 from routers.messaging import router as messaging_router
+from me_endpoints import router as me_router
 from government_api import router as government_api_router
 from api.public import router as public_router
 from api.missing_endpoints import router as missing_endpoints_router
@@ -1254,6 +1255,10 @@ app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
 app.include_router(government_api_router, prefix="/api", tags=["Government API"])
 app.include_router(public_router, prefix="/api", tags=["Public"])
 app.include_router(missing_endpoints_router, prefix="/api", tags=["Missing Endpoints"])
+# Account self-service for any signed-in role. The /api/admin/profile pair is
+# behind require_admin, so managers/supervisors/parents had no audited path to
+# edit their own account — see me_endpoints.py.
+app.include_router(me_router, prefix="/api/me", tags=["Account"])
 
 app.include_router(charts_router, tags=["Charts"])
 app.include_router(analytics_explorer_router, tags=["Analytics Explorer"])

@@ -67,6 +67,47 @@ actions=supervisor_actions
     </li>
 </ul>
 
+<!-- Search + filters -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-lg-5">
+        <label class="form-label" for="supSearch">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</label>
+        <div class="input-group">
+          <span class="input-group-text" aria-hidden="true"><i class="bi bi-search"></i></span>
+          <input type="search" class="form-control" id="supSearch"
+                 placeholder="{% if ui_lang == 'en' %}Name, username, email or phone{% else %}الاسم أو اسم المستخدم أو البريد أو الهاتف{% endif %}"
+                 autocomplete="off">
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <label class="form-label" for="supStatusFilter">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+        <select class="form-select" id="supStatusFilter">
+          <option value="all" selected>{% if ui_lang == 'en' %}All statuses{% else %}كل الحالات{% endif %}</option>
+          <option value="active">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+          <option value="inactive">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</option>
+        </select>
+      </div>
+      <div class="col-6 col-lg-3">
+        <label class="form-label" for="supAssignmentFilter">{% if ui_lang == 'en' %}Assignment{% else %}التعيين{% endif %}</label>
+        <select class="form-select" id="supAssignmentFilter">
+          <option value="all" selected>{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+          <option value="assigned">{% if ui_lang == 'en' %}Assigned to a class{% else %}مُعيَّن لشعبة{% endif %}</option>
+          <option value="unassigned">{% if ui_lang == 'en' %}Unassigned{% else %}بدون تعيين{% endif %}</option>
+        </select>
+      </div>
+      <div class="col-12 col-lg-1 d-grid">
+        <button type="button" class="btn btn-outline-secondary" id="supClearFilters"
+                title="{% if ui_lang == 'en' %}Clear filters{% else %}مسح المرشحات{% endif %}">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+          <span class="d-lg-none ms-2">{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</span>
+        </button>
+      </div>
+    </div>
+    <p class="text-secondary small mb-0 mt-3" id="supResultCount" role="status" aria-live="polite"></p>
+  </div>
+</div>
+
 <!-- Supervisor Cards -->
 <div id="supervisorsContainer">
     <div class="text-center py-5 text-secondary" id="loadingState">
@@ -151,6 +192,9 @@ const h = () => {
 };
 
 let _classes = [];
+// Full server-side list. Filtering is a view concern applied on top of this, so
+// the stat tiles keep reporting real totals while the grid shows the subset.
+let _supervisors = [];
 
 async function loadSupervisors() {
     try {
@@ -161,27 +205,72 @@ async function loadSupervisors() {
         const supData = supRes.ok ? await supRes.json() : { supervisors: [] };
         const clsData = clsRes.ok ? await clsRes.json() : { classes: [] };
         _classes = clsData.classes || [];
-        renderSupervisors(supData.supervisors || []);
+        _supervisors = supData.supervisors || [];
+        updateStats();
+        applyFilters();
     } catch {
         notify('تعذّر تحميل البيانات', 'Unable to load data', 'error');
     }
 }
 
-function renderSupervisors(supervisors) {
-    document.getElementById('statTotal').textContent = supervisors.length;
-    const assigned   = supervisors.filter(s => s.classes && s.classes.length).length;
-    const unassigned = supervisors.length - assigned;
-    document.getElementById('statAssigned').textContent   = assigned;
-    document.getElementById('statUnassigned').textContent = unassigned;
+function isAssigned(sup) {
+    return Boolean(sup.classes && sup.classes.length);
+}
 
+function updateStats() {
+    const assigned = _supervisors.filter(isAssigned).length;
+    document.getElementById('statTotal').textContent      = _supervisors.length;
+    document.getElementById('statAssigned').textContent   = assigned;
+    document.getElementById('statUnassigned').textContent = _supervisors.length - assigned;
+}
+
+function applyFilters() {
+    const term = (document.getElementById('supSearch')?.value || '').trim().toLowerCase();
+    const status = document.getElementById('supStatusFilter')?.value || 'all';
+    const assignment = document.getElementById('supAssignmentFilter')?.value || 'all';
+
+    const filtered = _supervisors.filter(sup => {
+        if (status === 'active' && sup.status !== 'ACTIVE') return false;
+        if (status === 'inactive' && sup.status === 'ACTIVE') return false;
+        if (assignment === 'assigned' && !isAssigned(sup)) return false;
+        if (assignment === 'unassigned' && isAssigned(sup)) return false;
+        if (!term) return true;
+        // Match the same fields the card displays, so a visible value is always
+        // searchable — including the class names shown as badges.
+        const haystack = [
+            sup.full_name, sup.username, sup.email, sup.phone_number,
+            ...(sup.classes || []).map(c => c.name_ar),
+            ...(sup.classes || []).map(c => c.name_en),
+        ].filter(Boolean).join(' ').toLowerCase();
+        return haystack.includes(term);
+    });
+
+    renderSupervisors(filtered);
+
+    const countEl = document.getElementById('supResultCount');
+    if (countEl) {
+        countEl.textContent = filtered.length === _supervisors.length
+            ? TS(`عرض ${_supervisors.length} مشرفًا`, `Showing all ${_supervisors.length} supervisors`)
+            : TS(`عرض ${filtered.length} من ${_supervisors.length} مشرفًا`,
+                 `Showing ${filtered.length} of ${_supervisors.length} supervisors`);
+    }
+}
+
+function renderSupervisors(supervisors) {
     const container = document.getElementById('supervisorsContainer');
     if (!supervisors.length) {
+        // Distinguish "nothing exists" from "nothing matches", so a user who
+        // filtered everything out is not told the kindergarten has no staff.
+        const emptyMessage = _supervisors.length
+            ? TS('لا نتائج مطابقة للبحث', 'No supervisors match your filters')
+            : TS('لا يوجد مشرفون', 'No supervisors yet');
         container.innerHTML = `<div class="text-center py-5 text-secondary">
-            <span>${TS('لا يوجد مشرفون', 'No supervisors yet')}</span>
+            <span>${escHtml(emptyMessage)}</span>
         </div>`;
+        document.getElementById('loadingState')?.remove();
         return;
     }
-    
+
     // This <ul> is the grid row itself, so #supervisorsContainer must NOT also be a .row:
     // nesting a .row directly inside a .row doubles Bootstrap's negative gutter margins and
     // pushes the cards past the inline edge. list-unstyled removes the default markers.
@@ -295,8 +384,20 @@ async function saveSupervisor() {
     await loadSupervisors();
 }
 
-async function removeSupervisor(id) {
-    if (!confirm('{% if ui_lang == "en" %}Remove this supervisor account?{% else %}هل تريد إزالة حساب المشرف؟{% endif %}')) return;
+async function removeSupervisor(id, cardEl) {
+    const sup = _supervisors.find(s => s.id === id);
+    // AdminUtils.confirm resolves through SweetAlert2 (RTL-aware, translatable)
+    // and falls back to window.confirm only if the vendor script is missing.
+    const confirmed = await window.AdminUtils.confirm({
+        title: TS('إزالة حساب المشرف؟', 'Remove this supervisor account?'),
+        message: sup
+            ? TS(`سيتم إلغاء تفعيل حساب ${sup.full_name}.`, `${sup.full_name}'s account will be deactivated.`)
+            : '',
+        confirmText: TS('إزالة', 'Remove'),
+        danger: true,
+    });
+    if (!confirmed) return;
+
     const res = await fetch(`/api/manager/supervisors/${id}`, { method: 'DELETE', headers: h() });
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -304,6 +405,14 @@ async function removeSupervisor(id) {
         else notify('تعذر إزالة المشرف', 'Unable to remove supervisor', 'error');
         return;
     }
+
+    // Fade the removed card out before reloading, so the grid does not appear
+    // to jump. The reload is what actually re-establishes truth.
+    if (cardEl) {
+        cardEl.classList.add('supervisor-card-removing');
+        await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    notify('تمت إزالة المشرف', 'Supervisor removed', 'success');
     await loadSupervisors();
 }
 
@@ -325,8 +434,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const editBtn = e.target.closest('.js-edit-supervisor');
         if (editBtn) editSupervisor(editBtn);
         const deleteBtn = e.target.closest('.js-delete-supervisor');
-        if (deleteBtn) removeSupervisor(parseInt(deleteBtn.dataset.supId, 10));
+        if (deleteBtn) {
+            removeSupervisor(parseInt(deleteBtn.dataset.supId, 10),
+                             deleteBtn.closest('.supervisor-card'));
+        }
     });
+
+    // Filtering is client-side over the already-loaded list, so it costs no
+    // extra request; debounce only keeps re-rendering off every keystroke.
+    let searchTimer = null;
+    const search = document.getElementById('supSearch');
+    if (search) search.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(applyFilters, 150);
+    });
+    document.getElementById('supStatusFilter')?.addEventListener('change', applyFilters);
+    document.getElementById('supAssignmentFilter')?.addEventListener('change', applyFilters);
+    document.getElementById('supClearFilters')?.addEventListener('click', () => {
+        if (search) search.value = '';
+        document.getElementById('supStatusFilter').value = 'all';
+        document.getElementById('supAssignmentFilter').value = 'all';
+        applyFilters();
+    });
+
     loadSupervisors();
 });
 

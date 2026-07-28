@@ -6801,7 +6801,11 @@ def change_admin_password(
         raise unauthenticated_error("Current password is incorrect")
 
     current_user.hashed_password = get_password_hash(payload.new_password)
-    current_user.password_changed_at = datetime.now(_JORDAN_TZ)
+    # UTC on purpose — see the note in me_endpoints.change_my_password. This
+    # column is only ever read as a duration anchor by
+    # auth.requires_password_change, which treats a naive value (all SQLite
+    # reads) as UTC; storing Jordan wall-clock made it read back 3 hours off.
+    current_user.password_changed_at = datetime.now(timezone.utc)
     current_user.must_change_password = False
     db.commit()
 
