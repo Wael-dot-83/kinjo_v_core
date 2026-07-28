@@ -254,14 +254,32 @@ python scripts/seed_data.py
 python scripts/seed_local.py
 ```
 
-**Demo accounts** (created by `seed_comprehensive.py`):
+**Demo accounts.**
 
-| Role | Username | Password |
-|------|----------|----------|
-| Admin | `admin@kinjo.jo` | `Admin123!` |
-| Manager | `manager@kinjo.jo` | `Manager123!` |
-| Supervisor | `supervisor@kinjo.jo` | `Supervisor123!` |
-| Parent | `parent@kinjo.jo` | `Parent123!` |
+This table used to list `manager@kinjo.jo`, `supervisor@kinjo.jo` and
+`parent@kinjo.jo`. None of those three accounts exists in a seeded database — only
+`admin@kinjo.jo` does — so anyone following it hit "تعذّر تسجيل الدخول" (login
+failed) and reasonably blamed the password. The real accounts are below.
+
+You may sign in with **either the username or the email**; the login endpoint
+accepts both (and a phone number), and the email match is case-insensitive.
+
+| Role | Sign in with | Password |
+|------|--------------|----------|
+| Admin | `admin` / `admin@kinjo.jo` | `Admin@1234` |
+| Manager | `manager1` / `khalid@kinjo.jo` | `Manager@123!` |
+
+Managers are seeded as `manager1`–`manager5`, one per kindergarten 1–5, with
+personal-name emails: `khalid@`, `sara@`, `omar@`, `nour@`, `yazan@kinjo.jo`.
+Supervisors are `sup1`–`sup10` (`supN@kinjo.jo`); parents use their own email
+address as the username (`parent1@example.com` …).
+
+Only `manager1`'s password is listed because it is the only one deliberately set
+to a known value. The other seeded accounts' passwords are whatever
+`scripts/seed_comprehensive.py` generated; if you need one, set it explicitly
+rather than guessing — five wrong attempts trigger a lockout
+(`ACCOUNT_LOCKOUT_DURATION_MINUTES`), and the account then returns **423** rather
+than 401 until it expires.
 
 > Demo passwords meet the production password policy (≥ 8 chars, uppercase + lowercase + digit + special character).
 
