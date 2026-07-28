@@ -1069,3 +1069,54 @@ msgstr "تقرير"
 
 #~ msgid "You have not enrolled any child yet"
 #~ msgstr "لم تقم بتسجيل أي طفل بعد"
+
+
+# --- Manager module (routers/manager.py) ---
+
+msgid "Class not found."
+msgstr "الصف غير موجود."
+
+msgid "Report not found."
+msgstr "التقرير غير موجود."
+
+msgid "Supervisor not found."
+msgstr "المشرف غير موجود."
+
+msgid "Supervisor is already assigned to another class."
+msgstr "المشرف معيّن بالفعل على صف آخر."
+
+msgid "Assignment not found."
+msgstr "التعيين غير موجود."
+
+msgid "Active enrollment for child in source class not found."
+msgstr "لا يوجد تسجيل نشط لهذا الطفل في الصف المصدر."
+
+msgid "from_date must be on or before to_date"
+msgstr "يجب أن يكون تاريخ البداية مساويًا أو أسبق من تاريخ النهاية."
+
+msgid "Only submitted reports can be edited during manager review."
+msgstr "يمكن تعديل التقارير المُرسَلة فقط أثناء مراجعة المدير."
+
+msgid "Report must be SUBMITTED or APPROVED to send to parents."
+msgstr "يجب أن يكون التقرير مُرسَلاً أو معتمدًا لإرساله إلى ولي الأمر."
+
+msgid "Failed to send report to parent; no changes were applied."
+msgstr "تعذّر إرسال التقرير إلى ولي الأمر؛ لم يتم تطبيق أي تغييرات."
+
+msgid "Cannot delete a report that has been sent to parents."
+msgstr "لا يمكن حذف تقرير تم إرساله إلى ولي الأمر."
+
+msgid "Username or email already exists."
+msgstr "اسم المستخدم أو البريد الإلكتروني مستخدم بالفعل."
+
+msgid "Email already exists."
+msgstr "البريد الإلكتروني مستخدم بالفعل."
+
+msgid "Invalid supervisor status."
+msgstr "حالة المشرف غير صالحة."
+
+msgid "New daily report — {name} — {date}"
+msgstr "تقرير يومي جديد — {name} — {date}"
+
+msgid "A new daily report for your child {name} was sent on {date}."
+msgstr "تم إرسال تقرير يومي جديد لطفلك {name} بتاريخ {date}."

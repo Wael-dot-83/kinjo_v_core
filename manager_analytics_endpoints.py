@@ -19,12 +19,18 @@ from utils.time_utils import now_amman as _now, today_amman as _today
 
 import models
 from database import get_db
-# ManagerScope comes straight from its home module. It used to be imported via
-# manager_scope.py, a compatibility shim whose only remaining job — installing a
-# `validate_kindergarten_access` alias — has no callers left anywhere in the tree.
-# The shim itself is kept for now because tests/test_manager_scope.py still asserts
-# on it; retiring the two together is a follow-up, not a drive-by.
-from dependencies import ManagerScope, get_current_user
+# Same guard as every other route in the module. These endpoints previously took
+# Depends(get_current_user) and then called ManagerScope.validate_manager() by
+# hand, which answers 400 for a manager with no kindergarten while /api/manager/*
+# answers 403 for that identical account state — one module, two HTTP contracts.
+# ManagerScope.validate_manager keeps its 400 (tests/test_manager_scope.py pins
+# it); it is simply no longer used as a route guard.
+#
+# This also drops the last import of manager_scope.py, a shim whose only remaining
+# job — a `validate_kindergarten_access` alias — has no callers anywhere. The shim
+# survives solely because tests/test_manager_scope.py still asserts on it; retiring
+# the two together is a follow-up, not a drive-by.
+from dependencies import require_manager
 from manager_analytics import ManagerAnalyticsService
 
 router = APIRouter(tags=["manager_analytics"])
@@ -75,7 +81,7 @@ class _SafeCsvWriter:
 @router.get("/manager/analytics/kpis")
 def get_manager_kpis(
     period_days: int = Query(30, ge=1, le=365, description="Number of days to look back"),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_manager),
     db: Session = Depends(get_db)
 ):
     """
@@ -89,8 +95,7 @@ def get_manager_kpis(
     - Class capacity utilization
     - Supervisor workload
     """
-    ManagerScope.validate_manager(current_user)
-    kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
+    kg_id = current_user.kindergarten_id
 
     today = _today()
     start_date = today - timedelta(days=period_days)
@@ -153,15 +158,14 @@ def get_manager_kpis(
 def get_enrollment_trend(
     period_days: int = Query(30, ge=1, le=365),
     grouping: str = Query("daily", pattern="^(daily|weekly|monthly)$"),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_manager),
     db: Session = Depends(get_db)
 ):
     """
     Get enrollment trend over time.
     Shows new enrollments and cumulative active enrollments per day/week/month.
     """
-    ManagerScope.validate_manager(current_user)
-    kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
+    kg_id = current_user.kindergarten_id
 
     today = _today()
     start_date = today - timedelta(days=period_days)
@@ -178,7 +182,7 @@ def get_enrollment_trend(
             "grouping": grouping
         },
         "trend": trend,
-        "generated_at": _today().isoformat()
+        "generated_at": _now().isoformat()
     }
 
 
@@ -186,7 +190,7 @@ def get_enrollment_trend(
 def get_attendance_forecast(
     lookback_days: int = Query(30, ge=7, le=90),
     forecast_days: int = Query(7, ge=1, le=30),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_manager),
     db: Session = Depends(get_db)
 ):
     """
@@ -198,8 +202,7 @@ def get_attendance_forecast(
     - Trend direction (increasing/decreasing/stable)
     - Confidence intervals for forecasted values
     """
-    ManagerScope.validate_manager(current_user)
-    kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
+    kg_id = current_user.kindergarten_id
 
     today = _today()
     start_date = today - timedelta(days=lookback_days)
@@ -218,7 +221,7 @@ def get_attendance_forecast(
             "forecast_end": forecast_end.isoformat()
         },
         **result,
-        "generated_at": _today().isoformat()
+        "generated_at": _now().isoformat()
     }
 
 
@@ -226,7 +229,7 @@ def get_attendance_forecast(
 def detect_attendance_anomalies(
     lookback_days: int = Query(30, ge=7, le=90),
     std_threshold: float = Query(2.0, ge=1.0, le=5.0),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_manager),
     db: Session = Depends(get_db)
 ):
     """
@@ -239,8 +242,7 @@ def detect_attendance_anomalies(
     - warning: z-score between 2.0 and 3.0 (relative to threshold)
     - critical: z-score > 3.0
     """
-    ManagerScope.validate_manager(current_user)
-    kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
+    kg_id = current_user.kindergarten_id
 
     today = _today()
     start_date = today - timedelta(days=lookback_days)
@@ -257,14 +259,14 @@ def detect_attendance_anomalies(
             "lookback_days": lookback_days
         },
         **result,
-        "generated_at": _today().isoformat()
+        "generated_at": _now().isoformat()
     }
 
 
 @router.get("/manager/analytics/drilldown/by-class")
 def drilldown_by_class(
     period_days: int = Query(30, ge=1, le=365),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_manager),
     db: Session = Depends(get_db)
 ):
     """
@@ -276,8 +278,7 @@ def drilldown_by_class(
     - Class-specific attendance rate
     - Incident count for the period
     """
-    ManagerScope.validate_manager(current_user)
-    kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
+    kg_id = current_user.kindergarten_id
 
     today = _today()
     start_date = today - timedelta(days=period_days)
@@ -295,14 +296,14 @@ def drilldown_by_class(
         },
         "classes": classes,
         "total_classes": len(classes),
-        "generated_at": _today().isoformat()
+        "generated_at": _now().isoformat()
     }
 
 
 @router.get("/manager/analytics/drilldown/by-supervisor")
 def drilldown_by_supervisor(
     period_days: int = Query(30, ge=1, le=365),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_manager),
     db: Session = Depends(get_db)
 ):
     """
@@ -314,8 +315,7 @@ def drilldown_by_supervisor(
     - Daily reports submitted in period
     - Incidents reported in period
     """
-    ManagerScope.validate_manager(current_user)
-    kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
+    kg_id = current_user.kindergarten_id
 
     today = _today()
     start_date = today - timedelta(days=period_days)
@@ -333,7 +333,7 @@ def drilldown_by_supervisor(
         },
         "supervisors": supervisors,
         "total_supervisors": len(supervisors),
-        "generated_at": _today().isoformat()
+        "generated_at": _now().isoformat()
     }
 
 
@@ -341,7 +341,7 @@ def drilldown_by_supervisor(
 def export_analytics_csv(
     report_type: str = Query("kpis", pattern="^(kpis|trends|drilldown)$"),
     period_days: int = Query(30, ge=1, le=365),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_manager),
     db: Session = Depends(get_db)
 ):
     """
@@ -350,8 +350,7 @@ def export_analytics_csv(
     Scoped to manager's kindergarten only.
     Supports: KPIs, trends, drilldown reports.
     """
-    ManagerScope.validate_manager(current_user)
-    kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
+    kg_id = current_user.kindergarten_id
 
     # Get kindergarten name for filename
     kg = db.query(models.Kindergarten).filter(

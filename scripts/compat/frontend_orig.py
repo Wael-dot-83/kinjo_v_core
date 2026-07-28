@@ -130,6 +130,23 @@ templates.env.filters['status_ar'] = status_label_ar
 
 router = APIRouter(include_in_schema=False)
 
+
+def _role_is(user, *roles: str) -> bool:
+    """True when *user* holds one of *roles*, named as plain strings.
+
+    The manager page routes asked this question three different ways: an Enum
+    comparison (`current_user.role != UserRole.MANAGER`), a string comparison
+    against `.value`, and a `hasattr(current_user.role, 'value')` guard on a
+    column that is always an Enum. Same question, three spellings, and the
+    hasattr branch could never be false.
+
+    This does not change who can reach any page — each caller keeps the exact
+    role set it had.
+    """
+    role = getattr(user, "role", None)
+    return getattr(role, "value", role) in roles
+
+
 # -----------------------------------------------------------------------------
 # Home & Auth
 # -----------------------------------------------------------------------------
@@ -1613,7 +1630,7 @@ async def admin_classification(request: Request, current_user: User = Depends(ge
 @router.get("/manager/supervisors", response_class=HTMLResponse)
 async def manager_supervisors_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Manager supervisors list page (assign classes, view assignments)."""
-    if current_user.role != UserRole.MANAGER:
+    if not _role_is(current_user, "MANAGER"):
         return RedirectResponse("/dashboard")
     return templates.TemplateResponse(
         request=request,
@@ -1625,7 +1642,7 @@ async def manager_supervisors_page(request: Request, current_user: User = Depend
 @router.get("/manager/benchmarking", response_class=HTMLResponse)
 async def manager_benchmarking(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Manager anonymized benchmarking page"""
-    if current_user.role != UserRole.MANAGER:
+    if not _role_is(current_user, "MANAGER"):
         return RedirectResponse("/dashboard")
     return templates.TemplateResponse(
         request=request,
@@ -1637,7 +1654,7 @@ async def manager_benchmarking(request: Request, current_user: User = Depends(ge
 @router.get("/manager/kpi", response_class=HTMLResponse)
 async def manager_kpi_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Manager KPI dashboard page"""
-    if current_user.role != UserRole.MANAGER:
+    if not _role_is(current_user, "MANAGER"):
         return RedirectResponse("/dashboard")
     return templates.TemplateResponse(
         request=request,
@@ -1848,8 +1865,10 @@ async def manager_absence_requests(
     current_user: User = Depends(get_current_user_or_redirect),
 ):
     """Manager page: review absence requests."""
-    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
-    if user_role not in ('MANAGER', 'ADMIN'):
+    # Broader than its three sibling /manager/* pages on purpose: no
+    # admin-specific absence-requests page exists, so this is the only route to
+    # the review UI for an administrator.
+    if not _role_is(current_user, "MANAGER", "ADMIN"):
         return RedirectResponse(url="/dashboard")
 
     return templates.TemplateResponse(

@@ -40,12 +40,38 @@ class ManagerAssignmentError(HTTPException):
 
     Subclasses HTTPException so FastAPI serialises it directly; the
     ``code`` is embedded in the detail payload for the frontend.
+
+    Two messages used to be concatenated into one string with a " / " separator,
+    so the client had no way to show one language and the user was shown both at
+    once. They are separate fields now, matching the ``message_ar`` /
+    ``message_en`` shape api/manager.py already uses for dashboard alerts.
+    ``message`` is retained as a compatibility alias for the English text — the
+    existing consumer in api/kindergartens.py reads ``e.message`` directly.
+
+    ``code`` remains the field a client should actually branch on; it is stable
+    across both languages and predates this change.
     """
 
-    def __init__(self, status_code: int, message: str, code: str = "manager_assignment_error"):
-        self.message = message
+    def __init__(
+        self,
+        status_code: int,
+        message_ar: str,
+        message_en: str,
+        code: str = "manager_assignment_error",
+    ):
+        self.message_ar = message_ar
+        self.message_en = message_en
+        self.message = message_en
         self.code = code
-        super().__init__(status_code=status_code, detail={"code": code, "message": message})
+        super().__init__(
+            status_code=status_code,
+            detail={
+                "code": code,
+                "message": message_en,
+                "message_ar": message_ar,
+                "message_en": message_en,
+            },
+        )
 
 
 def _audit(db: Session, actor_id: Optional[int], action: str, entity_type: str,
@@ -87,9 +113,11 @@ def guard_supervisor_coverage(db: Session, user: models.User) -> None:
     except validators.ValidationError as exc:
         raise ManagerAssignmentError(
             status_code=422,
-            message=(
+            message_ar=(
                 "لا يمكن ترقية هذا المشرف إلى مدير لأن حضانته ستبقى بلا مشرف نشط. "
-                "يرجى تعيين مشرف بديل أولاً. / "
+                "يرجى تعيين مشرف بديل أولاً."
+            ),
+            message_en=(
                 "Cannot promote this supervisor to manager because their kindergarten "
                 "would be left without an active supervisor. Assign a replacement first."
             ),
@@ -188,19 +216,22 @@ def assign_user_as_manager(
     if target_kg is None:
         raise ManagerAssignmentError(
             status_code=status.HTTP_404_NOT_FOUND,
-            message="Target kindergarten not found.",
+            message_ar="الحضانة المستهدفة غير موجودة.",
+            message_en="Target kindergarten not found.",
             code="kindergarten_not_found",
         )
     if target_kg.status == models.KindergartenStatus.DELETED:
         raise ManagerAssignmentError(
             status_code=status.HTTP_404_NOT_FOUND,
-            message="Target kindergarten not found.",
+            message_ar="الحضانة المستهدفة غير موجودة.",
+            message_en="Target kindergarten not found.",
             code="kindergarten_not_found",
         )
     if target_kg.status == models.KindergartenStatus.FROZEN:
         raise ManagerAssignmentError(
             status_code=status.HTTP_409_CONFLICT,
-            message="Managers cannot be assigned while the kindergarten is frozen.",
+            message_ar="لا يمكن تعيين مدير أثناء تجميد الحضانة.",
+            message_en="Managers cannot be assigned while the kindergarten is frozen.",
             code="kindergarten_frozen",
         )
 
@@ -213,13 +244,15 @@ def assign_user_as_manager(
     if locked_user is None or locked_user.deleted_at is not None:
         raise ManagerAssignmentError(
             status_code=status.HTTP_404_NOT_FOUND,
-            message="User not found.",
+            message_ar="المستخدم غير موجود.",
+            message_en="User not found.",
             code="user_not_found",
         )
     if locked_user.role == models.UserRole.ADMIN:
         raise ManagerAssignmentError(
             status_code=status.HTTP_409_CONFLICT,
-            message="Administrator accounts cannot be assigned as kindergarten managers.",
+            message_ar="لا يمكن تعيين حسابات المسؤولين كمديري حضانات.",
+            message_en="Administrator accounts cannot be assigned as kindergarten managers.",
             code="privileged_role_assignment_forbidden",
         )
     user = locked_user
@@ -237,7 +270,11 @@ def assign_user_as_manager(
         if previous_kg and previous_kg.status == models.KindergartenStatus.ACTIVE:
             raise ManagerAssignmentError(
                 status_code=status.HTTP_409_CONFLICT,
-                message=(
+                message_ar=(
+                    "لا يمكن ترك حضانة نشطة بلا مدير. "
+                    "جمّد الحضانة أو عيّن مديرًا بديلاً قبل نقل هذا المدير."
+                ),
+                message_en=(
                     "An active kindergarten cannot be left without a manager. "
                     "Freeze it or assign a replacement before moving this manager."
                 ),
@@ -265,9 +302,11 @@ def assign_user_as_manager(
         if not allow_replace:
             raise ManagerAssignmentError(
                 status_code=status.HTTP_409_CONFLICT,
-                message=(
+                message_ar=(
                     f"الحضانة رقم {target_kindergarten_id} لديها مدير نشط بالفعل "
-                    f"(معرّف {existing_manager.id}). / "
+                    f"(معرّف {existing_manager.id})."
+                ),
+                message_en=(
                     f"Kindergarten {target_kindergarten_id} already has an active manager "
                     f"(ID {existing_manager.id}). Use replace to take over."
                 ),

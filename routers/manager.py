@@ -43,9 +43,21 @@ from models import (
 from rbac import assert_manager_owns_kindergarten
 from admin_security import log_audit_event
 from audit_actions import AuditAction
+from i18n import gettext as _api
 import validators
 
 router = APIRouter(prefix="/api/manager", tags=["manager"])
+
+
+def _ulang(user) -> str:
+    """The caller's preferred UI language, defaulting to Arabic.
+
+    Same helper as api/children.py / api/enrollment.py / api/parent.py — the
+    manager module was the odd one out, answering every error in English inside
+    an Arabic-primary product while the templates render `err.detail` verbatim.
+    """
+    return getattr(user, "preferred_language", None) or "ar"
+
 
 
 def _audit(
@@ -98,7 +110,7 @@ def _get_class_or_403(
         query = query.filter(Class.is_active.is_(True))
     cls = query.first()
     if not cls:
-        raise HTTPException(status_code=404, detail="Class not found.")
+        raise HTTPException(status_code=404, detail=_api("Class not found.", _ulang(manager)))
     assert_manager_owns_kindergarten(manager, cls.kindergarten_id)
     return cls
 
@@ -114,7 +126,7 @@ def _get_daily_report_for_manager_or_404(report_id: int, manager: User, db: Sess
     """
     report = db.query(DailyReport).filter(DailyReport.id == report_id).with_for_update().first()
     if not report or report.kindergarten_id != manager.kindergarten_id:
-        raise HTTPException(status_code=404, detail="Report not found.")
+        raise HTTPException(status_code=404, detail=_api("Report not found.", _ulang(manager)))
     return report
 
 
@@ -179,8 +191,14 @@ def _available_supervisor_for_assignment(
     supervisor_id: int,
     kindergarten_id: int,
     *,
+    manager: User,
     exclude_class_id: Optional[int] = None,
 ) -> User:
+    """Resolve an assignable supervisor, or raise in the *manager's* language.
+
+    `manager` is here only so the two failures below can be localized; every
+    other helper in this module already had the caller in scope.
+    """
     supervisor = (
         db.query(User)
         .filter(
@@ -194,7 +212,7 @@ def _available_supervisor_for_assignment(
         .first()
     )
     if not supervisor:
-        raise HTTPException(status_code=404, detail="Supervisor not found.")
+        raise HTTPException(status_code=404, detail=_api("Supervisor not found.", _ulang(manager)))
 
     today = _today()
     overlap = db.query(SupervisorAssignment).filter(
@@ -205,7 +223,7 @@ def _available_supervisor_for_assignment(
     if exclude_class_id is not None:
         overlap = overlap.filter(SupervisorAssignment.class_id != exclude_class_id)
     if overlap.first():
-        raise HTTPException(status_code=409, detail="Supervisor is already assigned to another class.")
+        raise HTTPException(status_code=409, detail=_api("Supervisor is already assigned to another class.", _ulang(manager)))
     return supervisor
 
 
@@ -221,6 +239,7 @@ def assign_supervisor_to_class(
         db,
         body.supervisor_id,
         current_user.kindergarten_id,
+        manager=current_user,
         exclude_class_id=body.class_id,
     )
 
@@ -284,7 +303,7 @@ def unassign_supervisor_from_class(
         .first()
     )
     if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found.")
+        raise HTTPException(status_code=404, detail=_api("Assignment not found.", _ulang(current_user)))
     now = _now()
     assignment.deleted_at = now
     assignment.end_date = now.date()
@@ -322,6 +341,7 @@ def swap_supervisor(
         db,
         body.supervisor_id,
         current_user.kindergarten_id,
+        manager=current_user,
         exclude_class_id=class_id,
     )
 
@@ -372,7 +392,7 @@ def move_child_between_classes(
         .first()
     )
     if not enrollment:
-        raise HTTPException(status_code=404, detail="Active enrollment for child in source class not found.")
+        raise HTTPException(status_code=404, detail=_api("Active enrollment for child in source class not found.", _ulang(current_user)))
 
     # Respect the target class capacity.
     occupied = (
@@ -386,7 +406,7 @@ def move_child_between_classes(
     if to_cls.capacity_total is not None and occupied >= to_cls.capacity_total:
         raise HTTPException(
             status_code=409,
-            detail=f"Target class is full ({occupied}/{to_cls.capacity_total}).",
+            detail=_api(f"Target class is full ({occupied}/{to_cls.capacity_total}).", _ulang(current_user)),
         )
 
     enrollment.class_id = body.to_class_id
@@ -419,7 +439,7 @@ def list_daily_reports_for_review(
     current_user: User = Depends(_require_manager),
 ):
     if from_date and to_date and from_date > to_date:
-        raise HTTPException(status_code=422, detail="from_date must be on or before to_date")
+        raise HTTPException(status_code=422, detail=_api("from_date must be on or before to_date", _ulang(current_user)))
     # Get child IDs in manager's kindergarten
     kg_id = current_user.kindergarten_id
     classes = db.query(Class).filter(Class.kindergarten_id == kg_id, Class.deleted_at.is_(None)).all()
@@ -429,7 +449,7 @@ def list_daily_reports_for_review(
         # A class outside the manager's kindergarten is reported as not found (#14),
         # so we don't reveal that it exists in another tenant.
         if class_id not in class_ids:
-            raise HTTPException(status_code=404, detail="Class not found.")
+            raise HTTPException(status_code=404, detail=_api("Class not found.", _ulang(current_user)))
         class_ids = {class_id}
 
     child_class_map = {
@@ -460,7 +480,7 @@ def list_daily_reports_for_review(
             allowed = ", ".join(s.name for s in DailyReportStatus)
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid report_status '{report_status}'. Allowed: {allowed}.",
+                detail=_api(f"Invalid report_status '{report_status}'. Allowed: {allowed}.", _ulang(current_user)),
             )
         q = q.filter(DailyReport.status == status_enum)
     else:
@@ -484,7 +504,7 @@ def list_daily_reports_for_review(
             .first()
         )
         if not supervisor:
-            raise HTTPException(status_code=404, detail="Supervisor not found.")
+            raise HTTPException(status_code=404, detail=_api("Supervisor not found.", _ulang(current_user)))
         q = q.filter(DailyReport.submitted_by == supervisor_id)
 
     reports = q.order_by(DailyReport.date.desc()).limit(200).all()
@@ -567,7 +587,7 @@ def edit_daily_report(
     if report.status != DailyReportStatus.SUBMITTED:
         raise HTTPException(
             status_code=409,
-            detail="Only submitted reports can be edited during manager review.",
+            detail=_api("Only submitted reports can be edited during manager review.", _ulang(current_user)),
         )
 
     for field in ("notes", "activities", "arrival_time", "leave_time", "breakfast", "snack", "milk", "lunch"):
@@ -596,7 +616,7 @@ def send_report_to_parents(
     report = _get_daily_report_for_manager_or_404(report_id, current_user, db)
     child = db.query(Child).filter(Child.id == report.child_id).first()
     if not child:
-        raise HTTPException(status_code=404, detail="Report not found.")
+        raise HTTPException(status_code=404, detail=_api("Report not found.", _ulang(current_user)))
 
     if report.status not in (DailyReportStatus.SUBMITTED, DailyReportStatus.APPROVED):
         # The message used to say "must be in SUBMITTED state" while the guard also
@@ -604,7 +624,7 @@ def send_report_to_parents(
         # contradicted the code that let it through.
         raise HTTPException(
             status_code=400,
-            detail="Report must be SUBMITTED or APPROVED to send to parents.",
+            detail=_api("Report must be SUBMITTED or APPROVED to send to parents.", _ulang(current_user)),
         )
 
     # Atomic: status change, approval fields, parent notification, and both audit
@@ -626,13 +646,24 @@ def send_report_to_parents(
 
         parent_user_id = child.parent.user_id if child.parent else None
         if parent_user_id:
+            # Written in the PARENT's language, not the manager's and not
+            # hardcoded Arabic. This message is delivered to the parent's inbox,
+            # so the recipient's preference is the only one that matters here.
+            parent_user = db.query(User).filter(User.id == parent_user_id).first()
+            plang = _ulang(parent_user)
             notification = Message(
                 thread_type=MessageThreadType.DIRECT,
                 sender_id=current_user.id,
                 recipient_id=parent_user_id,
                 kindergarten_id=current_user.kindergarten_id,
-                subject=f"تقرير يومي جديد — {child.first_name} — {report.date}",
-                message_body=f"تم إرسال تقرير يومي جديد لطفلك {child.first_name} بتاريخ {report.date}.",
+                subject=_api(
+                    "New daily report — {name} — {date}", plang,
+                    name=child.first_name, date=report.date,
+                ),
+                message_body=_api(
+                    "A new daily report for your child {name} was sent on {date}.",
+                    plang, name=child.first_name, date=report.date,
+                ),
             )
             db.add(notification)
             db.flush()  # assign notification.id before the audit row references it
@@ -652,7 +683,7 @@ def send_report_to_parents(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to send report to parent; no changes were applied.",
+            detail=_api("Failed to send report to parent; no changes were applied.", _ulang(current_user)),
         )
 
     return {"id": report.id, "status": report.status.value}
@@ -667,7 +698,7 @@ def delete_report(
     report = _get_daily_report_for_manager_or_404(report_id, current_user, db)
 
     if report.status == DailyReportStatus.SENT_TO_PARENT:
-        raise HTTPException(status_code=409, detail="Cannot delete a report that has been sent to parents.")
+        raise HTTPException(status_code=409, detail=_api("Cannot delete a report that has been sent to parents.", _ulang(current_user)))
 
     _audit(
         db,
@@ -713,7 +744,7 @@ def _manager_supervisor_or_404(db: Session, supervisor_id: int, manager: User) -
         .first()
     )
     if not supervisor:
-        raise HTTPException(status_code=404, detail="Supervisor not found.")
+        raise HTTPException(status_code=404, detail=_api("Supervisor not found.", _ulang(manager)))
     return supervisor
 
 
@@ -740,7 +771,7 @@ def create_supervisor(
         .first()
     )
     if duplicate:
-        raise HTTPException(status_code=409, detail="Username or email already exists.")
+        raise HTTPException(status_code=409, detail=_api("Username or email already exists.", _ulang(current_user)))
 
     supervisor = User(
         username=body.username.strip(),
@@ -768,7 +799,7 @@ def create_supervisor(
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Username or email already exists.")
+        raise HTTPException(status_code=409, detail=_api("Username or email already exists.", _ulang(current_user)))
     db.refresh(supervisor)
     return {"id": supervisor.id, "username": supervisor.username, "status": supervisor.status.value}
 
@@ -785,7 +816,7 @@ def update_supervisor(
         email = str(body.email)
         duplicate = db.query(User.id).filter(User.email == email, User.id != supervisor.id).first()
         if duplicate:
-            raise HTTPException(status_code=409, detail="Email already exists.")
+            raise HTTPException(status_code=409, detail=_api("Email already exists.", _ulang(current_user)))
         supervisor.email = email
     if body.full_name is not None:
         supervisor.full_name = body.full_name.strip()
@@ -795,7 +826,7 @@ def update_supervisor(
         try:
             new_status = models.UserStatus(body.status.upper())
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid supervisor status.")
+            raise HTTPException(status_code=400, detail=_api("Invalid supervisor status.", _ulang(current_user)))
         if new_status != models.UserStatus.ACTIVE and supervisor.status == models.UserStatus.ACTIVE:
             try:
                 validators.validate_kg_has_supervisor(db, current_user.kindergarten_id, exclude_user_id=supervisor.id)
@@ -901,7 +932,7 @@ def list_children(
 
     if class_id:
         if class_id not in class_ids:
-            raise HTTPException(status_code=404, detail="Class not found.")
+            raise HTTPException(status_code=404, detail=_api("Class not found.", _ulang(current_user)))
         filter_class_ids = {class_id}
     else:
         filter_class_ids = set(class_ids.keys())
