@@ -101,8 +101,9 @@
                The inline style this used to carry set color: #1F5E47, which an
                inline declaration made unoverridable — dark green text on the dark
                green header band. #}
+            {% from 'components/kinjo_logo.html' import kinjo_logo %}
             <a href="/dashboard" class="header-logo header-logo-wordmark">
-              <img src="/static/favicon.svg" width="32" height="32" alt="" class="header-logo-icon" aria-hidden="true" loading="eager" />
+              {{ kinjo_logo(size='navbar') }}
               <span data-i18n="nav.brand">KinJo Manager</span>
             </a>
           </div>

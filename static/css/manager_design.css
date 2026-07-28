@@ -196,3 +196,194 @@
   background-color: #e2e8f0;
   border-radius: 4px;
 }
+
+
+/* ==========================================================================
+   MANAGER MODULE - UI/UX ENHANCEMENTS
+   Classes here back the markup in templates/manager/. Every selector below is
+   used by a template or by the JS that renders into one; nothing is defined
+   speculatively, because unused rules here are indistinguishable from rules
+   whose markup was renamed out from under them.
+   ========================================================================== */
+
+/* Stat card */
+.mgr-stat-card {
+  display: flex;
+  align-items: center;
+  gap: var(--kinjo-spacing-4);
+  padding: var(--kinjo-spacing-4);
+  background: var(--kinjo-color-bg-surface);
+  border: 1px solid var(--kinjo-color-border);
+  border-radius: var(--mgr-border-radius);
+  box-shadow: var(--mgr-card-shadow);
+  transition: var(--mgr-transition);
+}
+
+.mgr-stat-card:hover {
+  box-shadow: var(--mgr-card-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.mgr-stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--mgr-border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+/* Only the three variants supervisors.html actually renders. The warning tile
+   takes dark green text rather than white: white on --kinjo-color-warning is
+   about 1.9:1 and fails at any size. */
+.mgr-stat-icon-primary { background: var(--kinjo-color-primary); color: #fff; }
+.mgr-stat-icon-success { background: var(--kinjo-color-success); color: #fff; }
+.mgr-stat-icon-warning { background: var(--kinjo-color-warning); color: #064e32; }
+
+.mgr-stat-body { flex: 1; min-width: 0; }
+.mgr-stat-label {
+  font-size: var(--kinjo-font-size-sm);
+  font-weight: var(--kinjo-font-weight-medium);
+  color: var(--kinjo-color-text-secondary);
+  margin-bottom: var(--kinjo-spacing-1);
+}
+.mgr-stat-value {
+  font-size: var(--kinjo-font-size-3xl);
+  font-weight: var(--kinjo-font-weight-bold);
+  color: var(--kinjo-color-text-primary);
+  line-height: 1.1;
+}
+
+/* Supervisor card enhancements */
+.supervisor-card {
+  transition: var(--mgr-transition);
+  border: 1px solid var(--kinjo-color-border);
+}
+
+.supervisor-card:hover {
+  box-shadow: var(--mgr-card-shadow-hover);
+  transform: translateY(-3px);
+  border-color: var(--kinjo-color-primary);
+}
+
+.supervisor-card .card-footer {
+  border-top: 1px solid var(--kinjo-color-border-subtle);
+  background: var(--kinjo-color-bg-surface);
+}
+
+/* .badge-soft-* is deliberately NOT redefined here. It already exists twice, in
+   admin_design_system.css (3341) and kinjo.css (2279), and kinjo.css is linked
+   after this file in manager_base.html — so a copy here would be overridden and
+   never apply. The supervisor cards use the shared definition. */
+
+/* Absence request tabs */
+.absence-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kinjo-spacing-2);
+  margin-bottom: var(--kinjo-spacing-4);
+}
+
+.absence-tab {
+  padding: var(--kinjo-spacing-2) var(--kinjo-spacing-4);
+  border-radius: var(--kinjo-radius-md);
+  font-weight: var(--kinjo-font-weight-medium);
+  font-size: var(--kinjo-font-size-sm);
+  cursor: pointer;
+  border: 1px solid var(--kinjo-color-border);
+  background: var(--kinjo-color-bg-surface);
+  color: var(--kinjo-color-text-secondary);
+  transition: all var(--kinjo-transition-fast);
+}
+
+.absence-tab:hover {
+  background: var(--kinjo-color-bg-hover);
+  border-color: var(--kinjo-color-primary);
+  color: var(--kinjo-color-text-primary);
+}
+
+.absence-tab.active {
+  background: var(--kinjo-color-primary);
+  color: #fff;
+  border-color: var(--kinjo-color-primary);
+}
+
+/* Enhanced table for absence requests */
+.absence-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--kinjo-color-bg-surface);
+  border-radius: var(--mgr-border-radius);
+  overflow: hidden;
+  border: 1px solid var(--kinjo-color-border);
+}
+
+.absence-table thead th {
+  background: #f8fafc;
+  color: var(--kinjo-color-text-secondary);
+  font-weight: var(--kinjo-font-weight-semibold);
+  font-size: var(--kinjo-font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: var(--kinjo-spacing-3) var(--kinjo-spacing-4);
+  border-bottom: 2px solid var(--kinjo-color-border);
+  white-space: nowrap;
+}
+
+.absence-table tbody td {
+  padding: var(--kinjo-spacing-3) var(--kinjo-spacing-4);
+  border-bottom: 1px solid var(--kinjo-color-border-subtle);
+  font-size: var(--kinjo-font-size-sm);
+  vertical-align: middle;
+}
+
+.absence-table tbody tr:hover {
+  background: var(--mgr-primary-light);
+}
+
+.absence-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Modal chrome for manager pages */
+.mgr-modal-content {
+  border-radius: var(--mgr-border-radius);
+  border: 1px solid var(--kinjo-color-border);
+  box-shadow: var(--kinjo-shadow-lg);
+}
+
+.mgr-modal-header {
+  background: #f8fafc;
+  border-bottom: 1px solid var(--kinjo-color-border);
+  padding: var(--kinjo-spacing-4) var(--kinjo-spacing-5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .mgr-stat-card {
+    padding: var(--kinjo-spacing-3);
+  }
+  .mgr-stat-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+  }
+  .mgr-stat-value {
+    font-size: var(--kinjo-font-size-2xl);
+  }
+  .absence-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: var(--kinjo-spacing-2);
+  }
+  .absence-table {
+    font-size: var(--kinjo-font-size-sm);
+  }
+  .absence-table thead th,
+  .absence-table tbody td {
+    padding: var(--kinjo-spacing-2) var(--kinjo-spacing-3);
+  }
+}

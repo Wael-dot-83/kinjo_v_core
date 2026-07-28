@@ -4698,6 +4698,17 @@ html[dir="rtl"] .submenu .nav-link {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
   box-shadow: var(--focus-ring);
+  border-radius: var(--radius-md);
+}
+
+/* Forced-colors mode discards author colours, so --color-primary above resolves
+   to nothing and the ring disappears. Highlight is a system colour the mode
+   keeps, which is why the ring has to be restated rather than inherited. */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
 }
 
 /* Remove outline only for mouse/touch (pointer-coarse or explicit :focus:not(:focus-visible)) */
@@ -6027,4 +6038,42 @@ html[dir="rtl"] .submenu .nav-link {
 .header-logo:focus-visible {
   outline: 2px solid #111827;
   outline-offset: -2px;
+}
+
+
+/* ==========================================================================
+   MANAGER MODULE POLISH
+   Only rules that had no home already. Anything restating something this file
+   already declares was dropped rather than appended, because a duplicate
+   selector later in the file silently wins and leaves the original looking
+   active when it is not. Dropped for that reason: .card / .card:hover (declared
+   at line 851), the skeleton shimmer (1734), @media print (2512) and
+   prefers-reduced-motion (1597).
+   ========================================================================== */
+
+/* Primary actions read as raised, so the eye lands on them first in a dialog
+   footer or a filter bar. The lift is translate-only -- scaling a button
+   resamples its label and softens the text. */
+.btn-primary {
+  box-shadow: 0 2px 4px rgba(30, 64, 175, 0.2);
+}
+
+.btn-primary:hover:not(:disabled),
+.btn-primary:focus-visible:not(:disabled) {
+  box-shadow: 0 4px 8px rgba(30, 64, 175, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* One focus treatment for every control that takes typed input. Bootstrap's
+   default glow fights the design system's own border colour, so the border moves
+   to the action colour at the same moment the ring appears. */
+.form-control:focus,
+.admin-select:focus,
+.form-check-input:focus {
+  border-color: var(--kinjo-action);
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.25);
 }

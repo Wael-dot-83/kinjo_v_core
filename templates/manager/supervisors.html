@@ -33,35 +33,35 @@ actions=supervisor_actions
    showed the browser's default list markers, since .row does not unstyle a list. #}
 <ul class="row g-3 mb-4 list-unstyled">
     <li class="col-md-4">
-        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-primary-subtle border-primary border-opacity-25">
-            <div class="p-2 bg-primary text-white rounded-circle me-3 d-flex justify-content-center align-items-center flex-shrink-0" style="width: 56px; height: 56px; border-radius: 50%;">
-                <i class="bi bi-people-fill h3 fw-bold m-0"></i>
+        <div class="mgr-stat-card">
+            <div class="mgr-stat-icon mgr-stat-icon-primary" aria-hidden="true">
+                <i class="bi bi-people-fill"></i>
             </div>
-            <div class="card-body p-0">
-                <h2 class="card-title fs-6 text-secondary m-0">{% if ui_lang == 'en' %}Total Supervisors{% else %}إجمالي المشرفين{% endif %}</h2>
-                <p class="fs-1 fw-bold text-primary m-0" id="statTotal">—</p>
-            </div>
-        </div>
-    </li>
-    <li class="col-md-4">
-        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-success-subtle border-success border-opacity-25">
-            <div class="p-2 text-bg-success text-white rounded-circle me-3 d-flex justify-content-center align-items-center flex-shrink-0" style="width: 56px; height: 56px; border-radius: 50%;">
-                <i class="bi bi-person-check-fill h3 fw-bold m-0"></i>
-            </div>
-            <div class="card-body p-0">
-                <h2 class="card-title fs-6 text-secondary m-0">{% if ui_lang == 'en' %}Assigned to Classes{% else %}مُعيَّنون لشعب{% endif %}</h2>
-                <p class="fs-1 fw-bold text-success-dark m-0" id="statAssigned">—</p>
+            <div class="mgr-stat-body">
+                <h2 class="mgr-stat-label">{% if ui_lang == 'en' %}Total Supervisors{% else %}إجمالي المشرفين{% endif %}</h2>
+                <div class="mgr-stat-value" id="statTotal">—</div>
             </div>
         </div>
     </li>
     <li class="col-md-4">
-        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-warning-subtle border-gold">
-            <div class="p-2 bg-gold text-white rounded-circle me-3 d-flex justify-content-center align-items-center flex-shrink-0" style="width: 56px; height: 56px; border-radius: 50%;">
-                <i class="bi bi-person-dash-fill h3 fw-bold m-0"></i>
+        <div class="mgr-stat-card">
+            <div class="mgr-stat-icon mgr-stat-icon-success" aria-hidden="true">
+                <i class="bi bi-person-check-fill"></i>
             </div>
-            <div class="card-body p-0">
-                <h2 class="card-title fs-6 text-secondary m-0">{% if ui_lang == 'en' %}Unassigned{% else %}بدون تعيين{% endif %}</h2>
-                <p class="fs-1 fw-bold text-gold m-0" id="statUnassigned">—</p>
+            <div class="mgr-stat-body">
+                <h2 class="mgr-stat-label">{% if ui_lang == 'en' %}Assigned to Classes{% else %}مُعيَّنون لشعب{% endif %}</h2>
+                <div class="mgr-stat-value" id="statAssigned">—</div>
+            </div>
+        </div>
+    </li>
+    <li class="col-md-4">
+        <div class="mgr-stat-card">
+            <div class="mgr-stat-icon mgr-stat-icon-warning" aria-hidden="true">
+                <i class="bi bi-person-dash-fill"></i>
+            </div>
+            <div class="mgr-stat-body">
+                <h2 class="mgr-stat-label">{% if ui_lang == 'en' %}Unassigned{% else %}بدون تعيين{% endif %}</h2>
+                <div class="mgr-stat-value" id="statUnassigned">—</div>
             </div>
         </div>
     </li>
@@ -187,16 +187,16 @@ function renderSupervisors(supervisors) {
     // pushes the cards past the inline edge. list-unstyled removes the default markers.
     container.innerHTML = `<ul class="row g-4 list-unstyled mb-0">` + supervisors.map(sup => {
         const classBadges = sup.classes && sup.classes.length
-            ? sup.classes.map(c => `<span class="badge me-2">${escHtml(c.name_ar)}${c.is_primary ? ' ★' : ''}</span>`).join('')
-            : `<span class="badge">${TS('بدون تعيين', 'Unassigned')}</span>`;
+            ? sup.classes.map(c => `<span class="badge badge-soft-primary me-2">${escHtml(c.name_ar)}${c.is_primary ? ' ★' : ''}</span>`).join('')
+            : `<span class="badge badge-soft-secondary">${TS('بدون تعيين', 'Unassigned')}</span>`;
 
         const statusTag = sup.status === 'ACTIVE'
-            ? `<span class="badge text-bg-success mt-1">${TS('نشط', 'Active')}</span>`
-            : `<span class="badge text-bg-light mt-1 text-muted">${TS('غير نشط', 'Inactive')}</span>`;
+            ? `<span class="badge badge-soft-success mt-1">${TS('نشط', 'Active')}</span>`
+            : `<span class="badge badge-soft-secondary mt-1">${TS('غير نشط', 'Inactive')}</span>`;
 
         return `
         <li class="col-12 col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
+            <div class="card h-100 shadow-sm supervisor-card">
                 <header class="card-header">
                     <h2 class="card-title">${escHtml(sup.full_name)}</h2>
                     <p class="card-subtitle text-muted mb-0">@${escHtml(sup.username)}</p>
@@ -207,7 +207,7 @@ function renderSupervisors(supervisors) {
                     <p class="mb-2"><i class="bi bi-telephone me-2 text-secondary"></i>${escHtml(sup.phone_number || '—')}</p>
                     <div class="mb-2">${classBadges}</div>
                 </div>
-                <div class="card-footer bg-transparent border-0">
+                <div class="card-footer">
                     <a href="#assignClassModal" class="btn btn-outline-primary js-assign-class" role="button" aria-controls="assignClassModal" data-bs-toggle="modal" data-bs-target="#assignClassModal" data-sup-id="${sup.id}">
                         <i class="bi bi-plus-circle me-2"></i>${TS('تعيين شعبة', 'Assign class')}
                     </a>
