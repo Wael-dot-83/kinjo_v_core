@@ -195,6 +195,39 @@ class HttpInterceptor {
       // Do not inject the JWT into an Authorization header; that would reintroduce
       // XSS-token-theft exposure.
 
+      // Defensively drop an Authorization header that is really the CSRF sentinel.
+      //
+      // AuthStorage.getToken() deliberately returns the kinjo_csrf_token cookie as a
+      // truthy sentinel, because the real JWT lives in the HttpOnly kinjo_session
+      // cookie and is unreadable from JS. That is fine for the `if (!getToken())`
+      // liveness checks it was designed for, but ~30 call sites across 18 templates
+      // still do:
+      //
+      //     headers['Authorization'] = `Bearer ${AuthService.getToken()}`
+      //
+      // which presents the CSRF token as a credential. The server rejects it with 401
+      // even though the session cookie accompanying the request is perfectly valid,
+      // and the 401 branch below then clears local state and redirects to
+      // /login?expired=true — silently logging the user out mid-action. Stripping the
+      // header lets the session cookie authenticate the request, which is what every
+      // one of those call sites actually intended.
+      //
+      // Only the exact sentinel value is removed, so a genuine bearer token (a JWT,
+      // which never equals the CSRF cookie) still passes through untouched.
+      const csrfSentinel = readCsrfToken();
+      if (csrfSentinel) {
+        for (const headerName of Object.keys(options.headers)) {
+          if (headerName.toLowerCase() !== "authorization") continue;
+          const headerValue = String(options.headers[headerName] ?? "").trim();
+          if (
+            headerValue === csrfSentinel ||
+            headerValue === `Bearer ${csrfSentinel}`
+          ) {
+            delete options.headers[headerName];
+          }
+        }
+      }
+
       if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
         const csrfToken = readCsrfToken();
         if (csrfToken) {
@@ -859,6 +892,21 @@ window.handleLogout = handleLogout;
 window.fetchWithAuth = fetchWithAuth;
 window.currentLanguage = currentLanguage;
 window.t = t;
+
+// Install the fetch interceptor NOW, at script-evaluation time, rather than
+// waiting for initAuth() on DOMContentLoaded.
+//
+// auth.js is a classic script at the end of <body>, so it evaluates before
+// DOMContentLoaded fires — but inline page scripts higher up the document
+// register their own DOMContentLoaded handlers first, and listeners run in
+// registration order. Any page that fetched during its own DOMContentLoaded
+// handler (communication/modals/new_message.html's initMessageForm is the
+// clearest case) therefore ran against the *unpatched* fetch: no CSRF header,
+// no 401 handling, and no chance for the interceptor to strip a stale
+// Authorization header. Installing here closes that window; the call left in
+// initAuth() is harmless because install() is guarded by
+// __kinjoAuthFetchInstalled.
+HttpInterceptor.install();
 
 document.addEventListener("DOMContentLoaded", () => {
   initAuth().catch((error) => {

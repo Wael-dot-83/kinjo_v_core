@@ -384,11 +384,20 @@
         }
     };
 
+    // Report dates follow the UI language and Jordan's locale.
+    //
+    // This was hardcoded to 'ar-SA', which was wrong twice over: it ignored
+    // English mode entirely (English users saw "٢٣ يوليو ٢٠٢٦" instead of
+    // "Jul 23, 2026"), and even in Arabic it used Gulf month names — ar-SA
+    // renders July as "يوليو" where Jordan says "تموز" (ar-JO). Every other
+    // manager screen already formats with ar-JO/en-JO.
+    const REPORT_DATE_LOCALE = {% if ui_lang == 'en' %}'en-JO'{% else %}'ar-JO'{% endif %};
+
     function renderTable(reports) {
         reportsById = new Map(reports.map(report => [report.id, report]));
         const tbody = document.getElementById('reportsTableBody');
         tbody.innerHTML = reports.map(r => {
-            const date  = r.date ? new Date(r.date).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'}) : '—';
+            const date  = r.date ? new Date(r.date).toLocaleDateString(REPORT_DATE_LOCALE, {year:'numeric',month:'short',day:'numeric'}) : '—';
             const badge = STATUS_BADGE[r.status] || `<span class="badge text-bg-secondary">{{ _('حالة غير معروفة') }}</span>`;
             const canSend = r.status === 'SUBMITTED';
             return `
