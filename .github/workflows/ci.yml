@@ -157,7 +157,11 @@ jobs:
         # and still aborted on PostgreSQL: indexes and constraints share one namespace there.
         env:
           MIGRATION_TEST_POSTGRES_URL: postgresql://kinjo:kinjo@localhost:5432/kinjo_test
-        run: pytest tests/test_migration_column_drift.py -q
+        # --timeout matches the analytics-postgres job: these run against real
+        # PostgreSQL, and pytest.ini's default of 30s (previously inert in
+        # pyproject.toml) is tuned for the SQLite suite, not for schema
+        # inspection over a network socket.
+        run: pytest tests/test_migration_column_drift.py -q --timeout=60
 
   analytics-postgres:
     # Postgres E2E for the admin analytics work (registry, data-state, drill-down,

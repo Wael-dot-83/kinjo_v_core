@@ -39,14 +39,11 @@ known-first-party = [
     "admin_endpoints", "missing_endpoints", "frontend",
 ]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-asyncio_mode = "auto"
-markers = [
-    "slow: marks tests as slow",
-    "integration: marks integration tests",
-    "security: marks security tests",
-    "p0: priority 0 – must pass on every commit",
-    "p1: priority 1 – should pass before merge",
-]
-timeout = 30
+# pytest is configured in pytest.ini, not here.
+#
+# Both files declared pytest settings, and pytest uses exactly one config
+# source: it picked pytest.ini and reported "WARNING: ignoring pytest config in
+# pyproject.toml" on every run. This block was therefore inert — a second,
+# divergent copy of testpaths/asyncio_mode/markers that looked authoritative
+# while changing nothing. Its only unique setting, `timeout = 30`, has been
+# moved into pytest.ini so it now actually applies.
