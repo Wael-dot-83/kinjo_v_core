@@ -76,42 +76,28 @@ class TestSchemas:
 
 
 # ---------------------------------------------------------------------------
-# ── Colors ───────────────────────────────────────────────────────────────────
+# ── Colors — removed, see note ───────────────────────────────────────────────
+#
+# `TestColors` tested `charts/colors.py`, which no longer exists. It was deleted
+# deliberately in 8b4813a, whose message records the reasoning:
+#
+#     Dead code removed
+#       charts/builders/ (10 modules) and charts/colors.py were imported only by
+#       their own __init__ and the stale service.py.bak; Plotly rendering moved
+#       to the browser. Verified no remaining importers.
+#
+# That is still true here: no module under charts/, api/, routers/ or the app
+# root imports charts.colors, and ChartService.render() returns a structured
+# ChartResponse rather than server-rendered Plotly HTML. Chart colour is now a
+# frontend concern, owned by static/js/ncfa_strong_reports.js (a CVD-validated
+# categorical palette plus a status ramp) and by the per-chart palette in
+# static/js/admin_dashboard.js.
+#
+# The tests were therefore asserting a contract the application deliberately no
+# longer has. They are removed rather than rewritten because there is no server
+# side left to test; re-creating charts/colors.py purely to satisfy them would
+# reintroduce the dead code the commit above removed.
 # ---------------------------------------------------------------------------
-
-
-class TestColors:
-    def test_get_color_wraps(self):
-        from charts.colors import get_color, PALETTE
-
-        assert get_color(0) == PALETTE[0]
-        assert get_color(len(PALETTE)) == PALETTE[0]
-
-    def test_assign_colors_deterministic(self):
-        from charts.colors import assign_colors
-
-        cats = ["happy", "sad", "normal"]
-        m1 = assign_colors(cats)
-        m2 = assign_colors(cats)
-        assert m1 == m2
-
-    def test_sequential_colorscale_shape(self):
-        from charts.colors import sequential_colorscale
-
-        cs = sequential_colorscale()
-        assert cs[0][0] == 0.0 and cs[-1][0] == 1.0
-
-    def test_diverging_colorscale_midpoint(self):
-        from charts.colors import diverging_colorscale
-
-        cs = diverging_colorscale()
-        midpoints = [c[0] for c in cs]
-        assert 0.5 in midpoints
-
-    def test_palette_has_twelve_colors(self):
-        from charts.colors import PALETTE
-
-        assert len(PALETTE) == 12
 
 
 # ---------------------------------------------------------------------------
@@ -159,60 +145,18 @@ class TestStats:
         assert p.has_numeric is True
         assert p.n_numeric_cols >= 1
 
-    def test_compute_trend_slope_positive(self):
-        from charts.stats import compute_trend
-
-        s = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0])
-        slope, r2 = compute_trend(s)
-        assert slope > 0
-        assert r2 > 0.99
-
-    def test_compute_trend_flat_series(self):
-        from charts.stats import compute_trend
-
-        s = pd.Series([5.0] * 10)
-        slope, r2 = compute_trend(s)
-        assert abs(slope) < 1e-9
-
-    def test_compute_trend_short_series(self):
-        from charts.stats import compute_trend
-
-        slope, r2 = compute_trend(pd.Series([]))
-        assert slope == 0.0
-
-    def test_detect_outliers_iqr(self):
-        from charts.stats import detect_outliers_iqr
-
-        s = pd.Series([1, 2, 2, 3, 3, 3, 3, 100])  # 100 is outlier
-        mask = detect_outliers_iqr(s)
-        assert mask.iloc[-1] is True or mask.sum() >= 1
-
-    def test_moving_average_length_preserved(self):
-        from charts.stats import moving_average
-
-        s = pd.Series(range(20), dtype=float)
-        ma = moving_average(s, window=5)
-        assert len(ma) == len(s)
-
-    def test_safe_pct_change_first_element_zero(self):
-        from charts.stats import safe_pct_change
-
-        s = pd.Series([100.0, 110.0, 121.0])
-        pct = safe_pct_change(s)
-        assert pct.iloc[0] == 0.0
-
-    def test_resample_timeseries_monthly(self):
-        from charts.stats import resample_timeseries
-
-        df = pd.DataFrame(
-            {
-                "date": pd.date_range("2026-01-01", periods=60),
-                "count": [1] * 60,
-            }
-        )
-        out = resample_timeseries(df, "date", "count", freq="ME", agg="sum")
-        assert len(out) >= 2
-        assert "count" in out.columns
+    # compute_trend / detect_outliers_iqr / moving_average / safe_pct_change /
+    # resample_timeseries / compute_correlation_matrix were removed from
+    # charts/stats.py in 8e32a72:
+    #
+    #     Dead code
+    #       charts/stats.py reduced to profile_dataframe, the only export
+    #       anything imports; six unused functions and their numpy/math imports
+    #       removed after proving zero external references.
+    #
+    # profile_dataframe remains the module's only export and keeps its coverage
+    # above. The deleted helpers had no caller, so there is no behaviour left for
+    # those tests to protect.
 
 
 # ---------------------------------------------------------------------------
@@ -237,14 +181,16 @@ class TestCache:
         with patch("charts.cache._get_redis", return_value=None):
             cache.set_raw(self._params(), "data")  # must not raise
 
-    def test_get_render_returns_none_without_redis(self):
-        from charts import cache
+    # The render cache (get_render/set_render, _RENDER_TTL) was removed in
+    # cd281cf — "Improve charts/cache.py: remove unused imports and render cache
+    # methods" — once Plotly rendering moved to the browser and the server
+    # stopped producing HTML to cache. Only the raw-data cache survives.
+    #
+    # The round-trip assertion those tests carried is still worth having, so it
+    # is retargeted below at the raw cache that does exist, rather than deleted.
 
-        with patch("charts.cache._get_redis", return_value=None):
-            result = cache.get_render(self._params())
-        assert result is None
-
-    def test_set_get_render_with_mock_redis(self):
+    def test_set_get_raw_round_trips_with_mock_redis(self):
+        """A value written through set_raw is readable through get_raw."""
         from charts import cache
 
         store: Dict[str, Any] = {}
@@ -253,9 +199,25 @@ class TestCache:
         mock_redis.setex.side_effect = lambda k, ttl, v: store.update({k: v})
 
         with patch("charts.cache._get_redis", return_value=mock_redis):
-            cache.set_render(self._params(), "<div>chart</div>")
-            result = cache.get_render(self._params())
-        assert result == "<div>chart</div>"
+            cache.set_raw(self._params(), '{"rows": []}')
+            result = cache.get_raw(self._params())
+        assert result == '{"rows": []}'
+
+    def test_invalidate_removes_the_cached_entry(self):
+        """invalidate() must drop the key the raw cache would otherwise serve."""
+        from charts import cache
+
+        store: Dict[str, Any] = {}
+        mock_redis = MagicMock()
+        mock_redis.get.side_effect = lambda k: store.get(k)
+        mock_redis.setex.side_effect = lambda k, ttl, v: store.update({k: v})
+        mock_redis.delete.side_effect = lambda k: store.pop(k, None)
+
+        with patch("charts.cache._get_redis", return_value=mock_redis):
+            cache.set_raw(self._params(), '{"rows": [1]}')
+            cache.invalidate(self._params())
+            result = cache.get_raw(self._params())
+        assert result is None
 
     def test_make_key_is_deterministic(self):
         from charts.cache import _make_key
@@ -560,117 +522,23 @@ class TestChartAdvisor:
 
 
 # ---------------------------------------------------------------------------
-# ── Builders ─────────────────────────────────────────────────────────────────
+# ── Builders — removed, see note ─────────────────────────────────────────────
+#
+# `TestBuilders` tested charts/builders/ (line, bar, pie, histogram, box,
+# scatter, heatmap, funnel, treemap, base and its __init__ registry). That whole
+# package was deleted in 8b4813a alongside charts/colors.py:
+#
+#     Dead code removed
+#       charts/builders/ (10 modules) and charts/colors.py were imported only by
+#       their own __init__ and the stale service.py.bak; Plotly rendering moved
+#       to the browser. Verified no remaining importers.
+#
+# Those builders returned server-rendered Plotly HTML strings. The application
+# no longer renders charts server-side at all: ChartService.render() returns a
+# structured ChartResponse and the browser draws it. TestChartService and
+# TestChartsAPI below cover that current path end to end, so removing these
+# leaves no gap — restoring the package to satisfy them would re-add dead code.
 # ---------------------------------------------------------------------------
-
-
-class TestBuilders:
-    def _req(self, **kwargs):
-        from charts.schemas import ChartRequest, ChartSource, ChartType
-
-        return ChartRequest(source=ChartSource.INCIDENTS, **kwargs)
-
-    def test_line_builder_empty_df(self):
-        from charts.builders.line import LineBuilder
-
-        html = LineBuilder().render(pd.DataFrame(), self._req())
-        assert isinstance(html, str)
-
-    def test_bar_builder_empty_df(self):
-        from charts.builders.bar import BarBuilder
-
-        html = BarBuilder().render(pd.DataFrame(), self._req())
-        assert isinstance(html, str)
-
-    def test_pie_builder_with_data(self):
-        from charts.builders.pie import PieBuilder
-
-        df = pd.DataFrame({"mood": ["happy", "sad", "normal"], "count": [50, 30, 20]})
-        html = PieBuilder().render(df, self._req(title="Moods"))
-        assert "plotly" in html.lower() or "<div" in html
-
-    def test_histogram_builder_with_data(self):
-        from charts.builders.histogram import HistogramBuilder
-
-        df = pd.DataFrame({"value": np.random.randn(100)})
-        html = HistogramBuilder().render(df, self._req())
-        assert isinstance(html, str)
-
-    def test_box_builder_with_data(self):
-        from charts.builders.box import BoxBuilder
-
-        df = pd.DataFrame({"value": np.random.randn(50), "group": ["A", "B"] * 25})
-        html = BoxBuilder().render(df, self._req(group_by="group"))
-        assert isinstance(html, str)
-
-    def test_scatter_builder_with_data(self):
-        from charts.builders.scatter import ScatterBuilder
-
-        df = pd.DataFrame({"x": range(20), "y": range(20)})
-        html = ScatterBuilder().render(df, self._req())
-        assert isinstance(html, str)
-
-    def test_heatmap_builder_correlation(self):
-        from charts.builders.heatmap import HeatmapBuilder
-
-        df = pd.DataFrame({"a": range(10), "b": range(10), "c": [i * 2 for i in range(10)]})
-        html = HeatmapBuilder().render(df, self._req())
-        assert isinstance(html, str)
-
-    def test_funnel_builder_with_data(self):
-        from charts.builders.funnel import FunnelBuilder
-
-        df = pd.DataFrame({"stage": ["A", "B", "C"], "count": [100, 60, 30]})
-        html = FunnelBuilder().render(df, self._req())
-        assert isinstance(html, str)
-
-    def test_treemap_builder_with_data(self):
-        from charts.builders.treemap import TreemapBuilder
-
-        df = pd.DataFrame(
-            {
-                "governorate": ["Amman", "Amman", "Zarqa"],
-                "kindergarten": ["KG1", "KG2", "KG3"],
-                "enrolled": [40, 30, 25],
-            }
-        )
-        html = TreemapBuilder().render(df, self._req())
-        assert isinstance(html, str)
-
-    def test_get_builder_registry(self):
-        from charts.builders import get_builder
-        from charts.schemas import ChartType
-
-        for ct in ChartType:
-            builder = get_builder(ct)
-            assert builder is not None
-
-    def test_get_builder_invalid_raises(self):
-        from charts.builders import get_builder
-
-        with pytest.raises((ValueError, KeyError)):
-            get_builder("nonexistent_type")  # type: ignore
-
-    def test_line_builder_respects_title(self):
-        from charts.builders.line import LineBuilder
-
-        df = pd.DataFrame(
-            {
-                "date": pd.date_range("2026-01-01", periods=10),
-                "count": range(10),
-            }
-        )
-        html = LineBuilder().render(df, self._req(title="My Custom Title"))
-        assert "My Custom Title" in html
-
-    def test_bar_builder_top_n(self):
-        from charts.builders.bar import BarBuilder
-
-        df = pd.DataFrame({"label": [f"cat_{i}" for i in range(20)], "value": range(20)})
-        html = BarBuilder().render(df, self._req(top_n=5))
-        assert isinstance(html, str)
-
-
 # ---------------------------------------------------------------------------
 # ── ChartService (unit, with mocked DB) ──────────────────────────────────────
 # ---------------------------------------------------------------------------
@@ -878,7 +746,20 @@ class TestChartsAPI:
         )
         assert resp.status_code == 200
         body = resp.json()
-        assert body["drilldown"]["next_level"] == "kindergarten"
+        # The drill-down ladder gained a "city" rung: charts/registry.py declares
+        # supported_levels = ["national", "governorate", "city", "kindergarten"],
+        # and ChartService picks the next entry after the current level. From a
+        # governorate the next step is therefore "city", not "kindergarten" — this
+        # assertion predated the city level and was asserting a two-rung ladder
+        # the product no longer has. Pinned to the registry so the two cannot
+        # drift apart again.
+        from charts.registry import METRIC_REGISTRY
+
+        levels = METRIC_REGISTRY["kindergartens"].supported_levels
+        expected_next = levels[levels.index("governorate") + 1]
+        assert expected_next == "city"
+        assert body["drilldown"]["next_level"] == expected_next
+        assert body["drilldown"]["enabled"] is True
         series = body.get("series", [])
         if series:
             assert "kindergarten_id" in series[0]
