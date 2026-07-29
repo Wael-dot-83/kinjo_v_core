@@ -18,6 +18,10 @@ import models
 from auth import get_password_hash
 from conftest import CSRF_COOKIE_NAME, bearer_headers, csrf_pair
 
+# `enable_strict_csrf` comes from conftest.py: the suite runs with TESTING set,
+# which short-circuits the CSRF middleware, so the negative cases below must turn
+# production enforcement back on to fail for the right reason.
+
 
 def _admin(db):
     u = models.User(
@@ -84,49 +88,89 @@ class TestValidAdminWriteContract:
         assert reloaded.email == original_email  # untouched fields preserved
 
     def test_missing_csrf_header_is_rejected_on_a_real_target(
-        self, client, test_db, sample_kindergarten
+        self, client, test_db, sample_kindergarten, enable_strict_csrf
     ):
-        """400 here can only be CSRF: the target exists, so it is not a 404."""
+        """403 here can only be CSRF: the target exists, so it is not a 404."""
         _admin(test_db)
         target = _supervisor(test_db, sample_kindergarten, "wr_no_header")
-        r = client.put(
-            f"/api/admin/users/{target.id}",
-            json={"full_name": "Should Not Apply"},
-            headers=bearer_headers(_token(client), with_csrf=False),
-        )
-        assert r.status_code == 400, r.text
-        assert "CSRF" in r.text
-        # And nothing was written.
-        test_db.expire_all()
-        still = test_db.query(models.User).filter(models.User.id == target.id).one()
-        assert still.full_name == "Original Name"
-
-    def test_missing_csrf_cookie_is_rejected(self, client, test_db, sample_kindergarten):
-        _admin(test_db)
-        target = _supervisor(test_db, sample_kindergarten, "wr_no_cookie")
         headers = bearer_headers(_token(client), with_csrf=False)
-        headers["X-CSRF-Token"] = secrets.token_hex(32)  # header only, no cookie
+
+        enable_strict_csrf()
         r = client.put(
             f"/api/admin/users/{target.id}",
             json={"full_name": "Should Not Apply"},
             headers=headers,
         )
-        assert r.status_code == 400, r.text
+        assert r.status_code == 403, r.text
         assert "CSRF" in r.text
+        # And nothing was written — the gate must run before the business logic.
+        test_db.expire_all()
+        still = test_db.query(models.User).filter(models.User.id == target.id).one()
+        assert still.full_name == "Original Name"
 
-    def test_mismatched_csrf_pair_is_rejected(self, client, test_db, sample_kindergarten):
+    def test_missing_csrf_cookie_is_rejected(
+        self, client, test_db, sample_kindergarten, enable_strict_csrf
+    ):
+        _admin(test_db)
+        target = _supervisor(test_db, sample_kindergarten, "wr_no_cookie")
+        headers = bearer_headers(_token(client), with_csrf=False)
+        headers["X-CSRF-Token"] = secrets.token_hex(32)  # header only, no cookie
+
+        enable_strict_csrf()
+        r = client.put(
+            f"/api/admin/users/{target.id}",
+            json={"full_name": "Should Not Apply"},
+            headers=headers,
+        )
+        assert r.status_code == 403, r.text
+        assert "CSRF" in r.text
+        test_db.expire_all()
+        still = test_db.query(models.User).filter(models.User.id == target.id).one()
+        assert still.full_name == "Original Name"
+
+    def test_mismatched_csrf_pair_is_rejected(
+        self, client, test_db, sample_kindergarten, enable_strict_csrf
+    ):
         _admin(test_db)
         target = _supervisor(test_db, sample_kindergarten, "wr_mismatch")
         headers = bearer_headers(_token(client), with_csrf=False)
         headers["X-CSRF-Token"] = secrets.token_hex(32)
         headers["Cookie"] = f"{CSRF_COOKIE_NAME}={secrets.token_hex(32)}"
+
+        enable_strict_csrf()
         r = client.put(
             f"/api/admin/users/{target.id}",
             json={"full_name": "Should Not Apply"},
             headers=headers,
         )
-        assert r.status_code == 400, r.text
+        assert r.status_code == 403, r.text
         assert "CSRF" in r.text
+        test_db.expire_all()
+        still = test_db.query(models.User).filter(models.User.id == target.id).one()
+        assert still.full_name == "Original Name"
+
+    def test_valid_csrf_pair_passes_the_gate_under_strict_enforcement(
+        self, client, test_db, sample_kindergarten, enable_strict_csrf
+    ):
+        """The positive control: the same request succeeds once the pair matches.
+
+        Without this, the three negatives above would still pass if the middleware
+        started rejecting everything unconditionally.
+        """
+        _admin(test_db)
+        target = _supervisor(test_db, sample_kindergarten, "wr_valid_strict")
+        headers = bearer_headers(_token(client))  # includes a matching pair
+
+        enable_strict_csrf()
+        r = client.put(
+            f"/api/admin/users/{target.id}",
+            json={"full_name": "Applied Under Strict CSRF"},
+            headers=headers,
+        )
+        assert r.status_code == 200, r.text
+        test_db.expire_all()
+        reloaded = test_db.query(models.User).filter(models.User.id == target.id).one()
+        assert reloaded.full_name == "Applied Under Strict CSRF"
 
     def test_unauthenticated_write_is_rejected(self, client, test_db, sample_kindergarten):
         _admin(test_db)

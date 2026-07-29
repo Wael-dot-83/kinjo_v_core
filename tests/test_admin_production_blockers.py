@@ -247,14 +247,27 @@ class TestCSRFEnforcement:
             return client.patch(path, json=json_data or {}, headers=headers)
         return client.get(path)
 
-    def test_endpoints_reject_missing_csrf(self, client, test_db, admin_token):
-        """State-changing endpoints should reject requests without CSRF token."""
+    def test_endpoints_reject_missing_csrf(self, client, test_db, admin_token, enable_strict_csrf):
+        """Every state-changing admin endpoint must be refused without a CSRF token.
+
+        Enforcement moved from a per-endpoint `_validate_csrf_token` (400) to
+        `middleware.csrf.csrf_protection_middleware` (403), which the suite's
+        TESTING flag switches off — so this needs strict mode on to mean anything.
+        The token is minted by the `admin_token` fixture before that happens.
+
+        The assertion is also tightened from the previous `!= 200`, which passed on
+        any error at all (a 404, a 422, even a 500) and so would not have noticed
+        the gate disappearing. It now pins the exact refusal the middleware makes.
+        """
         bad_headers = {"Authorization": f"Bearer {admin_token}"}
 
+        enable_strict_csrf()
         for method, path in self.CSRF_ENDPOINTS:
             r = self._call_endpoint(client, method, path, bad_headers)
-            # Should NOT return 200 — CSRF validation should reject
-            assert r.status_code != 200, f"{method} {path} accepted request without CSRF token"
+            assert r.status_code == 403, (
+                f"{method} {path} was not CSRF-refused (got {r.status_code}): {r.text[:200]}"
+            )
+            assert "CSRF" in r.text, f"{method} {path} refused without naming CSRF: {r.text[:200]}"
 
     def test_endpoints_accept_valid_csrf(self, client, test_db, admin_token):
         """State-changing endpoints should accept requests with valid CSRF token."""

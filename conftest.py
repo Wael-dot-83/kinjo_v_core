@@ -413,6 +413,36 @@ def bearer_headers(token: str, *, with_csrf: bool = True) -> dict:
 
 
 @pytest.fixture
+def enable_strict_csrf(monkeypatch):
+    """Turn on production CSRF enforcement partway through a test.
+
+    CSRF was once checked per endpoint by `admin_endpoints._validate_csrf_token`,
+    which ran unconditionally and answered 400. That validator no longer exists;
+    enforcement moved into `middleware.csrf.csrf_protection_middleware`, which
+    answers 403 and short-circuits entirely while `settings.TESTING` is set.
+    This conftest sets TESTING for the whole suite (see the top of this file), so
+    by default an admin write faces no CSRF gate and a test asserting rejection
+    can never fail for the right reason.
+
+    Returned as a callable rather than applied at setup because the bearer token
+    must be minted first: with TESTING off, `/token` additionally demands MFA for
+    privileged roles (`main._do_login`), which is a different gate and not what
+    the CSRF tests are exercising.
+
+    Usage:
+        headers = bearer_headers(_token(client), with_csrf=False)
+        enable_strict_csrf()
+        r = client.put(..., headers=headers)
+        assert r.status_code == 403
+    """
+
+    def _enable():
+        monkeypatch.setattr(_settings, "TESTING", False)
+
+    return _enable
+
+
+@pytest.fixture
 def auth_headers_admin(admin_token):
     """Authentication + CSRF headers for admin."""
     return bearer_headers(admin_token)
