@@ -31,6 +31,16 @@ class _CommaListEnvSource(EnvSettingsSource):
 
 logger = logging.getLogger(__name__)
 
+# Canonical child enrolment age policy (ministry rule): 1 day to 4 years 8 months.
+#
+# Declared here and used as the field defaults below so the policy of record and
+# the default can never drift apart. They are still overridable per deployment —
+# validate_production_settings() warns when an override disagrees, because a
+# stale .env carrying the superseded 70-day minimum silently refused children
+# aged 1-69 days with no signal anywhere.
+CANONICAL_MIN_CHILD_AGE_DAYS = 1
+CANONICAL_MAX_CHILD_AGE_MONTHS = 56
+
 
 class Settings(BaseSettings):
     """Application settings"""
@@ -195,8 +205,8 @@ class Settings(BaseSettings):
     CLAMAV_PORT: int = 3310
 
     # Business Rules
-    MIN_CHILD_AGE_DAYS: int = 1
-    MAX_CHILD_AGE_MONTHS: int = 56  # 4 years 8 months
+    MIN_CHILD_AGE_DAYS: int = CANONICAL_MIN_CHILD_AGE_DAYS
+    MAX_CHILD_AGE_MONTHS: int = CANONICAL_MAX_CHILD_AGE_MONTHS  # 4 years 8 months
     WAITLIST_OFFER_EXPIRY_HOURS: int = 48
     MANAGER_TO_MANAGER_ENABLED: bool = False
     MANAGER_TO_MANAGER_SCOPE: str = "same_kg"
@@ -445,6 +455,34 @@ def validate_production_settings():
         logger.warning(
             "WARNING: SESSION_COOKIE_SAMESITE should be 'strict' in production. "
             "Currently set to: " + settings.SESSION_COOKIE_SAMESITE
+        )
+
+    # Surface a child-age policy that disagrees with the ministry rule.
+    #
+    # 0768814 lowered the minimum from 70 days to 1, but the value is read from
+    # the environment and every .env seeded from a pre-fix template still carried
+    # 70 — which silently refuses enrolment for children aged 1-69 days with no
+    # signal anywhere. The setting stays overridable (deliberately: it is policy,
+    # not a constant), so this warns rather than refusing to start, and it fires
+    # once at startup rather than per request.
+    if settings.MIN_CHILD_AGE_DAYS != CANONICAL_MIN_CHILD_AGE_DAYS:
+        logger.warning(
+            "NONCANONICAL_CHILD_AGE_POLICY: MIN_CHILD_AGE_DAYS=%s, canonical=%s. "
+            "Children aged %s-%s days will be refused enrolment. "
+            "Set MIN_CHILD_AGE_DAYS=%s, or remove the override to inherit the default.",
+            settings.MIN_CHILD_AGE_DAYS,
+            CANONICAL_MIN_CHILD_AGE_DAYS,
+            CANONICAL_MIN_CHILD_AGE_DAYS,
+            settings.MIN_CHILD_AGE_DAYS - 1,
+            CANONICAL_MIN_CHILD_AGE_DAYS,
+        )
+
+    if settings.MAX_CHILD_AGE_MONTHS != CANONICAL_MAX_CHILD_AGE_MONTHS:
+        logger.warning(
+            "NONCANONICAL_CHILD_AGE_POLICY: MAX_CHILD_AGE_MONTHS=%s, canonical=%s. "
+            "The upper enrolment bound does not match the ministry rule.",
+            settings.MAX_CHILD_AGE_MONTHS,
+            CANONICAL_MAX_CHILD_AGE_MONTHS,
         )
 
     # Raise when SMTP is not configured — password reset emails will not be delivered

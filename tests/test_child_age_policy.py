@@ -39,26 +39,51 @@ def test_config_default_matches_canonical_policy():
     assert defaults["MAX_CHILD_AGE_MONTHS"].default == CANONICAL_MAX_AGE_MONTHS
 
 
-def test_env_example_matches_canonical_policy():
-    """The shipped template must not contradict the policy it deploys.
+def test_env_templates_match_canonical_policy():
+    """No shipped env template may contradict the policy it deploys.
 
     0768814 lowered the minimum from 70 days to 1 in config.py and
-    child_age_policy.py but left .env.example at 70. Because a value in the env
-    file overrides the code default, every deployment seeded from that template
-    silently refused children aged 1-69 days. This is the regression guard.
+    child_age_policy.py but left the templates at 70. Because a value in an env
+    file overrides the code default, every deployment seeded from one silently
+    refused children aged 1-69 days.
+
+    This guard deliberately scans *every* tracked env template rather than only
+    .env.example: the first version of it checked that one file, so
+    .env.local.example and reqMd/.env.local.example kept shipping 70 unnoticed.
+    Any template added later is covered automatically.
     """
     import re
     from pathlib import Path
 
-    template = (Path(__file__).resolve().parents[1] / ".env.example").read_text(encoding="utf-8")
+    root = Path(__file__).resolve().parents[1]
+    templates = sorted(
+        p for p in root.rglob("*.env*example*")
+        if ".git" not in p.parts and "node_modules" not in p.parts
+    )
+    templates += sorted(
+        p for p in root.rglob(".env*example")
+        if ".git" not in p.parts and "node_modules" not in p.parts
+    )
+    templates = sorted(set(templates))
+    assert templates, "no env templates found — the search is broken"
 
-    def _value(key: str) -> int:
-        match = re.search(rf"^{key}=(\d+)", template, re.M)
-        assert match, f"{key} is not set in .env.example"
-        return int(match.group(1))
+    checked = 0
+    for path in templates:
+        text = path.read_text(encoding="utf-8")
+        for key, expected in (
+            ("MIN_CHILD_AGE_DAYS", CANONICAL_MIN_AGE_DAYS),
+            ("MAX_CHILD_AGE_MONTHS", CANONICAL_MAX_AGE_MONTHS),
+        ):
+            match = re.search(rf"^{key}=(\d+)", text, re.M)
+            if match is None:
+                continue  # a template need not set it; inheriting the default is fine
+            checked += 1
+            assert int(match.group(1)) == expected, (
+                f"{path.relative_to(root)} sets {key}={match.group(1)}, "
+                f"contradicting the canonical policy of {expected}"
+            )
 
-    assert _value("MIN_CHILD_AGE_DAYS") == CANONICAL_MIN_AGE_DAYS
-    assert _value("MAX_CHILD_AGE_MONTHS") == CANONICAL_MAX_AGE_MONTHS
+    assert checked, "no env template declares the age policy — the search is broken"
 
 
 def test_bounds_inclusive():
@@ -175,6 +200,34 @@ def test_bounds_clamp_to_short_month_end():
     assert get_child_age_bounds(date(2028, 10, 31)).min_date == date(2024, 2, 29)
     # 31 -> 30 for a 30-day month.
     assert get_child_age_bounds(date(2026, 5, 31)).min_date == date(2021, 9, 30)
+
+
+def test_minimum_age_rejection_message_is_translated_for_arabic_callers():
+    """The catalogue key must stay parameterised, not interpolated.
+
+    api/enrollment.py built this message with an f-string, so the lookup key
+    carried the configured number. The catalogue held
+    "Child must be at least 70 days old"; once the policy became 1 day the key
+    became "Child must be at least 1 days old", matched nothing, and Arabic
+    callers silently received the untranslated English string. Arabic is the
+    platform's primary language, so that is a user-facing regression.
+    """
+    from i18n import gettext
+
+    key = "Child must be at least {days} days old"
+    arabic = gettext(key, "ar", days=CANONICAL_MIN_AGE_DAYS)
+
+    assert arabic != key, "the Arabic catalogue no longer resolves this message"
+    assert "يجب أن يكون عمر الطفل" in arabic
+    assert str(CANONICAL_MIN_AGE_DAYS) in arabic
+
+    # The enrollment endpoint must pass the value as a parameter, never bake it
+    # into the key, or the catalogue silently stops matching again.
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "api" / "enrollment.py").read_text(encoding="utf-8")
+    assert 'f"Child must be at least {settings.MIN_CHILD_AGE_DAYS} days old"' not in source
+    assert "days=settings.MIN_CHILD_AGE_DAYS" in source
 
 
 def test_non_integer_age_configuration_is_rejected_at_load():

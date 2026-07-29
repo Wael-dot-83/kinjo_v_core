@@ -250,7 +250,18 @@ def create_enrollment_application(
     age_months = age_days / 30.44  # Average days per month
 
     if age_days < settings.MIN_CHILD_AGE_DAYS:
-        raise HTTPException(status_code=400, detail=_api(f"Child must be at least {settings.MIN_CHILD_AGE_DAYS} days old", _ulang(current_user)))
+        # Parameterised, not an f-string: the message is the catalogue lookup key,
+        # so interpolating the number first produced a key ("Child must be at
+        # least 1 days old") that no longer matched the msgid, and Arabic callers
+        # silently received the untranslated English text.
+        raise HTTPException(
+            status_code=400,
+            detail=_api(
+                "Child must be at least {days} days old",
+                _ulang(current_user),
+                days=settings.MIN_CHILD_AGE_DAYS,
+            ),
+        )
     if age_months > 56:
         raise HTTPException(status_code=400, detail=_api("Child must be under 56 months old", _ulang(current_user)))
 
