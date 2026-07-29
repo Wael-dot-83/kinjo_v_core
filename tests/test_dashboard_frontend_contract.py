@@ -223,15 +223,31 @@ def test_shared_async_state_helper_exists_and_is_reused():
 
 
 def test_auto_refresh_toggle_present_and_wired():
+    """The toggle exists, persists its state, and gates the interval on it.
+
+    The localStorage assertions are matched allowing whitespace between the call
+    and its first argument. They previously required
+    `localStorage.setItem("autoRefreshEnabled"` on one line, so when a formatter
+    wrapped that call across three lines the test reported the persistence as
+    missing while it was present and working — the same brittleness, not a
+    behaviour change.
+    """
     template = ADMIN_DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
     assert 'id="autoRefreshCheck"' in template
 
     source = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
     assert "isAutoRefreshEnabled()" in source
-    assert 'localStorage.getItem("autoRefreshEnabled")' in source
-    assert 'localStorage.setItem("autoRefreshEnabled"' in source
-    # Must not unconditionally auto-start regardless of saved preference
-    assert "if (this.isAutoRefreshEnabled()) this.startAutoRefresh();" in source
+    assert re.search(r'localStorage\.getItem\(\s*"autoRefreshEnabled"', source), (
+        "the saved auto-refresh preference is never read"
+    )
+    assert re.search(r'localStorage\.setItem\(\s*"autoRefreshEnabled"', source), (
+        "toggling auto-refresh is never persisted"
+    )
+    # Must not unconditionally auto-start regardless of saved preference.
+    assert re.search(
+        r"if\s*\(\s*this\.isAutoRefreshEnabled\(\)\s*\)\s*this\.startAutoRefresh\(\);",
+        source,
+    ), "auto-refresh starts without consulting the saved preference"
 
 
 def test_failed_login_is_not_relabeled_as_successful_authentication():

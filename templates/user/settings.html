@@ -57,8 +57,8 @@
                 <div class="tab-content" id="nav-tabContent">
                     <!-- Profile Settings -->
                     <div class="tab-pane fade show active" id="profile" role="tabpanel">
-                        <h5 class="mb-4 text-primary fw-bold">{% if ui_lang == 'en' %}Personal Information{% else %}المعلومات الشخصية{% endif %}</h5>
-                        <form>
+                        <h2 class="h5 mb-4 text-primary fw-bold">{% if ui_lang == 'en' %}Personal Information{% else %}المعلومات الشخصية{% endif %}</h2>
+                        <form id="profileForm" novalidate>
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label for="username" class="form-label">{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</label>
@@ -67,8 +67,10 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label for="fullName" class="form-label">{% if ui_lang == 'en' %}Full Name{% else %}الاسم الكامل{% endif %}</label>
-                                    <input type="text" id="fullName" class="form-control"
+                                    <input type="text" id="fullName" class="form-control" data-dirty-track
+                                        minlength="2" maxlength="255"
                                         value="{{ current_user.full_name or '' }}">
+                                    <div class="invalid-feedback" id="fullNameError"></div>
                                 </div>
                                 <div class="col-md-12">
                                     <label for="email" class="form-label">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label>
@@ -78,13 +80,16 @@
                                 </div>
                                 <div class="col-md-12">
                                     <label for="phoneNumber" class="form-label">{% if ui_lang == 'en' %}Phone Number{% else %}رقم الهاتف{% endif %}</label>
-                                    <input type="tel" id="phoneNumber" class="form-control"
+                                    <input type="tel" id="phoneNumber" class="form-control" data-dirty-track
+                                        maxlength="20" inputmode="tel"
                                         value="{{ current_user.phone_number or '' }}">
+                                    <div class="form-text">{% if ui_lang == 'en' %}Jordanian format, e.g. 0791234567{% else %}صيغة أردنية، مثال: 0791234567{% endif %}</div>
+                                    <div class="invalid-feedback" id="phoneNumberError"></div>
                                 </div>
                                 <div class="col-12 mt-4">
-                                    <button type="button" class="btn btn-primary px-4"
-                                        onclick="showToast('{% if ui_lang == 'en' %}Changes saved successfully{% else %}تم حفظ التغييرات بنجاح{% endif %}')">
-                                        <i class="bi bi-save me-1"></i> {% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}
+                                    <button type="submit" class="btn btn-primary px-4" id="profileSaveBtn">
+                                        <span class="spinner-border spinner-border-sm me-2 d-none" id="profileSpinner" aria-hidden="true"></span>
+                                        <i class="bi bi-save me-1" aria-hidden="true"></i> {% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}
                                     </button>
                                 </div>
                             </div>
@@ -93,24 +98,28 @@
 
                     <!-- Security Settings -->
                     <div class="tab-pane fade" id="security" role="tabpanel">
-                        <h5 class="mb-4 text-primary fw-bold">{% if ui_lang == 'en' %}Change Password{% else %}تغيير كلمة المرور{% endif %}</h5>
-                        <form>
+                        <h2 class="h5 mb-4 text-primary fw-bold">{% if ui_lang == 'en' %}Change Password{% else %}تغيير كلمة المرور{% endif %}</h2>
+                        <form id="passwordForm" novalidate>
                             <div class="mb-3">
                                 <label for="currentPassword" class="form-label">{% if ui_lang == 'en' %}Current Password{% else %}كلمة المرور الحالية{% endif %}</label>
-                                <input type="password" id="currentPassword" class="form-control">
+                                <input type="password" id="currentPassword" class="form-control" autocomplete="current-password" required>
                             </div>
                             <div class="mb-3">
                                 <label for="newPassword" class="form-label">{% if ui_lang == 'en' %}New Password{% else %}كلمة المرور الجديدة{% endif %}</label>
-                                <input type="password" id="newPassword" class="form-control">
+                                <input type="password" id="newPassword" class="form-control" autocomplete="new-password" minlength="8" maxlength="128" required>
+                                <div class="form-text">
+                                    {% if ui_lang == 'en' %}At least 8 characters, with an uppercase letter, a lowercase letter, a digit and a special character.{% else %}٨ أحرف على الأقل، مع حرف كبير وحرف صغير ورقم ورمز خاص.{% endif %}
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="confirmPassword" class="form-label">{% if ui_lang == 'en' %}Confirm New Password{% else %}تأكيد كلمة المرور الجديدة{% endif %}</label>
-                                <input type="password" id="confirmPassword" class="form-control">
+                                <input type="password" id="confirmPassword" class="form-control" autocomplete="new-password" minlength="8" maxlength="128" required>
+                                <div class="invalid-feedback" id="confirmPasswordError"></div>
                             </div>
                             <div class="mt-4">
-                                <button type="button" class="btn btn-warning px-4"
-                                    onclick="showToast('{% if ui_lang == 'en' %}Password updated{% else %}تم تحديث كلمة المرور{% endif %}')">
-                                    <i class="bi bi-key me-1"></i> {% if ui_lang == 'en' %}Update Password{% else %}تحديث كلمة المرور{% endif %}
+                                <button type="submit" class="btn btn-warning px-4" id="passwordSaveBtn">
+                                    <span class="spinner-border spinner-border-sm me-2 d-none" id="passwordSpinner" aria-hidden="true"></span>
+                                    <i class="bi bi-key me-1" aria-hidden="true"></i> {% if ui_lang == 'en' %}Update Password{% else %}تحديث كلمة المرور{% endif %}
                                 </button>
                             </div>
                         </form>
@@ -118,52 +127,61 @@
 
                     <!-- Notification Settings -->
                     <div class="tab-pane fade" id="notifications" role="tabpanel">
-                        <h5 class="mb-4 text-primary fw-bold">{% if ui_lang == 'en' %}Notification Preferences{% else %}تفضيلات الإشعارات{% endif %}</h5>
-                        <div class="list-group">
-                            <label class="list-group-item d-flex gap-3">
-                                <input class="form-check-input flex-shrink-0 fs-5" type="checkbox" checked>
-                                <span class="pt-1 form-checked-content">
-                                    <strong>{% if ui_lang == 'en' %}Email Notifications{% else %}إشعارات البريد الإلكتروني{% endif %}</strong>
-                                    <small class="d-block text-body-secondary">{% if ui_lang == 'en' %}Receive weekly summaries and important alerts.{% else %}استلام ملخصات أسبوعية وتنبيهات
-                                        هامة.{% endif %}</small>
-                                </span>
-                            </label>
-                            <label class="list-group-item d-flex gap-3">
-                                <input class="form-check-input flex-shrink-0 fs-5" type="checkbox" checked>
-                                <span class="pt-1 form-checked-content">
-                                    <strong>{% if ui_lang == 'en' %}System Notifications (In-app){% else %}إشعارات النظام (داخل التطبيق){% endif %}</strong>
-                                    <small class="d-block text-body-secondary">{% if ui_lang == 'en' %}Instant alerts when important actions occur.{% else %}تنبيهات فورية عند حدوث إجراءات
-                                        هامة.{% endif %}</small>
-                                </span>
-                            </label>
-                        </div>
-                        <div class="mt-4">
-                            <button type="button" class="btn btn-primary px-4" onclick="showToast('{% if ui_lang == 'en' %}Preferences saved{% else %}تم حفظ التفضيلات{% endif %}')">
-                                <i class="bi bi-save me-1"></i> {% if ui_lang == 'en' %}Save Preferences{% else %}حفظ التفضيلات{% endif %}
-                            </button>
-                        </div>
+                        <h2 class="h5 mb-4 text-primary fw-bold">{% if ui_lang == 'en' %}Notification Preferences{% else %}تفضيلات الإشعارات{% endif %}</h2>
+                        <form id="notificationsForm" novalidate>
+                            <div class="list-group">
+                                <label class="list-group-item d-flex gap-3" for="prefEmail">
+                                    <input class="form-check-input flex-shrink-0 fs-5" type="checkbox" id="prefEmail" data-dirty-track>
+                                    <span class="pt-1 form-checked-content">
+                                        <strong>{% if ui_lang == 'en' %}Email Notifications{% else %}إشعارات البريد الإلكتروني{% endif %}</strong>
+                                        <small class="d-block text-body-secondary">{% if ui_lang == 'en' %}Receive weekly summaries and important alerts.{% else %}استلام ملخصات أسبوعية وتنبيهات
+                                            هامة.{% endif %}</small>
+                                    </span>
+                                </label>
+                                <label class="list-group-item d-flex gap-3" for="prefInApp">
+                                    <input class="form-check-input flex-shrink-0 fs-5" type="checkbox" id="prefInApp" data-dirty-track>
+                                    <span class="pt-1 form-checked-content">
+                                        <strong>{% if ui_lang == 'en' %}System Notifications (In-app){% else %}إشعارات النظام (داخل التطبيق){% endif %}</strong>
+                                        <small class="d-block text-body-secondary">{% if ui_lang == 'en' %}Instant alerts when important actions occur.{% else %}تنبيهات فورية عند حدوث إجراءات
+                                            هامة.{% endif %}</small>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="mt-4">
+                                <button type="submit" class="btn btn-primary px-4" id="notificationsSaveBtn">
+                                    <span class="spinner-border spinner-border-sm me-2 d-none" id="notificationsSpinner" aria-hidden="true"></span>
+                                    <i class="bi bi-save me-1" aria-hidden="true"></i> {% if ui_lang == 'en' %}Save Preferences{% else %}حفظ التفضيلات{% endif %}
+                                </button>
+                            </div>
+                        </form>
                     </div>
 
                     <!-- System Settings (Admin Only) -->
                     {% if current_user.role and current_user.role.value == 'ADMIN' %}
                     <div class="tab-pane fade" id="system" role="tabpanel">
-                        <h5 class="mb-4 text-danger fw-bold">{% if ui_lang == 'en' %}General System Settings{% else %}إعدادات النظام العامة{% endif %}</h5>
-                        <form>
-                            <div class="mb-3">
-                                <label for="schoolYearStart" class="form-label">{% if ui_lang == 'en' %}School Year Start{% else %}بداية العام الدراسي{% endif %}</label>
-                                <input type="date" id="schoolYearStart" class="form-control" value="2023-09-01">
+                        <h2 class="h5 mb-4 text-danger fw-bold">{% if ui_lang == 'en' %}General System Settings{% else %}إعدادات النظام العامة{% endif %}</h2>
+                        {# "School Year Start" and "Max Students Per Class" have no model, no config
+                           key and no endpoint anywhere in the codebase — the previous Save button
+                           called showToast('System settings updated') and wrote nothing at all.
+                           The controls are left visible but disabled so the page stops reporting a
+                           success that never happened. #}
+                        <div class="alert alert-warning d-flex align-items-start" role="status">
+                            <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+                            <div>
+                                <strong>{% if ui_lang == 'en' %}Not available yet{% else %}غير متاح بعد{% endif %}</strong>
+                                <p class="mb-0">
+                                    {% if ui_lang == 'en' %}These system-wide values are not stored anywhere yet, so they cannot be saved. They are shown read-only until the backing settings store exists.{% else %}هذه القيم على مستوى النظام غير مخزّنة بعد، لذا لا يمكن حفظها. تظهر للقراءة فقط إلى أن يتوفّر مخزن الإعدادات.{% endif %}
+                                </p>
                             </div>
-                            <div class="mb-3">
-                                <label for="maxStudentsPerClass" class="form-label">{% if ui_lang == 'en' %}Max Students Per Class{% else %}الحد الأقصى للطلاب لكل فصل{% endif %}</label>
-                                <input type="number" id="maxStudentsPerClass" class="form-control" value="25">
-                            </div>
-                            <div class="mt-4">
-                                <button type="button" class="btn btn-danger px-4"
-                                    onclick="showToast('{% if ui_lang == 'en' %}System settings updated{% else %}تم تحديث إعدادات النظام{% endif %}')">
-                                    <i class="bi bi-gear-fill me-1"></i> {% if ui_lang == 'en' %}Update System{% else %}تحديث النظام{% endif %}
-                                </button>
-                            </div>
-                        </form>
+                        </div>
+                        <div class="mb-3">
+                            <label for="schoolYearStart" class="form-label">{% if ui_lang == 'en' %}School Year Start{% else %}بداية العام الدراسي{% endif %}</label>
+                            <input type="date" id="schoolYearStart" class="form-control" value="2023-09-01" disabled readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="maxStudentsPerClass" class="form-label">{% if ui_lang == 'en' %}Max Students Per Class{% else %}الحد الأقصى للطلاب لكل فصل{% endif %}</label>
+                            <input type="number" id="maxStudentsPerClass" class="form-control" value="25" disabled readonly>
+                        </div>
                     </div>
                     {% endif %}
                 </div>
@@ -172,27 +190,295 @@
     </div>
 </div>
 
-<script>
-    function showToast(message) {
-        // Simple toast or alert for functionality demo
-        // In real implementation, utilize a toast library or existing toast component
-        const toastContainer = document.createElement('div');
-        toastContainer.style.position = 'fixed';
-        toastContainer.style.bottom = '20px';
-        toastContainer.style.left = '20px';
-        toastContainer.style.zIndex = '1055';
-        toastContainer.innerHTML = `
-            <div class="toast show align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <i class="bi bi-check-circle-fill me-2"></i> ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}" onclick="this.closest('.toast').remove()"></button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(toastContainer);
-        setTimeout(() => toastContainer.remove(), 3000);
+<!-- Floating unsaved-changes bar -->
+<div id="unsavedBar" class="settings-unsaved-bar shadow" role="status" aria-live="polite" hidden>
+    <span class="me-auto d-flex align-items-center">
+        <i class="bi bi-exclamation-circle me-2" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}You have unsaved changes{% else %}لديك تغييرات غير محفوظة{% endif %}
+    </span>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="unsavedDiscardBtn">
+        {% if ui_lang == 'en' %}Discard{% else %}تجاهل{% endif %}
+    </button>
+    <button type="button" class="btn btn-sm btn-primary" id="unsavedSaveBtn">
+        {% if ui_lang == 'en' %}Save now{% else %}حفظ الآن{% endif %}
+    </button>
+</div>
+
+<style>
+    .settings-unsaved-bar {
+        position: fixed;
+        inset-inline: 1rem;
+        bottom: 1rem;
+        z-index: 1050;
+        margin-inline: auto;
+        max-width: 34rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        padding: .75rem 1rem;
+        border: 1px solid var(--bs-warning-border-subtle, #ffe69c);
+        border-radius: .5rem;
+        background: var(--bs-warning-bg-subtle, #fff3cd);
+        color: var(--bs-warning-text-emphasis, #664d03);
     }
+    /* `hidden` must win over the flex display above, or the bar never hides. */
+    .settings-unsaved-bar[hidden] { display: none; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    "use strict";
+
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => (IS_EN ? en : ar);
+
+    // showToast is defined globally by kinjo-app.js, which base.html loads.
+    // This page used to declare its own copy, which shadowed the shared one and
+    // rendered a second, differently-styled toast.
+    const notify = (msg, type) => {
+        if (typeof showToast === 'function') showToast(msg, type || 'info');
+        else alert(msg);
+    };
+
+    // Auth is the httpOnly kinjo_session cookie; state-changing calls also need
+    // the CSRF double-submit token.
+    const headers = () => {
+        let csrf = '';
+        try { csrf = AuthStorage.getCookie(CSRF_CONFIG.cookieName) || ''; } catch (e) {}
+        return { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) };
+    };
+
+    /** Read the bilingual message the /api/me endpoints return. */
+    const apiMessage = (data, fallbackAr, fallbackEn) => {
+        if (data && (data.message_ar || data.message_en)) {
+            return IS_EN ? (data.message_en || data.message_ar) : (data.message_ar || data.message_en);
+        }
+        return T(fallbackAr, fallbackEn);
+    };
+
+    /** Pull a human-readable error out of an error response body. */
+    async function errorText(res) {
+        let body = null;
+        try { body = await res.json(); } catch (e) { /* non-JSON error body */ }
+        const detail = body && (body.detail ?? body.message);
+        if (typeof detail === 'string' && detail) return detail;
+        // FastAPI validation errors arrive as a list of {loc, msg}.
+        if (Array.isArray(detail) && detail.length) {
+            return detail.map(d => d.msg).filter(Boolean).join('; ')
+                || T('تعذّر حفظ التغييرات', 'Could not save changes');
+        }
+        if (res.status === 429) return T('محاولات كثيرة، حاول لاحقًا', 'Too many attempts, try again later');
+        return T('تعذّر حفظ التغييرات', 'Could not save changes');
+    }
+
+    /* ── Dirty tracking ─────────────────────────────────────────── */
+    // Baseline is captured once on load and re-captured after every successful
+    // save, so "dirty" always means "differs from what the server holds".
+    const tracked = () => Array.from(document.querySelectorAll('[data-dirty-track]'));
+    const valueOf = el => (el.type === 'checkbox' ? String(el.checked) : el.value);
+    let baseline = new Map();
+    let activeForm = null;
+
+    function captureBaseline() {
+        baseline = new Map(tracked().map(el => [el.id, valueOf(el)]));
+    }
+
+    function dirtyFields() {
+        return tracked().filter(el => baseline.get(el.id) !== valueOf(el));
+    }
+
+    function refreshUnsavedBar() {
+        const dirty = dirtyFields();
+        const bar = document.getElementById('unsavedBar');
+        bar.hidden = dirty.length === 0;
+        // The floating Save button acts on whichever form owns the dirty fields.
+        activeForm = dirty.length ? dirty[0].closest('form') : null;
+    }
+
+    function discardChanges() {
+        tracked().forEach(el => {
+            const original = baseline.get(el.id);
+            if (original === undefined) return;
+            if (el.type === 'checkbox') el.checked = original === 'true';
+            else el.value = original;
+            el.classList.remove('is-invalid');
+        });
+        refreshUnsavedBar();
+    }
+
+    // Guard against losing edits to a full page navigation / reload.
+    window.addEventListener('beforeunload', e => {
+        if (dirtyFields().length) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    /* ── Busy state ─────────────────────────────────────────────── */
+    function setBusy(btnId, spinnerId, busy) {
+        const btn = document.getElementById(btnId);
+        const spinner = document.getElementById(spinnerId);
+        if (btn) btn.disabled = busy;
+        if (spinner) spinner.classList.toggle('d-none', !busy);
+    }
+
+    function setFieldError(inputId, message) {
+        const input = document.getElementById(inputId);
+        const box = document.getElementById(inputId + 'Error');
+        if (!input) return;
+        input.classList.toggle('is-invalid', Boolean(message));
+        if (box) box.textContent = message || '';
+    }
+
+    /* ── Profile ────────────────────────────────────────────────── */
+    async function saveProfile() {
+        setFieldError('fullName', '');
+        setFieldError('phoneNumber', '');
+
+        const fullName = document.getElementById('fullName').value.trim();
+        const phone = document.getElementById('phoneNumber').value.trim();
+
+        if (fullName.length < 2) {
+            setFieldError('fullName', T('الاسم قصير جدًا', 'Name is too short'));
+            return;
+        }
+
+        setBusy('profileSaveBtn', 'profileSpinner', true);
+        try {
+            const res = await fetch('/api/me/profile', {
+                method: 'PUT',
+                headers: headers(),
+                body: JSON.stringify({ full_name: fullName, phone_number: phone }),
+            });
+            if (!res.ok) {
+                const msg = await errorText(res);
+                if (/phone|هاتف/i.test(msg)) setFieldError('phoneNumber', msg);
+                notify(msg, 'error');
+                return;
+            }
+            const data = await res.json();
+            notify(apiMessage(data, 'تم حفظ التغييرات بنجاح', 'Changes saved successfully'), 'success');
+            captureBaseline();
+            refreshUnsavedBar();
+        } catch (err) {
+            notify(T('خطأ في الشبكة', 'Network error'), 'error');
+        } finally {
+            setBusy('profileSaveBtn', 'profileSpinner', false);
+        }
+    }
+
+    /* ── Password ───────────────────────────────────────────────── */
+    async function savePassword() {
+        setFieldError('confirmPassword', '');
+        const current = document.getElementById('currentPassword').value;
+        const next = document.getElementById('newPassword').value;
+        const confirm = document.getElementById('confirmPassword').value;
+
+        if (!current || !next || !confirm) {
+            notify(T('يرجى تعبئة جميع الحقول', 'Please fill in every field'), 'error');
+            return;
+        }
+        if (next !== confirm) {
+            setFieldError('confirmPassword', T('كلمتا المرور غير متطابقتين', 'Passwords do not match'));
+            return;
+        }
+
+        setBusy('passwordSaveBtn', 'passwordSpinner', true);
+        try {
+            const res = await fetch('/api/me/password', {
+                method: 'POST',
+                headers: headers(),
+                body: JSON.stringify({
+                    current_password: current,
+                    new_password: next,
+                    confirm_password: confirm,
+                }),
+            });
+            if (!res.ok) {
+                notify(await errorText(res), 'error');
+                return;
+            }
+            const data = await res.json();
+            notify(apiMessage(data, 'تم تحديث كلمة المرور بنجاح', 'Password updated successfully'), 'success');
+            document.getElementById('passwordForm').reset();
+        } catch (err) {
+            notify(T('خطأ في الشبكة', 'Network error'), 'error');
+        } finally {
+            setBusy('passwordSaveBtn', 'passwordSpinner', false);
+        }
+    }
+
+    /* ── Notification preferences ───────────────────────────────── */
+    async function loadPreferences() {
+        try {
+            const res = await fetch('/api/me/notification-preferences', { headers: headers() });
+            if (!res.ok) return;
+            const prefs = await res.json();
+            document.getElementById('prefInApp').checked = prefs.in_app !== false;
+            document.getElementById('prefEmail').checked = prefs.email !== false;
+        } catch (err) {
+            // Leave the checkboxes at their unchecked default; the save path
+            // still works and will report its own errors.
+            console.warn('Could not load notification preferences:', err);
+        } finally {
+            // Baseline must be captured after the real values land, otherwise
+            // the page opens already "dirty".
+            captureBaseline();
+            refreshUnsavedBar();
+        }
+    }
+
+    async function savePreferences() {
+        setBusy('notificationsSaveBtn', 'notificationsSpinner', true);
+        try {
+            const res = await fetch('/api/me/notification-preferences', {
+                method: 'PUT',
+                headers: headers(),
+                body: JSON.stringify({
+                    in_app: document.getElementById('prefInApp').checked,
+                    email: document.getElementById('prefEmail').checked,
+                }),
+            });
+            if (!res.ok) {
+                notify(await errorText(res), 'error');
+                return;
+            }
+            const data = await res.json();
+            notify(apiMessage(data, 'تم حفظ التفضيلات بنجاح', 'Preferences saved successfully'), 'success');
+            captureBaseline();
+            refreshUnsavedBar();
+        } catch (err) {
+            notify(T('خطأ في الشبكة', 'Network error'), 'error');
+        } finally {
+            setBusy('notificationsSaveBtn', 'notificationsSpinner', false);
+        }
+    }
+
+    /* ── Wiring (no inline on* handlers — CSP / XSS surface) ────── */
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('profileForm').addEventListener('submit', e => {
+            e.preventDefault(); saveProfile();
+        });
+        document.getElementById('passwordForm').addEventListener('submit', e => {
+            e.preventDefault(); savePassword();
+        });
+        document.getElementById('notificationsForm').addEventListener('submit', e => {
+            e.preventDefault(); savePreferences();
+        });
+
+        tracked().forEach(el => {
+            el.addEventListener('input', refreshUnsavedBar);
+            el.addEventListener('change', refreshUnsavedBar);
+        });
+
+        document.getElementById('unsavedDiscardBtn').addEventListener('click', discardChanges);
+        document.getElementById('unsavedSaveBtn').addEventListener('click', () => {
+            if (activeForm) activeForm.requestSubmit();
+        });
+
+        captureBaseline();
+        refreshUnsavedBar();
+        loadPreferences();
+    });
+})();
 </script>
 {% endblock %}

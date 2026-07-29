@@ -23,36 +23,28 @@
 
 <!-- Status Filter Tabs -->
 <div class="mb-4">
-    <ul class="btn btn-group" id="statusTabs">
-        <li class="btn">
-            <button class="btn btn-primary tab-btn border-radius-left-lg" data-status="SUBMITTED">{% if ui_lang == 'en' %}Awaiting Manager Review{% else %}بانتظار مراجعة المدير{% endif %}</button>
-        </li>
-        <li class="btn">
-            <button class="btn btn-outline-primary tab-btn" data-status="APPROVED">{% if ui_lang == 'en' %}Approved{% else %}معتمد{% endif %}</button>
-        </li>
-        <li class="btn">
-            <button class="btn btn-outline-primary tab-btn" data-status="REJECTED">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</button>
-        </li>
-        <li class="btn">
-            <button class="btn btn-outline-primary tab-btn border-radius-right-lg" data-status="all">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</button>
-        </li>
-    </ul>
+    <div class="absence-tabs" id="statusTabs" role="tablist">
+        <button type="button" class="absence-tab active" data-status="SUBMITTED" role="tab" aria-selected="true" aria-controls="requestsTable">{% if ui_lang == 'en' %}Awaiting Manager Review{% else %}بانتظار مراجعة المدير{% endif %}</button>
+        <button type="button" class="absence-tab" data-status="APPROVED" role="tab" aria-selected="false" aria-controls="requestsTable">{% if ui_lang == 'en' %}Approved{% else %}معتمد{% endif %}</button>
+        <button type="button" class="absence-tab" data-status="REJECTED" role="tab" aria-selected="false" aria-controls="requestsTable">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</button>
+        <button type="button" class="absence-tab" data-status="all" role="tab" aria-selected="false" aria-controls="requestsTable">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</button>
+    </div>
 </div>
 
 <!-- Requests Table -->
-<div class="card h-100 shadow-sm p-3 mb-4 bg-white border border-base-lighter shadow-2">
+<div class="card shadow-sm mb-4">
     <div class="overflow-x-auto">
-        <table class="table table-hover align-middle align-middle--striped w-100 border-base-lighter border-1px" id="requestsTable" aria-label="{{ _('قائمة طلبات الغياب') }}">
-            <thead class="bg-primary-subtle text-primary">
+        <table class="absence-table" id="requestsTable" aria-label="{{ _('قائمة طلبات الغياب') }}">
+            <thead>
                 <tr>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">#</th>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}Parent{% else %}ولي الأمر{% endif %}</th>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}From{% else %}من{% endif %}</th>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}</th>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}Reason{% else %}السبب{% endif %}</th>
-                    <th scope="col" class="border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                    <th scope="col" class="text-center border-bottom-2px border-primary border-opacity-25">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                    <th scope="col">#</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Parent{% else %}ولي الأمر{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}From{% else %}من{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Reason{% else %}السبب{% endif %}</th>
+                    <th scope="col">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                    <th scope="col" class="text-center">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
                 </tr>
             </thead>
             <tbody id="requestsBody">
@@ -69,8 +61,8 @@
 <!-- Decision Modal -->
 <div class="modal fade" id="decisionModal" tabindex="-1" aria-labelledby="decisionTitle" aria-hidden="true">
   <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
+    <div class="modal-content mgr-modal-content">
+      <div class="modal-header mgr-modal-header">
         <h2 class="modal-title" id="decisionTitle">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</h2>
         <button type="button" class="btn-close usa-modal__close" aria-label="Close" data-bs-dismiss="modal"></button>
       </div>
@@ -285,13 +277,20 @@
         });
 
         // ---- filter tabs ----
-        document.querySelectorAll('.tab-btn').forEach(tab => {
+        document.querySelectorAll('.absence-tab').forEach(tab => {
             tab.addEventListener('click', function (e) {
                 e.preventDefault();
-                document.querySelectorAll('.tab-btn').forEach(t => {
-                    t.classList.add('btn btn-outline-primary');
+                // classList.add/remove throw InvalidCharacterError on a token
+                // containing a space, so the previous 'btn btn-outline-primary'
+                // argument aborted this handler before it reached loadRequests()
+                // and the filter never applied. One class per call, and
+                // aria-selected moves with it so the tablist stays truthful.
+                document.querySelectorAll('.absence-tab').forEach(t => {
+                    t.classList.remove('active');
+                    t.setAttribute('aria-selected', 'false');
                 });
-                this.classList.remove('btn btn-outline-primary');
+                this.classList.add('active');
+                this.setAttribute('aria-selected', 'true');
                 currentFilter = this.dataset.status;
                 loadRequests();
             });

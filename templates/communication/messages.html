@@ -129,8 +129,23 @@
 
 {% block extra_js %}
 <script>
-    const IS_EN = document.documentElement.lang === 'en';
-    const T = (ar, en) => IS_EN ? en : ar;
+    /* IS_EN and T are intentionally NOT declared here.
+
+       communication/modals/new_message.html is included unconditionally from
+       this page's content block (above), and its <script> already defines both
+       — identically — in this same top-level script scope. Because the include
+       renders before `extra_js`, re-declaring them with `const` here threw
+
+           SyntaxError: Identifier 'IS_EN' has already been declared
+
+       which aborted this ENTIRE block at parse time: filterMsgs, loadMessages
+       and allMessages were never defined, the three filter buttons threw
+       ReferenceError on click, and the list sat on "جاري التحميل…" forever.
+       The page was completely non-functional for every role.
+
+       A later script can read a `const` from an earlier one's global lexical
+       scope, so simply reusing them is correct. If that include is ever removed
+       from this page, declare both here again. */
 
     let allMessages = [];
     let refreshTimer = null;

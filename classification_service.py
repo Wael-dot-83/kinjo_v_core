@@ -134,6 +134,25 @@ def _band_for_score(score: Optional[float]) -> Tuple[Optional[str], str]:
     return "RED", "أحمر"
 
 
+# English counterparts of BAND_RULES' Arabic labels, keyed by band code.
+# `band_label` is persisted in Arabic only, so any screen rendering it in English
+# mode showed raw Arabic ("أخضر") next to otherwise-English copy — see
+# CLAUDE.md, "Backend strings shown in the UI must supply both _ar and _en".
+_BAND_LABEL_EN = {
+    "GREEN": "Green",
+    "AMBER": "Amber",
+    "RED": "Red",
+}
+_UNCLASSIFIED_EN = "Unclassified"
+
+
+def _band_label_en(band_code: Optional[str]) -> str:
+    """English label for a band code, mirroring the stored Arabic label."""
+    if not band_code:
+        return _UNCLASSIFIED_EN
+    return _BAND_LABEL_EN.get(band_code, _UNCLASSIFIED_EN)
+
+
 def _trend_direction(delta: Optional[float]) -> str:
     if delta is None:
         return "NONE"
@@ -238,6 +257,7 @@ class ManagerBenchmarkSummaryResponse(BaseModel):
     final_score: Optional[float]
     percentile: Optional[float]
     band_label: str
+    band_label_en: str
     peer_group_size: int
     peer_group_label: str
     anonymized_peers: List[Dict[str, Any]]
@@ -1825,6 +1845,7 @@ def get_manager_benchmarking_summary(request: Request,
                 "rank": peer.rank,
                 "percentile": peer.percentile,
                 "band_label": peer.band_label,
+                "band_label_en": _band_label_en(peer.band_code),
                 "final_score": peer.final_score,
             }
         )
@@ -1839,6 +1860,7 @@ def get_manager_benchmarking_summary(request: Request,
         final_score=row.final_score,
         percentile=row.percentile,
         band_label=row.band_label,
+        band_label_en=_band_label_en(row.band_code),
         peer_group_size=len(peer_rows),
         peer_group_label=f"{manager_kg.governorate} - {_size_band_label(row.size_band)}",
         anonymized_peers=anonymized_peers,

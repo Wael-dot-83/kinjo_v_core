@@ -2,6 +2,8 @@
 KPI and Governance Reporting Services
 Implements all KPIs from Section 5 of the SRS
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -43,6 +45,8 @@ _ = setup_translator("ar")  # Default to Arabic, can be made configurable
 from models import TrainingStatus, TrainingModule, StaffTrainingCompletion, KPITarget
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
@@ -4253,7 +4257,7 @@ def get_consolidated_kpi_dashboard_data(
         return att_points, inc_points, enroll_points, gov_points
 
     # Build student distribution by birth year (calendar year)
-    # Age constraints: 70 days (MIN_CHILD_AGE_DAYS) to 4 years 8 months (MAX_CHILD_AGE_MONTHS)
+    # Age constraints: MIN_CHILD_AGE_DAYS (1 day) to MAX_CHILD_AGE_MONTHS (4 years 8 months)
     today_date = _today_jordan()
     bounds = get_child_age_bounds(today_date)
 
@@ -5036,6 +5040,16 @@ def get_kpi_country_level(
             bundle = KPIService.compute_kpi_bundle(db, kg.id, period_start, period_end)
             all_bundles.append(bundle)
         except Exception:
+            # Degrade rather than fail the whole national rollup, but never
+            # silently: a kindergarten dropped here is missing from every
+            # country-level KPI, and without this the omission is invisible.
+            # Only the identifier and the period are logged — no child, parent
+            # or staff data passes through here.
+            logger.warning(
+                "KPI_AGGREGATE_RECORD_EXCLUDED operation=country_rollup "
+                "kindergarten_id=%s period=%s..%s",
+                kg.id, period_start, period_end, exc_info=True,
+            )
             continue
 
     count = len(all_bundles)
@@ -5100,6 +5114,14 @@ def get_kpi_governorate_level(
             bundle = KPIService.compute_kpi_bundle(db, kg.id, period_start, period_end)
             governorate_bundles.setdefault(gov, []).append(bundle)
         except Exception:
+            # As in the country rollup: keep the governorate comparison alive,
+            # but record which kindergarten dropped out of it. Governorate is a
+            # geographic grouping, not personal data.
+            logger.warning(
+                "KPI_AGGREGATE_RECORD_EXCLUDED operation=governorate_rollup "
+                "kindergarten_id=%s governorate=%s period=%s..%s",
+                kg.id, gov, period_start, period_end, exc_info=True,
+            )
             continue
 
     result = []
@@ -5198,6 +5220,11 @@ def get_kpi_alerts(
         try:
             cached = dashboard_cache.get(cache_key)
         except Exception:
+            # Best-effort read: a cache outage must degrade to recomputation,
+            # never fail the request. DEBUG, not WARNING — an unavailable cache
+            # is an expected operational state and would otherwise emit one line
+            # per request for the whole outage.
+            logger.debug("KPI alerts cache read failed; recomputing", exc_info=True)
             cached = None
         if cached is not None:
             return cached
@@ -5282,7 +5309,16 @@ def get_kpi_alerts(
                     "action_en": "Review staff scheduling and ensure adequate coverage",
                 })
         except Exception:
-            pass
+            # A kindergarten that raises here contributes no alerts at all, so a
+            # genuinely failing site looks identical to a healthy one. Keep
+            # serving the rest of the network's alerts, but say which one was
+            # skipped. kindergarten_name is deliberately not logged — the id is
+            # enough to investigate.
+            logger.warning(
+                "KPI_AGGREGATE_RECORD_EXCLUDED operation=alerts "
+                "kindergarten_id=%s period=%s..%s",
+                kg_id, period_start, period_end, exc_info=True,
+            )
 
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
     alerts.sort(key=lambda a: priority_order.get(a.get("priority", "low"), 3))
@@ -5297,7 +5333,10 @@ def get_kpi_alerts(
         try:
             dashboard_cache.set(cache_key, result, ttl_seconds=60)
         except Exception:
-            pass
+            # Best-effort write, same reasoning as the read above: the caller
+            # already has a correct result and must not be failed by a cache
+            # outage. DEBUG keeps an outage from flooding the log.
+            logger.debug("KPI alerts cache write failed; result still served", exc_info=True)
     return result
 
 
@@ -5339,6 +5378,14 @@ def get_kpi_recommended_actions(
     try:
         bundle = KPIService.compute_kpi_bundle(db, kg_id, period_start, period_end)
     except Exception:
+        # The caller does get a structured error here, but nothing server-side
+        # recorded *why*, so the same failure that silently drops this
+        # kindergarten from the rollups above was equally undiagnosable here.
+        logger.warning(
+            "KPI_AGGREGATE_RECORD_EXCLUDED operation=recommended_actions "
+            "kindergarten_id=%s period=%s..%s",
+            kg_id, period_start, period_end, exc_info=True,
+        )
         return {"recommended_actions": [], "error": "Could not compute KPI bundle"}
 
     actions = []

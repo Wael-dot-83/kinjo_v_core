@@ -3,13 +3,28 @@
 {% block title %}{% if ui_lang == 'en' %}Manager Dashboard — KinJo{% else %}لوحة تحكم المدير — كنجو{% endif %}{% endblock %}
 
 {% block page_header %}
-<h1 class="fs-1 fw-bold mt-0 mb-1">
-  {% if ui_lang == 'en' %}Manager Dashboard{% else %}لوحة تحكم المدير{% endif %}
-</h1>
-<p class="lead text-muted mt-0" id="kgNameLine">
-  <span id="kgName">…</span>
-  <span class="text-muted">— <span id="todayDate"></span></span>
-</p>
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+  <div>
+    <h1 class="fs-1 fw-bold mt-0 mb-1">
+      {% if ui_lang == 'en' %}Manager Dashboard{% else %}لوحة تحكم المدير{% endif %}
+    </h1>
+    <p class="lead text-muted mt-0 mb-0" id="kgNameLine">
+      <span id="kgName">…</span>
+      <span class="text-muted">— <span id="todayDate"></span></span>
+    </p>
+  </div>
+  <div class="text-end">
+    <button type="button" class="btn btn-outline-primary" id="dashRefreshBtn">
+      <i class="bi bi-arrow-clockwise me-2" id="dashRefreshIcon" aria-hidden="true"></i>
+      {% if ui_lang == 'en' %}Refresh{% else %}تحديث البيانات{% endif %}
+    </button>
+    {# aria-live so a screen reader announces the new time after a refresh. #}
+    <p class="small text-muted mt-2 mb-0" id="dashUpdatedLine" role="status" aria-live="polite" hidden>
+      {% if ui_lang == 'en' %}Updated{% else %}آخر تحديث{% endif %}
+      <span id="dashUpdatedAt"></span>
+    </p>
+  </div>
+</div>
 {% endblock %}
 
 {% block content %}
@@ -281,11 +296,42 @@ function renderAttendanceTrendChart(data) {
 // so the dashboard can never sit on "Loading…" forever.
 const DASH_TIMEOUT_MS = 15000;
 
-async function loadDashboard() {
+const T = (ar, en) => UI_EN ? en : ar;
+
+/** Stamp the header with the Jordan-local time of the last successful load. */
+function markUpdatedNow() {
+    const line = document.getElementById('dashUpdatedLine');
+    const at = document.getElementById('dashUpdatedAt');
+    if (!line || !at) return;
+    // Pin the zone to Asia/Amman: operational times are Jordan time regardless
+    // of where the browser happens to be running.
+    at.textContent = new Date().toLocaleTimeString(UI_EN ? 'en-JO' : 'ar-JO', {
+        timeZone: 'Asia/Amman', hour: '2-digit', minute: '2-digit',
+    });
+    line.hidden = false;
+}
+
+function setRefreshBusy(busy) {
+    const btn = document.getElementById('dashRefreshBtn');
+    const icon = document.getElementById('dashRefreshIcon');
+    if (btn) btn.disabled = busy;
+    // Bootstrap Icons ship a spin animation class; the icon keeps its shape.
+    if (icon) icon.classList.toggle('spin', busy);
+}
+
+// `manual` distinguishes the user pressing Refresh from the initial page load.
+// On a manual refresh the already-rendered figures stay on screen instead of
+// being replaced by the full-page spinner, which otherwise reads as the
+// dashboard being thrown away and rebuilt.
+async function loadDashboard({ manual = false } = {}) {
     const loading = document.getElementById('dashLoading');
     const error = document.getElementById('dashError');
     const content = document.getElementById('dashContent');
-    loading.hidden = false; error.hidden = true; content.hidden = true;
+    if (manual) {
+        setRefreshBusy(true);
+    } else {
+        loading.hidden = false; error.hidden = true; content.hidden = true;
+    }
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), DASH_TIMEOUT_MS);
@@ -361,18 +407,34 @@ async function loadDashboard() {
             Boolean(noSup.length || nearCap.length || extra.length);
 
         loading.hidden = true;
+        error.hidden = true;
         content.hidden = false;
+        markUpdatedNow();
+        if (manual && typeof showToast === 'function') {
+            showToast(T('تم تحديث البيانات', 'Data refreshed'), 'success');
+        }
     } catch (err) {
         console.error('Dashboard load failed:', err);
-        loading.hidden = true;
-        error.hidden = false;
+        if (manual) {
+            // Keep the last good figures visible and report the failure, rather
+            // than blanking a dashboard that is merely stale.
+            if (typeof showToast === 'function') {
+                showToast(T('تعذّر تحديث البيانات', 'Could not refresh data'), 'error');
+            }
+        } else {
+            loading.hidden = true;
+            error.hidden = false;
+        }
     } finally {
         clearTimeout(timer);
+        if (manual) setRefreshBusy(false);
     }
 }
 document.addEventListener('DOMContentLoaded', () => {
     const retry = document.getElementById('dashRetryBtn');
-    if (retry) retry.addEventListener('click', loadDashboard);
+    if (retry) retry.addEventListener('click', () => loadDashboard());
+    const refresh = document.getElementById('dashRefreshBtn');
+    if (refresh) refresh.addEventListener('click', () => loadDashboard({ manual: true }));
     loadDashboard();
 });
 </script>

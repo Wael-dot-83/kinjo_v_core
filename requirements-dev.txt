@@ -5,6 +5,9 @@ pytest-asyncio>=1.0,<2
 pytest-cov==6.0.0
 pytest-xdist==3.5.0
 pytest-timeout>=2.3,<3
+# Deterministic clock for deadline/boundary tests (tests/test_daily_reports_organization_api.py).
+# Was imported by the suite but never declared, so a clean CI install failed at import.
+freezegun>=1.5,<2
 ruff==0.15.1
 selenium>=4.0,<5
 playwright>=1.49,<2

@@ -1776,7 +1776,10 @@ def change_supervisor_password(
         raise HTTPException(status_code=400, detail="New password confirmation does not match.")
 
     current_user.hashed_password = get_password_hash(body.new_password)
-    current_user.password_changed_at = datetime.now(_JORDAN_TZ)
+    # UTC on purpose — see the note in me_endpoints.change_my_password. Read
+    # only as a duration anchor by auth.requires_password_change, which treats
+    # naive values (every SQLite read) as UTC.
+    current_user.password_changed_at = datetime.now(timezone.utc)
     db.commit()
     return {"status": "ok"}
 

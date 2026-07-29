@@ -24,6 +24,18 @@
     return response.json();
   }
 
+  /** Pick the band label matching the UI language.
+   *
+   * The classification row stores band_label in Arabic only; the API now also
+   * returns band_label_en alongside it. Falling back to the Arabic label keeps
+   * this working against an older response shape rather than rendering blank.
+   */
+  function bandLabel(source) {
+    if (!source) return tr("غير مصنف", "Unclassified");
+    const label = IS_AR ? source.band_label : (source.band_label_en || source.band_label);
+    return label || tr("غير مصنف", "Unclassified");
+  }
+
   function formatNumber(value, digits = 2) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
       return "--";
@@ -90,7 +102,10 @@
       data.final_score === null ? tr("غير متاح", "Not available") : formatNumber(data.final_score);
     percentileEl.textContent =
       data.percentile === null ? "--" : `${formatNumber(data.percentile)}%`;
-    bandEl.textContent = data.band_label || tr("غير مصنف", "Unclassified");
+    // band_label is persisted in Arabic only; band_label_en is its English
+    // counterpart. Reading band_label unconditionally left "أخضر" sitting in an
+    // otherwise fully English page.
+    bandEl.textContent = bandLabel(data);
     peerSizeEl.textContent = String(data.peer_group_size ?? 0);
 
     const peers = data.anonymized_peers || [];
@@ -106,7 +121,7 @@
         <td>${escapeHtml(peer.peer_code)}</td>
         <td>${peer.rank ?? "--"}</td>
         <td>${peer.percentile === null ? "--" : `${formatNumber(peer.percentile)}%`}</td>
-        <td>${escapeHtml(peer.band_label || tr("غير مصنف", "Unclassified"))}</td>
+        <td>${escapeHtml(bandLabel(peer))}</td>
         <td>${peer.final_score === null ? "--" : formatNumber(peer.final_score)}</td>
       </tr>
     `

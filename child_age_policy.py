@@ -17,8 +17,19 @@ from sqlalchemy import and_
 
 from config import settings
 
-MIN_CHILD_AGE_DAYS = settings.MIN_CHILD_AGE_DAYS
-MAX_CHILD_AGE_MONTHS = settings.MAX_CHILD_AGE_MONTHS
+# Read from `settings` at call time, not bound here at import.
+#
+# These were module-level snapshots taken when child_age_policy was first
+# imported, which made the policy look configurable while actually freezing it:
+# anything that adjusted settings afterwards (a test pinning the rule, a reload)
+# was silently ignored, and the frozen copy was the only value the bounds ever
+# used. Reading inside the accessors keeps `settings` the single source of truth.
+def _min_child_age_days() -> int:
+    return settings.MIN_CHILD_AGE_DAYS
+
+
+def _max_child_age_months() -> int:
+    return settings.MAX_CHILD_AGE_MONTHS
 
 
 @dataclass(frozen=True)
@@ -45,8 +56,8 @@ def _subtract_months(base: date, months: int) -> date:
 def get_child_age_bounds(today: Optional[date] = None) -> ChildAgeBounds:
     """Return inclusive DOB bounds for the child age policy."""
     today = today or _today()
-    max_date = today - timedelta(days=MIN_CHILD_AGE_DAYS)
-    min_date = _subtract_months(today, MAX_CHILD_AGE_MONTHS)
+    max_date = today - timedelta(days=_min_child_age_days())
+    min_date = _subtract_months(today, _max_child_age_months())
     return ChildAgeBounds(min_date=min_date, max_date=max_date)
 
 

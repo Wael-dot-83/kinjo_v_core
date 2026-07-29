@@ -107,6 +107,32 @@ def ensure_not_testing_in_production() -> None:
         raise RuntimeError("Refusing to start with TESTING=true in production environment.")
 
 
+def warn_if_testing_disables_security() -> None:
+    """Say out loud when TESTING=true has switched security off.
+
+    `middleware.csrf.csrf_protection_middleware` short-circuits entirely while
+    TESTING is set, so a dev server started with TESTING=true in .env accepts
+    state-changing requests that carry no CSRF token at all. Nothing surfaced
+    that: the server looked normal, so local testing quietly "passed" against a
+    configuration production never runs, and a real CSRF regression could not be
+    reproduced locally.
+
+    The pytest suite sets TESTING itself (conftest.py sets os.environ["TESTING"]
+    before importing the app), so .env does NOT need it — leaving it out of .env
+    costs nothing and makes the dev server behave like production.
+
+    Production can't reach this: ensure_not_testing_in_production() raises first.
+    """
+    if not settings.TESTING:
+        return
+    logging.getLogger("main").warning(
+        "TESTING=true — CSRF enforcement is DISABLED for this process "
+        "(middleware/csrf.py skips all state-changing checks). This is for the "
+        "pytest suite, which sets the flag itself; a dev or staging server does "
+        "not need it in .env. Unset TESTING to exercise real CSRF behaviour."
+    )
+
+
 def ensure_secure_production_config() -> None:
     """Fail fast on obviously unsafe production configuration."""
     if settings.ENVIRONMENT.lower() != "production":
@@ -168,6 +194,8 @@ def configure_logging():
         root.addHandler(h)
 
 configure_logging()
+# Must run after configure_logging() so the warning actually reaches a handler.
+warn_if_testing_disables_security()
 
 # Suppress noisy WinError 10054 connection reset errors on Windows asyncio
 def _ignore_connection_reset(loop, context):
@@ -217,6 +245,7 @@ from routers.supervisor import router as supervisor_scoped_router
 from routers.manager import router as manager_scoped_router
 from routers.admin_impersonation import router as admin_impersonation_router
 from routers.messaging import router as messaging_router
+from me_endpoints import router as me_router
 from government_api import router as government_api_router
 from api.public import router as public_router
 from api.missing_endpoints import router as missing_endpoints_router
@@ -1254,6 +1283,10 @@ app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
 app.include_router(government_api_router, prefix="/api", tags=["Government API"])
 app.include_router(public_router, prefix="/api", tags=["Public"])
 app.include_router(missing_endpoints_router, prefix="/api", tags=["Missing Endpoints"])
+# Account self-service for any signed-in role. The /api/admin/profile pair is
+# behind require_admin, so managers/supervisors/parents had no audited path to
+# edit their own account — see me_endpoints.py.
+app.include_router(me_router, prefix="/api/me", tags=["Account"])
 
 app.include_router(charts_router, tags=["Charts"])
 app.include_router(analytics_explorer_router, tags=["Analytics Explorer"])

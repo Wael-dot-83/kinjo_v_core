@@ -1080,7 +1080,30 @@ class TestInstitutionsLicenseChart:
         assert payload.get("chart")
         assert payload.get("license_chart")
         assert payload["license_chart"]["type"] == "pie"
-        assert any(s["label"] == "مرخصة (سارية)" for s in payload["license_chart"]["series"])
+
+        # The slices are deliberately mutually exclusive so the pie is
+        # statistically valid — see the comment above `lic_series` in
+        # agency_reports_service.py. This assertion previously looked for
+        # "مرخصة (سارية)", a label from the earlier overlapping design where a
+        # kindergarten could be counted in more than one slice; the broader
+        # "licensed" total now lives in the summary instead.
+        series = payload["license_chart"]["series"]
+        labels = [s["label"] for s in series]
+        assert labels == [
+            "نشطة ومرخّصة",
+            "مرخصة لكن غير نشطة",
+            "تراخيص منتهية",
+            "بدون بيانات ترخيص",
+        ], labels
+
+        # The one seeded kindergarten is ACTIVE with a licence valid to 2030, so
+        # it must land in exactly one slice.
+        by_label = {s["label"]: s["value"] for s in series}
+        assert by_label["نشطة ومرخّصة"] == 1
+        assert sum(by_label.values()) == 1, (
+            f"slices must not double-count a kindergarten: {by_label}"
+        )
+        assert all(value >= 0 for value in by_label.values()), by_label
 
 
 class TestChildSafetyChartPresent:

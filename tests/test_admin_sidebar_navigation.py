@@ -8,19 +8,44 @@ FRONTEND_MODULES = [
     ROOT / "scripts" / "compat" / "frontend_orig.py",
     ROOT / "daily_report_analytics.py",
     ROOT / "frontend_agency_reports.py",
+    # Guided analytics registers its page on a dedicated `page_router`
+    # (main.py includes it as analytics_explorer_page_router). Without this entry
+    # the registration check below could not see /admin/analytics/explorer and
+    # would have reported a live, reachable page as an unregistered dead link.
+    ROOT / "analytics_explorer.py",
 ]
 ADMIN_CSS = ROOT / "static" / "css" / "admin_design_system.css"
 
+# Canonical Admin navigation, kept in the order the product decided on.
+#
+# Two deliberate changes landed in templates/admin_base.html after 7cd5f69 (the
+# commit that last updated template and test together) and were never reflected
+# here, which is why the order assertions below had drifted:
+#
+#   de5a00a "feat(admin): promote Geographic Analysis, widen logo, …" and
+#   d0f1130 "feat(admin): move Geographic Analysis under the Overview menu"
+#       moved التحليل الجغرافي (/admin/heatmap) out of العمليات والسلامة and up
+#       into نظرة عامة.
+#
+#   8b4813a "feat(analytics): complete guided explorer — navigation, …"
+#       added التحليلات الموجَّهة (/admin/analytics/explorer) under
+#       التحليلات والتقارير. The page is live and returns 200.
+#
+# The lists are re-pinned to that intended order rather than the template being
+# reordered back: the commit titles above are explicit product decisions. The
+# assertions themselves are unchanged — exact order, exact membership, no
+# duplicates, and every href a registered GET route.
 EXPECTED_ARABIC_LABEL_ORDER = [
-    "نظرة عامة", "لوحة التحكم الإدارية", "مراقبة النظام", "التنبيهات",
+    "نظرة عامة", "لوحة التحكم الإدارية", "التحليل الجغرافي", "مراقبة النظام",
+    "التنبيهات",
     "الأشخاص والجهات", "المستخدمون", "استيراد المستخدمين",
     "نظرة عامة على الحضانات", "سجل الحضانات", "التواصل والبيانات",
     "الرسائل", "إنشاء رسالة", "رسائل التواصل", "بيانات الحضانات المستوردة",
     "استيراد الحضانات", "سجل الاستيراد", "العمليات والسلامة",
-    "تقارير الحوادث", "تحليلات الحوادث", "التحليل الجغرافي",
+    "تقارير الحوادث", "تحليلات الحوادث",
     "التحليلات والتقارير", "نظرة عامة على التحليلات", "مؤشرات أداء الشبكة",
     "مركز التقارير", "دعم القرار", "تنظيم التقارير اليومية",
-    "تحليلات التقارير اليومية", "مستكشف الرسوم البيانية",
+    "تحليلات التقارير اليومية", "التحليلات الموجَّهة", "مستكشف الرسوم البيانية",
     "الحوكمة", "حوكمة التقارير اليومية",
     "تذكيرات الالتزام", "التصنيف والمقارنات", "تقارير الجهات الرسمية",
     "الأمان والحساب",
@@ -29,15 +54,15 @@ EXPECTED_ARABIC_LABEL_ORDER = [
 ]
 
 EXPECTED_VISIBLE_HREFS = [
-    "/admin/dashboard", "/admin/observability", "/admin/alerts",
+    "/admin/dashboard", "/admin/heatmap", "/admin/observability", "/admin/alerts",
     "/admin/users", "/admin/users/import", "/admin/kg-overview",
     "/admin/kindergartens", "/admin/messages", "/admin/messages/compose",
     "/admin/contact-messages", "/admin/imported-kindergartens",
     "/admin/import-kindergartens", "/admin/import-logs",
-    "/admin/reports/incidents", "/admin/safety-analytics", "/admin/heatmap",
+    "/admin/reports/incidents", "/admin/safety-analytics",
     "/admin/analytics", "/admin/kpi", "/admin/analytics/reports",
     "/admin/analytics/decision-support", "/admin/daily-reports-organization",
-    "/reports/analytics", "/admin/analytics/charts",
+    "/reports/analytics", "/admin/analytics/explorer", "/admin/analytics/charts",
     "/admin/governance-reports", "/admin/governance/reminders",
     "/admin/classification", "/admin/agency-reports",
     "/admin/audit-logs", "/admin/impersonate",
@@ -78,8 +103,11 @@ def test_admin_sidebar_visible_links_are_exact_unique_and_registered():
     assert len(visible_hrefs) == len(set(visible_hrefs))
 
     frontend_source = "\n".join(path.read_text(encoding="utf-8") for path in FRONTEND_MODULES)
+    # `page_router` is included too: analytics_explorer.py registers its Admin page
+    # on a dedicated router (main.py: analytics_explorer_page_router), so matching
+    # only `router`/`frontend_router` would miss a route that genuinely exists.
     registered_get_routes = set(
-        re.findall(r'@(?:frontend_)?router\.get\("([^"]+)"', frontend_source)
+        re.findall(r'@(?:frontend_|page_)?router\.get\("([^"]+)"', frontend_source)
     )
     for href in visible_hrefs:
         assert href in registered_get_routes, href

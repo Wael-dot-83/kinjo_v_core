@@ -280,8 +280,8 @@ msgid "passport_number required for non-Jordanian children"
 msgstr "رقم جواز السفر مطلوب للأطفال غير الأردنيين"
 
 #: api/enrollment.py
-msgid "Child must be at least 70 days old"
-msgstr "يجب أن يكون عمر الطفل 70 يومًا على الأقل"
+msgid "Child must be at least {days} days old"
+msgstr "يجب أن يكون عمر الطفل {days} يومًا على الأقل"
 
 #: api/enrollment.py
 msgid "Child must be under 56 months old"

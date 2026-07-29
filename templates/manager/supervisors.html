@@ -33,39 +33,80 @@ actions=supervisor_actions
    showed the browser's default list markers, since .row does not unstyle a list. #}
 <ul class="row g-3 mb-4 list-unstyled">
     <li class="col-md-4">
-        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-primary-subtle border-primary border-opacity-25">
-            <div class="p-2 bg-primary text-white rounded-circle me-3 d-flex justify-content-center align-items-center flex-shrink-0" style="width: 56px; height: 56px; border-radius: 50%;">
-                <i class="bi bi-people-fill h3 fw-bold m-0"></i>
+        <div class="mgr-stat-card">
+            <div class="mgr-stat-icon mgr-stat-icon-primary" aria-hidden="true">
+                <i class="bi bi-people-fill"></i>
             </div>
-            <div class="card-body p-0">
-                <h2 class="card-title fs-6 text-secondary m-0">{% if ui_lang == 'en' %}Total Supervisors{% else %}إجمالي المشرفين{% endif %}</h2>
-                <p class="fs-1 fw-bold text-primary m-0" id="statTotal">—</p>
-            </div>
-        </div>
-    </li>
-    <li class="col-md-4">
-        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-success-subtle border-success border-opacity-25">
-            <div class="p-2 text-bg-success text-white rounded-circle me-3 d-flex justify-content-center align-items-center flex-shrink-0" style="width: 56px; height: 56px; border-radius: 50%;">
-                <i class="bi bi-person-check-fill h3 fw-bold m-0"></i>
-            </div>
-            <div class="card-body p-0">
-                <h2 class="card-title fs-6 text-secondary m-0">{% if ui_lang == 'en' %}Assigned to Classes{% else %}مُعيَّنون لشعب{% endif %}</h2>
-                <p class="fs-1 fw-bold text-success-dark m-0" id="statAssigned">—</p>
+            <div class="mgr-stat-body">
+                <h2 class="mgr-stat-label">{% if ui_lang == 'en' %}Total Supervisors{% else %}إجمالي المشرفين{% endif %}</h2>
+                <div class="mgr-stat-value" id="statTotal">—</div>
             </div>
         </div>
     </li>
     <li class="col-md-4">
-        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2 bg-warning-subtle border-gold">
-            <div class="p-2 bg-gold text-white rounded-circle me-3 d-flex justify-content-center align-items-center flex-shrink-0" style="width: 56px; height: 56px; border-radius: 50%;">
-                <i class="bi bi-person-dash-fill h3 fw-bold m-0"></i>
+        <div class="mgr-stat-card">
+            <div class="mgr-stat-icon mgr-stat-icon-success" aria-hidden="true">
+                <i class="bi bi-person-check-fill"></i>
             </div>
-            <div class="card-body p-0">
-                <h2 class="card-title fs-6 text-secondary m-0">{% if ui_lang == 'en' %}Unassigned{% else %}بدون تعيين{% endif %}</h2>
-                <p class="fs-1 fw-bold text-gold m-0" id="statUnassigned">—</p>
+            <div class="mgr-stat-body">
+                <h2 class="mgr-stat-label">{% if ui_lang == 'en' %}Assigned to Classes{% else %}مُعيَّنون لشعب{% endif %}</h2>
+                <div class="mgr-stat-value" id="statAssigned">—</div>
+            </div>
+        </div>
+    </li>
+    <li class="col-md-4">
+        <div class="mgr-stat-card">
+            <div class="mgr-stat-icon mgr-stat-icon-warning" aria-hidden="true">
+                <i class="bi bi-person-dash-fill"></i>
+            </div>
+            <div class="mgr-stat-body">
+                <h2 class="mgr-stat-label">{% if ui_lang == 'en' %}Unassigned{% else %}بدون تعيين{% endif %}</h2>
+                <div class="mgr-stat-value" id="statUnassigned">—</div>
             </div>
         </div>
     </li>
 </ul>
+
+<!-- Search + filters -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-lg-5">
+        <label class="form-label" for="supSearch">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</label>
+        <div class="input-group">
+          <span class="input-group-text" aria-hidden="true"><i class="bi bi-search"></i></span>
+          <input type="search" class="form-control" id="supSearch"
+                 placeholder="{% if ui_lang == 'en' %}Name, username, email or phone{% else %}الاسم أو اسم المستخدم أو البريد أو الهاتف{% endif %}"
+                 autocomplete="off">
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <label class="form-label" for="supStatusFilter">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+        <select class="form-select" id="supStatusFilter">
+          <option value="all" selected>{% if ui_lang == 'en' %}All statuses{% else %}كل الحالات{% endif %}</option>
+          <option value="active">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+          <option value="inactive">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</option>
+        </select>
+      </div>
+      <div class="col-6 col-lg-3">
+        <label class="form-label" for="supAssignmentFilter">{% if ui_lang == 'en' %}Assignment{% else %}التعيين{% endif %}</label>
+        <select class="form-select" id="supAssignmentFilter">
+          <option value="all" selected>{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+          <option value="assigned">{% if ui_lang == 'en' %}Assigned to a class{% else %}مُعيَّن لشعبة{% endif %}</option>
+          <option value="unassigned">{% if ui_lang == 'en' %}Unassigned{% else %}بدون تعيين{% endif %}</option>
+        </select>
+      </div>
+      <div class="col-12 col-lg-1 d-grid">
+        <button type="button" class="btn btn-outline-secondary" id="supClearFilters"
+                title="{% if ui_lang == 'en' %}Clear filters{% else %}مسح المرشحات{% endif %}">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+          <span class="d-lg-none ms-2">{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</span>
+        </button>
+      </div>
+    </div>
+    <p class="text-secondary small mb-0 mt-3" id="supResultCount" role="status" aria-live="polite"></p>
+  </div>
+</div>
 
 <!-- Supervisor Cards -->
 <div id="supervisorsContainer">
@@ -151,6 +192,9 @@ const h = () => {
 };
 
 let _classes = [];
+// Full server-side list. Filtering is a view concern applied on top of this, so
+// the stat tiles keep reporting real totals while the grid shows the subset.
+let _supervisors = [];
 
 async function loadSupervisors() {
     try {
@@ -161,42 +205,87 @@ async function loadSupervisors() {
         const supData = supRes.ok ? await supRes.json() : { supervisors: [] };
         const clsData = clsRes.ok ? await clsRes.json() : { classes: [] };
         _classes = clsData.classes || [];
-        renderSupervisors(supData.supervisors || []);
+        _supervisors = supData.supervisors || [];
+        updateStats();
+        applyFilters();
     } catch {
         notify('تعذّر تحميل البيانات', 'Unable to load data', 'error');
     }
 }
 
-function renderSupervisors(supervisors) {
-    document.getElementById('statTotal').textContent = supervisors.length;
-    const assigned   = supervisors.filter(s => s.classes && s.classes.length).length;
-    const unassigned = supervisors.length - assigned;
-    document.getElementById('statAssigned').textContent   = assigned;
-    document.getElementById('statUnassigned').textContent = unassigned;
+function isAssigned(sup) {
+    return Boolean(sup.classes && sup.classes.length);
+}
 
+function updateStats() {
+    const assigned = _supervisors.filter(isAssigned).length;
+    document.getElementById('statTotal').textContent      = _supervisors.length;
+    document.getElementById('statAssigned').textContent   = assigned;
+    document.getElementById('statUnassigned').textContent = _supervisors.length - assigned;
+}
+
+function applyFilters() {
+    const term = (document.getElementById('supSearch')?.value || '').trim().toLowerCase();
+    const status = document.getElementById('supStatusFilter')?.value || 'all';
+    const assignment = document.getElementById('supAssignmentFilter')?.value || 'all';
+
+    const filtered = _supervisors.filter(sup => {
+        if (status === 'active' && sup.status !== 'ACTIVE') return false;
+        if (status === 'inactive' && sup.status === 'ACTIVE') return false;
+        if (assignment === 'assigned' && !isAssigned(sup)) return false;
+        if (assignment === 'unassigned' && isAssigned(sup)) return false;
+        if (!term) return true;
+        // Match the same fields the card displays, so a visible value is always
+        // searchable — including the class names shown as badges.
+        const haystack = [
+            sup.full_name, sup.username, sup.email, sup.phone_number,
+            ...(sup.classes || []).map(c => c.name_ar),
+            ...(sup.classes || []).map(c => c.name_en),
+        ].filter(Boolean).join(' ').toLowerCase();
+        return haystack.includes(term);
+    });
+
+    renderSupervisors(filtered);
+
+    const countEl = document.getElementById('supResultCount');
+    if (countEl) {
+        countEl.textContent = filtered.length === _supervisors.length
+            ? TS(`عرض ${_supervisors.length} مشرفًا`, `Showing all ${_supervisors.length} supervisors`)
+            : TS(`عرض ${filtered.length} من ${_supervisors.length} مشرفًا`,
+                 `Showing ${filtered.length} of ${_supervisors.length} supervisors`);
+    }
+}
+
+function renderSupervisors(supervisors) {
     const container = document.getElementById('supervisorsContainer');
     if (!supervisors.length) {
+        // Distinguish "nothing exists" from "nothing matches", so a user who
+        // filtered everything out is not told the kindergarten has no staff.
+        const emptyMessage = _supervisors.length
+            ? TS('لا نتائج مطابقة للبحث', 'No supervisors match your filters')
+            : TS('لا يوجد مشرفون', 'No supervisors yet');
         container.innerHTML = `<div class="text-center py-5 text-secondary">
-            <span>${TS('لا يوجد مشرفون', 'No supervisors yet')}</span>
+            <span>${escHtml(emptyMessage)}</span>
         </div>`;
+        document.getElementById('loadingState')?.remove();
         return;
     }
-    
+
     // This <ul> is the grid row itself, so #supervisorsContainer must NOT also be a .row:
     // nesting a .row directly inside a .row doubles Bootstrap's negative gutter margins and
     // pushes the cards past the inline edge. list-unstyled removes the default markers.
     container.innerHTML = `<ul class="row g-4 list-unstyled mb-0">` + supervisors.map(sup => {
         const classBadges = sup.classes && sup.classes.length
-            ? sup.classes.map(c => `<span class="badge me-2">${escHtml(c.name_ar)}${c.is_primary ? ' ★' : ''}</span>`).join('')
-            : `<span class="badge">${TS('بدون تعيين', 'Unassigned')}</span>`;
+            ? sup.classes.map(c => `<span class="badge badge-soft-primary me-2">${escHtml(c.name_ar)}${c.is_primary ? ' ★' : ''}</span>`).join('')
+            : `<span class="badge badge-soft-secondary">${TS('بدون تعيين', 'Unassigned')}</span>`;
 
         const statusTag = sup.status === 'ACTIVE'
-            ? `<span class="badge text-bg-success mt-1">${TS('نشط', 'Active')}</span>`
-            : `<span class="badge text-bg-light mt-1 text-muted">${TS('غير نشط', 'Inactive')}</span>`;
+            ? `<span class="badge badge-soft-success mt-1">${TS('نشط', 'Active')}</span>`
+            : `<span class="badge badge-soft-secondary mt-1">${TS('غير نشط', 'Inactive')}</span>`;
 
         return `
         <li class="col-12 col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
+            <div class="card h-100 shadow-sm supervisor-card">
                 <header class="card-header">
                     <h2 class="card-title">${escHtml(sup.full_name)}</h2>
                     <p class="card-subtitle text-muted mb-0">@${escHtml(sup.username)}</p>
@@ -207,7 +296,7 @@ function renderSupervisors(supervisors) {
                     <p class="mb-2"><i class="bi bi-telephone me-2 text-secondary"></i>${escHtml(sup.phone_number || '—')}</p>
                     <div class="mb-2">${classBadges}</div>
                 </div>
-                <div class="card-footer bg-transparent border-0">
+                <div class="card-footer">
                     <a href="#assignClassModal" class="btn btn-outline-primary js-assign-class" role="button" aria-controls="assignClassModal" data-bs-toggle="modal" data-bs-target="#assignClassModal" data-sup-id="${sup.id}">
                         <i class="bi bi-plus-circle me-2"></i>${TS('تعيين شعبة', 'Assign class')}
                     </a>
@@ -295,8 +384,20 @@ async function saveSupervisor() {
     await loadSupervisors();
 }
 
-async function removeSupervisor(id) {
-    if (!confirm('{% if ui_lang == "en" %}Remove this supervisor account?{% else %}هل تريد إزالة حساب المشرف؟{% endif %}')) return;
+async function removeSupervisor(id, cardEl) {
+    const sup = _supervisors.find(s => s.id === id);
+    // AdminUtils.confirm resolves through SweetAlert2 (RTL-aware, translatable)
+    // and falls back to window.confirm only if the vendor script is missing.
+    const confirmed = await window.AdminUtils.confirm({
+        title: TS('إزالة حساب المشرف؟', 'Remove this supervisor account?'),
+        message: sup
+            ? TS(`سيتم إلغاء تفعيل حساب ${sup.full_name}.`, `${sup.full_name}'s account will be deactivated.`)
+            : '',
+        confirmText: TS('إزالة', 'Remove'),
+        danger: true,
+    });
+    if (!confirmed) return;
+
     const res = await fetch(`/api/manager/supervisors/${id}`, { method: 'DELETE', headers: h() });
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -304,6 +405,14 @@ async function removeSupervisor(id) {
         else notify('تعذر إزالة المشرف', 'Unable to remove supervisor', 'error');
         return;
     }
+
+    // Fade the removed card out before reloading, so the grid does not appear
+    // to jump. The reload is what actually re-establishes truth.
+    if (cardEl) {
+        cardEl.classList.add('supervisor-card-removing');
+        await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    notify('تمت إزالة المشرف', 'Supervisor removed', 'success');
     await loadSupervisors();
 }
 
@@ -325,8 +434,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const editBtn = e.target.closest('.js-edit-supervisor');
         if (editBtn) editSupervisor(editBtn);
         const deleteBtn = e.target.closest('.js-delete-supervisor');
-        if (deleteBtn) removeSupervisor(parseInt(deleteBtn.dataset.supId, 10));
+        if (deleteBtn) {
+            removeSupervisor(parseInt(deleteBtn.dataset.supId, 10),
+                             deleteBtn.closest('.supervisor-card'));
+        }
     });
+
+    // Filtering is client-side over the already-loaded list, so it costs no
+    // extra request; debounce only keeps re-rendering off every keystroke.
+    let searchTimer = null;
+    const search = document.getElementById('supSearch');
+    if (search) search.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(applyFilters, 150);
+    });
+    document.getElementById('supStatusFilter')?.addEventListener('change', applyFilters);
+    document.getElementById('supAssignmentFilter')?.addEventListener('change', applyFilters);
+    document.getElementById('supClearFilters')?.addEventListener('click', () => {
+        if (search) search.value = '';
+        document.getElementById('supStatusFilter').value = 'all';
+        document.getElementById('supAssignmentFilter').value = 'all';
+        applyFilters();
+    });
+
     loadSupervisors();
 });
 

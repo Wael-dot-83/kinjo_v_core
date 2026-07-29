@@ -236,11 +236,20 @@ class TestDiskFullChaos:
                 "Error response has no human-readable message"
             )
 
-    def test_backup_endpoint_requires_csrf(self, client, test_db):
-        """Same endpoint, auth but no CSRF pair, must be rejected at the gate."""
+    def test_backup_endpoint_requires_csrf(self, client, test_db, enable_strict_csrf):
+        """Same endpoint, auth but no CSRF pair, must be rejected at the gate.
+
+        The gate is now `middleware.csrf.csrf_protection_middleware` (403), not the
+        removed per-endpoint `_validate_csrf_token` (400), and it is inert while the
+        suite's TESTING flag is set — hence `enable_strict_csrf`. The bearer token is
+        taken first because strict mode also brings MFA into `/token`.
+        """
         _make_admin(test_db)
-        r = client.post("/api/admin/backup/create", headers=_tok(client))
-        assert r.status_code == 400, r.text
+        headers = _tok(client)
+
+        enable_strict_csrf()
+        r = client.post("/api/admin/backup/create", headers=headers)
+        assert r.status_code == 403, r.text
         assert "CSRF" in r.text
 
     def test_create_database_backup_surfaces_disk_full(self, tmp_path, monkeypatch):

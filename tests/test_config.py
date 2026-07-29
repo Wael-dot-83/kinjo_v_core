@@ -53,4 +53,72 @@ def test_production_accepts_postgres(monkeypatch):
     # Reaches the SMTP check, i.e. the database guard let PostgreSQL through.
     with pytest.raises(RuntimeError, match="SMTP_UNCONFIGURED"):
         config.validate_production_settings()
-        
+
+
+# --------------------------------------------------------------------------
+# Non-canonical child-age policy must be visible at startup.
+#
+# The setting is deliberately overridable (it is policy, not a constant), so
+# this warns rather than refusing to start. Without it, a .env carrying the
+# superseded MIN_CHILD_AGE_DAYS=70 refused children aged 1-69 days with no
+# signal in any log.
+# --------------------------------------------------------------------------
+
+
+def _reaches_child_age_check(monkeypatch):
+    """Valid production settings that get past every hard guard before the warning."""
+    _valid_production_settings(monkeypatch)
+    monkeypatch.setattr(config.settings, "SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr(config.settings, "SMTP_FROM", "noreply@example.com")
+    monkeypatch.setattr(config.settings, "CAPTCHA_ENABLED", False)
+    monkeypatch.setattr(config.settings, "REDIS_URL", "redis://cache:6379/0")
+
+
+def test_noncanonical_minimum_child_age_warns_at_startup(monkeypatch, caplog):
+    _reaches_child_age_check(monkeypatch)
+    monkeypatch.setattr(config.settings, "MIN_CHILD_AGE_DAYS", 70)
+
+    with caplog.at_level("WARNING", logger=config.logger.name):
+        config.validate_production_settings()
+
+    warnings = [r for r in caplog.records if "NONCANONICAL_CHILD_AGE_POLICY" in r.getMessage()]
+    assert len(warnings) == 1, [r.getMessage() for r in caplog.records]
+
+    message = warnings[0].getMessage()
+    assert "MIN_CHILD_AGE_DAYS=70" in message
+    assert f"canonical={config.CANONICAL_MIN_CHILD_AGE_DAYS}" in message
+    # The operator needs the impact and the exact remedy, not just a flag.
+    assert "1-69 days will be refused" in message
+    assert "remove the override" in message
+    assert warnings[0].levelname == "WARNING"
+
+
+def test_noncanonical_maximum_child_age_warns_at_startup(monkeypatch, caplog):
+    _reaches_child_age_check(monkeypatch)
+    monkeypatch.setattr(config.settings, "MAX_CHILD_AGE_MONTHS", 48)
+
+    with caplog.at_level("WARNING", logger=config.logger.name):
+        config.validate_production_settings()
+
+    warnings = [r for r in caplog.records if "MAX_CHILD_AGE_MONTHS" in r.getMessage()]
+    assert len(warnings) == 1
+    assert f"canonical={config.CANONICAL_MAX_CHILD_AGE_MONTHS}" in warnings[0].getMessage()
+
+
+def test_canonical_child_age_policy_is_silent(monkeypatch, caplog):
+    """The happy path must not warn, or the signal is worthless."""
+    _reaches_child_age_check(monkeypatch)
+    monkeypatch.setattr(config.settings, "MIN_CHILD_AGE_DAYS", config.CANONICAL_MIN_CHILD_AGE_DAYS)
+    monkeypatch.setattr(config.settings, "MAX_CHILD_AGE_MONTHS", config.CANONICAL_MAX_CHILD_AGE_MONTHS)
+
+    with caplog.at_level("WARNING", logger=config.logger.name):
+        config.validate_production_settings()
+
+    assert not [r for r in caplog.records if "CHILD_AGE_POLICY" in r.getMessage()]
+
+
+def test_child_age_defaults_are_the_canonical_constants():
+    """The default and the policy of record cannot drift apart."""
+    fields = Settings.model_fields
+    assert fields["MIN_CHILD_AGE_DAYS"].default == config.CANONICAL_MIN_CHILD_AGE_DAYS
+    assert fields["MAX_CHILD_AGE_MONTHS"].default == config.CANONICAL_MAX_CHILD_AGE_MONTHS

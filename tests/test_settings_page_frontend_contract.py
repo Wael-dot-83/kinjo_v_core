@@ -20,9 +20,17 @@ def test_session_timeout_meta_tag_is_emitted():
     assert 'meta[name="session-timeout-minutes"]' in js
 
     base_html = ADMIN_BASE_TEMPLATE.read_text(encoding="utf-8")
-    match = re.search(r'<meta name="session-timeout-minutes" content="([^"]+)"', base_html)
-    assert match, "session-timeout-minutes meta tag is not emitted in admin_base.html"
-    assert "session_timeout_minutes" in match.group(1)
+    # Match the tag structurally rather than as one exact line. The previous
+    # pattern required `<meta name="..." content="..."` with single spaces, so it
+    # broke the moment a formatter wrapped the attributes onto their own lines —
+    # reporting "tag is not emitted" while admin_base.html emitted it correctly.
+    # Attribute order and whitespace are not part of this contract; the tag being
+    # present and fed from the Jinja global is.
+    meta_tag = re.search(r'<meta\b[^>]*name="session-timeout-minutes"[^>]*>', base_html)
+    assert meta_tag, "session-timeout-minutes meta tag is not emitted in admin_base.html"
+    content = re.search(r'content="([^"]+)"', meta_tag.group(0))
+    assert content, "session-timeout-minutes meta tag has no content attribute"
+    assert "session_timeout_minutes" in content.group(1)
 
 
 def test_settings_page_and_meta_tag_read_the_same_source_of_truth():
