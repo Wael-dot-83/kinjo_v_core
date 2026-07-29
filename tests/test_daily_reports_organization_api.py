@@ -1,4 +1,7 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+import pytest
 
 import models
 from main import app
@@ -503,15 +506,39 @@ def test_all_kindergartens_filter_respects_pagination(
     assert body["pagination"]["has_more_pages"] is True
 
 
+@pytest.mark.parametrize(
+    "amman_clock, expect_rejected",
+    [
+        ("15:59", False),  # one minute before the cut-off — must still submit
+        ("16:00", True),   # the cut-off itself is exclusive: 4:00 PM is too late
+        ("16:01", True),   # one minute after
+    ],
+)
 def test_daily_report_submit_enforces_jordan_deadline(
-    client, test_db, supervisor_user, sample_child, active_enrollment
+    client, test_db, supervisor_user, sample_child, active_enrollment,
+    amman_clock, expect_rejected,
 ):
+    """The 4:00 PM cut-off is evaluated in Amman local time, not UTC.
+
+    `validators.validate_daily_report_deadline` compares
+    `datetime.now(UTC+3).hour >= 16`. The previous version of this test froze the
+    clock at "2026-07-25 16:01:00", which freezegun interprets as UTC — 19:01 in
+    Amman. It therefore passed while testing a time three hours past the boundary
+    and would have kept passing had the rule been evaluated in UTC, the exact
+    defect it exists to catch. Freezing an explicitly Amman-aware instant pins the
+    real boundary, and the 15:59 case proves the endpoint is not simply refusing
+    everything.
+    """
     from freezegun import freeze_time
+
+    amman = ZoneInfo("Asia/Amman")
+    hour, minute = (int(part) for part in amman_clock.split(":"))
+    frozen = datetime(2026, 7, 25, hour, minute, tzinfo=amman)
 
     report = models.DailyReport(
         child_id=sample_child.id,
         kindergarten_id=active_enrollment.kindergarten_id,
-        date=date.today(),
+        date=frozen.date(),
         status=models.DailyReportStatus.DRAFT,
         submitted_by=supervisor_user.id,
         arrival_time="08:00",
@@ -520,13 +547,29 @@ def test_daily_report_submit_enforces_jordan_deadline(
     test_db.commit()
     test_db.refresh(report)
 
+    # Materialise this router on a real clock before freezegun patches datetime.
+    #
+    # FastAPI defers include_router behind opaque `_IncludedRouter` nodes and only
+    # builds each route's pydantic fields on the first dispatch into it. One route
+    # in this router declares `Optional[date] = Query(None)`, and while freezegun
+    # is active `datetime.date` is `FakeDate`, which pydantic cannot build a schema
+    # for — so a *cold* first dispatch inside the frozen block dies with
+    # "Invalid args for response field" instead of exercising the deadline at all.
+    # Without this warm-up the test passes only when some earlier test happened to
+    # touch the router first, which is precisely the order-dependence that hides
+    # real regressions. The response is irrelevant; the dispatch is the point.
+    client.get("/api/daily-reports/__router_warmup__")
+
     app.dependency_overrides[get_current_user] = lambda: supervisor_user
     try:
-        with freeze_time("2026-07-25 16:01:00"):
-            response = client.post(
-                f"/api/daily-reports/{report.id}/submit",
-            )
-        assert response.status_code == 400
-        assert "4:00 PM" in response.text or "deadline" in response.text.lower()
+        with freeze_time(frozen):
+            response = client.post(f"/api/daily-reports/{report.id}/submit")
+
+        if expect_rejected:
+            assert response.status_code == 400, response.text
+            assert "4:00 PM" in response.text or "deadline" in response.text.lower()
+        else:
+            assert response.status_code == 200, response.text
+            assert response.json()["status"] == "submitted"
     finally:
         app.dependency_overrides.pop(get_current_user, None)
