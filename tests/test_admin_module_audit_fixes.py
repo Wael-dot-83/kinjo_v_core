@@ -27,13 +27,34 @@ AGENCY_REPORT = ROOT / "templates" / "admin" / "agency_reports" / "report.html"
 
 
 def test_charts_dashboard_has_no_hardcoded_english_only_strings():
+    """Every user-facing string in the charts explorer resolves in both languages.
+
+    The empty-state check asserts the *contract* — that each "no data" message is
+    produced through the bilingual `tEn(en, ar)` helper — rather than pinning one
+    Arabic literal. It previously required the exact string "بدون بيانات", which
+    appears nowhere in the repository: the codebase consistently says
+    "لا توجد بيانات" (58 occurrences) and "لا تتوفر بيانات" (33). The assertion
+    could therefore never pass, and satisfying it literally would have introduced
+    a phrasing inconsistent with every other screen.
+    """
+    import re
+
     html = CHARTS_DASHBOARD.read_text(encoding="utf-8")
     assert '<span class="visually-hidden">Loading...' not in html
     assert "<em>Level:" not in html
     assert "'<p class=\"text-muted\">No data</p>'" not in html
     # The drilldown breadcrumb's final segment is bilingual now.
     assert "الحضانات" in html
-    assert "بدون بيانات" in html
+
+    # Every English "No data…" string must be paired with an Arabic one via tEn().
+    bare_no_data = re.findall(r"""['"]No data[^'"]*['"]""", html)
+    assert bare_no_data, "expected the explorer to render at least one empty state"
+    for literal in bare_no_data:
+        pattern = r"tEn\(\s*" + re.escape(literal) + r"\s*,\s*['\"][^'\"]*[؀-ۿ]"
+        assert re.search(pattern, html), (
+            f"{literal} is rendered without an Arabic counterpart via tEn()"
+        )
+
     # The scope-level enum localises through TRANSLATIONS (network was missing).
     assert '"network": LANG === \'en\' ? "Network" : "الشبكة"' in html
 
