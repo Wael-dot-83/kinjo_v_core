@@ -912,7 +912,9 @@ def _supervisor_analytics(
         class_supervisor_map.setdefault(a.class_id, []).append(a.supervisor_id)
 
     class_map = {c.id: c for c in classes}
-    kg_map = {k.id: k for k in db.query(models.Kindergarten).all()}
+    kg_ids_needed = {c.kindergarten_id for c in classes if c.kindergarten_id}
+    kg_ids_needed.update(s.kindergarten_id for s in supervisors if s.kindergarten_id)
+    kg_map = {k.id: k for k in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids_needed)).all()} if kg_ids_needed else {}
 
     enrolled_by_class: dict[int, int] = {}
     for e in official_enrollments:
