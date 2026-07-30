@@ -87,7 +87,7 @@ def get_manager_dashboard(
     week_ago = today - timedelta(days=7)
     recent_incidents = db.query(func.count(models.Incident.id)).filter(
         models.Incident.kindergarten_id == kindergarten_id,
-        func.date(models.Incident.occurred_at) >= week_ago
+        models.Incident.occurred_at >= jordan_day_bounds(week_ago)[0]
     ).scalar() or 0
 
     # Attendance Trend (Last 7 days) — single GROUP BY query

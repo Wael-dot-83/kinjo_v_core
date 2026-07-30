@@ -17,6 +17,7 @@ from sqlalchemy import func, and_, case
 import models
 from config import settings
 from cache_service import cache_service
+from utils.time_utils import jordan_date_range_filter
 
 logger = logging.getLogger(__name__)
 
@@ -745,8 +746,7 @@ def _incident_sla_score(
         .filter(
             models.Incident.followup_required_flag.is_(True),
             models.Incident.followup_sla_deadline.isnot(None),
-            func.date(models.Incident.occurred_at) >= start_date,
-            func.date(models.Incident.occurred_at) <= end_date,
+            *jordan_date_range_filter(models.Incident.occurred_at, start_date, end_date),
         )
     )
     if kindergarten_id:

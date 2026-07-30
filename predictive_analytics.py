@@ -9,7 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import models
-from utils.time_utils import today_amman as _today
+from utils.time_utils import today_amman as _today, jordan_date_range_filter, jordan_date_range_filter
 
 
 class PredictionType(Enum):
@@ -135,8 +135,7 @@ class PredictiveAnalytics:
         q_rows = (
             db.query(func.date(models.Incident.occurred_at), func.count(models.Incident.id))
             .filter(
-                func.date(models.Incident.occurred_at) >= start_day,
-                func.date(models.Incident.occurred_at) <= end_day,
+                *jordan_date_range_filter(models.Incident.occurred_at, start_day, end_day),
             )
         )
         if kindergarten_id > 0:
@@ -283,8 +282,7 @@ class PredictiveAnalytics:
             )
             .filter(
                 models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-                func.date(models.EnrollmentApplication.created_at) >= start_day,
-                func.date(models.EnrollmentApplication.created_at) <= end_day,
+                *jordan_date_range_filter(models.EnrollmentApplication.created_at, start_day, end_day),
             )
             .group_by(func.date(models.EnrollmentApplication.created_at))
             .order_by(func.date(models.EnrollmentApplication.created_at).asc())

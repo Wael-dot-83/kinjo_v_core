@@ -13,6 +13,8 @@ from sqlalchemy import and_, or_, func
 from database import get_db
 from cache_service import cache_service
 import models
+from utils.time_utils import jordan_date_range_filter
+from utils.time_utils import jordan_date_range_filter
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +23,12 @@ class DashboardFilterService:
     """Service for advanced dashboard filtering and search"""
 
     def __init__(self):
+        from utils.time_utils import now_amman
+        jordan_now = now_amman()
         self.default_filters = {
             "date_range": {
-                "start_date": (datetime.now() - timedelta(days=30)).date(),
-                "end_date": datetime.now().date()
+                "start_date": (jordan_now - timedelta(days=30)).date(),
+                "end_date": jordan_now.date()
             },
             "kindergarten_ids": [],
             "governorates": [],
@@ -153,8 +157,7 @@ class DashboardFilterService:
 
             if hasattr(models.Kindergarten, "created_at"):
                 query = query.filter(
-                    func.date(models.Kindergarten.created_at) >= start_date,
-                    func.date(models.Kindergarten.created_at) <= end_date,
+                    *jordan_date_range_filter(models.Kindergarten.created_at, start_date, end_date),
                 )
 
         # Kindergarten filter

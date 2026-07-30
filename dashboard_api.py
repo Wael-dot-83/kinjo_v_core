@@ -219,12 +219,13 @@ def get_dashboard_summary(
         attendance = round(att_num / att_den * 100, 1) if att_den > 0 else 0.0
 
         # open alerts: pending enrollments + today's incidents
+        from utils.time_utils import jordan_date_range_filter
         pending_q = db.query(func.count(models.EnrollmentApplication.id)).filter(
             models.EnrollmentApplication.status == models.EnrollmentStatus.PENDING_REVIEW,
             models.EnrollmentApplication.deleted_at.is_(None),
         )
         incident_q = db.query(func.count(models.Incident.id)).filter(
-            func.date(models.Incident.occurred_at) == today,
+            *jordan_date_range_filter(models.Incident.occurred_at, today, today),
             models.Incident.deleted_at.is_(None),
         )
         if kg_filter_ids:

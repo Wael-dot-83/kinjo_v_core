@@ -42,14 +42,16 @@ _ = setup_translator("ar")  # Default to Arabic, can be made configurable
 # Import new models/enums
 from models import TrainingStatus, TrainingModule, StaffTrainingCompletion, KPITarget
 
+from utils.time_utils import get_amman_tz, now_amman, today_amman, jordan_date_range_filter
+
 router = APIRouter()
 
-_JORDAN_TZ = timezone(timedelta(hours=3))
+_JORDAN_TZ = get_amman_tz()
 
 
 def _today_jordan() -> date:
     """Current date in Jordan UTC+3. Use everywhere instead of date.today()."""
-    return datetime.now(_JORDAN_TZ).date()
+    return today_amman()
 
 
 KPI_SUPPORTED_DIMENSION_TYPES: Tuple[str, ...] = (
@@ -1595,8 +1597,7 @@ class KPIService:
         """
         incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end)
         ).scalar() or 0
 
         _, expected_by_child, _ = KPIService._count_expected_child_days(
@@ -1624,8 +1625,7 @@ class KPIService:
         """
         serious_incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.severity_level.in_([
                 models.SeverityLevel.HIGH,
                 models.SeverityLevel.CRITICAL
@@ -1764,8 +1764,7 @@ class KPIService:
         # Count incidents requiring follow-up
         total_followup_required = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.followup_required_flag == True
         ).scalar() or 0
 
@@ -1775,11 +1774,9 @@ class KPIService:
         # Count incidents closed within SLA
         closed_within_sla = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.followup_required_flag == True,
             models.Incident.closed_at.isnot(None),
-            models.Incident.closed_at <= models.Incident.followup_sla_deadline
         ).scalar() or 0
 
         rate = (closed_within_sla / total_followup_required) * 100
@@ -2403,13 +2400,11 @@ class KPIService:
 
         incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
         ).scalar() or 0
         serious_incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.severity_level.in_([
                 models.SeverityLevel.HIGH,
                 models.SeverityLevel.CRITICAL,
@@ -2417,14 +2412,12 @@ class KPIService:
         ).scalar() or 0
         followup_required = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.followup_required_flag == True,
         ).scalar() or 0
         followup_closed_within_sla = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.followup_required_flag == True,
             models.Incident.closed_at.isnot(None),
             models.Incident.closed_at <= models.Incident.followup_sla_deadline,
@@ -3541,8 +3534,7 @@ def get_consolidated_kpi_dashboard_data(
                 func.count(models.Incident.id),
             ).filter(
                 models.Incident.kindergarten_id.in_(target_kindergarten_ids),
-                func.date(models.Incident.occurred_at) >= period_start,
-                func.date(models.Incident.occurred_at) <= period_end,
+                *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
                 *extra_filters,
             ).group_by(models.Incident.kindergarten_id)
             return {int(r[0]): int(r[1]) for r in q.all()}
@@ -4195,8 +4187,7 @@ def get_consolidated_kpi_dashboard_data(
             func.count(models.Incident.id),
         ).filter(
             models.Incident.kindergarten_id.in_(target_kindergarten_ids),
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
         ).group_by(func.date(models.Incident.occurred_at)).all()
         inc_by_date: Dict[str, int] = {str(r[0]): int(r[1]) for r in inc_rows}
 
@@ -4206,8 +4197,7 @@ def get_consolidated_kpi_dashboard_data(
             func.count(models.EnrollmentApplication.id),
         ).filter(
             models.EnrollmentApplication.kindergarten_id.in_(target_kindergarten_ids),
-            func.date(models.EnrollmentApplication.created_at) >= period_start,
-            func.date(models.EnrollmentApplication.created_at) <= period_end,
+            *jordan_date_range_filter(models.EnrollmentApplication.created_at, period_start, period_end),
         ).group_by(func.date(models.EnrollmentApplication.created_at)).all()
         enroll_by_date: Dict[str, int] = {str(r[0]): int(r[1]) for r in enroll_rows}
 

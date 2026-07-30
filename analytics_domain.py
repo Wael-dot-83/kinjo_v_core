@@ -424,11 +424,13 @@ def attendance_series(db: Session, scope_type: str, scope_id: Optional[str], sta
     return series
 
 
+from utils.time_utils import jordan_date_range_filter
+
 def incident_series(db: Session, scope_type: str, scope_id: Optional[str], start: date, end: date) -> List[SeriesPoint]:
     series: List[SeriesPoint] = []
     current = start
     while current <= end:
-        incident_q = db.query(func.count(models.Incident.id)).filter(func.date(models.Incident.occurred_at) == current)
+        incident_q = db.query(func.count(models.Incident.id)).filter(*jordan_date_range_filter(models.Incident.occurred_at, current, current))
         if scope_type == "KINDERGARTEN" and scope_id:
             incident_q = incident_q.filter(models.Incident.kindergarten_id == int(scope_id))
         elif scope_type == "CLASS" and scope_id:
@@ -447,7 +449,7 @@ def enrollment_series(db: Session, scope_type: str, scope_id: Optional[str], sta
     series: List[SeriesPoint] = []
     current = start
     while current <= end:
-        enroll_q = db.query(func.count(models.EnrollmentApplication.id)).filter(func.date(models.EnrollmentApplication.created_at) == current)
+        enroll_q = db.query(func.count(models.EnrollmentApplication.id)).filter(*jordan_date_range_filter(models.EnrollmentApplication.created_at, current, current))
         if scope_type == "KINDERGARTEN" and scope_id:
             enroll_q = enroll_q.filter(models.EnrollmentApplication.kindergarten_id == int(scope_id))
         elif scope_type == "CLASS" and scope_id:

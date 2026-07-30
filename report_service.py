@@ -34,10 +34,8 @@ class ReportService:
             db = next(get_db())
 
         # Build query filters
-        filters = [
-            models.Incident.occurred_at >= datetime.combine(start_date, datetime.min.time()),
-            models.Incident.occurred_at <= datetime.combine(end_date, datetime.max.time())
-        ]
+        from utils.time_utils import jordan_date_range_filter
+        filters = jordan_date_range_filter(models.Incident.occurred_at, start_date, end_date)
 
         if scope_type == models.ReportScopeType.KINDERGARTEN:
             if kindergarten_id is None:

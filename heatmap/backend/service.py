@@ -19,7 +19,7 @@ import logging
 import math
 import os
 from datetime import date, datetime, timedelta, timezone
-from utils.time_utils import today_amman as _today
+from utils.time_utils import today_amman as _today, now_amman, jordan_day_bounds
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -339,7 +339,7 @@ def _compute_sub_indicators(db: Session, slug: str) -> Dict[str, Any]:
     total_incidents = _query_incident_count(db, slug, critical_only=False)
     critical_incidents = _query_incident_count(db, slug, critical_only=True)
     governance = _query_governance_score(db, slug)
-    since = datetime.now() - timedelta(days=30)
+    since = now_amman() - timedelta(days=30)
     reports_30d = _query_reports_count(db, slug, since)
 
     active_pct = round((active_kg / max(total_kg, 1)) * 100, 1)
@@ -547,7 +547,7 @@ def _count_recent_reports(db: Session, kindergarten_id: int, days: int = 30) -> 
 
 def _count_recent_incidents(db: Session, kindergarten_id: int, days: int = 90) -> Dict[str, int]:
     try:
-        since = datetime.now() - timedelta(days=days)
+        since = now_amman() - timedelta(days=days)
         q = (
             db.query(models.Incident)
             .filter(models.Incident.kindergarten_id == kindergarten_id)
@@ -845,9 +845,9 @@ def build_kindergarten_query(
         query = query.filter(models.Kindergarten.district == district)
 
     if from_date:
-        query = query.filter(func.date(func.coalesce(models.Kindergarten.updated_at, models.Kindergarten.created_at)) >= from_date)
+        query = query.filter(func.coalesce(models.Kindergarten.updated_at, models.Kindergarten.created_at) >= jordan_day_bounds(from_date)[0])
     if to_date:
-        query = query.filter(func.date(func.coalesce(models.Kindergarten.updated_at, models.Kindergarten.created_at)) <= to_date)
+        query = query.filter(func.coalesce(models.Kindergarten.updated_at, models.Kindergarten.created_at) < jordan_day_bounds(to_date)[1])
 
     return query
 

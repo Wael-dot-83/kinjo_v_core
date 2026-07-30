@@ -199,7 +199,7 @@ def list_kindergartens(
         "total": total,
         "pagination": _pagination_meta(page, page_size, total),
         "filters": _kindergarten_filters(governorate, city, status, from_date, to_date),
-        "last_update": datetime.now().isoformat(),
+        "last_update": now_amman().isoformat(),
     }
 
 
@@ -269,7 +269,7 @@ def get_kindergarten_detail(
         raise not_found_error(f"Unknown kindergarten: {id}")
     return {
         "kindergarten": data,
-        "last_update": datetime.now().isoformat(),
+        "last_update": now_amman().isoformat(),
     }
 
 
@@ -616,7 +616,7 @@ def acknowledge_alert(
         raise not_found_error(f"Unknown alert: {alert_id}")
     if alert.acknowledged_at is not None:
         return {"status": "already_acknowledged", "alert_id": alert_id}
-    alert.acknowledged_at = datetime.now()
+    alert.acknowledged_at = now_amman()
     alert.acknowledged_by = current_user.id
     db.commit()
     try:

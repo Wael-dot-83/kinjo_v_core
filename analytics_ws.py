@@ -16,6 +16,8 @@ from database import SessionLocal
 from data_quality_service import data_quality_service
 from cache_service import dashboard_cache
 from monitoring_service import performance_monitor, health_checker
+from utils.time_utils import today_amman, jordan_date_range_filter
+from utils.time_utils import today_amman, jordan_date_range_filter
 
 logger = logging.getLogger(__name__)
 
@@ -254,7 +256,7 @@ async def _compute_admin_dashboard_data(db):
     ).scalar()
 
     incidents_today = db.query(func.count(models.Incident.id)).filter(
-        func.date(models.Incident.created_at) == datetime.now(timezone(timedelta(hours=3))).date()
+        *jordan_date_range_filter(models.Incident.created_at, today_amman(), today_amman())
     ).scalar()
 
     # Calculate system health score

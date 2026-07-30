@@ -520,6 +520,10 @@ def _label_map(keys) -> dict[str, str]:
     return {k: _FIELD_LABELS.get(k, k) for k in keys}
 
 
+from utils.time_utils import jordan_date_range_filter
+
+from utils.time_utils import jordan_date_range_filter
+
 class AgencyReportsService:
     """Registry-driven report generator.
 
@@ -985,7 +989,7 @@ class AgencyReportsService:
                 "observation": "ارتفاع عدد المؤهلين في منطقة محددة",
                 "evidence": f"وجود {eligible_count:,} طفلاً مؤهلاً يتركز الجزء الأكبر منهم في {highest_gov}",
                 "implication": "طلب متوقع مرتفع قد يسبب ضغطاً على الغرف الصفية المتوفرة",
-                "action": "مقارنة عدد الأطفال المؤهلين بالطاقة الاستيعابية للمدارس ورياض الأطفال القائمة في تلك المناطق"
+                "action": "مقارنة عدد الأطفال المؤهلين بالطاقة الاستيعابية للمدارس والحضانات القائمة في تلك المناطق"
             },
             {
                 "observation": "وجود سجلات غير قابلة للتقييم",
@@ -1434,8 +1438,7 @@ class AgencyReportsService:
             .join(models.Kindergarten, models.Kindergarten.id == models.Incident.kindergarten_id)
             .filter(
                 models.Incident.deleted_at.is_(None),
-                func.date(models.Incident.occurred_at) >= start,
-                func.date(models.Incident.occurred_at) <= end,
+                *jordan_date_range_filter(models.Incident.occurred_at, start, end),
             )
         )
         q = self._apply_kindergarten_geo_filters(q, filters)
@@ -2480,8 +2483,7 @@ class AgencyReportsService:
             .filter(
                 models.Incident.deleted_at.is_(None),
                 models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
-                func.date(models.Incident.occurred_at) >= start,
-                func.date(models.Incident.occurred_at) <= end,
+                *jordan_date_range_filter(models.Incident.occurred_at, start, end),
             )
         )
         q = self._apply_kindergarten_geo_filters(q, filters)
@@ -3427,8 +3429,7 @@ class AgencyReportsService:
     def _ind_critical_incidents(self, kg_ids, start, end):
         q = self.db.query(func.count(models.Incident.id)).filter(
             models.Incident.deleted_at.is_(None) if hasattr(models.Incident, "deleted_at") else True,
-            func.date(models.Incident.occurred_at) >= start,
-            func.date(models.Incident.occurred_at) <= end,
+            *jordan_date_range_filter(models.Incident.occurred_at, start, end),
             models.Incident.severity_level == models.SeverityLevel.CRITICAL,
         )
         if kg_ids is not None:
@@ -3441,7 +3442,7 @@ class AgencyReportsService:
 
     def _ind_incidents_by_severity(self, kg_ids, start, end):
         q = self.db.query(models.Incident.severity_level, func.count(models.Incident.id)).filter(
-            func.date(models.Incident.occurred_at) >= start, func.date(models.Incident.occurred_at) <= end
+            *jordan_date_range_filter(models.Incident.occurred_at, start, end)
         )
         if kg_ids is not None:
             q = q.filter(models.Incident.kindergarten_id.in_(kg_ids))

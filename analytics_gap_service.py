@@ -18,6 +18,7 @@ from sqlalchemy import and_, case, distinct, func, or_
 from sqlalchemy.orm import Session
 
 import models
+from utils.time_utils import jordan_date_range_filter
 from schemas.chart_dto import (
     ChartConfig,
     ChartDataset,
@@ -693,17 +694,19 @@ class AnalyticsGapService:
             .filter(
                 models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
                 models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-                func.date(models.EnrollmentApplication.created_at) >= this_month_start,
+                *jordan_date_range_filter(models.EnrollmentApplication.created_at, this_month_start, date.today())
             )
             .scalar()
         ) or 0
+        
+        last_month_start_date = (this_month_start.replace(day=1) - timedelta(days=1)).replace(day=1)
+        last_month_end_date = this_month_start - timedelta(days=1)
         last_month = (
             self.db.query(func.count(models.EnrollmentApplication.id))
             .filter(
                 models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
                 models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-                func.date(models.EnrollmentApplication.created_at) >= last_month_start,
-                func.date(models.EnrollmentApplication.created_at) < this_month_start,
+                *jordan_date_range_filter(models.EnrollmentApplication.created_at, last_month_start_date, last_month_end_date)
             )
             .scalar()
         ) or 0
@@ -1548,7 +1551,7 @@ class AnalyticsGapService:
                 self.db.query(func.count(models.EnrollmentApplication.id))
                 .filter(
                     models.EnrollmentApplication.status.in_(["ACTIVE", "ACCEPTED"]),
-                    func.date(models.EnrollmentApplication.created_at).between(ms, me),
+                    *jordan_date_range_filter(models.EnrollmentApplication.created_at, ms, me),
                 )
                 .scalar()
             ) or 0

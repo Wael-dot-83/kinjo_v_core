@@ -28,7 +28,7 @@ import random
 import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
-from utils.time_utils import today_amman as _today
+from utils.time_utils import today_amman as _today, now_amman
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -1143,7 +1143,7 @@ def run_daily_pipeline(
         # 6. Finalize run log
         elapsed = int((time.monotonic() - started) * 1000)
         run_log.status = "success"
-        run_log.finished_at = datetime.now()
+        run_log.finished_at = now_amman()
         run_log.duration_ms = elapsed
         run_log.rows_processed = summary["rows_processed"]
         run_log.governorates = summary["governorates"]
@@ -1165,7 +1165,7 @@ def run_daily_pipeline(
         try:
             db.rollback()
             run_log.status = "failed"
-            run_log.finished_at = datetime.now(timezone.utc)
+            run_log.finished_at = now_amman()
             run_log.errors = [{"step": "pipeline", "error": str(exc)}]
             db.commit()
         except Exception:

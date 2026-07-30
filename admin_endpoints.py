@@ -3925,7 +3925,7 @@ def get_admin_dashboard(
         models.DailyReport.status == models.DailyReportStatus.SUBMITTED
     ).scalar() or 0
     recent_incidents = db.query(func.count(models.Incident.id)).filter(
-        func.date(models.Incident.occurred_at) >= week_ago,
+        models.Incident.occurred_at >= jordan_day_bounds(week_ago)[0],
         models.Incident.deleted_at.is_(None)
     ).scalar() or 0
     attendance_today = db.query(func.count(models.AttendanceLog.id)).filter(
@@ -4013,8 +4013,7 @@ def get_admin_dashboard(
             func.date(models.Incident.occurred_at),
             func.count(models.Incident.id),
         ).filter(
-            func.date(models.Incident.occurred_at) >= chart_start_date,
-            func.date(models.Incident.occurred_at) <= today,
+            *jordan_date_range_filter(models.Incident.occurred_at, chart_start_date, today),
             models.Incident.deleted_at.is_(None),
         ).group_by(func.date(models.Incident.occurred_at)).all()
     )
@@ -6542,7 +6541,7 @@ def get_heatmap_data(
         return HeatmapResponse(
             data=data,
             indicators=list(INDICATOR_LABELS.keys()),
-            last_update=overview.get("last_update", datetime.now().isoformat()),
+            last_update=overview.get("last_update", now_amman().isoformat()),
             summary=overview.get("summary"),
             risk_legend=overview.get("risk_legend"),
         )
@@ -6650,7 +6649,7 @@ def _fallback_map_overview(db: Session) -> Dict[str, Any]:
             },
         })
     return {
-        "last_update": datetime.now().isoformat(),
+        "last_update": now_amman().isoformat(),
         "indicators": [{"key": k, **v} for k, v in INDICATOR_LABELS.items()],
         "governorates": data,
         "summary": {

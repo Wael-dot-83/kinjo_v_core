@@ -5,7 +5,7 @@ Automated pairwise Pearson/Spearman scanner with domain-filter and causal probes
 import logging
 import math
 from datetime import date, datetime, timedelta, timezone
-from utils.time_utils import today_amman as _today
+from utils.time_utils import today_amman as _today, jordan_day_bounds
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import func, and_, cast, Float, Date
@@ -184,7 +184,7 @@ class CorrelationEngine:
                 func.date(Incident.created_at).label("d"),
                 func.count(Incident.id),
             )
-            .filter(func.date(Incident.created_at) >= cutoff)
+            .filter(Incident.created_at >= jordan_day_bounds(cutoff)[0])
             .group_by(func.date(Incident.created_at))
             .order_by("d")
             .all()
@@ -219,7 +219,7 @@ class CorrelationEngine:
                 func.date(EnrollmentApplication.created_at).label("d"),
                 func.count(EnrollmentApplication.id),
             )
-            .filter(func.date(EnrollmentApplication.created_at) >= cutoff.date())
+            .filter(EnrollmentApplication.created_at >= jordan_day_bounds(cutoff.date())[0])
             .group_by(func.date(EnrollmentApplication.created_at))
             .order_by("d")
             .all()

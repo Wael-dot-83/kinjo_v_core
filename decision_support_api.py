@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date, timedelta
-from utils.time_utils import today_amman as _today
+from utils.time_utils import today_amman as _today, jordan_day_bounds
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -153,7 +153,7 @@ def get_decision_support_dashboard(
         db.query(models.Incident.kindergarten_id, func.count(models.Incident.id))
         .filter(
             models.Incident.kindergarten_id.in_(kg_ids),
-            func.date(models.Incident.occurred_at) >= recent_since,
+            models.Incident.occurred_at >= jordan_day_bounds(recent_since)[0],
         )
         .group_by(models.Incident.kindergarten_id)
         .all()

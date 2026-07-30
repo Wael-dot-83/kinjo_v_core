@@ -9,7 +9,7 @@ Provides manager-scoped analytics including:
 
 from typing import Optional, List, Dict, Tuple
 from datetime import date, datetime, timedelta
-from utils.time_utils import today_amman as _today
+from utils.time_utils import today_amman as _today, jordan_date_range_filter, jordan_date_range_filter
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import logging
@@ -646,8 +646,7 @@ class ManagerAnalyticsService:
             db.query(models.Incident.class_id, func.count(models.Incident.id))
             .filter(
                 models.Incident.class_id.in_(class_ids),
-                func.date(models.Incident.occurred_at) >= start_date,
-                func.date(models.Incident.occurred_at) <= end_date,
+                *jordan_date_range_filter(models.Incident.occurred_at, start_date, end_date),
             )
             .group_by(models.Incident.class_id)
             .all()
@@ -732,8 +731,7 @@ class ManagerAnalyticsService:
             .filter(
                 SA.supervisor_id.in_(sup_ids), *_primary,
                 # occurred_at is a DateTime; compare on DATE so end_date incidents count.
-                func.date(models.Incident.occurred_at) >= start_date,
-                func.date(models.Incident.occurred_at) <= end_date,
+                *jordan_date_range_filter(models.Incident.occurred_at, start_date, end_date),
             )
             .group_by(SA.supervisor_id)
             .all()

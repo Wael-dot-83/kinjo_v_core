@@ -13,6 +13,7 @@ Celery Beat is not available (e.g. single-process dev mode).
 import logging
 import threading
 from datetime import datetime, time, timedelta, timezone
+from utils.time_utils import now_amman
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +51,13 @@ class DailyReportScheduler:
     def _schedule_next(self) -> None:
         if not self._running:
             return
-        now = datetime.now()
+        now = now_amman()
         events = [
             (REMINDER_TIME, self._fire_reminder),
             (DEADLINE_TIME, self._fire_compliance),
         ]
         for target_time, callback in events:
-            target_dt = datetime.combine(now.date(), target_time)
+            target_dt = datetime.combine(now.date(), target_time, tzinfo=now.tzinfo)
             if target_dt <= now:
                 # Already past today → schedule for tomorrow
                 target_dt += timedelta(days=1)

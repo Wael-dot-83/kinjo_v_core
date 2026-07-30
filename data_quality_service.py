@@ -7,7 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import models
-from utils.time_utils import today_amman as _today
+from utils.time_utils import today_amman as _today, jordan_date_range_filter
 
 
 @dataclass
@@ -214,7 +214,7 @@ class DataQualityService:
             db.query(func.count(models.Incident.id))
             .filter(
                 models.Incident.kindergarten_id == kindergarten_id,
-                func.date(models.Incident.created_at) == today,
+                *jordan_date_range_filter(models.Incident.created_at, today, today),
             )
             .scalar()
             or 0

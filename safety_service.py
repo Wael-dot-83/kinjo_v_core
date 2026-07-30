@@ -80,10 +80,13 @@ def create_incident(
             raise HTTPException(status_code=404, detail="Child not found")
         raise HTTPException(status_code=403, detail="Child is not enrolled in this kindergarten")
 
-    if incident_data.occurred_at > datetime.now(_JORDAN_TZ).replace(tzinfo=None): # naive comparison if possible
-        pass # Handle tz properly below
-    _now = datetime.now(_JORDAN_TZ) if incident_data.occurred_at.tzinfo else datetime.now()
-    if incident_data.occurred_at > _now:
+    # Always validate against Jordan time to prevent future-dated incidents
+    _now = datetime.now(_JORDAN_TZ)
+    # If occurred_at is naive, assume it's in Jordan time for comparison
+    occurred_at_check = incident_data.occurred_at
+    if not occurred_at_check.tzinfo:
+        occurred_at_check = occurred_at_check.replace(tzinfo=_JORDAN_TZ)
+    if occurred_at_check > _now:
         raise HTTPException(status_code=400, detail="occurred_at cannot be in the future")
 
     incident = models.Incident(
