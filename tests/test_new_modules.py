@@ -16,6 +16,7 @@ import pytest
 
 import models
 from audit_actions import AuditAction
+from conftest import csrf_pair
 
 
 # ===========================================================================
@@ -23,7 +24,9 @@ from audit_actions import AuditAction
 # ===========================================================================
 
 def _hdr(token: str) -> dict:
-    return {"Authorization": f"Bearer {token}"}
+    """Auth + CSRF headers. CSRF is needed for admin POST endpoints;
+    it is harmless on GET requests (CSRF middleware skips safe methods)."""
+    return {"Authorization": f"Bearer {token}", **csrf_pair()}
 
 
 def _make_supervisor(test_db, kg_id, username="sup2", email="sup2@test.com"):

@@ -887,6 +887,51 @@ class TestBackupExtendedCoverage:
             )
         assert r2.status_code == 500
 
+    def test_backup_scheduler_starts_on_app_startup(self, monkeypatch):
+        """D-3: Verify backup_scheduler.start_scheduler() is called during app startup."""
+        import main
+        from backup_manager import backup_scheduler as bs
+        from config import settings
+
+        monkeypatch.setattr(settings, "TESTING", False)
+
+        calls = []
+        original_start = bs.start_scheduler
+
+        def tracked_start():
+            calls.append(True)
+            return original_start()
+
+        monkeypatch.setattr(bs, "start_scheduler", tracked_start)
+        monkeypatch.setattr(main, "setup_database_monitoring", lambda *a, **k: None)
+        monkeypatch.setattr(main, "start_system_monitoring", lambda: None)
+        monkeypatch.setattr(main.performance_monitor, "start_monitoring", lambda: None)
+        monkeypatch.setattr(main.auto_scaler, "start_auto_scaling", lambda: None)
+
+        from fastapi.testclient import TestClient
+
+        with TestClient(main.app):
+            pass
+
+        assert len(calls) >= 1, "backup_scheduler.start_scheduler() was not called during app startup"
+
+    def test_backup_scheduler_start_stop_roundtrip(self):
+        """D-3: BackupScheduler.start/stop roundtrip sets _running and manages timers."""
+        from backup_manager import BackupScheduler
+        from datetime import time
+
+        scheduler = BackupScheduler(backup_time=time(23, 59))
+        assert scheduler._running is False
+        assert scheduler._timers == []
+
+        scheduler.start_scheduler()
+        assert scheduler._running is True
+        assert len(scheduler._timers) == 1
+
+        scheduler.stop_scheduler()
+        assert scheduler._running is False
+        assert scheduler._timers == []
+
 
 # ---------------------------------------------------------------------------
 # 14. Kindergarten Excel import  (lines 3864-3962)

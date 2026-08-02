@@ -1,12 +1,10 @@
 """
 Registration domain endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
-from typing import List, Optional
+from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models

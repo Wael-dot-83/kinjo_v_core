@@ -447,7 +447,7 @@ def export_analytics_csv(
     filename = f"kindergarten_{kg_id}_{report_type}_{today}.csv"
 
     return StreamingResponse(
-        iter([output.getvalue()]),
+        iter(["\ufeff" + output.getvalue()]),  # UTF-8 BOM for Arabic Excel compatibility (CHART-003)
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )

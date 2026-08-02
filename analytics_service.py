@@ -28,6 +28,7 @@ except ImportError:
 import models
 from database import get_db, SessionLocal
 from dependencies import get_current_user, get_current_user_or_redirect
+from services.jordan_locations import governorate_filter
 from kpi_service import KPIService
 from data_quality_enhanced import enhanced_data_quality_service
 import validators
@@ -35,6 +36,7 @@ from audit_actions import AuditAction
 from admin_security import log_audit_event, validation_error
 from cache_service import cache_service
 from config import settings
+from utils.time_utils import jordan_date_range_filter, jordan_day_bounds, to_jordan_date
 from analytics_domain import (
     PredictRequest,
     PredictResponse,
@@ -598,11 +600,15 @@ def _actual_values_for_window(db: Session, metric: str, start: date, end: date) 
                 col, model_id = models.Incident.occurred_at, models.Incident.id
             else:
                 col, model_id = models.EnrollmentApplication.created_at, models.EnrollmentApplication.id
+            # Use Jordan-local date bounds to avoid func.date() timezone issues (CHART-013)
+            from utils.time_utils import jordan_day_bounds
+            start_dt, end_dt = jordan_day_bounds(start)
+            _, end_dt_final = jordan_day_bounds(end)
             rows = (
                 db.query(func.date(col), func.count(model_id))
                 .filter(
-                    col >= datetime.combine(start, time.min),
-                    col < datetime.combine(end + timedelta(days=1), time.min),
+                    col >= start_dt,
+                    col < end_dt_final,
                 )
                 .group_by(func.date(col))
                 .all()
@@ -1922,8 +1928,7 @@ def _analyze_attendance_root_causes(db: Session, kg_filter, period_start: date, 
     factors = []
 
     incident_count = db.query(func.count(models.Incident.id)).filter(
-        func.date(models.Incident.occurred_at) >= period_start,
-        func.date(models.Incident.occurred_at) <= period_end
+        *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end)
     )
     if kg_filter:
         incident_count = incident_count.filter(models.Incident.kindergarten_id.in_(kg_filter))
@@ -1942,7 +1947,7 @@ def _analyze_attendance_root_causes(db: Session, kg_filter, period_start: date, 
 
     current_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
         models.EnrollmentApplication.status == 'ACTIVE',
-        func.date(models.EnrollmentApplication.created_at) <= period_end
+        models.EnrollmentApplication.created_at < jordan_day_bounds(period_end)[1]
     )
     if kg_filter:
         current_enrollments = current_enrollments.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
@@ -1951,7 +1956,7 @@ def _analyze_attendance_root_causes(db: Session, kg_filter, period_start: date, 
     prev_start = period_start - (period_end - period_start)
     prev_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
         models.EnrollmentApplication.status == 'ACTIVE',
-        func.date(models.EnrollmentApplication.created_at) <= prev_start
+        models.EnrollmentApplication.created_at < jordan_day_bounds(prev_start)[1]
     )
     if kg_filter:
         prev_enrollments = prev_enrollments.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
@@ -1995,8 +2000,7 @@ def _analyze_incident_root_causes(db: Session, kg_filter, period_start: date, pe
     factors = []
 
     serious_incidents = db.query(func.count(models.Incident.id)).filter(
-        func.date(models.Incident.occurred_at) >= period_start,
-        func.date(models.Incident.occurred_at) <= period_end,
+        *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
         models.Incident.severity_level.in_([models.SeverityLevel.HIGH, models.SeverityLevel.CRITICAL])
     )
     if kg_filter:
@@ -2004,8 +2008,7 @@ def _analyze_incident_root_causes(db: Session, kg_filter, period_start: date, pe
     serious_count = serious_incidents.scalar() or 0
 
     total_incidents = db.query(func.count(models.Incident.id)).filter(
-        func.date(models.Incident.occurred_at) >= period_start,
-        func.date(models.Incident.occurred_at) <= period_end
+        *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end)
     )
     if kg_filter:
         total_incidents = total_incidents.filter(models.Incident.kindergarten_id.in_(kg_filter))
@@ -2028,8 +2031,7 @@ def _analyze_incident_root_causes(db: Session, kg_filter, period_start: date, pe
             models.Incident.kindergarten_id,
             func.count(models.Incident.id).label('count')
         ).filter(
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.kindergarten_id.in_(kg_filter)
         ).group_by(models.Incident.kindergarten_id).order_by(desc('count')).limit(3).all()
 
@@ -2154,7 +2156,7 @@ def _count_active_kindergartens_at(db: Session, kg_ids: Optional[List[int]], as_
 
     query = db.query(func.count(models.Kindergarten.id)).filter(
         models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
-        func.date(models.Kindergarten.created_at) <= as_of_date,
+        models.Kindergarten.created_at < jordan_day_bounds(as_of_date)[1],
         or_(
             models.Kindergarten.license_valid_until.is_(None),
             models.Kindergarten.license_valid_until >= as_of_date,
@@ -2681,15 +2683,17 @@ def export_analytics_data(
                 yield [kg.name_ar, len(kg.enrollments), "N/A", rate]
                 
         elif request_body.report_type == "incidents":
-            headers.extend(["Date", "Kindergarten", "Type", "Severity", "Description", "Child"])
+            # Timezone stated in the heading: the column is a Jordan calendar date
+            # derived from a UTC-stored instant, and without the label a reader cannot
+            # tell which day an incident near midnight belongs to.
+            headers.extend(["Date (Asia/Amman)", "Kindergarten", "Type", "Severity", "Description", "Child"])
             yield headers
             incidents = db.query(models.Incident).filter(
-                func.date(models.Incident.occurred_at) >= start_date,
-                func.date(models.Incident.occurred_at) <= end_date
+                *jordan_date_range_filter(models.Incident.occurred_at, start_date, end_date)
             ).yield_per(100)
             for inc in incidents:
                 ch_name = f"{inc.child.first_name} {inc.child.last_name}" if inc.child else "Unknown"
-                yield [inc.occurred_at.strftime("%Y-%m-%d"), inc.kindergarten.name_ar if inc.kindergarten else "", inc.type.value, inc.severity_level.value, inc.description, ch_name]
+                yield [to_jordan_date(inc.occurred_at).strftime("%Y-%m-%d"), inc.kindergarten.name_ar if inc.kindergarten else "", inc.type.value, inc.severity_level.value, inc.description, ch_name]
 
         elif request_body.report_type == "compliance":
             headers.extend(["Kindergarten", "Ratio Compliance %", "Governance Score"])
@@ -2716,8 +2720,7 @@ def export_analytics_data(
             
             # Streaming query for large audit logs
             query = db.query(models.AuditLog).filter(
-                 func.date(models.AuditLog.created_at) >= start_date,
-                 func.date(models.AuditLog.created_at) <= end_date
+                 *jordan_date_range_filter(models.AuditLog.created_at, start_date, end_date)
             ).order_by(desc(models.AuditLog.created_at))
             
             # Simple caching for users
@@ -2844,8 +2847,7 @@ def get_enrollment_analytics(
 
         # Period filter on created_at for "new applications"
         period_query = query.filter(
-            func.date(models.EnrollmentApplication.created_at) >= period_start,
-            func.date(models.EnrollmentApplication.created_at) <= period_end,
+            *jordan_date_range_filter(models.EnrollmentApplication.created_at, period_start, period_end),
         )
 
         # Applications by status
@@ -2915,8 +2917,7 @@ def get_enrollment_analytics(
         daily_decided = {}
         for ea in query.filter(
             models.EnrollmentApplication.decision_at.isnot(None),
-            func.date(models.EnrollmentApplication.decision_at) >= period_start,
-            func.date(models.EnrollmentApplication.decision_at) <= period_end,
+            *jordan_date_range_filter(models.EnrollmentApplication.decision_at, period_start, period_end),
         ).all():
             day = ea.decision_at.date().isoformat()
             daily_decided[day] = daily_decided.get(day, 0) + 1
@@ -2924,7 +2925,7 @@ def get_enrollment_analytics(
         # Time-series for new applications per day in period
         daily_new = {}
         for ea in period_query.all():
-            day = ea.created_at.date().isoformat()
+            day = to_jordan_date(ea.created_at).isoformat()
             daily_new[day] = daily_new.get(day, 0) + 1
 
         return {
@@ -2994,8 +2995,7 @@ def get_safety_analytics(
 ) -> Dict[str, Any]:
         """Get safety/incident analytics"""
         query = db.query(models.Incident).filter(
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end)
         )
 
         if kindergarten_id:
@@ -3182,8 +3182,7 @@ def get_time_series(
 
         elif metric == "incident_count":
             query = db.query(func.count(models.Incident.id)).filter(
-                func.date(models.Incident.occurred_at) >= current,
-                func.date(models.Incident.occurred_at) < next_date
+                *jordan_date_range_filter(models.Incident.occurred_at, current, current)
             )
             if dim_upper in ("KINDERGARTEN", "GOVERNORATE") and kg_scope:
                 query = query.filter(models.Incident.kindergarten_id.in_(kg_scope))
@@ -3191,8 +3190,7 @@ def get_time_series(
 
         elif metric == "enrollment_count":
             query = db.query(func.count(models.EnrollmentApplication.id)).filter(
-                func.date(models.EnrollmentApplication.created_at) >= current,
-                func.date(models.EnrollmentApplication.created_at) < next_date
+                *jordan_date_range_filter(models.EnrollmentApplication.created_at, current, current)
             )
             if dim_upper in ("KINDERGARTEN", "GOVERNORATE") and kg_scope:
                 query = query.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_scope))
@@ -3354,7 +3352,7 @@ def get_drilldown(
             raise HTTPException(status_code=403, detail="Governorate not allowed")
 
         # Governorate level -> list Cities (distinct areas) within the governorate.
-        base = [models.Kindergarten.governorate == dimension_id]
+        base = [governorate_filter(models.Kindergarten.governorate, dimension_id)]
         nurseries, children = _drilldown_geo_rollup(
             db, models.Kindergarten.area, base, allowed_kgs
         )
@@ -3949,8 +3947,7 @@ def get_kpi_analytics(
     incident_rate = 0.0
     try:
         incidents_query = db.query(models.Incident).filter(
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end)
         )
         if kg_id:
             incidents_query = incidents_query.filter(models.Incident.kindergarten_id == kg_id)
@@ -4161,8 +4158,7 @@ def get_analytics_dashboard(
         
         # Incidents
         incidents = db.query(models.Incident).filter(
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end)
         )
         if kg_id:
             incidents = incidents.filter(models.Incident.kindergarten_id == kg_id)
@@ -4452,7 +4448,7 @@ def get_registration_quality_breakdown(
     gov_rows: List[Dict[str, Any]] = []
     for gov_name, kg_total in gov_rows_raw:
         kg_gov_q = db.query(models.Kindergarten).filter(
-            models.Kindergarten.governorate == gov_name
+            governorate_filter(models.Kindergarten.governorate, gov_name)
         )
         if kg_ids_filter:
             kg_gov_q = kg_gov_q.filter(models.Kindergarten.id.in_(kg_ids_filter))
@@ -4572,22 +4568,19 @@ def get_registration_quality_breakdown(
     for mo_start, mo_end in mo_ranges:
         monthly_users.append(
             db.query(models.User).filter(
-                func.date(models.User.created_at) >= mo_start,
-                func.date(models.User.created_at) <= mo_end,
+                *jordan_date_range_filter(models.User.created_at, mo_start, mo_end),
                 models.User.deleted_at.is_(None),
             ).count()
         )
         kg_mo_q = db.query(models.Kindergarten).filter(
-            func.date(models.Kindergarten.created_at) >= mo_start,
-            func.date(models.Kindergarten.created_at) <= mo_end,
+            *jordan_date_range_filter(models.Kindergarten.created_at, mo_start, mo_end),
         )
         if kg_ids_filter:
             kg_mo_q = kg_mo_q.filter(models.Kindergarten.id.in_(kg_ids_filter))
         monthly_kgs.append(kg_mo_q.count())
 
         ea_mo_q = db.query(models.EnrollmentApplication).filter(
-            func.date(models.EnrollmentApplication.created_at) >= mo_start,
-            func.date(models.EnrollmentApplication.created_at) <= mo_end,
+            *jordan_date_range_filter(models.EnrollmentApplication.created_at, mo_start, mo_end),
         )
         if kg_ids_filter:
             ea_mo_q = ea_mo_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids_filter))
@@ -4631,8 +4624,7 @@ def get_registration_entity_summary(
     users_inactive  = user_q.filter(models.User.status == models.UserStatus.INACTIVE).count()
     users_by_role   = {r.value: user_q.filter(models.User.role == r).count() for r in models.UserRole}
     users_new       = user_q.filter(
-        func.date(models.User.created_at) >= period_start,
-        func.date(models.User.created_at) <= period_end,
+        *jordan_date_range_filter(models.User.created_at, period_start, period_end),
     ).count()
 
     # ── Kindergartens ───────────────────────────────────────────────────────────
@@ -4645,8 +4637,7 @@ def get_registration_entity_summary(
     kg_inactive = kg_q.filter(models.Kindergarten.status == models.KindergartenStatus.INACTIVE).count()
     kg_draft    = kg_q.filter(models.Kindergarten.status == models.KindergartenStatus.DRAFT).count()
     kg_new      = kg_q.filter(
-        func.date(models.Kindergarten.created_at) >= period_start,
-        func.date(models.Kindergarten.created_at) <= period_end,
+        *jordan_date_range_filter(models.Kindergarten.created_at, period_start, period_end),
     ).count()
 
     # ── Enrollment applications ─────────────────────────────────────────────────
@@ -4658,8 +4649,7 @@ def get_registration_entity_summary(
     status_counts = {s.value: ea_q.filter(models.EnrollmentApplication.status == s).count()
                      for s in models.EnrollmentStatus}
     ea_new        = ea_q.filter(
-        func.date(models.EnrollmentApplication.created_at) >= period_start,
-        func.date(models.EnrollmentApplication.created_at) <= period_end,
+        *jordan_date_range_filter(models.EnrollmentApplication.created_at, period_start, period_end),
     ).count()
 
     # Quality indicators
@@ -5466,8 +5456,7 @@ def get_kg_overview_summary(
         try:
             _paq = db.query(func.count(models.ActiveAlert.id)).filter(
                 models.ActiveAlert.triggered_at.isnot(None),
-                func.date(models.ActiveAlert.triggered_at) >= _prev[0],
-                func.date(models.ActiveAlert.triggered_at) <= _prev[1],
+                *jordan_date_range_filter(models.ActiveAlert.triggered_at, _prev[0], _prev[1]),
             )
             if kg_filter:
                 _paq = _paq.filter(
@@ -6341,8 +6330,7 @@ def compute_report_preview(
             
             from sqlalchemy import func
             source_q = db.query(models.EnrollmentApplication.source, func.count(models.EnrollmentApplication.id)).filter(
-                func.date(models.EnrollmentApplication.created_at) >= period_start,
-                func.date(models.EnrollmentApplication.created_at) <= period_end
+                *jordan_date_range_filter(models.EnrollmentApplication.created_at, period_start, period_end)
             )
             if effective_kgs: source_q = source_q.filter(models.EnrollmentApplication.kindergarten_id.in_(effective_kgs))
             source_data = source_q.group_by(models.EnrollmentApplication.source).all()
@@ -6578,7 +6566,7 @@ def compute_report_preview(
             from collections import Counter
             month_counts: Counter = Counter()
             for i in all_incs:
-                key = i.occurred_at.strftime("%Y-%m") if i.occurred_at else "unknown"
+                key = to_jordan_date(i.occurred_at).strftime("%Y-%m") if i.occurred_at else "unknown"
                 month_counts[key] += 1
             sorted_months = sorted(month_counts.keys())
             charts[1]["data"] = {
@@ -6928,7 +6916,7 @@ def compute_report_preview(
             for inc in incs:
                 kg = _inc_kg_map.get(inc.kindergarten_id)
                 sample_data.append({
-                    "date": inc.occurred_at.date().isoformat(),
+                    "date": to_jordan_date(inc.occurred_at).isoformat(),
                     "kindergarten": kg.name_ar if kg else "",
                     "type": inc.type.value if hasattr(inc.type, "value") else str(inc.type),
                     "severity": inc.severity_level.value if hasattr(inc.severity_level, "value") else str(inc.severity_level),
@@ -7427,7 +7415,7 @@ class AnalyticsService:
                 kg_count = len(gov_kg_ids)
             else:
                 kg_count = db.query(func.count(models.Kindergarten.id)).filter(
-                    models.Kindergarten.governorate == gov_name,
+                    governorate_filter(models.Kindergarten.governorate, gov_name),
                     models.Kindergarten.status == models.KindergartenStatus.ACTIVE
                 ).scalar() or 0
 
@@ -7442,7 +7430,7 @@ class AnalyticsService:
             if gov_kg_ids:
                 children_q = children_q.filter(models.EnrollmentApplication.kindergarten_id.in_(gov_kg_ids))
             else:
-                children_q = children_q.filter(models.Kindergarten.governorate == gov_name)
+                children_q = children_q.filter(governorate_filter(models.Kindergarten.governorate, gov_name))
             children_count = children_q.scalar() or 0
 
             # Sum capacity of classes in active kindergartens for this governorate
@@ -7455,7 +7443,7 @@ class AnalyticsService:
             if gov_kg_ids:
                 capacity_q = capacity_q.filter(models.Class.kindergarten_id.in_(gov_kg_ids))
             else:
-                capacity_q = capacity_q.filter(models.Kindergarten.governorate == gov_name)
+                capacity_q = capacity_q.filter(governorate_filter(models.Kindergarten.governorate, gov_name))
             capacity = capacity_q.scalar() or 0
 
             # Enrollment rate (children / capacity)
@@ -7642,8 +7630,7 @@ class AnalyticsService:
         """Compute network-wide incident rate per 1,000 attended child-days"""
         # Count total incidents
         incident_q = db.query(func.count(models.Incident.id)).filter(
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end)
         )
         if kg_ids:
             incident_q = incident_q.filter(models.Incident.kindergarten_id.in_(kg_ids))
@@ -7684,8 +7671,7 @@ class AnalyticsService:
         """Compute network-wide serious incident rate per 1,000 attended child-days"""
         # Count serious incidents
         serious_incidents = db.query(func.count(models.Incident.id)).filter(
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.severity_level.in_([models.SeverityLevel.HIGH, models.SeverityLevel.CRITICAL])
         ).scalar() or 0
 
@@ -7736,7 +7722,7 @@ class AnalyticsService:
         # Get all kindergartens in the governorate
         if kg_ids is None:
             kg_rows = db.query(models.Kindergarten.id).filter(
-                models.Kindergarten.governorate == governorate,
+                governorate_filter(models.Kindergarten.governorate, governorate),
                 models.Kindergarten.status == models.KindergartenStatus.ACTIVE
             ).all()
             kg_ids = [kg_id for (kg_id,) in kg_rows]
@@ -7766,7 +7752,7 @@ class AnalyticsService:
         # Get kindergarten IDs in governorate
         if kg_ids is None:
             kg_rows = db.query(models.Kindergarten.id).filter(
-                models.Kindergarten.governorate == governorate,
+                governorate_filter(models.Kindergarten.governorate, governorate),
                 models.Kindergarten.status == models.KindergartenStatus.ACTIVE
             ).all()
             kg_ids = [kg_id for (kg_id,) in kg_rows]
@@ -7777,8 +7763,7 @@ class AnalyticsService:
         # Count incidents
         incidents = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id.in_(kg_ids),
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end)
         ).scalar() or 0
 
         # Subquery avoids Cartesian product from joining through enrollment
@@ -7815,7 +7800,7 @@ class AnalyticsService:
         if kg_ids:
             kg_query = kg_query.filter(models.Kindergarten.id.in_(kg_ids))
         else:
-            kg_query = kg_query.filter(models.Kindergarten.governorate == governorate)
+            kg_query = kg_query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
         kindergartens = kg_query.all()
 
         if not kindergartens:
@@ -8178,10 +8163,10 @@ class AnalyticsService:
         else:
             attendance_rate = KPIService.compute_attendance_rate(
                 db, kindergarten_id, period_start, period_end
-            )
+            ) or 0
             incident_rate = KPIService.compute_incident_rate(
                 db, kindergarten_id, period_start, period_end
-            )
+            ) or 0
 
         # Report completion rate
         days_in_period = (period_end - period_start).days + 1
@@ -8373,8 +8358,7 @@ class AnalyticsService:
 
         incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.class_id == class_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end)
         ).scalar() or 0
 
         children_count = db.query(func.count(models.EnrollmentApplication.id)).filter(
@@ -8411,8 +8395,7 @@ class AnalyticsService:
 
         incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.child_id == child_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end)
         ).scalar() or 0
 
         return {
@@ -8591,7 +8574,12 @@ class AnalyticsService:
     @staticmethod
     def evaluate_data_quality(db: Session, user_id: int) -> None:
         latest = db.query(models.DataQualityMetric).order_by(models.DataQualityMetric.evaluated_at.desc()).first()
-        if latest and latest.evaluated_at >= _utcnow_naive() - timedelta(hours=12):
+        # Compare aware-to-aware: db_types.UTCDateTime returns timezone-aware UTC, so
+        # pairing it with _utcnow_naive() raises "can't compare offset-naive and
+        # offset-aware datetimes". Query *bounds* elsewhere can stay naive — those are
+        # bind parameters and the type reads naive as UTC — but this is a Python-level
+        # comparison against a loaded value.
+        if latest and latest.evaluated_at >= datetime.now(timezone.utc) - timedelta(hours=12):
             return
 
         total_kgs = db.query(func.count(models.Kindergarten.id)).scalar() or 0
@@ -8766,7 +8754,7 @@ def get_attendance_by_governorate(
     result = []
     for (gov,) in governorates:
         kg_ids = [k.id for k in db.query(models.Kindergarten).filter(
-            models.Kindergarten.governorate == gov,
+            governorate_filter(models.Kindergarten.governorate, gov),
             models.Kindergarten.status == models.KindergartenStatus.ACTIVE
         ).all()]
         if not kg_ids:

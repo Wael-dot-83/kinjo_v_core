@@ -4,16 +4,20 @@ SQLAlchemy ORM Models for KinJo Kindergarten Management Platform
 import enum
 import uuid
 from enum import Enum as PyEnum
-from datetime import date, datetime
+from datetime import datetime
 from typing import Optional, List
 from sqlalchemy import (
-    Column, Integer, BigInteger, String, Text, Boolean, Float, Date, DateTime,
+    Column, Integer, BigInteger, String, Text, Boolean, Float, Date,
     ForeignKey, Enum, CheckConstraint, UniqueConstraint, Index, JSON,
     ForeignKeyConstraint, text
 )
-from sqlalchemy.orm import relationship, Mapped, mapped_column, validates
+from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
 from database import Base
+# Every timezone-aware column uses UTCDateTime rather than UTCDateTime,
+# so values are normalised to UTC in Python instead of relying on backend behaviour
+# that differs between SQLite and PostgreSQL. See db_types.py for why (D-11).
+from db_types import UTCDateTime
 
 # =============================================================================
 # Analytics & Reporting Enums (must be defined before models that use them)
@@ -296,11 +300,11 @@ class Kindergarten(Base):
     # Freeze = reversible operational hold (spec uses lowercase "frozen"). frozen_at
     # is the marker of record; frozen_reason is an admin-supplied justification;
     # frozen_by captures the acting admin.
-    frozen_at = Column(DateTime(timezone=True), nullable=True)
+    frozen_at = Column(UTCDateTime, nullable=True)
     frozen_reason = Column(String(255), nullable=True)
     frozen_by = Column(Integer, nullable=True)
     # Soft-delete audit trail (spec uses lowercase "deleted").
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, nullable=True)
     # --- Extended management / ownership fields (Management module) ---
     legal_name = Column(String(255), nullable=True)        # Legal / trade name
@@ -327,8 +331,8 @@ class Kindergarten(Base):
     operating_hours_end = Column(String(5), nullable=True)
     license_number = Column(String(100), nullable=True)
     license_valid_until = Column(Date, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         UniqueConstraint("license_number", name="uq_kindergartens_license_number"),
@@ -376,20 +380,20 @@ class User(Base):
     passport_number = Column(String(50), nullable=True)
     # IAM hardening columns
     failed_login_count = Column(Integer, default=0, nullable=False)
-    locked_until = Column(DateTime(timezone=True), nullable=True)
-    password_changed_at = Column(DateTime(timezone=True), nullable=True)
-    last_login_at = Column(DateTime(timezone=True), nullable=True)
+    locked_until = Column(UTCDateTime, nullable=True)
+    password_changed_at = Column(UTCDateTime, nullable=True)
+    last_login_at = Column(UTCDateTime, nullable=True)
     mfa_enabled = Column(Boolean, default=False, nullable=False, server_default="0")
     mfa_secret = Column(String(255), nullable=True)
     totp_secret = Column(String(255), nullable=True)
-    mfa_enrolled_at = Column(DateTime(timezone=True), nullable=True)
-    mfa_last_verified_at = Column(DateTime(timezone=True), nullable=True)
+    mfa_enrolled_at = Column(UTCDateTime, nullable=True)
+    mfa_last_verified_at = Column(UTCDateTime, nullable=True)
     notification_preferences = Column(JSON, nullable=True)
     preferred_language = Column(String(10), nullable=False, default="ar", server_default="ar")
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="users")
@@ -432,8 +436,8 @@ class UserDashboardPreference(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
     widget_config = Column(JSON, nullable=True)  # JSON array of widget configurations
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     # Relationships
     user = relationship("User", back_populates="dashboard_preferences")
@@ -450,8 +454,8 @@ class UserFilterPreference(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
     filter_config = Column(JSON, nullable=True)  # JSON object of filter configurations
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     # Relationships
     user = relationship("User", back_populates="filter_preferences")
@@ -466,8 +470,8 @@ class SupervisorProfile(Base):
 
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     kindergarten_id = Column(Integer, ForeignKey("kindergartens.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     # Relationships
     user = relationship("User", back_populates="supervisor_profile")
@@ -485,9 +489,9 @@ class PasswordResetToken(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     token = Column(String(255), unique=True, nullable=False)
-    expires_at = Column(DateTime(timezone=True), nullable=False)
+    expires_at = Column(UTCDateTime, nullable=False)
     used = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         Index("ix_password_reset_tokens_used", "used"),
@@ -526,11 +530,11 @@ class ParentProfile(Base):
     correspondence_preference = Column(Boolean, nullable=False, default=True)
     notification_language = Column(String(10), nullable=False, server_default="ar", default="ar")
     profile_complete = Column(Boolean, nullable=False, default=False)
-    profile_completed_at = Column(DateTime(timezone=True), nullable=True)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    profile_completed_at = Column(UTCDateTime, nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         Index("uq_parent_profiles_national_id", "national_id", unique=True),
@@ -563,9 +567,9 @@ class Child(Base):
     media_consent = Column(Boolean, nullable=False, default=False)
     correspondence_flag = Column(Boolean, nullable=False, default=False)  # Explicit opt-in required
     profile_complete = Column(Boolean, nullable=False, default=False)
-    profile_completed_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    profile_completed_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         CheckConstraint("date_of_birth <= CURRENT_DATE", name="ck_children_dob_not_future"),
@@ -592,7 +596,7 @@ class Child(Base):
     emergency_contact_phone = Column(String(20), nullable=True)
     blood_type = Column(String(5), nullable=True)
     vaccination_up_to_date = Column(Boolean, nullable=True)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     # Corresponding guardian (secondary contact who may pick up / be contacted for the child)
@@ -627,10 +631,10 @@ class Class(Base):
     max_age_months = Column(Integer, nullable=False)
     supervisor_id = Column(Integer, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         UniqueConstraint("supervisor_id", name="uq_classes_supervisor"),
@@ -677,10 +681,10 @@ class SupervisorAssignment(Base):
     full_time_dedication = Column(Boolean, nullable=False, default=True)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=True)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     # Relationships
     class_ = relationship("Class", back_populates="supervisor_assignments")
@@ -695,10 +699,10 @@ class KindergartenService(Base):
     service_name = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
     enabled_flag = Column(Boolean, nullable=False, default=True)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="services")
@@ -712,7 +716,7 @@ class OperatingCalendar(Base):
     date = Column(Date, nullable=False)
     is_open = Column(Boolean, nullable=False, default=True)
     reason = Column(String(255), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="calendar")
@@ -732,18 +736,18 @@ class EnrollmentApplication(Base):
     is_active = Column(Boolean, nullable=True)
     status_reason = Column(String(255), nullable=True)
     source = Column(String(50), nullable=False, default="WEB")
-    submitted_at = Column(DateTime(timezone=True), nullable=True)
-    accepted_at = Column(DateTime(timezone=True), nullable=True)
-    rejected_at = Column(DateTime(timezone=True), nullable=True)
+    submitted_at = Column(UTCDateTime, nullable=True)
+    accepted_at = Column(UTCDateTime, nullable=True)
+    rejected_at = Column(UTCDateTime, nullable=True)
     decision_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    decision_at = Column(DateTime(timezone=True), nullable=True)
+    decision_at = Column(UTCDateTime, nullable=True)
     enrollment_start_date = Column(Date, nullable=True)
     enrollment_end_date = Column(Date, nullable=True)
     class_assignment_date = Column(Date, nullable=True)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         # Prevent duplicate enrollments for same child + kindergarten.
@@ -779,10 +783,10 @@ class WaitlistEntry(Base):
     enrollment_id = Column(Integer, ForeignKey("enrollment_applications.id"), unique=True, nullable=False)
     status = Column(Enum(WaitlistStatus), nullable=False, default=WaitlistStatus.WAITLISTED)
     priority_score = Column(Float, nullable=False, default=0.0)
-    offer_sent_at = Column(DateTime(timezone=True), nullable=True)
-    offer_expiry_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    offer_sent_at = Column(UTCDateTime, nullable=True)
+    offer_expiry_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     # Relationships
     enrollment = relationship("EnrollmentApplication", back_populates="waitlist_entry")
@@ -796,12 +800,12 @@ class AttendanceLog(Base):
     class_id = Column(Integer, ForeignKey("classes.id"), nullable=False)
     date = Column(Date, nullable=False)
     status = Column(Enum(AttendanceStatus), nullable=False)
-    check_in_at = Column(DateTime(timezone=True), nullable=True)
-    check_out_at = Column(DateTime(timezone=True), nullable=True)
+    check_in_at = Column(UTCDateTime, nullable=True)
+    check_out_at = Column(UTCDateTime, nullable=True)
     recorded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     picked_by_name = Column(String(200), nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         UniqueConstraint("child_id", "date", name="uq_attendance_child_date"),
@@ -829,10 +833,10 @@ class DailyReport(Base):
     date = Column(Date, nullable=False)
     status = Column(Enum(DailyReportStatus), nullable=False, default=DailyReportStatus.DRAFT)
     submitted_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    submitted_at = Column(DateTime(timezone=True), nullable=True)
+    submitted_at = Column(UTCDateTime, nullable=True)
     approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    approved_at = Column(DateTime(timezone=True), nullable=True)
-    sent_to_parent_at = Column(DateTime(timezone=True), nullable=True)
+    approved_at = Column(UTCDateTime, nullable=True)
+    sent_to_parent_at = Column(UTCDateTime, nullable=True)
     rejected_reason = Column(Text, nullable=True)
     arrival_time = Column(String(5), nullable=False)
     leave_time = Column(String(5), nullable=True)
@@ -855,8 +859,8 @@ class DailyReport(Base):
     # Activities and notes
     activities = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         UniqueConstraint("kindergarten_id", "child_id", "date", name="uq_daily_report_kindergarten_child_date"),
@@ -912,11 +916,11 @@ class Incident(Base):
     type = Column(Enum(IncidentType), nullable=False)
     severity_level = Column(Enum(SeverityLevel), nullable=False)
     description = Column(Text, nullable=False)
-    occurred_at = Column(DateTime(timezone=True), nullable=False)
-    notify_parent_at = Column(DateTime(timezone=True), nullable=True)
+    occurred_at = Column(UTCDateTime, nullable=False)
+    notify_parent_at = Column(UTCDateTime, nullable=True)
     followup_required_flag = Column(Boolean, nullable=False, default=False)
-    followup_sla_deadline = Column(DateTime(timezone=True), nullable=True)
-    closed_at = Column(DateTime(timezone=True), nullable=True)
+    followup_sla_deadline = Column(UTCDateTime, nullable=True)
+    closed_at = Column(UTCDateTime, nullable=True)
     reported_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)
     closed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -929,10 +933,10 @@ class Incident(Base):
     attachment_url = Column(String(500), nullable=True)
     status = Column(Enum(IncidentStatus), nullable=False, default=IncidentStatus.OPEN)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         Index("ix_incidents_kg_occurred_at", "kindergarten_id", "occurred_at"),
@@ -970,7 +974,7 @@ class IncidentHistory(Base):
     status_to = Column(Enum(IncidentStatus), nullable=True)
     owner_from_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     owner_to_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    timestamp = Column(UTCDateTime, server_default=func.now())
     notes = Column(Text, nullable=True)
 
     __table_args__ = (
@@ -998,7 +1002,7 @@ class Report(Base):
     metrics_json = Column(JSON, nullable=False)
     file_path = Column(String(500), nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         Index("idx_reports_scope_type", "scope_type"),
@@ -1020,8 +1024,8 @@ class Observation(Base):
     domain = Column(Enum(LearningDomain), nullable=False)
     observation_text = Column(Text, nullable=False)
     mastery_level = Column(Enum(MasteryLevel), nullable=True)
-    observed_at = Column(DateTime(timezone=True), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    observed_at = Column(UTCDateTime, nullable=False)
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     # Relationships
     child = relationship("Child", back_populates="observations")
@@ -1037,7 +1041,7 @@ class CurriculumOutcome(Base):
     age_band_max_months = Column(Integer, nullable=False)
     indicator_code = Column(String(50), nullable=False, unique=True)
     description = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         Index("idx_curriculum_outcomes_domain_age", "domain", "age_band_min_months"),
@@ -1052,9 +1056,9 @@ class Portfolio(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     status = Column(Enum(PortfolioStatus), nullable=False, default=PortfolioStatus.DRAFT)
-    published_at = Column(DateTime(timezone=True), nullable=True)
-    parent_viewed_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    published_at = Column(UTCDateTime, nullable=True)
+    parent_viewed_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     # Relationships
     child = relationship("Child", back_populates="portfolios")
@@ -1068,8 +1072,8 @@ class HealthAlert(Base):
     alert_type = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
     severity = Column(String(50), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     # Relationships
     child = relationship("Child", back_populates="health_alerts")
@@ -1097,10 +1101,10 @@ class Message(Base):
     recipient_count = Column(Integer, nullable=True)
     translated_text = Column(Text, nullable=True)
     queue_status = Column(Enum(MessageQueueStatus), nullable=True, default=MessageQueueStatus.SENT)
-    scheduled_at = Column(DateTime(timezone=True), nullable=True)
+    scheduled_at = Column(UTCDateTime, nullable=True)
     is_read = Column(Boolean, nullable=False, default=False)
-    read_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    read_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     # Relationships
     sender = relationship("User", foreign_keys=[sender_id], back_populates="messages_sent")
@@ -1129,10 +1133,10 @@ class MessageRecipient(Base):
     id = Column(Integer, primary_key=True, index=True)
     message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
     recipient_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    delivered_at = Column(DateTime(timezone=True), nullable=True)
-    read_at = Column(DateTime(timezone=True), nullable=True)
+    delivered_at = Column(UTCDateTime, nullable=True)
+    read_at = Column(UTCDateTime, nullable=True)
     status = Column(String(20), nullable=False, default="queued")  # queued, sent, failed
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     message = relationship("Message", back_populates="recipients")
     recipient = relationship("User")
@@ -1151,10 +1155,10 @@ class MessageUserState(Base):
     id = Column(Integer, primary_key=True, index=True)
     message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    read_at = Column(DateTime(timezone=True), nullable=True)
-    archived_at = Column(DateTime(timezone=True), nullable=True)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    read_at = Column(UTCDateTime, nullable=True)
+    archived_at = Column(UTCDateTime, nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     message = relationship("Message", back_populates="user_states")
     user = relationship("User", back_populates="message_states")
@@ -1179,8 +1183,8 @@ class MessageAttachment(Base):
     storage_provider = Column(String(50), nullable=False)
     storage_key = Column(String(500), nullable=False)
     url = Column(String(500), nullable=True)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    deleted_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     message = relationship("Message", back_populates="attachments")
     uploaded_by = relationship("User")
@@ -1200,8 +1204,8 @@ class UserDeviceToken(Base):
     platform = Column(Enum(DevicePlatform), nullable=False)
     device_name = Column(String(255), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
-    last_used_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_used_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     user = relationship("User")
 
@@ -1245,8 +1249,8 @@ class Notification(Base):
     status = Column(Enum(NotificationStatus), nullable=False, default=NotificationStatus.PENDING)
     payload = Column(JSON, nullable=True)
     error_message = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    sent_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
+    sent_at = Column(UTCDateTime, nullable=True)
 
     user = relationship("User")
     message = relationship("Message")
@@ -1268,12 +1272,12 @@ class Event(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     type = Column(Enum(EventType), nullable=False)
-    start_at = Column(DateTime(timezone=True), nullable=False)
-    end_at = Column(DateTime(timezone=True), nullable=False)
+    start_at = Column(UTCDateTime, nullable=False)
+    end_at = Column(UTCDateTime, nullable=False)
     requires_consent_flag = Column(Boolean, nullable=False, default=False)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="events")
@@ -1289,9 +1293,9 @@ class Survey(Base):
     nps_question_enabled = Column(Boolean, nullable=False, default=True)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="surveys")
@@ -1306,7 +1310,7 @@ class SurveyResponse(Base):
     parent_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     nps_score = Column(Integer, nullable=True) # 0-10
     feedback_text = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         UniqueConstraint("survey_id", "parent_id", name="uq_survey_responses_survey_parent"),
@@ -1332,9 +1336,9 @@ class AbsenceRequest(Base):
     status = Column(Enum(AbsenceRequestStatus), nullable=False, default=AbsenceRequestStatus.SUBMITTED)
     manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     decision_note = Column(Text, nullable=True)
-    decided_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    decided_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     # Relationships
     parent = relationship("ParentProfile")
@@ -1368,7 +1372,7 @@ class AuditLog(Base):
     sensitivity_level = Column(Integer, nullable=True)
     impersonated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     impersonation_reason = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         Index("idx_audit_logs_action", "action"),
@@ -1385,9 +1389,9 @@ class StaffPresenceLog(Base):
     staff_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
     date = Column(Date, nullable=False)
-    start_at = Column(DateTime(timezone=True), nullable=False)
-    end_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    start_at = Column(UTCDateTime, nullable=False)
+    end_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
 
 
 class RatioCompliance(Base):
@@ -1400,7 +1404,7 @@ class RatioCompliance(Base):
     compliant_minutes = Column(Integer, nullable=False)
     staff_count_avg = Column(Float, nullable=False)
     child_count_avg = Column(Float, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         Index("ix_ratio_compliance_kg_date", "kindergarten_id", "date"),
@@ -1417,7 +1421,7 @@ class KPISnapshot(Base):
     period_start = Column(Date, nullable=False)
     period_end = Column(Date, nullable=False)
     is_locked = Column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
 
 class GovernanceScore(Base):
@@ -1431,7 +1435,7 @@ class GovernanceScore(Base):
     child_experience_index = Column(Float, nullable=False)
     final_governance_score = Column(Float, nullable=False)
     band = Column(String(10), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
 
 class SafeguardingCase(Base):
@@ -1443,13 +1447,13 @@ class SafeguardingCase(Base):
     case_description = Column(Text, nullable=False)
     status = Column(String(50), nullable=True)
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
-    opened_at = Column(DateTime(timezone=True), nullable=False)
-    escalated_at = Column(DateTime(timezone=True), nullable=True)
-    closed_at = Column(DateTime(timezone=True), nullable=True)
-    sla_escalation_deadline = Column(DateTime(timezone=True), nullable=True)
-    sla_closure_deadline = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    opened_at = Column(UTCDateTime, nullable=False)
+    escalated_at = Column(UTCDateTime, nullable=True)
+    closed_at = Column(UTCDateTime, nullable=True)
+    sla_escalation_deadline = Column(UTCDateTime, nullable=True)
+    sla_closure_deadline = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
 
 class ContactMessage(Base):
@@ -1467,8 +1471,8 @@ class ContactMessage(Base):
     message = Column(Text, nullable=False)
     is_resolved = Column(Boolean, default=False, nullable=False)
     resolved_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    submitted_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
-    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    submitted_at = Column(UTCDateTime, server_default=func.now(), nullable=False, index=True)
+    resolved_at = Column(UTCDateTime, nullable=True)
 
     __table_args__ = (
         Index("ix_contact_messages_is_resolved", "is_resolved"),
@@ -1488,11 +1492,11 @@ class Task(Base):
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     due_date = Column(Date, nullable=True)
-    completed_at = Column(DateTime(timezone=True), nullable=True)
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(UTCDateTime, nullable=True)
+    deleted_at = Column(UTCDateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
 
 class TrainingStatus(str, enum.Enum):
@@ -1507,8 +1511,8 @@ class TrainingModule(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     is_mandatory = Column(Boolean, nullable=False, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
 class StaffTrainingCompletion(Base):
     __tablename__ = "staff_training_completion"
@@ -1519,8 +1523,8 @@ class StaffTrainingCompletion(Base):
     kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True) # Optional, for network-level trainings
     completion_date = Column(Date, nullable=True)
     status = Column(Enum(TrainingStatus), nullable=False, default=TrainingStatus.PENDING)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     user = relationship("User", backref="training_completions")
     training_module = relationship("TrainingModule")
@@ -1539,8 +1543,8 @@ class KPITarget(Base):
     target_value = Column(Float, nullable=False)
     effective_date = Column(Date, nullable=False)
     kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True) # NULL for network-wide target
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     kindergarten = relationship("Kindergarten")
 
@@ -1596,8 +1600,8 @@ class AdvancedAnalyticsCache(Base):
     # Health/Alerts
     health_alerts_count = Column(Integer)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         Index('ix_adv_analytics_cache_dim', 'dimension_type', 'dimension_id'),
@@ -1669,8 +1673,8 @@ class AnalyticsDimensionCache(Base):
     child_experience_index = Column(Float, nullable=True)
     final_governance_score = Column(Float, nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         Index('ix_analytics_cache_dimension', 'dimension_type', 'dimension_id'),
@@ -1694,9 +1698,9 @@ class ExportJob(Base):
     file_path = Column(String(500), nullable=True)
     file_size = Column(Integer, nullable=True)
     error_message = Column(Text, nullable=True)
-    started_at = Column(DateTime(timezone=True), nullable=True)
-    completed_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    started_at = Column(UTCDateTime, nullable=True)
+    completed_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     # Relationship
     user = relationship("User", backref="export_jobs")
@@ -1718,8 +1722,8 @@ class ReportTemplate(Base):
     include_charts = Column(Boolean, nullable=False, default=True)
     include_summary = Column(Boolean, nullable=False, default=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
+    last_used_at = Column(UTCDateTime, nullable=True)
 
     creator = relationship("User")
 
@@ -1739,11 +1743,11 @@ class ScheduledReport(Base):
     export_format = Column(String(20), nullable=False, default="CSV")
     frequency = Column(String(50), nullable=False)  # daily, weekly, monthly, quarterly, once
     recipients = Column(JSON, nullable=True)  # list of user_ids or emails
-    next_run = Column(DateTime(timezone=True), nullable=True)
-    last_run = Column(DateTime(timezone=True), nullable=True)
+    next_run = Column(UTCDateTime, nullable=True)
+    last_run = Column(UTCDateTime, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     creator = relationship("User")
 
@@ -1761,13 +1765,13 @@ class PredictiveModel(Base):
     scope_type = Column(String(50), nullable=False)
     scope_id = Column(String(100), nullable=True)
     model_version = Column(String(50), nullable=False)
-    trained_at = Column(DateTime(timezone=True), nullable=False)
+    trained_at = Column(UTCDateTime, nullable=False)
     training_start = Column(Date, nullable=True)
     training_end = Column(Date, nullable=True)
     parameters = Column(JSON, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         Index("ix_predictive_models_metric_scope", "metric_type", "scope_type", "scope_id"),
@@ -1790,8 +1794,8 @@ class PredictionCache(Base):
     forecast_points = Column(JSON, nullable=False)
     confidence = Column(JSON, nullable=False)
     model_meta = Column(JSON, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         Index("ix_prediction_cache_lookup", "metric_type", "scope_type", "scope_id", "params_hash", unique=True),
@@ -1812,9 +1816,9 @@ class AnomalyAlert(Base):
     message = Column(String(255), nullable=False)
     is_acknowledged = Column(Boolean, nullable=False, default=False)
     acknowledged_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    acknowledged_at = Column(UTCDateTime, nullable=True)
     data = Column(JSON, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         Index("ix_anomaly_alerts_metric_scope", "metric_type", "scope_type", "scope_id"),
@@ -1830,7 +1834,7 @@ class DrilldownPath(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     scope_type = Column(String(50), nullable=False)
     scope_id = Column(String(100), nullable=True)
-    visited_at = Column(DateTime(timezone=True), server_default=func.now())
+    visited_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         Index("ix_drilldown_paths_user_ts", "user_id", "visited_at"),
@@ -1850,8 +1854,8 @@ class AlertThreshold(Base):
     severity = Column(Enum(SeverityLevel), nullable=False, default=SeverityLevel.MEDIUM)
     is_active = Column(Boolean, nullable=False, default=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         Index("ix_alert_thresholds_scope", "metric_type", "scope_type", "scope_id"),
@@ -1871,10 +1875,10 @@ class ActiveAlert(Base):
     message = Column(String(255), nullable=False)
     severity = Column(Enum(SeverityLevel), nullable=False, default=SeverityLevel.MEDIUM)
     status = Column(Enum(AlertStatus), nullable=False, default=AlertStatus.ACTIVE)
-    triggered_at = Column(DateTime(timezone=True), nullable=False)
+    triggered_at = Column(UTCDateTime, nullable=False)
     acknowledged_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    acknowledged_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         Index("ix_active_alerts_status", "status"),
@@ -1892,8 +1896,8 @@ class PerformanceTarget(Base):
     target_value = Column(Float, nullable=False)
     effective_date = Column(Date, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         Index("ix_performance_targets_lookup", "metric_type", "scope_type", "scope_id", "effective_date"),
@@ -1911,7 +1915,7 @@ class BenchmarkData(Base):
     period_start = Column(Date, nullable=False)
     period_end = Column(Date, nullable=False)
     value = Column(Float, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         Index("ix_benchmark_data_scope", "metric_type", "scope_type", "scope_id"),
@@ -1932,7 +1936,7 @@ class Recommendation(Base):
     severity = Column(Enum(SeverityLevel), nullable=False, default=SeverityLevel.MEDIUM)
     recommended_actions = Column(JSON, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     kindergarten = relationship("Kindergarten")
 
@@ -1955,8 +1959,8 @@ class ActionPlan(Base):
     status = Column(Enum(ActionPlanStatus), nullable=False, default=ActionPlanStatus.OPEN)
     progress_percent = Column(Integer, nullable=False, default=0)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     recommendation = relationship("Recommendation")
     kindergarten = relationship("Kindergarten")
@@ -1982,9 +1986,9 @@ class ChildDocument(Base):
     uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     verified = Column(Boolean, nullable=False, default=False)
     verified_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    verified_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    verified_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         Index("idx_child_documents_child_id", "child_id"),
@@ -2007,9 +2011,9 @@ class DataQualityMetric(Base):
     accuracy_score = Column(Float, nullable=False)
     timeliness_score = Column(Float, nullable=False)
     consistency_score = Column(Float, nullable=False)
-    evaluated_at = Column(DateTime(timezone=True), nullable=False)
+    evaluated_at = Column(UTCDateTime, nullable=False)
     details = Column(JSON, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         Index("ix_data_quality_entity", "entity_type", "entity_id"),
@@ -2024,7 +2028,7 @@ class DailyReportView(Base):
     id = Column(Integer, primary_key=True, index=True)
     daily_report_id = Column(Integer, ForeignKey("daily_reports.id"), nullable=False)
     parent_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    viewed_at = Column(DateTime(timezone=True), server_default=func.now())
+    viewed_at = Column(UTCDateTime, server_default=func.now())
 
     daily_report = relationship("DailyReport")
     parent_user = relationship("User")
@@ -2046,9 +2050,9 @@ class DailyChecklist(Base):
     status = Column(Enum(DailyChecklistStatus), nullable=False, default=DailyChecklistStatus.PENDING)
     notes = Column(Text, nullable=True)
     submitted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    submitted_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    submitted_at = Column(UTCDateTime, nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     kindergarten = relationship("Kindergarten")
     submitter = relationship("User")
@@ -2074,8 +2078,8 @@ class GovernanceReminder(Base):
     target_id = Column(Integer, nullable=False)
     reminder_type = Column(String(50), nullable=False)  # e.g. "low_submission_rate"
     sent_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    sent_at = Column(DateTime(timezone=True), server_default=func.now())
-    cooldown_expires_at = Column(DateTime(timezone=True), nullable=False)
+    sent_at = Column(UTCDateTime, server_default=func.now())
+    cooldown_expires_at = Column(UTCDateTime, nullable=False)
     payload = Column(JSON, nullable=True)
 
     sender = relationship("User")
@@ -2097,8 +2101,8 @@ class ImportedKindergarten(Base):
     area = Column(String(100), nullable=True)
     detailed_address = Column(Text, nullable=True)
     phone = Column(String(20), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
 
     __table_args__ = (
         UniqueConstraint("name_ar", "district", "phone", name="uq_imported_kindergartens_name_district_phone"),
@@ -2118,7 +2122,7 @@ class ImportLog(Base):
     updated_count = Column(Integer, nullable=False, default=0)
     skipped_count = Column(Integer, nullable=False, default=0)
     errors_json = Column(JSON, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
 
 # =============================================================================
@@ -2141,7 +2145,7 @@ class MapIndicatorSnapshot(Base):
     previous_value = Column(Float, nullable=True)
     trend_pct = Column(Float, nullable=True)
     sample_size = Column(Integer, nullable=False, default=0)
-    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+    computed_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         UniqueConstraint("snapshot_date", "governorate_code", "main_indicator", name="uq_mis"),
@@ -2163,7 +2167,7 @@ class MapSubIndicatorValue(Base):
     threshold_high = Column(Float, nullable=True)
     threshold_low = Column(Float, nullable=True)
     above_threshold = Column(Boolean, nullable=False, default=False)
-    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+    computed_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         UniqueConstraint("snapshot_date", "governorate_code", "sub_indicator", name="uq_ssiv"),
@@ -2184,7 +2188,7 @@ class MapCorrelationSnapshot(Base):
     p_value = Column(Float, nullable=True)
     n_samples = Column(Integer, nullable=False, default=0)
     strength = Column(String(15), nullable=False)
-    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+    computed_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         UniqueConstraint("snapshot_date", "main_indicator", "sub_indicator", "method", name="uq_corr"),
@@ -2217,7 +2221,7 @@ class MapRegressionSnapshot(Base):
     n_samples = Column(Integer, nullable=False, default=0)
     ridge_used = Column(Boolean, nullable=False, default=False)
     fit_warning = Column(String(40), nullable=True)
-    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+    computed_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         UniqueConstraint("snapshot_date", "main_indicator", "sub_indicator", name="uq_reg"),
@@ -2239,7 +2243,7 @@ class MapRiskSnapshot(Base):
     top_driver_beta = Column(Float, nullable=True)
     trend_pct = Column(Float, nullable=True)
     contributing_subs = Column(JSON, nullable=False, default=list)
-    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+    computed_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         UniqueConstraint("snapshot_date", "governorate_code", name="uq_risk"),
@@ -2266,10 +2270,10 @@ class MapAlertHistory(Base):
     threshold = Column(Float, nullable=True)
     message = Column(Text, nullable=False)
     meta = Column(JSON, nullable=False, default=dict)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
-    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(UTCDateTime, server_default=func.now(), index=True)
+    acknowledged_at = Column(UTCDateTime, nullable=True)
     acknowledged_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_at = Column(UTCDateTime, nullable=True)
     resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     __table_args__ = (
@@ -2290,8 +2294,8 @@ class MapDailyRunLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     run_id = Column(String(36), nullable=False, unique=True)
-    started_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
-    finished_at = Column(DateTime(timezone=True), nullable=True)
+    started_at = Column(UTCDateTime, server_default=func.now(), index=True)
+    finished_at = Column(UTCDateTime, nullable=True)
     status = Column(String(20), nullable=False)
     rows_processed = Column(Integer, nullable=False, default=0)
     governorates = Column(Integer, nullable=False, default=0)
@@ -2357,11 +2361,11 @@ class AIParentRecommendation(Base):
     confidence = Column(Float, nullable=True)
     evidence_json = Column(JSON, nullable=True)
     parent_feedback = Column(String(20), nullable=True)
-    feedback_at = Column(DateTime(timezone=True), nullable=True)
+    feedback_at = Column(UTCDateTime, nullable=True)
     human_reviewed = Column(Boolean, nullable=False, default=False)
     reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     review_note = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
 
 class AIManagerAlert(Base):
@@ -2377,9 +2381,9 @@ class AIManagerAlert(Base):
     rule_version = Column(String(20), nullable=True)
     acknowledged = Column(Boolean, nullable=False, default=False)
     acknowledged_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    acknowledged_at = Column(UTCDateTime, nullable=True)
     dismissed = Column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
 
 class AIJobLog(Base):
@@ -2388,8 +2392,8 @@ class AIJobLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     job_name = Column(String(100), nullable=False)
     job_type = Column(String(50), nullable=False)
-    started_at = Column(DateTime(timezone=True), nullable=False)
-    finished_at = Column(DateTime(timezone=True), nullable=True)
+    started_at = Column(UTCDateTime, nullable=False)
+    finished_at = Column(UTCDateTime, nullable=True)
     status = Column(String(20), nullable=False)
     records_in = Column(Integer, nullable=True)
     records_out = Column(Integer, nullable=True)
@@ -2408,8 +2412,8 @@ class AIFeature(Base):
     feature_name = Column(String(100), nullable=False)
     feature_value = Column(Float, nullable=True)
     feature_json = Column(JSON, nullable=True)
-    computed_at = Column(DateTime(timezone=True), server_default=func.now())
-    valid_until = Column(DateTime(timezone=True), nullable=True)
+    computed_at = Column(UTCDateTime, server_default=func.now())
+    valid_until = Column(UTCDateTime, nullable=True)
     model_version = Column(String(50), nullable=True)
 
     __table_args__ = (
@@ -2431,8 +2435,8 @@ class AIModelVersion(Base):
     model_type = Column(String(50), nullable=False)
     description = Column(Text, nullable=True)
     parameters = Column(JSON, nullable=True)
-    deployed_at = Column(DateTime(timezone=True), server_default=func.now())
-    retired_at = Column(DateTime(timezone=True), nullable=True)
+    deployed_at = Column(UTCDateTime, server_default=func.now())
+    retired_at = Column(UTCDateTime, nullable=True)
     deployed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     __table_args__ = (
@@ -2450,7 +2454,7 @@ class AIFeedback(Base):
     user_role = Column(String(50), nullable=True)
     feedback_type = Column(String(50), nullable=False)
     feedback_note = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
 
 class AIEmbedding(Base):
@@ -2462,7 +2466,7 @@ class AIEmbedding(Base):
     chunk_index = Column(Integer, nullable=False, default=0)
     embedding = Column(Text, nullable=False)
     model_name = Column(String(100), nullable=False, default="nomic-embed-text")
-    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+    computed_at = Column(UTCDateTime, server_default=func.now())
     content_hash = Column(String(64), nullable=True)
 
     __table_args__ = (
@@ -2496,7 +2500,7 @@ class NationalImmunizationSchedule(Base):
     notes = Column(String(500), nullable=True)
     sort_order = Column(Integer, nullable=False, default=0)
     uploaded_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
         CheckConstraint("age_value >= 0", name="ck_immunization_age_value_nonneg"),

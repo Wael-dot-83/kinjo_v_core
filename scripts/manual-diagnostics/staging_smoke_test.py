@@ -201,7 +201,7 @@ def check_csrf_enforced(report: Report, session: requests.Session, created: list
         uid = (r.json() or {}).get("id")
         if uid:
             artifact["id"] = uid
-    assert r.status_code in (401, 403), f"CSRF-less admin write got {r.status_code}, expected 401/403"
+    assert r.status_code in (400, 401), f"CSRF-less admin write got {r.status_code}, expected 400/401"
     report.record("csrf_double_submit_enforced", "pass",
                   f"admin write without X-CSRF-Token -> {r.status_code}")
 

@@ -14,12 +14,12 @@ so every test here failed at import with
 which meant the double-submit boundary had *no* working test coverage at all.
 The tests now exercise the middleware that actually enforces it.
 
-The middleware is driven directly rather than through TestClient because
-`csrf_protection_middleware` short-circuits when `settings.TESTING` is true, and
-the whole suite runs with TESTING=true. Flipping that flag around a real request
-would also re-enable Redis-backed caching and other TESTING-gated paths, so the
-middleware is called as the pure function it is: same code, no side effects.
+The middleware is driven directly rather than through TestClient so each rule
+of the policy is exercised in isolation: same code, no side effects. The
+middleware has **no TESTING conditional** (D-2 consolidation deleted the old
+seam), so these tests exercise exactly what production runs.
 """
+
 import inspect
 import secrets
 
@@ -63,48 +63,53 @@ async def _passthrough(_request):
     return JSONResponse({"reached_endpoint": True})
 
 
-@pytest.fixture
-def strict_csrf(monkeypatch):
-    """Run the middleware with its production behaviour (TESTING off)."""
-    monkeypatch.setattr(settings, "TESTING", False)
-    return settings
-
-
 async def _run(request):
     return await csrf_protection_middleware(request, _passthrough)
 
 
 def _is_rejected(response) -> bool:
-    return response.status_code == 403
+    return response.status_code == 400
 
 
 class TestDoubleSubmitContract:
     """Header and cookie must both be present and must match."""
 
     @pytest.mark.asyncio
-    async def test_matching_pair_is_accepted(self, strict_csrf):
+    async def test_matching_pair_is_accepted(self):
         token = secrets.token_hex(32)
-        response = await _run(
-            _make_request(cookies={CSRF_COOKIE_NAME: token}, headers={"X-CSRF-Token": token})
-        )
+        response = await _run(_make_request(cookies={CSRF_COOKIE_NAME: token}, headers={"X-CSRF-Token": token}))
         assert response.status_code == 200, "a matching CSRF pair must reach the endpoint"
 
     @pytest.mark.asyncio
-    async def test_missing_both_is_rejected(self, strict_csrf):
-        assert _is_rejected(await _run(_make_request()))
+    async def test_missing_both_passes_through_to_auth(self):
+        """No cookies and no header means no ambient authority — nothing to forge.
+
+        CSRF rides ambient credentials (cookies). A request carrying none cannot
+        be a forgery of anything, so the middleware passes it through and
+        authentication downstream answers 401. This is also what preserves
+        curl-style API clients and anonymous 401 semantics. A browser never
+        looks like this in practice: the middleware provisions the CSRF cookie
+        on the first safe response, so real browser writes always land in the
+        enforced branch.
+        """
+        response = await _run(_make_request())
+        assert response.status_code == 200, (
+            "a credential-less request must reach the endpoint so auth can "
+            "reject it with 401; CSRF blocking it would mask the real cause"
+        )
 
     @pytest.mark.asyncio
-    async def test_header_without_cookie_is_rejected(self, strict_csrf):
+    async def test_header_without_cookie_is_rejected(self):
         response = await _run(_make_request(headers={"X-CSRF-Token": secrets.token_hex(32)}))
         assert _is_rejected(response)
 
     @pytest.mark.asyncio
-    async def test_cookie_without_header_is_rejected(self, strict_csrf):
+    async def test_cookie_without_header_is_rejected(self):
         response = await _run(_make_request(cookies={CSRF_COOKIE_NAME: secrets.token_hex(32)}))
         assert _is_rejected(response)
 
     @pytest.mark.asyncio
-    async def test_mismatched_pair_is_rejected(self, strict_csrf):
+    async def test_mismatched_pair_is_rejected(self):
         """A forged header cannot be paired with an unrelated cookie."""
         response = await _run(
             _make_request(
@@ -115,15 +120,13 @@ class TestDoubleSubmitContract:
         assert _is_rejected(response)
 
     @pytest.mark.asyncio
-    async def test_empty_values_are_rejected(self, strict_csrf):
+    async def test_empty_values_are_rejected(self):
         """Empty strings compare equal — they must not count as a valid pair."""
-        response = await _run(
-            _make_request(cookies={CSRF_COOKIE_NAME: ""}, headers={"X-CSRF-Token": ""})
-        )
+        response = await _run(_make_request(cookies={CSRF_COOKIE_NAME: ""}, headers={"X-CSRF-Token": ""}))
         assert _is_rejected(response)
 
     @pytest.mark.asyncio
-    async def test_cross_site_origin_is_rejected(self, strict_csrf):
+    async def test_cross_site_origin_is_rejected(self):
         """Even a valid pair must not be honoured from a foreign origin."""
         token = secrets.token_hex(32)
         response = await _run(
@@ -134,8 +137,23 @@ class TestDoubleSubmitContract:
         )
         assert _is_rejected(response)
 
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/api/contact",
+            "/api/users/request-password-reset",
+            "/api/users/reset-password",
+        ],
+    )
     @pytest.mark.asyncio
-    async def test_cross_site_referer_is_rejected(self, strict_csrf):
+    async def test_public_pre_auth_flows_are_exempt_from_csrf(self, path):
+        """Public contact and password-reset pages should not require a CSRF pair."""
+        token = secrets.token_hex(32)
+        response = await _run(_make_request(method="POST", path=path, cookies={CSRF_COOKIE_NAME: token}))
+        assert response.status_code == 200, f"{path} should be allowed to reach the endpoint without a CSRF pair"
+
+    @pytest.mark.asyncio
+    async def test_cross_site_referer_is_rejected(self):
         token = secrets.token_hex(32)
         response = await _run(
             _make_request(
@@ -147,7 +165,7 @@ class TestDoubleSubmitContract:
 
     @pytest.mark.parametrize("method", sorted(CSRF_SAFE_METHODS))
     @pytest.mark.asyncio
-    async def test_safe_methods_are_not_blocked(self, strict_csrf, method):
+    async def test_safe_methods_are_not_blocked(self, method):
         """Reads must never require a token, or the whole UI breaks."""
         response = await _run(_make_request(method=method, path="/api/admin/users"))
         assert response.status_code == 200
@@ -159,8 +177,7 @@ class TestValidatorHasNoBypass:
     def test_middleware_uses_constant_time_comparison(self):
         source = inspect.getsource(csrf_protection_middleware)
         assert "compare_digest" in source, (
-            "csrf_protection_middleware must compare the double-submit pair in "
-            "constant time"
+            "csrf_protection_middleware must compare the double-submit pair in constant time"
         )
 
     def test_remaining_endpoint_validators_use_constant_time_comparison(self):
@@ -171,8 +188,7 @@ class TestValidatorHasNoBypass:
         for validator in (analytics_validator, heatmap_validator):
             source = inspect.getsource(validator)
             assert "compare_digest" in source, (
-                f"{validator.__module__}._validate_csrf_token must compare in "
-                "constant time"
+                f"{validator.__module__}._validate_csrf_token must compare in constant time"
             )
 
     def test_endpoint_validators_contain_no_environment_bypass(self):
@@ -189,17 +205,20 @@ class TestValidatorHasNoBypass:
                     f"{token!r} — CSRF must not be conditional on environment"
                 )
 
-    def test_middleware_test_bypass_cannot_apply_in_production(self):
-        """The middleware's TESTING short-circuit is the one env-conditional path.
+    def test_middleware_has_no_environment_bypass(self):
+        """The middleware must run identical semantics in every environment.
 
-        It is deliberate — the suite could not drive authenticated writes without
-        it — but it must never be reachable in production, so it is pinned to
-        `not settings.is_production`.
+        The old TESTING seam was deleted by the D-2 consolidation: the suite
+        authenticates with bearer tokens (CSRF-exempt) or dependency overrides
+        (cookie-less, so nothing to forge), so no test-only short-circuit is
+        needed — and none may ever return, because a seam that relaxes CSRF
+        under TESTING is exactly how a real regression ships undetected.
         """
         source = inspect.getsource(csrf_protection_middleware)
-        assert "settings.TESTING and not settings.is_production" in source, (
-            "the CSRF test bypass must remain gated on `not settings.is_production`"
-        )
+        for token in ("TESTING", "DEBUG", "is_production", "ENVIRONMENT"):
+            assert token not in source, (
+                f"csrf_protection_middleware references {token!r} — CSRF must not be conditional on environment"
+            )
 
     def test_csrf_pair_helper_matches_production_cookie_name(self):
         """The canonical helper must target the cookie the app actually reads."""

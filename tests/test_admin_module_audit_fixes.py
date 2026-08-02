@@ -33,7 +33,8 @@ def test_charts_dashboard_has_no_hardcoded_english_only_strings():
     assert "'<p class=\"text-muted\">No data</p>'" not in html
     # The drilldown breadcrumb's final segment is bilingual now.
     assert "الحضانات" in html
-    assert "بدون بيانات" in html
+    assert "لا تتوفر بيانات" in html
+
     # The scope-level enum localises through TRANSLATIONS (network was missing).
     assert '"network": LANG === \'en\' ? "Network" : "الشبكة"' in html
 

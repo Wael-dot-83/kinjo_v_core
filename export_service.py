@@ -3,7 +3,7 @@ Export and reporting service for dashboard data
 """
 import csv
 from csv_utils import escape_csv_formula
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 
 import io
 import json
@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from kpi_service import get_consolidated_kpi_dashboard_data
 from cache_service import cache_service
+from utils.time_utils import now_amman, to_jordan_date
 import models
 
 logger = logging.getLogger(__name__)
@@ -88,16 +89,17 @@ class ExportService:
 
     def _export_kpi_json(self, kpi_data: Dict[str, Any]) -> Dict[str, Any]:
         """Export KPI data as JSON"""
+        jordan_now = now_amman()
         export_data = {
             "export_type": "kpi_dashboard",
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": jordan_now.isoformat(),
             "data": kpi_data
         }
 
         return {
             "content": json.dumps(export_data, ensure_ascii=False, indent=2),
             "content_type": "application/json",
-            "filename": f"kpi_dashboard_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            "filename": f"kpi_dashboard_{jordan_now.strftime('%Y%m%d_%H%M%S')}.json"
         }
 
     def _export_kpi_csv(self, kpi_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -137,7 +139,7 @@ class ExportService:
         return {
             "content": output.getvalue(),
             "content_type": "text/csv",
-            "filename": f"kpi_dashboard_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            "filename": f"kpi_dashboard_{now_amman().strftime('%Y%m%d_%H%M%S')}.csv"
         }
 
     def _export_kpi_excel(self, kpi_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -225,9 +227,9 @@ class ExportService:
 
     def _get_incidents_report_data(self, db: Session, user: models.User, date_from: date, date_to: date) -> List[Dict]:
         """Get incidents report data"""
+        from utils.time_utils import jordan_date_range_filter
         query = db.query(models.Incident).filter(
-            models.Incident.occurred_at >= datetime.combine(date_from, datetime.min.time()),
-            models.Incident.occurred_at <= datetime.combine(date_to, datetime.max.time()),
+            *jordan_date_range_filter(models.Incident.occurred_at, date_from, date_to)
         )
 
         if user.role != models.UserRole.ADMIN:
@@ -237,7 +239,8 @@ class ExportService:
 
         return [
             {
-                "date": inc.occurred_at.date().isoformat(),
+                # Jordan calendar date, not the UTC one: this column is read by people.
+                "date": to_jordan_date(inc.occurred_at).isoformat(),
                 "type": inc.type.value if hasattr(inc.type, "value") else str(inc.type),
                 "severity": inc.severity_level.value if hasattr(inc.severity_level, "value") else str(inc.severity_level),
                 "description": inc.description,
@@ -248,9 +251,9 @@ class ExportService:
 
     def _get_enrollment_report_data(self, db: Session, user: models.User, date_from: date, date_to: date) -> List[Dict]:
         """Get enrollment report data"""
+        from utils.time_utils import jordan_date_range_filter
         query = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.created_at >= datetime.combine(date_from, datetime.min.time()),
-            models.EnrollmentApplication.created_at <= datetime.combine(date_to, datetime.max.time()),
+            *jordan_date_range_filter(models.EnrollmentApplication.created_at, date_from, date_to)
         )
 
         if user.role != models.UserRole.ADMIN:
@@ -279,9 +282,10 @@ class ExportService:
 
     def _export_report_json(self, report_data: List[Dict], report_type: str) -> Dict[str, Any]:
         """Export report data as JSON"""
+        jordan_now = now_amman()
         export_data = {
             "report_type": report_type,
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": jordan_now.isoformat(),
             "record_count": len(report_data),
             "data": report_data
         }
@@ -289,7 +293,7 @@ class ExportService:
         return {
             "content": json.dumps(export_data, ensure_ascii=False, indent=2),
             "content_type": "application/json",
-            "filename": f"{report_type}_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            "filename": f"{report_type}_report_{jordan_now.strftime('%Y%m%d_%H%M%S')}.json"
         }
 
     def _export_report_csv(self, report_data: List[Dict], report_type: str) -> Dict[str, Any]:
@@ -298,7 +302,7 @@ class ExportService:
             return {
                 "content": "No data available",
                 "content_type": "text/csv",
-                "filename": f"{report_type}_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                "filename": f"{report_type}_report_{now_amman().strftime('%Y%m%d_%H%M%S')}.csv"
             }
 
         output = io.StringIO()
@@ -316,7 +320,7 @@ class ExportService:
         return {
             "content": output.getvalue(),
             "content_type": "text/csv",
-            "filename": f"{report_type}_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            "filename": f"{report_type}_report_{now_amman().strftime('%Y%m%d_%H%M%S')}.csv"
         }
 
     def _export_report_excel(self, report_data: List[Dict], report_type: str) -> Dict[str, Any]:

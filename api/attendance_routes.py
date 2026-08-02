@@ -1,8 +1,7 @@
 """
 Attendance domain endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import IntegrityError
@@ -17,6 +16,7 @@ import validators
 from config import settings
 from database import get_db
 from dependencies import get_current_user
+from services.jordan_locations import governorate_filter
 
 router = APIRouter(tags=["Attendance"])
 
@@ -522,7 +522,7 @@ def get_attendance_history_summary(
         if governorate or kindergarten_name:
             mode = "filtered_kindergartens"
             if governorate:
-                kg_query = kg_query.filter(models.Kindergarten.governorate == governorate)
+                kg_query = kg_query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
                 filters_applied["governorate"] = governorate
             if kindergarten_name:
                 kg_query = kg_query.filter(

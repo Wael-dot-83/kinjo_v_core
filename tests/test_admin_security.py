@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone, date
 from auth import get_password_hash
 from audit_actions import AuditAction
 import models
+from conftest import csrf_pair
 
 
 # =============================================================================
@@ -86,6 +87,10 @@ class TestAdminAuthEnforcement:
         ]
 
         for method, endpoint in endpoints:
+            # Truly credential-less: clear the jar so a CSRF cookie provisioned
+            # by an earlier loop iteration cannot carry over — a cookie-carrying
+            # request lands in the CSRF enforced branch and gets 400, not 401.
+            client.cookies.clear()
             if method == "GET":
                 response = client.get(endpoint)
             elif method == "POST":
@@ -1235,7 +1240,7 @@ def test_admin_generate_incident_report(client, test_db, admin_token, admin_user
     test_db.add_all([incident1, incident2])
     test_db.commit()
 
-    headers = {"Authorization": f"Bearer {admin_token}"}
+    headers = {"Authorization": f"Bearer {admin_token}", **csrf_pair()}
 
     # Generate report
     report_data = {
@@ -1347,7 +1352,14 @@ def test_admin_export_incident_report_csv(client, test_db, admin_token, admin_us
 
     headers = {"Authorization": f"Bearer {admin_token}"}
 
-    response = client.get(f"/api/admin/reports/incidents/{report.id}/export", headers=headers)
+    # lang=en is now explicit: the export became bilingual and defaults to Arabic,
+    # per CLAUDE.md's Arabic-primary rule. This test keeps the English path covered;
+    # the Arabic default is covered by tests/test_batch_3_bilingual_export.py.
+    response = client.get(
+        f"/api/admin/reports/incidents/{report.id}/export",
+        params={"lang": "en"},
+        headers=headers,
+    )
     assert response.status_code == 200
     assert response.headers["content-type"] == "text/csv; charset=utf-8"
 
@@ -1355,6 +1367,12 @@ def test_admin_export_incident_report_csv(client, test_db, admin_token, admin_us
     csv_content = response.text
     assert "Report Title" in csv_content
     assert "Total Incidents" in csv_content
+
+    # And the default really is Arabic, so the two languages cannot silently converge.
+    ar_response = client.get(f"/api/admin/reports/incidents/{report.id}/export", headers=headers)
+    assert ar_response.status_code == 200
+    assert "عنوان التقرير" in ar_response.text
+    assert "Report Title" not in ar_response.text
 
     audit_log = (
         test_db.query(models.AuditLog)
@@ -1419,7 +1437,7 @@ def test_admin_get_available_scopes(client, admin_token):
 
 def test_non_admin_cannot_generate_reports(client, manager_token):
     """Test non-admin users cannot generate reports"""
-    headers = {"Authorization": f"Bearer {manager_token}"}
+    headers = {"Authorization": f"Bearer {manager_token}", **csrf_pair()}
 
     report_data = {
         "scope_type": "ALL",
@@ -1432,8 +1450,8 @@ def test_non_admin_cannot_generate_reports(client, manager_token):
 
 def test_admin_incident_report_permissions_enforced(client, test_db, admin_token, manager_token, sample_kindergarten):
     """Test that report generation respects user permissions"""
-    headers_admin = {"Authorization": f"Bearer {admin_token}"}
-    headers_manager = {"Authorization": f"Bearer {manager_token}"}
+    headers_admin = {"Authorization": f"Bearer {admin_token}", **csrf_pair()}
+    headers_manager = {"Authorization": f"Bearer {manager_token}", **csrf_pair()}
 
     # Admin can generate ALL scope reports
     report_data_all = {

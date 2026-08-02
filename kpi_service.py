@@ -19,6 +19,7 @@ from translations import setup_translator
 from child_age_policy import get_child_age_bounds
 from cache_service import dashboard_cache
 from config import settings
+from services.jordan_locations import governorate_filter
 from kpi_standards import (
     STANDARDS,
     HARD_OVERRIDE_RULES,
@@ -42,14 +43,16 @@ _ = setup_translator("ar")  # Default to Arabic, can be made configurable
 # Import new models/enums
 from models import TrainingStatus, TrainingModule, StaffTrainingCompletion, KPITarget
 
+from utils.time_utils import get_amman_tz, now_amman, today_amman, jordan_date_range_filter
+
 router = APIRouter()
 
-_JORDAN_TZ = timezone(timedelta(hours=3))
+_JORDAN_TZ = get_amman_tz()
 
 
 def _today_jordan() -> date:
     """Current date in Jordan UTC+3. Use everywhere instead of date.today()."""
-    return datetime.now(_JORDAN_TZ).date()
+    return today_amman()
 
 
 KPI_SUPPORTED_DIMENSION_TYPES: Tuple[str, ...] = (
@@ -1595,8 +1598,7 @@ class KPIService:
         """
         incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end)
         ).scalar() or 0
 
         _, expected_by_child, _ = KPIService._count_expected_child_days(
@@ -1624,8 +1626,7 @@ class KPIService:
         """
         serious_incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.severity_level.in_([
                 models.SeverityLevel.HIGH,
                 models.SeverityLevel.CRITICAL
@@ -1764,22 +1765,28 @@ class KPIService:
         # Count incidents requiring follow-up
         total_followup_required = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.followup_required_flag == True
         ).scalar() or 0
 
         if total_followup_required == 0:
             return 0.0  # no incidents to follow up; caller checks quality.has_data
 
-        # Count incidents closed within SLA
+        # Count incidents closed within SLA.
+        #
+        # The deadline comparison is load-bearing: without it this counted every
+        # *closed* incident as on-time, so an incident closed after its deadline
+        # scored 100% here while compute_kpi_bundle() scored it 0% — two paths in
+        # this same module disagreeing on one metric. Predicate mirrors the bundle
+        # at :2419-2425 exactly, including the NULL-deadline behaviour (a NULL
+        # followup_sla_deadline makes the comparison NULL, so the row is excluded
+        # from the numerator in both places).
         closed_within_sla = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.followup_required_flag == True,
             models.Incident.closed_at.isnot(None),
-            models.Incident.closed_at <= models.Incident.followup_sla_deadline
+            models.Incident.closed_at <= models.Incident.followup_sla_deadline,
         ).scalar() or 0
 
         rate = (closed_within_sla / total_followup_required) * 100
@@ -2403,13 +2410,11 @@ class KPIService:
 
         incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
         ).scalar() or 0
         serious_incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.severity_level.in_([
                 models.SeverityLevel.HIGH,
                 models.SeverityLevel.CRITICAL,
@@ -2417,14 +2422,12 @@ class KPIService:
         ).scalar() or 0
         followup_required = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.followup_required_flag == True,
         ).scalar() or 0
         followup_closed_within_sla = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.followup_required_flag == True,
             models.Incident.closed_at.isnot(None),
             models.Incident.closed_at <= models.Incident.followup_sla_deadline,
@@ -3541,8 +3544,7 @@ def get_consolidated_kpi_dashboard_data(
                 func.count(models.Incident.id),
             ).filter(
                 models.Incident.kindergarten_id.in_(target_kindergarten_ids),
-                func.date(models.Incident.occurred_at) >= period_start,
-                func.date(models.Incident.occurred_at) <= period_end,
+                *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
                 *extra_filters,
             ).group_by(models.Incident.kindergarten_id)
             return {int(r[0]): int(r[1]) for r in q.all()}
@@ -4195,8 +4197,7 @@ def get_consolidated_kpi_dashboard_data(
             func.count(models.Incident.id),
         ).filter(
             models.Incident.kindergarten_id.in_(target_kindergarten_ids),
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end,
+            *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
         ).group_by(func.date(models.Incident.occurred_at)).all()
         inc_by_date: Dict[str, int] = {str(r[0]): int(r[1]) for r in inc_rows}
 
@@ -4206,8 +4207,7 @@ def get_consolidated_kpi_dashboard_data(
             func.count(models.EnrollmentApplication.id),
         ).filter(
             models.EnrollmentApplication.kindergarten_id.in_(target_kindergarten_ids),
-            func.date(models.EnrollmentApplication.created_at) >= period_start,
-            func.date(models.EnrollmentApplication.created_at) <= period_end,
+            *jordan_date_range_filter(models.EnrollmentApplication.created_at, period_start, period_end),
         ).group_by(func.date(models.EnrollmentApplication.created_at)).all()
         enroll_by_date: Dict[str, int] = {str(r[0]): int(r[1]) for r in enroll_rows}
 
@@ -4253,7 +4253,9 @@ def get_consolidated_kpi_dashboard_data(
         return att_points, inc_points, enroll_points, gov_points
 
     # Build student distribution by birth year (calendar year)
-    # Age constraints: 70 days (MIN_CHILD_AGE_DAYS) to 4 years 8 months (MAX_CHILD_AGE_MONTHS)
+    # Age constraints: 1 day (MIN_CHILD_AGE_DAYS) to 4 years 8 months (MAX_CHILD_AGE_MONTHS).
+    # The authoritative values come from get_child_age_bounds() below, not from this
+    # comment — which previously said "70 days" and had drifted from config.py:198.
     today_date = _today_jordan()
     bounds = get_child_age_bounds(today_date)
 
@@ -5451,7 +5453,7 @@ def get_kpi_network_summary(
         models.Kindergarten.status == models.KindergartenStatus.ACTIVE
     )
     if governorate:
-        kg_query = kg_query.filter(models.Kindergarten.governorate == governorate)
+        kg_query = kg_query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
     kindergartens = kg_query.all()
 
     per_kg = []

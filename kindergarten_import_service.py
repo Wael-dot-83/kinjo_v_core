@@ -16,6 +16,7 @@ from fastapi import HTTPException
 
 from models import ImportedKindergarten, ImportLog
 from database import get_db
+from services.jordan_locations import governorate_filter
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +220,7 @@ class KindergartenImportService:
         query = self.db.query(ImportedKindergarten)
 
         if governorate:
-            query = query.filter(ImportedKindergarten.governorate == governorate)
+            query = query.filter(governorate_filter(ImportedKindergarten.governorate, governorate))
         if district:
             query = query.filter(ImportedKindergarten.district == district)
         if search:

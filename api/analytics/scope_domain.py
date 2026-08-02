@@ -6,6 +6,7 @@ from fastapi import HTTPException, Query
 from sqlalchemy.orm import Session
 
 import models
+from services.jordan_locations import governorate_filter
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
@@ -45,7 +46,7 @@ def allowed_kindergarten_ids(current_user: models.User, db: Session) -> Optional
             gov_rows = (
                 db.query(models.Kindergarten.id)
                 .filter(
-                    models.Kindergarten.governorate == supervisor_gov,
+                    governorate_filter(models.Kindergarten.governorate, supervisor_gov),
                     models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
                 )
                 .all()

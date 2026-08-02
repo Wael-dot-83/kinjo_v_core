@@ -470,3 +470,16 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
   .agency-report-summary dl{grid-template-columns:1fr}
   .agency-charts-grid{grid-template-columns:1fr}
 }
+
+/* Styles for JS-rendered interpretation & decision support sections */
+.agency-report-interpretation, .agency-report-decisions {
+  margin-top: 2rem;
+  padding: 1.25rem;
+  background: var(--admin-surface, #fff);
+  border: 1px solid var(--admin-border, #d9dee6);
+  border-radius: 12px;
+}
+.agency-report-decisions {
+  margin-top: 1.5rem;
+}
+

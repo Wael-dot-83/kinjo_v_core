@@ -334,6 +334,9 @@
         <!-- Page Header block (for page-specific headers) -->
         {% block page_header %}{% endblock %}
 
+        <!-- Manager Kindergarten Context Strip -->
+        {% include "components/manager_context_strip.html" %}
+
         <!-- Page Content -->
         <div class="admin-content" id="admin-content">{% block content %}{% endblock %}</div>
       </main>
@@ -353,8 +356,12 @@
 
     <!-- Auth & API (must load before other JS) -->
     <script src="/static/js/auth.js?v=2.1"></script>
+    <script src="/static/js/date_display.js"></script>
     <script src="/static/js/app_i18n.js"></script>
     <script src="/static/js/kinjo-api.js?v=2.0"></script>
+
+    <!-- Manager Context Strip (kindergarten scope indicator) -->
+    <script src="/static/js/manager_context_strip.js"></script>
 
     <!-- Core Infrastructure -->
     <script src="/static/js/core/dataFetcher.js"></script>

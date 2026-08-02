@@ -372,7 +372,7 @@ async def export_enrollment_forecast_csv(
     output.seek(0)
     filename = f"enrollment_forecast_{target_year}.csv"
     return StreamingResponse(
-        iter([output.getvalue()]),
+        iter(["\ufeff" + output.getvalue()]),  # UTF-8 BOM for Arabic Excel compatibility (CHART-003)
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

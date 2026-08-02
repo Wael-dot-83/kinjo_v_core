@@ -7,8 +7,12 @@ means no business operation ran and nothing was written.
 
 This exercises PUT /api/admin/users/{id} against a REAL existing target and
 asserts the update reaches the business logic, returns 200, and changes the row
-in the database. The CSRF-negative cases use the SAME valid target so a 400 can
-only come from the CSRF gate, never from a missing resource.
+in the database.
+
+CSRF applies to cookie-authenticated requests (bearer tokens are inherently
+CSRF-safe and pass through — see middleware/csrf.py). The negative cases
+therefore authenticate via the real session cookie, so a 400 can only come
+from the CSRF gate, never from missing authentication or a missing resource.
 """
 import secrets
 
@@ -16,6 +20,7 @@ import pytest
 
 import models
 from auth import get_password_hash
+from config import settings
 from conftest import CSRF_COOKIE_NAME, bearer_headers, csrf_pair
 
 
@@ -55,6 +60,21 @@ def _token(client, username="wr_admin", password="Admin123!"):
     return r.json()["access_token"]
 
 
+def _cookie_pair(client) -> dict:
+    """Session + CSRF cookie values captured from the jar after a real login.
+
+    The session cookie alone authenticates the request; the CSRF cookie is
+    one half of the double-submit pair. Returning the raw values lets each
+    test send exactly the combination it needs via an explicit Cookie header
+    (which overrides the jar for that request).
+    """
+    session = client.cookies.get(settings.SESSION_COOKIE_NAME)
+    csrf = client.cookies.get(CSRF_COOKIE_NAME)
+    assert session, "login must set the session cookie"
+    assert csrf, "login must provision the CSRF cookie"
+    return {"session": session, "csrf": csrf}
+
+
 class TestValidAdminWriteContract:
     def test_valid_csrf_write_succeeds_and_persists(
         self, client, test_db, sample_kindergarten
@@ -83,16 +103,49 @@ class TestValidAdminWriteContract:
         assert reloaded.phone_number == "+962790000123"
         assert reloaded.email == original_email  # untouched fields preserved
 
+    def test_valid_csrf_write_via_session_cookie_succeeds(
+        self, client, test_db, sample_kindergarten
+    ):
+        """Positive cookie-auth control: the session cookie alone authenticates,
+        so the 400s in the negative cases below can only come from the CSRF gate."""
+        _admin(test_db)
+        target = _supervisor(test_db, sample_kindergarten, "wr_cookie_ok")
+        _token(client)  # login; jar now holds session + CSRF cookies
+        jar = _cookie_pair(client)
+
+        r = client.put(
+            f"/api/admin/users/{target.id}",
+            json={"full_name": "Updated Via Cookie"},
+            headers={
+                "Cookie": (
+                    f"{settings.SESSION_COOKIE_NAME}={jar['session']}; "
+                    f"{CSRF_COOKIE_NAME}={jar['csrf']}"
+                ),
+                "X-CSRF-Token": jar["csrf"],
+            },
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["full_name"] == "Updated Via Cookie"
+
     def test_missing_csrf_header_is_rejected_on_a_real_target(
         self, client, test_db, sample_kindergarten
     ):
-        """400 here can only be CSRF: the target exists, so it is not a 404."""
+        """400 here can only be CSRF: cookie-authenticated, target exists."""
         _admin(test_db)
         target = _supervisor(test_db, sample_kindergarten, "wr_no_header")
+        _token(client)
+        jar = _cookie_pair(client)
+
         r = client.put(
             f"/api/admin/users/{target.id}",
             json={"full_name": "Should Not Apply"},
-            headers=bearer_headers(_token(client), with_csrf=False),
+            headers={
+                "Cookie": (
+                    f"{settings.SESSION_COOKIE_NAME}={jar['session']}; "
+                    f"{CSRF_COOKIE_NAME}={jar['csrf']}"
+                )
+                # no X-CSRF-Token header
+            },
         )
         assert r.status_code == 400, r.text
         assert "CSRF" in r.text
@@ -104,12 +157,17 @@ class TestValidAdminWriteContract:
     def test_missing_csrf_cookie_is_rejected(self, client, test_db, sample_kindergarten):
         _admin(test_db)
         target = _supervisor(test_db, sample_kindergarten, "wr_no_cookie")
-        headers = bearer_headers(_token(client), with_csrf=False)
-        headers["X-CSRF-Token"] = secrets.token_hex(32)  # header only, no cookie
+        _token(client)
+        jar = _cookie_pair(client)
+
         r = client.put(
             f"/api/admin/users/{target.id}",
             json={"full_name": "Should Not Apply"},
-            headers=headers,
+            headers={
+                # session cookie present, CSRF cookie absent (header only)
+                "Cookie": f"{settings.SESSION_COOKIE_NAME}={jar['session']}",
+                "X-CSRF-Token": secrets.token_hex(32),
+            },
         )
         assert r.status_code == 400, r.text
         assert "CSRF" in r.text
@@ -117,13 +175,19 @@ class TestValidAdminWriteContract:
     def test_mismatched_csrf_pair_is_rejected(self, client, test_db, sample_kindergarten):
         _admin(test_db)
         target = _supervisor(test_db, sample_kindergarten, "wr_mismatch")
-        headers = bearer_headers(_token(client), with_csrf=False)
-        headers["X-CSRF-Token"] = secrets.token_hex(32)
-        headers["Cookie"] = f"{CSRF_COOKIE_NAME}={secrets.token_hex(32)}"
+        _token(client)
+        jar = _cookie_pair(client)
+
         r = client.put(
             f"/api/admin/users/{target.id}",
             json={"full_name": "Should Not Apply"},
-            headers=headers,
+            headers={
+                "Cookie": (
+                    f"{settings.SESSION_COOKIE_NAME}={jar['session']}; "
+                    f"{CSRF_COOKIE_NAME}={jar['csrf']}"
+                ),
+                "X-CSRF-Token": secrets.token_hex(32),  # does not match the cookie
+            },
         )
         assert r.status_code == 400, r.text
         assert "CSRF" in r.text

@@ -129,9 +129,15 @@ class TestJordanTimezone:
         assert jordan_date != utc_date
 
     def test_today_jordan_resolves_at_call_time(self):
-        """Patching datetime.now inside kpi_service must change _today_jordan()."""
+        """_today_jordan() must read the clock per call, not snapshot it at import.
+
+        Patch target is utils.time_utils, not kpi_service: _today_jordan() now
+        delegates to utils.time_utils.today_amman() (kpi_service.py:53-55), so
+        patching kpi_service.datetime no longer reaches the clock and the test
+        passed vacuously against the real date.
+        """
         fixed_dt = datetime(2026, 1, 15, 12, 0, 0, tzinfo=_JORDAN_TZ)
-        with patch("kpi_service.datetime") as mock_dt:
+        with patch("utils.time_utils.datetime") as mock_dt:
             mock_dt.now.return_value = fixed_dt
             result = _today_jordan()
         assert result == date(2026, 1, 15)

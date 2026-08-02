@@ -1,0 +1,79 @@
+{# Manager Kindergarten Context Strip — the manager module's signature element.
+
+   Why it exists: every manager action is scoped to exactly one kindergarten.
+   This strip makes that scope a visible, always-present part of the interface
+   instead of a hidden assumption in the code, so a manager never has to ask
+   "which kindergarten am I operating in right now?".
+
+   Rendering notes:
+
+   * The kindergarten NAME is server-rendered from current_user.kindergarten, so
+     the scope is correct on first paint with no JavaScript and no extra request.
+   * The CHILD COUNT is not. kindergartens.current_child_count is NULL across
+     this dataset, so printing it would show a fabricated or blank number on
+     every page. The count element stays hidden until manager_context_strip.js
+     fills it from /api/manager/dashboard (the endpoint the dashboard already
+     calls) and is announced via aria-live. If that fetch fails the count simply
+     never appears — the strip degrades to name-only rather than showing a zero
+     it cannot stand behind.
+   * No <h1> here, deliberately. This partial renders before {% block content %}
+     on every manager page, so a heading would sit above each page's own <h1>
+     and produce the illogical outline that components/admin_page_context.html
+     lines 61-65 documents. role="region" + aria-label gives assistive tech the
+     same landmark without breaking the heading order.
+   * No kindergarten switcher. A manager is bound to a single kindergarten_id in
+     this data model (models.User line 368), so a switcher would be a control
+     that cannot switch anything. It belongs here only once multi-kindergarten
+     access actually exists.
+   * The sync state is conveyed by colour AND text ("Current"/"محدّث"), never
+     colour alone — WCAG SC 1.4.1.
+#}
+{% set mgr_kg = current_user.kindergarten if current_user and current_user.kindergarten_id else none %}
+{% if mgr_kg %}
+{% set kg_display_name = (mgr_kg.name_en or mgr_kg.name_ar) if ui_lang == 'en' else (mgr_kg.name_ar or mgr_kg.name_en) %}
+<section
+  class="manager-context-strip"
+  role="region"
+  aria-label="{% if ui_lang == 'en' %}Kindergarten context{% else %}سياق الحضانة{% endif %}"
+  data-manager-context-strip
+>
+  <p class="strip-scope mb-0">
+    <i class="bi bi-building" aria-hidden="true"></i>
+    <span class="strip-scope-label">
+      {% if ui_lang == 'en' %}Operating in{% else %}تعمل في{% endif %}
+    </span>
+    <span class="strip-kindergarten">{{ kg_display_name }}</span>
+  </p>
+
+  {# Hidden until the JS has a real number; never renders a placeholder digit. #}
+  <p
+    class="strip-children mb-0 d-none"
+    data-strip-children
+    aria-live="polite"
+    aria-atomic="true"
+  >
+    <i class="bi bi-people" aria-hidden="true"></i>
+    <span data-strip-children-count></span>
+    <span class="strip-children-label">
+      {% if ui_lang == 'en' %}enrolled children{% else %}طفلاً مسجلاً{% endif %}
+    </span>
+  </p>
+
+  {% if mgr_kg.status and mgr_kg.status != 'ACTIVE' %}
+  <p class="strip-status mb-0">
+    <span class="badge bg-warning text-dark">
+      {% if ui_lang == 'en' %}{{ mgr_kg.status|title }}{% else %}الحالة: {{ mgr_kg.status }}{% endif %}
+    </span>
+  </p>
+  {% endif %}
+
+  {# Sync indicator: starts "pending" and is promoted to current/stale by the JS
+     once it knows whether the data actually loaded. #}
+  <p class="strip-sync mb-0" data-strip-sync>
+    <span class="strip-sync-dot pending" data-strip-sync-dot aria-hidden="true"></span>
+    <span data-strip-sync-text>
+      {% if ui_lang == 'en' %}Checking data…{% else %}جارٍ التحقق من البيانات…{% endif %}
+    </span>
+  </p>
+</section>
+{% endif %}

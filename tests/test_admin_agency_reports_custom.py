@@ -76,13 +76,16 @@ def test_custom_schema_forbidden_for_non_admin(client, request, role_fixture):
 
 # ----------------------------- run endpoint --------------------------------
 
+from conftest import csrf_pair
+
+# ... (rest unchanged) ...
 def test_custom_run_returns_stable_envelope(client, admin_user):
     app.dependency_overrides[get_current_user] = lambda: admin_user
     try:
         resp = client.post("/api/admin/agency-reports/custom", json={
             "agency": "mosd", "level": "national", "period": "year",
             "indicators": ["children_count", "gender_distribution", "kindergarten_status"],
-        })
+        }, headers=csrf_pair())
         assert resp.status_code == 200
         body = resp.json()
         assert body["success"] is True
@@ -103,7 +106,7 @@ def test_custom_run_unavailable_indicator_not_fabricated(client, admin_user):
         resp = client.post("/api/admin/agency-reports/custom", json={
             "agency": "moh", "level": "national", "period": "year",
             "indicators": ["vaccination_coverage"],
-        })
+        }, headers=csrf_pair())
         assert resp.status_code == 200
         data = resp.json()["data"]
         # No fabricated KPI for an unavailable indicator; reported in data_quality.
@@ -125,7 +128,7 @@ def test_custom_run_unavailable_indicator_not_fabricated(client, admin_user):
 def test_custom_run_validates_bad_filters(client, admin_user, payload):
     app.dependency_overrides[get_current_user] = lambda: admin_user
     try:
-        resp = client.post("/api/admin/agency-reports/custom", json=payload)
+        resp = client.post("/api/admin/agency-reports/custom", json=payload, headers=csrf_pair())
         assert resp.status_code == 400
     finally:
         app.dependency_overrides.clear()
@@ -136,7 +139,7 @@ def test_custom_run_forbidden_for_non_admin(client, request, role_fixture):
     user = request.getfixturevalue(role_fixture)
     app.dependency_overrides[get_current_user] = lambda: user
     try:
-        resp = client.post("/api/admin/agency-reports/custom", json={"agency": "mosd", "indicators": ["children_count"]})
+        resp = client.post("/api/admin/agency-reports/custom", json={"agency": "mosd", "indicators": ["children_count"]}, headers=csrf_pair())
         assert resp.status_code == 403
     finally:
         app.dependency_overrides.clear()
@@ -150,7 +153,7 @@ def test_custom_export_csv(client, admin_user):
         resp = client.post("/api/admin/agency-reports/custom/export.csv", json={
             "agency": "mosd", "level": "national", "period": "year",
             "indicators": ["children_count", "gender_distribution"],
-        })
+        }, headers=csrf_pair())
         assert resp.status_code == 200
         assert resp.headers["content-type"].startswith("text/csv")
         assert resp.text.startswith("﻿")  # UTF-8 BOM for Arabic
@@ -162,7 +165,7 @@ def test_custom_export_csv(client, admin_user):
 def test_custom_export_csv_forbidden_for_non_admin(client, manager_user):
     app.dependency_overrides[get_current_user] = lambda: manager_user
     try:
-        resp = client.post("/api/admin/agency-reports/custom/export.csv", json={"agency": "mosd", "indicators": ["children_count"]})
+        resp = client.post("/api/admin/agency-reports/custom/export.csv", json={"agency": "mosd", "indicators": ["children_count"]}, headers=csrf_pair())
         assert resp.status_code == 403
     finally:
         app.dependency_overrides.clear()

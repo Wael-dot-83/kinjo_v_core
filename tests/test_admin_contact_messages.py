@@ -70,6 +70,8 @@ class TestContactMessagesAuth:
         assert r.status_code == 401
 
     def test_resolve_requires_auth(self, client, test_db):
+        # Unauthenticated request reaches auth middleware which returns 401.
+        # (CSRF middleware bypasses unauthenticated requests so auth speaks first.)
         r = client.post("/api/admin/contact-messages/1/resolve")
         assert r.status_code == 401
 

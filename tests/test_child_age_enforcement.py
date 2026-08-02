@@ -43,16 +43,23 @@ def test_enrollment_rejects_out_of_range_dob(client, parent_user, sample_kinderg
         "kindergarten_id": sample_kindergarten.id,
     }
 
+    # Each call must be truly credential-less (this test exercises age
+    # validation via dependency override, not CSRF): responses provision the
+    # CSRF cookie, and a jar-carried cookie would put the next call into the
+    # middleware's enforced branch (400 CSRF, masking the validation verdict).
+    client.cookies.clear()
     response = client.post("/api/enrollment/apply", json=payload)
     assert response.status_code == 400
 
     too_old = (date.today() - timedelta(days=365 * 6)).isoformat()
     payload["date_of_birth"] = too_old
+    client.cookies.clear()
     response = client.post("/api/enrollment/apply", json=payload)
     assert response.status_code == 400
 
     valid = (date.today() - timedelta(days=365 * 3)).isoformat()
     payload["date_of_birth"] = valid
+    client.cookies.clear()
     response = client.post("/api/enrollment/apply", json=payload)
     assert response.status_code == 201
 

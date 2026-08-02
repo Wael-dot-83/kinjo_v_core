@@ -6,9 +6,9 @@ Mounted through api.missing_endpoints wrapper under /api, yielding paths such as
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 
@@ -299,7 +299,7 @@ def agency_report_export_csv(
         _audit_export(db, current_user, agency_code, report_code, "csv", dict(request.query_params))
         filename = f"agency_report_{agency_code}_{report_code}.csv"
         return Response(
-            content=csv_payload,
+            content="\ufeff" + csv_payload,  # UTF-8 BOM for Arabic Excel compatibility (CHART-003)
             media_type="text/csv; charset=utf-8",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
@@ -317,7 +317,7 @@ def custom_report_schema(
 
 @router.post("/admin/agency-reports/custom")
 def custom_report(
-    scope: dict[str, Any],
+    scope: dict = Body(...),
     current_user: models.User = Depends(_require_admin),
     db: Session = Depends(get_db),
 ):
@@ -331,7 +331,7 @@ def custom_report(
 
 @router.post("/admin/agency-reports/custom/export.csv")
 def custom_report_export_csv(
-    scope: dict[str, Any],
+    scope: dict = Body(...),
     current_user: models.User = Depends(_require_admin),
     db: Session = Depends(get_db),
 ):
@@ -358,7 +358,7 @@ def custom_report_export_csv(
         )
         filename = "custom_agency_report.csv"
         return Response(
-            content=csv_payload,
+            content="\ufeff" + csv_payload,  # UTF-8 BOM for Arabic Excel compatibility (CHART-003)
             media_type="text/csv; charset=utf-8",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )

@@ -22,7 +22,7 @@ from enum import Enum
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from pydantic import BaseModel, Field, field_validator, EmailStr, ValidationError
+from pydantic import BaseModel, Field, field_validator, EmailStr
 from sqlalchemy.orm import Session
 
 import models
@@ -148,15 +148,6 @@ def conflict_error(message: str, fields: Optional[Dict[str, str]] = None) -> API
         code=ErrorCode.CONFLICT,
         message=message,
         fields=fields
-    )
-
-
-def rate_limited_error(retry_after: int = 60) -> APIError:
-    return APIError(
-        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-        code=ErrorCode.RATE_LIMITED,
-        message=f"Rate limit exceeded. Retry after {retry_after} seconds.",
-        details={"retry_after": retry_after}
     )
 
 
@@ -444,17 +435,6 @@ def can_admin_access_user(actor: models.User, target: models.User) -> bool:
     return target.id == actor.id
 
 
-def can_admin_access_kindergarten(actor: models.User, kindergarten_id: int) -> bool:
-    """Check if actor can access/modify a kindergarten"""
-    if actor.role == models.UserRole.ADMIN:
-        return True
-
-    if actor.role == models.UserRole.MANAGER:
-        return actor.kindergarten_id == kindergarten_id
-
-    return False
-
-
 def validate_bulk_targets(
     db: Session,
     actor: models.User,
@@ -557,46 +537,6 @@ def sanitize_csv_cell(value: str) -> str:
         return "'" + value
 
     return value
-
-
-def validate_csv_row(
-    row: Dict[str, str],
-    row_number: int,
-    schema: type,  # Pydantic model class
-    db: Session
-) -> tuple[Optional[Any], List[CSVRowError]]:
-    """
-    Validate a single CSV row against a Pydantic schema.
-
-    Returns:
-        Tuple of (validated_data or None, list of errors)
-    """
-    errors = []
-
-    # Sanitize all values
-    sanitized = {k: sanitize_csv_cell(str(v)) if v else v for k, v in row.items()}
-
-    try:
-        validated = schema(**sanitized)
-        return validated, []
-    except (ValidationError, ValueError, TypeError) as e:
-        if hasattr(e, 'errors'):
-            for error in e.errors():
-                field = '.'.join(str(loc) for loc in error.get('loc', []))
-                errors.append(CSVRowError(
-                    row_number=row_number,
-                    field=field,
-                    error_code="VALIDATION_ERROR",
-                    message=error.get('msg', str(error))
-                ))
-        else:
-            errors.append(CSVRowError(
-                row_number=row_number,
-                error_code="PARSE_ERROR",
-                message=str(e)
-            ))
-
-    return None, errors
 
 
 # =============================================================================

@@ -247,14 +247,41 @@ class TestCSRFEnforcement:
             return client.patch(path, json=json_data or {}, headers=headers)
         return client.get(path)
 
-    def test_endpoints_reject_missing_csrf(self, client, test_db, admin_token):
-        """State-changing endpoints should reject requests without CSRF token."""
-        bad_headers = {"Authorization": f"Bearer {admin_token}"}
+    def test_endpoints_reject_missing_csrf(self, client, test_db, admin_user):
+        """State-changing endpoints must reject a cookie session with no CSRF pair.
+
+        Driven by cookie, not bearer. middleware/csrf.py exempts bearer-authenticated
+        requests by design — a browser cannot attach an Authorization header to a
+        forged cross-origin request, and CORS is an explicit allowlist (main.py:374-381),
+        so that path is not forgeable. The CSRF surface that *is* real is the browser
+        session: session cookie present, double-submit pair absent.
+
+        This previously sent a bearer token and asserted rejection, which contradicted
+        the shipped policy. The mismatch was invisible because a NameError fired earlier
+        in the loop. Same treatment as test_chaos.py::test_backup_endpoint_requires_csrf.
+        """
+        from config import settings
+
+        client.cookies.clear()
+        login = client.post(
+            "/token",
+            data={"username": "testadmin", "password": "Admin123!"},
+        )
+        assert login.status_code == 200, login.text
+        session = client.cookies.get(settings.SESSION_COOKIE_NAME)
+        assert session, "login must set the session cookie"
+
+        # Cookie only — no X-CSRF-Token header, so the double-submit pair is incomplete.
+        bad_headers = {"Cookie": f"{settings.SESSION_COOKIE_NAME}={session}"}
 
         for method, path in self.CSRF_ENDPOINTS:
+            client.cookies.clear()  # keep the jar from re-supplying the CSRF cookie
             r = self._call_endpoint(client, method, path, bad_headers)
-            # Should NOT return 200 — CSRF validation should reject
-            assert r.status_code != 200, f"{method} {path} accepted request without CSRF token"
+            assert r.status_code == 400, (
+                f"{method} {path} returned {r.status_code}, expected 400 "
+                f"for a cookie session with no CSRF pair"
+            )
+            assert "CSRF" in r.text, f"{method} {path} rejected for the wrong reason: {r.text[:200]}"
 
     def test_endpoints_accept_valid_csrf(self, client, test_db, admin_token):
         """State-changing endpoints should accept requests with valid CSRF token."""

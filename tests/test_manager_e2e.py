@@ -192,6 +192,18 @@ def _clear():
     app.dependency_overrides.pop(get_current_user_or_redirect, None)
 
 
+def _w(client, method, url, **kwargs):
+    """Credential-less write for override-authenticated tests.
+
+    These tests authenticate via dependency override, not cookies, so the jar
+    must stay clean: every response provisions the CSRF cookie, and a
+    jar-carried cookie pushes the next write into the middleware's enforced
+    branch (400 CSRF) instead of the endpoint.
+    """
+    client.cookies.clear()
+    return getattr(client, method)(url, **kwargs)
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -224,12 +236,13 @@ class TestManagerWorkflowE2E:
                 "max_age_months": 60,
                 "supervisor_id": scenario["sup_a"].id,
             }
-            r = client.post("/api/classes", json=payload)
+            r = _w(client, "post", "/api/classes", json=payload)
             assert r.status_code in (200, 201), r.text
             assert r.json()["kindergarten_id"] == scenario["kg_a"].id
 
             new_class_id = r.json()["id"]
-            r = client.post(
+            r = _w(
+                client, "post",
                 "/api/manager/classes/assign-supervisor",
                 json={"class_id": new_class_id, "supervisor_id": scenario["sup_a"].id, "is_primary": True},
             )
@@ -247,7 +260,8 @@ class TestManagerWorkflowE2E:
             # KG B child must NOT leak into Manager A's list.
             assert scenario["child_b"].id not in child_ids
 
-            r = client.post(
+            r = _w(
+                client, "post",
                 "/api/manager/children/move-class",
                 json={
                     "child_id": scenario["child_a"].id,
@@ -263,10 +277,10 @@ class TestManagerWorkflowE2E:
         try:
             _as(scenario["mgr_a"])
             rid = scenario["report_a"].id
-            r = client.put(f"/api/manager/daily-reports/{rid}", json={"notes": "Reviewed by manager."})
+            r = _w(client, "put", f"/api/manager/daily-reports/{rid}", json={"notes": "Reviewed by manager."})
             assert r.status_code == 200, r.text
 
-            r = client.put(f"/api/manager/daily-reports/{rid}/send-to-parents")
+            r = _w(client, "put", f"/api/manager/daily-reports/{rid}/send-to-parents")
             assert r.status_code == 200, r.text
             assert r.json()["status"] == "SENT_TO_PARENT"
 
@@ -362,7 +376,7 @@ class TestManagerWorkflowE2E:
                 ("put", f"/api/manager/classes/{scenario['class_a'].id}"),
                 ("delete", f"/api/manager/classes/{scenario['class_a'].id}"),
             ):
-                r = getattr(client, method)(path, json={}) if method != "delete" else client.delete(path)
+                r = _w(client, method, path, json={}) if method != "delete" else _w(client, "delete", path)
                 assert r.status_code in (404, 405), f"{method} {path} -> {r.status_code}: {r.text}"
 
             # The manager-scoped READ still exists and is KG-scoped.
@@ -372,7 +386,8 @@ class TestManagerWorkflowE2E:
             assert scenario["class_a"].id in ids
 
             # Canonical create works on /api/classes for the manager's KG.
-            r = client.post(
+            r = _w(
+                client, "post",
                 "/api/classes",
                 json={
                     "kindergarten_id": scenario["kg_a"].id,

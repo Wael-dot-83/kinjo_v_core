@@ -10,6 +10,7 @@ Verifies:
 from datetime import datetime, timedelta
 import time
 import pytest
+from utils.time_utils import now_amman
 from auth import get_password_hash
 import models
 
@@ -100,7 +101,12 @@ class TestDashboardResponse:
         )
         test_db.add(other)
         test_db.flush()
-        now = datetime.now()
+        # Aware Jordan, not naive datetime.now(). This test asserts on "logins today"
+        # in Jordan terms, and db_types.UTCDateTime reads a naive value as UTC — so a
+        # naive local timestamp taken after 21:00 Jordan lands on the *next* Jordan day
+        # and the count silently drops to 0. That made this test pass during the working
+        # day and fail in the evening.
+        now = now_amman()
         test_db.query(models.AuditLog).delete()
         test_db.add_all([
             models.AuditLog(user_id=admin.id, action="LOGIN_SUCCESS", entity_type="User", created_at=now),

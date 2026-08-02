@@ -22,6 +22,7 @@ from database import get_db
 from dependencies import require_admin
 from api.analytics.scope_domain import can_view_child_detail
 from cache_service import dashboard_cache
+from services.jordan_locations import governorate_filter
 
 from analytics import metric_calculators as mc
 from analytics import metric_registry as mr
@@ -272,7 +273,7 @@ async def list_districts(
         models.Kindergarten.status == models.KindergartenStatus.ACTIVE
     )
     if governorate:
-        query = query.filter(models.Kindergarten.governorate == governorate)
+        query = query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
     rows = query.all()
     return {"districts": sorted(r[0] for r in rows if r[0])}
 
@@ -292,7 +293,7 @@ async def list_areas(
         models.Kindergarten.status == models.KindergartenStatus.ACTIVE
     )
     if governorate:
-        query = query.filter(models.Kindergarten.governorate == governorate)
+        query = query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
     if district:
         query = query.filter(models.Kindergarten.district == district)
     rows = query.all()

@@ -8,7 +8,6 @@ import io
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import Response
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
@@ -21,18 +20,41 @@ from export_service import export_service
 from dependencies import require_admin
 from validators import calculate_required_supervisors
 from config import settings
+from services.jordan_locations import governorate_filter
 
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List
 from fastapi import Request, Form
 from fastapi.responses import JSONResponse
 from rate_limiter import limiter
 import logging
+
+# Canonical age bucket labels - single source of truth (CHART-011)
+AGE_BUCKET_LABELS = {
+    "B1": {"ar": "يوم إلى 3 أشهر", "en": "1 day to 3 months"},
+    "B2": {"ar": "3 إلى 6 أشهر", "en": "3 to 6 months"},
+    "B3": {"ar": "6 إلى 9 أشهر", "en": "6 to 9 months"},
+    "B4": {"ar": "9 إلى 12 شهر", "en": "9 to 12 months"},
+    "B5": {"ar": "12 إلى 15 شهر", "en": "12 to 15 months"},
+    "B6": {"ar": "15 إلى 18 شهر", "en": "15 to 18 months"},
+    "B7": {"ar": "18 إلى 21 شهر", "en": "18 to 21 months"},
+    "B8": {"ar": "21 إلى 24 شهر", "en": "21 to 24 months"},
+    "B9": {"ar": "24 إلى 27 شهر", "en": "24 to 27 months"},
+    "B10": {"ar": "27 إلى 30 شهر", "en": "27 to 30 months"},
+    "B11": {"ar": "30 إلى 33 شهر", "en": "30 to 33 months"},
+    "B12": {"ar": "33 إلى 36 شهر", "en": "33 to 36 months"},
+    "B13": {"ar": "36 إلى 39 شهر", "en": "36 to 39 months"},
+    "B14": {"ar": "39 إلى 42 شهر", "en": "39 to 42 months"},
+    "B15": {"ar": "42 إلى 45 شهر", "en": "42 to 45 months"},
+    "B16": {"ar": "45 إلى 48 شهر", "en": "45 to 48 months"},
+    "B17": {"ar": "48 إلى 51 شهر", "en": "48 to 51 months"},
+    "B18": {"ar": "51 إلى 54 شهر", "en": "51 to 54 months"},
+    "B19": {"ar": "54 إلى 57 شهر", "en": "54 to 57 months"},
+}
 logger = logging.getLogger(__name__)
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import SQLAlchemyError
 from admin_security import get_correlation_id
-
 
 
 router = APIRouter(prefix="/reports", tags=["Admin Reports"])
@@ -63,12 +85,6 @@ class ScopeFilters:
 
 def _today() -> date:
     return datetime.now(_JORDAN_TZ).date()
-
-
-def _as_float(num: float, den: float) -> float:
-    if not den:
-        return 0.0
-    return round(float(num) / float(den), 4)
 
 
 def _pct(num: float, den: float) -> float:
@@ -107,11 +123,11 @@ def _resolve_dates(
         # Jordan academic calendar: 1st semester Sep–Jan, 2nd semester Feb–Jun
         m = today.month
         if m >= 9:
-            start = date(today.year, 9, 1)       # Sep–Dec: first semester
+            start = date(today.year, 9, 1)  # Sep–Dec: first semester
         elif m >= 2:
-            start = date(today.year, 2, 1)        # Feb–Jun: second semester
+            start = date(today.year, 2, 1)  # Feb–Jun: second semester
         else:
-            start = date(today.year - 1, 9, 1)   # January: still in Sep semester
+            start = date(today.year - 1, 9, 1)  # January: still in Sep semester
         return start, today
     if p == "this_year":
         return date(today.year, 1, 1), today
@@ -169,10 +185,23 @@ def _build_scope_filters(
 
 def _kg_filter_expr(filters: ScopeFilters):
     clauses = [models.Kindergarten.status == models.KindergartenStatus.ACTIVE]
-    if filters.level in {ReportLevel.GOVERNORATE, ReportLevel.CITY, ReportLevel.DISTRICT, ReportLevel.AREA, ReportLevel.KINDERGARTEN, ReportLevel.CLASS}:
+    if filters.level in {
+        ReportLevel.GOVERNORATE,
+        ReportLevel.CITY,
+        ReportLevel.DISTRICT,
+        ReportLevel.AREA,
+        ReportLevel.KINDERGARTEN,
+        ReportLevel.CLASS,
+    }:
         if filters.governorate:
-            clauses.append(models.Kindergarten.governorate == filters.governorate)
-    if filters.level in {ReportLevel.CITY, ReportLevel.DISTRICT, ReportLevel.AREA, ReportLevel.KINDERGARTEN, ReportLevel.CLASS} and filters.city:
+            clauses.append(governorate_filter(models.Kindergarten.governorate, filters.governorate))
+    if (
+        filters.level
+        in {ReportLevel.CITY, ReportLevel.DISTRICT, ReportLevel.AREA, ReportLevel.KINDERGARTEN, ReportLevel.CLASS}
+        and filters.city
+    ):
+        # CHART-017: Kindergarten model uses `district` column for city filtering
+        # This is a known design decision from the city→district migration (see alembic migration b2e9a2f60c27)
         clauses.append(models.Kindergarten.district == filters.city)
     if filters.level in {ReportLevel.AREA, ReportLevel.KINDERGARTEN, ReportLevel.CLASS} and filters.area:
         clauses.append(models.Kindergarten.area == filters.area)
@@ -213,24 +242,42 @@ def _age_bucket_key(dob: Optional[date]) -> tuple[str, Optional[str]]:
     if age_months > 57:
         return "invalid", "too_old"
 
-    if age_months < 3: return "B1", None
-    if age_months < 6: return "B2", None
-    if age_months < 9: return "B3", None
-    if age_months < 12: return "B4", None
-    if age_months < 15: return "B5", None
-    if age_months < 18: return "B6", None
-    if age_months < 21: return "B7", None
-    if age_months < 24: return "B8", None
-    if age_months < 27: return "B9", None
-    if age_months < 30: return "B10", None
-    if age_months < 33: return "B11", None
-    if age_months < 36: return "B12", None
-    if age_months < 39: return "B13", None
-    if age_months < 42: return "B14", None
-    if age_months < 45: return "B15", None
-    if age_months < 48: return "B16", None
-    if age_months < 51: return "B17", None
-    if age_months < 54: return "B18", None
+    if age_months < 3:
+        return "B1", None
+    if age_months < 6:
+        return "B2", None
+    if age_months < 9:
+        return "B3", None
+    if age_months < 12:
+        return "B4", None
+    if age_months < 15:
+        return "B5", None
+    if age_months < 18:
+        return "B6", None
+    if age_months < 21:
+        return "B7", None
+    if age_months < 24:
+        return "B8", None
+    if age_months < 27:
+        return "B9", None
+    if age_months < 30:
+        return "B10", None
+    if age_months < 33:
+        return "B11", None
+    if age_months < 36:
+        return "B12", None
+    if age_months < 39:
+        return "B13", None
+    if age_months < 42:
+        return "B14", None
+    if age_months < 45:
+        return "B15", None
+    if age_months < 48:
+        return "B16", None
+    if age_months < 51:
+        return "B17", None
+    if age_months < 54:
+        return "B18", None
     return "B19", None
 
 
@@ -296,7 +343,9 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
 
     kindergartens_q = db.query(models.Kindergarten)
     if filters.governorate:
-        kindergartens_q = kindergartens_q.filter(models.Kindergarten.governorate == filters.governorate)
+        kindergartens_q = kindergartens_q.filter(
+            governorate_filter(models.Kindergarten.governorate, filters.governorate)
+        )
     if filters.city:
         kindergartens_q = kindergartens_q.filter(models.Kindergarten.district == filters.city)
     if filters.area:
@@ -378,7 +427,11 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
 
     gender_counts = {"male": 0, "female": 0, "unknown": 0}
     for child in official_children:
-        g = str(child.gender.value if hasattr(child.gender, "value") else child.gender).upper() if child.gender else "UNKNOWN"
+        g = (
+            str(child.gender.value if hasattr(child.gender, "value") else child.gender).upper()
+            if child.gender
+            else "UNKNOWN"
+        )
         if g == "MALE":
             gender_counts["male"] += 1
         elif g == "FEMALE":
@@ -437,7 +490,6 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         by_area[area_key]["kindergarten_count"] += 1
 
     kg_id_map = {k.id: k for k in kindergartens}
-    class_map = {c.id: c for c in classes}
     kg_class_counts: dict[int, int] = {}
     for c in classes:
         kg_class_counts[c.kindergarten_id] = kg_class_counts.get(c.kindergarten_id, 0) + 1
@@ -445,18 +497,51 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         gov = (parent_kg.governorate if parent_kg else None) or "Unknown"
         city = (parent_kg.district if parent_kg else None) or "Unknown"
         area = (parent_kg.area if parent_kg else None) or "Unknown"
-        
-        by_governorate.setdefault(gov, {"governorate": gov, "kindergarten_count": 0, "class_count": 0, "children_count": 0, "supervisor_count": 0, "capacity": 0})
+
+        by_governorate.setdefault(
+            gov,
+            {
+                "governorate": gov,
+                "kindergarten_count": 0,
+                "class_count": 0,
+                "children_count": 0,
+                "supervisor_count": 0,
+                "capacity": 0,
+            },
+        )
         by_governorate[gov]["class_count"] += 1
         by_governorate[gov]["capacity"] += c.capacity_total or 0
-        
+
         city_key = (gov, city)
-        by_city.setdefault(city_key, {"governorate": gov, "city": city, "kindergarten_count": 0, "class_count": 0, "children_count": 0, "supervisor_count": 0, "capacity": 0})
+        by_city.setdefault(
+            city_key,
+            {
+                "governorate": gov,
+                "city": city,
+                "kindergarten_count": 0,
+                "class_count": 0,
+                "children_count": 0,
+                "supervisor_count": 0,
+                "capacity": 0,
+            },
+        )
         by_city[city_key]["class_count"] += 1
         by_city[city_key]["capacity"] += c.capacity_total or 0
 
         area_key = (gov, city, area)
-        by_area.setdefault(area_key, {"governorate": gov, "city": city, "area": area, "kindergarten_count": 0, "class_count": 0, "children_count": 0, "supervisor_count": 0, "capacity": 0})
+        by_area.setdefault(
+            area_key,
+            {
+                "governorate": gov,
+                "city": city,
+                "area": area,
+                "kindergarten_count": 0,
+                "class_count": 0,
+                "children_count": 0,
+                "supervisor_count": 0,
+                "capacity": 0,
+            },
+        )
         by_area[area_key]["class_count"] += 1
         by_area[area_key]["capacity"] += c.capacity_total or 0
 
@@ -521,15 +606,11 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         .having(func.count(func.distinct(models.EnrollmentApplication.class_id)) > 1)
         .subquery()
     )
-    children_in_multiple_classes = (
-        db.query(func.count()).select_from(_multi_class_sq).scalar() or 0
-    )
+    children_in_multiple_classes = db.query(func.count()).select_from(_multi_class_sq).scalar() or 0
 
     classes_without_supervisor = sum(1 for c in classes if class_supervisor_counts.get(c.id, 0) == 0)
     classes_with_children_no_supervisor = sum(
-        1
-        for c in classes
-        if enrolled_by_class.get(c.id, 0) > 0 and class_supervisor_counts.get(c.id, 0) == 0
+        1 for c in classes if enrolled_by_class.get(c.id, 0) > 0 and class_supervisor_counts.get(c.id, 0) == 0
     )
     kindergartens_no_supervisor_with_children = 0
     kindergartens_over_capacity = 0
@@ -562,17 +643,24 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
         + kindergartens_over_capacity
         + children_in_multiple_classes
     )
+    # CHART-020: Compliance score formula mixes different violation types (age, staffing, capacity)
+    # This may produce misleading results as violations have different severity levels
+    # Consider weighting violations by severity or using separate compliance metrics
 
-    # data_quality_score: % of active kindergartens in scope that filed a report in the last 7 days
+    # CHART-019: data_quality_score: % of active kindergartens in scope that filed a report in the last 7 days
     # This matches the canonical definition in admin_endpoints.py and CLAUDE.md.
+    # Note: This measures report filing rate, not general data quality
     active_kg_count = len(kindergartens)
     if active_kg_count > 0 and kg_ids:
-        kg_with_recent_report = db.query(
-            func.count(func.distinct(models.DailyReport.kindergarten_id))
-        ).filter(
-            models.DailyReport.kindergarten_id.in_(kg_ids),
-            models.DailyReport.date >= _today() - timedelta(days=7),
-        ).scalar() or 0
+        kg_with_recent_report = (
+            db.query(func.count(func.distinct(models.DailyReport.kindergarten_id)))
+            .filter(
+                models.DailyReport.kindergarten_id.in_(kg_ids),
+                models.DailyReport.date >= _today() - timedelta(days=7),
+            )
+            .scalar()
+            or 0
+        )
         data_quality_score = round((kg_with_recent_report / active_kg_count) * 100.0, 2)
     else:
         data_quality_score = 0.0
@@ -619,6 +707,8 @@ def _collect_core_metrics(db: Session, filters: ScopeFilters, date_from: date, d
 
 
 def _risk_rows(metrics: dict[str, Any]) -> list[dict[str, Any]]:
+    # CHART-018: Risk ranking currently uses city-level aggregation only
+    # Future enhancement: Add kindergarten/class-level risk ranking for more granular insights
     rows: list[dict[str, Any]] = []
     for row in metrics.get("by_city", []):
         children = row.get("children_count", 0)
@@ -703,7 +793,7 @@ def _kindergarten_detail_rows(
 ) -> list[dict[str, Any]]:
     kg_q = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
     if filters.governorate:
-        kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
+        kg_q = kg_q.filter(governorate_filter(models.Kindergarten.governorate, filters.governorate))
     if filters.city:
         kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
     if filters.kindergarten_id:
@@ -714,7 +804,6 @@ def _kindergarten_detail_rows(
     rows: list[dict[str, Any]] = []
     for kg_id, kg in kg_map.items():
         kg_classes = [c for c in classes if c.kindergarten_id == kg_id]
-        kg_supervisors = [s for s in supervisors if s.kindergarten_id == kg_id]
         kg_enrollments = [e for e in official_enrollments if e.kindergarten_id == kg_id]
         kg_class_ids = {c.id for c in kg_classes}
         kg_active_assignments = [a for a in active_assignments if a.class_id in kg_class_ids]
@@ -750,7 +839,11 @@ def _kindergarten_detail_rows(
         over_capacity = capacity > 0 and children_count > capacity
         missing_capacity = capacity <= 0 and children_count > 0
         no_supervisor_with_children = children_count > 0 and active_sup_count == 0
-        classes_without_supervisor = sum(1 for c in kg_classes if enrolled_by_class.get(c.id, 0) > 0 and all(a.class_id != c.id for a in kg_active_assignments))
+        classes_without_supervisor = sum(
+            1
+            for c in kg_classes
+            if enrolled_by_class.get(c.id, 0) > 0 and all(a.class_id != c.id for a in kg_active_assignments)
+        )
         data_issues = []
         if missing_capacity:
             data_issues.append("missing_capacity")
@@ -788,32 +881,36 @@ def _kindergarten_detail_rows(
             recommended_action_ar = "الوضع مستقر: استمر في المراقبة."
             recommended_action_en = "Stable: continue monitoring."
 
-        rows.append({
-            "id": kg.id,
-            "name_ar": kg.name_ar,
-            "name_en": kg.name_en,
-            "governorate": kg.governorate,
-            "city": kg.district,
-            "children_count": children_count,
-            "supervisors_count": active_sup_count,
-            "classes_count": len(kg_classes),
-            "capacity": capacity,
-            "capacity_utilization_pct": cap_util,
-            "children_per_supervisor": cps,
-            "children_per_class": children_per_class,
-            "required_supervisors": required_sup,
-            "supervisor_gap": max(0, required_sup - active_sup_count),
-            "over_capacity": over_capacity,
-            "missing_capacity": missing_capacity,
-            "no_supervisor_with_children": no_supervisor_with_children,
-            "classes_without_supervisor": classes_without_supervisor,
-            "classification": classification,
-            "risk_status": risk_status,
-            "data_issues": data_issues,
-            "recommended_action_ar": recommended_action_ar,
-            "recommended_action_en": recommended_action_en,
-        })
-    rows.sort(key=lambda x: ({"critical": 0, "warning": 1, "normal": 2}.get(x["risk_status"], 3), -x.get("risk_score", 0)))
+        rows.append(
+            {
+                "id": kg.id,
+                "name_ar": kg.name_ar,
+                "name_en": kg.name_en,
+                "governorate": kg.governorate,
+                "city": kg.district,
+                "children_count": children_count,
+                "supervisors_count": active_sup_count,
+                "classes_count": len(kg_classes),
+                "capacity": capacity,
+                "capacity_utilization_pct": cap_util,
+                "children_per_supervisor": cps,
+                "children_per_class": children_per_class,
+                "required_supervisors": required_sup,
+                "supervisor_gap": max(0, required_sup - active_sup_count),
+                "over_capacity": over_capacity,
+                "missing_capacity": missing_capacity,
+                "no_supervisor_with_children": no_supervisor_with_children,
+                "classes_without_supervisor": classes_without_supervisor,
+                "classification": classification,
+                "risk_status": risk_status,
+                "data_issues": data_issues,
+                "recommended_action_ar": recommended_action_ar,
+                "recommended_action_en": recommended_action_en,
+            }
+        )
+    rows.sort(
+        key=lambda x: ({"critical": 0, "warning": 1, "normal": 2}.get(x["risk_status"], 3), -x.get("risk_score", 0))
+    )
     return rows
 
 
@@ -834,7 +931,9 @@ def _class_detail_rows(
     needed_kg_ids = {cls.kindergarten_id for cls in classes if cls.kindergarten_id}
     kg_map: dict[int, models.Kindergarten] = {}
     if needed_kg_ids:
-        kg_map = {k.id: k for k in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(needed_kg_ids)).all()}
+        kg_map = {
+            k.id: k for k in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(needed_kg_ids)).all()
+        }
 
     rows: list[dict[str, Any]] = []
     for cls in classes:
@@ -845,7 +944,9 @@ def _class_detail_rows(
         sup_ids = {a.supervisor_id for a in cls_assignments}
         supervisors_in_class = [s for s in supervisors if s.id in sup_ids]
         try:
-            required_sup = calculate_required_supervisors(str(cls.age_group), children_count) if children_count > 0 else 0
+            required_sup = (
+                calculate_required_supervisors(str(cls.age_group), children_count) if children_count > 0 else 0
+            )
         except Exception:
             required_sup = 1 if children_count > 0 else 0
         actual_sup = len(sup_ids)
@@ -872,30 +973,32 @@ def _class_detail_rows(
 
         supervisor_names = [s.full_name or s.username for s in supervisors_in_class]
 
-        rows.append({
-            "id": cls.id,
-            "class_code": cls.class_code,
-            "name_ar": cls.name_ar,
-            "name_en": cls.name_en,
-            "age_group": cls.age_group,
-            "kindergarten_id": cls.kindergarten_id,
-            "kindergarten_name_ar": kg.name_ar if kg else "",
-            "kindergarten_name_en": kg.name_en if kg else "",
-            "governorate": kg.governorate if kg else "",
-            "city": kg.district if kg else "",
-            "children_count": children_count,
-            "capacity": cls.capacity_total or 0,
-            "capacity_utilization_pct": cap_util,
-            "supervisors": supervisor_names,
-            "supervisors_count": actual_sup,
-            "required_supervisors": required_sup,
-            "supervisor_gap": supervisor_gap,
-            "children_per_supervisor": cps,
-            "risk_status": risk_status,
-            "recommended_action_ar": recommended_action_ar,
-            "recommended_action_en": recommended_action_en,
-        })
-    rows.sort(key=lambda x: ({"critical": 0, "warning": 1, "normal": 2}.get(x["risk_status"], 3)))
+        rows.append(
+            {
+                "id": cls.id,
+                "class_code": cls.class_code,
+                "name_ar": cls.name_ar,
+                "name_en": cls.name_en,
+                "age_group": cls.age_group,
+                "kindergarten_id": cls.kindergarten_id,
+                "kindergarten_name_ar": kg.name_ar if kg else "",
+                "kindergarten_name_en": kg.name_en if kg else "",
+                "governorate": kg.governorate if kg else "",
+                "city": kg.district if kg else "",
+                "children_count": children_count,
+                "capacity": cls.capacity_total or 0,
+                "capacity_utilization_pct": cap_util,
+                "supervisors": supervisor_names,
+                "supervisors_count": actual_sup,
+                "required_supervisors": required_sup,
+                "supervisor_gap": supervisor_gap,
+                "children_per_supervisor": cps,
+                "risk_status": risk_status,
+                "recommended_action_ar": recommended_action_ar,
+                "recommended_action_en": recommended_action_en,
+            }
+        )
+    rows.sort(key=lambda x: {"critical": 0, "warning": 1, "normal": 2}.get(x["risk_status"], 3))
     return rows
 
 
@@ -912,7 +1015,13 @@ def _supervisor_analytics(
         class_supervisor_map.setdefault(a.class_id, []).append(a.supervisor_id)
 
     class_map = {c.id: c for c in classes}
-    kg_map = {k.id: k for k in db.query(models.Kindergarten).all()}
+    kg_ids_needed = {c.kindergarten_id for c in classes if c.kindergarten_id}
+    kg_ids_needed.update(s.kindergarten_id for s in supervisors if s.kindergarten_id)
+    kg_map = (
+        {k.id: k for k in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids_needed)).all()}
+        if kg_ids_needed
+        else {}
+    )
 
     enrolled_by_class: dict[int, int] = {}
     for e in official_enrollments:
@@ -950,22 +1059,28 @@ def _supervisor_analytics(
         else:
             issue_flag = "ok"
 
-        supervisors_data.append({
-            "id": s.id,
-            "username": s.username,
-            "full_name": s.full_name or s.username,
-            "kindergarten_id": s.kindergarten_id,
-            "kindergarten_name_ar": kg_map[s.kindergarten_id].name_ar if s.kindergarten_id and s.kindergarten_id in kg_map else "",
-            "kindergarten_name_en": kg_map[s.kindergarten_id].name_en if s.kindergarten_id and s.kindergarten_id in kg_map else "",
-            "governorate": kg_map[s.kindergarten_id].governorate if s.kindergarten_id and s.kindergarten_id in kg_map else "",
-            "city": kg_map[s.kindergarten_id].district if s.kindergarten_id and s.kindergarten_id in kg_map else "",
-            "classes_count": len(s_classes),
-            "children_count": children_count,
-            "classes_per_supervisor": _safe_div(len(s_classes), 1),
-            "children_per_supervisor": _safe_div(children_count, 1),
-            "error_flags": error_flags,
-            "issue_flag": issue_flag,
-        })
+        supervisors_data.append(
+            {
+                "id": s.id,
+                "username": s.username,
+                "full_name": s.full_name or s.username,
+                "kindergarten_id": s.kindergarten_id,
+                "kindergarten_name_ar": kg_map[s.kindergarten_id].name_ar
+                if s.kindergarten_id and s.kindergarten_id in kg_map
+                else "",
+                "kindergarten_name_en": kg_map[s.kindergarten_id].name_en
+                if s.kindergarten_id and s.kindergarten_id in kg_map
+                else "",
+                "governorate": kg_map[s.kindergarten_id].governorate
+                if s.kindergarten_id and s.kindergarten_id in kg_map
+                else "",
+                "city": kg_map[s.kindergarten_id].district if s.kindergarten_id and s.kindergarten_id in kg_map else "",
+                "classes_count": len(s_classes),
+                "children_count": children_count,
+                "error_flags": error_flags,
+                "issue_flag": issue_flag,
+            }
+        )
 
     total_supervisors = len(supervisors)
     actual_supervisors = len({a.supervisor_id for a in active_assignments})
@@ -1002,28 +1117,7 @@ def _build_response(report_type: str, filters: ScopeFilters, metrics: dict[str, 
     interpretation = _interpret_overview(metrics, lang)
     risk_rows = _risk_rows(metrics)
 
-    age_labels_map = {
-        "B1": {"ar": "يوم إلى 3 أشهر", "en": "1 day to 3 months"},
-        "B2": {"ar": "3 إلى 6 أشهر", "en": "3 to 6 months"},
-        "B3": {"ar": "6 إلى 9 أشهر", "en": "6 to 9 months"},
-        "B4": {"ar": "9 إلى 12 شهر", "en": "9 to 12 months"},
-        "B5": {"ar": "12 إلى 15 شهر", "en": "12 to 15 months"},
-        "B6": {"ar": "15 إلى 18 شهر", "en": "15 to 18 months"},
-        "B7": {"ar": "18 إلى 21 شهر", "en": "18 to 21 months"},
-        "B8": {"ar": "21 إلى 24 شهر", "en": "21 to 24 months"},
-        "B9": {"ar": "24 إلى 27 شهر", "en": "24 to 27 months"},
-        "B10": {"ar": "27 إلى 30 شهر", "en": "27 to 30 months"},
-        "B11": {"ar": "30 إلى 33 شهر", "en": "30 to 33 months"},
-        "B12": {"ar": "33 إلى 36 شهر", "en": "33 to 36 months"},
-        "B13": {"ar": "36 إلى 39 شهر", "en": "36 to 39 months"},
-        "B14": {"ar": "39 إلى 42 شهر", "en": "39 to 42 months"},
-        "B15": {"ar": "42 إلى 45 شهر", "en": "42 to 45 months"},
-        "B16": {"ar": "45 إلى 48 شهر", "en": "45 to 48 months"},
-        "B17": {"ar": "48 إلى 51 شهر", "en": "48 to 51 months"},
-        "B18": {"ar": "51 إلى 54 شهر", "en": "51 to 54 months"},
-        "B19": {"ar": "54 إلى 57 شهر", "en": "54 to 57 months"}
-    }
-    mapped_labels = [age_labels_map.get(k, {"ar": k, "en": k}) for k in metrics["age_buckets"].keys()]
+    mapped_labels = [AGE_BUCKET_LABELS.get(k, {"ar": k, "en": k}) for k in metrics["age_buckets"].keys()]
 
     age_total = sum(metrics["age_buckets"].values())
     age_dataset = {
@@ -1044,6 +1138,19 @@ def _build_response(report_type: str, filters: ScopeFilters, metrics: dict[str, 
             if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
                 return settings.JORDAN_GOVERNORATES_ENGLISH[idx]
         return gov
+
+    def _city_en(city: str) -> str:
+        """Translate city name to English using jordan_locations data (CHART-002)."""
+        if not city:
+            return ""
+        from services.jordan_locations import AREAS
+
+        # Search through all governorates for the city
+        for gov_key, areas in AREAS.items():
+            for area in areas:
+                if area["name_ar"] == city or city in area.get("aliases", []):
+                    return area["name_en"]
+        return city
 
     return {
         "report_type": report_type,
@@ -1073,9 +1180,7 @@ def _build_response(report_type: str, filters: ScopeFilters, metrics: dict[str, 
         "children": {
             "enrollment_status_counts": metrics["enrollment_status_counts"],
             "age_buckets": metrics["age_buckets"],
-            "age_bucket_percentages": {
-                k: _pct(v, age_total) for k, v in metrics["age_buckets"].items()
-            },
+            "age_bucket_percentages": {k: _pct(v, age_total) for k, v in metrics["age_buckets"].items()},
             "age_invalid_reasons": metrics["age_invalid_reasons"],
             "gender_counts": metrics["gender_counts"],
             "gender_percentages": {
@@ -1100,12 +1205,24 @@ def _build_response(report_type: str, filters: ScopeFilters, metrics: dict[str, 
         "charts": {
             "age_distribution": age_dataset,
             "children_by_governorate": {
-                "labels": [{"ar": r["governorate"], "en": _gov_en(r["governorate"])} for r in metrics["by_governorate"]],
-                "datasets": [{"label": _localized("الأطفال", "Children", lang), "data": [r["children_count"] for r in metrics["by_governorate"]]}],
+                "labels": [
+                    {"ar": r["governorate"], "en": _gov_en(r["governorate"])} for r in metrics["by_governorate"]
+                ],
+                "datasets": [
+                    {
+                        "label": _localized("الأطفال", "Children", lang),
+                        "data": [r["children_count"] for r in metrics["by_governorate"]],
+                    }
+                ],
             },
             "children_by_city": {
-                "labels": [{"ar": r["city"], "en": r["city"]} for r in metrics["by_city"]],
-                "datasets": [{"label": _localized("الأطفال", "Children", lang), "data": [r["children_count"] for r in metrics["by_city"]]}],
+                "labels": [{"ar": r["city"], "en": _city_en(r["city"])} for r in metrics["by_city"]],
+                "datasets": [
+                    {
+                        "label": _localized("الأطفال", "Children", lang),
+                        "data": [r["children_count"] for r in metrics["by_city"]],
+                    }
+                ],
             },
             "risk_ranking": risk_rows,
         },
@@ -1198,37 +1315,16 @@ def _resolve_report_payload(
         }
     if report_type == "children_age_buckets":
         total = max(1, sum(metrics["age_buckets"].values()))
-        age_labels_map = {
-            "B1": {"ar": "يوم إلى 3 أشهر", "en": "1 day to 3 months"},
-            "B2": {"ar": "3 إلى 6 أشهر", "en": "3 to 6 months"},
-            "B3": {"ar": "6 إلى 9 أشهر", "en": "6 to 9 months"},
-            "B4": {"ar": "9 إلى 12 شهر", "en": "9 to 12 months"},
-            "B5": {"ar": "12 إلى 15 شهر", "en": "12 to 15 months"},
-            "B6": {"ar": "15 إلى 18 شهر", "en": "15 to 18 months"},
-            "B7": {"ar": "18 إلى 21 شهر", "en": "18 to 21 months"},
-            "B8": {"ar": "21 إلى 24 شهر", "en": "21 to 24 months"},
-            "B9": {"ar": "24 إلى 27 شهر", "en": "24 to 27 months"},
-            "B10": {"ar": "27 إلى 30 شهر", "en": "27 to 30 months"},
-            "B11": {"ar": "30 إلى 33 شهر", "en": "30 to 33 months"},
-            "B12": {"ar": "33 إلى 36 شهر", "en": "33 to 36 months"},
-            "B13": {"ar": "36 إلى 39 شهر", "en": "36 to 39 months"},
-            "B14": {"ar": "39 إلى 42 شهر", "en": "39 to 42 months"},
-            "B15": {"ar": "42 إلى 45 شهر", "en": "42 to 45 months"},
-            "B16": {"ar": "45 إلى 48 شهر", "en": "45 to 48 months"},
-            "B17": {"ar": "48 إلى 51 شهر", "en": "48 to 51 months"},
-            "B18": {"ar": "51 إلى 54 شهر", "en": "51 to 54 months"},
-            "B19": {"ar": "54 إلى 57 شهر", "en": "54 to 57 months"}
-        }
         return {
             "age_buckets": [
                 {
                     "bucket": _localized(
-                        age_labels_map.get(k, {"ar": k, "en": k})["ar"],
-                        age_labels_map.get(k, {"ar": k, "en": k})["en"],
-                        lang
+                        AGE_BUCKET_LABELS.get(k, {"ar": k, "en": k})["ar"],
+                        AGE_BUCKET_LABELS.get(k, {"ar": k, "en": k})["en"],
+                        lang,
                     ),
                     "count": v,
-                    "percentage": _pct(v, total)
+                    "percentage": _pct(v, total),
                 }
                 for k, v in metrics["age_buckets"].items()
             ],
@@ -1274,95 +1370,6 @@ def _resolve_report_payload(
         return {"ranking": _risk_rows(metrics)}
 
     raise HTTPException(status_code=422, detail="Unsupported report_type")
-
-
-def resolve_kindergarten_detail_report(db: Session, filters: ScopeFilters, date_from: date, date_to: date, lang: str) -> dict[str, Any]:
-    enroll_q = _base_enrollment_query(db, filters)
-    official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
-    all_enroll_rows = enroll_q.all()
-    official_rows = official_enroll_q.all()
-    official_children_ids = {r.child_id for r in official_rows}
-
-    classes_q = db.query(models.Class).filter(models.Class.is_active.is_(True))
-    kg_q = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
-    if filters.governorate:
-        kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
-    if filters.city:
-        kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
-    if filters.area:
-        kg_q = kg_q.filter(models.Kindergarten.area == filters.area)
-    if filters.kindergarten_id:
-        kg_q = kg_q.filter(models.Kindergarten.id == filters.kindergarten_id)
-    kg_ids = [k.id for k in kg_q.all()]
-    if kg_ids:
-        classes_q = classes_q.filter(models.Class.kindergarten_id.in_(kg_ids))
-    classes = classes_q.all()
-
-    supervisors_q = db.query(models.User).filter(
-        models.User.role == models.UserRole.SUPERVISOR,
-        models.User.status == models.UserStatus.ACTIVE,
-    )
-    if kg_ids:
-        supervisors_q = supervisors_q.filter(models.User.kindergarten_id.in_(kg_ids))
-    supervisors = supervisors_q.all()
-
-    active_assignments_q = db.query(models.SupervisorAssignment).filter(
-        or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= _today()),
-        models.SupervisorAssignment.deleted_at.is_(None),
-    )
-    class_ids = [c.id for c in classes]
-    if class_ids:
-        active_assignments_q = active_assignments_q.filter(models.SupervisorAssignment.class_id.in_(class_ids))
-    active_assignments = active_assignments_q.all()
-
-    rows = _kindergarten_detail_rows(db, filters, official_children_ids, official_rows, classes, supervisors, active_assignments)
-    total_kindergartens = len(rows)
-    total_children = sum(r["children_count"] for r in rows)
-    total_supervisors = sum(r["supervisors_count"] for r in rows)
-    total_classes = sum(r["classes_count"] for r in rows)
-    total_capacity = sum(r["capacity"] for r in rows)
-    critical_count = sum(1 for r in rows if r["risk_status"] == "critical")
-    warning_count = sum(1 for r in rows if r["risk_status"] == "warning")
-    return {
-        "level": filters.level.value,
-        "filters": {
-            "governorate": filters.governorate,
-            "city": filters.city,
-            "kindergarten_id": filters.kindergarten_id,
-            "period": {"from": date_from.isoformat(), "to": date_to.isoformat()},
-        },
-        "summary": {
-            "total_kindergartens": total_kindergartens,
-            "total_children": total_children,
-            "total_supervisors": total_supervisors,
-            "total_classes": total_classes,
-            "total_capacity": total_capacity,
-            "critical_count": critical_count,
-            "warning_count": warning_count,
-        },
-        "kindergartens": rows,
-        "interpretation": {
-            "summary": _localized(
-                f"يوجد {total_kindergartens} حضانة نشطة ضمن النطاق المحدد، منها {critical_count} ذات خطورة حرجة.",
-                f"There are {total_kindergartens} active kindergartens in scope, {critical_count} at critical risk.",
-                lang,
-            ),
-            "severity": "critical" if critical_count > 0 else "warning" if warning_count > 0 else "normal",
-            "comparison_baseline": _localized("متوسط الشبكة", "Network average", lang),
-            "recommended_action": _localized(
-                "ابدأ بالحضانات الحرجة ثم التي تحتاج انتباه.",
-                "Start with critical kindergartens, then those needing attention.",
-                lang,
-            ),
-        },
-    }
-
-
-def _safe_csv_cell(value: Any) -> str:
-    text = "" if value is None else str(value)
-    if text.startswith(("=", "+", "-", "@")):
-        return "'" + text
-    return text
 
 
 def _rows_for_export(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1465,11 +1472,18 @@ def children_geography(
     _: models.User = Depends(require_admin),
 ):
     filters = _build_scope_filters(level, governorate, city, area, None, None)
+    # CHART-031: Geography endpoints currently don't support kindergarten/class level filtering
+    # Future enhancement: Add kindergarten_id and class_id parameters for granular geography data
     start, end = _resolve_dates(date_from, date_to, period)
     metrics = _collect_core_metrics(db, filters, start, end)
     return {
         "level": level.value,
-        "filters": {"governorate": governorate, "city": city, "area": area, "period": {"from": start.isoformat(), "to": end.isoformat()}},
+        "filters": {
+            "governorate": governorate,
+            "city": city,
+            "area": area,
+            "period": {"from": start.isoformat(), "to": end.isoformat()},
+        },
         "governorates": metrics["by_governorate"],
         "cities": metrics["by_city"],
         "areas": metrics["by_area"],
@@ -1496,29 +1510,7 @@ def children_age_buckets(
     total = max(1, sum(metrics["age_buckets"].values()))
     dominant_bucket = max(metrics["age_buckets"], key=lambda k: metrics["age_buckets"][k])
 
-    age_labels_map = {
-        "B1": {"ar": "يوم إلى 3 أشهر", "en": "1 day to 3 months"},
-        "B2": {"ar": "3 إلى 6 أشهر", "en": "3 to 6 months"},
-        "B3": {"ar": "6 إلى 9 أشهر", "en": "6 to 9 months"},
-        "B4": {"ar": "9 إلى 12 شهر", "en": "9 to 12 months"},
-        "B5": {"ar": "12 إلى 15 شهر", "en": "12 to 15 months"},
-        "B6": {"ar": "15 إلى 18 شهر", "en": "15 to 18 months"},
-        "B7": {"ar": "18 إلى 21 شهر", "en": "18 to 21 months"},
-        "B8": {"ar": "21 إلى 24 شهر", "en": "21 to 24 months"},
-        "B9": {"ar": "24 إلى 27 شهر", "en": "24 to 27 months"},
-        "B10": {"ar": "27 إلى 30 شهر", "en": "27 to 30 months"},
-        "B11": {"ar": "30 إلى 33 شهر", "en": "30 to 33 months"},
-        "B12": {"ar": "33 إلى 36 شهر", "en": "33 to 36 months"},
-        "B13": {"ar": "36 إلى 39 شهر", "en": "36 to 39 months"},
-        "B14": {"ar": "39 إلى 42 شهر", "en": "39 to 42 months"},
-        "B15": {"ar": "42 إلى 45 شهر", "en": "42 to 45 months"},
-        "B16": {"ar": "45 إلى 48 شهر", "en": "45 to 48 months"},
-        "B17": {"ar": "48 إلى 51 شهر", "en": "48 to 51 months"},
-        "B18": {"ar": "51 إلى 54 شهر", "en": "51 to 54 months"},
-        "B19": {"ar": "54 إلى 57 شهر", "en": "54 to 57 months"}
-    }
-
-    dom_lbl = age_labels_map.get(dominant_bucket, {"ar": dominant_bucket, "en": dominant_bucket})
+    dom_lbl = AGE_BUCKET_LABELS.get(dominant_bucket, {"ar": dominant_bucket, "en": dominant_bucket})
     summary_ar = f"الفئة العمرية الأعلى هي {dom_lbl['ar']}."
     summary_en = f"Top age bucket is {dom_lbl['en']}."
 
@@ -1527,26 +1519,30 @@ def children_age_buckets(
         "age_buckets": [
             {
                 "bucket": _localized(
-                    age_labels_map.get(k, {"ar": k, "en": k})["ar"],
-                    age_labels_map.get(k, {"ar": k, "en": k})["en"],
-                    lang
+                    AGE_BUCKET_LABELS.get(k, {"ar": k, "en": k})["ar"],
+                    AGE_BUCKET_LABELS.get(k, {"ar": k, "en": k})["en"],
+                    lang,
                 ),
                 "count": v,
-                "percentage": _pct(v, total)
+                "percentage": _pct(v, total),
             }
             for k, v in metrics["age_buckets"].items()
         ],
         "invalid_reasons": metrics["age_invalid_reasons"],
         "dominant_bucket": _localized(
-            age_labels_map.get(dominant_bucket, {"ar": dominant_bucket, "en": dominant_bucket})["ar"],
-            age_labels_map.get(dominant_bucket, {"ar": dominant_bucket, "en": dominant_bucket})["en"],
-            lang
+            AGE_BUCKET_LABELS.get(dominant_bucket, {"ar": dominant_bucket, "en": dominant_bucket})["ar"],
+            AGE_BUCKET_LABELS.get(dominant_bucket, {"ar": dominant_bucket, "en": dominant_bucket})["en"],
+            lang,
         ),
         "interpretation": {
             "summary": _localized(summary_ar, summary_en, lang),
-            "severity": "warning" if metrics["age_invalid_reasons"]["too_old"] + metrics["age_invalid_reasons"]["too_young"] > 0 else "normal",
+            "severity": "warning"
+            if metrics["age_invalid_reasons"]["too_old"] + metrics["age_invalid_reasons"]["too_young"] > 0
+            else "normal",
             "comparison_baseline": _localized("توزيع الفئات العمرية", "Age bucket distribution", lang),
-            "recommended_action": _localized("تحقق من صلاحية أعمار الأطفال غير المطابقة للسياسة.", "Review children with out-of-policy ages.", lang),
+            "recommended_action": _localized(
+                "تحقق من صلاحية أعمار الأطفال غير المطابقة للسياسة.", "Review children with out-of-policy ages.", lang
+            ),
         },
     }
 
@@ -1579,10 +1575,16 @@ def children_gender(
             "gender_balance_ratio": round(_safe_div(g["male"], g["female"] if g["female"] else 1), 2),
         },
         "interpretation": {
-            "summary": _localized("توزيع الجنس وصفي ويستخدم لمراقبة جودة البيانات.", "Gender distribution is descriptive and used for data-quality monitoring.", lang),
+            "summary": _localized(
+                "توزيع الجنس وصفي ويستخدم لمراقبة جودة البيانات.",
+                "Gender distribution is descriptive and used for data-quality monitoring.",
+                lang,
+            ),
             "severity": "warning" if g["unknown"] > 0 else "normal",
             "comparison_baseline": _localized("إجمالي الأطفال", "Total children", lang),
-            "recommended_action": _localized("استكمل حقول الجنس المفقودة في السجلات.", "Complete missing gender values in records.", lang),
+            "recommended_action": _localized(
+                "استكمل حقول الجنس المفقودة في السجلات.", "Complete missing gender values in records.", lang
+            ),
         },
     }
 
@@ -1705,14 +1707,26 @@ def data_quality_report(
             "classes_with_children_no_supervisor": metrics["classes_with_children_no_supervisor"],
         },
         "interpretation": {
-            "summary": _localized("يعكس المؤشر مدى اكتمال وصحة السجلات التشغيلية.", "The score reflects operational record completeness and validity.", lang),
-            "severity": "critical" if status_band == "red" else "warning" if status_band in {"yellow", "orange"} else "normal",
+            "summary": _localized(
+                "يعكس المؤشر مدى اكتمال وصحة السجلات التشغيلية.",
+                "The score reflects operational record completeness and validity.",
+                lang,
+            ),
+            "severity": "critical"
+            if status_band == "red"
+            else "warning"
+            if status_band in {"yellow", "orange"}
+            else "normal",
             "comparison_baseline": _localized(
                 f"الفترة السابقة: جودة البيانات {prev_metrics['data_quality_score']}% (التغيير: {sign(quality_delta)}{quality_delta}%)",
                 f"Previous period: data quality {prev_metrics['data_quality_score']}% (change: {sign(quality_delta)}{quality_delta}%)",
                 lang,
             ),
-            "recommended_action": _localized("نفّذ خطة تصحيح للحقول المفقودة والتعارضات قبل دورة التقارير القادمة.", "Run a correction plan for missing/conflicting fields before the next reporting cycle.", lang),
+            "recommended_action": _localized(
+                "نفّذ خطة تصحيح للحقول المفقودة والتعارضات قبل دورة التقارير القادمة.",
+                "Run a correction plan for missing/conflicting fields before the next reporting cycle.",
+                lang,
+            ),
         },
     }
 
@@ -1765,14 +1779,26 @@ def compliance_report(
             "kindergartens_over_capacity": metrics["kindergartens_over_capacity"],
         },
         "interpretation": {
-            "summary": _localized("مؤشر الامتثال يقيس الالتزام بالقواعد التنظيمية والتشغيلية.", "Compliance score measures adherence to operational and regulatory rules.", lang),
-            "severity": "critical" if status_band == "red" else "warning" if status_band in {"yellow", "orange"} else "normal",
+            "summary": _localized(
+                "مؤشر الامتثال يقيس الالتزام بالقواعد التنظيمية والتشغيلية.",
+                "Compliance score measures adherence to operational and regulatory rules.",
+                lang,
+            ),
+            "severity": "critical"
+            if status_band == "red"
+            else "warning"
+            if status_band in {"yellow", "orange"}
+            else "normal",
             "comparison_baseline": _localized(
                 f"الفترة السابقة: امتثال {prev_metrics['compliance_score']}% (التغيير: {sign(compliance_delta)}{compliance_delta}%)",
                 f"Previous period: compliance {prev_metrics['compliance_score']}% (change: {sign(compliance_delta)}{compliance_delta}%)",
                 lang,
             ),
-            "recommended_action": _localized("عالج المخالفات الحرجة أولا: الفصول بلا مشرف والتجاوزات الاستيعابية.", "Address critical violations first: classes without supervisors and over-capacity sites.", lang),
+            "recommended_action": _localized(
+                "عالج المخالفات الحرجة أولا: الفصول بلا مشرف والتجاوزات الاستيعابية.",
+                "Address critical violations first: classes without supervisors and over-capacity sites.",
+                lang,
+            ),
         },
     }
 
@@ -1798,10 +1824,24 @@ def risk_ranking(
         "level": level.value,
         "ranking": rows,
         "interpretation": {
-            "summary": _localized("ترتيب المخاطر يحدد المناطق ذات الأولوية للتدخل الفوري.", "Risk ranking identifies priority areas for immediate intervention.", lang),
-            "severity": "critical" if rows and rows[0]["risk_score"] >= 60 else "warning" if rows and rows[0]["risk_score"] >= 35 else "normal",
-            "comparison_baseline": _localized("ترتيب المدن ضمن النطاق المحدد", "City ranking within selected scope", lang),
-            "recommended_action": _localized("ابدأ بأعلى 5 مواقع خطورة وفعّل خطة علاج أسبوعية.", "Start with top 5 high-risk sites and run a weekly mitigation plan.", lang),
+            "summary": _localized(
+                "ترتيب المخاطر يحدد المناطق ذات الأولوية للتدخل الفوري.",
+                "Risk ranking identifies priority areas for immediate intervention.",
+                lang,
+            ),
+            "severity": "critical"
+            if rows and rows[0]["risk_score"] >= 60
+            else "warning"
+            if rows and rows[0]["risk_score"] >= 35
+            else "normal",
+            "comparison_baseline": _localized(
+                "ترتيب المدن ضمن النطاق المحدد", "City ranking within selected scope", lang
+            ),
+            "recommended_action": _localized(
+                "ابدأ بأعلى 5 مواقع خطورة وفعّل خطة علاج أسبوعية.",
+                "Start with top 5 high-risk sites and run a weekly mitigation plan.",
+                lang,
+            ),
         },
     }
 
@@ -1845,14 +1885,13 @@ def kindergartens_detail(
     start, end = _resolve_dates(date_from, date_to, period)
     enroll_q = _base_enrollment_query(db, filters)
     official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
-    all_enroll_rows = enroll_q.all()
     official_rows = official_enroll_q.all()
     official_children_ids = {r.child_id for r in official_rows}
 
     classes_q = db.query(models.Class).filter(models.Class.is_active.is_(True))
     kg_q = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
     if filters.governorate:
-        kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
+        kg_q = kg_q.filter(governorate_filter(models.Kindergarten.governorate, filters.governorate))
     if filters.city:
         kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
     if filters.area:
@@ -1881,7 +1920,9 @@ def kindergartens_detail(
         active_assignments_q = active_assignments_q.filter(models.SupervisorAssignment.class_id.in_(class_ids))
     active_assignments = active_assignments_q.all()
 
-    rows = _kindergarten_detail_rows(db, filters, official_children_ids, official_rows, classes, supervisors, active_assignments)
+    rows = _kindergarten_detail_rows(
+        db, filters, official_children_ids, official_rows, classes, supervisors, active_assignments
+    )
     total_kindergartens = len(rows)
     total_children = sum(r["children_count"] for r in rows)
     total_supervisors = sum(r["supervisors_count"] for r in rows)
@@ -1947,10 +1988,11 @@ def classes_detail(
     start, end = _resolve_dates(date_from, date_to, period)
     enroll_q = _base_enrollment_query(db, filters)
     official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
-    all_enroll_rows = enroll_q.all()
     official_rows = official_enroll_q.all()
 
-    classes_q = db.query(models.Class).filter(models.Class.is_active.is_(True), models.Class.kindergarten_id == kindergarten_id)
+    classes_q = db.query(models.Class).filter(
+        models.Class.is_active.is_(True), models.Class.kindergarten_id == kindergarten_id
+    )
     if class_id:
         classes_q = classes_q.filter(models.Class.id == class_id)
     classes = classes_q.all()
@@ -1965,7 +2007,9 @@ def classes_detail(
             models.User.id.in_(
                 db.query(models.SupervisorAssignment.supervisor_id).filter(
                     models.SupervisorAssignment.class_id.in_(class_ids),
-                    or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= _today()),
+                    or_(
+                        models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= _today()
+                    ),
                     models.SupervisorAssignment.deleted_at.is_(None),
                 )
             )
@@ -2053,7 +2097,7 @@ def supervisors_analytics(
     classes_q = db.query(models.Class).filter(models.Class.is_active.is_(True))
     kg_q = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
     if filters.governorate:
-        kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
+        kg_q = kg_q.filter(governorate_filter(models.Kindergarten.governorate, filters.governorate))
     if filters.city:
         kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
     if filters.area:
@@ -2128,14 +2172,13 @@ def kindergartens_classification(
     start, end = _resolve_dates(date_from, date_to, period)
     enroll_q = _base_enrollment_query(db, filters)
     official_enroll_q = enroll_q.filter(models.EnrollmentApplication.status.in_(list(_ACTIVE_STATUSES)))
-    all_enroll_rows = enroll_q.all()
     official_rows = official_enroll_q.all()
     official_children_ids = {r.child_id for r in official_rows}
 
     classes_q = db.query(models.Class).filter(models.Class.is_active.is_(True))
     kg_q = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
     if filters.governorate:
-        kg_q = kg_q.filter(models.Kindergarten.governorate == filters.governorate)
+        kg_q = kg_q.filter(governorate_filter(models.Kindergarten.governorate, filters.governorate))
     if filters.city:
         kg_q = kg_q.filter(models.Kindergarten.district == filters.city)
     if filters.area:
@@ -2162,7 +2205,9 @@ def kindergartens_classification(
         active_assignments_q = active_assignments_q.filter(models.SupervisorAssignment.class_id.in_(class_ids))
     active_assignments = active_assignments_q.all()
 
-    rows = _kindergarten_detail_rows(db, filters, official_children_ids, official_rows, classes, supervisors, active_assignments)
+    rows = _kindergarten_detail_rows(
+        db, filters, official_children_ids, official_rows, classes, supervisors, active_assignments
+    )
 
     classification_counts = {}
     for r in rows:
@@ -2199,7 +2244,7 @@ def kindergartens_classification(
 @router.get("/export")
 def export_report(
     report_type: str = Query(...),
-    export_format: str = Query("csv", pattern="^(csv|json|CSV|JSON)$"),
+    export_format: str = Query("csv", pattern="^(?i)(csv|json)$"),  # Simplified pattern (CHART-014)
     level: ReportLevel = Query(ReportLevel.JORDAN),
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
@@ -2294,6 +2339,27 @@ def export_report(
             "B17": _localized("48 إلى 51 شهر", "48 to 51 months", lang),
             "B18": _localized("51 إلى 54 شهر", "51 to 54 months", lang),
             "B19": _localized("54 إلى 57 شهر", "54 to 57 months", lang),
+            # Additional keys for complete translation coverage (CHART-004)
+            "supervisor_id": _localized("معرف المشرفة", "Supervisor ID", lang),
+            "supervisor_name": _localized("اسم المشرفة", "Supervisor Name", lang),
+            "kindergarten_name": _localized("اسم الحضانة", "Kindergarten Name", lang),
+            "class_name": _localized("اسم الفصل", "Class Name", lang),
+            "kindergarten_id": _localized("معرف الحضانة", "Kindergarten ID", lang),
+            "class_id": _localized("معرف الفصل", "Class ID", lang),
+            "child_id": _localized("معرف الطفل", "Child ID", lang),
+            "child_name": _localized("اسم الطفل", "Child Name", lang),
+            "parent_name": _localized("اسم ولي الأمر", "Parent Name", lang),
+            "phone": _localized("الهاتف", "Phone", lang),
+            "email": _localized("البريد الإلكتروني", "Email", lang),
+            "address": _localized("العنوان", "Address", lang),
+            "date": _localized("التاريخ", "Date", lang),
+            "time": _localized("الوقت", "Time", lang),
+            "status": _localized("الحالة", "Status", lang),
+            "type": _localized("النوع", "Type", lang),
+            "description": _localized("الوصف", "Description", lang),
+            "notes": _localized("الملاحظات", "Notes", lang),
+            "created_at": _localized("تاريخ الإنشاء", "Created At", lang),
+            "updated_at": _localized("تاريخ التحديث", "Updated At", lang),
         }
 
         original_keys = list(rows[0].keys())
@@ -2313,6 +2379,7 @@ def export_report(
 # Admin Incident Reporting Endpoints
 # =============================================================================
 
+
 @router.post("/incidents/generate")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def generate_incident_report(
@@ -2325,7 +2392,7 @@ def generate_incident_report(
     period_type: str = Form(...),
     year: Optional[int] = Form(None),
     current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Generate and save an incident report"""
     try:
@@ -2337,6 +2404,7 @@ def generate_incident_report(
 
         # Calculate date range
         from report_service import ReportService
+
         reference_date = date(year, 1, 1) if period_type == "annual" and year else None
         start_date, end_date = ReportService.calculate_date_range(period_type, reference_date)
 
@@ -2349,7 +2417,7 @@ def generate_incident_report(
             governorate=governorate,
             district=district,
             area=area,
-            db=db
+            db=db,
         )
 
         # Create report record
@@ -2363,7 +2431,7 @@ def generate_incident_report(
             start_date=start_date,
             end_date=end_date,
             metrics_json=metrics,
-            created_by=current_user.id
+            created_by=current_user.id,
         )
 
         db.add(report)
@@ -2371,20 +2439,19 @@ def generate_incident_report(
         db.refresh(report)
 
         log_audit_event(
-            db, AuditAction.REPORT_GENERATED, current_user, "report",
+            db,
+            AuditAction.REPORT_GENERATED,
+            current_user,
+            "report",
             target_ids=report.id,
             metadata={
                 "description": f"Generated incident report ID {report.id} for scope {scope_type}",
-                "correlation_id": get_correlation_id()
-            }
+                "correlation_id": get_correlation_id(),
+            },
         )
         db.commit()
 
-        return JSONResponse({
-            "success": True,
-            "report_id": report.id,
-            "message": "تم إنشاء التقرير بنجاح"
-        })
+        return JSONResponse({"success": True, "report_id": report.id, "message": "تم إنشاء التقرير بنجاح"})
 
     except HTTPException:
         db.rollback()
@@ -2404,16 +2471,19 @@ def list_incident_reports(
     governorate: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
+    lang: str = Query("ar", pattern="^(ar|en)$"),
     current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """List incident reports with filtering"""
     try:
-        query = db.query(models.Report).options(
-            selectinload(models.Report.kindergarten),
-            selectinload(models.Report.creator),
-        ).filter(
-            models.Report.report_type == models.ReportType.INCIDENT_SUMMARY
+        query = (
+            db.query(models.Report)
+            .options(
+                selectinload(models.Report.kindergarten),
+                selectinload(models.Report.creator),
+            )
+            .filter(models.Report.report_type == models.ReportType.INCIDENT_SUMMARY)
         )
 
         # Apply scope filters
@@ -2428,7 +2498,7 @@ def list_incident_reports(
             query = query.filter(models.Report.kindergarten_id == kindergarten_id)
 
         if governorate:
-            query = query.filter(models.Report.governorate == governorate)
+            query = query.filter(governorate_filter(models.Report.governorate, governorate))
 
         # Pagination
         total = query.count()
@@ -2447,19 +2517,27 @@ def list_incident_reports(
             elif report.scope_type == models.ReportScopeType.AREA:
                 scope_name = report.area
             elif report.scope_type == models.ReportScopeType.ALL:
-                scope_name = "جميع الحضانات"
+                scope_name = _localized("جميع الحضانات", "All Kindergartens", lang)
 
-            report_list.append({
-                "id": report.id,
-                "title": f"تقرير الحوادث - {scope_name} ({report.start_date} - {report.end_date})",
-                "scope_type": report.scope_type.value,
-                "scope_name": scope_name,
-                "start_date": report.start_date.isoformat(),
-                "end_date": report.end_date.isoformat(),
-                "created_at": report.created_at.isoformat(),
-                "created_by": report.creator.username if report.creator else "غير معروف",
-                "total_incidents": report.metrics_json.get("total_incidents", 0)
-            })
+            report_list.append(
+                {
+                    "id": report.id,
+                    "title": _localized(
+                        f"تقرير الحوادث - {scope_name} ({report.start_date} - {report.end_date})",
+                        f"Incident Report - {scope_name} ({report.start_date} - {report.end_date})",
+                        lang,
+                    ),
+                    "scope_type": report.scope_type.value,
+                    "scope_name": scope_name,
+                    "start_date": report.start_date.isoformat(),
+                    "end_date": report.end_date.isoformat(),
+                    "created_at": report.created_at.isoformat(),
+                    "created_by": report.creator.username
+                    if report.creator
+                    else _localized("غير معروف", "Unknown", lang),
+                    "total_incidents": report.metrics_json.get("total_incidents", 0),
+                }
+            )
 
         return {
             "reports": report_list,
@@ -2467,8 +2545,8 @@ def list_incident_reports(
                 "page": page,
                 "per_page": per_page,
                 "total": total,
-                "pages": (total + per_page - 1) // per_page
-            }
+                "pages": (total + per_page - 1) // per_page,
+            },
         }
 
     except HTTPException:
@@ -2483,15 +2561,17 @@ def list_incident_reports(
 def get_incident_report_detail(
     report_id: int,
     request: Request,
+    lang: str = Query("ar", pattern="^(ar|en)$"),
     current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get detailed incident report"""
     try:
-        report = db.query(models.Report).filter(
-            models.Report.id == report_id,
-            models.Report.report_type == models.ReportType.INCIDENT_SUMMARY
-        ).first()
+        report = (
+            db.query(models.Report)
+            .filter(models.Report.id == report_id, models.Report.report_type == models.ReportType.INCIDENT_SUMMARY)
+            .first()
+        )
 
         if not report:
             raise not_found_error("Report not found")
@@ -2507,18 +2587,22 @@ def get_incident_report_detail(
         elif report.scope_type == models.ReportScopeType.AREA:
             scope_name = report.area
         elif report.scope_type == models.ReportScopeType.ALL:
-            scope_name = "جميع الحضانات"
+            scope_name = _localized("جميع الحضانات", "All Kindergartens", lang)
 
         return {
             "id": report.id,
-            "title": f"تقرير الحوادث - {scope_name} ({report.start_date} - {report.end_date})",
+            "title": _localized(
+                f"تقرير الحوادث - {scope_name} ({report.start_date} - {report.end_date})",
+                f"Incident Report - {scope_name} ({report.start_date} - {report.end_date})",
+                lang,
+            ),
             "scope_type": report.scope_type.value,
             "scope_name": scope_name,
             "start_date": report.start_date.isoformat(),
             "end_date": report.end_date.isoformat(),
             "created_at": report.created_at.isoformat(),
-            "created_by": report.creator.username if report.creator else "غير معروف",
-            "metrics": report.metrics_json
+            "created_by": report.creator.username if report.creator else _localized("غير معروف", "Unknown", lang),
+            "metrics": report.metrics_json,
         }
 
     except HTTPException:
@@ -2533,57 +2617,69 @@ def get_incident_report_detail(
 def export_incident_report_csv(
     report_id: int,
     request: Request,
+    lang: str = Query("ar", pattern="^(ar|en)$"),
     current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Export incident report as CSV"""
     try:
-        report = db.query(models.Report).filter(
-            models.Report.id == report_id,
-            models.Report.report_type == models.ReportType.INCIDENT_SUMMARY
-        ).first()
+        report = (
+            db.query(models.Report)
+            .filter(models.Report.id == report_id, models.Report.report_type == models.ReportType.INCIDENT_SUMMARY)
+            .first()
+        )
 
         if not report:
             raise HTTPException(status_code=404, detail="Report not found")
 
+        # Not localised: both halves are derived from enum values, which are the
+        # same in either language. Wrapping identical strings in _localized() only
+        # looked bilingual.
         report_title = f"{report.report_type.value.replace('_', ' ').title()} - {report.scope_type.value.title()}"
-        
+
         rows = []
-        rows.append(['Report Title', report_title])
-        rows.append(['Scope', report.scope_type.value])
-        rows.append(['Start Date', report.start_date.isoformat()])
-        rows.append(['End Date', report.end_date.isoformat()])
-        rows.append(['Generated By', report.creator.username if report.creator else 'Unknown'])
-        rows.append(['Generated At', report.created_at.isoformat()])
+        rows.append([_localized("عنوان التقرير", "Report Title", lang), report_title])
+        rows.append(
+            [_localized("النطاق", "Scope", lang), _localized(report.scope_type.value, report.scope_type.value, lang)]
+        )
+        rows.append([_localized("تاريخ البداية", "Start Date", lang), report.start_date.isoformat()])
+        rows.append([_localized("تاريخ النهاية", "End Date", lang), report.end_date.isoformat()])
+        rows.append(
+            [
+                _localized("أنشأ بواسطة", "Generated By", lang),
+                report.creator.username if report.creator else _localized("غير معروف", "Unknown", lang),
+            ]
+        )
+        rows.append([_localized("تاريخ الإنشاء", "Generated At", lang), report.created_at.isoformat()])
         rows.append([])
 
         # Write metrics
         metrics = report.metrics_json
-        rows.append(['Metric', 'Value'])
-        rows.append(['Total Incidents', metrics.get('total_incidents', 0)])
-        rows.append(['Open Incidents', metrics.get('open_incidents', 0)])
-        rows.append(['Closed Incidents', metrics.get('closed_incidents', 0)])
+        rows.append([_localized("المؤشر", "Metric", lang), _localized("القيمة", "Value", lang)])
+        rows.append([_localized("إجمالي الحوادث", "Total Incidents", lang), metrics.get("total_incidents", 0)])
+        rows.append([_localized("الحوادث المفتوحة", "Open Incidents", lang), metrics.get("open_incidents", 0)])
+        rows.append([_localized("الحوادث المغلقة", "Closed Incidents", lang), metrics.get("closed_incidents", 0)])
         rows.append([])
 
         # Incidents by type
-        rows.append(['Incidents by Type'])
-        rows.append(['Type', 'Count'])
-        for type_name, count in metrics.get('incidents_by_type', {}).items():
+        rows.append([_localized("الحوادث حسب النوع", "Incidents by Type", lang)])
+        rows.append([_localized("النوع", "Type", lang), _localized("العدد", "Count", lang)])
+        for type_name, count in metrics.get("incidents_by_type", {}).items():
             rows.append([type_name, count])
         rows.append([])
 
         # Incidents by severity
-        rows.append(['Incidents by Severity'])
-        rows.append(['Severity', 'Count'])
-        for severity, count in metrics.get('incidents_by_severity', {}).items():
+        rows.append([_localized("الحوادث حسب الخطورة", "Incidents by Severity", lang)])
+        rows.append([_localized("الخطورة", "Severity", lang), _localized("العدد", "Count", lang)])
+        for severity, count in metrics.get("incidents_by_severity", {}).items():
             rows.append([severity, count])
         rows.append([])
 
         # Per kindergarten (if applicable)
-        per_kg = metrics.get('per_kindergarten', {})
+        per_kg = metrics.get("per_kindergarten", {})
         if per_kg:
-            rows.append(['Incidents by Kindergarten'])
-            rows.append(['Kindergarten', 'Count'])
+            rows.append([_localized("الحوادث حسب الحضانة", "Incidents by Kindergarten", lang)])
+            rows.append([_localized("الحضانة", "Kindergarten", lang), _localized("العدد", "Count", lang)])
             for kg, count in per_kg.items():
                 rows.append([kg, count])
 
@@ -2603,8 +2699,8 @@ def export_incident_report_csv(
             sensitivity_level=2,
         )
 
-        # Return CSV file
-        filename = f"incident_report_{report_id}_{report.created_at.date().isoformat()}.csv"
+        # Return CSV file - use report period dates in filename (CHART-032)
+        filename = f"incident_report_{report_id}_{report.start_date.isoformat()}_{report.end_date.isoformat()}.csv"
         return export_service.generate_raw_csv_response(rows, filename)
 
     except HTTPException:
@@ -2629,13 +2725,13 @@ def get_districts(
     request: Request,
     governorate: Optional[str] = Query(None),
     current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """List distinct districts/قصبة/لواء, optionally filtered by governorate"""
     try:
         query = db.query(models.Kindergarten.district).distinct()
         if governorate:
-            query = query.filter(models.Kindergarten.governorate == governorate)
+            query = query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
         districts = [d[0] for d in query.all() if d[0]]
         return {"districts": sorted(districts)}
     except Exception as e:
@@ -2650,13 +2746,13 @@ def get_areas(
     governorate: Optional[str] = Query(None),
     district: Optional[str] = Query(None),
     current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """List distinct areas/منطقة, optionally filtered by governorate and/or district"""
     try:
         query = db.query(models.Kindergarten.area).distinct()
         if governorate:
-            query = query.filter(models.Kindergarten.governorate == governorate)
+            query = query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
         if district:
             query = query.filter(models.Kindergarten.district == district)
         areas = [a[0] for a in query.all() if a[0]]
@@ -2669,13 +2765,12 @@ def get_areas(
 @router.get("/scopes")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_available_scopes(
-    request: Request,
-    current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
+    request: Request, current_user: models.User = Depends(require_admin), db: Session = Depends(get_db)
 ):
     """Get available report scopes for the current user"""
     try:
         from report_service import ReportService
+
         scopes = ReportService.get_available_scopes(current_user, db)
         return {"scopes": scopes}
 
@@ -2689,6 +2784,7 @@ def get_available_scopes(
 # =============================================================================
 # Admin Alerts API
 # =============================================================================
+
 
 class AdminAlertResponse(BaseModel):
     id: int

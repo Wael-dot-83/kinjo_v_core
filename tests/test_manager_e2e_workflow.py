@@ -145,6 +145,18 @@ def _as(user):
     app.dependency_overrides[get_current_user] = lambda: user
 
 
+def _w(client, method, url, **kwargs):
+    """Credential-less write for override-authenticated tests.
+
+    These tests authenticate via dependency override, not cookies, so the jar
+    must stay clean: every response provisions the CSRF cookie, and a
+    jar-carried cookie pushes the next write into the middleware's enforced
+    branch (400 CSRF) instead of the endpoint.
+    """
+    client.cookies.clear()
+    return getattr(client, method)(url, **kwargs)
+
+
 def _audit_actions(db, entity_type=None):
     q = db.query(models.AuditLog.action)
     if entity_type:
@@ -167,7 +179,7 @@ class TestManagerE2EWorkflow:
         assert d["summary"]["active_enrollments"] == 1
 
         # 2. Create a second class through the canonical classes API.
-        r = client.post("/api/classes", json={
+        r = _w(client, "post", "/api/classes", json={
             "kindergarten_id": A["kg"].id, "name_ar": "صف جديد أ",
             "name_en": "New A", "class_code": "E2E-A2", "age_group": "AGE_2_4",
             "capacity_total": 5, "min_age_months": 24, "max_age_months": 72,
@@ -178,7 +190,7 @@ class TestManagerE2EWorkflow:
 
         # 3. Assign the supervisor to the original class (audited path —
         # class creation above already auto-assigned them to the new class).
-        r = client.post("/api/manager/supervisors", json={
+        r = _w(client, "post", "/api/manager/supervisors", json={
             "username": "e2e_second_supervisor",
             "email": "e2e-second-supervisor@example.com",
             "password": "SecondSupervisor123!",
@@ -186,7 +198,7 @@ class TestManagerE2EWorkflow:
         })
         assert r.status_code == 201, r.text
         second_supervisor_id = r.json()["id"]
-        r = client.post("/api/manager/classes/assign-supervisor", json={
+        r = _w(client, "post", "/api/manager/classes/assign-supervisor", json={
             "class_id": A["cls"].id, "supervisor_id": second_supervisor_id,
             "is_primary": True,
         })
@@ -201,7 +213,7 @@ class TestManagerE2EWorkflow:
         assert B["child"].id not in ids
 
         # 5. Move the child into the new class.
-        r = client.post("/api/manager/children/move-class", json={
+        r = _w(client, "post", "/api/manager/children/move-class", json={
             "child_id": A["child"].id,
             "from_class_id": A["cls"].id,
             "to_class_id": new_class_id,
@@ -213,12 +225,12 @@ class TestManagerE2EWorkflow:
         assert r.status_code == 200
         assert any(rep["id"] == A["report"].id for rep in r.json()["reports"])
 
-        r = client.put(f"/api/manager/daily-reports/{A['report'].id}",
+        r = _w(client, "put", f"/api/manager/daily-reports/{A['report'].id}",
                        json={"notes": "ملاحظات المدير"})
         assert r.status_code == 200, r.text
 
         # 7. Send to parent; a notification Message is created.
-        r = client.put(f"/api/manager/daily-reports/{A['report'].id}/send-to-parents")
+        r = _w(client, "put", f"/api/manager/daily-reports/{A['report'].id}/send-to-parents")
         assert r.status_code == 200, r.text
         assert r.json()["status"] == "SENT_TO_PARENT"
         note = test_db.query(models.Message).filter(
@@ -227,14 +239,14 @@ class TestManagerE2EWorkflow:
         assert note is not None, "parent notification message missing"
 
         # 8. Sent report is read-only; double-send is rejected.
-        r = client.put(f"/api/manager/daily-reports/{A['report'].id}",
+        r = _w(client, "put", f"/api/manager/daily-reports/{A['report'].id}",
                        json={"notes": "تعديل ممنوع"})
         assert r.status_code == 409
-        r = client.put(f"/api/manager/daily-reports/{A['report'].id}/send-to-parents")
+        r = _w(client, "put", f"/api/manager/daily-reports/{A['report'].id}/send-to-parents")
         assert r.status_code == 400
 
         # 9. Decide the absence request.
-        r = client.post(f"/api/absence-requests/{A['absence'].id}/approve", json={})
+        r = _w(client, "post", f"/api/absence-requests/{A['absence'].id}/approve", json={})
         assert r.status_code == 200, r.text
 
         # 10. Dashboard reflects the completed work.
@@ -258,21 +270,21 @@ class TestManagerE2EWorkflow:
         _DENIED = (403, 404)
         r = client.get(f"/api/classes/{B['cls'].id}")
         assert r.status_code in _DENIED
-        r = client.post("/api/manager/classes/assign-supervisor", json={
+        r = _w(client, "post", "/api/manager/classes/assign-supervisor", json={
             "class_id": B["cls"].id, "supervisor_id": A["supervisor"].id,
         })
         assert r.status_code in _DENIED
-        r = client.post("/api/manager/children/move-class", json={
+        r = _w(client, "post", "/api/manager/children/move-class", json={
             "child_id": B["child"].id, "from_class_id": B["cls"].id,
             "to_class_id": new_class_id,
         })
         assert r.status_code in _DENIED
-        r = client.put(f"/api/manager/daily-reports/{B['report'].id}",
+        r = _w(client, "put", f"/api/manager/daily-reports/{B['report'].id}",
                        json={"notes": "تسلل"})
         assert r.status_code in _DENIED
-        r = client.put(f"/api/manager/daily-reports/{B['report'].id}/send-to-parents")
+        r = _w(client, "put", f"/api/manager/daily-reports/{B['report'].id}/send-to-parents")
         assert r.status_code in _DENIED
-        r = client.post(f"/api/absence-requests/{B['absence'].id}/approve", json={})
+        r = _w(client, "post", f"/api/absence-requests/{B['absence'].id}/approve", json={})
         assert r.status_code in _DENIED
         r = client.get("/api/manager/daily-reports")
         assert all(rep["id"] != B["report"].id for rep in r.json()["reports"])

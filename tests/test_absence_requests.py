@@ -67,13 +67,13 @@ class TestParentCreateAbsence:
             "reason": "cookie csrf contract",
         }
         missing = client.post("/api/absence-requests", json=payload)
-        assert missing.status_code == 403
+        assert missing.status_code == 400
         mismatched = client.post(
             "/api/absence-requests",
             json=payload,
             headers={"X-CSRF-Token": "wrong"},
         )
-        assert mismatched.status_code == 403
+        assert mismatched.status_code == 400
         accepted = client.post(
             "/api/absence-requests",
             json=payload,

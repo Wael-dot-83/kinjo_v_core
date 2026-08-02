@@ -171,7 +171,7 @@
         '<td data-label="' + T("الحضور %", "Attendance %") + '">' + (kg.attendance_pct != null ? kg.attendance_pct + "%" : "—") + "</td>" +
         '<td data-label="' + T("الإشغال %", "Occupancy %") + '">' + occupancyCell(kg.occupancy_pct) + "</td>" +
         '<td data-label="' + T("الحالة", "Status") + '">' + statusBadge(kg.status) + "</td>" +
-        '<td data-label="' + T("آخر تحديث", "Last Update") + '"><span class="kg-kg-sub">' + (kg.updated_at ? esc(kg.updated_at.slice(0, 10)) : "—") + "</span></td>" +
+        '<td data-label="' + T("آخر تحديث", "Last Update") + '"><span class="kg-kg-sub">' + (kg.updated_at ? esc(KinjoDate.jordanDate(kg.updated_at)) : "—") + "</span></td>" +
         '<td data-label="' + T("الإجراءات", "Actions") + '" class="text-end">' + actions + "</td>" +
         "</tr>"
       );
@@ -299,7 +299,7 @@
       items.forEach(function (k) {
         lines.push([k.name_ar, k.legal_name, k.governorate, k.district, k.child_count,
           k.occupancy_pct, k.attendance_pct, STATUS_LABEL[k.status] || k.status,
-          k.updated_at ? k.updated_at.slice(0, 10) : ""].map(cell).join(","));
+          k.updated_at ? KinjoDate.jordanDate(k.updated_at) : ""].map(cell).join(","));
       });
       var blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
       var url = URL.createObjectURL(blob);

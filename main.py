@@ -8,10 +8,10 @@ import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Response, Form, APIRouter, WebSocket
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Form, WebSocket
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -74,6 +74,7 @@ from middleware.auth import (
     sanitize_response_payload,
 )
 from middleware.csrf import csrf_protection_middleware
+from utils.time_utils import now_amman
 from middleware.security import (
     audit_state_changes_middleware,
     request_timeout_middleware,
@@ -108,14 +109,15 @@ def ensure_not_testing_in_production() -> None:
 
 
 def warn_if_testing_disables_security() -> None:
-    """Say out loud when TESTING=true has switched security off.
+    """Say out loud when TESTING=true has relaxed security subsystems.
 
-    `middleware.csrf.csrf_protection_middleware` short-circuits entirely while
-    TESTING is set, so a dev server started with TESTING=true in .env accepts
-    state-changing requests that carry no CSRF token at all. Nothing surfaced
-    that: the server looked normal, so local testing quietly "passed" against a
-    configuration production never runs, and a real CSRF regression could not be
-    reproduced locally.
+    CSRF is NOT one of them: middleware/csrf.py runs identical semantics under
+    TESTING (bearer and cookie-less requests pass; cookie-carrying requests
+    need the double-submit pair), so a CSRF regression is always reproducible
+    locally. What TESTING still relaxes is the rate limiter
+    (rate_limiter.py disables itself and uses in-memory storage), so a dev
+    server started with TESTING=true in .env accepts request rates production
+    never would.
 
     The pytest suite sets TESTING itself (conftest.py sets os.environ["TESTING"]
     before importing the app), so .env does NOT need it — leaving it out of .env
@@ -126,10 +128,12 @@ def warn_if_testing_disables_security() -> None:
     if not settings.TESTING:
         return
     logging.getLogger("main").warning(
-        "TESTING=true — CSRF enforcement is DISABLED for this process "
-        "(middleware/csrf.py skips all state-changing checks). This is for the "
-        "pytest suite, which sets the flag itself; a dev or staging server does "
-        "not need it in .env. Unset TESTING to exercise real CSRF behaviour."
+        "TESTING=true — rate limiting is DISABLED for this process "
+        "(rate_limiter.py). CSRF is unaffected: middleware/csrf.py enforces "
+        "the same double-submit policy under TESTING as in production. "
+        "TESTING is for the pytest suite, which sets the flag itself; a dev "
+        "or staging server does not need it in .env. Unset TESTING to "
+        "exercise full production behaviour."
     )
 
 
@@ -282,6 +286,9 @@ async def lifespan(app: FastAPI):
 
         # Start waitlist expiry scheduler (every 15 min)
         waitlist_expiry_scheduler.start_scheduler()
+
+        # Start backup scheduler (automated daily backups)
+        backup_scheduler.start_scheduler()
 
         # Start monitoring services
         performance_monitor.start_monitoring()
@@ -556,83 +563,14 @@ async def enforce_english_language_integrity(request: Request, call_next):
     return response
 
 
-# CSRF protection — validate Origin/Referer on state-changing requests
-# Cookie uses SameSite=Lax (set in auth.js), this is defense-in-depth.
-_CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-_CSRF_DOUBLE_SUBMIT_EXEMPT_PATHS = {"/token", "/api/auth/login", "/api/auth/register", "/api/auth/mfa/setup", "/api/auth/mfa/verify", "/api/telemetry/vitals", "/api/telemetry/errors", "/api/telemetry/api"}
-_CSRF_ALLOWED_HOSTS = {
-    origin.split("://", 1)[-1].rstrip("/")
-    for origin in (settings.CORS_ALLOWED_ORIGINS or ["http://127.0.0.1:8000", "http://localhost:8000"])
-}
-
-
-def _loopback_netloc_aliases(netloc: str) -> set[str]:
-    """Return localhost/loopback aliases for the same port."""
-    from urllib.parse import urlparse
-
-    parsed = urlparse(f"http://{netloc}")
-    host = (parsed.hostname or "").lower()
-    port = parsed.port
-    if host not in {"localhost", "127.0.0.1", "::1"}:
-        return set()
-
-    if port is None:
-        return {"localhost", "127.0.0.1", "[::1]"}
-    return {f"localhost:{port}", f"127.0.0.1:{port}", f"[::1]:{port}"}
+# CSRF protection lives in middleware/csrf.py as the single enforcement
+# point (double-submit pair, 400 on failure). Bearer-authenticated and
+# cookie-less requests are inherently unforgeable and pass through; the
+# full policy is documented in middleware/csrf.py's module docstring.
 
 
 @app.middleware("http")
-async def csrf_origin_check(request: Request, call_next):
-    if request.method not in _CSRF_SAFE_METHODS:
-        # Skip CSRF check for API calls with Bearer token (inherently CSRF-safe)
-        auth_header = request.headers.get("authorization", "")
-        if not auth_header.lower().startswith("bearer "):
-            # Cookie-based auth — verify Origin or Referer
-            origin = request.headers.get("origin", "")
-            referer = request.headers.get("referer", "")
-            request_netloc = (request.url.netloc or "").lower()
-            session_cookie = request.cookies.get(settings.SESSION_COOKIE_NAME) or request.cookies.get("kinjo_token")
-            csrf_cookie = request.cookies.get(settings.CSRF_COOKIE_NAME)
-            csrf_header = request.headers.get("x-csrf-token", "")
-            allowed_hosts = {host.lower() for host in _CSRF_ALLOWED_HOSTS}
-            if request_netloc:
-                allowed_hosts.add(request_netloc)
-                allowed_hosts.update(_loopback_netloc_aliases(request_netloc))
-            if origin:
-                from urllib.parse import urlparse
-                parsed = urlparse(origin)
-                origin_netloc = (parsed.netloc or "").lower()
-                if origin_netloc not in allowed_hosts:
-                    return JSONResponse(
-                        status_code=403,
-                        content={"detail": "CSRF check failed: origin not allowed"}
-                    )
-            elif referer:
-                from urllib.parse import urlparse
-                parsed = urlparse(referer)
-                referer_netloc = (parsed.netloc or "").lower()
-                if referer_netloc not in allowed_hosts:
-                    return JSONResponse(
-                        status_code=403,
-                        content={"detail": "CSRF check failed: referer not allowed"}
-                    )
-            if session_cookie and request.url.path not in _CSRF_DOUBLE_SUBMIT_EXEMPT_PATHS:
-                if not csrf_cookie or not csrf_header:
-                    return JSONResponse(
-                        status_code=403,
-                        content={"detail": "CSRF check failed: missing CSRF token"}
-                    )
-                if not secrets.compare_digest(csrf_cookie, csrf_header):
-                    return JSONResponse(
-                        status_code=403,
-                        content={"detail": "CSRF check failed: invalid CSRF token"}
-                    )
-            # If neither header is present, allow (browser forms on same origin
-            # may omit both in some privacy configs; SameSite=Lax handles this).
-    return await call_next(request)
-
-@app.middleware("http")
-async def strict_csrf_protection(request: Request, call_next):
+async def csrf_double_submit_protection(request: Request, call_next):
     return await csrf_protection_middleware(request, call_next)
 
 
@@ -1413,10 +1351,14 @@ async def heatmap_websocket(websocket: WebSocket):
                 await websocket.send_json({
                     "type": "kpi_update",
                     "governorates": data.get("governorates", []),
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": now_amman().isoformat(),
                 })
             except Exception:
-                pass
+                # Previously `pass`, which hid a NameError here for the whole
+                # life of the socket: the client stayed connected and simply
+                # never received a frame, with nothing logged. Keep the loop
+                # alive on transient errors, but never silently again.
+                logger.exception("heatmap websocket kpi_update failed")
             finally:
                 db.close()
             await asyncio.sleep(30)

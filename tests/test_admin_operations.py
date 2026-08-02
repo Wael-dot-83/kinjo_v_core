@@ -305,10 +305,9 @@ class TestBackupCreate:
 
     def test_create_forbidden_for_non_admin(self, client, test_db, sample_kindergarten):
         """Non-admin cannot create backups (require_admin dependency)."""
-        mgr = _make_user(test_db, "bkp_mgr_create", models.UserRole.MANAGER,
-                         kg_id=sample_kindergarten.id)
-        r_login = client.post("/token", data={"username": "bkp_mgr_create", "password": "Pass123!"})
-        headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
+        _make_user(test_db, "bkp_mgr_create", models.UserRole.MANAGER,
+                   kg_id=sample_kindergarten.id)
+        headers = _tok(client, "bkp_mgr_create", password="Pass123!")
         r = client.post("/api/admin/backup/create", headers=headers, json={"backup_type": "database"})
         assert r.status_code == 403
 
@@ -394,10 +393,9 @@ class TestBackupRestore:
 
     def test_restore_forbidden_for_non_admin(self, client, test_db, sample_kindergarten):
         """Non-admin cannot restore backups (require_admin dependency)."""
-        mgr = _make_user(test_db, "bkp_mgr_restore", models.UserRole.MANAGER,
-                         kg_id=sample_kindergarten.id)
-        r_login = client.post("/token", data={"username": "bkp_mgr_restore", "password": "Pass123!"})
-        headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
+        _make_user(test_db, "bkp_mgr_restore", models.UserRole.MANAGER,
+                   kg_id=sample_kindergarten.id)
+        headers = _tok(client, "bkp_mgr_restore", password="Pass123!")
         r = client.post("/api/admin/backup/restore/some_backup.sql.gz", headers=headers, json={})
         assert r.status_code == 403
 
@@ -460,10 +458,9 @@ class TestBackupDelete:
 
     def test_delete_forbidden_for_non_admin(self, client, test_db, sample_kindergarten):
         """Non-admin cannot delete backups."""
-        mgr = _make_user(test_db, "bkp_mgr_del", models.UserRole.MANAGER,
-                         kg_id=sample_kindergarten.id)
-        r_login = client.post("/token", data={"username": "bkp_mgr_del", "password": "Pass123!"})
-        headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
+        _make_user(test_db, "bkp_mgr_del", models.UserRole.MANAGER,
+                   kg_id=sample_kindergarten.id)
+        headers = _tok(client, "bkp_mgr_del", password="Pass123!")
         r = client.delete("/api/admin/backup/some_backup.sql.gz", headers=headers)
         assert r.status_code in [401, 403]
 
@@ -541,10 +538,9 @@ class TestBackupCleanup:
 
     def test_cleanup_forbidden_for_non_admin(self, client, test_db, sample_kindergarten):
         """Line 3791: non-admin → 403."""
-        mgr = _make_user(test_db, "bkp_mgr_cln", models.UserRole.MANAGER,
-                         kg_id=sample_kindergarten.id)
-        r_login = client.post("/token", data={"username": "bkp_mgr_cln", "password": "Pass123!"})
-        headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
+        _make_user(test_db, "bkp_mgr_cln", models.UserRole.MANAGER,
+                   kg_id=sample_kindergarten.id)
+        headers = _tok(client, "bkp_mgr_cln", password="Pass123!")
         r = client.post("/api/admin/backup/cleanup", headers=headers)
         assert r.status_code == 403
 
@@ -586,10 +582,9 @@ class TestBackupValidate:
 
     def test_validate_forbidden_for_non_admin(self, client, test_db, sample_kindergarten):
         """Line 3821: non-admin → 403."""
-        mgr = _make_user(test_db, "bkp_mgr_val", models.UserRole.MANAGER,
-                         kg_id=sample_kindergarten.id)
-        r_login = client.post("/token", data={"username": "bkp_mgr_val", "password": "Pass123!"})
-        headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
+        _make_user(test_db, "bkp_mgr_val", models.UserRole.MANAGER,
+                   kg_id=sample_kindergarten.id)
+        headers = _tok(client, "bkp_mgr_val", password="Pass123!")
         r = client.post("/api/admin/backup/validate/some_backup.sql.gz", headers=headers)
         assert r.status_code == 403
 
@@ -612,10 +607,9 @@ class TestKGExcelImport:
 
     def test_import_non_admin_forbidden(self, client, test_db, sample_kindergarten):
         """Lines 3874-3875: non-admin → 403."""
-        mgr = _make_user(test_db, "kg_mgr_imp", models.UserRole.MANAGER,
-                         kg_id=sample_kindergarten.id)
-        r_login = client.post("/token", data={"username": "kg_mgr_imp", "password": "Pass123!"})
-        headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
+        _make_user(test_db, "kg_mgr_imp", models.UserRole.MANAGER,
+                   kg_id=sample_kindergarten.id)
+        headers = _tok(client, "kg_mgr_imp", password="Pass123!")
         xlsx = self._make_xlsx([["حضانة", "Test", "عمان", "عمان", "منطقة", "عنوان", "0777"]])
         r = client.post("/api/admin/kindergartens/import-excel",
                         headers=headers,

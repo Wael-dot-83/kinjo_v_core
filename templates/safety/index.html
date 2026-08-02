@@ -449,7 +449,7 @@
         
         for (const inc of filteredIncidents) {
             const row = [
-                inc.occurred_at ? inc.occurred_at.split('T')[0] : '',
+                inc.occurred_at ? KinjoDate.jordanDate(inc.occurred_at) : '',
                 `"${(inc.child_name || '').replace(/"/g, '""')}"`,
                 inc.type || '',
                 inc.severity_level || '',

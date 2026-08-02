@@ -17,8 +17,11 @@ from datetime import date, datetime, timedelta
 os.environ["TESTING"] = "true"
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "kinjo-ci-testing-secret-key-not-for-production-use-9x7z")
+os.environ["MIN_CHILD_AGE_DAYS"] = "1"
+os.environ["MAX_CHILD_AGE_MONTHS"] = "56"
 
 from config import settings as _settings
+
 from database import Base, get_db
 from main import app
 

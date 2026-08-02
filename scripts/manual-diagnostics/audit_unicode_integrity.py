@@ -40,8 +40,15 @@ def tracked_text_files(root: Path) -> list[Path]:
         if relative in EXCLUDED_FILES or relative.startswith(EXCLUDED_PREFIXES):
             continue
         path = root / relative
-        if path.suffix.lower() in TEXT_SUFFIXES:
-            files.append(path)
+        if path.suffix.lower() not in TEXT_SUFFIXES:
+            continue
+        if not path.exists():
+            # Tracked by git but absent from the working tree: a deletion that has
+            # not been staged yet. There is no content to audit, and including it
+            # raises FileNotFoundError below — which surfaces as an encoding
+            # failure and is not one.
+            continue
+        files.append(path)
     return files
 
 

@@ -1,6 +1,7 @@
 import pytest
 from datetime import date, timedelta, datetime
 import models
+from conftest import csrf_pair
 
 def test_kindergarten_crud_admin(client, test_db, admin_token, admin_user):
     """Test that an admin can create and list kindergartens"""
@@ -20,7 +21,7 @@ def test_kindergarten_crud_admin(client, test_db, admin_token, admin_user):
         "operating_hours_end": "14:00"
     }
     
-    headers = {"Authorization": f"Bearer {admin_token}"}
+    headers = {"Authorization": f"Bearer {admin_token}", **csrf_pair()}
     response = client.post("/api/admin/kindergartens", json=kg_data, headers=headers)
     assert response.status_code == 201, f"Create failed: {response.text}"
     created = response.json().get("data", response.json())
@@ -50,7 +51,7 @@ def test_kindergarten_creation_without_email_or_license(client, test_db, admin_t
         "operating_hours_end": "15:30"
     }
 
-    headers = {"Authorization": f"Bearer {admin_token}"}
+    headers = {"Authorization": f"Bearer {admin_token}", **csrf_pair()}
     response = client.post("/api/admin/kindergartens", json=kg_data, headers=headers)
     assert response.status_code == 201, f"Create without email failed: {response.text}"
     payload = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
@@ -71,7 +72,7 @@ def test_kindergarten_invalid_email_rejected(client, test_db, admin_token, admin
         "contact_phone": "0777777777",
         "contact_email": "not-an-email"
     }
-    headers = {"Authorization": f"Bearer {admin_token}"}
+    headers = {"Authorization": f"Bearer {admin_token}", **csrf_pair()}
     response = client.post("/api/admin/kindergartens", json=kg_data, headers=headers)
     assert response.status_code == 422
 
@@ -90,7 +91,7 @@ def test_kindergarten_blank_optional_fields_become_null(client, test_db, admin_t
         "license_number": "   ",
         "license_valid_until": None
     }
-    headers = {"Authorization": f"Bearer {admin_token}"}
+    headers = {"Authorization": f"Bearer {admin_token}", **csrf_pair()}
     response = client.post("/api/admin/kindergartens", json=kg_data, headers=headers)
     assert response.status_code == 201, response.text
     payload = response.json().get("data") if (isinstance(response.json(), dict) and "success" in response.json() and response.json().get("data") is not None) else response.json()
@@ -100,7 +101,7 @@ def test_kindergarten_blank_optional_fields_become_null(client, test_db, admin_t
 
 def test_kindergarten_duplicate_phone_returns_code(client, test_db, admin_token, admin_user):
     """Duplicate phone should trigger clear duplicate error code"""
-    headers = {"Authorization": f"Bearer {admin_token}"}
+    headers = {"Authorization": f"Bearer {admin_token}", **csrf_pair()}
     base_payload = {
         "name_ar": "حضانة الهاتف 1",
         "name_en": "Phone KG 1",

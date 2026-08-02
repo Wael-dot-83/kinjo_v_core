@@ -1,0 +1,124 @@
+INTERNALERROR> Traceback (most recent call last):
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\main.py", line 326, in wrap_session
+INTERNALERROR>     config._do_configure()
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\config\__init__.py", line 1205, in _do_configure
+INTERNALERROR>     self.hook.pytest_configure.call_historic(kwargs=dict(config=self))
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_hooks.py", line 534, in call_historic
+INTERNALERROR>     res = self._hookexec(self.name, self._hookimpls.copy(), kwargs, False)
+INTERNALERROR>           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+INTERNALERROR>     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+INTERNALERROR>            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_callers.py", line 167, in _multicall
+INTERNALERROR>     raise exception
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+INTERNALERROR>     res = hook_impl.function(*args)
+INTERNALERROR>           ^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\cacheprovider.py", line 556, in pytest_configure
+INTERNALERROR>     config.pluginmanager.register(NFPlugin(config), "nfplugin")
+INTERNALERROR>                                   ^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\cacheprovider.py", line 433, in __init__
+INTERNALERROR>     self.cached_nodeids = set(config.cache.get("cache/nodeids", []))
+INTERNALERROR>                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\cacheprovider.py", line 202, in get
+INTERNALERROR>     return json.load(f)
+INTERNALERROR>            ^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\waelj\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\json\__init__.py", line 293, in load
+INTERNALERROR>     return loads(fp.read(),
+INTERNALERROR>                  ^^^^^^^^^
+INTERNALERROR> MemoryError
+2026-08-02 22:21:00,366 WARNING main TESTING=true — rate limiting is DISABLED for this process (rate_limiter.py). CSRF is unaffected: middleware/csrf.py enforces the same double-submit policy under TESTING as in production. TESTING is for the pytest suite, which sets the flag itself; a dev or staging server does not need it in .env. Unset TESTING to exercise full production behaviour.
+2026-08-02 22:21:03,046 INFO main Static files mounted successfully from 'static' directory
+============================= test session starts =============================
+platform win32 -- Python 3.12.9, pytest-9.1.1, pluggy-1.6.0 -- D:\Final Version_mvp_ADMIN\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Final Version_mvp_ADMIN
+configfile: pytest.ini
+plugins: anyio-4.14.2, asyncio-1.4.0, timeout-2.4.0, xdist-3.5.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+timeout: 60.0s
+timeout method: thread
+timeout func_only: False
+created: 10/10 workers
+INTERNALERROR> def worker_internal_error(self, node, formatted_error):
+INTERNALERROR>         """
+INTERNALERROR>         pytest_internalerror() was called on the worker.
+INTERNALERROR>     
+INTERNALERROR>         pytest_internalerror() arguments are an excinfo and an excrepr, which can't
+INTERNALERROR>         be serialized, so we go with a poor man's solution of raising an exception
+INTERNALERROR>         here ourselves using the formatted message.
+INTERNALERROR>         """
+INTERNALERROR>         self._active_nodes.remove(node)
+INTERNALERROR>         try:
+INTERNALERROR> >           assert False, formatted_error
+INTERNALERROR> E           AssertionError: Traceback (most recent call last):
+INTERNALERROR> E               File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\main.py", line 326, in wrap_session
+INTERNALERROR> E                 config._do_configure()
+INTERNALERROR> E               File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\config\__init__.py", line 1205, in _do_configure
+INTERNALERROR> E                 self.hook.pytest_configure.call_historic(kwargs=dict(config=self))
+INTERNALERROR> E               File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_hooks.py", line 534, in call_historic
+INTERNALERROR> E                 res = self._hookexec(self.name, self._hookimpls.copy(), kwargs, False)
+INTERNALERROR> E                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR> E               File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+INTERNALERROR> E                 return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+INTERNALERROR> E                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR> E               File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_callers.py", line 167, in _multicall
+INTERNALERROR> E                 raise exception
+INTERNALERROR> E               File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+INTERNALERROR> E                 res = hook_impl.function(*args)
+INTERNALERROR> E                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR> E               File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\cacheprovider.py", line 556, in pytest_configure
+INTERNALERROR> E                 config.pluginmanager.register(NFPlugin(config), "nfplugin")
+INTERNALERROR> E                                               ^^^^^^^^^^^^^^^^
+INTERNALERROR> E               File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\cacheprovider.py", line 433, in __init__
+INTERNALERROR> E                 self.cached_nodeids = set(config.cache.get("cache/nodeids", []))
+INTERNALERROR> E                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR> E               File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\cacheprovider.py", line 202, in get
+INTERNALERROR> E                 return json.load(f)
+INTERNALERROR> E                        ^^^^^^^^^^^^
+INTERNALERROR> E               File "C:\Users\waelj\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\json\__init__.py", line 293, in load
+INTERNALERROR> E                 return loads(fp.read(),
+INTERNALERROR> E                              ^^^^^^^^^
+INTERNALERROR> E             MemoryError
+INTERNALERROR> E           assert False
+INTERNALERROR> 
+INTERNALERROR> .venv\Lib\site-packages\xdist\dsession.py:200: AssertionError
+[gw9] node down: Not properly terminated
+
+replacing crashed worker gw9
+INTERNALERROR> Traceback (most recent call last):
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\main.py", line 330, in wrap_session
+INTERNALERROR>     session.exitstatus = doit(config, session) or 0
+INTERNALERROR>                          ^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\main.py", line 384, in _main
+INTERNALERROR>     config.hook.pytest_runtestloop(session=session)
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+INTERNALERROR>     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+INTERNALERROR>            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+INTERNALERROR>     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+INTERNALERROR>            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_callers.py", line 167, in _multicall
+INTERNALERROR>     raise exception
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\logging.py", line 816, in pytest_runtestloop
+INTERNALERROR>     return (yield)  # Run all the tests.
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\_pytest\terminal.py", line 708, in pytest_runtestloop
+INTERNALERROR>     result = yield
+INTERNALERROR>              ^^^^^
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+INTERNALERROR>     res = hook_impl.function(*args)
+INTERNALERROR>           ^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\xdist\dsession.py", line 123, in pytest_runtestloop
+INTERNALERROR>     self.loop_once()
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\xdist\dsession.py", line 148, in loop_once
+INTERNALERROR>     call(**kwargs)
+INTERNALERROR>   File "D:\Final Version_mvp_ADMIN\.venv\Lib\site-packages\xdist\dsession.py", line 238, in worker_errordown
+INTERNALERROR>     self._active_nodes.remove(node)
+INTERNALERROR> KeyError: <WorkerController gw9>
+
+=========================== no tests ran in 19.02s ============================

@@ -18,6 +18,18 @@ from database import get_db
 from dependencies import get_current_user
 
 
+def _w(client, method, url, **kwargs):
+    """Credential-less write for override-authenticated tests.
+
+    These tests authenticate via dependency override, not cookies, so the jar
+    must stay clean: every response provisions the CSRF cookie, and a
+    jar-carried cookie pushes the next write into the middleware's enforced
+    branch (400 CSRF) instead of the endpoint.
+    """
+    client.cookies.clear()
+    return getattr(client, method)(url, **kwargs)
+
+
 # =============================================================================
 # FIXTURES
 # =============================================================================
@@ -655,7 +667,7 @@ class TestManagerMutationAudit:
         full_class.capacity_total = 5
         test_db.commit()
         before = self._audit_count(test_db, "CHILD_MOVED_CLASS")
-        r = client.post("/api/manager/children/move-class", json={
+        r = _w(client, "post", "/api/manager/children/move-class", json={
             "child_id": child_kg_a.id,
             "from_class_id": class_kg_a.id,
             "to_class_id": full_class.id,
@@ -1076,8 +1088,14 @@ class TestManagerAnalyticsIncidentBoundary:
     def test_incident_on_end_date_counted(self, test_db, kg_a, class_kg_a, child_kg_a, enrollment_kg_a):
         from datetime import time
         from manager_analytics import ManagerAnalyticsService as MA
-        end = date.today()
+        from utils.time_utils import get_amman_tz, today_amman
+        end = today_amman()
         start = end - timedelta(days=7)
+        # Timezone-AWARE Jordan, matching what production writes
+        # (routers/supervisor.py uses datetime.now(_JORDAN_TZ)). A naive 23:00 is
+        # ambiguous — db_types.UTCDateTime reads naive input as UTC, which would put
+        # this incident at 02:00 Jordan the *next* day and correctly exclude it.
+        # The point of the test is the last hour of the Jordan day, so say so.
         test_db.add(models.Incident(
             child_id=child_kg_a.id,
             kindergarten_id=kg_a.id,
@@ -1085,7 +1103,7 @@ class TestManagerAnalyticsIncidentBoundary:
             type=models.IncidentType.INJURY,
             severity_level=models.SeverityLevel.LOW,
             description="late incident",
-            occurred_at=datetime.combine(end, time(23, 0)),
+            occurred_at=datetime.combine(end, time(23, 0), tzinfo=get_amman_tz()),
         ))
         test_db.commit()
         rows = MA.get_drilldown_by_class(test_db, kg_a.id, start, end)
@@ -1290,13 +1308,13 @@ class TestManagerProductionBlockers:
         assert created.status_code == 201, created.text
         supervisor_id = created.json()["id"]
 
-        updated = client.put(f"/api/manager/supervisors/{supervisor_id}", json={
+        updated = _w(client, "put", f"/api/manager/supervisors/{supervisor_id}", json={
             "full_name": "Updated Supervisor",
         })
         assert updated.status_code == 200, updated.text
 
         app.dependency_overrides[get_current_user] = lambda: manager_kg_b
-        foreign = client.put(f"/api/manager/supervisors/{supervisor_id}", json={
+        foreign = _w(client, "put", f"/api/manager/supervisors/{supervisor_id}", json={
             "full_name": "Forbidden Update",
         })
         assert foreign.status_code == 404

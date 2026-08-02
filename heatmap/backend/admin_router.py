@@ -24,7 +24,7 @@ from __future__ import annotations
 import logging
 import secrets
 from datetime import date, datetime, timedelta
-from utils.time_utils import today_amman as _today
+from utils.time_utils import now_amman, today_amman as _today, to_utc_iso
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -402,7 +402,10 @@ def get_daily_update(
             if latest.started_at is not None:
                 next_run = (latest.started_at + timedelta(days=1)).isoformat()
             return {
-                "last_update": latest.started_at.isoformat() + "Z" if latest.started_at else None,
+                # No manual "Z" suffix: stored values are aware UTC since D-11, so
+                # .isoformat() already ends in "+00:00" and appending "Z" produced the
+                # malformed "…+00:00Z". Correct while values were naive; wrong now.
+                "last_update": to_utc_iso(latest.started_at),
                 "last_run_status": latest.status,
                 "rows_processed": latest.rows_processed,
                 "governorates": latest.governorates,

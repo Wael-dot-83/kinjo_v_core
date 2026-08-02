@@ -127,9 +127,9 @@
       dl(document.getElementById('status-info'), [
         [T('الحالة','Status'), STATUS[kg.status] || kg.status],
         [T('سبب التجميد','Freeze Reason'), kg.frozen_reason],
-        [T('تاريخ التجميد','Frozen At'), kg.frozen_at ? kg.frozen_at.slice(0,16) : null],
-        [T('تاريخ الحذف','Deleted At'), kg.deleted_at ? kg.deleted_at.slice(0,16) : null],
-        [T('تاريخ الإنشاء','Created At'), kg.created_at ? kg.created_at.slice(0,16) : null],
+        [T('تاريخ التجميد','Frozen At'), kg.frozen_at ? KinjoDate.jordanDateTime(kg.frozen_at) : null],
+        [T('تاريخ الحذف','Deleted At'), kg.deleted_at ? KinjoDate.jordanDateTime(kg.deleted_at) : null],
+        [T('تاريخ الإنشاء','Created At'), kg.created_at ? KinjoDate.jordanDateTime(kg.created_at) : null],
       ]);
 
       var toggle = document.getElementById('d-toggle-status');
@@ -163,7 +163,7 @@
       if (!items.length) { box.innerHTML = '<ul class="kg-timeline"><li><span class="text-muted">'+T('لا يوجد سجل','No history')+'</span></li></ul>'; return; }
       box.innerHTML = '<ul class="kg-timeline">' + items.map(function (h) {
         return '<li><div class="kg-tl-action">'+esc(h.action)+'</div>' +
-          '<div class="kg-tl-meta">'+(h.created_at ? esc(h.created_at.slice(0,16)) : '')+(h.actor_role ? ' · '+esc(h.actor_role) : '')+'</div>' +
+          '<div class="kg-tl-meta">'+(h.created_at ? esc(KinjoDate.jordanDateTime(h.created_at)) : '')+(h.actor_role ? ' · '+esc(h.actor_role) : '')+'</div>' +
           (h.details ? '<div class="kg-tl-details">'+esc(h.details)+'</div>' : '') + '</li>';
       }).join('') + '</ul>';
     }).catch(function () {

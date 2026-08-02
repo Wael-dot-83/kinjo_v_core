@@ -27,6 +27,7 @@ from admin_security import log_audit_event
 from audit_actions import AuditAction
 from rate_limiter import limiter
 from config import settings
+from services.jordan_locations import governorate_filter
 
 logger = logging.getLogger(__name__)
 
@@ -373,7 +374,7 @@ class BenchmarkingService:
                 elif level_value != DEFAULT_COUNTRY_NAME:
                     return []
             elif level == "GOVERNORATE":
-                query = query.filter(models.Kindergarten.governorate == level_value)
+                query = query.filter(governorate_filter(models.Kindergarten.governorate, level_value))
             elif level == "CITY":
                 query = query.filter(models.Kindergarten.district == level_value)
             elif level == "AREA":
@@ -390,7 +391,7 @@ class BenchmarkingService:
             elif country != DEFAULT_COUNTRY_NAME:
                 return []
         if governorate:
-            query = query.filter(models.Kindergarten.governorate == governorate)
+            query = query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
         if district:
             query = query.filter(models.Kindergarten.district == district)
         if area:
