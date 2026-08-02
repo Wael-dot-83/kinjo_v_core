@@ -9,7 +9,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import models
-from utils.time_utils import today_amman as _today, jordan_date_range_filter, jordan_date_range_filter
+from utils.time_utils import today_amman as _today, jordan_date_range_filter
+from admin_reports_api import _localized
 
 
 class PredictionType(Enum):
@@ -214,6 +215,9 @@ class PredictiveAnalytics:
         predicted_raw = self._predict_at_index(slope, intercept, future_index)
         predicted = self._bound_percent(predicted_raw) if percent_metric else max(0.0, predicted_raw)
 
+        # CHART-026: Uses 1.96 for 95% confidence interval assuming normal distribution
+        # This is a statistical assumption that may not hold for all data distributions
+        # Consider using t-distribution for small samples or non-parametric methods
         margin = (1.96 * stddev) if stddev > 0 else max(1.0, mae)
         lower = predicted - margin
         upper = predicted + margin
@@ -341,6 +345,8 @@ class PredictiveAnalytics:
         forecast_values, r2, mae = self._forecast_curve(values, horizon_days=14, percent_metric=percent_metric)
         slope, _, _, _, _ = self._linear_fit(values)
         trend_direction = "stable"
+        # CHART-025: Threshold of 0.02 is arbitrary and may need tuning based on domain expertise
+        # Consider making this configurable or using statistical significance testing
         if slope > 0.02:
             trend_direction = "upward"
         elif slope < -0.02:
@@ -350,15 +356,15 @@ class PredictiveAnalytics:
         return TrendAnalysis(
             trend_direction=trend_direction,
             trend_strength=trend_strength,
-            seasonality_detected=False,
-            change_points=[],
+            seasonality_detected=False,  # CHART-015: Seasonality detection not yet implemented (future enhancement)
+            change_points=[],  # CHART-015: Change point detection not yet implemented (future enhancement)
             forecast_values=forecast_values,
             forecast_dates=[_today() + timedelta(days=i) for i in range(1, len(forecast_values) + 1)],
             r_squared=r2,
             mean_absolute_error=mae,
         )
 
-    async def get_predictive_insights(self, db: Session, kindergarten_id: int) -> dict:
+    async def get_predictive_insights(self, db: Session, kindergarten_id: int, lang: str = "ar") -> dict:
         attendance = await self.predict_attendance_rate(db, kindergarten_id, days_ahead=7)
         incidents = await self.predict_incident_trend(db, kindergarten_id, days_ahead=14)
         capacity = await self.predict_capacity_utilization(db, kindergarten_id, days_ahead=30)
@@ -366,23 +372,53 @@ class PredictiveAnalytics:
         alerts: List[str] = []
         recommendations: List[str] = []
 
+        # Bilingual alert and recommendation mappings (CHART-001)
+        alert_map = {
+            "attendance_drop_risk": {"ar": "خطر انخفاض الحضور", "en": "attendance_drop_risk"},
+            "incident_spike_risk": {"ar": "خطر ارتفاع الحوادث", "en": "incident_spike_risk"},
+            "capacity_saturation_risk": {"ar": "خطر تشبع السعة", "en": "capacity_saturation_risk"},
+        }
+        
+        recommendation_map = {
+            "attendance_drop_risk": {
+                "ar": "زيادة تواصل أولياء الأمور للأطفال الغائبين",
+                "en": "Increase parent engagement for absent children."
+            },
+            "incident_spike_risk": {
+                "ar": "مراجعة بروتوكولات السلامة وتغطية إشراف الموظفين",
+                "en": "Review safety protocols and staff supervision coverage."
+            },
+            "capacity_saturation_risk": {
+                "ar": "التخطيط لتوسيع الفصول أو إعادة توازن التسجيلات",
+                "en": "Plan class expansion or rebalance enrollments."
+            },
+        }
+
         if attendance.predicted_value < 80:
-            alerts.append("attendance_drop_risk")
-            recommendations.append("Increase parent engagement for absent children.")
+            alerts.append(_localized(alert_map["attendance_drop_risk"]["ar"], alert_map["attendance_drop_risk"]["en"], lang))
+            recommendations.append(_localized(recommendation_map["attendance_drop_risk"]["ar"], recommendation_map["attendance_drop_risk"]["en"], lang))
         if incidents.predicted_value > 3:
-            alerts.append("incident_spike_risk")
-            recommendations.append("Review safety protocols and staff supervision coverage.")
+            alerts.append(_localized(alert_map["incident_spike_risk"]["ar"], alert_map["incident_spike_risk"]["en"], lang))
+            recommendations.append(_localized(recommendation_map["incident_spike_risk"]["ar"], recommendation_map["incident_spike_risk"]["en"], lang))
         if capacity.predicted_value > 90:
-            alerts.append("capacity_saturation_risk")
-            recommendations.append("Plan class expansion or rebalance enrollments.")
+            alerts.append(_localized(alert_map["capacity_saturation_risk"]["ar"], alert_map["capacity_saturation_risk"]["en"], lang))
+            recommendations.append(_localized(recommendation_map["capacity_saturation_risk"]["ar"], recommendation_map["capacity_saturation_risk"]["en"], lang))
 
         if not recommendations:
-            recommendations.append("Metrics are stable; continue monitoring weekly.")
+            recommendations.append(_localized(
+                "المقاييس مستقرة؛ استمر في المراقبة الأسبوعية",
+                "Metrics are stable; continue monitoring weekly.",
+                lang
+            ))
 
-        summary = (
+        summary = _localized(
+            f"توقع الحضور: {attendance.predicted_value:.1f}%، "
+            f"الحوادث/يوم: {incidents.predicted_value:.2f}، "
+            f"السعة: {capacity.predicted_value:.1f}%.",
             f"Attendance forecast: {attendance.predicted_value:.1f}%, "
             f"incidents/day: {incidents.predicted_value:.2f}, "
-            f"capacity: {capacity.predicted_value:.1f}%."
+            f"capacity: {capacity.predicted_value:.1f}%.",
+            lang
         )
 
         return {

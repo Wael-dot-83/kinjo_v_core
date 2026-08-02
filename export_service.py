@@ -3,7 +3,7 @@ Export and reporting service for dashboard data
 """
 import csv
 from csv_utils import escape_csv_formula
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 
 import io
 import json
@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from kpi_service import get_consolidated_kpi_dashboard_data
 from cache_service import cache_service
+from utils.time_utils import now_amman, to_jordan_date
 import models
 
 logger = logging.getLogger(__name__)
@@ -88,7 +89,6 @@ class ExportService:
 
     def _export_kpi_json(self, kpi_data: Dict[str, Any]) -> Dict[str, Any]:
         """Export KPI data as JSON"""
-        from utils.time_utils import now_amman
         jordan_now = now_amman()
         export_data = {
             "export_type": "kpi_dashboard",
@@ -239,7 +239,8 @@ class ExportService:
 
         return [
             {
-                "date": inc.occurred_at.date().isoformat(),
+                # Jordan calendar date, not the UTC one: this column is read by people.
+                "date": to_jordan_date(inc.occurred_at).isoformat(),
                 "type": inc.type.value if hasattr(inc.type, "value") else str(inc.type),
                 "severity": inc.severity_level.value if hasattr(inc.severity_level, "value") else str(inc.severity_level),
                 "description": inc.description,

@@ -339,6 +339,35 @@ def governorate_query_aliases(value: Optional[str]) -> List[str]:
     return [v]
 
 
+def governorate_filter(column, value: Optional[str]):
+    """Return a SQLAlchemy filter condition for governorate matching with alias support.
+
+    This is the canonical way to filter by governorate in all analytics/reporting code.
+    It uses ``governorate_query_aliases()`` to match any accepted form (Arabic canonical,
+    English, legacy aliases, whitespace variants, etc.).
+
+    Args:
+        column: SQLAlchemy column (e.g., models.Kindergarten.governorate)
+        value: Governorate value to filter by (any accepted form)
+
+    Returns:
+        SQLAlchemy filter condition using IN (...) with all aliases, or False if value is empty
+
+    Example:
+        query = query.filter(governorate_filter(models.Kindergarten.governorate, "Amman"))
+        # Matches rows with "amman", "عمان", "العاصمة", "عاصمة", "Amman", "AMMAN"
+    """
+    if not value:
+        # Return a condition that matches nothing (empty filter)
+        from sqlalchemy import false
+        return false()
+    aliases = governorate_query_aliases(value)
+    if not aliases:
+        from sqlalchemy import false
+        return false()
+    return column.in_(aliases)
+
+
 def normalize_area(governorate_key: str, value: Optional[str]) -> Optional[str]:
     """Normalize an area value to its canonical Arabic name within a governorate."""
     if not value:

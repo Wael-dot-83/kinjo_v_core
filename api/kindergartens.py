@@ -1,12 +1,11 @@
 """
 Kindergartens domain endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta, timezone
-from typing import List, Optional
+from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
@@ -22,6 +21,7 @@ from services.jordan_locations import (
     get_areas_for_governorate,
     get_governorate_by_key,
     get_governorate_by_name,
+    governorate_filter,
 )
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
@@ -104,7 +104,7 @@ from fastapi import APIRouter, Depends, HTTPException, status as http_status, Qu
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func, case
 from datetime import date, datetime, timedelta, timezone
-from typing import List, Optional
+from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
@@ -478,7 +478,7 @@ def list_kindergartens(
             )
         )
     if governorate:
-        query = query.filter(models.Kindergarten.governorate == governorate)
+        query = query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
     if district:
         query = query.filter(models.Kindergarten.district == district)
     if status:

@@ -237,9 +237,22 @@ class TestDiskFullChaos:
             )
 
     def test_backup_endpoint_requires_csrf(self, client, test_db):
-        """Same endpoint, auth but no CSRF pair, must be rejected at the gate."""
+        """Cookie-authenticated but no CSRF pair, must be rejected at the gate.
+
+        Bearer tokens are inherently CSRF-safe and pass through
+        (middleware/csrf.py), so the gate is exercised the way a real browser
+        session hits it: session cookie present, double-submit pair absent.
+        """
+        from config import settings
+
         _make_admin(test_db)
-        r = client.post("/api/admin/backup/create", headers=_tok(client))
+        _tok(client)  # login; jar now holds session + CSRF cookies
+        session = client.cookies.get(settings.SESSION_COOKIE_NAME)
+        assert session, "login must set the session cookie"
+        r = client.post(
+            "/api/admin/backup/create",
+            headers={"Cookie": f"{settings.SESSION_COOKIE_NAME}={session}"},
+        )
         assert r.status_code == 400, r.text
         assert "CSRF" in r.text
 

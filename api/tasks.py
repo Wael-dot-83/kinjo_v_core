@@ -4,8 +4,7 @@ Tasks domain endpoints
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta, timezone

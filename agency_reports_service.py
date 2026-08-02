@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 import models
 from agency_reports_registry import AGENCY_REPORT_REGISTRY, SENSITIVE_FIELD_DENYLIST
 from config import settings
+from services.jordan_locations import governorate_filter
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
@@ -2994,7 +2995,7 @@ class AgencyReportsService:
             return None
         q = self.db.query(models.Kindergarten.id).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
         if filters.get("governorate"):
-            q = q.filter(models.Kindergarten.governorate == filters["governorate"])
+            q = q.filter(governorate_filter(models.Kindergarten.governorate, filters["governorate"]))
         if filters.get("city"):
             q = q.filter(models.Kindergarten.district == filters["city"])
         if filters.get("kindergarten_id"):

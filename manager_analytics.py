@@ -9,7 +9,7 @@ Provides manager-scoped analytics including:
 
 from typing import Optional, List, Dict, Tuple
 from datetime import date, datetime, timedelta
-from utils.time_utils import today_amman as _today, jordan_date_range_filter, jordan_date_range_filter
+from utils.time_utils import today_amman as _today, jordan_date_range_filter, to_jordan_date
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import logging
@@ -225,7 +225,7 @@ class ManagerAnalyticsService:
         # Bucket the enrollments by period start.
         periods: Dict[date, Dict[str, int]] = {}
         for enrollment in enrollments:
-            key = _period_start(enrollment.created_at.date())
+            key = _period_start(to_jordan_date(enrollment.created_at))
             bucket = periods.setdefault(key, {"new": 0, "active": 0})
             bucket["new"] += 1
             if enrollment.status == models.EnrollmentStatus.ACTIVE:

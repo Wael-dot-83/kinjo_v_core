@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
 from typing import List, Optional
-from datetime import datetime, date, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 _JORDAN_TZ = timezone(timedelta(hours=3))
 from pydantic import BaseModel
 
@@ -32,11 +32,6 @@ class IncidentCreate(BaseModel):
     followup_required_flag: bool = False
     parent_informed: bool = True
     parent_not_informed_reason: Optional[str] = None
-
-class IncidentUpdate(BaseModel):
-    description: Optional[str] = None
-    followup_sla_deadline: Optional[datetime] = None
-    close_incident: Optional[bool] = None  # set True to close; server sets closed_at
 
 class HealthAlertCreate(BaseModel):
     alert_type: str # Allergy, Condition, Medication, etc.
@@ -430,9 +425,6 @@ def get_health_alerts_summary(
 
     alerts = alerts_query.options(joinedload(models.HealthAlert.child)).all()
     children_with_conditions = children_query.all()
-    
-    # Format the results
-    results = []
     
     # Add explicit alerts
     child_alert_map = {}

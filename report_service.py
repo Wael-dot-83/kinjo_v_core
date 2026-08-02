@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from database import get_db
 import models
+from services.jordan_locations import governorate_filter
 
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ class ReportService:
                 raise ValueError("governorate required for GOVERNORATE scope")
             # Get all kindergartens in the governorate
             kindergarten_ids = db.query(models.Kindergarten.id).filter(
-                models.Kindergarten.governorate == governorate
+                governorate_filter(models.Kindergarten.governorate, governorate)
             ).all()
             kindergarten_ids = [k.id for k in kindergarten_ids]
             filters.append(models.Incident.kindergarten_id.in_(kindergarten_ids))

@@ -12,20 +12,45 @@ import threading
 from datetime import datetime, timedelta, timezone, time
 from typing import Optional, Dict, Any, List
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
 # Resolve paths relative to this file so it works regardless of cwd
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-_BACKUP_DIR = os.path.join(_BASE_DIR, "data", "backups")
-_METADATA_FILE = os.path.join(_BACKUP_DIR, "backup_metadata.json")
+
+# BACKUP_DIR / BACKUP_RETENTION_DAYS were previously read by nothing: this module
+# imported no settings at all and hardcoded both, so an operator configuring them
+# saw no effect. They are honoured now. A relative BACKUP_DIR resolves against this
+# file's directory, which keeps the historical default ("data/backups") byte-identical
+# — configuring the settings changes behaviour, leaving them alone does not.
+# Keep a module-level override for compatibility with the existing test harness,
+# but prefer the configured settings value at runtime.
+_BACKUP_DIR: Optional[str] = None
+
+
+def _backup_dir() -> str:
+    backup_dir = _BACKUP_DIR or settings.BACKUP_DIR
+    if os.path.isabs(backup_dir):
+        return backup_dir
+    return os.path.join(_BASE_DIR, backup_dir)
+
+
+def _retention_days() -> int:
+    return int(settings.BACKUP_RETENTION_DAYS)
+
+
+def _metadata_file() -> str:
+    return os.path.join(_backup_dir(), "backup_metadata.json")
+
+
 _DB_PATH = os.path.join(_BASE_DIR, "data", "kinjo_fresh.db")
 _UPLOADS_DIR = os.path.join(_BASE_DIR, "uploads")
 _CONFIG_FILES = ["config.py", ".env", "alembic.ini"]
-_RETENTION_DAYS = 30
 
 
 def _ensure_backup_dir():
-    os.makedirs(_BACKUP_DIR, exist_ok=True)
+    os.makedirs(_backup_dir(), exist_ok=True)
 
 
 def _file_sha256(path: str) -> str:
@@ -43,12 +68,21 @@ class BackupManager:
         _ensure_backup_dir()
         self.metadata: Dict[str, Any] = self._load_metadata()
 
+    @property
+    def backup_dir(self) -> str:
+        return _backup_dir()
+
+    @property
+    def retention_days(self) -> int:
+        return _retention_days()
+
     # ---- metadata persistence ------------------------------------------------
 
     def _load_metadata(self) -> Dict[str, Any]:
-        if os.path.exists(_METADATA_FILE):
+        metadata_file = _metadata_file()
+        if os.path.exists(metadata_file):
             try:
-                with open(_METADATA_FILE, "r", encoding="utf-8") as f:
+                with open(metadata_file, "r", encoding="utf-8") as f:
                     return json.load(f)
             except (OSError, json.JSONDecodeError):
                 logger.warning("Corrupt backup metadata — starting fresh")
@@ -56,7 +90,7 @@ class BackupManager:
 
     def _save_metadata(self):
         _ensure_backup_dir()
-        with open(_METADATA_FILE, "w", encoding="utf-8") as f:
+        with open(_metadata_file(), "w", encoding="utf-8") as f:
             json.dump(self.metadata, f, indent=2, default=str)
 
     # ---- create backups ------------------------------------------------------
@@ -65,7 +99,7 @@ class BackupManager:
         _ensure_backup_dir()
         ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         name = f"db_{backup_type}_{ts}.sqlite3"
-        dest = os.path.join(_BACKUP_DIR, name)
+        dest = os.path.join(self.backup_dir, name)
 
         if not os.path.exists(_DB_PATH):
             raise FileNotFoundError(f"Database file not found: {_DB_PATH}")
@@ -88,7 +122,7 @@ class BackupManager:
         _ensure_backup_dir()
         ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         name = f"uploads_{backup_type}_{ts}"
-        dest = os.path.join(_BACKUP_DIR, name)
+        dest = os.path.join(self.backup_dir, name)
 
         if os.path.isdir(_UPLOADS_DIR):
             shutil.make_archive(dest, "zip", _UPLOADS_DIR)
@@ -97,6 +131,7 @@ class BackupManager:
             # No uploads directory — create empty placeholder
             archive = dest + ".zip"
             import zipfile
+
             with zipfile.ZipFile(archive, "w") as zf:
                 zf.writestr("__empty__", "")
 
@@ -117,9 +152,10 @@ class BackupManager:
         _ensure_backup_dir()
         ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         name = f"config_{backup_type}_{ts}.zip"
-        dest = os.path.join(_BACKUP_DIR, name)
+        dest = os.path.join(self.backup_dir, name)
 
         import zipfile
+
         with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as zf:
             for cfg in _CONFIG_FILES:
                 full = os.path.join(_BASE_DIR, cfg)
@@ -185,7 +221,8 @@ class BackupManager:
 
     # ---- cleanup -------------------------------------------------------------
 
-    def cleanup_old_backups(self, retention_days: int = _RETENTION_DAYS):
+    def cleanup_old_backups(self, retention_days: int | None = None):
+        retention_days = self.retention_days if retention_days is None else retention_days
         cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
         to_delete = []
         for name, info in list(self.metadata.items()):
@@ -220,7 +257,7 @@ class BackupScheduler:
     def __init__(self, backup_time: time = time(2, 0)):  # 2:00 AM UTC by default
         """
         Initialize backup scheduler.
-        
+
         Args:
             backup_time: time of day to run automated backups (default 2:00 AM)
         """

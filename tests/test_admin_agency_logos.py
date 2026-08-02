@@ -31,8 +31,9 @@ def test_kinjo_logo_component_renders():
     for size in ("navbar", "sidebar", "login"):
         html = str(kinjo_logo(size=size))
         assert f"kinjo-logo--{size}" in html
-        assert 'alt="شعار KinJo"' in html
-        assert "/static/img/kinjo-logo.png" in html
+        assert 'alt=""' in html
+        assert "/static/img/kinjo-logo-mark-320.png" in html
+
 
 
 def test_agency_logo_assets_exist():

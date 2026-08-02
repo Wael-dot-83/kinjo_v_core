@@ -19,6 +19,7 @@ from translations import setup_translator
 from child_age_policy import get_child_age_bounds
 from cache_service import dashboard_cache
 from config import settings
+from services.jordan_locations import governorate_filter
 from kpi_standards import (
     STANDARDS,
     HARD_OVERRIDE_RULES,
@@ -1771,12 +1772,21 @@ class KPIService:
         if total_followup_required == 0:
             return 0.0  # no incidents to follow up; caller checks quality.has_data
 
-        # Count incidents closed within SLA
+        # Count incidents closed within SLA.
+        #
+        # The deadline comparison is load-bearing: without it this counted every
+        # *closed* incident as on-time, so an incident closed after its deadline
+        # scored 100% here while compute_kpi_bundle() scored it 0% — two paths in
+        # this same module disagreeing on one metric. Predicate mirrors the bundle
+        # at :2419-2425 exactly, including the NULL-deadline behaviour (a NULL
+        # followup_sla_deadline makes the comparison NULL, so the row is excluded
+        # from the numerator in both places).
         closed_within_sla = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
             *jordan_date_range_filter(models.Incident.occurred_at, period_start, period_end),
             models.Incident.followup_required_flag == True,
             models.Incident.closed_at.isnot(None),
+            models.Incident.closed_at <= models.Incident.followup_sla_deadline,
         ).scalar() or 0
 
         rate = (closed_within_sla / total_followup_required) * 100
@@ -4243,7 +4253,9 @@ def get_consolidated_kpi_dashboard_data(
         return att_points, inc_points, enroll_points, gov_points
 
     # Build student distribution by birth year (calendar year)
-    # Age constraints: 70 days (MIN_CHILD_AGE_DAYS) to 4 years 8 months (MAX_CHILD_AGE_MONTHS)
+    # Age constraints: 1 day (MIN_CHILD_AGE_DAYS) to 4 years 8 months (MAX_CHILD_AGE_MONTHS).
+    # The authoritative values come from get_child_age_bounds() below, not from this
+    # comment — which previously said "70 days" and had drifted from config.py:198.
     today_date = _today_jordan()
     bounds = get_child_age_bounds(today_date)
 
@@ -5441,7 +5453,7 @@ def get_kpi_network_summary(
         models.Kindergarten.status == models.KindergartenStatus.ACTIVE
     )
     if governorate:
-        kg_query = kg_query.filter(models.Kindergarten.governorate == governorate)
+        kg_query = kg_query.filter(governorate_filter(models.Kindergarten.governorate, governorate))
     kindergartens = kg_query.all()
 
     per_kg = []

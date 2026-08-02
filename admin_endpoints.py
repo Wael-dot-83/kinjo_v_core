@@ -16,7 +16,6 @@ This module provides secure admin endpoints with:
 import csv
 import io
 import os
-import secrets
 import enum
 import logging
 import math
@@ -28,7 +27,8 @@ from typing import List, Optional, Dict, Any, Set, Tuple, Union
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, UploadFile, File, Form
-from fastapi.responses import Response, JSONResponse, StreamingResponse
+from services.jordan_locations import governorate_filter
+from fastapi.responses import Response, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from admin_reports_api import AdminAlertResponse, AdminAlertsListResponse
 
@@ -39,6 +39,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import models
 import validators
 from database import get_db
+from utils.time_utils import jordan_day_bounds, jordan_date_range_filter, now_amman, to_jordan_date, to_jordan_iso
 from export_service import export_service
 from dependencies import get_current_user
 from rate_limiter import limiter
@@ -2115,7 +2116,7 @@ def safety_analytics(
     if governorate:
         q = q.join(
             models.Kindergarten, models.Kindergarten.id == models.Incident.kindergarten_id
-        ).filter(models.Kindergarten.governorate == governorate)
+        ).filter(governorate_filter(models.Kindergarten.governorate, governorate))
 
     if incident_type:
         try:
@@ -2184,7 +2185,11 @@ def safety_analytics(
         else:
             parent_not_informed_count += 1
 
-        month_key = inc.occurred_at.strftime("%Y-%m-01")
+        # Jordan month, not UTC: an incident at 22:00 Jordan on the 31st is 19:00Z
+        # the same day, but one at 23:30 Jordan on the 1st is 20:30Z on the 1st —
+        # while 00:30 Jordan on the 1st is 21:30Z on the *previous* month's last day.
+        # Bucketing on the raw UTC value silently moves month-boundary incidents.
+        month_key = to_jordan_date(inc.occurred_at).strftime("%Y-%m-01")
         by_month[month_key] = by_month.get(month_key, 0) + 1
 
         kg_incident_ids.setdefault(inc.kindergarten_id, []).append(inc.id)
@@ -3368,7 +3373,7 @@ def list_kindergarten_options(
     if governorate:
         try:
             gov_normalized = validators.validate_jordan_governorate(governorate)
-            query = query.filter(models.Kindergarten.governorate == gov_normalized)
+            query = query.filter(governorate_filter(models.Kindergarten.governorate, gov_normalized))
         except validators.ValidationError:
             pass  # Ignore invalid governorate in filter
 
@@ -3804,6 +3809,17 @@ def _severity_for(action: str, sensitivity_level: Optional[int]) -> str:
     return {1: "low", 2: "medium", 3: "high"}.get(sensitivity_level or 2, "medium")
 
 
+def _to_jordan_iso(value) -> str:
+    """Render a stored timestamp as an ISO string in Jordan time.
+
+    Thin wrapper over ``utils.time_utils.to_jordan_iso`` that returns "" rather than
+    None, because ``ActivityItem.timestamp`` is a non-optional str. The conversion
+    itself lives in the shared helper so there is one implementation, not one per
+    call site (N16).
+    """
+    return to_jordan_iso(value) or ""
+
+
 def _activity_item_from_log(log: "models.AuditLog", actor_username: Optional[str] = None) -> Optional["ActivityItem"]:
     """Build a bilingual, enriched ActivityItem from a raw AuditLog row.
     USER_UPDATED is special-cased: a role change in old_data/new_data is
@@ -3826,7 +3842,11 @@ def _activity_item_from_log(log: "models.AuditLog", actor_username: Optional[str
         type=act_type,
         message_ar=msg_ar,
         message_en=msg_en,
-        timestamp=log.created_at.isoformat(),
+        # Rendered in Jordan time, not UTC. The activity feed is Jordan-facing and the
+        # UI derives a calendar date from this string; a UTC timestamp puts anything
+        # after 21:00 Jordan on the previous day. Storage is UTC (db_types.UTCDateTime)
+        # — only the presentation is localised.
+        timestamp=_to_jordan_iso(log.created_at),
         user_name=actor_username,
         user_role=(log.actor_role or None),
         module_ar=module_ar,
@@ -4419,7 +4439,7 @@ def get_admin_dashboard_activity(
         if governorate:
             scoped_users = scoped_users.join(
                 models.Kindergarten, models.Kindergarten.id == models.User.kindergarten_id
-            ).filter(models.Kindergarten.governorate == governorate)
+            ).filter(governorate_filter(models.Kindergarten.governorate, governorate))
         query = query.filter(models.AuditLog.user_id.in_([r[0] for r in scoped_users.all()]))
 
     if search:
@@ -4764,7 +4784,6 @@ def get_kg_overview(
         kids = children_by_kg.get(kg.id, 0)
         att_rate = round(attendance_rate_by_kg.get(kg.id, 0.0), 1)
         cap = capacity_by_kg.get(kg.id, {"total_capacity": 0, "total_enrolled": 0})
-        occ_rate = round((cap["total_enrolled"] / cap["total_capacity"] * 100.0), 1) if cap["total_capacity"] > 0 else 0.0
         teachers = teachers_by_kg.get(kg.id, 0)
         open_alerts = len(alerts_by_kg.get(kg.id, []))
 
@@ -4853,7 +4872,6 @@ def get_kg_overview(
     # Aggregates (based on filtered kg_cards when governorate/risk_level is set)
     total_children = sum(c.children_count for c in kg_cards)
     kg_card_ids = [c.id for c in kg_cards]
-    total_enrolled = sum(children_by_kg.get(kid, 0) for kid in kg_card_ids)
     # Network attendance is sum(attended)/sum(expected) over the filtered set, not the
     # mean of the per-kindergarten percentages: averaging rates would weight a 3-child
     # kindergarten the same as a 300-child one. It divided window-wide PRESENT rows by
@@ -6256,7 +6274,7 @@ def get_admin_alerts(
             kg_id_strings = [
                 str(row.id)
                 for row in db.query(models.Kindergarten.id).filter(
-                    models.Kindergarten.governorate == gov_normalized
+                    governorate_filter(models.Kindergarten.governorate, gov_normalized)
                 ).all()
             ]
             query = query.filter(

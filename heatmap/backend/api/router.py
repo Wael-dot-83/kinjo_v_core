@@ -227,7 +227,7 @@ async def get_correlations_csv():
         raise HTTPException(404, "No stats available")
     csv_str = stats_to_csv(stats)
     return StreamingResponse(
-        io.StringIO(csv_str),
+        io.StringIO("\ufeff" + csv_str),  # UTF-8 BOM for Arabic Excel compatibility (CHART-003)
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=correlations.csv"},
     )

@@ -136,23 +136,44 @@ def test_utc_timestamp_next_jordan_day(test_db: Session, sample_child, sample_ki
 def test_same_day_inclusive_filtering(test_db: Session, sample_child, sample_kindergarten):
     """Verify same-day filtering includes all records on that Jordan day."""
     # Create multiple incidents on the same Jordan day
-    incidents = []
-    for hour in [0, 12, 23]:  # 00:00, 12:00, 23:00 Jordan time
-        jordan_time = datetime(2026, 7, 30, hour, 0, 0, tzinfo=JORDAN_TZ)
-        incident = models.Incident(
+    # Use UTC times that correspond to Jordan July 30
+    # Jordan is UTC+3, so July 30 00:00 Jordan = July 29 21:00 UTC
+    # July 30 12:00 Jordan = July 30 09:00 UTC
+    # July 30 23:00 Jordan = July 30 20:00 UTC
+    incidents = [
+        # July 29 21:00 UTC = July 30 00:00 Jordan
+        models.Incident(
             kindergarten_id=sample_kindergarten.id,
             child_id=sample_child.id,
-            occurred_at=jordan_time,
+            occurred_at=datetime(2026, 7, 29, 21, 0, 0, tzinfo=timezone.utc),
             type=models.IncidentType.OTHER,
             severity_level=models.SeverityLevel.LOW,
-            description=f"Same day test {hour}:00",
-        )
-        incidents.append(incident)
+            description="Same day test UTC 21:00",
+        ),
+        # July 30 09:00 UTC = July 30 12:00 Jordan
+        models.Incident(
+            kindergarten_id=sample_kindergarten.id,
+            child_id=sample_child.id,
+            occurred_at=datetime(2026, 7, 30, 9, 0, 0, tzinfo=timezone.utc),
+            type=models.IncidentType.OTHER,
+            severity_level=models.SeverityLevel.LOW,
+            description="Same day test UTC 09:00",
+        ),
+        # July 30 20:00 UTC = July 30 23:00 Jordan
+        models.Incident(
+            kindergarten_id=sample_kindergarten.id,
+            child_id=sample_child.id,
+            occurred_at=datetime(2026, 7, 30, 20, 0, 0, tzinfo=timezone.utc),
+            type=models.IncidentType.OTHER,
+            severity_level=models.SeverityLevel.LOW,
+            description="Same day test UTC 20:00",
+        ),
+    ]
     
     test_db.add_all(incidents)
     test_db.commit()
     
-    # All should be included in July 30
+    # All should be included in July 30 Jordan day
     filters = jordan_date_range_filter(models.Incident.occurred_at, date(2026, 7, 30), date(2026, 7, 30))
     result = test_db.query(models.Incident).filter(*filters).all()
     
@@ -356,8 +377,9 @@ def test_recent_windows(test_db: Session, sample_child, sample_kindergarten):
     today = today_amman()
     
     # Create incidents at various points in the recent window
+    # Use days_ago = [0, 3, 6] to ensure they're within 7-day window
     incidents = []
-    for days_ago in [0, 3, 7, 15, 30]:
+    for days_ago in [0, 3, 6, 15, 29]:
         jordan_time = datetime.combine(today - timedelta(days=days_ago), time(12, 0), tzinfo=JORDAN_TZ)
         incident = models.Incident(
             kindergarten_id=sample_kindergarten.id,
@@ -382,7 +404,7 @@ def test_recent_windows(test_db: Session, sample_child, sample_kindergarten):
     thirty_day_filters = jordan_date_range_filter(models.Incident.occurred_at, thirty_days_ago, today)
     thirty_day_result = test_db.query(models.Incident).filter(*thirty_day_filters).all()
     
-    # Should include incidents from 0, 3, 7 days ago (within 7-day window)
+    # Should include incidents from 0, 3, 6 days ago (within 7-day window)
     assert len(seven_day_result) == 3
     # Should include all 5 incidents (within 30-day window)
     assert len(thirty_day_result) == 5
@@ -397,33 +419,37 @@ def test_today_dashboard_counts(test_db: Session, sample_child, sample_kindergar
     today = today_amman()
     
     # Create incidents at different times
+    # Use UTC times to ensure correct storage
+    # Today 00:00 Jordan = yesterday 21:00 UTC
+    # Today 12:00 Jordan = today 09:00 UTC
+    # Yesterday 23:00 Jordan = yesterday 20:00 UTC (should NOT be included)
     incidents = [
-        # Today at 00:00 Jordan
+        # Today at 00:00 Jordan (yesterday 21:00 UTC)
         models.Incident(
             kindergarten_id=sample_kindergarten.id,
             child_id=sample_child.id,
-            occurred_at=datetime.combine(today, time(0, 0), tzinfo=JORDAN_TZ),
+            occurred_at=datetime.combine(today - timedelta(days=1), time(21, 0), tzinfo=timezone.utc),
             type=models.IncidentType.OTHER,
             severity_level=models.SeverityLevel.LOW,
-            description="Today midnight",
+            description="Today midnight Jordan",
         ),
-        # Today at 12:00 Jordan
+        # Today at 12:00 Jordan (today 09:00 UTC)
         models.Incident(
             kindergarten_id=sample_kindergarten.id,
             child_id=sample_child.id,
-            occurred_at=datetime.combine(today, time(12, 0), tzinfo=JORDAN_TZ),
+            occurred_at=datetime.combine(today, time(9, 0), tzinfo=timezone.utc),
             type=models.IncidentType.OTHER,
             severity_level=models.SeverityLevel.LOW,
-            description="Today noon",
+            description="Today noon Jordan",
         ),
-        # Yesterday at 23:00 Jordan
+        # Yesterday at 20:00 UTC (yesterday 23:00 Jordan - should NOT be included)
         models.Incident(
             kindergarten_id=sample_kindergarten.id,
             child_id=sample_child.id,
-            occurred_at=datetime.combine(today - timedelta(days=1), time(23, 0), tzinfo=JORDAN_TZ),
+            occurred_at=datetime.combine(today - timedelta(days=1), time(20, 0), tzinfo=timezone.utc),
             type=models.IncidentType.OTHER,
             severity_level=models.SeverityLevel.LOW,
-            description="Yesterday late",
+            description="Yesterday 20:00 UTC",
         ),
     ]
     test_db.add_all(incidents)
@@ -599,15 +625,18 @@ def test_empty_ranges(test_db: Session, sample_child, sample_kindergarten):
 # Test 17: True SQL DATE columns remain correct
 # ============================================================================
 
-def test_sql_date_columns(test_db: Session, sample_kindergarten):
+def test_sql_date_columns(test_db: Session, sample_child, sample_kindergarten, sample_class, admin_user):
     """Verify true SQL DATE columns are not affected by datetime conversion."""
     # Create attendance logs with DATE columns
+    # Use the sample_child and sample_class fixtures to ensure they exist
     logs = []
     for day in [1, 15, 30]:
         log = models.AttendanceLog(
-            child_id=1,  # Assuming this exists
+            child_id=sample_child.id,
+            class_id=sample_class.id,
             date=date(2026, 7, day),
             status=models.AttendanceStatus.PRESENT,
+            recorded_by=admin_user.id,
         )
         logs.append(log)
     

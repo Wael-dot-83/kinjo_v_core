@@ -286,7 +286,11 @@ class Settings(BaseSettings):
     DUPLICATE_MESSAGE_CHECK_MINUTES: int = 5
 
     # Backup Configuration
-    BACKUP_DIR: str = "backups"
+    # Relative paths resolve against the repository root (see backup_manager.py).
+    # The default is "data/backups" because that is what backup_manager.py has always
+    # used; the previous default of "backups" was never read by anything, so changing
+    # it to match reality is not a behaviour change.
+    BACKUP_DIR: str = "data/backups"
     BACKUP_RETENTION_DAYS: int = 30
     BACKUP_SCHEDULE_HOUR: int = 2  # 2 AM
     BACKUP_CLEANUP_HOUR: int = 3   # 3 AM
@@ -305,9 +309,6 @@ class Settings(BaseSettings):
     # restricted by HTTP referrer in Google Cloud Console. Override via the
     # GOOGLE_MAPS_API_KEY env var per environment when needed.
     GOOGLE_MAPS_API_KEY: str = "AIzaSyDC0R-BS4uB4uWNHTpjlGO8hL3Py41bAR8"
-
-    # Cesium ion access token (kept for reference — map now uses Google Maps)
-    CESIUM_ION_TOKEN: str = ""
 
     # AI/ML (ai/ package: ml.py, llm.py, insights.py, embeddings.py) — local Ollama
     OLLAMA_URL: str = "http://localhost:11434"

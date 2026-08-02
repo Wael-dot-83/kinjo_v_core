@@ -7,7 +7,7 @@ from i18n import gettext as _i18n_gettext
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from datetime import date, timedelta, datetime, timezone
-from utils.time_utils import today_amman as _today
+from utils.time_utils import today_amman as _today, to_jordan_date
 import typing
 from typing import Optional
 
@@ -690,8 +690,10 @@ async def view_enrollment(request: Request, app_id: int, db: Session = Depends(g
         "status": status_val.lower(),
         "status_ar": STATUS_AR.get(status_val, status_val),
         "status_color": STATUS_COLOR.get(status_val, "secondary"),
-        "created_at": enrollment.created_at.strftime("%Y-%m-%d") if enrollment.created_at else "—",
-        "submitted_at": enrollment.submitted_at.strftime("%Y-%m-%d") if enrollment.submitted_at else None,
+        # Jordan dates: these are rendered directly into the page, so the server
+        # decides the calendar day and the browser never gets to localise.
+        "created_at": to_jordan_date(enrollment.created_at).strftime("%Y-%m-%d") if enrollment.created_at else "—",
+        "submitted_at": to_jordan_date(enrollment.submitted_at).strftime("%Y-%m-%d") if enrollment.submitted_at else None,
         "dob": child.date_of_birth.isoformat() if child and child.date_of_birth else "—",
         "gender_ar": ("ذكر" if child and child.gender and child.gender.value == "MALE" else "أنثى") if child else "—",
         "national_id": child.mother_national_id if child else "—",

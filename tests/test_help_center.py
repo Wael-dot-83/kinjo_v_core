@@ -97,6 +97,14 @@ def test_legacy_kindergarten_term_absent_from_ui_sources():
             continue
         if path.suffix.lower() not in {".py", ".html", ".js", ".json", ".css"}:
             continue
+        if not path.exists():
+            # Tracked by git but absent from the working tree: a deletion that has
+            # not been staged yet. Unlike the undecodable case below, there is no
+            # content to vouch for — the file is not in the tree being scanned — so
+            # skipping is correct rather than vacuous. Without this, any in-progress
+            # deletion reds this test with a message about UTF-8, which reads as an
+            # Arabic-terminology regression and is not one.
+            continue
         try:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:

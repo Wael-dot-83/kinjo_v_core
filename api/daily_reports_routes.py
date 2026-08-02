@@ -2,8 +2,7 @@
 Daily Reports domain endpoints
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -11,7 +10,7 @@ from datetime import date, datetime, timedelta, timezone
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 import re
-from typing import List, Optional
+from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models

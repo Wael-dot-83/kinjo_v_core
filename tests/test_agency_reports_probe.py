@@ -1080,7 +1080,7 @@ class TestInstitutionsLicenseChart:
         assert payload.get("chart")
         assert payload.get("license_chart")
         assert payload["license_chart"]["type"] == "pie"
-        assert any(s["label"] == "مرخصة (سارية)" for s in payload["license_chart"]["series"])
+        assert any(s["label"] == "نشطة ومرخّصة" for s in payload["license_chart"]["series"])
 
 
 class TestChildSafetyChartPresent:

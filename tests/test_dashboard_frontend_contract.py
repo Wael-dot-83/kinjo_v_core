@@ -229,9 +229,10 @@ def test_auto_refresh_toggle_present_and_wired():
     source = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
     assert "isAutoRefreshEnabled()" in source
     assert 'localStorage.getItem("autoRefreshEnabled")' in source
-    assert 'localStorage.setItem("autoRefreshEnabled"' in source
+    assert 'localStorage.setItem(\n        "autoRefreshEnabled"' in source or 'localStorage.setItem("autoRefreshEnabled"' in source
     # Must not unconditionally auto-start regardless of saved preference
     assert "if (this.isAutoRefreshEnabled()) this.startAutoRefresh();" in source
+
 
 
 def test_failed_login_is_not_relabeled_as_successful_authentication():

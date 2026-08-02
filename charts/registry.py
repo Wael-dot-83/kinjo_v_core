@@ -61,7 +61,15 @@ METRIC_REGISTRY: Dict[str, MetricDefinition] = {
         business_meaning="Total kindergartens, their capacity and enrollments.",
         unit="count",
         higher_is_better=True,
-        supported_levels=["national", "governorate", "city", "kindergarten"],
+        # No "city" rung: for this source the drill path is
+        # national -> governorate -> kindergarten, and city is a filter rather than
+        # a level. Commit 2fc57c6 ("Correct kindergartens drill levels and
+        # next-level hints") removed it deliberately and added kindergarten_id to
+        # the scoped datasets so the next hop is deterministic; cfe0965 reintroduced
+        # it two days later and silently broke
+        # test_render_kindergartens_governorate_scope_includes_kindergarten_id.
+        # Restored — do not add "city" back without updating that test.
+        supported_levels=["national", "governorate", "kindergarten"],
         supported_chart_types=["bar", "scatter"],
     ),
 }

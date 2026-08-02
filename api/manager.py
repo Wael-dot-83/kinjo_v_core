@@ -11,6 +11,7 @@ _JORDAN_TZ = timezone(timedelta(hours=3))
 import models
 from database import get_db
 from dependencies import require_manager
+from utils.time_utils import jordan_day_bounds
 
 router = APIRouter(tags=["Manager"])
 
