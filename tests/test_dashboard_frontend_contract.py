@@ -32,6 +32,11 @@ def test_dashboard_summary_uses_csrf_aware_fetch_when_available():
     assert 'fetch("/api/dashboard/summary"' not in source
 
 
+def test_admin_dashboard_allows_slow_but_valid_responses():
+    source = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
+    assert "const timeoutId = setTimeout(() => controller.abort(), 30000);" in source
+
+
 def test_decision_support_charts_have_fallback_paths():
     source = DECISION_SUPPORT_JS.read_text(encoding="utf-8")
     for helper in (
@@ -43,7 +48,7 @@ def test_decision_support_charts_have_fallback_paths():
         assert helper in source
 
     assert re.search(r"catch\s*\(err\)\s*\{[^}]*renderDecisionSupportFallback\(\)", source, re.S)
-    assert source.count("showCanvasFallback(chartEl, dsText(\"ds.no_data\"));") >= 4
+    assert source.count('showCanvasFallback(chartEl, dsText("ds.no_data"));') >= 4
 
 
 def test_analytics_filter_bar_sticks_to_scrollport_top():
@@ -88,9 +93,7 @@ def test_risk_intelligence_cards_use_real_backend_field_names():
     assert "item.kindergarten_name" in admin_analytics
     assert "item.risk_value" in admin_analytics
     # The stale shape must not reappear in updateRiskRadar's validation filter
-    stale_filter_pattern = re.search(
-        r"function updateRiskRadar.*?(?=\nfunction )", admin_analytics, re.S
-    )
+    stale_filter_pattern = re.search(r"function updateRiskRadar.*?(?=\nfunction )", admin_analytics, re.S)
     assert stale_filter_pattern is not None
     stale_body = stale_filter_pattern.group(0)
     assert "item.risk_score" not in stale_body
@@ -229,10 +232,12 @@ def test_auto_refresh_toggle_present_and_wired():
     source = ADMIN_DASHBOARD_JS.read_text(encoding="utf-8")
     assert "isAutoRefreshEnabled()" in source
     assert 'localStorage.getItem("autoRefreshEnabled")' in source
-    assert 'localStorage.setItem(\n        "autoRefreshEnabled"' in source or 'localStorage.setItem("autoRefreshEnabled"' in source
+    assert (
+        'localStorage.setItem(\n        "autoRefreshEnabled"' in source
+        or 'localStorage.setItem("autoRefreshEnabled"' in source
+    )
     # Must not unconditionally auto-start regardless of saved preference
     assert "if (this.isAutoRefreshEnabled()) this.startAutoRefresh();" in source
-
 
 
 def test_failed_login_is_not_relabeled_as_successful_authentication():
@@ -296,11 +301,11 @@ def test_admin_dashboard_has_scoped_uswds_redesign_shell_without_losing_hooks():
     template = ADMIN_DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
 
     assert "/static/vendor/uswds/css/uswds.min.css" in template
-    assert 'admin-uswds-dashboard usa-section' in template
-    assert 'agency-reports-dashboard-section usa-summary-box' in template
-    assert 'admin-page-header usa-prose' in template
-    assert 'admin-dashboard-cards usa-card-group' in template
-    assert 'admin-quick-actions usa-card-group' in template
+    assert "admin-uswds-dashboard usa-section" in template
+    assert "agency-reports-dashboard-section usa-summary-box" in template
+    assert "admin-page-header usa-prose" in template
+    assert "admin-dashboard-cards usa-card-group" in template
+    assert "admin-quick-actions usa-card-group" in template
     for hook in (
         'id="admin-dashboard"',
         'id="dashboard-loading"',
@@ -327,9 +332,15 @@ def test_system_alerts_css_classes_match_what_the_js_actually_renders():
     naively-renamed mapping had an admin-alert-error rule or icon at all."""
     css = ADMIN_DESIGN_SYSTEM_CSS.read_text(encoding="utf-8")
     for cls in (
-        ".admin-alert-item", ".admin-alert-critical", ".admin-alert-error",
-        ".admin-alert-warning", ".admin-alert-info", ".admin-alert-success",
-        ".admin-alert-icon", ".admin-alert-content", ".admin-alert-message",
+        ".admin-alert-item",
+        ".admin-alert-critical",
+        ".admin-alert-error",
+        ".admin-alert-warning",
+        ".admin-alert-info",
+        ".admin-alert-success",
+        ".admin-alert-icon",
+        ".admin-alert-content",
+        ".admin-alert-message",
         ".admin-alert-time",
     ):
         assert cls in css, f"missing CSS rule for {cls}"

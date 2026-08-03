@@ -1,6 +1,5 @@
-{% extends "admin_base.html" %} {% block title %}
-{% if ui_lang == 'en' %}KinJo Admin — Dashboard{% else %}إدارة KinJo — لوحة التحكم{% endif %}
-{% endblock %}
+{% extends "admin_base.html" %} {% block title %} {% if ui_lang == 'en' %}KinJo
+Admin — Dashboard{% else %}إدارة KinJo — لوحة التحكم{% endif %} {% endblock %}
 {% block extra_head %} {{ super() }}
 <link rel="stylesheet" href="/static/vendor/uswds/css/uswds.min.css" />
 <link rel="stylesheet" href="/static/css/agency_reports.css?v=3.2" />
@@ -575,7 +574,8 @@
                    card-group rule); each <li> is display:contents so the
                    grid layout still applies directly to the <a> as before. -->
               <ul class="admin-quick-actions usa-card-group" role="list">
-                <li><a href="/admin/users" class="admin-quick-action-card">
+                <li>
+                  <a href="/admin/users" class="admin-quick-action-card">
                     <span
                       class="admin-quick-action-card-icon admin-quick-action-card-icon--primary"
                     >
@@ -591,9 +591,11 @@
                         %}إضافة أو تعديل الحسابات{% endif %}
                       </span>
                     </div>
-                  </a></li>
+                  </a>
+                </li>
 
-                <li><a
+                <li>
+                  <a
                     href="/admin/messages/compose"
                     class="admin-quick-action-card"
                   >
@@ -612,9 +614,11 @@
                         else %}رسائل جماعية أو مباشرة{% endif %}
                       </span>
                     </div>
-                  </a></li>
+                  </a>
+                </li>
 
-                <li><a href="/admin/analytics" class="admin-quick-action-card">
+                <li>
+                  <a href="/admin/analytics" class="admin-quick-action-card">
                     <span
                       class="admin-quick-action-card-icon admin-quick-action-card-icon--info"
                     >
@@ -630,9 +634,11 @@
                         %}تقارير نظام مفصلة{% endif %}
                       </span>
                     </div>
-                  </a></li>
+                  </a>
+                </li>
 
-                <li><a
+                <li>
+                  <a
                     href="/admin/imported-kindergartens"
                     class="admin-quick-action-card"
                   >
@@ -651,7 +657,8 @@
                         %}مراجعة السجلات المستوردة{% endif %}
                       </span>
                     </div>
-                  </a></li>
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
@@ -668,7 +675,7 @@
   window.KINJO_LANG = "{{ ui_lang }}";
 </script>
 <script src="/static/js/chart_utils.js?v=2.1"></script>
-<script src="/static/js/admin_dashboard.js?v=3.1"></script>
+<script src="/static/js/admin_dashboard.js?v=3.2"></script>
 <script src="/static/js/admin_activity_filters.js?v=1.0"></script>
 <script src="/static/js/admin_agency_reports_dashboard_summary.js?v=1.0"></script>
 {% endblock %}
