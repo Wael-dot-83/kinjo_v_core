@@ -694,7 +694,7 @@ class AnalyticsGapService:
             .filter(
                 models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
                 models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-                *jordan_date_range_filter(models.EnrollmentApplication.created_at, this_month_start, date.today())
+                *jordan_date_range_filter(models.EnrollmentApplication.created_at, this_month_start, today)
             )
             .scalar()
         ) or 0

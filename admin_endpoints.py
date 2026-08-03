@@ -22,7 +22,7 @@ import math
 from zipfile import BadZipFile
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone, date
-from typing import List, Optional, Dict, Any, Set, Tuple, Union
+from typing import Iterable, List, Optional, Dict, Any, Set, Tuple, Union
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 
@@ -1176,6 +1176,34 @@ def get_user_mfa_status(
 # Bulk Operations (Hardened with Guardrails)
 # =============================================================================
 
+def _managers_orphaning_active_kindergartens(
+    db: Session, users: Iterable[models.User]
+) -> List[int]:
+    """Ids of active managers whose removal would leave an active kindergarten unmanaged.
+
+    Both bulk paths (status change and delete) need this check. They each used to
+    walk the batch issuing one Kindergarten lookup per manager; this resolves the
+    whole batch in a single query instead.
+    """
+    candidates = [
+        u for u in users
+        if u.role == models.UserRole.MANAGER
+        and u.status == models.UserStatus.ACTIVE
+        and u.kindergarten_id is not None
+    ]
+    if not candidates:
+        return []
+
+    active_kg_ids = {
+        row[0] for row in
+        db.query(models.Kindergarten.id).filter(
+            models.Kindergarten.id.in_({u.kindergarten_id for u in candidates}),
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+        ).all()
+    }
+    return [u.id for u in candidates if u.kindergarten_id in active_kg_ids]
+
+
 @router.post("/users/bulk-status-update")
 @limiter.limit(settings.RATE_LIMIT_BULK_UPDATE)
 def bulk_update_status(
@@ -1304,18 +1332,7 @@ def bulk_update_status(
                 u.id: u for u in
                 db.query(models.User).filter(models.User.id.in_(access_result["allowed"])).all()
             }
-        orphaned = []
-        for user in target_users.values():
-            if (
-                user.role == models.UserRole.MANAGER
-                and user.status == models.UserStatus.ACTIVE
-                and user.kindergarten_id is not None
-            ):
-                kg = db.query(models.Kindergarten).filter(
-                    models.Kindergarten.id == user.kindergarten_id
-                ).first()
-                if kg and kg.status == models.KindergartenStatus.ACTIVE:
-                    orphaned.append(user.id)
+        orphaned = _managers_orphaning_active_kindergartens(db, target_users.values())
         if orphaned:
             return JSONResponse(
                 status_code=status.HTTP_409_CONFLICT,
@@ -1448,18 +1465,7 @@ def bulk_delete_users(
         u.id: u for u in
         db.query(models.User).filter(models.User.id.in_(access_result["allowed"])).all()
     }
-    orphaned = []
-    for user in target_users.values():
-        if (
-            user.role == models.UserRole.MANAGER
-            and user.status == models.UserStatus.ACTIVE
-            and user.kindergarten_id is not None
-        ):
-            kg = db.query(models.Kindergarten).filter(
-                models.Kindergarten.id == user.kindergarten_id
-            ).first()
-            if kg and kg.status == models.KindergartenStatus.ACTIVE:
-                orphaned.append(user.id)
+    orphaned = _managers_orphaning_active_kindergartens(db, target_users.values())
     if orphaned:
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,

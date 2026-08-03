@@ -11,9 +11,12 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from fastapi.responses import JSONResponse, StreamingResponse
 import io
+
+from config import settings
+from dependencies import require_admin
 
 from .models import (
     DailyPayloadIn, IndicatorResponse, CorrelationRow,
@@ -26,10 +29,22 @@ from ..alerts.engine import get_alerts, acknowledge_alert, evaluate_alerts
 from ..etl.pipeline import run_pipeline
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["heatmap"])
+
+# Every route here is admin-only. This router was previously mounted with no guard
+# at all, which left its ETL and analytics endpoints — including the state-changing
+# ingest and pipeline triggers — open to anonymous callers.
+router = APIRouter(tags=["heatmap"], dependencies=[Depends(require_admin)])
 
 DATA_DIR   = Path(__file__).parent.parent.parent / "data"
 STATIC_DIR = Path("static/heatmap")
+
+# The pipeline may only read sources the server itself designates. A caller-supplied
+# path let an anonymous request point pandas at any file on the host and read it back
+# through the validation errors, so the wire format is now an opaque key.
+PIPELINE_SOURCES: dict[str, Path] = {
+    "daily": DATA_DIR / "daily_indicators.csv",
+    "sample": DATA_DIR / "test_data.csv",
+}
 
 # ---------------------------------------------------------------------------
 # Shared in-memory cache (refresh on ingest)
@@ -38,8 +53,25 @@ _computed_cache: pd.DataFrame = pd.DataFrame()
 _stats_cache:    pd.DataFrame = pd.DataFrame()
 
 
-def _load_test_data() -> pd.DataFrame:
-    csv = DATA_DIR / "test_data.csv"
+def _load_seed_data() -> pd.DataFrame:
+    """Load the server's designated indicator source.
+
+    Prefers the real daily export and falls back to the bundled sample only
+    outside production. This router used to load test_data.csv unconditionally,
+    so a production deployment answered every read with fixture data and no
+    indication that it was doing so.
+    """
+    csv = PIPELINE_SOURCES["daily"]
+    if not csv.exists():
+        if settings.ENVIRONMENT.lower() == "production":
+            logger.error(
+                "Heat map indicator source %s is missing; serving no data rather "
+                "than falling back to the bundled sample in production.", csv
+            )
+            return pd.DataFrame()
+        csv = PIPELINE_SOURCES["sample"]
+        logger.warning("Heat map falling back to bundled sample data: %s", csv)
+
     if csv.exists():
         df = pd.read_csv(csv)
         return impute_missing(df)
@@ -49,7 +81,7 @@ def _load_test_data() -> pd.DataFrame:
 def _get_computed() -> pd.DataFrame:
     global _computed_cache
     if _computed_cache.empty:
-        raw = _load_test_data()
+        raw = _load_seed_data()
         if not raw.empty:
             _computed_cache = compute_dataframe(raw)
     return _computed_cache
@@ -197,9 +229,24 @@ async def ingest_indicators(
 
 
 @router.post("/pipeline/run", response_model=PipelineResult)
-async def trigger_pipeline(csv_path: str = Query(str(DATA_DIR / "test_data.csv"))):
-    """Manually trigger the full ETL pipeline (for testing/admin use)."""
+async def trigger_pipeline(
+    source: str = Query(
+        "daily",
+        description=f"Server-side source key. One of: {', '.join(sorted(PIPELINE_SOURCES))}",
+    ),
+):
+    """Manually trigger the full ETL pipeline over a server-designated source."""
     global _computed_cache, _stats_cache
+
+    csv_path = PIPELINE_SOURCES.get(source)
+    if csv_path is None:
+        raise HTTPException(
+            400,
+            f"Unknown source {source!r}. Expected one of: {', '.join(sorted(PIPELINE_SOURCES))}",
+        )
+    if not csv_path.exists():
+        raise HTTPException(404, f"Source {source!r} is not available on this server")
+
     result = run_pipeline(csv_path, source_type="csv")
     _computed_cache = pd.DataFrame()  # force reload
     _stats_cache    = pd.DataFrame()

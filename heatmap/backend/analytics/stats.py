@@ -8,11 +8,14 @@ Outputs: r / ρ / τ, p_value, beta_std, se, t_stat, r_squared per
 """
 from __future__ import annotations
 import io
+import logging
 import pandas as pd
 
 from .pearson import compute_correlation_matrix
 from .spearman import compute_spearman_matrix
 from .ols import run_all_regressions
+
+logger = logging.getLogger(__name__)
 
 
 def compute_full_stats(df: pd.DataFrame, indicator_map: dict[str, list[str]]) -> pd.DataFrame:
@@ -140,6 +143,17 @@ def rolling_health_alert_hotspot(
 
     Returns list of {admin_id, date, current_avg, baseline_avg, pct_change}.
     """
+    # The computed frame only carries the sub-indicators named in INDICATOR_MAP,
+    # which deliberately excludes absences_health_alerts ("no defensible source").
+    # Callers may therefore hand us a frame without it; that is a data-coverage
+    # gap, not a server fault, so report no hotspots instead of raising KeyError.
+    if "absences_health_alerts" not in df.columns:
+        logger.warning(
+            "rolling_health_alert_hotspot: no absences_health_alerts column in input; "
+            "returning no hotspots"
+        )
+        return []
+
     df = df.sort_values(["admin_id", "date"]).copy()
     df["date"] = pd.to_datetime(df["date"])
     hotspots = []

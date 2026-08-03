@@ -28,11 +28,16 @@ class IndicatorResponse(BaseModel):
     date: str
     admin_id: str
     kindergarten_status: float
-    children_enrollment: float
+    # Nullable by design. compute_row() emits None for any composite it cannot
+    # derive from a defensible source — children_enrollment has no population
+    # denominator, and tasks_governance is absent when no governance score was
+    # filed. Declaring these as required floats made /indicators fail response
+    # validation on every row rather than reporting the gap honestly.
+    children_enrollment: Optional[float] = None
     staff_classrooms: float
     safety_incidents: float
     reports_attendance: float
-    tasks_governance: float
+    tasks_governance: Optional[float] = None
 
 
 class CorrelationRow(BaseModel):

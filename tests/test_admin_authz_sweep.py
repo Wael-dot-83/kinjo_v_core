@@ -116,10 +116,28 @@ def _fill(path: str) -> str:
     return "/" + "/".join(out)
 
 
+# Every JSON prefix that is admin-only. Scoping this sweep to `/api/admin` alone is
+# what let the heat map ETL router ship unauthenticated: it lives at /api/heatmap, so
+# no assertion here ever drove it, and `POST /api/heatmap/pipeline/run` accepted an
+# anonymous caller-supplied file path. A prefix belongs here when *every* route under
+# it is admin-only; role-scoped surfaces (/api/manager, /api/supervisor, /api/parent)
+# legitimately admit non-admins and are asserted by their own tests.
+ADMIN_JSON_PREFIXES = (
+    "/api/admin",
+    "/api/heatmap",
+    "/admin/charts",
+)
+
+# HTML page routes bounce an anonymous operator to the login screen instead of
+# answering 401, which is the correct behaviour for a browser navigation. They are
+# registered with include_in_schema=False, so that flag separates the JSON surface
+# this sweep asserts from the page surface it must not.
 def _admin_pairs():
     seen = []
     for path, route in _walk(app):
-        if not path.startswith("/api/admin"):
+        if not path.startswith(ADMIN_JSON_PREFIXES):
+            continue
+        if not route.include_in_schema:
             continue
         for method in sorted(route.methods or []):
             if method in ("HEAD", "OPTIONS"):
@@ -136,6 +154,15 @@ def test_sweep_actually_found_the_admin_surface():
     assert len(ADMIN_PAIRS) > 100, (
         f"only {len(ADMIN_PAIRS)} admin (method,path) pairs discovered — the "
         "_IncludedRouter walk is broken, so this sweep would silently verify nothing"
+    )
+
+
+@pytest.mark.parametrize("prefix", ADMIN_JSON_PREFIXES)
+def test_every_admin_prefix_is_covered(prefix):
+    """Each declared prefix must contribute routes, or its entry is silently dead."""
+    assert any(p.startswith(prefix) for _, p in ADMIN_PAIRS), (
+        f"no routes discovered under {prefix} — the prefix was renamed or unmounted, "
+        "so this sweep is no longer guarding it"
     )
 
 

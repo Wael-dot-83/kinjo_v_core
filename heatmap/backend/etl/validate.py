@@ -8,9 +8,38 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def summarize_validation_error(exc: Exception) -> str:
+    """Describe why a row failed without quoting any of its content.
+
+    `str(exc)` on a pydantic ValidationError embeds `input_value=...`, i.e. the
+    submitted row verbatim. When the source is a file the server read on the
+    caller's behalf, echoing that back turns validation output into a file-read
+    primitive, so only the field location and error type ever leave this module.
+    """
+    if isinstance(exc, ValidationError):
+        parts = []
+        for err in exc.errors():
+            loc = ".".join(str(p) for p in err.get("loc", ())) or "<row>"
+            parts.append(f"{loc}: {err.get('type', 'invalid')}")
+        return "; ".join(parts) if parts else "validation failed"
+    # Non-pydantic failures (e.g. a malformed row shape) may also carry data in
+    # their message, so report the exception class alone.
+    return type(exc).__name__
+
+
+def _safe_admin_id(value: Any) -> str | None:
+    """Echo the row's admin_id only when it is one of the known Jordan codes.
+
+    Identifying which row failed is useful, but the field is only safe to reflect
+    when its value came from the fixed vocabulary rather than from arbitrary
+    file content.
+    """
+    return value if value in VALID_ADMIN_IDS else None
 
 VALID_ADMIN_IDS = {
     "JO-AM", "JO-IR", "JO-ZA", "JO-BA", "JO-MD",
@@ -104,7 +133,11 @@ def validate_dataframe(df: pd.DataFrame) -> tuple[pd.DataFrame, list[dict[str, A
             payload = DailyPayload(**data)
             valid_rows.append(payload.model_dump())
         except Exception as exc:
-            errors.append({"row_index": idx, "admin_id": data.get("admin_id"), "error": str(exc)})
+            errors.append({
+                "row_index": idx,
+                "admin_id": _safe_admin_id(data.get("admin_id")),
+                "error": summarize_validation_error(exc),
+            })
 
     clean_df = pd.DataFrame(valid_rows) if valid_rows else pd.DataFrame()
     return clean_df, errors
@@ -118,5 +151,9 @@ def validate_records(records: list[dict]) -> tuple[list[dict], list[dict]]:
             payload = DailyPayload(**rec)
             valid.append(payload.model_dump())
         except Exception as exc:
-            errors.append({"index": i, "admin_id": rec.get("admin_id"), "error": str(exc)})
+            errors.append({
+                "index": i,
+                "admin_id": _safe_admin_id(rec.get("admin_id")),
+                "error": summarize_validation_error(exc),
+            })
     return valid, errors

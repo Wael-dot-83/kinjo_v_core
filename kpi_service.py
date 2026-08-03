@@ -2894,6 +2894,27 @@ def backfill_governance_kpis(
                 )
             )
             created += 1
+
+    # Bulk-rewrites governance scores for an arbitrary period, so it is a
+    # state-changing admin action and must leave an audit trail.
+    from admin_security import log_audit_event
+    from audit_actions import AuditAction
+
+    log_audit_event(
+        db=db,
+        action=AuditAction.KPI_GOVERNANCE_BACKFILL,
+        actor=current_user,
+        target_type="GovernanceScore",
+        target_ids=target_kg_ids,
+        metadata={
+            "period_start": period_start.isoformat(),
+            "period_end": period_end.isoformat(),
+            "kindergartens_processed": len(target_kg_ids),
+            "created_rows": created,
+            "updated_rows": updated,
+        },
+        sensitivity_level=2,
+    )
     db.commit()
 
     return {
