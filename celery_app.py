@@ -6,6 +6,7 @@ Tasks run eagerly in-process when TESTING=True so no Redis is required in CI.
 import logging
 
 from celery import Celery
+from celery.schedules import crontab
 from celery.signals import task_prerun, task_postrun, task_failure, task_revoked
 
 from config import settings
@@ -16,7 +17,10 @@ celery_app = Celery(
     "kinjo",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["messaging_tasks", "charts.tasks", "backup_tasks", "import_tasks", "export_tasks"],
+    include=[
+        "messaging_tasks", "charts.tasks", "backup_tasks", "import_tasks", "export_tasks",
+        "heatmap_tasks",
+    ],
 )
 
 celery_app.conf.update(
@@ -31,6 +35,15 @@ celery_app.conf.update(
         "dispatch-scheduled-messages": {
             "task": "messaging_tasks.dispatch_scheduled_messages",
             "schedule": 60.0,
+        },
+        # Heat map dataset rebuild. Beat runs on UTC (see timezone/enable_utc above),
+        # so this is expressed in UTC: 17:00 UTC == 20:00 Jordan (UTC+3). That is
+        # after the Jordan business day, so the day's attendance and reports are
+        # already recorded when the snapshot is taken — running at Jordan midnight
+        # would stamp a date whose activity had barely begun.
+        "regenerate-heatmap-dataset": {
+            "task": "heatmap_tasks.regenerate_daily_indicators",
+            "schedule": crontab(hour=17, minute=0),
         },
     },
 )

@@ -5,7 +5,7 @@ Enforces schema, ranges, and date format per spec.
 from __future__ import annotations
 import re
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
@@ -57,23 +57,41 @@ VALID_ADMIN_IDS = {
 
 
 class DailyPayload(BaseModel):
+    """One (date, admin_id) observation.
+
+    Five measures are nullable, and the distinction matters: `None` means "not
+    measurable", which this codebase deliberately never renders as `0` (see
+    tests/test_heatmap_unavailable_data.py — "unavailable != 0 — no fabricated
+    measurement is written"). Requiring them made an honest dataset impossible to
+    express: a producer with no defensible source had to invent a zero or have the
+    row rejected outright.
+
+    Three have no source anywhere in the KinJo domain model:
+      * unregistered_children  — no population denominator exists
+      * absences_health_alerts — AttendanceStatus has no health/sickness value
+      * protection_issues      — IncidentType has no child-protection category
+    Two are derivable but genuinely undefined when nothing has been recorded:
+      * governance_score       — no score filed for the period
+      * training_completion_pct— no mandatory module assigned
+    """
+
     date: str
     admin_id: str
     kindergartens_active: int = Field(ge=0)
     kindergartens_inactive: int = Field(ge=0)
     enrolled_children: int = Field(ge=0)
-    unregistered_children: int = Field(ge=0)
+    unregistered_children: Optional[int] = Field(default=None, ge=0)
     supervisors_count: int = Field(ge=0)
     classes_count: int = Field(ge=0)
     classes_without_supervisor: int = Field(ge=0)
     critical_incidents: int = Field(ge=0)
-    protection_issues: int = Field(ge=0)
+    protection_issues: Optional[int] = Field(default=None, ge=0)
     daily_reports_count: int = Field(ge=0)
     absences_total: int = Field(ge=0)
-    absences_health_alerts: int = Field(ge=0)
+    absences_health_alerts: Optional[int] = Field(default=None, ge=0)
     tasks_overdue: int = Field(ge=0)
-    governance_score: float = Field(ge=0.0, le=100.0)
-    training_completion_pct: float = Field(ge=0.0, le=100.0)
+    governance_score: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    training_completion_pct: Optional[float] = Field(default=None, ge=0.0, le=100.0)
 
     @field_validator("date")
     @classmethod
@@ -97,7 +115,12 @@ class DailyPayload(BaseModel):
     def cross_field_checks(self) -> "DailyPayload":
         if self.classes_without_supervisor > self.classes_count:
             raise ValueError("classes_without_supervisor cannot exceed classes_count")
-        if self.absences_health_alerts > self.absences_total:
+        # Only comparable when the health-alert figure was actually measured; an
+        # unavailable value has no ordering relationship with the total.
+        if (
+            self.absences_health_alerts is not None
+            and self.absences_health_alerts > self.absences_total
+        ):
             raise ValueError("absences_health_alerts cannot exceed absences_total")
         total_kg = self.kindergartens_active + self.kindergartens_inactive
         if total_kg > 0 and self.supervisors_count > total_kg * 10:
@@ -115,6 +138,14 @@ def validate_dataframe(df: pd.DataFrame) -> tuple[pd.DataFrame, list[dict[str, A
 
     for idx, row in df.iterrows():
         data = row.to_dict()
+
+        # An empty CSV cell arrives as NaN. NaN is pandas' "missing"; None is this
+        # schema's "not measurable". Translating here is what lets a producer leave a
+        # genuinely unmeasurable column blank instead of inventing a zero for it.
+        for col, value in list(data.items()):
+            if value is not None and not isinstance(value, str) and pd.isna(value):
+                data[col] = None
+
         # cast integer-like floats that pandas may infer
         int_cols = [
             "kindergartens_active","kindergartens_inactive","enrolled_children",

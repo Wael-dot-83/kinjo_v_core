@@ -325,3 +325,60 @@ WHERE tablename = 'users';
 ### Apply performance indexes (if not yet applied)
 Performance indexes are included in the regular migration chain — running
 `alembic upgrade head` (see §1/§2) applies them. No separate step needed.
+
+---
+
+## Heat map indicator dataset
+
+`/api/heatmap/*` serves a generated CSV at `heatmap/data/daily_indicators.csv`, built from KinJo
+database tables. Production **never** falls back to the bundled `test_data.csv` fixture — if the
+dataset is missing, the endpoints return empty results rather than sample data. That is deliberate.
+
+### Scheduled rebuild
+
+Celery beat entry `regenerate-heatmap-dataset` runs `heatmap_tasks.regenerate_daily_indicators`
+daily at **17:00 UTC = 20:00 Jordan** — after the business day, so the day's attendance and reports
+are recorded. Requires a running Celery **worker and beat**:
+
+```bash
+celery -A celery_app worker -l info
+celery -A celery_app beat   -l info
+```
+
+### Check freshness
+
+```bash
+curl -H "Authorization: Bearer $ADMIN_TOKEN" https://<host>/api/heatmap/dataset/status
+```
+
+Returns `available`, `stale`, `snapshot_date`, `generated_at`, `rows`, `age_days`, any
+`unresolved_governorates`, and the columns that are unavailable by design. A dataset older than
+**2 days** reports `stale: true`.
+
+### Force a rebuild
+
+```bash
+curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://<host>/api/heatmap/dataset/refresh
+```
+
+Admin-only, audited as `HEATMAP_DATASET_REGENERATED`. Takes no parameters — the destination is
+derived server-side and cannot be supplied by the caller. Returns `409` if a generation is already
+running.
+
+### Operational notes
+
+- **After a redeploy the dataset is gone.** `heatmap/data/` is not a mounted volume, so a container
+  rebuild drops the file. Run the refresh above (or wait for the schedule) after deploying.
+- **Multi-worker staleness.** Each API worker parses the CSV once and caches it for the life of the
+  process. The refresh endpoint invalidates only the worker that served the request, and the
+  scheduled Celery task runs in a different process entirely, so it cannot invalidate any API
+  worker. **After a scheduled rebuild, restart the API workers** to guarantee every worker serves
+  the new data. (Tracked as HM-3.)
+- **Empty columns are intentional.** `unregistered_children`, `absences_health_alerts` and
+  `protection_issues` have no defensible source in KinJo and are emitted blank, never `0`.
+  `governance_score` and `training_completion_pct` are blank when nothing has been filed.
+- **Failed rebuilds keep the previous dataset.** Validation or write failure leaves the existing
+  file untouched; the failure is returned to the admin and logged.
+- **`GEOJSON_OUTPUT_DIR`** (default `static/heatmap`) is where `POST /api/heatmap/pipeline/run`
+  writes its output. Point it outside the repo in development to avoid leaving artifacts in the
+  working tree.

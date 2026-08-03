@@ -11,12 +11,17 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Request
 from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy.orm import Session
 import io
 
+import models
+from admin_security import log_audit_event
+from audit_actions import AuditAction
 from config import settings
-from dependencies import require_admin
+from database import get_db
+from dependencies import get_current_user, require_admin
 
 from .models import (
     DailyPayloadIn, IndicatorResponse, CorrelationRow,
@@ -27,6 +32,12 @@ from ..etl.compute import compute_dataframe, impute_missing, INDICATOR_MAP
 from ..analytics.stats import compute_full_stats, stats_to_csv, rolling_health_alert_hotspot
 from ..alerts.engine import get_alerts, acknowledge_alert, evaluate_alerts
 from ..etl.pipeline import run_pipeline
+from ..etl.generate import (
+    DAILY_DATASET,
+    UNAVAILABLE_COLUMNS,
+    dataset_status,
+    generate_daily_indicators,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +52,11 @@ STATIC_DIR = Path("static/heatmap")
 # The pipeline may only read sources the server itself designates. A caller-supplied
 # path let an anonymous request point pandas at any file on the host and read it back
 # through the validation errors, so the wire format is now an opaque key.
+# "daily" is the generated production dataset (heatmap.backend.etl.generate owns the
+# path, so there is one definition of where it lives). "sample" is the bundled fixture,
+# which _load_seed_data() refuses to fall back to in production.
 PIPELINE_SOURCES: dict[str, Path] = {
-    "daily": DATA_DIR / "daily_indicators.csv",
+    "daily": DAILY_DATASET,
     "sample": DATA_DIR / "test_data.csv",
 }
 
@@ -251,6 +265,83 @@ async def trigger_pipeline(
     _computed_cache = pd.DataFrame()  # force reload
     _stats_cache    = pd.DataFrame()
     return result
+
+
+# ---------------------------------------------------------------------------
+# Production dataset supply
+# ---------------------------------------------------------------------------
+
+def invalidate_dataset_cache() -> None:
+    """Drop the in-process frames so the next read picks up a new file.
+
+    The CSV is read once per worker and cached for the life of the process, so a
+    regenerated file is invisible to a running server until this is called. Every
+    generation path must go through here or freshness reporting means nothing.
+    """
+    global _computed_cache, _stats_cache
+    _computed_cache = pd.DataFrame()
+    _stats_cache = pd.DataFrame()
+
+
+@router.get("/dataset/status", summary="Freshness of the generated indicator dataset")
+async def get_dataset_status():
+    """Report whether a dataset is installed, how old it is, and what it cannot measure.
+
+    Answers 200 in every case, including when no dataset exists — an absent dataset
+    is an operational state the caller must be able to read, not a server fault.
+    """
+    status = dataset_status()
+    status["columns_unavailable_by_design"] = {
+        column: reason for column, reason in UNAVAILABLE_COLUMNS.items()
+    }
+    status["cached_rows_in_process"] = int(len(_computed_cache))
+    return status
+
+
+@router.post("/dataset/refresh", summary="Regenerate the indicator dataset from the database")
+async def refresh_dataset(
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Rebuild the dataset from authoritative KinJo tables.
+
+    Admin-only via the router-level guard, and subject to the project's established
+    CSRF contract (middleware/csrf.py, the single enforcement point): a cookie-borne
+    browser request must present the double-submit pair, while a bearer-authenticated
+    call is exempt because a browser cannot attach an Authorization header to a forged
+    cross-origin request.
+
+    Takes no path or source argument of any kind: the destination is derived
+    server-side, so this cannot be steered at the filesystem.
+    """
+    result = generate_daily_indicators(db)
+
+    log_audit_event(
+        db=db,
+        action=AuditAction.HEATMAP_DATASET_REGENERATED,
+        actor=current_user,
+        target_type="HeatmapDataset",
+        metadata={
+            "status": result.status,
+            "snapshot_date": result.snapshot_date,
+            "rows_written": result.rows_written,
+            "rows_rejected": result.rows_rejected,
+            "governorates_covered": result.governorates_covered,
+            "unresolved_governorates": result.unresolved_governorates[:20],
+            "trigger": "manual_admin",
+        },
+        sensitivity_level=2,
+    )
+    db.commit()
+
+    if result.status == "success":
+        invalidate_dataset_cache()
+    elif result.status == "skipped_locked":
+        # Another generation holds the lock; the caller's intent is already in flight.
+        raise HTTPException(409, "A dataset generation is already running")
+
+    return result.as_dict()
 
 
 # ---------------------------------------------------------------------------
