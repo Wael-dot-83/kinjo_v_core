@@ -1,5 +1,4 @@
-{% extends "admin_base.html" %} {% block title %} {% if ui_lang == 'en' %}KinJo
-Admin — Dashboard{% else %}إدارة KinJo — لوحة التحكم{% endif %} {% endblock %}
+{% extends "admin_base.html" %} {% block title %} {% if ui_lang == 'en' %}KinJo Admin{% else %}إدارة KinJo{% endif %} — {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %} {% endblock %}
 {% block extra_head %} {{ super() }}
 <link rel="stylesheet" href="/static/vendor/uswds/css/uswds.min.css" />
 <link rel="stylesheet" href="/static/css/agency_reports.css?v=3.2" />
@@ -574,8 +573,7 @@ Admin — Dashboard{% else %}إدارة KinJo — لوحة التحكم{% endif 
                    card-group rule); each <li> is display:contents so the
                    grid layout still applies directly to the <a> as before. -->
               <ul class="admin-quick-actions usa-card-group" role="list">
-                <li>
-                  <a href="/admin/users" class="admin-quick-action-card">
+                <li><a href="/admin/users" class="admin-quick-action-card">
                     <span
                       class="admin-quick-action-card-icon admin-quick-action-card-icon--primary"
                     >
@@ -594,8 +592,7 @@ Admin — Dashboard{% else %}إدارة KinJo — لوحة التحكم{% endif 
                   </a>
                 </li>
 
-                <li>
-                  <a
+                <li><a
                     href="/admin/messages/compose"
                     class="admin-quick-action-card"
                   >
@@ -617,8 +614,7 @@ Admin — Dashboard{% else %}إدارة KinJo — لوحة التحكم{% endif 
                   </a>
                 </li>
 
-                <li>
-                  <a href="/admin/analytics" class="admin-quick-action-card">
+                <li><a href="/admin/analytics" class="admin-quick-action-card">
                     <span
                       class="admin-quick-action-card-icon admin-quick-action-card-icon--info"
                     >
@@ -637,8 +633,7 @@ Admin — Dashboard{% else %}إدارة KinJo — لوحة التحكم{% endif 
                   </a>
                 </li>
 
-                <li>
-                  <a
+                <li><a
                     href="/admin/imported-kindergartens"
                     class="admin-quick-action-card"
                   >
