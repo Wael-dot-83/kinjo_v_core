@@ -22,13 +22,14 @@ Design constraints, each traced in
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import tempfile
 import threading
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -48,6 +49,14 @@ logger = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 DAILY_DATASET = DATA_DIR / "daily_indicators.csv"
 DATASET_METADATA = DATA_DIR / "daily_indicators.meta.json"
+
+# Bump when the manifest's shape changes in a way readers must notice.
+MANIFEST_SCHEMA_VERSION = 1
+
+# Redis key carrying the active dataset version. An accelerator only — see
+# _publish_version() for why correctness must not depend on it.
+DATASET_VERSION_CACHE_KEY = "heatmap:dataset:version"
+VERSION_KEY_TTL_SECONDS = 24 * 60 * 60
 
 # Column order is the file's public contract; keep it stable.
 CSV_COLUMNS: List[str] = [
@@ -484,8 +493,39 @@ def _write_atomic(df: pd.DataFrame, destination: Path) -> None:
         raise
 
 
+def content_version(path: Path) -> str:
+    """Short SHA-256 of the file's bytes — the dataset's identity.
+
+    Deliberately *not* mtime. Filesystem timestamp resolution varies by platform and
+    container, and a scheduled rebuild colliding with a manual refresh inside the same
+    second is entirely realistic; either would make two different datasets look
+    identical. Hashing the content cannot collide that way.
+    """
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _write_metadata(result: GenerationResult, destination: Path) -> None:
+    """Write the manifest atomically, *after* the dataset it describes is installed.
+
+    Ordering matters: a manifest version must never name a dataset that failed
+    validation, because workers treat the manifest as the authoritative statement of
+    what they should be serving.
+    """
+    full_hash = content_version(destination)
     payload = {
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "version": full_hash[:16],
+        "content_sha256": full_hash,
+        "status": result.status,
+        # UTC for machine ordering; snapshot_date stays the Jordan business date.
+        "generated_at_utc": (
+            datetime.fromisoformat(result.generated_at).astimezone(timezone.utc).isoformat()
+            if result.generated_at else None
+        ),
         "generated_at": result.generated_at,
         "snapshot_date": result.snapshot_date,
         "rows": result.rows_written,
@@ -499,6 +539,23 @@ def _write_metadata(result: GenerationResult, destination: Path) -> None:
     tmp = DATASET_METADATA.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     os.replace(tmp, DATASET_METADATA)
+    _publish_version(payload["version"])
+
+
+def _publish_version(version: str) -> None:
+    """Best-effort announcement of the active version to Redis.
+
+    Purely an accelerator: it lets a worker skip a stat() when nothing has changed.
+    Correctness never depends on it, because cache_service degrades to a *per-process*
+    in-memory dict when Redis is down — which would silently reintroduce the very
+    staleness this work removes. So a failure here is logged and ignored.
+    """
+    try:
+        from cache_service import cache_service
+
+        cache_service.set(DATASET_VERSION_CACHE_KEY, version, ttl_seconds=VERSION_KEY_TTL_SECONDS)
+    except Exception as exc:  # noqa: BLE001 - never let cache trouble fail a generation
+        logger.warning("Could not publish heat map dataset version to cache: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -605,8 +662,11 @@ def dataset_status(destination: Optional[Path] = None) -> Dict[str, Any]:
         return {
             "available": False,
             "stale": False,
+            "version": None,
+            "schema_version": MANIFEST_SCHEMA_VERSION,
             "snapshot_date": None,
             "generated_at": None,
+            "generated_at_utc": None,
             "rows": 0,
             "age_days": None,
             "message": "No generated dataset is installed.",
@@ -631,8 +691,15 @@ def dataset_status(destination: Optional[Path] = None) -> Dict[str, Any]:
     return {
         "available": True,
         "stale": stale,
+        # The active version every worker should converge on. Content-derived, so two
+        # regenerations in the same second still produce distinct identities.
+        "version": meta.get("version"),
+        "schema_version": meta.get("schema_version", MANIFEST_SCHEMA_VERSION),
+        "generation_status": meta.get("status"),
+        "source": meta.get("source"),
         "snapshot_date": snapshot_raw,
         "generated_at": meta.get("generated_at"),
+        "generated_at_utc": meta.get("generated_at_utc"),
         "rows": meta.get("rows", 0),
         "age_days": age_days,
         "unavailable_columns": meta.get("unavailable_columns", sorted(UNAVAILABLE_COLUMNS)),

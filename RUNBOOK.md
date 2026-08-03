@@ -382,3 +382,42 @@ running.
 - **`GEOJSON_OUTPUT_DIR`** (default `static/heatmap`) is where `POST /api/heatmap/pipeline/run`
   writes its output. Point it outside the repo in development to avoid leaving artifacts in the
   working tree.
+
+### Multi-worker cache convergence (HM-3)
+
+Each API worker parses the dataset once and holds it in memory. Workers no longer need a restart to
+pick up a rebuild: they compare the manifest's **content-hash version** and reload when it moves.
+
+**Convergence is eventual, not instant** — bounded by a 5-second revalidation interval. After a
+rebuild, expect every worker to be serving the new version within a few seconds.
+
+Confirm convergence by comparing `version` (active) against `worker.loaded_version` (this process):
+
+```bash
+# Repeat a few times; a load balancer will spread these across workers.
+for i in $(seq 1 10); do
+  curl -s -H "Authorization: Bearer $ADMIN_TOKEN" https://<host>/api/heatmap/dataset/status \
+    | jq -c '{active: .version, worker: .worker.loaded_version, ok: .worker.up_to_date}'
+done
+```
+
+Every line should report `ok: true` with matching versions. A worker stuck on an older version past
+the convergence window is a defect — check its logs for `Heat map dataset reload failed`.
+
+**Redis is optional here.** `heatmap:dataset:version` (TTL 24 h) lets a worker skip a manifest read,
+but the manifest on disk is authoritative. With Redis down, convergence still works — this was the
+condition under which it was verified. Redis being unavailable must never cause a 500, stale data
+that never converges, or a lost dataset.
+
+**A failed rebuild never blanks a worker.** If a reload fails (corrupt or unreadable file), the
+worker keeps serving its last good snapshot and records the reason in
+`worker.last_reload_error` on the status endpoint.
+
+**Restarting API workers is no longer required after a scheduled rebuild.** The earlier guidance to
+restart after the nightly Celery run is superseded by this section.
+
+**Verification status.** Multi-worker convergence was verified locally with `uvicorn --workers 2`
+(both worker processes independently reloaded from version A to version B without restart, with
+Redis unavailable). **It has not been verified behind the production proxy, nor with Redis
+available.** Treat the first deploy as a staging gate: after a rebuild, poll the status endpoint as
+above and confirm every worker reports `up_to_date: true` within the convergence window.
