@@ -421,3 +421,8 @@ restart after the nightly Celery run is superseded by this section.
 Redis unavailable). **It has not been verified behind the production proxy, nor with Redis
 available.** Treat the first deploy as a staging gate: after a rebuild, poll the status endpoint as
 above and confirm every worker reports `up_to_date: true` within the convergence window.
+
+**Test-run note.** `GEOJSON_OUTPUT_DIR` defaults to `static/heatmap`, which is inside the repository.
+A full test-suite run can leave generated artifacts there (`indicators.csv` modified, dated
+`jordan_heatmap_*.geojson` / `stats_*.csv` created). Point `GEOJSON_OUTPUT_DIR` outside the working
+tree when running the suite locally to avoid committing them by accident.
