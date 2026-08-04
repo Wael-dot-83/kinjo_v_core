@@ -17,8 +17,31 @@ from sqlalchemy import and_
 
 from config import settings
 
-MIN_CHILD_AGE_DAYS = settings.MIN_CHILD_AGE_DAYS
-MAX_CHILD_AGE_MONTHS = settings.MAX_CHILD_AGE_MONTHS
+
+def _min_child_age_days() -> int:
+    """Minimum child age in days, read from ``settings`` at call time.
+
+    Read live rather than snapshotted at import, so a change to
+    ``settings.MIN_CHILD_AGE_DAYS`` (a test override or a runtime reconfiguration)
+    takes effect on the next evaluation — no module reload required.
+    """
+    return settings.MIN_CHILD_AGE_DAYS
+
+
+def _max_child_age_months() -> int:
+    """Maximum child age in months, read from ``settings`` at call time."""
+    return settings.MAX_CHILD_AGE_MONTHS
+
+
+def __getattr__(name: str):
+    # Back-compat: this module historically exposed MIN_CHILD_AGE_DAYS /
+    # MAX_CHILD_AGE_MONTHS as module attributes. Serve them live so any external
+    # reader sees the current settings value, never a stale import-time snapshot.
+    if name == "MIN_CHILD_AGE_DAYS":
+        return settings.MIN_CHILD_AGE_DAYS
+    if name == "MAX_CHILD_AGE_MONTHS":
+        return settings.MAX_CHILD_AGE_MONTHS
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 @dataclass(frozen=True)
@@ -45,8 +68,8 @@ def _subtract_months(base: date, months: int) -> date:
 def get_child_age_bounds(today: Optional[date] = None) -> ChildAgeBounds:
     """Return inclusive DOB bounds for the child age policy."""
     today = today or _today()
-    max_date = today - timedelta(days=MIN_CHILD_AGE_DAYS)
-    min_date = _subtract_months(today, MAX_CHILD_AGE_MONTHS)
+    max_date = today - timedelta(days=_min_child_age_days())
+    min_date = _subtract_months(today, _max_child_age_months())
     return ChildAgeBounds(min_date=min_date, max_date=max_date)
 
 

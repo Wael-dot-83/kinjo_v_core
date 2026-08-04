@@ -73,6 +73,11 @@
     <!-- Odometer (self-hosted v0.4.8) -->
     <link rel="stylesheet" href="/static/vendor/odometer/odometer-theme-default.css" />
 
+    <!-- Print stylesheet (media="print" — inert on screen). Wires the completed
+         static/css/print.css so manager report/list pages print without the
+         interactive shell while preserving the kindergarten context strip. -->
+    <link rel="stylesheet" href="/static/css/print.css" media="print" />
+
     <script src="/static/js/sanitize.js"></script>
     <script src="/static/js/page_load_timer.js"></script>
 

@@ -91,8 +91,8 @@ The `models.py` Kindergarten model is missing some fields requested in the featu
 - `license_status`
 - `license_valid_until`
 - `administrative_notes`
-- `working_hours_start`
-- `working_hours_end`
+- ~~`working_hours_start`~~ — **present, not missing**: stored on the Kindergarten model as `operating_hours_start` (`String(5)`) and exposed by the kindergartens API/form under the alias `working_hours_start` (`api/kindergartens.py`). The DB column name is `operating_hours_start`; `working_hours_start` is the intentional API/form field name.
+- ~~`working_hours_end`~~ — **present, not missing**: stored as `operating_hours_end` (`String(5)`), exposed by the API/form as `working_hours_end`.
 - `working_days`
 - `age_group`
 - `registration_fees`
