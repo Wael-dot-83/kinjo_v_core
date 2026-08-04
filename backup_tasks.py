@@ -78,3 +78,21 @@ def run_backup(
     except Exception as exc:
         logger.exception("Backup task failed (attempt %d): %s", self.request.retries + 1, exc)
         raise self.retry(exc=exc)
+
+
+@celery_app.task(name="backup_tasks.cleanup_old_backups", bind=True, max_retries=2, default_retry_delay=60)
+def cleanup_old_backups(self, retention_days: Optional[int] = None) -> dict:
+    """Async Celery task: prune automated backups past the retention window.
+
+    ``retention_days=None`` defers to ``settings.BACKUP_RETENTION_DAYS``. Manual
+    backups are never auto-deleted (see BackupManager.cleanup_old_backups).
+    """
+    from backup_manager import backup_manager
+    try:
+        before = len(backup_manager.list_backups())
+        backup_manager.cleanup_old_backups(retention_days)
+        after = len(backup_manager.list_backups())
+        return {"removed": before - after, "remaining": after}
+    except Exception as exc:
+        logger.exception("Backup cleanup task failed (attempt %d): %s", self.request.retries + 1, exc)
+        raise self.retry(exc=exc)

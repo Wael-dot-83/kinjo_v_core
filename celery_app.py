@@ -45,6 +45,22 @@ celery_app.conf.update(
             "task": "heatmap_tasks.regenerate_daily_indicators",
             "schedule": crontab(hour=17, minute=0),
         },
+        # Daily automated backup + retention cleanup. Beat runs on UTC (see
+        # timezone/enable_utc above), so BACKUP_SCHEDULE_HOUR / BACKUP_CLEANUP_HOUR
+        # are interpreted as UTC hours-of-day — matching BackupScheduler's own
+        # "2:00 AM UTC" convention (backup_manager.py). Scheduled runs are tagged
+        # "automated" so the retention sweep can prune them; manual backups are
+        # never auto-deleted. Cleanup runs an hour after the backup so the day's
+        # fresh snapshot already exists before old ones are pruned.
+        "run-daily-backup": {
+            "task": "backup_tasks.run_backup",
+            "schedule": crontab(hour=settings.BACKUP_SCHEDULE_HOUR, minute=0),
+            "kwargs": {"backup_type": "automated"},
+        },
+        "cleanup-old-backups": {
+            "task": "backup_tasks.cleanup_old_backups",
+            "schedule": crontab(hour=settings.BACKUP_CLEANUP_HOUR, minute=0),
+        },
     },
 )
 
