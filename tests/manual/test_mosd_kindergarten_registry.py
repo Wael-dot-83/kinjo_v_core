@@ -10,8 +10,12 @@ from agency_reports_service import AgencyReportsService
 from agency_reports_export import to_csv
 
 
+from database import SessionLocal, engine
+
+
 @pytest.fixture
 def db():
+    models.Base.metadata.create_all(bind=engine)
     session = SessionLocal()
     try:
         yield session

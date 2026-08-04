@@ -512,8 +512,10 @@ _FIELD_LABELS: dict[str, str] = {
     "data_completeness_rate": "نسبة اكتمال البيانات %",
     "highest_governorate": "أعلى محافظة",
     "total_evaluated": "إجمالي السجلات المشمولة",
-    "last_eligible_birth_date": "آخر تاريخ ميلاد مؤهل",
-    "required_age": "العمر المطلوب",
+    "total_licensed_capacity": "مجموع السعة الاستيعابية",
+    "overall_occupancy_rate": "نسبة الإشغال الكلية %",
+    "critical_high_incidents": "الحوادث عالية الخطورة والحرجة",
+    "incident_count": "إجمالي حوادث السلامة",
 }
 
 
@@ -1233,6 +1235,7 @@ class AgencyReportsService:
             models.Kindergarten.district,
             models.Kindergarten.status,
             func.count(models.Kindergarten.id).label("count"),
+            func.coalesce(func.sum(models.Kindergarten.total_capacity), 0).label("capacity"),
         )
         q = self._apply_kindergarten_geo_filters(q, filters)
         _kg_status = _coerce_enum(models.KindergartenStatus, filters.get("status"))
@@ -1241,23 +1244,23 @@ class AgencyReportsService:
         rows = q.group_by(
             models.Kindergarten.governorate, models.Kindergarten.district, models.Kindergarten.status
         ).all()
+
         breakdowns = [
             {
                 "governorate": r.governorate or "غير محدد",
                 "city": r.district or "غير محدد",
                 "status": _kindergarten_status_ar(r.status),
                 "count": _safe_int(r.count),
+                "capacity": _safe_int(r.capacity),
             }
             for r in rows
         ]
         total = sum(r["count"] for r in breakdowns)
         active = sum(_safe_int(r.count) for r in rows if _enum_value(r.status) == "ACTIVE")
+        total_capacity = sum(r["capacity"] for r in breakdowns)
 
         gov_filter = filters.get("governorate")
-        if gov_filter:
-            group_dim = "district"
-        else:
-            group_dim = "governorate"
+        group_dim = "district" if gov_filter else "governorate"
 
         geo_counts = {}
         for r in rows:
@@ -1306,16 +1309,136 @@ class AgencyReportsService:
             "series": status_series,
         }
 
+        summary = {
+            "total_kindergartens": total,
+            "active_kindergartens": active,
+            "total_licensed_capacity": total_capacity,
+            "interpretation_ar": "يعرض هذا التقرير التوزيع الجغرافي للحضانات المسجلة وحالتها التشغيلية والسعة الاستيعابية المعتمدة لدعم أعمال التفتيش والترخيص والتوسع لوزارة التنمية الاجتماعية.",
+            "decision_implications": [
+                {
+                    "observation": "التفاوت في أعداد الحضانات وحالتها التشغيلية عبر الألوية والمحافظات.",
+                    "evidence": f"إجمالي الحضانات: {total}، منها {active} نشطة بنسبة تشغيل {round((active/total*100), 1) if total > 0 else 0}%.",
+                    "implication": "وجود مناطق ذات تغطية منخفضة أو حضانات غير نشطة يتطلب تدخلاً رقابياً وإعادة تقييم التراخيص.",
+                    "action": "توجيه فرق التفتيش الميداني للحضانات غير النشطة وإعادة جدولة متطلبات الاعتماد في الألوية المحرومة."
+                },
+                {
+                    "observation": "الطاقة الاستيعابية الترخيصية المسجلة.",
+                    "evidence": f"مجموع السعة الاستيعابية الترخيصية: {total_capacity} مقعد طفل.",
+                    "implication": "تحديد مدى ملاءمة الطاقة الاستيعابية المرخصة لمستويات الطلب المحلي على خدمات الرعاية.",
+                    "action": "تحديث اشتراطات الترخيص للمناطق المكتظة وتيسير إجراءات الاعتماد."
+                }
+            ]
+        }
+
         payload = self._payload(
             agency_code,
             agency,
             report_code,
             report,
             filters,
-            {"total_kindergartens": total, "active_kindergartens": active},
+            summary,
             breakdowns,
             chart=chart,
         )
+        payload["license_chart"] = license_chart
+        return payload
+
+    def _child_safety(
+        self,
+        agency_code: str,
+        agency: dict[str, Any],
+        report_code: str,
+        report: dict[str, Any],
+        filters: dict[str, Any],
+    ) -> dict[str, Any]:
+        start, end = _resolve_dos_period(filters)
+        q = (
+            self.db.query(
+                models.Kindergarten.governorate,
+                models.Kindergarten.district,
+                models.Incident.severity_level,
+                func.count(models.Incident.id).label("count"),
+            )
+            .join(models.Kindergarten, models.Kindergarten.id == models.Incident.kindergarten_id)
+            .filter(
+                models.Incident.deleted_at.is_(None),
+                *jordan_date_range_filter(models.Incident.occurred_at, start, end),
+            )
+        )
+        q = self._apply_kindergarten_geo_filters(q, filters)
+        _severity = _coerce_enum(models.SeverityLevel, filters.get("severity"))
+        if _severity is not None:
+            q = q.filter(models.Incident.severity_level == _severity)
+        rows = q.group_by(
+            models.Kindergarten.governorate, models.Kindergarten.district, models.Incident.severity_level
+        ).all()
+        breakdowns = [
+            {
+                "governorate": r.governorate or "غير محدد",
+                "city": r.district or "غير محدد",
+                "severity": _severity_ar(r.severity_level),
+                "count": _safe_int(r.count),
+            }
+            for r in rows
+        ]
+        total = sum(r["count"] for r in breakdowns)
+        critical_count = sum(_safe_int(r.count) for r in rows if _enum_value(r.severity_level) in ("HIGH", "CRITICAL"))
+
+        chart = None
+        if breakdowns:
+            severity_counts: dict[str, int] = {}
+            for r in rows:
+                label = _severity_ar(_enum_value(r.severity_level))
+                severity_counts[label] = severity_counts.get(label, 0) + _safe_int(r.count)
+            severity_series = [{"label": label, "value": severity_counts.get(label, 0)} for label in severity_counts]
+            chart = {
+                "type": "bar",
+                "title_ar": "الحوادث حسب درجة الخطورة",
+                "series": severity_series,
+            }
+
+        gov_filter = filters.get("governorate")
+        group_dim = "district" if gov_filter else "governorate"
+
+        geo_counts = {}
+        for r in rows:
+            key = r.district if gov_filter else r.governorate
+            key = key or "غير محدد"
+            geo_counts[key] = geo_counts.get(key, 0) + _safe_int(r.count)
+
+        geo_series = [{"label": k, "value": v} for k, v in geo_counts.items()]
+        geo_series.sort(key=lambda s: s["value"], reverse=True)
+
+        license_chart = {
+            "type": "bar",
+            "title_ar": "توزيع الحوادث حسب اللواء" if gov_filter else "توزيع الحوادث حسب المحافظة",
+            "series": geo_series[:15],
+            "group_by": group_dim,
+        }
+
+        summary = {
+            "incident_count": total,
+            "critical_high_incidents": critical_count,
+            "interpretation_ar": "يوفر هذا التقرير تحليلاً شاملاً لحوادث السلامة وحماية الطفل المسجلة في الحضانات حسب درجة الخطورة والموقع الجغرافي لدعم أعمال الرقابة والتفتيش والحماية الاجتماعية.",
+            "decision_implications": [
+                {
+                    "observation": "سجلات حوادث السلامة وحماية الأطفال المسجلة في الحضانات.",
+                    "evidence": f"إجمالي الحوادث المسجلة: {total} حادثة، منها {critical_count} حادثة ذات خطورة عالية أو حرجة.",
+                    "implication": "تستدعي الحوادث الحرجة مراجعة فورية لإجراءات الوقوف على أسبابها وتفادي تكرارها في البيئة الصفية.",
+                    "action": "إيفاد فرق السلامة والتفتيش للحضانات المسجلة للحوادث الحرجة، وإلزام المشرفين بدورة السلامة المهنية."
+                },
+                {
+                    "observation": "التوزيع الجغرافي لحوادث السلامة على مستوى الألوية والمحافظات.",
+                    "evidence": "تركز الحوادث في المناطق والمحافظات ذات الكثافة العالية.",
+                    "implication": "توجيه الموارد التفتيشية والمعايير التنظيمية نحو الألوية ذات معدلات الإبلاغ العالية.",
+                    "action": "تطبيق خطة الرقابة المشددة وتحديث نماذج الإبلاغ المبكر لحوادث الأطفال."
+                }
+            ]
+        }
+        if not total:
+            summary["data_quality_note_ar"] = "لا توجد حوادث مسجّلة ضمن الفترة المحددة."
+
+        payload = self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns, chart=chart)
         payload["license_chart"] = license_chart
         return payload
 
