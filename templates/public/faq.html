@@ -33,13 +33,11 @@
         <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqEnrollment">
           <div class="accordion-body">
             {% if ui_lang == 'en' %}
-            Create a parent account from <a href="/register">Create account</a>, then go to
-            <a href="/services">Service Guide</a> to see required documents, or sign in and start
-            an enrollment application from your dashboard.
+            {% if public_registration_enabled %}Create a parent account from <a href="/register">Create account</a>, then{% else %}Sign in with your existing account, then{% endif %} go to
+            <a href="/services">Service Guide</a> to see required documents and start an enrollment application from your dashboard.
             {% else %}
-            أنشئ حساب ولي أمر من صفحة <a href="/register">إنشاء حساب</a>، ثم راجع
-            <a href="/services">دليل الخدمة</a> للتعرف على المستندات المطلوبة، أو سجّل الدخول وابدأ
-            طلب التسجيل من لوحة التحكم.
+            {% if public_registration_enabled %}أنشئ حساب ولي أمر من صفحة <a href="/register">إنشاء حساب</a>، ثم{% else %}سجّل الدخول بحسابك الحالي، ثم{% endif %} راجع
+            <a href="/services">دليل الخدمة</a> للتعرف على المستندات المطلوبة وابدأ طلب التسجيل من لوحة التحكم.
             {% endif %}
           </div>
         </div>

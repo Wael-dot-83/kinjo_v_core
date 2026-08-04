@@ -154,7 +154,9 @@ def _role_is(user, *roles: str) -> bool:
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, current_user: typing.Optional[User] = Depends(get_current_user_optional)):
     if current_user:
-        return RedirectResponse(url="/dashboard")
+        # A landing page is useful only to visitors. Send signed-in users to
+        # the role-aware dashboard instead of rendering guest-only actions.
+        return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(request=request, name="public/home.html", context={"current_user": None})
 
 @router.get("/login", response_class=HTMLResponse)
@@ -163,6 +165,7 @@ async def login_page(request: Request):
     # and does not flash in after paint. The query flag is a trusted boolean —
     # never reflected as HTML — so it is safe against injection.
     session_expired = request.query_params.get("expired") == "true"
+    registration_unavailable = request.query_params.get("registration") == "disabled"
     return templates.TemplateResponse(
         request=request,
         name="auth/login.html",
@@ -170,6 +173,7 @@ async def login_page(request: Request):
             "current_user": None,
             "messages": [],
             "session_expired": session_expired,
+            "registration_unavailable": registration_unavailable,
         },
     )
 
@@ -270,7 +274,6 @@ async def robots_txt():
         "Allow: /disclaimer",
         "Allow: /copyright",
         "Allow: /login",
-        "Allow: /register",
         "Disallow: /api/",
         "Disallow: /admin",
         "Disallow: /dashboard",
@@ -280,6 +283,10 @@ async def robots_txt():
         "Sitemap: /sitemap.xml",
         "",
     ]
+    if settings.PUBLIC_REGISTRATION_ENABLED or settings.TESTING:
+        lines.insert(lines.index("Disallow: /api/"), "Allow: /register")
+    else:
+        lines.insert(lines.index("Disallow: /api/"), "Disallow: /register")
     return Response(content="\n".join(lines), media_type="text/plain")
 
 
@@ -288,8 +295,10 @@ async def sitemap_xml(request: Request):
     public_paths = [
         "/", "/about", "/services", "/faq", "/contact", "/sitemap",
         "/privacy", "/terms", "/disclaimer", "/copyright",
-        "/login", "/register",
+        "/login",
     ]
+    if settings.PUBLIC_REGISTRATION_ENABLED or settings.TESTING:
+        public_paths.append("/register")
     base = str(request.base_url).rstrip("/")
     entries = "".join(
         f"<url><loc>{base}{path}</loc></url>" for path in public_paths

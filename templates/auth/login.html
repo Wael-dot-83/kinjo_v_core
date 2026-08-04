@@ -833,7 +833,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
          validated redirect) across the switch so the no-JS fallback keeps the
          session-expired context; the redirect is url-encoded so it cannot break
          out of the attribute and is re-validated before use at login time. #}
-      {% set lang_qs %}{% if request.query_params.get('expired') == 'true' %}&expired=true{% endif %}{% if request.query_params.get('redirect') %}&redirect={{ request.query_params.get('redirect') | urlencode }}{% endif %}{% endset %}
+      {% set lang_qs %}{% if request.query_params.get('expired') == 'true' %}&expired=true{% endif %}{% if request.query_params.get('registration') == 'disabled' %}&registration=disabled{% endif %}{% if request.query_params.get('redirect') %}&redirect={{ request.query_params.get('redirect') | urlencode }}{% endif %}{% endset %}
       <div class="auth-lang-row">
         {% if ui_lang == 'en' %}
         <a
@@ -892,6 +892,13 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
         <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
         <span>{% if ui_lang == 'en' %}For the security of your account, you were signed out after a period of inactivity. Please sign in again.{% else %}حفاظاً على أمان حسابك، تم تسجيل خروجك بعد فترة من عدم النشاط. يرجى تسجيل الدخول مجدداً.{% endif %}</span>
       </div>
+
+      {% if registration_unavailable %}
+      <div class="auth-alert auth-alert-warning" role="status" aria-live="polite">
+        <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+        <span>{% if ui_lang == 'en' %}New account registration is not available at the moment. Please sign in with an existing account or contact your kindergarten for access.{% else %}تسجيل الحسابات الجديدة غير متاح حالياً. سجّل الدخول بحساب موجود أو تواصل مع الحضانة للحصول على صلاحية الوصول.{% endif %}</span>
+      </div>
+      {% endif %}
 
       {# ── Login error alert ── #}
       <div

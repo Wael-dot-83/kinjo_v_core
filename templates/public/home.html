@@ -6,11 +6,12 @@
 {% endblock %}
 
 {% block content %}
-<div class="kinjo-home-hero">
+<section class="kinjo-home-hero" aria-labelledby="home-title">
   <div class="container py-5">
     <div class="row align-items-center">
       <div class="col-lg-7">
-        <h1 class="display-6 fw-bold mb-3">
+        <p class="kinjo-home-eyebrow mb-2">{% if ui_lang == 'en' %}One connected service{% else %}خدمة واحدة مترابطة{% endif %}</p>
+        <h1 id="home-title" class="display-5 fw-bold mb-3">
           {% if ui_lang == 'en' %}Kindergarten enrollment, made simple{% else %}تسجيل الحضانة، بخطوات بسيطة{% endif %}
         </h1>
         <p class="lead text-muted mb-4">
@@ -23,9 +24,11 @@
           {% endif %}
         </p>
         <div class="d-flex flex-wrap gap-2">
+          {% if public_registration_enabled %}
           <a href="/register" class="btn btn-primary btn-lg">
             <i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}Create an account{% else %}إنشاء حساب{% endif %}
           </a>
+          {% endif %}
           <a href="/login" class="btn btn-outline-primary btn-lg">
             <i class="bi bi-box-arrow-in-right me-1"></i>{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
           </a>
@@ -34,12 +37,12 @@
           </a>
         </div>
       </div>
-      <div class="col-lg-5 d-none d-lg-block text-center">
+      <div class="col-lg-5 d-none d-lg-block text-center" aria-hidden="true">
         <i class="bi bi-building" style="font-size: 12rem; color: var(--kinjo-primary, #1F5E47); opacity: 0.15;" aria-hidden="true"></i>
       </div>
     </div>
   </div>
-</div>
+</section>
 
 <div class="container py-5">
   <div class="row text-center mb-4">
@@ -47,9 +50,9 @@
       <h2 class="h4">{% if ui_lang == 'en' %}What you can do on KinJo{% else %}ماذا يمكنك فعله على KinJo؟{% endif %}</h2>
     </div>
   </div>
-  <div class="row g-4">
+  <div class="row g-4" aria-label="{% if ui_lang == 'en' %}KinJo services{% else %}خدمات KinJo{% endif %}">
     <div class="col-md-4">
-      <div class="card border-0 shadow-sm h-100 text-center p-3">
+      <div class="card kinjo-home-feature border-0 shadow-sm h-100 text-center p-3">
         <i class="bi bi-clipboard-check fs-1 text-primary mb-2" aria-hidden="true"></i>
         <h3 class="h6">{% if ui_lang == 'en' %}Enroll a child{% else %}تسجيل طفل{% endif %}</h3>
         <p class="text-muted small mb-0">
@@ -58,7 +61,7 @@
       </div>
     </div>
     <div class="col-md-4">
-      <div class="card border-0 shadow-sm h-100 text-center p-3">
+      <div class="card kinjo-home-feature border-0 shadow-sm h-100 text-center p-3">
         <i class="bi bi-journal-text fs-1 text-primary mb-2" aria-hidden="true"></i>
         <h3 class="h6">{% if ui_lang == 'en' %}Follow daily reports{% else %}متابعة التقارير اليومية{% endif %}</h3>
         <p class="text-muted small mb-0">
@@ -67,7 +70,7 @@
       </div>
     </div>
     <div class="col-md-4">
-      <div class="card border-0 shadow-sm h-100 text-center p-3">
+      <div class="card kinjo-home-feature border-0 shadow-sm h-100 text-center p-3">
         <i class="bi bi-chat-dots fs-1 text-primary mb-2" aria-hidden="true"></i>
         <h3 class="h6">{% if ui_lang == 'en' %}Stay in touch{% else %}التواصل المستمر{% endif %}</h3>
         <p class="text-muted small mb-0">
@@ -98,8 +101,28 @@
 
 <style>
   .kinjo-home-hero {
-    background: linear-gradient(155deg, #eff6ff 0%, #ffffff 60%);
+    background: radial-gradient(circle at 85% 18%, rgba(47, 125, 98, 0.14), transparent 32%), linear-gradient(155deg, #eff6ff 0%, #ffffff 60%);
     border-bottom: 1px solid var(--kinjo-border-light, var(--kinjo-color-border));
+  }
+  .kinjo-home-eyebrow {
+    color: var(--kinjo-primary, #1F5E47);
+    font-size: .875rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .kinjo-home-feature {
+    border: 1px solid transparent !important;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .kinjo-home-feature:hover {
+    border-color: rgba(31, 94, 71, .25) !important;
+    box-shadow: 0 .75rem 1.75rem rgba(22, 61, 46, .12) !important;
+    transform: translateY(-.25rem);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .kinjo-home-feature { transition: none; }
+    .kinjo-home-feature:hover { transform: none; }
   }
 </style>
 {% endblock %}

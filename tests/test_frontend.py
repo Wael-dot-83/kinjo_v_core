@@ -216,7 +216,7 @@ class TestFrontendRoutes:
         app.dependency_overrides[get_current_user_optional] = lambda: admin_user
 
         response = client.get("/", follow_redirects=False)
-        assert response.status_code == 307  # Redirect
+        assert response.status_code == 303
         assert "/dashboard" in response.headers.get("location", "")
 
         app.dependency_overrides.clear()
@@ -233,6 +233,66 @@ class TestFrontendRoutes:
         assert "/login" in response.text
 
         app.dependency_overrides.clear()
+
+    def test_index_hides_unavailable_registration_entry_points(self, client, monkeypatch):
+        """Guests are never sent to a registration route that immediately rejects them."""
+        monkeypatch.setattr("scripts.compat.frontend_orig.settings.PUBLIC_REGISTRATION_ENABLED", False)
+        monkeypatch.setattr("scripts.compat.frontend_orig.settings.TESTING", False)
+        app.dependency_overrides[get_current_user_optional] = lambda: None
+        try:
+            response = client.get("/", follow_redirects=False)
+            assert response.status_code == 200
+            assert 'href="/register"' not in response.text
+            assert 'href="/login"' in response.text
+            for path in ("/faq", "/services", "/sitemap"):
+                page = client.get(path)
+                assert page.status_code == 200
+                assert 'href="/register"' not in page.text
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_disabled_registration_redirect_explains_next_step(self, client, monkeypatch):
+        monkeypatch.setattr("scripts.compat.frontend_orig.settings.PUBLIC_REGISTRATION_ENABLED", False)
+        monkeypatch.setattr("scripts.compat.frontend_orig.settings.TESTING", False)
+        redirect = client.get("/register", follow_redirects=False)
+        assert redirect.status_code == 302
+        assert redirect.headers["location"] == "/login?registration=disabled"
+
+        login = client.get(redirect.headers["location"])
+        assert login.status_code == 200
+        assert "تسجيل الحسابات الجديدة غير متاح حالياً" in login.text
+
+    def test_disabled_registration_is_not_advertised_to_crawlers(self, client, monkeypatch):
+        monkeypatch.setattr("scripts.compat.frontend_orig.settings.PUBLIC_REGISTRATION_ENABLED", False)
+        monkeypatch.setattr("scripts.compat.frontend_orig.settings.TESTING", False)
+        assert "Disallow: /register" in client.get("/robots.txt").text
+        assert "/register" not in client.get("/sitemap.xml").text
+
+    def test_disabled_registration_api_rejects_direct_posts(self, client, monkeypatch):
+        monkeypatch.setattr("main.settings.PUBLIC_REGISTRATION_ENABLED", False)
+        monkeypatch.setattr("main.settings.TESTING", False)
+        response = client.post(
+            "/api/auth/register",
+            data={"username": "blocked_signup", "email": "blocked@example.com", "password": "SecurePass123!"},
+        )
+        assert response.status_code == 403
+        assert response.json()["detail"] == "Public registration is not available"
+
+    def test_disabled_registration_notice_survives_language_switch(self, client):
+        response = client.get("/login?registration=disabled")
+        assert 'href="?lang=en&registration=disabled"' in response.text
+
+    def test_login_redirect_preserves_path_and_query(self, client):
+        response = client.get("/dashboard?view=week", follow_redirects=False)
+        assert response.status_code == 302
+        assert response.headers["location"] == "/login?redirect=%2Fdashboard%3Fview%3Dweek"
+
+    def test_malformed_login_redirect_is_handled_safely_by_client_code(self):
+        source = (Path(__file__).resolve().parent.parent / "static" / "js" / "auth.js").read_text(encoding="utf-8")
+        method = source[source.index("static getSafeRedirectFromQuery()"):source.index("static redirectToDashboard", source.index("static getSafeRedirectFromQuery()"))]
+        assert "try {" in method
+        assert "catch {" in method
+        assert "return null;" in method
 
     def test_login_page(self, client):
         """Test login page renders"""

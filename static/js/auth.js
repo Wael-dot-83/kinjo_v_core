@@ -301,8 +301,15 @@ class AuthGuard {
     if (!redirectUrl) {
       return null;
     }
-    const decoded = decodeURIComponent(redirectUrl);
-    return this.isValidRedirectUrl(decoded) ? decoded : null;
+    try {
+      // URLSearchParams already performs one decode. A second decode is kept
+      // for legacy double-encoded return URLs, but malformed input must never
+      // interrupt a successful login.
+      const decoded = decodeURIComponent(redirectUrl);
+      return this.isValidRedirectUrl(decoded) ? decoded : null;
+    } catch {
+      return null;
+    }
   }
 
   static redirectToDashboard(user) {
