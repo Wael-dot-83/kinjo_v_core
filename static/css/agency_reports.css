@@ -483,3 +483,48 @@ details[open] .agency-help-summary::before{transform:rotate(90deg)}
   margin-top: 1.5rem;
 }
 
+/* Print & PDF Export Styling */
+@media print {
+  #admin-sidebar,
+  .admin-header,
+  .admin-footer,
+  .agency-breadcrumb,
+  .agency-export-actions,
+  .agency-filter-form,
+  .agency-loading-skeleton,
+  button,
+  .admin-btn {
+    display: none !important;
+  }
+
+  body, .admin-page-content, .agency-reports-page {
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .agency-kpi-grid,
+  .agency-charts-grid,
+  .agency-table-section,
+  .agency-report-interpretation,
+  .agency-report-decisions {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    page-break-inside: avoid;
+  }
+
+  .admin-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    border: 1px solid #ddd !important;
+    padding: 6px 8px !important;
+    font-size: 11pt !important;
+  }
+}
+

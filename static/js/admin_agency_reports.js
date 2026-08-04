@@ -1379,26 +1379,68 @@
       root.appendChild(prov);
     }
 
-    // Export controls — CSV only (no JSON, PDF, Excel, Print)
+    // Export & Actions toolbar — CSV, JSON, Print/PDF, and Copy Summary
     const exports = document.createElement("div");
-    exports.className = "agency-export-actions";
+    exports.className = "agency-export-actions d-flex flex-wrap gap-2 align-items-center mt-4";
     const base =
       "/api/admin/agency-reports/" +
       encodeURIComponent(payload.metadata.agency_code) +
       "/reports/" +
       encodeURIComponent(payload.metadata.report_code);
+    const dateStr = new Date().toISOString().slice(0, 10);
+
     if (payload.exports && payload.exports.csv) {
-      const date = new Date().toISOString().slice(0, 10);
       const a = document.createElement("a");
       a.href = base + "/export.csv" + window.location.search;
       a.className = "admin-btn admin-btn-secondary";
-      a.download =
-        (payload.metadata.report_code || "report") + "_" + date + ".csv";
+      a.download = (payload.metadata.report_code || "report") + "_" + dateStr + ".csv";
       a.innerHTML =
-        '<i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> ' +
+        '<i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i> ' +
         t("تصدير CSV", "Export CSV");
       exports.appendChild(a);
     }
+
+    if (payload.exports && payload.exports.json) {
+      const aJson = document.createElement("a");
+      aJson.href = base + "/export.json" + window.location.search;
+      aJson.className = "admin-btn admin-btn-secondary";
+      aJson.download = (payload.metadata.report_code || "report") + "_" + dateStr + ".json";
+      aJson.innerHTML =
+        '<i class="bi bi-file-earmark-code me-1" aria-hidden="true"></i> ' +
+        t("تصدير JSON", "Export JSON");
+      exports.appendChild(aJson);
+    }
+
+    const printBtn = document.createElement("button");
+    printBtn.type = "button";
+    printBtn.className = "admin-btn admin-btn-secondary";
+    printBtn.innerHTML =
+      '<i class="bi bi-printer me-1" aria-hidden="true"></i> ' +
+      t("طباعة / PDF", "Print / PDF");
+    printBtn.onclick = function () {
+      window.print();
+    };
+    exports.appendChild(printBtn);
+
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "admin-btn admin-btn-secondary";
+    copyBtn.innerHTML =
+      '<i class="bi bi-clipboard me-1" aria-hidden="true"></i> ' +
+      t("نسخ الملخص", "Copy Summary");
+    copyBtn.onclick = function () {
+      let text = (payload.metadata ? (lang === "en" ? payload.metadata.title_en : payload.metadata.title_ar) || "" : "") + "\n";
+      if (payload.kpis && payload.kpis.length) {
+        text += payload.kpis.map(function (k) { return (k.title || k.label || "") + ": " + (k.value !== undefined ? k.value : ""); }).join(" | ");
+      }
+      navigator.clipboard.writeText(text).then(function () {
+        if (window.AdminComponents && typeof window.AdminComponents.showNotification === "function") {
+          window.AdminComponents.showNotification({ type: "success", title: "", message: t("تم نسخ الملخص بنجاح", "Summary copied to clipboard") });
+        }
+      });
+    };
+    exports.appendChild(copyBtn);
+
     root.appendChild(exports);
   }
 
