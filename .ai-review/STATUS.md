@@ -1,9 +1,10 @@
 # KinJo Production Readiness Status
 
 > **The authoritative audit lives in `.kilo/phase1_reports/`, not here.**
-> Reports `16`–`21` are the current reconciled set; `IMPLEMENTATION_LOG.md` in that
+> Reports `16`–`26` are the current reconciled set; `IMPLEMENTATION_LOG.md` in that
 > directory is the single-writer batch log. Earlier versions are preserved under
-> `.kilo/phase1_reports/archive/2026-07-30/`.
+> `.kilo/phase1_reports/archive/2026-07-30/`. Reports `22`–`26` cover Batch 0
+> triage, the pytest-timeout batch (D-4) and its independent review (report `26`).
 >
 > Note that `.ai-review/TEST_EVIDENCE.md` contains the original Phase 1 *prompt*,
 > not test evidence, and `MASTER_FINDINGS.md` / `UNRESOLVED_RISKS.md` are empty.
@@ -46,7 +47,15 @@ CSV BOM handling, and the Arabic terminology change.
 
 ## Open Findings
 
-See `.kilo/phase1_reports/20_RECONCILED_IMPLEMENTATION_BACKLOG.md`. Highest priority remaining:
+> **Update 2026-08-01.** Verified this session against report 20's numbering: the CSRF
+> consolidation (20 D-1/D-2), pytest timeout (20 D-4), charts subsystem (20 D-5), and the
+> dead-template / Cesium / 70-day-comment items (20 D-6/D-7/D-8) are all resolved, and the
+> backup configuration (20 D-3) has been wired to Celery beat. **All report-20 defects are
+> now closed;** only the improvements (20 I-1…I-12) remain, several gated on operator
+> decisions. The list below uses this file's older, divergent numbering — treat report 20 as
+> authoritative.
+
+See `.kilo/phase1_reports/20_RECONCILED_IMPLEMENTATION_BACKLOG.md`. Historical (pre-2026-08-01) list:
 
 - **D-1 / D-2** — security review of the consolidated CSRF middleware, and three public flows
   (contact, password-reset request, password-reset confirm) that return 400 for real browsers.
