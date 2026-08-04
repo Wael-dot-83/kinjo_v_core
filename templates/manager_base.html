@@ -109,7 +109,10 @@
             {% from 'components/kinjo_logo.html' import kinjo_logo %}
             <a href="/dashboard" class="header-logo header-logo-wordmark">
               {{ kinjo_logo(size='navbar') }}
-              <span data-i18n="nav.brand">KinJo Manager</span>
+              {# Server-rendered fallback must match the page title above: a hardcoded
+                 English wordmark left "Manager" showing on the Arabic UI whenever the
+                 JS i18n pass had not yet replaced it. #}
+              <span data-i18n="nav.brand">{% if ui_lang == 'en' %}KinJo Manager{% else %}إدارة الحضانة{% endif %}</span>
             </a>
           </div>
 
