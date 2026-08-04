@@ -77,41 +77,41 @@ Created ESLint configuration file to enforce code style and catch potential issu
 ## What's Missing/Challenged
 
 ### 1. Backend Model Fields
-The `models.py` Kindergarten model is missing some fields requested in the feature spec:
-- `manager_name` 
-- `manager_id`
-- `manager_phone` 
-- `manager_email`
-- `owner_name`
-- `ownership_type`
-- `type`
-- `mobile`
-- `website`
-- `license_number`
-- `license_status`
-- `license_valid_until`
-- `administrative_notes`
-- ~~`working_hours_start`~~ — **present, not missing**: stored on the Kindergarten model as `operating_hours_start` (`String(5)`) and exposed by the kindergartens API/form under the alias `working_hours_start` (`api/kindergartens.py`). The DB column name is `operating_hours_start`; `working_hours_start` is the intentional API/form field name.
-- ~~`working_hours_end`~~ — **present, not missing**: stored as `operating_hours_end` (`String(5)`), exposed by the API/form as `working_hours_end`.
-- `working_days`
-- `age_group`
-- `registration_fees`
-- `monthly_fees`
-- `total_capacity`
-- `current_child_count`
-- `number_of_classes`
-- `teacher_count`
+**Reconciled 2026-08-01 (I-6b) — none of these fields are missing.** Every field once listed here
+is present on the `Kindergarten` model (`models.py:285-335`), verified against the model, its
+migrations, and the request schemas:
+
+- **Management / ownership fields** — `models.py:311-329`, created by migration
+  `alembic/versions/d4a2b8c1f0e9_extend_kindergarten_management_fields.py`:
+  `type` (`:311`), `mobile` (`:312`), `website` (`:313`), `manager_name` (`:314`),
+  `manager_id` (`:315`), `manager_phone` (`:316`), `manager_email` (`:317`), `owner_name` (`:318`),
+  `ownership_type` (`:319`), `total_capacity` (`:320`), `current_child_count` (`:321`),
+  `number_of_classes` (`:322`), `teacher_count` (`:323`), `working_days` (`:324`),
+  `age_group` (`:325`), `registration_fees` (`:326`), `monthly_fees` (`:327`),
+  `license_status` (`:328`), `administrative_notes` (`:329`).
+- **License + operating hours** — `models.py:330-333`, created by the initial squash migration
+  `alembic/versions/db828d82089e_initial_squash_all_tables.py:177-180`:
+  `operating_hours_start` (`:330`), `operating_hours_end` (`:331`),
+  `license_number` (`:332`, unique constraint `:338`), `license_valid_until` (`:333`).
+- **Working-hours naming (an alias, not a missing field):** the DB columns are
+  `operating_hours_start` / `operating_hours_end`; the kindergartens API and form expose them under
+  the alias `working_hours_start` / `working_hours_end` (request schema `api/kindergartens.py:148-149`;
+  response map `:385-386` returns `operating_hours_*` under the `working_hours_*` keys). Both names are
+  intentional — **do not** add duplicate `working_hours_*` columns.
+
+All of the above are mirrored in the `KindergartenCreate` / `KindergartenUpdate` request schemas
+(`api/kindergartens.py:130-176`).
 
 ### 2. API Schemas
-The `api/kindergartens.py` KindergartenCreate and KindergartenUpdate schemas include the missing fields from the model, but the frontend forms aren't connecting to the backend endpoints properly.
+The `api/kindergartens.py` KindergartenCreate and KindergartenUpdate schemas include these model fields (`api/kindergartens.py:130-176`), but the frontend forms aren't connecting to the backend endpoints properly.
 
 ### 3. Database Schema
-The database models might need migration to support the new fields.
+The fields are already migrated — `alembic/versions/d4a2b8c1f0e9_extend_kindergarten_management_fields.py` (management / ownership fields) and the initial squash `alembic/versions/db828d82089e_initial_squash_all_tables.py` (operating hours, license). No further migration is needed for them; the migration-drift CI gate (`tests/test_migration_column_drift.py`) enforces model↔schema consistency.
 
 ## Next Steps
 
 ### 1. Complete Database Model
-Update the Kindergarten model in `models.py` to include all missing fields from the feature spec.
+**Done** — the Kindergarten model (`models.py:285-335`) already includes every feature-spec field (see "Backend Model Fields" above). No further model work is required.
 
 ### 2. Update Frontend Integration
 Ensure the forms, list view, and detail view are properly connected to the backend API endpoints.
