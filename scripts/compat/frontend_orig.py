@@ -153,9 +153,22 @@ def _role_is(user, *roles: str) -> bool:
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, current_user: typing.Optional[User] = Depends(get_current_user_optional)):
-    if current_user:
-        return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="public/home.html", context={"current_user": None})
+    """Public home page, served to signed-in visitors too.
+
+    This used to redirect authenticated users to /dashboard, which made the home
+    page unreachable once you signed in: the navbar brand and the footer both link
+    to "/", and pressing Back onto "/" bounced straight out again. The redirect was
+    also redundant — auth.js redirectToDashboard() already sends each role to its own
+    dashboard after login, so nothing depended on this hop.
+
+    The page itself adapts: signed-in visitors get a link to their dashboard instead
+    of the register/sign-in pair.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="public/home.html",
+        context={"current_user": current_user},
+    )
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):

@@ -261,7 +261,36 @@
   border-color: var(--slate-200);
   box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.06);
   border-bottom-color: var(--slate-300);
+  padding: var(--sp-2) var(--sp-4);
+  margin-bottom: var(--sp-3);
 }
+/* Compact rearrangement on scroll down: shrink controls and hide floating labels to prevent blocking viewport content */
+.glass-filter-bar.is-stuck .form-label {
+  display: none;
+}
+.glass-filter-bar.is-stuck .btn,
+.glass-filter-bar.is-stuck .form-select,
+.glass-filter-bar.is-stuck .form-control {
+  min-height: 34px;
+  height: 34px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  font-size: 0.8125rem;
+}
+.glass-filter-bar.is-stuck .d-flex.align-items-end {
+  align-items: center !important;
+}
+.glass-filter-bar.is-stuck .row {
+  --bs-gutter-y: 0.5rem;
+  --bs-gutter-x: 0.5rem;
+}
+.glass-filter-bar.is-stuck .d-flex.gap-3 {
+  gap: var(--sp-2) !important;
+}
+.glass-filter-bar.is-stuck .filter-dropdown-glass select {
+  min-width: 110px;
+}
+
 /* Active-filter indicator (class toggled by JS in the analytics template;
    no attribute selector — <select> has no value attribute, so
    select:not([value=""]) would match every control permanently).

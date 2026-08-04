@@ -1120,3 +1120,62 @@ msgstr "تقرير يومي جديد — {name} — {date}"
 
 msgid "A new daily report for your child {name} was sent on {date}."
 msgstr "تم إرسال تقرير يومي جديد لطفلك {name} بتاريخ {date}."
+
+# Added: strings that were reaching the Arabic UI untranslated.
+
+msgid "Welcome"
+msgstr "أهلاً بك"
+
+msgid "Follow your children's news and daily reports"
+msgstr "تابع أخبار أطفالك والتقارير اليومية"
+
+msgid "Quick Actions"
+msgstr "إجراءات سريعة"
+
+msgid "Register"
+msgstr "تسجيل"
+
+msgid "District"
+msgstr "اللواء"
+
+msgid "Attendance trend chart"
+msgstr "مخطط اتجاه الحضور"
+
+msgid "Observability Dashboard"
+msgstr "لوحة المراقبة التشغيلية"
+
+msgid "API p95 Latency"
+msgstr "زمن استجابة الواجهة البرمجية"
+
+msgid "Alert Quality"
+msgstr "جودة التنبيهات"
+
+msgid "Cache Hit Rate"
+msgstr "نسبة إصابة الذاكرة المؤقتة"
+
+msgid "Data Freshness"
+msgstr "حداثة البيانات"
+
+msgid "Data Quality"
+msgstr "جودة البيانات"
+
+msgid "Data Quality Audit"
+msgstr "تدقيق جودة البيانات"
+
+msgid "Endpoint Latency p95 (ms)"
+msgstr "زمن استجابة نقاط النهاية بالمللي ثانية"
+
+msgid "Error Rate"
+msgstr "معدل الأخطاء"
+
+msgid "Metric"
+msgstr "المؤشر"
+
+msgid "Score"
+msgstr "الدرجة"
+
+msgid "Total Requests"
+msgstr "إجمالي الطلبات"
+
+msgid "Web Vitals (LCP p95)"
+msgstr "مؤشرات تجربة التصفح"

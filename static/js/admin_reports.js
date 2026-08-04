@@ -1433,13 +1433,17 @@
   // Init
   // ===========================================================================
   async function init() {
-    await loadGovernorates();
-    await loadKindergartens();
-    await loadReviewers();
-    await loadSummaryStats();
-    await loadScheduledCount();
-    await loadRecentHistory();
-    await loadSavedTemplates();
+    try {
+      await loadGovernorates();
+      await loadKindergartens();
+      await loadReviewers();
+      await loadSummaryStats();
+      await loadScheduledCount();
+      await loadRecentHistory();
+      await loadSavedTemplates();
+    } catch (e) {
+      console.warn("Non-fatal error during Reports init option load:", e);
+    }
 
     // Wire events
     updateFilterVisibility();

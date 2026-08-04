@@ -125,7 +125,7 @@
                 </div>
                 <div class="attendance-grid" id="attendanceGrid">
                     <div class="text-center py-4">
-                        <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
+                        <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جارٍ التحميل...{% endif %}</span></div>
                         <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                     </div>
                 </div>

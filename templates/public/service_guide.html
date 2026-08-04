@@ -1,6 +1,31 @@
 {% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
+{#
+  Age-bound wording helpers.
+
+  Both bounds are configuration values, so the sentence has to agree with whatever
+  number they hold. Arabic counted nouns change form by count (1 = واحد، 2 = مثنى،
+  3–10 = جمع، 11+ = مفرد منصوب) and English needs the plural "s" only above one, so a
+  bare "{{ n }} days" printed "1 days" and "1 يوماً" once the minimum was lowered to a
+  single day.
+#}
+{%- macro en_unit(n, one, many) -%}
+{{ n }} {{ one if n == 1 else many }}
+{%- endmacro -%}
+{%- macro ar_days(n) -%}
+{%- if n == 1 -%}يوم واحد
+{%- elif n == 2 -%}يومان
+{%- elif n <= 10 -%}{{ n }} أيام
+{%- else -%}{{ n }} يوماً{%- endif -%}
+{%- endmacro -%}
+{%- macro ar_months(n) -%}
+{%- if n == 1 -%}شهر واحد
+{%- elif n == 2 -%}شهران
+{%- elif n <= 10 -%}{{ n }} أشهر
+{%- else -%}{{ n }} شهراً{%- endif -%}
+{%- endmacro -%}
+
 {% block title %}{% if ui_lang == 'en' %}Service Guide{% else %}دليل الخدمة{% endif %}{% endblock %}
 {% block meta_description %}
 <meta name="description" content="{% if ui_lang == 'en' %}Kindergarten enrollment service: requirements, documents, fees, and how to apply on KinJo.{% else %}خدمة تسجيل الحضانة: المتطلبات والمستندات والرسوم وطريقة التقديم عبر KinJo.{% endif %}" />
@@ -50,10 +75,10 @@
           <dt class="col-sm-3">{% if ui_lang == 'en' %}Eligibility{% else %}شروط الأهلية{% endif %}</dt>
           <dd class="col-sm-9">
             {% if ui_lang == 'en' %}
-            Child age between {{ min_child_age_days }} days and {{ max_child_age_months }} months at the time
-            of enrollment.
+            Child age between {{ en_unit(min_child_age_days, 'day', 'days') }} and
+            {{ en_unit(max_child_age_months, 'month', 'months') }} at the time of enrollment.
             {% else %}
-            أن يكون عمر الطفل بين {{ min_child_age_days }} يوماً و {{ max_child_age_months }} شهراً عند التسجيل.
+            أن يكون عمر الطفل بين {{ ar_days(min_child_age_days) }} و{{ ar_months(max_child_age_months) }} عند التسجيل.
             {% endif %}
           </dd>
 

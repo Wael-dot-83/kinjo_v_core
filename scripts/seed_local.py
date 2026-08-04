@@ -40,6 +40,102 @@ CREDENTIALS = {
     "parent2":     {"password": "Parent@1234",  "role": "PARENT"},
 }
 
+
+def ensure_local_dev_seed_data(db) -> bool:
+    """Create deterministic local-dev users and a default kindergarten when absent."""
+    if settings.ENVIRONMENT.lower() == "production" and not settings.TESTING:
+        return False
+
+    from sqlalchemy import text
+
+    def upsert_user(username, email, password, role, kg_id=None, first="", last=""):
+        existing = db.query(User).filter(User.username == username).first()
+        if existing:
+            existing.email = email
+            existing.role = role
+            existing.kindergarten_id = kg_id
+            existing.status = UserStatus.ACTIVE
+            existing.hashed_password = get_password_hash(password)
+            existing.failed_login_count = 0
+            existing.locked_until = None
+            existing.must_change_password = False
+            if hasattr(existing, "mfa_enabled"):
+                existing.mfa_enabled = False
+            db.commit()
+            return False
+
+        import uuid as _uuid
+        hashed = get_password_hash(password)
+        try:
+            db.execute(text(
+                "INSERT INTO users (username, email, hashed_password, role, status, kindergarten_id, must_change_password, failed_login_count, mfa_enabled, public_id) "
+                "VALUES (:u, :e, :h, :r, 'ACTIVE', :kg, 0, 0, 0, :pid)"
+            ), {"u": username, "e": email, "h": hashed, "r": role.value, "kg": kg_id, "pid": str(_uuid.uuid4())})
+        except Exception as exc:
+            existing = db.query(User).filter(User.username == username).first()
+            if existing:
+                existing.email = email
+                existing.role = role
+                existing.kindergarten_id = kg_id
+                existing.status = UserStatus.ACTIVE
+                existing.hashed_password = get_password_hash(password)
+                existing.failed_login_count = 0
+                existing.locked_until = None
+                existing.must_change_password = False
+                if hasattr(existing, "mfa_enabled"):
+                    existing.mfa_enabled = False
+                db.commit()
+                return False
+
+            if kg_id is not None and "UNIQUE constraint failed: users.kindergarten_id" in str(exc):
+                existing = db.query(User).filter(User.kindergarten_id == kg_id).order_by(User.id.asc()).first()
+                if existing:
+                    existing.username = username
+                    existing.email = email
+                    existing.role = role
+                    existing.kindergarten_id = kg_id
+                    existing.status = UserStatus.ACTIVE
+                    existing.hashed_password = get_password_hash(password)
+                    existing.failed_login_count = 0
+                    existing.locked_until = None
+                    existing.must_change_password = False
+                    if hasattr(existing, "mfa_enabled"):
+                        existing.mfa_enabled = False
+                    db.commit()
+                    return False
+            raise
+        db.commit()
+        return True
+
+    kg = db.query(Kindergarten).filter(Kindergarten.name_ar == "حضانة الأمل").first()
+    if not kg:
+        kg = Kindergarten(
+            name_ar="حضانة الأمل",
+            name_en="Al Amal Kindergarten",
+            governorate="عمان",
+            district="عمان",
+            area="الجبيهة",
+            address_line="شارع الجامعة الأردنية، عمان",
+            contact_phone="0791234567",
+            status=KindergartenStatus.ACTIVE,
+        )
+        db.add(kg)
+        db.commit()
+        db.refresh(kg)
+
+    created_any = False
+    created_any = upsert_user("admin", "admin@kinjo.jo", "Admin@1234", UserRole.ADMIN, None, "مدير", "النظام") or created_any
+    created_any = upsert_user("manager1", "manager1@kinjo.jo", "Manager@1234", UserRole.MANAGER, kg.id, "محمد", "الأحمد") or created_any
+    created_any = upsert_user("supervisor1", "sup1@kinjo.jo", "Super@1234", UserRole.SUPERVISOR, kg.id, "فاطمة", "علي") or created_any
+    created_any = upsert_user("parent1", "parent1@kinjo.jo", "Parent@1234", UserRole.PARENT, None, "سامي", "الخالد") or created_any
+
+    if not kg.status:
+        kg.status = KindergartenStatus.ACTIVE
+        db.commit()
+
+    return created_any
+
+
 def run():
     init_db()
     db = SessionLocal()
@@ -60,6 +156,8 @@ def run():
             print(f"  Fixed corrupt kindergarten id={_id}")
         if _corrupt:
             db.commit()
+
+        ensure_local_dev_seed_data(db)
 
         # ── Kindergartens ─────────────────────────────────────────────────────
         kg1 = db.query(Kindergarten).filter(Kindergarten.name_ar == "حضانة الأمل").first()

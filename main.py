@@ -66,7 +66,7 @@ from database import get_db, init_db
 from auth import authenticate_user, create_access_token, get_password_hash
 from cache_service import cache_service
 from config import settings
-from dependencies import get_current_user, get_current_user_optional, RedirectToLogin
+from dependencies import get_current_user, get_current_user_optional, ManagerScope, RedirectToLogin
 from middleware.auth import (
     build_generic_auth_exception,
     classify_login_identifier,
@@ -1737,12 +1737,18 @@ async def predict_attendance_rate(
 ):
     """Predict attendance rate for the next N days"""
     try:
-        # Check permissions
+        # Role gate first, then the tenant gate.
+        #
+        # ManagerScope.assert_kindergarten_access is the canonical IDOR guard: it
+        # answers a cross-tenant target with 404 rather than 403, so the response
+        # cannot be used to tell an existing kindergarten from an absent one. The
+        # inline check it replaces returned 403 (an enumeration oracle) and, worse,
+        # exempted SUPERVISOR from the ownership test entirely -- a supervisor could
+        # read any kindergarten's analytics.
         if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR] and current_user.kindergarten_id != kindergarten_id:
-            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+        ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
 
         prediction = await predictive_analytics.predict_attendance_rate(db, kindergarten_id, days_ahead)
 
@@ -1779,12 +1785,18 @@ async def predict_incident_trend(
 ):
     """Predict incident trends for risk assessment"""
     try:
-        # Check permissions
+        # Role gate first, then the tenant gate.
+        #
+        # ManagerScope.assert_kindergarten_access is the canonical IDOR guard: it
+        # answers a cross-tenant target with 404 rather than 403, so the response
+        # cannot be used to tell an existing kindergarten from an absent one. The
+        # inline check it replaces returned 403 (an enumeration oracle) and, worse,
+        # exempted SUPERVISOR from the ownership test entirely -- a supervisor could
+        # read any kindergarten's analytics.
         if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR] and current_user.kindergarten_id != kindergarten_id:
-            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+        ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
 
         prediction = await predictive_analytics.predict_incident_trend(db, kindergarten_id, days_ahead)
 
@@ -1821,12 +1833,18 @@ async def predict_capacity_utilization(
 ):
     """Predict capacity utilization trends"""
     try:
-        # Check permissions
+        # Role gate first, then the tenant gate.
+        #
+        # ManagerScope.assert_kindergarten_access is the canonical IDOR guard: it
+        # answers a cross-tenant target with 404 rather than 403, so the response
+        # cannot be used to tell an existing kindergarten from an absent one. The
+        # inline check it replaces returned 403 (an enumeration oracle) and, worse,
+        # exempted SUPERVISOR from the ownership test entirely -- a supervisor could
+        # read any kindergarten's analytics.
         if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR] and current_user.kindergarten_id != kindergarten_id:
-            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+        ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
 
         prediction = await predictive_analytics.predict_capacity_utilization(db, kindergarten_id, days_ahead)
 
@@ -1863,11 +1881,14 @@ async def predict_enrollment_trend(
 ):
     """Predict enrollment application trends for a kindergarten"""
     try:
+        # Enrollment prediction is admin/manager only — supervisors are excluded by
+        # the role gate rather than by the tenant gate, so the canonical scope check
+        # below still applies to whoever gets past it. See the note on the other
+        # predict endpoints: a cross-tenant target must answer 404, not 403.
         if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
-            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+        ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
 
         prediction = await predictive_analytics.predict_enrollment_trend(db, kindergarten_id, days_ahead)
 
@@ -1908,12 +1929,18 @@ async def analyze_trends(
 ):
     """Perform comprehensive trend analysis"""
     try:
-        # Check permissions
+        # Role gate first, then the tenant gate.
+        #
+        # ManagerScope.assert_kindergarten_access is the canonical IDOR guard: it
+        # answers a cross-tenant target with 404 rather than 403, so the response
+        # cannot be used to tell an existing kindergarten from an absent one. The
+        # inline check it replaces returned 403 (an enumeration oracle) and, worse,
+        # exempted SUPERVISOR from the ownership test entirely -- a supervisor could
+        # read any kindergarten's analytics.
         if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR] and current_user.kindergarten_id != kindergarten_id:
-            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+        ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
 
         # Validate metric type
         valid_metrics = ["attendance", "incidents", "capacity"]
@@ -1955,12 +1982,18 @@ async def get_predictive_insights(
 ):
     """Generate comprehensive predictive insights"""
     try:
-        # Check permissions
+        # Role gate first, then the tenant gate.
+        #
+        # ManagerScope.assert_kindergarten_access is the canonical IDOR guard: it
+        # answers a cross-tenant target with 404 rather than 403, so the response
+        # cannot be used to tell an existing kindergarten from an absent one. The
+        # inline check it replaces returned 403 (an enumeration oracle) and, worse,
+        # exempted SUPERVISOR from the ownership test entirely -- a supervisor could
+        # read any kindergarten's analytics.
         if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR] and current_user.kindergarten_id != kindergarten_id:
-            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+        ManagerScope.assert_kindergarten_access(current_user, kindergarten_id)
 
         insights = await predictive_analytics.get_predictive_insights(db, kindergarten_id)
 

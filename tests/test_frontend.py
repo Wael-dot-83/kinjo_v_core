@@ -210,14 +210,22 @@ def supervisor_user(test_db, sample_kindergarten):
 class TestFrontendRoutes:
     """Test frontend HTML routes"""
 
-    def test_index_redirect_authenticated(self, client, admin_user):
-        """Test index page redirects authenticated users to dashboard"""
-        # Mock authenticated user
+    def test_index_stays_reachable_when_authenticated(self, client, admin_user):
+        """A signed-in visitor still gets the home page, not a bounce to /dashboard.
+
+        This previously redirected (307 -> /dashboard), which made the home page
+        unreachable after login: the navbar brand and footer both link to "/", so
+        clicking the logo or pressing Back landed on "/" and was thrown straight out
+        again. Nothing depended on the hop — auth.js redirectToDashboard() already
+        routes each role to its own dashboard after login.
+        """
         app.dependency_overrides[get_current_user_optional] = lambda: admin_user
 
         response = client.get("/", follow_redirects=False)
-        assert response.status_code == 307  # Redirect
-        assert "/dashboard" in response.headers.get("location", "")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+        # Signed-in visitors are offered a way back into the product, not signup.
+        assert "/dashboard" in response.text
 
         app.dependency_overrides.clear()
 

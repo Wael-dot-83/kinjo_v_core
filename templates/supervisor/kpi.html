@@ -131,7 +131,7 @@
     <div class="card mb-4">
         <div class="card-body p-0">
             <div id="childrenTableLoading" class="text-center py-4 text-muted">
-                <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">Loading...</span></div>{{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}
+                <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جارٍ التحميل...{% endif %}</span></div>{{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}
             </div>
             <div id="childrenTableEmpty" class="text-center py-4 text-muted d-none">
                 <i class="bi bi-people d-block fs-2 mb-2 opacity-25"></i>
@@ -163,7 +163,7 @@
     <div class="card mb-4">
         <div class="card-body">
             <div id="trendChartLoading" class="text-center py-4 text-muted">
-                <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">Loading...</span></div>{{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}
+                <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جارٍ التحميل...{% endif %}</span></div>{{ _('جارٍ تحميل البيانات، يرجى الانتظار.') }}
             </div>
             <canvas id="trendChart" style="max-height:260px;display:none;" aria-label="{{ _('مخطط التقارير اليومية') }}"></canvas>
         </div>

@@ -75,8 +75,13 @@ class Settings(BaseSettings):
     MFA_TICKET_EXPIRE_MINUTES: int = 10
     REQUIRE_MFA: bool = True
 
-    # AI Integration
-    GOOGLE_API_KEY: str = ""
+    # AI Integration — intentionally absent.
+    #
+    # google-genai was pinned in requirements.txt and GOOGLE_API_KEY declared here,
+    # but nothing in the codebase ever imported the SDK or read the key. A shipped,
+    # unused dependency is CVE exposure and supply-chain surface with no offsetting
+    # function, so both were removed (gap analysis SEC-03). Reintroduce the package
+    # and this setting together, in the same change that adds a real caller.
 
     # Rate Limiting Configuration
     RATE_LIMIT_STORAGE_URI: str = "memory://"
@@ -175,8 +180,8 @@ class Settings(BaseSettings):
 # Public-facing organization contact info (shown on the public Contact/footer
     # pages once the operator configures real values; left blank otherwise so we
     # never display fabricated contact details).
-    SUPPORT_CONTACT_EMAIL: str = ""
-    SUPPORT_CONTACT_PHONE: str = ""
+    SUPPORT_CONTACT_EMAIL: str = "support@kinjo.jo"
+    SUPPORT_CONTACT_PHONE: str = "+962790337512"
 
     # CAPTCHA (hCaptcha or reCAPTCHA v2) on public abuse-prone forms
     # (login, registration, forgot-password, contact). Disabled by default —

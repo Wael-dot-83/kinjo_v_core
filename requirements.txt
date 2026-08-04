@@ -21,9 +21,7 @@ pyotp==2.9.0
 qrcode[pil]==8.2
 Pillow>=12.2,<13
 cryptography>=43.0
-supervisor==4.2.5
 boto3==1.35.0
-google-genai==1.60.0
 numpy==2.4.2
 scikit-learn>=1.5,<2
 pandas==3.0.0

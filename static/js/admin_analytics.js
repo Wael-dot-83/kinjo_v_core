@@ -118,8 +118,10 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    // Initial load
-    loadAdminAnalytics();
+    // Initial load: run only on analytics dashboard page with error handling
+    if (document.getElementById("kpiTotal") || document.getElementById("tabOverview") || document.querySelector(".admin-analytics-dashboard")) {
+      loadAdminAnalytics().catch((err) => console.warn("Dashboard initial load suppressed error:", err));
+    }
   }
 
   // Load governorates for filter
@@ -343,6 +345,12 @@ function adminAnalyticsLiteral(value) {
 }
 
 async function loadAdminAnalytics(retryCount = 0) {
+  // Guard: loadAdminAnalytics target elements only exist on the analytics dashboard (/admin/analytics).
+  // Skip execution when on other pages like Reports (/admin/analytics/reports) to prevent unhandled rejection toasts.
+  if (!document.getElementById("kpiTotal") && !document.getElementById("tabOverview") && !document.querySelector(".admin-analytics-dashboard")) {
+    return;
+  }
+
   // Push current filter values to global state
   if (window.AnalyticsFilterState) {
     var pStart = document.getElementById('periodStart');

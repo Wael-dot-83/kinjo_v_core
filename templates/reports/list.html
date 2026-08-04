@@ -39,7 +39,7 @@
 
         <div id="reportsContainer">
             <div class="text-center py-5 text-on-surface-variant">
-                <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
+                <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جارٍ التحميل...{% endif %}</span></div>
                 <span class="ms-2">{% if ui_lang == 'en' %}Loading reports...{% else %}جاري تحميل التقارير...{% endif %}</span>
             </div>
         </div>
@@ -232,7 +232,7 @@
         if (container) {
             container.innerHTML = `
                 <div class="text-center py-5 text-on-surface-variant">
-                    <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
+                    <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جارٍ التحميل...{% endif %}</span></div>
                     <span class="ms-2">${tr('جاري تحميل التقارير...', 'Loading reports...')}</span>
                 </div>
             `;

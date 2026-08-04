@@ -3876,9 +3876,17 @@ def get_kpi_analytics(
     kg_id = kindergarten_id
     if current_user.role not in [models.UserRole.ADMIN]:
         allowed_kgs = _allowed_kindergarten_ids(current_user, db)
-        if kg_id is None and allowed_kgs and len(allowed_kgs) == 1:
+        # allowed_kindergarten_ids() returns None for "unrestricted (admin)" and an
+        # empty list for "no access at all". Both are falsy, so guarding on
+        # `allowed_kgs and ...` collapsed the two: a caller with an EMPTY allow-list
+        # fell through unscoped and got whatever kindergarten_id they asked for. A
+        # parent is always [], so any parent could read any kindergarten's KPIs.
+        # Deny an empty scope first — the same order the other 25 call sites use.
+        if not allowed_kgs:
+            raise HTTPException(status_code=403, detail="Access denied")
+        if kg_id is None and len(allowed_kgs) == 1:
             kg_id = allowed_kgs[0]
-        elif kg_id is not None and allowed_kgs and kg_id not in allowed_kgs:
+        elif kg_id is not None and kg_id not in allowed_kgs:
             raise HTTPException(status_code=403, detail="Not allowed to access this kindergarten")
     
     # Get attendance rate
@@ -4035,21 +4043,36 @@ def get_analytics_attendance(
     """Get attendance analytics for dashboard displays."""
     period_start, period_end = get_date_range(start_date, end_date)
     
-    # Scope by user role
+    # Scope by user role.
+    #
+    # Forcing kg_id to current_user.kindergarten_id looks safe but fails open for a
+    # caller who has no kindergarten at all: a parent has kindergarten_id = None, so
+    # kg_id became None and every query below ran unscoped, returning network-wide
+    # figures. Establish that the caller has a scope before relying on it.
     kg_id = kindergarten_id
     if current_user.role not in [models.UserRole.ADMIN]:
-        kg_id = current_user.kindergarten_id
+        allowed_kgs = _allowed_kindergarten_ids(current_user, db)
+        if not allowed_kgs:
+            raise HTTPException(status_code=403, detail="Access denied")
+        kg_id = current_user.kindergarten_id or allowed_kgs[0]
     
     today = _jordan_today()
 
     # Get total children
     children_query = db.query(models.Child)
     if kg_id:
-        enrolled_parent_ids = db.query(models.EnrollmentApplication.parent_id).filter(
+        # Enrolment links a *child* to a kindergarten. This previously filtered on
+        # EnrollmentApplication.parent_id and EnrollmentStatus.ENROLLED, neither of
+        # which exists, so the endpoint raised AttributeError and answered 500 for
+        # every caller. Counting the enrolled children directly is both correct and
+        # narrower: it does not pull in a parent's other children at another
+        # kindergarten.
+        enrolled_child_ids = db.query(models.EnrollmentApplication.child_id).filter(
             models.EnrollmentApplication.kindergarten_id == kg_id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ENROLLED
-        ).subquery()
-        children_query = children_query.filter(models.Child.parent_id.in_(enrolled_parent_ids))
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            models.EnrollmentApplication.deleted_at.is_(None),
+        ).scalar_subquery()
+        children_query = children_query.filter(models.Child.id.in_(enrolled_child_ids))
     total_children = children_query.count()
     
     # Get present today
@@ -4105,10 +4128,18 @@ def get_analytics_dashboard(
     """Get consolidated analytics dashboard data."""
     period_start, period_end = get_date_range(start_date, end_date)
     
-    # Scope by user role
+    # Scope by user role.
+    #
+    # Forcing kg_id to current_user.kindergarten_id looks safe but fails open for a
+    # caller who has no kindergarten at all: a parent has kindergarten_id = None, so
+    # kg_id became None and every query below ran unscoped, returning network-wide
+    # figures. Establish that the caller has a scope before relying on it.
     kg_id = kindergarten_id
     if current_user.role not in [models.UserRole.ADMIN]:
-        kg_id = current_user.kindergarten_id
+        allowed_kgs = _allowed_kindergarten_ids(current_user, db)
+        if not allowed_kgs:
+            raise HTTPException(status_code=403, detail="Access denied")
+        kg_id = current_user.kindergarten_id or allowed_kgs[0]
     
     # Summary stats
     total_kindergartens = db.query(models.Kindergarten).filter(
