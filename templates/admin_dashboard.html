@@ -1,6 +1,4 @@
-{% extends "admin_base.html" %} {% block title %}
-{% if ui_lang == 'en' %}KinJo Admin — Dashboard{% else %}إدارة KinJo — لوحة التحكم{% endif %}
-{% endblock %}
+{% extends "admin_base.html" %} {% block title %} {% if ui_lang == 'en' %}KinJo Admin{% else %}إدارة KinJo{% endif %} — {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %} {% endblock %}
 {% block extra_head %} {{ super() }}
 <link rel="stylesheet" href="/static/vendor/uswds/css/uswds.min.css" />
 <link rel="stylesheet" href="/static/css/agency_reports.css?v=3.2" />
@@ -591,7 +589,8 @@
                         %}إضافة أو تعديل الحسابات{% endif %}
                       </span>
                     </div>
-                  </a></li>
+                  </a>
+                </li>
 
                 <li><a
                     href="/admin/messages/compose"
@@ -612,7 +611,8 @@
                         else %}رسائل جماعية أو مباشرة{% endif %}
                       </span>
                     </div>
-                  </a></li>
+                  </a>
+                </li>
 
                 <li><a href="/admin/analytics" class="admin-quick-action-card">
                     <span
@@ -630,7 +630,8 @@
                         %}تقارير نظام مفصلة{% endif %}
                       </span>
                     </div>
-                  </a></li>
+                  </a>
+                </li>
 
                 <li><a
                     href="/admin/imported-kindergartens"
@@ -651,7 +652,8 @@
                         %}مراجعة السجلات المستوردة{% endif %}
                       </span>
                     </div>
-                  </a></li>
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
@@ -668,7 +670,7 @@
   window.KINJO_LANG = "{{ ui_lang }}";
 </script>
 <script src="/static/js/chart_utils.js?v=2.1"></script>
-<script src="/static/js/admin_dashboard.js?v=3.1"></script>
+<script src="/static/js/admin_dashboard.js?v=3.2"></script>
 <script src="/static/js/admin_activity_filters.js?v=1.0"></script>
 <script src="/static/js/admin_agency_reports_dashboard_summary.js?v=1.0"></script>
 {% endblock %}

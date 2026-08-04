@@ -15,7 +15,7 @@ services:
     # Override port to avoid conflicts with a locally installed postgres.
     # Bound to 127.0.0.1 so the port is NOT accessible from other hosts on the network.
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:5434:5432"
     environment:
       POSTGRES_USER: kinjo
       POSTGRES_PASSWORD: kinjo_dev_password

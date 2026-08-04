@@ -33,7 +33,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 import bcrypt
 from sqlalchemy import text
 from database import SessionLocal, init_db
-from models import Kindergarten, KindergartenStatus, UserRole
+from models import Kindergarten, KindergartenStatus, User, UserRole, UserStatus
 
 
 def _hash(password: str) -> str:
@@ -73,10 +73,15 @@ def run():
         print("=" * 60)
         print("STEP 1 : Removing all existing users ...")
         print("=" * 60)
-        # Disable FK enforcement in SQLite so we can delete freely
-        db.execute(text("PRAGMA foreign_keys = OFF"))
-        db.execute(text("DELETE FROM users"))
-        db.execute(text("PRAGMA foreign_keys = ON"))
+        dialect_name = db.get_bind().dialect.name
+        if dialect_name == "sqlite":
+            # SQLite requires FK enforcement to be disabled while clearing the parent table.
+            db.execute(text("PRAGMA foreign_keys = OFF"))
+            db.execute(text("DELETE FROM users"))
+            db.execute(text("PRAGMA foreign_keys = ON"))
+        else:
+            # PostgreSQL does not support PRAGMA foreign_keys and will cascade via FK rules.
+            db.execute(text("DELETE FROM users"))
         db.commit()
         print("  Done - users table cleared.\n")
 
@@ -126,13 +131,28 @@ def run():
 
             import uuid
             kg_id = kg.id if role in ROLES_NEEDING_KG else None
+            if role == UserRole.MANAGER:
+                import models
+                existing_manager = (
+                    db.query(models.User)
+                    .filter(
+                        models.User.role == UserRole.MANAGER,
+                        models.User.status == models.UserStatus.ACTIVE,
+                        models.User.deleted_at.is_(None),
+                        models.User.kindergarten_id == kg_id,
+                    )
+                    .first()
+                )
+                if existing_manager is not None:
+                    print(f"  [SKIP] {username} -> manager slot already occupied for kindergarten {kg_id}")
+                    continue
             db.execute(
                 text(
                     "INSERT INTO users "
                     "  (public_id, username, email, hashed_password, role, status, "
                     "   kindergarten_id, must_change_password, failed_login_count) "
                     "VALUES "
-                    "  (:pub_id, :u, :e, :h, :r, 'ACTIVE', :kg, 0, 0)"
+                    "  (:pub_id, :u, :e, :h, :r, 'ACTIVE', :kg, FALSE, 0)"
                 ),
                 {
                     "pub_id": str(uuid.uuid4()),

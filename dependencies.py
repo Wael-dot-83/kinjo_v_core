@@ -3,6 +3,7 @@ FastAPI Dependencies for KinJo platform
 """
 import logging
 from typing import Optional
+from urllib.parse import quote
 
 from fastapi import Depends, HTTPException, status, Request, Cookie
 from fastapi.security import OAuth2PasswordBearer
@@ -449,7 +450,10 @@ async def get_current_user_or_redirect(
     token = _get_request_token(request, token, kinjo_session, kinjo_token)
     if not token:
         # Redirect to login with the original URL as redirect parameter
-        redirect_url = f"/login?redirect={request.url.path}"
+        original_url = request.url.path
+        if request.url.query:
+            original_url = f"{original_url}?{request.url.query}"
+        redirect_url = f"/login?redirect={quote(original_url, safe='')}"
         raise RedirectToLogin(redirect_url)
 
     try:

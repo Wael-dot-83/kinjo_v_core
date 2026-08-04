@@ -1472,6 +1472,14 @@ async def register(
     db: Session = Depends(get_db)
 ):
     """Register a new parent user"""
+    # The public page is not the security boundary.  Enforce the same policy
+    # here so a caller cannot create accounts by posting to the API directly.
+    if not (settings.PUBLIC_REGISTRATION_ENABLED or settings.TESTING):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Public registration is not available",
+        )
+
     from email_validator import EmailNotValidError, validate_email as validate_email_address
 
     username = username.strip()

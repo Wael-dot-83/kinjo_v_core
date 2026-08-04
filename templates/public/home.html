@@ -1,1097 +1,128 @@
-{% extends 'base.html' %} {% from 'components/kinjo_logo.html' import kinjo_logo
-%} {# Public landing page. Language: every visible string is wrapped in the
-project's `ui_lang` guard, so a single render emits one language only. Nothing
-here is bilingual on screen — the Arabic page contains no English sentences and
-vice versa. The one Latin string that survives into the Arabic render is the
-brand name "KinJo", which is a proper noun and is written the same way on the
-logo itself. Typography is language-aware on purpose. base.html already loads
-Cairo and Inter, and no single face sets both scripts well: Cairo carries the
-Arabic display type, Inter the Latin. Body copy keeps the inherited token stack.
-Colour comes entirely from the existing brand — the deep green is
---kinjo-primary, and the gold hairline is the inner ring of the logo badge, not
-a new accent. #} {% block title %}{% if ui_lang == 'en' %}Home{% else
-%}الرئيسية{% endif %}{% endblock %} {% block meta_description %}
-<meta
-  name="description"
-  content="{% if ui_lang == 'en' %}KinJo is Jordan's kindergarten platform: enrol a child, follow attendance and daily reports, and manage a kindergarten in one place.{% else %}KinJo منصة الحضانات في الأردن: سجّل طفلك، وتابع الحضور والتقارير اليومية، وأدر الحضانة من مكان واحد.{% endif %}"
-/>
-{% endblock %} {% block content %}
+{% extends 'base.html' %}
 
-<!-- ── Hero ─────────────────────────────────────────────────────────── -->
-<section class="kj-hero">
-  <div class="container">
-    <div class="row align-items-center g-5">
+{% block title %}{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}{% endblock %}
+{% block meta_description %}
+<meta name="description" content="{% if ui_lang == 'en' %}KinJo - Kindergarten enrollment and management platform for Jordan.{% else %}KinJo - منصة تسجيل وإدارة الحضانات في الأردن.{% endif %}" />
+{% endblock %}
+
+{% block content %}
+<section class="kinjo-home-hero" aria-labelledby="home-title">
+  <div class="container py-5">
+    <div class="row align-items-center">
       <div class="col-lg-7">
-        <div class="kj-eyebrow-wrapper">
-          <span class="kj-eyebrow">
-            <i class="bi bi-shield-check me-1" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Kindergarten platform — Jordan{% else %}منصة
-            الحضانات — الأردن{% endif %}
-          </span>
-        </div>
-        <h1 class="kj-display">
-          {% if ui_lang == 'en' %} One place for every child's kindergarten day
-          {% else %} مكان واحد ليوم طفلك في الحضانة {% endif %}
+        <p class="kinjo-home-eyebrow mb-2">{% if ui_lang == 'en' %}One connected service{% else %}خدمة واحدة مترابطة{% endif %}</p>
+        <h1 id="home-title" class="display-5 fw-bold mb-3">
+          {% if ui_lang == 'en' %}Kindergarten enrollment, made simple{% else %}تسجيل الحضانة، بخطوات بسيطة{% endif %}
         </h1>
-        <p class="kj-lead">
-          {% if ui_lang == 'en' %} Parents, kindergarten staff, and supervisors
-          work in the same system. Enrol a child, record attendance, publish
-          daily reports, and follow how kindergartens are performing — without
-          paper forms or phone calls. {% else %} أولياء الأمور وكادر الحضانة
-          والمشرفون يعملون في النظام نفسه. سجّل طفلك، وسجّل الحضور، وانشر
-          التقارير اليومية، وتابع أداء الحضانات — دون نماذج ورقية أو اتصالات
-          هاتفية. {% endif %}
-        </p>
-        {# Signed-in visitors reach this page from the navbar brand or the Back
-           button, so offering them "create an account" would be wrong. They get a
-           way back into the product instead, and the page stays readable. #}
-        <div class="kj-hero-actions">
-          {% if current_user %}
-          <a href="/dashboard" class="btn btn-lg kj-btn-primary">
-            <i class="bi bi-speedometer2" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Go to my dashboard{% else %}الذهاب إلى لوحة
-            التحكم{% endif %}
-          </a>
-          <a href="/services" class="btn btn-lg kj-btn-ghost">
-            <i class="bi bi-journal-check" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Service Guide{% else %}دليل الخدمة{% endif %}
-          </a>
+        <p class="lead text-muted mb-4">
+          {% if ui_lang == 'en' %}
+          KinJo connects parents, kindergarten staff, and education supervisors on one platform —
+          enroll a child, track attendance, and follow daily reports online.
           {% else %}
-          <a href="/register" class="btn btn-lg kj-btn-primary">
-            <i class="bi bi-person-plus" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Create a parent account{% else %}إنشاء حساب
-            ولي أمر{% endif %}
-          </a>
-          <a href="/login" class="btn btn-lg kj-btn-ghost">
-            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
-          </a>
-          {% endif %}
-        </div>
-        <p class="kj-hero-note">
-          <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
-          {% if current_user %}
-            {% if ui_lang == 'en' %} You are signed in. This page stays available
-            from the logo at any time. {% else %} أنت مسجّل الدخول. تبقى هذه
-            الصفحة متاحة من الشعار في أي وقت. {% endif %}
-          {% else %}
-            {% if ui_lang == 'en' %} Kindergarten staff and supervisors receive
-            their accounts from an administrator. {% else %} كادر الحضانة
-            والمشرفون يحصلون على حساباتهم من مسؤول النظام. {% endif %}
+          تجمع KinJo أولياء الأمور والعاملين في الحضانات والمشرفين التربويين في منصة واحدة —
+          سجّل طفلك، وتابع الحضور والتقارير اليومية عبر الإنترنت.
           {% endif %}
         </p>
-
-        <!-- Trust & Impact Bar -->
-        <div class="kj-hero-stats">
-          <div class="kj-stat-item">
-            <span class="kj-stat-val">100%</span>
-            <span class="kj-stat-lbl"
-              >{% if ui_lang == 'en' %}Official Supervision{% else %}إشراف رسمي
-              حكومي{% endif %}</span
-            >
-          </div>
-          <div class="kj-stat-divider" aria-hidden="true"></div>
-          <div class="kj-stat-item">
-            <span class="kj-stat-val">24/7</span>
-            <span class="kj-stat-lbl"
-              >{% if ui_lang == 'en' %}Parent Portal Access{% else %}متابعة
-              فورية للأسر{% endif %}</span
-            >
-          </div>
-          <div class="kj-stat-divider" aria-hidden="true"></div>
-          <div class="kj-stat-item">
-            <span class="kj-stat-val"
-              >{% if ui_lang == 'en' %}Zero Paper{% else %}بلا أوراق{% endif
-              %}</span
-            >
-            <span class="kj-stat-lbl"
-              >{% if ui_lang == 'en' %}Digital Attendance & Reports{% else
-              %}تقارير وحضور رقمي{% endif %}</span
-            >
-          </div>
+        <div class="d-flex flex-wrap gap-2">
+          {% if public_registration_enabled %}
+          <a href="/register" class="btn btn-primary btn-lg">
+            <i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}Create an account{% else %}إنشاء حساب{% endif %}
+          </a>
+          {% endif %}
+          <a href="/login" class="btn btn-outline-primary btn-lg">
+            <i class="bi bi-box-arrow-in-right me-1"></i>{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
+          </a>
+          <a href="/services" class="btn btn-outline-secondary btn-lg">
+            <i class="bi bi-journal-check me-1"></i>{% if ui_lang == 'en' %}View Service Guide{% else %}دليل الخدمة{% endif %}
+          </a>
         </div>
       </div>
-
-      <div class="col-lg-5">
-        <div class="kj-hero-mark-card">
-          <div class="kj-hero-mark">
-            {{ kinjo_logo(size='login', extra_class='kj-hero-logo') }}
-            <p class="kj-hero-mark-caption">
-              <span class="kj-badge-live"></span>
-              {% if ui_lang == 'en' %}Ministry-supervised kindergartens{% else
-              %}حضانات تحت إشراف الجهات الرسمية{% endif %}
-            </p>
-          </div>
-        </div>
+      <div class="col-lg-5 d-none d-lg-block text-center" aria-hidden="true">
+        <i class="bi bi-building" style="font-size: 12rem; color: var(--kinjo-primary, #1F5E47); opacity: 0.15;" aria-hidden="true"></i>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── Signature: who are you? ──────────────────────────────────────── -->
-{# The defining property of this system is that four different audiences share
-it, each entering at a different door. Routing by role is therefore the most
-useful thing this page can do, which is why it sits directly under the hero
-rather than a feature grid. #}
-<section class="kj-section kj-section--roles">
-  <div class="container">
-    <header class="kj-section-head">
-      <h2 class="kj-h2">
-        {% if ui_lang == 'en' %}Find your starting point{% else %}ابدأ من
-        مكانك{% endif %}
-      </h2>
-      <p class="kj-sub">
-        {% if ui_lang == 'en' %} KinJo serves four groups. Choose the one that
-        describes you to see what you can do and how to get access. {% else %}
-        تخدم KinJo أربع فئات. اختر الفئة التي تصفك لترى ما يمكنك فعله وكيف تحصل
-        على صلاحية الدخول. {% endif %}
-      </p>
-    </header>
-
-    <div class="row g-4">
-      <!-- Parent -->
-      <div class="col-md-6 col-xl-3">
-        <article class="kj-role">
-          <div class="kj-role-header">
-            <span class="kj-role-icon" aria-hidden="true"
-              ><i class="bi bi-people"></i
-            ></span>
-            <span class="kj-role-chip kj-role-chip--green">
-              {% if ui_lang == 'en' %}Self Register{% else %}تسجيل مباشر{% endif
-              %}
-            </span>
-          </div>
-          <h3 class="kj-role-title">
-            {% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}
-          </h3>
-          <ul class="kj-role-list">
-            <li>
-              {% if ui_lang == 'en' %}Enrol a child and track the application{%
-              else %}تسجيل طفل ومتابعة الطلب{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Follow daily attendance{% else %}متابعة
-              الحضور اليومي{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Read daily reports{% else %}قراءة التقارير
-              اليومية{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Message the kindergarten{% else %}مراسلة
-              الحضانة{% endif %}
-            </li>
-          </ul>
-          <p class="kj-role-access">
-            {% if ui_lang == 'en' %}Register yourself directly.{% else %}يمكنك
-            التسجيل بنفسك مباشرةً.{% endif %}
-          </p>
-          <a href="/register" class="kj-role-link">
-            {% if ui_lang == 'en' %}Create an account{% else %}إنشاء حساب{%
-            endif %}
-            <i
-              class="bi bi-arrow-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %}"
-              aria-hidden="true"
-            ></i>
-          </a>
-        </article>
-      </div>
-
-      <!-- Supervisor -->
-      <div class="col-md-6 col-xl-3">
-        <article class="kj-role">
-          <div class="kj-role-header">
-            <span class="kj-role-icon" aria-hidden="true"
-              ><i class="bi bi-clipboard-check"></i
-            ></span>
-            <span class="kj-role-chip kj-role-chip--teal">
-              {% if ui_lang == 'en' %}Assigned Account{% else %}حساب مُسْنَد{%
-              endif %}
-            </span>
-          </div>
-          <h3 class="kj-role-title">
-            {% if ui_lang == 'en' %}Supervisor{% else %}مشرف تربوي{% endif %}
-          </h3>
-          <ul class="kj-role-list">
-            <li>
-              {% if ui_lang == 'en' %}Record class attendance{% else %}تسجيل
-              حضور الصف{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Write daily reports{% else %}كتابة
-              التقارير اليومية{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Log observations{% else %}تدوين
-              الملاحظات{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Review your performance{% else %}مراجعة
-              مؤشرات أدائك{% endif %}
-            </li>
-          </ul>
-          <p class="kj-role-access">
-            {% if ui_lang == 'en' %}Your kindergarten creates your account.{%
-            else %}الحضانة تنشئ حسابك.{% endif %}
-          </p>
-          <a href="/login" class="kj-role-link">
-            {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
-            <i
-              class="bi bi-arrow-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %}"
-              aria-hidden="true"
-            ></i>
-          </a>
-        </article>
-      </div>
-
-      <!-- Manager -->
-      <div class="col-md-6 col-xl-3">
-        <article class="kj-role">
-          <div class="kj-role-header">
-            <span class="kj-role-icon" aria-hidden="true"
-              ><i class="bi bi-building-gear"></i
-            ></span>
-            <span class="kj-role-chip kj-role-chip--purple">
-              {% if ui_lang == 'en' %}Manager Access{% else %}اعتماد مدير{%
-              endif %}
-            </span>
-          </div>
-          <h3 class="kj-role-title">
-            {% if ui_lang == 'en' %}Kindergarten manager{% else %}مدير حضانة{%
-            endif %}
-          </h3>
-          <ul class="kj-role-list">
-            <li>
-              {% if ui_lang == 'en' %}Review enrolment applications{% else
-              %}مراجعة طلبات التسجيل{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Manage supervisors and classes{% else
-              %}إدارة المشرفين والصفوف{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Decide absence requests{% else %}البتّ في
-              طلبات الغياب{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Follow performance indicators{% else
-              %}متابعة مؤشرات الأداء{% endif %}
-            </li>
-          </ul>
-          <p class="kj-role-access">
-            {% if ui_lang == 'en' %}An administrator creates your account.{%
-            else %}مسؤول النظام ينشئ حسابك.{% endif %}
-          </p>
-          <a href="/login" class="kj-role-link">
-            {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
-            <i
-              class="bi bi-arrow-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %}"
-              aria-hidden="true"
-            ></i>
-          </a>
-        </article>
-      </div>
-
-      <!-- Administrator -->
-      <div class="col-md-6 col-xl-3">
-        <article class="kj-role">
-          <div class="kj-role-header">
-            <span class="kj-role-icon" aria-hidden="true"
-              ><i class="bi bi-shield-check"></i
-            ></span>
-            <span class="kj-role-chip kj-role-chip--gold">
-              {% if ui_lang == 'en' %}Central Authority{% else %}صلاحية مركزية{%
-              endif %}
-            </span>
-          </div>
-          <h3 class="kj-role-title">
-            {% if ui_lang == 'en' %}Administrator{% else %}مسؤول النظام{% endif
-            %}
-          </h3>
-          <ul class="kj-role-list">
-            <li>
-              {% if ui_lang == 'en' %}Maintain the kindergarten registry{% else
-              %}إدارة سجل الحضانات{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Manage users and permissions{% else
-              %}إدارة المستخدمين والصلاحيات{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Read national analytics{% else %}الاطلاع
-              على التحليلات الوطنية{% endif %}
-            </li>
-            <li>
-              {% if ui_lang == 'en' %}Produce official reports{% else %}إصدار
-              التقارير الرسمية{% endif %}
-            </li>
-          </ul>
-          <p class="kj-role-access">
-            {% if ui_lang == 'en' %}Issued by the platform owner.{% else %}تُمنح
-            من الجهة المالكة للمنصة.{% endif %}
-          </p>
-          <a href="/login" class="kj-role-link">
-            {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
-            <i
-              class="bi bi-arrow-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %}"
-              aria-hidden="true"
-            ></i>
-          </a>
-        </article>
-      </div>
+<div class="container py-5">
+  <div class="row text-center mb-4">
+    <div class="col-12">
+      <h2 class="h4">{% if ui_lang == 'en' %}What you can do on KinJo{% else %}ماذا يمكنك فعله على KinJo؟{% endif %}</h2>
     </div>
   </div>
-</section>
-
-<!-- ── Services ─────────────────────────────────────────────────────── -->
-<section class="kj-section">
-  <div class="container">
-    <header class="kj-section-head">
-      <h2 class="kj-h2">
-        {% if ui_lang == 'en' %}What the platform does{% else %}ماذا تقدّم
-        المنصة{% endif %}
-      </h2>
-      <p class="kj-sub">
-        {% if ui_lang == 'en' %} Six services covering a child's day, the
-        kindergarten's operations, and oversight. {% else %} ستّ خدمات تغطي يوم
-        الطفل، وتشغيل الحضانة، والإشراف عليها. {% endif %}
-      </p>
-    </header>
-
-    <div class="row g-4">
-      {% set services = [ ('bi-clipboard-check', 'Enrolment', 'التسجيل', 'Apply
-      to a kindergarten, upload documents, and follow the application until a
-      decision is issued.', 'قدّم طلباً إلى حضانة، وأرفق المستندات، وتابع الطلب
-      حتى صدور القرار.'), ('bi-calendar-check', 'Attendance', 'الحضور', 'Daily
-      attendance recorded by the class supervisor and visible to parents the
-      same day.', 'حضور يومي يسجّله مشرف الصف ويظهر لولي الأمر في اليوم نفسه.'),
-      ('bi-journal-text', 'Daily reports', 'التقارير اليومية', 'Meals,
-      activities, mood, and notes written for each child and sent to the
-      parent.', 'الوجبات والأنشطة والحالة والملاحظات لكل طفل، وتُرسل إلى ولي
-      الأمر.'), ('bi-heart-pulse', 'Safety and health', 'السلامة والصحة',
-      'Incidents and health alerts are logged, escalated, and tracked until they
-      are closed.', 'تُسجَّل الحوادث والتنبيهات الصحية وتُصعَّد وتُتابع حتى
-      إغلاقها.'), ('bi-chat-dots', 'Messaging', 'المراسلات', 'Direct messages
-      between families and kindergarten staff, kept with the child record.',
-      'رسائل مباشرة بين الأسرة وكادر الحضانة، محفوظة مع ملف الطفل.'),
-      ('bi-graph-up', 'Performance and reports', 'الأداء والتقارير', 'Indicators
-      for each kindergarten, and official reports for the supervising bodies.',
-      'مؤشرات لكل حضانة، وتقارير رسمية للجهات المشرفة.') ] %} {% for icon,
-      title_en, title_ar, body_en, body_ar in services %}
-      <div class="col-md-6 col-lg-4">
-        <article class="kj-service">
-          <div class="kj-service-icon-box">
-            <i class="bi {{ icon }}" aria-hidden="true"></i>
-          </div>
-          <h3 class="kj-service-title">
-            {% if ui_lang == 'en' %}{{ title_en }}{% else %}{{ title_ar }}{%
-            endif %}
-          </h3>
-          <p class="kj-service-body">
-            {% if ui_lang == 'en' %}{{ body_en }}{% else %}{{ body_ar }}{% endif
-            %}
-          </p>
-        </article>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-
-<!-- ── Enrolment sequence ───────────────────────────────────────────── -->
-{# Numbered because this genuinely is an ordered process — each step cannot
-begin until the previous one finishes. Numbering anything else on this page
-would be decoration. #}
-<section class="kj-section kj-section--steps">
-  <div class="container">
-    <header class="kj-section-head">
-      <h2 class="kj-h2">
-        {% if ui_lang == 'en' %}How enrolment works{% else %}كيف يتم التسجيل{%
-        endif %}
-      </h2>
-      <p class="kj-sub">
-        {% if ui_lang == 'en' %} Four steps, each one visible to you as it
-        happens. {% else %} أربع خطوات، كل خطوة ظاهرة لك فور حدوثها. {% endif %}
-      </p>
-    </header>
-
-    <div class="kj-steps-wrapper">
-      <ol class="kj-steps">
-        <li class="kj-step">
-          <span class="kj-step-num" aria-hidden="true"
-            >{% if ui_lang == 'en' %}1{% else %}١{% endif %}</span
-          >
-          <h3 class="kj-step-title">
-            {% if ui_lang == 'en' %}Create an account{% else %}أنشئ حساباً{%
-            endif %}
-          </h3>
-          <p class="kj-step-body">
-            {% if ui_lang == 'en' %}Register as a parent using your national ID
-            or passport details.{% else %}سجّل كولي أمر باستخدام الرقم الوطني أو
-            بيانات جواز السفر.{% endif %}
-          </p>
-        </li>
-        <li class="kj-step">
-          <span class="kj-step-num" aria-hidden="true"
-            >{% if ui_lang == 'en' %}2{% else %}٢{% endif %}</span
-          >
-          <h3 class="kj-step-title">
-            {% if ui_lang == 'en' %}Add your child{% else %}أضف طفلك{% endif %}
-          </h3>
-          <p class="kj-step-body">
-            {% if ui_lang == 'en' %}Enter the child's details and upload the
-            required documents.{% else %}أدخل بيانات الطفل وأرفق المستندات
-            المطلوبة.{% endif %}
-          </p>
-        </li>
-        <li class="kj-step">
-          <span class="kj-step-num" aria-hidden="true"
-            >{% if ui_lang == 'en' %}3{% else %}٣{% endif %}</span
-          >
-          <h3 class="kj-step-title">
-            {% if ui_lang == 'en' %}Choose a kindergarten{% else %}اختر حضانة{%
-            endif %}
-          </h3>
-          <p class="kj-step-body">
-            {% if ui_lang == 'en' %}Select a participating kindergarten and
-            submit the application.{% else %}اختر حضانة مشاركة وقدّم الطلب.{%
-            endif %}
-          </p>
-        </li>
-        <li class="kj-step">
-          <span class="kj-step-num" aria-hidden="true"
-            >{% if ui_lang == 'en' %}4{% else %}٤{% endif %}</span
-          >
-          <h3 class="kj-step-title">
-            {% if ui_lang == 'en' %}Follow the decision{% else %}تابع القرار{%
-            endif %}
-          </h3>
-          <p class="kj-step-body">
-            {% if ui_lang == 'en' %}The kindergarten reviews the application and
-            you are notified of the result.{% else %}تراجع الحضانة الطلب ويصلك
-            إشعار بالنتيجة.{% endif %}
-          </p>
-        </li>
-      </ol>
-    </div>
-
-    <p class="kj-steps-note">
-      <i class="bi bi-book me-1" aria-hidden="true"></i>
-      {% if ui_lang == 'en' %} Requirements, documents, and fees are listed in
-      the <a href="/services">Service Guide</a>. {% else %} المتطلبات والمستندات
-      والرسوم مذكورة في <a href="/services">دليل الخدمة</a>. {% endif %}
-    </p>
-  </div>
-</section>
-
-<!-- ── Help ─────────────────────────────────────────────────────────── -->
-<section class="kj-section kj-section--help">
-  <div class="container">
-    <div class="row g-4 align-items-start">
-      <div class="col-lg-7">
-        <h2 class="kj-h2">
-          {% if ui_lang == 'en' %}If you need help{% else %}إذا احتجت مساعدة{%
-          endif %}
-        </h2>
-        <p class="kj-sub">
-          {% if ui_lang == 'en' %} Start with the answers to common questions.
-          If your question is not there, contact us and a member of staff will
-          reply. {% else %} ابدأ بالأسئلة الشائعة. وإذا لم تجد سؤالك، تواصل معنا
-          وسيرد عليك أحد الموظفين. {% endif %}
+  <div class="row g-4" aria-label="{% if ui_lang == 'en' %}KinJo services{% else %}خدمات KinJo{% endif %}">
+    <div class="col-md-4">
+      <div class="card kinjo-home-feature border-0 shadow-sm h-100 text-center p-3">
+        <i class="bi bi-clipboard-check fs-1 text-primary mb-2" aria-hidden="true"></i>
+        <h3 class="h6">{% if ui_lang == 'en' %}Enroll a child{% else %}تسجيل طفل{% endif %}</h3>
+        <p class="text-muted small mb-0">
+          {% if ui_lang == 'en' %}Find a kindergarten and submit an enrollment application online.{% else %}اختر حضانة وقدّم طلب التسجيل عبر الإنترنت.{% endif %}
         </p>
-        <div class="kj-help-links">
-          <a href="/faq" class="kj-help-link">
-            <i class="bi bi-question-circle" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Common questions{% else %}الأسئلة الشائعة{%
-            endif %}
-          </a>
-          <a href="/services" class="kj-help-link">
-            <i class="bi bi-journal-check" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Service Guide{% else %}دليل الخدمة{% endif
-            %}
-          </a>
-          <a href="/contact" class="kj-help-link">
-            <i class="bi bi-envelope" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Contact us{% else %}تواصل معنا{% endif %}
-          </a>
-          <a href="/about" class="kj-help-link">
-            <i class="bi bi-info-circle" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}About KinJo{% else %}عن KinJo{% endif %}
-          </a>
-        </div>
       </div>
-
-      <div class="col-lg-5">
-        <aside class="kj-access">
-          <h3 class="kj-access-title">
-            <i
-              class="bi bi-universal-access text-success"
-              aria-hidden="true"
-            ></i>
-            {% if ui_lang == 'en' %}Accessibility{% else %}إمكانية الوصول{%
-            endif %}
-          </h3>
-          <p class="kj-access-body">
-            {% if ui_lang == 'en' %} Use the accessibility button in the corner
-            of any page to change text size, raise contrast, or switch to night
-            mode. Your choice is remembered. {% else %} استخدم زر إمكانية الوصول
-            في زاوية أي صفحة لتغيير حجم النص أو رفع التباين أو تفعيل الوضع
-            الليلي. ويُحفظ اختيارك. {% endif %}
-          </p>
-          <div class="kj-access-legal">
-            <a href="/privacy"
-              >{% if ui_lang == 'en' %}Privacy Policy{% else %}سياسة الخصوصية{%
-              endif %}</a
-            >
-            <span aria-hidden="true">·</span>
-            <a href="/terms"
-              >{% if ui_lang == 'en' %}Terms of Use{% else %}الشروط والأحكام{%
-              endif %}</a
-            >
-          </div>
-        </aside>
+    </div>
+    <div class="col-md-4">
+      <div class="card kinjo-home-feature border-0 shadow-sm h-100 text-center p-3">
+        <i class="bi bi-journal-text fs-1 text-primary mb-2" aria-hidden="true"></i>
+        <h3 class="h6">{% if ui_lang == 'en' %}Follow daily reports{% else %}متابعة التقارير اليومية{% endif %}</h3>
+        <p class="text-muted small mb-0">
+          {% if ui_lang == 'en' %}See attendance and daily activity reports for your child.{% else %}تابع الحضور والتقارير اليومية لطفلك.{% endif %}
+        </p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card kinjo-home-feature border-0 shadow-sm h-100 text-center p-3">
+        <i class="bi bi-chat-dots fs-1 text-primary mb-2" aria-hidden="true"></i>
+        <h3 class="h6">{% if ui_lang == 'en' %}Stay in touch{% else %}التواصل المستمر{% endif %}</h3>
+        <p class="text-muted small mb-0">
+          {% if ui_lang == 'en' %}Message kindergarten staff directly through the platform.{% else %}تواصل مع كادر الحضانة مباشرة عبر المنصة.{% endif %}
+        </p>
       </div>
     </div>
   </div>
-</section>
+</div>
 
-{% endblock %} {% block extra_css %}
+<div class="container pb-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8 text-center">
+      <p class="text-muted small">
+        {% if ui_lang == 'en' %}
+        Have a question? Visit our <a href="/faq">FAQ</a> or <a href="/contact">contact us</a>.
+        Read our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.
+        Use the accessibility button in the bottom corner of any page to adjust text size, contrast, or night mode.
+        {% else %}
+        لديك سؤال؟ زر صفحة <a href="/faq">الأسئلة الشائعة</a> أو <a href="/contact">تواصل معنا</a>.
+        اقرأ <a href="/privacy">سياسة الخصوصية</a> و<a href="/terms">الشروط والأحكام</a>.
+        استخدم زر إمكانية الوصول في زاوية أي صفحة لتعديل حجم النص أو التباين أو الوضع الليلي.
+        {% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+
 <style>
-  /* Landing page stylesheet. Scoped under .kj- to avoid global style leakage.
-     Colors map strictly to existing brand design tokens with safe fallbacks. */
-  .kj-hero,
-  .kj-section {
-    --kj-green: var(--kinjo-primary, #1f5e47);
-    --kj-green-dark: var(--kinjo-primary-dark, #163d2e);
-    --kj-green-pale: var(--kinjo-primary-light, #e0f0eb);
-    --kj-gold: #c9a227;
-    --kj-ink: #16201c;
-    --kj-muted: #4a5a53;
-    --kj-surface: #f7faf9;
+  .kinjo-home-hero {
+    background: radial-gradient(circle at 85% 18%, rgba(47, 125, 98, 0.14), transparent 32%), linear-gradient(155deg, #eff6ff 0%, #ffffff 60%);
+    border-bottom: 1px solid var(--kinjo-border-light, var(--kinjo-color-border));
   }
-
-  /* Display typography: Cairo sets Arabic, Inter sets English. */
-  .kj-display,
-  .kj-h2,
-  .kj-role-title,
-  .kj-step-title {
-    font-family: "Cairo", "Noto Sans Arabic", "Segoe UI", sans-serif;
+  .kinjo-home-eyebrow {
+    color: var(--kinjo-primary, #1F5E47);
+    font-size: .875rem;
     font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
   }
-  [lang="en"] .kj-display,
-  [lang="en"] .kj-h2,
-  [lang="en"] .kj-role-title,
-  [lang="en"] .kj-step-title {
-    font-family:
-      "Inter",
-      -apple-system,
-      "Segoe UI",
-      sans-serif;
-    letter-spacing: -0.02em;
+  .kinjo-home-feature {
+    border: 1px solid transparent !important;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
   }
-
-  /* ── Hero ─────────────────────────────────────────────── */
-  .kj-hero {
-    background:
-      radial-gradient(
-        110% 130% at 85% 0%,
-        rgba(224, 240, 235, 0.9) 0%,
-        rgba(255, 255, 255, 0) 60%
-      ),
-      var(--kj-surface);
-    border-block-end: 1px solid rgba(31, 94, 71, 0.12);
-    padding-block: clamp(2.75rem, 6vw, 5.25rem);
+  .kinjo-home-feature:hover {
+    border-color: rgba(31, 94, 71, .25) !important;
+    box-shadow: 0 .75rem 1.75rem rgba(22, 61, 46, .12) !important;
+    transform: translateY(-.25rem);
   }
-
-  .kj-eyebrow-wrapper {
-    margin-block-end: 0.9rem;
-  }
-  .kj-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    padding-block: 0.35rem;
-    padding-inline: 0.9rem;
-    background: rgba(31, 94, 71, 0.06);
-    border: 1px solid var(--kj-gold);
-    border-radius: 999px;
-    color: var(--kj-green-dark);
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-  }
-
-  .kj-display {
-    margin-block-end: 1.1rem;
-    color: var(--kj-ink);
-    font-size: clamp(2rem, 4.5vw, 3.25rem);
-    line-height: 1.18;
-  }
-
-  .kj-lead {
-    max-width: 48ch;
-    margin-block-end: 1.85rem;
-    color: var(--kj-muted);
-    font-size: clamp(1rem, 1.6vw, 1.15rem);
-    line-height: 1.75;
-  }
-
-  .kj-hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.85rem;
-  }
-
-  .kj-btn-primary,
-  .kj-btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-    padding: 0.75rem 1.4rem;
-    border-radius: 12px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-  }
-
-  .kj-btn-primary {
-    background: var(--kj-green);
-    border: 1px solid var(--kj-green);
-    color: #fff;
-    box-shadow: 0 4px 14px rgba(31, 94, 71, 0.25);
-  }
-  .kj-btn-primary:hover,
-  .kj-btn-primary:focus-visible {
-    background: var(--kj-green-dark);
-    border-color: var(--kj-green-dark);
-    color: #fff;
-    box-shadow: 0 6px 18px rgba(22, 61, 46, 0.35);
-    transform: translateY(-1px);
-  }
-
-  .kj-btn-ghost {
-    background: #fff;
-    border: 1px solid rgba(31, 94, 71, 0.3);
-    color: var(--kj-green-dark);
-  }
-  .kj-btn-ghost:hover,
-  .kj-btn-ghost:focus-visible {
-    background: var(--kj-green-pale);
-    border-color: var(--kj-green);
-    color: var(--kj-green-dark);
-    transform: translateY(-1px);
-  }
-
-  .kj-hero-note {
-    margin-block-start: 1.1rem;
-    margin-block-end: 0;
-    color: var(--kj-muted);
-    font-size: 0.88rem;
-  }
-
-  /* Stats / Impact Bar */
-  .kj-hero-stats {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1.25rem;
-    margin-block-start: 2.25rem;
-    padding-block-start: 1.5rem;
-    border-block-start: 1px dashed rgba(31, 94, 71, 0.18);
-  }
-  .kj-stat-item {
-    display: flex;
-    flex-direction: column;
-  }
-  .kj-stat-val {
-    color: var(--kj-green-dark);
-    font-size: 1.25rem;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-  .kj-stat-lbl {
-    color: var(--kj-muted);
-    font-size: 0.8rem;
-  }
-  .kj-stat-divider {
-    width: 1px;
-    height: 28px;
-    background: rgba(31, 94, 71, 0.18);
-  }
-
-  /* Hero Logo Card */
-  .kj-hero-mark-card {
-    padding: 2.25rem 1.75rem;
-    background: #fff;
-    border: 1px solid rgba(31, 94, 71, 0.14);
-    border-radius: 20px;
-    box-shadow: 0 16px 36px rgba(22, 61, 46, 0.08);
-  }
-  .kj-hero-mark {
-    text-align: center;
-  }
-  .kj-hero-mark .kj-hero-logo {
-    width: clamp(130px, 22vw, 190px);
-    height: auto;
-    object-fit: contain;
-  }
-  .kj-hero-mark-caption {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin-block-start: 1.1rem;
-    margin-block-end: 0;
-    padding: 0.35rem 0.85rem;
-    background: var(--kj-surface);
-    border-radius: 999px;
-    color: var(--kj-muted);
-    font-size: 0.83rem;
-    font-weight: 500;
-  }
-  .kj-badge-live {
-    width: 8px;
-    height: 8px;
-    background: var(--kj-gold);
-    border-radius: 50%;
-    box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.25);
-  }
-
-  /* ── Sections ─────────────────────────────────────────── */
-  .kj-section {
-    padding-block: clamp(2.75rem, 5.5vw, 4.5rem);
-  }
-  .kj-section--roles {
-    background: #fff;
-  }
-  .kj-section--steps,
-  .kj-section--help {
-    background: var(--kj-surface);
-    border-block-start: 1px solid rgba(31, 94, 71, 0.1);
-  }
-
-  .kj-section-head {
-    max-width: 62ch;
-    margin-block-end: 2.25rem;
-  }
-  .kj-h2 {
-    margin-block-end: 0.5rem;
-    color: var(--kj-ink);
-    font-size: clamp(1.4rem, 2.6vw, 1.95rem);
-  }
-  .kj-sub {
-    margin-block-end: 0;
-    color: var(--kj-muted);
-    font-size: 0.98rem;
-    line-height: 1.7;
-  }
-
-  /* ── Role cards ───────────────────────────────────────── */
-  .kj-role {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    padding: 1.6rem;
-    background: #fff;
-    border: 1px solid rgba(31, 94, 71, 0.16);
-    border-radius: 16px;
-    border-block-start: 3px solid var(--kj-gold);
-    box-shadow: 0 4px 12px rgba(22, 61, 46, 0.04);
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease;
-  }
-  .kj-role:hover,
-  .kj-role:focus-within {
-    transform: translateY(-4px);
-    box-shadow: 0 14px 32px rgba(22, 61, 46, 0.12);
-  }
-
-  .kj-role-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-block-end: 1rem;
-  }
-
-  .kj-role-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 46px;
-    height: 46px;
-    background: var(--kj-green-pale);
-    border-radius: 12px;
-    color: var(--kj-green-dark);
-    font-size: 1.35rem;
-  }
-
-  .kj-role-chip {
-    padding: 0.2rem 0.55rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-  .kj-role-chip--green {
-    background: #e0f0eb;
-    color: #163d2e;
-  }
-  .kj-role-chip--teal {
-    background: #e0f2f1;
-    color: #004d40;
-  }
-  .kj-role-chip--purple {
-    background: #f3e5f5;
-    color: #4a148c;
-  }
-  .kj-role-chip--gold {
-    background: #fff8e1;
-    color: #795548;
-  }
-
-  .kj-role-title {
-    margin-block-end: 0.75rem;
-    color: var(--kj-ink);
-    font-size: 1.1rem;
-  }
-
-  .kj-role-list {
-    margin-block-end: 1.1rem;
-    padding: 0;
-    list-style: none;
-    color: var(--kj-muted);
-    font-size: 0.9rem;
-    line-height: 1.65;
-  }
-  .kj-role-list li {
-    position: relative;
-    padding-inline-start: 1.1rem;
-    margin-block-end: 0.45rem;
-  }
-  .kj-role-list li::before {
-    content: "";
-    position: absolute;
-    inset-inline-start: 0;
-    inset-block-start: 0.55em;
-    width: 5px;
-    height: 5px;
-    background: var(--kj-green);
-    border-radius: 50%;
-  }
-
-  .kj-role-access {
-    margin-block-start: auto;
-    margin-block-end: 0.75rem;
-    padding-block-start: 0.75rem;
-    border-block-start: 1px solid rgba(31, 94, 71, 0.08);
-    color: var(--kj-ink);
-    font-size: 0.84rem;
-    font-weight: 600;
-  }
-
-  .kj-role-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    color: var(--kj-green-dark);
-    font-size: 0.92rem;
-    font-weight: 600;
-    text-decoration: none;
-  }
-  .kj-role-link:hover,
-  .kj-role-link:focus-visible {
-    color: var(--kj-green);
-    text-decoration: underline;
-  }
-
-  /* ── Services ─────────────────────────────────────────── */
-  .kj-service {
-    height: 100%;
-    padding: 1.5rem;
-    background: #fff;
-    border: 1px solid rgba(31, 94, 71, 0.14);
-    border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(22, 61, 46, 0.03);
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
-  }
-  .kj-service:hover {
-    border-color: rgba(31, 94, 71, 0.35);
-    box-shadow: 0 8px 22px rgba(22, 61, 46, 0.08);
-  }
-  .kj-service-icon-box {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    margin-block-end: 0.9rem;
-    background: var(--kj-green-pale);
-    border-radius: 12px;
-    color: var(--kj-green);
-    font-size: 1.5rem;
-  }
-  .kj-service-title {
-    margin-block-end: 0.45rem;
-    color: var(--kj-ink);
-    font-size: 1.05rem;
-    font-weight: 600;
-  }
-  .kj-service-body {
-    margin-block-end: 0;
-    color: var(--kj-muted);
-    font-size: 0.9rem;
-    line-height: 1.65;
-  }
-
-  /* ── Steps Stepper ────────────────────────────────────── */
-  .kj-steps-wrapper {
-    position: relative;
-  }
-  .kj-steps {
-    display: grid;
-    gap: 1.25rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  }
-  .kj-step {
-    position: relative;
-    padding: 1.5rem;
-    background: #fff;
-    border: 1px solid rgba(31, 94, 71, 0.14);
-    border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(22, 61, 46, 0.03);
-    transition: transform 0.18s ease;
-  }
-  .kj-step:hover {
-    transform: translateY(-2px);
-  }
-  .kj-step-num {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    margin-block-end: 0.85rem;
-    background: var(--kj-green-dark);
-    border: 2px solid var(--kj-gold);
-    border-radius: 10px;
-    color: #fff;
-    font-size: 1.05rem;
-    font-weight: 700;
-  }
-  .kj-step-title {
-    margin-block-end: 0.4rem;
-    color: var(--kj-ink);
-    font-size: 1.05rem;
-  }
-  .kj-step-body {
-    margin-block-end: 0;
-    color: var(--kj-muted);
-    font-size: 0.88rem;
-    line-height: 1.6;
-  }
-  .kj-steps-note {
-    margin-block-start: 1.75rem;
-    margin-block-end: 0;
-    color: var(--kj-muted);
-    font-size: 0.92rem;
-  }
-
-  /* ── Help ─────────────────────────────────────────────── */
-  .kj-help-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-block-start: 1.5rem;
-  }
-  .kj-help-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.65rem 1.1rem;
-    background: #fff;
-    border: 1px solid rgba(31, 94, 71, 0.22);
-    border-radius: 999px;
-    color: var(--kj-green-dark);
-    font-size: 0.92rem;
-    font-weight: 600;
-    text-decoration: none;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
-    transition: all 0.18s ease;
-  }
-  .kj-help-link:hover,
-  .kj-help-link:focus-visible {
-    background: var(--kj-green-pale);
-    border-color: var(--kj-green);
-    color: var(--kj-green-dark);
-    transform: translateY(-1px);
-  }
-
-  .kj-access {
-    padding: 1.6rem;
-    background: #fff;
-    border: 1px solid rgba(31, 94, 71, 0.16);
-    border-inline-start: 4px solid var(--kj-gold);
-    border-radius: 14px;
-    box-shadow: 0 4px 14px rgba(22, 61, 46, 0.05);
-  }
-  .kj-access-title {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    margin-block-end: 0.75rem;
-    color: var(--kj-ink);
-    font-size: 1.05rem;
-    font-weight: 700;
-  }
-  .kj-access-body {
-    color: var(--kj-muted);
-    font-size: 0.9rem;
-    line-height: 1.68;
-  }
-  .kj-access-legal {
-    display: flex;
-    gap: 0.6rem;
-    margin-block-start: 1rem;
-    padding-block-start: 0.85rem;
-    border-block-start: 1px solid rgba(31, 94, 71, 0.08);
-    font-size: 0.85rem;
-  }
-  .kj-access-legal a {
-    color: var(--kj-green-dark);
-    font-weight: 600;
-    text-decoration: none;
-  }
-  .kj-access-legal a:hover {
-    text-decoration: underline;
-  }
-
-  /* ── Quality floor & Focus states ───────────────────── */
-  .kj-role-link:focus-visible,
-  .kj-help-link:focus-visible,
-  .kj-btn-primary:focus-visible,
-  .kj-btn-ghost:focus-visible {
-    outline: 3px solid var(--kj-gold);
-    outline-offset: 2px;
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .kj-role,
-    .kj-step,
-    .kj-help-link,
-    .kj-btn-primary,
-    .kj-btn-ghost {
-      transition: none;
-    }
-    .kj-role:hover,
-    .kj-role:focus-within,
-    .kj-step:hover,
-    .kj-help-link:hover,
-    .kj-btn-primary:hover,
-    .kj-btn-ghost:hover {
-      transform: none;
-    }
+    .kinjo-home-feature { transition: none; }
+    .kinjo-home-feature:hover { transform: none; }
   }
 </style>
 {% endblock %}
