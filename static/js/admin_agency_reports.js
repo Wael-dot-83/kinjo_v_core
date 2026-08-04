@@ -11,6 +11,10 @@
       credentials: "same-origin",
       headers: { "X-Requested-With": "XMLHttpRequest" },
     }).then((r) => {
+      if (r.status === 401) {
+        window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname + window.location.search);
+        throw new Error("HTTP 401 Unauthorized");
+      }
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     });
@@ -1505,15 +1509,18 @@
 
     api(url)
       .then(renderReport)
-      .catch(() => {
-        if (root)
+      .catch((err) => {
+        console.error("Agency report load error:", err);
+        if (root) {
+          const is403 = err && err.message && err.message.includes("403");
+          const msg = is403
+            ? t("خطأ في الصلاحيات: يتطلب عرض هذا التقرير حساب مدير النظام (Admin).", "Permission error: This report requires Admin account privileges.")
+            : t("تعذر تحميل التقرير. يرجى المحاولة مرة أخرى أو التواصل مع مسؤول النظام.", "Unable to load the report. Please try again or contact the system administrator.");
           root.innerHTML =
             '<div class="agency-alert agency-alert--error"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> ' +
-            t(
-              "تعذر تحميل التقرير. يرجى المحاولة مرة أخرى أو التواصل مع مسؤول النظام.",
-              "Unable to load the report. Please try again or contact the system administrator.",
-            ) +
-            "</div>";
+            msg +
+            '</div>';
+        }
       });
   }
 
