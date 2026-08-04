@@ -686,9 +686,9 @@
         .map(
           (kpi) => `
             <div class="col-md-3 col-sm-6">
-              <div class="p-3 bg-light rounded text-center border">
-                <div class="fs-4 fw-bold text-primary mb-1">${escapeHtml(kpi.value.toString())} <small class="text-muted fs-6">${escapeHtml(kpi.unit)}</small></div>
-                <div class="small text-muted">${escapeHtml(reportsText(kpi.label_ar || kpi.label, kpi.label_en || kpi.label))}</div>
+              <div class="preview-kpi-card text-center h-100">
+                <div class="fs-4 fw-bold text-primary mb-1">${escapeHtml(kpi.value.toString())} <small class="text-muted fs-6">${escapeHtml(kpi.unit || "")}</small></div>
+                <div class="small text-muted fw-medium">${escapeHtml(reportsText(kpi.label_ar || kpi.label, kpi.label_en || kpi.label))}</div>
               </div>
             </div>
             `,
