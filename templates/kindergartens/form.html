@@ -151,13 +151,15 @@ breadcrumbs=[
                     <div class="row mb-3">
                         <div class="col-md-6 mb-3 mb-md-0">
                             <label for="operatingStart" class="form-label">{% if ui_lang == 'en' %}Start Time{% else %}وقت البدء{% endif %}</label>
-                            <input type="time" class="form-control" id="operatingStart" name="operating_hours_start"
+                            {# name= is the API request field (working_hours_*); value= reads the
+                               ORM column (operating_hours_*). The API translates between them. #}
+                            <input type="time" class="form-control" id="operatingStart" name="working_hours_start"
                                 data-testid="operatingStart"
                                 value="{{ kindergarten.operating_hours_start if kindergarten else '07:00' }}">
                         </div>
                         <div class="col-md-6">
                             <label for="operatingEnd" class="form-label">{% if ui_lang == 'en' %}End Time{% else %}وقت الانتهاء{% endif %}</label>
-                            <input type="time" class="form-control" id="operatingEnd" name="operating_hours_end"
+                            <input type="time" class="form-control" id="operatingEnd" name="working_hours_end"
                                 data-testid="operatingEnd"
                                 value="{{ kindergarten.operating_hours_end if kindergarten else '16:00' }}">
                         </div>
@@ -424,7 +426,7 @@ breadcrumbs=[
             }
         });
 
-        const optionalFields = ['contact_email', 'name_en', 'operating_hours_start', 'operating_hours_end', 'license_number', 'license_valid_until'];
+        const optionalFields = ['contact_email', 'name_en', 'working_hours_start', 'working_hours_end', 'license_number', 'license_valid_until'];
         optionalFields.forEach(field => {
             if (field in payload) {
                 const value = typeof payload[field] === 'string' ? payload[field].trim() : payload[field];

@@ -17,8 +17,9 @@ def test_kindergarten_crud_admin(client, test_db, admin_token, admin_user):
         "contact_phone": "0799999999",
         "contact_email": "future@kg.com",
         "license_number": "LIC-TEST-001",
-        "operating_hours_start": "08:00",
-        "operating_hours_end": "14:00"
+        # Public API field names; the API persists them to operating_hours_*.
+        "working_hours_start": "08:00",
+        "working_hours_end": "14:00"
     }
     
     headers = {"Authorization": f"Bearer {admin_token}", **csrf_pair()}
@@ -27,6 +28,14 @@ def test_kindergarten_crud_admin(client, test_db, admin_token, admin_user):
     created = response.json().get("data", response.json())
     kg_id = created["id"]
     assert created["status"] == models.KindergartenStatus.DRAFT.value.lower()
+
+    # Non-vacuity: the submitted hours must actually reach the DB columns, not just
+    # return 201. (This payload previously used the column names, which Pydantic
+    # drops, so the assertion below would have passed while the data was lost.)
+    kg_row = test_db.query(models.Kindergarten).filter(models.Kindergarten.id == kg_id).first()
+    assert kg_row.operating_hours_start == "08:00"
+    assert kg_row.operating_hours_end == "14:00"
+    assert created["working_hours_start"] == "08:00"
 
     # 2. List Kindergartens (should find it)
     response = client.get("/api/kindergartens", headers=headers)
@@ -47,8 +56,8 @@ def test_kindergarten_creation_without_email_or_license(client, test_db, admin_t
         "area": "Downtown",
         "address_line": "Main street",
         "contact_phone": "0788888888",
-        "operating_hours_start": "07:30",
-        "operating_hours_end": "15:30"
+        "working_hours_start": "07:30",
+        "working_hours_end": "15:30"
     }
 
     headers = {"Authorization": f"Bearer {admin_token}", **csrf_pair()}
