@@ -356,6 +356,22 @@ def _stats_subqueries(db: Session):
     return child_count, attendance
 
 
+# The public API exposes the operating-hours columns under their historical
+# `working_hours_*` names (request schemas above, and _serialize below). The
+# columns themselves are `operating_hours_*`, so a request payload cannot be
+# spread onto the model unchanged — translate it on the way in. This is the
+# write-side counterpart of the mapping _serialize performs on the way out.
+_MODEL_FIELD_ALIASES = {
+    "working_hours_start": "operating_hours_start",
+    "working_hours_end": "operating_hours_end",
+}
+
+
+def _to_model_fields(data: dict) -> dict:
+    """Rename public API field names to their SQLAlchemy column names."""
+    return {_MODEL_FIELD_ALIASES.get(key, key): value for key, value in data.items()}
+
+
 def _serialize(kg: models.Kindergarten, child_count: Optional[int] = None,
                attendance_present: Optional[int] = None, attendance_total: Optional[int] = None):
     d = {
@@ -642,7 +658,7 @@ def create_kindergarten(
 
     # A kindergarten without an authenticated manager is not operational yet.
     # Create it as DRAFT; assigning its first manager activates it atomically.
-    kg = models.Kindergarten(**data.model_dump(exclude_none=True), status=models.KindergartenStatus.DRAFT)
+    kg = models.Kindergarten(**_to_model_fields(data.model_dump(exclude_none=True)), status=models.KindergartenStatus.DRAFT)
     db.add(kg)
     db.flush()
     validators.log_audit_action(
@@ -678,7 +694,7 @@ def update_kindergarten(
         }.get(dup, "سجل مكرر / Duplicate record")
         return _envelope(False, None, msg, 400)
 
-    for field, value in data.model_dump(exclude_none=True).items():
+    for field, value in _to_model_fields(data.model_dump(exclude_none=True)).items():
         setattr(kg, field, value)
     kg.updated_at = datetime.now(_JORDAN_TZ)
     validators.log_audit_action(
@@ -847,7 +863,7 @@ def create_kindergarten_with_manager(
         return _envelope(False, None, "Username or email already exists", 409)
         
     try:
-        kg = models.Kindergarten(**payload.kindergarten.model_dump(exclude_none=True), status=models.KindergartenStatus.ACTIVE)
+        kg = models.Kindergarten(**_to_model_fields(payload.kindergarten.model_dump(exclude_none=True)), status=models.KindergartenStatus.ACTIVE)
         db.add(kg)
         db.flush()
         
