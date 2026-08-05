@@ -98,12 +98,14 @@
       <div class="col-lg-2 col-md-6 col-6">
         <h3 class="kj-footer-heading">{% if ui_lang == 'en' %}Portals & Services{% else %}البوابات والخدمات{% endif %}</h3>
         <ul class="list-unstyled kj-footer-nav mb-0">
+          {% if public_registration_enabled %}
           <li>
             <a href="/register" class="kj-footer-link">
               <i class="bi bi-person-plus me-1" aria-hidden="true"></i>
               {% if ui_lang == 'en' %}Parent Registration{% else %}بوابة تسجيل أولياء الأمور{% endif %}
             </a>
           </li>
+          {% endif %}
           <li>
             <a href="/login" class="kj-footer-link">
               <i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>

@@ -222,8 +222,9 @@ class TestFrontendRoutes:
         app.dependency_overrides[get_current_user_optional] = lambda: admin_user
 
         response = client.get("/", follow_redirects=False)
-        assert response.status_code == 303
-        assert "/dashboard" in response.headers.get("location", "")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+        assert "location" not in response.headers
 
         app.dependency_overrides.clear()
 
