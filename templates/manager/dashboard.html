@@ -3,107 +3,136 @@
 {% block title %}{% if ui_lang == 'en' %}Manager Dashboard — KinJo{% else %}لوحة تحكم المدير — كنجو{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
-  <div>
-    <h1 class="fs-1 fw-bold mt-0 mb-1">
-      {% if ui_lang == 'en' %}Manager Dashboard{% else %}لوحة تحكم المدير{% endif %}
-    </h1>
-    <p class="lead text-muted mt-0 mb-0" id="kgNameLine">
-      <span id="kgName">…</span>
-      <span class="text-muted">— <span id="todayDate"></span></span>
-    </p>
-  </div>
-  <div class="text-end">
-    <button type="button" class="btn btn-outline-primary" id="dashRefreshBtn">
-      <i class="bi bi-arrow-clockwise me-2" id="dashRefreshIcon" aria-hidden="true"></i>
-      {% if ui_lang == 'en' %}Refresh{% else %}تحديث البيانات{% endif %}
-    </button>
-    {# aria-live so a screen reader announces the new time after a refresh. #}
-    <p class="small text-muted mt-2 mb-0" id="dashUpdatedLine" role="status" aria-live="polite" hidden>
-      {% if ui_lang == 'en' %}Updated{% else %}آخر تحديث{% endif %}
-      <span id="dashUpdatedAt"></span>
-    </p>
+<div class="mgr-dash-hero mb-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 position-relative" style="z-index: 2;">
+    <div>
+      <div class="mgr-brand-badge mb-2">
+        <i class="bi bi-shield-check" aria-hidden="true"></i>
+        <span>{% if ui_lang == 'en' %}KinJo Manager Portal{% else %}بوابة إدارة الحضانة{% endif %}</span>
+      </div>
+      <h1 class="fs-2 fw-bold text-white mt-0 mb-1">
+        {% if ui_lang == 'en' %}Manager Dashboard{% else %}لوحة تحكم المدير{% endif %}
+      </h1>
+      <p class="lead text-white-50 mt-0 mb-0 d-flex align-items-center gap-2" id="kgNameLine">
+        <i class="bi bi-building"></i>
+        <span id="kgName" class="fw-semibold text-white">…</span>
+        <span>— <span id="todayDate"></span></span>
+      </p>
+    </div>
+    <div class="text-end">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <button type="button" class="btn btn-light text-success fw-bold shadow-sm d-inline-flex align-items-center gap-2" id="dashRefreshBtn">
+          <i class="bi bi-arrow-clockwise" id="dashRefreshIcon" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Refresh Data{% else %}تحديث البيانات{% endif %}
+        </button>
+      </div>
+      <p class="mgr-time-pill mb-0" id="dashUpdatedLine" role="status" aria-live="polite" hidden>
+        <i class="bi bi-clock"></i>
+        <span>{% if ui_lang == 'en' %}Updated at{% else %}آخر تحديث{% endif %}</span>
+        <span id="dashUpdatedAt" class="fw-semibold"></span>
+      </p>
+    </div>
   </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- Loading state.
-     NOTE: do not add a `d-flex` (or any `d-*`) utility here. Those set
-     `display: … !important`, which overrides the `hidden` attribute, so the
-     spinner would stay visible even after the data loads. The JS toggles
-     `hidden`, so this element must not carry a conflicting display utility. -->
-<div id="dashLoading" class="alert alert-info" role="status">
-  <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-  <span>{% if ui_lang == 'en' %}Loading dashboard…{% else %}جارٍ تحميل لوحة التحكم…{% endif %}</span>
+<!-- Loading state. -->
+<div id="dashLoading" class="alert alert-info shadow-sm border-info rounded-3 p-4" role="status">
+  <div class="d-flex align-items-center gap-3">
+    <span class="spinner-border spinner-border-sm text-info fs-5" aria-hidden="true"></span>
+    <span class="fw-semibold">{% if ui_lang == 'en' %}Loading dashboard…{% else %}جارٍ تحميل لوحة التحكم…{% endif %}</span>
+  </div>
 </div>
 
 <!-- Error state -->
-<div id="dashError" class="alert alert-danger" role="alert" hidden>
-  <div>
-    <p class="mb-0">
-      {% if ui_lang == 'en' %}Could not load the dashboard. {% else %}تعذّر تحميل لوحة التحكم. {% endif %}
-      <button type="button" class="btn btn-link text-decoration-none" id="dashRetryBtn">
-        {% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}
-      </button>
-    </p>
+<div id="dashError" class="alert alert-danger shadow-sm border-danger rounded-3 p-4" role="alert" hidden>
+  <div class="d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-3">
+      <i class="bi bi-exclamation-octagon-fill fs-3 text-danger"></i>
+      <p class="mb-0 fw-medium">
+        {% if ui_lang == 'en' %}Could not load the dashboard.{% else %}تعذّر تحميل لوحة التحكم.{% endif %}
+      </p>
+    </div>
+    <button type="button" class="btn btn-danger fw-bold" id="dashRetryBtn">
+      <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}
+    </button>
   </div>
 </div>
 
 <div id="dashContent" hidden>
 
   <!-- Pending actions -->
-  <section aria-labelledby="pendingHeading" class="mb-5">
-    <h2 id="pendingHeading" class="h3 fw-bold mb-3 text-primary d-flex align-items-center">
-      <i class="bi bi-bell-fill text-gold me-2"></i>
-      {% if ui_lang == 'en' %}Needs your action today{% else %}بانتظار إجراءاتك اليوم{% endif %}
-    </h2>
-    <ul class="row g-4 list-unstyled">
+  <section aria-labelledby="pendingHeading" class="mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h2 id="pendingHeading" class="mgr-section-title mb-0">
+        <i class="bi bi-bell-fill text-warning"></i>
+        <span>{% if ui_lang == 'en' %}Needs your action today{% else %}بانتظار إجراءاتك اليوم{% endif %}</span>
+      </h2>
+    </div>
+    <ul class="row g-4 list-unstyled mb-0">
       <li class="col-12 col-md-6 col-lg-3">
-        <div class="card h-100 shadow-sm bg-primary-subtle border-primary border-opacity-25">
-          <div class="card-body text-center">
-            <i class="bi bi-file-earmark-text text-primary fs-1 mb-1"></i>
-            <p class="fs-1 fw-bolder display-5 m-0 text-primary fw-bold" id="statReportsPending">0</p>
-            <p class="m-0 text-primary fw-bold">{% if ui_lang == 'en' %}Daily reports to review{% else %}تقارير يومية للمراجعة{% endif %}</p>
+        <div class="card h-100 mgr-action-card mgr-action-card--gold">
+          <div class="card-body text-center p-3">
+            <div class="mgr-icon-ring mgr-icon-ring--gold">
+              <i class="bi bi-file-earmark-text-fill"></i>
+            </div>
+            <p class="display-6 fw-bold text-dark m-0" id="statReportsPending">0</p>
+            <p class="small text-muted fw-bold mt-1 mb-2">{% if ui_lang == 'en' %}Daily reports to review{% else %}تقارير يومية للمراجعة{% endif %}</p>
           </div>
-          <div class="card-footer bg-transparent border-0 pt-0">
-            <a href="/daily-reports" class="btn btn-primary w-100 d-flex justify-content-center align-items-center">
+          <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+            <a href="/daily-reports" class="btn btn-warning text-dark w-100 fw-bold d-flex justify-content-center align-items-center gap-2 shadow-sm">
               {% if ui_lang == 'en' %}Review Now{% else %}راجع الآن{% endif %}
-              <i class="bi bi-arrow-right ms-2"></i>
+              <i class="bi bi-arrow-right icon-directional"></i>
             </a>
           </div>
         </div>
       </li>
       <li class="col-12 col-md-6 col-lg-3">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body text-center">
-            <i class="bi bi-calendar-x text-muted fs-1 mb-1"></i>
-            <p class="fs-1 fw-bolder display-5 m-0 text-primary" id="statAbsencePending">0</p>
-            <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Absence requests{% else %}طلبات غياب معلّقة{% endif %}</p>
+        <div class="card h-100 mgr-action-card mgr-action-card--teal">
+          <div class="card-body text-center p-3">
+            <div class="mgr-icon-ring mgr-icon-ring--teal">
+              <i class="bi bi-calendar-x-fill"></i>
+            </div>
+            <p class="display-6 fw-bold text-dark m-0" id="statAbsencePending">0</p>
+            <p class="small text-muted fw-bold mt-1 mb-2">{% if ui_lang == 'en' %}Absence requests{% else %}طلبات غياب معلّقة{% endif %}</p>
           </div>
-          <div class="card-footer bg-transparent border-0 pt-0">
-            <a href="/manager/absence-requests" class="btn btn-outline-primary w-100">{% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %}</a>
-          </div>
-        </div>
-      </li>
-      <li class="col-12 col-md-6 col-lg-3">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body text-center">
-            <i class="bi bi-person-plus text-muted fs-1 mb-1"></i>
-            <p class="fs-1 fw-bolder display-5 m-0 text-primary" id="statEnrollmentPending">0</p>
-            <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Enrollment requests{% else %}طلبات تسجيل معلّقة{% endif %}</p>
-          </div>
-          <div class="card-footer bg-transparent border-0 pt-0">
-            <a href="/enrollments" class="btn btn-outline-primary w-100">{% if ui_lang == 'en' %}Review{% else %}مراجعة{% endif %}</a>
+          <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+            <a href="/manager/absence-requests" class="btn btn-outline-primary w-100 fw-bold d-flex justify-content-center align-items-center gap-2">
+              {% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %}
+            </a>
           </div>
         </div>
       </li>
       <li class="col-12 col-md-6 col-lg-3">
-        <div class="card h-100 shadow-sm bg-success-subtle border-success border-opacity-25">
-          <div class="card-body text-center">
-            <i class="bi bi-send-check text-success fs-1 mb-1"></i>
-            <p class="fs-1 fw-bolder display-5 m-0 text-success fw-bold" id="statReportsSentToday">0</p>
-            <p class="m-0 text-success fw-bold">{% if ui_lang == 'en' %}Reports sent today{% else %}تقارير أُرسلت اليوم{% endif %}</p>
+        <div class="card h-100 mgr-action-card mgr-action-card--indigo">
+          <div class="card-body text-center p-3">
+            <div class="mgr-icon-ring mgr-icon-ring--indigo">
+              <i class="bi bi-person-plus-fill"></i>
+            </div>
+            <p class="display-6 fw-bold text-dark m-0" id="statEnrollmentPending">0</p>
+            <p class="small text-muted fw-bold mt-1 mb-2">{% if ui_lang == 'en' %}Enrollment requests{% else %}طلبات تسجيل معلّقة{% endif %}</p>
+          </div>
+          <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+            <a href="/enrollments" class="btn btn-outline-primary w-100 fw-bold d-flex justify-content-center align-items-center gap-2">
+              {% if ui_lang == 'en' %}Review{% else %}مراجعة{% endif %}
+            </a>
+          </div>
+        </div>
+      </li>
+      <li class="col-12 col-md-6 col-lg-3">
+        <div class="card h-100 mgr-action-card mgr-action-card--emerald">
+          <div class="card-body text-center p-3">
+            <div class="mgr-icon-ring mgr-icon-ring--emerald">
+              <i class="bi bi-send-check-fill"></i>
+            </div>
+            <p class="display-6 fw-bold text-success m-0" id="statReportsSentToday">0</p>
+            <p class="small text-muted fw-bold mt-1 mb-2">{% if ui_lang == 'en' %}Reports sent today{% else %}تقارير أُرسلت اليوم{% endif %}</p>
+          </div>
+          <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+            <a href="/daily-reports" class="btn btn-outline-success w-100 fw-bold d-flex justify-content-center align-items-center gap-2">
+              {% if ui_lang == 'en' %}View Log{% else %}عرض السجل{% endif %}
+            </a>
           </div>
         </div>
       </li>
@@ -111,45 +140,54 @@
   </section>
 
   <!-- Kindergarten snapshot -->
-  <section aria-labelledby="snapshotHeading" class="mb-5">
-    <h2 id="snapshotHeading" class="h3 fw-bold mb-3 text-primary d-flex align-items-center">
-      <i class="bi bi-building me-2"></i>
-      {% if ui_lang == 'en' %}Kindergarten Snapshot{% else %}نظرة عامة على الحضانة{% endif %}
+  <section aria-labelledby="snapshotHeading" class="mb-4">
+    <h2 id="snapshotHeading" class="mgr-section-title mb-3">
+      <i class="bi bi-building"></i>
+      <span>{% if ui_lang == 'en' %}Kindergarten Snapshot{% else %}نظرة عامة على الحضانة{% endif %}</span>
     </h2>
-    <ul class="row g-4 list-unstyled">
+    <ul class="row g-4 list-unstyled mb-0">
       <li class="col-12 col-md-6 col-lg-4">
-        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2">
-          <div class="p-2 bg-primary-subtle text-primary rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
-            <i class="bi bi-diagram-3 fs-1 fw-bold"></i>
+        <div class="mgr-snapshot-tile">
+          <div class="mgr-snapshot-avatar mgr-snapshot-avatar--primary">
+            <i class="bi bi-diagram-3-fill"></i>
           </div>
-          <div class="card-body p-0">
-            <p class="m-0 text-secondary text-uppercase small fw-bold">{% if ui_lang == 'en' %}Active Classes{% else %}شعب صفية نشطة{% endif %}</p>
-            <p class="fs-1 fw-bold m-0" id="statClasses">0</p>
-            <a href="/classes" class="link-secondary mt-2 d-inline-block">{% if ui_lang == 'en' %}Manage classes →{% else %}إدارة الشعب الصفية ←{% endif %}</a>
+          <div>
+            <p class="m-0 text-muted small fw-bold text-uppercase">{% if ui_lang == 'en' %}Active Classes{% else %}شعب صفية نشطة{% endif %}</p>
+            <p class="fs-2 fw-bold text-dark m-0" id="statClasses">0</p>
+            <a href="/classes" class="link-primary fw-semibold small mt-1 d-inline-flex align-items-center gap-1">
+              {% if ui_lang == 'en' %}Manage classes{% else %}إدارة الشعب الصفية{% endif %}
+              <i class="bi bi-arrow-right icon-directional"></i>
+            </a>
           </div>
         </div>
       </li>
       <li class="col-12 col-md-6 col-lg-4">
-        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2">
-          <div class="p-2 bg-success-subtle text-success-dark rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
-            <i class="bi bi-emoji-smile fs-1 fw-bold"></i>
+        <div class="mgr-snapshot-tile">
+          <div class="mgr-snapshot-avatar mgr-snapshot-avatar--success">
+            <i class="bi bi-emoji-smile-fill"></i>
           </div>
-          <div class="card-body p-0">
-            <p class="m-0 text-secondary text-uppercase small fw-bold">{% if ui_lang == 'en' %}Enrolled Children{% else %}أطفال مسجّلون{% endif %}</p>
-            <p class="fs-1 fw-bold m-0" id="statChildren">0</p>
-            <a href="/children" class="link-secondary mt-2 d-inline-block">{% if ui_lang == 'en' %}View children →{% else %}عرض الأطفال ←{% endif %}</a>
+          <div>
+            <p class="m-0 text-muted small fw-bold text-uppercase">{% if ui_lang == 'en' %}Enrolled Children{% else %}أطفال مسجّلون{% endif %}</p>
+            <p class="fs-2 fw-bold text-dark m-0" id="statChildren">0</p>
+            <a href="/children" class="link-success fw-semibold small mt-1 d-inline-flex align-items-center gap-1">
+              {% if ui_lang == 'en' %}View children{% else %}عرض الأطفال{% endif %}
+              <i class="bi bi-arrow-right icon-directional"></i>
+            </a>
           </div>
         </div>
       </li>
       <li class="col-12 col-md-6 col-lg-4">
-        <div class="card h-100 shadow-sm d-flex flex-row align-items-center p-2">
-          <div class="p-2 bg-warning-subtle text-gold rounded-circle me-3 d-flex justify-content-center align-items-center" style="width: 64px; height: 64px; border-radius: 50%;">
-            <i class="bi bi-person-badge-fill fs-1 fw-bold"></i>
+        <div class="mgr-snapshot-tile">
+          <div class="mgr-snapshot-avatar mgr-snapshot-avatar--gold">
+            <i class="bi bi-person-badge-fill"></i>
           </div>
-          <div class="card-body p-0">
-            <p class="m-0 text-secondary text-uppercase small fw-bold">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</p>
-            <p class="fs-1 fw-bold m-0" id="statSupervisors">0</p>
-            <a href="/manager/supervisors" class="link-secondary mt-2 d-inline-block">{% if ui_lang == 'en' %}View coverage →{% else %}عرض التغطية ←{% endif %}</a>
+          <div>
+            <p class="m-0 text-muted small fw-bold text-uppercase">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفون{% endif %}</p>
+            <p class="fs-2 fw-bold text-dark m-0" id="statSupervisors">0</p>
+            <a href="/manager/supervisors" class="link-warning fw-semibold small mt-1 d-inline-flex align-items-center gap-1">
+              {% if ui_lang == 'en' %}View coverage{% else %}عرض التغطية{% endif %}
+              <i class="bi bi-arrow-right icon-directional"></i>
+            </a>
           </div>
         </div>
       </li>
@@ -157,78 +195,83 @@
   </section>
 
   <!-- Today's Activity -->
-  <section aria-labelledby="activityHeading" class="mb-5">
-    <h2 id="activityHeading" class="h3 fw-bold mb-3 text-primary d-flex align-items-center">
-      <i class="bi bi-calendar-check me-2"></i>
-      {% if ui_lang == 'en' %}Today's Activity{% else %}نشاط اليوم{% endif %}
+  <section aria-labelledby="activityHeading" class="mb-4">
+    <h2 id="activityHeading" class="mgr-section-title mb-3">
+      <i class="bi bi-calendar-check-fill"></i>
+      <span>{% if ui_lang == 'en' %}Today's Activity{% else %}نشاط اليوم{% endif %}</span>
     </h2>
-    <ul class="row g-4 list-unstyled">
+    <ul class="row g-4 list-unstyled mb-0">
       <li class="col-12 col-md-4">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body text-center">
-            <i class="bi bi-people-fill text-success fs-1 mb-1"></i>
-            <p class="fs-1 fw-bolder display-5 m-0 text-success" id="statAttendanceToday">0</p>
-            <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Present today{% else %}حاضرون اليوم{% endif %}</p>
-          </div>
+        <div class="mgr-activity-card">
+          <i class="bi bi-people-fill text-success fs-1 mb-1 d-block"></i>
+          <p class="display-6 fw-bold text-success m-0" id="statAttendanceToday">0</p>
+          <p class="m-0 text-muted fw-bold small mt-1">{% if ui_lang == 'en' %}Present today{% else %}حاضرون اليوم{% endif %}</p>
         </div>
       </li>
       <li class="col-12 col-md-4">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body text-center">
-            <i class="bi bi-person-plus text-warning fs-1 mb-1"></i>
-            <p class="fs-1 fw-bolder display-5 m-0 text-warning" id="statWaitlisted">0</p>
-            <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Waitlisted{% else %}قائمة الانتظار{% endif %}</p>
-          </div>
+        <div class="mgr-activity-card">
+          <i class="bi bi-person-plus-fill text-warning fs-1 mb-1 d-block"></i>
+          <p class="display-6 fw-bold text-warning m-0" id="statWaitlisted">0</p>
+          <p class="m-0 text-muted fw-bold small mt-1">{% if ui_lang == 'en' %}Waitlisted{% else %}قائمة الانتظار{% endif %}</p>
         </div>
       </li>
       <li class="col-12 col-md-4">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body text-center">
-            <i class="bi bi-exclamation-triangle text-danger fs-1 mb-1"></i>
-            <p class="fs-1 fw-bolder display-5 m-0 text-danger" id="statIncidents">0</p>
-            <p class="m-0 text-muted fw-bold">{% if ui_lang == 'en' %}Incidents (7 days){% else %}حوادث (7 أيام){% endif %}</p>
-          </div>
+        <div class="mgr-activity-card">
+          <i class="bi bi-exclamation-triangle-fill text-danger fs-1 mb-1 d-block"></i>
+          <p class="display-6 fw-bold text-danger m-0" id="statIncidents">0</p>
+          <p class="m-0 text-muted fw-bold small mt-1">{% if ui_lang == 'en' %}Incidents (7 days){% else %}حوادث (7 أيام){% endif %}</p>
         </div>
       </li>
     </ul>
   </section>
 
   <!-- Attendance Trend Chart -->
-  <section aria-labelledby="chartHeading" class="mb-5">
-    <h2 id="chartHeading" class="h3 fw-bold mb-3 text-primary d-flex align-items-center">
-      <i class="bi bi-graph-up me-2"></i>
-      {% if ui_lang == 'en' %}Attendance Trend (7 days){% else %}اتجاه الحضور (7 أيام){% endif %}
-    </h2>
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <canvas id="attendanceTrendChart" style="max-height:300px;" aria-label="{{ _('Attendance trend chart') }}"></canvas>
+  <section aria-labelledby="chartHeading" class="mb-4">
+    <div class="mgr-chart-card">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 id="chartHeading" class="mgr-section-title mb-0">
+          <i class="bi bi-graph-up-arrow"></i>
+          <span>{% if ui_lang == 'en' %}Attendance Trend (7 days){% else %}اتجاه الحضور (7 أيام){% endif %}</span>
+        </h2>
+        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 rounded-pill">
+          <i class="bi bi-activity me-1"></i>{% if ui_lang == 'en' %}Live Sync{% else %}تحديث حي{% endif %}
+        </span>
+      </div>
+      <div style="position: relative; height: 280px; width: 100%;">
+        <canvas id="attendanceTrendChart" aria-label="{{ _('Attendance trend chart') }}"></canvas>
       </div>
     </div>
   </section>
 
-  <section aria-labelledby="alertsHeading">
-    <h2 id="alertsHeading" class="h3 fw-bold mb-2">
-      {% if ui_lang == 'en' %}Operational alerts{% else %}تنبيهات تشغيلية{% endif %}
+  <section aria-labelledby="alertsHeading" class="mb-4">
+    <h2 id="alertsHeading" class="mgr-section-title mb-3">
+      <i class="bi bi-shield-exclamation text-danger"></i>
+      <span>{% if ui_lang == 'en' %}Operational alerts{% else %}تنبيهات تشغيلية{% endif %}</span>
     </h2>
-    <div id="alertNoSupervisor" class="alert alert-warning" hidden>
-      <div>
-        <h3 class="alert-heading">{% if ui_lang == 'en' %}Classes without a supervisor{% else %}شعب صفية بلا مشرف{% endif %}</h3>
-        <p class="mb-0" id="alertNoSupervisorList"></p>
+    <div id="alertNoSupervisor" class="alert alert-warning border border-warning shadow-sm rounded-3 mb-3" hidden>
+      <div class="d-flex align-items-start gap-3">
+        <i class="bi bi-exclamation-triangle-fill fs-3 text-warning flex-shrink-0 mt-1"></i>
+        <div>
+          <h3 class="alert-heading h5 fw-bold mb-1">{% if ui_lang == 'en' %}Classes without a supervisor{% else %}شعب صفية بلا مشرف{% endif %}</h3>
+          <p class="mb-0 text-dark" id="alertNoSupervisorList"></p>
+        </div>
       </div>
     </div>
-    <div id="alertNearCapacity" class="alert alert-warning" hidden>
-      <div>
-        <h3 class="alert-heading">{% if ui_lang == 'en' %}Classes at or near capacity{% else %}شعب صفية ممتلئة أو شبه ممتلئة{% endif %}</h3>
-        <p class="mb-0" id="alertNearCapacityList"></p>
+    <div id="alertNearCapacity" class="alert alert-warning border border-warning shadow-sm rounded-3 mb-3" hidden>
+      <div class="d-flex align-items-start gap-3">
+        <i class="bi bi-speedometer2 fs-3 text-warning flex-shrink-0 mt-1"></i>
+        <div>
+          <h3 class="alert-heading h5 fw-bold mb-1">{% if ui_lang == 'en' %}Classes at or near capacity{% else %}شعب صفية ممتلئة أو شبه ممتلئة{% endif %}</h3>
+          <p class="mb-0 text-dark" id="alertNearCapacityList"></p>
+        </div>
       </div>
     </div>
-    <!-- Alerts the API reports that have no dedicated block above: licence expiry,
-         pending applications, pending reports. Rendered from the `alerts` payload so
-         a new server-side alert type shows up here instead of vanishing. -->
-    <div id="alertsFromApi" hidden></div>
-    <div id="alertsAllClear" class="alert py-2 alert-success" hidden>
-      <div>
-        <p class="mb-0">{% if ui_lang == 'en' %}No operational alerts — everything looks good.{% else %}لا توجد تنبيهات تشغيلية — كل شيء على ما يرام.{% endif %}</p>
+    <!-- Alerts from API -->
+    <div id="alertsFromApi" class="mb-3" hidden></div>
+    <div id="alertsAllClear" class="alert alert-success border border-success shadow-sm rounded-3 py-3" hidden>
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-check-circle-fill fs-3 text-success flex-shrink-0"></i>
+        <p class="mb-0 fw-semibold text-success-emphasis">{% if ui_lang == 'en' %}No operational alerts — everything looks good.{% else %}لا توجد تنبيهات تشغيلية — كل شيء على ما يرام.{% endif %}</p>
       </div>
     </div>
   </section>
@@ -261,31 +304,54 @@ function renderAttendanceTrendChart(data) {
         return d.toLocaleDateString(UI_EN ? 'en-JO' : 'ar-JO', { weekday: 'short', month: 'short', day: 'numeric' });
     });
     const values = data.map(p => p.count);
-    _trendChart = new Chart(canvas.getContext('2d'), {
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+    gradient.addColorStop(0, 'rgba(31, 94, 71, 0.3)');
+    gradient.addColorStop(1, 'rgba(31, 94, 71, 0.01)');
+
+    _trendChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels,
             datasets: [{
                 label: UI_EN ? 'Attending children' : 'الأطفال الحاضرون',
                 data: values,
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16,185,129,0.1)',
+                borderColor: '#1F5E47',
+                borderWidth: 3,
+                backgroundColor: gradient,
                 fill: true,
-                tension: 0.3,
-                pointRadius: 4,
-                pointBackgroundColor: '#10b981',
+                tension: 0.35,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: '#D4AF37',
+                pointBorderColor: '#1F5E47',
+                pointBorderWidth: 2,
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
-                tooltip: { rtl: !UI_EN, titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
+                tooltip: {
+                    rtl: !UI_EN,
+                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                    titleFont: { family: 'Noto Sans Arabic, Inter, sans-serif', size: 13, weight: 'bold' },
+                    bodyFont: { family: 'Noto Sans Arabic, Inter, sans-serif', size: 12 },
+                    padding: 10,
+                    cornerRadius: 8
+                }
             },
             scales: {
-                y: { beginAtZero: true, ticks: { font: { family: 'Cairo' }, stepSize: 1 } },
-                x: { ticks: { font: { family: 'Cairo', size: 10 } } }
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(226, 232, 240, 0.7)' },
+                    ticks: { font: { family: 'Noto Sans Arabic, Inter, sans-serif' }, stepSize: 1 }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { family: 'Noto Sans Arabic, Inter, sans-serif', size: 11 } }
+                }
             }
         }
     });
