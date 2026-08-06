@@ -4141,17 +4141,44 @@ def get_analytics_dashboard(
             raise HTTPException(status_code=403, detail="Access denied")
         kg_id = current_user.kindergarten_id or allowed_kgs[0]
     
-    # Summary stats
-    total_kindergartens = db.query(models.Kindergarten).filter(
+    # Summary stats.
+    #
+    # These three counts used to run unscoped while every KPI below them already
+    # honoured kg_id. A manager or supervisor is bound to exactly one
+    # kindergarten, but this block answered with network-wide totals:
+    # total_kindergartens returned every active kindergarten in the country,
+    # total_children every child in the system, and total_staff every active
+    # manager and supervisor — regardless of who was asking. They now use the
+    # same kg_id the scoping block above established.
+    #
+    # kg_id is None only for an ADMIN who asked for no particular kindergarten,
+    # which is the one case where network-wide totals are the correct answer.
+    kindergartens_query = db.query(models.Kindergarten).filter(
         models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-    ).count()
-    
-    total_children = db.query(models.Child).count()
-    
-    total_staff = db.query(models.User).filter(
+    )
+    if kg_id:
+        kindergartens_query = kindergartens_query.filter(models.Kindergarten.id == kg_id)
+    total_kindergartens = kindergartens_query.count()
+
+    children_query = db.query(models.Child)
+    if kg_id:
+        # Children carry no kindergarten_id; enrolment is the link. Same
+        # subquery the attendance endpoint above uses, so the two agree.
+        scoped_child_ids = db.query(models.EnrollmentApplication.child_id).filter(
+            models.EnrollmentApplication.kindergarten_id == kg_id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            models.EnrollmentApplication.deleted_at.is_(None),
+        ).scalar_subquery()
+        children_query = children_query.filter(models.Child.id.in_(scoped_child_ids))
+    total_children = children_query.count()
+
+    staff_query = db.query(models.User).filter(
         models.User.role.in_([models.UserRole.MANAGER, models.UserRole.SUPERVISOR]),
         models.User.status == models.UserStatus.ACTIVE
-    ).count()
+    )
+    if kg_id:
+        staff_query = staff_query.filter(models.User.kindergarten_id == kg_id)
+    total_staff = staff_query.count()
     
     # Get KPIs
     kpis = {

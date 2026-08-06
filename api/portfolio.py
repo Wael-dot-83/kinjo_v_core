@@ -119,7 +119,33 @@ def get_child_portfolio(
             .all()
         )
     else:
-        # Staff can see all portfolios
+        # This branch read "Staff can see all portfolios" and did precisely
+        # that, across tenants: a manager bound to one kindergarten could fetch
+        # the portfolio of a child enrolled in another. Verified against the
+        # seed data — manager1 (kindergarten 1) retrieved child 7's portfolio,
+        # a child enrolled in kindergarten 3, title and all.
+        #
+        # Same guard get_child_health_alerts already uses further down this
+        # file, so the two child-scoped reads now agree. Admins stay
+        # unrestricted; every other staff role must hold an active enrolment
+        # for this child in their own kindergarten.
+        if current_user.role != models.UserRole.ADMIN:
+            enrollment = (
+                db.query(models.EnrollmentApplication.id)
+                .filter(
+                    models.EnrollmentApplication.child_id == child_id,
+                    models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+                    models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+                )
+                .first()
+            )
+            # 404, matching api/children.py::_authorize_child_access and
+            # get_child_health_alerts below. Every child-scoped read in this
+            # module refuses the same way, so an out-of-scope child cannot be
+            # told apart from one that does not exist.
+            if not enrollment:
+                raise HTTPException(status_code=404, detail="Child not found")
+
         portfolios = (
             db.query(models.Portfolio)
             .filter(models.Portfolio.child_id == child_id)
@@ -251,7 +277,7 @@ def get_child_health_alerts(
     elif current_user.role != models.UserRole.ADMIN:
         # Supervisors and managers are scoped to their own kindergarten
         enrollment = (
-            db.query(models.EnrollmentApplication)
+            db.query(models.EnrollmentApplication.id)
             .filter(
                 models.EnrollmentApplication.child_id == child_id,
                 models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
@@ -259,8 +285,19 @@ def get_child_health_alerts(
             )
             .first()
         )
+        # 404, not 403. This scope check was already correct — it was the refusal
+        # that leaked: a 403 reading "Child not in your kindergarten scope"
+        # confirms the child exists in some other kindergarten, so numeric child
+        # IDs could still be walked to map another tenant's roll. That is the
+        # enumeration oracle dependencies.ManagerScope calls out ("404, not 403 —
+        # do not reveal that another tenant's resource exists") and that
+        # tests/test_analytics_tenant_isolation.py exists to prevent.
+        #
+        # Now identical to api/children.py::_authorize_child_access and to the
+        # observations/portfolio reads, so all child-scoped reads answer the same
+        # way and an out-of-scope child is indistinguishable from a missing one.
         if not enrollment:
-            raise HTTPException(status_code=403, detail="Child not in your kindergarten scope")
+            raise HTTPException(status_code=404, detail="Child not found")
 
     alerts = (
         db.query(models.HealthAlert)
