@@ -721,6 +721,64 @@ html[dir="rtl"] .sidebar {
   border-radius: 0.6rem;
 }
 
+/* Parent header items.
+   Scoped to .kj-nav-* so only the parent branch of components/navbar.html picks
+   these up; staff headers keep the existing .nav-link treatment untouched. */
+.kinjo-navbar .kj-nav-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.7rem;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* The active page reads as selected without relying on colour alone: the
+   underline carries the same information for anyone who cannot separate the
+   white-on-blue tints. */
+.kinjo-navbar .kj-nav-item.active {
+  background-color: rgba(255, 255, 255, 0.16);
+  position: relative;
+}
+
+.kinjo-navbar .kj-nav-item.active::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0.7rem;
+  bottom: 0.15rem;
+  height: 2px;
+  border-radius: 2px;
+  background-color: #fff;
+}
+
+.kinjo-navbar .kj-nav-avatar {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1;
+  color: #0f4cbd;
+  background-color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 2px 6px rgba(13, 48, 115, 0.25);
+}
+
+.kinjo-navbar .kj-nav-user:hover .kj-nav-avatar,
+.kinjo-navbar .kj-nav-user:focus-visible .kj-nav-avatar {
+  background-color: #eef4ff;
+}
+
+/* Bootstrap's RTL build flips dropdown-menu-end correctly, but the caret and
+   the icon gutter inside the items need the logical property to follow suit. */
+.kinjo-navbar .dropdown-menu .dropdown-item i {
+  width: 1.15rem;
+  text-align: center;
+}
+
 .navbar-search-form .input-group {
   background-color: rgba(255, 255, 255, 0.96);
   border-radius: 999px;
