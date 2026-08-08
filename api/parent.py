@@ -1,6 +1,7 @@
 """
 Parent domain endpoints
 """
+
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
@@ -26,29 +27,24 @@ def _ulang(user) -> str:
     """Return the user's preferred UI language, defaulting to Arabic."""
     return getattr(user, "preferred_language", None) or "ar"
 
+
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Parent"])
 
+
 @router.get("/parent/dashboard")
-def get_parent_dashboard(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+def get_parent_dashboard(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get comprehensive parent dashboard"""
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
-    parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
+    parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
 
     if not parent_profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     # Get all children
-    children = db.query(models.Child).filter(
-        models.Child.parent_id == parent_profile.id
-    ).all()
+    children = db.query(models.Child).filter(models.Child.parent_id == parent_profile.id).all()
 
     today = datetime.now(_JORDAN_TZ).date()
     child_ids = [c.id for c in children]
@@ -61,23 +57,30 @@ def get_parent_dashboard(
     if child_ids:
         enrollments_by_child = {
             e.child_id: e
-            for e in db.query(models.EnrollmentApplication).filter(
+            for e in db.query(models.EnrollmentApplication)
+            .filter(
                 models.EnrollmentApplication.child_id.in_(child_ids),
-                models.EnrollmentApplication.status.in_([
-                    models.EnrollmentStatus.ACTIVE,
-                    models.EnrollmentStatus.WAITLISTED,
-                    models.EnrollmentStatus.PENDING_REVIEW,
-                ]),
-            ).all()
+                models.EnrollmentApplication.status.in_(
+                    [
+                        models.EnrollmentStatus.ACTIVE,
+                        models.EnrollmentStatus.WAITLISTED,
+                        models.EnrollmentStatus.PENDING_REVIEW,
+                    ]
+                ),
+            )
+            .all()
         }
         attendance_by_child = {
             a.child_id: a
-            for a in db.query(models.AttendanceLog).filter(
+            for a in db.query(models.AttendanceLog)
+            .filter(
                 models.AttendanceLog.child_id.in_(child_ids),
                 models.AttendanceLog.date == today,
-            ).all()
+            )
+            .all()
         }
         from sqlalchemy import func as _func
+
         subq = (
             db.query(
                 models.DailyReport.child_id,
@@ -90,11 +93,14 @@ def get_parent_dashboard(
             .group_by(models.DailyReport.child_id)
             .subquery()
         )
-        for r in db.query(models.DailyReport).join(
-            subq,
-            (models.DailyReport.child_id == subq.c.child_id)
-            & (models.DailyReport.date == subq.c.max_date),
-        ).all():
+        for r in (
+            db.query(models.DailyReport)
+            .join(
+                subq,
+                (models.DailyReport.child_id == subq.c.child_id) & (models.DailyReport.date == subq.c.max_date),
+            )
+            .all()
+        ):
             latest_report_by_child[r.child_id] = r
 
     kgs_by_id = {}
@@ -102,8 +108,7 @@ def get_parent_dashboard(
         kg_ids = {e.kindergarten_id for e in enrollments_by_child.values() if e.kindergarten_id}
         if kg_ids:
             kgs_by_id = {
-                kg.id: kg
-                for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
+                kg.id: kg for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
             }
 
     children_data = []
@@ -117,7 +122,9 @@ def get_parent_dashboard(
             "id": child.id,
             "first_name": child.first_name,
             "last_name": child.last_name,
-            "gender": child.gender.value if hasattr(child.gender, "value") else (str(child.gender) if child.gender else None),
+            "gender": child.gender.value
+            if hasattr(child.gender, "value")
+            else (str(child.gender) if child.gender else None),
             "kindergarten_name": (kg.name_ar or kg.name_en) if kg else None,
             "age_months": validators.validate_age_months(child.date_of_birth),
             "enrollment": None,
@@ -148,11 +155,11 @@ def get_parent_dashboard(
     return {
         "parent": {
             "name": f"{parent_profile.first_name} {parent_profile.last_name}",
-            "phone": parent_profile.phone_number
+            "phone": parent_profile.phone_number,
         },
         "children": children_data,
         "total_children": len(children),
-        "notifications": []
+        "notifications": [],
     }
 
 
@@ -179,9 +186,7 @@ def get_parent_profile(
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
-    profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
+    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
@@ -225,16 +230,18 @@ def get_parent_children(
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
-    profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
+    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
-    children = db.query(models.Child).filter(
-        models.Child.parent_id == profile.id,
-        models.Child.deleted_at.is_(None),
-    ).all()
+    children = (
+        db.query(models.Child)
+        .filter(
+            models.Child.parent_id == profile.id,
+            models.Child.deleted_at.is_(None),
+        )
+        .all()
+    )
 
     child_ids = [c.id for c in children]
 
@@ -242,21 +249,19 @@ def get_parent_children(
     all_enrollments: list = []
     kg_ids: set = set()
     if child_ids:
-        all_enrollments = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id.in_(child_ids)
-        ).all()
+        all_enrollments = (
+            db.query(models.EnrollmentApplication).filter(models.EnrollmentApplication.child_id.in_(child_ids)).all()
+        )
         kg_ids = {e.kindergarten_id for e in all_enrollments if e.kindergarten_id}
 
     # Batch-fetch all kindergartens referenced by those enrollments
     kgs_by_id = {}
     if kg_ids:
-        kgs_by_id = {
-            kg.id: kg
-            for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
-        }
+        kgs_by_id = {kg.id: kg for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()}
 
     # Group enrollments by child_id
     from collections import defaultdict as _dd
+
     enrollments_by_child = _dd(list)
     for e in all_enrollments:
         enrollments_by_child[e.child_id].append(e)
@@ -266,26 +271,30 @@ def get_parent_children(
         enrollment_list = []
         for e in enrollments_by_child[child.id]:
             kg = kgs_by_id.get(e.kindergarten_id)
-            enrollment_list.append({
-                "id": e.id,
-                "kindergarten_id": e.kindergarten_id,
-                "kindergarten_name": kg.name_ar if kg else None,
-                "status": e.status.value,
-                "status_ar": _ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
-            })
+            enrollment_list.append(
+                {
+                    "id": e.id,
+                    "kindergarten_id": e.kindergarten_id,
+                    "kindergarten_name": kg.name_ar if kg else None,
+                    "status": e.status.value,
+                    "status_ar": _ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
+                }
+            )
 
-        children_data.append({
-            "id": child.id,
-            "first_name": child.first_name,
-            "last_name": child.last_name,
-            "gender": child.gender.value if child.gender else None,
-            "date_of_birth": child.date_of_birth.isoformat() if child.date_of_birth else None,
-            "father_name": child.father_name,
-            "mother_first_name": child.mother_first_name,
-            "mother_last_name": child.mother_last_name,
-            "profile_complete": child.profile_complete if hasattr(child, "profile_complete") else False,
-            "enrollments": enrollment_list,
-        })
+        children_data.append(
+            {
+                "id": child.id,
+                "first_name": child.first_name,
+                "last_name": child.last_name,
+                "gender": child.gender.value if child.gender else None,
+                "date_of_birth": child.date_of_birth.isoformat() if child.date_of_birth else None,
+                "father_name": child.father_name,
+                "mother_first_name": child.mother_first_name,
+                "mother_last_name": child.mother_last_name,
+                "profile_complete": child.profile_complete if hasattr(child, "profile_complete") else False,
+                "enrollments": enrollment_list,
+            }
+        )
 
     return {
         "total": len(children_data),
@@ -302,50 +311,52 @@ def get_parent_enrollments(
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
-    profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
+    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     child_ids = [
-        cid for (cid,) in db.query(models.Child.id).filter(
+        cid
+        for (cid,) in db.query(models.Child.id)
+        .filter(
             models.Child.parent_id == profile.id,
             models.Child.deleted_at.is_(None),
-        ).all()
+        )
+        .all()
     ]
 
     if not child_ids:
         return {"total": 0, "enrollments": []}
 
-    enrollments = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.child_id.in_(child_ids)
-    ).all()
+    enrollments = (
+        db.query(models.EnrollmentApplication).filter(models.EnrollmentApplication.child_id.in_(child_ids)).all()
+    )
 
-    children_by_id = {
-        c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()
-    }
+    children_by_id = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()}
     kg_ids = {e.kindergarten_id for e in enrollments if e.kindergarten_id}
-    kgs_by_id = {
-        kg.id: kg
-        for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
-    } if kg_ids else {}
+    kgs_by_id = (
+        {kg.id: kg for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()}
+        if kg_ids
+        else {}
+    )
 
     enrollment_data = []
     for e in enrollments:
         child = children_by_id.get(e.child_id)
         kg = kgs_by_id.get(e.kindergarten_id)
-        enrollment_data.append({
-            "id": e.id,
-            "child_id": e.child_id,
-            "child_name": f"{child.first_name} {child.last_name}" if child else None,
-            "kindergarten_id": e.kindergarten_id,
-            "kindergarten_name": kg.name_ar if kg else None,
-            "status": e.status.value,
-            "status_ar": _ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
-            "submitted_at": e.submitted_at.isoformat() if e.submitted_at else None,
-            "created_at": e.created_at.isoformat() if e.created_at else None,
-        })
+        enrollment_data.append(
+            {
+                "id": e.id,
+                "child_id": e.child_id,
+                "child_name": f"{child.first_name} {child.last_name}" if child else None,
+                "kindergarten_id": e.kindergarten_id,
+                "kindergarten_name": kg.name_ar if kg else None,
+                "status": e.status.value,
+                "status_ar": _ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
+                "submitted_at": e.submitted_at.isoformat() if e.submitted_at else None,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+        )
 
     return {
         "total": len(enrollment_data),
@@ -365,29 +376,23 @@ def get_parent_attendance(
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
-    profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
+    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
-    child_ids = [
-        cid for (cid,) in db.query(models.Child.id).filter(
-            models.Child.parent_id == profile.id
-        ).all()
-    ]
+    child_ids = [cid for (cid,) in db.query(models.Child.id).filter(models.Child.parent_id == profile.id).all()]
 
     if child_id:
         if child_id not in child_ids:
-            raise HTTPException(status_code=403, detail=_api("Not authorized to view this child's attendance", _ulang(current_user)))
+            raise HTTPException(
+                status_code=403, detail=_api("Not authorized to view this child's attendance", _ulang(current_user))
+            )
         child_ids = [child_id]
 
     if not child_ids:
         return {"total": 0, "attendance": []}
 
-    query = db.query(models.AttendanceLog).filter(
-        models.AttendanceLog.child_id.in_(child_ids)
-    )
+    query = db.query(models.AttendanceLog).filter(models.AttendanceLog.child_id.in_(child_ids))
 
     # Date filters
     try:
@@ -410,16 +415,20 @@ def get_parent_attendance(
     attendance_data = []
     for a in records:
         child = children.get(a.child_id)
-        attendance_data.append({
-            "id": a.id,
-            "child_id": a.child_id,
-            "child_name": f"{child.first_name} {child.last_name}" if child else None,
-            "date": a.date.isoformat() if isinstance(a.date, date) else a.date,
-            "status": a.status.value if hasattr(a, 'status') and a.status else ("PRESENT" if a.check_in_at else "ABSENT"),
-            "check_in_at": a.check_in_at.strftime("%H:%M") if a.check_in_at else None,
-            "check_out_at": a.check_out_at.strftime("%H:%M") if a.check_out_at else None,
-            "notes": a.notes if hasattr(a, 'notes') else None,
-        })
+        attendance_data.append(
+            {
+                "id": a.id,
+                "child_id": a.child_id,
+                "child_name": f"{child.first_name} {child.last_name}" if child else None,
+                "date": a.date.isoformat() if isinstance(a.date, date) else a.date,
+                "status": a.status.value
+                if hasattr(a, "status") and a.status
+                else ("PRESENT" if a.check_in_at else "ABSENT"),
+                "check_in_at": a.check_in_at.strftime("%H:%M") if a.check_in_at else None,
+                "check_out_at": a.check_out_at.strftime("%H:%M") if a.check_out_at else None,
+                "notes": a.notes if hasattr(a, "notes") else None,
+            }
+        )
 
     return {
         "total": len(attendance_data),
@@ -436,22 +445,13 @@ def get_parent_children_simple(
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
-    profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
+    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
-    children = db.query(models.Child).filter(
-        models.Child.parent_id == profile.id
-    ).all()
+    children = db.query(models.Child).filter(models.Child.parent_id == profile.id).all()
 
-    return {
-        "children": [
-            {"id": c.id, "name": f"{c.first_name} {c.last_name}"}
-            for c in children
-        ]
-    }
+    return {"children": [{"id": c.id, "name": f"{c.first_name} {c.last_name}"} for c in children]}
 
 
 class ParentProfileSelfUpdateRequest(BaseModel):
@@ -486,30 +486,98 @@ def update_parent_profile_self(
     db: Session = Depends(get_db),
 ):
     """Allow authenticated parent to update their own profile and language preference."""
+    from auth import jordan_phone_login_variants, normalize_jordan_phone
+
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
-    profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
+    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
-    profile_fields = [
-        "first_name", "second_name", "last_name", "first_name_en", "last_name_en",
-        "phone_number", "gender", "nationality", "national_id", "passport_number",
-        "home_governorate", "home_district", "home_area", "home_address_line", "work_address",
-        "emergency_contact_name", "emergency_contact_phone", "emergency_contact_relationship",
-        "relationship_to_child", "correspondence_preference", "notification_language",
+    text_fields = [
+        "first_name",
+        "second_name",
+        "last_name",
+        "first_name_en",
+        "last_name_en",
+        "nationality",
+        "national_id",
+        "passport_number",
+        "home_governorate",
+        "home_district",
+        "home_area",
+        "home_address_line",
+        "work_address",
+        "emergency_contact_name",
+        "emergency_contact_relationship",
+        "relationship_to_child",
     ]
-    for field in profile_fields:
+    for field in text_fields:
         val = getattr(data, field)
         if val is not None:
-            setattr(profile, field, val)
+            setattr(profile, field, val.strip() or None)
+
+    if data.gender is not None:
+        profile.gender = data.gender
+
+    if data.correspondence_preference is not None:
+        profile.correspondence_preference = data.correspondence_preference
+
+    if data.phone_number is not None:
+        raw_phone = data.phone_number.strip()
+        if raw_phone:
+            if not validators.validate_jordan_phone(raw_phone):
+                raise HTTPException(
+                    status_code=400,
+                    detail=_api("Invalid Jordanian phone number", _ulang(current_user)),
+                )
+            duplicate_phone = (
+                db.query(models.ParentProfile)
+                .filter(
+                    models.ParentProfile.phone_number.in_(jordan_phone_login_variants(raw_phone)),
+                    models.ParentProfile.user_id != current_user.id,
+                    models.ParentProfile.deleted_at.is_(None),
+                )
+                .first()
+            )
+            if duplicate_phone:
+                raise HTTPException(
+                    status_code=400,
+                    detail=_api("Phone number already used", _ulang(current_user)),
+                )
+            profile.phone_number = normalize_jordan_phone(raw_phone)
+        else:
+            profile.phone_number = None
+
+    if data.emergency_contact_phone is not None:
+        raw_emergency_phone = data.emergency_contact_phone.strip()
+        if raw_emergency_phone:
+            if not validators.validate_jordan_phone(raw_emergency_phone):
+                raise HTTPException(
+                    status_code=400,
+                    detail=_api("Invalid emergency contact phone number", _ulang(current_user)),
+                )
+            profile.emergency_contact_phone = normalize_jordan_phone(raw_emergency_phone)
+        else:
+            profile.emergency_contact_phone = None
+
+    if data.notification_language is not None:
+        if data.notification_language not in ("en", "ar"):
+            raise HTTPException(status_code=400, detail=_api("Supported languages: ar, en", _ulang(current_user)))
+        profile.notification_language = data.notification_language
 
     # Update user language preference
-    if data.language and data.language in ("en", "ar"):
+    if data.language is not None:
+        if data.language not in ("en", "ar"):
+            raise HTTPException(status_code=400, detail=_api("Supported languages: ar, en", _ulang(current_user)))
         current_user.preferred_language = data.language
+        if data.notification_language is None:
+            profile.notification_language = data.language
+
+    children = db.query(models.Child).filter(models.Child.parent_id == profile.id).all()
+    for child in children:
+        validators.mark_profile_complete_if_ready(db, child.id)
 
     log_audit_event(
         db=db,
@@ -539,22 +607,25 @@ def get_parent_daily_reports(
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
-    profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
+    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     child_ids = [
-        cid for (cid,) in db.query(models.Child.id).filter(
+        cid
+        for (cid,) in db.query(models.Child.id)
+        .filter(
             models.Child.parent_id == profile.id,
             models.Child.deleted_at.is_(None),
-        ).all()
+        )
+        .all()
     ]
 
     if child_id:
         if child_id not in child_ids:
-            raise HTTPException(status_code=403, detail=_api("Not authorized to view this child's reports", _ulang(current_user)))
+            raise HTTPException(
+                status_code=403, detail=_api("Not authorized to view this child's reports", _ulang(current_user))
+            )
         child_ids = [child_id]
 
     if not child_ids:
@@ -579,21 +650,22 @@ def get_parent_daily_reports(
     report_list = []
     for r in reports:
         c = children.get(r.child_id)
-        report_list.append({
-            "id": r.id,
-            "child_id": r.child_id,
-            "child_name": f"{c.first_name} {c.last_name}" if c else None,
-            "date": r.date.isoformat() if isinstance(r.date, date) else r.date,
-            "status": r.status.value,
-            "arrival_time": r.arrival_time,
-            "leave_time": r.leave_time,
-            "activities": getattr(r, "activities", None),
-            "notes": getattr(r, "notes", None),
-            "mood": getattr(r, "mood", None),
-        })
+        report_list.append(
+            {
+                "id": r.id,
+                "child_id": r.child_id,
+                "child_name": f"{c.first_name} {c.last_name}" if c else None,
+                "date": r.date.isoformat() if isinstance(r.date, date) else r.date,
+                "status": r.status.value,
+                "arrival_time": r.arrival_time,
+                "leave_time": r.leave_time,
+                "activities": getattr(r, "activities", None),
+                "notes": getattr(r, "notes", None),
+                "mood": getattr(r, "mood", None),
+            }
+        )
 
     return {
         "total": len(report_list),
         "reports": report_list,
     }
-

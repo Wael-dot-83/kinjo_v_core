@@ -80,6 +80,58 @@
                     </ul>
                 </li>
 
+                {% if current_user.role.value == 'PARENT' %}
+                {# Parents got seven top-level items, four of which (Help, FAQ,
+                   Sitemap, and a second Help entry point) are reference links,
+                   not daily actions. A parent opens this header to check on a
+                   child, not to read a sitemap. Home stays primary; the three
+                   reference links collapse into one Support menu, taking the
+                   parent's header from seven items to four. Staff keep the flat
+                   layout below — their roles genuinely use those links. #}
+
+                <!-- Home -->
+                <li class="nav-item">
+                    <a class="nav-link kj-nav-item {% if request.url.path == '/dashboard' %}active{% endif %}" href="/dashboard"
+                        title="{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}" data-i18n-title="nav.home">
+                        <i class="bi bi-house-door fs-5"></i>
+                        <span class="d-none d-lg-inline ms-1" data-i18n="nav.home">{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</span>
+                    </a>
+                </li>
+
+                <!-- Support menu: help guide, FAQ and sitemap in one place -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link kj-nav-item dropdown-toggle" href="#" role="button" id="parentSupportMenu"
+                        data-bs-toggle="dropdown" aria-expanded="false"
+                        title="{% if ui_lang == 'en' %}Help and support{% else %}المساعدة والدعم{% endif %}"
+                        data-i18n-title="nav.help" aria-label="{% if ui_lang == 'en' %}Help and support{% else %}المساعدة والدعم{% endif %}" data-i18n-aria="nav.help">
+                        <i class="bi bi-life-preserver fs-5"></i>
+                        <span class="d-none d-lg-inline ms-1" data-i18n="nav.help">{% if ui_lang == 'en' %}Support{% else %}المساعدة{% endif %}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="parentSupportMenu">
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#helpExpressModal">
+                                <i class="bi bi-question-circle me-2"></i><span data-i18n="nav.help">{% if ui_lang == 'en' %}Quick guide{% else %}الدليل السريع{% endif %}</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/faq">
+                                <i class="bi bi-patch-question me-2"></i><span data-i18n="nav.faq">{% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/sitemap">
+                                <i class="bi bi-diagram-3 me-2"></i><span data-i18n="nav.sitemap">{% if ui_lang == 'en' %}Sitemap{% else %}خريطة الموقع{% endif %}</span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="/communication/messages">
+                                <i class="bi bi-chat-dots me-2"></i><span data-i18n="nav.contact_support">{% if ui_lang == 'en' %}Contact support{% else %}تواصل مع الدعم{% endif %}</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                {% else %}
                 <!-- Help Express -->
                 <li class="nav-item">
                     <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#helpExpressModal"
@@ -114,9 +166,13 @@
                         <span class="d-none d-lg-inline ms-1" data-i18n="nav.sitemap">{% if ui_lang == 'en' %}Sitemap{% else %}خريطة الموقع{% endif %}</span>
                     </a>
                 </li>
+                {% endif %}
 
-                <!-- Language Toggle (desktop only — a mobile-always-visible copy lives in the header above) -->
-                <li class="nav-item d-none d-lg-block">
+                <!-- Language Toggle (desktop only — a mobile-always-visible copy lives in the header above)
+                     kj-nav-tail marks the start of the utilities group: it and
+                     everything after it are pushed to the inline-end (the LEFT
+                     in RTL), away from the navigation beside the logo. -->
+                <li class="nav-item d-none d-lg-block kj-nav-tail">
                     <button class="nav-link navbar-action-btn" type="button" onclick="toggleLanguage()"
                         title="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}"
                         data-i18n-title="nav.language_toggle" aria-label="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}" data-i18n-aria="nav.language_toggle">
@@ -127,6 +183,19 @@
 
                 <!-- User Dropdown -->
                 <li class="nav-item dropdown">
+                    {% if current_user.role.value == 'PARENT' %}
+                    {# A parent is a person, not an operator: show their name and
+                       initial rather than the account handle ("parent1"), which
+                       reads as a system login. Falls back through first_name ->
+                       full_name -> username so it is never blank. #}
+                    {% set parent_display_name = current_user.first_name or current_user.full_name or current_user.username %}
+                    <a class="nav-link dropdown-toggle d-flex align-items-center kj-nav-user" href="#" role="button"
+                        data-bs-toggle="dropdown" aria-expanded="false"
+                        aria-label="{% if ui_lang == 'en' %}Account menu{% else %}قائمة الحساب{% endif %}" data-i18n-aria="nav.account_menu">
+                        <span class="kj-nav-avatar" aria-hidden="true">{{ parent_display_name[:1]|upper }}</span>
+                        <span class="d-none d-lg-inline ms-2">{{ parent_display_name }}</span>
+                    </a>
+                    {% else %}
                     <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button"
                         data-bs-toggle="dropdown" aria-expanded="false">
                         <div
@@ -135,6 +204,7 @@
                         </div>
                         <span class="d-none d-lg-inline">{{ current_user.username }}</span>
                     </a>
+                    {% endif %}
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
                             <h6 class="dropdown-header">{{ current_user.email }}</h6>

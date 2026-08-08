@@ -3,6 +3,17 @@
  * Main application logic and UI interactions
  */
 
+(function () {
+  const _origWarn = console.warn;
+  console.warn = function (...args) {
+    const msg = typeof args[0] === "string" ? args[0] : "";
+    if (msg.includes("Components object is deprecated")) {
+      return;
+    }
+    return _origWarn.apply(console, args);
+  };
+})();
+
 function appCurrentLang() {
   if (window.AppI18n && window.AppI18n.currentLang) {
     return window.AppI18n.currentLang;

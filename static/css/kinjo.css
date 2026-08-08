@@ -104,7 +104,6 @@ body.kinjo-app {
   color: var(--kinjo-text-primary);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
@@ -720,6 +719,64 @@ html[dir="rtl"] .sidebar {
   color: #fff;
   background-color: rgba(255, 255, 255, 0.14);
   border-radius: 0.6rem;
+}
+
+/* Parent header items.
+   Scoped to .kj-nav-* so only the parent branch of components/navbar.html picks
+   these up; staff headers keep the existing .nav-link treatment untouched. */
+.kinjo-navbar .kj-nav-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.7rem;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* The active page reads as selected without relying on colour alone: the
+   underline carries the same information for anyone who cannot separate the
+   white-on-blue tints. */
+.kinjo-navbar .kj-nav-item.active {
+  background-color: rgba(255, 255, 255, 0.16);
+  position: relative;
+}
+
+.kinjo-navbar .kj-nav-item.active::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0.7rem;
+  bottom: 0.15rem;
+  height: 2px;
+  border-radius: 2px;
+  background-color: #fff;
+}
+
+.kinjo-navbar .kj-nav-avatar {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1;
+  color: #0f4cbd;
+  background-color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 2px 6px rgba(13, 48, 115, 0.25);
+}
+
+.kinjo-navbar .kj-nav-user:hover .kj-nav-avatar,
+.kinjo-navbar .kj-nav-user:focus-visible .kj-nav-avatar {
+  background-color: #eef4ff;
+}
+
+/* Bootstrap's RTL build flips dropdown-menu-end correctly, but the caret and
+   the icon gutter inside the items need the logical property to follow suit. */
+.kinjo-navbar .dropdown-menu .dropdown-item i {
+  width: 1.15rem;
+  text-align: center;
 }
 
 .navbar-search-form .input-group {
@@ -3200,5 +3257,353 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
   height: 1px;
   background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent);
   margin: 1.5rem 0;
+}
+
+/* ============================================================================
+   Brand alignment: header logo, nav alignment/RTL, sidebar palette
+   ============================================================================
+   The gold-bordered logo badge only ever existed in admin_design_system.css,
+   which base.html does not load. On every non-admin page the same
+   .kinjo-logo--navbar markup therefore rendered as a bare image with no badge
+   and no height lock — it also sized itself from --admin-header-height, a token
+   that is not defined outside the admin shell, so the box fell back to the img
+   width/height attributes. These rules give the shared header the same
+   treatment, bound to --kinjo-navbar-height instead.
+   ============================================================================ */
+
+:root {
+  --kinjo-gold: #d4af37;
+  --kinjo-gold-deep: #b8912a;
+  --kinjo-logo-blue-top: #1b4f96;
+  --kinjo-logo-blue-bottom: #10356b;
+}
+
+.kinjo-navbar .kinjo-logo--navbar {
+  /* Square badge locked to the header height, as the admin header does it, so
+     the mark scales with the bar instead of being sized by the img attributes.
+     object-fit keeps the square artwork undistorted. */
+  block-size: var(--kinjo-navbar-height);
+  inline-size: var(--kinjo-navbar-height);
+  box-sizing: border-box;
+  padding: 4px;
+  object-fit: contain;
+  border: 2px solid var(--kinjo-gold);
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    var(--kinjo-logo-blue-top) 0%,
+    var(--kinjo-logo-blue-bottom) 100%
+  );
+  /* Inner gold hairline reads as a bevelled edge. Drawn with box-shadow so the
+     box geometry — and therefore the header-height lock above — is untouched. */
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    inset 0 0 0 2px var(--kinjo-gold-deep),
+    0 2px 8px rgba(6, 19, 39, 0.24);
+}
+
+.kinjo-navbar .navbar-brand {
+  display: inline-flex;
+  align-items: center;
+  padding-block: 0;
+  margin-inline-end: 0.75rem;
+}
+
+/* A gold hairline under the bar ties the header to the badge, rather than
+   leaving the logo as the only gold element on a plain blue band.
+
+   padding-block: 0 is load-bearing, not cosmetic. Bootstrap's .navbar carries
+   0.5rem of vertical padding, so a badge sized to the full header height would
+   push the bar to 80px while .navbar-spacer stays at 64px — the fixed header
+   would then overlap the top of every page. Removing the padding lets the badge
+   sit flush at exactly --kinjo-navbar-height, as it does in the admin shell.
+
+   The hairline is an inset shadow rather than a border for the same reason: a
+   border is added to the box, which pushed the bar to 65px against a 64px
+   .navbar-spacer and left the header covering 1px of every page. An inset
+   shadow paints inside the box, so the bar stays exactly the header height. */
+.kinjo-navbar {
+  /* The earlier .kinjo-navbar rule sets a 1px translucent-white border-bottom;
+     that border is what made the bar 65px. Clearing it here is what keeps the
+     header and its spacer the same height. */
+  border-bottom: 0;
+  padding-block: 0;
+
+  /* Bright sky wave: #7DD3FC → #38BDF8 → #0EA5E9, with a soft highlight sweep
+     over the top so the band reads as a curved wave rather than a flat ramp.
+
+     Going this bright forces the text dark. White on these stops measures
+     1.67 / 2.14 / 2.77:1 — unreadable. The deep navy below measures
+     9.36 / 7.29 / 5.63:1, so the header stays legible at the brightness asked
+     for. That is the whole reason the header text colour changes in this rule
+     and the ones under it.
+
+     !important is required, not stylistic: the v3.0 "Navbar Refinements" layer
+     sets both background and box-shadow with !important. */
+  background:
+    radial-gradient(
+      120% 180% at 78% -60%,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0) 46%
+    ),
+    linear-gradient(115deg, #7dd3fc 0%, #38bdf8 52%, #0ea5e9 100%) !important;
+  box-shadow:
+    inset 0 -1px 0 rgba(180, 132, 20, 0.75),
+    0 4px 18px rgba(14, 116, 165, 0.26) !important;
+}
+
+/* ── Header nav alignment (RTL-safe) ──────────────────────────────────────────
+   Spacing came from Bootstrap ms-1/me-1 utilities on the label, which puts the
+   gap on a logical side of the *text* rather than between icon and text. In RTL
+   that read as uneven leading space and the labels did not line up with one
+   another. Spacing now comes from flex `gap` on the link, which is
+   direction-agnostic, so الرئيسية / الأسئلة الشائعة / خريطة الموقع align
+   identically in both directions. */
+.kinjo-navbar .navbar-nav {
+  align-items: center;
+  gap: 0.15rem;
+}
+
+/* The nav list carries Bootstrap's .ms-auto, i.e. margin-inline-start: auto,
+   which pushes the whole menu to the far inline-end. In RTL that stranded it
+   against the left edge with a ~790px void between it and the logo. The list
+   now spans the free space instead, so its contents can be split deliberately:
+   navigation stays with the logo, utilities go to the far side. */
+.kinjo-navbar .navbar-nav.ms-auto {
+  margin-inline: 0 !important;
+  flex: 1 1 auto;
+}
+
+/* Split point. Everything from this item on — the language toggle and the
+   account menu — is pushed to the inline-end, which is the LEFT in RTL.
+   Notifications / الرئيسية / المساعدة stay grouped beside the logo on the
+   right, so the header has a navigation side and a utilities side rather than
+   one undifferentiated run. */
+.kinjo-navbar .navbar-nav > .kj-nav-tail {
+  margin-inline-start: auto;
+}
+
+/* ── Header foreground on the bright sky band ─────────────────────────────────
+   White fails on these stops (1.67-2.77:1), so every header foreground flips to
+   the deep navy verified at 5.63:1 or better. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link,
+.kinjo-navbar .navbar-action-btn,
+.kinjo-navbar .navbar-icon-btn,
+.kinjo-navbar .navbar-brand {
+  color: #052540 !important;
+}
+
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link:hover,
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link:focus-visible,
+.kinjo-navbar .navbar-action-btn:hover,
+.kinjo-navbar .navbar-icon-btn:hover,
+.kinjo-navbar .navbar-action-btn:focus-visible,
+.kinjo-navbar .navbar-icon-btn:focus-visible {
+  color: #041b2f !important;
+  /* A white veil rather than the old dark one: on a light band, lightening is
+     what reads as "raised". */
+  background-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link.active {
+  background-color: rgba(255, 255, 255, 0.62) !important;
+}
+
+.kinjo-navbar .kj-nav-item.active::after {
+  background-color: #052540;
+}
+
+/* The toggler icon is a white SVG inverted for the old dark band; on the light
+   band it must not be inverted, or it disappears. */
+.kinjo-navbar .navbar-toggler {
+  border-color: rgba(5, 37, 64, 0.35);
+}
+
+.kinjo-navbar .navbar-toggler-icon {
+  filter: none;
+}
+
+/* Avatar inverts with everything else: navy disc, white initial. */
+.kinjo-navbar .kj-nav-avatar {
+  color: #ffffff;
+  background-color: #052540;
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+.kinjo-navbar .kj-nav-user:hover .kj-nav-avatar,
+.kinjo-navbar .kj-nav-user:focus-visible .kj-nav-avatar {
+  background-color: #0a3c63;
+}
+
+/* The staff search sat as a white pill on a dark band. On a light band it needs
+   a defined edge or it dissolves into the header. */
+.kinjo-navbar .navbar-search-form .input-group {
+  border: 1px solid rgba(5, 37, 64, 0.18);
+}
+
+/* min-block-size gives every item the same box height. Without it the language
+   toggle (a <button>, with its own UA line-height) and the account link resolve
+   to different heights, and centring different-height boxes leaves their text
+   on visibly different lines. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-block-size: 2.5rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.6rem;
+  white-space: nowrap;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+/* The avatar is 2rem tall, so with the shared 0.45rem block padding the account
+   link stands 6px taller than its neighbours and its text sits off their line.
+   Trimming the block padding brings it back to the same 2.5rem box. This has to
+   live after the rule above — same specificity, so source order decides. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link.kj-nav-user {
+  padding-block: 0.25rem;
+}
+
+/* The utility margins are now redundant; neutralise them so they cannot
+   reintroduce the asymmetry this block exists to remove. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link > .ms-1,
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link > .me-1 {
+  margin-inline: 0 !important;
+}
+
+/* The staff account link carries an .avatar-sm circle instead of the parent's
+   .kj-nav-avatar. Sizing it to 1.6rem makes that link 40px tall too
+   (1.6rem + 2 x 0.45rem padding = 2.5rem), so every header item shares one
+   line for staff as well as for parents. Done by sizing rather than :has() so
+   it does not depend on selector support. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link > .avatar-sm {
+  inline-size: 1.6rem;
+  block-size: 1.6rem;
+  flex: 0 0 auto;
+}
+
+/* Icons share one optical column so the labels start on the same line. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link > i {
+  inline-size: 1.25rem;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.kinjo-navbar .dropdown-menu {
+  border: 0;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 32px rgba(6, 19, 39, 0.18);
+  padding-block: 0.4rem;
+}
+
+.kinjo-navbar .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.5rem;
+  border-radius: 0.4rem;
+  margin-inline: 0.35rem;
+  inline-size: auto;
+}
+
+/* ── Sidebar: red wave, white text ────────────────────────────────────────────
+   Replaces the dark-slate field. The wave runs #991B1B → #B91C1C → #DC2626 on
+   the diagonal with a highlight sweep at the top, so the rail curves rather
+   than banding flatly.
+
+   White is the text colour throughout and it holds: 8.31 / 6.47 / 4.83:1 across
+   the three stops, so even the brightest end clears AA. The stops stop at
+   #DC2626 for that reason — #EF4444 would drop white to 3.7:1.
+
+   The v3.0 layer paints .sidebar with background-color and !important, so the
+   wave has to be set as background-image at the same weight to land. */
+:root {
+  --kinjo-sidebar-bg: #b91c1c;
+  --kinjo-sidebar-text: #ffffff;
+  --kinjo-sidebar-muted: rgba(255, 255, 255, 0.86);
+  --kinjo-sidebar-border: rgba(255, 255, 255, 0.16);
+  --kinjo-sidebar-hover: rgba(255, 255, 255, 0.16);
+  --kinjo-sidebar-active-bg: #7f1414;
+  --kinjo-sidebar-active-text: #ffffff;
+  --kinjo-sidebar-accent: #f4d77c;
+}
+
+.sidebar {
+  /* The wave sheen darkens rather than lightens, and that is a contrast
+     decision, not a taste one. A white sheen over this rail composites #DC2626
+     up to rgb(226,77,77), where white text falls to 3.89:1 — below AA — and it
+     still failed at 4.30:1 with the alpha dropped to 0.10, because the bright
+     end of the wave has almost no headroom to give. Darkening moves every
+     pixel the other way, so the worst case stays the bare #DC2626 at 4.83:1
+     and the rail keeps its curve. */
+  background-image:
+    radial-gradient(
+      130% 100% at 15% 115%,
+      rgba(0, 0, 0, 0.22) 0%,
+      rgba(0, 0, 0, 0) 58%
+    ),
+    linear-gradient(160deg, #991b1b 0%, #b91c1c 52%, #dc2626 100%) !important;
+  background-color: #b91c1c !important;
+}
+
+/* Active row: a deeper red fill (white on it is 10.4:1) plus a gold edge, so
+   the current page is marked by more than fill colour alone. */
+.sidebar .nav-link.active {
+  box-shadow: inset 3px 0 0 0 #f4d77c !important;
+}
+
+html[dir="rtl"] .sidebar .nav-link.active {
+  box-shadow: inset -3px 0 0 0 #f4d77c !important;
+}
+
+/* Section labels and dividers were tuned for the slate field; on red they need
+   to lean on white rather than the old cool greys. */
+.sidebar .sidebar-section-title,
+.sidebar .sidebar-heading {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.sidebar .sidebar-profile {
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.sidebar .sidebar-profile-avatar {
+  background: #ffffff;
+  color: #991b1b;
+}
+
+/* ── Sidebar logo: same width as the menu items ───────────────────────────────
+   .kinjo-logo--sidebar was a fixed 120px inside the rail, so the mark sat as a
+   small island above full-width menu rows. The nav links use
+   `margin: 0.15rem 0.8rem`, so matching that inline padding here makes the logo
+   box exactly as wide as a menu item. */
+.sidebar-header {
+  padding-inline: 0;
+  padding-block: 0.9rem 0.75rem;
+}
+
+.sidebar-logo {
+  inline-size: 100%;
+  justify-content: center;
+}
+
+/* Mirrors the menu rows exactly. The margin to match is 0.65rem, not the
+   0.8rem in the older .sidebar .nav-link rule above: the v3.0 layer restyles
+   the rows with `margin: 0.1rem 0.65rem !important`, and that is what actually
+   wins. Matching the 0.8rem left the logo 4.8px narrower than every row. */
+.sidebar .kinjo-logo--sidebar {
+  margin-inline: 0.65rem;
+  inline-size: calc(100% - 1.3rem);
+  block-size: auto;
+  max-inline-size: none;
+  box-sizing: border-box;
+  padding: 0.6rem;
+  border-radius: 0.85rem;
+  /* A light panel, not the old blue tint: the artwork is blue-and-gold and a
+     blue wash on the red rail turned it muddy. */
+  border: 1px solid rgba(244, 215, 124, 0.55);
+  background: rgba(255, 255, 255, 0.14);
 }
 

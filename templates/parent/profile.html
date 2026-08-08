@@ -1,102 +1,528 @@
-{% extends 'base.html' %} {% block title %}{{ _('My Profile') }}{% endblock %}
-{% block page_header %}
+{% extends 'base.html' %} {% set is_en = ui_lang == 'en' %} {% block title %}{{
+'My Profile' if is_en else 'ملفي الشخصي' }}{% endblock %} {% block extra_css %}
+<style>
+  .parent-profile-shell {
+    --profile-ink: #16342c;
+    --profile-muted: #64748b;
+    --profile-surface: #ffffff;
+    --profile-surface-soft: #f6fbf8;
+    --profile-border: rgba(31, 94, 71, 0.12);
+    --profile-shadow: 0 24px 60px rgba(20, 44, 37, 0.08);
+    --profile-accent: #1f5e47;
+    --profile-accent-soft: #dcefe7;
+    --profile-warm: #c98743;
+  }
+
+  .parent-profile-shell .profile-hero,
+  .parent-profile-shell .profile-card,
+  .parent-profile-shell .profile-side-card {
+    background: var(--profile-surface);
+    border: 1px solid var(--profile-border);
+    border-radius: 1.5rem;
+    box-shadow: var(--profile-shadow);
+  }
+
+  .parent-profile-shell .profile-hero {
+    overflow: hidden;
+    background:
+      radial-gradient(
+        circle at top {% if is_en %}right{% else %}left{% endif %},
+        rgba(201, 135, 67, 0.18),
+        transparent 28%
+      ),
+      linear-gradient(135deg, #163d2e 0%, #1f5e47 55%, #2f7d62 100%);
+    color: #fff;
+  }
+
+  .parent-profile-shell .profile-hero .text-muted,
+  .parent-profile-shell .profile-hero .profile-kicker,
+  .parent-profile-shell .profile-hero .profile-subcopy {
+    color: rgba(255, 255, 255, 0.82) !important;
+  }
+
+  .parent-profile-shell .profile-kicker {
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .parent-profile-shell .profile-avatar {
+    width: 4.75rem;
+    height: 4.75rem;
+    border-radius: 1.5rem;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(12px);
+    font-size: 2rem;
+  }
+
+  .parent-profile-shell .profile-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+
+  .parent-profile-shell .profile-chip i {
+    font-size: 0.95rem;
+  }
+
+  .parent-profile-shell .profile-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .parent-profile-shell .profile-meta-card {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    min-height: 100%;
+  }
+
+  .parent-profile-shell .profile-meta-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.74);
+  }
+
+  .parent-profile-shell .profile-card,
+  .parent-profile-shell .profile-side-card {
+    padding: 1.4rem;
+  }
+
+  .parent-profile-shell .profile-card-header,
+  .parent-profile-shell .profile-side-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .parent-profile-shell .profile-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--profile-ink);
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .parent-profile-shell .profile-card-icon {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 0.95rem;
+    display: grid;
+    place-items: center;
+    background: var(--profile-accent-soft);
+    color: var(--profile-accent);
+    flex: 0 0 auto;
+  }
+
+  .parent-profile-shell .profile-card-subtitle,
+  .parent-profile-shell .profile-side-subtitle,
+  .parent-profile-shell .profile-help,
+  .parent-profile-shell .profile-field-label,
+  .parent-profile-shell .profile-stat-label {
+    color: var(--profile-muted);
+  }
+
+  .parent-profile-shell .profile-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .parent-profile-shell .profile-field {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: var(--profile-surface-soft);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+    min-height: 100%;
+  }
+
+  .parent-profile-shell .profile-field-label {
+    font-size: 0.8rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .parent-profile-shell .profile-field-value {
+    font-weight: 700;
+    color: var(--profile-ink);
+    word-break: break-word;
+  }
+
+  .parent-profile-shell .profile-legal-name {
+    line-height: 1.7;
+  }
+
+  .parent-profile-shell .profile-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .parent-profile-shell .profile-stat {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #ffffff, #f8fbfa);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+  }
+
+  .parent-profile-shell .profile-stat-value {
+    color: var(--profile-ink);
+    font-size: 1.25rem;
+    font-weight: 800;
+  }
+
+  .parent-profile-shell .profile-progress {
+    height: 0.6rem;
+    background: #e5ece8;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .parent-profile-shell .profile-progress > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #1f5e47 0%, #c98743 100%);
+    border-radius: inherit;
+    transition: width 0.25s ease;
+  }
+
+  .parent-profile-shell .profile-side-card {
+    position: sticky;
+    top: 1.5rem;
+  }
+
+  .parent-profile-shell .profile-summary-list,
+  .parent-profile-shell .profile-link-list {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .parent-profile-shell .profile-summary-item,
+  .parent-profile-shell .profile-link-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.95rem 1rem;
+    border-radius: 1rem;
+    background: var(--profile-surface-soft);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+    color: var(--profile-ink);
+    text-decoration: none;
+  }
+
+  .parent-profile-shell .profile-summary-item i,
+  .parent-profile-shell .profile-link-item i {
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    border-radius: 0.75rem;
+    background: #fff;
+    color: var(--profile-accent);
+  }
+
+  .parent-profile-shell .profile-link-item:hover {
+    border-color: rgba(31, 94, 71, 0.22);
+    transform: translateY(-1px);
+  }
+
+  .parent-profile-shell .lang-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .parent-profile-shell .lang-toggle .btn {
+    border-radius: 0.9rem;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+    font-weight: 700;
+  }
+
+  .parent-profile-shell .form-control,
+  .parent-profile-shell .form-select,
+  .parent-profile-shell .form-check-input {
+    border-radius: 0.9rem;
+  }
+
+  .parent-profile-shell .form-control,
+  .parent-profile-shell .form-select {
+    border-color: rgba(31, 94, 71, 0.16);
+    padding-top: 0.78rem;
+    padding-bottom: 0.78rem;
+  }
+
+  .parent-profile-shell .form-control:focus,
+  .parent-profile-shell .form-select:focus {
+    border-color: rgba(31, 94, 71, 0.35);
+    box-shadow: 0 0 0 0.25rem rgba(31, 94, 71, 0.12);
+  }
+
+  .parent-profile-shell .btn-soft {
+    background: var(--profile-accent-soft);
+    color: var(--profile-accent);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+  }
+
+  .parent-profile-shell .btn-soft:hover {
+    background: #cde4db;
+    color: #163d2e;
+  }
+
+  .parent-profile-shell .profile-section-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .parent-profile-shell .profile-inline-note {
+    border-radius: 1rem;
+    padding: 0.85rem 1rem;
+    background: #f8f2eb;
+    color: #7a4d21;
+    border: 1px solid rgba(201, 135, 67, 0.2);
+  }
+
+  @media (max-width: 991.98px) {
+    .parent-profile-shell .profile-side-card {
+      position: static;
+    }
+
+    .parent-profile-shell .profile-meta-grid,
+    .parent-profile-shell .profile-info-grid,
+    .parent-profile-shell .profile-stats {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %} {% block page_header %}
 <div class="page-header-wrap">
-    <div>
-        <h1 class="page-header-title">
-            <i class="bi bi-person-circle text-primary me-2" aria-hidden="true"></i>
-            {{ _('My Profile') }}
-        </h1>
-        <nav aria-label="{{ _('Breadcrumb') }}">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">{{ _('Dashboard') }}</a></li>
-                <li class="breadcrumb-item active">{{ _('My Profile') }}</li>
-            </ol>
-        </nav>
-    </div>
+  <div>
+    <h1 class="page-header-title">
+      <i class="bi bi-person-vcard text-primary me-2" aria-hidden="true"></i>
+      {{ 'My Profile' if is_en else 'ملفي الشخصي' }}
+    </h1>
+    <nav aria-label="{{ 'Breadcrumb' if is_en else 'مسار التنقل' }}">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item">
+          <a href="/dashboard">{{ 'Dashboard' if is_en else 'لوحة التحكم' }}</a>
+        </li>
+        <li class="breadcrumb-item active">
+          {{ 'My Profile' if is_en else 'ملفي الشخصي' }}
+        </li>
+      </ol>
+    </nav>
+  </div>
 </div>
 {% endblock %} {% block content %}
-<!-- Profile Completion Alert -->
-<div id="profileAlert" class="alert alert-warning d-none" role="alert">
-  <i class="bi bi-exclamation-triangle me-2"></i>
-  <strong>{{ _('Your profile is incomplete.') }}</strong>
-  {{ _('You must complete all required fields to submit enrollment requests.')
-  }}
-</div>
+<div class="parent-profile-shell">
+  <div id="profileAlert" class="alert alert-warning d-none mb-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <strong
+      >{{ 'Your profile still needs a few details.' if is_en else 'ما زال ملفك
+      الشخصي يحتاج إلى بعض البيانات.' }}</strong
+    >
+    {{ 'Complete the required fields so enrollment requests and parent
+    communication work smoothly.' if is_en else 'أكمِل الحقول المطلوبة حتى تعمل
+    طلبات التسجيل والتواصل مع الحضانة بشكل سليم.' }}
+  </div>
 
-<div class="row g-4">
-  <!-- Profile Info Card -->
-  <div class="col-lg-8">
-    <div class="card shadow-sm">
-      <div
-        class="card-header bg-transparent d-flex justify-content-between align-items-center"
-      >
-        <h5 class="card-title mb-0">
-          <i class="bi bi-person me-2 text-primary"></i>{{ _('Personal
-          Information') }}
-        </h5>
-        <button
-          class="btn btn-sm btn-outline-primary"
-          id="btnEditProfile"
-          onclick="toggleEditMode()"
+  <div class="row g-4 align-items-start">
+    <div class="col-xl-8">
+      <section class="profile-hero p-4 p-lg-5 mb-4">
+        <div
+          class="d-flex flex-column flex-lg-row gap-4 justify-content-between align-items-start"
         >
-          <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
-        </button>
-      </div>
-      <div class="card-body">
-        <!-- View Mode -->
-        <div id="viewMode">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="text-muted small">{{ _('First Name') }}</label>
-              <div class="fw-semibold" id="viewFirstName">—</div>
+          <div class="d-flex gap-3 align-items-start">
+            <div class="profile-avatar">
+              <i class="bi bi-person-heart"></i>
             </div>
-            <div class="col-md-4">
-              <label class="text-muted small">{{ _('Middle Name') }}</label>
-              <div class="fw-semibold" id="viewSecondName">—</div>
+            <div>
+              <div class="profile-kicker mb-2">
+                {{ 'Parent account' if is_en else 'حساب ولي الأمر' }}
+              </div>
+              <h2 class="h3 mb-2" id="profileFullName">—</h2>
+              <p class="profile-subcopy mb-3" id="heroSubtitle">
+                {{ 'Keep your contact details current so the kindergarten can
+                always reach you.' if is_en else 'حافظ على تحديث بيانات التواصل
+                حتى تتمكن الحضانة من الوصول إليك دائماً.' }}
+              </p>
+              <div class="d-flex flex-wrap gap-2">
+                <span class="profile-chip" id="profileStatusBadge">
+                  <i class="bi bi-hourglass-split"></i>
+                  {{ 'Loading status' if is_en else 'جاري تحميل الحالة' }}
+                </span>
+                <span class="profile-chip" id="profileLanguageBadge">
+                  <i class="bi bi-translate"></i>
+                  {{ 'Language' if is_en else 'اللغة' }}
+                </span>
+              </div>
             </div>
-            <div class="col-md-4">
-              <label class="text-muted small">{{ _('Last Name') }}</label>
-              <div class="fw-semibold" id="viewLastName">—</div>
-            </div>
-            <div class="col-md-6">
-              <label class="text-muted small">{{ _('Phone Number') }}</label>
-              <div class="fw-semibold" id="viewPhone">—</div>
-            </div>
-            <div class="col-md-6">
-              <label class="text-muted small">{{ _('Email') }}</label>
-              <div class="fw-semibold" id="viewEmail">—</div>
-            </div>
-            <div class="col-md-4">
-              <label class="text-muted small">{{ _('Gender') }}</label>
-              <div class="fw-semibold" id="viewGender">—</div>
-            </div>
-            <div class="col-md-4">
-              <label class="text-muted small">{{ _('Nationality') }}</label>
-              <div class="fw-semibold" id="viewNationality">—</div>
-            </div>
-            <div class="col-md-4">
-              <label class="text-muted small"
-                >{{ _('Relationship to Child') }}</label
-              >
-              <div class="fw-semibold" id="viewRelationship">—</div>
-            </div>
-            <div class="col-md-6">
-              <label class="text-muted small">{{ _('National ID') }}</label>
-              <div class="fw-semibold" id="viewNationalId">—</div>
-            </div>
-            <div class="col-md-6">
-              <label class="text-muted small">{{ _('Passport Number') }}</label>
-              <div class="fw-semibold" id="viewPassport">—</div>
-            </div>
+          </div>
+          <div class="profile-section-actions">
+            <button
+              type="button"
+              class="btn btn-light text-dark fw-semibold"
+              id="editBtn"
+              onclick="toggleEditMode()"
+            >
+              <i class="bi bi-pencil-square me-1"></i>{{ 'Edit profile' if is_en
+              else 'تعديل الملف' }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-light fw-semibold"
+              onclick="toggleAddressEdit()"
+            >
+              <i class="bi bi-geo-alt me-1"></i>{{ 'Update address' if is_en
+              else 'تحديث العنوان' }}
+            </button>
           </div>
         </div>
 
-        <!-- Edit Mode -->
-        <form id="editMode" class="d-none">
+        <div class="profile-meta-grid mt-4">
+          <div class="profile-meta-card">
+            <span class="profile-meta-label"
+              >{{ 'Phone' if is_en else 'الهاتف' }}</span
+            >
+            <div class="fw-semibold fs-5" id="profileSummaryPhone">—</div>
+          </div>
+          <div class="profile-meta-card">
+            <span class="profile-meta-label"
+              >{{ 'Email' if is_en else 'البريد الإلكتروني' }}</span
+            >
+            <div class="fw-semibold fs-6" id="profileSummaryEmail">—</div>
+          </div>
+          <div class="profile-meta-card">
+            <span class="profile-meta-label"
+              >{{ 'Location' if is_en else 'الموقع' }}</span
+            >
+            <div class="fw-semibold fs-6" id="profileSummaryLocation">—</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="profile-card mb-4">
+        <div class="profile-card-header">
+          <div>
+            <h3 class="profile-card-title">
+              <span class="profile-card-icon"
+                ><i class="bi bi-person-lines-fill"></i
+              ></span>
+              {{ 'Personal information' if is_en else 'البيانات الشخصية' }}
+            </h3>
+            <p class="profile-card-subtitle mb-0 mt-2">
+              {{ 'Your core identity and the contact details shown to staff.' if
+              is_en else 'هويتك الأساسية وبيانات التواصل التي تظهر للموظفين.' }}
+            </p>
+          </div>
+          <button
+            class="btn btn-soft btn-sm fw-semibold"
+            id="btnEditProfile"
+            onclick="toggleEditMode()"
+          >
+            <i class="bi bi-pencil me-1"></i>{{ 'Edit' if is_en else 'تعديل' }}
+          </button>
+        </div>
+
+        <div id="viewMode" class="profile-info-grid">
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'First name' if is_en else 'الاسم الأول' }}
+            </div>
+            <div class="profile-field-value" id="viewFirstName">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Middle name' if is_en else 'الاسم الأوسط' }}
+            </div>
+            <div class="profile-field-value" id="viewSecondName">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Last name' if is_en else 'اسم العائلة' }}
+            </div>
+            <div class="profile-field-value" id="viewLastName">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Phone number' if is_en else 'رقم الهاتف' }}
+            </div>
+            <div class="profile-field-value" id="viewPhone" dir="ltr">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Email' if is_en else 'البريد الإلكتروني' }}
+            </div>
+            <div class="profile-field-value" id="viewEmail">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Relationship to child' if is_en else 'صلة القرابة بالطفل' }}
+            </div>
+            <div class="profile-field-value" id="viewRelationship">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Gender' if is_en else 'الجنس' }}
+            </div>
+            <div class="profile-field-value" id="viewGender">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Nationality' if is_en else 'الجنسية' }}
+            </div>
+            <div class="profile-field-value" id="viewNationality">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'National ID' if is_en else 'الرقم الوطني' }}
+            </div>
+            <div class="profile-field-value" id="viewNationalId">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Passport number' if is_en else 'رقم جواز السفر' }}
+            </div>
+            <div class="profile-field-value" id="viewPassport">—</div>
+          </div>
+          <div class="profile-field profile-legal-name">
+            <div class="profile-field-label">
+              {{ 'Arabic legal name' if is_en else 'الاسم القانوني بالعربية' }}
+            </div>
+            <div class="profile-field-value" id="viewArabicName">—</div>
+          </div>
+          <div class="profile-field profile-legal-name">
+            <div class="profile-field-label">
+              {{ 'English legal name' if is_en else 'الاسم القانوني بالإنجليزية'
+              }}
+            </div>
+            <div class="profile-field-value" id="viewEnglishName">—</div>
+          </div>
+        </div>
+
+        <form id="editMode" class="d-none" novalidate>
           <div class="row g-3">
             <div class="col-md-4">
               <label for="editFirstName" class="form-label"
-                >{{ _('First Name') }} <span class="text-danger">*</span></label
+                >{{ 'First name' if is_en else 'الاسم الأول' }}
+                <span class="text-danger">*</span></label
               >
               <input
                 type="text"
@@ -107,13 +533,14 @@
             </div>
             <div class="col-md-4">
               <label for="editSecondName" class="form-label"
-                >{{ _('Middle Name') }}</label
+                >{{ 'Middle name' if is_en else 'الاسم الأوسط' }}</label
               >
               <input type="text" class="form-control" id="editSecondName" />
             </div>
             <div class="col-md-4">
               <label for="editLastName" class="form-label"
-                >{{ _('Last Name') }} <span class="text-danger">*</span></label
+                >{{ 'Last name' if is_en else 'اسم العائلة' }}
+                <span class="text-danger">*</span></label
               >
               <input
                 type="text"
@@ -124,7 +551,7 @@
             </div>
             <div class="col-md-6">
               <label for="editPhone" class="form-label"
-                >{{ _('Phone Number') }}
+                >{{ 'Phone number' if is_en else 'رقم الهاتف' }}
                 <span class="text-danger">*</span></label
               >
               <input
@@ -132,189 +559,242 @@
                 class="form-control"
                 id="editPhone"
                 dir="ltr"
-                placeholder="+962..."
+                inputmode="tel"
+                placeholder="07XXXXXXXX or +9627XXXXXXXX"
                 required
               />
+              <div class="form-text">
+                {{ 'Accepted formats: 07XXXXXXXX, +9627XXXXXXXX or
+                009627XXXXXXXX.' if is_en else 'الصيغ المقبولة: 07XXXXXXXX أو
+                +9627XXXXXXXX أو 009627XXXXXXXX.' }}
+              </div>
             </div>
             <div class="col-md-6">
               <label for="editRelationship" class="form-label"
-                >{{ _('Relationship to Child') }}</label
+                >{{ 'Relationship to child' if is_en else 'صلة القرابة بالطفل'
+                }}</label
               >
               <select class="form-select" id="editRelationship">
-                <option value="">{{ _('Select...') }}</option>
-                <option value="FATHER">{{ _('Father') }}</option>
-                <option value="MOTHER">{{ _('Mother') }}</option>
-                <option value="GUARDIAN">{{ _('Guardian') }}</option>
-                <option value="OTHER">{{ _('Other') }}</option>
+                <option value="">
+                  {{ 'Select relationship' if is_en else 'اختر صلة القرابة' }}
+                </option>
+                <option value="FATHER">
+                  {{ 'Father' if is_en else 'أب' }}
+                </option>
+                <option value="MOTHER">
+                  {{ 'Mother' if is_en else 'أم' }}
+                </option>
+                <option value="GUARDIAN">
+                  {{ 'Guardian' if is_en else 'ولي أمر' }}
+                </option>
+                <option value="OTHER">
+                  {{ 'Other' if is_en else 'أخرى' }}
+                </option>
               </select>
             </div>
-            <div class="col-12 mt-3">
-              <button type="submit" class="btn btn-primary px-4">
-                <i class="bi bi-save me-1"></i>{{ _('Save Changes') }}
-              </button>
-              <button
-                type="button"
-                class="btn btn-outline-secondary me-2"
-                onclick="cancelEdit()"
-              >
-                {{ _('Cancel') }}
-              </button>
+            <div class="col-12">
+              <div class="profile-section-actions mt-2">
+                <button type="submit" class="btn btn-primary px-4">
+                  <i class="bi bi-check2-circle me-1"></i>{{ 'Save changes' if
+                  is_en else 'حفظ التغييرات' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary px-4"
+                  onclick="cancelEdit()"
+                >
+                  {{ 'Cancel' if is_en else 'إلغاء' }}
+                </button>
+              </div>
             </div>
           </div>
         </form>
-      </div>
-    </div>
+      </section>
 
-    <!-- Address Card -->
-    <div class="card shadow-sm mt-4">
-      <div
-        class="card-header bg-transparent d-flex justify-content-between align-items-center"
-      >
-        <h5 class="card-title mb-0">
-          <i class="bi bi-geo-alt me-2 text-success"></i>{{ _('Address') }}
-        </h5>
-        <button
-          class="btn btn-sm btn-outline-success"
-          id="btnEditAddress"
-          onclick="toggleAddressEdit()"
-        >
-          <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
-        </button>
-      </div>
-      <div class="card-body">
-        <!-- View Mode -->
-        <div id="addressViewMode">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="text-muted small">{{ _('Governorate') }}</label>
-              <div class="fw-semibold" id="viewGovernorate">—</div>
+      <section class="profile-card mb-4">
+        <div class="profile-card-header">
+          <div>
+            <h3 class="profile-card-title">
+              <span class="profile-card-icon"
+                ><i class="bi bi-geo-alt"></i
+              ></span>
+              {{ 'Address details' if is_en else 'بيانات العنوان' }}
+            </h3>
+            <p class="profile-card-subtitle mb-0 mt-2">
+              {{ 'Accurate address details help with enrollment and official
+              correspondence.' if is_en else 'تفاصيل العنوان الدقيقة تساعد في
+              التسجيل والمراسلات الرسمية.' }}
+            </p>
+          </div>
+          <button
+            class="btn btn-soft btn-sm fw-semibold"
+            id="btnEditAddress"
+            onclick="toggleAddressEdit()"
+          >
+            <i class="bi bi-pencil me-1"></i>{{ 'Edit' if is_en else 'تعديل' }}
+          </button>
+        </div>
+
+        <div id="addressViewMode" class="profile-info-grid">
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Governorate' if is_en else 'المحافظة' }}
             </div>
-            <div class="col-md-4">
-              <label class="text-muted small">{{ _('District') }}</label>
-              <div class="fw-semibold" id="viewCity">—</div>
+            <div class="profile-field-value" id="viewGovernorate">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'District' if is_en else 'اللواء' }}
             </div>
-            <div class="col-md-4">
-              <label class="text-muted small">{{ _('Area') }}</label>
-              <div class="fw-semibold" id="viewArea">—</div>
+            <div class="profile-field-value" id="viewCity">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Area' if is_en else 'المنطقة' }}
             </div>
-            <div class="col-md-6">
-              <label class="text-muted small">{{ _('Home Address') }}</label>
-              <div class="fw-semibold" id="viewAddressLine">—</div>
+            <div class="profile-field-value" id="viewArea">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Home address' if is_en else 'عنوان السكن' }}
             </div>
-            <div class="col-md-6">
-              <label class="text-muted small">{{ _('Work Address') }}</label>
-              <div class="fw-semibold" id="viewWorkAddress">—</div>
+            <div class="profile-field-value" id="viewAddressLine">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Work address' if is_en else 'عنوان العمل' }}
             </div>
+            <div class="profile-field-value" id="viewWorkAddress">—</div>
           </div>
         </div>
 
-        <!-- Edit Mode -->
-        <form id="addressEditMode" class="d-none">
+        <form id="addressEditMode" class="d-none" novalidate>
           <div class="row g-3">
             <div class="col-md-4">
               <label for="editGovernorate" class="form-label"
-                >{{ _('Governorate') }}
+                >{{ 'Governorate' if is_en else 'المحافظة' }}
                 <span class="text-danger">*</span></label
               >
               <select class="form-select" id="editGovernorate" required>
-                <option value="">{{ _('Select governorate') }}</option>
+                <option value="">
+                  {{ 'Select governorate' if is_en else 'اختر المحافظة' }}
+                </option>
               </select>
             </div>
             <div class="col-md-4">
               <label for="editCity" class="form-label"
-                >{{ _('District') }} <span class="text-danger">*</span></label
+                >{{ 'District' if is_en else 'اللواء' }}
+                <span class="text-danger">*</span></label
               >
               <select class="form-select" id="editCity" required>
-                <option value="">{{ _('Select governorate first') }}</option>
+                <option value="">
+                  {{ 'Select governorate first' if is_en else 'اختر المحافظة
+                  أولاً' }}
+                </option>
               </select>
             </div>
             <div class="col-md-4">
               <label for="editArea" class="form-label"
-                >{{ _('Area') }} <span class="text-danger">*</span></label
+                >{{ 'Area' if is_en else 'المنطقة' }}
+                <span class="text-danger">*</span></label
               >
               <input type="text" class="form-control" id="editArea" required />
             </div>
             <div class="col-md-6">
               <label for="editAddressLine" class="form-label"
-                >{{ _('Home Address') }}
+                >{{ 'Home address' if is_en else 'عنوان السكن' }}
                 <span class="text-danger">*</span></label
               >
               <textarea
                 class="form-control"
                 id="editAddressLine"
-                rows="2"
+                rows="3"
                 required
               ></textarea>
             </div>
             <div class="col-md-6">
               <label for="editWorkAddress" class="form-label"
-                >{{ _('Work Address') }}</label
+                >{{ 'Work address' if is_en else 'عنوان العمل' }}</label
               >
               <textarea
                 class="form-control"
                 id="editWorkAddress"
-                rows="2"
+                rows="3"
               ></textarea>
             </div>
-            <div class="col-12 mt-3">
-              <button type="submit" class="btn btn-success px-4">
-                <i class="bi bi-save me-1"></i>{{ _('Save Address') }}
-              </button>
-              <button
-                type="button"
-                class="btn btn-outline-secondary me-2"
-                onclick="cancelAddressEdit()"
-              >
-                {{ _('Cancel') }}
-              </button>
+            <div class="col-12">
+              <div class="profile-section-actions mt-2">
+                <button type="submit" class="btn btn-primary px-4">
+                  <i class="bi bi-check2-circle me-1"></i>{{ 'Save address' if
+                  is_en else 'حفظ العنوان' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary px-4"
+                  onclick="cancelAddressEdit()"
+                >
+                  {{ 'Cancel' if is_en else 'إلغاء' }}
+                </button>
+              </div>
             </div>
           </div>
         </form>
-      </div>
-    </div>
+      </section>
 
-    <!-- Emergency Contact Card -->
-    <div class="card shadow-sm mt-4">
-      <div
-        class="card-header bg-transparent d-flex justify-content-between align-items-center"
-      >
-        <h5 class="card-title mb-0">
-          <i class="bi bi-telephone-fill me-2 text-danger"></i>{{ _('Emergency
-          Contact') }}
-        </h5>
-        <button
-          class="btn btn-sm btn-outline-danger"
-          id="btnEditEmergency"
-          onclick="toggleEmergencyEdit()"
-        >
-          <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
-        </button>
-      </div>
-      <div class="card-body">
-        <!-- View Mode -->
-        <div id="emergencyViewMode">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="text-muted small">{{ _('Contact Name') }}</label>
-              <div class="fw-semibold" id="viewEmergencyName">—</div>
+      <section class="profile-card">
+        <div class="profile-card-header">
+          <div>
+            <h3 class="profile-card-title">
+              <span class="profile-card-icon"
+                ><i class="bi bi-shield-check"></i
+              ></span>
+              {{ 'Emergency contact' if is_en else 'جهة الاتصال في الطوارئ' }}
+            </h3>
+            <p class="profile-card-subtitle mb-0 mt-2">
+              {{ 'This contact is used if the kindergarten cannot reach you
+              directly.' if is_en else 'يُستخدم هذا الاتصال إذا تعذر على الحضانة
+              الوصول إليك مباشرة.' }}
+            </p>
+          </div>
+          <button
+            class="btn btn-soft btn-sm fw-semibold"
+            id="btnEditEmergency"
+            onclick="toggleEmergencyEdit()"
+          >
+            <i class="bi bi-pencil me-1"></i>{{ 'Edit' if is_en else 'تعديل' }}
+          </button>
+        </div>
+
+        <div id="emergencyViewMode" class="profile-info-grid">
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Contact name' if is_en else 'اسم جهة الاتصال' }}
             </div>
-            <div class="col-md-4">
-              <label class="text-muted small">{{ _('Contact Phone') }}</label>
-              <div class="fw-semibold" id="viewEmergencyPhone">—</div>
+            <div class="profile-field-value" id="viewEmergencyName">—</div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Contact phone' if is_en else 'هاتف جهة الاتصال' }}
             </div>
-            <div class="col-md-4">
-              <label class="text-muted small">{{ _('Relationship') }}</label>
-              <div class="fw-semibold" id="viewEmergencyRelationship">—</div>
+            <div class="profile-field-value" id="viewEmergencyPhone" dir="ltr">
+              —
+            </div>
+          </div>
+          <div class="profile-field">
+            <div class="profile-field-label">
+              {{ 'Relationship' if is_en else 'صلة القرابة' }}
+            </div>
+            <div class="profile-field-value" id="viewEmergencyRelationship">
+              —
             </div>
           </div>
         </div>
 
-        <!-- Edit Mode -->
-        <form id="emergencyEditMode" class="d-none">
+        <form id="emergencyEditMode" class="d-none" novalidate>
           <div class="row g-3">
             <div class="col-md-4">
               <label for="editEmergencyName" class="form-label"
-                >{{ _('Contact Name') }}
+                >{{ 'Contact name' if is_en else 'اسم جهة الاتصال' }}
                 <span class="text-danger">*</span></label
               >
               <input
@@ -326,7 +806,7 @@
             </div>
             <div class="col-md-4">
               <label for="editEmergencyPhone" class="form-label"
-                >{{ _('Contact Phone') }}
+                >{{ 'Contact phone' if is_en else 'هاتف جهة الاتصال' }}
                 <span class="text-danger">*</span></label
               >
               <input
@@ -334,13 +814,14 @@
                 class="form-control"
                 id="editEmergencyPhone"
                 dir="ltr"
-                placeholder="+962..."
+                inputmode="tel"
+                placeholder="07XXXXXXXX or +9627XXXXXXXX"
                 required
               />
             </div>
             <div class="col-md-4">
               <label for="editEmergencyRelationship" class="form-label"
-                >{{ _('Relationship') }}</label
+                >{{ 'Relationship' if is_en else 'صلة القرابة' }}</label
               >
               <input
                 type="text"
@@ -348,117 +829,217 @@
                 id="editEmergencyRelationship"
               />
             </div>
-            <div class="col-12 mt-3">
-              <button type="submit" class="btn btn-danger px-4">
-                <i class="bi bi-save me-1"></i>{{ _('Save Emergency Contact') }}
-              </button>
-              <button
-                type="button"
-                class="btn btn-outline-secondary me-2"
-                onclick="cancelEmergencyEdit()"
-              >
-                {{ _('Cancel') }}
-              </button>
+            <div class="col-12">
+              <div class="profile-inline-note">
+                {{ 'Use a reachable Jordanian phone number so urgent calls do
+                not fail.' if is_en else 'استخدم رقم هاتف أردني يمكن الوصول إليه
+                حتى لا تفشل الاتصالات العاجلة.' }}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="profile-section-actions mt-2">
+                <button type="submit" class="btn btn-primary px-4">
+                  <i class="bi bi-check2-circle me-1"></i>{{ 'Save emergency
+                  contact' if is_en else 'حفظ جهة الطوارئ' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary px-4"
+                  onclick="cancelEmergencyEdit()"
+                >
+                  {{ 'Cancel' if is_en else 'إلغاء' }}
+                </button>
+              </div>
             </div>
           </div>
         </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Side Panel -->
-  <div class="col-lg-4">
-    <!-- Profile Status Card -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-body text-center">
-        <div
-          class="avatar-lg bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
-        >
-          <i class="bi bi-person-fill text-primary fs-1"></i>
-        </div>
-        <h5 class="mb-1" id="profileFullName">—</h5>
-        <p class="text-muted mb-3" id="profileRole">{{ _('Parent') }}</p>
-        <div id="profileStatusBadge">
-          <span class="badge badge-soft badge-soft-secondary">{{ _('Loading...') }}</span>
-        </div>
-      </div>
+      </section>
     </div>
 
-    <!-- Quick Links Card -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-transparent">
-        <h5 class="card-title mb-0">
-          <i class="bi bi-link-45deg me-2"></i>{{ _('Quick Links') }}
-        </h5>
-      </div>
-      <div class="card-body">
-        <div class="d-grid gap-2">
-          <a href="/parent/children" class="btn btn-outline-primary">
-            <i class="bi bi-people me-2"></i>{{ _('My Children') }}
-          </a>
-          <a href="/enroll" class="btn btn-outline-success">
-            <i class="bi bi-person-plus me-2"></i>{{ _('Register New Child') }}
-          </a>
-          <a href="/parent/enrollments" class="btn btn-outline-info">
-            <i class="bi bi-clipboard-check me-2"></i>{{ _('Enrollment
-            Requests') }}
-          </a>
-          <a href="/my-reports" class="btn btn-outline-warning">
-            <i class="bi bi-journal-text me-2"></i>{{ _('My Reports') }}
-          </a>
-          <a href="/absence-requests" class="btn btn-outline-secondary">
-            <i class="bi bi-calendar-x me-2"></i>{{ _('Absence Requests') }}
-          </a>
+    <div class="col-xl-4">
+      <div class="profile-side-card mb-4">
+        <div class="profile-side-header">
+          <div>
+            <h3 class="profile-card-title mb-0">
+              <span class="profile-card-icon"
+                ><i class="bi bi-graph-up-arrow"></i
+              ></span>
+              {{ 'Profile overview' if is_en else 'نظرة عامة على الملف' }}
+            </h3>
+            <p class="profile-side-subtitle mb-0 mt-2">
+              {{ 'A quick summary of profile readiness and communication
+              settings.' if is_en else 'ملخص سريع لجاهزية الملف وإعدادات
+              التواصل.' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="profile-stats mb-3">
+          <div class="profile-stat">
+            <div class="profile-stat-label mb-1">
+              {{ 'Completion' if is_en else 'اكتمال الملف' }}
+            </div>
+            <div class="profile-stat-value" id="profileCompletionValue">0%</div>
+          </div>
+          <div class="profile-stat">
+            <div class="profile-stat-label mb-1">
+              {{ 'Preferred language' if is_en else 'اللغة المفضلة' }}
+            </div>
+            <div class="profile-stat-value fs-5" id="profileLanguageValue">
+              —
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-progress mb-2">
+          <span id="profileCompletionBar" style="width: 0%"></span>
+        </div>
+        <p class="profile-help small mb-4" id="profileCompletionText">
+          {{ 'Loading profile quality…' if is_en else 'جاري تحميل مستوى اكتمال
+          الملف…' }}
+        </p>
+
+        <div class="profile-summary-list">
+          <div class="profile-summary-item">
+            <i class="bi bi-person-badge"></i>
+            <div>
+              <div class="small text-muted">
+                {{ 'Role' if is_en else 'الدور' }}
+              </div>
+              <div class="fw-semibold" id="profileRole">
+                {{ 'Parent' if is_en else 'ولي أمر' }}
+              </div>
+            </div>
+          </div>
+          <div class="profile-summary-item">
+            <i class="bi bi-envelope-check"></i>
+            <div>
+              <div class="small text-muted">
+                {{ 'Email status' if is_en else 'حالة البريد الإلكتروني' }}
+              </div>
+              <div class="fw-semibold" id="profileEmailStatus">—</div>
+            </div>
+          </div>
+          <div class="profile-summary-item">
+            <i class="bi bi-telephone-forward"></i>
+            <div>
+              <div class="small text-muted">
+                {{ 'Primary contact' if is_en else 'جهة التواصل الرئيسية' }}
+              </div>
+              <div class="fw-semibold" id="profilePrimaryContact">—</div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Preferences -->
-    <div class="card shadow-sm">
-      <div class="card-header bg-transparent">
-        <h5 class="card-title mb-0">
-          <i class="bi bi-sliders me-2"></i>{{ _('Preferences') }}
-        </h5>
-      </div>
-      <div class="card-body">
-        <div class="form-check form-switch mb-3">
+      <div class="profile-side-card mb-4">
+        <div class="profile-side-header">
+          <div>
+            <h3 class="profile-card-title mb-0">
+              <span class="profile-card-icon"
+                ><i class="bi bi-sliders2"></i
+              ></span>
+              {{ 'Preferences' if is_en else 'التفضيلات' }}
+            </h3>
+            <p class="profile-side-subtitle mb-0 mt-2">
+              {{ 'Choose how KinJo communicates with you and which interface
+              language you prefer.' if is_en else 'اختر كيفية تواصل KinJo معك
+              ولغة الواجهة التي تفضلها.' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="form-check form-switch mb-4">
           <input
             class="form-check-input"
             type="checkbox"
             id="correspondenceSwitch"
             checked
           />
-          <label class="form-check-label" for="correspondenceSwitch">
-            {{ _('Receive correspondence') }}
-          </label>
-        </div>
-        <!-- Language Preference -->
-        <div class="mb-0">
-          <label class="form-label text-muted small mb-1">
-            <i class="bi bi-translate me-1"></i>{{ _('Interface Language') }}
-          </label>
-          <div
-            class="btn-group w-100"
-            role="group"
-            aria-label="{{ _('Language') }}"
+          <label class="form-check-label fw-semibold" for="correspondenceSwitch"
+            >{{ 'Receive parent correspondence' if is_en else 'استلام مراسلات
+            ولي الأمر' }}</label
           >
+          <div class="profile-help small mt-1">
+            {{ 'Turn this on to keep receiving routine updates and reminders.'
+            if is_en else 'فعّل هذا الخيار للاستمرار في استلام التحديثات
+            والتذكيرات الروتينية.' }}
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label fw-semibold"
+            >{{ 'Interface language' if is_en else 'لغة الواجهة' }}</label
+          >
+          <div class="lang-toggle">
             <button
               type="button"
               id="langBtnAr"
-              class="btn btn-sm btn-outline-primary"
+              class="btn btn-outline-primary"
               onclick="switchLanguage('ar')"
             >
-              عربي
+              العربية
             </button>
             <button
               type="button"
               id="langBtnEn"
-              class="btn btn-sm btn-outline-primary"
+              class="btn btn-outline-primary"
               onclick="switchLanguage('en')"
             >
               English
             </button>
           </div>
+          <div class="profile-help small mt-2">
+            {{ 'The page layout and labels switch instantly after reload.' if
+            is_en else 'سيتم تبديل تنسيق الصفحة والعناوين مباشرة بعد إعادة
+            التحميل.' }}
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-side-card">
+        <div class="profile-side-header">
+          <div>
+            <h3 class="profile-card-title mb-0">
+              <span class="profile-card-icon"
+                ><i class="bi bi-lightning-charge"></i
+              ></span>
+              {{ 'Quick links' if is_en else 'روابط سريعة' }}
+            </h3>
+            <p class="profile-side-subtitle mb-0 mt-2">
+              {{ 'Jump to the most common parent tasks.' if is_en else 'انتقل
+              مباشرة إلى أكثر مهام ولي الأمر استخداماً.' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="profile-link-list">
+          <a href="/parent/children" class="profile-link-item"
+            ><i class="bi bi-people"></i
+            ><span>{{ 'My children' if is_en else 'أطفالي' }}</span></a
+          >
+          <a href="/enroll" class="profile-link-item"
+            ><i class="bi bi-person-plus"></i
+            ><span
+              >{{ 'Register new child' if is_en else 'تسجيل طفل جديد' }}</span
+            ></a
+          >
+          <a href="/parent/enrollments" class="profile-link-item"
+            ><i class="bi bi-clipboard-check"></i
+            ><span
+              >{{ 'Enrollment requests' if is_en else 'طلبات التسجيل' }}</span
+            ></a
+          >
+          <a href="/my-reports" class="profile-link-item"
+            ><i class="bi bi-journal-text"></i
+            ><span>{{ 'My reports' if is_en else 'تقاريري' }}</span></a
+          >
+          <a href="/absence-requests" class="profile-link-item"
+            ><i class="bi bi-calendar-x"></i
+            ><span
+              >{{ 'Absence requests' if is_en else 'طلبات الغياب' }}</span
+            ></a
+          >
         </div>
       </div>
     </div>
@@ -467,15 +1048,9 @@
 {% endblock %} {% block extra_js %}
 <script>
   const IS_EN = "{{ ui_lang }}" === "en";
+  const PROFILE_ENDPOINT = "/api/parent/profile";
   const T = (ar, en) => (IS_EN ? en : ar);
-  // Mark the active language button
-  document.addEventListener("DOMContentLoaded", function () {
-    const activeId = IS_EN ? "langBtnEn" : "langBtnAr";
-    const btn = document.getElementById(activeId);
-    if (btn) {
-      btn.classList.replace("btn-outline-primary", "btn-primary");
-    }
-  });
+  const EMPTY_VALUE = "—";
 
   const RELATIONSHIP_LABELS = {
     FATHER: T("أب", "Father"),
@@ -484,209 +1059,423 @@
     OTHER: T("أخرى", "Other"),
   };
 
-  let _govData = [];
-  const GOVERNORATE_AR = {};
-
   let profileData = null;
+  let governorates = [];
 
   function getHeaders() {
     const headers = { "Content-Type": "application/json" };
     if (window.AuthService && AuthService.isAuthenticated()) {
       const token = AuthService.getToken();
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (token) headers.Authorization = `Bearer ${token}`;
     }
-    const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
-                 (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
-                 (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
-    if (csrf) headers['X-CSRF-Token'] = csrf;
+    const csrf =
+      (typeof getCsrfToken === "function" ? getCsrfToken() : null) ||
+      (typeof CSRF_TOKEN !== "undefined" ? CSRF_TOKEN : null) ||
+      (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
+    if (csrf) headers["X-CSRF-Token"] = csrf;
     return headers;
   }
 
-  document.addEventListener("DOMContentLoaded", async () => {
-    await loadGovernorates();
-    await loadProfile();
-  });
+  function normalizeJordanPhone(phone) {
+    let value = (phone || "").trim().replace(/[\s-]+/g, "");
+    if (value.startsWith("+962")) value = `0${value.slice(4)}`;
+    if (value.startsWith("00962")) value = `0${value.slice(5)}`;
+    if (/^7\d{8}$/.test(value)) value = `0${value}`;
+    return value;
+  }
 
-  async function loadGovernorates() {
+  function isValidJordanPhone(phone) {
+    return /^(\+962|00962|0)[0-9]{9}$/.test(
+      (phone || "").trim().replace(/[\s-]+/g, ""),
+    );
+  }
+
+  function formatJordanPhone(phone) {
+    const normalized = normalizeJordanPhone(phone);
+    if (!/^0\d{9}$/.test(normalized)) return phone || EMPTY_VALUE;
+    return `${normalized.slice(0, 3)} ${normalized.slice(3, 6)} ${normalized.slice(6)}`;
+  }
+
+  function textValue(value) {
+    return value && `${value}`.trim() ? value : EMPTY_VALUE;
+  }
+
+  function localizeGovernorate(value) {
+    if (!value) return EMPTY_VALUE;
+    const match = governorates.find(
+      (item) => item.name_ar === value || item.name_en === value,
+    );
+    if (!match) return value;
+    return IS_EN ? match.name_en || match.name_ar : match.name_ar;
+  }
+
+  function buildLocation(profile) {
+    const parts = [
+      localizeGovernorate(profile.home_governorate),
+      profile.home_district,
+      profile.home_area,
+    ].filter((value) => value && value !== EMPTY_VALUE);
+    return parts.length ? parts.join(" • ") : EMPTY_VALUE;
+  }
+
+  function buildDisplayName(profile) {
+    const englishName = [profile.first_name_en, profile.last_name_en]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    const arabicName = [
+      profile.first_name,
+      profile.second_name,
+      profile.last_name,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    return IS_EN && englishName
+      ? englishName
+      : arabicName || englishName || EMPTY_VALUE;
+  }
+
+  function computeCompletion(profile) {
+    const checkpoints = [
+      profile.first_name,
+      profile.last_name,
+      profile.phone_number,
+      profile.relationship_to_child,
+      profile.home_governorate,
+      profile.home_district,
+      profile.home_area,
+      profile.home_address_line,
+      profile.emergency_contact_name,
+      profile.emergency_contact_phone,
+    ];
+    const completeCount = checkpoints.filter(
+      (value) => value && `${value}`.trim(),
+    ).length;
+    return Math.round((completeCount / checkpoints.length) * 100);
+  }
+
+  function updateLanguageButtons(activeLang) {
+    ["langBtnAr", "langBtnEn"].forEach((id) => {
+      const button = document.getElementById(id);
+      button.classList.remove("btn-primary");
+      button.classList.add("btn-outline-primary");
+    });
+    const activeButton = document.getElementById(
+      activeLang === "en" ? "langBtnEn" : "langBtnAr",
+    );
+    activeButton.classList.remove("btn-outline-primary");
+    activeButton.classList.add("btn-primary");
+  }
+
+  function setButtonBusy(button, isBusy) {
+    if (!button) return;
+    if (isBusy) {
+      button.dataset.originalHtml = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${T("جاري الحفظ...", "Saving...")}`;
+      return;
+    }
+    button.disabled = false;
+    button.innerHTML = button.dataset.originalHtml || button.innerHTML;
+  }
+
+  async function getErrorMessage(response) {
     try {
-      const res = await fetch("/api/reference/governorates");
-      const data = await res.json();
-      _govData = data.governorates || [];
-      _govData.forEach((g) => {
-        GOVERNORATE_AR[g.name_ar] = g.name_ar;
-        GOVERNORATE_AR[g.name_en] = g.name_ar;
+      const data = await response.json();
+      if (typeof data.detail === "string") return data.detail;
+      if (Array.isArray(data.detail) && data.detail.length)
+        return data.detail[0].msg || data.detail[0];
+      if (data.message) return data.message;
+    } catch (error) {
+      console.error(error);
+    }
+    return T("تعذر إكمال العملية", "Unable to complete the request");
+  }
+
+  async function saveProfileUpdate(payload, successMessage, button) {
+    setButtonBusy(button, true);
+    try {
+      const response = await fetch(PROFILE_ENDPOINT, {
+        method: "PUT",
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
       });
-      populateGovernorates();
-    } catch (e) {
-      console.error("Failed to load governorates", e);
+      if (!response.ok) {
+        throw new Error(await getErrorMessage(response));
+      }
+      await loadProfile();
+      Swal.fire({
+        icon: "success",
+        title: T("تم", "Done"),
+        text: successMessage,
+        timer: 1600,
+        showConfirmButton: false,
+      });
+      return true;
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: T("خطأ", "Error"),
+        text:
+          error.message || T("تعذر حفظ التغييرات", "Failed to save changes"),
+      });
+      return false;
+    } finally {
+      setButtonBusy(button, false);
     }
   }
 
   function populateGovernorates() {
-    const sel = document.getElementById("editGovernorate");
-    sel.innerHTML = `<option value="">${T("اختر...", "Select...")}</option>`;
-    _govData.forEach((g) => {
-      const opt = document.createElement("option");
-      opt.value = g.name_ar;
-      opt.textContent = IS_EN ? g.name_en || g.name_ar : g.name_ar;
-      sel.appendChild(opt);
+    const select = document.getElementById("editGovernorate");
+    select.innerHTML = `<option value="">${T("اختر المحافظة", "Select governorate")}</option>`;
+    governorates.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.name_ar;
+      option.textContent = IS_EN ? item.name_en || item.name_ar : item.name_ar;
+      select.appendChild(option);
     });
   }
 
-  function populateCities(govName, selectedCity) {
-    const sel = document.getElementById("editCity");
-    const gov = _govData.find(
-      (g) => g.name_ar === govName || g.name_en === govName,
+  function populateCities(governorateName, selectedCity) {
+    const select = document.getElementById("editCity");
+    const governorate = governorates.find(
+      (item) =>
+        item.name_ar === governorateName || item.name_en === governorateName,
     );
-    if (!gov || !gov.cities || !gov.cities.length) {
-      sel.innerHTML = `<option value="">${T("لا توجد مدن", "No cities")}</option>`;
+    if (
+      !governorate ||
+      !Array.isArray(governorate.cities) ||
+      !governorate.cities.length
+    ) {
+      select.innerHTML = `<option value="">${T("لا توجد ألوية", "No districts available")}</option>`;
       return;
     }
-    sel.innerHTML = `<option value="">${T("اختر اللواء...", "Select district...")}</option>`;
-    gov.cities.forEach((c) => {
-      const opt = document.createElement("option");
-      opt.value = c;
-      opt.textContent = c;
-      if (c === selectedCity) opt.selected = true;
-      sel.appendChild(opt);
+    select.innerHTML = `<option value="">${T("اختر اللواء", "Select district")}</option>`;
+    governorate.cities.forEach((city) => {
+      const option = document.createElement("option");
+      option.value = city;
+      option.textContent = city;
+      option.selected = city === selectedCity;
+      select.appendChild(option);
     });
   }
 
-  document
-    .getElementById("editGovernorate")
-    .addEventListener("change", function () {
-      populateCities(this.value, "");
-    });
+  async function loadGovernorates() {
+    try {
+      const response = await fetch("/api/reference/governorates");
+      const data = await response.json();
+      governorates = data.governorates || [];
+      populateGovernorates();
+    } catch (error) {
+      console.error("Failed to load governorates", error);
+    }
+  }
 
   async function loadProfile() {
     try {
-      const resp = await fetch("/api/parent/profile", {
-        headers: getHeaders(),
-      });
-      if (!resp.ok) {
-        if (resp.status === 404) {
-          document.getElementById("profileAlert").classList.remove("d-none");
-          document.getElementById("profileAlert").innerHTML =
-            `<i class="bi bi-exclamation-triangle me-2"></i><strong>${T("لم يتم العثور على ملفك الشخصي.", "Profile not found.")}</strong> ${T("يرجى التواصل مع الإدارة.", "Please contact administration.")}`;
+      const response = await fetch(PROFILE_ENDPOINT, { headers: getHeaders() });
+      if (!response.ok) {
+        if (response.status === 404) {
+          const alert = document.getElementById("profileAlert");
+          alert.classList.remove("d-none");
+          alert.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i><strong>${T("تعذر العثور على ملفك الشخصي.", "We could not find your profile.")}</strong> ${T("يرجى التواصل مع الإدارة لإكمال التهيئة.", "Please contact administration to finish setup.")}`;
           return;
         }
-        throw new Error("Failed to load profile");
+        throw new Error(await getErrorMessage(response));
       }
-
-      profileData = await resp.json();
+      profileData = await response.json();
       renderProfile(profileData);
     } catch (error) {
-      console.error("Error loading profile:", error);
       Swal.fire({
         icon: "error",
         title: T("خطأ", "Error"),
-        text: T("تعذر تحميل الملف الشخصي", "Failed to load profile"),
+        text:
+          error.message ||
+          T("تعذر تحميل الملف الشخصي", "Failed to load profile"),
       });
     }
   }
 
-  function renderProfile(p) {
-    // Top card
-    document.getElementById("profileFullName").textContent =
-      `${p.first_name} ${p.second_name || ""} ${p.last_name}`.trim();
-    document.getElementById("profileStatusBadge").innerHTML = p.profile_complete
-      ? `<span class="badge badge-soft badge-soft-success"><i class="bi bi-check-circle me-1"></i>${T("مكتمل", "Complete")}</span>`
-      : `<span class="badge badge-soft badge-soft-warning"><i class="bi bi-exclamation-circle me-1"></i>${T("غير مكتمل", "Incomplete")}</span>`;
+  function renderProfile(profile) {
+    const completion = profile.profile_complete
+      ? 100
+      : computeCompletion(profile);
+    const displayName = buildDisplayName(profile);
+    const arabicName = [
+      profile.first_name,
+      profile.second_name,
+      profile.last_name,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    const englishName = [profile.first_name_en, profile.last_name_en]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    const statusBadge = profile.profile_complete
+      ? `<i class="bi bi-check-circle-fill"></i> ${T("مكتمل", "Complete")}`
+      : `<i class="bi bi-exclamation-circle-fill"></i> ${T("بحاجة إلى إكمال", "Needs completion")}`;
 
-    if (!p.profile_complete) {
-      document.getElementById("profileAlert").classList.remove("d-none");
-    }
-
-    // Personal Info
-    document.getElementById("viewFirstName").textContent =
-      IS_EN && p.first_name_en ? p.first_name_en : p.first_name || "—";
-    document.getElementById("viewSecondName").textContent =
-      p.second_name || "—";
-    document.getElementById("viewLastName").textContent =
-      IS_EN && p.last_name_en ? p.last_name_en : p.last_name || "—";
-    document.getElementById("viewPhone").textContent = p.phone_number || "—";
-    document.getElementById("viewEmail").textContent = p.email || "—";
-    document.getElementById("viewGender").textContent =
-      p.gender === "MALE"
-        ? T("ذكر", "Male")
-        : p.gender === "FEMALE"
-          ? T("أنثى", "Female")
-          : "—";
-    document.getElementById("viewNationality").textContent =
-      p.nationality || "—";
-    document.getElementById("viewRelationship").textContent =
-      RELATIONSHIP_LABELS[p.relationship_to_child] ||
-      p.relationship_to_child ||
-      "—";
-    document.getElementById("viewNationalId").textContent =
-      p.national_id || "—";
-    document.getElementById("viewPassport").textContent =
-      p.passport_number || "—";
-
-    // Address
-    document.getElementById("viewGovernorate").textContent =
-      GOVERNORATE_AR[p.home_governorate] || p.home_governorate || "—";
-    document.getElementById("viewCity").textContent = p.home_district || "—";
-    document.getElementById("viewArea").textContent = p.home_area || "—";
-    document.getElementById("viewAddressLine").textContent =
-      p.home_address_line || "—";
-    document.getElementById("viewWorkAddress").textContent =
-      p.work_address || "—";
-
-    // Emergency Contact
-    document.getElementById("viewEmergencyName").textContent =
-      p.emergency_contact_name || "—";
-    document.getElementById("viewEmergencyPhone").textContent =
-      p.emergency_contact_phone || "—";
-    document.getElementById("viewEmergencyRelationship").textContent =
-      p.emergency_contact_relationship || "—";
-
-    // Preferences
-    document.getElementById("correspondenceSwitch").checked =
-      p.correspondence_preference !== false;
-
-    // Fill edit forms
-    document.getElementById("editFirstName").value = p.first_name || "";
-    document.getElementById("editSecondName").value = p.second_name || "";
-    document.getElementById("editLastName").value = p.last_name || "";
-    document.getElementById("editPhone").value = p.phone_number || "";
-    document.getElementById("editRelationship").value =
-      p.relationship_to_child || "";
-
-    // Address edit
-    const govSelect = document.getElementById("editGovernorate");
-    const govValue = p.home_governorate || "";
-    const matchedGov = _govData.find(
-      (g) => g.name_ar === govValue || g.name_en === govValue,
+    document.getElementById("profileFullName").textContent = displayName;
+    document.getElementById("profileSummaryPhone").textContent =
+      formatJordanPhone(profile.phone_number);
+    document.getElementById("profileSummaryEmail").textContent = textValue(
+      profile.email,
     );
-    govSelect.value = matchedGov ? matchedGov.name_ar : govValue;
-    if (matchedGov) {
-      populateCities(matchedGov.name_ar, p.home_district || "");
-    }
-    document.getElementById("editArea").value = p.home_area || "";
-    document.getElementById("editAddressLine").value =
-      p.home_address_line || "";
-    document.getElementById("editWorkAddress").value = p.work_address || "";
+    document.getElementById("profileSummaryLocation").textContent =
+      buildLocation(profile);
+    document.getElementById("profileLanguageBadge").innerHTML =
+      `<i class="bi bi-translate"></i> ${profile.notification_language === "en" ? "English" : "العربية"}`;
+    document.getElementById("profileLanguageValue").textContent =
+      profile.notification_language === "en" ? "English" : "العربية";
+    document.getElementById("profileStatusBadge").innerHTML = statusBadge;
+    document.getElementById("profileCompletionValue").textContent =
+      `${completion}%`;
+    document.getElementById("profileCompletionBar").style.width =
+      `${completion}%`;
+    document.getElementById("profileCompletionText").textContent =
+      profile.profile_complete
+        ? T(
+            "ملفك مكتمل وجاهز للاستخدام في التسجيل والتواصل.",
+            "Your profile is complete and ready for enrollment and communication.",
+          )
+        : T(
+            "أكمِل بيانات التواصل والعنوان والطوارئ للوصول إلى الجاهزية الكاملة.",
+            "Complete your contact, address, and emergency details to reach full readiness.",
+          );
+    document.getElementById("profileEmailStatus").textContent = profile.email
+      ? T("مؤكد في الحساب", "Available on account")
+      : T("غير متوفر", "Missing");
+    document.getElementById("profilePrimaryContact").textContent =
+      formatJordanPhone(profile.phone_number);
+    document.getElementById("profileRole").textContent = T("ولي أمر", "Parent");
 
-    // Emergency edit
+    const alert = document.getElementById("profileAlert");
+    alert.classList.toggle("d-none", Boolean(profile.profile_complete));
+
+    document.getElementById("viewFirstName").textContent = textValue(
+      profile.first_name,
+    );
+    document.getElementById("viewSecondName").textContent = textValue(
+      profile.second_name,
+    );
+    document.getElementById("viewLastName").textContent = textValue(
+      profile.last_name,
+    );
+    document.getElementById("viewPhone").textContent = formatJordanPhone(
+      profile.phone_number,
+    );
+    document.getElementById("viewEmail").textContent = textValue(profile.email);
+    document.getElementById("viewRelationship").textContent =
+      RELATIONSHIP_LABELS[profile.relationship_to_child] ||
+      textValue(profile.relationship_to_child);
+    document.getElementById("viewGender").textContent =
+      profile.gender === "MALE"
+        ? T("ذكر", "Male")
+        : profile.gender === "FEMALE"
+          ? T("أنثى", "Female")
+          : EMPTY_VALUE;
+    document.getElementById("viewNationality").textContent = textValue(
+      profile.nationality,
+    );
+    document.getElementById("viewNationalId").textContent = textValue(
+      profile.national_id,
+    );
+    document.getElementById("viewPassport").textContent = textValue(
+      profile.passport_number,
+    );
+    document.getElementById("viewArabicName").textContent =
+      textValue(arabicName);
+    document.getElementById("viewEnglishName").textContent =
+      textValue(englishName);
+
+    document.getElementById("viewGovernorate").textContent =
+      localizeGovernorate(profile.home_governorate);
+    document.getElementById("viewCity").textContent = textValue(
+      profile.home_district,
+    );
+    document.getElementById("viewArea").textContent = textValue(
+      profile.home_area,
+    );
+    document.getElementById("viewAddressLine").textContent = textValue(
+      profile.home_address_line,
+    );
+    document.getElementById("viewWorkAddress").textContent = textValue(
+      profile.work_address,
+    );
+
+    document.getElementById("viewEmergencyName").textContent = textValue(
+      profile.emergency_contact_name,
+    );
+    document.getElementById("viewEmergencyPhone").textContent =
+      formatJordanPhone(profile.emergency_contact_phone);
+    document.getElementById("viewEmergencyRelationship").textContent =
+      textValue(profile.emergency_contact_relationship);
+
+    document.getElementById("correspondenceSwitch").checked =
+      profile.correspondence_preference !== false;
+    updateLanguageButtons(profile.notification_language || "ar");
+
+    document.getElementById("editFirstName").value = profile.first_name || "";
+    document.getElementById("editSecondName").value = profile.second_name || "";
+    document.getElementById("editLastName").value = profile.last_name || "";
+    document.getElementById("editPhone").value = normalizeJordanPhone(
+      profile.phone_number || "",
+    );
+    document.getElementById("editRelationship").value =
+      profile.relationship_to_child || "";
+
+    const governorateValue = profile.home_governorate || "";
+    const governorateMatch = governorates.find(
+      (item) =>
+        item.name_ar === governorateValue || item.name_en === governorateValue,
+    );
+    document.getElementById("editGovernorate").value = governorateMatch
+      ? governorateMatch.name_ar
+      : governorateValue;
+    populateCities(
+      document.getElementById("editGovernorate").value,
+      profile.home_district || "",
+    );
+    document.getElementById("editArea").value = profile.home_area || "";
+    document.getElementById("editAddressLine").value =
+      profile.home_address_line || "";
+    document.getElementById("editWorkAddress").value =
+      profile.work_address || "";
+
     document.getElementById("editEmergencyName").value =
-      p.emergency_contact_name || "";
-    document.getElementById("editEmergencyPhone").value =
-      p.emergency_contact_phone || "";
+      profile.emergency_contact_name || "";
+    document.getElementById("editEmergencyPhone").value = normalizeJordanPhone(
+      profile.emergency_contact_phone || "",
+    );
     document.getElementById("editEmergencyRelationship").value =
-      p.emergency_contact_relationship || "";
+      profile.emergency_contact_relationship || "";
   }
 
-  // Toggle personal info edit
-  function toggleEditMode() {
-    document.getElementById("viewMode").classList.toggle("d-none");
-    document.getElementById("editMode").classList.toggle("d-none");
-    const btn = document.getElementById("btnEditProfile");
-    btn.innerHTML = document
-      .getElementById("editMode")
-      .classList.contains("d-none")
+  function toggleSection(viewId, formId, buttonId) {
+    const view = document.getElementById(viewId);
+    const form = document.getElementById(formId);
+    const button = document.getElementById(buttonId);
+    const isOpen = !form.classList.contains("d-none");
+    view.classList.toggle("d-none", !isOpen);
+    form.classList.toggle("d-none", isOpen);
+    button.innerHTML = isOpen
       ? `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`
-      : `<i class="bi bi-x me-1"></i>${T("إلغاء", "Cancel")}`;
+      : `<i class="bi bi-x-lg me-1"></i>${T("إلغاء", "Cancel")}`;
+  }
+
+  function toggleEditMode() {
+    toggleSection("viewMode", "editMode", "btnEditProfile");
+  }
+
+  function toggleAddressEdit() {
+    toggleSection("addressViewMode", "addressEditMode", "btnEditAddress");
+  }
+
+  function toggleEmergencyEdit() {
+    toggleSection("emergencyViewMode", "emergencyEditMode", "btnEditEmergency");
   }
 
   function cancelEdit() {
@@ -697,36 +1486,12 @@
       `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`;
   }
 
-  // Toggle address edit
-  function toggleAddressEdit() {
-    document.getElementById("addressViewMode").classList.toggle("d-none");
-    document.getElementById("addressEditMode").classList.toggle("d-none");
-    const btn = document.getElementById("btnEditAddress");
-    btn.innerHTML = document
-      .getElementById("addressEditMode")
-      .classList.contains("d-none")
-      ? `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`
-      : `<i class="bi bi-x me-1"></i>${T("إلغاء", "Cancel")}`;
-  }
-
   function cancelAddressEdit() {
     if (profileData) renderProfile(profileData);
     document.getElementById("addressViewMode").classList.remove("d-none");
     document.getElementById("addressEditMode").classList.add("d-none");
     document.getElementById("btnEditAddress").innerHTML =
       `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`;
-  }
-
-  // Toggle emergency contact edit
-  function toggleEmergencyEdit() {
-    document.getElementById("emergencyViewMode").classList.toggle("d-none");
-    document.getElementById("emergencyEditMode").classList.toggle("d-none");
-    const btn = document.getElementById("btnEditEmergency");
-    btn.innerHTML = document
-      .getElementById("emergencyEditMode")
-      .classList.contains("d-none")
-      ? `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`
-      : `<i class="bi bi-x me-1"></i>${T("إلغاء", "Cancel")}`;
   }
 
   function cancelEmergencyEdit() {
@@ -737,87 +1502,90 @@
       `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`;
   }
 
-  // Save personal info
-  document.getElementById("editMode").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!profileData) return;
-
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    if (submitBtn.disabled) return;
-    submitBtn.disabled = true;
-    const origHtml = submitBtn.innerHTML;
-    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${T("جاري الحفظ...", "Saving...")}`;
-
-    const payload = {
-      first_name: document.getElementById("editFirstName").value.trim(),
-      second_name:
-        document.getElementById("editSecondName").value.trim() || null,
-      last_name: document.getElementById("editLastName").value.trim(),
-      phone_number: document.getElementById("editPhone").value.trim(),
-      relationship_to_child:
-        document.getElementById("editRelationship").value || null,
-    };
-
-    if (!payload.first_name || !payload.last_name || !payload.phone_number) {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = origHtml;
-      Swal.fire({
-        icon: "warning",
-        title: T("تنبيه", "Warning"),
-        text: T(
-          "يرجى تعبئة جميع الحقول المطلوبة",
-          "Please fill all required fields",
-        ),
-      });
-      return;
+  function validatePhoneInput(inputId, required = true) {
+    const input = document.getElementById(inputId);
+    const value = input.value.trim();
+    if (!value && !required) {
+      input.classList.remove("is-invalid");
+      return true;
     }
+    const valid = isValidJordanPhone(value);
+    input.classList.toggle("is-invalid", !valid);
+    if (valid) input.value = normalizeJordanPhone(value);
+    return valid;
+  }
 
-    try {
-      const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
-        method: "PUT",
-        headers: getHeaders(),
-        body: JSON.stringify(payload),
+  document.addEventListener("DOMContentLoaded", async () => {
+    await loadGovernorates();
+    await loadProfile();
+
+    document
+      .getElementById("editGovernorate")
+      .addEventListener("change", function () {
+        populateCities(this.value, "");
       });
-      if (!resp.ok) throw new Error("Update failed");
 
-      Swal.fire({
-        icon: "success",
-        title: T("تم", "Done"),
-        text: T(
+    ["editPhone", "editEmergencyPhone"].forEach((id) => {
+      const input = document.getElementById(id);
+      input.addEventListener("blur", () => validatePhoneInput(id, true));
+    });
+  });
+
+  document
+    .getElementById("editMode")
+    .addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = event.target.querySelector('button[type="submit"]');
+      const payload = {
+        first_name: document.getElementById("editFirstName").value.trim(),
+        second_name:
+          document.getElementById("editSecondName").value.trim() || null,
+        last_name: document.getElementById("editLastName").value.trim(),
+        phone_number: document.getElementById("editPhone").value.trim(),
+        relationship_to_child:
+          document.getElementById("editRelationship").value || null,
+      };
+
+      if (!payload.first_name || !payload.last_name || !payload.phone_number) {
+        Swal.fire({
+          icon: "warning",
+          title: T("تنبيه", "Warning"),
+          text: T(
+            "يرجى تعبئة الاسم الأول واسم العائلة ورقم الهاتف.",
+            "Please complete first name, last name, and phone number.",
+          ),
+        });
+        return;
+      }
+      if (!validatePhoneInput("editPhone", true)) {
+        Swal.fire({
+          icon: "warning",
+          title: T("رقم هاتف غير صالح", "Invalid phone number"),
+          text: T(
+            "أدخل رقماً أردنياً صالحاً مثل 0791234567 أو +962791234567.",
+            "Enter a valid Jordanian number such as 0791234567 or +962791234567.",
+          ),
+        });
+        return;
+      }
+      payload.phone_number = normalizeJordanPhone(payload.phone_number);
+
+      const saved = await saveProfileUpdate(
+        payload,
+        T(
           "تم تحديث البيانات الشخصية بنجاح",
           "Personal information updated successfully",
         ),
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      await loadProfile();
-      cancelEdit();
-    } catch (err) {
-      console.error(err);
-      Swal.fire({
-        icon: "error",
-        title: T("خطأ", "Error"),
-        text: T("تعذر حفظ التغييرات", "Failed to save changes"),
-      });
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = origHtml;
-    }
-  });
+        button,
+      );
+      if (saved) cancelEdit();
+    });
 
-  // Save address
   document
     .getElementById("addressEditMode")
-    .addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!profileData) return;
-
-      const submitBtn = e.target.querySelector('button[type="submit"]');
-      if (submitBtn.disabled) return;
-      submitBtn.disabled = true;
-      const origHtml = submitBtn.innerHTML;
-      submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${T("جاري الحفظ...", "Saving...")}`;
-
+    .addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = event.target.querySelector('button[type="submit"]');
       const payload = {
         home_governorate: document.getElementById("editGovernorate").value,
         home_district: document.getElementById("editCity").value.trim(),
@@ -835,62 +1603,30 @@
         !payload.home_area ||
         !payload.home_address_line
       ) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = origHtml;
         Swal.fire({
           icon: "warning",
           title: T("تنبيه", "Warning"),
           text: T(
-            "يرجى تعبئة جميع حقول العنوان المطلوبة",
-            "Please fill all required address fields",
+            "يرجى تعبئة جميع حقول العنوان المطلوبة.",
+            "Please complete all required address fields.",
           ),
         });
         return;
       }
 
-      try {
-        const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
-          method: "PUT",
-          headers: getHeaders(),
-          body: JSON.stringify(payload),
-        });
-        if (!resp.ok) throw new Error("Update failed");
-
-        Swal.fire({
-          icon: "success",
-          title: T("تم", "Done"),
-          text: T("تم تحديث العنوان بنجاح", "Address updated successfully"),
-          timer: 1500,
-          showConfirmButton: false,
-        });
-        await loadProfile();
-        cancelAddressEdit();
-      } catch (err) {
-        console.error(err);
-        Swal.fire({
-          icon: "error",
-          title: T("خطأ", "Error"),
-          text: T("تعذر حفظ العنوان", "Failed to save address"),
-        });
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = origHtml;
-      }
+      const saved = await saveProfileUpdate(
+        payload,
+        T("تم تحديث العنوان بنجاح", "Address updated successfully"),
+        button,
+      );
+      if (saved) cancelAddressEdit();
     });
 
-  // Save emergency contact
   document
     .getElementById("emergencyEditMode")
-    .addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!profileData) return;
-
-      const submitBtn = e.target.querySelector('button[type="submit"]');
-      if (submitBtn.disabled) return;
-      submitBtn.disabled = true;
-      const origHtml = submitBtn.innerHTML;
-      submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${T("جاري الحفظ...", "Saving...")}`;
-
+    .addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = event.target.querySelector('button[type="submit"]');
       const payload = {
         emergency_contact_name: document
           .getElementById("editEmergencyName")
@@ -904,81 +1640,61 @@
       };
 
       if (!payload.emergency_contact_name || !payload.emergency_contact_phone) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = origHtml;
         Swal.fire({
           icon: "warning",
           title: T("تنبيه", "Warning"),
           text: T(
-            "يرجى تعبئة اسم ورقم جهة الطوارئ",
-            "Please fill emergency contact name and phone",
+            "يرجى تعبئة اسم جهة الطوارئ ورقمها.",
+            "Please provide the emergency contact name and phone number.",
           ),
         });
         return;
       }
-
-      try {
-        const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
-          method: "PUT",
-          headers: getHeaders(),
-          body: JSON.stringify(payload),
-        });
-        if (!resp.ok) throw new Error("Update failed");
-
+      if (!validatePhoneInput("editEmergencyPhone", true)) {
         Swal.fire({
-          icon: "success",
-          title: T("تم", "Done"),
+          icon: "warning",
+          title: T("رقم هاتف غير صالح", "Invalid phone number"),
           text: T(
-            "تم تحديث جهة الطوارئ بنجاح",
-            "Emergency contact updated successfully",
+            "أدخل رقم هاتف أردني صالحاً لجهة الطوارئ.",
+            "Enter a valid Jordanian emergency contact phone number.",
           ),
-          timer: 1500,
-          showConfirmButton: false,
         });
-        await loadProfile();
-        cancelEmergencyEdit();
-      } catch (err) {
-        console.error(err);
-        Swal.fire({
-          icon: "error",
-          title: T("خطأ", "Error"),
-          text: T("تعذر حفظ جهة الطوارئ", "Failed to save emergency contact"),
-        });
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = origHtml;
+        return;
       }
+      payload.emergency_contact_phone = normalizeJordanPhone(
+        payload.emergency_contact_phone,
+      );
+
+      const saved = await saveProfileUpdate(
+        payload,
+        T(
+          "تم تحديث جهة الطوارئ بنجاح",
+          "Emergency contact updated successfully",
+        ),
+        button,
+      );
+      if (saved) cancelEmergencyEdit();
     });
 
-  // Correspondence preference toggle
   document
     .getElementById("correspondenceSwitch")
     .addEventListener("change", async function () {
-      if (!profileData) return;
-      try {
-        await fetch(`/api/parent-profiles/${profileData.id}`, {
-          method: "PUT",
-          headers: getHeaders(),
-          body: JSON.stringify({ correspondence_preference: this.checked }),
-        });
-      } catch (e) {
-        console.error(e);
-      }
+      await saveProfileUpdate(
+        { correspondence_preference: this.checked },
+        this.checked
+          ? T("تم تفعيل المراسلات", "Correspondence enabled")
+          : T("تم إيقاف المراسلات", "Correspondence disabled"),
+        null,
+      );
     });
 
-  // Language preference switcher
   async function switchLanguage(lang) {
-    try {
-      // Persist to server via new PUT /api/parent/profile endpoint
-      await fetch("/api/parent/profile", {
-        method: "PUT",
-        headers: getHeaders(),
-        body: JSON.stringify({ language: lang }),
-      });
-    } catch (e) {
-      console.error("Language switch error:", e);
-    }
-    // Set cookie and reload to apply new language across the UI
+    const saved = await saveProfileUpdate(
+      { language: lang, notification_language: lang },
+      T("تم تحديث اللغة", "Language updated"),
+      document.getElementById(lang === "en" ? "langBtnEn" : "langBtnAr"),
+    );
+    if (!saved) return;
     document.cookie = `kinjo_lang=${lang};path=/;max-age=31536000`;
     window.location.reload();
   }
