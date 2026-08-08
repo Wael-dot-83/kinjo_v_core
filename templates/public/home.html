@@ -124,14 +124,31 @@
     box-shadow: 0 0.75rem 1.4rem rgba(15, 23, 42, 0.06);
   }
 
+  /* The 13ch cap was what made this headline a tall stack: the Arabic title is
+     45 characters, so capping the line at 13 broke it over four lines at a
+     5rem type size. The cap is gone and the type is scaled to the column
+     (col-lg-7) instead. */
   .kinjo-home-title {
-    max-width: 13ch;
+    max-width: none;
     margin: 1.1rem 0 1rem;
-    font-size: clamp(2.6rem, 6vw, 5rem);
-    line-height: 0.97;
-    letter-spacing: -0.04em;
+    font-size: clamp(1.55rem, 2.45vw, 2.6rem);
+    line-height: 1.25;
+    letter-spacing: -0.02em;
     text-wrap: balance;
     color: #14312a;
+  }
+
+  /* One line from the large breakpoint up, where the column is wide enough to
+     hold all 45 characters at the sizes above. Below 992px the column is too
+     narrow for a single line at a legible size, so it is allowed to wrap rather
+     than shrink the headline into unreadability.
+
+     Scoped to Arabic deliberately: the English title is 66 characters and would
+     overflow the same column on one line. */
+  @media (min-width: 992px) {
+    html[lang="ar"] .kinjo-home-title {
+      white-space: nowrap;
+    }
   }
 
   .kinjo-home-lead {

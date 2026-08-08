@@ -3259,3 +3259,215 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
   margin: 1.5rem 0;
 }
 
+/* ============================================================================
+   Brand alignment: header logo, nav alignment/RTL, sidebar palette
+   ============================================================================
+   The gold-bordered logo badge only ever existed in admin_design_system.css,
+   which base.html does not load. On every non-admin page the same
+   .kinjo-logo--navbar markup therefore rendered as a bare image with no badge
+   and no height lock — it also sized itself from --admin-header-height, a token
+   that is not defined outside the admin shell, so the box fell back to the img
+   width/height attributes. These rules give the shared header the same
+   treatment, bound to --kinjo-navbar-height instead.
+   ============================================================================ */
+
+:root {
+  --kinjo-gold: #d4af37;
+  --kinjo-gold-deep: #b8912a;
+  --kinjo-logo-blue-top: #1b4f96;
+  --kinjo-logo-blue-bottom: #10356b;
+}
+
+.kinjo-navbar .kinjo-logo--navbar {
+  /* Square badge locked to the header height, as the admin header does it, so
+     the mark scales with the bar instead of being sized by the img attributes.
+     object-fit keeps the square artwork undistorted. */
+  block-size: var(--kinjo-navbar-height);
+  inline-size: var(--kinjo-navbar-height);
+  box-sizing: border-box;
+  padding: 4px;
+  object-fit: contain;
+  border: 2px solid var(--kinjo-gold);
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    var(--kinjo-logo-blue-top) 0%,
+    var(--kinjo-logo-blue-bottom) 100%
+  );
+  /* Inner gold hairline reads as a bevelled edge. Drawn with box-shadow so the
+     box geometry — and therefore the header-height lock above — is untouched. */
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    inset 0 0 0 2px var(--kinjo-gold-deep),
+    0 2px 8px rgba(6, 19, 39, 0.24);
+}
+
+.kinjo-navbar .navbar-brand {
+  display: inline-flex;
+  align-items: center;
+  padding-block: 0;
+  margin-inline-end: 0.75rem;
+}
+
+/* A gold hairline under the bar ties the header to the badge, rather than
+   leaving the logo as the only gold element on a plain blue band.
+
+   padding-block: 0 is load-bearing, not cosmetic. Bootstrap's .navbar carries
+   0.5rem of vertical padding, so a badge sized to the full header height would
+   push the bar to 80px while .navbar-spacer stays at 64px — the fixed header
+   would then overlap the top of every page. Removing the padding lets the badge
+   sit flush at exactly --kinjo-navbar-height, as it does in the admin shell.
+
+   The hairline is an inset shadow rather than a border for the same reason: a
+   border is added to the box, which pushed the bar to 65px against a 64px
+   .navbar-spacer and left the header covering 1px of every page. An inset
+   shadow paints inside the box, so the bar stays exactly the header height. */
+.kinjo-navbar {
+  /* The earlier .kinjo-navbar rule sets a 1px translucent-white border-bottom;
+     that border is what made the bar 65px. Clearing it here is what keeps the
+     header and its spacer the same height. */
+  border-bottom: 0;
+  box-shadow:
+    inset 0 -1px 0 rgba(212, 175, 55, 0.55),
+    0 8px 20px rgba(13, 48, 115, 0.2);
+  padding-block: 0;
+}
+
+/* ── Header nav alignment (RTL-safe) ──────────────────────────────────────────
+   Spacing came from Bootstrap ms-1/me-1 utilities on the label, which puts the
+   gap on a logical side of the *text* rather than between icon and text. In RTL
+   that read as uneven leading space and the labels did not line up with one
+   another. Spacing now comes from flex `gap` on the link, which is
+   direction-agnostic, so الرئيسية / الأسئلة الشائعة / خريطة الموقع align
+   identically in both directions. */
+.kinjo-navbar .navbar-nav {
+  align-items: center;
+  gap: 0.15rem;
+}
+
+/* min-block-size gives every item the same box height. Without it the language
+   toggle (a <button>, with its own UA line-height) and the account link resolve
+   to different heights, and centring different-height boxes leaves their text
+   on visibly different lines. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-block-size: 2.5rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.6rem;
+  white-space: nowrap;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+/* The avatar is 2rem tall, so with the shared 0.45rem block padding the account
+   link stands 6px taller than its neighbours and its text sits off their line.
+   Trimming the block padding brings it back to the same 2.5rem box. This has to
+   live after the rule above — same specificity, so source order decides. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link.kj-nav-user {
+  padding-block: 0.25rem;
+}
+
+/* The utility margins are now redundant; neutralise them so they cannot
+   reintroduce the asymmetry this block exists to remove. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link > .ms-1,
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link > .me-1 {
+  margin-inline: 0 !important;
+}
+
+/* The staff account link carries an .avatar-sm circle instead of the parent's
+   .kj-nav-avatar. Sizing it to 1.6rem makes that link 40px tall too
+   (1.6rem + 2 x 0.45rem padding = 2.5rem), so every header item shares one
+   line for staff as well as for parents. Done by sizing rather than :has() so
+   it does not depend on selector support. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link > .avatar-sm {
+  inline-size: 1.6rem;
+  block-size: 1.6rem;
+  flex: 0 0 auto;
+}
+
+/* Icons share one optical column so the labels start on the same line. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link > i {
+  inline-size: 1.25rem;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.kinjo-navbar .dropdown-menu {
+  border: 0;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 32px rgba(6, 19, 39, 0.18);
+  padding-block: 0.4rem;
+}
+
+.kinjo-navbar .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.5rem;
+  border-radius: 0.4rem;
+  margin-inline: 0.35rem;
+  inline-size: auto;
+}
+
+/* ── Sidebar: brand palette ───────────────────────────────────────────────────
+   The v3.0 layer themes the sidebar dark slate with a *green* accent (#2F7D62 /
+   #163d2e / #a8d4c4). Nothing else in the shell is green: the header band is
+   blue and the logo badge is blue-and-gold, so the active menu item was the one
+   element disagreeing with the brand. Re-point the same tokens at the logo's
+   own blue and gold — only the values change, every rule consuming them is left
+   alone.
+
+   Contrast on the #111827 field: gold #d4af37 ≈ 9.2:1; active text #cfe0ff on
+   the #17376b fill ≈ 8.1:1. Both clear WCAG AA. */
+:root {
+  --kinjo-sidebar-active-bg: #17376b;
+  --kinjo-sidebar-active-text: #cfe0ff;
+  --kinjo-sidebar-accent: var(--kinjo-gold);
+}
+
+/* The active row keeps a gold edge so it is not signalled by fill alone. */
+.sidebar .nav-link.active {
+  box-shadow: inset 2px 0 0 0 var(--kinjo-gold) !important;
+}
+
+html[dir="rtl"] .sidebar .nav-link.active {
+  box-shadow: inset -2px 0 0 0 var(--kinjo-gold) !important;
+}
+
+/* ── Sidebar logo: same width as the menu items ───────────────────────────────
+   .kinjo-logo--sidebar was a fixed 120px inside the rail, so the mark sat as a
+   small island above full-width menu rows. The nav links use
+   `margin: 0.15rem 0.8rem`, so matching that inline padding here makes the logo
+   box exactly as wide as a menu item. */
+.sidebar-header {
+  padding-inline: 0;
+  padding-block: 0.9rem 0.75rem;
+}
+
+.sidebar-logo {
+  inline-size: 100%;
+  justify-content: center;
+}
+
+/* Mirrors the menu rows exactly. The margin to match is 0.65rem, not the
+   0.8rem in the older .sidebar .nav-link rule above: the v3.0 layer restyles
+   the rows with `margin: 0.1rem 0.65rem !important`, and that is what actually
+   wins. Matching the 0.8rem left the logo 4.8px narrower than every row. */
+.sidebar .kinjo-logo--sidebar {
+  margin-inline: 0.65rem;
+  inline-size: calc(100% - 1.3rem);
+  block-size: auto;
+  max-inline-size: none;
+  box-sizing: border-box;
+  padding: 0.6rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  background: linear-gradient(
+    180deg,
+    rgba(27, 79, 150, 0.35) 0%,
+    rgba(16, 53, 107, 0.35) 100%
+  );
+}
+
