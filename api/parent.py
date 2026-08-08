@@ -44,7 +44,10 @@ def get_parent_dashboard(current_user: models.User = Depends(get_current_user), 
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     # Get all children
-    children = db.query(models.Child).filter(models.Child.parent_id == parent_profile.id).all()
+    children = db.query(models.Child).filter(
+        models.Child.parent_id == parent_profile.id,
+        models.Child.deleted_at.is_(None),
+    ).all()
 
     today = datetime.now(_JORDAN_TZ).date()
     child_ids = [c.id for c in children]
@@ -214,6 +217,7 @@ def get_parent_profile(
         "emergency_contact_phone": profile.emergency_contact_phone,
         "emergency_contact_relationship": profile.emergency_contact_relationship,
         "relationship_to_child": profile.relationship_to_child,
+        "parent_type": profile.parent_type,
         "profile_complete": profile.profile_complete,
         "profile_completed_at": profile.profile_completed_at.isoformat() if profile.profile_completed_at else None,
         "correspondence_preference": profile.correspondence_preference,
@@ -380,7 +384,11 @@ def get_parent_attendance(
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
-    child_ids = [cid for (cid,) in db.query(models.Child.id).filter(models.Child.parent_id == profile.id).all()]
+    child_ids = [
+        cid for (cid,) in db.query(models.Child.id).filter(
+            models.Child.parent_id == profile.id, models.Child.deleted_at.is_(None)
+        ).all()
+    ]
 
     if child_id:
         if child_id not in child_ids:
@@ -449,7 +457,9 @@ def get_parent_children_simple(
     if not profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
-    children = db.query(models.Child).filter(models.Child.parent_id == profile.id).all()
+    children = db.query(models.Child).filter(
+        models.Child.parent_id == profile.id, models.Child.deleted_at.is_(None)
+    ).all()
 
     return {"children": [{"id": c.id, "name": f"{c.first_name} {c.last_name}"} for c in children]}
 
@@ -474,6 +484,7 @@ class ParentProfileSelfUpdateRequest(BaseModel):
     emergency_contact_phone: Optional[str] = None
     emergency_contact_relationship: Optional[str] = None
     relationship_to_child: Optional[str] = None
+    parent_type: Optional[str] = None
     correspondence_preference: Optional[bool] = None
     notification_language: Optional[str] = None
     language: Optional[str] = None  # updates user.preferred_language
@@ -512,6 +523,7 @@ def update_parent_profile_self(
         "emergency_contact_name",
         "emergency_contact_relationship",
         "relationship_to_child",
+        "parent_type",
     ]
     for field in text_fields:
         val = getattr(data, field)
@@ -662,6 +674,14 @@ def get_parent_daily_reports(
                 "activities": getattr(r, "activities", None),
                 "notes": getattr(r, "notes", None),
                 "mood": getattr(r, "mood", None),
+                "health_notes": getattr(r, "health_notes", None),
+                "breakfast": getattr(r, "breakfast", None),
+                "snack": getattr(r, "snack", None),
+                "milk": getattr(r, "milk", None),
+                "lunch": getattr(r, "lunch", None),
+                "nap_start": getattr(r, "nap_start", None),
+                "nap_end": getattr(r, "nap_end", None),
+                "nap_duration_minutes": getattr(r, "nap_duration_minutes", None),
             }
         )
 

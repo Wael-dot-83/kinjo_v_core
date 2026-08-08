@@ -58,12 +58,7 @@ KNOWN_BROKEN = {
     "templates/enrollment/create.html",
     "templates/enrollment/view.html",
     "templates/kpi/dashboard.html",
-    "templates/parent/attendance.html",
-    "templates/parent/children.html",
-    "templates/parent/enrollments.html",
-    "templates/parent/profile.html",
     "templates/reports/form.html",
-    "templates/reports/parent_list.html",
     "templates/supervisor/observations.html",
 }
 

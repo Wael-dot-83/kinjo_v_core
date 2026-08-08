@@ -210,10 +210,6 @@
 
     function getHeaders() {
         const headers = { 'Content-Type': 'application/json' };
-        if (window.AuthService && AuthService.isAuthenticated()) {
-            const token = AuthService.getToken();
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-        }
         const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
                      (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
                      (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
@@ -442,6 +438,13 @@
     function openReportModal(index) {
         const report = globalReports[index];
         if (!report) return;
+
+        // Record the view for parent-engagement metrics.  This is intentionally
+        // best-effort: a telemetry failure must never prevent reading a report.
+        fetch(`/api/daily-reports/${report.id}/view`, {
+            method: 'POST',
+            headers: getHeaders(),
+        }).catch(() => {});
 
         const titleEl = document.getElementById('modalReportTitle');
         const bodyEl = document.getElementById('modalReportBody');

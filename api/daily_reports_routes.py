@@ -86,7 +86,9 @@ def _authorize_report_for_child(db: Session, current_user: models.User, child_id
     def _not_found():
         raise HTTPException(status_code=404, detail="Child not found")
 
-    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    child = db.query(models.Child).filter(
+        models.Child.id == child_id, models.Child.deleted_at.is_(None)
+    ).first()
     if not child:
         _not_found()
 
@@ -437,7 +439,9 @@ def get_child_daily_reports(
 ):
     """Get daily reports for a child (parents only see approved reports)"""
     # Verify child exists
-    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    child = db.query(models.Child).filter(
+        models.Child.id == child_id, models.Child.deleted_at.is_(None)
+    ).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
@@ -470,9 +474,13 @@ def get_child_daily_reports(
 
     reports = query.order_by(models.DailyReport.date.desc()).all()
 
-    return {
-        "reports": [
-            {
+    def _parent_report_payload(r: models.DailyReport) -> dict:
+        meals = [name for name, eaten in (("breakfast", r.breakfast), ("snack", r.snack), ("milk", r.milk), ("lunch", r.lunch)) if eaten]
+        nap_time = (
+            f"{r.nap_duration_minutes} min" if r.nap_duration_minutes is not None
+            else " - ".join(value for value in (r.nap_start, r.nap_end) if value) or None
+        )
+        return {
                 "id": r.id,
                 "date": r.date.isoformat(),
                 "status": r.status.value,
@@ -480,10 +488,19 @@ def get_child_daily_reports(
                 "leave_time": r.leave_time,
                 "activities": r.activities,
                 "notes": r.notes,
+                "mood": r.mood,
+                "health_notes": r.health_notes,
+                "breakfast": r.breakfast,
+                "snack": r.snack,
+                "milk": r.milk,
+                "lunch": r.lunch,
+                "nap_start": r.nap_start,
+                "nap_end": r.nap_end,
+                "nap_duration_minutes": r.nap_duration_minutes,
+                "meals": ", ".join(meals) if meals else None,
+                "nap_time": nap_time,
             }
-            for r in reports
-        ]
-    }
+    return {"reports": [_parent_report_payload(r) for r in reports]}
 
 
 @router.get("/daily-reports/{report_id}")
@@ -499,7 +516,9 @@ def get_daily_report_by_id(
     # scoped by the report's immutable kindergarten context, not the child's
     # current enrollment, so transfers cannot create cross-tenant disclosure.
     if current_user.role == models.UserRole.PARENT:
-        child = db.query(models.Child).filter(models.Child.id == report.child_id).first()
+        child = db.query(models.Child).filter(
+            models.Child.id == report.child_id, models.Child.deleted_at.is_(None)
+        ).first()
         parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
         if not parent_profile or not child or child.parent_id != parent_profile.id:
             raise HTTPException(status_code=403, detail="Forbidden")
@@ -522,6 +541,14 @@ def get_daily_report_by_id(
         "activities": getattr(report, "activities", None),
         "notes": getattr(report, "notes", None),
         "mood": getattr(report, "mood", None),
+        "health_notes": getattr(report, "health_notes", None),
+        "breakfast": getattr(report, "breakfast", None),
+        "snack": getattr(report, "snack", None),
+        "milk": getattr(report, "milk", None),
+        "lunch": getattr(report, "lunch", None),
+        "nap_start": getattr(report, "nap_start", None),
+        "nap_end": getattr(report, "nap_end", None),
+        "nap_duration_minutes": getattr(report, "nap_duration_minutes", None),
         "submitted_by": report.submitted_by,
     }
 
@@ -551,7 +578,9 @@ def record_daily_report_view(
         raise HTTPException(status_code=403, detail="Report is not accessible")
 
     # 3. Verify the authenticated parent owns the child referenced in the report
-    child = db.query(models.Child).filter(models.Child.id == report.child_id).first()
+    child = db.query(models.Child).filter(
+        models.Child.id == report.child_id, models.Child.deleted_at.is_(None)
+    ).first()
     if not child:
         raise HTTPException(status_code=404, detail="Report not found")
 

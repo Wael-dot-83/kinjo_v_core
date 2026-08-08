@@ -214,6 +214,14 @@ def test_parent_lists_hide_soft_deleted_children_and_enrollments(
     assert active_enrollment.id in enrollment_ids
     assert deleted_child_enrollment.id not in enrollment_ids
 
+    dashboard_resp = client.get("/api/parent/dashboard", headers=auth_headers_parent)
+    assert dashboard_resp.status_code == 200
+    assert {child["first_name"] for child in dashboard_resp.json()["children"]} == {"ActiveKid"}
+
+    selector_resp = client.get("/api/parent/children-list", headers=auth_headers_parent)
+    assert selector_resp.status_code == 200
+    assert {child["name"] for child in selector_resp.json()["children"]} == {"ActiveKid One"}
+
 
 def test_passport_only_parent_can_apply_for_enrollment(
     client, test_db, sample_kindergarten

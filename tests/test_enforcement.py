@@ -48,6 +48,7 @@ def _valid_parent_payload(overrides=None):
         "home_district": "Amman",
         "home_area": "Abdoun",
         "home_address_line": "123 Main St",
+        "correspondence_preference": True,
         "email": f"parent_{secrets.token_hex(4)}@test.com",
         "password": "Str0ng!Pass",
     }
@@ -179,6 +180,24 @@ class TestParentRegistrationEnforcement:
             models.AuditLog.action == "REGISTER"
         ).first()
         assert audit is not None
+
+    def test_register_preserves_explicit_correspondence_refusal(self, client, test_db):
+        payload = _valid_parent_payload({"correspondence_preference": False})
+        response = client.post("/api/register/parent", json=payload)
+        assert response.status_code == 201
+        profile = test_db.query(models.ParentProfile).filter_by(user_id=response.json()["id"]).one()
+        assert profile.correspondence_preference is False
+
+    def test_register_requires_explicit_correspondence_consent(self, client):
+        payload = _valid_parent_payload()
+        payload.pop("correspondence_preference", None)
+        assert client.post("/api/register/parent", json=payload).status_code == 422
+
+    def test_invalid_gender_does_not_create_an_orphan_parent_user(self, client, test_db):
+        payload = _valid_parent_payload({"email": "no-orphan@example.com", "gender": "INVALID"})
+        response = client.post("/api/register/parent", json=payload)
+        assert response.status_code == 400
+        assert test_db.query(models.User).filter_by(email="no-orphan@example.com").count() == 0
 
 
 # ══════════════════════════════════════════════════════════════════

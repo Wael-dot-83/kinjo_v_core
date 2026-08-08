@@ -222,6 +222,8 @@ def update_current_user_profile(
         if update_data.phone is not None:
             phone = update_data.phone.strip()
             if phone:
+                if not validators.validate_jordan_phone(phone):
+                    raise HTTPException(status_code=400, detail="Invalid Jordanian phone number")
                 normalized_phone = normalize_jordan_phone(phone)
                 dup = (
                     db.query(models.ParentProfile)

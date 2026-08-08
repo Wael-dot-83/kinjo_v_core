@@ -1518,28 +1518,12 @@ async def register(
             detail="Username or email already registered"
         )
 
-    # Create user
-    user = models.User(
-        username=username,
-        email=email,
-        hashed_password=get_password_hash(password),
-        role=models.UserRole.PARENT,
-        status=models.UserStatus.ACTIVE
+    # This legacy form endpoint cannot collect the mandatory ParentProfile
+    # fields. Keeping it live creates login-capable orphan parent accounts.
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Use POST /api/register/parent to create a complete parent account.",
     )
-
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    _log_auth_event(
-        db=db,
-        user_id=user.id,
-        action=AuditAction.REGISTER_SUCCESS,
-        details=f"Parent registration via {request.url.path}",
-        ip_address=_get_request_ip(request),
-        sensitivity_level=2,
-    )
-
-    return {"message": "User registered successfully", "user_id": user.id}
 
 
 # =============================================================================

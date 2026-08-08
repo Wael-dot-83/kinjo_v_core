@@ -9,6 +9,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, UploadFile, File
 from fastapi.responses import Response, JSONResponse
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta, timezone
 _JORDAN_TZ = timezone(timedelta(hours=3))
@@ -23,6 +24,8 @@ from dependencies import get_current_user
 from i18n import gettext as _api
 from storage_service import compress_image_in_place
 from virus_scan_service import VirusFoundError, VirusScanUnavailable, scan_bytes, scan_error_message
+from admin_security import log_audit_event
+from audit_actions import AuditAction
 
 
 def _ulang(user) -> str:
@@ -101,17 +104,44 @@ def update_parent_profile(
     if current_user.role != models.UserRole.ADMIN and parent.user_id != current_user.id:
         raise HTTPException(status_code=403, detail=_api("Not authorized to update this profile", _ulang(current_user)))
 
+    # Keep this compatibility endpoint subject to the same input checks and
+    # audit trail as the canonical self-service profile endpoint.
+    from auth import jordan_phone_login_variants, normalize_jordan_phone
+
+    if payload.phone_number is not None:
+        raw_phone = payload.phone_number.strip()
+        if raw_phone and not validators.validate_jordan_phone(raw_phone):
+            raise HTTPException(status_code=400, detail=_api("Invalid Jordanian phone number", _ulang(current_user)))
+        if raw_phone:
+            duplicate = db.query(models.ParentProfile).filter(
+                models.ParentProfile.phone_number.in_(jordan_phone_login_variants(raw_phone)),
+                models.ParentProfile.id != parent.id,
+                models.ParentProfile.deleted_at.is_(None),
+            ).first()
+            if duplicate:
+                raise HTTPException(status_code=400, detail=_api("Phone number already used", _ulang(current_user)))
+            payload.phone_number = normalize_jordan_phone(raw_phone)
+
     # Apply updates
     changed = False
     for field in ['first_name','second_name','last_name','phone_number','home_governorate','home_district','home_area','home_address_line','work_address','emergency_contact_name','emergency_contact_phone','emergency_contact_relationship','relationship_to_child','correspondence_preference']:
         val = getattr(payload, field)
         if val is not None:
-            setattr(parent, field, val)
+            setattr(parent, field, val.strip() if isinstance(val, str) else val)
             changed = True
 
     if changed:
-        db.commit()
-        db.refresh(parent)
+        try:
+            log_audit_event(
+                db=db, action=getattr(AuditAction, "ACCOUNT_PROFILE_UPDATED", "ACCOUNT_PROFILE_UPDATED"),
+                actor=current_user, target_type="ParentProfile", target_ids=parent.id,
+                after_state={"updated_via": "parent-profiles compatibility endpoint"},
+            )
+            db.commit()
+            db.refresh(parent)
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(status_code=409, detail=_api("Profile details are already in use", _ulang(current_user)))
 
     # After update, try to mark profiles complete for any children of this parent
     children = db.query(models.Child).filter(models.Child.parent_id == parent.id).all()

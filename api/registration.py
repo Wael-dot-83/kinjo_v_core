@@ -3,6 +3,7 @@ Registration domain endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import and_, or_, func
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
@@ -41,7 +42,8 @@ class ParentRegistrationRequest(BaseModel):
     home_district: str
     home_area: str
     home_address_line: str
-    correspondence_preference: Optional[bool] = True
+    correspondence_preference: bool
+    parent_type: Optional[str] = None
     email: str
     password: str
     work_address: Optional[str] = None
@@ -100,7 +102,14 @@ def register_parent(
     except validators.ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # Create user
+    if not validators.validate_jordan_phone(registration_data.phone_number):
+        raise HTTPException(status_code=400, detail=_api("Invalid Jordanian phone number", lang))
+    try:
+        gender = models.Gender(registration_data.gender.upper())
+    except ValueError:
+        raise HTTPException(status_code=400, detail=_api("Invalid gender", lang))
+
+    # A parent user and their required profile must be committed together.
     user = models.User(
         username=registration_data.email,
         email=registration_data.email,
@@ -109,11 +118,9 @@ def register_parent(
         status=models.UserStatus.ACTIVE
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    # Create parent profile
-    parent_profile = models.ParentProfile(
+    try:
+        db.flush()
+        parent_profile = models.ParentProfile(
         user_id=user.id,
         first_name=registration_data.first_name,
         second_name=registration_data.second_name,
@@ -121,7 +128,7 @@ def register_parent(
         first_name_en=registration_data.first_name_en,
         last_name_en=registration_data.last_name_en,
         phone_number=registration_data.phone_number,
-        gender=models.Gender(registration_data.gender.upper()),
+        gender=gender,
         nationality=registration_data.nationality,
         national_id=registration_data.national_id,
         passport_number=registration_data.passport_number,
@@ -129,17 +136,16 @@ def register_parent(
         home_district=registration_data.home_district,
         home_area=registration_data.home_area,
         home_address_line=registration_data.home_address_line,
-        correspondence_preference=registration_data.correspondence_preference or True,
+        correspondence_preference=registration_data.correspondence_preference,
+        parent_type=registration_data.parent_type,
         work_address=registration_data.work_address,
         emergency_contact_name=registration_data.emergency_contact_name,
         emergency_contact_phone=registration_data.emergency_contact_phone,
         emergency_contact_relationship=registration_data.emergency_contact_relationship,
         relationship_to_child=registration_data.relationship_to_child,
-    )
-    db.add(parent_profile)
-    db.commit()
-
-    validators.log_audit_action(
+        )
+        db.add(parent_profile)
+        validators.log_audit_action(
         db=db,
         user_id=user.id,
         action=AuditAction.REGISTER,
@@ -147,7 +153,14 @@ def register_parent(
         entity_id=user.id,
         details="Parent registration",
         sensitivity_level=1
-    )
+        )
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=_api("Registration details are already in use.", lang))
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "id": user.id,
