@@ -3,7 +3,7 @@
 {% block title %}{{ _('Enrollment Applications') }}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="page-header-wrap mb-4">
     <div>
         <h1 class="page-header-title">
             <i class="bi bi-clipboard-check text-primary me-2" aria-hidden="true"></i>
@@ -17,7 +17,7 @@
         </nav>
     </div>
     <div class="page-header-actions">
-        <a href="/enroll" class="btn btn-primary">
+        <a href="/enroll" class="btn btn-primary rounded-pill px-4 shadow-sm">
             <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{{ _('New Application') }}
         </a>
     </div>
@@ -28,58 +28,67 @@
 <!-- Status Summary Cards -->
 <div class="row g-3 mb-4" id="statusSummary">
     <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <h3 class="mb-0 text-primary" id="countTotal">0</h3>
-                <small class="text-muted">{{ _('Total') }}</small>
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+                <i class="bi bi-file-earmark-stack fs-5"></i>
             </div>
+            <h3 class="fw-bold mb-0 text-dark" id="countTotal">0</h3>
+            <small class="text-muted fw-semibold">{{ _('Total Applications') }}</small>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <h3 class="mb-0 text-success" id="countActive">0</h3>
-                <small class="text-muted">{{ _('Active / Accepted') }}</small>
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+                <i class="bi bi-check-circle-fill fs-5"></i>
             </div>
+            <h3 class="fw-bold mb-0 text-success" id="countActive">0</h3>
+            <small class="text-muted fw-semibold">{{ _('Active / Accepted') }}</small>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <h3 class="mb-0 text-warning" id="countPending">0</h3>
-                <small class="text-muted">{{ _('Under Review') }}</small>
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+                <i class="bi bi-hourglass-split fs-5"></i>
             </div>
+            <h3 class="fw-bold mb-0 text-warning" id="countPending">0</h3>
+            <small class="text-muted fw-semibold">{{ _('Under Review') }}</small>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <h3 class="mb-0 text-danger" id="countRejected">0</h3>
-                <small class="text-muted">{{ _('Rejected') }}</small>
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+                <i class="bi bi-x-circle-fill fs-5"></i>
             </div>
+            <h3 class="fw-bold mb-0 text-danger" id="countRejected">0</h3>
+            <small class="text-muted fw-semibold">{{ _('Rejected') }}</small>
         </div>
     </div>
 </div>
 
-<!-- Enrollments List -->
-<div class="card shadow-sm">
+<!-- Enrollments Table Card -->
+<div class="parent-report-card">
+    <div class="card-header bg-transparent py-3 border-bottom d-flex align-items-center justify-content-between">
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-journal-text me-2 text-primary"></i>
+            {{ _('Applications List') }}
+        </h5>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
                     <tr>
-                        <th>#</th>
-                        <th>{{ _('Child') }}</th>
-                        <th>{{ _('Kindergarten') }}</th>
-                        <th>{{ _('Status') }}</th>
-                        <th>{{ _('Submitted') }}</th>
+                        <th class="py-3 px-4">#</th>
+                        <th class="py-3 px-4">{{ _('Child Name') }}</th>
+                        <th class="py-3 px-4">{{ _('Kindergarten') }}</th>
+                        <th class="py-3 px-4">{{ _('Status') }}</th>
+                        <th class="py-3 px-4">{{ _('Submitted Date') }}</th>
                     </tr>
                 </thead>
                 <tbody id="enrollmentsTableBody">
                     <tr>
-                        <td colspan="5" class="text-center py-4">
-                            <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جارٍ التحميل...{% endif %}</span></div>
-                            <span class="ms-2">{{ _('Loading...') }}</span>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"><span class="visually-hidden">{{ _('Loading...') }}</span></div>
                         </td>
                     </tr>
                 </tbody>
@@ -107,18 +116,27 @@
     };
 
     function getHeaders() {
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
-        const token = AuthService.getToken();
         const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (window.AuthService && AuthService.isAuthenticated()) {
+            const token = AuthService.getToken();
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+        }
+        const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
+                     (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
+                     (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
+        if (csrf) headers['X-CSRF-Token'] = csrf;
         return headers;
     }
 
     function formatDate(dateStr) {
         if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString(IS_EN ? 'en-US' : 'ar-SA');
+        try {
+            return new Date(dateStr).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO', {
+                year: 'numeric', month: 'short', day: 'numeric'
+            });
+        } catch (e) {
+            return dateStr;
+        }
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -129,12 +147,11 @@
         const tbody = document.getElementById('enrollmentsTableBody');
         try {
             const resp = await fetch('/api/parent/enrollments', { headers: getHeaders() });
-            if (!resp.ok) throw new Error('Failed to load enrollments');
+            if (!resp.ok) throw new Error(T('فشل في تحميل طلبات التسجيل', 'Failed to load enrollments'));
 
             const data = await resp.json();
             const enrollments = data.enrollments || [];
 
-            // Update counts
             document.getElementById('countTotal').textContent = enrollments.length;
             document.getElementById('countActive').textContent =
                 enrollments.filter(e => e.status === 'ACTIVE' || e.status === 'ACCEPTED').length;
@@ -147,9 +164,10 @@
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="5" class="text-center py-5">
-                            <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
-                            <p class="text-muted">${T('لا توجد طلبات تسجيل', 'No enrollment applications')}</p>
-                            <a href="/enroll" class="btn btn-primary">
+                            <i class="bi bi-inbox fs-1 text-muted d-block mb-3 opacity-25"></i>
+                            <h6 class="fw-bold mb-1">${T('لا توجد طلبات تسجيل حالياً', 'No enrollment applications')}</h6>
+                            <p class="text-muted small mb-3">${T('يمكنك تسجيل طفل في الحضانة بسهولة وفي أي وقت.', 'You can register your child easily at any time.')}</p>
+                            <a href="/enroll" class="btn btn-primary rounded-pill px-4 shadow-sm">
                                 <i class="bi bi-plus-circle me-2"></i>${T('تقديم طلب جديد', 'Submit New Application')}
                             </a>
                         </td>
@@ -160,17 +178,15 @@
 
             tbody.innerHTML = enrollments.map((e, i) => `
                 <tr>
-                    <td>${i + 1}</td>
-                    <td>
-                        <div class="fw-semibold">${escHtml(e.child_name)}</div>
-                    </td>
-                    <td>${escHtml(e.kindergarten_name)}</td>
-                    <td>
-                        <span class="badge ${STATUS_CLASS[e.status] || 'badge-soft badge-soft-secondary'}">
+                    <td class="py-3 px-4 text-muted small">${i + 1}</td>
+                    <td class="py-3 px-4 fw-bold text-dark">${escHtml(e.child_name || '—')}</td>
+                    <td class="py-3 px-4 text-muted"><i class="bi bi-building me-1"></i>${escHtml(e.kindergarten_name || '—')}</td>
+                    <td class="py-3 px-4">
+                        <span class="badge ${STATUS_CLASS[e.status] || 'badge-soft badge-soft-secondary'} rounded-pill px-3 py-2">
                             ${STATUS_LABEL[e.status] || escHtml(e.status)}
                         </span>
                     </td>
-                    <td>${formatDate(e.submitted_at || e.created_at)}</td>
+                    <td class="py-3 px-4 text-muted"><i class="bi bi-calendar3 me-1"></i>${formatDate(e.submitted_at || e.created_at)}</td>
                 </tr>
             `).join('');
 
@@ -179,7 +195,7 @@
             tbody.innerHTML = `
                 <tr>
                     <td colspan="5" class="text-center text-danger py-4">
-                        <i class="bi bi-exclamation-triangle me-2"></i>${T('خطأ في تحميل البيانات', 'Error loading data')}
+                        <i class="bi bi-exclamation-triangle me-2"></i>${T('خطأ في تحميل طلبات التسجيل', 'Error loading enrollment data')}
                     </td>
                 </tr>
             `;

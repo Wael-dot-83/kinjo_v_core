@@ -1179,3 +1179,157 @@ msgstr "إجمالي الطلبات"
 
 msgid "Web Vitals (LCP p95)"
 msgstr "مؤشرات تجربة التصفح"
+
+msgid "Welcome back,"
+msgstr "أهلاً بك،"
+
+msgid "Follow your children's daily activities, attendance status, and kindergarten reports in real-time."
+msgstr "تابع أنشطة أطفالك اليومية، وحالة الحضور والغياب، وتقارير الروضة أولاً بأول."
+
+msgid "Present Today"
+msgstr "حاضرون اليوم"
+
+msgid "Manage Children"
+msgstr "إدارة الأطفال"
+
+msgid "Quick Services"
+msgstr "الخدمات السريعة"
+
+msgid "Register Child"
+msgstr "تسجيل طفل"
+
+msgid "New Enrollment Application"
+msgstr "تقديم طلب جديد"
+
+msgid "Daily Reports"
+msgstr "التقارير اليومية"
+
+msgid "View Daily Logs & Notes"
+msgstr "متابعة السجلات والأنشطة"
+
+msgid "Messages"
+msgstr "الرسائل والطلب"
+
+msgid "Contact Teachers & KG"
+msgstr "التواصل مع الروضة والمعلمات"
+
+msgid "Attendance Log"
+msgstr "سجل الحضور"
+
+msgid "Track Check-in Records"
+msgstr "متابعة الدخول والخروج"
+
+msgid "Applications"
+msgstr "طلبات التسجيل"
+
+msgid "Status & History"
+msgstr "حالة وقائمة الطلبات"
+
+msgid "My Profile"
+msgstr "ملفي الشخصي"
+
+msgid "Account & Parent Info"
+msgstr "بيانات الحساب وولي الأمر"
+
+msgid "Latest Daily Reports"
+msgstr "أحدث التقارير اليومية"
+
+msgid "View All"
+msgstr "عرض الكل"
+
+msgid "Upcoming Events & Activities"
+msgstr "الفعاليات والأنشطة القادمة"
+
+msgid "No upcoming events scheduled"
+msgstr "لا توجد فعاليات قادمة حالياً"
+
+msgid "Need Assistance?"
+msgstr "هل تحتاج إلى مساعدة؟"
+
+msgid "Have questions about your child or kindergarten services? Our support team is here to help."
+msgstr "هل لديك استفسارات حول طفلك أو خدمات الروضة؟ فريق الدعم متاح لمساعدتك."
+
+msgid "Contact Support"
+msgstr "تواصل مع الدعم"
+
+msgid "Daily Report Details"
+msgstr "تفاصيل التقرير اليومي"
+
+msgid "Close"
+msgstr "إغلاق"
+
+msgid "Attendance Record"
+msgstr "سجل الحضور والغياب"
+
+msgid "Total Records"
+msgstr "إجمالي السجلات"
+
+msgid "Present Days"
+msgstr "أيام الحضور"
+
+msgid "Absent Days"
+msgstr "أيام الغياب"
+
+msgid "Late Days"
+msgstr "أيام التأخير"
+
+msgid "Child Select:"
+msgstr "اختيار الطفل:"
+
+msgid "All Children"
+msgstr "جميع الأطفال"
+
+msgid "Date Filter:"
+msgstr "تاريخ الحضور:"
+
+msgid "Filter"
+msgstr "تصفية"
+
+msgid "Attendance Logs"
+msgstr "سجلات الحضور"
+
+msgid "Child"
+msgstr "الطفل"
+
+msgid "Date"
+msgstr "التاريخ"
+
+msgid "Status"
+msgstr "الحالة"
+
+msgid "Check-in Time"
+msgstr "وقت الدخول"
+
+msgid "Check-out Time"
+msgstr "وقت الخروج"
+
+msgid "Notes"
+msgstr "ملاحظات"
+
+msgid "Enrollment Applications"
+msgstr "طلبات التسجيل"
+
+msgid "New Application"
+msgstr "تقديم طلب جديد"
+
+msgid "Total Applications"
+msgstr "إجمالي الطلبات"
+
+msgid "Active / Accepted"
+msgstr "مقبولة / نشطة"
+
+msgid "Under Review"
+msgstr "قيد المراجعة"
+
+msgid "Applications List"
+msgstr "قائمة الطلبات"
+
+msgid "Child Name"
+msgstr "اسم الطفل"
+
+msgid "Kindergarten"
+msgstr "الروضة"
+
+msgid "Submitted Date"
+msgstr "تاريخ التقديم"
+

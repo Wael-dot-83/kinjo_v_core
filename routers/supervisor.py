@@ -256,6 +256,13 @@ def get_my_children(
                 "last_name": c.last_name,
                 "name": f"{c.first_name} {c.last_name}".strip(),
                 "gender": c.gender.value if c.gender else None,
+                # Required by every client that lists these children: the daily
+                # report picker and the class roster both run the list through
+                # ChildAgeValidator.isEligible(child.date_of_birth). Without the
+                # field that predicate is falsy for every row and the list comes
+                # back empty, which is exactly what stopped supervisors filing
+                # any daily report at all.
+                "date_of_birth": c.date_of_birth.isoformat() if c.date_of_birth else None,
                 "photo_url": c.photo_url,
                 "class_id": enrollments_by_child_id.get(c.id).class_id if enrollments_by_child_id.get(c.id) else None,
                 "class_name": (
@@ -1852,15 +1859,6 @@ class ObservationRecordRequest(BaseModel):
     mastery_level: Optional[str] = None
     observed_at: Optional[str] = None
 
-class SupervisorChildDailyReportRequest(BaseModel):
-    reportDate: str
-    meals: Optional[str] = None
-    sleep: Optional[str] = None
-    activities: Optional[str] = None
-    behavior: Optional[str] = None
-    healthNotes: Optional[str] = None
-    generalNotes: Optional[str] = None
-
 class SupervisorAssignmentRequest(BaseModel):
     supervisor_id: int
     class_id: int
@@ -2288,6 +2286,13 @@ def get_supervisor_children(
             "first_name": child.first_name,
             "last_name": child.last_name,
             "gender": child.gender.value,
+            # date_of_birth is load-bearing, not decorative. Every client that
+            # lists children for a supervisor filters the list through
+            # ChildAgeValidator.isEligible(child.date_of_birth) as an age-policy
+            # safety net; omitting the field made that predicate falsy for every
+            # row, so the daily-report form's child picker rendered "no children
+            # available" and a supervisor could not file a report at all.
+            "date_of_birth": child.date_of_birth.isoformat() if child.date_of_birth else None,
             "photo_url": child.photo_url,
             "class_id": enrollment.class_id if enrollment else None,
             "class_name": (enrollment.class_.name_ar if enrollment and enrollment.class_ else None),
@@ -2354,85 +2359,55 @@ def get_supervisor_child_details(
                 "phone_number": child.parent.phone_number if child.parent else None,
             },
         },
+        # Serialised from the columns DailyReport actually has. This block used
+        # to read report.meals / .sleep / .behavior / .general_notes, none of
+        # which exist on the model, so every call to this endpoint raised
+        # AttributeError and answered 500 — for the supervisor's own children,
+        # not just out-of-scope ones. Meals are four separate booleans and sleep
+        # is a start/end pair, so both are reported the way they are stored
+        # rather than invented as single fields.
         "daily_reports": [
             {
                 "id": report.id,
                 "reportDate": report.date.isoformat(),
-                "meals": report.meals,
-                "sleep": report.sleep,
+                "arrivalTime": report.arrival_time,
+                "leaveTime": report.leave_time,
+                "mood": report.mood,
+                "meals": {
+                    "breakfast": report.breakfast,
+                    "snack": report.snack,
+                    "milk": report.milk,
+                    "lunch": report.lunch,
+                },
+                "sleep": {
+                    "start": report.nap_start,
+                    "end": report.nap_end,
+                    "minutes": report.nap_duration_minutes,
+                },
                 "activities": report.activities,
-                "behavior": report.behavior,
                 "healthNotes": report.health_notes,
-                "generalNotes": report.general_notes or report.notes,
+                "generalNotes": report.notes,
                 "status": report.status.value,
             }
             for report in reports
         ],
     }
 
-@router.post("/children/{child_id}/daily-reports", status_code=status.HTTP_201_CREATED)
-def create_supervisor_child_daily_report(
-    child_id: int,
-    payload: SupervisorChildDailyReportRequest,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    if current_user.role != models.UserRole.SUPERVISOR:
-        raise HTTPException(status_code=403, detail="Only supervisors can create daily reports")
-
-    enrollment = _get_supervisor_child_enrollment(db, current_user.id, child_id)
-    if not enrollment:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    try:
-        report_date = date.fromisoformat(payload.reportDate)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid reportDate")
-
-    existing = db.query(models.DailyReport).filter(
-        models.DailyReport.child_id == child_id,
-        models.DailyReport.date == report_date,
-    ).first()
-    if existing:
-        raise HTTPException(status_code=409, detail="Daily report already exists for this date")
-
-    report = models.DailyReport(
-        child_id=child_id,
-        class_id=enrollment.class_id,
-        supervisor_id=current_user.id,
-        kindergarten_id=enrollment.kindergarten_id,
-        date=report_date,
-        status=models.DailyReportStatus.SUBMITTED,
-        submitted_by=current_user.id,
-        submitted_at=datetime.now(_JORDAN_TZ),
-        arrival_time="08:00",
-        leave_time="14:00",
-        meals=payload.meals,
-        sleep=payload.sleep,
-        activities=payload.activities,
-        behavior=payload.behavior,
-        health_notes=payload.healthNotes,
-        general_notes=payload.generalNotes,
-        notes=payload.generalNotes,
-    )
-    db.add(report)
-    db.commit()
-    db.refresh(report)
-
-    return {
-        "id": report.id,
-        "childId": report.child_id,
-        "classId": report.class_id,
-        "supervisorId": report.supervisor_id,
-        "kindergartenId": report.kindergarten_id,
-        "reportDate": report.date.isoformat(),
-        "meals": report.meals,
-        "sleep": report.sleep,
-        "activities": report.activities,
-        "behavior": report.behavior,
-        "healthNotes": report.health_notes,
-        "generalNotes": report.general_notes,
-    }
+# NOTE: POST /api/supervisor/children/{child_id}/daily-reports was removed.
+#
+# It was a second, hand-written report-creation path that had never worked:
+# it constructed DailyReport with class_id, supervisor_id, meals, sleep,
+# behavior and general_notes, none of which are columns on the model, so
+# every call raised TypeError and answered 500. Its request schema assumed a
+# different shape too (meals and sleep as free text, where the model stores
+# four meal booleans and a nap start/end pair), so there is no faithful way
+# to "fix" it without inventing data.
+#
+# Nothing referenced it — no template, no JS, no test — and it could never
+# have been used successfully. The supported paths are
+# POST /api/daily-reports/create (one child) and POST /api/daily-reports/batch
+# (a whole class), which share one set of authorisation gates in
+# api/daily_reports_routes.py::_authorize_report_for_child.
 
 @router.get("/children/{child_id}/daily-reports")
 def list_supervisor_child_daily_reports(
@@ -2507,10 +2482,26 @@ def get_supervisor_dashboard(
         models.AttendanceLog.date == today
     ).scalar() or 0
     
-    # Pending daily reports
+    # Pending daily reports — drafts this supervisor has started but not submitted.
     pending_reports = db.query(func.count(models.DailyReport.id)).filter(
         models.DailyReport.submitted_by == current_user.id,
         models.DailyReport.status == models.DailyReportStatus.DRAFT
+    ).scalar() or 0
+
+    # How much of today's class is actually reported.
+    #
+    # pending_reports counts DRAFTS, so it reads 0 both when the day's work is
+    # finished and when it has not been started — and the dashboard rendered the
+    # second case as "all reports are complete" while nobody had filed anything.
+    # This counts children in the assigned classes who have a report for today,
+    # which is the number a supervisor is actually asking about.
+    reports_today = db.query(func.count(func.distinct(models.DailyReport.child_id))).join(
+        models.EnrollmentApplication,
+        models.DailyReport.child_id == models.EnrollmentApplication.child_id,
+    ).filter(
+        models.EnrollmentApplication.class_id.in_(class_ids),
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.DailyReport.date == today,
     ).scalar() or 0
     
     # Build class details list — batch fetch to avoid N+1
@@ -2536,5 +2527,7 @@ def get_supervisor_dashboard(
         "attendance_summary": {"today": today_attendance},
         "total_children": total_children,
         "pending_reports": pending_reports,
+        "reports_today": reports_today,
+        "reports_remaining_today": max(total_children - reports_today, 0),
         "date": today.isoformat()
     }

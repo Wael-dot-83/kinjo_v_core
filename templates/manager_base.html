@@ -60,10 +60,17 @@
     <link rel="stylesheet" href="/static/css/layout.css?v=1.1" />
     <link rel="stylesheet" href="/static/css/components.css?v=1.2" />
     <link rel="stylesheet" href="/static/css/utilities.css?v=1" />
-    <link rel="stylesheet" href="/static/css/manager_design.css?v=1.0" />
 
     <!-- Legacy compatibility -->
     <link rel="stylesheet" href="/static/css/kinjo.css?v=20260703" />
+
+    <!-- Manager module layer. Deliberately after kinjo.css: this is the most
+         specific layer on these pages, and loading it earlier meant it lost
+         every specificity tie to the legacy sheet — the previous revision of
+         manager_design.css carried comments about rules it knew could never
+         apply. Still before rtl.css so directional corrections keep the last
+         word. -->
+    <link rel="stylesheet" href="/static/css/manager_design.css?v=2.0" />
     {% if ui_dir == 'rtl' %}
     <link rel="stylesheet" href="/static/css/rtl.css" />
     {% endif %}
@@ -339,11 +346,19 @@
         </nav>
         </aside>
 
-        <!-- Page Header block (for page-specific headers) -->
-        {% block page_header %}{% endblock %}
+        <!-- Page header + kindergarten context share one band.
 
-        <!-- Manager Kindergarten Context Strip -->
-        {% include "components/manager_context_strip.html" %}
+             Both are flex items of .admin-main, which carries no inline padding
+             of its own — .admin-content supplies its own and these did not. So
+             every page title, breadcrumb and the context strip ran flush to the
+             viewport edge while all the content below them sat inset, and long
+             Arabic titles (benchmarking) overflowed off-screen entirely. The
+             band puts the whole page head on the same measure as the content. -->
+        <div class="mgr-page-band">
+          {% block page_header %}{% endblock %}
+
+          {% include "components/manager_context_strip.html" %}
+        </div>
 
         <!-- Page Content -->
         <div class="admin-content" id="admin-content">{% block content %}{% endblock %}</div>

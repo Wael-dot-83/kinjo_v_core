@@ -135,7 +135,12 @@ openapi_output.json
 ENHANCED_*
 MANAGER_MESSAGING_*
 SUPERVISOR_*
+# SUPERVISOR_* is meant for root-level SUPERVISOR_*.md scratch reports, but
+# core.ignorecase is true on Windows so it also swallows static/js/supervisor_*.js
+# source files. supervisor_performance.js needed the first exception; the roster
+# script is the second. Any future static/js/supervisor_*.js needs one too.
 !static/js/supervisor_performance.js
+!static/js/supervisor_roster.js
 upload/
 perplexity-ext/
 *_snippet.py
@@ -146,6 +151,9 @@ verify_*.py
 git-error-*.txt
 cookies.txt
 *_tail.txt
+# Throwaway diagnostic scripts and route/template dumps. Keepers belong in
+# scripts/manual-diagnostics/, reports in docs/reports/.
+scratch/
 
 # Generated diagnostic dumps at the repo root. These are stdout snapshots from
 # scripts/manual-diagnostics/audit_routes.py and audit_base_includes.py, so they

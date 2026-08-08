@@ -288,12 +288,12 @@ function renderSupervisors(supervisors) {
             <div class="card h-100 shadow-sm supervisor-card">
                 <header class="card-header">
                     <h2 class="card-title">${escHtml(sup.full_name)}</h2>
-                    <p class="card-subtitle text-muted mb-0">@${escHtml(sup.username)}</p>
+                    <p class="card-subtitle text-muted mb-0"><bdi>@${escHtml(sup.username)}</bdi></p>
                     ${statusTag}
                 </header>
                 <div class="card-body">
-                    <p class="mb-1"><i class="bi bi-envelope me-2 text-secondary"></i>${escHtml(sup.email || '—')}</p>
-                    <p class="mb-2"><i class="bi bi-telephone me-2 text-secondary"></i>${escHtml(sup.phone_number || '—')}</p>
+                    <p class="mb-1 text-break"><i class="bi bi-envelope me-2 text-secondary"></i><bdi>${escHtml(sup.email || '—')}</bdi></p>
+                    <p class="mb-2"><i class="bi bi-telephone me-2 text-secondary"></i><bdi>${escHtml(sup.phone_number || '—')}</bdi></p>
                     <div class="mb-2">${classBadges}</div>
                 </div>
                 <div class="card-footer">

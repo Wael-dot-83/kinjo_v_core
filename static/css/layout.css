@@ -6,7 +6,9 @@
   --admin-header-height-mobile: 56px;
 
   /* Filter Bar Offset — total height for sticky elements to avoid overlap */
-  --filter-bar-offset: calc(var(--admin-header-height) + var(--kinjo-spacing-6));
+  --filter-bar-offset: calc(
+    var(--admin-header-height) + var(--kinjo-spacing-6)
+  );
 
   /* Z-Index Layer System — explicit stacking context for admin components */
   --z-header: 1000;
@@ -88,9 +90,18 @@ body.admin-container {
    the muted role line has no headroom to spare. */
 .admin-header {
   height: var(--admin-header-height);
-  background-color: var(--admin-header-bg);
+  background:
+    radial-gradient(
+      circle at 18% 50%,
+      rgba(255, 255, 255, 0.05),
+      transparent 28%
+    ),
+    linear-gradient(135deg, #0f2347 0%, #153d73 52%, #102a4e 100%);
   color: var(--admin-header-ink);
-  border-block-end: 1px solid var(--admin-header-border);
+  border-block-end: 1px solid rgba(212, 175, 55, 0.22);
+  box-shadow:
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 28px rgba(8, 17, 33, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -125,7 +136,9 @@ body.admin-container {
   color: var(--admin-header-ink-soft);
   padding: 0.25rem 0.5rem;
   border-radius: 8px;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
   cursor: pointer;
 }
 
@@ -186,6 +199,10 @@ body.admin-container {
   color: var(--admin-header-ink);
 }
 
+.header-logo-wordmark span {
+  letter-spacing: -0.01em;
+}
+
 .header-user-name {
   font-size: 16px;
   font-weight: 600;
@@ -221,7 +238,9 @@ body.admin-container {
   padding: 0.5rem 0.75rem;
   font-weight: 500;
   color: var(--admin-nav-ink);
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .header-lang-dropdown .dropdown-item:hover,
@@ -279,7 +298,8 @@ body.admin-container {
    anywhere in the loaded stylesheet chain, so it rendered as a bare,
    unstyled <h1>. */
 .admin-page-title {
-  font: var(--kinjo-font-weight-bold) var(--kinjo-font-size-2xl) / 1.3 var(--kinjo-font-family);
+  font: var(--kinjo-font-weight-bold) var(--kinjo-font-size-2xl) / 1.3
+    var(--kinjo-font-family);
   color: var(--kinjo-color-text-primary);
   margin: 0;
 }
@@ -295,16 +315,30 @@ body.admin-container {
   display: grid;
   gap: var(--kinjo-spacing-6);
 }
-.admin-grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
-.admin-grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.admin-grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.admin-grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.admin-grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+.admin-grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.admin-grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.admin-grid-cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
 
 @media (max-width: 1024px) {
-  .admin-grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .admin-grid-cols-3 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .admin-grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-grid-cols-3 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 991px) {
-  .admin-grid-cols-2 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+  .admin-grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
 }

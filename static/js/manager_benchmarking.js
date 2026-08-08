@@ -36,11 +36,18 @@
     return label || tr("غير مصنف", "Unclassified");
   }
 
-  function formatNumber(value, digits = 2) {
+  // toFixed(2) rendered "82.00" and "100.00%" for whole numbers and spelled the
+  // digits in Latin, while the rest of the Arabic UI (context strip, KPI page)
+  // uses Arabic-Indic. toLocaleString fixes both: maximumFractionDigits drops a
+  // trailing ".0" instead of padding to it, so a score reads 82, a percentile
+  // reads 45.5, and neither carries more precision than the number deserves.
+  function formatNumber(value, digits = 1) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
       return "--";
     }
-    return Number(value).toFixed(digits);
+    return Number(value).toLocaleString(IS_AR ? "ar-JO" : "en", {
+      maximumFractionDigits: digits,
+    });
   }
 
   function formatDateValue(dateObj) {
@@ -106,6 +113,29 @@
     // counterpart. Reading band_label unconditionally left "أخضر" sitting in an
     // otherwise fully English page.
     bandEl.textContent = bandLabel(data);
+
+    // Colour the card's status rail to match the band. The response carries no
+    // machine-readable band code — only the two display labels — so this maps
+    // from band_label_en, which classification_service._BAND_LABEL_EN pins to a
+    // closed set ("Green"/"Amber"/"Red"/"Unclassified"). If that endpoint ever
+    // grows a real band_code field, switch to it: matching on a display string
+    // is the weakest link here.
+    const bandCard = document.getElementById("managerBandCard");
+    if (bandCard) {
+      const RAIL_BY_BAND = {
+        Green: "mgr-state-healthy",
+        Amber: "mgr-state-attention",
+        Red: "mgr-state-breach",
+      };
+      bandCard.classList.remove(
+        "mgr-state-healthy",
+        "mgr-state-attention",
+        "mgr-state-breach"
+      );
+      const rail = RAIL_BY_BAND[data.band_label_en];
+      if (rail) bandCard.classList.add(rail);
+    }
+
     peerSizeEl.textContent = String(data.peer_group_size ?? 0);
 
     const peers = data.anonymized_peers || [];

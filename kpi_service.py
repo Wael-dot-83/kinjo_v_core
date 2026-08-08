@@ -4810,7 +4810,10 @@ def get_enhanced_manager_kpi_dashboard(
         alerts.append(
             AlertsSummary(
                 type="KPI",
-                message=f"معدل الحوادث {incident_rate}% يتجاوز الحد المسموح",
+                # :.1f — the bare float surfaced as "معدل الحوادث 45.455%" on the
+                # manager KPI page. A rate quoted to three decimals implies a
+                # precision the underlying counts do not support.
+                message=f"معدل الحوادث {incident_rate:.1f}% يتجاوز الحد المسموح",
                 priority="medium",
             )
         )
@@ -4819,7 +4822,7 @@ def get_enhanced_manager_kpi_dashboard(
         alerts.append(
             AlertsSummary(
                 type="KPI",
-                message=f"معدل الغياب المزمن {chronic_absence_rate}% مرتفع جداً",
+                message=f"معدل الغياب المزمن {chronic_absence_rate:.1f}% مرتفع جداً",
                 priority="high",
             )
         )

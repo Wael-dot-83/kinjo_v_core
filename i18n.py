@@ -97,10 +97,90 @@ def _load_catalog(language: str) -> dict[str, str]:
     return catalog
 
 
+PARENT_TRANSLATIONS_AR: dict[str, str] = {
+    "Parent Dashboard": "لوحة ولي الأمر",
+    "Welcome back,": "أهلاً بك،",
+    "Parent": "ولي الأمر",
+    "Follow your children's daily activities, attendance status, and kindergarten reports in real-time.": "تابع أنشطة أطفالك اليومية، وحالة الحضور والغياب، وتقارير الروضة أولاً بأول.",
+    "Children": "الأطفال",
+    "Present Today": "حاضرون اليوم",
+    "Reports": "التقارير",
+    "My Children": "أطفالي",
+    "Manage Children": "إدارة الأطفال",
+    "Quick Services": "الخدمات السريعة",
+    "Register Child": "تسجيل طفل",
+    "New Enrollment Application": "تقديم طلب جديد",
+    "Daily Reports": "التقارير اليومية",
+    "View Daily Logs & Notes": "متابعة السجلات والأنشطة",
+    "Messages": "الرسائل والطلب",
+    "Contact Teachers & KG": "التواصل مع الروضة والمعلمات",
+    "Attendance Log": "سجل الحضور",
+    "Track Check-in Records": "متابعة الدخول والخروج",
+    "Applications": "طلبات التسجيل",
+    "Status & History": "حالة وقائمة الطلبات",
+    "My Profile": "ملفي الشخصي",
+    "Account & Parent Info": "بيانات الحساب وولي الأمر",
+    "Latest Daily Reports": "أحدث التقارير اليومية",
+    "View All": "عرض الكل",
+    "Upcoming Events & Activities": "الفعاليات والأنشطة القادمة",
+    "No upcoming events scheduled": "لا توجد فعاليات قادمة حالياً",
+    "Need Assistance?": "هل تحتاج إلى مساعدة؟",
+    "Have questions about your child or kindergarten services? Our support team is here to help.": "هل لديك استفسارات حول طفلك أو خدمات الروضة؟ فريق الدعم متاح لمساعدتك.",
+    "Contact Support": "تواصل مع الدعم",
+    "Daily Report Details": "تفاصيل التقرير اليومي",
+    "Close": "إغلاق",
+    "Attendance Record": "سجل الحضور والغياب",
+    "Attendance": "الحضور",
+    "Total Records": "إجمالي السجلات",
+    "Present Days": "أيام الحضور",
+    "Absent Days": "أيام الغياب",
+    "Late Days": "أيام التأخير",
+    "Select Child:": "اختيار الطفل:",
+    "Child Select:": "اختيار الطفل:",
+    "All Children": "جميع الأطفال",
+    "Filter by Date:": "تاريخ الحضور:",
+    "Date Filter:": "تاريخ الحضور:",
+    "Filter": "تصفية",
+    "Reset filters": "إعادة ضبط الفلاتر",
+    "Attendance Logs": "سجلات الحضور",
+    "Child": "الطفل",
+    "Date": "التاريخ",
+    "Status": "الحالة",
+    "Check-in Time": "وقت الدخول",
+    "Check-out Time": "وقت الخروج",
+    "Notes": "ملاحظات",
+    "Enrollment Applications": "طلبات التسجيل",
+    "Enrollments": "التسجيلات",
+    "New Application": "تقديم طلب جديد",
+    "Register New Child": "تسجيل طفل جديد",
+    "Total Applications": "إجمالي الطلبات",
+    "Active / Accepted": "مقبولة / نشطة",
+    "Under Review": "قيد المراجعة",
+    "Applications List": "قائمة الطلبات",
+    "Child Name": "اسم الطفل",
+    "Kindergarten": "الروضة",
+    "Submitted Date": "تاريخ التقديم",
+    "Dashboard": "لوحة التحكم",
+    "Breadcrumb": "مسار التنقل",
+    "Loading...": "جارٍ تحميل البيانات، يرجى الانتظار.",
+    "Personal Information": "المعلومات الشخصية",
+    "Enrollment Requests": "طلبات التسجيل",
+    "Returned": "مُرجَع",
+    "My Children's Reports": "تقارير أطفالي",
+    "KinJo — Home": "KinJo — الرئيسية",
+}
+
+
 def gettext(message: Any, lang: str = "en", **kwargs: Any) -> str:
     text = str(message or "")
     language = normalize_language(lang, default="en")
-    translated = _load_catalog(language).get(text, text) if language != "en" else text
+    if language == "ar":
+        translated = PARENT_TRANSLATIONS_AR.get(text) or _load_catalog("ar").get(text, text)
+    elif language != "en":
+        translated = _load_catalog(language).get(text, text)
+    else:
+        translated = text
+
     if kwargs:
         try:
             return translated.format(**kwargs)

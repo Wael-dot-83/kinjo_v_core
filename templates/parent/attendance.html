@@ -3,7 +3,7 @@
 {% block title %}{{ _('Attendance Record') }}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="page-header-wrap mb-4">
     <div>
         <h1 class="page-header-title">
             <i class="bi bi-calendar-check text-primary me-2" aria-hidden="true"></i>
@@ -12,7 +12,7 @@
         <nav aria-label="{{ _('Breadcrumb') }}">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{{ _('Dashboard') }}</a></li>
-                <li class="breadcrumb-item active">{{ _('Attendance') }}</li>
+                <li class="breadcrumb-item active">{{ _('Attendance Record') }}</li>
             </ol>
         </nav>
     </div>
@@ -20,80 +20,93 @@
 {% endblock %}
 
 {% block content %}
-<!-- Filters -->
-<div class="d-flex flex-wrap align-items-center mb-4 bg-white p-3 rounded shadow-sm border gap-3">
-    <div class="d-flex align-items-center">
-        <span class="fw-bold me-2">{{ _('Child:') }}</span>
-        <select class="form-select w-auto" id="childFilter">
-            <option value="">{{ _('All Children') }}</option>
-        </select>
-    </div>
-    <div class="d-flex align-items-center">
-        <span class="fw-bold me-2">{{ _('Date:') }}</span>
-        <input type="date" class="form-control w-auto" id="dateFilter">
-    </div>
-    <button class="btn btn-outline-primary" onclick="loadAttendance()">
-        <i class="bi bi-funnel me-1"></i>{{ _('Filter') }}
-    </button>
-</div>
-
-<!-- Summary Cards -->
+<!-- Stat Summary Cards -->
 <div class="row g-3 mb-4" id="attendanceSummary">
     <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <h3 class="mb-0 text-primary" id="countTotal">0</h3>
-                <small class="text-muted">{{ _('Total Records') }}</small>
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+                <i class="bi bi-list-check fs-5"></i>
             </div>
+            <h3 class="fw-bold mb-0 text-dark" id="countTotal">0</h3>
+            <small class="text-muted fw-semibold">{{ _('Total Records') }}</small>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <h3 class="mb-0 text-success" id="countPresent">0</h3>
-                <small class="text-muted">{{ _('Present') }}</small>
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+                <i class="bi bi-check-circle-fill fs-5"></i>
             </div>
+            <h3 class="fw-bold mb-0 text-success" id="countPresent">0</h3>
+            <small class="text-muted fw-semibold">{{ _('Present Days') }}</small>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <h3 class="mb-0 text-danger" id="countAbsent">0</h3>
-                <small class="text-muted">{{ _('Absent') }}</small>
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+                <i class="bi bi-x-circle-fill fs-5"></i>
             </div>
+            <h3 class="fw-bold mb-0 text-danger" id="countAbsent">0</h3>
+            <small class="text-muted fw-semibold">{{ _('Absent Days') }}</small>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card text-center border-0 shadow-sm">
-            <div class="card-body py-3">
-                <h3 class="mb-0 text-warning" id="countLate">0</h3>
-                <small class="text-muted">{{ _('Late') }}</small>
+        <div class="parent-child-card p-3 text-center">
+            <div class="avatar-md bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+                <i class="bi bi-clock-history fs-5"></i>
             </div>
+            <h3 class="fw-bold mb-0 text-warning" id="countLate">0</h3>
+            <small class="text-muted fw-semibold">{{ _('Late Days') }}</small>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="parent-report-card p-3 mb-4">
+    <div class="row g-3 align-items-center">
+        <div class="col-12 col-md-4">
+            <label class="form-label small text-muted fw-semibold mb-1">{{ _('Select Child:') }}</label>
+            <select class="form-select rounded-pill" id="childFilter">
+                <option value="">{{ _('All Children') }}</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-4">
+            <label class="form-label small text-muted fw-semibold mb-1">{{ _('Filter by Date:') }}</label>
+            <input type="date" class="form-control rounded-pill" id="dateFilter">
+        </div>
+        <div class="col-12 col-md-4 d-flex align-items-end gap-2" style="padding-top: 1.6rem;">
+            <button class="btn btn-primary rounded-pill px-4 flex-grow-1" onclick="loadAttendance()">
+                <i class="bi bi-funnel me-1"></i>{{ _('Filter') }}
+            </button>
+            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="resetFilters()" aria-label="{{ _('Reset filters') }}" title="{{ _('Reset filters') }}">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
         </div>
     </div>
 </div>
 
 <!-- Attendance Table -->
-<div class="card shadow-sm">
+<div class="parent-report-card">
+    <div class="card-header bg-transparent py-3 border-bottom">
+        <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-journal-text me-2 text-primary"></i>{{ _('Attendance Logs') }}</h5>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
                     <tr>
-                        <th>#</th>
-                        <th>{{ _('Child') }}</th>
-                        <th>{{ _('Date') }}</th>
-                        <th>{{ _('Status') }}</th>
-                        <th>{{ _('Check-in') }}</th>
-                        <th>{{ _('Check-out') }}</th>
-                        <th>{{ _('Notes') }}</th>
+                        <th class="py-3 px-4">#</th>
+                        <th class="py-3 px-4">{{ _('Child') }}</th>
+                        <th class="py-3 px-4">{{ _('Date') }}</th>
+                        <th class="py-3 px-4">{{ _('Status') }}</th>
+                        <th class="py-3 px-4">{{ _('Check-in Time') }}</th>
+                        <th class="py-3 px-4">{{ _('Check-out Time') }}</th>
+                        <th class="py-3 px-4">{{ _('Notes') }}</th>
                     </tr>
                 </thead>
                 <tbody id="attendanceTableBody">
                     <tr>
-                        <td colspan="7" class="text-center py-4">
-                            <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جارٍ التحميل...{% endif %}</span></div>
-                            <span class="ms-2">{{ _('Loading...') }}</span>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"><span class="visually-hidden">{{ _('Loading...') }}</span></div>
                         </td>
                     </tr>
                 </tbody>
@@ -121,30 +134,38 @@
     };
 
     function getHeaders() {
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
-        const token = AuthService.getToken();
         const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (window.AuthService && AuthService.isAuthenticated()) {
+            const token = AuthService.getToken();
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+        }
+        const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
+                     (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
+                     (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
+        if (csrf) headers['X-CSRF-Token'] = csrf;
         return headers;
     }
 
     function formatDate(dateStr) {
         if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString(IS_EN ? 'en-US' : 'ar-SA');
+        try {
+            return new Date(dateStr).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO', {
+                year: 'numeric', month: 'short', day: 'numeric'
+            });
+        } catch (e) {
+            return dateStr;
+        }
     }
 
     function formatTime(timeStr) {
         if (!timeStr) return '—';
         try {
             const d = new Date(timeStr);
-            return d.toLocaleTimeString(IS_EN ? 'en-US' : 'ar-SA', { hour: '2-digit', minute: '2-digit' });
+            return d.toLocaleTimeString(IS_EN ? 'en-US' : 'ar-JO', { hour: '2-digit', minute: '2-digit' });
         } catch { return timeStr; }
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-        // Load children dropdown
         try {
             const resp = await fetch('/api/parent/children-list', { headers: getHeaders() });
             if (resp.ok) {
@@ -156,7 +177,6 @@
                     opt.textContent = c.name;
                     sel.appendChild(opt);
                 });
-                // Pre-select from URL
                 const params = new URLSearchParams(window.location.search);
                 if (params.get('child_id')) sel.value = params.get('child_id');
             }
@@ -164,6 +184,12 @@
 
         await loadAttendance();
     });
+
+    function resetFilters() {
+        document.getElementById('childFilter').value = '';
+        document.getElementById('dateFilter').value = '';
+        loadAttendance();
+    }
 
     async function loadAttendance() {
         const tbody = document.getElementById('attendanceTableBody');
@@ -173,17 +199,19 @@
         let url = '/api/parent/attendance';
         const params = new URLSearchParams();
         if (childId) params.set('child_id', childId);
-        if (date) params.set('date', date);
+        if (date) {
+            params.set('start_date', date);
+            params.set('end_date', date);
+        }
         if (params.toString()) url += '?' + params.toString();
 
         try {
             const resp = await fetch(url, { headers: getHeaders() });
-            if (!resp.ok) throw new Error('Failed');
+            if (!resp.ok) throw new Error(T('فشل في تحميل بيانات الحضور والغياب', 'Failed to load attendance'));
 
             const data = await resp.json();
             const records = data.attendance || [];
 
-            // Update summary
             document.getElementById('countTotal').textContent = records.length;
             document.getElementById('countPresent').textContent =
                 records.filter(r => r.status === 'PRESENT').length;
@@ -196,8 +224,9 @@
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="7" class="text-center py-5">
-                            <i class="bi bi-calendar-x fs-1 text-muted d-block mb-3"></i>
-                            <p class="text-muted">${T('لا توجد سجلات حضور', 'No attendance records found')}</p>
+                            <i class="bi bi-calendar-x fs-1 text-muted d-block mb-3 opacity-25"></i>
+                            <h6 class="fw-bold mb-1">${T('لا توجد سجلات حضور', 'No attendance records found')}</h6>
+                            <small class="text-muted">${T('جرب اختيار طفل آخر أو مسح تاريخ الفلتر.', 'Try selecting another child or clearing the date filter.')}</small>
                         </td>
                     </tr>
                 `;
@@ -206,17 +235,17 @@
 
             tbody.innerHTML = records.map((r, i) => `
                 <tr>
-                    <td>${i + 1}</td>
-                    <td class="fw-semibold">${escHtml(r.child_name || '—')}</td>
-                    <td>${formatDate(r.date)}</td>
-                    <td>
-                        <span class="badge ${STATUS_CLASS[r.status] || 'badge-soft badge-soft-secondary'}">
+                    <td class="py-3 px-4 text-muted small">${i + 1}</td>
+                    <td class="py-3 px-4 fw-bold text-dark">${escHtml(r.child_name || '—')}</td>
+                    <td class="py-3 px-4 text-muted"><i class="bi bi-calendar3 me-1"></i>${formatDate(r.date)}</td>
+                    <td class="py-3 px-4">
+                        <span class="badge ${STATUS_CLASS[r.status] || 'badge-soft badge-soft-secondary'} rounded-pill px-3 py-2">
                             ${STATUS_LABEL[r.status] || escHtml(r.status)}
                         </span>
                     </td>
-                    <td>${formatTime(r.check_in_at)}</td>
-                    <td>${formatTime(r.check_out_at)}</td>
-                    <td>${escHtml(r.notes || '—')}</td>
+                    <td class="py-3 px-4 text-dark font-monospace"><i class="bi bi-box-arrow-in-right text-success me-1"></i>${formatTime(r.check_in_at)}</td>
+                    <td class="py-3 px-4 text-dark font-monospace"><i class="bi bi-box-arrow-right text-danger me-1"></i>${formatTime(r.check_out_at)}</td>
+                    <td class="py-3 px-4 text-muted small">${escHtml(r.notes || '—')}</td>
                 </tr>
             `).join('');
 
@@ -225,7 +254,7 @@
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center text-danger py-4">
-                        <i class="bi bi-exclamation-triangle me-2"></i>${T('خطأ في تحميل البيانات', 'Error loading data')}
+                        <i class="bi bi-exclamation-triangle me-2"></i>${T('خطأ في تحميل بيانات الحضور والغياب', 'Error loading attendance data')}
                     </td>
                 </tr>
             `;

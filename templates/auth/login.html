@@ -20,12 +20,23 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     flex: 0 0 42%;
     max-width: 42%;
     position: relative;
-    background: linear-gradient(155deg, #163d2e 0%, #1F5E47 50%, #2F7D62 100%);
+    background:
+      radial-gradient(
+        circle at 80% 18%,
+        rgba(255, 214, 115, 0.34),
+        transparent 20%
+      ),
+      radial-gradient(
+        circle at 18% 18%,
+        rgba(117, 201, 245, 0.28),
+        transparent 22%
+      ),
+      linear-gradient(155deg, #fff7e4 0%, #fffdf9 42%, #eefaf5 100%);
     overflow: hidden;
     padding: 3.5rem 3rem;
     flex-direction: column;
     justify-content: center;
-    color: #fff;
+    color: #17312a;
   }
   @media (min-width: 992px) {
     .auth-brand-panel {
@@ -41,7 +52,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     width: 380px;
     height: 380px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.5);
     pointer-events: none;
   }
   .auth-brand-panel::after {
@@ -52,7 +63,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     width: 300px;
     height: 300px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 164, 120, 0.16);
     pointer-events: none;
   }
 
@@ -60,17 +71,12 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     width: 84px;
     height: 84px;
     border-radius: 1.375rem;
-    background: rgba(255, 255, 255, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    backdrop-filter: blur(8px);
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 1.75rem;
     flex-shrink: 0;
-  }
-  .auth-brand-logo-wrap i {
-    font-size: 2.4rem;
   }
 
   .auth-brand-name {
@@ -82,10 +88,11 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
   .auth-brand-tagline {
     font-size: 1.0625rem;
-    opacity: 0.82;
+    opacity: 1;
     line-height: 1.65;
     max-width: 310px;
     margin-bottom: 2.75rem;
+    color: #4d5f58;
   }
   .auth-brand-features {
     list-style: none;
@@ -98,7 +105,8 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     gap: 0.75rem;
     margin-bottom: 1.1rem;
     font-size: 0.9375rem;
-    opacity: 0.9;
+    opacity: 1;
+    color: #35544a;
   }
   .auth-brand-features li i {
     font-size: 1.125rem;
@@ -113,7 +121,13 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     flex: 1;
     display: flex;
     flex-direction: column;
-    background: #fff;
+    background:
+      radial-gradient(
+        circle at top right,
+        rgba(255, 214, 115, 0.2),
+        transparent 18%
+      ),
+      linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
     overflow-y: auto;
     min-width: 0;
   }
@@ -148,9 +162,9 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
   .auth-lang-btn {
     font-size: 0.8125rem;
-    color: #64748b;
-    border: 1.5px solid var(--kinjo-color-border);
-    background: transparent;
+    color: #35544a;
+    border: 1.5px solid rgba(31, 94, 71, 0.12);
+    background: rgba(255, 255, 255, 0.86);
     border-radius: 0.4375rem;
     padding: 0.3125rem 0.6875rem;
     cursor: pointer;
@@ -166,10 +180,10 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
   .auth-lang-btn:hover,
   .auth-lang-btn:focus-visible {
-    border-color: #1F5E47;
-    color: #1F5E47;
-    background: #f0f7f4;
-    outline: 2px solid #a8d4c4;
+    border-color: #ff9c6c;
+    color: #17312a;
+    background: #fff7ed;
+    outline: 2px solid rgba(255, 156, 108, 0.26);
     outline-offset: 2px;
   }
 
@@ -180,14 +194,14 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   .auth-heading {
     font-size: 1.75rem;
     font-weight: 800;
-    color: #0f172a;
+    color: #17312a;
     line-height: 1.25;
     margin-bottom: 0.5rem;
     transition: color 0.3s ease;
   }
   .auth-subheading {
     font-size: 1rem;
-    color: #64748b;
+    color: #5c6e67;
     line-height: 1.6;
     margin-bottom: 2rem;
   }
@@ -210,12 +224,12 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     font-size: 1rem;
   }
   .auth-alert-warning {
-    background: #fffbeb;
-    color: #92400e;
+    background: #fff7e6;
+    color: #8a5b00;
   }
   .auth-alert-danger {
-    background: #fff1f2;
-    color: #be123c;
+    background: #fff1f0;
+    color: #b42318;
   }
 
   /* ── Field groups ── */
@@ -226,7 +240,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     display: block;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #374151;
+    color: #35544a;
     margin-bottom: 0.4rem;
   }
   .auth-field label .req-star {
@@ -242,7 +256,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     top: 50%;
     inset-inline-start: 0.875rem;
     transform: translateY(-50%);
-    color: #94a3b8;
+    color: #8ea39c;
     font-size: 1rem;
     pointer-events: none;
     z-index: 4;
@@ -278,7 +292,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     transform: translateY(-50%);
     background: none;
     border: none;
-    color: #94a3b8;
+    color: #8ea39c;
     cursor: pointer;
     padding: 0.3rem 0.4rem;
     font-size: 1.0625rem;
@@ -293,10 +307,10 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     transition: color 0.15s;
   }
   .auth-input-wrap .af-toggle:hover {
-    color: #475569;
+    color: #17312a;
   }
   .auth-input-wrap .af-toggle:focus-visible {
-    outline: 2px solid #1F5E47;
+    outline: 2px solid #ff9c6c;
     outline-offset: 1px;
     color: #475569;
   }
@@ -308,10 +322,10 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     padding: 0 0.875rem;
     padding-inline-start: 2.75rem;
     font-size: 0.9375rem;
-    border: 1.5px solid var(--kinjo-color-border);
+    border: 1.5px solid rgba(31, 94, 71, 0.14);
     border-radius: 0.625rem;
-    background: #f8fafc;
-    color: #1e293b;
+    background: #fffdf8;
+    color: #17312a;
     -webkit-appearance: none;
     appearance: none;
     transition:
@@ -320,27 +334,27 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
       background-color 0.2s;
   }
   .af-control::placeholder {
-    color: #b0bec5;
+    color: #9aa8a3;
   }
   .af-control:focus {
     outline: none;
-    border-color: #1F5E47;
+    border-color: #ff9c6c;
     background: #fff;
-    box-shadow: 0 0 0 3px rgba(31, 94, 71, 0.12);
+    box-shadow: 0 0 0 3px rgba(255, 156, 108, 0.18);
   }
   .af-control.af-has-toggle {
     padding-inline-end: 2.75rem;
   }
   .af-control.af-valid {
-    border-color: #10b981;
-    background: #f0fdf4;
+    border-color: #22c55e;
+    background: #f0fff5;
   }
   .af-control.af-valid:focus {
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
   }
   .af-control.af-invalid {
-    border-color: #ef4444;
-    background: #fff8f8;
+    border-color: #f97373;
+    background: #fff7f7;
   }
   .af-control.af-invalid:focus {
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
@@ -348,7 +362,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
 
   .af-hint {
     font-size: 0.8125rem;
-    color: #64748b;
+    color: #66747a;
     margin-top: 0.3125rem;
     display: flex;
     align-items: baseline;
@@ -380,21 +394,21 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     align-items: center;
     gap: 0.5rem;
     font-size: 0.875rem;
-    color: #475569;
+    color: #35544a;
     cursor: pointer;
     user-select: none;
   }
   .auth-check-label input[type="checkbox"] {
     width: 1rem;
     height: 1rem;
-    accent-color: #1F5E47;
+    accent-color: #ff9c6c;
     cursor: pointer;
     flex-shrink: 0;
   }
   .auth-forgot-link {
     font-size: 0.875rem;
     font-weight: 500;
-    color: #1F5E47;
+    color: #d9652e;
     text-decoration: none;
     border-radius: 0.25rem;
     padding: 0.125rem 0.25rem;
@@ -404,11 +418,11 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
       background 0.15s;
   }
   .auth-forgot-link:hover {
-    color: #163d2e;
-    background: #f0f7f4;
+    color: #17312a;
+    background: #fff7ed;
   }
   .auth-forgot-link:focus-visible {
-    outline: 2px solid #1F5E47;
+    outline: 2px solid #ff9c6c;
     outline-offset: 2px;
   }
 
@@ -418,7 +432,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     align-items: baseline;
     gap: 0.3rem;
     font-size: 0.8125rem;
-    color: #64748b;
+    color: #66747a;
     margin: -1.1rem 0 1.4rem;
   }
   .auth-remember-hint i {
@@ -431,7 +445,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     height: 50px;
     border: none;
     border-radius: 0.625rem;
-    background: linear-gradient(135deg, #1F5E47, #163d2e);
+    background: linear-gradient(135deg, #ff9c6c, #ffd36b);
     color: #fff;
     font-size: 1rem;
     font-weight: 600;
@@ -440,7 +454,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    box-shadow: 0 4px 16px rgba(31, 94, 71, 0.28);
+    box-shadow: 0 4px 16px rgba(255, 156, 108, 0.28);
     transition:
       transform 0.15s,
       box-shadow 0.2s,
@@ -448,16 +462,16 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     letter-spacing: 0.01em;
   }
   .auth-submit-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #2F7D62, #1F5E47);
-    box-shadow: 0 6px 22px rgba(31, 94, 71, 0.36);
+    background: linear-gradient(135deg, #ffb27f, #ffe07c);
+    box-shadow: 0 6px 22px rgba(255, 156, 108, 0.34);
     transform: translateY(-1px);
   }
   .auth-submit-btn:active:not(:disabled) {
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(31, 94, 71, 0.22);
+    box-shadow: 0 2px 8px rgba(255, 156, 108, 0.2);
   }
   .auth-submit-btn:focus-visible {
-    outline: 2px solid #a8d4c4;
+    outline: 2px solid rgba(255, 214, 115, 0.6);
     outline-offset: 2px;
   }
   .auth-submit-btn:disabled {
@@ -495,35 +509,35 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     content: "";
     flex: 1;
     height: 1px;
-    background: #e2e8f0;
+    background: #e9ecef;
   }
 
   /* ── Register / Info ── */
   .auth-register-row {
     text-align: center;
     font-size: 0.875rem;
-    color: #64748b;
+    color: #66747a;
   }
   .auth-register-link {
-    color: #1F5E47;
+    color: #d9652e;
     font-weight: 600;
     text-decoration: none;
     margin-inline-start: 0.25rem;
   }
   .auth-register-link:hover {
-    color: #163d2e;
+    color: #17312a;
     text-decoration: underline;
   }
   .auth-register-link:focus-visible {
-    outline: 2px solid #1F5E47;
+    outline: 2px solid #ff9c6c;
     outline-offset: 2px;
     border-radius: 2px;
   }
 
   .auth-closed-notice {
-    background: #f0f7f4;
-    color: #163d2e;
-    border: 1px solid #a8d4c4;
+    background: #fff7ed;
+    color: #17312a;
+    border: 1px solid rgba(255, 156, 108, 0.22);
     border-radius: 0.625rem;
     padding: 0.875rem 1rem;
     font-size: 0.875rem;
@@ -557,7 +571,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     align-items: center;
     gap: 0.35rem;
     font-weight: 600;
-    color: #163d2e;
+    color: #d9652e;
     text-decoration: none;
     border-radius: 0.25rem;
     padding: 0.1rem 0.2rem;
@@ -567,7 +581,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     text-decoration: underline;
   }
   .auth-support-link:focus-visible {
-    outline: 2px solid #1F5E47;
+    outline: 2px solid #ff9c6c;
     outline-offset: 2px;
   }
 
@@ -576,7 +590,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     padding: 1.25rem 2rem 1.5rem;
     text-align: center;
     border-top: 1px solid var(--kinjo-color-border-subtle);
-    background: #fafbff;
+    background: #fffdf7;
   }
   @media (max-width: 575.98px) {
     .auth-footer {
@@ -593,7 +607,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
   .auth-footer-nav a {
     font-size: 0.8125rem;
-    color: #94a3b8;
+    color: #66747a;
     text-decoration: none;
     padding: 0.25rem 0.625rem;
     border-radius: 0.25rem;
@@ -602,11 +616,11 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
       background 0.15s;
   }
   .auth-footer-nav a:hover {
-    color: #475569;
-    background: #f1f5f9;
+    color: #17312a;
+    background: #fff7ed;
   }
   .auth-footer-nav a:focus-visible {
-    outline: 2px solid #1F5E47;
+    outline: 2px solid #ff9c6c;
     outline-offset: 1px;
   }
   .auth-footer-sep {
@@ -617,7 +631,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   }
   .auth-copyright {
     font-size: 0.78rem;
-    color: #64748b;
+    color: #66747a;
     margin: 0;
   }
 
@@ -676,7 +690,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     }
     .af-control:focus {
       background: #1e293b;
-      border-color: #2F7D62;
+      border-color: #2f7d62;
       box-shadow: 0 0 0 3px rgba(31, 94, 71, 0.15);
     }
     .af-control.af-valid {
@@ -762,7 +776,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
     .auth-lang-btn:focus-visible {
       background: #1e293b;
       color: #a8d4c4;
-      border-color: #2F7D62;
+      border-color: #2f7d62;
     }
     .auth-mobile-logo-text-name {
       color: #f1f5f9;
@@ -781,17 +795,16 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
 <div class="auth-layout" id="authLayout">
   {# ══════════════════════════════════════════ Brand Panel — visible on lg+
   screens only (aria-hidden: decorative, not needed by AT)
-  ══════════════════════════════════════════ #}
-  {% from 'components/kinjo_logo.html' import kinjo_logo %}
+  ══════════════════════════════════════════ #} {% from
+  'components/kinjo_logo.html' import kinjo_logo %}
   <aside class="auth-brand-panel" aria-hidden="true">
-    <div class="auth-brand-logo-wrap">
-      <img src="/static/img/kinjo-logo.png" alt="KinJo" style="height: 42px; width: auto; object-fit: contain;">
-    </div>
+    <div class="auth-brand-logo-wrap">{{ kinjo_logo(size='navbar') }}</div>
 
     <p class="auth-brand-tagline">
       {% if ui_lang == 'en' %} The complete kindergarten management platform for
       administrators, directors, supervisors, and parents. {% else %} منصة
-      الإدارة المتكاملة للحضانات — للمديرين والمشرفين وأولياء الأمور. {% endif %}
+      الإدارة المتكاملة للحضانات — للمديرين والمشرفين وأولياء الأمور. {% endif
+      %}
     </p>
     <ul class="auth-brand-features">
       <li>
@@ -830,10 +843,14 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
   <div class="auth-form-panel" id="formPanel">
     <main class="auth-form-inner" id="mainContent">
       {# Language toggle. Preserve safe, non-sensitive state (expired flag and a
-         validated redirect) across the switch so the no-JS fallback keeps the
-         session-expired context; the redirect is url-encoded so it cannot break
-         out of the attribute and is re-validated before use at login time. #}
-      {% set lang_qs %}{% if request.query_params.get('expired') == 'true' %}&expired=true{% endif %}{% if request.query_params.get('registration') == 'disabled' %}&registration=disabled{% endif %}{% if request.query_params.get('redirect') %}&redirect={{ request.query_params.get('redirect') | urlencode }}{% endif %}{% endset %}
+      validated redirect) across the switch so the no-JS fallback keeps the
+      session-expired context; the redirect is url-encoded so it cannot break
+      out of the attribute and is re-validated before use at login time. #} {%
+      set lang_qs %}{% if request.query_params.get('expired') == 'true'
+      %}&expired=true{% endif %}{% if request.query_params.get('registration')
+      == 'disabled' %}&registration=disabled{% endif %}{% if
+      request.query_params.get('redirect') %}&redirect={{
+      request.query_params.get('redirect') | urlencode }}{% endif %}{% endset %}
       <div class="auth-lang-row">
         {% if ui_lang == 'en' %}
         <a
@@ -856,33 +873,40 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
         {% endif %}
       </div>
 
-
-
       {# Welcome heading & Expired state #}
       <div class="auth-heading-wrap af-anim af-delay1" id="headingWrap">
+        <div class="d-flex justify-content-center mb-4">
+          {{ kinjo_logo(size='navbar') }}
+        </div>
 
-        <img src="/static/img/kinjo-logo.png" alt="KinJo" class="mb-4 mx-auto" style="width: 180px; height: auto; max-width: 100%; object-fit: contain; display: block;">
-
-        <h1 class="auth-heading" id="authHeading" {% if session_expired %}style="color: #d97706;"{% endif %}>
-          {% if session_expired %}
-            {% if ui_lang == 'en' %}Session Expired{% else %}انتهت الجلسة{% endif %}
-          {% else %}
-            {% if ui_lang == 'en' %}Welcome back{% else %}مرحباً بعودتك{% endif %}
-          {% endif %}
+        <h1
+          class="auth-heading"
+          id="authHeading"
+          {%
+          if
+          session_expired
+          %}style="color: #d97706;"
+          {%
+          endif
+          %}
+        >
+          {% if session_expired %} {% if ui_lang == 'en' %}Session Expired{%
+          else %}انتهت الجلسة{% endif %} {% else %} {% if ui_lang == 'en'
+          %}Welcome back{% else %}مرحباً بعودتك{% endif %} {% endif %}
         </h1>
         <p class="auth-subheading" id="authSubheading">
-          {% if session_expired %}
-            {% if ui_lang == 'en' %}For your security, you've been signed out due to inactivity. Please sign in again.{% else %}لحماية حسابك، تم تسجيل خروجك بسبب عدم النشاط. يرجى تسجيل الدخول مجدداً.{% endif %}
-          {% else %}
-            {% if ui_lang == 'en' %} Sign in to your account. {% else %} سجّل الدخول إلى حسابك. {% endif %}
-          {% endif %}
+          {% if session_expired %} {% if ui_lang == 'en' %}For your security,
+          you've been signed out due to inactivity. Please sign in again.{% else
+          %}لحماية حسابك، تم تسجيل خروجك بسبب عدم النشاط. يرجى تسجيل الدخول
+          مجدداً.{% endif %} {% else %} {% if ui_lang == 'en' %} Sign in to your
+          account. {% else %} سجّل الدخول إلى حسابك. {% endif %} {% endif %}
         </p>
       </div>
 
       {# ── Session-expired banner ── Server-rendered so it works without JS and
-         never flashes in after paint. `session_expired` is a trusted boolean
-         derived from the ?expired flag, never reflected as HTML. Hidden by
-         default (d-none); the .auth-alert-warning styling is defined above. #}
+      never flashes in after paint. `session_expired` is a trusted boolean
+      derived from the ?expired flag, never reflected as HTML. Hidden by default
+      (d-none); the .auth-alert-warning styling is defined above. #}
       <div
         class="auth-alert auth-alert-warning{% if not session_expired %} d-none{% endif %}"
         id="sessionExpiredBanner"
@@ -890,24 +914,37 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
         aria-live="polite"
       >
         <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
-        <span>{% if ui_lang == 'en' %}For the security of your account, you were signed out after a period of inactivity. Please sign in again.{% else %}حفاظاً على أمان حسابك، تم تسجيل خروجك بعد فترة من عدم النشاط. يرجى تسجيل الدخول مجدداً.{% endif %}</span>
+        <span
+          >{% if ui_lang == 'en' %}For the security of your account, you were
+          signed out after a period of inactivity. Please sign in again.{% else
+          %}حفاظاً على أمان حسابك، تم تسجيل خروجك بعد فترة من عدم النشاط. يرجى
+          تسجيل الدخول مجدداً.{% endif %}</span
+        >
       </div>
 
       {% if registration_unavailable %}
-      <div class="auth-alert auth-alert-warning" role="status" aria-live="polite">
+      <div
+        class="auth-alert auth-alert-warning"
+        role="status"
+        aria-live="polite"
+      >
         <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
-        <span>{% if ui_lang == 'en' %}New account registration is not available at the moment. Please sign in with an existing account or contact your kindergarten for access.{% else %}تسجيل الحسابات الجديدة غير متاح حالياً. سجّل الدخول بحساب موجود أو تواصل مع الحضانة للحصول على صلاحية الوصول.{% endif %}</span>
+        <span
+          >{% if ui_lang == 'en' %}New account registration is not available at
+          the moment. Please sign in with an existing account or contact your
+          kindergarten for access.{% else %}تسجيل الحسابات الجديدة غير متاح
+          حالياً. سجّل الدخول بحساب موجود أو تواصل مع الحضانة للحصول على صلاحية
+          الوصول.{% endif %}</span
+        >
       </div>
-      {% endif %}
-
-      {# ── Login error alert ── #}
+      {% endif %} {# ── Login error alert ── #}
       <div
         id="loginError"
         class="auth-alert auth-alert-danger d-none"
         role="alert"
         aria-live="assertive"
         aria-atomic="true"
-        style="border-inline-start: 4px solid #dc2626;"
+        style="border-inline-start: 4px solid #dc2626"
       >
         <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
         <span id="loginErrorMessage"></span>
@@ -1018,15 +1055,20 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
             class="af-error"
             role="alert"
             aria-live="polite"
-             aria-atomic="true"
-           ></p>
-           <p id="capsLockWarning" class="af-hint" style="display:none; color:#b45309;">
-             <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-             {% if ui_lang == 'en' %}Caps Lock is on{% else %}مفتاح Caps Lock مفعّل{% endif %}
-           </p>
-         </div>
+            aria-atomic="true"
+          ></p>
+          <p
+            id="capsLockWarning"
+            class="af-hint"
+            style="display: none; color: #b45309"
+          >
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %}Caps Lock is on{% else %}مفتاح Caps Lock
+            مفعّل{% endif %}
+          </p>
+        </div>
 
-         {# ── Remember me + Forgot password ── #}
+        {# ── Remember me + Forgot password ── #}
         <div class="auth-options-row af-anim af-delay3">
           <label class="auth-check-label" for="rememberMe">
             <input
@@ -1056,9 +1098,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
             data-sitekey="{{ captcha_site_key }}"
           ></div>
         </div>
-        {% endif %}
-
-        {# ── Submit button ── #}
+        {% endif %} {# ── Submit button ── #}
         <button
           type="submit"
           class="auth-submit-btn af-anim af-delay4"
@@ -1101,9 +1141,9 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
           </p>
           <p class="auth-closed-text">
             {% if ui_lang == 'en' %}Accounts are created by the platform
-            administration. Contact the administrator at your organization to get
-            an account.{% else %}يتم إنشاء الحسابات من خلال إدارة المنصة. تواصل
-            مع المسؤول في مؤسستك للحصول على حساب.{% endif %}
+            administration. Contact the administrator at your organization to
+            get an account.{% else %}يتم إنشاء الحسابات من خلال إدارة المنصة.
+            تواصل مع المسؤول في مؤسستك للحصول على حساب.{% endif %}
           </p>
           {% if support_contact_email or support_contact_phone %}
           <p class="auth-closed-actions">
@@ -1451,7 +1491,7 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
       if (authSubheading) {
         authSubheading.innerHTML = tr(
           "لحماية حسابك، تم تسجيل خروجك بسبب عدم النشاط. يرجى تسجيل الدخول مجدداً.",
-          "For your security, you've been signed out due to inactivity. Please sign in again."
+          "For your security, you've been signed out due to inactivity. Please sign in again.",
         );
       }
 

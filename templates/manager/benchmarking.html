@@ -3,9 +3,12 @@
 {% block title %}{% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="mb-4 d-flex flex-justify align-items-start flex-wrap g-2">
-    <div class="mb-3">
-        <h1 class="fs-1 fw-bold mt-0 mb-1">
+{# fs-1 is a fluid clamp tuned for short Latin headings; the Arabic title ran off
+   the inline edge of the viewport at desktop widths. fs-3 fits the manager
+   module's heading scale and wraps instead of overflowing. #}
+<div class="mb-3 d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h1 class="fs-3 fw-bold mt-0 mb-1">
             {% if ui_lang == 'en' %}Manager Benchmarking{% else %}مقارنة معيارية لمدير الحضانة{% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}" class="admin-breadcrumb">
@@ -63,62 +66,45 @@
         </div>
     </div>
 
+    {# Each metric used to be a <ul class="row"> holding exactly one <li>. A list
+       of one is a semantic lie, and the un-suppressed markers were rendering as
+       loose dots beside every card. These are now plain columns using the shared
+       .mgr-stat-card, so all five manager pages present one card. The rail
+       reports state: the three context metrics are informational, the
+       performance band is the one that can go good or bad, so the JS sets its
+       state class from the band it receives. #}
     <div class="row g-3 mb-4">
-        <div class="col-md-3 mb-2 mb-md-0">
-            <ul class="row g-4">
-                <li class="col-12 col-md-12 bg-white">
-                    <div class="card h-100 shadow-sm border border-base-lighter">
-                        <header class="card-header pb-0">
-                            <h2 class="card-title text-secondary text-normal">{% if ui_lang == 'en' %}Final Score{% else %}الدرجة النهائية{% endif %}</h2>
-                        </header>
-                        <div class="card-body">
-                            <div id="managerFinalScore" class="fs-1 fw-bold">--</div>
-                        </div>
-                    </div>
-                </li>
-            </ul>
+        <div class="col-6 col-lg-3">
+            <div class="mgr-stat-card h-100 mgr-state-info">
+                <div class="mgr-stat-body">
+                    <h2 class="mgr-stat-label">{% if ui_lang == 'en' %}Final Score{% else %}الدرجة النهائية{% endif %}</h2>
+                    <div id="managerFinalScore" class="mgr-stat-value">--</div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-3 mb-2 mb-md-0">
-            <ul class="row g-4">
-                <li class="col-12 col-md-12 bg-white">
-                    <div class="card h-100 shadow-sm border border-base-lighter">
-                        <header class="card-header pb-0">
-                            <h2 class="card-title text-secondary text-normal">{% if ui_lang == 'en' %}Percentile{% else %}النسبة المئوية{% endif %}</h2>
-                        </header>
-                        <div class="card-body">
-                            <div id="managerPercentile" class="fs-1 fw-bold">--</div>
-                        </div>
-                    </div>
-                </li>
-            </ul>
+        <div class="col-6 col-lg-3">
+            <div class="mgr-stat-card h-100 mgr-state-info">
+                <div class="mgr-stat-body">
+                    <h2 class="mgr-stat-label">{% if ui_lang == 'en' %}Percentile{% else %}النسبة المئوية{% endif %}</h2>
+                    <div id="managerPercentile" class="mgr-stat-value">--</div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-3 mb-2 mb-md-0">
-            <ul class="row g-4">
-                <li class="col-12 col-md-12 bg-white">
-                    <div class="card h-100 shadow-sm border border-base-lighter">
-                        <header class="card-header pb-0">
-                            <h2 class="card-title text-secondary text-normal">{% if ui_lang == 'en' %}Performance Band{% else %}مجال الأداء{% endif %}</h2>
-                        </header>
-                        <div class="card-body">
-                            <div id="managerBand" class="fs-1 fw-bold">--</div>
-                        </div>
-                    </div>
-                </li>
-            </ul>
+        <div class="col-6 col-lg-3">
+            <div class="mgr-stat-card h-100" id="managerBandCard">
+                <div class="mgr-stat-body">
+                    <h2 class="mgr-stat-label">{% if ui_lang == 'en' %}Performance Band{% else %}مجال الأداء{% endif %}</h2>
+                    <div id="managerBand" class="mgr-stat-value">--</div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-3">
-            <ul class="row g-4">
-                <li class="col-12 col-md-12 bg-white">
-                    <div class="card h-100 shadow-sm border border-base-lighter">
-                        <header class="card-header pb-0">
-                            <h2 class="card-title text-secondary text-normal">{% if ui_lang == 'en' %}Peer Group Size{% else %}حجم المجموعة الندية{% endif %}</h2>
-                        </header>
-                        <div class="card-body">
-                            <div id="managerPeerSize" class="fs-1 fw-bold">--</div>
-                        </div>
-                    </div>
-                </li>
-            </ul>
+        <div class="col-6 col-lg-3">
+            <div class="mgr-stat-card h-100 mgr-state-info">
+                <div class="mgr-stat-body">
+                    <h2 class="mgr-stat-label">{% if ui_lang == 'en' %}Peer Group Size{% else %}حجم المجموعة الندية{% endif %}</h2>
+                    <div id="managerPeerSize" class="mgr-stat-value">--</div>
+                </div>
+            </div>
         </div>
     </div>
 

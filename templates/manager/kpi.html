@@ -94,11 +94,15 @@ actions=refresh_action
 
     <!-- Active Alerts -->
     <div id="alertsSection" class="d-none mb-4">
-        <div class="border border-secondary-dark rounded-3">
-            <div class="text-bg-secondary text-white p-2 d-flex align-items-center g-2">
+        {# Was .text-bg-secondary: a dead grey masthead on the one panel whose
+           whole job is to be noticed. It now carries the module's attention
+           colour. `g-2` was also a grid-gutter class, inert on a flex row —
+           gap-2 is what was meant. #}
+        <div class="mgr-alerts-panel rounded-3">
+            <div class="mgr-alerts-header p-2 d-flex align-items-center gap-2">
                 <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-                <strong class="">{{ _('التنبيهات النشطة') }}</strong>
-                <span class="badge bg-white text-dark text-secondary ms-auto" id="alertsCount">0</span>
+                <strong>{{ _('التنبيهات النشطة') }}</strong>
+                <span class="badge mgr-alerts-count ms-auto" id="alertsCount">0</span>
             </div>
             <div class="p-2 bg-white" id="alertsList"></div>
         </div>
@@ -138,24 +142,42 @@ actions=refresh_action
 </div><!-- /kpiContent -->
 
 <style>
-.kpi-hero-card { background: linear-gradient(135deg, #0A5C8E 0%, #0d7db5 100%); color: #fff; }
+/* The hero was a blue gradient (#0A5C8E -> #0d7db5) in an otherwise green
+   product — the single most off-brand surface in the manager module. It now
+   wears the same brand gradient as the dashboard hero, so the two landing
+   surfaces of the module read as one system. Blue stays what design-tokens.css
+   reserves it for: interaction. */
+.kpi-hero-card {
+  background: linear-gradient(135deg, var(--mgr-brand) 0%, var(--mgr-brand-mid) 55%, var(--mgr-brand-deep) 100%);
+  color: #fff;
+}
 /* The hero is dark, so Bootstrap's .text-secondary (a dark grey meant for light surfaces)
    is unreadable on it. These labels sit on the gradient and need a light ink instead. */
 .kpi-hero-label { color: rgba(255, 255, 255, 0.88); }
 .kpi-hero-trend-good    { color: #6ee7b7; }
 .kpi-hero-trend-bad     { color: #fca5a5; }
 .kpi-hero-trend-neutral { color: rgba(255, 255, 255, 0.88); }
-.kpi-card { transition: transform .18s, box-shadow .18s; }
-.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,.1); }
-.kpi-status-bar-green { border-inline-start: 4px solid #10b981; }
-.kpi-status-bar-amber { border-inline-start: 4px solid #f59e0b; }
-.kpi-status-bar-red   { border-inline-start: 4px solid #ef4444; }
+
+/* This page's status bars are where the module's rail vocabulary started; the
+   shared .mgr-* cards now follow it. Both read from the same tokens so the two
+   can no longer drift apart. The hover translate is gone for the same reason it
+   went from manager_design.css: it shifts a card out from under the pointer and
+   buys nothing a shadow change does not. */
+.kpi-card { transition: box-shadow .18s, border-color .18s; }
+.kpi-card:hover { box-shadow: var(--mgr-shadow-raised); }
+.kpi-status-bar-green { border-inline-start: 4px solid var(--mgr-rail-healthy); }
+.kpi-status-bar-amber { border-inline-start: 4px solid var(--mgr-rail-attention); }
+.kpi-status-bar-red   { border-inline-start: 4px solid var(--mgr-rail-breach); }
 /* gray and insufficient_data are real BandColor members and reach this class too. */
 .kpi-status-bar-gray,
-.kpi-status-bar-insufficient_data { border-inline-start: 4px solid #9ca3af; }
-.kpi-action-high   { border-inline-start: 3px solid #ef4444; }
-.kpi-action-medium { border-inline-start: 3px solid #f59e0b; }
-.kpi-action-low    { border-inline-start: 3px solid #10b981; }
+.kpi-status-bar-insufficient_data { border-inline-start: 4px solid var(--mgr-state-idle); }
+.kpi-action-high   { border-inline-start: 3px solid var(--mgr-rail-breach); }
+.kpi-action-medium { border-inline-start: 3px solid var(--mgr-rail-attention); }
+.kpi-action-low    { border-inline-start: 3px solid var(--mgr-rail-healthy); }
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-card { transition: none; }
+}
 </style>
 {% endblock %}
 

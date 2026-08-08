@@ -1,0 +1,456 @@
+/* static/css/parent-dashboard.css - KinJo Bright & Happy Parent Dashboard UI System */
+
+:root {
+  /* Bright, Joyful, Child-Friendly Color Tokens */
+  --parent-hero-bg: linear-gradient(135deg, #059669 0%, #10B981 45%, #F59E0B 100%);
+  --parent-hero-text: #ffffff;
+  --parent-hero-muted: rgba(255, 255, 255, 0.92);
+  
+  --parent-card-bg: #ffffff;
+  --parent-card-border: rgba(16, 185, 129, 0.18);
+  --parent-card-radius: 1.25rem;
+  --parent-card-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.1), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+  --parent-card-shadow-hover: 0 18px 38px -6px rgba(16, 185, 129, 0.18), 0 6px 16px -2px rgba(0, 0, 0, 0.06);
+
+  --parent-pulse-green: #10B981;
+  --parent-pulse-amber: #F59E0B;
+  --parent-pulse-blue: #3B82F6;
+  --parent-pulse-coral: #F43F5E;
+
+  --parent-tile-qa-1: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); /* Mint Green */
+  --parent-tile-qa-2: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); /* Sky Blue */
+  --parent-tile-qa-3: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); /* Playful Purple */
+  --parent-tile-qa-4: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); /* Sunshine Yellow */
+  --parent-tile-qa-5: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%); /* Warm Orange */
+  --parent-tile-qa-6: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); /* Happy Pink */
+}
+
+/* Dark Mode Overrides - Preserving Brightness in Dark */
+[data-theme="dark"]:root,
+:root[data-theme="dark"] {
+  --parent-card-bg: #1e293b;
+  --parent-card-border: rgba(255, 255, 255, 0.12);
+  --parent-card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+  --parent-card-shadow-hover: 0 18px 38px -6px rgba(0, 0, 0, 0.5);
+
+  --parent-tile-qa-1: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.38) 100%);
+  --parent-tile-qa-2: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(59, 130, 246, 0.38) 100%);
+  --parent-tile-qa-3: linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(139, 92, 246, 0.38) 100%);
+  --parent-tile-qa-4: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(245, 158, 11, 0.38) 100%);
+  --parent-tile-qa-5: linear-gradient(135deg, rgba(249, 115, 22, 0.25) 0%, rgba(249, 115, 22, 0.38) 100%);
+  --parent-tile-qa-6: linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(236, 72, 153, 0.38) 100%);
+}
+
+/* ==========================================
+   1. Joyful Hero Banner
+   ========================================== */
+.parent-hero-banner {
+  background: var(--parent-hero-bg);
+  border-radius: var(--parent-card-radius);
+  color: var(--parent-hero-text);
+  padding: 2rem 2.25rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 14px 32px -6px rgba(16, 185, 129, 0.35);
+}
+
+.parent-hero-banner::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -5%;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.parent-hero-banner::after {
+  content: '';
+  position: absolute;
+  bottom: -40%;
+  right: 3%;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(254, 240, 138, 0.3) 0%, rgba(254, 240, 138, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+[dir="rtl"] .parent-hero-banner::before {
+  right: auto;
+  left: -5%;
+}
+
+[dir="rtl"] .parent-hero-banner::after {
+  right: auto;
+  left: 3%;
+}
+
+.parent-hero-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  letter-spacing: -0.3px;
+}
+
+.parent-hero-subtitle {
+  color: var(--parent-hero-muted);
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0;
+  line-height: 1.5;
+}
+
+.parent-hero-badge {
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  padding: 0.45rem 0.95rem;
+  border-radius: 2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.parent-hero-stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.parent-hero-stat-chip {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 1rem;
+  padding: 0.65rem 1.15rem;
+  min-width: 115px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  transition: transform 0.2s ease;
+}
+
+.parent-hero-stat-chip:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.parent-hero-stat-value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+.parent-hero-stat-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
+/* ==========================================
+   2. Children Cards Grid
+   ========================================== */
+.parent-child-card {
+  background: var(--parent-card-bg);
+  border: 1.5px solid var(--parent-card-border);
+  border-radius: var(--parent-card-radius);
+  box-shadow: var(--parent-card-shadow);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.parent-child-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--parent-card-shadow-hover);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.parent-child-card.is-present {
+  border-top: 5px solid var(--parent-pulse-green);
+}
+
+.child-avatar-ring {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10B981 0%, #3B82F6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 2.1rem;
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+  margin: 0 auto 0.85rem;
+  position: relative;
+}
+
+.child-avatar-ring.female {
+  background: linear-gradient(135deg, #EC4899 0%, #8B5CF6 100%);
+  box-shadow: 0 6px 16px rgba(236, 72, 153, 0.3);
+}
+
+.child-presence-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -4px;
+  background: #10B981;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 1rem;
+  border: 2px solid var(--parent-card-bg);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+[dir="rtl"] .child-presence-badge {
+  right: auto;
+  left: -4px;
+}
+
+.pulse-dot-green {
+  width: 8px;
+  height: 8px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  display: inline-block;
+  position: relative;
+}
+
+.child-info-chip {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+  color: #047857;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+[data-theme="dark"] .child-info-chip {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.child-card-report-banner {
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  border-top: 1px dashed #10B981;
+  color: #047857;
+  padding: 0.75rem 1.15rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.child-card-report-banner:hover {
+  background: linear-gradient(135deg, #A7F3D0 0%, #6EE7B7 100%);
+  color: #064E32;
+}
+
+[data-theme="dark"] .child-card-report-banner {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+/* ==========================================
+   3. Super Vibrant Quick Action Grid
+   ========================================== */
+.parent-qa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1.15rem;
+  margin-bottom: 2rem;
+}
+
+.parent-qa-card {
+  background: var(--parent-card-bg);
+  border: 1.5px solid var(--parent-card-border);
+  border-radius: var(--parent-card-radius);
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  text-decoration: none;
+  color: var(--kinjo-color-text-primary, #0f172a);
+  box-shadow: var(--parent-card-shadow);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.parent-qa-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: var(--parent-card-shadow-hover);
+  color: var(--kinjo-color-text-primary, #0f172a);
+}
+
+.parent-qa-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.55rem;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.25s ease;
+}
+
+.parent-qa-card:hover .parent-qa-icon-wrap {
+  transform: scale(1.15) rotate(-4deg);
+}
+
+.qa-theme-enroll .parent-qa-icon-wrap { background: var(--parent-tile-qa-1); color: #047857; }
+.qa-theme-reports .parent-qa-icon-wrap { background: var(--parent-tile-qa-2); color: #1D4ED8; }
+.qa-theme-messages .parent-qa-icon-wrap { background: var(--parent-tile-qa-3); color: #6D28D9; }
+.qa-theme-attendance .parent-qa-icon-wrap { background: var(--parent-tile-qa-4); color: #B45309; }
+.qa-theme-applications .parent-qa-icon-wrap { background: var(--parent-tile-qa-5); color: #C2410C; }
+.qa-theme-profile .parent-qa-icon-wrap { background: var(--parent-tile-qa-6); color: #BE185D; }
+
+.parent-qa-label {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.25;
+}
+
+.parent-qa-subtext {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* ==========================================
+   4. Daily Reports & Activity Hub
+   ========================================== */
+.parent-report-card {
+  background: var(--parent-card-bg);
+  border: 1.5px solid var(--parent-card-border);
+  border-radius: var(--parent-card-radius);
+  box-shadow: var(--parent-card-shadow);
+  overflow: hidden;
+}
+
+.parent-report-item {
+  padding: 1.15rem 1.35rem;
+  border-bottom: 1px solid var(--kinjo-color-border-subtle, #DCEAE3);
+  transition: background-color 0.2s ease;
+}
+
+.parent-report-item:last-child {
+  border-bottom: none;
+}
+
+.parent-report-item:hover {
+  background-color: rgba(16, 185, 129, 0.04);
+}
+
+/* ==========================================
+   5. Help & Support Card
+   ========================================== */
+.support-gradient-card {
+  background: linear-gradient(135deg, #059669 0%, #10B981 60%, #3B82F6 100%);
+  color: #ffffff;
+  border-radius: var(--parent-card-radius);
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+}
+
+.support-gradient-card .btn-light {
+  color: #047857;
+  font-weight: 700;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ==========================================
+    6. RTL Layout Adjustments
+    ========================================== */
+[dir="rtl"] .parent-hero-banner {
+  text-align: right;
+}
+
+[dir="rtl"] .parent-hero-stats {
+  justify-content: flex-start;
+}
+
+[dir="rtl"] .parent-hero-stat-chip {
+  text-align: right;
+}
+
+[dir="rtl"] .parent-hero-badge {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .parent-qa-card {
+  text-align: right;
+}
+
+[dir="rtl"] .parent-qa-icon-wrap {
+  margin-inline-end: 0;
+  margin-inline-start: 0;
+}
+
+[dir="rtl"] .parent-report-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .child-card-report-banner {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .child-card-report-banner i {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] .support-gradient-card {
+  text-align: right;
+}
+
+[dir="rtl"] .parent-report-card .card-header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .parent-child-card .btn {
+  flex-direction: row-reverse;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 575.98px) {
+  .parent-hero-banner {
+    padding: 1.35rem 1.15rem;
+  }
+  .parent-hero-title {
+    font-size: 1.4rem;
+  }
+  .parent-qa-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

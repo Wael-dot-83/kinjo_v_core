@@ -120,7 +120,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Initial load: run only on analytics dashboard page with error handling
     if (document.getElementById("kpiTotal") || document.getElementById("tabOverview") || document.querySelector(".admin-analytics-dashboard")) {
-      loadAdminAnalytics().catch((err) => console.warn("Dashboard initial load suppressed error:", err));
+      loadAdminAnalytics().catch((err) => console.error("Dashboard initial load suppressed error:", err));
     }
   }
 

@@ -522,6 +522,15 @@ def test_daily_report_submit_enforces_jordan_deadline(
 
     app.dependency_overrides[get_current_user] = lambda: supervisor_user
     try:
+        # Warm the route BEFORE freezing: FastAPI builds a route's dependant lazily on
+        # first request, and inside freeze_time `datetime.date` is freezegun's FakeDate,
+        # which Pydantic rejects ("Invalid args for response field ... Optional[date]").
+        # A non-existent id exercises the same path with no state change.
+        client.post("/api/daily-reports/999999999/submit")
+        # Drop the CSRF cookie the warm-up response provisioned: a jar-carried cookie
+        # puts the next call into the middleware's enforced branch (400 "CSRF validation
+        # failed"), which would mask the deadline verdict this test exists to assert.
+        client.cookies.clear()
         with freeze_time("2026-07-25 16:01:00"):
             response = client.post(
                 f"/api/daily-reports/{report.id}/submit",

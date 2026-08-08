@@ -3,7 +3,7 @@
 {% block title %}{{ _('My Children') }}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="page-header-wrap mb-4">
     <div>
         <h1 class="page-header-title">
             <i class="bi bi-people-fill text-primary me-2" aria-hidden="true"></i>
@@ -17,20 +17,32 @@
         </nav>
     </div>
     <div class="page-header-actions">
-        <a href="/enroll" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{{ _('Register New Child') }}
+        <a href="/enroll" class="btn btn-primary rounded-pill px-3 shadow-sm">
+            <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{{ _('Register Child') }}
         </a>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- Children Cards -->
+<!-- Children Cards Container -->
 <div class="row g-4" id="childrenContainer">
-    <!-- Loading skeleton -->
-    <div class="col-12 text-center py-5">
-        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جارٍ التحميل...{% endif %}</span></div>
-        <p class="mt-2 text-muted">{{ _('Loading children data...') }}</p>
+    <!-- Skeleton Shimmer Loader -->
+    <div class="col-md-6 col-lg-4">
+        <div class="parent-child-card p-4 text-center">
+            <div class="skeleton-box rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
+            <div class="skeleton-box w-75 mx-auto mb-2" style="height: 20px;"></div>
+            <div class="skeleton-box w-50 mx-auto mb-3" style="height: 14px;"></div>
+            <div class="skeleton-box w-100 mb-2" style="height: 36px;"></div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-4 d-none d-md-block">
+        <div class="parent-child-card p-4 text-center">
+            <div class="skeleton-box rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
+            <div class="skeleton-box w-75 mx-auto mb-2" style="height: 20px;"></div>
+            <div class="skeleton-box w-50 mx-auto mb-3" style="height: 14px;"></div>
+            <div class="skeleton-box w-100 mb-2" style="height: 36px;"></div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -63,24 +75,48 @@
     };
 
     function getHeaders() {
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
-        const token = AuthService.getToken();
         const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (window.AuthService && AuthService.isAuthenticated()) {
+            const token = AuthService.getToken();
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+        }
+        const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
+                     (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
+                     (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
+        if (csrf) headers['X-CSRF-Token'] = csrf;
         return headers;
     }
 
     function calculateAge(dobStr) {
         if (!dobStr) return '—';
-        const dob = new Date(dobStr);
-        const now = new Date();
-        let years = now.getFullYear() - dob.getFullYear();
-        let months = now.getMonth() - dob.getMonth();
-        if (months < 0) { years--; months += 12; }
-        if (years > 0) return IS_EN ? `${years}y ${months}m` : `${years} سنة و ${months} شهر`;
-        return IS_EN ? `${months}m` : `${months} شهر`;
+        try {
+            const dob = new Date(dobStr);
+            const now = new Date();
+            let years = now.getFullYear() - dob.getFullYear();
+            let months = now.getMonth() - dob.getMonth();
+            if (months < 0) { years--; months += 12; }
+            if (IS_EN) {
+                if (years > 0) return `${years}y ${months}m`;
+                return `${months}m`;
+            }
+            let yearText = '';
+            if (years === 1) yearText = 'سنة واحدة';
+            else if (years === 2) yearText = 'سنتان';
+            else if (years >= 3 && years <= 10) yearText = `${years} سنوات`;
+            else if (years > 10) yearText = `${years} سنة`;
+
+            let monthText = '';
+            if (months === 1) monthText = 'شهر واحد';
+            else if (months === 2) monthText = 'شهران';
+            else if (months >= 3 && months <= 10) monthText = `${months} أشهر`;
+            else if (months > 10) monthText = `${months} شهرًا`;
+
+            if (years > 0 && months > 0) return `${yearText} و ${monthText}`;
+            if (years > 0) return yearText;
+            return monthText || 'أقل من شهر';
+        } catch (e) {
+            return dobStr;
+        }
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -91,7 +127,7 @@
         const container = document.getElementById('childrenContainer');
         try {
             const resp = await fetch('/api/parent/children', { headers: getHeaders() });
-            if (!resp.ok) throw new Error('Failed to load children');
+            if (!resp.ok) throw new Error(T('تعذر تحميل بيانات الأطفال', 'Failed to load children'));
 
             const data = await resp.json();
             const children = data.children || [];
@@ -99,38 +135,39 @@
             if (children.length === 0) {
                 container.innerHTML = `
                     <div class="col-12">
-                        <div class="card border-dashed">
-                            <div class="card-body text-center py-5">
-                                <i class="bi bi-person-plus fs-1 text-primary mb-3 d-block"></i>
-                                <h5>${T('لم تقم بتسجيل أي طفل بعد', 'No children registered yet')}</h5>
-                                <p class="text-muted">${T('ابدأ بتسجيل طفلك في إحدى الحضانات', 'Start by enrolling your child in a kindergarten')}</p>
-                                <a href="/enroll" class="btn btn-primary btn-lg">
-                                    <i class="bi bi-plus-circle me-2"></i>${T('تسجيل طفل جديد', 'Register New Child')}
-                                </a>
+                        <div class="parent-child-card p-5 text-center border-dashed">
+                            <div class="avatar-lg bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 72px; height: 72px;">
+                                <i class="bi bi-person-plus fs-1"></i>
                             </div>
+                            <h4 class="fw-bold mb-2">${T('لم تقم بتسجيل أي طفل بعد', 'No children registered yet')}</h4>
+                            <p class="text-muted mb-4 max-w-md mx-auto">${T('ابدأ بتسجيل طفلك في إحدى الحضانات المعتمدة للاستفادة من كامل خدمات المنصة.', 'Start by enrolling your child in a kindergarten to benefit from all services.')}</p>
+                            <a href="/enroll" class="btn btn-primary rounded-pill px-4 shadow">
+                                <i class="bi bi-plus-circle me-2"></i>${T('تسجيل طفل جديد', 'Register New Child')}
+                            </a>
                         </div>
                     </div>
                 `;
                 return;
             }
 
-            // Children count summary
             let summaryHtml = `
-                <div class="col-12">
-                    <div class="alert alert-info d-flex align-items-center">
-                        <i class="bi bi-info-circle me-2"></i>
-                        ${T(`لديك <strong>${children.length}</strong> ${children.length === 1 ? 'طفل' : children.length === 2 ? 'طفلين' : children.length <= 10 ? 'أطفال' : 'طفل'} مسجل${children.length === 2 ? 'ين' : 'ين'}`,
-                           `You have <strong>${children.length}</strong> registered ${children.length === 1 ? 'child' : 'children'}`)}
+                <div class="col-12 mb-2">
+                    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center rounded-3">
+                        <i class="bi bi-info-circle-fill fs-5 me-3 text-info"></i>
+                        <div>
+                            ${T(`لديك <strong>${children.length}</strong> ${children.length === 1 ? 'طفل' : children.length === 2 ? 'طفلين' : children.length <= 10 ? 'أطفال' : 'طفل'} مسجل${children.length === 2 ? 'ين' : 'ين'} في حسابك.`,
+                               `You have <strong>${children.length}</strong> registered ${children.length === 1 ? 'child' : 'children'} in your account.`)}
+                        </div>
                     </div>
                 </div>
             `;
 
             container.innerHTML = summaryHtml + children.map(child => {
                 const age = calculateAge(child.date_of_birth);
-                const genderText = child.gender === 'MALE' ? T('ذكر', 'Male') : child.gender === 'FEMALE' ? T('أنثى', 'Female') : '—';
-                const genderIcon = child.gender === 'MALE' ? 'bi-gender-male text-primary' : 'bi-gender-female text-danger';
+                const isFemale = (child.gender || '').toUpperCase() === 'FEMALE';
+                const genderText = isFemale ? T('أنثى', 'Female') : T('ذكر', 'Male');
+                const genderThemeClass = isFemale ? 'female' : '';
 
-                // Enrollment badges
                 let enrollmentHtml = '';
                 if (child.enrollments && child.enrollments.length > 0) {
                     enrollmentHtml = child.enrollments.map(e => `
@@ -138,7 +175,7 @@
                             <small class="text-muted text-truncate" style="max-width: 60%;" title="${escHtml(e.kindergarten_name)}">
                                 <i class="bi bi-building me-1"></i>${escHtml(e.kindergarten_name)}
                             </small>
-                            <span class="badge ${STATUS_CLASS[e.status] || 'badge-soft badge-soft-secondary'}">
+                            <span class="badge ${STATUS_CLASS[e.status] || 'badge-soft badge-soft-secondary'} rounded-pill">
                                 ${STATUS_LABEL[e.status] || e.status}
                             </span>
                         </div>
@@ -153,42 +190,42 @@
 
                 return `
                 <div class="col-md-6 col-lg-4">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="avatar-md bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; min-width: 50px;">
-                                    <i class="bi bi-emoji-smile text-primary fs-4"></i>
+                    <div class="parent-child-card h-100">
+                        <div class="p-4 flex-grow-1">
+                            <div class="d-flex align-items-start justify-content-between mb-3">
+                                <div class="child-avatar-ring ${genderThemeClass} mb-0" style="width: 56px; height: 56px; font-size: 1.5rem;">
+                                    <i class="bi bi-emoji-smile-fill"></i>
                                 </div>
                                 <div>
-                                    <h5 class="card-title mb-0">${escHtml(child.first_name)} ${escHtml(child.last_name)}</h5>
-                                    <small class="text-muted">
-                                        <i class="bi ${genderIcon} me-1"></i>${genderText} · ${age}
-                                    </small>
-                                </div>
-                                <div class="ms-auto">
                                     ${child.profile_complete
-                        ? `<span class="badge badge-soft badge-soft-success-subtle text-success" title="${T('مكتمل', 'Complete')}"><i class="bi bi-check-circle"></i></span>`
-                        : `<span class="badge badge-soft badge-soft-warning-subtle text-warning" title="${T('الملف غير مكتمل', 'Incomplete profile')}"><i class="bi bi-exclamation-circle"></i></span>`
-                    }
+                                        ? `<span class="badge bg-success-subtle text-success rounded-pill px-3 py-1" title="${T('مكتمل', 'Complete')}"><i class="bi bi-check-circle me-1"></i>${T('مكتمل', 'Complete')}</span>`
+                                        : `<span class="badge bg-warning-subtle text-warning rounded-pill px-3 py-1" title="${T('غير مكتمل', 'Incomplete')}"><i class="bi bi-exclamation-circle me-1"></i>${T('غير مكتمل', 'Incomplete')}</span>`
+                                    }
                                 </div>
                             </div>
 
-                            <dl class="row mb-2 small">
-                                <dt class="col-5 text-muted">${T('تاريخ الميلاد', 'Date of Birth')}</dt>
-                                <dd class="col-7">${escHtml(child.date_of_birth || '—')}</dd>
-                                <dt class="col-5 text-muted">${T('اسم الأب', 'Father Name')}</dt>
-                                <dd class="col-7">${escHtml(child.father_name || '—')}</dd>
+                            <h4 class="fw-bold mb-1 text-dark">${escHtml(child.first_name)} ${escHtml(child.last_name || '')}</h4>
+                            <p class="text-muted small mb-3">
+                                <span class="child-info-chip me-1">${genderText}</span>
+                                <span class="child-info-chip">${age}</span>
+                            </p>
+
+                            <dl class="row mb-2 small text-muted">
+                                <dt class="col-5 fw-normal">${T('تاريخ الميلاد', 'Date of Birth')}:</dt>
+                                <dd class="col-7 fw-semibold text-dark mb-1">${escHtml(child.date_of_birth || '—')}</dd>
+                                <dt class="col-5 fw-normal">${T('اسم الأب', 'Father Name')}:</dt>
+                                <dd class="col-7 fw-semibold text-dark mb-0">${escHtml(child.father_name || '—')}</dd>
                             </dl>
 
                             ${enrollmentHtml}
                         </div>
-                        <div class="card-footer bg-transparent">
+                        <div class="card-footer bg-light border-top p-3">
                             <div class="d-flex gap-2">
-                                <a href="/children/${child.id}" class="btn btn-sm btn-outline-primary flex-fill">
-                                    <i class="bi bi-eye me-1"></i>${T('عرض', 'View')}
+                                <a href="/children/${child.id}" class="btn btn-sm btn-outline-primary flex-fill rounded-pill fw-semibold">
+                                    <i class="bi bi-eye me-1"></i>${T('عرض الملف', 'View Profile')}
                                 </a>
-                                <a href="/enroll" class="btn btn-sm btn-outline-success flex-fill">
-                                    <i class="bi bi-plus me-1"></i>${T('تسجيل', 'Enroll')}
+                                <a href="/my-reports?child_id=${child.id}" class="btn btn-sm btn-outline-success flex-fill rounded-pill fw-semibold">
+                                    <i class="bi bi-journal-text me-1"></i>${T('التقارير', 'Reports')}
                                 </a>
                             </div>
                         </div>
@@ -203,7 +240,7 @@
                 <div class="col-12 text-center text-danger py-5">
                     <i class="bi bi-exclamation-triangle fs-1 d-block mb-3"></i>
                     <p>${T('خطأ في تحميل بيانات الأطفال', 'Error loading children data')}</p>
-                    <button class="btn btn-outline-primary" onclick="loadChildren()">
+                    <button class="btn btn-outline-primary rounded-pill px-4" onclick="loadChildren()">
                         <i class="bi bi-arrow-clockwise me-1"></i>${T('إعادة المحاولة', 'Retry')}
                     </button>
                 </div>

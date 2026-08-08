@@ -2,116 +2,194 @@
 
 {% block title %}{{ _('Parent Dashboard') }}{% endblock %}
 
-{% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <h1 class="page-header-title">
-            <i class="bi bi-house-heart text-primary me-2" aria-hidden="true"></i>
-            {{ _('Welcome') }}
-        </h1>
-        <p class="text-muted mb-0 small">{{ _("Follow your children's news and daily reports") }}</p>
+{% block content %}
+<!-- Personalized Hero Banner -->
+<div class="parent-hero-banner mb-4">
+    <div class="row align-items-center g-3">
+        <div class="col-lg-7">
+            <div class="parent-hero-badge mb-2">
+                <i class="bi bi-calendar3 me-1"></i>
+                <span id="heroDateStr">{{ today.strftime('%Y-%m-%d') if today else '' }}</span>
+            </div>
+            <h1 class="parent-hero-title">
+                <span id="heroGreetingIcon"><i class="bi bi-sun-fill text-warning"></i></span>
+                <span id="heroGreetingText">{{ _('Welcome back,') }}</span>
+                <span>{{ current_user.first_name or current_user.full_name or current_user.username or _('Parent') }}</span>
+            </h1>
+            <p class="parent-hero-subtitle">
+                {{ _("Follow your children's daily activities, attendance status, and kindergarten reports in real-time.") }}
+            </p>
+        </div>
+        <div class="col-lg-5">
+            <div class="parent-hero-stats">
+                <div class="parent-hero-stat-chip">
+                    <div class="parent-hero-stat-value" id="heroStatChildren">0</div>
+                    <div class="parent-hero-stat-label">{{ _('Children') }}</div>
+                </div>
+                <div class="parent-hero-stat-chip">
+                    <div class="parent-hero-stat-value" id="heroStatPresent">0</div>
+                    <div class="parent-hero-stat-label">{{ _('Present Today') }}</div>
+                </div>
+                <div class="parent-hero-stat-chip">
+                    <div class="parent-hero-stat-value" id="heroStatReports">0</div>
+                    <div class="parent-hero-stat-label">{{ _('Reports') }}</div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-{% endblock %}
 
-{% block content %}
-<!-- Children Overview -->
+<!-- Children Overview Cards Header -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h4 class="fw-bold mb-0 text-dark d-flex align-items-center">
+        <i class="bi bi-emoji-smile text-primary me-2 fs-4"></i>
+        {{ _('My Children') }}
+    </h4>
+    <a href="/parent/children" class="btn btn-sm btn-outline-primary rounded-pill">
+        <i class="bi bi-people me-1"></i> {{ _('Manage Children') }}
+    </a>
+</div>
+
+<!-- Children Overview Grid -->
 <div class="row g-4 mb-4" id="childrenCards">
-    <!-- Populated by JavaScript -->
-    <div class="col-12 text-center py-5">
-        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جارٍ التحميل...{% endif %}</span></div>
-        <p class="mt-2 text-muted">{{ _('Loading children data...') }}</p>
+    <!-- Skeleton Loading Placeholder -->
+    <div class="col-md-6 col-lg-4">
+        <div class="parent-child-card p-4 text-center">
+            <div class="skeleton-box rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
+            <div class="skeleton-box w-75 mx-auto mb-2" style="height: 20px;"></div>
+            <div class="skeleton-box w-50 mx-auto mb-3" style="height: 14px;"></div>
+            <div class="skeleton-box w-100 mb-2" style="height: 36px;"></div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-4 d-none d-md-block">
+        <div class="parent-child-card p-4 text-center">
+            <div class="skeleton-box rounded-circle mx-auto mb-3" style="width: 72px; height: 72px;"></div>
+            <div class="skeleton-box w-75 mx-auto mb-2" style="height: 20px;"></div>
+            <div class="skeleton-box w-50 mx-auto mb-3" style="height: 14px;"></div>
+            <div class="skeleton-box w-100 mb-2" style="height: 36px;"></div>
+        </div>
     </div>
 </div>
 
 <!-- Quick Actions for Parents -->
-<div class="row g-3 mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0"><i class="bi bi-lightning-fill me-2 text-warning"></i>{{ _('Quick Actions') }}</h5>
+<div class="mb-4">
+    <h5 class="fw-bold mb-3 d-flex align-items-center">
+        <i class="bi bi-lightning-charge-fill text-warning me-2"></i>
+        {{ _('Quick Services') }}
+    </h5>
+    <div class="parent-qa-grid">
+        <a href="/enroll" class="parent-qa-card qa-theme-enroll">
+            <div class="parent-qa-icon-wrap"><i class="bi bi-person-plus-fill"></i></div>
+            <div class="parent-qa-label">{{ _('Register Child') }}</div>
+            <div class="parent-qa-subtext">{{ _('New Enrollment Application') }}</div>
+        </a>
+        <a href="/my-reports" class="parent-qa-card qa-theme-reports">
+            <div class="parent-qa-icon-wrap"><i class="bi bi-journal-check"></i></div>
+            <div class="parent-qa-label">{{ _('Daily Reports') }}</div>
+            <div class="parent-qa-subtext">{{ _('View Daily Logs & Notes') }}</div>
+        </a>
+        <a href="/communication/messages" class="parent-qa-card qa-theme-messages">
+            <div class="parent-qa-icon-wrap"><i class="bi bi-chat-heart-fill"></i></div>
+            <div class="parent-qa-label">{{ _('Messages') }}</div>
+            <div class="parent-qa-subtext">{{ _('Contact Teachers & KG') }}</div>
+        </a>
+        <a href="/parent/attendance" class="parent-qa-card qa-theme-attendance">
+            <div class="parent-qa-icon-wrap"><i class="bi bi-calendar2-check-fill"></i></div>
+            <div class="parent-qa-label">{{ _('Attendance Log') }}</div>
+            <div class="parent-qa-subtext">{{ _('Track Check-in Records') }}</div>
+        </a>
+        <a href="/parent/enrollments" class="parent-qa-card qa-theme-applications">
+            <div class="parent-qa-icon-wrap"><i class="bi bi-file-earmark-text-fill"></i></div>
+            <div class="parent-qa-label">{{ _('Applications') }}</div>
+            <div class="parent-qa-subtext">{{ _('Status & History') }}</div>
+        </a>
+        <a href="/parent/profile" class="parent-qa-card qa-theme-profile">
+            <div class="parent-qa-icon-wrap"><i class="bi bi-person-bounding-box"></i></div>
+            <div class="parent-qa-label">{{ _('My Profile') }}</div>
+            <div class="parent-qa-subtext">{{ _('Account & Parent Info') }}</div>
+        </a>
+    </div>
+</div>
+
+<!-- Main Activity Hub -->
+<div class="row g-4">
+    <!-- Left Column: Latest Daily Reports -->
+    <div class="col-12 col-lg-8">
+        <div class="parent-report-card h-100">
+            <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center border-bottom">
+                <h5 class="fw-bold mb-0 d-flex align-items-center">
+                    <i class="bi bi-journal-text me-2 text-primary"></i>
+                    {{ _('Latest Daily Reports') }}
+                </h5>
+                <a href="/my-reports" class="btn btn-sm btn-outline-primary rounded-pill">
+                    {{ _('View All') }} <i class="bi bi-arrow-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} ms-1"></i>
+                </a>
             </div>
-            <div class="card-body d-flex flex-column gap-2 p-3">
-                <div class="row g-2">
-                    <div class="col-6 col-md-3">
-                        <a href="/enroll" class="quick-action-btn qa-primary">
-                            <span class="qa-icon"><i class="bi bi-person-plus"></i></span>
-                            <span class="d-none d-sm-inline">{{ _('Register New Child') }}</span>
-                            <span class="d-sm-none">{{ _('Register') }}</span>
-                        </a>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <a href="/my-reports" class="quick-action-btn qa-success">
-                            <span class="qa-icon"><i class="bi bi-journal-text"></i></span>
-                            <span class="d-none d-sm-inline">{{ _('Daily Reports') }}</span>
-                            <span class="d-sm-none">{{ _('Reports') }}</span>
-                        </a>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <a href="/messages" class="quick-action-btn qa-info">
-                            <span class="qa-icon"><i class="bi bi-chat-dots"></i></span>
-                            <span>{{ _('Messages') }}</span>
-                        </a>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <a href="/parent/profile" class="quick-action-btn" style="border-color:var(--kinjo-color-border)">
-                            <span class="qa-icon" style="background:#f1f5f9;color:#64748b"><i class="bi bi-person-circle"></i></span>
-                            <span>{{ _('My Profile') }}</span>
-                        </a>
+            <div class="card-body p-0">
+                <div id="latestReports">
+                    <!-- Loading Shimmer -->
+                    <div class="p-4 text-center">
+                        <div class="skeleton-box w-100 mb-3" style="height: 48px;"></div>
+                        <div class="skeleton-box w-100 mb-3" style="height: 48px;"></div>
+                        <div class="skeleton-box w-100" style="height: 48px;"></div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Sidebar Widgets -->
+    <div class="col-12 col-lg-4">
+        <!-- Upcoming Events Widget -->
+        <div class="parent-report-card mb-4">
+            <div class="card-header bg-transparent py-3 border-bottom">
+                <h5 class="fw-bold mb-0 d-flex align-items-center fs-6">
+                    <i class="bi bi-calendar-event me-2 text-warning"></i>
+                    {{ _('Upcoming Events & Activities') }}
+                </h5>
+            </div>
+            <div class="card-body p-0" id="upcomingEvents">
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-calendar-x d-block fs-1 mb-2 opacity-25 text-warning"></i>
+                    <p class="small mb-0">{{ _('No upcoming events scheduled') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help & Contact Card -->
+        <div class="support-gradient-card">
+            <div class="mb-3">
+                <div class="avatar-lg bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                    <i class="bi bi-headset fs-2 text-white"></i>
+                </div>
+            </div>
+            <h5 class="fw-bold mb-1 text-white">{{ _('Need Assistance?') }}</h5>
+            <p class="small text-white opacity-75 mb-3">{{ _('Have questions about your child or kindergarten services? Our support team is here to help.') }}</p>
+            <a href="/communication/messages" class="btn btn-light rounded-pill btn-sm px-4 shadow-sm">
+                <i class="bi bi-chat-dots me-1"></i> {{ _('Contact Support') }}
+            </a>
         </div>
     </div>
 </div>
 
-<!-- Latest Reports Section -->
-<div class="row g-3">
-    <div class="col-12 col-lg-8">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-journal-text me-2"></i>
-                    {{ _('Latest Daily Reports') }}
+<!-- Daily Report View Modal -->
+<div class="modal fade" id="parentReportModal" tabindex="-1" aria-labelledby="parentReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem;">
+            <div class="modal-header border-bottom bg-light">
+                <h5 class="modal-title fw-bold" id="parentReportModalLabel">
+                    <i class="bi bi-journal-text text-primary me-2"></i>
+                    <span id="modalReportTitle">{{ _('Daily Report Details') }}</span>
                 </h5>
-                <a href="/my-reports" class="btn btn-sm btn-outline-primary">{{ _('View All') }}</a>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
             </div>
-            <div class="card-body p-0">
-                <div class="list-group list-group-flush" id="latestReports">
-                    <!-- Populated by JavaScript -->
+            <div class="modal-body p-4" id="modalReportBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div class="col-12 col-lg-4">
-        <!-- Upcoming Events -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-calendar-event me-2"></i>
-                    {{ _('Upcoming Events') }}
-                </h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="list-group list-group-flush" id="upcomingEvents">
-                    <div class="list-group-item text-center text-muted py-4">
-                        <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-25"></i>
-                        <small>{{ _('No upcoming events') }}</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Contact Support -->
-        <div class="card">
-            <div class="card-body text-center">
-                <i class="bi bi-headset fs-1 text-primary mb-3"></i>
-                <h5>{{ _('Need Help?') }}</h5>
-                <p class="text-muted small">{{ _('Contact kindergarten management') }}</p>
-                <a href="/communication/messages" class="btn btn-outline-primary">
-                    <i class="bi bi-chat me-2"></i>{{ _('Contact Us') }}
-                </a>
+            <div class="modal-footer border-top bg-light">
+                <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">{{ _('Close') }}</button>
             </div>
         </div>
     </div>
@@ -130,32 +208,80 @@
             ? appCurrentLocale()
             : (document.documentElement.lang === 'en' ? 'en-US' : 'ar-JO'));
 
-    // Auth helper — session is the HttpOnly kinjo_session cookie, sent automatically.
     function getHeaders() {
-        return { 'Content-Type': 'application/json' };
+        const headers = { 'Content-Type': 'application/json' };
+        if (window.AuthService && AuthService.isAuthenticated()) {
+            const token = AuthService.getToken();
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+        }
+        const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
+                     (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
+                     (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
+        if (csrf) headers['X-CSRF-Token'] = csrf;
+        return headers;
     }
 
     function formatDate(dateStr) {
         if (!dateStr) return '';
-        return new Date(dateStr).toLocaleDateString(parentLocale());
+        try {
+            return new Date(dateStr).toLocaleDateString(parentLocale(), {
+                year: 'numeric', month: 'short', day: 'numeric'
+            });
+        } catch (e) {
+            return dateStr;
+        }
     }
 
     function getStatusBadge(status) {
         const normalized = (status || '').toString().toUpperCase();
         const badges = {
-            APPROVED: `<span class="badge badge-soft badge-soft-success">${parentText('status.approved', 'معتمد', 'Approved')}</span>`,
-            SENT_TO_PARENT: `<span class="badge badge-soft badge-soft-primary">${parentText('status.sent_to_parent', 'مرسل لولي الأمر', 'Sent to parent')}</span>`,
-            SUBMITTED: `<span class="badge badge-soft badge-soft-warning">${parentText('status.pending_review', 'قيد المراجعة', 'Under review')}</span>`,
-            DRAFT: `<span class="badge badge-soft badge-soft-secondary">${parentText('status.draft', 'مسودة', 'Draft')}</span>`,
-            REJECTED: `<span class="badge badge-soft badge-soft-danger">${parentText('status.rejected', 'مرفوض', 'Rejected')}</span>`,
-            RETURNED: `<span class="badge badge-soft badge-soft-danger">${parentText('status.returned', 'مرفوض', 'Rejected')}</span>`,
+            APPROVED: `<span class="badge badge-soft badge-soft-success rounded-pill px-3 py-2"><i class="bi bi-check-circle me-1"></i>${parentText('status.approved', 'معتمد', 'Approved')}</span>`,
+            ACCEPTED: `<span class="badge badge-soft badge-soft-success rounded-pill px-3 py-2"><i class="bi bi-check-lg me-1"></i>${parentText('status.accepted', 'مقبول', 'Accepted')}</span>`,
+            ACTIVE: `<span class="badge badge-soft badge-soft-success rounded-pill px-3 py-2"><i class="bi bi-person-check me-1"></i>${parentText('status.active', 'نشط', 'Active')}</span>`,
+            SENT_TO_PARENT: `<span class="badge badge-soft badge-soft-primary rounded-pill px-3 py-2"><i class="bi bi-send me-1"></i>${parentText('status.sent_to_parent', 'مرسل لولي الأمر', 'Sent to parent')}</span>`,
+            SUBMITTED: `<span class="badge badge-soft badge-soft-info rounded-pill px-3 py-2"><i class="bi bi-file-earmark-text me-1"></i>${parentText('status.submitted', 'مقدّم', 'Submitted')}</span>`,
+            PENDING_REVIEW: `<span class="badge badge-soft badge-soft-warning rounded-pill px-3 py-2"><i class="bi bi-hourglass-split me-1"></i>${parentText('status.pending_review', 'قيد المراجعة', 'Under review')}</span>`,
+            PENDING: `<span class="badge badge-soft badge-soft-warning rounded-pill px-3 py-2"><i class="bi bi-clock me-1"></i>${parentText('status.pending', 'قيد الانتظار', 'Pending')}</span>`,
+            WAITLISTED: `<span class="badge badge-soft badge-soft-warning rounded-pill px-3 py-2"><i class="bi bi-list-ol me-1"></i>${parentText('status.waitlisted', 'قائمة الانتظار', 'Waitlisted')}</span>`,
+            DRAFT: `<span class="badge badge-soft badge-soft-secondary rounded-pill px-3 py-2"><i class="bi bi-pencil me-1"></i>${parentText('status.draft', 'مسودة', 'Draft')}</span>`,
+            REJECTED: `<span class="badge badge-soft badge-soft-danger rounded-pill px-3 py-2"><i class="bi bi-x-circle me-1"></i>${parentText('status.rejected', 'مرفوض', 'Rejected')}</span>`,
+            RETURNED: `<span class="badge badge-soft badge-soft-danger rounded-pill px-3 py-2"><i class="bi bi-arrow-counterclockwise me-1"></i>${parentText('status.returned', 'مُرجَع', 'Returned')}</span>`,
+            WITHDRAWN: `<span class="badge badge-soft badge-soft-secondary rounded-pill px-3 py-2"><i class="bi bi-dash-circle me-1"></i>${parentText('status.withdrawn', 'منسحب', 'Withdrawn')}</span>`,
         };
-        return badges[normalized] || `<span class="badge bg-light text-dark">${parentText('common.unknown', 'غير معروف', 'Unknown')}</span>`;
+        return badges[normalized] || `<span class="badge bg-light text-dark rounded-pill px-3 py-2">${parentText('common.unknown', 'غير معروف', 'Unknown')}</span>`;
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
+        setupHeroGreeting();
         await loadParentDashboard();
     });
+
+    function setupHeroGreeting() {
+        const hour = new Date().getHours();
+        const iconEl = document.getElementById('heroGreetingIcon');
+        const textEl = document.getElementById('heroGreetingText');
+        const isEn = document.documentElement.lang === 'en';
+
+        if (hour >= 5 && hour < 12) {
+            if (iconEl) iconEl.innerHTML = '<i class="bi bi-sun-fill text-warning"></i>';
+            if (textEl) textEl.textContent = isEn ? 'Good Morning,' : 'صباح الخير،';
+        } else if (hour >= 12 && hour < 18) {
+            if (iconEl) iconEl.innerHTML = '<i class="bi bi-brightness-high-fill text-warning"></i>';
+            if (textEl) textEl.textContent = isEn ? 'Good Afternoon,' : 'مساء الخير،';
+        } else {
+            if (iconEl) iconEl.innerHTML = '<i class="bi bi-moon-stars-fill text-info"></i>';
+            if (textEl) textEl.textContent = isEn ? 'Good Evening,' : 'مساء الخير،';
+        }
+
+        const dateEl = document.getElementById('heroDateStr');
+        if (dateEl) {
+            dateEl.textContent = new Date().toLocaleDateString(parentLocale(), {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+        }
+    }
+
+    let globalReports = [];
 
     async function loadParentDashboard() {
         try {
@@ -165,27 +291,36 @@
             const data = await resp.json();
             const children = data.children || [];
 
+            const presentCount = children.filter(c => c.attendance_today && c.attendance_today.checked_in && !c.attendance_today.checked_out).length;
+            document.getElementById('heroStatChildren').textContent = children.length;
+            document.getElementById('heroStatPresent').textContent = presentCount;
+
             renderChildrenCards(children);
 
-            // Fetch latest reports for all children
             const reportsPromises = children.map(child =>
                 fetch(`/api/daily-reports/child/${child.id}`, { headers: getHeaders() })
                     .then(r => r.ok ? r.json() : { reports: [] })
-                    .then(d => d.reports.map(r => ({ ...r, child_name: child.first_name, child_id: child.id })))
+                    .then(d => (d.reports || []).map(r => ({ ...r, child_name: child.first_name + ' ' + (child.last_name || ''), child_id: child.id })))
             );
 
             const results = await Promise.allSettled(reportsPromises);
-            const allReports = results
+            globalReports = results
                 .filter(result => result.status === 'fulfilled')
                 .flatMap(result => result.value)
                 .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            renderLatestReports(allReports.slice(0, 5)); // Show top 5
+            document.getElementById('heroStatReports').textContent = globalReports.length;
+            renderLatestReports(globalReports.slice(0, 5));
 
         } catch (error) {
             console.error('Error loading parent dashboard:', error);
-            document.getElementById('childrenCards').innerHTML =
-                `<div class="col-12 text-center text-danger">${parentText('common.load_error', 'خطأ في تحميل البيانات', 'Error loading data')}</div>`;
+            document.getElementById('childrenCards').innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-danger d-flex align-items-center rounded-3 shadow-sm">
+                        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                        <div>${parentText('common.load_error', 'حدث خطأ أثناء تحميل بيانات أطفالك. يرجى إعادة المحاولة.', 'An error occurred while loading your children data. Please retry.')}</div>
+                    </div>
+                </div>`;
         }
     }
 
@@ -195,13 +330,15 @@
         if (!children || children.length === 0) {
             container.innerHTML = `
                 <div class="col-12">
-                    <div class="card border-dashed">
-                        <div class="card-body text-center py-5">
-                            <i class="bi bi-person-plus fs-1 text-primary mb-3"></i>
-                            <h5>${parentText('dashboard.parent.no_children', 'لم تقم بتسجيل أي طفل بعد', 'You have not enrolled any child yet')}</h5>
-                            <p class="text-muted">${parentText('dashboard.parent.start_enrollment', 'ابدأ بتسجيل طفلك في إحدى الحضانات', 'Start by enrolling your child in a kindergarten')}</p>
-                            <a href="/enroll" class="btn btn-primary btn-lg">
-                                <i class="bi bi-plus-circle me-2"></i>${parentText('dashboard.parent.enroll_child', 'تسجيل طفل', 'Enroll child')}
+                    <div class="parent-child-card p-5 text-center border-dashed">
+                        <div class="avatar-lg bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 72px; height: 72px;">
+                            <i class="bi bi-person-plus fs-1"></i>
+                        </div>
+                        <h4 class="fw-bold mb-2">${parentText('dashboard.parent.no_children', 'لم تقم بتسجيل أي طفل بعد', 'You have not enrolled any child yet')}</h4>
+                        <p class="text-muted mb-4 max-w-md mx-auto">${parentText('dashboard.parent.start_enrollment', 'ابدأ بتسجيل طفلك في إحدى الحضانات المعتمدة للاستفادة من كامل خدمات المنصة.', 'Start by enrolling your child in an accredited kindergarten to benefit from all platform services.')}</p>
+                        <div>
+                            <a href="/enroll" class="btn btn-primary btn-lg rounded-pill px-4 shadow">
+                                <i class="bi bi-plus-circle me-2"></i>${parentText('dashboard.parent.enroll_child', 'تسجيل طفل جديد', 'Enroll New Child')}
                             </a>
                         </div>
                     </div>
@@ -212,39 +349,47 @@
 
         container.innerHTML = children.map(child => {
             const isPresent = child.attendance_today && child.attendance_today.checked_in && !child.attendance_today.checked_out;
+            const isFemale = (child.gender || '').toUpperCase() === 'FEMALE';
+            const avatarIcon = 'bi-emoji-smile-fill';
+            const genderThemeClass = isFemale ? 'female' : '';
             const hasReport = child.latest_report_date === SERVER_TODAY;
 
             return `
             <div class="col-md-6 col-lg-4">
-                <div class="card h-100 ${isPresent ? 'border-success' : ''}">
-                    <div class="card-body text-center">
-                        <div class="position-relative d-inline-block mb-3">
-                            <div class="avatar-lg bg-primary bg-opacity-10 rounded-circle 
-                                        d-flex align-items-center justify-content-center mx-auto">
-                                <i class="bi bi-emoji-smile text-primary fs-1"></i>
-                            </div>
+                <div class="parent-child-card ${isPresent ? 'is-present' : ''}">
+                    <div class="p-4 text-center flex-grow-1">
+                        <div class="child-avatar-ring ${genderThemeClass}">
+                            <i class="bi ${avatarIcon}"></i>
                             ${isPresent ? `
-                                <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-success">
-                                    <i class="bi bi-check-lg"></i> ${parentText('attendance.present', 'حاضر', 'Present')}
-                                </span>
+                                <div class="child-presence-badge" title="${parentText('attendance.present', 'حاضر اليوم', 'Present Today')}">
+                                    <span class="pulse-dot-green"></span>
+                                    <span>${parentText('attendance.present', 'حاضر', 'Present')}</span>
+                                </div>
                             ` : ''}
                         </div>
-                        <h4 class="card-title mb-1">${escHtml(child.first_name)} ${escHtml(child.last_name)}</h4>
-                        <p class="text-muted mb-2">${child.enrollment ? parentText('status.enrolled', 'مسجل', 'Enrolled') : parentText('status.pending_enrollment', 'بانتظار التسجيل', 'Pending enrollment')}</p>
+                        <h4 class="fw-bold mb-1 text-dark">${escHtml(child.first_name)} ${escHtml(child.last_name || '')}</h4>
+                        <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
+                            <span class="child-info-chip">
+                                <i class="bi bi-building"></i> ${escHtml(child.kindergarten_name || parentText('status.enrolled', 'مسجل', 'Enrolled'))}
+                            </span>
+                        </div>
                         
-                        <div class="d-grid gap-2">
-                            <a href="/children/${child.id}" class="btn btn-outline-primary">
-                                <i class="bi bi-person me-2"></i>${parentText('nav.profile', 'الملف الشخصي', 'Profile')}
+                        <div class="d-grid gap-2 col-11 mx-auto mt-3">
+                            <a href="/children/${child.id}" class="btn btn-sm btn-outline-primary rounded-pill fw-semibold">
+                                <i class="bi bi-person-badge me-1"></i> ${parentText('nav.profile', 'الملف الشخصي', 'Profile')}
                             </a>
-                            <a href="/my-reports?child_id=${child.id}" class="btn btn-outline-success">
-                                <i class="bi bi-journal-text me-2"></i>${parentText('common.reports', 'التقارير', 'Reports')}
+                            <a href="/my-reports?child_id=${child.id}" class="btn btn-sm btn-outline-success rounded-pill fw-semibold">
+                                <i class="bi bi-journal-text me-1"></i> ${parentText('common.reports', 'التقارير اليومية', 'Daily Reports')}
                             </a>
                         </div>
                     </div>
                     ${hasReport ? `
-                        <div class="card-footer bg-success bg-opacity-10 text-success text-center">
-                            <i class="bi bi-check-circle me-1"></i>
-                            ${parentText('dashboard.parent.today_report_available', 'تقرير اليوم متاح', 'Today report is available')}
+                        <div class="child-card-report-banner" onclick="viewChildTodayReport(${child.id})">
+                            <span class="d-flex align-items-center">
+                                <i class="bi bi-stars text-warning me-2 fs-5"></i>
+                                ${parentText('dashboard.parent.today_report_available', 'تقرير اليوم جاهز للعرض', 'Today report is ready')}
+                            </span>
+                            <i class="bi bi-arrow-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %}-short fs-4"></i>
                         </div>
                     ` : ''}
                 </div>
@@ -258,28 +403,105 @@
 
         if (!reports || reports.length === 0) {
             container.innerHTML = `
-                <div class="text-center py-4 text-muted">
-                    <i class="bi bi-journal d-block fs-2 mb-2 opacity-25"></i>
-                    <small>${parentText('dashboard.parent.no_reports', 'لا توجد تقارير حالياً', 'No reports available')}</small>
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-journal-x d-block fs-1 mb-2 opacity-25 text-secondary"></i>
+                    <h6 class="fw-bold mb-1">${parentText('dashboard.parent.no_reports', 'لا توجد تقارير يومية حالياً', 'No daily reports available')}</h6>
+                    <small>${parentText('dashboard.parent.reports_hint', 'ستظهر التقارير اليومية هنا فور اعتمادها من الحضانة.', 'Daily reports will appear here once approved by the kindergarten.')}</small>
                 </div>
             `;
             return;
         }
 
-        container.innerHTML = reports.map(report => `
-            <div class="list-group-item list-group-item-action">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="mb-1">${escHtml(report.child_name || '')}</h6>
-                        <p class="mb-1 text-muted small">${escHtml(report.notes || parentText('common.no_notes', 'لا توجد ملاحظات', 'No notes'))}</p>
-                        <small class="text-muted">
-                            <i class="bi bi-calendar me-1"></i>${formatDate(report.date)}
-                        </small>
+        container.innerHTML = reports.map((report, idx) => `
+            <div class="parent-report-item d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-md bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; min-width: 44px;">
+                        <i class="bi bi-journal-richtext fs-5"></i>
                     </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h6 class="fw-bold mb-0 text-dark">${escHtml(report.child_name || '')}</h6>
+                            <span class="text-muted small">·</span>
+                            <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>${formatDate(report.date)}</small>
+                        </div>
+                        <p class="mb-0 text-muted small text-truncate" style="max-width: 360px;">
+                            ${escHtml(report.notes || report.activities || parentText('common.no_notes', 'تقرير اليوم يوضح النشاطات والملاحظات العامة.', 'Daily report detailing activities and notes.'))}
+                        </p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
                     ${getStatusBadge(report.status)}
+                    <button class="btn btn-sm btn-light rounded-circle shadow-sm" onclick="openReportModal(${idx})" title="${parentText('common.view', 'عرض التفاصيل', 'View Details')}">
+                        <i class="bi bi-eye text-primary"></i>
+                    </button>
                 </div>
             </div>
         `).join('');
+    }
+
+    function openReportModal(index) {
+        const report = globalReports[index];
+        if (!report) return;
+
+        const titleEl = document.getElementById('modalReportTitle');
+        const bodyEl = document.getElementById('modalReportBody');
+
+        if (titleEl) titleEl.textContent = `${parentText('common.report', 'تقرير', 'Report')}: ${report.child_name} - ${formatDate(report.date)}`;
+
+        bodyEl.innerHTML = `
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3 text-center">
+                    <div class="bg-light p-3 rounded-3">
+                        <span class="d-block text-muted small mb-1">${parentText('report.mood', 'المزاج العام', 'Mood')}</span>
+                        <span class="fw-bold text-dark fs-5">${escHtml(report.mood || '😊')}</span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3 text-center">
+                    <div class="bg-light p-3 rounded-3">
+                        <span class="d-block text-muted small mb-1">${parentText('report.meals', 'الوجبات', 'Meals')}</span>
+                        <span class="fw-bold text-success fs-6">${escHtml(report.meals || parentText('report.meals_good', 'ممتاز 🍏', 'Good 🍏'))}</span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3 text-center">
+                    <div class="bg-light p-3 rounded-3">
+                        <span class="d-block text-muted small mb-1">${parentText('report.nap', 'قيلولة', 'Nap')}</span>
+                        <span class="fw-bold text-info fs-6">${escHtml(report.nap_time || parentText('report.nap_normal', 'ساعة و 30 دقيقة 😴', '1h 30m 😴'))}</span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3 text-center">
+                    <div class="bg-light p-3 rounded-3">
+                        <span class="d-block text-muted small mb-1">${parentText('common.status', 'الحالة', 'Status')}</span>
+                        <div>${getStatusBadge(report.status)}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-puzzle me-1"></i> ${parentText('report.activities', 'الأنشطة اليومية', 'Daily Activities')}</h6>
+                <div class="p-3 bg-light rounded-3 text-dark">
+                    ${escHtml(report.activities || parentText('report.no_activities', 'تم تنفيذ الأنشطة المنهجية اليومية واللعب التفاعلي.', 'Daily curriculum activities and interactive play.'))}
+                </div>
+            </div>
+
+            <div>
+                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-chat-quote me-1"></i> ${parentText('report.teacher_notes', 'ملاحظات المعلمة', 'Teacher Notes')}</h6>
+                <div class="p-3 bg-light rounded-3 text-dark">
+                    ${escHtml(report.notes || parentText('report.no_notes', 'لا توجد ملاحظات إضافية لهذا اليوم.', 'No additional notes for today.'))}
+                </div>
+            </div>
+        `;
+
+        const modal = new bootstrap.Modal(document.getElementById('parentReportModal'));
+        modal.show();
+    }
+
+    function viewChildTodayReport(childId) {
+        const idx = globalReports.findIndex(r => r.child_id === childId && r.date === SERVER_TODAY);
+        if (idx !== -1) {
+            openReportModal(idx);
+        } else {
+            window.location.href = `/my-reports?child_id=${childId}`;
+        }
     }
 
     function escHtml(s) {

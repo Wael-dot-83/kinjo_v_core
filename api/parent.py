@@ -18,6 +18,8 @@ from config import settings
 from database import get_db
 from dependencies import get_current_user
 from i18n import gettext as _api
+from admin_security import log_audit_event
+from audit_actions import AuditAction
 
 
 def _ulang(user) -> str:
@@ -95,16 +97,28 @@ def get_parent_dashboard(
         ).all():
             latest_report_by_child[r.child_id] = r
 
+    kgs_by_id = {}
+    if child_ids:
+        kg_ids = {e.kindergarten_id for e in enrollments_by_child.values() if e.kindergarten_id}
+        if kg_ids:
+            kgs_by_id = {
+                kg.id: kg
+                for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
+            }
+
     children_data = []
     for child in children:
         enrollment = enrollments_by_child.get(child.id)
         attendance = attendance_by_child.get(child.id)
         latest_report = latest_report_by_child.get(child.id)
+        kg = kgs_by_id.get(enrollment.kindergarten_id) if enrollment else None
 
         child_info = {
             "id": child.id,
             "first_name": child.first_name,
             "last_name": child.last_name,
+            "gender": child.gender.value if hasattr(child.gender, "value") else (str(child.gender) if child.gender else None),
+            "kindergarten_name": (kg.name_ar or kg.name_en) if kg else None,
             "age_months": validators.validate_age_months(child.date_of_birth),
             "enrollment": None,
             "attendance_today": None,
@@ -497,8 +511,89 @@ def update_parent_profile_self(
     if data.language and data.language in ("en", "ar"):
         current_user.preferred_language = data.language
 
+    log_audit_event(
+        db=db,
+        action=getattr(AuditAction, "ACCOUNT_PROFILE_UPDATED", "ACCOUNT_PROFILE_UPDATED"),
+        actor=current_user,
+        target_type="ParentProfile",
+        target_ids=profile.id,
+        after_state={"user_id": current_user.id, "language": current_user.preferred_language},
+    )
+
     db.commit()
     db.refresh(profile)
 
     lang = _ulang(current_user)
     return {"detail": _api("Saved successfully", lang)}
+
+
+@router.get("/parent/daily-reports")
+def get_parent_daily_reports(
+    child_id: Optional[int] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get daily reports across all parent's children (status SENT_TO_PARENT only)."""
+    if current_user.role != models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
+
+    profile = db.query(models.ParentProfile).filter(
+        models.ParentProfile.user_id == current_user.id
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+
+    child_ids = [
+        cid for (cid,) in db.query(models.Child.id).filter(
+            models.Child.parent_id == profile.id,
+            models.Child.deleted_at.is_(None),
+        ).all()
+    ]
+
+    if child_id:
+        if child_id not in child_ids:
+            raise HTTPException(status_code=403, detail=_api("Not authorized to view this child's reports", _ulang(current_user)))
+        child_ids = [child_id]
+
+    if not child_ids:
+        return {"total": 0, "reports": []}
+
+    query = db.query(models.DailyReport).filter(
+        models.DailyReport.child_id.in_(child_ids),
+        models.DailyReport.status == models.DailyReportStatus.SENT_TO_PARENT,
+    )
+
+    try:
+        if start_date:
+            query = query.filter(models.DailyReport.date >= date.fromisoformat(start_date))
+        if end_date:
+            query = query.filter(models.DailyReport.date <= date.fromisoformat(end_date))
+    except ValueError:
+        logger.warning("INVALID_DATE_FILTER start_date=%r end_date=%r ignored", start_date, end_date)
+
+    reports = query.order_by(models.DailyReport.date.desc(), models.DailyReport.id.desc()).all()
+    children = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()}
+
+    report_list = []
+    for r in reports:
+        c = children.get(r.child_id)
+        report_list.append({
+            "id": r.id,
+            "child_id": r.child_id,
+            "child_name": f"{c.first_name} {c.last_name}" if c else None,
+            "date": r.date.isoformat() if isinstance(r.date, date) else r.date,
+            "status": r.status.value,
+            "arrival_time": r.arrival_time,
+            "leave_time": r.leave_time,
+            "activities": getattr(r, "activities", None),
+            "notes": getattr(r, "notes", None),
+            "mood": getattr(r, "mood", None),
+        })
+
+    return {
+        "total": len(report_list),
+        "reports": report_list,
+    }
+

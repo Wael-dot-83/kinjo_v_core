@@ -245,10 +245,38 @@ _SOURCE_AR = {
     "StaffTraining": "برامج التدريب",
 }
 
+_SOURCE_EN = {
+    "Child": "Children Registry",
+    "ParentProfile": "Parent Profiles",
+    "EnrollmentApplication": "Enrollment Records",
+    "Kindergarten": "Kindergarten Registry",
+    "Class": "Class Records",
+    "Incident": "Incident and Safety Records",
+    "AttendanceLog": "Attendance Records",
+    "DailyReport": "Daily Reports",
+    "User": "Workforce (Users) Registry",
+    "AbsenceRequest": "Absence Requests",
+    "StaffTrainingCompletion": "Training Completion Records",
+    "Message": "Messaging Records",
+    "NationalImmunizationSchedule": "National Immunization Schedule",
+    "ChildVaccinationRecord": "Child Vaccination Record",
+    "AbsenceReasonCategory": "Absence Reason Categories",
+    "OperatingCalendar": "Operating Calendar",
+    "SupervisorAssignment": "Supervisor Assignment Records",
+    "StaffTraining": "Training Programs",
+}
+
+
 _GEO_BASIS_AR = {
     "parent_residence": "حسب سكن ولي الأمر",
     "kindergarten_location": "حسب موقع الحضانة",
 }
+
+_GEO_BASIS_EN = {
+    "parent_residence": "by parent residence",
+    "kindergarten_location": "by kindergarten location",
+}
+
 
 # Factual methodology definitions, written to match what each report actually
 # computes (not the broad title) so figures are interpreted without assumptions.
@@ -270,11 +298,36 @@ _REPORT_DEFINITIONS = {
     "family_communication_counts": "عدد الرسائل موزّعة حسب نوع المحادثة.",
 }
 
+_REPORT_DEFINITIONS_EN = {
+    "children_demographics": "Distribution of enrolled children by governorate, district, and gender, based on parent residence.",
+    "enrollment_participation_0_60": "Counts of children (0-60 months) with active enrollment, by location and age band (12-month steps).",
+    "institutions_active_licensed": "Counts of early-childhood institutions by operational status and geographic location.",
+    "capacity_occupancy_overcrowding": "Class capacity versus active enrollments and occupancy rate, by location.",
+    "monthly_attendance_absence": "Distribution of attendance and absence records by status (present/absent/late/excused) and location.",
+    "supervisors_child_ratio": "Number of supervisors versus enrolled children and children-per-supervisor rate, by location.",
+    "incidents_safety_1000_child_days": "Recorded safety incidents by severity and location, with incident rate per 1000 child-days present.",
+    "geographic_service_gaps": "Children versus active kindergartens and children-per-kindergarten rate, highlighting geographic service gaps.",
+    "data_quality_completeness": "Data completeness indicator: children missing a recorded date of birth, by location.",
+    "annual_quarterly_trends": "Active kindergartens by year of establishment, highlighting the time trend.",
+    "kindergarten_registry": "Registered kindergartens by operational status and geographic location.",
+    "child_safety_protection": "Child-safety and protection incidents by severity and geographic location.",
+    "workforce_summary": "Counts of workforce (managers and supervisors) by role and geographic location.",
+    "training_compliance": "Completed training records versus total records and completion rate.",
+    "family_communication_counts": "Message counts by conversation type.",
+}
+
+
 
 def _sources_ar(models_list: list[str]) -> str:
     """Human-readable Arabic data-source attribution from the registry model names."""
     names = [_SOURCE_AR.get(m, m) for m in (models_list or [])]
     return "، ".join(dict.fromkeys(names)) if names else "منصة KinJo"
+
+
+def _sources_en(models_list: list[str]) -> str:
+    """English counterpart of _sources_ar."""
+    names = [_SOURCE_EN.get(m, m) for m in (models_list or [])]
+    return ", ".join(dict.fromkeys(names)) if names else "KinJo Platform"
 
 
 def _is_rate_key(key: Any) -> bool:
@@ -298,7 +351,7 @@ def _is_rate_key(key: Any) -> bool:
 _GEO_KEYS = {"governorate", "city", "district", "year"}
 
 
-def _build_chart(breakdowns: list[dict[str, Any]], value_col: str | None, title: str | None) -> dict[str, Any] | None:
+def _build_chart(breakdowns: list[dict[str, Any]], value_col: str | None, title_ar: str | None, title_en: str | None = None) -> dict[str, Any] | None:
     """Build a meaningful, aggregated chart from a multi-dimensional breakdown.
 
     The raw breakdown has one row per (governorate, city, category), so plotting it
@@ -340,7 +393,7 @@ def _build_chart(breakdowns: list[dict[str, Any]], value_col: str | None, title:
         agg[g] = agg.get(g, 0) + (v if _num(v) else 0)
     series = [{"label": g, "value": v} for g, v in agg.items()]
     series.sort(key=lambda s: s["value"], reverse=True)
-    return {"type": "bar", "title_ar": title, "series": series[:15], "group_by": group_col}
+    return {"type": "bar", "title_ar": title_ar, "title_en": title_en, "series": series[:15], "group_by": group_col}
 
 
 def _finalize_breakdowns(breakdowns: list[dict[str, Any]]) -> tuple[str | None, dict[str, Any] | None]:
@@ -377,7 +430,7 @@ def _finalize_breakdowns(breakdowns: list[dict[str, Any]]) -> tuple[str | None, 
     total_row: dict[str, Any] = {}
     for k in breakdowns[0].keys():  # includes the just-added share column
         if k == label_col:
-            total_row[k] = "المجموع"
+            total_row[k] = {"ar": "المجموع", "en": "Total"}
         elif k == "النسبة %":
             total_row[k] = 100.0
         elif _is_rate_key(k):
@@ -517,10 +570,114 @@ _FIELD_LABELS: dict[str, str] = {
     "critical_high_incidents": "الحوادث عالية الخطورة والحرجة",
     "incident_count": "إجمالي حوادث السلامة",
 }
+_FIELD_LABELS_EN: dict[str, str] = {
+    "admission_year": "Admission Year",
+    "cutoff_date": "Cutoff Date (born before)",
+    "eligible_children": "Eligible Children",
+    "total_children": "Total Children",
+    "total_kindergartens": "Total Kindergartens",
+    "active_kindergartens": "Active Kindergartens",
+    "managers": "Managers",
+    "supervisors": "Supervisors",
+    "total_staff": "Total Staff",
+    "training_records": "Training Records",
+    "completed": "Completed",
+    "completion_rate_pct": "Completion Rate %",
+    "message_count": "Message Count",
+    "incident_count": "Incident Count",
+    "eligible_child_days": "Eligible Child-Days",
+    "incident_rate_per_1000_child_days": "Incident Rate per 1000 Child-Days",
+    "areas": "Number of Areas",
+    "children": "Children",
+    "enrolled_children": "Enrolled Children",
+    "total_institutions": "Total Institutions",
+    "active_institutions": "Active Institutions",
+    "licensed_institutions": "Licensed Institutions (Active)",
+    "active_and_licensed": "Active and Licensed",
+    "expired_licenses": "Expired Licenses",
+    "missing_license_data": "Missing License Data",
+    "total_capacity": "Total Capacity",
+    "total_enrolled": "Actual Enrolled Count",
+    "occupancy_rate_pct": "Occupancy Rate %",
+    "occupancy_rate": "Occupancy Rate %",
+    "overcrowded_kindergartens": "Overcrowded Kindergartens",
+    "overcrowding_rate_pct": "Overcrowding Rate %",
+    "total_records": "Total Records",
+    "present_records": "Present Records",
+    "absent_records": "Absent Records",
+    "attendance_rate_pct": "Attendance Rate %",
+    "absence_rate_pct": "Absence Rate %",
+    "total_supervisors": "Total Supervisors",
+    "children_missing_dob": "Children Missing Date of Birth",
+    "data_quality_note_ar": "Data Quality Note",
+    "trend_years": "Measurement Years",
+    "period_start": "Period Start",
+    "period_end": "Period End",
+    "total_enrolled_children": "Total Enrolled Children",
+    "period": "Period",
+    "quarter": "Quarter",
+    "share_pct": "Share %",
+    "indicator": "Indicator",
+    "category": "Category",
+    "value": "Value",
+    "governorate": "Governorate",
+    "city": "City/District",
+    "district": "District",
+    "area": "Area/Neighborhood",
+    "gender": "Gender",
+    "count": "Count",
+    "status": "Status",
+    "role": "Role",
+    "severity": "Severity",
+    "thread_type": "Conversation Type",
+    "children_per_kindergarten": "Children per Kindergarten",
+    "age_group": "Age Group",
+    "enrolled_total": "Total Enrolled (0-60)",
+    "enrolled_0_11m": "0-11 months",
+    "enrolled_12_23m": "12-23 months",
+    "enrolled_24_35m": "24-35 months",
+    "enrolled_36_47m": "36-47 months",
+    "enrolled_48_60m": "48-60 months",
+    "enrolled": "Enrolled Children",
+    "children_per_supervisor": "Children per Supervisor",
+    "missing_dob": "Missing Date of Birth",
+    "year": "Year",
+    "new_kindergartens": "New Kindergartens",
+    "national_ratio": "National Ratio of Children per Kindergarten",
+    "unserved_districts_count": "Number of Underserved Districts",
+    "unserved_children_count": "Underserved Children in Deprived Areas",
+    "is_unserved_zone": "Underserved Zone",
+    "status_ar": "Service Status",
+    "available_expansion_capacity": "Available Expansion Capacity",
+    "is_overcrowded": "Overcrowding Status",
+    "investment_priority_score": "Developmental Investment Priority Score",
+    "priority_level_ar": "Priority Level",
+    "priority_rank": "Developmental Rank",
+    "governorates_count": "Number of Governorates Covered",
+    "النسبة %": "Share %",
+    "top_priority_governorate": "Top Priority Governorate",
+    "average_investment_priority_score": "Average National Priority Score",
+    "vaccine": "Vaccine",
+    "due_age": "Due Age",
+    "vaccines_in_schedule": "Vaccines in Schedule",
+    "children_considered": "Children Considered",
+    "vaccine_doses_due": "Total Due Doses",
+    "ineligible_children": "Ineligible Children",
+    "unevaluatable_records": "Records That Could Not Be Evaluated",
+    "eligibility_rate": "Eligibility Rate %",
+    "data_completeness_rate": "Data Completeness Rate %",
+    "highest_governorate": "Top Governorate",
+    "total_evaluated": "Total Records Covered",
+    "total_licensed_capacity": "Total Licensed Capacity",
+    "overall_occupancy_rate": "Overall Occupancy Rate %",
+    "critical_high_incidents": "High and Critical Incidents",
+}
 
 
-def _label_map(keys) -> dict[str, str]:
-    return {k: _FIELD_LABELS.get(k, k) for k in keys}
+
+
+def _label_map(keys) -> dict[str, dict[str, str]]:
+    return {k: {"ar": _FIELD_LABELS.get(k, k), "en": _FIELD_LABELS_EN.get(k, k)} for k in keys}
 
 
 from utils.time_utils import jordan_date_range_filter
@@ -761,12 +918,19 @@ class AgencyReportsService:
             # source, geography basis, definition, units, and a missing-data legend,
             # so a reader can trust and interpret the figures without assumptions.
             "data_source_ar": _sources_ar(report.get("data_sources", [])),
+            "data_source_en": _sources_en(report.get("data_sources", [])),
             "geography_basis_ar": _GEO_BASIS_AR.get(
                 filters.get("geography_basis") or report.get("default_geography_basis", ""), ""
             ),
+            "geography_basis_en": _GEO_BASIS_EN.get(
+                filters.get("geography_basis") or report.get("default_geography_basis", ""), ""
+            ),
             "definition_ar": report.get("description_ar") or _REPORT_DEFINITIONS.get(report_code),
+            "definition_en": report.get("description_en") or _REPORT_DEFINITIONS_EN.get(report_code),
             "units_note_ar": "الأعداد بالأرقام المطلقة، والنسب بالنسبة المئوية (%).",
+            "units_note_en": "Counts are absolute numbers; ratios are percentages (%).",
             "symbols_note_ar": "«—» تعني غير متوفر أو لا ينطبق · «0» تعني لا يوجد (صفر فعلي).",
+            "symbols_note_en": "‘—’ means not available or not applicable; ‘0’ means none (actual zero).",
             "excluded_sensitive_fields": sorted(SENSITIVE_FIELD_DENYLIST),
             "limitations": [],
             "accessibility_status": "wcag_2_1_aa_review_required",
@@ -802,6 +966,7 @@ class AgencyReportsService:
             "unavailable_indicators": [{"code": report_code, "status": status, "message_ar": report.get("reason_ar")}],
             "exports": {"csv": False, "json": True},
             "privacy_notice_ar": "يعرض هذا التقرير بيانات تجميعية فقط ولا يتضمن أي بيانات شخصية أو حساسة.",
+            "privacy_notice_en": "This report displays aggregated data only and contains no personal or sensitive data.",
         }
 
     def _apply_parent_geo_filters(self, q, filters: dict[str, Any]):
@@ -1032,19 +1197,27 @@ class AgencyReportsService:
 
         if group_dim == "governorate":
             chart_title_ar = "توزيع الأطفال المؤهلين حسب المحافظة"
+            chart_title_en = "Distribution of Eligible Children by Governorate"
             x_label = "المحافظة"
+            x_label_en = "Governorate"
         elif group_dim == "district":
             chart_title_ar = "توزيع الأطفال المؤهلين حسب اللواء"
+            chart_title_en = "Distribution of Eligible Children by District"
             x_label = "اللواء"
+            x_label_en = "District"
         else:
             chart_title_ar = "توزيع الأطفال المؤهلين حسب المنطقة"
+            chart_title_en = "Distribution of Eligible Children by Area"
             x_label = "المنطقة"
+            x_label_en = "Area"
 
         chart = {
             "type": "bar",
             "title_ar": chart_title_ar,
+            "title_en": chart_title_en,
             "x_axis_title_ar": x_label,
-            "y_axis_title_ar": "عدد الأطفال المؤهلين",
+            "x_axis_title_en": x_label_en,
+            "y_axis_title_ar": "عدد الأطفال المؤهلين", "y_axis_title_en": "Number of Eligible Children",
             "series": chart_series[:15],
             "group_by": group_dim,
             "show_share_pct": True,
@@ -1070,7 +1243,7 @@ class AgencyReportsService:
 
         license_chart = {
             "type": "pie",
-            "title_ar": "توزيع الأطفال المؤهلين حسب الجنس",
+            "title_ar": "توزيع الأطفال المؤهلين حسب الجنس", "title_en": "Distribution of Eligible Children by Gender",
             "series": gender_series,
         }
 
@@ -1213,7 +1386,7 @@ class AgencyReportsService:
         payload = self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns)
         payload["chart"] = {
             "type": "bar",
-            "title_ar": "الأطفال المستحقون لكل مطعوم",
+            "title_ar": "الأطفال المستحقون لكل مطعوم", "title_en": "Children Due per Vaccine",
             "series": chart_series,
         }
         payload["exports"] = {"csv": True, "json": True}
@@ -1272,11 +1445,13 @@ class AgencyReportsService:
         chart_series.sort(key=lambda s: s["value"], reverse=True)
 
         chart_title = "توزيع الحضانات حسب اللواء" if gov_filter else "توزيع الحضانات حسب المحافظة"
+        chart_title_en = "Distribution of Kindergartens by District" if gov_filter else "Distribution of Kindergartens by Governorate"
         chart = {
             "type": "bar",
             "title_ar": chart_title,
-            "x_axis_title_ar": "اللواء" if gov_filter else "المحافظة",
-            "y_axis_title_ar": "عدد الحضانات",
+            "title_en": chart_title_en,
+            "x_axis_title_ar": "اللواء", "x_axis_title_en": "District" if gov_filter else "Governorate",
+            "y_axis_title_ar": "عدد الحضانات", "y_axis_title_en": "Number of Kindergartens",
             "series": chart_series[:15],
             "group_by": group_dim,
             "show_share_pct": True,
@@ -1305,7 +1480,7 @@ class AgencyReportsService:
 
         license_chart = {
             "type": "pie",
-            "title_ar": "توزيع الحضانات حسب الحالة التشغيلية",
+            "title_ar": "توزيع الحضانات حسب الحالة التشغيلية", "title_en": "Distribution of Kindergartens by Operational Status",
             "series": status_series,
         }
 
@@ -1393,7 +1568,7 @@ class AgencyReportsService:
             severity_series = [{"label": label, "value": severity_counts.get(label, 0)} for label in severity_counts]
             chart = {
                 "type": "bar",
-                "title_ar": "الحوادث حسب درجة الخطورة",
+                "title_ar": "الحوادث حسب درجة الخطورة", "title_en": "Incidents by Severity Level",
                 "series": severity_series,
             }
 
@@ -1411,7 +1586,7 @@ class AgencyReportsService:
 
         license_chart = {
             "type": "bar",
-            "title_ar": "توزيع الحوادث حسب اللواء" if gov_filter else "توزيع الحوادث حسب المحافظة",
+            "title_ar": "توزيع الحوادث حسب اللواء", "title_en": "Distribution of Incidents by District" if gov_filter else "توزيع الحوادث حسب المحافظة",
             "series": geo_series[:15],
             "group_by": group_dim,
         }
@@ -1592,7 +1767,7 @@ class AgencyReportsService:
             severity_series = [{"label": label, "value": severity_counts.get(label, 0)} for label in severity_counts]
             chart = {
                 "type": "bar",
-                "title_ar": "الحوادث حسب درجة الخطورة",
+                "title_ar": "الحوادث حسب درجة الخطورة", "title_en": "Incidents by Severity Level",
                 "series": severity_series,
             }
 
@@ -1622,7 +1797,9 @@ class AgencyReportsService:
         if filters.get("city"):
             group_dim = "area"
             y_axis_title = "المنطقة / الحي"
+            y_axis_title_en = "Area/Neighborhood"
             chart_title = f"فجوة الوصول للخدمة في {filters['city']}: الأطفال لكل حضانة حسب المنطقة"
+            chart_title_en = f"Service Access Gap in {filters['city']}: Children per Kindergarten by Area"
 
             child_rows = (
                 self.db.query(
@@ -1697,11 +1874,15 @@ class AgencyReportsService:
             if filters.get("governorate"):
                 group_dim = "city"
                 y_axis_title = "اللواء"
+                y_axis_title_en = "District"
                 chart_title = f"فجوة الوصول للخدمة في محافظة {filters['governorate']}: الأطفال لكل حضانة نشطة حسب اللواء"
+                chart_title_en = f"Service Access Gap in {filters['governorate']} Governorate: Children per Active Kindergarten by District"
             else:
                 group_dim = "governorate"
                 y_axis_title = "المحافظة"
+                y_axis_title_en = "Governorate"
                 chart_title = "فجوة الوصول للخدمة: أطفال لكل حضانة نشطة حسب المحافظة"
+                chart_title_en = "Service Access Gap: Children per Active Kindergarten by Governorate"
 
             child_rows = (
                 self.db.query(
@@ -1820,11 +2001,13 @@ class AgencyReportsService:
             chart = {
                 "type": "bar",
                 "title_ar": chart_title,
+                "title_en": chart_title_en,
                 "series": chart_series,
                 "group_by": group_dim,
-                "value_suffix": " طفل/حضانة",
-                "x_axis_title_ar": "الأطفال لكل حضانة نشطة",
+                "value_suffix": {"ar": " طفل/حضانة", "en": " child/kg"},
+                "x_axis_title_ar": "الأطفال لكل حضانة نشطة", "x_axis_title_en": "Children per Active Kindergarten",
                 "y_axis_title_ar": y_axis_title,
+                "y_axis_title_en": y_axis_title_en,
             }
 
         summary = {
@@ -1963,12 +2146,12 @@ class AgencyReportsService:
 
             chart = {
                 "type": "bar",
-                "title_ar": "معدلات إشغال السعة الاستيعابية حسب المنطقة (%)",
+                "title_ar": "معدلات إشغال السعة الاستيعابية حسب المنطقة (%)", "title_en": "Capacity Occupancy Rates by Area (%)",
                 "series": chart_series,
                 "group_by": group_dim,
                 "value_suffix": "%",
-                "x_axis_title_ar": "نسبة الإشغال (%)",
-                "y_axis_title_ar": "اللواء / المحافظة" if group_dim == "city" else "المحافظة",
+                "x_axis_title_ar": "نسبة الإشغال (%)", "x_axis_title_en": "Occupancy Rate (%)",
+                "y_axis_title_ar": "اللواء / المحافظة", "y_axis_title_en": "District / Governorate" if group_dim == "city" else "المحافظة",
             }
 
         summary = {
@@ -2100,12 +2283,12 @@ class AgencyReportsService:
             ]
             chart = {
                 "type": "bar",
-                "title_ar": "مؤشر أولويات الاستثمار التنموي حسب المحافظة (من 100)",
+                "title_ar": "مؤشر أولويات الاستثمار التنموي حسب المحافظة (من 100)", "title_en": "Developmental Investment Priority Index by Governorate (out of 100)",
                 "series": chart_series,
                 "group_by": "governorate",
-                "value_suffix": " درجة",
-                "x_axis_title_ar": "درجة الأولوية التنموية",
-                "y_axis_title_ar": "المحافظة",
+                "value_suffix": {"ar": " درجة", "en": " points"},
+                "x_axis_title_ar": "درجة الأولوية التنموية", "x_axis_title_en": "Developmental Priority Score",
+                "y_axis_title_ar": "المحافظة", "y_axis_title_en": "Governorate",
             }
 
         avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
@@ -2244,7 +2427,7 @@ class AgencyReportsService:
         chart_series = [{"label": k, "value": v} for k, v in total_by_age.items() if v > 0]
         chart = None
         if chart_series:
-            chart = {"type": "pie", "title_ar": "التوزيع العمري للأطفال المسجلين (0-60 شهراً)", "series": chart_series}
+            chart = {"type": "pie", "title_ar": "التوزيع العمري للأطفال المسجلين (0-60 شهراً)", "title_en": "Age Distribution of Enrolled Children (0-60 months)", "series": chart_series}
 
         return self._payload(
             agency_code, agency, report_code, report, filters, {"enrolled_children": total}, breakdowns, chart=chart
@@ -2320,7 +2503,7 @@ class AgencyReportsService:
         status_series = [{"label": label, "value": status_counts.get(label, 0)} for label in status_counts]
         status_chart = {
             "type": "pie",
-            "title_ar": "توزيع الحضانات حسب الحالة التشغيلية",
+            "title_ar": "توزيع الحضانات حسب الحالة التشغيلية", "title_en": "Distribution of Kindergartens by Operational Status",
             "series": status_series,
         }
 
@@ -2340,7 +2523,7 @@ class AgencyReportsService:
         ]
         lic_chart = {
             "type": "pie",
-            "title_ar": "توزيع الحضانات حسب حالة الترخيص",
+            "title_ar": "توزيع الحضانات حسب حالة الترخيص", "title_en": "Distribution of Kindergartens by License Status",
             "series": lic_series,
         }
 
@@ -2435,7 +2618,7 @@ class AgencyReportsService:
             chart_series.sort(key=lambda s: s["value"] if s["value"] is not None else -1, reverse=True)
             chart = {
                 "type": "bar",
-                "title_ar": "نسبة الإشغال حسب المحافظة",
+                "title_ar": "نسبة الإشغال حسب المحافظة", "title_en": "Occupancy Rate by Governorate",
                 "series": chart_series,
                 "group_by": "governorate",
                 "orientation": "vertical",
@@ -2507,7 +2690,7 @@ class AgencyReportsService:
         }
         chart = {
             "type": "bar",
-            "title_ar": "توزيع سجلات الحضور والغياب حسب الحالة",
+            "title_ar": "توزيع سجلات الحضور والغياب حسب الحالة", "title_en": "Distribution of Attendance Records by Status",
             "series": [{"label": label, "value": count} for label, count in chart_counts.items()],
             "group_by": "status",
             "orientation": "vertical",
@@ -2579,10 +2762,10 @@ class AgencyReportsService:
             chart_series.sort(key=lambda s: s["value"] if s["value"] is not None else -1, reverse=True)
             chart = {
                 "type": "bar",
-                "title_ar": "معدل الأطفال لكل مشرفة حسب المحافظة",
+                "title_ar": "معدل الأطفال لكل مشرفة حسب المحافظة", "title_en": "Children per Supervisor Rate by Governorate",
                 "series": chart_series,
                 "orientation": "vertical",
-                "value_suffix": " طفل/مشرفة",
+                "value_suffix": {"ar": " طفل/مشرفة", "en": " child/supervisor"},
             }
 
         return self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns, chart=chart)
@@ -2668,13 +2851,13 @@ class AgencyReportsService:
 
         chart = {
             "type": "bar",
-            "title_ar": "توزيع الحوادث حسب درجة الخطورة",
+            "title_ar": "توزيع الحوادث حسب درجة الخطورة", "title_en": "Distribution of Incidents by Severity Level",
             "series": severity_series,
             "orientation": "vertical",
-            "value_suffix": " حادثة",
+            "value_suffix": {"ar": " حادثة", "en": " incident"},
             "show_share_pct": True,
-            "x_axis_title_ar": "درجة الخطورة",
-            "y_axis_title_ar": "عدد الحوادث",
+            "x_axis_title_ar": "درجة الخطورة", "x_axis_title_en": "Severity Level",
+            "y_axis_title_ar": "عدد الحوادث", "y_axis_title_en": "Number of Incidents",
         }
 
         return self._payload(agency_code, agency, report_code, report, filters, summary, breakdowns, chart=chart)
@@ -2835,13 +3018,13 @@ class AgencyReportsService:
 
                 chart = {
                     "type": "bar",
-                    "title_ar": "الاتجاهات السنوية — الأطفال المسجلون",
+                    "title_ar": "الاتجاهات السنوية — الأطفال المسجلون", "title_en": "Annual Trends - Enrolled Children",
                     "series": [{"label": y, "value": v} for y, v in sorted(by_year.items(), key=_year_sort_key)],
                     "group_by": "year",
                     "orientation": "vertical",
-                    "value_suffix": " طفل",
-                    "x_axis_title_ar": "السنة",
-                    "y_axis_title_ar": "الأطفال المسجلون",
+                    "value_suffix": {"ar": " طفل", "en": " child"},
+                    "x_axis_title_ar": "السنة", "x_axis_title_en": "Year",
+                    "y_axis_title_ar": "الأطفال المسجلون", "y_axis_title_en": "Enrolled Children",
                 }
             else:
                 # Second level after drilling into a year: quarter trend.
@@ -2854,6 +3037,7 @@ class AgencyReportsService:
                 chart = {
                     "type": "bar",
                     "title_ar": f"الاتجاهات الربعية — الأطفال المسجلون ({year_filter})",
+                    "title_en": f"Quarterly Trends - Enrolled Children ({year_filter})",
                     "series": [
                         {
                             "label": _quarter_ar(qn),
@@ -2865,9 +3049,9 @@ class AgencyReportsService:
                     ],
                     "group_by": "quarter",
                     "orientation": "vertical",
-                    "value_suffix": " طفل",
-                    "x_axis_title_ar": "الربع",
-                    "y_axis_title_ar": "الأطفال المسجلون",
+                    "value_suffix": {"ar": " طفل", "en": " child"},
+                    "x_axis_title_ar": "الربع", "x_axis_title_en": "Quarter",
+                    "y_axis_title_ar": "الأطفال المسجلون", "y_axis_title_en": "Enrolled Children",
                 }
 
         summary = {
@@ -2906,10 +3090,10 @@ class AgencyReportsService:
         # Professionalize the table: add a share column (count breakdowns) and a
         # totals row (المجموع), and pick a robust chart value column.
         value_col, total_row = _finalize_breakdowns(breakdowns)
-        table = {"caption_ar": report.get("title_ar"), "rows": breakdowns, "total_row": total_row}
+        table = {"caption_ar": report.get("title_ar"), "caption_en": report.get("title_en"), "rows": breakdowns, "total_row": total_row}
 
         if chart is None and breakdowns and value_col:
-            chart = _build_chart(breakdowns, value_col, report.get("title_ar"))
+            chart = _build_chart(breakdowns, value_col, report.get("title_ar"), report.get("title_en"))
 
         payload = {
             "metadata": self._metadata(agency_code, agency, report_code, report, filters),
@@ -2922,6 +3106,7 @@ class AgencyReportsService:
             "unavailable_indicators": [],
             "exports": {"csv": "csv" in report.get("exports", []), "json": "json" in report.get("exports", [])},
             "privacy_notice_ar": "يعرض هذا التقرير بيانات تجميعية فقط ولا يتضمن أي بيانات شخصية أو حساسة.",
+            "privacy_notice_en": "This report displays aggregated data only and contains no personal or sensitive data.",
         }
         if chart:
             payload["chart"] = chart
@@ -3073,6 +3258,7 @@ class AgencyReportsService:
             "decision_notes_ar": notes,
             "data_quality": {"status": status, "notes": quality_notes, "suppressed_cells": suppressed_cells},
             "privacy_notice_ar": "يعرض هذا التقرير بيانات تجميعية فقط ولا يتضمن أي بيانات شخصية أو حساسة.",
+            "privacy_notice_en": "This report displays aggregated data only and contains no personal or sensitive data.",
             "excluded_sensitive_fields": sorted(SENSITIVE_FIELD_DENYLIST),
         }
         self._assert_privacy(payload)
@@ -3126,20 +3312,20 @@ class AgencyReportsService:
         return [r[0] for r in q.all()]
 
     @staticmethod
-    def _kpi(code: str, label_ar: str, value: Any, unit_ar: str = "") -> dict[str, Any]:
-        return {"code": code, "label_ar": label_ar, "value": value, "unit_ar": unit_ar}
+    def _kpi(code: str, label_ar: str, label_en: str, value: Any, unit_ar: str = "", unit_en: str = "") -> dict[str, Any]:
+        return {"code": code, "label_ar": label_ar, "label_en": label_en, "value": value, "unit_ar": unit_ar, "unit_en": unit_en}
 
     @staticmethod
-    def _dist_rows(indicator_ar: str, series: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _dist_rows(indicator_ar: str, indicator_en: str, series: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Table rows for a categorical distribution, each carrying its share of the
         total — the standard way official statistics present a breakdown (count + %)."""
         total = sum(s["value"] for s in series if isinstance(s["value"], (int, float)))
         return [
             {
-                "المؤشر": indicator_ar,
-                "الفئة": s["label"],
-                "القيمة": s["value"],
-                "النسبة %": (round(s["value"] / total * 100, 1) if total else 0.0),
+                "indicator": {"ar": indicator_ar, "en": indicator_en},
+                "category": s["label"],
+                "value": s["value"],
+                "share_pct": (round(s["value"] / total * 100, 1) if total else 0.0),
             }
             for s in series
         ]
@@ -3192,7 +3378,7 @@ class AgencyReportsService:
     def _ind_children_count(self, kg_ids, start, end):
         total = self._child_base_query(kg_ids).count()
         return {
-            "kpi": self._kpi("children_count", "عدد الأطفال", total, "طفل"),
+            "kpi": self._kpi("children_count", "عدد الأطفال", "Number of Children", total, "طفل", "child"),
             "rows": [{"المؤشر": "عدد الأطفال", "القيمة": total}],
             "note": f"إجمالي عدد الأطفال ضمن النطاق: {total}.",
         }
@@ -3213,9 +3399,9 @@ class AgencyReportsService:
         total = sum(s["value"] for s in series)
         males = counts.get("MALE", 0)
         return {
-            "kpi": self._kpi("gender_distribution", "نسبة الذكور", _safe_pct(males, total), "%"),
-            "chart": {"type": "pie", "title_ar": "التوزيع حسب الجنس", "series": series},
-            "rows": self._dist_rows("التوزيع حسب الجنس", series),
+            "kpi": self._kpi("gender_distribution", "نسبة الذكور", "Male Share", _safe_pct(males, total), "%", "%"),
+            "chart": {"type": "pie", "title_ar": "التوزيع حسب الجنس", "title_en": "Distribution by Gender", "series": series},
+            "rows": self._dist_rows("التوزيع حسب الجنس", "Distribution by Gender", series),
         }
 
     def _ind_age_distribution(self, kg_ids, start, end):
@@ -3254,9 +3440,9 @@ class AgencyReportsService:
         if unknown:
             series.append({"label": "غير معروف", "value": unknown})
         return {
-            "kpi": self._kpi("age_distribution_6mo", "عدد الفئات العمرية (كل 6 أشهر)", band_count, "فئة"),
-            "chart": {"type": "bar", "title_ar": "التوزيع العمري كل 6 أشهر", "series": series},
-            "rows": self._dist_rows("التوزيع العمري", series),
+            "kpi": self._kpi("age_distribution_6mo", "عدد الفئات العمرية (كل 6 أشهر)", "Number of Age Bands (every 6 months)", band_count, "فئة", "band"),
+            "chart": {"type": "bar", "title_ar": "التوزيع العمري كل 6 أشهر", "title_en": "Age Distribution Every 6 Months", "series": series},
+            "rows": self._dist_rows("التوزيع العمري", "Age Distribution", series),
             "note": (f"يوجد {unknown} طفل بدون تاريخ ميلاد صالح ضمن النطاق." if unknown else None),
         }
 
@@ -3273,9 +3459,9 @@ class AgencyReportsService:
         ]
         active = counts.get("ACTIVE", 0)
         return {
-            "kpi": self._kpi("enrollment_status", "التسجيلات النشطة", active, "تسجيل"),
-            "chart": {"type": "bar", "title_ar": "حالة التسجيل", "series": series},
-            "rows": self._dist_rows("حالة التسجيل", series),
+            "kpi": self._kpi("enrollment_status", "التسجيلات النشطة", "Active Enrollments", active, "تسجيل", "enrollment"),
+            "chart": {"type": "bar", "title_ar": "حالة التسجيل", "title_en": "Enrollment Status", "series": series},
+            "rows": self._dist_rows("حالة التسجيل", "Enrollment Status", series),
         }
 
     # -- kindergartens / capacity -------------------------------------
@@ -3288,7 +3474,7 @@ class AgencyReportsService:
     def _ind_kindergarten_count(self, kg_ids, start, end):
         total = self._kg_query(kg_ids).count()
         return {
-            "kpi": self._kpi("kindergarten_count", "عدد الحضانات", total, "حضانة"),
+            "kpi": self._kpi("kindergarten_count", "عدد الحضانات", "Number of Kindergartens", total, "حضانة", "kindergarten"),
             "rows": [{"المؤشر": "عدد الحضانات", "القيمة": total}],
         }
 
@@ -3305,9 +3491,9 @@ class AgencyReportsService:
         series = [{"label": _kindergarten_status_ar(st.value), "value": counts.get(st.value, 0)} for st in statuses]
         active = counts.get("ACTIVE", 0)
         return {
-            "kpi": self._kpi("kindergarten_status", "الحضانات النشطة", active, "حضانة"),
-            "chart": {"type": "pie", "title_ar": "حالة الحضانات", "series": series},
-            "rows": self._dist_rows("حالة الحضانة", series),
+            "kpi": self._kpi("kindergarten_status", "الحضانات النشطة", "Active Kindergartens", active, "حضانة", "kindergarten"),
+            "chart": {"type": "pie", "title_ar": "حالة الحضانات", "title_en": "Kindergarten Status", "series": series},
+            "rows": self._dist_rows("حالة الحضانة", "Kindergarten Status", series),
         }
 
     def _ind_occupancy_rate(self, kg_ids, start, end):
@@ -3329,7 +3515,7 @@ class AgencyReportsService:
         if capacity == 0:
             note = "لا توجد سعة صفية مسجّلة ضمن النطاق لاحتساب نسبة الإشغال."
         return {
-            "kpi": self._kpi("occupancy_rate", "نسبة الإشغال", pct, "%"),
+            "kpi": self._kpi("occupancy_rate", "نسبة الإشغال", "Occupancy Rate", pct, "%", "%"),
             "rows": [
                 {
                     "المؤشر": "نسبة الإشغال",
@@ -3469,7 +3655,7 @@ class AgencyReportsService:
         # Denominator is expected child-days on working days, not "all rows".
         pct = _safe_pct(attended, expected) if expected else None
         return {
-            "kpi": self._kpi("attendance_rate", "نسبة الحضور", pct, "%"),
+            "kpi": self._kpi("attendance_rate", "نسبة الحضور", "Attendance Rate", pct, "%", "%"),
             "rows": [
                 {
                     "المؤشر": "نسبة الحضور",
@@ -3492,7 +3678,7 @@ class AgencyReportsService:
             q = q.filter(models.AbsenceRequest.kindergarten_id.in_(kg_ids))
         total = _safe_int(q.scalar())
         return {
-            "kpi": self._kpi("absence_requests", "طلبات الغياب", total, "طلب"),
+            "kpi": self._kpi("absence_requests", "طلبات الغياب", "Absence Requests", total, "طلب", "request"),
             "rows": [{"المؤشر": "طلبات الغياب", "القيمة": total}],
         }
 
@@ -3522,7 +3708,7 @@ class AgencyReportsService:
             )
         pct = _safe_pct(completed, expected) if expected else None
         return {
-            "kpi": self._kpi("daily_report_completion", "معدل إنجاز التقارير اليومية", pct, "%"),
+            "kpi": self._kpi("daily_report_completion", "معدل إنجاز التقارير اليومية", "Daily Report Completion Rate", pct, "%", "%"),
             "rows": [
                 {
                     "المؤشر": "إنجاز التقارير اليومية",
@@ -3545,7 +3731,7 @@ class AgencyReportsService:
             q = q.filter(models.DailyReport.kindergarten_id.in_(kg_ids))
         total = _safe_int(q.scalar())
         return {
-            "kpi": self._kpi("late_reports", "التقارير المتأخرة", total, "تقرير"),
+            "kpi": self._kpi("late_reports", "التقارير المتأخرة", "Late Reports", total, "تقرير", "report"),
             "rows": [{"المؤشر": "التقارير المتأخرة", "القيمة": total}],
         }
 
@@ -3560,7 +3746,7 @@ class AgencyReportsService:
             q = q.filter(models.Incident.kindergarten_id.in_(kg_ids))
         total = _safe_int(q.scalar())
         return {
-            "kpi": self._kpi("critical_incidents", "الحوادث الحرجة", total, "حادثة"),
+            "kpi": self._kpi("critical_incidents", "الحوادث الحرجة", "Critical Incidents", total, "حادثة", "incident"),
             "rows": [{"المؤشر": "الحوادث الحرجة", "القيمة": total}],
         }
 
@@ -3579,7 +3765,7 @@ class AgencyReportsService:
         _, expected_by_child = self._expected_child_days(kg_ids, start, end)
         attended = self._attended_child_days(list(expected_by_child.keys()), start, end)
         rate = round(total / attended * 1000, 3) if attended else None
-        table = self._dist_rows("الحوادث حسب الخطورة", series)
+        table = self._dist_rows("الحوادث حسب الخطورة", "Incidents by Severity", series)
         table.append(
             {
                 "المؤشر": "معدل الحوادث لكل 1000 يوم حضور",
@@ -3588,8 +3774,8 @@ class AgencyReportsService:
             }
         )
         return {
-            "kpi": self._kpi("incidents_by_severity", "إجمالي الحوادث", total, "حادثة"),
-            "chart": {"type": "bar", "title_ar": "الحوادث حسب الخطورة", "series": series},
+            "kpi": self._kpi("incidents_by_severity", "إجمالي الحوادث", "Total Incidents", total, "حادثة", "incident"),
+            "chart": {"type": "bar", "title_ar": "الحوادث حسب الخطورة", "title_en": "Incidents by Severity", "series": series},
             "rows": table,
             "note": (
                 "لا توجد أيام حضور لاحتساب معدل الحوادث لكل 1000 يوم."
@@ -3610,7 +3796,7 @@ class AgencyReportsService:
         managers = rows.get("MANAGER", 0)
         supervisors = rows.get("SUPERVISOR", 0)
         return {
-            "kpi": self._kpi("staff_count", "عدد الموظفين", managers + supervisors, "موظف"),
+            "kpi": self._kpi("staff_count", "عدد الموظفين", "Number of Staff", managers + supervisors, "موظف", "staff"),
             "rows": [
                 {
                     "المؤشر": "عدد الموظفين",
@@ -3632,7 +3818,7 @@ class AgencyReportsService:
             q = q.filter(models.Class.kindergarten_id.in_(kg_ids))
         total = _safe_int(q.scalar())
         return {
-            "kpi": self._kpi("unassigned_classes", "الفصول غير المسندة لمشرف", total, "صف"),
+            "kpi": self._kpi("unassigned_classes", "الفصول غير المسندة لمشرف", "Classes Not Assigned to a Supervisor", total, "صف", "class"),
             "rows": [{"المؤشر": "الفصول غير المسندة لمشرف", "القيمة": total}],
         }
 
@@ -3645,7 +3831,7 @@ class AgencyReportsService:
             q = q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
         total = _safe_int(q.scalar())
         return {
-            "kpi": self._kpi("unassigned_children", "الأطفال غير المسجلين في صف", total, "طفل"),
+            "kpi": self._kpi("unassigned_children", "الأطفال غير المسجلين في صف", "Children Not Enrolled in a Class", total, "طفل", "child"),
             "rows": [{"المؤشر": "الأطفال غير المسجلين في صف", "القيمة": total}],
         }
 
@@ -3678,7 +3864,7 @@ class AgencyReportsService:
         # No active nurseries in scope -> participation is unavailable, not 0%.
         pct = _safe_pct(reported, total) if total else None
         return {
-            "kpi": self._kpi("data_quality_score", "مؤشر جودة البيانات", pct, "%"),
+            "kpi": self._kpi("data_quality_score", "مؤشر جودة البيانات", "Data Quality Score", pct, "%", "%"),
             "rows": [
                 {
                     "المؤشر": f"المشاركة في الإبلاغ ({window_start} → {window_end})",
@@ -3700,7 +3886,7 @@ class AgencyReportsService:
         active_kgs = _safe_int(kg_q.scalar())
         ratio = round(children / active_kgs, 2) if active_kgs else 0.0
         return {
-            "kpi": self._kpi("service_access_ratio", "أطفال لكل حضانة نشطة", ratio, "طفل/حضانة"),
+            "kpi": self._kpi("service_access_ratio", "أطفال لكل حضانة نشطة", "Children per Active Kindergarten", ratio, "طفل/حضانة", "child/kg"),
             "rows": [
                 {"المؤشر": "أطفال لكل حضانة نشطة", "الأطفال": children, "الحضانات النشطة": active_kgs, "النسبة": ratio}
             ],

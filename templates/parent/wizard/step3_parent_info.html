@@ -1,14 +1,21 @@
 {% extends 'base.html' %}
-{% block title %}{{ _('معلومات ولي الأمر') }} — KinJo{% endblock %}
+{% block title %}{{ _('Parent & Child Information') }} — KinJo{% endblock %}
 
 {% block page_header %}
 <div class="page-header-wrap">
     <div>
-        <div class="page-header-eyebrow"><i class="bi bi-person-plus-fill"></i> {{ _('تسجيل طفل') }}</div>
-        <h1 class="page-header-title">{{ _('الخطوة 3: معلومات الطفل') }}</h1>
+        <div class="page-header-eyebrow"><i class="bi bi-person-plus-fill"></i> {{ _('Child Enrollment') }}</div>
+        <h1 class="page-header-title">{{ _('Step 3: Child Information') }}</h1>
+        <nav aria-label="{{ _('Breadcrumb') }}">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="/dashboard">{{ _('Dashboard') }}</a></li>
+                <li class="breadcrumb-item"><a href="/parent/enrollments">{{ _('Enrollments') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('Child Information') }}</li>
+            </ol>
+        </nav>
     </div>
-    <a href="/parent/enroll" class="btn btn-ghost btn-sm">
-        <i class="bi bi-arrow-right me-1"></i>{{ _('الخطوة السابقة') }}
+    <a href="/enroll" class="btn btn-ghost btn-sm">
+        <i class="bi bi-arrow-right me-1"></i>{{ _('Previous Step') }}
     </a>
 </div>
 <div class="progress mb-4" style="height:6px;">
@@ -88,16 +95,21 @@
     const kgName = sessionStorage.getItem('enroll_kg_name');
 
     if (!kgId) {
-        window.location.href = '/parent/enroll';
+        window.location.href = '/enrollments/create';
         return;
     }
 
     document.getElementById('kgInfo').textContent =
-        '{{ _("الحضانة المختارة:") }} ' + (kgName || kgId);
+        '{{ _("Selected Kindergarten:") }} ' + (kgName || kgId);
 
     function getHeaders() {
         const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-        return { 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' };
+        const headers = { 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' };
+        const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
+                     (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
+                     (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
+        if (csrf) headers['X-CSRF-Token'] = csrf;
+        return headers;
     }
 
     document.getElementById('enrollForm').addEventListener('submit', async function(e) {

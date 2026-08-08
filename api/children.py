@@ -97,8 +97,8 @@ def update_parent_profile(
     if not parent:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
-    # Authorization — only the profile owner may update their own profile
-    if parent.user_id != current_user.id:
+    # Authorization — only the profile owner or ADMIN may update profile
+    if current_user.role != models.UserRole.ADMIN and parent.user_id != current_user.id:
         raise HTTPException(status_code=403, detail=_api("Not authorized to update this profile", _ulang(current_user)))
 
     # Apply updates
@@ -677,6 +677,33 @@ def get_child_observations(
                 raise HTTPException(status_code=403, detail="Not assigned to child's class")
         else:
             raise HTTPException(status_code=403, detail="Child not enrolled in any active class")
+
+    # Managers are scoped to their own kindergarten.
+    #
+    # There was no MANAGER branch here at all: parents and supervisors were
+    # checked, admins are unrestricted by design, and a manager fell straight
+    # through to the unfiltered query below. Verified against the seed data —
+    # manager1 (kindergarten 1) read all four developmental observations for
+    # child 7, who is enrolled in kindergarten 3, including assessment text and
+    # mastery level.
+    #
+    # Supervisors keep the stricter class-assignment rule above; this only adds
+    # the kindergarten boundary a manager was missing. Same guard shape as
+    # api/portfolio.py's child-scoped reads.
+    # 404 rather than 403, and the same wording _authorize_child_access uses at
+    # the top of this file: "Staff lookups deliberately return 404 outside their
+    # kindergarten so numeric child IDs cannot be used to discover another
+    # tenant's records." A 403 reading "not in your kindergarten scope" would
+    # confirm the child exists somewhere else, which is the enumeration oracle
+    # tests/test_analytics_tenant_isolation.py exists to prevent.
+    if current_user.role == models.UserRole.MANAGER:
+        enrollment = db.query(models.EnrollmentApplication.id).filter(
+            models.EnrollmentApplication.child_id == child_id,
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+        ).first()
+        if not enrollment:
+            raise HTTPException(status_code=404, detail="Child not found")
 
     observations_query = db.query(models.Observation).filter(
         models.Observation.child_id == child_id

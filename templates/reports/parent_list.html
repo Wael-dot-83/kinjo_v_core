@@ -18,7 +18,7 @@ endblock %} {% block page_header %}
 </div>
 {% endblock %} {% block content %} {% set STATUS_LABELS = { 'APPROVED':
 _('Approved'), 'DRAFT': _('Draft'), 'REJECTED': _('Rejected'), 'SUBMITTED':
-_('Under Review'), 'SENT_TO_PARENT': _('Sent'), 'RETURNED': _('Rejected'), } %}
+_('Under Review'), 'SENT_TO_PARENT': _('Sent'), 'RETURNED': _('Returned'), } %}
 <div class="row g-4">
   <div class="col-lg-12">
     <!-- Filters -->
@@ -103,12 +103,15 @@ _('Under Review'), 'SENT_TO_PARENT': _('Sent'), 'RETURNED': _('Rejected'), } %}
 
 <script>
   function getHeaders() {
-    if (!window.AuthService || !AuthService.isAuthenticated()) {
-      return { "Content-Type": "application/json" };
-    }
-    const token = AuthService.getToken();
     const headers = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (window.AuthService && AuthService.isAuthenticated()) {
+      const token = AuthService.getToken();
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    }
+    const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
+                 (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
+                 (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
+    if (csrf) headers['X-CSRF-Token'] = csrf;
     return headers;
   }
 

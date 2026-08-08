@@ -1,406 +1,677 @@
 /* ==========================================================================
-   KinJo Manager Module — Modern Design System Extensions
+   KinJo Manager Module — design layer
+   ==========================================================================
+
+   Scope: the five manager pages (dashboard, supervisors, KPI, benchmarking,
+   absence requests) plus the shared context strip. Loaded AFTER kinjo.css in
+   manager_base.html so this layer actually wins its specificity ties — an
+   earlier revision sat before kinjo.css and carried apologetic comments about
+   rules that could never apply.
+
+   Three rules govern every colour below, and they come from design-tokens.css
+   rather than from taste:
+
+     1. GREEN IS IDENTITY AND HEALTH, NEVER AN ACTION.
+        design-tokens.css:6-16 makes green load-bearing as a status colour, so
+        a green button would erase the "healthy" signal. Green appears here on
+        chrome (hero, strip rail) and on the healthy state. Nothing else.
+
+     2. BLUE IS INTERACTION.
+        --kinjo-action drives links, buttons, focus. Untouched here.
+
+     3. STATUS COLOUR IS RESERVED FOR THE RAIL.
+        Amber/green/red mean something. They are not available for decoration,
+        which is what the previous --gold/--teal/--indigo/--emerald card accents
+        were: four hues encoding nothing, on four different card components.
+
+   The card system is ONE component. Six competing definitions used to live in
+   this file (.mgr-card, .mgr-stat-card, .mgr-action-card, .mgr-snapshot-tile,
+   .mgr-activity-card, .mgr-chart-card) and produced four visibly different
+   cards across four pages. They now share a single surface and differ only in
+   the state their rail reports. Fifteen unused selector groups were removed
+   (.mgr-card, .mgr-quick-tile, .mgr-table*, .mgr-badge*, .mgr-modal,
+   .mgr-hero-banner, .mgr-skeleton) — verified against every template and JS
+   file before deletion.
+
+   No glassmorphism, no hover translate. Both were decoration that cost
+   legibility on a data-dense compliance tool; backdrop-filter also forces a
+   compositing layer per card. The rail replaces them because it carries
+   information they did not.
    ========================================================================== */
 
-/* Root tokens for Manager theme */
 :root {
-  --mgr-primary: #1F5E47;
-  --mgr-primary-hover: #164634;
-  --mgr-primary-light: rgba(31, 94, 71, 0.08);
-  --mgr-gold: #D4AF37;
-  --mgr-gold-hover: #B89628;
-  --mgr-gold-light: rgba(212, 175, 55, 0.12);
-  --mgr-bg-glass: rgba(255, 255, 255, 0.85);
-  --mgr-card-shadow: 0 4px 20px -2px rgba(31, 94, 71, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
-  --mgr-card-shadow-hover: 0 12px 28px -4px rgba(31, 94, 71, 0.14), 0 4px 12px -2px rgba(0, 0, 0, 0.06);
-  --mgr-border-radius: 12px;
-  --mgr-border-radius-sm: 8px;
-  --mgr-transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Chrome — identity only. */
+  --mgr-brand: #1f5e47;
+  --mgr-brand-mid: #267054;
+  --mgr-brand-deep: #134231;
+  --mgr-brand-tint: rgba(31, 94, 71, 0.06);
+
+  /* Status. Two tiers, because a 3px rail and a glyph have different jobs:
+     --mgr-rail-*  vivid, for the rail itself, where saturation is what makes a
+                   3px sliver visible at a glance. These are the values
+                   templates/manager/kpi.html already used for its
+                   .kpi-status-bar-* rails; that page is where this vocabulary
+                   started, and it now reads from these tokens so the two cannot
+                   drift apart.
+     --mgr-state-* darker, for icon glyphs and text, which have to clear 4.5:1
+                   against their tint. #f59e0b on #fef3c7 is 1.9:1 and fails;
+                   #b45309 on the same tint is 5.9:1. Never use a rail value as
+                   an ink colour. */
+  --mgr-rail-attention: #f59e0b;
+  --mgr-rail-healthy: #10b981;
+  --mgr-rail-breach: #ef4444;
+  --mgr-rail-info: #3b82f6;
+
+  --mgr-state-attention: #b45309; /* work is waiting on the manager */
+  --mgr-state-attention-tint: #fef3c7;
+  --mgr-state-healthy: #15803d; /* done, or within standard */
+  --mgr-state-healthy-tint: #dcfce7;
+  --mgr-state-breach: #b91c1c; /* outside standard */
+  --mgr-state-breach-tint: #fee2e2;
+  --mgr-state-info: #1e40af; /* context, no action implied */
+  --mgr-state-info-tint: #e0e7ff;
+  --mgr-state-idle: #cbd5e1; /* nothing to report */
+
+  --mgr-radius: 12px;
+  --mgr-radius-sm: 8px;
+  --mgr-rail: 3px;
+
+  /* Two elevations. A card is resting or it is hovered; there is no third. */
+  --mgr-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --mgr-shadow-raised: 0 2px 6px rgba(15, 23, 42, 0.05), 0 10px 24px -8px rgba(31, 94, 71, 0.18);
+
+  --mgr-speed: 160ms;
+  --mgr-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Glassmorphism Cards */
-.mgr-card {
-  background: var(--mgr-bg-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  border-radius: var(--mgr-border-radius);
-  box-shadow: var(--mgr-card-shadow);
-  transition: var(--mgr-transition);
-}
+/* ==========================================================================
+   1. Context strip — the manager module's signature element
+   --------------------------------------------------------------------------
+   templates/components/manager_context_strip.html calls itself the signature
+   element and ships full a11y semantics (role=region, aria-live on the count,
+   colour never used alone for sync state), but carried no CSS at all — so it
+   rendered as three bare stacked paragraphs on all five pages.
 
-.mgr-card:hover {
-  box-shadow: var(--mgr-card-shadow-hover);
-  transform: translateY(-2px);
-}
-
-/* Metric Hero Section */
-.mgr-hero-banner {
-  background: linear-gradient(135deg, #1F5E47 0%, #2A7B5F 50%, #164634 100%);
-  color: #ffffff;
-  border-radius: var(--mgr-border-radius);
-  padding: 1.75rem 2rem;
-  box-shadow: 0 8px 24px -4px rgba(31, 94, 71, 0.25);
-  position: relative;
-  overflow: hidden;
-}
-
-.mgr-hero-banner::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
-  pointer-events: none;
-}
-
-/* Quick Action Tiles */
-.mgr-quick-tile {
+   Every manager action is scoped to exactly one kindergarten. The strip is the
+   persistent answer to "which one, how many children, is this fresh", so it
+   reads as one continuous rail rather than a card: full-width, low, quiet, and
+   anchored to the brand by a single edge.
+   ========================================================================== */
+.manager-context-strip {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  border-radius: var(--mgr-border-radius-sm);
-  background: #ffffff;
-  border: 1px solid var(--kinjo-color-border);
-  color: #1e293b;
-  text-decoration: none;
-  transition: var(--mgr-transition);
+  gap: 0.375rem 1.25rem;
+  padding: 0.625rem 1rem;
+  margin-bottom: 1.5rem;
+  background: var(--kinjo-color-bg-surface, #fff);
+  border: 1px solid var(--kinjo-color-border-subtle, #dceae3);
+  border-inline-start: var(--mgr-rail) solid var(--mgr-brand);
+  border-radius: var(--mgr-radius-sm);
+  box-shadow: var(--mgr-shadow);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--kinjo-color-text-secondary, #475569);
 }
 
-.mgr-quick-tile:hover {
-  background: var(--mgr-primary-light);
-  border-color: var(--mgr-primary);
-  color: var(--mgr-primary);
-  transform: translateX(4px);
-}
-
-[dir="rtl"] .mgr-quick-tile:hover {
-  transform: translateX(-4px);
-}
-
-.mgr-quick-tile-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  display: flex;
+.manager-context-strip > p {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
+  gap: 0.4rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.manager-context-strip .bi {
+  color: var(--mgr-brand);
+  font-size: 0.9375rem;
   flex-shrink: 0;
 }
 
-/* Custom Table Styles */
-.mgr-table-container {
-  border-radius: var(--mgr-border-radius);
-  overflow: hidden;
-  border: 1px solid var(--kinjo-color-border);
-  background: #ffffff;
+/* The kindergarten name is the one thing here that must survive a glance. */
+.manager-context-strip .strip-kindergarten {
+  font-weight: 700;
+  color: var(--kinjo-color-text-primary, #0f172a);
 }
 
-.mgr-table {
+.manager-context-strip .strip-scope-label,
+.manager-context-strip .strip-children-label {
+  color: var(--kinjo-color-text-muted, #64748b);
+}
+
+.manager-context-strip .strip-children [data-strip-children-count] {
+  font-weight: 700;
+  color: var(--kinjo-color-text-primary, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sync state. Colour is a redundant cue here — the JS always writes the text
+   too — so these dots may safely carry meaning. */
+.strip-sync-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  background: var(--mgr-state-idle);
+}
+
+.strip-sync-dot.synced {
+  background: var(--mgr-state-healthy);
+}
+
+.strip-sync-dot.pending {
+  background: var(--mgr-state-attention);
+}
+
+.strip-sync-dot.stale {
+  background: var(--kinjo-color-text-muted, #64748b);
+}
+
+.manager-context-strip .strip-sync {
+  color: var(--kinjo-color-text-muted, #64748b);
+  font-size: 0.8125rem;
+}
+
+/* Push the sync state to the far edge on wide screens: it is the least urgent
+   item in the strip and should not sit between the two that matter. */
+@media (min-width: 768px) {
+  .manager-context-strip .strip-sync {
+    margin-inline-start: auto;
+  }
+}
+
+/* ==========================================================================
+   2. Page header sizing inside the app shell
+   --------------------------------------------------------------------------
+   layout.css makes .admin-layout a 100vh flex row and .admin-main a
+   flex-direction:column with overflow:hidden, so every direct child of
+   .admin-main is a flex item at the default flex-shrink:1. The page header
+   was therefore compressible: the dashboard hero resolved to 95px tall around
+   283px of content and cut the Arabic title in half.
+
+   That was the real cause. A -webkit-line-clamp:2 had been added to the hero's
+   h1 to treat the symptom; it could not work, because the heading was never
+   overflowing its own box — it was being crushed along with everything else in
+   the header. The clamp only added its own damage, since the -webkit-box line
+   box is computed from Latin metrics and cuts Arabic descenders.
+
+   .admin-content keeps flex-grow:1 and overflow-y:auto, so it remains the
+   scroll region and absorbs the space the header no longer gives up. Scoped to
+   manager pages: this sheet loads nowhere else.
+   ========================================================================== */
+.admin-main > *:not(.admin-content) {
+  flex-shrink: 0;
+}
+
+/* The page head band: title, breadcrumb and context strip, held on the same
+   inline measure as .admin-content so the whole page reads on one edge. */
+.mgr-page-band {
+  padding-inline: var(--kinjo-spacing-6, 1.5rem);
+  padding-block-start: var(--kinjo-spacing-4, 1rem);
+  min-width: 0;
+}
+
+/* An empty page_header block still leaves whitespace, so :empty will not match
+   it — the band is padded from the top only, and the strip's own margin
+   supplies the gap below. */
+.mgr-page-band > *:last-child {
   margin-bottom: 0;
 }
 
-.mgr-table th {
-  background: #f8fafc;
-  color: #475569;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.875rem 1rem;
-  border-bottom: 2px solid var(--kinjo-color-border);
+/* The shared page-header component (components/page-header.html) already owns
+   its own gutter, so it must not take the band's as well. */
+.mgr-page-band > .page-header-wrap {
+  margin-inline: 0;
 }
 
-.mgr-table td {
-  padding: 0.875rem 1rem;
-  vertical-align: middle;
-  border-bottom: 1px solid var(--kinjo-color-border-subtle);
-  font-size: 0.925rem;
+/* kinjo.css:1425-1447 puts `.page-header-actions { width: 100% }` inside a
+   `@media (min-width: 768px)` block. Combined with the wrapper's flex-wrap,
+   a full-width actions block always wraps onto its own line, which is what
+   left the KPI and supervisors headers ~175px tall with a button stranded
+   under an otherwise empty white card.
+
+   Reading the rest of that block — .page-header-actions going column, buttons
+   going width:100% — it is a mobile stacking rule that was published against
+   min-width instead of max-width. Correcting it in kinjo.css would change
+   every admin page too, so this override is scoped to the manager band and the
+   underlying rule is left for a separate, deliberate fix. */
+@media (min-width: 768px) {
+  .mgr-page-band .page-header-actions {
+    width: auto;
+    justify-content: flex-end;
+  }
 }
 
-.mgr-table tbody tr:hover {
-  background-color: var(--mgr-primary-light);
+/* Guard the scroll region: a flex item's automatic minimum size is its content,
+   which would otherwise stop .admin-content shrinking to the space left over. */
+.admin-main > .admin-content {
+  min-height: 0;
 }
-
-/* Badge System */
-.mgr-badge {
-  padding: 0.35em 0.75em;
-  font-size: 0.785rem;
-  font-weight: 600;
-  border-radius: 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.mgr-badge-success {
-  background-color: #dcfce7;
-  color: #15803d;
-}
-
-.mgr-badge-warning {
-  background-color: #fef3c7;
-  color: #b45309;
-}
-
-.mgr-badge-danger {
-  background-color: #fee2e2;
-  color: #b91c1c;
-}
-
-.mgr-badge-info {
-  background-color: #e0f2fe;
-  color: #0369a1;
-}
-
-.mgr-badge-neutral {
-  background-color: #f1f5f9;
-  color: #475569;
-}
-
-/* Modal Improvements */
-.mgr-modal .modal-content {
-  border-radius: var(--mgr-border-radius);
-  border: none;
-  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.2);
-}
-
-.mgr-modal .modal-header {
-  background: #f8fafc;
-  border-bottom: 1px solid var(--kinjo-color-border);
-  border-top-left-radius: var(--mgr-border-radius);
-  border-top-right-radius: var(--mgr-border-radius);
-  padding: 1.25rem 1.5rem;
-}
-
-.mgr-modal .modal-footer {
-  background: #f8fafc;
-  border-top: 1px solid var(--kinjo-color-border);
-  border-bottom-left-radius: var(--mgr-border-radius);
-  border-bottom-right-radius: var(--mgr-border-radius);
-  padding: 1rem 1.5rem;
-}
-
-/* Skeleton Loading Animations */
-@keyframes mgr-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-.mgr-skeleton {
-  animation: mgr-pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  background-color: #e2e8f0;
-  border-radius: 4px;
-}
-
 
 /* ==========================================================================
-   MANAGER MODULE - UI/UX ENHANCEMENTS
-   Classes here back the markup in templates/manager/. Every selector below is
-   used by a template or by the JS that renders into one; nothing is defined
-   speculatively, because unused rules here are indistinguishable from rules
-   whose markup was renamed out from under them.
+   2b. Hero
+   --------------------------------------------------------------------------
+   Arabic headings are never clamped here; they wrap. Any future truncation must
+   use max-height with a generous line-height, not line-clamp.
    ========================================================================== */
+.mgr-dash-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 1.5rem 1.75rem;
+  border-radius: var(--mgr-radius);
+  background: linear-gradient(135deg, var(--mgr-brand) 0%, var(--mgr-brand-mid) 55%, var(--mgr-brand-deep) 100%);
+  color: #fff;
+  box-shadow: 0 8px 24px -10px rgba(19, 66, 49, 0.45);
+}
 
-/* Stat card */
-.mgr-stat-card {
+/* A single soft light source, top inline-end. Replaces the previous gold
+   radial bloom, which read as a smudge behind the title at small widths. */
+.mgr-dash-hero::before {
+  content: "";
+  position: absolute;
+  inset-block-start: -60%;
+  inset-inline-end: -10%;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
+}
+
+.mgr-dash-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.mgr-dash-hero h1 {
+  line-height: 1.45; /* Arabic descenders need the room; do not tighten. */
+  margin: 0 0 0.35rem;
+  overflow-wrap: anywhere;
+}
+
+.mgr-dash-hero .lead {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.mgr-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+
+.mgr-time-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* ==========================================================================
+   3. The card
+   --------------------------------------------------------------------------
+   One surface. The rail on the inline-start edge is the only thing that varies,
+   and it reports state rather than category.
+   ========================================================================== */
+.mgr-action-card,
+.mgr-snapshot-tile,
+.mgr-activity-card,
+.mgr-chart-card,
+.mgr-stat-card,
+.supervisor-card {
+  position: relative;
+  background: var(--kinjo-color-bg-surface, #fff);
+  border: 1px solid var(--kinjo-color-border-subtle, #dceae3);
+  border-inline-start: var(--mgr-rail) solid var(--mgr-state-idle);
+  border-radius: var(--mgr-radius);
+  box-shadow: var(--mgr-shadow);
+  transition: box-shadow var(--mgr-speed) var(--mgr-ease),
+    border-color var(--mgr-speed) var(--mgr-ease);
+}
+
+.mgr-action-card:hover,
+.mgr-snapshot-tile:hover,
+.mgr-activity-card:hover,
+.mgr-chart-card:hover,
+.mgr-stat-card:hover,
+.supervisor-card:hover {
+  box-shadow: var(--mgr-shadow-raised);
+}
+
+/* Several of these elements also carry Bootstrap's .card, and kinjo.css:2723
+   declares `.card { border: 1px solid #edf2f7 !important }`. That is a
+   SHORTHAND with !important, so it resets all four sides and no ordinary
+   declaration can put a rail on a card no matter how late it loads — the four
+   dashboard action cards were silently rendering with a 1px grey edge instead
+   of their status rail.
+
+   These declarations are !important solely to answer that one. They are equal
+   in specificity to the kinjo.css rule and this sheet now loads after it, so
+   later-wins settles the tie. Delete these the day that `border` shorthand
+   loses its !important. */
+.mgr-action-card,
+.mgr-snapshot-tile,
+.mgr-activity-card,
+.mgr-chart-card,
+.mgr-stat-card,
+.supervisor-card {
+  border: 1px solid var(--kinjo-color-border-subtle, #dceae3) !important;
+  border-inline-start: var(--mgr-rail) solid var(--mgr-state-idle) !important;
+  border-radius: var(--mgr-radius) !important;
+}
+
+/* Padding belongs to the card, not to a utility class in the markup. */
+.mgr-snapshot-tile,
+.mgr-activity-card {
+  padding: 1.25rem;
+}
+
+.mgr-chart-card {
+  padding: 1.5rem;
+}
+
+.mgr-snapshot-tile {
   display: flex;
   align-items: center;
-  gap: var(--kinjo-spacing-4);
-  padding: var(--kinjo-spacing-4);
-  background: var(--kinjo-color-bg-surface);
-  border: 1px solid var(--kinjo-color-border);
-  border-radius: var(--mgr-border-radius);
-  box-shadow: var(--mgr-card-shadow);
-  transition: var(--mgr-transition);
+  gap: 1rem;
 }
 
-.mgr-stat-card:hover {
-  box-shadow: var(--mgr-card-shadow-hover);
-  transform: translateY(-2px);
+/* --- Rail states ---------------------------------------------------------
+   The legacy modifier names are colour words (--gold/--teal/--indigo/
+   --emerald) and are kept so the templates keep working, but each now maps to
+   a MEANING. Three of the four dashboard action cards count work waiting on
+   the manager, so they share the attention rail; the fourth counts work
+   already done and reads healthy. Same hue, same meaning, every page.        */
+.mgr-action-card--gold,
+.mgr-action-card--teal,
+.mgr-action-card--indigo {
+  border-inline-start-color: var(--mgr-rail-attention) !important;
 }
 
-.mgr-stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--mgr-border-radius);
+.mgr-action-card--emerald {
+  border-inline-start-color: var(--mgr-rail-healthy) !important;
+}
+
+/* Explicit state hooks, for markup that can say what it means. !important is
+   load-bearing here: these sit alongside the .mgr-action-card--* modifiers on
+   the same element and both are single-class selectors, so source order alone
+   would decide the winner. */
+.mgr-state-attention {
+  border-inline-start-color: var(--mgr-rail-attention) !important;
+}
+
+.mgr-state-healthy {
+  border-inline-start-color: var(--mgr-rail-healthy) !important;
+}
+
+.mgr-state-breach {
+  border-inline-start-color: var(--mgr-rail-breach) !important;
+}
+
+.mgr-state-info {
+  border-inline-start-color: var(--mgr-rail-info) !important;
+}
+
+/* ==========================================================================
+   4. Card internals — icons, labels, values
+   ==========================================================================
+   Icon tints follow the rail vocabulary. The previous four-hue palette
+   (teal/indigo/emerald/gold) is collapsed onto it, so an amber icon and an
+   amber rail always mean the same thing.
+   ========================================================================== */
+.mgr-icon-ring,
+.mgr-stat-icon,
+.mgr-snapshot-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
   flex-shrink: 0;
+  border-radius: var(--mgr-radius-sm);
+  font-size: 1.375rem;
 }
 
-/* Only the three variants supervisors.html actually renders. The warning tile
-   takes dark green text rather than white: white on --kinjo-color-warning is
-   about 1.9:1 and fails at any size. */
-.mgr-stat-icon-primary { background: var(--kinjo-color-primary); color: #fff; }
-.mgr-stat-icon-success { background: var(--kinjo-color-success); color: #fff; }
-.mgr-stat-icon-warning { background: var(--kinjo-color-warning); color: #064e32; }
+.mgr-icon-ring {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 0.75rem;
+}
 
-.mgr-stat-body { flex: 1; min-width: 0; }
+.mgr-stat-icon,
+.mgr-snapshot-avatar {
+  width: 52px;
+  height: 52px;
+}
+
+.mgr-icon-ring--gold,
+.mgr-icon-ring--teal,
+.mgr-icon-ring--indigo,
+.mgr-stat-icon-warning {
+  background: var(--mgr-state-attention-tint);
+  color: var(--mgr-state-attention);
+}
+
+.mgr-icon-ring--emerald,
+.mgr-stat-icon-success,
+.mgr-snapshot-avatar--success {
+  background: var(--mgr-state-healthy-tint);
+  color: var(--mgr-state-healthy);
+}
+
+.mgr-stat-icon-primary,
+.mgr-snapshot-avatar--primary,
+.mgr-snapshot-avatar--gold {
+  background: var(--mgr-brand-tint);
+  color: var(--mgr-brand);
+}
+
+.mgr-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.mgr-stat-body {
+  flex: 1;
+  min-width: 0;
+}
+
 .mgr-stat-label {
-  font-size: var(--kinjo-font-size-sm);
-  font-weight: var(--kinjo-font-weight-medium);
-  color: var(--kinjo-color-text-secondary);
-  margin-bottom: var(--kinjo-spacing-1);
-}
-.mgr-stat-value {
-  font-size: var(--kinjo-font-size-3xl);
-  font-weight: var(--kinjo-font-weight-bold);
-  color: var(--kinjo-color-text-primary);
-  line-height: 1.1;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--kinjo-color-text-secondary, #475569);
+  margin-bottom: 0.125rem;
 }
 
-/* Supervisor card enhancements */
-.supervisor-card {
-  transition: var(--mgr-transition);
-  border: 1px solid var(--kinjo-color-border);
+/* Tabular figures so a column of counts lines up on the decimal. */
+.mgr-stat-value,
+.mgr-snapshot-tile .fs-2,
+.mgr-activity-card .fs-2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--kinjo-color-text-primary, #0f172a);
+  font-variant-numeric: tabular-nums;
 }
 
-.supervisor-card:hover {
-  box-shadow: var(--mgr-card-shadow-hover);
-  transform: translateY(-3px);
-  border-color: var(--kinjo-color-primary);
+/* Long emails and names truncate with an ellipsis instead of being cut by
+   overflow, which is what produced "wael-supervisor@" above the full address. */
+.supervisor-card .text-truncate,
+.mgr-stat-body .text-truncate {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .supervisor-card .card-footer {
-  border-top: 1px solid var(--kinjo-color-border-subtle);
-  background: var(--kinjo-color-bg-surface);
+  background: transparent;
+  border-top: 1px solid var(--kinjo-color-border-subtle, #dceae3);
 }
 
-/* .badge-soft-* is deliberately NOT redefined here. It already exists twice, in
-   admin_design_system.css (3341) and kinjo.css (2279), and kinjo.css is linked
-   after this file in manager_base.html — so a copy here would be overridden and
-   never apply. The supervisor cards use the shared definition. */
+/* ==========================================================================
+   4b. Active alerts panel (KPI page)
+   --------------------------------------------------------------------------
+   Dark ink on a pale attention tint rather than white on saturated amber:
+   white on #f59e0b measures 1.9:1 and fails at any size, which is why the
+   panel had drifted to a grey that failed to signal anything at all.
+   ========================================================================== */
+.mgr-alerts-panel {
+  border: 1px solid var(--mgr-rail-attention);
+  border-inline-start: var(--mgr-rail) solid var(--mgr-rail-attention);
+  overflow: hidden;
+  background: var(--kinjo-color-bg-surface, #fff);
+}
 
-/* Absence request tabs */
+.mgr-alerts-header {
+  background: var(--mgr-state-attention-tint);
+  color: var(--mgr-state-attention);
+  font-size: 0.9375rem;
+}
+
+.mgr-alerts-header .bi {
+  color: var(--mgr-state-attention);
+}
+
+.mgr-alerts-count {
+  background: var(--mgr-state-attention);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   5. Section headings
+   ========================================================================== */
+.mgr-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--kinjo-color-text-primary, #0f172a);
+  margin-bottom: 0.875rem;
+}
+
+.mgr-section-title .bi,
+.mgr-section-title i {
+  color: var(--mgr-brand);
+  font-size: 1rem;
+}
+
+/* ==========================================================================
+   6. Absence requests — tabs and table
+   ========================================================================== */
 .absence-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--kinjo-spacing-2);
-  margin-bottom: var(--kinjo-spacing-4);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .absence-tab {
-  padding: var(--kinjo-spacing-2) var(--kinjo-spacing-4);
-  border-radius: var(--kinjo-radius-md);
-  font-weight: var(--kinjo-font-weight-medium);
-  font-size: var(--kinjo-font-size-sm);
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--kinjo-color-border-subtle, #dceae3);
+  border-radius: 999px;
+  background: var(--kinjo-color-bg-surface, #fff);
+  color: var(--kinjo-color-text-secondary, #475569);
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  border: 1px solid var(--kinjo-color-border);
-  background: var(--kinjo-color-bg-surface);
-  color: var(--kinjo-color-text-secondary);
-  transition: all var(--kinjo-transition-fast);
+  transition: background-color var(--mgr-speed) var(--mgr-ease),
+    color var(--mgr-speed) var(--mgr-ease), border-color var(--mgr-speed) var(--mgr-ease);
 }
 
 .absence-tab:hover {
-  background: var(--kinjo-color-bg-hover);
-  border-color: var(--kinjo-color-primary);
-  color: var(--kinjo-color-text-primary);
+  background: var(--mgr-brand-tint);
+  border-color: var(--mgr-brand);
+  color: var(--kinjo-color-text-primary, #0f172a);
 }
 
 .absence-tab.active {
-  background: var(--kinjo-color-primary);
+  background: var(--kinjo-color-primary, #1e40af);
+  border-color: var(--kinjo-color-primary, #1e40af);
   color: #fff;
-  border-color: var(--kinjo-color-primary);
 }
 
-/* Enhanced table for absence requests */
 .absence-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  background: var(--kinjo-color-bg-surface);
-  border-radius: var(--mgr-border-radius);
+  background: var(--kinjo-color-bg-surface, #fff);
+  border: 1px solid var(--kinjo-color-border-subtle, #dceae3);
+  border-radius: var(--mgr-radius);
   overflow: hidden;
-  border: 1px solid var(--kinjo-color-border);
 }
 
 .absence-table thead th {
-  background: #f8fafc;
-  color: var(--kinjo-color-text-secondary);
-  font-weight: var(--kinjo-font-weight-semibold);
-  font-size: var(--kinjo-font-size-sm);
-  text-transform: uppercase;
+  padding: 0.75rem 1rem;
+  background: var(--mgr-brand-tint);
+  color: var(--kinjo-color-text-secondary, #475569);
+  font-size: 0.75rem;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  padding: var(--kinjo-spacing-3) var(--kinjo-spacing-4);
-  border-bottom: 2px solid var(--kinjo-color-border);
+  text-transform: uppercase;
   white-space: nowrap;
+  border-bottom: 1px solid var(--kinjo-color-border-subtle, #dceae3);
 }
 
 .absence-table tbody td {
-  padding: var(--kinjo-spacing-3) var(--kinjo-spacing-4);
-  border-bottom: 1px solid var(--kinjo-color-border-subtle);
-  font-size: var(--kinjo-font-size-sm);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
   vertical-align: middle;
-}
-
-.absence-table tbody tr:hover {
-  background: var(--mgr-primary-light);
+  border-bottom: 1px solid var(--kinjo-color-border-subtle, #dceae3);
 }
 
 .absence-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* Modal chrome for manager pages */
-.mgr-modal-content {
-  border-radius: var(--mgr-border-radius);
-  border: 1px solid var(--kinjo-color-border);
-  box-shadow: var(--kinjo-shadow-lg);
-}
-
-.mgr-modal-header {
-  background: #f8fafc;
-  border-bottom: 1px solid var(--kinjo-color-border);
-  padding: var(--kinjo-spacing-4) var(--kinjo-spacing-5);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .mgr-stat-card {
-    padding: var(--kinjo-spacing-3);
-  }
-  .mgr-stat-icon {
-    width: 44px;
-    height: 44px;
-    font-size: 1.25rem;
-  }
-  .mgr-stat-value {
-    font-size: var(--kinjo-font-size-2xl);
-  }
-  .absence-tabs {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    padding-bottom: var(--kinjo-spacing-2);
-  }
-  .absence-table {
-    font-size: var(--kinjo-font-size-sm);
-  }
-  .absence-table thead th,
-  .absence-table tbody td {
-    padding: var(--kinjo-spacing-2) var(--kinjo-spacing-3);
-  }
+.absence-table tbody tr:hover {
+  background: var(--mgr-brand-tint);
 }
 
 /* ==========================================================================
-   Header notifications panel
-   The bell lives in .admin-header-right next to the language and user menus.
-   Bootstrap's default dropdown width collapses to the toggle, so message
-   subjects wrapped one word per line; give the panel a real width and cap its
-   height so a long inbox scrolls inside the panel instead of off-screen.
+   7. Modal chrome
+   ========================================================================== */
+.mgr-modal-content {
+  border: 1px solid var(--kinjo-color-border-subtle, #dceae3);
+  border-radius: var(--mgr-radius);
+  box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.28);
+}
+
+.mgr-modal-header {
+  padding: 1rem 1.25rem;
+  background: var(--mgr-brand-tint);
+  border-bottom: 1px solid var(--kinjo-color-border-subtle, #dceae3);
+}
+
+/* ==========================================================================
+   8. Header notification panel
+   Bootstrap collapses a dropdown to its toggle width, which wrapped message
+   subjects one word per line.
    ========================================================================== */
 .header-notif-menu {
   width: 20rem;
   max-width: calc(100vw - 2rem);
   max-height: 24rem;
   overflow-y: auto;
-  padding-block: var(--kinjo-spacing-2, 0.5rem);
+  padding-block: 0.5rem;
 }
 
 .header-notif-menu .dropdown-item {
@@ -408,8 +679,6 @@
   word-break: break-word;
 }
 
-/* The badge is positioned against the toggle, which therefore has to be a
-   containing block; .btn-header-action is not positioned by default. */
 .header-notif-dropdown .btn-header-action {
   position: relative;
 }
@@ -420,12 +689,13 @@
 }
 
 /* ==========================================================================
-   Refresh spin
-   Used by the manager dashboard's Refresh button while a reload is in flight.
-   Bootstrap Icons ships no animation of its own, so define one here.
+   9. Motion
+   Two states only: a refresh in flight, and a card leaving the grid.
    ========================================================================== */
 @keyframes kinjo-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .bi.spin {
@@ -433,204 +703,106 @@
   animation: kinjo-spin 0.8s linear infinite;
 }
 
-/* Users who ask for reduced motion still need the busy state to read as busy,
-   so keep a non-animated cue rather than dropping the feedback entirely. */
+.supervisor-card {
+  transition: opacity 0.25s ease, box-shadow var(--mgr-speed) var(--mgr-ease),
+    border-color var(--mgr-speed) var(--mgr-ease);
+}
+
+.supervisor-card-removing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Reduced motion still needs the busy state to read as busy, so the cue
+   changes rather than disappears. */
 @media (prefers-reduced-motion: reduce) {
   .bi.spin {
     animation: none;
     opacity: 0.55;
   }
-}
 
-/* ==========================================================================
-   Supervisor card removal
-   Brief fade/shrink between a confirmed delete and the list reload, so the
-   grid does not visibly jump. Purely cosmetic: the reload is what establishes
-   the real state.
-   ========================================================================== */
-.supervisor-card {
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.supervisor-card-removing {
-  opacity: 0;
-  transform: scale(0.95);
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .supervisor-card {
-    transition: opacity 0.25s ease;
-  }
-  .supervisor-card-removing {
-    transform: none;
+  .mgr-action-card,
+  .mgr-snapshot-tile,
+  .mgr-activity-card,
+  .mgr-chart-card,
+  .mgr-stat-card,
+  .supervisor-card,
+  .absence-tab {
+    transition: none;
   }
 }
 
 /* ==========================================================================
-   Manager Dashboard Interactive Redesign Tokens & Components
+   10. Focus
+   The module layer loads late, so it is responsible for not losing the focus
+   ring that admin_design_system.css establishes.
    ========================================================================== */
-
-/* Hero Banner */
-.mgr-dash-hero {
-  background: linear-gradient(135deg, #1F5E47 0%, #2A7B5F 50%, #134231 100%);
-  border-radius: 16px;
-  padding: 1.75rem 2rem;
-  color: #ffffff;
-  box-shadow: 0 10px 30px -5px rgba(31, 94, 71, 0.3), 0 4px 12px rgba(0, 0, 0, 0.05);
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+.absence-tab:focus-visible,
+.manager-context-strip a:focus-visible,
+.mgr-action-card a:focus-visible,
+.supervisor-card a:focus-visible {
+  outline: 2px solid var(--kinjo-color-primary, #1e40af);
+  outline-offset: 2px;
+  border-radius: var(--mgr-radius-sm);
 }
 
-.mgr-dash-hero::before {
-  content: '';
-  position: absolute;
-  top: -40%;
-  right: -10%;
-  width: 320px;
-  height: 320px;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.25) 0%, rgba(255, 255, 255, 0) 70%);
-  pointer-events: none;
+/* ==========================================================================
+   11. Responsive
+   ========================================================================== */
+@media (max-width: 768px) {
+  .mgr-dash-hero {
+    padding: 1.25rem 1.125rem;
+  }
+
+  .mgr-dash-hero h1 {
+    font-size: 1.375rem;
+  }
+
+  .manager-context-strip {
+    gap: 0.375rem 0.875rem;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .mgr-stat-card,
+  .mgr-snapshot-tile,
+  .mgr-activity-card {
+    padding: 1rem;
+    gap: 0.875rem;
+  }
+
+  .mgr-chart-card {
+    padding: 1.125rem;
+  }
+
+  .mgr-icon-ring,
+  .mgr-stat-icon,
+  .mgr-snapshot-avatar {
+    width: 42px;
+    height: 42px;
+    font-size: 1.125rem;
+  }
+
+  .mgr-stat-value,
+  .mgr-snapshot-tile .fs-2,
+  .mgr-activity-card .fs-2 {
+    font-size: 1.5rem;
+  }
+
+  /* Tabs scroll rather than stacking into a tall block. */
+  .absence-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .absence-tab {
+    white-space: nowrap;
+  }
+
+  .absence-table thead th,
+  .absence-table tbody td {
+    padding: 0.625rem 0.75rem;
+  }
 }
-
-.mgr-brand-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.85rem;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(212, 175, 55, 0.4);
-  border-radius: 30px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #FEE180;
-}
-
-.mgr-time-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0.3rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* Priority Action Cards */
-.mgr-action-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 14px;
-  box-shadow: 0 4px 16px -2px rgba(31, 94, 71, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.mgr-action-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px -4px rgba(31, 94, 71, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.mgr-action-card--gold { border-top: 4px solid #D4AF37; }
-.mgr-action-card--teal { border-top: 4px solid #0EA5E9; }
-.mgr-action-card--indigo { border-top: 4px solid #6366F1; }
-.mgr-action-card--emerald { border-top: 4px solid #10B981; }
-
-.mgr-icon-ring {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  margin: 0 auto 0.75rem auto;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.mgr-icon-ring--gold { background: rgba(212, 175, 55, 0.15); color: #B89628; }
-.mgr-icon-ring--teal { background: rgba(14, 165, 233, 0.15); color: #0284C7; }
-.mgr-icon-ring--indigo { background: rgba(99, 102, 241, 0.15); color: #4F46E5; }
-.mgr-icon-ring--emerald { background: rgba(16, 185, 129, 0.15); color: #059669; }
-
-/* Snapshot Metric Tiles */
-.mgr-snapshot-tile {
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid #E2E8F0;
-  padding: 1.25rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-  transition: all 0.25s ease;
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.mgr-snapshot-tile:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(31, 94, 71, 0.1);
-  border-color: #1F5E47;
-}
-
-.mgr-snapshot-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.6rem;
-  flex-shrink: 0;
-}
-
-.mgr-snapshot-avatar--primary { background: linear-gradient(135deg, #1F5E47 0%, #2D8A68 100%); color: #fff; }
-.mgr-snapshot-avatar--success { background: linear-gradient(135deg, #059669 0%, #10B981 100%); color: #fff; }
-.mgr-snapshot-avatar--gold { background: linear-gradient(135deg, #D4AF37 0%, #F59E0B 100%); color: #fff; }
-
-/* Today Activity Widgets */
-.mgr-activity-card {
-  background: #ffffff;
-  border: 1px solid #E2E8F0;
-  border-radius: 14px;
-  padding: 1.5rem;
-  text-center: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  transition: all 0.2s ease;
-}
-
-.mgr-activity-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
-}
-
-/* Chart Card */
-.mgr-chart-card {
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid #E2E8F0;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
-  padding: 1.5rem;
-}
-
-/* Section Header Titles */
-.mgr-section-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1E293B;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.mgr-section-title i {
-  color: #1F5E47;
-}
-
