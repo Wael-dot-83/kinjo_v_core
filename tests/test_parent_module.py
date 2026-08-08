@@ -12,6 +12,7 @@ Comprehensive tests for the Parent Module:
 - /children  (parent redirect)
 - /enrollments/{id}  (parent access control)
 """
+
 import pytest
 from datetime import date, timedelta
 import models
@@ -48,9 +49,16 @@ class TestParentProfileAPI:
         response = client.get("/api/parent/profile", headers=auth_headers_parent)
         data = response.json()
         # These optional fields should be present (possibly null)
-        for field in ["second_name", "first_name_en", "last_name_en",
-                      "passport_number", "work_address", "profile_complete",
-                      "profile_completed_at", "correspondence_preference"]:
+        for field in [
+            "second_name",
+            "first_name_en",
+            "last_name_en",
+            "passport_number",
+            "work_address",
+            "profile_complete",
+            "profile_completed_at",
+            "correspondence_preference",
+        ]:
             assert field in data, f"Field {field} missing from profile response"
 
     def test_403_for_admin(self, client, auth_headers_admin, admin_user, test_db):
@@ -83,15 +91,10 @@ class TestParentProfileAPI:
         test_db.commit()
 
         # Login to get token
-        response = client.post("/token", data={
-            "username": "noprofile@test.com",
-            "password": "Parent123!"
-        })
+        response = client.post("/token", data={"username": "noprofile@test.com", "password": "Parent123!"})
         token = response.json()["access_token"]
 
-        response = client.get("/api/parent/profile", headers={
-            "Authorization": f"Bearer {token}"
-        })
+        response = client.get("/api/parent/profile", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 404
         assert "profile" in response.json()["detail"].lower()
 
@@ -99,6 +102,33 @@ class TestParentProfileAPI:
         """Should get 401 without auth"""
         response = client.get("/api/parent/profile")
         assert response.status_code == 401
+
+    def test_self_update_normalizes_phone_numbers(self, client, auth_headers_parent, parent_user, test_db):
+        """Self-service profile update should normalize parent and emergency phone numbers."""
+        response = client.put(
+            "/api/parent/profile",
+            json={
+                "phone_number": "+962799876543",
+                "emergency_contact_phone": "00962791234567",
+            },
+            headers=auth_headers_parent,
+        )
+        assert response.status_code == 200, response.text
+
+        profile = test_db.query(models.ParentProfile).filter(models.ParentProfile.user_id == parent_user.id).first()
+        assert profile is not None
+        assert profile.phone_number == "0799876543"
+        assert profile.emergency_contact_phone == "0791234567"
+
+    def test_self_update_rejects_invalid_phone_number(self, client, auth_headers_parent, parent_user, test_db):
+        """Self-service profile update should reject invalid Jordan phone numbers."""
+        response = client.put(
+            "/api/parent/profile",
+            json={"phone_number": "12345"},
+            headers=auth_headers_parent,
+        )
+        assert response.status_code == 400
+        assert "phone" in response.json()["detail"].lower()
 
 
 # ============================================================================
@@ -126,8 +156,9 @@ class TestParentChildrenAPI:
         assert child["mother_first_name"] == "Fatima"
         assert child["mother_last_name"] == "Hassan"
 
-    def test_children_include_enrollment_info(self, client, auth_headers_parent, parent_user,
-                                               sample_child, parent_enrollment, sample_kindergarten, test_db):
+    def test_children_include_enrollment_info(
+        self, client, auth_headers_parent, parent_user, sample_child, parent_enrollment, sample_kindergarten, test_db
+    ):
         """Children response should include enrollment details"""
         response = client.get("/api/parent/children", headers=auth_headers_parent)
         data = response.json()
@@ -197,8 +228,9 @@ class TestParentChildrenAPI:
 class TestParentEnrollmentsAPI:
     """Tests for GET /api/parent/enrollments"""
 
-    def test_returns_enrollments(self, client, auth_headers_parent, parent_user,
-                                  sample_child, parent_enrollment, sample_kindergarten, test_db):
+    def test_returns_enrollments(
+        self, client, auth_headers_parent, parent_user, sample_child, parent_enrollment, sample_kindergarten, test_db
+    ):
         """Parent should see their enrollments"""
         response = client.get("/api/parent/enrollments", headers=auth_headers_parent)
         assert response.status_code == 200
@@ -222,31 +254,41 @@ class TestParentEnrollmentsAPI:
         assert data["total"] == 0
         assert data["enrollments"] == []
 
-    def test_empty_enrollments_with_children(self, client, auth_headers_parent, parent_user,
-                                              sample_child, test_db):
+    def test_empty_enrollments_with_children(self, client, auth_headers_parent, parent_user, sample_child, test_db):
         """Parent with children but no enrollments should get empty list"""
         response = client.get("/api/parent/enrollments", headers=auth_headers_parent)
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 0
 
-    def test_multiple_enrollments_for_multiple_children(self, client, auth_headers_parent,
-                                                         parent_user, test_db):
+    def test_multiple_enrollments_for_multiple_children(self, client, auth_headers_parent, parent_user, test_db):
         """Parent with multiple children and enrollments"""
         profile = parent_user.parent_profile
 
         # Create 2 children
         child1 = models.Child(
-            parent_id=profile.id, first_name="Omar", last_name="Al-Rashid",
-            gender=models.Gender.MALE, date_of_birth=date.today() - timedelta(days=365 * 4),
-            father_name="Ahmad", mother_first_name="Fatima", mother_last_name="H",
-            mother_nationality="Jordanian", mother_national_id="111"
+            parent_id=profile.id,
+            first_name="Omar",
+            last_name="Al-Rashid",
+            gender=models.Gender.MALE,
+            date_of_birth=date.today() - timedelta(days=365 * 4),
+            father_name="Ahmad",
+            mother_first_name="Fatima",
+            mother_last_name="H",
+            mother_nationality="Jordanian",
+            mother_national_id="111",
         )
         child2 = models.Child(
-            parent_id=profile.id, first_name="Sara", last_name="Al-Rashid",
-            gender=models.Gender.FEMALE, date_of_birth=date.today() - timedelta(days=365 * 3),
-            father_name="Ahmad", mother_first_name="Fatima", mother_last_name="H",
-            mother_nationality="Jordanian", mother_national_id="222"
+            parent_id=profile.id,
+            first_name="Sara",
+            last_name="Al-Rashid",
+            gender=models.Gender.FEMALE,
+            date_of_birth=date.today() - timedelta(days=365 * 3),
+            father_name="Ahmad",
+            mother_first_name="Fatima",
+            mother_last_name="H",
+            mother_nationality="Jordanian",
+            mother_national_id="222",
         )
         test_db.add_all([child1, child2])
         test_db.commit()
@@ -255,16 +297,24 @@ class TestParentEnrollmentsAPI:
 
         # Create 2 kindergartens
         kg1 = models.Kindergarten(
-            name_ar="حضانة الأمل", name_en="Hope KG",
-            governorate="Amman", district="Amman", area="A",
-            address_line="St 1", contact_phone="+962790000001",
-            status=models.KindergartenStatus.ACTIVE
+            name_ar="حضانة الأمل",
+            name_en="Hope KG",
+            governorate="Amman",
+            district="Amman",
+            area="A",
+            address_line="St 1",
+            contact_phone="+962790000001",
+            status=models.KindergartenStatus.ACTIVE,
         )
         kg2 = models.Kindergarten(
-            name_ar="حضانة النور", name_en="Light KG",
-            governorate="Amman", district="Amman", area="B",
-            address_line="St 2", contact_phone="+962790000002",
-            status=models.KindergartenStatus.ACTIVE
+            name_ar="حضانة النور",
+            name_en="Light KG",
+            governorate="Amman",
+            district="Amman",
+            area="B",
+            address_line="St 2",
+            contact_phone="+962790000002",
+            status=models.KindergartenStatus.ACTIVE,
         )
         test_db.add_all([kg1, kg2])
         test_db.commit()
@@ -273,12 +323,10 @@ class TestParentEnrollmentsAPI:
 
         # Create enrollments
         e1 = models.EnrollmentApplication(
-            child_id=child1.id, kindergarten_id=kg1.id,
-            status=models.EnrollmentStatus.ACCEPTED
+            child_id=child1.id, kindergarten_id=kg1.id, status=models.EnrollmentStatus.ACCEPTED
         )
         e2 = models.EnrollmentApplication(
-            child_id=child2.id, kindergarten_id=kg2.id,
-            status=models.EnrollmentStatus.PENDING_REVIEW
+            child_id=child2.id, kindergarten_id=kg2.id, status=models.EnrollmentStatus.PENDING_REVIEW
         )
         test_db.add_all([e1, e2])
         test_db.commit()
@@ -294,20 +342,30 @@ class TestParentEnrollmentsAPI:
         """Arabic status labels should be correctly mapped"""
         profile = parent_user.parent_profile
         child = models.Child(
-            parent_id=profile.id, first_name="T", last_name="T",
-            gender=models.Gender.MALE, date_of_birth=date.today() - timedelta(days=365 * 3),
-            father_name="A", mother_first_name="F", mother_last_name="H",
-            mother_nationality="Jordanian", mother_national_id="333"
+            parent_id=profile.id,
+            first_name="T",
+            last_name="T",
+            gender=models.Gender.MALE,
+            date_of_birth=date.today() - timedelta(days=365 * 3),
+            father_name="A",
+            mother_first_name="F",
+            mother_last_name="H",
+            mother_nationality="Jordanian",
+            mother_national_id="333",
         )
         test_db.add(child)
         test_db.commit()
         test_db.refresh(child)
 
         kg = models.Kindergarten(
-            name_ar="حضانة", name_en="KG",
-            governorate="Amman", district="Amman", area="A",
-            address_line="St", contact_phone="+962790000099",
-            status=models.KindergartenStatus.ACTIVE
+            name_ar="حضانة",
+            name_en="KG",
+            governorate="Amman",
+            district="Amman",
+            area="A",
+            address_line="St",
+            contact_phone="+962790000099",
+            status=models.KindergartenStatus.ACTIVE,
         )
         test_db.add(kg)
         test_db.commit()
@@ -323,8 +381,7 @@ class TestParentEnrollmentsAPI:
         }
         for eng_status, arabic_label in status_map.items():
             enrollment = models.EnrollmentApplication(
-                child_id=child.id, kindergarten_id=kg.id,
-                status=models.EnrollmentStatus[eng_status]
+                child_id=child.id, kindergarten_id=kg.id, status=models.EnrollmentStatus[eng_status]
             )
             test_db.add(enrollment)
             test_db.commit()
@@ -359,19 +416,27 @@ class TestParentEnrollmentsAPI:
         """Parent A should NOT see Parent B's enrollments"""
         # Create parent A
         user_a = models.User(
-            username="parenta@test.com", email="parenta@test.com",
+            username="parenta@test.com",
+            email="parenta@test.com",
             hashed_password=get_password_hash("Parent123!"),
-            role=models.UserRole.PARENT, status=models.UserStatus.ACTIVE
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
         )
         test_db.add(user_a)
         test_db.commit()
         test_db.refresh(user_a)
         profile_a = models.ParentProfile(
-            user_id=user_a.id, first_name="A", last_name="A",
-            phone_number="+962790000010", gender=models.Gender.MALE,
-            nationality="Jordanian", national_id="AAAA",
-            home_governorate="Amman", home_district="Amman",
-            home_area="Abdoun", home_address_line="St 1"
+            user_id=user_a.id,
+            first_name="A",
+            last_name="A",
+            phone_number="+962790000010",
+            gender=models.Gender.MALE,
+            nationality="Jordanian",
+            national_id="AAAA",
+            home_governorate="Amman",
+            home_district="Amman",
+            home_area="Abdoun",
+            home_address_line="St 1",
         )
         test_db.add(profile_a)
         test_db.commit()
@@ -379,47 +444,64 @@ class TestParentEnrollmentsAPI:
 
         # Create parent B with child and enrollment
         user_b = models.User(
-            username="parentb@test.com", email="parentb@test.com",
+            username="parentb@test.com",
+            email="parentb@test.com",
             hashed_password=get_password_hash("Parent123!"),
-            role=models.UserRole.PARENT, status=models.UserStatus.ACTIVE
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
         )
         test_db.add(user_b)
         test_db.commit()
         test_db.refresh(user_b)
         profile_b = models.ParentProfile(
-            user_id=user_b.id, first_name="B", last_name="B",
-            phone_number="+962790000011", gender=models.Gender.FEMALE,
-            nationality="Jordanian", national_id="BBBB",
-            home_governorate="Amman", home_district="Amman",
-            home_area="Abdoun", home_address_line="St 2"
+            user_id=user_b.id,
+            first_name="B",
+            last_name="B",
+            phone_number="+962790000011",
+            gender=models.Gender.FEMALE,
+            nationality="Jordanian",
+            national_id="BBBB",
+            home_governorate="Amman",
+            home_district="Amman",
+            home_area="Abdoun",
+            home_address_line="St 2",
         )
         test_db.add(profile_b)
         test_db.commit()
         test_db.refresh(profile_b)
 
         child_b = models.Child(
-            parent_id=profile_b.id, first_name="ChildB", last_name="B",
-            gender=models.Gender.MALE, date_of_birth=date.today() - timedelta(days=365 * 3),
-            father_name="B", mother_first_name="B", mother_last_name="B",
-            mother_nationality="Jordanian", mother_national_id="MMMM"
+            parent_id=profile_b.id,
+            first_name="ChildB",
+            last_name="B",
+            gender=models.Gender.MALE,
+            date_of_birth=date.today() - timedelta(days=365 * 3),
+            father_name="B",
+            mother_first_name="B",
+            mother_last_name="B",
+            mother_nationality="Jordanian",
+            mother_national_id="MMMM",
         )
         test_db.add(child_b)
         test_db.commit()
         test_db.refresh(child_b)
 
         kg = models.Kindergarten(
-            name_ar="حضانة خاصة", name_en="Private KG",
-            governorate="Amman", district="Amman", area="X",
-            address_line="St", contact_phone="+962790000012",
-            status=models.KindergartenStatus.ACTIVE
+            name_ar="حضانة خاصة",
+            name_en="Private KG",
+            governorate="Amman",
+            district="Amman",
+            area="X",
+            address_line="St",
+            contact_phone="+962790000012",
+            status=models.KindergartenStatus.ACTIVE,
         )
         test_db.add(kg)
         test_db.commit()
         test_db.refresh(kg)
 
         enroll_b = models.EnrollmentApplication(
-            child_id=child_b.id, kindergarten_id=kg.id,
-            status=models.EnrollmentStatus.ACCEPTED
+            child_id=child_b.id, kindergarten_id=kg.id, status=models.EnrollmentStatus.ACCEPTED
         )
         test_db.add(enroll_b)
         test_db.commit()
@@ -429,9 +511,7 @@ class TestParentEnrollmentsAPI:
         token_a = resp.json()["access_token"]
 
         # Parent A should see 0 enrollments
-        response = client.get("/api/parent/enrollments", headers={
-            "Authorization": f"Bearer {token_a}"
-        })
+        response = client.get("/api/parent/enrollments", headers={"Authorization": f"Bearer {token_a}"})
         assert response.status_code == 200
         assert response.json()["total"] == 0
 
@@ -440,9 +520,7 @@ class TestParentEnrollmentsAPI:
         token_b = resp.json()["access_token"]
 
         # Parent B should see 1 enrollment
-        response = client.get("/api/parent/enrollments", headers={
-            "Authorization": f"Bearer {token_b}"
-        })
+        response = client.get("/api/parent/enrollments", headers={"Authorization": f"Bearer {token_b}"})
         assert response.status_code == 200
         assert response.json()["total"] == 1
         assert response.json()["enrollments"][0]["child_name"] == "ChildB B"
@@ -605,8 +683,9 @@ class TestParentRedirects:
 class TestParentEnrollmentViewAccess:
     """Parent should only see their own children's enrollment details"""
 
-    def test_parent_can_view_own_enrollment(self, client, parent_token, parent_user,
-                                             sample_child, parent_enrollment, test_db):
+    def test_parent_can_view_own_enrollment(
+        self, client, parent_token, parent_user, sample_child, parent_enrollment, test_db
+    ):
         """Parent should see their own child's enrollment detail"""
         client.cookies.set("kinjo_token", parent_token)
         response = client.get(f"/enrollments/{parent_enrollment.id}")
@@ -616,48 +695,65 @@ class TestParentEnrollmentViewAccess:
         """Parent should NOT see another parent's enrollment"""
         # Create another parent with child and enrollment
         user2 = models.User(
-            username="other@test.com", email="other@test.com",
+            username="other@test.com",
+            email="other@test.com",
             hashed_password=get_password_hash("Parent123!"),
-            role=models.UserRole.PARENT, status=models.UserStatus.ACTIVE
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
         )
         test_db.add(user2)
         test_db.commit()
         test_db.refresh(user2)
 
         profile2 = models.ParentProfile(
-            user_id=user2.id, first_name="Other", last_name="Parent",
-            phone_number="+962790009999", gender=models.Gender.FEMALE,
-            nationality="Jordanian", national_id="XXXX",
-            home_governorate="Amman", home_district="Amman",
-            home_area="Abdoun", home_address_line="St 1"
+            user_id=user2.id,
+            first_name="Other",
+            last_name="Parent",
+            phone_number="+962790009999",
+            gender=models.Gender.FEMALE,
+            nationality="Jordanian",
+            national_id="XXXX",
+            home_governorate="Amman",
+            home_district="Amman",
+            home_area="Abdoun",
+            home_address_line="St 1",
         )
         test_db.add(profile2)
         test_db.commit()
         test_db.refresh(profile2)
 
         child2 = models.Child(
-            parent_id=profile2.id, first_name="OtherChild", last_name="P",
-            gender=models.Gender.MALE, date_of_birth=date.today() - timedelta(days=365 * 3),
-            father_name="O", mother_first_name="M", mother_last_name="P",
-            mother_nationality="Jordanian", mother_national_id="YYYY"
+            parent_id=profile2.id,
+            first_name="OtherChild",
+            last_name="P",
+            gender=models.Gender.MALE,
+            date_of_birth=date.today() - timedelta(days=365 * 3),
+            father_name="O",
+            mother_first_name="M",
+            mother_last_name="P",
+            mother_nationality="Jordanian",
+            mother_national_id="YYYY",
         )
         test_db.add(child2)
         test_db.commit()
         test_db.refresh(child2)
 
         kg = models.Kindergarten(
-            name_ar="حضانة أخرى", name_en="Other KG",
-            governorate="Amman", district="Amman", area="Z",
-            address_line="St", contact_phone="+962790009998",
-            status=models.KindergartenStatus.ACTIVE
+            name_ar="حضانة أخرى",
+            name_en="Other KG",
+            governorate="Amman",
+            district="Amman",
+            area="Z",
+            address_line="St",
+            contact_phone="+962790009998",
+            status=models.KindergartenStatus.ACTIVE,
         )
         test_db.add(kg)
         test_db.commit()
         test_db.refresh(kg)
 
         other_enrollment = models.EnrollmentApplication(
-            child_id=child2.id, kindergarten_id=kg.id,
-            status=models.EnrollmentStatus.ACCEPTED
+            child_id=child2.id, kindergarten_id=kg.id, status=models.EnrollmentStatus.ACCEPTED
         )
         test_db.add(other_enrollment)
         test_db.commit()
@@ -681,58 +777,86 @@ class TestParentChildrenIsolation:
         """Parent A children list should NOT include Parent B's children"""
         # Create Parent A
         user_a = models.User(
-            username="pa@test.com", email="pa@test.com",
+            username="pa@test.com",
+            email="pa@test.com",
             hashed_password=get_password_hash("Parent123!"),
-            role=models.UserRole.PARENT, status=models.UserStatus.ACTIVE
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
         )
         test_db.add(user_a)
         test_db.commit()
         test_db.refresh(user_a)
         profile_a = models.ParentProfile(
-            user_id=user_a.id, first_name="PA", last_name="A",
-            phone_number="+962791111111", gender=models.Gender.MALE,
-            nationality="Jordanian", national_id="PA1",
-            home_governorate="Amman", home_district="Amman",
-            home_area="Abdoun", home_address_line="St 1"
+            user_id=user_a.id,
+            first_name="PA",
+            last_name="A",
+            phone_number="+962791111111",
+            gender=models.Gender.MALE,
+            nationality="Jordanian",
+            national_id="PA1",
+            home_governorate="Amman",
+            home_district="Amman",
+            home_area="Abdoun",
+            home_address_line="St 1",
         )
         test_db.add(profile_a)
         test_db.commit()
         test_db.refresh(profile_a)
 
         child_a = models.Child(
-            parent_id=profile_a.id, first_name="ChildA", last_name="A",
-            gender=models.Gender.MALE, date_of_birth=date.today() - timedelta(days=365 * 3),
-            father_name="PA", mother_first_name="MA", mother_last_name="A",
-            mother_nationality="Jordanian", mother_national_id="MA1"
+            parent_id=profile_a.id,
+            first_name="ChildA",
+            last_name="A",
+            gender=models.Gender.MALE,
+            date_of_birth=date.today() - timedelta(days=365 * 3),
+            father_name="PA",
+            mother_first_name="MA",
+            mother_last_name="A",
+            mother_nationality="Jordanian",
+            mother_national_id="MA1",
         )
         test_db.add(child_a)
         test_db.commit()
 
         # Create Parent B
         user_b = models.User(
-            username="pb@test.com", email="pb@test.com",
+            username="pb@test.com",
+            email="pb@test.com",
             hashed_password=get_password_hash("Parent123!"),
-            role=models.UserRole.PARENT, status=models.UserStatus.ACTIVE
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
         )
         test_db.add(user_b)
         test_db.commit()
         test_db.refresh(user_b)
         profile_b = models.ParentProfile(
-            user_id=user_b.id, first_name="PB", last_name="B",
-            phone_number="+962792222222", gender=models.Gender.FEMALE,
-            nationality="Jordanian", national_id="PB1",
-            home_governorate="Amman", home_district="Amman",
-            home_area="Khalda", home_address_line="St 2"
+            user_id=user_b.id,
+            first_name="PB",
+            last_name="B",
+            phone_number="+962792222222",
+            gender=models.Gender.FEMALE,
+            nationality="Jordanian",
+            national_id="PB1",
+            home_governorate="Amman",
+            home_district="Amman",
+            home_area="Khalda",
+            home_address_line="St 2",
         )
         test_db.add(profile_b)
         test_db.commit()
         test_db.refresh(profile_b)
 
         child_b = models.Child(
-            parent_id=profile_b.id, first_name="ChildB", last_name="B",
-            gender=models.Gender.FEMALE, date_of_birth=date.today() - timedelta(days=365 * 4),
-            father_name="PB", mother_first_name="MB", mother_last_name="B",
-            mother_nationality="Jordanian", mother_national_id="MB1"
+            parent_id=profile_b.id,
+            first_name="ChildB",
+            last_name="B",
+            gender=models.Gender.FEMALE,
+            date_of_birth=date.today() - timedelta(days=365 * 4),
+            father_name="PB",
+            mother_first_name="MB",
+            mother_last_name="B",
+            mother_nationality="Jordanian",
+            mother_national_id="MB1",
         )
         test_db.add(child_b)
         test_db.commit()
@@ -741,9 +865,7 @@ class TestParentChildrenIsolation:
         resp = client.post("/token", data={"username": "pa@test.com", "password": "Parent123!"})
         token_a = resp.json()["access_token"]
 
-        response = client.get("/api/parent/children", headers={
-            "Authorization": f"Bearer {token_a}"
-        })
+        response = client.get("/api/parent/children", headers={"Authorization": f"Bearer {token_a}"})
         data = response.json()
         assert data["total"] == 1
         assert data["children"][0]["first_name"] == "ChildA"
@@ -752,9 +874,7 @@ class TestParentChildrenIsolation:
         resp = client.post("/token", data={"username": "pb@test.com", "password": "Parent123!"})
         token_b = resp.json()["access_token"]
 
-        response = client.get("/api/parent/children", headers={
-            "Authorization": f"Bearer {token_b}"
-        })
+        response = client.get("/api/parent/children", headers={"Authorization": f"Bearer {token_b}"})
         data = response.json()
         assert data["total"] == 1
         assert data["children"][0]["first_name"] == "ChildB"
@@ -772,38 +892,54 @@ class TestParentProfileIsolation:
         """Two parents should each see only their own profile"""
         # Create Parent A
         user_a = models.User(
-            username="profilea@test.com", email="profilea@test.com",
+            username="profilea@test.com",
+            email="profilea@test.com",
             hashed_password=get_password_hash("Parent123!"),
-            role=models.UserRole.PARENT, status=models.UserStatus.ACTIVE
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
         )
         test_db.add(user_a)
         test_db.commit()
         test_db.refresh(user_a)
         profile_a = models.ParentProfile(
-            user_id=user_a.id, first_name="Khalid", last_name="Mansour",
-            phone_number="+962793333333", gender=models.Gender.MALE,
-            nationality="Jordanian", national_id="KM01",
-            home_governorate="Amman", home_district="Amman",
-            home_area="Abdoun", home_address_line="St 1"
+            user_id=user_a.id,
+            first_name="Khalid",
+            last_name="Mansour",
+            phone_number="+962793333333",
+            gender=models.Gender.MALE,
+            nationality="Jordanian",
+            national_id="KM01",
+            home_governorate="Amman",
+            home_district="Amman",
+            home_area="Abdoun",
+            home_address_line="St 1",
         )
         test_db.add(profile_a)
         test_db.commit()
 
         # Create Parent B
         user_b = models.User(
-            username="profileb@test.com", email="profileb@test.com",
+            username="profileb@test.com",
+            email="profileb@test.com",
             hashed_password=get_password_hash("Parent123!"),
-            role=models.UserRole.PARENT, status=models.UserStatus.ACTIVE
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
         )
         test_db.add(user_b)
         test_db.commit()
         test_db.refresh(user_b)
         profile_b = models.ParentProfile(
-            user_id=user_b.id, first_name="Nour", last_name="Haddad",
-            phone_number="+962794444444", gender=models.Gender.FEMALE,
-            nationality="Jordanian", national_id="NH01",
-            home_governorate="Amman", home_district="Amman",
-            home_area="Shmeisani", home_address_line="St 2"
+            user_id=user_b.id,
+            first_name="Nour",
+            last_name="Haddad",
+            phone_number="+962794444444",
+            gender=models.Gender.FEMALE,
+            nationality="Jordanian",
+            national_id="NH01",
+            home_governorate="Amman",
+            home_district="Amman",
+            home_area="Shmeisani",
+            home_address_line="St 2",
         )
         test_db.add(profile_b)
         test_db.commit()
@@ -811,9 +947,7 @@ class TestParentProfileIsolation:
         # Login as Parent A
         resp = client.post("/token", data={"username": "profilea@test.com", "password": "Parent123!"})
         token_a = resp.json()["access_token"]
-        response = client.get("/api/parent/profile", headers={
-            "Authorization": f"Bearer {token_a}"
-        })
+        response = client.get("/api/parent/profile", headers={"Authorization": f"Bearer {token_a}"})
         assert response.status_code == 200
         assert response.json()["first_name"] == "Khalid"
         assert response.json()["last_name"] == "Mansour"
@@ -821,9 +955,7 @@ class TestParentProfileIsolation:
         # Login as Parent B
         resp = client.post("/token", data={"username": "profileb@test.com", "password": "Parent123!"})
         token_b = resp.json()["access_token"]
-        response = client.get("/api/parent/profile", headers={
-            "Authorization": f"Bearer {token_b}"
-        })
+        response = client.get("/api/parent/profile", headers={"Authorization": f"Bearer {token_b}"})
         assert response.status_code == 200
         assert response.json()["first_name"] == "Nour"
         assert response.json()["last_name"] == "Haddad"
@@ -875,6 +1007,7 @@ class TestParentDashboardQuickActions:
         # Should have parent profile link, not generic settings
         assert "/parent/profile" in html
         assert "ملفي الشخصي" in html
+
 
 # ============================================================================
 # Parent reports page and API visibility
@@ -1237,6 +1370,7 @@ class TestParentDailyReportsVisibility:
         assert child_row is not None
         assert child_row["attendance_today"] is not None
         assert child_row["attendance_today"]["checked_in"] is None
+
 
 class TestParentDashboardDateContext:
     """Parent dashboard should use server-side date for daily badges."""
