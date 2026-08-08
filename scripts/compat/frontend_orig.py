@@ -1284,19 +1284,36 @@ async def parent_reports(
         models.ParentProfile.user_id == current_user.id
     ).first()
 
+    empty_summary = {
+        "report_count": 0,
+        "children_with_reports": 0,
+        "total_children": 0,
+        "week_report_count": 0,
+    }
+
     if not parent_profile:
         return templates.TemplateResponse(
             request=request,
             name="reports/parent_list.html",
-            context={"current_user": current_user, "today": selected_date.isoformat(), "reports": []},
+            context={
+                "current_user": current_user,
+                "today": selected_date.isoformat(),
+                "selected_date": selected_date.isoformat(),
+                "reports": [],
+                "children": [],
+                "selected_child_id": None,
+                "selected_child_name": None,
+                "summary": empty_summary,
+            },
         )
 
-    child_ids = [
-        child_id
-        for (child_id,) in db.query(models.Child.id).filter(
-            models.Child.parent_id == parent_profile.id
-        ).all()
-    ]
+    child_rows = db.query(models.Child).filter(models.Child.parent_id == parent_profile.id).order_by(models.Child.id.asc()).all()
+    child_ids = [child.id for child in child_rows]
+    child_name_by_id = {
+        child.id: f"{child.first_name} {child.last_name}".strip()
+        for child in child_rows
+    }
+    selected_child_id = None
 
     child_id_filter = request.query_params.get("child_id")
     if child_id_filter:
@@ -1311,9 +1328,16 @@ async def parent_reports(
                 status_code=403,
                 context={"current_user": current_user},
             )
+        selected_child_id = requested_child_id
         child_ids = [requested_child_id]
 
     reports = []
+    summary = {
+        "report_count": 0,
+        "children_with_reports": 0,
+        "total_children": len(child_rows),
+        "week_report_count": 0,
+    }
     if child_ids:
         visible_statuses = [models.DailyReportStatus.SENT_TO_PARENT]
         reports = db.query(models.DailyReport).filter(
@@ -1324,13 +1348,18 @@ async def parent_reports(
             models.DailyReport.created_at.desc(),
             models.DailyReport.id.desc(),
         ).all()
-
-        child_name_by_id = {
-            child.id: f"{child.first_name} {child.last_name}".strip()
-            for child in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()
-        }
         for report in reports:
             report.child_name = child_name_by_id.get(report.child_id, "طفل")
+
+        week_start = selected_date - timedelta(days=6)
+        summary["report_count"] = len(reports)
+        summary["children_with_reports"] = len({report.child_id for report in reports})
+        summary["week_report_count"] = db.query(models.DailyReport).filter(
+            models.DailyReport.child_id.in_(child_ids),
+            models.DailyReport.status.in_(visible_statuses),
+            models.DailyReport.date >= week_start,
+            models.DailyReport.date <= selected_date,
+        ).count()
 
     return templates.TemplateResponse(
         request=request,
@@ -1338,7 +1367,12 @@ async def parent_reports(
         context={
             "current_user": current_user,
             "today": selected_date.isoformat(),
+            "selected_date": selected_date.isoformat(),
             "reports": reports,
+            "children": child_rows,
+            "selected_child_id": selected_child_id,
+            "selected_child_name": child_name_by_id.get(selected_child_id) if selected_child_id else None,
+            "summary": summary,
         },
     )
 

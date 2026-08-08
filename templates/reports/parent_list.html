@@ -1,10 +1,261 @@
-{% extends 'base.html' %} {% block title %}{{ _("My Children's Reports") }}{%
-endblock %} {% block page_header %}
+{% extends 'base.html' %} {% set is_en = ui_lang == 'en' %} {% set STATUS_LABELS
+= { 'APPROVED': _('Approved'), 'DRAFT': _('Draft'), 'REJECTED': _('Rejected'),
+'SUBMITTED': _('Under Review'), 'SENT_TO_PARENT': _('Sent'), 'RETURNED':
+_('Returned'), } %} {% block title %}{{ _('My Children\'s Reports') }}{%
+endblock %} {% block extra_css %}
+<style>
+  .parent-reports-shell {
+    --reports-ink: #16342c;
+    --reports-muted: #6b7a75;
+    --reports-surface: #ffffff;
+    --reports-surface-soft: #f5faf7;
+    --reports-border: rgba(31, 94, 71, 0.12);
+    --reports-accent: #1f5e47;
+    --reports-accent-soft: #dcefe7;
+    --reports-warm: #c98743;
+    --reports-shadow: 0 20px 48px rgba(16, 24, 40, 0.08);
+  }
+
+  .parent-reports-shell .reports-hero,
+  .parent-reports-shell .reports-panel,
+  .parent-reports-shell .report-card {
+    background: var(--reports-surface);
+    border: 1px solid var(--reports-border);
+    border-radius: 1.5rem;
+    box-shadow: var(--reports-shadow);
+  }
+
+  .parent-reports-shell .reports-hero {
+    overflow: hidden;
+    background:
+      radial-gradient(
+        circle at top {% if is_en %}right{% else %}left{% endif %},
+        rgba(201, 135, 67, 0.2),
+        transparent 28%
+      ),
+      linear-gradient(135deg, #163d2e 0%, #1f5e47 55%, #2f7d62 100%);
+    color: #fff;
+  }
+
+  .parent-reports-shell .reports-kicker,
+  .parent-reports-shell .reports-hero-copy,
+  .parent-reports-shell .reports-hero small {
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  .parent-reports-shell .reports-kicker {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .parent-reports-shell .reports-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font-weight: 700;
+  }
+
+  .parent-reports-shell .reports-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .parent-reports-shell .reports-metric {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .parent-reports-shell .reports-metric-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: rgba(255, 255, 255, 0.74);
+    font-size: 0.8rem;
+  }
+
+  .parent-reports-shell .reports-panel {
+    padding: 1.4rem;
+  }
+
+  .parent-reports-shell .reports-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: end;
+  }
+
+  .parent-reports-shell .reports-toolbar .toolbar-field {
+    flex: 1 1 220px;
+  }
+
+  .parent-reports-shell .reports-toolbar .toolbar-field label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--reports-muted);
+    font-weight: 700;
+  }
+
+  .parent-reports-shell .reports-toolbar .form-control,
+  .parent-reports-shell .reports-toolbar .form-select {
+    border-radius: 1rem;
+    border-color: rgba(31, 94, 71, 0.16);
+    min-height: 3.25rem;
+  }
+
+  .parent-reports-shell .reports-toolbar .btn {
+    min-height: 3.25rem;
+    border-radius: 1rem;
+    padding-inline: 1.25rem;
+    font-weight: 700;
+  }
+
+  .parent-reports-shell .reports-toolbar .btn-outline-secondary {
+    border-color: rgba(31, 94, 71, 0.18);
+    color: var(--reports-accent);
+  }
+
+  .parent-reports-shell .reports-toolbar .btn-outline-secondary:hover {
+    background: var(--reports-surface-soft);
+  }
+
+  .parent-reports-shell .reports-summary-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .parent-reports-shell .reports-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.65rem 0.95rem;
+    border-radius: 999px;
+    background: var(--reports-surface-soft);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+    color: var(--reports-ink);
+    font-weight: 600;
+  }
+
+  .parent-reports-shell .report-card {
+    overflow: hidden;
+  }
+
+  .parent-reports-shell .report-card-header {
+    padding: 1.2rem 1.3rem;
+    background: linear-gradient(180deg, #ffffff, #fbfdfc);
+    border-bottom: 1px solid rgba(31, 94, 71, 0.08);
+  }
+
+  .parent-reports-shell .report-card-body {
+    padding: 1.3rem;
+  }
+
+  .parent-reports-shell .report-avatar {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 1rem;
+    display: grid;
+    place-items: center;
+    background: var(--reports-accent-soft);
+    color: var(--reports-accent);
+    flex: 0 0 auto;
+  }
+
+  .parent-reports-shell .report-status {
+    border-radius: 999px;
+    padding: 0.55rem 0.85rem;
+    font-weight: 700;
+  }
+
+  .parent-reports-shell .report-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  .parent-reports-shell .report-fact,
+  .parent-reports-shell .report-notes,
+  .parent-reports-shell .report-activities,
+  .parent-reports-shell .reports-empty {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: var(--reports-surface-soft);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+  }
+
+  .parent-reports-shell .report-fact-label,
+  .parent-reports-shell .report-section-label,
+  .parent-reports-shell .reports-empty small {
+    color: var(--reports-muted);
+  }
+
+  .parent-reports-shell .report-fact-value {
+    color: var(--reports-ink);
+    font-weight: 800;
+  }
+
+  .parent-reports-shell .report-section-label {
+    font-size: 0.85rem;
+    margin-bottom: 0.45rem;
+    font-weight: 700;
+  }
+
+  .parent-reports-shell .activity-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid rgba(201, 135, 67, 0.22);
+    color: #7a4d21;
+    font-weight: 600;
+    margin: 0.2rem;
+  }
+
+  .parent-reports-shell .reports-empty {
+    text-align: center;
+    padding: 2rem 1.2rem;
+  }
+
+  .parent-reports-shell .reports-empty-icon {
+    width: 4.25rem;
+    height: 4.25rem;
+    margin: 0 auto 1rem;
+    border-radius: 1.3rem;
+    display: grid;
+    place-items: center;
+    background: var(--reports-accent-soft);
+    color: var(--reports-accent);
+    font-size: 1.65rem;
+  }
+
+  @media (max-width: 991.98px) {
+    .parent-reports-shell .reports-metric-grid,
+    .parent-reports-shell .report-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %} {% block page_header %}
 <div class="page-header-wrap">
   <div>
     <h1 class="page-header-title">
-      <i class="bi bi-journal-text text-primary me-2" aria-hidden="true"></i>
-      {{ _("My Children's Reports") }}
+      <i
+        class="bi bi-journal-richtext text-primary me-2"
+        aria-hidden="true"
+      ></i>
+      {{ _('My Children\'s Reports') }}
     </h1>
     <nav aria-label="{{ _('Breadcrumb') }}">
       <ol class="breadcrumb mb-0">
@@ -16,140 +267,265 @@ endblock %} {% block page_header %}
     </nav>
   </div>
 </div>
-{% endblock %} {% block content %} {% set STATUS_LABELS = { 'APPROVED':
-_('Approved'), 'DRAFT': _('Draft'), 'REJECTED': _('Rejected'), 'SUBMITTED':
-_('Under Review'), 'SENT_TO_PARENT': _('Sent'), 'RETURNED': _('Returned'), } %}
-<div class="row g-4">
-  <div class="col-lg-12">
-    <!-- Filters -->
+{% endblock %} {% block content %}
+<div class="parent-reports-shell">
+  <section class="reports-hero p-4 p-lg-5 mb-4">
     <div
-      class="d-flex flex-wrap align-items-center mb-4 bg-white p-3 rounded shadow-sm border gap-3"
+      class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-4"
     >
-      <div class="d-flex align-items-center">
-        <span class="fw-bold me-2">{{ _('Date:') }}</span>
-        <input
-          type="date"
-          class="form-control w-auto"
-          id="dateFilter"
-          value="{{ today }}"
-        />
+      <div>
+        <div class="reports-kicker mb-2">
+          {% if is_en %}Daily reports{% else %}التقارير اليومية{% endif %}
+        </div>
+        <h2 class="h3 mb-2">
+          {% if is_en %}A clearer view of your children's day{% else %}رؤية أوضح
+          ليوم أطفالك{% endif %}
+        </h2>
+        <p class="reports-hero-copy mb-0">
+          {% if is_en %} Track what was shared with you, focus on one child when
+          needed, and open each report for the full daily details. {% else %}
+          تابع ما تمت مشاركته معك، وركّز على طفل واحد عند الحاجة، وافتح كل تقرير
+          للاطلاع على تفاصيل اليوم كاملة. {% endif %}
+        </p>
       </div>
-      <div class="d-flex align-items-center">
-        <span class="fw-bold me-2">{{ _('Child:') }}</span>
-        <select class="form-select w-auto" id="childFilter">
-          <option value="">{{ _('All Children') }}</option>
-        </select>
+      <div class="reports-hero-badge">
+        <i class="bi bi-calendar-check"></i>
+        {{ selected_date }}
       </div>
-      <button class="btn btn-outline-primary" onclick="loadReports()">
-        <i class="bi bi-funnel me-1"></i>{{ _('Filter') }}
-      </button>
     </div>
 
-    <div id="reportsContainer">
-      {% if reports %} {% for report in reports %}
-      <div class="card mb-3 report-card">
-        <div
-          class="card-header bg-white d-flex justify-content-between align-items-center py-3"
+    <div class="reports-metric-grid mt-4">
+      <div class="reports-metric">
+        <span class="reports-metric-label"
+          >{% if is_en %}Reports for selected day{% else %}تقارير اليوم المحدد{%
+          endif %}</span
         >
-          <div class="d-flex align-items-center">
-            <div
-              class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
-            >
-              <i class="bi bi-person"></i>
-            </div>
+        <div class="fs-3 fw-bold">{{ summary.report_count }}</div>
+      </div>
+      <div class="reports-metric">
+        <span class="reports-metric-label"
+          >{% if is_en %}Children with updates{% else %}أطفال لديهم تحديثات{%
+          endif %}</span
+        >
+        <div class="fs-3 fw-bold">{{ summary.children_with_reports }}</div>
+      </div>
+      <div class="reports-metric">
+        <span class="reports-metric-label"
+          >{% if is_en %}Reports shared in the last 7 days{% else %}تقارير تمت
+          مشاركتها خلال آخر 7 أيام{% endif %}</span
+        >
+        <div class="fs-3 fw-bold">{{ summary.week_report_count }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="reports-panel mb-4">
+    <div class="reports-toolbar">
+      <div class="toolbar-field">
+        <label for="dateFilter">{{ _('Date') }}</label>
+        <input
+          type="date"
+          class="form-control"
+          id="dateFilter"
+          value="{{ selected_date }}"
+        />
+      </div>
+      <div class="toolbar-field">
+        <label for="childFilter">{{ _('Child') }}</label>
+        <select class="form-select" id="childFilter">
+          <option value="">{{ _('All Children') }}</option>
+          {% for child in children %}
+          <option
+            value="{{ child.id }}"
+              {% if selected_child_id == child.id %}selected{% endif %}
+          >
+            {{ child.first_name }} {{ child.last_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="toolbar-field flex-grow-0">
+        <button
+          class="btn btn-primary w-100"
+          type="button"
+          onclick="loadReports()"
+        >
+          <i class="bi bi-funnel me-1"></i>{% if is_en %}Apply Filters{% else
+          %}تطبيق التصفية{% endif %}
+        </button>
+      </div>
+      <div class="toolbar-field flex-grow-0">
+        <button
+          class="btn btn-outline-secondary w-100"
+          type="button"
+          onclick="resetFilters()"
+        >
+          <i class="bi bi-arrow-counterclockwise me-1"></i>{% if is_en %}Reset{%
+          else %}إعادة ضبط{% endif %}
+        </button>
+      </div>
+    </div>
+
+    <div class="reports-summary-bar">
+      <span class="reports-pill"
+        ><i class="bi bi-people"></i>{{ summary.total_children }} {% if is_en
+        %}children linked to this account{% else %}أطفال مرتبطون بهذا الحساب{%
+        endif %}</span
+      >
+      <span class="reports-pill"
+        ><i class="bi bi-person-check"></i>{{ selected_child_name if
+        selected_child_name else (("Showing all children") if is_en else "عرض
+        جميع الأطفال") }}</span
+      >
+      <span class="reports-pill"
+        ><i class="bi bi-info-circle"></i>{% if is_en %}Only reports sent to
+        parents appear here{% else %}تظهر هنا فقط التقارير التي تم إرسالها إلى
+        أولياء الأمور{% endif %}</span
+      >
+    </div>
+  </section>
+
+  <div id="reportsContainer">
+    {% if reports %}
+    <div class="d-grid gap-4">
+      {% for report in reports %}
+      <article class="report-card">
+        <div
+          class="report-card-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3"
+        >
+          <div class="d-flex align-items-center gap-3">
+            <div class="report-avatar"><i class="bi bi-person-heart"></i></div>
             <div>
-              <strong
-                >{{ report.child_name if report.child_name else _('Child')
-                }}</strong
-              >
-              <small class="text-muted d-block">{{ report.date }}</small>
+              <h3 class="h5 mb-1">
+                {{ report.child_name if report.child_name else _('Child') }}
+              </h3>
+              <div class="text-muted small">
+                <i class="bi bi-calendar-event me-1"></i>{{ report.date }}
+              </div>
             </div>
           </div>
           <span
-            class="badge badge-soft {% if report.status.value == 'APPROVED' %}badge-soft-success{% elif report.status.value == 'REJECTED' or report.status.value == 'RETURNED' %}badge-soft-danger{% elif report.status.value == 'SUBMITTED' %}badge-soft-info{% elif report.status.value == 'SENT_TO_PARENT' %}badge-soft-primary{% elif report.status.value == 'DRAFT' %}badge-soft-warning{% else %}badge-soft-secondary{% endif %}"
+            class="report-status badge badge-soft {% if report.status.value == 'APPROVED' %}badge-soft-success{% elif report.status.value == 'REJECTED' or report.status.value == 'RETURNED' %}badge-soft-danger{% elif report.status.value == 'SUBMITTED' %}badge-soft-info{% elif report.status.value == 'SENT_TO_PARENT' %}badge-soft-primary{% elif report.status.value == 'DRAFT' %}badge-soft-warning{% else %}badge-soft-secondary{% endif %}"
           >
             {{ STATUS_LABELS[report.status.value] if report.status.value in
             STATUS_LABELS else report.status.value }}
           </span>
         </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <h6 class="text-muted mb-2">{{ _('Mood') }}</h6>
-              <p>{{ report.mood if report.mood else _('Not specified') }}</p>
+        <div class="report-card-body">
+          <div class="report-grid">
+            <div class="report-fact">
+              <div class="report-fact-label">{{ _('Mood') }}</div>
+              <div class="report-fact-value">
+                {{ report.mood if report.mood else _('Not specified') }}
+              </div>
             </div>
-            <div class="col-md-6">
-              <h6 class="text-muted mb-2">{{ _('Notes') }}</h6>
-              <p>{{ report.notes if report.notes else _('No notes') }}</p>
+            <div class="report-fact">
+              <div class="report-fact-label">{{ _('Arrival time') }}</div>
+              <div class="report-fact-value">
+                {{ report.arrival_time if report.arrival_time else '—' }}
+              </div>
+            </div>
+            <div class="report-fact">
+              <div class="report-fact-label">{{ _('Departure time') }}</div>
+              <div class="report-fact-value">
+                {{ report.leave_time if report.leave_time else '—' }}
+              </div>
             </div>
           </div>
-          <a
-            href="/reports/{{ report.id }}"
-            class="btn btn-outline-primary btn-sm mt-3"
-          >
-            <i class="bi bi-eye me-1"></i>{{ _('View Details') }}
-          </a>
+
+          <div class="row g-3 align-items-stretch">
+            <div class="col-lg-8">
+              <div class="report-notes h-100">
+                <div class="report-section-label">{{ _('Notes') }}</div>
+                <div>{{ report.notes if report.notes else _('No notes') }}</div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="report-activities h-100">
+                <div class="report-section-label">{{ _('Activities') }}</div>
+                {% if report.activities %}
+                <div>
+                  {% for activity in report.activities %}
+                  <span class="activity-chip"
+                    ><i class="bi bi-check2-circle"></i>{{ activity }}</span
+                  >
+                  {% endfor %}
+                </div>
+                {% else %}
+                <div>{{ _('No activity details shared') }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 d-flex flex-wrap gap-2">
+            <a
+              href="/reports/{{ report.id }}"
+              class="btn btn-outline-primary btn-sm"
+            >
+              <i class="bi bi-eye me-1"></i>{{ _('View Details') }}
+            </a>
+            <a href="/parent/children" class="btn btn-light btn-sm border">
+              <i class="bi bi-people me-1"></i>{% if is_en %}Go to My Children{%
+              else %}الانتقال إلى أطفالي{% endif %}
+            </a>
+          </div>
         </div>
-      </div>
-      {% endfor %} {% else %}
-      <div class="alert alert-info">
-        <i class="bi bi-info-circle me-2"></i>
-        {{ _('No reports for this date') }}
-      </div>
-      {% endif %}
+      </article>
+      {% endfor %}
     </div>
+    {% else %}
+    <div class="reports-empty">
+      <div class="reports-empty-icon"><i class="bi bi-journal-x"></i></div>
+      <h3 class="h5 mb-2">{{ _('No reports for this date') }}</h3>
+      <p class="mb-2">
+        {% if is_en %} No report has been shared for the selected date yet. Try
+        a different child or another date, or check back later once the
+        kindergarten sends the daily update. {% else %} لم تتم مشاركة أي تقرير
+        لهذا التاريخ بعد. جرّب طفلاً آخر أو تاريخاً مختلفاً، أو عد لاحقاً بعد أن
+        ترسل الحضانة تحديث اليوم. {% endif %}
+      </p>
+      <small>
+        {% if selected_child_name %} {% if is_en %}Current child filter:{% else
+        %}عامل تصفية الطفل الحالي:{% endif %} {{ selected_child_name }} {% else
+        %} {% if is_en %} You are currently viewing all children linked to your
+        account. {% else %} أنت تعرض حالياً جميع الأطفال المرتبطين بحسابك. {%
+        endif %} {% endif %}
+      </small>
+    </div>
+    {% endif %}
   </div>
 </div>
 
 <script>
-  function getHeaders() {
-    const headers = { "Content-Type": "application/json" };
-    if (window.AuthService && AuthService.isAuthenticated()) {
-      const token = AuthService.getToken();
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-    }
-    const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
-                 (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
-                 (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
-    if (csrf) headers['X-CSRF-Token'] = csrf;
-    return headers;
+  function buildReportsUrl() {
+    const date = document.getElementById("dateFilter").value;
+    const childId = document.getElementById("childFilter").value;
+    const params = new URLSearchParams();
+    if (date) params.set("date", date);
+    if (childId) params.set("child_id", childId);
+    const query = params.toString();
+    return query ? `/my-reports?${query}` : "/my-reports";
   }
 
   function loadReports() {
-    const date = document.getElementById("dateFilter").value;
-    const childId = document.getElementById("childFilter").value;
-    let url = `/my-reports?date=${date}`;
-    if (childId) url += `&child_id=${childId}`;
-    window.location.href = url;
+    window.location.href = buildReportsUrl();
   }
 
-  document.addEventListener("DOMContentLoaded", async function () {
+  function resetFilters() {
+    document.getElementById("dateFilter").value = "{{ today }}";
+    document.getElementById("childFilter").value = "";
+    window.location.href = `/my-reports?date={{ today }}`;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
     const dateFilter = document.getElementById("dateFilter");
-    if (!dateFilter.value) {
+    const childFilter = document.getElementById("childFilter");
+    if (dateFilter && !dateFilter.value) {
       dateFilter.value = new Date().toISOString().split("T")[0];
     }
-
-    // Load children for filter dropdown
-    try {
-      const resp = await fetch("/api/parent/children-list", {
-        headers: getHeaders(),
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        const sel = document.getElementById("childFilter");
-        (data.children || []).forEach((c) => {
-          const opt = document.createElement("option");
-          opt.value = c.id;
-          opt.textContent = c.name;
-          sel.appendChild(opt);
-        });
-        // Pre-select child from URL
-        const params = new URLSearchParams(window.location.search);
-        if (params.get("child_id")) sel.value = params.get("child_id");
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    if (dateFilter) dateFilter.addEventListener("change", loadReports);
+    if (childFilter) childFilter.addEventListener("change", loadReports);
   });
 </script>
 {% endblock %}
