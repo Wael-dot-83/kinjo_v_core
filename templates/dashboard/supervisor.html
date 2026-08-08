@@ -418,13 +418,13 @@
     }
 
     async function toggleChildAttendance(childId, currentStatus) {
-        const checkInEligible = new Set(['not_recorded', 'absent', 'excused']);
+        const checkInEligible = new Set(['not_arrived', 'not_recorded', 'absent', 'excused']);
         const checkOutEligible = new Set(['present', 'late']);
         try {
             if (checkInEligible.has(currentStatus)) {
                 await requestWithAuth(
-                    `/api/attendance/check-in?child_id=${encodeURIComponent(childId)}&method=manual&dropped_by_name=${encodeURIComponent(supervisorText('roles.supervisor_short', 'المشرف', 'Supervisor'))}`,
-                    { method: 'POST' }
+                    '/api/supervisor/attendance',
+                    { method: 'POST', body: JSON.stringify({ child_id: Number(childId), action: 'check_in' }) }
                 );
                 notify(supervisorText('attendance.checkin_success', 'تم تسجيل الحضور', 'Attendance recorded'), 'success');
             } else if (checkOutEligible.has(currentStatus)) {
@@ -432,8 +432,8 @@
                     return;
                 }
                 await requestWithAuth(
-                    `/api/attendance/check-out?child_id=${encodeURIComponent(childId)}&picked_by_name=${encodeURIComponent(supervisorText('roles.parent_short', 'ولي الأمر', 'Parent'))}`,
-                    { method: 'POST' }
+                    '/api/supervisor/attendance',
+                    { method: 'POST', body: JSON.stringify({ child_id: Number(childId), action: 'check_out' }) }
                 );
                 notify(supervisorText('attendance.checkout_success', 'تم تسجيل الانصراف', 'Check-out recorded'), 'success');
             } else {

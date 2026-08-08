@@ -55,7 +55,14 @@ class DailyReportCreateRequest(BaseModel):
         return v
 
 
-def _authorize_report_for_child(db: Session, current_user: models.User, child_id: int, report_date: date):
+def _authorize_report_for_child(
+    db: Session,
+    current_user: models.User,
+    child_id: int,
+    report_date: date,
+    *,
+    require_no_existing_report: bool = True,
+):
     """Run every gate that guards creating a daily report for one child.
 
     Returns the child's ACTIVE enrolment on success and raises HTTPException on
@@ -97,6 +104,7 @@ def _authorize_report_for_child(db: Session, current_user: models.User, child_id
         .filter(
             models.EnrollmentApplication.child_id == child_id,
             models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            models.EnrollmentApplication.deleted_at.is_(None),
         )
         .first()
     )
@@ -124,6 +132,7 @@ def _authorize_report_for_child(db: Session, current_user: models.User, child_id
             .filter(
                 models.SupervisorAssignment.supervisor_id == current_user.id,
                 models.SupervisorAssignment.class_id == active_enrollment.class_id,
+                models.SupervisorAssignment.deleted_at.is_(None),
                 models.SupervisorAssignment.start_date <= report_date,
                 (models.SupervisorAssignment.end_date == None) | (models.SupervisorAssignment.end_date >= report_date),
             )
@@ -147,13 +156,14 @@ def _authorize_report_for_child(db: Session, current_user: models.User, child_id
     if not validators.is_working_day(db, active_enrollment.kindergarten_id, report_date):
         raise HTTPException(status_code=400, detail="Date is not a working day for this kindergarten")
 
-    existing = (
-        db.query(models.DailyReport)
-        .filter(models.DailyReport.child_id == child_id, models.DailyReport.date == report_date)
-        .first()
-    )
-    if existing:
-        raise HTTPException(status_code=409, detail="Daily report for this child and date already exists")
+    if require_no_existing_report:
+        existing = (
+            db.query(models.DailyReport)
+            .filter(models.DailyReport.child_id == child_id, models.DailyReport.date == report_date)
+            .first()
+        )
+        if existing:
+            raise HTTPException(status_code=409, detail="Daily report for this child and date already exists")
 
     return active_enrollment
 
@@ -168,7 +178,10 @@ def create_daily_report(
     if current_user.role != models.UserRole.SUPERVISOR:
         raise HTTPException(status_code=403, detail="Only supervisors can create daily reports")
 
-    report_date = date.fromisoformat(report_data.date)
+    try:
+        report_date = date.fromisoformat(report_data.date)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="date must use ISO format (YYYY-MM-DD)")
     active_enrollment = _authorize_report_for_child(db, current_user, report_data.child_id, report_date)
 
     report = models.DailyReport(

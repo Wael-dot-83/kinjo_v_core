@@ -54,6 +54,7 @@ class SupervisorService:
         # Find active assignments
         assignments = db.query(models.SupervisorAssignment).filter(
             models.SupervisorAssignment.supervisor_id == supervisor_user.id,
+            models.SupervisorAssignment.deleted_at.is_(None),
             models.SupervisorAssignment.start_date <= today,
             or_(
                 models.SupervisorAssignment.end_date.is_(None),
@@ -65,7 +66,8 @@ class SupervisorService:
         class_ids = [a.class_id for a in assignments]
         classes = db.query(models.Class).filter(
             models.Class.id.in_(class_ids),
-            models.Class.is_active == True
+            models.Class.is_active == True,
+            models.Class.deleted_at.is_(None),
         ).all()
 
         return classes
@@ -90,7 +92,9 @@ class SupervisorService:
             joinedload(models.EnrollmentApplication.child).joinedload(models.Child.parent)
         ).filter(
             models.EnrollmentApplication.class_id.in_(class_ids),
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            models.EnrollmentApplication.deleted_at.is_(None),
+            models.EnrollmentApplication.child.has(models.Child.deleted_at.is_(None)),
         ).all()
 
         children_by_id = {}
@@ -278,7 +282,9 @@ class SupervisorService:
             joinedload(models.EnrollmentApplication.child).joinedload(models.Child.parent)
         ).filter(
             models.EnrollmentApplication.class_id == class_id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            models.EnrollmentApplication.deleted_at.is_(None),
+            models.EnrollmentApplication.child.has(models.Child.deleted_at.is_(None)),
         ).all()
 
         roster = []

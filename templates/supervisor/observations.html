@@ -115,10 +115,6 @@
 
     function authHeaders() {
         const headers = { 'Content-Type': 'application/json' };
-        const token = (window.AuthService && typeof window.AuthService.getToken === 'function')
-            ? window.AuthService.getToken()
-            : (localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token'));
-        if (token) headers.Authorization = `Bearer ${token}`;
         return headers;
     }
 

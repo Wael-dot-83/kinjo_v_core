@@ -4,6 +4,8 @@ import io
 from datetime import date, datetime, timedelta, timezone
 
 import models
+import pytest
+from datetime import date
 import pyotp
 
 from audit_actions import AuditAction
@@ -194,6 +196,8 @@ def test_supervisor_daily_report_duplicate_requires_force_and_overwrites_existin
     sample_supervisor_assignment,
     sample_enrollment,
 ):
+    sample_daily_report.status = models.DailyReportStatus.RETURNED
+    test_db.commit()
     payload = {
         "child_id": sample_child.id,
         "date": sample_daily_report.date.isoformat(),
@@ -228,6 +232,81 @@ def test_supervisor_daily_report_duplicate_requires_force_and_overwrites_existin
         models.DailyReport.child_id == sample_child.id,
         models.DailyReport.date == sample_daily_report.date,
     ).count() == 1
+
+
+def test_manager_can_create_and_send_report_from_shared_form_contract(
+    client, test_db, auth_headers_manager, sample_child, active_enrollment, monkeypatch
+):
+    """The rendered manager form has a real, scoped create-and-send endpoint."""
+    monkeypatch.setattr("routers.manager.validators.is_working_day", lambda *args: True)
+    response = client.post(
+        "/api/manager/daily-reports/create-and-send",
+        headers=auth_headers_manager,
+        json={
+            "child_id": sample_child.id,
+            "date": date.today().isoformat(),
+            "arrival_time": "08:00",
+            "leave_time": "14:00",
+            "activities": "Art",
+        },
+    )
+    assert response.status_code == 201, response.text
+    report = test_db.query(models.DailyReport).filter(
+        models.DailyReport.id == response.json()["id"]
+    ).one()
+    assert report.kindergarten_id == active_enrollment.kindergarten_id
+    assert report.status == models.DailyReportStatus.SENT_TO_PARENT
+
+
+def test_admin_can_use_shared_report_form_endpoint(
+    client, test_db, auth_headers_admin, sample_child, active_enrollment, monkeypatch
+):
+    monkeypatch.setattr("routers.manager.validators.is_working_day", lambda *args: True)
+    response = client.post(
+        "/api/manager/daily-reports/create-and-send",
+        headers=auth_headers_admin,
+        json={"child_id": sample_child.id, "date": date.today().isoformat(), "arrival_time": "08:00"},
+    )
+    assert response.status_code == 201, response.text
+
+
+def test_canonical_daily_report_invalid_date_returns_422(
+    client, auth_headers_supervisor, sample_child
+):
+    response = client.post(
+        "/api/daily-reports/create",
+        headers=auth_headers_supervisor,
+        json={"child_id": sample_child.id, "date": "not-a-date", "arrival_time": "08:00"},
+    )
+    assert response.status_code == 422
+
+
+def test_safety_incident_invalid_timestamp_returns_422(
+    client, auth_headers_supervisor, sample_child, sample_supervisor_assignment, sample_enrollment
+):
+    response = client.post(
+        "/api/supervisor/safety-incidents",
+        headers=auth_headers_supervisor,
+        json={
+            "child_id": sample_child.id,
+            "type": "INJURY",
+            "severity_level": "LOW",
+            "description": "Test",
+            "occurred_at": "not-a-timestamp",
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_manager_shared_report_form_rejects_invalid_time(
+    client, auth_headers_manager, sample_child, active_enrollment
+):
+    response = client.post(
+        "/api/manager/daily-reports/create-and-send",
+        headers=auth_headers_manager,
+        json={"child_id": sample_child.id, "date": date.today().isoformat(), "arrival_time": "99:99"},
+    )
+    assert response.status_code == 422
 
 
 def test_supervisor_can_resolve_incident_with_put_and_attachment(
@@ -292,3 +371,19 @@ def test_supervisor_child_observations_pagination_exposes_total_count(
     payload = response.json()
     assert isinstance(payload, list)
     assert len(payload) == 2
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/supervisor/attendance",
+        "/supervisor/daily-reports",
+        "/supervisor/messages",
+        "/supervisor/profile",
+        "/supervisor/safety",
+        "/supervisor/settings",
+    ],
+)
+def test_all_supervisor_pages_are_registered(client, auth_headers_supervisor, path):
+    response = client.get(path, headers=auth_headers_supervisor)
+    assert response.status_code == 200

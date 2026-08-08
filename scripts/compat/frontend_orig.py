@@ -1778,6 +1778,44 @@ async def supervisor_observations(request: Request, current_user: User = Depends
     )
 
 
+async def _supervisor_page(request: Request, current_user: User, template_name: str):
+    if current_user.role != UserRole.SUPERVISOR:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request, name=template_name, context={"current_user": current_user, "today": _today()}
+    )
+
+
+@router.get("/supervisor/attendance", response_class=HTMLResponse)
+async def supervisor_attendance_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    return await _supervisor_page(request, current_user, "supervisor/attendance.html")
+
+
+@router.get("/supervisor/daily-reports", response_class=HTMLResponse)
+async def supervisor_daily_reports_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    return await _supervisor_page(request, current_user, "supervisor/daily_reports.html")
+
+
+@router.get("/supervisor/messages", response_class=HTMLResponse)
+async def supervisor_messages_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    return await _supervisor_page(request, current_user, "supervisor/messages.html")
+
+
+@router.get("/supervisor/profile", response_class=HTMLResponse)
+async def supervisor_profile_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    return await _supervisor_page(request, current_user, "supervisor/profile.html")
+
+
+@router.get("/supervisor/safety", response_class=HTMLResponse)
+async def supervisor_safety_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    return await _supervisor_page(request, current_user, "supervisor/safety.html")
+
+
+@router.get("/supervisor/settings", response_class=HTMLResponse)
+async def supervisor_settings_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    return await _supervisor_page(request, current_user, "supervisor/settings.html")
+
+
 @router.get("/admin/messages", response_class=HTMLResponse)
 async def admin_messages_list(
     request: Request,

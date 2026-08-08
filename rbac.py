@@ -11,6 +11,7 @@ Guards:
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional, Set
 
 from fastapi import Depends, HTTPException, Request, status
@@ -18,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from dependencies import get_current_user
-from models import SupervisorAssignment, User, UserRole, EnrollmentApplication, EnrollmentStatus
+from models import Child, SupervisorAssignment, User, UserRole, EnrollmentApplication, EnrollmentStatus
 
 
 # ---------------------------------------------------------------------------
@@ -49,11 +50,14 @@ def block_role(*roles: UserRole):
 
 def get_supervisor_class_ids(supervisor_id: int, db: Session) -> Set[int]:
     """Return the set of active class IDs the supervisor is assigned to."""
+    today = date.today()
     rows = (
         db.query(SupervisorAssignment.class_id)
         .filter(
             SupervisorAssignment.supervisor_id == supervisor_id,
             SupervisorAssignment.deleted_at.is_(None),
+            SupervisorAssignment.start_date <= today,
+            (SupervisorAssignment.end_date.is_(None) | (SupervisorAssignment.end_date >= today)),
         )
         .all()
     )
@@ -67,9 +71,12 @@ def get_supervisor_child_ids(supervisor_id: int, db: Session) -> Set[int]:
         return set()
     rows = (
         db.query(EnrollmentApplication.child_id)
+        .join(Child, Child.id == EnrollmentApplication.child_id)
         .filter(
             EnrollmentApplication.class_id.in_(class_ids),
             EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+            EnrollmentApplication.deleted_at.is_(None),
+            Child.deleted_at.is_(None),
         )
         .all()
     )

@@ -278,14 +278,10 @@
     const T = (ar, en) => IS_EN ? en : ar;
 
     function getHeaders() {
-        // Use centralized auth system
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
-
-        const token = AuthService.getToken();
         const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const csrfToken = (window.AuthStorage && AuthStorage.getCookie && AuthStorage.getCookie('kinjo_csrf_token')) ||
+            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
         return headers;
     }
 
@@ -469,6 +465,7 @@
             // Manager endpoint expects different structure
             payload = {
                 child_id: parseInt(fd.get('child_id')),
+                date: fd.get('report_date'),
                 arrival_time: fd.get('arrival_time'),
                 leave_time: fd.get('leave_time'),
                 mood: fd.get('mood') || null,
@@ -508,7 +505,7 @@
             let url = '/api/daily-reports/create';
 
             if (normalizedRole === 'MANAGER' || normalizedRole === 'ADMIN') {
-                url = '/api/daily-reports/manager/create-and-send';
+                url = '/api/manager/daily-reports/create-and-send';
             }
 
             const response = await fetch(url, {

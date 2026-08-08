@@ -8,6 +8,7 @@ the manager's own kindergarten(s).
 from __future__ import annotations
 
 from datetime import date, timedelta
+import re
 from typing import Optional
 
 # One clock for the whole module. This file previously carried its own
@@ -19,13 +20,13 @@ from typing import Optional
 from utils.time_utils import now_amman as _now, today_amman as _today
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from database import get_db
-from dependencies import require_manager as _require_manager
+from dependencies import get_current_user, require_manager as _require_manager
 import models
 from models import (
     Class,
@@ -125,7 +126,9 @@ def _get_daily_report_for_manager_or_404(report_id: int, manager: User, db: Sess
     exists (#6/#14).
     """
     report = db.query(DailyReport).filter(DailyReport.id == report_id).with_for_update().first()
-    if not report or report.kindergarten_id != manager.kindergarten_id:
+    if not report or (
+        manager.role != UserRole.ADMIN and report.kindergarten_id != manager.kindergarten_id
+    ):
         raise HTTPException(status_code=404, detail=_api("Report not found.", _ulang(manager)))
     return report
 
@@ -574,6 +577,86 @@ class DailyReportManagerPatch(BaseModel):
     lunch: Optional[bool] = None
 
 
+class DailyReportManagerCreate(BaseModel):
+    child_id: int
+    date: date
+    arrival_time: str = Field(min_length=1, max_length=5)
+    leave_time: Optional[str] = None
+    mood: Optional[str] = Field(default=None, max_length=20)
+    health_notes: Optional[str] = None
+    breakfast: Optional[bool] = None
+    snack: Optional[bool] = None
+    milk: Optional[bool] = None
+    lunch: Optional[bool] = None
+    nap_start: Optional[str] = None
+    nap_end: Optional[str] = None
+    nap_duration_minutes: Optional[int] = Field(default=None, ge=0)
+    bathroom_count: Optional[int] = Field(default=None, ge=0)
+    diaper_wet: Optional[bool] = None
+    diaper_soiled: Optional[bool] = None
+    activities: Optional[str] = None
+    notes: Optional[str] = None
+
+    @field_validator("arrival_time", "leave_time", "nap_start", "nap_end")
+    @classmethod
+    def validate_time_format(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value):
+            raise ValueError("time must use HH:MM format (24-hour)")
+        return value
+
+
+@router.post("/daily-reports/create-and-send", status_code=status.HTTP_201_CREATED)
+def create_and_send_daily_report(
+    body: DailyReportManagerCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a manager/admin-authored report and send it through the normal parent workflow."""
+    if current_user.role not in (UserRole.MANAGER, UserRole.ADMIN):
+        raise HTTPException(status_code=403, detail="Only managers or admins can create daily reports.")
+    if body.date > _today():
+        raise HTTPException(status_code=400, detail=_api("Cannot create reports for future dates.", _ulang(current_user)))
+
+    enrollment_query = db.query(EnrollmentApplication).filter(
+        EnrollmentApplication.child_id == body.child_id,
+        EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+        EnrollmentApplication.deleted_at.is_(None),
+    )
+    if current_user.role == UserRole.MANAGER:
+        enrollment_query = enrollment_query.filter(
+            EnrollmentApplication.kindergarten_id == current_user.kindergarten_id
+        )
+    enrollment = enrollment_query.first()
+    child = db.query(Child).filter(Child.id == body.child_id, Child.deleted_at.is_(None)).first()
+    if not enrollment or not child:
+        raise HTTPException(status_code=404, detail=_api("Child not found.", _ulang(current_user)))
+    kindergarten_id = enrollment.kindergarten_id
+    if not validators.is_working_day(db, kindergarten_id, body.date):
+        raise HTTPException(status_code=400, detail=_api("Date is not a working day for this kindergarten.", _ulang(current_user)))
+    if db.query(DailyReport.id).filter(
+        DailyReport.kindergarten_id == kindergarten_id,
+        DailyReport.child_id == body.child_id,
+        DailyReport.date == body.date,
+    ).first():
+        raise HTTPException(status_code=409, detail=_api("Daily report for this child and date already exists.", _ulang(current_user)))
+
+    report = DailyReport(
+        child_id=body.child_id, kindergarten_id=kindergarten_id, date=body.date,
+        status=DailyReportStatus.SUBMITTED, submitted_by=current_user.id, submitted_at=_now(),
+        arrival_time=body.arrival_time, leave_time=body.leave_time, mood=body.mood,
+        health_notes=body.health_notes, breakfast=body.breakfast, snack=body.snack,
+        milk=body.milk, lunch=body.lunch, nap_start=body.nap_start, nap_end=body.nap_end,
+        nap_duration_minutes=body.nap_duration_minutes, bathroom_count=body.bathroom_count,
+        diaper_wet=body.diaper_wet, diaper_soiled=body.diaper_soiled,
+        activities=body.activities, notes=body.notes,
+    )
+    db.add(report)
+    db.flush()
+    _audit(db, current_user, AuditAction.DAILY_REPORT_CREATED, "daily_report", report.id,
+           f"Manager created daily report for child {body.child_id} dated {body.date}")
+    return send_report_to_parents(report.id, db, current_user)
+
+
 @router.put("/daily-reports/{report_id}")
 def edit_daily_report(
     report_id: int,
@@ -655,7 +738,7 @@ def send_report_to_parents(
                 thread_type=MessageThreadType.DIRECT,
                 sender_id=current_user.id,
                 recipient_id=parent_user_id,
-                kindergarten_id=current_user.kindergarten_id,
+                kindergarten_id=report.kindergarten_id,
                 subject=_api(
                     "New daily report — {name} — {date}", plang,
                     name=child.first_name, date=report.date,

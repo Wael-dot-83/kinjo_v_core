@@ -1,15 +1,6 @@
 (function () {
-  function tokenValue() {
-    return localStorage.getItem("kinjo_token") || sessionStorage.getItem("kinjo_token") || "";
-  }
-
   function authHeaders() {
-    const headers = { "Content-Type": "application/json" };
-    const token = tokenValue();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-    return headers;
+    return { "Content-Type": "application/json" };
   }
 
   async function apiRequest(url) {

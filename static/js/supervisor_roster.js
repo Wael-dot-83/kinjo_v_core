@@ -33,10 +33,6 @@
 
   function headers() {
     var h = { "Content-Type": "application/json" };
-    if (window.AuthService && AuthService.isAuthenticated()) {
-      var t = AuthService.getToken();
-      if (t) h["Authorization"] = "Bearer " + t;
-    }
     var m = document.cookie.match(/(?:^|;\s*)kinjo_csrf_token=([^;]+)/);
     if (m) h["X-CSRF-Token"] = decodeURIComponent(m[1]);
     return h;

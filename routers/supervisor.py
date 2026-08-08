@@ -86,6 +86,7 @@ from rbac import (
 def _get_supervisor_active_class_ids(db: Session, supervisor_id: int, on_date: date) -> set[int]:
     rows = db.query(models.SupervisorAssignment).filter(
         models.SupervisorAssignment.supervisor_id == supervisor_id,
+        models.SupervisorAssignment.deleted_at.is_(None),
         models.SupervisorAssignment.start_date <= on_date,
         or_(
             models.SupervisorAssignment.end_date.is_(None),
@@ -107,6 +108,7 @@ def _get_supervisor_child_enrollment(db: Session, supervisor_id: int, child_id: 
         models.EnrollmentApplication.child_id == child_id,
         models.EnrollmentApplication.class_id.in_(class_ids),
         models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+        models.EnrollmentApplication.deleted_at.is_(None),
     ).first()
 
 router = APIRouter(prefix="/api/supervisor", tags=["supervisor"])
@@ -207,6 +209,8 @@ def get_my_classes(
         .filter(
             SupervisorAssignment.supervisor_id == current_user.id,
             SupervisorAssignment.deleted_at.is_(None),
+            SupervisorAssignment.start_date <= datetime.now(_JORDAN_TZ).date(),
+            or_(SupervisorAssignment.end_date.is_(None), SupervisorAssignment.end_date >= datetime.now(_JORDAN_TZ).date()),
         )
         .all()
     )
@@ -227,12 +231,15 @@ def get_my_children(
     child_ids = get_supervisor_child_ids(current_user.id, db)
     if not child_ids:
         return {"children": []}
-    children = db.query(Child).filter(Child.id.in_(child_ids)).all()
+    children = db.query(Child).filter(
+        Child.id.in_(child_ids), Child.deleted_at.is_(None)
+    ).all()
     enrollments = (
         db.query(EnrollmentApplication)
         .filter(
             EnrollmentApplication.child_id.in_(child_ids),
             EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+            EnrollmentApplication.deleted_at.is_(None),
         )
         .all()
     )
@@ -404,6 +411,7 @@ def _attendance_payload(
         .filter(
             EnrollmentApplication.child_id.in_(child_ids),
             EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+            EnrollmentApplication.deleted_at.is_(None),
         )
         .all()
     )
@@ -555,6 +563,7 @@ def record_attendance(
     enrollment_query = db.query(EnrollmentApplication).filter(
         EnrollmentApplication.child_id == body.child_id,
         EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+        EnrollmentApplication.deleted_at.is_(None),
     )
     if current_user.role == UserRole.SUPERVISOR:
         enrollment_query = enrollment_query.filter(EnrollmentApplication.class_id.in_(class_ids))
@@ -673,6 +682,7 @@ def get_daily_reports(
         child_ids = [
             e.child_id for e in db.query(EnrollmentApplication).filter(
                 EnrollmentApplication.status.in_(ACTIVE_ENROLLMENT_STATUSES),
+                EnrollmentApplication.deleted_at.is_(None),
                 *([] if current_user.role == UserRole.ADMIN else
                   [EnrollmentApplication.kindergarten_id == current_user.kindergarten_id])
             ).all()
@@ -702,16 +712,23 @@ def get_daily_reports(
         try:
             q = q.filter(DailyReport.status == DailyReportStatus(status_filter.upper()))
         except ValueError:
-            pass
+            allowed = ", ".join(item.value for item in DailyReportStatus)
+            raise HTTPException(status_code=400, detail=f"Invalid status. Allowed: {allowed}.")
 
     reports = q.order_by(DailyReport.date.desc()).all()
     from models import Child, Class, EnrollmentApplication, EnrollmentStatus
-    child_map = {c.id: c for c in db.query(Child).filter(Child.id.in_(child_ids)).all()}
+    child_map = {c.id: c for c in db.query(Child).filter(
+        Child.id.in_(child_ids), Child.deleted_at.is_(None)
+    ).all()}
 
     # Build class_name map for all children
     enrollments = (
         db.query(EnrollmentApplication)
-        .filter(EnrollmentApplication.child_id.in_(child_ids), EnrollmentApplication.status == EnrollmentStatus.ACTIVE)
+        .filter(
+            EnrollmentApplication.child_id.in_(child_ids),
+            EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+            EnrollmentApplication.deleted_at.is_(None),
+        )
         .all()
     )
     class_ids = {e.child_id: e.class_id for e in enrollments}
@@ -818,8 +835,21 @@ def create_daily_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_supervisor),
 ):
-    assert_supervisor_owns_child(current_user.id, body.child_id, db)
-    target_date = date.fromisoformat(body.date)
+    try:
+        target_date = date.fromisoformat(body.date)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="date must use ISO format (YYYY-MM-DD)")
+
+    # Reuse the canonical report gate so this compatibility route cannot bypass
+    # profile completeness, workday, active-enrollment, or dated assignment rules.
+    from api.daily_reports_routes import _authorize_report_for_child
+    enrollment = _authorize_report_for_child(
+        db,
+        current_user,
+        body.child_id,
+        target_date,
+        require_no_existing_report=False,
+    )
 
     if target_date > _today():
         raise HTTPException(status_code=400, detail="Cannot create reports for future dates")
@@ -852,10 +882,10 @@ def create_daily_report(
 
     if existing and force:
         # Prevent overwriting reports that have already been approved or shared with parent
-        if existing.status in (DailyReportStatus.APPROVED, DailyReportStatus.SENT_TO_PARENT):
+        if existing.status not in (DailyReportStatus.DRAFT, DailyReportStatus.REJECTED, DailyReportStatus.RETURNED):
             raise HTTPException(
                 status_code=403,
-                detail="Cannot overwrite a report that has already been approved or sent to the parent"
+                detail="Only draft or returned reports can be edited"
             )
         report = existing
         report.status = target_status
@@ -881,7 +911,7 @@ def create_daily_report(
             report.activities = body.activities
         if "notes" in provided_fields:
             report.notes = body.notes
-        report.kindergarten_id = current_user.kindergarten_id
+        report.kindergarten_id = enrollment.kindergarten_id
         db.add(AuditLog(
             user_id=current_user.id,
             action=AuditAction.DAILY_REPORT_FORCE_UPDATED,
@@ -890,6 +920,8 @@ def create_daily_report(
             details=f"Supervisor overwrote daily report for child {body.child_id} dated {body.date} as {target_status.value}",
         ))
     else:
+        if not body.arrival_time:
+            raise HTTPException(status_code=422, detail="arrival_time is required when creating a daily report")
         report = DailyReport(
             child_id=body.child_id,
             date=target_date,
@@ -906,7 +938,7 @@ def create_daily_report(
             nap_end=body.nap_end,
             activities=body.activities,
             notes=body.notes,
-            kindergarten_id=current_user.kindergarten_id,
+            kindergarten_id=enrollment.kindergarten_id,
             created_at=now,
         )
         db.add(report)
@@ -950,9 +982,8 @@ def update_daily_report(
         raise HTTPException(status_code=404, detail="Report not found.")
     assert_supervisor_owns_child(current_user.id, report.child_id, db)
 
-    # Supervisor can only edit while DRAFT
-    if report.status != DailyReportStatus.DRAFT:
-        raise HTTPException(status_code=403, detail="Report is already submitted and cannot be edited.")
+    if not report.is_editable_by_supervisor():
+        raise HTTPException(status_code=403, detail="Only draft or returned reports can be edited.")
 
     now = datetime.now(_JORDAN_TZ)
     for field in ("arrival_time", "leave_time", "breakfast", "snack", "milk",
@@ -962,6 +993,8 @@ def update_daily_report(
             setattr(report, field, val)
 
     if body.status:
+        if body.status not in ("DRAFT", "SUBMITTED"):
+            raise HTTPException(status_code=400, detail="Supervisor can only save as DRAFT or SUBMITTED.")
         target_status = DailyReportStatus.DRAFT if body.status == "DRAFT" else DailyReportStatus.SUBMITTED
         report.status = target_status
         if target_status == DailyReportStatus.SUBMITTED:
@@ -982,8 +1015,8 @@ def submit_daily_report(
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
     assert_supervisor_owns_child(current_user.id, report.child_id, db)
-    if report.status != DailyReportStatus.DRAFT:
-        raise HTTPException(status_code=403, detail="Only DRAFT reports can be submitted.")
+    if not report.can_submit_to_manager():
+        raise HTTPException(status_code=403, detail="Only draft or returned reports can be submitted.")
     report.status = DailyReportStatus.SUBMITTED
     report.submitted_at = datetime.now(_JORDAN_TZ)
     db.add(AuditLog(
@@ -1017,7 +1050,9 @@ def create_safety_incident(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_supervisor),
 ):
-    assert_supervisor_owns_child(current_user.id, body.child_id, db)
+    enrollment = _get_supervisor_child_enrollment(db, current_user.id, body.child_id)
+    if not enrollment:
+        raise HTTPException(status_code=403, detail="Child is not in your assigned class.")
 
     try:
         inc_type = IncidentType(body.type)
@@ -1028,14 +1063,18 @@ def create_safety_incident(
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid severity level: {body.severity_level}")
 
-    occurred_at = (
-        datetime.fromisoformat(body.occurred_at) if body.occurred_at
-        else datetime.now(_JORDAN_TZ)
-    )
+    if body.occurred_at:
+        try:
+            occurred_at = datetime.fromisoformat(body.occurred_at)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="occurred_at must use ISO-8601 format")
+    else:
+        occurred_at = datetime.now(_JORDAN_TZ)
 
     incident = Incident(
         child_id=body.child_id,
-        kindergarten_id=current_user.kindergarten_id,
+        kindergarten_id=enrollment.kindergarten_id,
+        class_id=enrollment.class_id,
         reported_by=current_user.id,
         type=inc_type,
         severity_level=severity,
@@ -1584,6 +1623,8 @@ def get_supervisor_profile(
         .filter(
             SupervisorAssignment.supervisor_id == current_user.id,
             SupervisorAssignment.deleted_at.is_(None),
+            SupervisorAssignment.start_date <= _today(),
+            or_(SupervisorAssignment.end_date.is_(None), SupervisorAssignment.end_date >= _today()),
         )
         .all()
     )
@@ -2019,7 +2060,10 @@ def create_observation(
         raise HTTPException(status_code=403, detail="Only staff can create observations")
     
     # Verify child exists
-    child = db.query(models.Child).filter(models.Child.id == observation_data.child_id).first()
+    child = db.query(models.Child).filter(
+        models.Child.id == observation_data.child_id,
+        models.Child.deleted_at.is_(None),
+    ).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
@@ -2028,6 +2072,7 @@ def create_observation(
         .filter(
             models.EnrollmentApplication.child_id == child.id,
             models.EnrollmentApplication.status.in_(tuple(models.ACTIVE_ENROLLMENT_STATUSES)),
+            models.EnrollmentApplication.deleted_at.is_(None),
         )
         .order_by(models.EnrollmentApplication.updated_at.desc(), models.EnrollmentApplication.id.desc())
         .first()
@@ -2036,6 +2081,10 @@ def create_observation(
         raise HTTPException(status_code=400, detail="Child has no active enrollment")
 
     validators.validate_kindergarten_scope(current_user, enrollment.kindergarten_id)
+    if current_user.role == models.UserRole.SUPERVISOR and not _get_supervisor_child_enrollment(
+        db, current_user.id, child.id
+    ):
+        raise HTTPException(status_code=403, detail="Not assigned to child's class")
     
     # Map domain string to enum (case-insensitive)
     domain_str = observation_data.domain.upper().replace("-", "_")
@@ -2113,6 +2162,7 @@ def upload_observation_photo(
             models.EnrollmentApplication.child_id == observation.child_id,
             models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
             models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+            models.EnrollmentApplication.deleted_at.is_(None),
         ).first()
         if not enrollment:
             raise HTTPException(status_code=403, detail="Observation not in your kindergarten scope")
@@ -2165,14 +2215,18 @@ def record_observation(
         )
     
     # Verify child exists
-    child = db.query(models.Child).filter(models.Child.id == observation_data.child_id).first()
+    child = db.query(models.Child).filter(
+        models.Child.id == observation_data.child_id,
+        models.Child.deleted_at.is_(None),
+    ).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
     # Verify active enrollment and supervisor scope
     active_enrollment = db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.child_id == child.id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.deleted_at.is_(None),
     ).first()
     if not active_enrollment:
         raise HTTPException(status_code=400, detail="Child not active in any class")
@@ -2184,6 +2238,7 @@ def record_observation(
     assignment = db.query(models.SupervisorAssignment).filter(
         models.SupervisorAssignment.supervisor_id == current_user.id,
         models.SupervisorAssignment.class_id == active_enrollment.class_id,
+        models.SupervisorAssignment.deleted_at.is_(None),
         models.SupervisorAssignment.start_date <= today,
         or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= today)
     ).first()
@@ -2257,6 +2312,7 @@ def get_supervisor_children(
         for e in db.query(models.EnrollmentApplication).filter(
             models.EnrollmentApplication.child_id.in_(child_ids),
             models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            models.EnrollmentApplication.deleted_at.is_(None),
         ).all()
     }
     attendance_by_child = {
@@ -2327,7 +2383,10 @@ def get_supervisor_child_details(
     if not enrollment:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    child = db.query(models.Child).filter(
+        models.Child.id == child_id,
+        models.Child.deleted_at.is_(None),
+    ).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
@@ -2431,15 +2490,18 @@ def list_supervisor_child_daily_reports(
             {
                 "id": report.id,
                 "reportDate": report.date.isoformat(),
-                "classId": report.class_id,
-                "supervisorId": report.supervisor_id,
                 "kindergartenId": report.kindergarten_id,
-                "meals": report.meals,
-                "sleep": report.sleep,
+                "breakfast": report.breakfast,
+                "snack": report.snack,
+                "milk": report.milk,
+                "lunch": report.lunch,
+                "nap_start": report.nap_start,
+                "nap_end": report.nap_end,
+                "nap_duration_minutes": report.nap_duration_minutes,
                 "activities": report.activities,
-                "behavior": report.behavior,
+                "mood": report.mood,
                 "healthNotes": report.health_notes,
-                "generalNotes": report.general_notes or report.notes,
+                "generalNotes": report.notes,
                 "status": report.status.value,
             }
             for report in reports
@@ -2458,6 +2520,8 @@ def get_supervisor_dashboard(
     # Get supervisor's classes
     assignments = db.query(models.SupervisorAssignment).filter(
         models.SupervisorAssignment.supervisor_id == current_user.id,
+        models.SupervisorAssignment.deleted_at.is_(None),
+        models.SupervisorAssignment.start_date <= datetime.now(_JORDAN_TZ).date(),
         or_(
             models.SupervisorAssignment.end_date.is_(None),
             models.SupervisorAssignment.end_date >= datetime.now(_JORDAN_TZ).date()
@@ -2469,7 +2533,8 @@ def get_supervisor_dashboard(
     # Count children in assigned classes
     total_children = db.query(func.count(models.EnrollmentApplication.id)).filter(
         models.EnrollmentApplication.class_id.in_(class_ids),
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.deleted_at.is_(None),
     ).scalar() or 0
     
     # Count today's attendance
@@ -2479,6 +2544,8 @@ def get_supervisor_dashboard(
         models.AttendanceLog.child_id == models.EnrollmentApplication.child_id
     ).filter(
         models.EnrollmentApplication.class_id.in_(class_ids),
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.deleted_at.is_(None),
         models.AttendanceLog.date == today
     ).scalar() or 0
     
@@ -2501,6 +2568,7 @@ def get_supervisor_dashboard(
     ).filter(
         models.EnrollmentApplication.class_id.in_(class_ids),
         models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.deleted_at.is_(None),
         models.DailyReport.date == today,
     ).scalar() or 0
     

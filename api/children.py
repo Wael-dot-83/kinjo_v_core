@@ -184,7 +184,10 @@ def update_child_profile(
     db: Session = Depends(get_db)
 ):
     """Update child profile. Parent can update their child; Admin/Manager can as well."""
-    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    child = db.query(models.Child).filter(
+        models.Child.id == child_id,
+        models.Child.deleted_at.is_(None),
+    ).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
@@ -676,7 +679,10 @@ def get_child_observations(
 ):
     """Get all observations for a specific child"""
     # Verify access
-    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    child = db.query(models.Child).filter(
+        models.Child.id == child_id,
+        models.Child.deleted_at.is_(None),
+    ).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
@@ -693,13 +699,15 @@ def get_child_observations(
     if current_user.role == models.UserRole.SUPERVISOR:
         active_enrollment = db.query(models.EnrollmentApplication).filter(
             models.EnrollmentApplication.child_id == child_id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            models.EnrollmentApplication.deleted_at.is_(None),
         ).first()
         if active_enrollment:
             today = datetime.now(_JORDAN_TZ).date()
             assignment = db.query(models.SupervisorAssignment).filter(
                 models.SupervisorAssignment.supervisor_id == current_user.id,
                 models.SupervisorAssignment.class_id == active_enrollment.class_id,
+                models.SupervisorAssignment.deleted_at.is_(None),
                 models.SupervisorAssignment.start_date <= today,
                 or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= today)
             ).first()
@@ -731,6 +739,7 @@ def get_child_observations(
             models.EnrollmentApplication.child_id == child_id,
             models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
             models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+            models.EnrollmentApplication.deleted_at.is_(None),
         ).first()
         if not enrollment:
             raise HTTPException(status_code=404, detail="Child not found")
