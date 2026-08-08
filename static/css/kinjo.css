@@ -3327,10 +3327,25 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
      that border is what made the bar 65px. Clearing it here is what keeps the
      header and its spacer the same height. */
   border-bottom: 0;
-  box-shadow:
-    inset 0 -1px 0 rgba(212, 175, 55, 0.55),
-    0 8px 20px rgba(13, 48, 115, 0.2);
   padding-block: 0;
+
+  /* Sky blue instead of the near-navy #0f2d6b→#1d60e0 band. These are the
+     brightest sky stops that still carry white text at WCAG AA: white measures
+     7.2:1 / 4.9:1 / 4.7:1 across the three stops. Anything genuinely lighter
+     fails — true sky (#0EA5E9) puts white at 2.8:1, which is why the band stops
+     where it does rather than going brighter.
+
+     !important is required, not stylistic: the v3.0 "Navbar Refinements" layer
+     sets both background and box-shadow with !important. */
+  background: linear-gradient(
+    135deg,
+    #065c8a 0%,
+    #0a7cb8 55%,
+    #0077cc 100%
+  ) !important;
+  box-shadow:
+    inset 0 -1px 0 rgba(212, 175, 55, 0.6),
+    0 4px 18px rgba(6, 92, 138, 0.28) !important;
 }
 
 /* ── Header nav alignment (RTL-safe) ──────────────────────────────────────────
@@ -3343,6 +3358,17 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 .kinjo-navbar .navbar-nav {
   align-items: center;
   gap: 0.15rem;
+}
+
+/* The nav list carries Bootstrap's .ms-auto, i.e. margin-inline-start: auto,
+   which pushes it to the far inline-end. In RTL that stranded the whole menu
+   against the left edge with a ~790px void between it and the logo: the items
+   were aligned to nothing. Flipping the auto margin to the inline-end groups
+   them immediately after the logo, so the header reads as one run from the
+   right — logo, notifications, الرئيسية, المساعدة, language, account. */
+.kinjo-navbar .navbar-nav.ms-auto {
+  margin-inline-start: 0 !important;
+  margin-inline-end: auto !important;
 }
 
 /* min-block-size gives every item the same box height. Without it the language
