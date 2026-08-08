@@ -405,8 +405,30 @@
   text-align: right;
 }
 
+/* ── RTL: no manual row reversal ──────────────────────────────────────────────
+   A flex row inside dir="rtl" already lays its children out right-to-left. The
+   rules below added flex-direction: row-reverse on top of that, which flips the
+   row a second time and lands it back in left-to-right order — the opposite of
+   what they were meant to do.
+
+   Measured on the parent dashboard before removal, each of these had its FIRST
+   DOM child rendered LEFTMOST instead of rightmost:
+     .parent-report-card .card-header  — "أحدث التقارير اليومية" sat at x442-644
+                                          inside a card spanning x421-1168, i.e.
+                                          pinned to the left with the "view all"
+                                          link on the right.
+     .parent-report-item               — each report row reversed.
+     .parent-hero-badge                — the icon rendered after its label.
+
+   .child-card-report-banner carries the same pattern; it only renders when a
+   child already has a report filed for today, so it was corrected by the same
+   reasoning rather than observed. .parent-child-card .btn resolved to a single
+   child, where row-reverse is a no-op, and is left alone.
+
+   The chevron mirroring below is kept: that is a glyph flip, not a layout flip,
+   and a right-pointing chevron genuinely should point left in RTL. */
 [dir="rtl"] .parent-hero-badge {
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 
 [dir="rtl"] .parent-qa-card {
@@ -419,11 +441,11 @@
 }
 
 [dir="rtl"] .parent-report-item {
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 
 [dir="rtl"] .child-card-report-banner {
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 
 [dir="rtl"] .child-card-report-banner i {
@@ -434,8 +456,11 @@
   text-align: right;
 }
 
+/* "أحدث التقارير اليومية" belongs at the right edge of its card, with the
+   "view all" link at the left. Plain `row` under dir="rtl" does exactly that;
+   justify-content: space-between on the header pushes them apart. */
 [dir="rtl"] .parent-report-card .card-header {
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 
 [dir="rtl"] .parent-child-card .btn {

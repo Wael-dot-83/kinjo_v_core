@@ -3306,7 +3306,18 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
   display: inline-flex;
   align-items: center;
   padding-block: 0;
+  padding-inline: 0;
+  margin-inline-start: 0;
   margin-inline-end: 0.75rem;
+}
+
+/* The badge sits flush against the edge where the header colour begins. The
+   12px it stood off by was .container-fluid's own gutter padding
+   (--bs-gutter-x / 2), not anything in the brand itself, so the padding is
+   dropped on the leading side only — the trailing side keeps its gutter so the
+   account menu does not collide with the window edge. */
+.kinjo-navbar > .container-fluid {
+  padding-inline-start: 0;
 }
 
 /* A gold hairline under the bar ties the header to the badge, rather than
@@ -3508,23 +3519,26 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 }
 
 /* ── Sidebar: red wave, white text ────────────────────────────────────────────
-   Replaces the dark-slate field. The wave runs #991B1B → #B91C1C → #DC2626 on
-   the diagonal with a highlight sweep at the top, so the rail curves rather
-   than banding flatly.
+   Replaces the dark-slate field. The wave runs #A80019 → #CC0022 → #E4002B.
 
-   White is the text colour throughout and it holds: 8.31 / 6.47 / 4.83:1 across
-   the three stops, so even the brightest end clears AA. The stops stop at
-   #DC2626 for that reason — #EF4444 would drop white to 3.7:1.
+   These are pure-chroma reds, not the earlier brick tones, and that is what
+   makes them read as vivid: #DC2626 carries 38 of both green and blue, while
+   #E4002B drops green to zero. It is the more saturated colour and it holds
+   white marginally better at the same time (4.85:1 against 4.83:1).
+
+   White is the text colour throughout: 7.9 / 5.9 / 4.85:1 across the stops. The
+   wave stops here because this is the ceiling — #EF4444 puts white at 3.76:1
+   and #F01B2D at 4.29:1, both below AA. Anything brighter needs dark text.
 
    The v3.0 layer paints .sidebar with background-color and !important, so the
    wave has to be set as background-image at the same weight to land. */
 :root {
-  --kinjo-sidebar-bg: #b91c1c;
+  --kinjo-sidebar-bg: #cc0022;
   --kinjo-sidebar-text: #ffffff;
   --kinjo-sidebar-muted: rgba(255, 255, 255, 0.86);
   --kinjo-sidebar-border: rgba(255, 255, 255, 0.16);
   --kinjo-sidebar-hover: rgba(255, 255, 255, 0.16);
-  --kinjo-sidebar-active-bg: #7f1414;
+  --kinjo-sidebar-active-bg: #7a0014;
   --kinjo-sidebar-active-text: #ffffff;
   --kinjo-sidebar-accent: #f4d77c;
 }
@@ -3543,8 +3557,8 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
       rgba(0, 0, 0, 0.22) 0%,
       rgba(0, 0, 0, 0) 58%
     ),
-    linear-gradient(160deg, #991b1b 0%, #b91c1c 52%, #dc2626 100%) !important;
-  background-color: #b91c1c !important;
+    linear-gradient(160deg, #a80019 0%, #cc0022 52%, #e4002b 100%) !important;
+  background-color: #cc0022 !important;
 }
 
 /* Active row: a deeper red fill (white on it is 10.4:1) plus a gold edge, so
