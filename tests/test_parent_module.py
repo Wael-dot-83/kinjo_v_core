@@ -1218,6 +1218,30 @@ class TestParentMyReportsPage:
         assert "FILTER_IN_NOTE" in html
         assert "FILTER_OUT_NOTE" not in html
 
+    def test_child_only_report_link_uses_latest_shared_report_date(
+        self, client, parent_token, sample_child, sample_kindergarten, supervisor_user, test_db
+    ):
+        latest_date = date.today() - timedelta(days=2)
+        test_db.add(
+            models.DailyReport(
+                child_id=sample_child.id,
+                kindergarten_id=sample_kindergarten.id,
+                date=latest_date,
+                status=models.DailyReportStatus.SENT_TO_PARENT,
+                submitted_by=supervisor_user.id,
+                arrival_time="08:00",
+                leave_time="14:00",
+                notes="LATEST_SHARED_REPORT",
+            )
+        )
+        test_db.commit()
+
+        client.cookies.set("kinjo_token", parent_token)
+        response = client.get(f"/my-reports?child_id={sample_child.id}")
+        assert response.status_code == 200
+        assert "LATEST_SHARED_REPORT" in response.text
+        assert latest_date.isoformat() in response.text
+
     def test_non_parent_redirected_from_my_reports(self, client, admin_token, admin_user, test_db):
         client.cookies.set("kinjo_token", admin_token)
         response = client.get("/my-reports", follow_redirects=False)

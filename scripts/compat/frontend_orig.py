@@ -5,7 +5,7 @@ from jinja2 import pass_context
 import models
 from i18n import gettext as _i18n_gettext
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from datetime import date, timedelta, datetime, timezone
 from utils.time_utils import today_amman as _today, to_jordan_date
 import typing
@@ -1307,7 +1307,10 @@ async def parent_reports(
             },
         )
 
-    child_rows = db.query(models.Child).filter(models.Child.parent_id == parent_profile.id).order_by(models.Child.id.asc()).all()
+    child_rows = db.query(models.Child).filter(
+        models.Child.parent_id == parent_profile.id,
+        models.Child.deleted_at.is_(None),
+    ).order_by(models.Child.id.asc()).all()
     child_ids = [child.id for child in child_rows]
     child_name_by_id = {
         child.id: f"{child.first_name} {child.last_name}".strip()
@@ -1330,6 +1333,21 @@ async def parent_reports(
             )
         selected_child_id = requested_child_id
         child_ids = [requested_child_id]
+
+    # Links from the parent dashboard identify a child but intentionally omit a
+    # date.  In that case, show that child's most recently shared report rather
+    # than an empty page caused solely by today's date having no report.
+    if selected_child_id and not raw_date:
+        latest_shared_date = (
+            db.query(func.max(models.DailyReport.date))
+            .filter(
+                models.DailyReport.child_id == selected_child_id,
+                models.DailyReport.status == models.DailyReportStatus.SENT_TO_PARENT,
+            )
+            .scalar()
+        )
+        if latest_shared_date:
+            selected_date = latest_shared_date
 
     reports = []
     summary = {
