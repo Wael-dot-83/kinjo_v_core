@@ -150,9 +150,17 @@
                     <span>{% if ui_lang == 'en' %}Record Attendance{% else %}تسجيل حضور{% endif %}</span>
                     <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
+                {# The roster comes first: filing the class is the ordinary daily
+                   task, and the single-child form is the exception for a child
+                   who needs more detail than a roster row holds. #}
+                <a href="/daily-reports/roster" class="quick-action-btn qa-primary">
+                    <span class="qa-icon"><i class="bi bi-journal-check"></i></span>
+                    <span>{% if ui_lang == 'en' %}Report the whole class{% else %}تقارير الصف كاملاً{% endif %}</span>
+                    <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
+                </a>
                 <a href="/daily-reports/create" class="quick-action-btn qa-primary">
                     <span class="qa-icon"><i class="bi bi-journal-plus"></i></span>
-                    <span>{% if ui_lang == 'en' %}Create Daily Report{% else %}إنشاء تقرير يومي{% endif %}</span>
+                    <span>{% if ui_lang == 'en' %}Report one child{% else %}تقرير طفل واحد{% endif %}</span>
                     <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
                 <a href="/supervisor/observations" class="quick-action-btn qa-info">
@@ -326,7 +334,14 @@
 
             applyAttendanceFilter();
             await loadMyClasses();
-            renderPendingReportsList(pendingReports);
+            // Pass today's coverage as well as the draft count: the panel used to
+            // read "all reports are complete" whenever there were no DRAFTS,
+            // which is also true before anyone has filed anything at all.
+            renderPendingReportsList(pendingReports, {
+                reported: Number(stats?.reports_today || 0),
+                remaining: Number(stats?.reports_remaining_today || 0),
+                total: Number(stats?.total_children || counts.total || 0),
+            });
             updateLastUpdatedAt();
         } catch (error) {
             console.error('Error loading supervisor dashboard:', error);
@@ -432,13 +447,37 @@
         }
     }
 
-    function renderPendingReportsList(count) {
+    function renderPendingReportsList(count, coverage) {
         const list = document.getElementById('pendingReportsList');
         const badge = document.getElementById('pendingBadge');
         if (!list) return;
         if (badge) badge.textContent = String(count || 0);
 
         if (!count || count === 0) {
+            // No drafts is not the same as nothing left to do. If children in the
+            // class still have no report for today, say how many and offer the
+            // roster; only claim the day is done when it actually is.
+            const remaining = coverage && Number(coverage.remaining) > 0 ? Number(coverage.remaining) : 0;
+            if (remaining > 0) {
+                list.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="bi bi-journal-plus fs-1 d-block mb-2 text-warning opacity-50"></i>
+                        <p class="mb-2 fw-semibold">${supervisorText(
+                            'reports.remaining_today',
+                            // Arabic: the count-plus-singular form reads correctly for 1 and for n.
+                            remaining + ' طفل بلا تقرير اليوم',
+                            // English needs real agreement; "child(ren)" is a placeholder, not copy.
+                            remaining === 1
+                                ? '1 child has no report today'
+                                : remaining + ' children have no report today'
+                        )}</p>
+                        <a href="/daily-reports/roster" class="btn btn-sm btn-primary">
+                            <i class="bi bi-journal-check me-1"></i>${supervisorText('reports.open_roster', 'افتح كشف الصف', 'Open class roster')}
+                        </a>
+                    </div>
+                `;
+                return;
+            }
             list.innerHTML = `
                 <div class="text-center py-4 text-muted">
                     <i class="bi bi-check-circle fs-1 d-block mb-2 opacity-25"></i>

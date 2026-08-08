@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{#
+  Class roster — file the whole class's daily reports from one screen.
+
+  The single-child form (reports/form.html) asks a supervisor to pick a child,
+  fill roughly twenty fields, submit, and start again. For a class of twenty
+  that is twenty passes over the same page, re-entering the same arrival time,
+  leave time and meals every single time.
+
+  Here the values that are the same for everyone are entered once at the top and
+  every row inherits them. A row then needs one tap — the child's mood — for the
+  ordinary day, and only the exceptions get touched: a shorter day, a nap, a
+  note. Anything genuinely detailed still opens the full form for that child.
+
+  The roster deliberately does not try to replace the full form. It covers the
+  common case quickly and hands off the uncommon one.
+#}
+
+{% block title %}{% if ui_lang == 'en' %}Class Roster — Daily Reports{% else %}كشف الصف — التقارير اليومية{% endif %}{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-journal-check" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %}Supervisor{% else %}المشرف{% endif %}
+        </div>
+        <h1 class="page-header-title">{% if ui_lang == 'en' %}Class Roster{% else %}كشف الصف{% endif %}</h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb mb-0 breadcrumb-sm">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item"><a href="/daily-reports" class="text-decoration-none">{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Class Roster{% else %}كشف الصف{% endif %}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="page-header-actions">
+        <a href="/daily-reports/create" class="btn btn-outline-primary">
+            <i class="bi bi-person-lines-fill me-2" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %}One child at a time{% else %}طفل واحد في كل مرة{% endif %}
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="rosterRoot">
+
+  <!-- Shared values: entered once, inherited by every row -->
+  <section class="card mb-3 roster-shared" aria-labelledby="sharedHeading">
+    <div class="card-body">
+      <h2 id="sharedHeading" class="h6 fw-bold mb-3 d-flex align-items-center gap-2">
+        <i class="bi bi-sliders" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Applies to the whole class{% else %}ينطبق على الصف بأكمله{% endif %}
+      </h2>
+      <div class="row g-3 align-items-end">
+        <div class="col-6 col-md-3">
+          <label class="form-label" for="rosterDate">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</label>
+          <input type="date" class="form-control" id="rosterDate">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label" for="sharedArrival">{% if ui_lang == 'en' %}Arrival{% else %}الحضور{% endif %}</label>
+          <input type="time" class="form-control" id="sharedArrival" value="08:00">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label" for="sharedLeave">{% if ui_lang == 'en' %}Leave{% else %}الانصراف{% endif %}</label>
+          <input type="time" class="form-control" id="sharedLeave" value="13:00">
+        </div>
+        <div class="col-6 col-md-5">
+          <span class="form-label d-block">{% if ui_lang == 'en' %}Meals{% else %}الوجبات{% endif %}</span>
+          <div class="d-flex flex-wrap gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="sharedBreakfast" checked>
+              <label class="form-check-label" for="sharedBreakfast">{% if ui_lang == 'en' %}Breakfast{% else %}الفطور{% endif %}</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="sharedLunch" checked>
+              <label class="form-check-label" for="sharedLunch">{% if ui_lang == 'en' %}Lunch{% else %}الغداء{% endif %}</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="sharedSnack" checked>
+              <label class="form-check-label" for="sharedSnack">{% if ui_lang == 'en' %}Snack{% else %}سناك{% endif %}</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Loading / empty / error -->
+  <div id="rosterLoading" class="text-center py-5 text-secondary" role="status">
+    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+    {% if ui_lang == 'en' %}Loading your class…{% else %}جارٍ تحميل صفك…{% endif %}
+  </div>
+  <div id="rosterEmpty" class="card text-center py-5 d-none">
+    <div class="card-body">
+      <i class="bi bi-people d-block fs-1 mb-3 opacity-25" aria-hidden="true"></i>
+      <p class="mb-0 text-secondary">{% if ui_lang == 'en' %}No children are enrolled in your class yet.{% else %}لا يوجد أطفال مسجّلون في صفك بعد.{% endif %}</p>
+    </div>
+  </div>
+  <div id="rosterError" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+
+  <!-- The roster -->
+  <section id="rosterList" class="d-none" aria-label="{% if ui_lang == 'en' %}Children in your class{% else %}أطفال صفك{% endif %}"></section>
+
+  <!-- Result of the last save -->
+  <div id="rosterResult" class="mt-3 d-none" aria-live="polite"></div>
+
+  <!-- Sticky save bar -->
+  <div id="rosterBar" class="roster-bar d-none">
+    <span id="rosterCount" class="fw-semibold" aria-live="polite"></span>
+    <button type="button" class="btn btn-primary" id="rosterSave">
+      <i class="bi bi-send-check me-2" aria-hidden="true"></i>
+      {% if ui_lang == 'en' %}Save all{% else %}حفظ الكل{% endif %}
+    </button>
+  </div>
+</div>
+
+<style>
+/* The roster is a form the supervisor works down at speed, so the row is the
+   unit of design: one line per child, mood reachable in a single tap, and the
+   fields that are usually left alone visually quieter than the ones that are
+   not. */
+.roster-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1.4fr) auto minmax(5rem, .6fr) minmax(8rem, 1.6fr) auto;
+  gap: .75rem;
+  align-items: center;
+  padding: .75rem 1rem;
+  border: 1px solid var(--kinjo-color-border-subtle, #dceae3);
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: .5rem;
+}
+.roster-row.is-filed { background: #f8fafc; opacity: .72; }
+.roster-row.is-skipped { background: #f8fafc; opacity: .55; }
+.roster-child { display: flex; align-items: center; gap: .625rem; min-width: 0; }
+.roster-avatar {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(31, 94, 71, .08); color: #1f5e47; font-weight: 700;
+}
+.roster-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Mood: five radio buttons styled as one segmented control. Labels are real
+   text for screen readers; the emoji is decorative. */
+.roster-moods { display: flex; gap: .25rem; }
+.roster-moods input { position: absolute; opacity: 0; width: 0; height: 0; }
+.roster-moods label {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.25rem; height: 2.25rem; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--kinjo-color-border-subtle, #dceae3);
+  background: #fff; font-size: 1.1rem; line-height: 1; user-select: none;
+}
+.roster-moods input:checked + label { border-color: #1f5e47; background: rgba(31,94,71,.1); }
+.roster-moods input:focus-visible + label { outline: 2px solid #1e40af; outline-offset: 2px; }
+
+.roster-bar {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .75rem 1rem; margin-top: 1rem;
+  background: #fff; border: 1px solid var(--kinjo-color-border-subtle, #dceae3);
+  border-radius: 10px; box-shadow: 0 -4px 16px -8px rgba(15,23,42,.25);
+}
+.roster-filed-badge { font-size: .75rem; }
+
+@media (max-width: 767.98px) {
+  /* Stacked, because five columns on a phone makes every one of them useless. */
+  .roster-row { grid-template-columns: 1fr; gap: .5rem; }
+  .roster-moods { justify-content: space-between; }
+  .roster-moods label { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roster-row { transition: none; }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/supervisor_roster.js?v=1"></script>
+{% endblock %}

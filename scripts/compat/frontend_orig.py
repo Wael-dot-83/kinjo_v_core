@@ -1098,6 +1098,21 @@ async def create_daily_report(request: Request, current_user: User = Depends(get
     return templates.TemplateResponse(request=request, name="reports/form.html", context={"current_user": current_user, "today": _today()})
 
 
+@router.get("/daily-reports/roster", response_class=HTMLResponse)
+async def daily_reports_roster(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Class roster — file the whole class's daily reports from one screen.
+
+    Supervisor-only, matching /daily-reports/create: the page reads
+    /api/supervisor/children and posts to /api/daily-reports/batch, and both of
+    those refuse anyone else. The role check here keeps the refusal a rendered
+    403 rather than an empty screen driven by a failed fetch.
+    """
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'SUPERVISOR':
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
+    return templates.TemplateResponse(request=request, name="reports/roster.html", context={"current_user": current_user, "today": _today()})
+
+
 @router.get("/curriculum", response_class=HTMLResponse)
 async def curriculum_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Curriculum management placeholder - redirects to dashboard until module is built."""

@@ -51,11 +51,30 @@
                 </p>
             </li>
 
+            {# Managers and supervisors both need attendance, but not the same page.
+               /attendance/daily is explicitly a manager screen and answers 403 to
+               SUPERVISOR, so pointing both roles at it guaranteed the supervisor's
+               most-used nav item landed on a permission error. Supervisors get the
+               check-in screen their dashboard button already opens. #}
             {% if current_user.role.value in ['MANAGER', 'SUPERVISOR'] %}
             <li class="nav-item">
-                <a class="nav-link {% if '/attendance' in request.url.path %}active{% endif %}" href="/attendance/daily" data-tooltip="{% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}">
+                <a class="nav-link {% if '/attendance' in request.url.path %}active{% endif %}"
+                   href="{% if current_user.role.value == 'SUPERVISOR' %}/attendance/check-in{% else %}/attendance/daily{% endif %}"
+                   data-tooltip="{% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}">
                     <i class="bi bi-calendar-check" aria-hidden="true"></i>
                     <span data-i18n="sidebar.attendance_daily">{% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}</span>
+                </a>
+            </li>
+            {% endif %}
+
+            {# The roster is the supervisor's fastest path to the day's reports, so
+               it sits in Daily Operations next to attendance rather than under
+               Reports, where it would read as an archive. #}
+            {% if current_user.role.value == 'SUPERVISOR' %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/daily-reports/roster' in request.url.path %}active{% endif %}" href="/daily-reports/roster" data-tooltip="{% if ui_lang == 'en' %}Class Roster{% else %}كشف الصف{% endif %}">
+                    <i class="bi bi-journal-check" aria-hidden="true"></i>
+                    <span data-i18n="sidebar.class_roster">{% if ui_lang == 'en' %}Class Roster{% else %}كشف الصف{% endif %}</span>
                 </a>
             </li>
             {% endif %}

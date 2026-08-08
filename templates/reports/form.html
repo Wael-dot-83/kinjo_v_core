@@ -319,9 +319,30 @@
             const data = await res.json();
             let children = data.children || data;
 
-            // Enforce global child age policy client-side as a safety net
+            // Client-side age policy, as a safety net over the server's own check.
+            //
+            // This used to read `child.date_of_birth && isEligible(...)`, which
+            // drops a child whenever the field is merely ABSENT. The supervisor
+            // children endpoints did not serialise date_of_birth, so that
+            // predicate was falsy for every row and the picker rendered "no
+            // children available" — no supervisor could file a report, and the
+            // failure was silent because an empty list looks like an empty class.
+            //
+            // A safety net must not delete the whole list when it cannot see.
+            // Drop a child only when the data positively says they are
+            // ineligible; if the field is missing, keep them and let the server
+            // reject on create, where the authoritative check lives.
             if (window.ChildAgeValidator) {
-                children = children.filter(child => child.date_of_birth && ChildAgeValidator.isEligible(child.date_of_birth));
+                const missingDob = children.filter(c => !c.date_of_birth).length;
+                if (missingDob) {
+                    console.warn(
+                        `[daily-report] ${missingDob} child record(s) have no date_of_birth; ` +
+                        'age eligibility cannot be checked client-side for them.'
+                    );
+                }
+                children = children.filter(
+                    child => !child.date_of_birth || ChildAgeValidator.isEligible(child.date_of_birth)
+                );
             }
 
             // Filter by age range if specified (using month-based ranges)
