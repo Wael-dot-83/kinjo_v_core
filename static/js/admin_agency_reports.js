@@ -20,6 +20,8 @@
     });
   const t = (ar, en) => (lang === "en" ? en : ar);
   const LOCALE = lang === "ar" ? "ar-JO" : "en-US";
+  const bi = (ar, en) => (lang === "en" ? (en || ar) : (ar || en));
+  const pick = (v) => (v && typeof v === "object" && (v.ar !== undefined || v.en !== undefined) ? bi(v.ar, v.en) : v);
 
   function formatDateForFilename(value) {
     if (!value) return new Date().toISOString().slice(0, 10);
@@ -415,7 +417,7 @@
       titleEl.textContent =
         lang === "en" ? data.agency_name_en : data.agency_name_ar;
     const desc = document.getElementById("agency-description");
-    if (desc) desc.textContent = data.description_ar || "";
+    if (desc) desc.textContent = bi(data.description_ar, data.description_en) || "";
     const headerUpdated = document.getElementById("agency-header-updated");
     if (headerUpdated) {
       headerUpdated.innerHTML =
@@ -443,10 +445,10 @@
     }
 
     // Agency explanation
-    if (data.description_ar) {
+    if (data.description_ar || data.description_en) {
       const expl = document.createElement("div");
       expl.className = "agency-alert agency-alert--info";
-      expl.textContent = data.description_ar;
+      expl.textContent = bi(data.description_ar, data.description_en);
       root.appendChild(expl);
     }
 
@@ -464,7 +466,7 @@
 
       const reportDesc = document.createElement("p");
       reportDesc.className = "agency-card-desc";
-      reportDesc.textContent = report.description_ar || "";
+      reportDesc.textContent = bi(report.description_ar, report.description_en) || "";
 
       const indicators = document.createElement("p");
       indicators.className = "agency-card-meta";
@@ -515,7 +517,7 @@
       if (report.status !== "ready" && report.reason_ar) {
         const reason = document.createElement("span");
         reason.className = "agency-card-reason";
-        reason.textContent = report.reason_ar;
+        reason.textContent = bi(report.reason_ar, report.reason_en);
         statusRow.appendChild(reason);
       }
 
@@ -580,7 +582,7 @@
     table.style.border = "none";
 
     const caption = document.createElement("caption");
-    caption.textContent = payload.metadata.report_title_ar || "";
+    caption.textContent = bi(payload.metadata.report_title_ar, payload.metadata.report_title_en) || "";
     table.appendChild(caption);
 
     const columnLabels = payload.column_labels || {};
@@ -600,7 +602,7 @@
       th.style.borderBottom = "2px solid var(--admin-border, #e2e8f0)";
       
       const textSpan = document.createElement("span");
-      textSpan.textContent = columnLabels[h] || h;
+      textSpan.textContent = pick(columnLabels[h]) || h;
       th.appendChild(textSpan);
 
       const iconSpan = document.createElement("span");
@@ -652,7 +654,8 @@
       headers.forEach((h) => {
         const td = document.createElement("td");
         const v = totalRow[h];
-        td.textContent = v == null || v === "" ? "" : String(v);
+        const dispTotal = pick(v);
+        td.textContent = dispTotal == null || dispTotal === "" ? "" : String(dispTotal);
         const isNumeric = typeof v === "number" || (!isNaN(v) && v !== "");
         if (isNumeric) {
           td.style.textAlign = "right";
@@ -707,7 +710,8 @@
         headers.forEach((h) => {
           const td = document.createElement("td");
           const v = row[h];
-          td.textContent = v == null ? "—" : String(v);
+          const disp = pick(v);
+          td.textContent = disp == null ? "—" : String(disp);
           const isNumeric = typeof v === "number" || (!isNaN(v) && v !== "");
           if (isNumeric) {
             td.style.textAlign = "right";
@@ -781,11 +785,11 @@
           ? payload.metadata.report_title_en
           : payload.metadata.report_title_ar;
     const descEl = document.getElementById("agency-report-description");
-    if (descEl) descEl.textContent = payload.metadata.description_ar || "";
+    if (descEl) descEl.textContent = bi(payload.metadata.description_ar, payload.metadata.description_en) || "";
     const breadcrumbAgency = document.getElementById("breadcrumb-agency-name");
     if (breadcrumbAgency) {
       breadcrumbAgency.textContent =
-        payload.metadata.agency_name_ar || payload.metadata.agency_code;
+        bi(payload.metadata.agency_name_ar, payload.metadata.agency_name_en) || payload.metadata.agency_code;
       breadcrumbAgency.href =
         "/admin/agency-reports/" +
         encodeURIComponent(payload.metadata.agency_code);
@@ -793,7 +797,7 @@
     const breadcrumbReport = document.getElementById("breadcrumb-report-name");
     if (breadcrumbReport)
       breadcrumbReport.textContent =
-        payload.metadata.report_title_ar || payload.metadata.report_code;
+        bi(payload.metadata.report_title_ar, payload.metadata.report_title_en) || payload.metadata.report_code;
 
     // Drill-down breadcrumb
     const drill = window.__agencyDrillDown || {};
@@ -841,6 +845,7 @@
       const agencyObj = {
         code: payload.metadata.agency_code,
         name_ar: payload.metadata.agency_name_ar,
+        name_en: payload.metadata.agency_name_en,
       };
       logoEl.appendChild(window.renderAgencyLogo(agencyObj, 72));
     }
@@ -892,7 +897,7 @@
     Object.entries(payload.summary || {}).forEach(([key, value]) => {
       if (key === "message_ar" || key === "data_quality_note_ar" || key === "interpretation_ar" || key === "decision_implications" || key === "required_age" || key === "last_eligible_birth_date" || key === "cutoff_date" || key === "admission_year") return;
       const dt = document.createElement("dt");
-      dt.textContent = summaryLabels[key] || key;
+      dt.textContent = pick(summaryLabels[key]) || key;
       const dd = document.createElement("dd");
       dd.textContent = value == null ? "—" : String(value);
       dl.append(dt, dd);
@@ -907,7 +912,7 @@
       const alert = document.createElement("div");
       alert.className = "agency-alert agency-alert--warning";
       alert.textContent =
-        payload.summary.message_ar ||
+        (lang === "en" ? (payload.summary.message_en || payload.summary.message_ar) : payload.summary.message_ar) ||
         t(
           "هذا التقرير يتطلب بيانات منظمة إضافية.",
           "This report requires additional structured data.",
@@ -923,12 +928,12 @@
       const chartTitle = document.createElement("h2");
       chartTitle.className = "agency-chart-title";
       chartTitle.textContent =
-        payload.chart.title_ar || t("الرسم البياني", "Chart");
+        bi(payload.chart.title_ar, payload.chart.title_en) || t("الرسم البياني", "Chart");
       chartSection.appendChild(chartTitle);
       const chartContainer = document.createElement("div");
       chartContainer.id = "agency-plotly-chart";
       chartContainer.setAttribute("role", "img");
-      chartContainer.setAttribute("aria-label", payload.chart.title_ar || "");
+      chartContainer.setAttribute("aria-label", bi(payload.chart.title_ar, payload.chart.title_en) || "");
       chartSection.appendChild(chartContainer);
       if (
         window.Plotly &&
@@ -1033,9 +1038,14 @@
           !isPie &&
           payload.chart.show_share_pct === true &&
           sharePcts.some((v) => typeof v === "number");
+        const rawSuffix = payload.chart.value_suffix;
         const valueSuffix = isPie
           ? ""
-          : payload.chart.value_suffix || (isVerticalBar ? "" : "");
+          : rawSuffix == null
+            ? (isVerticalBar ? "" : "")
+            : typeof rawSuffix === "object"
+              ? bi(rawSuffix.ar, rawSuffix.en)
+              : rawSuffix;
         const barText = values.map((v, idx) => {
           if (typeof v !== "number") return "";
           if (showSharePct && typeof sharePcts[idx] === "number") {
@@ -1047,7 +1057,7 @@
         const plotData = [
           {
             type: isPie ? "pie" : "bar",
-            name: payload.chart.title_ar || payload.chart.title_en || "",
+            name: bi(payload.chart.title_ar, payload.chart.title_en) || "",
             ...(isPie
               ? { labels, values }
               : isVerticalBar
@@ -1088,7 +1098,7 @@
           plot_bgcolor: "transparent",
           font: { family: "'Inter', 'Segoe UI', system-ui, sans-serif" },
           title: {
-            text: payload.chart.title_ar || payload.chart.title_en || "",
+            text: bi(payload.chart.title_ar, payload.chart.title_en) || "",
           },
           uniformtext: !isPie ? { mode: "hide", minsize: 11 } : undefined,
           bargap: !isPie ? 0.3 : undefined,
@@ -1097,13 +1107,13 @@
               ? {
                   tickfont: { size: 13 },
                   automargin: true,
-                  title: payload.chart.x_axis_title_ar || undefined,
+                  title: bi(payload.chart.x_axis_title_ar, payload.chart.x_axis_title_en) || undefined,
                 }
               : {
                   tickfont: { size: 13 },
                   zeroline: false,
                   gridcolor: "rgba(148, 163, 184, 0.25)",
-                  title: payload.chart.x_axis_title_ar || undefined,
+                  title: bi(payload.chart.x_axis_title_ar, payload.chart.x_axis_title_en) || undefined,
                 }
             : undefined,
           yaxis: !isPie
@@ -1114,12 +1124,12 @@
                   gridcolor: "rgba(148, 163, 184, 0.25)",
                   rangemode: "tozero",
                   ticksuffix: valueSuffix,
-                  title: payload.chart.y_axis_title_ar || undefined,
+                  title: bi(payload.chart.y_axis_title_ar, payload.chart.y_axis_title_en) || undefined,
                 }
               : {
                   tickfont: { size: 13 },
                   automargin: true,
-                  title: payload.chart.y_axis_title_ar || undefined,
+                  title: bi(payload.chart.y_axis_title_ar, payload.chart.y_axis_title_en) || undefined,
                 }
             : undefined,
         };
@@ -1162,14 +1172,14 @@
       const extraTitle = document.createElement("h2");
       extraTitle.className = "agency-chart-title";
       extraTitle.textContent =
-        payload.license_chart.title_ar || t("الرسم البياني", "Chart");
+        bi(payload.license_chart.title_ar, payload.license_chart.title_en) || t("الرسم البياني", "Chart");
       extraSection.appendChild(extraTitle);
       const extraContainer = document.createElement("div");
       extraContainer.id = "agency-plotly-chart-license";
       extraContainer.setAttribute("role", "img");
       extraContainer.setAttribute(
         "aria-label",
-        payload.license_chart.title_ar || "",
+        bi(payload.license_chart.title_ar, payload.license_chart.title_en) || "",
       );
       extraSection.appendChild(extraContainer);
       if (
@@ -1183,7 +1193,7 @@
         const plotData = [
           {
             type: "pie",
-            name: payload.license_chart.title_ar || "",
+            name: bi(payload.license_chart.title_ar, payload.license_chart.title_en) || "",
             labels: labels,
             values: values,
             textinfo: "label+percent",
@@ -1196,7 +1206,7 @@
           paper_bgcolor: "transparent",
           plot_bgcolor: "transparent",
           font: { family: "'Inter', 'Segoe UI', system-ui, sans-serif" },
-          title: { text: payload.license_chart.title_ar || "" },
+          title: { text: bi(payload.license_chart.title_ar, payload.license_chart.title_en) || "" },
         };
         const config = {
           displaylogo: false,
@@ -1340,12 +1350,12 @@
     // so figures can be trusted and interpreted without assumptions.
     const meta = payload.metadata || {};
     const provItems = [
-      [t("تعريف التقرير", "Definition"), meta.definition_ar],
-      [t("مصدر البيانات", "Data source"), meta.data_source_ar],
-      [t("الأساس الجغرافي", "Geographic basis"), meta.geography_basis_ar],
-      [t("ملاحظات جودة البيانات", "Data Quality Note"), payload.summary ? payload.summary.data_quality_note_ar : null],
-      [t("وحدات القياس", "Units"), meta.units_note_ar],
-      [t("الرموز", "Symbols"), meta.symbols_note_ar],
+      [t("تعريف التقرير", "Definition"), lang === "en" ? meta.definition_en : meta.definition_ar],
+      [t("مصدر البيانات", "Data source"), lang === "en" ? meta.data_source_en : meta.data_source_ar],
+      [t("الأساس الجغرافي", "Geographic basis"), lang === "en" ? meta.geography_basis_en : meta.geography_basis_ar],
+      [t("ملاحظات جودة البيانات", "Data Quality Note"), payload.summary ? (lang === "en" ? (payload.summary.data_quality_note_en || payload.summary.data_quality_note_ar) : payload.summary.data_quality_note_ar) : null],
+      [t("وحدات القياس", "Units"), lang === "en" ? meta.units_note_en : meta.units_note_en],
+      [t("الرموز", "Symbols"), lang === "en" ? meta.symbols_note_en : meta.symbols_note_ar],
       [
         t("تاريخ الإصدار", "Generated"),
         meta.generated_at

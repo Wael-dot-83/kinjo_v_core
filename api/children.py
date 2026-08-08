@@ -97,8 +97,8 @@ def update_parent_profile(
     if not parent:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
-    # Authorization — only the profile owner may update their own profile
-    if parent.user_id != current_user.id:
+    # Authorization — only the profile owner or ADMIN may update profile
+    if current_user.role != models.UserRole.ADMIN and parent.user_id != current_user.id:
         raise HTTPException(status_code=403, detail=_api("Not authorized to update this profile", _ulang(current_user)))
 
     # Apply updates

@@ -490,12 +490,15 @@
   let profileData = null;
 
   function getHeaders() {
-    if (!window.AuthService || !AuthService.isAuthenticated()) {
-      return { "Content-Type": "application/json" };
-    }
-    const token = AuthService.getToken();
     const headers = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (window.AuthService && AuthService.isAuthenticated()) {
+      const token = AuthService.getToken();
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    }
+    const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
+                 (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
+                 (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
+    if (csrf) headers['X-CSRF-Token'] = csrf;
     return headers;
   }
 

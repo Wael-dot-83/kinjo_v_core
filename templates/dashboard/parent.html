@@ -9,6 +9,12 @@
             <i class="bi bi-house-heart text-primary me-2" aria-hidden="true"></i>
             {{ _('Welcome') }}
         </h1>
+        <nav aria-label="{{ _('Breadcrumb') }}">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="/dashboard">{{ _('Home') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('Parent Dashboard') }}</li>
+            </ol>
+        </nav>
         <p class="text-muted mb-0 small">{{ _("Follow your children's news and daily reports") }}</p>
     </div>
 </div>
@@ -130,9 +136,17 @@
             ? appCurrentLocale()
             : (document.documentElement.lang === 'en' ? 'en-US' : 'ar-JO'));
 
-    // Auth helper — session is the HttpOnly kinjo_session cookie, sent automatically.
     function getHeaders() {
-        return { 'Content-Type': 'application/json' };
+        const headers = { 'Content-Type': 'application/json' };
+        if (window.AuthService && AuthService.isAuthenticated()) {
+            const token = AuthService.getToken();
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+        }
+        const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
+                     (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
+                     (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
+        if (csrf) headers['X-CSRF-Token'] = csrf;
+        return headers;
     }
 
     function formatDate(dateStr) {

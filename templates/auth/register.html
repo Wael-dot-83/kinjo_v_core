@@ -1,374 +1,676 @@
-{% extends 'base.html' %}
-{% from 'components/form-controls.html' import gender_select, nationality_with_toggle, phone_input, email_input, password_input, address_group %}
-{% from 'components/step-indicator.html' import step_indicator %}
-{% from 'components/submit-button.html' import submit_button %}
+{% extends 'base.html' %} {% from 'components/kinjo_logo.html' import kinjo_logo
+%} {% from 'components/form-controls.html' import gender_select,
+nationality_with_toggle, phone_input, email_input, password_input, address_group
+%} {% from 'components/step-indicator.html' import step_indicator %} {% from
+'components/submit-button.html' import submit_button %} {% block title %}{% if
+ui_lang == 'en' %}Create Account{% else %}إنشاء حساب جديد{% endif %}{% endblock
+%} {% block body_class %}auth-page bg-light{% endblock %} {% block extra_css %}
+<style>
+  .register-page-shell {
+    background:
+      radial-gradient(
+        circle at top left,
+        rgba(255, 164, 120, 0.18),
+        transparent 22%
+      ),
+      radial-gradient(
+        circle at 88% 10%,
+        rgba(117, 201, 245, 0.18),
+        transparent 20%
+      ),
+      linear-gradient(180deg, #fffdf7 0%, #f8fbff 100%);
+    min-height: 100vh;
+  }
 
-{% block title %}{% if ui_lang == 'en' %}Create Account{% else %}إنشاء حساب جديد{% endif %}{% endblock %}
-{% block body_class %}auth-page bg-light{% endblock %}
+  .register-brand-badge {
+    width: 84px;
+    height: 64px;
+    border-radius: 0.75rem;
+    background: transparent;
+    box-shadow: none;
+  }
 
-{% block body %}
-<div class="container py-5">
+  .register-card {
+    border: 1px solid rgba(31, 94, 71, 0.08);
+    border-radius: 1.5rem;
+    background: linear-gradient(180deg, #ffffff 0%, #fffdf7 100%);
+    box-shadow: 0 1.4rem 3rem rgba(15, 23, 42, 0.08);
+  }
+
+  .register-card .form-control,
+  .register-card .form-select {
+    border-color: rgba(31, 94, 71, 0.14);
+  }
+
+  .register-card .form-control:focus,
+  .register-card .form-select:focus {
+    border-color: #ff9c6c;
+    box-shadow: 0 0 0 3px rgba(255, 156, 108, 0.18);
+  }
+
+  .register-note-strip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(255, 214, 115, 0.28);
+    color: #7a5200;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .register-surface-copy {
+    color: #5c6e67;
+    line-height: 1.75;
+  }
+
+  .register-mini-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .register-mini-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 0.95rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+  }
+
+  .register-mini-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 164, 120, 0.24),
+      rgba(117, 201, 245, 0.24)
+    );
+    color: #165041;
+    flex: 0 0 auto;
+  }
+
+  .register-mini-card strong {
+    display: block;
+    margin-bottom: 0.15rem;
+    color: #17312a;
+  }
+
+  .register-mini-card span {
+    color: #5b6472;
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+</style>
+{% endblock %} {% block body %}
+<div class="register-page-shell py-5">
+  <div class="container">
     <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-7 col-xl-6">
-            <!-- Logo Card -->
-            <div class="text-center mb-4">
-                <a href="/" class="text-decoration-none">
-                    <div class="d-inline-flex align-items-center justify-content-center bg-primary rounded-circle p-3 mb-3">
-                        <i class="bi bi-building text-white fs-1"></i>
-                    </div>
-                    <h2 class="text-primary fw-bold mb-1">KinJo</h2>
-                    <p class="text-muted small">{% if ui_lang == 'en' %}Kindergarten management platform{% else %}منصة إدارة الحضانات{% endif %}</p>
-                </a>
+      <div class="col-md-8 col-lg-7 col-xl-6">
+        <!-- Logo Card -->
+        <div class="text-center mb-4">
+          <a href="/" class="text-decoration-none">
+            <div
+              class="register-brand-badge d-inline-flex align-items-center justify-content-center mb-3"
+            >
+              {{ kinjo_logo(size='navbar') }}
             </div>
-            
-            <!-- Registration Card -->
-            <div class="card shadow-lg border-0">
-                <div class="card-body p-4 p-lg-5">
-                    <h4 class="card-title text-center mb-2">{% if ui_lang == 'en' %}Parent Registration{% else %}تسجيل ولي أمر جديد{% endif %}</h4>
-                    <p class="text-muted text-center small mb-4">
-                        {% if ui_lang == 'en' %}Create your parent account in about 3 minutes. You will need a valid email and phone number.{% else %}أنشئ حساب ولي الأمر في نحو 3 دقائق. ستحتاج إلى بريد إلكتروني ورقم هاتف صالحين.{% endif %}
-                    </p>
-
-                    <!-- Progress Steps -->
-                    {{ step_indicator(
-                        steps=[
-                            {"number": 1, "label": "Personal information" if ui_lang == 'en' else "البيانات الشخصية"},
-                            {"number": 2, "label": "Address" if ui_lang == 'en' else "العنوان"},
-                            {"number": 3, "label": "Account" if ui_lang == 'en' else "الحساب"}
-                        ],
-                        current_step=1
-                    ) }}
-                    
-                    <!-- Error Alert -->
-                    <div id="registerError" class="alert alert-danger d-none" role="alert">
-                        <i class="bi bi-x-circle me-2"></i>
-                        <span id="registerErrorMessage"></span>
-                    </div>
-                    
-                    <!-- Registration Form -->
-                    <form id="registerForm" class="needs-validation" novalidate>
-                        <!-- Step 1: Personal Information -->
-                        <div id="step1" class="registration-step">
-                            <h6 class="text-muted mb-3">{% if ui_lang == 'en' %}Personal information{% else %}البيانات الشخصية{% endif %}</h6>
-                            
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label for="firstName" class="form-label required">{% if ui_lang == 'en' %}First name{% else %}الاسم الأول{% endif %}</label>
-                                    <input type="text" class="form-control" id="firstName" name="first_name" 
-                                           placeholder="{% if ui_lang == 'en' %}First name{% else %}الاسم الأول{% endif %}" required>
-                                    <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter first name{% else %}يرجى إدخال الاسم الأول{% endif %}</div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="secondName" class="form-label">{% if ui_lang == 'en' %}Father&apos;s name{% else %}اسم الأب{% endif %}</label>
-                                    <input type="text" class="form-control" id="secondName" name="second_name" 
-                                           placeholder="{% if ui_lang == 'en' %}Father&apos;s name{% else %}اسم الأب{% endif %}">
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="lastName" class="form-label required">{% if ui_lang == 'en' %}Last name{% else %}اسم العائلة{% endif %}</label>
-                                    <input type="text" class="form-control" id="lastName" name="last_name" 
-                                           placeholder="{% if ui_lang == 'en' %}Last name{% else %}اسم العائلة{% endif %}" required>
-                                    <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter last name{% else %}يرجى إدخال اسم العائلة{% endif %}</div>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    {{ gender_select() }}
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    {{ phone_input() }}
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                {{ nationality_with_toggle() }}
-                            </div>
-                            
-                            <div class="d-flex justify-content-end mt-3">
-                                <button type="button" class="btn btn-primary" onclick="nextStep(2)">
-                                    {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-{% if ui_lang == 'en' %}arrow-right{% else %}arrow-left{% endif %} ms-2"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Step 2: Address -->
-                        <div id="step2" class="registration-step d-none">
-                            <h6 class="text-muted mb-3">{% if ui_lang == 'en' %}Address details{% else %}عنوان السكن{% endif %}</h6>
-
-                            {{ address_group(prefix="home") }}
-                            
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" id="correspondencePreference" 
-                                       name="correspondence_preference" checked>
-                                <label class="form-check-label" for="correspondencePreference">
-                                    {% if ui_lang == 'en' %}I agree to receive notifications and email messages{% else %}أوافق على تلقي الإشعارات والرسائل عبر البريد الإلكتروني{% endif %}
-                                </label>
-                            </div>
-                            
-                            <div class="d-flex justify-content-between mt-3">
-                                <button type="button" class="btn btn-outline-secondary" onclick="prevStep(1)">
-                                    <i class="bi bi-{% if ui_lang == 'en' %}arrow-left{% else %}arrow-right{% endif %} me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
-                                </button>
-                                <button type="button" class="btn btn-primary" onclick="nextStep(3)">
-                                    {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-{% if ui_lang == 'en' %}arrow-right{% else %}arrow-left{% endif %} ms-2"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Step 3: Account -->
-                        <div id="step3" class="registration-step d-none">
-                            <h6 class="text-muted mb-3">{% if ui_lang == 'en' %}Account details{% else %}بيانات الحساب{% endif %}</h6>
-                            
-                            <div class="mb-3">
-                                {{ email_input(with_icon=True) }}
-                            </div>
-                            
-                            <div class="mb-3">
-                                {{ password_input(help_text="Must contain at least 8 characters" if ui_lang == 'en' else "يجب أن تحتوي على 8 أحرف على الأقل") }}
-                                <!-- Password strength indicator -->
-                                <div id="passwordStrengthWrapper" class="mt-2 d-none">
-                                    <div class="progress" style="height:6px;">
-                                        <div id="passwordStrengthBar" class="progress-bar" role="progressbar" style="width:0%"
-                                            aria-label="{% if ui_lang == 'en' %}Password strength{% else %}قوة كلمة المرور{% endif %}"
-                                            aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                    <small id="passwordStrengthLabel" class="form-text mt-1"></small>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                {{ password_input(name="confirm_password", id="confirmPassword", label="Confirm password" if ui_lang == 'en' else "تأكيد كلمة المرور") }}
-                            </div>
-                            
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" id="agreeTerms" required>
-                                <label class="form-check-label" for="agreeTerms">
-                                    {% if ui_lang == 'en' %}I agree to the <a href="/terms" target="_blank" rel="noopener">Terms and Conditions</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>{% else %}أوافق على <a href="/terms" target="_blank" rel="noopener">الشروط والأحكام</a> و<a href="/privacy" target="_blank" rel="noopener">سياسة الخصوصية</a>{% endif %}
-                                </label>
-                                <div class="invalid-feedback">{% if ui_lang == 'en' %}You must agree to the terms{% else %}يجب الموافقة على الشروط والأحكام{% endif %}</div>
-                            </div>
-
-                            {% if captcha_enabled %}
-                            <div class="mb-3">
-                                <div class="{{ 'g-recaptcha' if captcha_provider == 'recaptcha' else 'h-captcha' }}" data-sitekey="{{ captcha_site_key }}"></div>
-                            </div>
-                            {% endif %}
-
-                            <div class="d-flex justify-content-between mt-4">
-                                <button type="button" class="btn btn-outline-secondary" onclick="prevStep(2)">
-                                    <i class="bi bi-{% if ui_lang == 'en' %}arrow-left{% else %}arrow-right{% endif %} me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
-                                </button>
-                                {{ submit_button(id="registerBtn", label="Create account" if ui_lang == 'en' else "إنشاء الحساب", loading_label="Creating..." if ui_lang == 'en' else "جاري الإنشاء...", btn_class="btn-success btn-lg") }}
-                            </div>
-                        </div>
-                    </form>
-                    
-                    <hr class="my-4">
-                    
-                    <div class="text-center">
-                        <p class="mb-0 small text-muted">
-                            {% if ui_lang == 'en' %}Already have an account?{% else %}لديك حساب بالفعل؟{% endif %} 
-                            <a href="/login" class="text-decoration-none fw-semibold">{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}</a>
-                        </p>
-                    </div>
-                </div>
-            </div>
+            <h2 class="fw-bold mb-1" style="color: #17312a">KinJo</h2>
+            <p class="text-muted small mb-2">
+              {% if ui_lang == 'en' %}Kindergarten management platform{% else
+              %}منصة إدارة الحضانات{% endif %}
+            </p>
+            <span class="register-note-strip"
+              ><i class="bi bi-stars" aria-hidden="true"></i>{% if ui_lang ==
+              'en' %}Create a warm, simple family account{% else %}أنشئ حسابًا
+              عائليًا بسيطًا ودافئًا{% endif %}</span
+            >
+          </a>
         </div>
+
+        <!-- Registration Card -->
+        <div class="card register-card">
+          <div class="card-body p-4 p-lg-5">
+            <h4 class="card-title text-center mb-2">
+              {% if ui_lang == 'en' %}Parent Registration{% else %}تسجيل ولي أمر
+              جديد{% endif %}
+            </h4>
+            <p class="text-muted text-center small mb-4">
+              {% if ui_lang == 'en' %}Create your parent account in about 3
+              minutes. You will need a valid email and phone number.{% else
+              %}أنشئ حساب ولي الأمر في نحو 3 دقائق. ستحتاج إلى بريد إلكتروني
+              ورقم هاتف صالحين.{% endif %}
+            </p>
+
+            <div class="register-mini-grid mb-4">
+              <div class="register-mini-card">
+                <span class="register-mini-icon"
+                  ><i class="bi bi-person-check" aria-hidden="true"></i
+                ></span>
+                <div>
+                  <strong
+                    >{% if ui_lang == 'en' %}Clear account setup{% else %}إعداد
+                    حساب واضح{% endif %}</strong
+                  ><span
+                    >{% if ui_lang == 'en' %}The steps are short and guide you
+                    from profile details to the final agreement.{% else
+                    %}الخطوات قصيرة وتقودك من بياناتك الأساسية إلى الموافقة
+                    النهائية.{% endif %}</span
+                  >
+                </div>
+              </div>
+              <div class="register-mini-card">
+                <span class="register-mini-icon"
+                  ><i class="bi bi-shield-check" aria-hidden="true"></i
+                ></span>
+                <div>
+                  <strong
+                    >{% if ui_lang == 'en' %}Secure and guided{% else %}آمن
+                    وموجّه{% endif %}</strong
+                  ><span
+                    >{% if ui_lang == 'en' %}Every required field is shown when
+                    needed, so the form stays clean and understandable.{% else
+                    %}تظهر الحقول المطلوبة فقط عند الحاجة، فيبقى النموذج واضحًا
+                    ومريحًا.{% endif %}</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress Steps -->
+            {{ step_indicator( steps=[ {"number": 1, "label": "Personal
+            information" if ui_lang == 'en' else "البيانات الشخصية"}, {"number":
+            2, "label": "Address" if ui_lang == 'en' else "العنوان"}, {"number":
+            3, "label": "Account" if ui_lang == 'en' else "الحساب"} ],
+            current_step=1 ) }}
+
+            <!-- Error Alert -->
+            <div
+              id="registerError"
+              class="alert alert-danger d-none"
+              role="alert"
+            >
+              <i class="bi bi-x-circle me-2"></i>
+              <span id="registerErrorMessage"></span>
+            </div>
+
+            <!-- Registration Form -->
+            <form id="registerForm" class="needs-validation" novalidate>
+              <!-- Step 1: Personal Information -->
+              <div id="step1" class="registration-step">
+                <h6 class="text-muted mb-3">
+                  {% if ui_lang == 'en' %}Personal information{% else %}البيانات
+                  الشخصية{% endif %}
+                </h6>
+
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label for="firstName" class="form-label required"
+                      >{% if ui_lang == 'en' %}First name{% else %}الاسم الأول{%
+                      endif %}</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="firstName"
+                      name="first_name"
+                      placeholder="{% if ui_lang == 'en' %}First name{% else %}الاسم الأول{% endif %}"
+                      required
+                    />
+                    <div class="invalid-feedback">
+                      {% if ui_lang == 'en' %}Please enter first name{% else
+                      %}يرجى إدخال الاسم الأول{% endif %}
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="secondName" class="form-label"
+                      >{% if ui_lang == 'en' %}Father&apos;s name{% else %}اسم
+                      الأب{% endif %}</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="secondName"
+                      name="second_name"
+                      placeholder="{% if ui_lang == 'en' %}Father's name{% else %}اسم الأب{% endif %}"
+                    />
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="lastName" class="form-label required"
+                      >{% if ui_lang == 'en' %}Last name{% else %}اسم العائلة{%
+                      endif %}</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="lastName"
+                      name="last_name"
+                      placeholder="{% if ui_lang == 'en' %}Last name{% else %}اسم العائلة{% endif %}"
+                      required
+                    />
+                    <div class="invalid-feedback">
+                      {% if ui_lang == 'en' %}Please enter last name{% else
+                      %}يرجى إدخال اسم العائلة{% endif %}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-6 mb-3">{{ gender_select() }}</div>
+                  <div class="col-md-6 mb-3">{{ phone_input() }}</div>
+                </div>
+
+                <div class="row">{{ nationality_with_toggle() }}</div>
+
+                <div class="d-flex justify-content-end mt-3">
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    onclick="nextStep(2)"
+                  >
+                    {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %}
+                    <i
+                      class="bi bi-{% if ui_lang == 'en' %}arrow-right{% else %}arrow-left{% endif %} ms-2"
+                    ></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Step 2: Address -->
+              <div id="step2" class="registration-step d-none">
+                <h6 class="text-muted mb-3">
+                  {% if ui_lang == 'en' %}Address details{% else %}عنوان السكن{%
+                  endif %}
+                </h6>
+
+                {{ address_group(prefix="home") }}
+
+                <div class="form-check mb-3">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="correspondencePreference"
+                    name="correspondence_preference"
+                    checked
+                  />
+                  <label
+                    class="form-check-label"
+                    for="correspondencePreference"
+                  >
+                    {% if ui_lang == 'en' %}I agree to receive notifications and
+                    email messages{% else %}أوافق على تلقي الإشعارات والرسائل
+                    عبر البريد الإلكتروني{% endif %}
+                  </label>
+                </div>
+
+                <div class="d-flex justify-content-between mt-3">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    onclick="prevStep(1)"
+                  >
+                    <i
+                      class="bi bi-{% if ui_lang == 'en' %}arrow-left{% else %}arrow-right{% endif %} me-2"
+                    ></i>
+                    {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    onclick="nextStep(3)"
+                  >
+                    {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %}
+                    <i
+                      class="bi bi-{% if ui_lang == 'en' %}arrow-right{% else %}arrow-left{% endif %} ms-2"
+                    ></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Step 3: Account -->
+              <div id="step3" class="registration-step d-none">
+                <h6 class="text-muted mb-3">
+                  {% if ui_lang == 'en' %}Account details{% else %}بيانات
+                  الحساب{% endif %}
+                </h6>
+
+                <div class="mb-3">{{ email_input(with_icon=True) }}</div>
+
+                <div class="mb-3">
+                  {{ password_input(help_text="Must contain at least 8
+                  characters" if ui_lang == 'en' else "يجب أن تحتوي على 8 أحرف
+                  على الأقل") }}
+                  <!-- Password strength indicator -->
+                  <div id="passwordStrengthWrapper" class="mt-2 d-none">
+                    <div class="progress" style="height: 6px">
+                      <div
+                        id="passwordStrengthBar"
+                        class="progress-bar"
+                        role="progressbar"
+                        style="width: 0%"
+                        aria-label="{% if ui_lang == 'en' %}Password strength{% else %}قوة كلمة المرور{% endif %}"
+                        aria-valuenow="0"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      ></div>
+                    </div>
+                    <small
+                      id="passwordStrengthLabel"
+                      class="form-text mt-1"
+                    ></small>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  {{ password_input(name="confirm_password",
+                  id="confirmPassword", label="Confirm password" if ui_lang ==
+                  'en' else "تأكيد كلمة المرور") }}
+                </div>
+
+                <div class="form-check mb-3">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="agreeTerms"
+                    required
+                  />
+                  <label class="form-check-label" for="agreeTerms">
+                    {% if ui_lang == 'en' %}I agree to the
+                    <a href="/terms" target="_blank" rel="noopener"
+                      >Terms and Conditions</a
+                    >
+                    and
+                    <a href="/privacy" target="_blank" rel="noopener"
+                      >Privacy Policy</a
+                    >{% else %}أوافق على
+                    <a href="/terms" target="_blank" rel="noopener"
+                      >الشروط والأحكام</a
+                    >
+                    و<a href="/privacy" target="_blank" rel="noopener"
+                      >سياسة الخصوصية</a
+                    >{% endif %}
+                  </label>
+                  <div class="invalid-feedback">
+                    {% if ui_lang == 'en' %}You must agree to the terms{% else
+                    %}يجب الموافقة على الشروط والأحكام{% endif %}
+                  </div>
+                </div>
+
+                {% if captcha_enabled %}
+                <div class="mb-3">
+                  <div
+                    class="{{ 'g-recaptcha' if captcha_provider == 'recaptcha' else 'h-captcha' }}"
+                    data-sitekey="{{ captcha_site_key }}"
+                  ></div>
+                </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-between mt-4">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    onclick="prevStep(2)"
+                  >
+                    <i
+                      class="bi bi-{% if ui_lang == 'en' %}arrow-left{% else %}arrow-right{% endif %} me-2"
+                    ></i>
+                    {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
+                  </button>
+                  {{ submit_button(id="registerBtn", label="Create account" if
+                  ui_lang == 'en' else "إنشاء الحساب",
+                  loading_label="Creating..." if ui_lang == 'en' else "جاري
+                  الإنشاء...", btn_class="btn-success btn-lg") }}
+                </div>
+              </div>
+            </form>
+
+            <hr class="my-4" />
+
+            <div class="text-center">
+              <p class="mb-0 small text-muted">
+                {% if ui_lang == 'en' %}Already have an account?{% else %}لديك
+                حساب بالفعل؟{% endif %}
+                <a href="/login" class="text-decoration-none fw-semibold"
+                  >{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif
+                  %}</a
+                >
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 
-{% endblock %}
-
-{% block extra_js %}
+{% endblock %} {% block extra_js %}
 <script>
-    const isEnglishUi = (document.documentElement.lang || "").toLowerCase() === "en";
-    const uiText = (arText, enText) => (isEnglishUi ? enText : arText);
-    let currentStep = 1;
-    
-    // Handle nationality change
-    document.getElementById('nationality').addEventListener('change', function() {
-        const isJordanian = this.value === 'Jordanian';
-        const nationalIdGroup = document.getElementById('nationalIdGroup');
-        const passportGroup = document.getElementById('passportGroup');
-        const nationalIdInput = document.getElementById('nationalId');
-        const passportInput = document.getElementById('passportNumber');
-        
-        if (isJordanian) {
-            nationalIdGroup.classList.remove('d-none');
-            passportGroup.classList.add('d-none');
-            nationalIdInput.required = true;
-            passportInput.required = false;
-        } else {
-            nationalIdGroup.classList.add('d-none');
-            passportGroup.classList.remove('d-none');
-            nationalIdInput.required = false;
-            passportInput.required = true;
-        }
+  const isEnglishUi =
+    (document.documentElement.lang || "").toLowerCase() === "en";
+  const uiText = (arText, enText) => (isEnglishUi ? enText : arText);
+  let currentStep = 1;
+
+  // Handle nationality change
+  document
+    .getElementById("nationality")
+    .addEventListener("change", function () {
+      const isJordanian = this.value === "Jordanian";
+      const nationalIdGroup = document.getElementById("nationalIdGroup");
+      const passportGroup = document.getElementById("passportGroup");
+      const nationalIdInput = document.getElementById("nationalId");
+      const passportInput = document.getElementById("passportNumber");
+
+      if (isJordanian) {
+        nationalIdGroup.classList.remove("d-none");
+        passportGroup.classList.add("d-none");
+        nationalIdInput.required = true;
+        passportInput.required = false;
+      } else {
+        nationalIdGroup.classList.add("d-none");
+        passportGroup.classList.remove("d-none");
+        nationalIdInput.required = false;
+        passportInput.required = true;
+      }
     });
-    
-    // Navigation functions
-    function nextStep(step) {
-        // Validate current step
-        if (!validateStep(currentStep)) {
-            return;
-        }
-        
-        // Hide current step
-        document.getElementById(`step${currentStep}`).classList.add('d-none');
-        document.getElementById(`step${currentStep}Circle`).classList.remove('active');
-        document.getElementById(`step${currentStep}Circle`).classList.add('completed');
-        
-        // Show next step
-        document.getElementById(`step${step}`).classList.remove('d-none');
-        document.getElementById(`step${step}Circle`).classList.add('active');
-        
-        currentStep = step;
+
+  // Navigation functions
+  function nextStep(step) {
+    // Validate current step
+    if (!validateStep(currentStep)) {
+      return;
     }
-    
-    function prevStep(step) {
-        // Hide current step
-        document.getElementById(`step${currentStep}`).classList.add('d-none');
-        document.getElementById(`step${currentStep}Circle`).classList.remove('active');
-        
-        // Show previous step
-        document.getElementById(`step${step}`).classList.remove('d-none');
-        document.getElementById(`step${step}Circle`).classList.add('active');
-        document.getElementById(`step${step}Circle`).classList.remove('completed');
-        
-        currentStep = step;
-    }
-    
-    function validateStep(step) {
-        const stepElement = document.getElementById(`step${step}`);
-        const inputs = stepElement.querySelectorAll('input[required], select[required], textarea[required]');
-        let isValid = true;
-        
-        inputs.forEach(input => {
-            if (!input.checkValidity()) {
-                input.classList.add('is-invalid');
-                isValid = false;
-            } else {
-                input.classList.remove('is-invalid');
-            }
-        });
-        
-        return isValid;
-    }
-    
-    // Toggle password visibility
-    function togglePassword(inputId) {
-        const input = document.getElementById(inputId);
-        const icon = document.getElementById(inputId + 'ToggleIcon');
 
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.replace('bi-eye', 'bi-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.replace('bi-eye-slash', 'bi-eye');
-        }
-    }
-    
-    // Password strength indicator
-    (function() {
-        const passwordInput = document.getElementById('password');
-        const wrapper = document.getElementById('passwordStrengthWrapper');
-        const bar = document.getElementById('passwordStrengthBar');
-        const label = document.getElementById('passwordStrengthLabel');
-        if (!passwordInput || !wrapper || !bar || !label) return;
+    // Hide current step
+    document.getElementById(`step${currentStep}`).classList.add("d-none");
+    document
+      .getElementById(`step${currentStep}Circle`)
+      .classList.remove("active");
+    document
+      .getElementById(`step${currentStep}Circle`)
+      .classList.add("completed");
 
-        const levels = [
-            { min: 0,  pct: 10, cls: 'bg-danger',  ar: 'ضعيفة جداً',  en: 'Very weak'  },
-            { min: 1,  pct: 30, cls: 'bg-danger',  ar: 'ضعيفة',       en: 'Weak'       },
-            { min: 2,  pct: 55, cls: 'bg-warning',  ar: 'متوسطة',      en: 'Fair'       },
-            { min: 3,  pct: 78, cls: 'bg-info',     ar: 'جيدة',        en: 'Good'       },
-            { min: 4,  pct: 100, cls: 'bg-success', ar: 'قوية',        en: 'Strong'     },
-        ];
+    // Show next step
+    document.getElementById(`step${step}`).classList.remove("d-none");
+    document.getElementById(`step${step}Circle`).classList.add("active");
 
-        function scorePassword(pw) {
-            let score = 0;
-            if (pw.length >= 8)  score++;
-            if (/[A-Z]/.test(pw)) score++;
-            if (/[a-z]/.test(pw)) score++;
-            if (/\d/.test(pw))    score++;
-            if (/[^A-Za-z0-9]/.test(pw)) score++;
-            return score;
-        }
+    currentStep = step;
+  }
 
-        passwordInput.addEventListener('input', function() {
-            const pw = this.value;
-            if (!pw) { wrapper.classList.add('d-none'); return; }
-            wrapper.classList.remove('d-none');
-            const score = Math.min(scorePassword(pw), 4);
-            const lvl = levels[score];
-            bar.style.width = lvl.pct + '%';
-            bar.setAttribute('aria-valuenow', lvl.pct);
-            bar.className = 'progress-bar ' + lvl.cls;
-            const isAr = document.documentElement.dir === 'rtl';
-            label.textContent = isAr ? lvl.ar : lvl.en;
-            label.className = 'form-text mt-1 ' + lvl.cls.replace('bg-', 'text-');
-        });
-    })();
+  function prevStep(step) {
+    // Hide current step
+    document.getElementById(`step${currentStep}`).classList.add("d-none");
+    document
+      .getElementById(`step${currentStep}Circle`)
+      .classList.remove("active");
 
-    // Password confirmation validation
-    document.getElementById('confirmPassword').addEventListener('input', function() {
-        const password = document.getElementById('password').value;
-        if (this.value !== password) {
-            this.setCustomValidity(uiText('كلمات المرور غير متطابقة', 'Passwords do not match'));
-        } else {
-            this.setCustomValidity('');
-        }
+    // Show previous step
+    document.getElementById(`step${step}`).classList.remove("d-none");
+    document.getElementById(`step${step}Circle`).classList.add("active");
+    document.getElementById(`step${step}Circle`).classList.remove("completed");
+
+    currentStep = step;
+  }
+
+  function validateStep(step) {
+    const stepElement = document.getElementById(`step${step}`);
+    const inputs = stepElement.querySelectorAll(
+      "input[required], select[required], textarea[required]",
+    );
+    let isValid = true;
+
+    inputs.forEach((input) => {
+      if (!input.checkValidity()) {
+        input.classList.add("is-invalid");
+        isValid = false;
+      } else {
+        input.classList.remove("is-invalid");
+      }
     });
-    
-    // Form submission
-    document.getElementById('registerForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        // Validate password match
-        const password = document.getElementById('password').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        
-        if (password !== confirmPassword) {
-            document.getElementById('confirmPassword').classList.add('is-invalid');
-            return;
-        }
-        
-        const registerBtn = document.getElementById('registerBtn');
-        const errorAlert = document.getElementById('registerError');
-        const errorMessage = document.getElementById('registerErrorMessage');
-        
-        // Show loading state
-        registerBtn.querySelector('.btn-text').classList.add('d-none');
-        registerBtn.querySelector('.btn-loading').classList.remove('d-none');
-        registerBtn.disabled = true;
-        errorAlert.classList.add('d-none');
-        
-        try {
-            const formData = new FormData(this);
-            const data = Object.fromEntries(formData.entries());
 
-            // Convert checkbox
-            data.correspondence_preference = document.getElementById('correspondencePreference').checked;
-            if (typeof window.getCaptchaToken === "function") {
-                data.captcha_token = window.getCaptchaToken();
-            }
+    return isValid;
+  }
 
-            await api.registerParent(data);
-            
-            showToast(uiText('تم إنشاء الحساب بنجاح! جاري تحويلك لتسجيل الدخول...', 'Account created successfully. Redirecting to sign-in...'), 'success');
-            
-            setTimeout(() => {
-                window.location.href = '/login';
-            }, 2000);
-            
-        } catch (error) {
-            errorMessage.textContent = error.message || uiText('حدث خطأ في إنشاء الحساب', 'An error occurred while creating the account');
-            errorAlert.classList.remove('d-none');
-            
-            registerBtn.querySelector('.btn-text').classList.remove('d-none');
-            registerBtn.querySelector('.btn-loading').classList.add('d-none');
-            registerBtn.disabled = false;
+  // Toggle password visibility
+  function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(inputId + "ToggleIcon");
+
+    if (input.type === "password") {
+      input.type = "text";
+      icon.classList.replace("bi-eye", "bi-eye-slash");
+    } else {
+      input.type = "password";
+      icon.classList.replace("bi-eye-slash", "bi-eye");
+    }
+  }
+
+  // Password strength indicator
+  (function () {
+    const passwordInput = document.getElementById("password");
+    const wrapper = document.getElementById("passwordStrengthWrapper");
+    const bar = document.getElementById("passwordStrengthBar");
+    const label = document.getElementById("passwordStrengthLabel");
+    if (!passwordInput || !wrapper || !bar || !label) return;
+
+    const levels = [
+      { min: 0, pct: 10, cls: "bg-danger", ar: "ضعيفة جداً", en: "Very weak" },
+      { min: 1, pct: 30, cls: "bg-danger", ar: "ضعيفة", en: "Weak" },
+      { min: 2, pct: 55, cls: "bg-warning", ar: "متوسطة", en: "Fair" },
+      { min: 3, pct: 78, cls: "bg-info", ar: "جيدة", en: "Good" },
+      { min: 4, pct: 100, cls: "bg-success", ar: "قوية", en: "Strong" },
+    ];
+
+    function scorePassword(pw) {
+      let score = 0;
+      if (pw.length >= 8) score++;
+      if (/[A-Z]/.test(pw)) score++;
+      if (/[a-z]/.test(pw)) score++;
+      if (/\d/.test(pw)) score++;
+      if (/[^A-Za-z0-9]/.test(pw)) score++;
+      return score;
+    }
+
+    passwordInput.addEventListener("input", function () {
+      const pw = this.value;
+      if (!pw) {
+        wrapper.classList.add("d-none");
+        return;
+      }
+      wrapper.classList.remove("d-none");
+      const score = Math.min(scorePassword(pw), 4);
+      const lvl = levels[score];
+      bar.style.width = lvl.pct + "%";
+      bar.setAttribute("aria-valuenow", lvl.pct);
+      bar.className = "progress-bar " + lvl.cls;
+      const isAr = document.documentElement.dir === "rtl";
+      label.textContent = isAr ? lvl.ar : lvl.en;
+      label.className = "form-text mt-1 " + lvl.cls.replace("bg-", "text-");
+    });
+  })();
+
+  // Password confirmation validation
+  document
+    .getElementById("confirmPassword")
+    .addEventListener("input", function () {
+      const password = document.getElementById("password").value;
+      if (this.value !== password) {
+        this.setCustomValidity(
+          uiText("كلمات المرور غير متطابقة", "Passwords do not match"),
+        );
+      } else {
+        this.setCustomValidity("");
+      }
+    });
+
+  // Form submission
+  document
+    .getElementById("registerForm")
+    .addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      // Validate password match
+      const password = document.getElementById("password").value;
+      const confirmPassword = document.getElementById("confirmPassword").value;
+
+      if (password !== confirmPassword) {
+        document.getElementById("confirmPassword").classList.add("is-invalid");
+        return;
+      }
+
+      const registerBtn = document.getElementById("registerBtn");
+      const errorAlert = document.getElementById("registerError");
+      const errorMessage = document.getElementById("registerErrorMessage");
+
+      // Show loading state
+      registerBtn.querySelector(".btn-text").classList.add("d-none");
+      registerBtn.querySelector(".btn-loading").classList.remove("d-none");
+      registerBtn.disabled = true;
+      errorAlert.classList.add("d-none");
+
+      try {
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+
+        // Convert checkbox
+        data.correspondence_preference = document.getElementById(
+          "correspondencePreference",
+        ).checked;
+        if (typeof window.getCaptchaToken === "function") {
+          data.captcha_token = window.getCaptchaToken();
         }
+
+        await api.registerParent(data);
+
+        showToast(
+          uiText(
+            "تم إنشاء الحساب بنجاح! جاري تحويلك لتسجيل الدخول...",
+            "Account created successfully. Redirecting to sign-in...",
+          ),
+          "success",
+        );
+
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 2000);
+      } catch (error) {
+        errorMessage.textContent =
+          error.message ||
+          uiText(
+            "حدث خطأ في إنشاء الحساب",
+            "An error occurred while creating the account",
+          );
+        errorAlert.classList.remove("d-none");
+
+        registerBtn.querySelector(".btn-text").classList.remove("d-none");
+        registerBtn.querySelector(".btn-loading").classList.add("d-none");
+        registerBtn.disabled = false;
+      }
     });
 </script>
 {% endblock %}

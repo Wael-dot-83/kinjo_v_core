@@ -1,128 +1,1054 @@
-{% extends 'base.html' %}
-
-{% block title %}{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}{% endblock %}
-{% block meta_description %}
-<meta name="description" content="{% if ui_lang == 'en' %}KinJo - Kindergarten enrollment and management platform for Jordan.{% else %}KinJo - منصة تسجيل وإدارة الحضانات في الأردن.{% endif %}" />
-{% endblock %}
-
-{% block content %}
-<section class="kinjo-home-hero" aria-labelledby="home-title">
-  <div class="container py-5">
-    <div class="row align-items-center">
-      <div class="col-lg-7">
-        <p class="kinjo-home-eyebrow mb-2">{% if ui_lang == 'en' %}One connected service{% else %}خدمة واحدة مترابطة{% endif %}</p>
-        <h1 id="home-title" class="display-5 fw-bold mb-3">
-          {% if ui_lang == 'en' %}Kindergarten enrollment, made simple{% else %}تسجيل الحضانة، بخطوات بسيطة{% endif %}
-        </h1>
-        <p class="lead text-muted mb-4">
-          {% if ui_lang == 'en' %}
-          KinJo connects parents, kindergarten staff, and education supervisors on one platform —
-          enroll a child, track attendance, and follow daily reports online.
-          {% else %}
-          تجمع KinJo أولياء الأمور والعاملين في الحضانات والمشرفين التربويين في منصة واحدة —
-          سجّل طفلك، وتابع الحضور والتقارير اليومية عبر الإنترنت.
-          {% endif %}
-        </p>
-        <div class="d-flex flex-wrap gap-2">
-          {% if public_registration_enabled %}
-          <a href="/register" class="btn btn-primary btn-lg">
-            <i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}Create an account{% else %}إنشاء حساب{% endif %}
-          </a>
-          {% endif %}
-          <a href="/login" class="btn btn-outline-primary btn-lg">
-            <i class="bi bi-box-arrow-in-right me-1"></i>{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
-          </a>
-          <a href="/services" class="btn btn-outline-secondary btn-lg">
-            <i class="bi bi-journal-check me-1"></i>{% if ui_lang == 'en' %}View Service Guide{% else %}دليل الخدمة{% endif %}
-          </a>
-        </div>
-      </div>
-      <div class="col-lg-5 d-none d-lg-block text-center" aria-hidden="true">
-        <i class="bi bi-building" style="font-size: 12rem; color: var(--kinjo-primary, #1F5E47); opacity: 0.15;" aria-hidden="true"></i>
-      </div>
-    </div>
-  </div>
-</section>
-
-<div class="container py-5">
-  <div class="row text-center mb-4">
-    <div class="col-12">
-      <h2 class="h4">{% if ui_lang == 'en' %}What you can do on KinJo{% else %}ماذا يمكنك فعله على KinJo؟{% endif %}</h2>
-    </div>
-  </div>
-  <div class="row g-4" aria-label="{% if ui_lang == 'en' %}KinJo services{% else %}خدمات KinJo{% endif %}">
-    <div class="col-md-4">
-      <div class="card kinjo-home-feature border-0 shadow-sm h-100 text-center p-3">
-        <i class="bi bi-clipboard-check fs-1 text-primary mb-2" aria-hidden="true"></i>
-        <h3 class="h6">{% if ui_lang == 'en' %}Enroll a child{% else %}تسجيل طفل{% endif %}</h3>
-        <p class="text-muted small mb-0">
-          {% if ui_lang == 'en' %}Find a kindergarten and submit an enrollment application online.{% else %}اختر حضانة وقدّم طلب التسجيل عبر الإنترنت.{% endif %}
-        </p>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card kinjo-home-feature border-0 shadow-sm h-100 text-center p-3">
-        <i class="bi bi-journal-text fs-1 text-primary mb-2" aria-hidden="true"></i>
-        <h3 class="h6">{% if ui_lang == 'en' %}Follow daily reports{% else %}متابعة التقارير اليومية{% endif %}</h3>
-        <p class="text-muted small mb-0">
-          {% if ui_lang == 'en' %}See attendance and daily activity reports for your child.{% else %}تابع الحضور والتقارير اليومية لطفلك.{% endif %}
-        </p>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card kinjo-home-feature border-0 shadow-sm h-100 text-center p-3">
-        <i class="bi bi-chat-dots fs-1 text-primary mb-2" aria-hidden="true"></i>
-        <h3 class="h6">{% if ui_lang == 'en' %}Stay in touch{% else %}التواصل المستمر{% endif %}</h3>
-        <p class="text-muted small mb-0">
-          {% if ui_lang == 'en' %}Message kindergarten staff directly through the platform.{% else %}تواصل مع كادر الحضانة مباشرة عبر المنصة.{% endif %}
-        </p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="container pb-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-8 text-center">
-      <p class="text-muted small">
-        {% if ui_lang == 'en' %}
-        Have a question? Visit our <a href="/faq">FAQ</a> or <a href="/contact">contact us</a>.
-        Read our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.
-        Use the accessibility button in the bottom corner of any page to adjust text size, contrast, or night mode.
-        {% else %}
-        لديك سؤال؟ زر صفحة <a href="/faq">الأسئلة الشائعة</a> أو <a href="/contact">تواصل معنا</a>.
-        اقرأ <a href="/privacy">سياسة الخصوصية</a> و<a href="/terms">الشروط والأحكام</a>.
-        استخدم زر إمكانية الوصول في زاوية أي صفحة لتعديل حجم النص أو التباين أو الوضع الليلي.
-        {% endif %}
-      </p>
-    </div>
-  </div>
-</div>
-
+{% extends 'base.html' %} {% from 'components/kinjo_logo.html' import kinjo_logo
+%} {% block title %}{% if ui_lang == 'en' %}KinJo | Home{% else %}KinJo |
+الرئيسية{% endif %}{% endblock %} {% block meta_description %}
+<meta
+  name="description"
+  content="{% if ui_lang == 'en' %}KinJo is a bilingual kindergarten enrollment, communication, and operations platform for families and schools in Jordan.{% else %}KinJo هي منصة ثنائية اللغة لتسجيل الأطفال والتواصل وإدارة عمليات الروضة للعائلات والروضات في الأردن.{% endif %}"
+/>
+{% endblock %} {% block meta_keywords %}
+<meta
+  name="keywords"
+  content="{% if ui_lang == 'en' %}KinJo, kindergarten enrollment, Jordan, parents, attendance, reports, communication{% else %}KinJo، تسجيل حضانة، الأردن، أولياء الأمور، الحضور، التقارير، التواصل{% endif %}"
+/>
+{% endblock %} {% block extra_css %}
 <style>
+  .kinjo-home-page {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(
+        circle at top left,
+        rgba(255, 164, 120, 0.18),
+        transparent 24%
+      ),
+      radial-gradient(
+        circle at 88% 8%,
+        rgba(117, 201, 245, 0.18),
+        transparent 22%
+      ),
+      radial-gradient(
+        circle at 14% 74%,
+        rgba(255, 224, 125, 0.22),
+        transparent 20%
+      ),
+      linear-gradient(180deg, #fffdf7 0%, #ffffff 38%, #f8fbff 100%);
+  }
+
+  .kinjo-home-page::before,
+  .kinjo-home-page::after {
+    content: "";
+    position: absolute;
+    inset: auto;
+    border-radius: 999px;
+    pointer-events: none;
+    filter: blur(10px);
+    opacity: 0.45;
+  }
+
+  .kinjo-home-page::before {
+    top: 6rem;
+    inset-inline-end: -4rem;
+    width: 12rem;
+    height: 12rem;
+    background: rgba(255, 204, 102, 0.3);
+  }
+
+  .kinjo-home-page::after {
+    bottom: 18rem;
+    inset-inline-start: -5rem;
+    width: 16rem;
+    height: 16rem;
+    background: rgba(117, 201, 245, 0.22);
+  }
+
   .kinjo-home-hero {
-    background: radial-gradient(circle at 85% 18%, rgba(47, 125, 98, 0.14), transparent 32%), linear-gradient(155deg, #eff6ff 0%, #ffffff 60%);
-    border-bottom: 1px solid var(--kinjo-border-light, var(--kinjo-color-border));
+    position: relative;
+    color: #17312a;
+    background:
+      radial-gradient(
+        circle at 88% 16%,
+        rgba(255, 206, 116, 0.5),
+        transparent 18%
+      ),
+      radial-gradient(
+        circle at 18% 20%,
+        rgba(117, 201, 245, 0.34),
+        transparent 20%
+      ),
+      radial-gradient(
+        circle at 75% 82%,
+        rgba(255, 164, 120, 0.22),
+        transparent 18%
+      ),
+      linear-gradient(135deg, #fff9e8 0%, #fffdf7 32%, #eef9f6 100%);
+    isolation: isolate;
   }
-  .kinjo-home-eyebrow {
-    color: var(--kinjo-primary, #1F5E47);
-    font-size: .875rem;
+
+  .kinjo-home-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(115deg, rgba(255, 255, 255, 0.72), transparent 42%),
+      radial-gradient(
+        circle at 82% 18%,
+        rgba(255, 184, 107, 0.3),
+        transparent 24%
+      ),
+      radial-gradient(
+        circle at 12% 22%,
+        rgba(255, 255, 255, 0.5),
+        transparent 26%
+      );
+    z-index: -1;
+  }
+
+  .kinjo-home-hero-inner {
+    position: relative;
+    padding: clamp(4rem, 6vw, 7rem) 0 clamp(2.5rem, 5vw, 4rem);
+  }
+
+  .kinjo-home-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+    color: #174536;
+    font-size: 0.9rem;
     font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 0.75rem 1.4rem rgba(15, 23, 42, 0.06);
   }
-  .kinjo-home-feature {
-    border: 1px solid transparent !important;
-    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+
+  .kinjo-home-title {
+    max-width: 13ch;
+    margin: 1.1rem 0 1rem;
+    font-size: clamp(2.6rem, 6vw, 5rem);
+    line-height: 0.97;
+    letter-spacing: -0.04em;
+    text-wrap: balance;
+    color: #14312a;
   }
-  .kinjo-home-feature:hover {
-    border-color: rgba(31, 94, 71, .25) !important;
-    box-shadow: 0 .75rem 1.75rem rgba(22, 61, 46, .12) !important;
-    transform: translateY(-.25rem);
+
+  .kinjo-home-lead {
+    max-width: 58ch;
+    margin-bottom: 1.5rem;
+    color: #50625b;
+    font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+    line-height: 1.8;
   }
+
+  .kinjo-home-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    margin-top: 1.5rem;
+  }
+
+  .kinjo-home-actions .btn {
+    border-radius: 999px;
+    padding-inline: 1.2rem;
+    padding-block: 0.8rem;
+    font-weight: 700;
+  }
+
+  .kinjo-home-actions .btn-primary {
+    box-shadow: 0 0.8rem 1.7rem rgba(255, 164, 120, 0.28);
+  }
+
+  .kinjo-home-actions .btn-outline-light {
+    border-color: rgba(23, 49, 42, 0.16);
+    color: #17312a;
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .kinjo-home-actions .btn-outline-light:hover {
+    color: #17312a;
+    background: #ffffff;
+  }
+
+  .kinjo-home-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1.5rem;
+  }
+
+  .kinjo-home-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+    color: #285448;
+    font-size: 0.88rem;
+    font-weight: 600;
+    box-shadow: 0 0.5rem 1.2rem rgba(15, 23, 42, 0.05);
+  }
+
+  .kinjo-home-panel {
+    position: relative;
+    border-radius: 1.75rem;
+    padding: 1.4rem;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.88),
+      rgba(255, 255, 255, 0.96)
+    );
+    border: 1px solid rgba(31, 94, 71, 0.08);
+    box-shadow: 0 1.4rem 3rem rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(18px);
+  }
+
+  .kinjo-home-panel .card {
+    border: 1px solid rgba(31, 94, 71, 0.06);
+    border-radius: 1.2rem;
+    background: linear-gradient(180deg, #fffefb 0%, #f6fbff 100%);
+    box-shadow: none;
+  }
+
+  .kinjo-home-panel .kinjo-home-card-title {
+    color: #14312a;
+  }
+
+  .kinjo-home-panel .kinjo-home-card-copy {
+    color: #4d5f58;
+  }
+
+  .kinjo-home-panel-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .kinjo-home-panel-title {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  .kinjo-home-panel-subtitle {
+    margin: 0;
+    color: #5c6e67;
+    font-size: 0.95rem;
+  }
+
+  .kinjo-home-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(255, 214, 115, 0.35);
+    color: #775000;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .kinjo-home-checklist {
+    display: grid;
+    gap: 0.9rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .kinjo-home-checklist-item {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+    padding: 0.85rem 0.9rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(31, 94, 71, 0.08);
+    box-shadow: 0 0.6rem 1.4rem rgba(15, 23, 42, 0.05);
+  }
+
+  .kinjo-home-checklist-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 164, 120, 0.26),
+      rgba(117, 201, 245, 0.24)
+    );
+    color: #165041;
+  }
+
+  .kinjo-home-checklist-text strong {
+    display: block;
+    margin-bottom: 0.18rem;
+    font-size: 0.95rem;
+  }
+
+  .kinjo-home-checklist-text span {
+    color: #596962;
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .kinjo-home-section {
+    position: relative;
+    padding: clamp(2.5rem, 5vw, 4.5rem) 0;
+  }
+
+  .kinjo-home-section-title {
+    margin-bottom: 0.75rem;
+    font-size: clamp(1.5rem, 2.3vw, 2.1rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #14312a;
+  }
+
+  .kinjo-home-section-lead {
+    max-width: 68ch;
+    color: #57616e;
+    line-height: 1.8;
+  }
+
+  .kinjo-home-service-card,
+  .kinjo-home-user-card,
+  .kinjo-home-step-card,
+  .kinjo-home-cta-card {
+    height: 100%;
+    border: 1px solid rgba(31, 94, 71, 0.08);
+    border-radius: 1.35rem;
+    background: linear-gradient(180deg, #ffffff 0%, #fffdf7 100%);
+    box-shadow: 0 1.1rem 2.2rem rgba(15, 23, 42, 0.06);
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .kinjo-home-service-card:hover,
+  .kinjo-home-user-card:hover,
+  .kinjo-home-step-card:hover,
+  .kinjo-home-cta-card:hover {
+    transform: translateY(-0.22rem);
+    box-shadow: 0 1.4rem 2.8rem rgba(15, 23, 42, 0.09);
+    border-color: rgba(255, 164, 120, 0.32);
+  }
+
+  .kinjo-home-icon-wrap {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 164, 120, 0.24),
+      rgba(117, 201, 245, 0.25)
+    );
+    color: #165041;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+
+  .kinjo-home-logo-wrap {
+    width: 84px;
+    height: 64px;
+    border-radius: 0.75rem;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .kinjo-home-service-card .card-body,
+  .kinjo-home-user-card .card-body,
+  .kinjo-home-step-card .card-body,
+  .kinjo-home-cta-card .card-body {
+    padding: 1.35rem;
+  }
+
+  .kinjo-home-card-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #14312a;
+  }
+
+  .kinjo-home-card-copy {
+    margin: 0.8rem 0 0;
+    color: #586862;
+    line-height: 1.7;
+  }
+
+  .kinjo-home-card-list {
+    display: grid;
+    gap: 0.55rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .kinjo-home-card-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    color: #3f504a;
+    line-height: 1.55;
+  }
+
+  .kinjo-home-card-list i {
+    color: #ff8f5d;
+    flex: 0 0 auto;
+    margin-top: 0.15rem;
+  }
+
+  .kinjo-home-step-number {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #ff9c6c, #ffd36b);
+    color: #fff;
+    font-weight: 800;
+    box-shadow: 0 0.75rem 1.6rem rgba(255, 156, 108, 0.28);
+  }
+
+  .kinjo-home-audience {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 214, 115, 0.1),
+      rgba(117, 201, 245, 0.08)
+    );
+  }
+
+  .kinjo-home-audience .kinjo-home-user-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fffaf2 100%);
+  }
+
+  .kinjo-home-cta-band {
+    padding-bottom: 4rem;
+  }
+
+  .kinjo-home-cta-card {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(
+        circle at 92% 16%,
+        rgba(255, 214, 115, 0.36),
+        transparent 22%
+      ),
+      radial-gradient(
+        circle at 10% 90%,
+        rgba(117, 201, 245, 0.2),
+        transparent 18%
+      ),
+      linear-gradient(135deg, #ffffff 0%, #fffdf7 100%);
+  }
+
+  .kinjo-home-cta-card::before {
+    content: "";
+    position: absolute;
+    inset-inline-end: -2rem;
+    inset-block-end: -2rem;
+    width: 9rem;
+    height: 9rem;
+    border-radius: 999px;
+    background: rgba(255, 164, 120, 0.12);
+  }
+
+  .kinjo-home-muted-note {
+    color: #586962;
+    line-height: 1.8;
+  }
+
+  .kinjo-home-helpers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .kinjo-home-helper-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #d9652e;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .kinjo-home-helper-link:hover {
+    color: #17312a;
+    text-decoration: underline;
+  }
+
+  @media (max-width: 991.98px) {
+    .kinjo-home-title {
+      max-width: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .kinjo-home-feature { transition: none; }
-    .kinjo-home-feature:hover { transform: none; }
+    .kinjo-home-service-card,
+    .kinjo-home-user-card,
+    .kinjo-home-step-card,
+    .kinjo-home-cta-card {
+      transition: none;
+    }
+
+    .kinjo-home-service-card:hover,
+    .kinjo-home-user-card:hover,
+    .kinjo-home-step-card:hover,
+    .kinjo-home-cta-card:hover {
+      transform: none;
+    }
   }
 </style>
+{% endblock %} {% block content %}
+<div class="kinjo-home-page">
+  <section class="kinjo-home-hero" aria-labelledby="home-title">
+    <div class="container kinjo-home-hero-inner">
+      <div class="row align-items-center g-4 g-lg-5">
+        <div class="col-lg-7">
+          <span class="kinjo-home-badge">
+            <i class="bi bi-stars" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %}Bilingual platform for families and
+            schools{% else %}منصة ثنائية اللغة للعائلات والروضات{% endif %}
+          </span>
+          <h1 id="home-title" class="kinjo-home-title fw-bold">
+            {% if ui_lang == 'en' %}A polished home for enrollment,
+            communication, and daily operations{% else %}واجهة أنيقة للتسجيل
+            والتواصل وإدارة يوم الروضة{% endif %}
+          </h1>
+          <p class="kinjo-home-lead">
+            {% if ui_lang == 'en' %} KinJo gives parents, kindergarten teams,
+            and supervisors one secure place to discover services, submit
+            requests, follow attendance, and keep every update in view. {% else
+            %} تمنح KinJo أولياء الأمور وفرق الروضات والمشرفين مساحة آمنة واحدة
+            لاكتشاف الخدمات، وتقديم الطلبات، ومتابعة الحضور، ومراجعة كل تحديث
+            بوضوح. {% endif %}
+          </p>
+
+          <div class="kinjo-home-actions">
+            {% if current_user %}
+            <a href="/dashboard" class="btn btn-primary btn-lg">
+              <i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>
+              {% if ui_lang == 'en' %}Open your dashboard{% else %}افتح لوحة
+              التحكم{% endif %}
+            </a>
+            <a href="/services" class="btn btn-outline-light btn-lg">
+              <i class="bi bi-journal-check me-1" aria-hidden="true"></i>
+              {% if ui_lang == 'en' %}Review the service guide{% else %}راجع
+              دليل الخدمة{% endif %}
+            </a>
+            {% else %} {% if public_registration_enabled %}
+            <a href="/register" class="btn btn-primary btn-lg">
+              <i class="bi bi-person-plus me-1" aria-hidden="true"></i>
+              {% if ui_lang == 'en' %}Create an account{% else %}إنشاء حساب{%
+              endif %}
+            </a>
+            {% endif %}
+            <a href="/login" class="btn btn-outline-light btn-lg">
+              <i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>
+              {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
+            </a>
+            <a href="/services" class="btn btn-outline-light btn-lg">
+              <i class="bi bi-journal-check me-1" aria-hidden="true"></i>
+              {% if ui_lang == 'en' %}See how it works{% else %}شاهد طريقة
+              العمل{% endif %}
+            </a>
+            {% endif %}
+          </div>
+
+          <div
+            class="kinjo-home-pills"
+            aria-label="{% if ui_lang == 'en' %}KinJo highlights{% else %}أبرز مزايا KinJo{% endif %}"
+          >
+            <span class="kinjo-home-pill"
+              ><i class="bi bi-shield-check" aria-hidden="true"></i>{% if
+              ui_lang == 'en' %}Secure access{% else %}وصول آمن{% endif %}</span
+            >
+            <span class="kinjo-home-pill"
+              ><i class="bi bi-translate" aria-hidden="true"></i>{% if ui_lang
+              == 'en' %}Arabic and English{% else %}العربية والإنجليزية{% endif
+              %}</span
+            >
+            <span class="kinjo-home-pill"
+              ><i class="bi bi-phone" aria-hidden="true"></i>{% if ui_lang ==
+              'en' %}Mobile-friendly{% else %}متوافق مع الهاتف{% endif %}</span
+            >
+            <span class="kinjo-home-pill"
+              ><i class="bi bi-lightning-charge" aria-hidden="true"></i>{% if
+              ui_lang == 'en' %}Fast workflows{% else %}سير عمل سريع{% endif
+              %}</span
+            >
+          </div>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="kinjo-home-panel">
+            <div class="kinjo-home-panel-top">
+              <div>
+                <p class="kinjo-home-panel-title">
+                  {% if current_user %} {% if ui_lang == 'en' %}Welcome back{%
+                  else %}مرحبًا بعودتك{% endif %} {% else %} {% if ui_lang ==
+                  'en' %}Start in minutes{% else %}ابدأ خلال دقائق{% endif %} {%
+                  endif %}
+                </p>
+                <p class="kinjo-home-panel-subtitle">
+                  {% if current_user %} {% if ui_lang == 'en' %}Continue where
+                  you left off and keep your workspace focused.{% else %}تابع من
+                  حيث توقفت وابدأ من مساحة عمل واضحة ومركزة.{% endif %} {% else
+                  %} {% if ui_lang == 'en' %}Everything you need is grouped into
+                  a simple path from discovery to action.{% else %}كل ما تحتاجه
+                  مجمع في مسار واضح من الاكتشاف حتى التنفيذ.{% endif %} {% endif
+                  %}
+                </p>
+              </div>
+              <span class="kinjo-home-note">
+                <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}One platform{% else %}منصة واحدة{% endif
+                %}
+              </span>
+            </div>
+
+            <div class="card mb-3">
+              <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                  <div class="kinjo-home-icon-wrap">
+                    <i class="bi bi-compass" aria-hidden="true"></i>
+                  </div>
+                  <div>
+                    <p class="kinjo-home-card-title">
+                      {% if ui_lang == 'en' %}Clear next step{% else %}الخطوة
+                      التالية بوضوح{% endif %}
+                    </p>
+                    <p class="kinjo-home-card-copy mt-2 mb-0">
+                      {% if current_user %} {% if ui_lang == 'en' %}Jump
+                      straight to your dashboard, then continue with the actions
+                      that matter most today.{% else %}انتقل مباشرة إلى لوحة
+                      التحكم، ثم واصل الإجراءات الأهم لليوم.{% endif %} {% else
+                      %} {% if ui_lang == 'en' %}Choose an account, explore the
+                      service guide, or sign in to continue instantly.{% else
+                      %}اختر إنشاء حساب، أو استعرض دليل الخدمة، أو سجّل الدخول
+                      للمتابعة فورًا.{% endif %} {% endif %}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <ul class="kinjo-home-checklist">
+              <li class="kinjo-home-checklist-item">
+                <span class="kinjo-home-checklist-icon"
+                  ><i class="bi bi-clipboard-check" aria-hidden="true"></i
+                ></span>
+                <div class="kinjo-home-checklist-text">
+                  <strong
+                    >{% if ui_lang == 'en' %}Enrollment made simple{% else
+                    %}تسجيل مبسط وواضح{% endif %}</strong
+                  >
+                  <span
+                    >{% if ui_lang == 'en' %}Submit requests from a guided
+                    journey instead of scattered forms.{% else %}قدّم الطلبات من
+                    مسار إرشادي بدلًا من النماذج المتفرقة.{% endif %}</span
+                  >
+                </div>
+              </li>
+              <li class="kinjo-home-checklist-item">
+                <span class="kinjo-home-checklist-icon"
+                  ><i class="bi bi-journal-text" aria-hidden="true"></i
+                ></span>
+                <div class="kinjo-home-checklist-text">
+                  <strong
+                    >{% if ui_lang == 'en' %}Daily visibility{% else %}وضوح يومي
+                    كامل{% endif %}</strong
+                  >
+                  <span
+                    >{% if ui_lang == 'en' %}Keep attendance, reports, and
+                    follow-up information in one place.{% else %}احتفظ بالحضور
+                    والتقارير ومتابعة الحالة في مكان واحد.{% endif %}</span
+                  >
+                </div>
+              </li>
+              <li class="kinjo-home-checklist-item">
+                <span class="kinjo-home-checklist-icon"
+                  ><i class="bi bi-shield-lock" aria-hidden="true"></i
+                ></span>
+                <div class="kinjo-home-checklist-text">
+                  <strong
+                    >{% if ui_lang == 'en' %}Built for trust{% else %}مصمم
+                    للثقة{% endif %}</strong
+                  >
+                  <span
+                    >{% if ui_lang == 'en' %}Role-aware access and a bilingual
+                    interface keep the experience consistent.{% else %}صلاحيات
+                    دقيقة وواجهة ثنائية اللغة تحافظان على تجربة متسقة.{% endif
+                    %}</span
+                  >
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="kinjo-home-section" aria-labelledby="services-title">
+    <div class="container">
+      <div class="row justify-content-center text-center mb-4 mb-lg-5">
+        <div class="col-lg-8">
+          <h2 id="services-title" class="kinjo-home-section-title">
+            {% if ui_lang == 'en' %}Everything users need, organized in one
+            clear experience{% else %}كل ما يحتاجه المستخدمون في تجربة واحدة
+            واضحة{% endif %}
+          </h2>
+          <p class="kinjo-home-section-lead mx-auto mb-0">
+            {% if ui_lang == 'en' %} KinJo is built to remove friction: fewer
+            steps, less confusion, and more confidence for every parent and
+            school team. {% else %} صُممت KinJo لتقليل التعقيد: خطوات أقل،
+            التباس أقل، وثقة أكبر لكل ولي أمر ولفريق الروضة. {% endif %}
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-md-6 col-xl-3">
+          <div class="card kinjo-home-service-card">
+            <div class="card-body">
+              <div class="kinjo-home-icon-wrap mb-3">
+                <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+              </div>
+              <h3 class="kinjo-home-card-title">
+                {% if ui_lang == 'en' %}Enrollment flow{% else %}مسار التسجيل{%
+                endif %}
+              </h3>
+              <p class="kinjo-home-card-copy">
+                {% if ui_lang == 'en' %}Find the right service, review the
+                requirements, and submit a complete application with
+                confidence.{% else %}اعثر على الخدمة المناسبة، وراجع المتطلبات،
+                وقدّم طلبًا مكتملًا بثقة.{% endif %}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+          <div class="card kinjo-home-service-card">
+            <div class="card-body">
+              <div class="kinjo-home-icon-wrap mb-3">
+                <i class="bi bi-activity" aria-hidden="true"></i>
+              </div>
+              <h3 class="kinjo-home-card-title">
+                {% if ui_lang == 'en' %}Daily visibility{% else %}الوضوح
+                اليومي{% endif %}
+              </h3>
+              <p class="kinjo-home-card-copy">
+                {% if ui_lang == 'en' %}Track attendance, updates, and reports
+                without switching between disconnected tools.{% else %}تابع
+                الحضور والتحديثات والتقارير دون التنقل بين أدوات متفرقة.{% endif
+                %}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+          <div class="card kinjo-home-service-card">
+            <div class="card-body">
+              <div class="kinjo-home-icon-wrap mb-3">
+                <i class="bi bi-chat-dots" aria-hidden="true"></i>
+              </div>
+              <h3 class="kinjo-home-card-title">
+                {% if ui_lang == 'en' %}Better communication{% else %}تواصل
+                أفضل{% endif %}
+              </h3>
+              <p class="kinjo-home-card-copy">
+                {% if ui_lang == 'en' %}Keep parents and school teams aligned
+                with a communication path that stays easy to understand.{% else
+                %}أبقِ أولياء الأمور وفرق الروضة متوافقين عبر قناة تواصل سهلة
+                وواضحة.{% endif %}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+          <div class="card kinjo-home-service-card">
+            <div class="card-body">
+              <div class="kinjo-home-icon-wrap mb-3">
+                <i class="bi bi-shield-lock" aria-hidden="true"></i>
+              </div>
+              <h3 class="kinjo-home-card-title">
+                {% if ui_lang == 'en' %}Role-aware access{% else %}صلاحيات بحسب
+                الدور{% endif %}
+              </h3>
+              <p class="kinjo-home-card-copy">
+                {% if ui_lang == 'en' %}Every user sees the workspace that
+                matches their role, with cleaner navigation and less clutter.{%
+                else %}يرى كل مستخدم المساحة المطابقة لدوره، مع تنقل أوضح وفوضى
+                أقل.{% endif %}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section
+    class="kinjo-home-section kinjo-home-audience"
+    aria-labelledby="audience-title"
+  >
+    <div class="container">
+      <div class="row justify-content-center text-center mb-4 mb-lg-5">
+        <div class="col-lg-8">
+          <h2 id="audience-title" class="kinjo-home-section-title">
+            {% if ui_lang == 'en' %}Built for every person who uses the
+            platform{% else %}مصمم لكل شخص يستخدم المنصة{% endif %}
+          </h2>
+          <p class="kinjo-home-section-lead mx-auto mb-0">
+            {% if ui_lang == 'en' %} The experience is tuned for parents,
+            kindergarten staff, and supervisors so each group can move faster
+            with less guesswork. {% else %} التجربة مضبوطة للعائلات وفرق الروضات
+            والمشرفين حتى يتحرك كل طرف بسرعة أكبر وبحيرة أقل. {% endif %}
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-4">
+          <div class="card kinjo-home-user-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3 mb-3">
+                <div class="kinjo-home-icon-wrap">
+                  <i class="bi bi-people" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <h3 class="kinjo-home-card-title">
+                    {% if ui_lang == 'en' %}For parents{% else %}لأولياء
+                    الأمور{% endif %}
+                  </h3>
+                  <p class="kinjo-home-card-copy mb-0">
+                    {% if ui_lang == 'en' %}Discover services, submit requests,
+                    and keep your child’s status and updates in one place.{%
+                    else %}اكتشف الخدمات، وقدّم الطلبات، واحتفظ بحالة طفلك
+                    وتحديثاته في مكان واحد.{% endif %}
+                  </p>
+                </div>
+              </div>
+              <ul class="kinjo-home-card-list">
+                <li>
+                  <i class="bi bi-check2-circle" aria-hidden="true"></i
+                  ><span
+                    >{% if ui_lang == 'en' %}Simple action path from landing
+                    page to form.{% else %}مسار سهل من الصفحة الرئيسية إلى
+                    النموذج.{% endif %}</span
+                  >
+                </li>
+                <li>
+                  <i class="bi bi-check2-circle" aria-hidden="true"></i
+                  ><span
+                    >{% if ui_lang == 'en' %}Readable status updates and clearer
+                    next steps.{% else %}حالات واضحة وخطوات تالية مفهومة.{%
+                    endif %}</span
+                  >
+                </li>
+                <li>
+                  <i class="bi bi-check2-circle" aria-hidden="true"></i
+                  ><span
+                    >{% if ui_lang == 'en' %}Bilingual experience without
+                    language mixing.{% else %}تجربة ثنائية اللغة بلا خلط أو
+                    تشويش.{% endif %}</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="card kinjo-home-user-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3 mb-3">
+                <div class="kinjo-home-logo-wrap">
+                  {{ kinjo_logo(size='navbar') }}
+                </div>
+                <div>
+                  <h3 class="kinjo-home-card-title">
+                    {% if ui_lang == 'en' %}For kindergarten teams{% else
+                    %}لفِرق الروضات{% endif %}
+                  </h3>
+                  <p class="kinjo-home-card-copy mb-0">
+                    {% if ui_lang == 'en' %}Present the service clearly, reduce
+                    support questions, and keep daily work organized.{% else
+                    %}اعرض الخدمة بوضوح، وقلل أسئلة الدعم، ونظّم العمل اليومي
+                    بسهولة.{% endif %}
+                  </p>
+                </div>
+              </div>
+              <ul class="kinjo-home-card-list">
+                <li>
+                  <i class="bi bi-check2-circle" aria-hidden="true"></i
+                  ><span
+                    >{% if ui_lang == 'en' %}A premium first impression that
+                    feels trustworthy.{% else %}انطباع أول احترافي يوحي
+                    بالثقة.{% endif %}</span
+                  >
+                </li>
+                <li>
+                  <i class="bi bi-check2-circle" aria-hidden="true"></i
+                  ><span
+                    >{% if ui_lang == 'en' %}Fewer interruptions thanks to a
+                    guided flow.{% else %}مقاطعات أقل بفضل المسار الإرشادي.{%
+                    endif %}</span
+                  >
+                </li>
+                <li>
+                  <i class="bi bi-check2-circle" aria-hidden="true"></i
+                  ><span
+                    >{% if ui_lang == 'en' %}Clean navigation for daily
+                    operations and follow-up.{% else %}تنقل واضح لإدارة العمل
+                    والمتابعة اليومية.{% endif %}</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="card kinjo-home-user-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3 mb-3">
+                <div class="kinjo-home-icon-wrap">
+                  <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <h3 class="kinjo-home-card-title">
+                    {% if ui_lang == 'en' %}For supervisors{% else %}للمشرفين{%
+                    endif %}
+                  </h3>
+                  <p class="kinjo-home-card-copy mb-0">
+                    {% if ui_lang == 'en' %}Keep a clear overview of operations,
+                    reports, and the next action to take.{% else %}حافظ على نظرة
+                    واضحة للعمليات والتقارير وما يجب فعله لاحقًا.{% endif %}
+                  </p>
+                </div>
+              </div>
+              <ul class="kinjo-home-card-list">
+                <li>
+                  <i class="bi bi-check2-circle" aria-hidden="true"></i
+                  ><span
+                    >{% if ui_lang == 'en' %}A guided path to the correct
+                    dashboard when signed in.{% else %}مسار مباشر إلى لوحة
+                    التحكم المناسبة بعد تسجيل الدخول.{% endif %}</span
+                  >
+                </li>
+                <li>
+                  <i class="bi bi-check2-circle" aria-hidden="true"></i
+                  ><span
+                    >{% if ui_lang == 'en' %}Faster access to reports and
+                    oversight tools.{% else %}وصول أسرع إلى التقارير وأدوات
+                    المتابعة.{% endif %}</span
+                  >
+                </li>
+                <li>
+                  <i class="bi bi-check2-circle" aria-hidden="true"></i
+                  ><span
+                    >{% if ui_lang == 'en' %}A cleaner, more focused workspace
+                    for decision-making.{% else %}مساحة عمل أنظف وأكثر تركيزًا
+                    لاتخاذ القرار.{% endif %}</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section
+    class="kinjo-home-section kinjo-home-cta-band"
+    aria-labelledby="cta-title"
+  >
+    <div class="container">
+      <div class="card kinjo-home-cta-card">
+        <div class="card-body p-4 p-lg-5">
+          <div class="row align-items-center g-4">
+            <div class="col-lg-8">
+              <h2 id="cta-title" class="kinjo-home-section-title mb-3">
+                {% if ui_lang == 'en' %}Ready to move from interest to action?{%
+                else %}هل أنت جاهز للانتقال من الاهتمام إلى التنفيذ؟{% endif %}
+              </h2>
+              <p class="kinjo-home-muted-note mb-0">
+                {% if ui_lang == 'en' %} Start with the service guide, create an
+                account if registration is open, or sign in to continue
+                immediately. {% else %} ابدأ بدليل الخدمة، أو أنشئ حسابًا إذا
+                كان التسجيل متاحًا، أو سجّل الدخول للمتابعة مباشرة. {% endif %}
+              </p>
+              <div class="kinjo-home-helpers">
+                <a class="kinjo-home-helper-link" href="/faq"
+                  ><i class="bi bi-question-circle" aria-hidden="true"></i>{% if
+                  ui_lang == 'en' %}Read the FAQ{% else %}اقرأ الأسئلة الشائعة{%
+                  endif %}</a
+                >
+                <a class="kinjo-home-helper-link" href="/contact"
+                  ><i class="bi bi-envelope" aria-hidden="true"></i>{% if
+                  ui_lang == 'en' %}Contact support{% else %}تواصل مع الدعم{%
+                  endif %}</a
+                >
+                <a class="kinjo-home-helper-link" href="/privacy"
+                  ><i class="bi bi-file-earmark-text" aria-hidden="true"></i>{%
+                  if ui_lang == 'en' %}Privacy policy{% else %}سياسة الخصوصية{%
+                  endif %}</a
+                >
+              </div>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+              <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+                {% if current_user %}
+                <a href="/dashboard" class="btn btn-primary btn-lg">
+                  <i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>
+                  {% if ui_lang == 'en' %}Go to dashboard{% else %}الانتقال إلى
+                  لوحة التحكم{% endif %}
+                </a>
+                {% else %} {% if public_registration_enabled %}
+                <a href="/register" class="btn btn-primary btn-lg">
+                  <i class="bi bi-person-plus me-1" aria-hidden="true"></i>
+                  {% if ui_lang == 'en' %}Create account{% else %}إنشاء حساب{%
+                  endif %}
+                </a>
+                {% endif %}
+                <a href="/login" class="btn btn-outline-primary btn-lg">
+                  <i
+                    class="bi bi-box-arrow-in-right me-1"
+                    aria-hidden="true"
+                  ></i>
+                  {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif
+                  %}
+                </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
 {% endblock %}

@@ -2,30 +2,35 @@
 <footer class="kj-footer mt-auto pt-5 pb-4">
   <div class="container-fluid px-4 px-lg-5">
     <div class="row g-4 justify-content-between">
-
       <!-- Brand & Platform Summary -->
       <div class="col-lg-3 col-md-6">
         <div class="kj-footer-brand mb-3">
-          <a href="/" class="d-inline-flex align-items-center text-decoration-none">
+          <a
+            href="/"
+            class="d-inline-flex align-items-center text-decoration-none"
+          >
             <span class="kj-footer-logo-text">KinJo</span>
             <span class="kj-footer-badge ms-2">
-              {% if ui_lang == 'en' %}Jordan Platform{% else %}المملكة الأردنية الهاشمية{% endif %}
+              {% if ui_lang == 'en' %}Jordan Platform{% else %}المملكة الأردنية
+              الهاشمية{% endif %}
             </span>
           </a>
         </div>
         <p class="kj-footer-desc mb-3">
-          {% if ui_lang == 'en' %}
-            Jordan's national platform for kindergarten enrollment, daily child care tracking, and official supervision under government standards.
-          {% else %}
-            المنصة الوطنية الموحدة لإدارة وتسجيل الحضانات في المملكة الأردنية الهاشمية، بمتابعة وإشراف حكومي شامل لضمان أمان ورعاية طفلك.
-          {% endif %}
+          {% if ui_lang == 'en' %} Jordan's national platform for kindergarten
+          enrollment, daily child care tracking, and official supervision under
+          government standards. {% else %} المنصة الوطنية الموحدة لإدارة وتسجيل
+          الحضانات في المملكة الأردنية الهاشمية، بمتابعة وإشراف حكومي شامل لضمان
+          أمان ورعاية طفلك. {% endif %}
         </p>
 
         <!-- System Status Pill -->
         <div class="kj-footer-status mb-3">
           <span class="kj-status-dot me-2"></span>
           <span class="kj-status-text">
-            {% if ui_lang == 'en' %}System Status: <strong>Operational 100%</strong>{% else %}حالة النظام: <strong>يعمل بكفاءة 100%</strong>{% endif %}
+            {% if ui_lang == 'en' %}System Status:
+            <strong>Operational 100%</strong>{% else %}حالة النظام:
+            <strong>يعمل بكفاءة 100%</strong>{% endif %}
           </span>
         </div>
 
@@ -34,24 +39,33 @@
           {% if support_contact_email %}
           <div class="kj-contact-item">
             <i class="bi bi-envelope-check me-2" aria-hidden="true"></i>
-            <a href="mailto:{{ support_contact_email }}" class="kj-footer-link">{{ support_contact_email }}</a>
+            <a href="mailto:{{ support_contact_email }}" class="kj-footer-link"
+              >{{ support_contact_email }}</a
+            >
           </div>
           {% else %}
           <div class="kj-contact-item">
             <i class="bi bi-envelope-check me-2" aria-hidden="true"></i>
-            <a href="mailto:support@kinjo.jo" class="kj-footer-link">support@kinjo.jo</a>
+            <a href="mailto:support@kinjo.jo" class="kj-footer-link"
+              >support@kinjo.jo</a
+            >
           </div>
-          {% endif %}
-
-          {% if support_contact_phone %}
+          {% endif %} {% if support_contact_phone %}
           <div class="kj-contact-item">
             <i class="bi bi-telephone-outbound me-2" aria-hidden="true"></i>
-            <a href="tel:{{ support_contact_phone }}" class="kj-footer-link" dir="ltr">{{ support_contact_phone }}</a>
+            <a
+              href="tel:{{ support_contact_phone }}"
+              class="kj-footer-link"
+              dir="ltr"
+              >{{ support_contact_phone }}</a
+            >
           </div>
           {% else %}
           <div class="kj-contact-item">
             <i class="bi bi-telephone-outbound me-2" aria-hidden="true"></i>
-            <a href="tel:+962790337512" class="kj-footer-link" dir="ltr">+962 790 337 512</a>
+            <a href="tel:+962790337512" class="kj-footer-link" dir="ltr"
+              >+962 790 337 512</a
+            >
           </div>
           {% endif %}
         </div>
@@ -59,36 +73,59 @@
 
       <!-- Navigation Column 1: About & Help -->
       <div class="col-lg-2 col-md-6 col-6">
-        <h3 class="kj-footer-heading">{% if ui_lang == 'en' %}Platform & Help{% else %}عن المنصة والمساعدة{% endif %}</h3>
+        <h3 class="kj-footer-heading">
+          {% if ui_lang == 'en' %}Platform & Help{% else %}عن المنصة والمساعدة{%
+          endif %}
+        </h3>
         <ul class="list-unstyled kj-footer-nav mb-0">
           <li>
             <a href="/about" class="kj-footer-link">
-              <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} kj-nav-icon" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}About KinJo{% else %}عن منصة KinJo{% endif %}
+              <i
+                class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} kj-nav-icon"
+                aria-hidden="true"
+              ></i>
+              {% if ui_lang == 'en' %}About KinJo{% else %}عن منصة KinJo{% endif
+              %}
             </a>
           </li>
           <li>
             <a href="/services" class="kj-footer-link">
-              <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} kj-nav-icon" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Service Guide{% else %}دليل الخدمات والرسوم{% endif %}
+              <i
+                class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} kj-nav-icon"
+                aria-hidden="true"
+              ></i>
+              {% if ui_lang == 'en' %}Service Guide{% else %}دليل الخدمات
+              والرسوم{% endif %}
             </a>
           </li>
           <li>
             <a href="/faq" class="kj-footer-link">
-              <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} kj-nav-icon" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Frequently Asked Questions{% else %}الأسئلة الشائعة{% endif %}
+              <i
+                class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} kj-nav-icon"
+                aria-hidden="true"
+              ></i>
+              {% if ui_lang == 'en' %}Frequently Asked Questions{% else
+              %}الأسئلة الشائعة{% endif %}
             </a>
           </li>
           <li>
             <a href="/contact" class="kj-footer-link">
-              <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} kj-nav-icon" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Contact Support{% else %}التواصل والدعم الفني{% endif %}
+              <i
+                class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} kj-nav-icon"
+                aria-hidden="true"
+              ></i>
+              {% if ui_lang == 'en' %}Contact Support{% else %}التواصل والدعم
+              الفني{% endif %}
             </a>
           </li>
           <li>
             <a href="/sitemap" class="kj-footer-link">
-              <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} kj-nav-icon" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Site Map{% else %}خريطة الموقع كاملة{% endif %}
+              <i
+                class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} kj-nav-icon"
+                aria-hidden="true"
+              ></i>
+              {% if ui_lang == 'en' %}Site Map{% else %}خريطة الموقع كاملة{%
+              endif %}
             </a>
           </li>
         </ul>
@@ -96,32 +133,42 @@
 
       <!-- Navigation Column 2: Portals & Roles -->
       <div class="col-lg-2 col-md-6 col-6">
-        <h3 class="kj-footer-heading">{% if ui_lang == 'en' %}Portals & Services{% else %}البوابات والخدمات{% endif %}</h3>
+        <h3 class="kj-footer-heading">
+          {% if ui_lang == 'en' %}Portals & Services{% else %}البوابات
+          والخدمات{% endif %}
+        </h3>
         <ul class="list-unstyled kj-footer-nav mb-0">
           {% if public_registration_enabled %}
           <li>
             <a href="/register" class="kj-footer-link">
               <i class="bi bi-person-plus me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Parent Registration{% else %}بوابة تسجيل أولياء الأمور{% endif %}
+              {% if ui_lang == 'en' %}Parent Registration{% else %}بوابة تسجيل
+              أولياء الأمور{% endif %}
             </a>
           </li>
           {% endif %}
           <li>
             <a href="/login" class="kj-footer-link">
               <i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Supervisor Sign In{% else %}دخول المشرفين والمربيات{% endif %}
+              {% if ui_lang == 'en' %}Supervisor Sign In{% else %}دخول المشرفين
+              والمربيات{% endif %}
             </a>
           </li>
           <li>
             <a href="/login" class="kj-footer-link">
               <i class="bi bi-building me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Manager Portal{% else %}بوابة إدارة الحضانات{% endif %}
+              {% if ui_lang == 'en' %}Manager Portal{% else %}بوابة إدارة
+              الحضانات{% endif %}
             </a>
           </li>
           <li>
             <a href="/admin/agency-reports" class="kj-footer-link">
-              <i class="bi bi-file-earmark-bar-graph me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير الجهات الرسمية{% endif %}
+              <i
+                class="bi bi-file-earmark-bar-graph me-1"
+                aria-hidden="true"
+              ></i>
+              {% if ui_lang == 'en' %}Official Agency Reports{% else %}تقارير
+              الجهات الرسمية{% endif %}
             </a>
           </li>
         </ul>
@@ -129,87 +176,68 @@
 
       <!-- Navigation Column 3: Policies & Compliance -->
       <div class="col-lg-2 col-md-6 col-6">
-        <h3 class="kj-footer-heading">{% if ui_lang == 'en' %}Policies & Legal{% else %}السياسات والامتثال{% endif %}</h3>
+        <h3 class="kj-footer-heading">
+          {% if ui_lang == 'en' %}Policies & Legal{% else %}السياسات والامتثال{%
+          endif %}
+        </h3>
         <ul class="list-unstyled kj-footer-nav mb-0">
           <li>
             <a href="/privacy" class="kj-footer-link">
               <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Privacy Policy{% else %}سياسة الخصوصية وحماية البيانات{% endif %}
+              {% if ui_lang == 'en' %}Privacy Policy{% else %}سياسة الخصوصية
+              وحماية البيانات{% endif %}
             </a>
           </li>
           <li>
             <a href="/terms" class="kj-footer-link">
               <i class="bi bi-file-text me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Terms of Use{% else %}الشروط والأحكام الاستخدام{% endif %}
+              {% if ui_lang == 'en' %}Terms of Use{% else %}الشروط والأحكام
+              الاستخدام{% endif %}
             </a>
           </li>
           <li>
             <a href="/disclaimer" class="kj-footer-link">
               <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Legal Disclaimer{% else %}إخلاء المسؤولية القانونية{% endif %}
+              {% if ui_lang == 'en' %}Legal Disclaimer{% else %}إخلاء المسؤولية
+              القانونية{% endif %}
             </a>
           </li>
           <li>
             <a href="/copyright" class="kj-footer-link">
               <i class="bi bi-c-circle me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Copyright & Ownership{% else %}حقوق النشر والملكية الفكرية{% endif %}
+              {% if ui_lang == 'en' %}Copyright & Ownership{% else %}حقوق النشر
+              والملكية الفكرية{% endif %}
             </a>
           </li>
         </ul>
       </div>
-
-      <!-- Navigation Column 4: Official Government Links -->
-      <div class="col-lg-3 col-md-6 col-6">
-        <h3 class="kj-footer-heading">{% if ui_lang == 'en' %}Official Government Links{% else %}روابط حكومية رسمية{% endif %}</h3>
-        <ul class="list-unstyled kj-footer-nav mb-0">
-          <li>
-            <a href="https://www.mosd.gov.jo" target="_blank" rel="noopener noreferrer" class="kj-footer-link external">
-              <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Ministry of Social Development{% else %}وزارة التنمية الاجتماعية{% endif %}
-            </a>
-          </li>
-          <li>
-            <a href="https://jordan.gov.jo" target="_blank" rel="noopener noreferrer" class="kj-footer-link external">
-              <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Jordan e-Government Portal{% else %}بوابة الحكومة الإلكترونية الأردنية{% endif %}
-            </a>
-          </li>
-          <li>
-            <a href="https://www.ombudsman.jo" target="_blank" rel="noopener noreferrer" class="kj-footer-link external">
-              <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}Right to Information Portal{% else %}حق الحصول على المعلومات{% endif %}
-            </a>
-          </li>
-          <li>
-            <a href="https://www.ammanmessage.com" target="_blank" rel="noopener noreferrer" class="kj-footer-link external">
-              <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}The Amman Message{% else %}رسالة عمان الرسمية{% endif %}
-            </a>
-          </li>
-        </ul>
-      </div>
-
     </div>
 
-    <hr class="kj-footer-hr my-4">
+    <hr class="kj-footer-hr my-4" />
 
     <!-- Bottom Bar: Copyright & Accessibility Shortcut -->
     <div class="row align-items-center gy-3 text-center text-md-start">
       <div class="col-md-6">
         <p class="kj-footer-copyright mb-0">
-          {% if ui_lang == 'en' %}
-            &copy; {{ current_year | default(2026) }} <strong>KinJo Platform</strong> — Official Kindergarten Intelligence System. All rights reserved.
-          {% else %}
-            &copy; {{ current_year | default(2026) }} <strong>منصة KinJo</strong> — النظام الوطني لإدارة وإشراف الحضانات. جميع الحقوق محفوظة.
-          {% endif %}
+          {% if ui_lang == 'en' %} &copy; {{ current_year | default(2026) }}
+          <strong>KinJo Platform</strong> — Official Kindergarten Intelligence
+          System. All rights reserved. {% else %} &copy; {{ current_year |
+          default(2026) }} <strong>منصة KinJo</strong> — النظام الوطني لإدارة
+          وإشراف الحضانات. جميع الحقوق محفوظة. {% endif %}
         </p>
       </div>
 
       <div class="col-md-6 text-md-end">
-        <div class="d-inline-flex align-items-center flex-wrap gap-3 justify-content-center justify-content-md-end">
+        <div
+          class="d-inline-flex align-items-center flex-wrap gap-3 justify-content-center justify-content-md-end"
+        >
           <span class="kj-security-badge">
-            <i class="bi bi-shield-lock-fill text-success me-1" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Encrypted 256-Bit SSL{% else %}مشفر وآمن SSL 256-Bit{% endif %}
+            <i
+              class="bi bi-shield-lock-fill text-success me-1"
+              aria-hidden="true"
+            ></i>
+            {% if ui_lang == 'en' %}Encrypted 256-Bit SSL{% else %}مشفر وآمن SSL
+            256-Bit{% endif %}
           </span>
           <span class="kj-footer-ver">v2.1 Build 2026</span>
         </div>
@@ -219,11 +247,10 @@
     <div class="row mt-2">
       <div class="col-12 text-center">
         <p class="kj-footer-recommendation mb-0">
-          {% if ui_lang == 'en' %}
-            Optimized for Chrome, Edge, Firefox, and Safari on desktop and mobile (1366×768 resolution or higher).
-          {% else %}
-            مُصمم ومُحسن للعمل على متصفحات Chrome وEdge وFirefox وSafari على مختلف الأجهزة بدقة 1366×768 أو أعلى.
-          {% endif %}
+          {% if ui_lang == 'en' %} Optimized for Chrome, Edge, Firefox, and
+          Safari on desktop and mobile (1366×768 resolution or higher). {% else
+          %} مُصمم ومُحسن للعمل على متصفحات Chrome وEdge وFirefox وSafari على
+          مختلف الأجهزة بدقة 1366×768 أو أعلى. {% endif %}
         </p>
       </div>
     </div>
@@ -231,139 +258,167 @@
 </footer>
 
 <style>
-  /* ── Interactive & Professional Footer Styling ───────────── */
+  /* ── Refined Footer Styling ───────────── */
   .kj-footer {
-    background-color: #12211b;
-    color: #c9d6d0;
-    border-top: 3px solid var(--kinjo-gold, #c9a227);
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(
+        circle at top left,
+        rgba(255, 255, 255, 0.06),
+        transparent 34%
+      ),
+      radial-gradient(
+        circle at top right,
+        rgba(255, 225, 153, 0.08),
+        transparent 28%
+      ),
+      linear-gradient(180deg, #183029 0%, #13251f 100%);
+    color: #d9e4de;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
     font-size: 0.9rem;
   }
   .kj-footer a {
-    transition: color 0.2s ease, transform 0.2s ease;
+    transition:
+      color 0.2s ease,
+      transform 0.2s ease;
   }
 
   .kj-footer-logo-text {
     font-family: "Cairo", "Inter", sans-serif;
     font-weight: 800;
-    font-size: 1.5rem;
+    font-size: 1.55rem;
     color: #ffffff;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
   }
   .kj-footer-badge {
-    padding: 0.2rem 0.65rem;
-    background: rgba(201, 162, 39, 0.15);
-    border: 1px solid #c9a227;
+    padding: 0.28rem 0.75rem;
+    background: rgba(250, 208, 93, 0.14);
+    border: 1px solid rgba(250, 208, 93, 0.32);
     border-radius: 999px;
-    color: #e5c158;
+    color: #f4d77c;
     font-size: 0.75rem;
     font-weight: 600;
   }
 
   .kj-footer-desc {
-    color: #9cb1a7;
-    font-size: 0.86rem;
-    line-height: 1.65;
+    color: #bfd0c7;
+    font-size: 0.9rem;
+    line-height: 1.75;
   }
 
   .kj-footer-status {
     display: inline-flex;
     align-items: center;
-    padding: 0.35rem 0.85rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    font-size: 0.8rem;
-    color: #d1e2db;
+    padding: 0.45rem 0.9rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    color: #e1ece6;
+    backdrop-filter: blur(10px);
   }
   .kj-status-dot {
     width: 8px;
     height: 8px;
-    background-color: #2ecc71;
+    background-color: #66d19e;
     border-radius: 50%;
-    box-shadow: 0 0 8px #2ecc71;
+    box-shadow: 0 0 10px rgba(102, 209, 158, 0.75);
   }
 
   .kj-footer-contacts .kj-contact-item {
-    margin-bottom: 0.4rem;
-    font-size: 0.86rem;
-    color: #9cb1a7;
+    margin-bottom: 0.55rem;
+    font-size: 0.87rem;
+    color: #bfd0c7;
   }
 
   .kj-footer-heading {
     color: #ffffff;
-    font-size: 0.95rem;
+    font-size: 0.98rem;
     font-weight: 700;
-    margin-bottom: 1.1rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 2px solid rgba(201, 162, 39, 0.4);
-    display: inline-block;
+    margin-bottom: 1rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid rgba(244, 215, 124, 0.32);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .kj-footer-nav li {
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.45rem;
   }
   .kj-footer-link {
-    color: #9cb1a7;
+    color: #bfd0c7;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
-    font-size: 0.88rem;
+    gap: 0.35rem;
+    font-size: 0.89rem;
+    line-height: 1.45;
+    padding: 0.18rem 0;
+    border-radius: 999px;
   }
   .kj-nav-icon {
     font-size: 0.75rem;
-    margin-inline-end: 0.4rem;
     opacity: 0.6;
-    transition: transform 0.2s ease, opacity 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      opacity 0.2s ease;
   }
   .kj-footer-link:hover,
   .kj-footer-link:focus-visible {
     color: #ffffff;
-    transform: translateX(3px);
+    transform: translateX(4px);
   }
   [dir="rtl"] .kj-footer-link:hover,
   [dir="rtl"] .kj-footer-link:focus-visible {
-    transform: translateX(-3px);
+    transform: translateX(-4px);
   }
   .kj-footer-link:hover .kj-nav-icon {
     opacity: 1;
-    color: #c9a227;
+    color: #f4d77c;
   }
 
   .kj-footer-hr {
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.1);
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
   }
 
   .kj-footer-copyright {
-    color: #84998f;
-    font-size: 0.83rem;
+    color: #aebdb6;
+    font-size: 0.84rem;
+    line-height: 1.6;
   }
 
   .kj-security-badge {
     display: inline-flex;
     align-items: center;
     font-size: 0.8rem;
-    color: #b2c5bc;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.25rem 0.7rem;
-    border-radius: 6px;
+    color: #d5e2dc;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
   .kj-footer-ver {
     font-size: 0.78rem;
-    color: #798e85;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
+    color: #93a79f;
+    background: rgba(0, 0, 0, 0.22);
+    padding: 0.28rem 0.55rem;
+    border-radius: 999px;
   }
 
   .kj-footer-recommendation {
-    color: #6a7f76;
+    color: #8fa399;
     font-size: 0.78rem;
+    line-height: 1.6;
   }
 
   .kj-footer-link:focus-visible {
     outline: 2px solid #c9a227;
     outline-offset: 2px;
-    border-radius: 3px;
+    border-radius: 999px;
   }
 </style>

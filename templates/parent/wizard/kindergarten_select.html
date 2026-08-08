@@ -1,11 +1,18 @@
 {% extends 'base.html' %}
-{% block title %}{{ _('اختيار الحضانة') }} — KinJo{% endblock %}
+{% block title %}{{ _('Select Kindergarten') }} — KinJo{% endblock %}
 
 {% block page_header %}
 <div class="page-header-wrap">
     <div>
-        <div class="page-header-eyebrow"><i class="bi bi-person-plus-fill"></i> {{ _('تسجيل طفل') }}</div>
-        <h1 class="page-header-title">{{ _('الخطوة 2: اختر الحضانة') }}</h1>
+        <div class="page-header-eyebrow"><i class="bi bi-person-plus-fill"></i> {{ _('Child Enrollment') }}</div>
+        <h1 class="page-header-title">{{ _('Step 2: Select Kindergarten') }}</h1>
+        <nav aria-label="{{ _('Breadcrumb') }}">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="/dashboard">{{ _('Dashboard') }}</a></li>
+                <li class="breadcrumb-item"><a href="/parent/enrollments">{{ _('Enrollments') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('Select Kindergarten') }}</li>
+            </ol>
+        </nav>
     </div>
 </div>
 <!-- Progress bar -->
@@ -80,7 +87,7 @@
     window.selectKGFromCard = function(card) {
         sessionStorage.setItem('enroll_kg_id', card.dataset.kgId);
         sessionStorage.setItem('enroll_kg_name', card.dataset.kgName);
-        window.location.href = '/parent/enroll/step3';
+        window.location.href = '/enrollments/create';
     };
 
     function escHtml(s) {
