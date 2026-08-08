@@ -1,7 +1,11 @@
 <!-- Footer Component: KinJo Official Platform Footer -->
 <footer class="kj-footer mt-auto pt-5 pb-4">
   <div class="container-fluid px-4 px-lg-5">
-    <div class="row g-4 justify-content-between">
+    {# Four equal-weight columns (3+3+3+3 = 12). They were 3+2+2+2 = 9 with
+       justify-content-between, so the gutters between the nav columns were set
+       by leftover space rather than by the grid, and the three link columns did
+       not line up with the brand block above them. #}
+    <div class="row g-4">
       <!-- Brand & Platform Summary -->
       <div class="col-lg-3 col-md-6">
         <div class="kj-footer-brand mb-3">
@@ -24,15 +28,10 @@
           أمان ورعاية طفلك. {% endif %}
         </p>
 
-        <!-- System Status Pill -->
-        <div class="kj-footer-status mb-3">
-          <span class="kj-status-dot me-2"></span>
-          <span class="kj-status-text">
-            {% if ui_lang == 'en' %}System Status:
-            <strong>Operational 100%</strong>{% else %}حالة النظام:
-            <strong>يعمل بكفاءة 100%</strong>{% endif %}
-          </span>
-        </div>
+        {# The system-status pill used to sit here, in the middle of the brand
+           blurb, while the SSL badge and build number sat in the bottom bar —
+           three pieces of the same "state of the system" information in two
+           places. They are now together in the bottom bar. #}
 
         <!-- Support Info -->
         <div class="kj-footer-contacts">
@@ -72,7 +71,7 @@
       </div>
 
       <!-- Navigation Column 1: About & Help -->
-      <div class="col-lg-2 col-md-6 col-6">
+      <div class="col-lg-3 col-md-6 col-6">
         <h3 class="kj-footer-heading">
           {% if ui_lang == 'en' %}Platform & Help{% else %}عن المنصة والمساعدة{%
           endif %}
@@ -132,7 +131,7 @@
       </div>
 
       <!-- Navigation Column 2: Portals & Roles -->
-      <div class="col-lg-2 col-md-6 col-6">
+      <div class="col-lg-3 col-md-6 col-6">
         <h3 class="kj-footer-heading">
           {% if ui_lang == 'en' %}Portals & Services{% else %}البوابات
           والخدمات{% endif %}
@@ -175,7 +174,7 @@
       </div>
 
       <!-- Navigation Column 3: Policies & Compliance -->
-      <div class="col-lg-2 col-md-6 col-6">
+      <div class="col-lg-3 col-md-6 col-6">
         <h3 class="kj-footer-heading">
           {% if ui_lang == 'en' %}Policies & Legal{% else %}السياسات والامتثال{%
           endif %}
@@ -215,9 +214,12 @@
 
     <hr class="kj-footer-hr my-4" />
 
-    <!-- Bottom Bar: Copyright & Accessibility Shortcut -->
-    <div class="row align-items-center gy-3 text-center text-md-start">
-      <div class="col-md-6">
+    {# Bottom bar: ownership on one side, system state on the other. All three
+       status chips (live status, encryption, build) now sit in one row and share
+       one chip style, instead of being split between the brand column and here
+       in two different visual treatments. #}
+    <div class="row align-items-center gy-3">
+      <div class="col-lg-6 text-center text-lg-start">
         <p class="kj-footer-copyright mb-0">
           {% if ui_lang == 'en' %} &copy; {{ current_year | default(2026) }}
           <strong>KinJo Platform</strong> — Official Kindergarten Intelligence
@@ -227,24 +229,29 @@
         </p>
       </div>
 
-      <div class="col-md-6 text-md-end">
+      <div class="col-lg-6">
         <div
-          class="d-inline-flex align-items-center flex-wrap gap-3 justify-content-center justify-content-md-end"
+          class="d-flex align-items-center flex-wrap gap-2 justify-content-center justify-content-lg-end"
         >
-          <span class="kj-security-badge">
-            <i
-              class="bi bi-shield-lock-fill text-success me-1"
-              aria-hidden="true"
-            ></i>
+          <span class="kj-footer-chip kj-footer-chip--live">
+            <span class="kj-status-dot" aria-hidden="true"></span>
+            {% if ui_lang == 'en' %}Operational 100%{% else %}يعمل بكفاءة 100%{%
+            endif %}
+          </span>
+          <span class="kj-footer-chip">
+            <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Encrypted 256-Bit SSL{% else %}مشفر وآمن SSL
             256-Bit{% endif %}
           </span>
-          <span class="kj-footer-ver">v2.1 Build 2026</span>
+          <span class="kj-footer-chip kj-footer-chip--muted">
+            <i class="bi bi-box-seam" aria-hidden="true"></i>
+            v2.1 Build 2026
+          </span>
         </div>
       </div>
     </div>
 
-    <div class="row mt-2">
+    <div class="row mt-3">
       <div class="col-12 text-center">
         <p class="kj-footer-recommendation mb-0">
           {% if ui_lang == 'en' %} Optimized for Chrome, Edge, Firefox, and
@@ -259,24 +266,24 @@
 
 <style>
   /* ── Refined Footer Styling ───────────── */
+  /* Light green wave. The footer was a dark field (#183029 → #13251f) with pale
+     text; it is now light, so every foreground below is inverted to a dark
+     green. Measured against the three stops #F2FBF5 / #DEF5E7 / #C9EEDA:
+     headings #0F3D2A 9.72:1 at worst, body #2C5A46 6.29:1, muted #46685A
+     4.94:1, links #175040 7.41:1 — all clear AA. */
   .kj-footer {
     position: relative;
     overflow: hidden;
     background:
       radial-gradient(
-        circle at top left,
-        rgba(255, 255, 255, 0.06),
-        transparent 34%
+        130% 120% at 85% -25%,
+        rgba(255, 255, 255, 0.85),
+        rgba(255, 255, 255, 0) 55%
       ),
-      radial-gradient(
-        circle at top right,
-        rgba(255, 225, 153, 0.08),
-        transparent 28%
-      ),
-      linear-gradient(180deg, #183029 0%, #13251f 100%);
-    color: #d9e4de;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      linear-gradient(155deg, #f2fbf5 0%, #def5e7 52%, #c9eeda 100%);
+    color: #2c5a46;
+    border-top: 1px solid rgba(15, 61, 42, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
     font-size: 0.9rem;
   }
   .kj-footer a {
@@ -289,57 +296,70 @@
     font-family: "Cairo", "Inter", sans-serif;
     font-weight: 800;
     font-size: 1.55rem;
-    color: #ffffff;
+    color: #0f3d2a;
     letter-spacing: -0.03em;
   }
   .kj-footer-badge {
     padding: 0.28rem 0.75rem;
-    background: rgba(250, 208, 93, 0.14);
-    border: 1px solid rgba(250, 208, 93, 0.32);
+    background: rgba(15, 61, 42, 0.08);
+    border: 1px solid rgba(15, 61, 42, 0.22);
     border-radius: 999px;
-    color: #f4d77c;
+    color: #175040;
     font-size: 0.75rem;
     font-weight: 600;
   }
 
   .kj-footer-desc {
-    color: #bfd0c7;
+    color: #2c5a46;
     font-size: 0.9rem;
     line-height: 1.75;
   }
 
-  .kj-footer-status {
+  /* One chip style for all three status items in the bottom bar. They used to
+     be a pill, a bordered badge and a dark-backed version tag - three
+     treatments for one class of information. */
+  .kj-footer-chip {
     display: inline-flex;
     align-items: center;
-    padding: 0.45rem 0.9rem;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    gap: 0.4rem;
+    padding: 0.35rem 0.8rem;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(15, 61, 42, 0.16);
     border-radius: 999px;
-    font-size: 0.82rem;
-    color: #e1ece6;
-    backdrop-filter: blur(10px);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #175040;
+    white-space: nowrap;
+  }
+  .kj-footer-chip--muted {
+    color: #46685a;
+    font-weight: 500;
+  }
+  .kj-footer-chip--live {
+    color: #12603f;
   }
   .kj-status-dot {
     width: 8px;
     height: 8px;
-    background-color: #66d19e;
+    background-color: #17a06a;
     border-radius: 50%;
-    box-shadow: 0 0 10px rgba(102, 209, 158, 0.75);
+    box-shadow: 0 0 0 3px rgba(23, 160, 106, 0.18);
+    flex: 0 0 auto;
   }
 
   .kj-footer-contacts .kj-contact-item {
     margin-bottom: 0.55rem;
     font-size: 0.87rem;
-    color: #bfd0c7;
+    color: #2c5a46;
   }
 
   .kj-footer-heading {
-    color: #ffffff;
+    color: #0f3d2a;
     font-size: 0.98rem;
     font-weight: 700;
     margin-bottom: 1rem;
     padding-bottom: 0.55rem;
-    border-bottom: 1px solid rgba(244, 215, 124, 0.32);
+    border-bottom: 1px solid rgba(15, 61, 42, 0.22);
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -349,7 +369,7 @@
     margin-bottom: 0.45rem;
   }
   .kj-footer-link {
-    color: #bfd0c7;
+    color: #175040;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
@@ -368,7 +388,7 @@
   }
   .kj-footer-link:hover,
   .kj-footer-link:focus-visible {
-    color: #ffffff;
+    color: #0b3323;
     transform: translateX(4px);
   }
   [dir="rtl"] .kj-footer-link:hover,
@@ -377,47 +397,34 @@
   }
   .kj-footer-link:hover .kj-nav-icon {
     opacity: 1;
-    color: #f4d77c;
+    color: #12603f;
   }
 
   .kj-footer-hr {
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(15, 61, 42, 0.16);
     margin-top: 1.5rem;
     margin-bottom: 1.5rem;
+    opacity: 1;
   }
 
   .kj-footer-copyright {
-    color: #aebdb6;
+    color: #46685a;
     font-size: 0.84rem;
     line-height: 1.6;
   }
 
-  .kj-security-badge {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.8rem;
-    color: #d5e2dc;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 0.35rem 0.8rem;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  .kj-footer-ver {
-    font-size: 0.78rem;
-    color: #93a79f;
-    background: rgba(0, 0, 0, 0.22);
-    padding: 0.28rem 0.55rem;
-    border-radius: 999px;
+  .kj-footer-copyright strong {
+    color: #0f3d2a;
   }
 
   .kj-footer-recommendation {
-    color: #8fa399;
+    color: #46685a;
     font-size: 0.78rem;
     line-height: 1.6;
   }
 
   .kj-footer-link:focus-visible {
-    outline: 2px solid #c9a227;
+    outline: 2px solid #0f3d2a;
     outline-offset: 2px;
     border-radius: 999px;
   }

@@ -168,8 +168,11 @@
                 </li>
                 {% endif %}
 
-                <!-- Language Toggle (desktop only — a mobile-always-visible copy lives in the header above) -->
-                <li class="nav-item d-none d-lg-block">
+                <!-- Language Toggle (desktop only — a mobile-always-visible copy lives in the header above)
+                     kj-nav-tail marks the start of the utilities group: it and
+                     everything after it are pushed to the inline-end (the LEFT
+                     in RTL), away from the navigation beside the logo. -->
+                <li class="nav-item d-none d-lg-block kj-nav-tail">
                     <button class="nav-link navbar-action-btn" type="button" onclick="toggleLanguage()"
                         title="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}"
                         data-i18n-title="nav.language_toggle" aria-label="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}" data-i18n-aria="nav.language_toggle">

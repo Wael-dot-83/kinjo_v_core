@@ -3329,23 +3329,27 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
   border-bottom: 0;
   padding-block: 0;
 
-  /* Sky blue instead of the near-navy #0f2d6b→#1d60e0 band. These are the
-     brightest sky stops that still carry white text at WCAG AA: white measures
-     7.2:1 / 4.9:1 / 4.7:1 across the three stops. Anything genuinely lighter
-     fails — true sky (#0EA5E9) puts white at 2.8:1, which is why the band stops
-     where it does rather than going brighter.
+  /* Bright sky wave: #7DD3FC → #38BDF8 → #0EA5E9, with a soft highlight sweep
+     over the top so the band reads as a curved wave rather than a flat ramp.
+
+     Going this bright forces the text dark. White on these stops measures
+     1.67 / 2.14 / 2.77:1 — unreadable. The deep navy below measures
+     9.36 / 7.29 / 5.63:1, so the header stays legible at the brightness asked
+     for. That is the whole reason the header text colour changes in this rule
+     and the ones under it.
 
      !important is required, not stylistic: the v3.0 "Navbar Refinements" layer
      sets both background and box-shadow with !important. */
-  background: linear-gradient(
-    135deg,
-    #065c8a 0%,
-    #0a7cb8 55%,
-    #0077cc 100%
-  ) !important;
+  background:
+    radial-gradient(
+      120% 180% at 78% -60%,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0) 46%
+    ),
+    linear-gradient(115deg, #7dd3fc 0%, #38bdf8 52%, #0ea5e9 100%) !important;
   box-shadow:
-    inset 0 -1px 0 rgba(212, 175, 55, 0.6),
-    0 4px 18px rgba(6, 92, 138, 0.28) !important;
+    inset 0 -1px 0 rgba(180, 132, 20, 0.75),
+    0 4px 18px rgba(14, 116, 165, 0.26) !important;
 }
 
 /* ── Header nav alignment (RTL-safe) ──────────────────────────────────────────
@@ -3361,14 +3365,80 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 }
 
 /* The nav list carries Bootstrap's .ms-auto, i.e. margin-inline-start: auto,
-   which pushes it to the far inline-end. In RTL that stranded the whole menu
-   against the left edge with a ~790px void between it and the logo: the items
-   were aligned to nothing. Flipping the auto margin to the inline-end groups
-   them immediately after the logo, so the header reads as one run from the
-   right — logo, notifications, الرئيسية, المساعدة, language, account. */
+   which pushes the whole menu to the far inline-end. In RTL that stranded it
+   against the left edge with a ~790px void between it and the logo. The list
+   now spans the free space instead, so its contents can be split deliberately:
+   navigation stays with the logo, utilities go to the far side. */
 .kinjo-navbar .navbar-nav.ms-auto {
-  margin-inline-start: 0 !important;
-  margin-inline-end: auto !important;
+  margin-inline: 0 !important;
+  flex: 1 1 auto;
+}
+
+/* Split point. Everything from this item on — the language toggle and the
+   account menu — is pushed to the inline-end, which is the LEFT in RTL.
+   Notifications / الرئيسية / المساعدة stay grouped beside the logo on the
+   right, so the header has a navigation side and a utilities side rather than
+   one undifferentiated run. */
+.kinjo-navbar .navbar-nav > .kj-nav-tail {
+  margin-inline-start: auto;
+}
+
+/* ── Header foreground on the bright sky band ─────────────────────────────────
+   White fails on these stops (1.67-2.77:1), so every header foreground flips to
+   the deep navy verified at 5.63:1 or better. */
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link,
+.kinjo-navbar .navbar-action-btn,
+.kinjo-navbar .navbar-icon-btn,
+.kinjo-navbar .navbar-brand {
+  color: #052540 !important;
+}
+
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link:hover,
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link:focus-visible,
+.kinjo-navbar .navbar-action-btn:hover,
+.kinjo-navbar .navbar-icon-btn:hover,
+.kinjo-navbar .navbar-action-btn:focus-visible,
+.kinjo-navbar .navbar-icon-btn:focus-visible {
+  color: #041b2f !important;
+  /* A white veil rather than the old dark one: on a light band, lightening is
+     what reads as "raised". */
+  background-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.kinjo-navbar .navbar-nav > .nav-item > .nav-link.active {
+  background-color: rgba(255, 255, 255, 0.62) !important;
+}
+
+.kinjo-navbar .kj-nav-item.active::after {
+  background-color: #052540;
+}
+
+/* The toggler icon is a white SVG inverted for the old dark band; on the light
+   band it must not be inverted, or it disappears. */
+.kinjo-navbar .navbar-toggler {
+  border-color: rgba(5, 37, 64, 0.35);
+}
+
+.kinjo-navbar .navbar-toggler-icon {
+  filter: none;
+}
+
+/* Avatar inverts with everything else: navy disc, white initial. */
+.kinjo-navbar .kj-nav-avatar {
+  color: #ffffff;
+  background-color: #052540;
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+.kinjo-navbar .kj-nav-user:hover .kj-nav-avatar,
+.kinjo-navbar .kj-nav-user:focus-visible .kj-nav-avatar {
+  background-color: #0a3c63;
+}
+
+/* The staff search sat as a white pill on a dark band. On a light band it needs
+   a defined edge or it dissolves into the header. */
+.kinjo-navbar .navbar-search-form .input-group {
+  border: 1px solid rgba(5, 37, 64, 0.18);
 }
 
 /* min-block-size gives every item the same box height. Without it the language
@@ -3437,29 +3507,71 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
   inline-size: auto;
 }
 
-/* ── Sidebar: brand palette ───────────────────────────────────────────────────
-   The v3.0 layer themes the sidebar dark slate with a *green* accent (#2F7D62 /
-   #163d2e / #a8d4c4). Nothing else in the shell is green: the header band is
-   blue and the logo badge is blue-and-gold, so the active menu item was the one
-   element disagreeing with the brand. Re-point the same tokens at the logo's
-   own blue and gold — only the values change, every rule consuming them is left
-   alone.
+/* ── Sidebar: red wave, white text ────────────────────────────────────────────
+   Replaces the dark-slate field. The wave runs #991B1B → #B91C1C → #DC2626 on
+   the diagonal with a highlight sweep at the top, so the rail curves rather
+   than banding flatly.
 
-   Contrast on the #111827 field: gold #d4af37 ≈ 9.2:1; active text #cfe0ff on
-   the #17376b fill ≈ 8.1:1. Both clear WCAG AA. */
+   White is the text colour throughout and it holds: 8.31 / 6.47 / 4.83:1 across
+   the three stops, so even the brightest end clears AA. The stops stop at
+   #DC2626 for that reason — #EF4444 would drop white to 3.7:1.
+
+   The v3.0 layer paints .sidebar with background-color and !important, so the
+   wave has to be set as background-image at the same weight to land. */
 :root {
-  --kinjo-sidebar-active-bg: #17376b;
-  --kinjo-sidebar-active-text: #cfe0ff;
-  --kinjo-sidebar-accent: var(--kinjo-gold);
+  --kinjo-sidebar-bg: #b91c1c;
+  --kinjo-sidebar-text: #ffffff;
+  --kinjo-sidebar-muted: rgba(255, 255, 255, 0.86);
+  --kinjo-sidebar-border: rgba(255, 255, 255, 0.16);
+  --kinjo-sidebar-hover: rgba(255, 255, 255, 0.16);
+  --kinjo-sidebar-active-bg: #7f1414;
+  --kinjo-sidebar-active-text: #ffffff;
+  --kinjo-sidebar-accent: #f4d77c;
 }
 
-/* The active row keeps a gold edge so it is not signalled by fill alone. */
+.sidebar {
+  /* The wave sheen darkens rather than lightens, and that is a contrast
+     decision, not a taste one. A white sheen over this rail composites #DC2626
+     up to rgb(226,77,77), where white text falls to 3.89:1 — below AA — and it
+     still failed at 4.30:1 with the alpha dropped to 0.10, because the bright
+     end of the wave has almost no headroom to give. Darkening moves every
+     pixel the other way, so the worst case stays the bare #DC2626 at 4.83:1
+     and the rail keeps its curve. */
+  background-image:
+    radial-gradient(
+      130% 100% at 15% 115%,
+      rgba(0, 0, 0, 0.22) 0%,
+      rgba(0, 0, 0, 0) 58%
+    ),
+    linear-gradient(160deg, #991b1b 0%, #b91c1c 52%, #dc2626 100%) !important;
+  background-color: #b91c1c !important;
+}
+
+/* Active row: a deeper red fill (white on it is 10.4:1) plus a gold edge, so
+   the current page is marked by more than fill colour alone. */
 .sidebar .nav-link.active {
-  box-shadow: inset 2px 0 0 0 var(--kinjo-gold) !important;
+  box-shadow: inset 3px 0 0 0 #f4d77c !important;
 }
 
 html[dir="rtl"] .sidebar .nav-link.active {
-  box-shadow: inset -2px 0 0 0 var(--kinjo-gold) !important;
+  box-shadow: inset -3px 0 0 0 #f4d77c !important;
+}
+
+/* Section labels and dividers were tuned for the slate field; on red they need
+   to lean on white rather than the old cool greys. */
+.sidebar .sidebar-section-title,
+.sidebar .sidebar-heading {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.sidebar .sidebar-profile {
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.sidebar .sidebar-profile-avatar {
+  background: #ffffff;
+  color: #991b1b;
 }
 
 /* ── Sidebar logo: same width as the menu items ───────────────────────────────
@@ -3489,11 +3601,9 @@ html[dir="rtl"] .sidebar .nav-link.active {
   box-sizing: border-box;
   padding: 0.6rem;
   border-radius: 0.85rem;
-  border: 1px solid rgba(212, 175, 55, 0.5);
-  background: linear-gradient(
-    180deg,
-    rgba(27, 79, 150, 0.35) 0%,
-    rgba(16, 53, 107, 0.35) 100%
-  );
+  /* A light panel, not the old blue tint: the artwork is blue-and-gold and a
+     blue wash on the red rail turned it muddy. */
+  border: 1px solid rgba(244, 215, 124, 0.55);
+  background: rgba(255, 255, 255, 0.14);
 }
 
