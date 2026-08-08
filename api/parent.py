@@ -97,16 +97,28 @@ def get_parent_dashboard(
         ).all():
             latest_report_by_child[r.child_id] = r
 
+    kgs_by_id = {}
+    if child_ids:
+        kg_ids = {e.kindergarten_id for e in enrollments_by_child.values() if e.kindergarten_id}
+        if kg_ids:
+            kgs_by_id = {
+                kg.id: kg
+                for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
+            }
+
     children_data = []
     for child in children:
         enrollment = enrollments_by_child.get(child.id)
         attendance = attendance_by_child.get(child.id)
         latest_report = latest_report_by_child.get(child.id)
+        kg = kgs_by_id.get(enrollment.kindergarten_id) if enrollment else None
 
         child_info = {
             "id": child.id,
             "first_name": child.first_name,
             "last_name": child.last_name,
+            "gender": child.gender.value if hasattr(child.gender, "value") else (str(child.gender) if child.gender else None),
+            "kindergarten_name": (kg.name_ar or kg.name_en) if kg else None,
             "age_months": validators.validate_age_months(child.date_of_birth),
             "enrollment": None,
             "attendance_today": None,
