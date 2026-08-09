@@ -3533,14 +3533,14 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
    The v3.0 layer paints .sidebar with background-color and !important, so the
    wave has to be set as background-image at the same weight to land. */
 :root {
-  --kinjo-sidebar-bg: #cc0022;
-  --kinjo-sidebar-text: #ffffff;
-  --kinjo-sidebar-muted: rgba(255, 255, 255, 0.86);
-  --kinjo-sidebar-border: rgba(255, 255, 255, 0.16);
-  --kinjo-sidebar-hover: rgba(255, 255, 255, 0.16);
-  --kinjo-sidebar-active-bg: #7a0014;
-  --kinjo-sidebar-active-text: #ffffff;
-  --kinjo-sidebar-accent: #f4d77c;
+  --kinjo-sidebar-bg: #ffc9bb;
+  --kinjo-sidebar-text: #3f241f;
+  --kinjo-sidebar-muted: rgba(63, 36, 31, 0.74);
+  --kinjo-sidebar-border: rgba(63, 36, 31, 0.14);
+  --kinjo-sidebar-hover: rgba(130, 65, 54, 0.12);
+  --kinjo-sidebar-active-bg: #efaa9b;
+  --kinjo-sidebar-active-text: #3f241f;
+  --kinjo-sidebar-accent: #873d32;
 }
 
 .sidebar {
@@ -3552,41 +3552,45 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
      pixel the other way, so the worst case stays the bare #DC2626 at 4.83:1
      and the rail keeps its curve. */
   background-image:
-    radial-gradient(
-      130% 100% at 15% 115%,
-      rgba(0, 0, 0, 0.22) 0%,
-      rgba(0, 0, 0, 0) 58%
-    ),
-    linear-gradient(160deg, #a80019 0%, #cc0022 52%, #e4002b 100%) !important;
-  background-color: #cc0022 !important;
+    radial-gradient(120% 90% at 5% 100%, rgba(255,255,255,.42) 0%, rgba(255,255,255,0) 58%),
+    linear-gradient(160deg, #ffd9cf 0%, #ffc9bb 55%, #f6b5a5 100%) !important;
+  background-color: #ffc9bb !important;
 }
 
 /* Active row: a deeper red fill (white on it is 10.4:1) plus a gold edge, so
    the current page is marked by more than fill colour alone. */
 .sidebar .nav-link.active {
-  box-shadow: inset 3px 0 0 0 #f4d77c !important;
+  box-shadow: inset 3px 0 0 0 #873d32 !important;
 }
 
 html[dir="rtl"] .sidebar .nav-link.active {
-  box-shadow: inset -3px 0 0 0 #f4d77c !important;
+  box-shadow: inset -3px 0 0 0 #873d32 !important;
 }
 
 /* Section labels and dividers were tuned for the slate field; on red they need
    to lean on white rather than the old cool greys. */
 .sidebar .sidebar-section-title,
 .sidebar .sidebar-heading {
-  color: rgba(255, 255, 255, 0.82) !important;
+  color: rgba(63, 36, 31, 0.72) !important;
 }
 
 .sidebar .sidebar-profile {
-  background: rgba(0, 0, 0, 0.18);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.44);
+  border-color: rgba(63, 36, 31, 0.12);
 }
 
 .sidebar .sidebar-profile-avatar {
   background: #ffffff;
-  color: #991b1b;
+  color: #873d32;
 }
+
+/* #FFC9BB is a light navigation surface: retain readable dark text in the
+   utility/sidebar rules that were originally tuned for a dark rail. */
+.sidebar .nav-link:hover { color: #3f241f !important; }
+.sidebar .nav-link:hover i { color: #873d32 !important; }
+.sidebar-user-card h6 { color: #3f241f !important; }
+.sidebar-user-card small,
+.sidebar-user-card .text-muted { color: rgba(63, 36, 31, .72) !important; }
 
 /* ── Sidebar logo: same width as the menu items ───────────────────────────────
    .kinjo-logo--sidebar was a fixed 120px inside the rail, so the mark sat as a
