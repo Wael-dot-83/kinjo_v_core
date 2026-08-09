@@ -97,6 +97,15 @@
 
             {% if current_user.role.value == 'SUPERVISOR' %}
             <li class="nav-item">
+                <a class="nav-link {% if '/supervisor/help' in request.url.path %}active{% endif %}" href="/supervisor/help" data-tooltip="{% if ui_lang == 'en' %}Supervisor Guide{% else %}دليل المشرف{% endif %}">
+                    <i class="bi bi-life-preserver" aria-hidden="true"></i>
+                    <span>{% if ui_lang == 'en' %}Supervisor Guide{% else %}دليل المشرف{% endif %}</span>
+                </a>
+            </li>
+            {% endif %}
+
+            {% if current_user.role.value == 'SUPERVISOR' %}
+            <li class="nav-item">
                 <a class="nav-link {% if '/supervisor/performance' in request.url.path %}active{% endif %}" href="/supervisor/performance" data-tooltip="{% if ui_lang == 'en' %}My Professional Performance{% else %}أدائي المهني{% endif %}">
                     <i class="bi bi-clipboard-data" aria-hidden="true"></i>
                     <span data-i18n="sidebar.supervisor_performance">{% if ui_lang == 'en' %}My Professional Performance{% else %}أدائي المهني{% endif %}</span>

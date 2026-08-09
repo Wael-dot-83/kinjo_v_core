@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}{% if ui_lang == 'en' %}Supervisor Guide{% else %}دليل المشرف{% endif %} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+  <div>
+    <div class="page-header-eyebrow"><i class="bi bi-life-preserver"></i>{% if ui_lang == 'en' %}Help center{% else %}مركز المساعدة{% endif %}</div>
+    <h1 class="page-header-title">{% if ui_lang == 'en' %}Supervisor Guide{% else %}دليل المشرف التربوي{% endif %}</h1>
+    <p class="text-muted mb-0">{% if ui_lang == 'en' %}A practical guide for your daily classroom work.{% else %}دليل عملي لإنجاز مهامك اليومية داخل الصف.{% endif %}</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="supervisor-guide">
+  <div class="guide-hero mb-4">
+    <div><span class="guide-kicker">{% if ui_lang == 'en' %}Your daily flow{% else %}مسار يومك{% endif %}</span><h2>{% if ui_lang == 'en' %}Arrive, record, report, communicate.{% else %}سجّل الحضور، وثّق اليوم، ثم تواصل بثقة.{% endif %}</h2></div>
+    <a href="/supervisor/messages" class="btn btn-light"><i class="bi bi-chat-dots me-2"></i>{% if ui_lang == 'en' %}Open messages{% else %}فتح الرسائل{% endif %}</a>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6 col-xl-4"><a class="guide-card" href="/supervisor/attendance"><i class="bi bi-calendar-check"></i><div><h3>{% if ui_lang == 'en' %}Attendance{% else %}الحضور والانصراف{% endif %}</h3><p>{% if ui_lang == 'en' %}Record arrival and departure only for children assigned to your class. Review the time before saving.{% else %}سجّل وصول وانصراف أطفال صفك فقط، وراجع الوقت قبل الحفظ.{% endif %}</p></div></a></div>
+    <div class="col-md-6 col-xl-4"><a class="guide-card" href="/daily-reports"><i class="bi bi-journal-check"></i><div><h3>{% if ui_lang == 'en' %}Daily reports{% else %}التقارير اليومية{% endif %}</h3><p>{% if ui_lang == 'en' %}Save every required field separately. Submit is available only after all fields are saved.{% else %}احفظ كل حقل مطلوب على حدة. يصبح الإرسال متاحاً بعد حفظ جميع الحقول.{% endif %}</p></div></a></div>
+    <div class="col-md-6 col-xl-4"><a class="guide-card" href="/supervisor/safety"><i class="bi bi-shield-exclamation"></i><div><h3>{% if ui_lang == 'en' %}Safety & incidents{% else %}السلامة والحوادث{% endif %}</h3><p>{% if ui_lang == 'en' %}Document facts, time, severity and action taken immediately. Escalate emergencies first.{% else %}وثّق الوقائع والوقت والخطورة والإجراء فوراً. عالج الطوارئ أولاً.{% endif %}</p></div></a></div>
+    <div class="col-md-6 col-xl-4"><a class="guide-card" href="/supervisor/observations"><i class="bi bi-eye"></i><div><h3>{% if ui_lang == 'en' %}Educational observations{% else %}الملاحظات التربوية{% endif %}</h3><p>{% if ui_lang == 'en' %}Use objective, observable language about learning, behaviour, and development.{% else %}استخدم لغة موضوعية قابلة للملاحظة عن التعلّم والسلوك والنمو.{% endif %}</p></div></a></div>
+    <div class="col-md-6 col-xl-4"><a class="guide-card" href="/supervisor/messages"><i class="bi bi-mic"></i><div><h3>{% if ui_lang == 'en' %}Messages & voice{% else %}الرسائل والإملاء الصوتي{% endif %}</h3><p>{% if ui_lang == 'en' %}Send the manager a clear subject and message. Use the microphone to dictate, then review text before sending.{% else %}أرسل للمدير موضوعاً واضحاً ورسالة مختصرة. استخدم الميكروفون للإملاء ثم راجع النص قبل الإرسال.{% endif %}</p></div></a></div>
+    <div class="col-md-6 col-xl-4"><a class="guide-card" href="/supervisor/performance"><i class="bi bi-graph-up-arrow"></i><div><h3>{% if ui_lang == 'en' %}Professional performance{% else %}الأداء المهني{% endif %}</h3><p>{% if ui_lang == 'en' %}Review your completion indicators to identify late reports or follow-up tasks.{% else %}راجع مؤشرات الإنجاز لمعرفة التقارير المتأخرة والمهام التي تحتاج متابعة.{% endif %}</p></div></a></div>
+  </div>
+
+  <div class="card mt-4"><div class="card-body"><h2 class="h5">{% if ui_lang == 'en' %}Before you finish the day{% else %}قبل إنهاء اليوم{% endif %}</h2><div class="guide-checklist"><span><i class="bi bi-check2-circle"></i>{% if ui_lang == 'en' %}Attendance and departure are accurate{% else %}الحضور والانصراف دقيقان{% endif %}</span><span><i class="bi bi-check2-circle"></i>{% if ui_lang == 'en' %}Required report fields are saved and submitted{% else %}تم حفظ وإرسال حقول التقرير المطلوبة{% endif %}</span><span><i class="bi bi-check2-circle"></i>{% if ui_lang == 'en' %}Important incidents and observations are documented{% else %}تم توثيق الحوادث والملاحظات المهمة{% endif %}</span><span><i class="bi bi-check2-circle"></i>{% if ui_lang == 'en' %}Unread messages are reviewed{% else %}تمت مراجعة الرسائل غير المقروءة{% endif %}</span></div></div></div>
+  <div class="alert alert-warning mt-4 mb-0"><i class="bi bi-shield-lock me-2"></i>{% if ui_lang == 'en' %}Protect children’s information: work only with your assigned children, never share account access, and sign out from shared devices.{% else %}احمِ معلومات الأطفال: اعمل فقط مع أطفال صفك، ولا تشارك الحساب، وسجّل الخروج من الأجهزة المشتركة.{% endif %}</div>
+</div>
+<style>
+.guide-hero{background:linear-gradient(135deg,#174d5b,#21877e);color:#fff;border-radius:1rem;padding:1.6rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}.guide-kicker{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#b9f2e7}.guide-hero h2{font-size:1.5rem;margin:.35rem 0 0}.guide-card{height:100%;display:flex;gap:1rem;padding:1.15rem;color:inherit;text-decoration:none;background:#fff;border:1px solid #e6eef0;border-radius:.9rem;transition:.2s}.guide-card:hover{transform:translateY(-3px);box-shadow:0 12px 25px rgba(18,61,78,.11);color:inherit;border-color:#8bcfc4}.guide-card>i{display:grid;place-items:center;flex:0 0 2.75rem;height:2.75rem;border-radius:.75rem;background:#e7f5f3;color:#16726b;font-size:1.25rem}.guide-card h3{font-size:1rem;font-weight:800;margin:0 0 .35rem}.guide-card p{font-size:.86rem;color:#64747c;margin:0}.guide-checklist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}.guide-checklist span{display:flex;gap:.5rem;align-items:center}.guide-checklist i{color:#21877e}@media(max-width:575px){.guide-hero{align-items:flex-start;flex-direction:column}.guide-checklist{grid-template-columns:1fr}}
+</style>
+{% endblock %}

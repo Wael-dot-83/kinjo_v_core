@@ -1830,6 +1830,12 @@ async def supervisor_messages_page(request: Request, current_user: User = Depend
     return await _supervisor_page(request, current_user, "supervisor/messages.html")
 
 
+@router.get("/supervisor/help", response_class=HTMLResponse)
+async def supervisor_help_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """In-app operational guide for the Supervisor role."""
+    return await _supervisor_page(request, current_user, "supervisor/help.html")
+
+
 @router.get("/supervisor/profile", response_class=HTMLResponse)
 async def supervisor_profile_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     return await _supervisor_page(request, current_user, "supervisor/profile.html")
