@@ -154,6 +154,7 @@ SUPERVISOR_*
 # script is the second. Any future static/js/supervisor_*.js needs one too.
 !static/js/supervisor_performance.js
 !static/js/supervisor_roster.js
+!docs/SUPERVISOR_HANDBOOK_AR.md
 upload/
 perplexity-ext/
 *_snippet.py
