@@ -5,6 +5,7 @@ import 'core/auth/auth_repository.dart';
 import 'core/auth/token_storage.dart';
 import 'core/theme/app_theme.dart';
 import 'models/user_model.dart';
+import 'screens/role_dashboards.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,33 +58,38 @@ class RoleShellScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (user.role) {
       case UserRole.parent:
-        return ParentDashboardShell(user: user);
+        return ParentDashboardScreen(user: user);
       case UserRole.supervisor:
-        return SupervisorDashboardShell(user: user);
+        return SupervisorDashboardScreen(user: user);
       case UserRole.manager:
-        return ManagerDashboardShell(user: user);
-      default:
-        return ParentDashboardShell(user: user);
+        return ManagerDashboardScreen(user: user);
+      case UserRole.admin:
+      case UserRole.unknown:
+        // Previously every unmatched role fell through to the parent screen, so
+        // an admin silently landed on a parent's dashboard. Admin has no mobile
+        // surface yet, so say that rather than show the wrong one.
+        return _UnsupportedRoleScreen(user: user);
     }
   }
 }
 
-/// Parent Mobile Interface Shell
-class ParentDashboardShell extends StatelessWidget {
+/// Shown to a role this app does not have a screen for.
+class _UnsupportedRoleScreen extends StatelessWidget {
   final UserModel user;
 
-  const ParentDashboardShell({super.key, required this.user});
+  const _UnsupportedRoleScreen({required this.user});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('لوحة ولي الأمر - KinJo'),
+        title: const Text('KinJo'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await TokenStorage.clearAll();
+              if (!context.mounted) return;
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (_) => const MobileLoginScreen()),
               );
@@ -91,115 +97,25 @@ class ParentDashboardShell extends StatelessWidget {
           )
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hero Welcome Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primary, AppTheme.primaryDark],
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'أهلاً بك، ${user.fullName}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'تابع أنشطة أطفالك اليومية، وحالة الحضور، وتقارير الروضة أولاً بأول.',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'الخدمات السريعة',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              children: [
-                _buildQuickTile(Icons.person_add, 'تسجيل طفل', 'تقديم طلب جديد', AppTheme.primary),
-                _buildQuickTile(Icons.assignment, 'التقارير اليومية', 'متابعة السجلات', AppTheme.secondary),
-                _buildQuickTile(Icons.calendar_today, 'سجل الحضور', 'الدخول والخروج', AppTheme.accent),
-                _buildQuickTile(Icons.chat, 'الرسائل', 'التواصل مع الروضة', AppTheme.purpleAccent),
-              ],
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickTile(IconData icon, String title, String subtitle, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              backgroundColor: color.withOpacity(0.15),
-              child: Icon(icon, color: color),
+            const Icon(Icons.devices_other, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              'لا توجد شاشة مخصّصة لدور ${user.role.value} في التطبيق بعد.',
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 10),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            const SizedBox(height: 4),
-            Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12), textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            const Text(
+              'يرجى استخدام نسخة الويب للوصول إلى هذه الصلاحيات.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Supervisor Mobile Interface Shell
-class SupervisorDashboardShell extends StatelessWidget {
-  final UserModel user;
-
-  const SupervisorDashboardShell({super.key, required this.user});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('لوحة المشرف الميداني')),
-      body: Center(
-        child: Text('مرحباً بك ${user.fullName} - قسم التفتيش والزيارات الميدانية'),
-      ),
-    );
-  }
-}
-
-/// Manager Mobile Interface Shell
-class ManagerDashboardShell extends StatelessWidget {
-  final UserModel user;
-
-  const ManagerDashboardShell({super.key, required this.user});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('إدارة الحضانة')),
-      body: Center(
-        child: Text('مرحباً بك ${user.fullName} - لوحة عمليات مدير الحضانة'),
       ),
     );
   }

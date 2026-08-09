@@ -73,17 +73,9 @@ class AuthRepository {
     }
   }
 
-  /// Register Firebase Cloud Messaging (FCM) Push Token
-  Future<void> registerFcmToken(String fcmToken) async {
-    try {
-      await _apiService.post(
-        ApiEndpoints.registerDeviceToken,
-        data: {'fcm_token': fcmToken, 'platform': 'mobile'},
-      );
-    } catch (e) {
-      // Non-blocking background registration failure
-    }
-  }
+  // registerFcmToken was removed: it posted to /api/notifications/register-device,
+  // which does not exist on this backend, and nothing ever called it. There is no
+  // push-notification wiring in this app for it to belong to.
 
   /// Logout user and clear local session state
   Future<void> logout() async {

@@ -21,7 +21,6 @@ class ApiEndpoints {
   /// stored session silently failed to restore on each launch and the user was
   /// sent back to the login screen with no error shown.
   static const String me = '/api/users/me';
-  static const String registerDeviceToken = '/api/notifications/register-device';
 
   // Parent Endpoints
   static const String parentDashboard = '/api/parent/dashboard';
@@ -34,14 +33,20 @@ class ApiEndpoints {
 
   // Supervisor Endpoints
   static const String supervisorDashboard = '/api/supervisor/dashboard';
-  static const String supervisorPerformance = '/api/supervisor/performance';
+  static const String supervisorChildren = '/api/supervisor/children';
+  static const String supervisorMyClasses = '/api/supervisor/my-classes';
   static const String supervisorObservations = '/api/supervisor/observations';
 
   // Manager Endpoints
   static const String managerDashboard = '/api/manager/dashboard';
-  static const String managerAbsenceRequests = '/api/manager/absence-requests';
-  static const String managerBenchmarking = '/api/manager/benchmarking';
   static const String managerDailyReports = '/api/manager/daily-reports';
+
+  // Removed: /api/supervisor/performance, /api/manager/absence-requests,
+  // /api/manager/benchmarking and /api/notifications/register-device were all
+  // declared here but return 404 — this registry listed 22 endpoints of which 5
+  // did not exist on the backend. Nothing referenced them, so they were a map
+  // of a service that isn't there. Re-add each one with the code that calls it,
+  // after checking it against /openapi.json.
 
   // Messaging & Notifications
   static const String messages = '/api/messages';

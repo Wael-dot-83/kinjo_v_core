@@ -5,7 +5,8 @@ class TokenStorage {
   static const _storage = FlutterSecureStorage();
   
   static const _keyToken = 'kinjo_jwt_token';
-  static const _keyRefreshToken = 'kinjo_refresh_token';
+  // No _keyRefreshToken: the backend issues a single access token and there is
+  // no refresh flow to store one for. The key was declared and never read.
   static const _keyUserRole = 'kinjo_user_role';
   static const _keyUserLang = 'kinjo_user_lang';
 
