@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
@@ -939,7 +939,36 @@ async def create_incident_page(request: Request, current_user: User = Depends(ge
         return RedirectResponse(url="/daily-reports")
     if user_role not in ('SUPERVISOR', 'ADMIN', 'MANAGER'):
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="safety/incident_form.html", context={"current_user": current_user})
+    incident_api_path = "/api/supervisor/safety-incidents" if user_role == "SUPERVISOR" else "/api/incidents"
+    return templates.TemplateResponse(
+        request=request,
+        name="safety/incident_form.html",
+        context={"current_user": current_user, "incident_api_path": incident_api_path},
+    )
+
+
+@router.get("/safety/incidents/{incident_id}", response_class=HTMLResponse)
+async def incident_detail_page(
+    incident_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_or_redirect),
+):
+    query = db.query(models.Incident).filter(
+        models.Incident.id == incident_id,
+        models.Incident.deleted_at.is_(None),
+    )
+    if current_user.role not in (UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERVISOR):
+        raise HTTPException(status_code=403, detail="Staff access required")
+    if current_user.role == UserRole.SUPERVISOR:
+        from rbac import get_supervisor_class_ids
+        query = query.filter(models.Incident.class_id.in_(get_supervisor_class_ids(current_user.id, db)))
+    elif current_user.role == UserRole.MANAGER:
+        query = query.filter(models.Incident.kindergarten_id == current_user.kindergarten_id)
+    incident = query.first()
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return templates.TemplateResponse(request=request, name="safety/incident_detail.html", context={"current_user": current_user, "incident": incident})
 
 
 # -----------------------------------------------------------------------------

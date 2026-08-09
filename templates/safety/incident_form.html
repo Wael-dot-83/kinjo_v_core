@@ -103,7 +103,7 @@ breadcrumbs=[
         };
 
         try {
-            const response = await window.api.post('/api/incidents', data);
+            const response = await window.api.post({{ incident_api_path|default('/api/incidents')|tojson }}, data);
 
             if (response) {
                 alert(T('تم تسجيل الحادث بنجاح', 'Incident reported successfully'));

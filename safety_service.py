@@ -15,6 +15,7 @@ import models
 import validators
 from database import get_db
 from dependencies import get_current_user
+from rbac import assert_supervisor_owns_child, get_supervisor_child_ids, get_supervisor_class_ids
 
 router = APIRouter()
 
@@ -53,6 +54,8 @@ def create_incident(
     # created by the kindergarten's own staff; admin oversees, never enters).
     if current_user.role not in (models.UserRole.SUPERVISOR, models.UserRole.MANAGER):
         raise HTTPException(status_code=403, detail="Only kindergarten staff can report incidents")
+    if current_user.role == models.UserRole.SUPERVISOR:
+        assert_supervisor_owns_child(current_user.id, incident_data.child_id, db)
 
     # If parent was not informed, a reason is required
     if not incident_data.parent_informed and not (incident_data.parent_not_informed_reason or "").strip():
@@ -66,7 +69,8 @@ def create_incident(
     child_enrollment = db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.child_id == incident_data.child_id,
         models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.deleted_at.is_(None),
     ).first()
 
     if not child_enrollment:
@@ -152,9 +156,11 @@ def list_incidents(
     db: Session = Depends(get_db)
 ):
     """List incidents with optional filtering"""
+    if current_user.role not in (models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        raise HTTPException(status_code=403, detail="Only staff can view incidents")
     from sqlalchemy.orm import joinedload
     
-    query = db.query(models.Incident).options(
+    query = db.query(models.Incident).filter(models.Incident.deleted_at.is_(None)).options(
         joinedload(models.Incident.child),
         joinedload(models.Incident.reported_by_user),
         joinedload(models.Incident.owner)
@@ -166,7 +172,7 @@ def list_incidents(
         if current_user.role == models.UserRole.SUPERVISOR:
             # Supervisor can only see incidents for children in their class
             # But the incident has class_id
-            supervisor_classes = [sa.class_id for sa in current_user.supervisor_assignments]
+            supervisor_classes = list(get_supervisor_class_ids(current_user.id, db))
             query = query.filter(models.Incident.class_id.in_(supervisor_classes))
     elif kindergarten_id:
         query = query.filter(models.Incident.kindergarten_id == kindergarten_id)
@@ -240,12 +246,14 @@ def get_incidents_summary(
     db: Session = Depends(get_db)
 ):
     """Get summary statistics for incidents"""
-    query = db.query(models.Incident)
+    if current_user.role not in (models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        raise HTTPException(status_code=403, detail="Only staff can view incidents")
+    query = db.query(models.Incident).filter(models.Incident.deleted_at.is_(None))
     
     if current_user.role != models.UserRole.ADMIN:
         query = query.filter(models.Incident.kindergarten_id == current_user.kindergarten_id)
         if current_user.role == models.UserRole.SUPERVISOR:
-            supervisor_classes = [sa.class_id for sa in current_user.supervisor_assignments]
+            supervisor_classes = list(get_supervisor_class_ids(current_user.id, db))
             query = query.filter(models.Incident.class_id.in_(supervisor_classes))
             
     total_open = query.filter(models.Incident.status == models.IncidentStatus.OPEN).count()
@@ -341,10 +349,17 @@ def get_incident_history(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    incident = db.query(models.Incident).filter(
+    if current_user.role not in (models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        raise HTTPException(status_code=403, detail="Only staff can view incident history")
+    incident_query = db.query(models.Incident).filter(
         models.Incident.id == incident_id,
-        models.Incident.kindergarten_id == current_user.kindergarten_id
-    ).first()
+        models.Incident.deleted_at.is_(None),
+    )
+    if current_user.role == models.UserRole.SUPERVISOR:
+        incident_query = incident_query.filter(models.Incident.class_id.in_(get_supervisor_class_ids(current_user.id, db)))
+    elif current_user.role == models.UserRole.MANAGER:
+        incident_query = incident_query.filter(models.Incident.kindergarten_id == current_user.kindergarten_id)
+    incident = incident_query.first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
         
@@ -390,12 +405,15 @@ def get_health_alerts_summary(
 ):
     """Get all health alerts and children with medical conditions for the user's scope"""
     from sqlalchemy.orm import joinedload
+    if current_user.role not in (models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        raise HTTPException(status_code=403, detail="Only staff can view health alerts")
     
     # 1. Get explicit HealthAlerts
     alerts_query = db.query(models.HealthAlert).join(models.Child)
     
     # 2. Get Children with medical/allergy notes but maybe no explicit HealthAlert
     children_query = db.query(models.Child).filter(
+        models.Child.deleted_at.is_(None),
         or_(
             models.Child.has_medical_condition == True,
             models.Child.medical_notes.isnot(None),
@@ -412,7 +430,8 @@ def get_health_alerts_summary(
             models.EnrollmentApplication.child_id == models.Child.id
         ).filter(
             models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES)
+            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+            models.EnrollmentApplication.deleted_at.is_(None),
         )
         
         children_query = children_query.join(
@@ -420,8 +439,14 @@ def get_health_alerts_summary(
             models.EnrollmentApplication.child_id == models.Child.id
         ).filter(
             models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES)
+            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+            models.EnrollmentApplication.deleted_at.is_(None),
         )
+
+    if current_user.role == models.UserRole.SUPERVISOR:
+        child_ids = list(get_supervisor_child_ids(current_user.id, db))
+        alerts_query = alerts_query.filter(models.HealthAlert.child_id.in_(child_ids))
+        children_query = children_query.filter(models.Child.id.in_(child_ids))
 
     alerts = alerts_query.options(joinedload(models.HealthAlert.child)).all()
     children_with_conditions = children_query.all()

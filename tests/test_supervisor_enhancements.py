@@ -197,6 +197,7 @@ def test_supervisor_daily_report_duplicate_requires_force_and_overwrites_existin
     sample_enrollment,
 ):
     sample_daily_report.status = models.DailyReportStatus.RETURNED
+    sample_daily_report.class_id = sample_enrollment.class_id
     test_db.commit()
     payload = {
         "child_id": sample_child.id,

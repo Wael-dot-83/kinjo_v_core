@@ -16,6 +16,7 @@ import validators
 from config import settings
 from database import get_db
 from dependencies import get_current_user
+from rbac import assert_supervisor_owns_child, assert_supervisor_owns_class, get_supervisor_child_ids
 from services.jordan_locations import governorate_filter
 
 router = APIRouter(tags=["Attendance"])
@@ -30,6 +31,8 @@ def check_in_child(
 ):
     """Check in a child for attendance"""
     validators.validate_supervisor_role(current_user)
+    if current_user.role == models.UserRole.SUPERVISOR:
+        assert_supervisor_owns_child(current_user.id, child_id, db)
     
     # Verify child has active enrollment
     child = db.query(models.Child).filter(models.Child.id == child_id).first()
@@ -38,7 +41,8 @@ def check_in_child(
     
     active_enrollment = db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.child_id == child_id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.deleted_at.is_(None),
     ).first()
     
     if not active_enrollment:
@@ -105,6 +109,8 @@ def check_out_child(
 ):
     """Check out a child from attendance"""
     validators.validate_supervisor_role(current_user)
+    if current_user.role == models.UserRole.SUPERVISOR:
+        assert_supervisor_owns_child(current_user.id, child_id, db)
     
     # Find today's check-in without check-out
     from utils.time_utils import today_amman
@@ -117,6 +123,8 @@ def check_out_child(
     
     if not attendance:
         raise HTTPException(status_code=400, detail="Child is not checked in today")
+    if current_user.role == models.UserRole.SUPERVISOR:
+        assert_supervisor_owns_class(current_user.id, attendance.class_id, db)
     
     attendance.check_out_at = datetime.now(_JORDAN_TZ)
     attendance.picked_by_name = picked_by_name
@@ -188,6 +196,8 @@ def get_attendance_report(
     db: Session = Depends(get_db)
 ):
     """Get attendance report matrix for specified period"""
+    if current_user.role == models.UserRole.SUPERVISOR:
+        raise HTTPException(status_code=403, detail="Supervisors must use the scoped attendance endpoint")
     # Authorization: Admin can see all, others only their kindergarten
     if current_user.role != models.UserRole.ADMIN:
         validators.validate_supervisor_role(current_user)
@@ -413,6 +423,8 @@ def correct_attendance_status(
     if not att_class:
         raise HTTPException(status_code=404, detail="Class for attendance record not found")
     validators.validate_kindergarten_scope(current_user, att_class.kindergarten_id)
+    if current_user.role == models.UserRole.SUPERVISOR:
+        assert_supervisor_owns_class(current_user.id, att.class_id, db)
 
     try:
         new_status = models.AttendanceStatus(payload.new_status)
@@ -452,7 +464,12 @@ def _attendance_summary(db: Session, target_date: date, current_user: models.Use
     # Total children with ACTIVE enrollment in this user's scope
     enrolled_q = db.query(models.EnrollmentApplication.child_id).filter(
         models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.deleted_at.is_(None),
     )
+    if current_user.role == models.UserRole.SUPERVISOR:
+        enrolled_q = enrolled_q.filter(
+            models.EnrollmentApplication.child_id.in_(get_supervisor_child_ids(current_user.id, db))
+        )
     if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id:
         enrolled_q = enrolled_q.filter(
             models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,

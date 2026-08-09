@@ -116,9 +116,11 @@ def test_child_detail_serialiser_only_reads_real_daily_report_columns():
         f"{sorted(missing)} — this is the shape of the bug that made it answer 500"
     )
 
-    # The four names the broken version used, kept explicit so a future schema
+    # The obsolete names the broken version used, kept explicit so a future schema
     # change that introduces one of them is a deliberate decision.
-    never_existed = {"meals", "sleep", "behavior", "general_notes", "class_id", "supervisor_id"}
+    # class_id is intentionally present: it is the immutable class snapshot
+    # used to authorize reports after a child changes class.
+    never_existed = {"meals", "sleep", "behavior", "general_notes", "supervisor_id"}
     resurrected = never_existed & columns
     assert not resurrected, (
         f"DailyReport now has {sorted(resurrected)}; the supervisor serialiser and the "

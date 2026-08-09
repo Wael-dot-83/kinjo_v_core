@@ -107,7 +107,7 @@
                     <i class="bi bi-calendar-check me-2"></i>
                     {% if ui_lang == 'en' %}Today's Attendance{% else %}حضور الأطفال اليوم{% endif %}
                 </h5>
-                <a href="/attendance" class="btn btn-sm btn-primary">
+                <a href="/supervisor/attendance" class="btn btn-sm btn-primary">
                     <i class="bi bi-pencil-square me-1"></i>
                     {% if ui_lang == 'en' %}Open Attendance{% else %}فتح شاشة الحضور{% endif %}
                 </a>
@@ -145,7 +145,7 @@
                 </h5>
             </div>
             <div class="card-body d-flex flex-column gap-2 p-3">
-                <a href="/attendance/check-in" class="quick-action-btn qa-success">
+                <a href="/supervisor/attendance" class="quick-action-btn qa-success">
                     <span class="qa-icon"><i class="bi bi-box-arrow-in-left"></i></span>
                     <span>{% if ui_lang == 'en' %}Record Attendance{% else %}تسجيل حضور{% endif %}</span>
                     <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>

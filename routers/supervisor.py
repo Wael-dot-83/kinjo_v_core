@@ -13,6 +13,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import secrets
 import uuid
 from datetime import date, datetime, timedelta, timezone
@@ -39,7 +40,7 @@ _OBSERVATION_IMAGE_TYPE_TO_EXT = {
 }
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import func, and_, or_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
@@ -691,6 +692,8 @@ def get_daily_reports(
         return {"reports": [], "stats": {"submitted": 0, "pending": 0, "draft": 0, "sent_to_parent": 0}}
 
     q = db.query(DailyReport).filter(DailyReport.child_id.in_(child_ids))
+    if current_user.role == UserRole.SUPERVISOR:
+        q = q.filter(DailyReport.kindergarten_id == current_user.kindergarten_id)
     if child_id:
         q = q.filter(DailyReport.child_id == child_id)
     if exact_date:
@@ -716,6 +719,16 @@ def get_daily_reports(
             raise HTTPException(status_code=400, detail=f"Invalid status. Allowed: {allowed}.")
 
     reports = q.order_by(DailyReport.date.desc()).all()
+    if current_user.role == UserRole.SUPERVISOR:
+        from api.daily_reports_routes import _authorize_supervisor_report_access
+        scoped_reports = []
+        for report in reports:
+            try:
+                _authorize_supervisor_report_access(db, current_user, report)
+            except HTTPException:
+                continue
+            scoped_reports.append(report)
+        reports = scoped_reports
     from models import Child, Class, EnrollmentApplication, EnrollmentStatus
     child_map = {c.id: c for c in db.query(Child).filter(
         Child.id.in_(child_ids), Child.deleted_at.is_(None)
@@ -753,7 +766,20 @@ def get_daily_reports(
     ]
 
     # Stats over ALL reports for this supervisor (not just the filtered set)
-    all_reports = db.query(DailyReport).filter(DailyReport.child_id.in_(child_ids)).all()
+    all_reports_q = db.query(DailyReport).filter(DailyReport.child_id.in_(child_ids))
+    if current_user.role == UserRole.SUPERVISOR:
+        all_reports_q = all_reports_q.filter(DailyReport.kindergarten_id == current_user.kindergarten_id)
+    all_reports = all_reports_q.all()
+    if current_user.role == UserRole.SUPERVISOR:
+        from api.daily_reports_routes import _authorize_supervisor_report_access
+        scoped_all_reports = []
+        for report in all_reports:
+            try:
+                _authorize_supervisor_report_access(db, current_user, report)
+            except HTTPException:
+                continue
+            scoped_all_reports.append(report)
+        all_reports = scoped_all_reports
     stats = {
         "submitted": sum(1 for r in all_reports if r.status == DailyReportStatus.SUBMITTED),
         "pending": sum(1 for r in all_reports if r.status in (DailyReportStatus.SUBMITTED, DailyReportStatus.DRAFT)),
@@ -779,6 +805,13 @@ class DailyReportIn(BaseModel):
     activities: Optional[str] = None
     notes: Optional[str] = None
 
+    @field_validator("arrival_time", "leave_time", "nap_start", "nap_end")
+    @classmethod
+    def validate_time_format(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value):
+            raise ValueError("time must use HH:MM format (24-hour)")
+        return value
+
 
 @router.get("/daily-reports/{report_id}")
 def get_daily_report(
@@ -789,7 +822,8 @@ def get_daily_report(
     report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
-    assert_supervisor_owns_child(current_user.id, report.child_id, db)
+    from api.daily_reports_routes import _authorize_supervisor_report_access
+    _authorize_supervisor_report_access(db, current_user, report)
     from models import Child
     child = db.query(Child).filter(Child.id == report.child_id).first()
     return {
@@ -821,7 +855,8 @@ def delete_daily_report(
     report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
-    assert_supervisor_owns_child(current_user.id, report.child_id, db)
+    from api.daily_reports_routes import _authorize_supervisor_report_access
+    _authorize_supervisor_report_access(db, current_user, report)
     if report.status != DailyReportStatus.DRAFT:
         raise HTTPException(status_code=403, detail="Only DRAFT reports can be deleted.")
     db.delete(report)
@@ -862,6 +897,8 @@ def create_daily_report(
         DailyReport.date == target_date,
     ).first()
     if existing:
+        from api.daily_reports_routes import _authorize_supervisor_report_access
+        _authorize_supervisor_report_access(db, current_user, existing)
         if not force:
             raise HTTPException(
                 status_code=409,
@@ -891,7 +928,7 @@ def create_daily_report(
         report.status = target_status
         report.submitted_by = current_user.id
         report.submitted_at = now if target_status == DailyReportStatus.SUBMITTED else None
-        if "arrival_time" in provided_fields:
+        if "arrival_time" in provided_fields and body.arrival_time is not None:
             report.arrival_time = body.arrival_time
         if "leave_time" in provided_fields:
             report.leave_time = body.leave_time
@@ -911,7 +948,6 @@ def create_daily_report(
             report.activities = body.activities
         if "notes" in provided_fields:
             report.notes = body.notes
-        report.kindergarten_id = enrollment.kindergarten_id
         db.add(AuditLog(
             user_id=current_user.id,
             action=AuditAction.DAILY_REPORT_FORCE_UPDATED,
@@ -924,6 +960,7 @@ def create_daily_report(
             raise HTTPException(status_code=422, detail="arrival_time is required when creating a daily report")
         report = DailyReport(
             child_id=body.child_id,
+            class_id=enrollment.class_id,
             date=target_date,
             status=target_status,
             submitted_by=current_user.id,
@@ -980,7 +1017,8 @@ def update_daily_report(
     report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
-    assert_supervisor_owns_child(current_user.id, report.child_id, db)
+    from api.daily_reports_routes import _authorize_supervisor_report_access
+    _authorize_supervisor_report_access(db, current_user, report)
 
     if not report.is_editable_by_supervisor():
         raise HTTPException(status_code=403, detail="Only draft or returned reports can be edited.")
@@ -1014,7 +1052,8 @@ def submit_daily_report(
     report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
-    assert_supervisor_owns_child(current_user.id, report.child_id, db)
+    from api.daily_reports_routes import _authorize_supervisor_report_access
+    _authorize_supervisor_report_access(db, current_user, report)
     if not report.can_submit_to_manager():
         raise HTTPException(status_code=403, detail="Only draft or returned reports can be submitted.")
     report.status = DailyReportStatus.SUBMITTED
@@ -1041,7 +1080,9 @@ class IncidentIn(BaseModel):
     severity_level: str
     description: str
     occurred_at: Optional[str] = None
-    parent_informed: bool = False
+    parent_informed: bool = True
+    parent_not_informed_reason: Optional[str] = None
+    followup_required_flag: bool = False
 
 
 @router.post("/safety-incidents", status_code=201)
@@ -1070,6 +1111,10 @@ def create_safety_incident(
             raise HTTPException(status_code=422, detail="occurred_at must use ISO-8601 format")
     else:
         occurred_at = datetime.now(_JORDAN_TZ)
+    if occurred_at > datetime.now(_JORDAN_TZ):
+        raise HTTPException(status_code=422, detail="occurred_at cannot be in the future")
+    if not body.parent_informed and not (body.parent_not_informed_reason or "").strip():
+        raise HTTPException(status_code=422, detail="Reason required when parent is not informed")
 
     incident = Incident(
         child_id=body.child_id,
@@ -1081,7 +1126,11 @@ def create_safety_incident(
         description=body.description,
         occurred_at=occurred_at,
         parent_informed=body.parent_informed,
+        parent_not_informed_reason=body.parent_not_informed_reason,
+        followup_required_flag=body.followup_required_flag,
     )
+    if incident.followup_required_flag:
+        incident.followup_sla_deadline = datetime.now(_JORDAN_TZ) + timedelta(hours=48)
     db.add(incident)
     db.commit()
     db.refresh(incident)
@@ -2484,6 +2533,14 @@ def list_supervisor_child_daily_reports(
     reports = db.query(models.DailyReport).filter(
         models.DailyReport.child_id == child_id
     ).order_by(models.DailyReport.date.desc()).all()
+    from api.daily_reports_routes import _authorize_supervisor_report_access
+    authorized_reports = []
+    for report in reports:
+        try:
+            _authorize_supervisor_report_access(db, current_user, report)
+        except HTTPException:
+            continue
+        authorized_reports.append(report)
 
     return {
         "reports": [
@@ -2504,7 +2561,7 @@ def list_supervisor_child_daily_reports(
                 "generalNotes": report.notes,
                 "status": report.status.value,
             }
-            for report in reports
+            for report in authorized_reports
         ]
     }
 

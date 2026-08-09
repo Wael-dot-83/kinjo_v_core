@@ -641,7 +641,7 @@ def create_and_send_daily_report(
         raise HTTPException(status_code=409, detail=_api("Daily report for this child and date already exists.", _ulang(current_user)))
 
     report = DailyReport(
-        child_id=body.child_id, kindergarten_id=kindergarten_id, date=body.date,
+        child_id=body.child_id, kindergarten_id=kindergarten_id, class_id=enrollment.class_id, date=body.date,
         status=DailyReportStatus.SUBMITTED, submitted_by=current_user.id, submitted_at=_now(),
         arrival_time=body.arrival_time, leave_time=body.leave_time, mood=body.mood,
         health_notes=body.health_notes, breakfast=body.breakfast, snack=body.snack,

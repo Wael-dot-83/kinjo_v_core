@@ -657,6 +657,10 @@ class Class(Base):
 class SupervisorAssignment(Base):
     __tablename__ = "supervisor_assignments"
     __table_args__ = (
+        CheckConstraint(
+            "end_date IS NULL OR end_date >= start_date",
+            name="ck_supervisor_assignment_dates",
+        ),
         # Active-assignment lookups filter on (class_id|supervisor_id, deleted_at)
         # — see routers/manager.py. Composite indexes keep those O(log n) (D2).
         Index("ix_supervisor_assignments_class_deleted", "class_id", "deleted_at"),
@@ -830,6 +834,9 @@ class DailyReport(Base):
     id = Column(Integer, primary_key=True, index=True)
     child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
     kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
+    # Immutable class snapshot: enrollment is mutable after a transfer, while a
+    # report must remain authorized against the class in which it was authored.
+    class_id = Column(Integer, ForeignKey("classes.id"), nullable=True, index=True)
     date = Column(Date, nullable=False)
     status = Column(Enum(DailyReportStatus), nullable=False, default=DailyReportStatus.DRAFT)
     submitted_by = Column(Integer, ForeignKey("users.id"), nullable=False)

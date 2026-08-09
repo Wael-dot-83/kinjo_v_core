@@ -18,6 +18,7 @@ import validators
 from config import settings
 from database import get_db
 from dependencies import get_current_user
+from rbac import assert_supervisor_owns_child
 
 router = APIRouter(tags=["Daily Reports"])
 
@@ -168,6 +169,23 @@ def _authorize_report_for_child(
     return active_enrollment
 
 
+def _authorize_supervisor_report_access(db: Session, user: models.User, report: models.DailyReport) -> None:
+    """Fail closed on report reads/submissions outside the supervisor's dated class scope."""
+    if report.kindergarten_id != user.kindergarten_id:
+        raise HTTPException(status_code=404, detail="Daily report not found")
+    if report.class_id is None:
+        raise HTTPException(status_code=404, detail="Daily report not found")
+    assignment = db.query(models.SupervisorAssignment).filter(
+        models.SupervisorAssignment.supervisor_id == user.id,
+        models.SupervisorAssignment.class_id == report.class_id,
+        models.SupervisorAssignment.deleted_at.is_(None),
+        models.SupervisorAssignment.start_date <= report.date,
+        (models.SupervisorAssignment.end_date.is_(None) | (models.SupervisorAssignment.end_date >= report.date)),
+    ).first()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Daily report not found")
+
+
 @router.post("/daily-reports/create", status_code=status.HTTP_201_CREATED)
 def create_daily_report(
     report_data: DailyReportCreateRequest,
@@ -187,6 +205,7 @@ def create_daily_report(
     report = models.DailyReport(
         child_id=report_data.child_id,
         kindergarten_id=active_enrollment.kindergarten_id,
+        class_id=active_enrollment.class_id,
         date=report_date,
         status=models.DailyReportStatus.DRAFT,
         submitted_by=current_user.id,
@@ -319,6 +338,7 @@ def create_daily_reports_batch(
                 report = models.DailyReport(
                     child_id=entry.child_id,
                     kindergarten_id=active_enrollment.kindergarten_id,
+                    class_id=active_enrollment.class_id,
                     date=report_date,
                     status=models.DailyReportStatus.DRAFT,
                     submitted_by=current_user.id,
@@ -395,6 +415,8 @@ def submit_daily_report(
 
     if report.submitted_by != current_user.id:
         raise HTTPException(status_code=403, detail="You can only submit your own reports")
+
+    _authorize_supervisor_report_access(db, current_user, report)
 
     if report.status != models.DailyReportStatus.DRAFT:
         raise HTTPException(status_code=400, detail="Only draft reports can be submitted")
@@ -476,6 +498,8 @@ def get_child_daily_reports(
         )
         if not enrollment:
             raise HTTPException(status_code=403, detail="Child not in your kindergarten scope")
+        if current_user.role == models.UserRole.SUPERVISOR:
+            assert_supervisor_owns_child(current_user.id, child_id, db)
 
     query = db.query(models.DailyReport).filter(models.DailyReport.child_id == child_id)
     if current_user.role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
@@ -486,6 +510,15 @@ def get_child_daily_reports(
         query = query.filter(models.DailyReport.status == models.DailyReportStatus.SENT_TO_PARENT)
 
     reports = query.order_by(models.DailyReport.date.desc()).all()
+    if current_user.role == models.UserRole.SUPERVISOR:
+        authorized_reports = []
+        for report in reports:
+            try:
+                _authorize_supervisor_report_access(db, current_user, report)
+            except HTTPException:
+                continue
+            authorized_reports.append(report)
+        reports = authorized_reports
 
     def _parent_report_payload(r: models.DailyReport) -> dict:
         meals = [name for name, eaten in (("breakfast", r.breakfast), ("snack", r.snack), ("milk", r.milk), ("lunch", r.lunch)) if eaten]
@@ -540,6 +573,8 @@ def get_daily_report_by_id(
     elif current_user.role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
         if not current_user.kindergarten_id or report.kindergarten_id != current_user.kindergarten_id:
             raise HTTPException(status_code=404, detail="Daily report not found")
+        if current_user.role == models.UserRole.SUPERVISOR:
+            _authorize_supervisor_report_access(db, current_user, report)
     elif current_user.role != models.UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized")
 
