@@ -20,8 +20,6 @@ class AppTheme {
         seedColor: primary,
         primary: primary,
         secondary: secondary,
-        tertiary: accent,
-        background: background,
         surface: cardBg,
         error: danger,
       ),

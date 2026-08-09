@@ -9,7 +9,7 @@ import 'screens/role_dashboards.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   final apiService = ApiService();
   final authRepository = AuthRepository(apiService);
   final initialUser = await authRepository.getCurrentUser();
@@ -28,7 +28,7 @@ class KinJoApp extends StatelessWidget {
       title: 'KinJo - كينجو',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      
+
       // Native Arabic RTL & English LTR Localization
       locale: const Locale('ar', 'JO'),
       supportedLocales: const [
@@ -63,61 +63,45 @@ class RoleShellScreen extends StatelessWidget {
         return SupervisorDashboardScreen(user: user);
       case UserRole.manager:
         return ManagerDashboardScreen(user: user);
-      case UserRole.admin:
-      case UserRole.unknown:
-        // Previously every unmatched role fell through to the parent screen, so
-        // an admin silently landed on a parent's dashboard. Admin has no mobile
-        // surface yet, so say that rather than show the wrong one.
-        return _UnsupportedRoleScreen(user: user);
+      default:
+        return Scaffold(
+          appBar: AppBar(title: const Text('غير مصرح')),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.block, size: 64, color: AppTheme.danger),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'دور الحساب غير مدعوم على تطبيق الهاتف.',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'حسابات المسؤولين (ADMIN) مخصصة فقط للوحة التحكم عبر الويب.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await TokenStorage.clearAll();
+                      if (context.mounted) {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => const MobileLoginScreen()),
+                        );
+                      }
+                    },
+                    child: const Text('تسجيل الخروج'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
     }
-  }
-}
-
-/// Shown to a role this app does not have a screen for.
-class _UnsupportedRoleScreen extends StatelessWidget {
-  final UserModel user;
-
-  const _UnsupportedRoleScreen({required this.user});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('KinJo'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await TokenStorage.clearAll();
-              if (!context.mounted) return;
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const MobileLoginScreen()),
-              );
-            },
-          )
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.devices_other, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text(
-              'لا توجد شاشة مخصّصة لدور ${user.role.value} في التطبيق بعد.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'يرجى استخدام نسخة الويب للوصول إلى هذه الصلاحيات.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
@@ -134,19 +118,32 @@ class _MobileLoginScreenState extends State<MobileLoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMsg;
+  bool _isRateLimited = false;
 
   Future<void> _handleLogin() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      setState(() {
+        _errorMsg = 'يُرجى أدخال اسم المستخدم وكلمة المرور.';
+        _isRateLimited = false;
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMsg = null;
+      _isRateLimited = false;
     });
 
     try {
       final apiService = ApiService();
       final authRepo = AuthRepository(apiService);
       final user = await authRepo.login(
-        username: _usernameController.text.trim(),
-        password: _passwordController.text.trim(),
+        username: username,
+        password: password,
       );
 
       if (mounted) {
@@ -154,9 +151,15 @@ class _MobileLoginScreenState extends State<MobileLoginScreen> {
           MaterialPageRoute(builder: (_) => RoleShellScreen(user: user)),
         );
       }
+    } on ApiException catch (e) {
+      setState(() {
+        _errorMsg = e.message;
+        _isRateLimited = e.isRateLimited;
+      });
     } catch (e) {
       setState(() {
         _errorMsg = e.toString().replaceAll('Exception: ', '');
+        _isRateLimited = false;
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -183,12 +186,35 @@ class _MobileLoginScreenState extends State<MobileLoginScreen> {
                 const SizedBox(height: 32),
                 if (_errorMsg != null) ...[
                   Container(
+                    width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.danger.withOpacity(0.1),
+                      color: _isRateLimited ? AppTheme.accent.withOpacity(0.15) : AppTheme.danger.withOpacity(0.1),
+                      border: Border.all(
+                        color: _isRateLimited ? AppTheme.accent : AppTheme.danger,
+                        width: 1,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(_errorMsg!, style: const TextStyle(color: AppTheme.danger)),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _isRateLimited ? Icons.hourglass_top : Icons.error_outline,
+                          color: _isRateLimited ? AppTheme.accent : AppTheme.danger,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _errorMsg!,
+                            style: TextStyle(
+                              color: _isRateLimited ? Colors.brown : AppTheme.danger,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],

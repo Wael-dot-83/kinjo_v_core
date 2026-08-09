@@ -4,13 +4,11 @@ import '../core/api/api_service.dart';
 import '../core/api/dashboard_repository.dart';
 import '../core/theme/app_theme.dart';
 import '../models/user_model.dart';
+import 'manager_operations_screen.dart';
+import 'parent_operations_screen.dart';
+import 'supervisor_roster_screen.dart';
 
 /// Shared scaffolding for the three role home screens.
-///
-/// Each screen loads one payload, and shows one of three states honestly:
-/// loading, the error with a retry, or the data. The previous versions rendered
-/// fixed text and never called the API, so a supervisor with twenty children
-/// and a supervisor with none saw exactly the same screen.
 abstract class _DashboardScreen extends StatefulWidget {
   final UserModel user;
 
@@ -54,8 +52,6 @@ abstract class _DashboardState<T extends _DashboardScreen> extends State<T> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        // Surfaced rather than swallowed: a blank screen and a failed request
-        // must not look the same.
         _error = 'تعذّر تحميل البيانات. تحقّق من الاتصال وحاول مجدداً.';
         _loading = false;
       });
@@ -156,7 +152,6 @@ class _Hero extends StatelessWidget {
   }
 }
 
-/// A number that came from the API, with the label it answers.
 class _StatTile extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -259,7 +254,26 @@ class _ParentState extends _DashboardState<ParentDashboardScreen> {
         greeting: 'أهلاً بك، ${widget.user.fullName}',
         subtitle: 'تابع أنشطة أطفالك اليومية وحالة الحضور وتقارير الروضة.',
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 16),
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ParentOperationsScreen(user: widget.user),
+              ),
+            );
+          },
+          icon: const Icon(Icons.assignment),
+          label: const Text('متابعة التقارير اليومية وتقديم إجازة'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.secondary,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
       _statGrid([
         _StatTile(
             icon: Icons.child_care,
@@ -346,7 +360,25 @@ class _SupervisorState extends _DashboardState<SupervisorDashboardScreen> {
         greeting: 'أهلاً بك، ${widget.user.fullName}',
         subtitle: 'ملخّص صفوفك ليوم ${_str(data['date'])}.',
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 16),
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => SupervisorRosterScreen(user: widget.user),
+              ),
+            );
+          },
+          icon: const Icon(Icons.assignment_turned_in),
+          label: const Text('تعبئة كشف التقارير اليومية للأطفال'),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
       _statGrid([
         _StatTile(
             icon: Icons.groups,
@@ -425,7 +457,26 @@ class _ManagerState extends _DashboardState<ManagerDashboardScreen> {
         greeting: kgName.isEmpty ? widget.user.fullName : kgName,
         subtitle: 'ملخّص عمليات الحضانة اليوم.',
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 16),
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ManagerOperationsScreen(user: widget.user),
+              ),
+            );
+          },
+          icon: const Icon(Icons.approval),
+          label: const Text('مراجعة طلبات الإجازة والتقارير اليومية'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.purpleAccent,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
       _statGrid([
         _StatTile(
             icon: Icons.people,

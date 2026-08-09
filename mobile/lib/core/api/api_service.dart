@@ -1,7 +1,30 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'api_endpoints.dart';
 import '../auth/token_storage.dart';
+
+/// Normalized Exception for KinJo API Errors
+class ApiException implements Exception {
+  final int? statusCode;
+  final String message;
+  final dynamic detail;
+
+  ApiException({
+    this.statusCode,
+    required this.message,
+    this.detail,
+  });
+
+  bool get isRateLimited => statusCode == 429;
+  bool get isUnauthorized => statusCode == 401;
+  bool get isForbidden => statusCode == 403;
+  bool get isNotFound => statusCode == 404;
+  bool get isConflict => statusCode == 409;
+  bool get isValidationError => statusCode == 422;
+
+  @override
+  String toString() => message;
+}
 
 /// Production-ready Dio HTTP Network Service Client for KinJo FastAPI Backend
 class ApiService {
@@ -38,27 +61,54 @@ class ApiService {
           return handler.next(options);
         },
         onError: (DioException error, handler) async {
-          // Handle 401 Unauthorized (Expired Session)
           if (error.response?.statusCode == 401) {
             await TokenStorage.clearAll();
-            // Optional: Trigger global logout stream / event
           }
           return handler.next(error);
         },
       ),
     );
+  }
 
-    // Logging Interceptor (Development build only)
-    _dio.interceptors.add(
-      PrettyDioLogger(
-        requestHeader: true,
-        requestBody: true,
-        responseBody: true,
-        responseHeader: false,
-        error: true,
-        compact: true,
-      ),
-    );
+  ApiException normalizeError(dynamic error) {
+    if (error is ApiException) return error;
+
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      final rawData = error.response?.data;
+      String message = 'حدث خطأ في الاتصال بالسيرفر. يُرجى التثبت من شبكة الإنترنِت والتعاوُد.';
+
+      if (statusCode == 429) {
+        message = 'لقد تجاوزت عدد المحاولات المسموح بها. يُرجى الانتظار قليلاً ثم المحاولة مرة أخرى.';
+      } else if (statusCode == 401) {
+        message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+      } else if (statusCode == 403) {
+        message = 'غير مصرح لك بإجراء هذه العملية.';
+      } else if (statusCode == 404) {
+        message = 'المورد المطلوب غير موجود.';
+      } else if (statusCode == 409) {
+        message = 'يوجد سجل مكرر أو طلب متداخل بالفعل.';
+      } else if (rawData != null) {
+        if (rawData is Map && rawData.containsKey('detail')) {
+          final detail = rawData['detail'];
+          if (detail is String) {
+            message = detail;
+          } else if (detail is Map && detail.containsKey('message')) {
+            message = detail['message'].toString();
+          }
+        }
+      } else if (error.error is SocketException) {
+        message = 'تعذّر الاتصال بالخادم. يُرجى التحقق من اتصال الإنترنت.';
+      }
+
+      return ApiException(
+        statusCode: statusCode,
+        message: message,
+        detail: rawData,
+      );
+    }
+
+    return ApiException(message: error.toString());
   }
 
   // GET Request
@@ -67,11 +117,15 @@ class ApiService {
     Map<String, dynamic>? queryParameters,
     Options? options,
   }) async {
-    return await _dio.get(
-      path,
-      queryParameters: queryParameters,
-      options: options,
-    );
+    try {
+      return await _dio.get(
+        path,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } catch (e) {
+      throw normalizeError(e);
+    }
   }
 
   // POST Request
@@ -81,12 +135,16 @@ class ApiService {
     Map<String, dynamic>? queryParameters,
     Options? options,
   }) async {
-    return await _dio.post(
-      path,
-      data: data,
-      queryParameters: queryParameters,
-      options: options,
-    );
+    try {
+      return await _dio.post(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } catch (e) {
+      throw normalizeError(e);
+    }
   }
 
   // PUT Request
@@ -96,12 +154,16 @@ class ApiService {
     Map<String, dynamic>? queryParameters,
     Options? options,
   }) async {
-    return await _dio.put(
-      path,
-      data: data,
-      queryParameters: queryParameters,
-      options: options,
-    );
+    try {
+      return await _dio.put(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } catch (e) {
+      throw normalizeError(e);
+    }
   }
 
   // DELETE Request
@@ -111,11 +173,15 @@ class ApiService {
     Map<String, dynamic>? queryParameters,
     Options? options,
   }) async {
-    return await _dio.delete(
-      path,
-      data: data,
-      queryParameters: queryParameters,
-      options: options,
-    );
+    try {
+      return await _dio.delete(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } catch (e) {
+      throw normalizeError(e);
+    }
   }
 }
