@@ -47,14 +47,28 @@ class UserModel {
     required this.email,
     this.firstName,
     this.lastName,
+    this.fullNameRaw,
     required this.role,
   });
 
+  /// Supplied whole by endpoints that do not split the name.
+  final String? fullNameRaw;
+
+  /// Best display name available, never blank.
+  ///
+  /// The endpoints disagree about shape: login returns username but no name
+  /// parts, /api/users/me returns id and role but no username, and
+  /// /api/me/profile returns full_name. Falling straight through to `username`
+  /// left the greeting empty whenever the source lacked it.
   String get fullName {
     if (firstName != null && lastName != null) {
       return '$firstName $lastName';
     }
-    return username;
+    if (fullNameRaw != null && fullNameRaw!.trim().isNotEmpty) {
+      return fullNameRaw!.trim();
+    }
+    if (username.isNotEmpty) return username;
+    return email;
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -64,6 +78,7 @@ class UserModel {
       email: json['email'] ?? '',
       firstName: json['first_name'],
       lastName: json['last_name'],
+      fullNameRaw: json['full_name'],
       role: UserRoleExtension.fromString(json['role']),
     );
   }

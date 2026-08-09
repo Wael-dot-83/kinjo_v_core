@@ -15,7 +15,12 @@ class ApiEndpoints {
   static const String login = '/api/auth/login';
   static const String token = '/token';
   static const String logout = '/api/auth/logout';
-  static const String me = '/api/me';
+
+  /// Current user. `/api/me` was declared here but has never existed on the
+  /// backend, and AuthRepository.getCurrentUser swallows every exception, so a
+  /// stored session silently failed to restore on each launch and the user was
+  /// sent back to the login screen with no error shown.
+  static const String me = '/api/users/me';
   static const String registerDeviceToken = '/api/notifications/register-device';
 
   // Parent Endpoints
