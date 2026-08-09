@@ -28,12 +28,22 @@ class DailyReportCreateRequest(BaseModel):
     date: str
     arrival_time: str
     leave_time: str
+    mood: Optional[str] = None
+    health_notes: Optional[str] = None
     breakfast: Optional[bool] = None
     snack: Optional[bool] = None
     milk: Optional[bool] = None
     lunch: Optional[bool] = None
+    breakfast_time: Optional[str] = None
+    snack_time: Optional[str] = None
+    milk_time: Optional[str] = None
+    lunch_time: Optional[str] = None
     nap_start: Optional[str] = None
     nap_end: Optional[str] = None
+    nap_duration_minutes: Optional[int] = Field(default=None, ge=0)
+    bathroom_count: Optional[int] = Field(default=None, ge=0)
+    diaper_wet: Optional[bool] = None
+    diaper_soiled: Optional[bool] = None
     activities: Optional[str] = None
     notes: Optional[str] = None
 
@@ -52,6 +62,13 @@ class DailyReportCreateRequest(BaseModel):
     @classmethod
     def time_format_hhmm(cls, v: str) -> str:
         if not re.match(r"^([01]\d|2[0-3]):[0-5]\d$", v):
+            raise ValueError("time must be in HH:MM format (24-hour)")
+        return v
+
+    @field_validator("nap_start", "nap_end", "breakfast_time", "snack_time", "milk_time", "lunch_time")
+    @classmethod
+    def nap_time_format_hhmm(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not re.match(r"^([01]\d|2[0-3]):[0-5]\d$", v):
             raise ValueError("time must be in HH:MM format (24-hour)")
         return v
 
@@ -211,12 +228,22 @@ def create_daily_report(
         submitted_by=current_user.id,
         arrival_time=report_data.arrival_time,
         leave_time=report_data.leave_time,
+        mood=report_data.mood,
+        health_notes=report_data.health_notes,
         breakfast=report_data.breakfast,
         snack=report_data.snack,
         milk=report_data.milk,
         lunch=report_data.lunch,
+        breakfast_time=report_data.breakfast_time,
+        snack_time=report_data.snack_time,
+        milk_time=report_data.milk_time,
+        lunch_time=report_data.lunch_time,
         nap_start=report_data.nap_start,
         nap_end=report_data.nap_end,
+        nap_duration_minutes=report_data.nap_duration_minutes,
+        bathroom_count=report_data.bathroom_count,
+        diaper_wet=report_data.diaper_wet,
+        diaper_soiled=report_data.diaper_soiled,
         activities=report_data.activities,
         notes=report_data.notes,
     )
@@ -252,8 +279,16 @@ class RosterEntry(BaseModel):
     snack: Optional[bool] = None
     milk: Optional[bool] = None
     lunch: Optional[bool] = None
+    breakfast_time: Optional[str] = None
+    snack_time: Optional[str] = None
+    milk_time: Optional[str] = None
+    lunch_time: Optional[str] = None
     nap_start: Optional[str] = None
     nap_end: Optional[str] = None
+    nap_duration_minutes: Optional[int] = Field(default=None, ge=0)
+    bathroom_count: Optional[int] = Field(default=None, ge=0)
+    diaper_wet: Optional[bool] = None
+    diaper_soiled: Optional[bool] = None
     activities: Optional[str] = None
     notes: Optional[str] = None
     health_notes: Optional[str] = None
@@ -270,6 +305,10 @@ class RosterBatchRequest(BaseModel):
     snack: Optional[bool] = None
     milk: Optional[bool] = None
     lunch: Optional[bool] = None
+    breakfast_time: Optional[str] = None
+    snack_time: Optional[str] = None
+    milk_time: Optional[str] = None
+    lunch_time: Optional[str] = None
     children: list[RosterEntry] = Field(min_length=1, max_length=60)
 
     @field_validator("date")
@@ -297,27 +336,6 @@ def create_daily_reports_batch(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """File a whole class's daily reports in one request (Supervisor only).
-
-    Filing reports one child at a time meant a supervisor walked the same
-    twenty-field form once per child, re-entering near-identical arrival, leave
-    and meal values every time. Here those are sent once and each row carries
-    only its exceptions.
-
-    Deliberately 207, not 201. A class is not all-or-nothing: one child may be
-    absent, another may already have a report from this morning, a third may
-    have an incomplete profile. Failing the whole batch on any of those would
-    make the screen unusable on exactly the days it matters. Every child is
-    therefore reported individually and the successes are kept.
-
-    Each child is written inside its own SAVEPOINT so a failure rolls back only
-    that row — without it, one IntegrityError would poison the session and lose
-    the reports that had already succeeded.
-
-    Authorisation is not relaxed for being a batch: every child goes through the
-    same _authorize_report_for_child gates as the single-create endpoint, so a
-    child outside the caller's class or kindergarten is refused here too.
-    """
     if current_user.role != models.UserRole.SUPERVISOR:
         raise HTTPException(status_code=403, detail="Only supervisors can create daily reports")
 
@@ -352,8 +370,16 @@ def create_daily_reports_batch(
                     snack=entry.snack if entry.snack is not None else payload.snack,
                     milk=entry.milk if entry.milk is not None else payload.milk,
                     lunch=entry.lunch if entry.lunch is not None else payload.lunch,
+                    breakfast_time=entry.breakfast_time or payload.breakfast_time,
+                    snack_time=entry.snack_time or payload.snack_time,
+                    milk_time=entry.milk_time or payload.milk_time,
+                    lunch_time=entry.lunch_time or payload.lunch_time,
                     nap_start=entry.nap_start,
                     nap_end=entry.nap_end,
+                    nap_duration_minutes=entry.nap_duration_minutes,
+                    bathroom_count=entry.bathroom_count,
+                    diaper_wet=entry.diaper_wet,
+                    diaper_soiled=entry.diaper_soiled,
                     activities=entry.activities,
                     notes=entry.notes,
                 )
@@ -540,6 +566,10 @@ def get_child_daily_reports(
                 "snack": r.snack,
                 "milk": r.milk,
                 "lunch": r.lunch,
+                "breakfast_time": getattr(r, "breakfast_time", None),
+                "snack_time": getattr(r, "snack_time", None),
+                "milk_time": getattr(r, "milk_time", None),
+                "lunch_time": getattr(r, "lunch_time", None),
                 "nap_start": r.nap_start,
                 "nap_end": r.nap_end,
                 "nap_duration_minutes": r.nap_duration_minutes,
@@ -594,9 +624,16 @@ def get_daily_report_by_id(
         "snack": getattr(report, "snack", None),
         "milk": getattr(report, "milk", None),
         "lunch": getattr(report, "lunch", None),
+        "breakfast_time": getattr(report, "breakfast_time", None),
+        "snack_time": getattr(report, "snack_time", None),
+        "milk_time": getattr(report, "milk_time", None),
+        "lunch_time": getattr(report, "lunch_time", None),
         "nap_start": getattr(report, "nap_start", None),
         "nap_end": getattr(report, "nap_end", None),
         "nap_duration_minutes": getattr(report, "nap_duration_minutes", None),
+        "bathroom_count": getattr(report, "bathroom_count", None),
+        "diaper_wet": getattr(report, "diaper_wet", None),
+        "diaper_soiled": getattr(report, "diaper_soiled", None),
         "submitted_by": report.submitted_by,
     }
 

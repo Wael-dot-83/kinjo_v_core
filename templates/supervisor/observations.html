@@ -58,7 +58,12 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="observationText">{% if ui_lang == 'en' %}Observation Text{% else %}نص الملاحظة{% endif %}</label>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label mb-0" for="observationText">{% if ui_lang == 'en' %}Observation Text{% else %}نص الملاحظة{% endif %}</label>
+                            <button type="button" class="btn btn-sm btn-outline-primary voice-dictation-btn py-0 px-2" data-target="observationText" title="{% if ui_lang == 'en' %}Dictate using microphone{% else %}إملاء صوتي بالميكروفون{% endif %}">
+                                <i class="bi bi-mic-fill me-1"></i><span class="btn-text">{% if ui_lang == 'en' %}Voice Input{% else %}إملاء صوتي{% endif %}</span>
+                            </button>
+                        </div>
                         <textarea class="form-control" id="observationText" rows="5" required
                             placeholder="{% if ui_lang == 'en' %}Write the educational observation clearly...{% else %}اكتب الملاحظة التربوية بشكل واضح...{% endif %}"></textarea>
                         <div class="d-flex justify-content-between mt-1">
@@ -371,6 +376,100 @@
         document.getElementById('observationText')?.addEventListener('input', updateObservationCounter);
         document.getElementById('resetObservationBtn')?.addEventListener('click', resetObservationForm);
         document.getElementById('observationForm')?.addEventListener('submit', submitObservation);
+        initVoiceDictation();
     });
+
+    // Voice Dictation (Microphone Speech-to-Text)
+    function initVoiceDictation() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        document.querySelectorAll('.voice-dictation-btn').forEach(btn => {
+            const targetId = btn.getAttribute('data-target');
+            const targetInput = document.getElementById(targetId);
+            if (!targetInput) return;
+
+            if (!SpeechRecognition) {
+                btn.addEventListener('click', () => {
+                    alert(T(
+                        'عفواً، الإملاء الصوتي غير مدعوم في متصفحك الحالي. يرجى استخدام Chrome أو Edge أو Safari.',
+                        'Voice dictation is not supported in your browser. Please use Chrome, Edge, or Safari.'
+                    ));
+                });
+                return;
+            }
+
+            let recognition = null;
+            let isRecording = false;
+
+            btn.addEventListener('click', () => {
+                if (isRecording && recognition) {
+                    recognition.stop();
+                    return;
+                }
+
+                try {
+                    recognition = new SpeechRecognition();
+                    recognition.lang = IS_EN ? 'en-US' : 'ar-JO';
+                    recognition.interimResults = false;
+                    recognition.continuous = false;
+
+                    const originalContent = btn.innerHTML;
+
+                    recognition.onstart = () => {
+                        isRecording = true;
+                        btn.classList.remove('btn-outline-primary');
+                        btn.classList.add('btn-danger', 'animate-mic-pulse');
+                        btn.innerHTML = `<i class="bi bi-record-circle-fill me-1"></i> <span>${T('جاري الاستماع...', 'Listening...')}</span>`;
+                    };
+
+                    recognition.onresult = (event) => {
+                        let transcript = '';
+                        for (let i = event.resultIndex; i < event.results.length; i++) {
+                            if (event.results[i].isFinal) {
+                                transcript += event.results[i][0].transcript;
+                            }
+                        }
+                        if (transcript) {
+                            const currentVal = targetInput.value ? targetInput.value.trim() : '';
+                            targetInput.value = currentVal ? currentVal + ' ' + transcript : transcript;
+                            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    };
+
+                    recognition.onerror = (event) => {
+                        console.warn('[VoiceDictation] Error:', event.error);
+                        isRecording = false;
+                        btn.classList.remove('btn-danger', 'animate-mic-pulse');
+                        btn.classList.add('btn-outline-primary');
+                        btn.innerHTML = originalContent;
+                    };
+
+                    recognition.onend = () => {
+                        isRecording = false;
+                        btn.classList.remove('btn-danger', 'animate-mic-pulse');
+                        btn.classList.add('btn-outline-primary');
+                        btn.innerHTML = originalContent;
+                    };
+
+                    recognition.start();
+                } catch (err) {
+                    console.error('[VoiceDictation] Exception:', err);
+                }
+            });
+        });
+    }
 </script>
+
+<style>
+@keyframes micPulseAnimation {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.85; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.animate-mic-pulse {
+    animation: micPulseAnimation 1.2s infinite ease-in-out;
+    box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+}
+</style>
 {% endblock %}

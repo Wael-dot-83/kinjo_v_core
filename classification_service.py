@@ -272,13 +272,16 @@ class SupervisorPerformanceSummaryResponse(BaseModel):
     period_end: date
     supervisor_id: int
     final_score: Optional[float]
+    band_code: Optional[str] = None
     band_label: str
+    band_label_en: str = "Unclassified"
     coverage_pct: float
     sample_size: int
     aspects: Dict[str, float]
     insufficient_data: bool
     insufficient_reason: Optional[str]
     indicator_explanations: List[Dict[str, str]]
+    action_guidance: List[Dict[str, str]] = []
 
 
 class ParentQualityBandResponse(BaseModel):
@@ -978,6 +981,9 @@ class BenchmarkingService:
                         "area": kg.area,
                     },
                     aspects={
+                        "attendance_consistency": attendance_rate,
+                        "report_completion": report_rate,
+                        "report_timeliness": timeliness_rate,
                         "اكتمال_الحضور": attendance_rate,
                         "اكتمال_التقارير": report_rate,
                         "الالتزام_بالوقت": timeliness_rate,
@@ -1906,18 +1912,70 @@ def get_supervisor_performance_summary(request: Request,
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No evaluation available for supervisor")
 
+    # Personalized action guidance based on aspect scores
+    action_guidance = []
+    aspects_map = row.aspects or {}
+    att_score = aspects_map.get("attendance_consistency", 100.0)
+    rep_score = aspects_map.get("report_completion", 100.0)
+    time_score = aspects_map.get("report_timeliness", 100.0)
+
+    if att_score < 85.0:
+        action_guidance.append({
+            "ar": "تأكد من تسجيل الحضور اليومي لجميع الأطفال في صفوفك فور وصولهم لرفع نسبة اتساق الحضور.",
+            "en": "Ensure daily attendance is recorded for all children in your assigned classes as soon as they arrive."
+        })
+    if rep_score < 85.0:
+        action_guidance.append({
+            "ar": "قم بإعداد وتعبئة التقارير اليومية لجميع الأطفال دون تخطي أي طفل لتحسين نسبة إكمال التقارير.",
+            "en": "Fill out daily reports for all children without skipping any student to improve report completion."
+        })
+    if time_score < 85.0:
+        action_guidance.append({
+            "ar": "يُفضل حفظ وإرسال التقارير اليومية قبل نهاية اليوم الدراسي لرفع درجة الالتزام بالوقت.",
+            "en": "Save and submit daily reports before the end of the school day to increase your timeliness score."
+        })
+    if not action_guidance and row.final_score and row.final_score >= 85.0:
+        action_guidance.append({
+            "ar": "أداؤك المهني ممتاز ومستمر في الارتفاع! حافظ على الدقة والسرعة في إدخال بيانات الأطفال.",
+            "en": "Your professional performance is outstanding! Maintain your high accuracy and promptness."
+        })
+
+    supervisor_indicator_explanations = [
+        {
+            "indicator": "اتساق الحضور (وزن 40%)",
+            "indicator_en": "Attendance Consistency (40% weight)",
+            "meaning": "نسبة تسجيل الحضور اليومي للأطفال المسجلين في الصفوف المسندة إليك.",
+            "meaning_en": "Percentage of daily attendance logged for children enrolled in your assigned classes."
+        },
+        {
+            "indicator": "اكتمال التقارير (وزن 40%)",
+            "indicator_en": "Report Completion (40% weight)",
+            "meaning": "نسبة إعداد التقارير اليومية الشاملة للأطفال مقارنة بأيام العمل المتوقعة.",
+            "meaning_en": "Percentage of comprehensive daily reports submitted compared to expected working days."
+        },
+        {
+            "indicator": "الالتزام بوقت التقرير (وزن 20%)",
+            "indicator_en": "Report Timeliness (20% weight)",
+            "meaning": "نسبة إرسال التقرير اليومي في نفس تاريخ اليوم المستهدف دون تأخير.",
+            "meaning_en": "Percentage of daily reports submitted on the target date without delay."
+        }
+    ]
+
     return SupervisorPerformanceSummaryResponse(
         period_start=period_start,
         period_end=period_end,
         supervisor_id=current_user.id,
         final_score=row.final_score,
+        band_code=row.band_code,
         band_label=row.band_label,
+        band_label_en=_band_label_en(row.band_code),
         coverage_pct=row.coverage_pct,
         sample_size=row.sample_size,
         aspects=row.aspects,
         insufficient_data=row.insufficient_data,
         insufficient_reason=row.insufficient_reason,
-        indicator_explanations=BenchmarkingService._indicator_explanations(),
+        indicator_explanations=supervisor_indicator_explanations,
+        action_guidance=action_guidance,
     )
 
 

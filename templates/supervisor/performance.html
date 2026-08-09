@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if ui_lang == 'en' %}Professional Performance{% else %}الأداء المهني{% endif %}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Professional Performance{% else %}الأداء المهني{% endif %} — KinJo{% endblock %}
 
 {% block page_header %}
 <div class="row pt-4 pb-2 mb-3 border-bottom align-items-center">
@@ -11,90 +11,449 @@
                 <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Professional Performance{% else %}الأداء المهني{% endif %}</li>
             </ol>
         </nav>
-        <h1 class="h3 fw-bold mb-1">{% if ui_lang == 'en' %}Supervisor Professional Performance Summary{% else %}ملخص الأداء المهني للمشرف{% endif %}</h1>
-        <p class="text-muted small mb-0">{% if ui_lang == 'en' %}Shows self-performance levels in attendance, reports, and punctuality without external comparisons.{% else %}يعرض مستوى الأداء الذاتي في الحضور والتقارير والالتزام بالوقت دون أي مقارنات خارجية.{% endif %}</p>
+        <h1 class="h3 fw-bold mb-1">
+            <i class="bi bi-speedometer2 text-primary me-2"></i>
+            {% if ui_lang == 'en' %}Supervisor Professional Performance Summary{% else %}ملخص الأداء المهني للمشرف{% endif %}
+        </h1>
+        <p class="text-muted small mb-0">
+            {% if ui_lang == 'en' %}Clear, objective metrics evaluating daily attendance logging, report completion, and submission punctuality for your assigned classes.{% else %}مؤشرات موضوعية وواضحة تقيّم اتساق تسجيل الحضور، واكتمال التقارير اليومية، والالتزام بالوقت للصفوف المسندة إليك.{% endif %}
+        </p>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 <div id="supervisorPerformanceRoot">
-    <div class="card shadow-sm border-0 mb-3">
+    <!-- Filter Bar & Date Presets -->
+    <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
             <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}</label>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small text-secondary" for="supervisorPeriodStart">
+                        <i class="bi bi-calendar-event me-1"></i>{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}
+                    </label>
                     <input id="supervisorPeriodStart" type="date" class="form-control">
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}</label>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small text-secondary" for="supervisorPeriodEnd">
+                        <i class="bi bi-calendar-check me-1"></i>{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}
+                    </label>
                     <input id="supervisorPeriodEnd" type="date" class="form-control">
                 </div>
-                <div class="col-md-4">
-                    <button id="supervisorPerformanceLoadBtn" class="btn btn-primary w-100">{% if ui_lang == 'en' %}Show Summary{% else %}عرض الملخص{% endif %}</button>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small text-secondary">
+                        <i class="bi bi-lightning-charge me-1"></i>{% if ui_lang == 'en' %}Quick Presets{% else %}فترات سريعة{% endif %}
+                    </label>
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-secondary btn-sm preset-btn" data-days="30">{% if ui_lang == 'en' %}30 Days{% else %}30 يوماً{% endif %}</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm preset-btn" data-days="90">{% if ui_lang == 'en' %}90 Days{% else %}90 يوماً{% endif %}</button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button id="supervisorPerformanceLoadBtn" class="btn btn-primary w-100 fw-semibold">
+                        <i class="bi bi-arrow-repeat me-1"></i>
+                        <span class="btn-text">{% if ui_lang == 'en' %}Update Summary{% else %}تحديث الملخص{% endif %}</span>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="supervisorPerformanceError" class="alert alert-danger d-none"></div>
+    <div id="supervisorPerformanceError" class="alert alert-danger d-none shadow-sm"></div>
 
-    <div class="row g-3 mb-3">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+    <!-- Stat Counter Cards -->
+    <div class="row g-3 mb-4">
+        <!-- Final Score -->
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 position-relative overflow-hidden" id="cardFinalScore">
                 <div class="card-body">
-                    <div class="text-muted small">{% if ui_lang == 'en' %}Final Score{% else %}الدرجة النهائية{% endif %}</div>
-                    <div id="supervisorFinalScore" class="display-6 fw-bold">--</div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted small fw-semibold">{% if ui_lang == 'en' %}Final Score{% else %}الدرجة النهائية{% endif %}</span>
+                        <i class="bi bi-award fs-5 text-primary"></i>
+                    </div>
+                    <div id="supervisorFinalScore" class="display-6 fw-bold my-1">--</div>
+                    <small class="text-muted">{% if ui_lang == 'en' %}Out of 100 points{% else %}من 100 نقطة{% endif %}</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+
+        <!-- Performance Band -->
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 position-relative overflow-hidden" id="cardBandLabel">
                 <div class="card-body">
-                    <div class="text-muted small">{% if ui_lang == 'en' %}Performance Band{% else %}مجال الأداء{% endif %}</div>
-                    <div id="supervisorBandLabel" class="display-6 fw-bold">--</div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted small fw-semibold">{% if ui_lang == 'en' %}Performance Level{% else %}مستوى الأداء{% endif %}</span>
+                        <i class="bi bi-shield-check fs-5 text-primary"></i>
+                    </div>
+                    <div id="supervisorBandLabel" class="display-6 fw-bold my-1 fs-3">--</div>
+                    <small class="text-muted" id="supervisorBandSubtext">{% if ui_lang == 'en' %}Current rating band{% else %}التصنيف الحالي{% endif %}</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+
+        <!-- Data Coverage -->
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 position-relative overflow-hidden">
                 <div class="card-body">
-                    <div class="text-muted small">{% if ui_lang == 'en' %}Data Coverage{% else %}تغطية البيانات{% endif %}</div>
-                    <div id="supervisorCoverage" class="display-6 fw-bold">--</div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted small fw-semibold">{% if ui_lang == 'en' %}Data Coverage{% else %}تغطية البيانات{% endif %}</span>
+                        <i class="bi bi-database-check fs-5 text-primary"></i>
+                    </div>
+                    <div id="supervisorCoverage" class="display-6 fw-bold my-1">--</div>
+                    <div class="progress mt-2" style="height: 6px;">
+                        <div id="supervisorCoverageProgressBar" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+
+        <!-- Sample Size -->
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 position-relative overflow-hidden">
                 <div class="card-body">
-                    <div class="text-muted small">{% if ui_lang == 'en' %}Sample Size{% else %}حجم العينة{% endif %}</div>
-                    <div id="supervisorSampleSize" class="display-6 fw-bold">--</div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted small fw-semibold">{% if ui_lang == 'en' %}Sample Opportunities{% else %}فرص التقييم{% endif %}</span>
+                        <i class="bi bi-people-fill fs-5 text-primary"></i>
+                    </div>
+                    <div id="supervisorSampleSize" class="display-6 fw-bold my-1">--</div>
+                    <small class="text-muted">{% if ui_lang == 'en' %}Expected child-days{% else %}طفل/يوم متوقع{% endif %}</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm mb-3">
+    <!-- Actionable Advice & Recommendations Card -->
+    <div id="supervisorActionGuidanceCard" class="card border-0 shadow-sm mb-4 bg-primary-subtle border-start border-primary border-4 d-none">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="fw-bold mb-0">{% if ui_lang == 'en' %}Indicators Chart{% else %}مخطط المؤشرات{% endif %}</h6>
-                <small class="text-muted">{% if ui_lang == 'en' %}Shows performance levels per indicator on a 0–100 scale{% else %}يعرض مستويات الأداء لكل مؤشر على مقياس من 0 إلى 100{% endif %}</small>
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-lightbulb-fill text-primary fs-4 me-2"></i>
+                <h6 class="fw-bold mb-0 text-primary-emphasis">
+                    {% if ui_lang == 'en' %}Actionable Tips & Next Steps{% else %}نصائح وتوصيات تحسين الأداء{% endif %}
+                </h6>
             </div>
-            <div class="position-relative" style="height: 320px;">
-                <canvas id="supervisorPerformanceChart" aria-label="{% if ui_lang == 'en' %}Performance Indicators Chart{% else %}مخطط مؤشرات الأداء{% endif %}"></canvas>
+            <ul id="supervisorActionGuidanceList" class="mb-0 ps-3 small text-secondary-emphasis"></ul>
+        </div>
+    </div>
+
+    <!-- Charts & Breakdown Section -->
+    <div class="row g-4 mb-4">
+        <!-- Radar Chart -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">
+                            <i class="bi bi-pie-chart-fill text-primary me-2"></i>
+                            {% if ui_lang == 'en' %}Indicators Chart{% else %}مخطط المؤشرات{% endif %}
+                        </h6>
+                        <small class="text-muted">{% if ui_lang == 'en' %}Scale 0–100{% else %}مقياس 0–100{% endif %}</small>
+                    </div>
+                    <div class="position-relative" style="height: 320px;">
+                        <canvas id="supervisorPerformanceChart" aria-label="{% if ui_lang == 'en' %}Performance Indicators Chart{% else %}مخطط مؤشرات الأداء{% endif %}"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Breakdown List with Progress Bars -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-list-task text-primary me-2"></i>
+                        {% if ui_lang == 'en' %}Indicators Breakdown{% else %}تفصيل المؤشرات والوزن النسبية{% endif %}
+                    </h6>
+                    <div id="supervisorAspectsContainer">
+                        <ul id="supervisorAspectsList" class="list-group list-group-flush"></ul>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <h6 class="fw-bold">{% if ui_lang == 'en' %}Indicators Breakdown{% else %}تفصيل المؤشرات{% endif %}</h6>
-            <ul id="supervisorAspectsList" class="list-group list-group-flush"></ul>
+    <!-- How the Final Score is Calculated — Full Explanation -->
+    <div class="card border-0 shadow-sm mb-4" id="supervisorScoringGuideCard">
+        <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between"
+             style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#scoringGuideBody" aria-expanded="false">
+            <h6 class="fw-bold mb-0">
+                <i class="bi bi-calculator text-primary me-2"></i>
+                {% if ui_lang == 'en' %}How Is Your Final Score Calculated?{% else %}كيف يتم احتساب درجتك النهائية؟{% endif %}
+            </h6>
+            <i class="bi bi-chevron-down text-muted" id="scoringGuideChevron"></i>
+        </div>
+        <div class="collapse" id="scoringGuideBody">
+            <div class="card-body p-4">
+
+                <!-- Intro Banner -->
+                <div class="alert alert-primary border-0 mb-4 d-flex align-items-start gap-3" role="alert">
+                    <i class="bi bi-lightbulb-fill fs-4 mt-1 flex-shrink-0"></i>
+                    <div>
+                        {% if ui_lang == 'en' %}
+                        Your <strong>Final Score</strong> is a number from <strong>0 to 100</strong> that reflects how consistently you recorded child attendance, submitted daily reports, and submitted them on time during the selected period. The higher the score, the better.
+                        {% else %}
+                        <strong>درجتك النهائية</strong> هي رقم من <strong>0 إلى 100</strong> يعكس مدى انتظامك في تسجيل حضور الأطفال، وإرسال التقارير اليومية، والالتزام بمواعيد إرسالها خلال الفترة المحددة. كلما ارتفعت الدرجة، كان أداؤك أفضل.
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Three Pillars -->
+                <h6 class="fw-bold text-dark mb-3">
+                    <i class="bi bi-bar-chart-steps text-primary me-2"></i>
+                    {% if ui_lang == 'en' %}The Three Pillars of Your Score{% else %}ثلاثة محاور يُبنى عليها التقييم{% endif %}
+                </h6>
+
+                <div class="row g-3 mb-4">
+
+                    <!-- Pillar 1 -->
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 bg-primary-subtle rounded-3">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-primary fs-6 me-2 rounded-circle px-2 py-1">1</span>
+                                    <span class="fw-bold text-primary-emphasis small">
+                                        {% if ui_lang == 'en' %}Attendance Consistency{% else %}اتساق تسجيل الحضور{% endif %}
+                                    </span>
+                                </div>
+                                <div class="display-6 fw-bold text-primary mb-1">40%</div>
+                                <p class="small text-secondary mb-2">
+                                    {% if ui_lang == 'en' %}
+                                    Measures how often you recorded attendance for your class on the expected working days.
+                                    {% else %}
+                                    يقيس عدد أيام تسجيل الحضور مقارنةً بأيام العمل المتوقعة للصفوف المسندة إليك.
+                                    {% endif %}
+                                </p>
+                                <div class="bg-white rounded-2 p-2 border border-primary-subtle">
+                                    <code class="text-primary small d-block text-center">
+                                        {% if ui_lang == 'en' %}
+                                        (Days Recorded ÷ Expected Days) × 100
+                                        {% else %}
+                                        (أيام التسجيل ÷ الأيام المتوقعة) × 100
+                                        {% endif %}
+                                    </code>
+                                </div>
+                                <p class="small text-muted mt-2 mb-0">
+                                    {% if ui_lang == 'en' %}
+                                    <i class="bi bi-info-circle me-1"></i>Example: 18 days recorded out of 20 expected → <strong>90%</strong>
+                                    {% else %}
+                                    <i class="bi bi-info-circle me-1"></i>مثال: سجّلت 18 يوماً من أصل 20 يوم عمل → <strong>90%</strong>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pillar 2 -->
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 bg-success-subtle rounded-3">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-success fs-6 me-2 rounded-circle px-2 py-1">2</span>
+                                    <span class="fw-bold text-success-emphasis small">
+                                        {% if ui_lang == 'en' %}Report Completion{% else %}اكتمال التقارير{% endif %}
+                                    </span>
+                                </div>
+                                <div class="display-6 fw-bold text-success mb-1">40%</div>
+                                <p class="small text-secondary mb-2">
+                                    {% if ui_lang == 'en' %}
+                                    Measures how many daily reports you submitted compared to the number of working days expected.
+                                    {% else %}
+                                    يقيس عدد التقارير اليومية التي أرسلتها مقارنةً بأيام العمل المتوقعة.
+                                    {% endif %}
+                                </p>
+                                <div class="bg-white rounded-2 p-2 border border-success-subtle">
+                                    <code class="text-success small d-block text-center">
+                                        {% if ui_lang == 'en' %}
+                                        (Reports Submitted ÷ Expected Days) × 100
+                                        {% else %}
+                                        (التقارير المرسلة ÷ الأيام المتوقعة) × 100
+                                        {% endif %}
+                                    </code>
+                                </div>
+                                <p class="small text-muted mt-2 mb-0">
+                                    {% if ui_lang == 'en' %}
+                                    <i class="bi bi-info-circle me-1"></i>Example: 17 reports out of 20 expected → <strong>85%</strong>
+                                    {% else %}
+                                    <i class="bi bi-info-circle me-1"></i>مثال: أرسلت 17 تقريراً من أصل 20 → <strong>85%</strong>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pillar 3 -->
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 bg-warning-subtle rounded-3">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-warning text-dark fs-6 me-2 rounded-circle px-2 py-1">3</span>
+                                    <span class="fw-bold text-warning-emphasis small">
+                                        {% if ui_lang == 'en' %}Report Timeliness{% else %}الالتزام بالوقت{% endif %}
+                                    </span>
+                                </div>
+                                <div class="display-6 fw-bold text-warning mb-1">20%</div>
+                                <p class="small text-secondary mb-2">
+                                    {% if ui_lang == 'en' %}
+                                    Measures the percentage of your submitted reports that were sent on time (before the daily deadline).
+                                    {% else %}
+                                    يقيس نسبة التقارير التي أرسلتها قبل انتهاء الموعد اليومي المحدد.
+                                    {% endif %}
+                                </p>
+                                <div class="bg-white rounded-2 p-2 border border-warning-subtle">
+                                    <code class="text-warning-emphasis small d-block text-center">
+                                        {% if ui_lang == 'en' %}
+                                        (On-Time Reports ÷ Total Submitted) × 100
+                                        {% else %}
+                                        (التقارير في الوقت ÷ إجمالي المرسل) × 100
+                                        {% endif %}
+                                    </code>
+                                </div>
+                                <p class="small text-muted mt-2 mb-0">
+                                    {% if ui_lang == 'en' %}
+                                    <i class="bi bi-info-circle me-1"></i>Example: 14 on-time out of 17 submitted → <strong>82%</strong>
+                                    {% else %}
+                                    <i class="bi bi-info-circle me-1"></i>مثال: 14 تقريراً بالوقت من أصل 17 مرسل → <strong>82%</strong>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- The Formula -->
+                <div class="alert alert-dark border-0 rounded-3 mb-4">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-function text-white me-2"></i>
+                        {% if ui_lang == 'en' %}The Formula{% else %}المعادلة{% endif %}
+                    </h6>
+                    <div class="bg-dark text-white rounded-2 p-3 text-center font-monospace mb-3">
+                        {% if ui_lang == 'en' %}
+                        <div class="mb-1 text-warning fw-bold">Final Score =</div>
+                        <div>(Attendance % × 40%) + (Report Completion % × 40%) + (Timeliness % × 20%)</div>
+                        <div class="text-secondary mt-1 small">÷ total active weights</div>
+                        {% else %}
+                        <div class="mb-1 text-warning fw-bold">الدرجة النهائية =</div>
+                        <div>(نسبة الحضور × 40%) + (نسبة التقارير × 40%) + (نسبة الالتزام × 20%)</div>
+                        <div class="text-secondary mt-1 small">مقسومةً على مجموع الأوزان الفعلية</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Worked Example -->
+                    <div class="text-white">
+                        <div class="fw-semibold mb-2">
+                            <i class="bi bi-pencil-square me-1 text-warning"></i>
+                            {% if ui_lang == 'en' %}Worked Example{% else %}مثال تطبيقي{% endif %}
+                        </div>
+                        <div class="row g-2 small">
+                            <div class="col-md-4">
+                                <div class="bg-white bg-opacity-10 rounded-2 p-2">
+                                    <div class="text-warning fw-bold">{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}</div>
+                                    <div>18 ÷ 20 × 100 = <strong>90%</strong></div>
+                                    <div class="text-secondary">× 40% = <strong class="text-info">36 pts</strong></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="bg-white bg-opacity-10 rounded-2 p-2">
+                                    <div class="text-warning fw-bold">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</div>
+                                    <div>17 ÷ 20 × 100 = <strong>85%</strong></div>
+                                    <div class="text-secondary">× 40% = <strong class="text-info">34 pts</strong></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="bg-white bg-opacity-10 rounded-2 p-2">
+                                    <div class="text-warning fw-bold">{% if ui_lang == 'en' %}Timeliness{% else %}الالتزام{% endif %}</div>
+                                    <div>14 ÷ 17 × 100 = <strong>82%</strong></div>
+                                    <div class="text-secondary">× 20% = <strong class="text-info">16.4 pts</strong></div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="bg-primary bg-opacity-25 rounded-2 p-2 text-center fw-bold">
+                                    {% if ui_lang == 'en' %}
+                                    Final Score = (36 + 34 + 16.4) ÷ 100 = <span class="text-warning fs-5">86.4 / 100</span> 🟢 Excellent
+                                    {% else %}
+                                    الدرجة النهائية = (36 + 34 + 16.4) ÷ 100 = <span class="text-warning fs-5">86.4 / 100</span> 🟢 ممتاز
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Bands -->
+                <h6 class="fw-bold text-dark mb-3">
+                    <i class="bi bi-award text-primary me-2"></i>
+                    {% if ui_lang == 'en' %}What Does Your Score Mean?{% else %}ماذا تعني درجتك؟{% endif %}
+                </h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-0 bg-success-subtle rounded-3 text-center p-3">
+                            <div class="display-6 mb-1">🟢</div>
+                            <div class="fw-bold text-success-emphasis fs-5">{% if ui_lang == 'en' %}Excellent{% else %}ممتاز{% endif %}</div>
+                            <div class="badge bg-success mb-2">80 – 100</div>
+                            <p class="small text-secondary mb-0">
+                                {% if ui_lang == 'en' %}Outstanding performance. You are consistently logging attendance and submitting reports on time.{% else %}أداء متميز. أنت تسجل الحضور وترسل التقارير بشكل منتظم وفي الوقت المحدد.{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 bg-warning-subtle rounded-3 text-center p-3">
+                            <div class="display-6 mb-1">🟡</div>
+                            <div class="fw-bold text-warning-emphasis fs-5">{% if ui_lang == 'en' %}Acceptable{% else %}مقبول{% endif %}</div>
+                            <div class="badge bg-warning text-dark mb-2">60 – 79</div>
+                            <p class="small text-secondary mb-0">
+                                {% if ui_lang == 'en' %}Good base, but there are gaps. Focus on daily report submission and timely delivery.{% else %}أساس جيد، لكن ثمة ثغرات. ركز على إرسال التقارير اليومية وتسليمها في الوقت المحدد.{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 bg-danger-subtle rounded-3 text-center p-3">
+                            <div class="display-6 mb-1">🔴</div>
+                            <div class="fw-bold text-danger-emphasis fs-5">{% if ui_lang == 'en' %}Needs Improvement{% else %}يحتاج تحسين{% endif %}</div>
+                            <div class="badge bg-danger mb-2">0 – 59</div>
+                            <p class="small text-secondary mb-0">
+                                {% if ui_lang == 'en' %}Significant gaps detected. Consistent attendance logging and report submission are required.{% else %}تم رصد ثغرات كبيرة. يُطلب منك الالتزام بتسجيل الحضور وإرسال التقارير يومياً.{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Important Notes -->
+                <div class="alert alert-info border-0 small mb-0">
+                    <i class="bi bi-pin-angle-fill me-2"></i>
+                    <strong>{% if ui_lang == 'en' %}Important Notes:{% else %}ملاحظات مهمة:{% endif %}</strong>
+                    <ul class="mb-0 mt-2 ps-3">
+                        <li>
+                            {% if ui_lang == 'en' %}The score is only calculated when there are at least <strong>30 working days</strong> of data in the selected period.{% else %}لا يتم احتساب الدرجة إلا إذا كانت الفترة المختارة تحتوي على <strong>30 يوم عمل</strong> على الأقل.{% endif %}
+                        </li>
+                        <li>
+                            {% if ui_lang == 'en' %}If attendance coverage or report coverage is below <strong>40%</strong>, the system marks the data as insufficient.{% else %}إذا كانت نسبة تغطية الحضور أو التقارير أقل من <strong>40%</strong>، يُصنّف النظام البيانات على أنها غير كافية.{% endif %}
+                        </li>
+                        <li>
+                            {% if ui_lang == 'en' %}Scores are capped at 100. You cannot lose points for logging <em>more</em> than expected.{% else %}الدرجة لا تتجاوز 100. لن تخسر نقاطاً إذا سجّلت حضوراً أو أرسلت تقارير أكثر من المتوقع.{% endif %}
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/supervisor_performance.js?v=1"></script>
+<script src="/static/js/supervisor_performance.js?v=2"></script>
+<script>
+    // Toggle chevron icon on collapse
+    (function () {
+        const guideBody = document.getElementById('scoringGuideBody');
+        const chevron = document.getElementById('scoringGuideChevron');
+        if (guideBody && chevron) {
+            guideBody.addEventListener('show.bs.collapse', () => {
+                chevron.classList.replace('bi-chevron-down', 'bi-chevron-up');
+            });
+            guideBody.addEventListener('hide.bs.collapse', () => {
+                chevron.classList.replace('bi-chevron-up', 'bi-chevron-down');
+            });
+        }
+    })();
+</script>
 {% endblock %}

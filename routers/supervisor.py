@@ -40,7 +40,7 @@ _OBSERVATION_IMAGE_TYPE_TO_EXT = {
 }
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, and_, or_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
@@ -796,16 +796,26 @@ class DailyReportIn(BaseModel):
     status: str = "DRAFT"  # DRAFT | SUBMITTED
     arrival_time: Optional[str] = None
     leave_time: Optional[str] = None
+    mood: Optional[str] = None
+    health_notes: Optional[str] = None
     breakfast: bool = False
     snack: bool = False
     milk: bool = False
     lunch: bool = False
+    breakfast_time: Optional[str] = None
+    snack_time: Optional[str] = None
+    milk_time: Optional[str] = None
+    lunch_time: Optional[str] = None
     nap_start: Optional[str] = None
     nap_end: Optional[str] = None
+    nap_duration_minutes: Optional[int] = Field(default=None, ge=0)
+    bathroom_count: Optional[int] = Field(default=None, ge=0)
+    diaper_wet: Optional[bool] = None
+    diaper_soiled: Optional[bool] = None
     activities: Optional[str] = None
     notes: Optional[str] = None
 
-    @field_validator("arrival_time", "leave_time", "nap_start", "nap_end")
+    @field_validator("arrival_time", "leave_time", "nap_start", "nap_end", "breakfast_time", "snack_time", "milk_time", "lunch_time")
     @classmethod
     def validate_time_format(cls, value: Optional[str]) -> Optional[str]:
         if value is not None and not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", value):
@@ -932,6 +942,10 @@ def create_daily_report(
             report.arrival_time = body.arrival_time
         if "leave_time" in provided_fields:
             report.leave_time = body.leave_time
+        if "mood" in provided_fields:
+            report.mood = body.mood
+        if "health_notes" in provided_fields:
+            report.health_notes = body.health_notes
         if "breakfast" in provided_fields:
             report.breakfast = body.breakfast
         if "snack" in provided_fields:
@@ -940,10 +954,26 @@ def create_daily_report(
             report.milk = body.milk
         if "lunch" in provided_fields:
             report.lunch = body.lunch
+        if "breakfast_time" in provided_fields:
+            report.breakfast_time = body.breakfast_time
+        if "snack_time" in provided_fields:
+            report.snack_time = body.snack_time
+        if "milk_time" in provided_fields:
+            report.milk_time = body.milk_time
+        if "lunch_time" in provided_fields:
+            report.lunch_time = body.lunch_time
         if "nap_start" in provided_fields:
             report.nap_start = body.nap_start
         if "nap_end" in provided_fields:
             report.nap_end = body.nap_end
+        if "nap_duration_minutes" in provided_fields:
+            report.nap_duration_minutes = body.nap_duration_minutes
+        if "bathroom_count" in provided_fields:
+            report.bathroom_count = body.bathroom_count
+        if "diaper_wet" in provided_fields:
+            report.diaper_wet = body.diaper_wet
+        if "diaper_soiled" in provided_fields:
+            report.diaper_soiled = body.diaper_soiled
         if "activities" in provided_fields:
             report.activities = body.activities
         if "notes" in provided_fields:
@@ -967,12 +997,22 @@ def create_daily_report(
             submitted_at=now if target_status == DailyReportStatus.SUBMITTED else None,
             arrival_time=body.arrival_time,
             leave_time=body.leave_time,
+            mood=body.mood,
+            health_notes=body.health_notes,
             breakfast=body.breakfast,
             snack=body.snack,
             milk=body.milk,
             lunch=body.lunch,
+            breakfast_time=body.breakfast_time,
+            snack_time=body.snack_time,
+            milk_time=body.milk_time,
+            lunch_time=body.lunch_time,
             nap_start=body.nap_start,
             nap_end=body.nap_end,
+            nap_duration_minutes=body.nap_duration_minutes,
+            bathroom_count=body.bathroom_count,
+            diaper_wet=body.diaper_wet,
+            diaper_soiled=body.diaper_soiled,
             activities=body.activities,
             notes=body.notes,
             kindergarten_id=enrollment.kindergarten_id,
@@ -997,12 +1037,22 @@ class DailyReportPatch(BaseModel):
     status: Optional[str] = None
     arrival_time: Optional[str] = None
     leave_time: Optional[str] = None
+    mood: Optional[str] = None
+    health_notes: Optional[str] = None
     breakfast: Optional[bool] = None
     snack: Optional[bool] = None
     milk: Optional[bool] = None
     lunch: Optional[bool] = None
+    breakfast_time: Optional[str] = None
+    snack_time: Optional[str] = None
+    milk_time: Optional[str] = None
+    lunch_time: Optional[str] = None
     nap_start: Optional[str] = None
     nap_end: Optional[str] = None
+    nap_duration_minutes: Optional[int] = Field(default=None, ge=0)
+    bathroom_count: Optional[int] = Field(default=None, ge=0)
+    diaper_wet: Optional[bool] = None
+    diaper_soiled: Optional[bool] = None
     activities: Optional[str] = None
     notes: Optional[str] = None
 
@@ -1024,8 +1074,9 @@ def update_daily_report(
         raise HTTPException(status_code=403, detail="Only draft or returned reports can be edited.")
 
     now = datetime.now(_JORDAN_TZ)
-    for field in ("arrival_time", "leave_time", "breakfast", "snack", "milk",
-                  "lunch", "nap_start", "nap_end", "activities", "notes"):
+    for field in ("arrival_time", "leave_time", "mood", "health_notes", "breakfast", "snack", "milk",
+                  "lunch", "breakfast_time", "snack_time", "milk_time", "lunch_time", "nap_start", "nap_end",
+                  "nap_duration_minutes", "bathroom_count", "diaper_wet", "diaper_soiled", "activities", "notes"):
         val = getattr(body, field)
         if val is not None:
             setattr(report, field, val)

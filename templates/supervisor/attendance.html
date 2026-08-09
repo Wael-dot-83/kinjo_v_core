@@ -159,9 +159,39 @@
     </div>
 </div>
 
+<!-- Mark Late Modal -->
+<div class="modal fade" id="lateModal" tabindex="-1" aria-labelledby="lateModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-700" id="lateModalLabel">
+                    <i class="bi bi-clock-history text-warning me-2"></i>
+                    {{ _('تسجيل تأخير الطفل') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">{{ _('تسجيل تأخير الطفل') }} <strong id="lateChildName"></strong></p>
+                <div class="mb-3">
+                    <label class="form-label small text-muted" for="lateReasonInput">{{ _('سبب التأخير (اختياري)') }}</label>
+                    <input type="text" id="lateReasonInput" class="form-control" placeholder="{{ _('مثال: مواصلات، ظروف عائلية...') }}">
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                <button type="button" class="btn btn-warning" id="confirmLateBtn" onclick="confirmMarkLate()">
+                    <span class="btn-text"><i class="bi bi-clock me-1"></i>{{ _('تسجيل تأخير') }}</span>
+                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 .status-present { color:var(--kinjo-success);font-weight:700; }
 .status-absent  { color:var(--kinjo-danger);font-weight:700; }
+.status-late    { color:#d97706;font-weight:700; }
 .status-checked-out { color:#64748b;font-weight:700; }
 .status-not-arrived { color:var(--kinjo-text-muted); }
 .bg-success-subtle { background:rgba(16,185,129,0.1); }
@@ -175,9 +205,9 @@
 
     const TODAY = new Date().toISOString().slice(0, 10);
     let pendingAbsentChildId = null;
+    let pendingLateChildId = null;
     let absentModal = null;
-
-
+    let lateModal = null;
 
     // Init date picker
     const picker = document.getElementById('attendanceDatePicker');
@@ -186,6 +216,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         absentModal = new bootstrap.Modal(document.getElementById('absentModal'));
+        lateModal = new bootstrap.Modal(document.getElementById('lateModal'));
         updateTableDateLabel(TODAY);
         loadAttendance();
     });
@@ -223,7 +254,7 @@
                 return;
             }
 
-            const present = children.filter(c => c.status === 'present').length;
+            const present = children.filter(c => c.status === 'present' || c.status === 'late').length;
             const absent  = children.filter(c => c.status === 'absent').length;
             document.getElementById('statPresent').textContent = present;
             document.getElementById('statAbsent').textContent  = absent;
@@ -240,11 +271,12 @@
         }
     };
 
-    function statusBadge(status) {
+    function statusBadge(status, lateReason) {
         const map = {
-            'present':     `<span class="badge badge-soft badge-soft-success">{{ _('حاضر') }}</span>`,
-            'absent':      `<span class="badge badge-soft badge-soft-danger">{{ _('غائب') }}</span>`,
-            'checked_out': `<span class="badge badge-soft badge-soft-secondary">{{ _('غادر') }}</span>`,
+            'present':     `<span class="badge badge-soft badge-soft-success"><i class="bi bi-check-circle me-1"></i>{{ _('حاضر') }}</span>`,
+            'late':        `<span class="badge badge-soft badge-soft-warning" title="${escHtml(lateReason || '')}"><i class="bi bi-clock me-1"></i>{{ _('متأخر') }}</span>`,
+            'absent':      `<span class="badge badge-soft badge-soft-danger"><i class="bi bi-person-x me-1"></i>{{ _('غائب') }}</span>`,
+            'checked_out': `<span class="badge badge-soft badge-soft-secondary"><i class="bi bi-box-arrow-right me-1"></i>{{ _('غادر') }}</span>`,
             'not_arrived': `<span class="badge bg-light text-muted border">{{ _('لم يصل') }}</span>`,
         };
         return map[status] || `<span class="badge bg-light text-muted border">${status}</span>`;
@@ -258,15 +290,39 @@
                         aria-label="{{ _('تسجيل حضور') }} ${escHtml(child.name)}">
                     <i class="bi bi-box-arrow-in-right me-1"></i>{{ _('حضور') }}
                 </button>
+                <button class="btn btn-sm btn-outline-warning" onclick="openLateModal(${child.id},${escHtml(JSON.stringify(child.name))})"
+                        aria-label="{{ _('تسجيل تأخير') }} ${escHtml(child.name)}">
+                    <i class="bi bi-clock me-1"></i>{{ _('متأخر') }}
+                </button>
                 <button class="btn btn-sm btn-outline-danger" onclick="openAbsentModal(${child.id},${escHtml(JSON.stringify(child.name))})"
                         aria-label="{{ _('تسجيل غياب') }} ${escHtml(child.name)}">
                     <i class="bi bi-person-dash me-1"></i>{{ _('غائب') }}
                 </button>`);
-        } else if (child.status === 'present') {
+        } else if (child.status === 'present' || child.status === 'late') {
             btns.push(`
                 <button class="btn btn-sm btn-outline-secondary" onclick="checkOut(${child.id},${escHtml(JSON.stringify(child.name))})"
                         aria-label="{{ _('تسجيل خروج') }} ${escHtml(child.name)}">
                     <i class="bi bi-box-arrow-right me-1"></i>{{ _('خروج') }}
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="openAbsentModal(${child.id},${escHtml(JSON.stringify(child.name))})"
+                        title="{{ _('تعديل إلى غائب') }}">
+                    <i class="bi bi-person-dash"></i>
+                </button>`);
+        } else if (child.status === 'absent') {
+            btns.push(`
+                <button class="btn btn-sm btn-outline-success" onclick="checkIn(${child.id},${escHtml(JSON.stringify(child.name))})"
+                        aria-label="{{ _('تعديل لحضور') }} ${escHtml(child.name)}">
+                    <i class="bi bi-box-arrow-in-right me-1"></i>{{ _('حضور') }}
+                </button>
+                <button class="btn btn-sm btn-outline-warning" onclick="openLateModal(${child.id},${escHtml(JSON.stringify(child.name))})"
+                        aria-label="{{ _('تعديل لمتأخر') }} ${escHtml(child.name)}">
+                    <i class="bi bi-clock me-1"></i>{{ _('متأخر') }}
+                </button>`);
+        } else if (child.status === 'checked_out') {
+            btns.push(`
+                <button class="btn btn-sm btn-outline-success" onclick="checkIn(${child.id},${escHtml(JSON.stringify(child.name))})"
+                        title="{{ _('إعادة الدخول / حضور') }}">
+                    <i class="bi bi-arrow-return-left me-1"></i>{{ _('حضور') }}
                 </button>`);
         } else {
             btns.push(`<span class="text-muted small">—</span>`);
@@ -290,7 +346,7 @@
                 <td class="text-muted small">${escHtml(c.class_name || '—')}</td>
                 <td class="small">${c.check_in_time ? `<span class="text-success fw-600">${c.check_in_time.slice(0,5)}</span>` : '<span class="text-muted">—</span>'}</td>
                 <td class="small">${c.check_out_time ? `<span class="text-secondary fw-600">${c.check_out_time.slice(0,5)}</span>` : '<span class="text-muted">—</span>'}</td>
-                <td>${statusBadge(c.status || 'not_arrived')}</td>
+                <td>${statusBadge(c.status || 'not_arrived', c.late_reason)}</td>
                 <td>
                     <div class="d-flex gap-1 justify-content-center flex-wrap" id="actions-${c.id}">
                         ${actionButtons(c)}
@@ -300,12 +356,13 @@
     }
 
     window.checkIn = async function (childId, name) {
+        const selectedDate = document.getElementById('attendanceDatePicker').value || TODAY;
         setActionLoading(childId, true);
         try {
             const r = await fetchWithAuth('/api/supervisor/attendance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ child_id: childId, action: 'check_in' })
+                body: JSON.stringify({ child_id: childId, action: 'check_in', date: selectedDate })
             });
             if (!r.ok) throw new Error();
             showToast(`{{ _('تم تسجيل حضور') }} ${name}`, 'success');
@@ -317,12 +374,13 @@
     };
 
     window.checkOut = async function (childId, name) {
+        const selectedDate = document.getElementById('attendanceDatePicker').value || TODAY;
         setActionLoading(childId, true);
         try {
             const r = await fetchWithAuth('/api/supervisor/attendance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ child_id: childId, action: 'check_out' })
+                body: JSON.stringify({ child_id: childId, action: 'check_out', date: selectedDate })
             });
             if (!r.ok) throw new Error();
             showToast(`{{ _('تم تسجيل خروج') }} ${name}`, 'success');
@@ -341,6 +399,7 @@
 
     window.confirmMarkAbsent = async function () {
         if (!pendingAbsentChildId) return;
+        const selectedDate = document.getElementById('attendanceDatePicker').value || TODAY;
         const btn = document.getElementById('confirmAbsentBtn');
         btn.querySelector('.btn-text').classList.add('d-none');
         btn.querySelector('.btn-loading').classList.remove('d-none');
@@ -350,7 +409,7 @@
             const r = await fetchWithAuth('/api/supervisor/attendance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ child_id: pendingAbsentChildId, action: 'mark_absent' })
+                body: JSON.stringify({ child_id: pendingAbsentChildId, action: 'mark_absent', date: selectedDate })
             });
             if (!r.ok) throw new Error();
             showToast('{{ _("تم تسجيل الغياب") }}', 'success');
@@ -363,6 +422,42 @@
             btn.querySelector('.btn-loading').classList.add('d-none');
             btn.disabled = false;
             pendingAbsentChildId = null;
+        }
+    };
+
+    window.openLateModal = function (childId, name) {
+        pendingLateChildId = childId;
+        document.getElementById('lateChildName').textContent = name;
+        document.getElementById('lateReasonInput').value = '';
+        lateModal.show();
+    };
+
+    window.confirmMarkLate = async function () {
+        if (!pendingLateChildId) return;
+        const selectedDate = document.getElementById('attendanceDatePicker').value || TODAY;
+        const reason = document.getElementById('lateReasonInput').value;
+        const btn = document.getElementById('confirmLateBtn');
+        btn.querySelector('.btn-text').classList.add('d-none');
+        btn.querySelector('.btn-loading').classList.remove('d-none');
+        btn.disabled = true;
+
+        try {
+            const r = await fetchWithAuth('/api/supervisor/attendance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ child_id: pendingLateChildId, action: 'late', late_reason: reason, date: selectedDate })
+            });
+            if (!r.ok) throw new Error();
+            showToast('{{ _("تم تسجيل التأخير بنجاح") }}', 'success');
+            lateModal.hide();
+            await loadAttendance();
+        } catch {
+            showToast('{{ _("حدث خطأ في تسجيل التأخير") }}', 'error');
+        } finally {
+            btn.querySelector('.btn-text').classList.remove('d-none');
+            btn.querySelector('.btn-loading').classList.add('d-none');
+            btn.disabled = false;
+            pendingLateChildId = null;
         }
     };
 

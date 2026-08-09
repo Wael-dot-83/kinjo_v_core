@@ -809,6 +809,7 @@ class AttendanceLog(Base):
     recorded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     picked_by_name = Column(String(200), nullable=True)
     notes = Column(Text, nullable=True)
+    late_reason = Column(Text, nullable=True)
     created_at = Column(UTCDateTime, server_default=func.now())
 
     __table_args__ = (
@@ -855,6 +856,10 @@ class DailyReport(Base):
     snack = Column(Boolean, nullable=True)
     milk = Column(Boolean, nullable=True)
     lunch = Column(Boolean, nullable=True)
+    breakfast_time = Column(String(5), nullable=True)
+    snack_time = Column(String(5), nullable=True)
+    milk_time = Column(String(5), nullable=True)
+    lunch_time = Column(String(5), nullable=True)
     # Sleep
     nap_start = Column(String(5), nullable=True)
     nap_end = Column(String(5), nullable=True)

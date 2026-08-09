@@ -1,4 +1,36 @@
 (function () {
+  const IS_EN = document.documentElement.lang === 'en';
+
+  const T = {
+    attendance_consistency: IS_EN ? "Attendance Consistency" : "اتساق الحضور",
+    report_completion: IS_EN ? "Daily Report Completion" : "اكتمال التقارير اليومية",
+    report_timeliness: IS_EN ? "Report Submission Timeliness" : "الالتزام بوقت التقرير",
+    "اكتمال_الحضور": IS_EN ? "Attendance Consistency" : "اتساق الحضور",
+    "اكتمال_التقارير": IS_EN ? "Daily Report Completion" : "اكتمال التقارير اليومية",
+    "الالتزام_بالوقت": IS_EN ? "Report Submission Timeliness" : "الالتزام بوقت التقرير",
+    overall: IS_EN ? "Overall Performance" : "الأداء العام",
+    unspecified: IS_EN ? "Unspecified Metric" : "مؤشر غير محدد",
+    noData: IS_EN ? "No sufficient evaluation data for this period" : "لا توجد بيانات كافية للمؤشرات التفصيلية بهذه الفترة",
+    insufficientPrefix: IS_EN ? "Current data is insufficient" : "البيانات الحالية غير كافية",
+    invalidPeriod: IS_EN ? "Start date must be before end date" : "تاريخ بداية الفترة يجب أن يسبق تاريخ نهاية الفترة",
+    fetchError: IS_EN ? "Failed to load professional performance summary" : "تعذر تحميل ملخص الأداء المهني.",
+    chartSeriesLabel: IS_EN ? "Performance Score" : "مستوى الأداء",
+    notAvailable: IS_EN ? "N/A" : "غير متاح",
+    unclassified: IS_EN ? "Unclassified" : "غير مصنف",
+    weight: IS_EN ? "Weight" : "الوزن"
+  };
+
+  const ASPECT_METADATA = {
+    attendance_consistency: { weight: "40%", icon: "bi-calendar-check" },
+    report_completion: { weight: "40%", icon: "bi-journal-check" },
+    report_timeliness: { weight: "20%", icon: "bi-clock-history" },
+    "اكتمال_الحضور": { weight: "40%", icon: "bi-calendar-check" },
+    "اكتمال_التقارير": { weight: "40%", icon: "bi-journal-check" },
+    "الالتزام_بالوقت": { weight: "20%", icon: "bi-clock-history" }
+  };
+
+  let performanceChart = null;
+
   function authHeaders() {
     return { "Content-Type": "application/json" };
   }
@@ -6,29 +38,19 @@
   async function apiRequest(url) {
     const headers = authHeaders();
     let response = null;
-
     if (typeof window.fetchWithAuth === "function") {
       response = await window.fetchWithAuth(url, { headers });
-      if (!response) {
-        throw new Error(
-          "\u064a\u062a\u0637\u0644\u0628 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644"
-        );
-      }
     } else {
       response = await fetch(url, { headers });
     }
-
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      throw new Error(
-        payload.detail ||
-          "\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a"
-      );
+    if (!response || !response.ok) {
+      const payload = await response?.json().catch(() => ({})) || {};
+      throw new Error(payload.detail || T.fetchError);
     }
     return response.json();
   }
 
-  function formatNumber(value, digits = 2) {
+  function formatNumber(value, digits = 1) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
       return "--";
     }
@@ -42,24 +64,20 @@
     return `${year}-${month}-${day}`;
   }
 
-  function defaultPeriod() {
+  function defaultPeriod(days = 30) {
     const endInput = document.getElementById("supervisorPeriodEnd");
     const startInput = document.getElementById("supervisorPeriodStart");
-    if (!endInput || !startInput) {
-      return;
-    }
+    if (!endInput || !startInput) return;
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 29);
+    startDate.setDate(endDate.getDate() - (days - 1));
     endInput.value = formatDateValue(endDate);
     startInput.value = formatDateValue(startDate);
   }
 
   function showError(message) {
     const box = document.getElementById("supervisorPerformanceError");
-    if (!box) {
-      return;
-    }
+    if (!box) return;
     if (message) {
       box.textContent = message;
       box.classList.remove("d-none");
@@ -69,108 +87,201 @@
     }
   }
 
-  const ASPECT_LABELS_AR = {
-    attendance_consistency: "\u0627\u062a\u0633\u0627\u0642 \u0627\u0644\u062d\u0636\u0648\u0631",
-    report_timeliness:
-      "\u0627\u0644\u0627\u0644\u062a\u0632\u0627\u0645 \u0628\u0648\u0642\u062a \u0627\u0644\u062a\u0642\u0631\u064a\u0631",
-    report_quality: "\u062c\u0648\u062f\u0629 \u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631",
-    engagement:
-      "\u0627\u0644\u062a\u0641\u0627\u0639\u0644 \u0627\u0644\u062a\u0631\u0628\u0648\u064a",
-    communication: "\u0627\u0644\u062a\u0648\u0627\u0635\u0644",
-    safeguarding: "\u0627\u0644\u0633\u0644\u0627\u0645\u0629",
-    overall: "\u0627\u0644\u0623\u062f\u0627\u0621 \u0627\u0644\u0639\u0627\u0645",
-  };
-  const NO_ASPECT_DATA_TEXT =
-    "\u0644\u0627 \u062a\u0648\u062c\u062f \u0628\u064a\u0627\u0646\u0627\u062a \u0643\u0627\u0641\u064a\u0629 \u0644\u0644\u0645\u0624\u0634\u0631\u0627\u062a \u0627\u0644\u062a\u0641\u0635\u064a\u0644\u064a\u0629";
-  const INSUFFICIENT_DATA_PREFIX =
-    "\u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u062d\u0627\u0644\u064a\u0629 \u063a\u064a\u0631 \u0643\u0627\u0641\u064a\u0629";
-  const FINAL_SCORE_LABEL =
-    "\u0627\u0644\u062f\u0631\u062c\u0629 \u0627\u0644\u0646\u0647\u0627\u0626\u064a\u0629";
-  const CHART_SERIES_LABEL = "\u0645\u0633\u062a\u0648\u0649 \u0627\u0644\u0623\u062f\u0627\u0621";
-  const INVALID_PERIOD_TEXT =
-    "\u062a\u0627\u0631\u064a\u062e \u0628\u062f\u0627\u064a\u0629 \u0627\u0644\u0641\u062a\u0631\u0629 \u064a\u062c\u0628 \u0623\u0646 \u064a\u0633\u0628\u0642 \u062a\u0627\u0631\u064a\u062e \u0646\u0647\u0627\u064a\u0629 \u0627\u0644\u0641\u062a\u0631\u0629";
-  let performanceChart = null;
+  function getBandStyle(bandCode, finalScore) {
+    const code = String(bandCode || "").toUpperCase();
+    const score = Number(finalScore);
 
-  function aspectLabel(key) {
-    const normalized = String(key || "").trim();
-    if (!normalized) return "\u063a\u064a\u0631 \u0645\u062d\u062f\u062f";
-    if (ASPECT_LABELS_AR[normalized]) return ASPECT_LABELS_AR[normalized];
-    return "\u0645\u0624\u0634\u0631 \u0625\u0636\u0627\u0641\u064a";
+    if (code === "GREEN" || score >= 85) {
+      return {
+        badgeBg: "bg-success",
+        textColor: "text-success",
+        borderColor: "border-success",
+        progressClass: "bg-success"
+      };
+    } else if (code === "AMBER" || (score >= 65 && score < 85)) {
+      return {
+        badgeBg: "bg-warning text-dark",
+        textColor: "text-warning-emphasis",
+        borderColor: "border-warning",
+        progressClass: "bg-warning"
+      };
+    } else if (code === "RED" || (score > 0 && score < 65)) {
+      return {
+        badgeBg: "bg-danger",
+        textColor: "text-danger",
+        borderColor: "border-danger",
+        progressClass: "bg-danger"
+      };
+    }
+    return {
+      badgeBg: "bg-secondary",
+      textColor: "text-secondary",
+      borderColor: "border-secondary",
+      progressClass: "bg-secondary"
+    };
   }
 
   function renderSummary(data) {
     const finalScoreEl = document.getElementById("supervisorFinalScore");
     const bandLabelEl = document.getElementById("supervisorBandLabel");
+    const bandSubtextEl = document.getElementById("supervisorBandSubtext");
     const coverageEl = document.getElementById("supervisorCoverage");
+    const coverageBarEl = document.getElementById("supervisorCoverageProgressBar");
     const sampleSizeEl = document.getElementById("supervisorSampleSize");
     const aspectsListEl = document.getElementById("supervisorAspectsList");
+
     if (!finalScoreEl || !bandLabelEl || !coverageEl || !sampleSizeEl || !aspectsListEl) {
       return;
     }
 
-    finalScoreEl.textContent =
-      data.final_score === null
-        ? "\u063a\u064a\u0631 \u0645\u062a\u0627\u062d"
-        : formatNumber(data.final_score);
-    bandLabelEl.textContent = data.band_label || "\u063a\u064a\u0631 \u0645\u0635\u0646\u0641";
-    coverageEl.textContent = `${formatNumber(data.coverage_pct)}%`;
+    const bandStyle = getBandStyle(data.band_code, data.final_score);
+
+    // Final Score Card
+    finalScoreEl.textContent = data.final_score === null ? T.notAvailable : `${formatNumber(data.final_score)}%`;
+    finalScoreEl.className = `display-6 fw-bold my-1 ${bandStyle.textColor}`;
+
+    // Performance Band Card
+    const bandText = IS_EN ? (data.band_label_en || data.band_label || T.unclassified) : (data.band_label || T.unclassified);
+    bandLabelEl.textContent = bandText;
+    bandLabelEl.className = `display-6 fw-bold my-1 fs-3 ${bandStyle.textColor}`;
+
+    if (bandSubtextEl) {
+      bandSubtextEl.textContent = IS_EN ? `Rating code: ${data.band_code || 'N/A'}` : `مستوى التقييم: ${data.band_label || 'غير محدد'}`;
+    }
+
+    // Data Coverage
+    const coverageVal = Math.min(100, Math.max(0, Number(data.coverage_pct || 0)));
+    coverageEl.textContent = `${formatNumber(coverageVal)}%`;
+    if (coverageBarEl) {
+      coverageBarEl.style.width = `${coverageVal}%`;
+      coverageBarEl.className = `progress-bar ${coverageVal >= 80 ? 'bg-success' : coverageVal >= 50 ? 'bg-warning' : 'bg-danger'}`;
+    }
+
+    // Sample Size
     sampleSizeEl.textContent = String(data.sample_size ?? 0);
 
+    // Render Aspects List with Progress Bars
     const aspects = data.aspects || {};
-    const keys = Object.keys(aspects);
-    if (keys.length === 0) {
-      aspectsListEl.innerHTML = "";
-      const emptyItem = document.createElement("li");
-      emptyItem.className = "list-group-item text-muted";
-      emptyItem.textContent = NO_ASPECT_DATA_TEXT;
-      aspectsListEl.appendChild(emptyItem);
-      renderPerformanceChart(data);
+
+    // Deduplicate keys (support both canonical English and Arabic backend keys)
+    const normalizedKeys = [];
+    const seenNames = new Set();
+
+    Object.keys(aspects).forEach(key => {
+      const name = T[key] || key;
+      if (!seenNames.has(name)) {
+        seenNames.add(name);
+        normalizedKeys.push(key);
+      }
+    });
+
+    if (normalizedKeys.length === 0) {
+      aspectsListEl.innerHTML = `<li class="list-group-item text-muted py-3 text-center">${T.noData}</li>`;
+      renderPerformanceChart(data, []);
       return;
     }
 
     const fragment = document.createDocumentFragment();
-    for (const key of keys) {
-      const item = document.createElement("li");
-      item.className = "list-group-item d-flex justify-content-between";
+    for (const key of normalizedKeys) {
+      const val = Number(aspects[key] || 0);
+      const aspectName = T[key] || key;
+      const meta = ASPECT_METADATA[key] || { weight: "20%", icon: "bi-graph-up" };
+      const itemBandStyle = getBandStyle(null, val);
 
-      const labelSpan = document.createElement("span");
-      labelSpan.textContent = aspectLabel(key);
+      const li = document.createElement("li");
+      li.className = "list-group-item border-0 px-0 py-3";
 
-      const valueSpan = document.createElement("span");
-      valueSpan.className = "fw-semibold";
-      valueSpan.textContent = formatNumber(aspects[key]);
-
-      item.append(labelSpan, valueSpan);
-      fragment.appendChild(item);
+      li.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <div class="d-flex align-items-center">
+            <i class="bi ${meta.icon} me-2 text-primary"></i>
+            <span class="fw-semibold text-dark me-2">${aspectName}</span>
+            <span class="badge bg-light text-secondary border small">${T.weight}: ${meta.weight}</span>
+          </div>
+          <span class="fw-bold ${itemBandStyle.textColor}">${formatNumber(val)}%</span>
+        </div>
+        <div class="progress" style="height: 8px;">
+          <div class="progress-bar ${itemBandStyle.progressClass}" role="progressbar" style="width: ${Math.min(100, Math.max(0, val))}%"></div>
+        </div>
+      `;
+      fragment.appendChild(li);
     }
 
     aspectsListEl.innerHTML = "";
     aspectsListEl.appendChild(fragment);
-    renderPerformanceChart(data);
+
+    // Render Radar Chart
+    renderPerformanceChart(data, normalizedKeys);
+
+    // Render Action Guidance Recommendations
+    renderActionGuidance(data.action_guidance);
+
+    // Render Explanations Grid
+    renderExplanationsGrid(data.indicator_explanations);
   }
 
-  function chartMetricValue(value) {
-    const numeric = Number(value);
-    if (Number.isNaN(numeric)) return 0;
-    return Math.max(0, Math.min(100, numeric));
-  }
+  function renderActionGuidance(guidanceList) {
+    const card = document.getElementById("supervisorActionGuidanceCard");
+    const listEl = document.getElementById("supervisorActionGuidanceList");
+    if (!card || !listEl) return;
 
-  function renderPerformanceChart(data) {
-    const chartEl = document.getElementById("supervisorPerformanceChart");
-    if (!chartEl || typeof window.Chart !== "function") {
+    if (!guidanceList || guidanceList.length === 0) {
+      card.classList.add("d-none");
       return;
     }
 
-    const aspects = data.aspects || {};
-    const keys = Object.keys(aspects);
+    const fragment = document.createDocumentFragment();
+    guidanceList.forEach(item => {
+      const li = document.createElement("li");
+      li.className = "mb-1";
+      li.textContent = IS_EN ? (item.en || item.ar) : (item.ar || item.en);
+      fragment.appendChild(li);
+    });
 
-    const labels = keys.map((key) => aspectLabel(key));
-    const values = keys.map((key) => chartMetricValue(aspects[key]));
+    listEl.innerHTML = "";
+    listEl.appendChild(fragment);
+    card.classList.remove("d-none");
+  }
 
-    if (data.final_score !== null && data.final_score !== undefined) {
-      labels.push(FINAL_SCORE_LABEL);
-      values.push(chartMetricValue(data.final_score));
+  function renderExplanationsGrid(explanations) {
+    const grid = document.getElementById("supervisorExplanationsGrid");
+    if (!grid) return;
+
+    if (!explanations || explanations.length === 0) {
+      grid.innerHTML = `<div class="col-12 text-muted">${T.notAvailable}</div>`;
+      return;
     }
+
+    const fragment = document.createDocumentFragment();
+    explanations.forEach(item => {
+      const col = document.createElement("div");
+      col.className = "col-md-4";
+
+      const title = IS_EN ? (item.indicator_en || item.indicator) : (item.indicator || item.indicator_en);
+      const desc = IS_EN ? (item.meaning_en || item.meaning) : (item.meaning || item.meaning_en);
+
+      col.innerHTML = `
+        <div class="p-3 bg-light rounded-3 h-100 border">
+          <div class="fw-semibold text-dark mb-1">
+            <i class="bi bi-check-circle-fill me-1 text-success"></i>${title}
+          </div>
+          <div class="text-muted small">${desc}</div>
+        </div>
+      `;
+      fragment.appendChild(col);
+    });
+
+    grid.innerHTML = "";
+    grid.appendChild(fragment);
+  }
+
+  function renderPerformanceChart(data, aspectKeys) {
+    const chartEl = document.getElementById("supervisorPerformanceChart");
+    if (!chartEl || typeof window.Chart !== "function") return;
+
+    const aspects = data.aspects || {};
+    const labels = aspectKeys.map(k => T[k] || k);
+    const values = aspectKeys.map(k => Math.max(0, Math.min(100, Number(aspects[k] || 0))));
 
     if (values.length === 0) {
       if (performanceChart) {
@@ -184,16 +295,16 @@
       labels,
       datasets: [
         {
-          label: CHART_SERIES_LABEL,
+          label: T.chartSeriesLabel,
           data: values,
           borderColor: "rgba(13, 110, 253, 0.95)",
-          backgroundColor: "rgba(13, 110, 253, 0.15)",
+          backgroundColor: "rgba(13, 110, 253, 0.2)",
           borderWidth: 2,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          pointBackgroundColor: "rgba(13, 110, 253, 1)",
-        },
-      ],
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: "rgba(13, 110, 253, 1)"
+        }
+      ]
     };
 
     if (performanceChart) {
@@ -208,7 +319,7 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 350 },
+        animation: { duration: 400 },
         scales: {
           r: {
             beginAtZero: true,
@@ -218,26 +329,26 @@
             grid: { color: "rgba(33, 37, 41, 0.15)" },
             pointLabels: {
               color: "#374151",
-              font: { size: 12 },
+              font: { size: 12, weight: "600" }
             },
             ticks: {
               stepSize: 20,
               backdropColor: "transparent",
-              color: "#6c757d",
-            },
-          },
+              color: "#6c757d"
+            }
+          }
         },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
               label(context) {
-                return `${context.formattedValue}`;
-              },
-            },
-          },
-        },
-      },
+                return `${context.label}: ${context.formattedValue}%`;
+              }
+            }
+          }
+        }
+      }
     });
   }
 
@@ -252,6 +363,13 @@
 
   async function loadSummary() {
     showError("");
+    const loadBtn = document.getElementById("supervisorPerformanceLoadBtn");
+    if (loadBtn) {
+      loadBtn.disabled = true;
+      const textSpan = loadBtn.querySelector(".btn-text");
+      if (textSpan) textSpan.textContent = IS_EN ? "Loading..." : "جاري التحميل...";
+    }
+
     try {
       const params = requestParams();
       if (
@@ -259,28 +377,40 @@
         params.has("period_end") &&
         params.get("period_start") > params.get("period_end")
       ) {
-        showError(INVALID_PERIOD_TEXT);
+        showError(T.invalidPeriod);
         return;
       }
       const data = await apiRequest(`/api/supervisor/performance/summary?${params.toString()}`);
       renderSummary(data);
       if (data.insufficient_data && data.insufficient_reason) {
-        showError(`${INSUFFICIENT_DATA_PREFIX}: ${data.insufficient_reason}`);
+        showError(`${T.insufficientPrefix}: ${data.insufficient_reason}`);
       }
     } catch (error) {
-      showError(
-        error.message ||
-          "\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0645\u0644\u062e\u0635 \u0627\u0644\u0623\u062f\u0627\u0621 \u0627\u0644\u0645\u0647\u0646\u064a."
-      );
+      showError(error.message || T.fetchError);
+    } finally {
+      if (loadBtn) {
+        loadBtn.disabled = false;
+        const textSpan = loadBtn.querySelector(".btn-text");
+        if (textSpan) textSpan.textContent = IS_EN ? "Update Summary" : "تحديث الملخص";
+      }
     }
   }
 
   function init() {
-    if (!document.getElementById("supervisorPerformanceRoot")) {
-      return;
-    }
-    defaultPeriod();
+    if (!document.getElementById("supervisorPerformanceRoot")) return;
+
+    defaultPeriod(30);
+
     document.getElementById("supervisorPerformanceLoadBtn")?.addEventListener("click", loadSummary);
+
+    document.querySelectorAll(".preset-btn").forEach(btn => {
+      btn.addEventListener("click", function () {
+        const days = parseInt(this.getAttribute("data-days"), 10) || 30;
+        defaultPeriod(days);
+        loadSummary();
+      });
+    });
+
     loadSummary();
   }
 
