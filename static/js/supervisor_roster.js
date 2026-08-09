@@ -142,6 +142,8 @@
   }
 
   function buildPayload() {
+    var shared = napWindow();
+
     return {
       date: els.date.value,
       arrival_time: els.arrival.value,
@@ -156,16 +158,35 @@
           var mood = document.querySelector('input[name="mood-' + c.id + '"]:checked');
           var nap = document.getElementById("nap-" + c.id);
           var note = document.getElementById("note-" + c.id);
-          var napMinutes = nap && nap.value ? parseInt(nap.value, 10) : null;
+          var override = nap && nap.value ? parseInt(nap.value, 10) : null;
+
+          // Three cases, in order of precedence:
+          //   1. the row overrides the duration — keep the shared start and end
+          //      that many minutes later, so the child's own window is recorded
+          //   2. the shared window is set — every row inherits it
+          //   3. neither — no nap is recorded for this child
+          //
+          // The previous version had no shared window at all: it anchored the
+          // nap to the arrival time, so every nap was recorded as beginning the
+          // moment the child walked through the door.
+          var napStart = null, napEnd = null, napMinutes = null;
+          if (override && shared.start) {
+            napStart = shared.start;
+            napEnd = addMinutes(shared.start, override);
+            napMinutes = override;
+          } else if (shared.minutes != null) {
+            napStart = shared.start;
+            napEnd = shared.end;
+            napMinutes = shared.minutes;
+          }
+
           return {
             child_id: c.id,
             skip: !!(skip && skip.checked),
             mood: mood ? mood.value : null,
-            // The model stores nap_start/nap_end, not a duration. Anchor the
-            // nap to the shared arrival time so a duration entered here lands
-            // as a real interval rather than being dropped.
-            nap_start: napMinutes ? els.arrival.value : null,
-            nap_end: napMinutes ? addMinutes(els.arrival.value, napMinutes) : null,
+            nap_start: napStart,
+            nap_end: napEnd,
+            nap_duration_minutes: napMinutes,
             notes: note && note.value ? note.value : null
           };
         })
@@ -179,6 +200,63 @@
     var h = String(Math.floor(total / 60)).padStart(2, "0");
     var m = String(total % 60).padStart(2, "0");
     return h + ":" + m;
+  }
+
+  // ── Shared nap window ──────────────────────────────────────────────────────
+  // The supervisor picks an hour and a minute for the start and for the end;
+  // the duration is derived from those two, never typed. Returns null when the
+  // window is incomplete or invalid so callers can tell "not set" from "zero".
+
+  function toMinutes(hhmm) {
+    if (!hhmm) return null;
+    var p = String(hhmm).split(":");
+    if (p.length !== 2) return null;
+    var h = parseInt(p[0], 10);
+    var m = parseInt(p[1], 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    return h * 60 + m;
+  }
+
+  // An hour on its own is a complete time — minutes default to :00 — but a
+  // minute on its own is not, so it yields nothing rather than a bogus 00:MM.
+  function napTimeOf(hourSelect, minuteSelect) {
+    if (!hourSelect || !hourSelect.value) return null;
+    return hourSelect.value + ":" + (minuteSelect && minuteSelect.value ? minuteSelect.value : "00");
+  }
+
+  function napWindow() {
+    var start = napTimeOf(els.napStartHour, els.napStartMinute);
+    var end = napTimeOf(els.napEndHour, els.napEndMinute);
+    if (!start || !end) return { start: start, end: end, minutes: null, error: null };
+
+    var diff = toMinutes(end) - toMinutes(start);
+    if (diff <= 0) {
+      return {
+        start: start,
+        end: end,
+        minutes: null,
+        error: T("وقت الانتهاء يجب أن يكون بعد وقت البدء.",
+                 "The end time must be after the start time.")
+      };
+    }
+    return { start: start, end: end, minutes: diff, error: null };
+  }
+
+  function refreshNapDuration() {
+    var w = napWindow();
+    if (els.napDuration) {
+      els.napDuration.value = w.minutes == null ? "" : String(w.minutes);
+    }
+    if (els.napWarning) {
+      if (w.error) {
+        els.napWarning.textContent = w.error;
+        els.napWarning.classList.remove("d-none");
+      } else {
+        els.napWarning.textContent = "";
+        els.napWarning.classList.add("d-none");
+      }
+    }
+    return w;
   }
 
   function showResult(data) {
@@ -281,7 +359,13 @@
       bar: document.getElementById("rosterBar"),
       count: document.getElementById("rosterCount"),
       save: document.getElementById("rosterSave"),
-      result: document.getElementById("rosterResult")
+      result: document.getElementById("rosterResult"),
+      napStartHour: document.getElementById("sharedNapStartHour"),
+      napStartMinute: document.getElementById("sharedNapStartMinute"),
+      napEndHour: document.getElementById("sharedNapEndHour"),
+      napEndMinute: document.getElementById("sharedNapEndMinute"),
+      napDuration: document.getElementById("sharedNapDuration"),
+      napWarning: document.getElementById("sharedNapWarning")
     };
     if (!els.list) return;
 
@@ -289,6 +373,15 @@
     els.date.max = todayISO();  // the API refuses future dates; do not offer them
     els.date.addEventListener("change", load);
     els.save.addEventListener("click", save);
+
+    // The duration is recomputed on every one of the four selects, so it stays
+    // right whichever the supervisor changes last.
+    [els.napStartHour, els.napStartMinute, els.napEndHour, els.napEndMinute]
+      .forEach(function (sel) {
+        if (sel) sel.addEventListener("change", refreshNapDuration);
+      });
+    refreshNapDuration();
+
     load();
   });
 })();

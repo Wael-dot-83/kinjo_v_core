@@ -85,6 +85,85 @@
           </div>
         </div>
       </div>
+
+      {# Nap is a shared value like arrival and leave: a class naps together, so
+         the supervisor sets the window once here and the per-child minutes box
+         on a row stays available for the child who slept differently.
+
+         Before this, the roster had no nap times at all — only a per-child
+         minutes box — and the payload anchored the nap to the arrival time,
+         which recorded every nap as starting the moment the child walked in. #}
+      <div class="row g-3 align-items-end mt-0 pt-3 border-top">
+        <div class="col-12">
+          <span class="form-label d-block mb-2 fw-semibold">
+            <i class="bi bi-moon-stars me-1" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %}Nap{% else %}النوم{% endif %}
+          </span>
+        </div>
+
+        <div class="col-6 col-md-4">
+          <label class="form-label" for="sharedNapStartHour">
+            {% if ui_lang == 'en' %}Nap start time{% else %}وقت بدء النوم{% endif %}
+          </label>
+          <div class="input-group">
+            <select class="form-select" id="sharedNapStartHour"
+                    aria-label="{% if ui_lang == 'en' %}Nap start hour{% else %}ساعة بدء النوم{% endif %}">
+              <option value="">{% if ui_lang == 'en' %}Hour{% else %}الساعة{% endif %}</option>
+              {% for h in range(7, 18) %}
+              <option value="{{ '%02d' % h }}">{{ '%02d' % h }}</option>
+              {% endfor %}
+            </select>
+            <span class="input-group-text px-2 fw-bold">:</span>
+            <select class="form-select" id="sharedNapStartMinute"
+                    aria-label="{% if ui_lang == 'en' %}Nap start minute{% else %}دقيقة بدء النوم{% endif %}">
+              <option value="">{% if ui_lang == 'en' %}Min{% else %}الدقيقة{% endif %}</option>
+              {% for m in range(0, 60, 5) %}
+              <option value="{{ '%02d' % m }}">{{ '%02d' % m }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-4">
+          <label class="form-label" for="sharedNapEndHour">
+            {% if ui_lang == 'en' %}Nap end time{% else %}وقت انتهاء النوم{% endif %}
+          </label>
+          <div class="input-group">
+            <select class="form-select" id="sharedNapEndHour"
+                    aria-label="{% if ui_lang == 'en' %}Nap end hour{% else %}ساعة انتهاء النوم{% endif %}">
+              <option value="">{% if ui_lang == 'en' %}Hour{% else %}الساعة{% endif %}</option>
+              {% for h in range(7, 18) %}
+              <option value="{{ '%02d' % h }}">{{ '%02d' % h }}</option>
+              {% endfor %}
+            </select>
+            <span class="input-group-text px-2 fw-bold">:</span>
+            <select class="form-select" id="sharedNapEndMinute"
+                    aria-label="{% if ui_lang == 'en' %}Nap end minute{% else %}دقيقة انتهاء النوم{% endif %}">
+              <option value="">{% if ui_lang == 'en' %}Min{% else %}الدقيقة{% endif %}</option>
+              {% for m in range(0, 60, 5) %}
+              <option value="{{ '%02d' % m }}">{{ '%02d' % m }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="sharedNapDuration">
+            {% if ui_lang == 'en' %}Nap duration (minutes){% else %}مدة النوم (دقائق){% endif %}
+          </label>
+          <div class="input-group">
+            <input type="text" class="form-control bg-body-secondary" id="sharedNapDuration"
+                   readonly inputmode="numeric"
+                   placeholder="{% if ui_lang == 'en' %}Calculated{% else %}يُحسب تلقائياً{% endif %}"
+                   aria-describedby="napDurationHelp">
+            <span class="input-group-text" id="napDurationHelp">
+              <i class="bi bi-calculator me-1" aria-hidden="true"></i>
+              {% if ui_lang == 'en' %}Auto{% else %}تلقائي{% endif %}
+            </span>
+          </div>
+          <div id="sharedNapWarning" class="form-text text-danger d-none" role="alert"></div>
+        </div>
+      </div>
     </div>
   </section>
 
