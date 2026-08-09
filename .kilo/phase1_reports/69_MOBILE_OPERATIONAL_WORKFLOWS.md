@@ -2,7 +2,8 @@
 
 **Date:** 2026-08-09  
 **Module:** KinJo Flutter Mobile Operational Client  
-**Status:** Implemented & Verified  
+**Branch & Governance Record:** Committed on `main` branch (`ddd5f08a6af5811367aead61e6c5d1c148e463c4`).  
+**Suite Clarification:** Verification uses fresh evidence from both the focused operational backend gate (215 tests) and the complete repository backend suite (4,687 tests).  
 
 ---
 
