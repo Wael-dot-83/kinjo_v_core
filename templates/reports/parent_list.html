@@ -337,7 +337,13 @@ endblock %} {% block extra_css %}
           {% for child in children %}
           <option
             value="{{ child.id }}"
-              {% if selected_child_id == child.id %}selected{% endif %}
+            {%
+            if
+            selected_child_id=""
+            ="child.id"
+            %}selected{%
+            endif
+            %}
           >
             {{ child.first_name }} {{ child.last_name }}
           </option>
