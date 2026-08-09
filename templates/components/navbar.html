@@ -177,7 +177,13 @@
                         title="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}"
                         data-i18n-title="nav.language_toggle" aria-label="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}" data-i18n-aria="nav.language_toggle">
                         <i class="bi bi-translate fs-5"></i>
-                        <span class="d-none d-lg-inline ms-1">{% if ui_lang == 'en' %}العربية{% else %}English{% endif %}</span>
+                        {# Names the language this switches TO. In English mode
+                           that must be the English word "Arabic", not "العربية":
+                           English pages carry no Arabic at all (enforced by
+                           test_language_zero_mix_routes), so the integrity pass
+                           rewrote "العربية" to "English" and left an English page
+                           showing a button labelled English. #}
+                        <span class="d-none d-lg-inline ms-1">{% if ui_lang == 'en' %}Arabic{% else %}English{% endif %}</span>
                     </button>
                 </li>
 

@@ -165,7 +165,12 @@
                       class="dropdown-item d-flex align-items-center justify-content-between {% if ui_lang == 'ar' %}active{% endif %}"
                       onclick="setAdminLanguage('ar')"
                     >
-                      العربية {% if ui_lang == 'ar' %}<i
+                      {# English mode must show the English word: the integrity
+                         pass rewrites Arabic on English pages, which turned this
+                         option into a second "English" entry and left no way to
+                         pick Arabic. #}
+                      {% if ui_lang == 'en' %}Arabic{% else %}العربية{% endif %}
+                      {% if ui_lang == 'ar' %}<i
                         class="bi bi-check2 ms-2"
                       ></i
                       >{% endif %}
