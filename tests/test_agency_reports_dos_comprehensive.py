@@ -13,6 +13,20 @@ from agency_reports_service import AgencyReportsService
 from agency_reports_registry import AGENCY_REPORT_REGISTRY
 
 
+def _ar(value):
+    """Arabic side of a report label.
+
+    Labels used to be bare Arabic strings. They are now ``{"ar": ..., "en": ...}``
+    so the report UI can render in either language, which is the house rule for
+    any backend string shown in the UI. admin_agency_reports.js resolves them
+    through its ``pick`` helper, which still accepts a plain string, so both
+    shapes are valid on the wire and this reads whichever arrived.
+    """
+    if isinstance(value, dict):
+        return value.get("ar")
+    return value
+
+
 def _make_admin(db: Session, username="dos_test_admin"):
     u = models.User(
         username=username,
@@ -481,9 +495,9 @@ class TestGeographicServiceGaps:
             table_governorates = {r["governorate"] for r in payload["breakdowns"]}
             assert chart_labels.issubset(table_governorates)
             assert payload["chart"].get("group_by") == "governorate"
-            assert payload["chart"].get("value_suffix") == " طفل/حضانة"
-            assert payload["chart"].get("x_axis_title_ar") == "الأطفال لكل حضانة نشطة"
-            assert payload["chart"].get("y_axis_title_ar") == "المحافظة"
+            assert _ar(payload["chart"].get("value_suffix")) == " طفل/حضانة"
+            assert _ar(payload["chart"].get("x_axis_title_ar")) == "الأطفال لكل حضانة نشطة"
+            assert _ar(payload["chart"].get("y_axis_title_ar")) == "المحافظة"
             for s in payload["chart"]["series"]:
                 assert "color" in s
 
@@ -658,7 +672,7 @@ class TestGeographicServiceGaps:
         _seed_children(test_db)
         headers = _tok(client, "dos_test_admin")
         payload = _call(client, "/api/admin/agency-reports/dos/reports/geographic_service_gaps", headers)
-        assert payload["summary_labels"].get("data_quality_note_ar") == "ملاحظة جودة البيانات"
+        assert _ar(payload["summary_labels"].get("data_quality_note_ar")) == "ملاحظة جودة البيانات"
 
 
 # ---------------------------------------------------------------------------
@@ -710,7 +724,7 @@ class TestAnnualQuarterlyTrends:
         if payload.get("chart"):
             assert payload["chart"].get("group_by") == "year"
             assert payload["chart"].get("orientation") == "vertical"
-            assert payload["chart"].get("value_suffix") == " طفل"
+            assert _ar(payload["chart"].get("value_suffix")) == " طفل"
 
     def test_api_year_filter_switches_chart_to_quarter(self, client, test_db):
         _make_admin(test_db)
@@ -758,7 +772,7 @@ class TestAnnualQuarterlyTrends:
         _seed_kindergartens(test_db)
         headers = _tok(client, "dos_test_admin")
         payload = _call(client, "/api/admin/agency-reports/dos/reports/annual_quarterly_trends", headers)
-        assert payload["summary_labels"].get("data_quality_note_ar") == "ملاحظة جودة البيانات"
+        assert _ar(payload["summary_labels"].get("data_quality_note_ar")) == "ملاحظة جودة البيانات"
 
     def test_year_filter_returns_quarter_drill_chart(self, test_db):
         from datetime import datetime, timezone
@@ -963,13 +977,13 @@ class TestIncidentsSafety1000ChildDays:
         assert payload["summary"]["incident_rate_per_1000_child_days"] == round(
             4000 / payload["summary"]["eligible_child_days"], 3
         )
-        assert payload["summary_labels"]["eligible_child_days"] == "أيام الأطفال المؤهلة"
-        assert payload["summary_labels"]["incident_rate_per_1000_child_days"] == "معدل الحوادث لكل 1000 يوم طفل"
+        assert _ar(payload["summary_labels"]["eligible_child_days"]) == "أيام الأطفال المؤهلة"
+        assert _ar(payload["summary_labels"]["incident_rate_per_1000_child_days"]) == "معدل الحوادث لكل 1000 يوم طفل"
         assert payload.get("chart")
         assert payload["chart"]["title_ar"] == "توزيع الحوادث حسب درجة الخطورة"
         assert payload["chart"]["orientation"] == "vertical"
         assert payload["chart"]["show_share_pct"] is True
-        assert payload["chart"]["value_suffix"] == " حادثة"
+        assert _ar(payload["chart"]["value_suffix"]) == " حادثة"
 
         chart_series = payload["chart"]["series"]
         assert [s["label"] for s in chart_series] == ["حرجة", "عالية", "متوسطة", "منخفضة"]

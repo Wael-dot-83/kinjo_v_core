@@ -929,13 +929,12 @@ KinJo{% else %}تسجيل الدخول — KinJo{% endif %}{% endblock %} {% blo
         aria-live="polite"
       >
         <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
-        <span
-          >{% if ui_lang == 'en' %}New account registration is not available at
-          the moment. Please sign in with an existing account or contact your
-          kindergarten for access.{% else %}تسجيل الحسابات الجديدة غير متاح
-          حالياً. سجّل الدخول بحساب موجود أو تواصل مع الحضانة للحصول على صلاحية
-          الوصول.{% endif %}</span
-        >
+        {# Each sentence stays on one source line on purpose. An HTML formatter
+           wrapped them mid-sentence, which put a newline inside the rendered
+           string: browsers collapse it, but the message is no longer greppable
+           and the contract test that asserts this exact copy stopped matching. #}
+        <!-- prettier-ignore -->
+        <span>{% if ui_lang == 'en' %}New account registration is not available at the moment. Please sign in with an existing account or contact your kindergarten for access.{% else %}تسجيل الحسابات الجديدة غير متاح حالياً. سجّل الدخول بحساب موجود أو تواصل مع الحضانة للحصول على صلاحية الوصول.{% endif %}</span>
       </div>
       {% endif %} {# ── Login error alert ── #}
       <div

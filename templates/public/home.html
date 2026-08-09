@@ -586,8 +586,12 @@
             </a>
             <a href="/services" class="btn btn-outline-light btn-lg">
               <i class="bi bi-journal-check me-1" aria-hidden="true"></i>
-              {% if ui_lang == 'en' %}See how it works{% else %}شاهد طريقة
-              العمل{% endif %}
+              {# Kept on one line: the formatter split "شاهد طريقة العمل" across
+                 a newline, so the rendered label contained a line break in the
+                 middle of the phrase and no longer matched the copy the home
+                 page contract test pins. #}
+              <!-- prettier-ignore -->
+              {% if ui_lang == 'en' %}See how it works{% else %}شاهد طريقة العمل{% endif %}
             </a>
             {% endif %}
           </div>

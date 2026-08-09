@@ -501,10 +501,19 @@ def sample_incident(test_db, sample_child, sample_kindergarten, supervisor_user,
 
 
 @pytest.fixture
-def sample_daily_report(test_db, sample_child, supervisor_user, sample_enrollment, sample_kindergarten):
+def sample_daily_report(
+    test_db, sample_child, supervisor_user, sample_enrollment, sample_kindergarten, sample_class
+):
     from models import DailyReport, DailyReportStatus
     report = DailyReport(
         child_id=sample_child.id,
+        # class_id is the report's immutable class snapshot (dr_class_snapshot_01).
+        # Supervisor access is scoped through it and fails closed when it is
+        # missing, so a report created without one is invisible to the very
+        # supervisor who filed it — the endpoint answers "Daily report not
+        # found". Every production write sets it; this fixture predates the
+        # column and did not.
+        class_id=sample_class.id,
         date=date(2026, 5, 1),
         status=DailyReportStatus.SUBMITTED,
         submitted_by=supervisor_user.id,

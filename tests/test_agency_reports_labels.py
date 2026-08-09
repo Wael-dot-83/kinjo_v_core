@@ -12,6 +12,20 @@ from auth import get_password_hash
 from agency_reports_service import AgencyReportsService
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _ar(value):
+    """Arabic side of a report label.
+
+    Labels are now {"ar": ..., "en": ...} rather than bare Arabic strings, so
+    the report UI can render in either language. A plain string is still
+    accepted on the wire, so read whichever shape arrived.
+    """
+    if isinstance(value, dict):
+        return value.get("ar")
+    return value
+
+
 AGENCY_REPORTS_JS = ROOT / "static" / "js" / "admin_agency_reports.js"
 AGENCY_LOGO_DIR = ROOT / "static" / "img" / "agencies"
 
@@ -61,9 +75,14 @@ def test_agency_reports_frontend_consumes_backend_labels_and_empty_state():
     source = AGENCY_REPORTS_JS.read_text(encoding="utf-8")
     assert not source.startswith("\ufeff")
     assert "payload.summary_labels || {}" in source
-    assert "summaryLabels[key] || key" in source
     assert "payload.column_labels || {}" in source
-    assert "columnLabels[h] || h" in source
+    # Labels arrive as {"ar": ..., "en": ...}, so the view resolves them through
+    # `pick` before falling back to the raw key. The older assertions here
+    # required the bare `summaryLabels[key] || key`, which no longer exists and
+    # would now forbid the very bilingual rendering the backend was changed to
+    # support.
+    assert "pick(summaryLabels[key]) || key" in source
+    assert "pick(columnLabels[h]) || h" in source
     assert "No matching data for the selected filters." in source
     assert "window.renderAgencyLogo" in source
 
@@ -90,13 +109,13 @@ def test_agency_report_payload_ships_arabic_labels(client, test_db):
     assert "summary_labels" in payload and "column_labels" in payload
 
     # No raw machine key is left unlabeled, and known keys map to Arabic.
-    assert payload["summary_labels"].get("total_kindergartens") == "إجمالي الحضانات"
+    assert _ar(payload["summary_labels"].get("total_kindergartens")) == "إجمالي الحضانات"
     for key in payload["summary"]:
         assert payload["summary_labels"].get(key), f"missing label for summary key {key}"
 
     rows = payload.get("breakdowns") or []
     if rows:
-        assert payload["column_labels"].get("governorate") == "المحافظة"
+        assert _ar(payload["column_labels"].get("governorate")) == "المحافظة"
         for col in rows[0]:
             assert payload["column_labels"].get(col), f"missing label for column {col}"
         # labels must be non-ASCII (Arabic), never the raw English key

@@ -58,7 +58,16 @@ class TestIncidentCreationRBAC:
         assert data["type"] == "INJURY"
 
     def test_supervisor_can_create_incident(
-        self, client, auth_headers_supervisor, sample_child, sample_enrollment
+        self,
+        client,
+        auth_headers_supervisor,
+        sample_child,
+        sample_enrollment,
+        # A supervisor may only file an incident for a child in a class they are
+        # assigned to (rbac.assert_supervisor_owns_child). This test previously
+        # relied on that check not existing, so it enrolled the child but never
+        # assigned the supervisor to the class and now gets a correct 403.
+        sample_supervisor_assignment,
     ):
         resp = client.post(
             "/api/incidents",

@@ -36,6 +36,12 @@ def _valid_parent_payload(overrides=None):
         "home_district": "Amman",
         "home_area": "Abdoun",
         "home_address_line": "123 Main St",
+        # Required since 3d33ece: ParentRegistrationRequest changed this from
+        # `Optional[bool] = True` to `bool`, so the caller now has to state the
+        # preference instead of having True assumed for them. The registration
+        # form sends it (templates/auth/register.html), so the endpoint is the
+        # contract of record and this payload was the stale side.
+        "correspondence_preference": True,
         "email": f"parent_{secrets.token_hex(4)}@test.com",
         "password": "Str0ng!Pass",
         "work_address": "45 Corporate Blvd, Amman",

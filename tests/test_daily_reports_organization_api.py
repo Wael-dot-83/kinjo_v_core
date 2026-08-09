@@ -504,13 +504,19 @@ def test_all_kindergartens_filter_respects_pagination(
 
 
 def test_daily_report_submit_enforces_jordan_deadline(
-    client, test_db, supervisor_user, sample_child, active_enrollment
+    client, test_db, supervisor_user, sample_child, active_enrollment,
+    # Supervisor access to a report is scoped through the report's class
+    # snapshot and fails closed. Without an assignment — and without class_id on
+    # the report below — the submit answered 404 before it ever reached the
+    # deadline rule this test exists to assert.
+    sample_supervisor_assignment,
 ):
     from freezegun import freeze_time
 
     report = models.DailyReport(
         child_id=sample_child.id,
         kindergarten_id=active_enrollment.kindergarten_id,
+        class_id=active_enrollment.class_id,
         date=date.today(),
         status=models.DailyReportStatus.DRAFT,
         submitted_by=supervisor_user.id,

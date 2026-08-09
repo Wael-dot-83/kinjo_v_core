@@ -128,7 +128,18 @@ def _seed_second_kindergarten_attendance(test_db, parent_user, supervisor_user):
     return second_kindergarten
 
 
-def test_get_attendance_summary_default_date(client, test_db, sample_kindergarten, sample_class, parent_user, supervisor_user):
+def test_get_attendance_summary_default_date(
+    client,
+    test_db,
+    sample_kindergarten,
+    sample_class,
+    parent_user,
+    supervisor_user,
+    # /api/attendance is scoped to the supervisor's assigned classes and fails
+    # closed. Without an assignment the summary is legitimately empty, so this
+    # asserted on counts it had not arranged to be visible.
+    sample_supervisor_assignment,
+):
     _seed_attendance(test_db, sample_kindergarten, sample_class, parent_user, supervisor_user)
 
     app.dependency_overrides[get_current_user] = lambda: supervisor_user

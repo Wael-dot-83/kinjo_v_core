@@ -1,5 +1,4 @@
-{% extends 'base.html' %} {% set is_en = ui_lang == 'en' %} {% block title %}{{
-'My Profile' if is_en else 'ملفي الشخصي' }}{% endblock %} {% block extra_css %}
+{% extends 'base.html' %} {% block title %}{{ _('My Profile') }}{% endblock %} {% block extra_css %}
 <style>
   .parent-profile-shell {
     --profile-ink: #16342c;
@@ -26,7 +25,7 @@
     overflow: hidden;
     background:
       radial-gradient(
-        circle at top {% if is_en %}right{% else %}left{% endif %},
+        circle at top {% if ui_dir == 'rtl' %}left{% else %}right{% endif %},
         rgba(201, 135, 67, 0.18),
         transparent 28%
       ),
@@ -316,15 +315,15 @@
   <div>
     <h1 class="page-header-title">
       <i class="bi bi-person-vcard text-primary me-2" aria-hidden="true"></i>
-      {{ 'My Profile' if is_en else 'ملفي الشخصي' }}
+      {{ _('My Profile') }}
     </h1>
-    <nav aria-label="{{ 'Breadcrumb' if is_en else 'مسار التنقل' }}">
+    <nav aria-label="{{ _('Breadcrumb') }}">
       <ol class="breadcrumb mb-0">
         <li class="breadcrumb-item">
-          <a href="/dashboard">{{ 'Dashboard' if is_en else 'لوحة التحكم' }}</a>
+          <a href="/dashboard">{{ _('Dashboard') }}</a>
         </li>
         <li class="breadcrumb-item active">
-          {{ 'My Profile' if is_en else 'ملفي الشخصي' }}
+          {{ _('My Profile') }}
         </li>
       </ol>
     </nav>
@@ -335,12 +334,9 @@
   <div id="profileAlert" class="alert alert-warning d-none mb-4" role="alert">
     <i class="bi bi-exclamation-triangle-fill me-2"></i>
     <strong
-      >{{ 'Your profile still needs a few details.' if is_en else 'ما زال ملفك
-      الشخصي يحتاج إلى بعض البيانات.' }}</strong
+      >{{ _('Your profile still needs a few details.') }}</strong
     >
-    {{ 'Complete the required fields so enrollment requests and parent
-    communication work smoothly.' if is_en else 'أكمِل الحقول المطلوبة حتى تعمل
-    طلبات التسجيل والتواصل مع الحضانة بشكل سليم.' }}
+    {{ _('Complete the required fields so enrollment requests and parent communication work smoothly.') }}
   </div>
 
   <div class="row g-4 align-items-start">
@@ -355,22 +351,20 @@
             </div>
             <div>
               <div class="profile-kicker mb-2">
-                {{ 'Parent account' if is_en else 'حساب ولي الأمر' }}
+                {{ _('Parent account') }}
               </div>
               <h2 class="h3 mb-2" id="profileFullName">—</h2>
               <p class="profile-subcopy mb-3" id="heroSubtitle">
-                {{ 'Keep your contact details current so the kindergarten can
-                always reach you.' if is_en else 'حافظ على تحديث بيانات التواصل
-                حتى تتمكن الحضانة من الوصول إليك دائماً.' }}
+                {{ _('Keep your contact details current so the kindergarten can always reach you.') }}
               </p>
               <div class="d-flex flex-wrap gap-2">
                 <span class="profile-chip" id="profileStatusBadge">
                   <i class="bi bi-hourglass-split"></i>
-                  {{ 'Loading status' if is_en else 'جاري تحميل الحالة' }}
+                  {{ _('Loading status') }}
                 </span>
                 <span class="profile-chip" id="profileLanguageBadge">
                   <i class="bi bi-translate"></i>
-                  {{ 'Language' if is_en else 'اللغة' }}
+                  {{ _('Language') }}
                 </span>
               </div>
             </div>
@@ -382,16 +376,14 @@
               id="editBtn"
               onclick="toggleEditMode()"
             >
-              <i class="bi bi-pencil-square me-1"></i>{{ 'Edit profile' if is_en
-              else 'تعديل الملف' }}
+              <i class="bi bi-pencil-square me-1"></i>{{ _('Edit profile') }}
             </button>
             <button
               type="button"
               class="btn btn-outline-light fw-semibold"
               onclick="toggleAddressEdit()"
             >
-              <i class="bi bi-geo-alt me-1"></i>{{ 'Update address' if is_en
-              else 'تحديث العنوان' }}
+              <i class="bi bi-geo-alt me-1"></i>{{ _('Update address') }}
             </button>
           </div>
         </div>
@@ -399,19 +391,19 @@
         <div class="profile-meta-grid mt-4">
           <div class="profile-meta-card">
             <span class="profile-meta-label"
-              >{{ 'Phone' if is_en else 'الهاتف' }}</span
+              >{{ _('Phone') }}</span
             >
             <div class="fw-semibold fs-5" id="profileSummaryPhone">—</div>
           </div>
           <div class="profile-meta-card">
             <span class="profile-meta-label"
-              >{{ 'Email' if is_en else 'البريد الإلكتروني' }}</span
+              >{{ _('Email') }}</span
             >
             <div class="fw-semibold fs-6" id="profileSummaryEmail">—</div>
           </div>
           <div class="profile-meta-card">
             <span class="profile-meta-label"
-              >{{ 'Location' if is_en else 'الموقع' }}</span
+              >{{ _('Location') }}</span
             >
             <div class="fw-semibold fs-6" id="profileSummaryLocation">—</div>
           </div>
@@ -425,11 +417,10 @@
               <span class="profile-card-icon"
                 ><i class="bi bi-person-lines-fill"></i
               ></span>
-              {{ 'Personal information' if is_en else 'البيانات الشخصية' }}
+              {{ _('Personal information') }}
             </h3>
             <p class="profile-card-subtitle mb-0 mt-2">
-              {{ 'Your core identity and the contact details shown to staff.' if
-              is_en else 'هويتك الأساسية وبيانات التواصل التي تظهر للموظفين.' }}
+              {{ _('Your core identity and the contact details shown to staff.') }}
             </p>
           </div>
           <button
@@ -437,81 +428,80 @@
             id="btnEditProfile"
             onclick="toggleEditMode()"
           >
-            <i class="bi bi-pencil me-1"></i>{{ 'Edit' if is_en else 'تعديل' }}
+            <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
           </button>
         </div>
 
         <div id="viewMode" class="profile-info-grid">
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'First name' if is_en else 'الاسم الأول' }}
+              {{ _('First name') }}
             </div>
             <div class="profile-field-value" id="viewFirstName">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Middle name' if is_en else 'الاسم الأوسط' }}
+              {{ _('Middle name') }}
             </div>
             <div class="profile-field-value" id="viewSecondName">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Last name' if is_en else 'اسم العائلة' }}
+              {{ _('Last name') }}
             </div>
             <div class="profile-field-value" id="viewLastName">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Phone number' if is_en else 'رقم الهاتف' }}
+              {{ _('Phone number') }}
             </div>
             <div class="profile-field-value" id="viewPhone" dir="ltr">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Email' if is_en else 'البريد الإلكتروني' }}
+              {{ _('Email') }}
             </div>
             <div class="profile-field-value" id="viewEmail">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Relationship to child' if is_en else 'صلة القرابة بالطفل' }}
+              {{ _('Relationship to child') }}
             </div>
             <div class="profile-field-value" id="viewRelationship">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Gender' if is_en else 'الجنس' }}
+              {{ _('Gender') }}
             </div>
             <div class="profile-field-value" id="viewGender">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Nationality' if is_en else 'الجنسية' }}
+              {{ _('Nationality') }}
             </div>
             <div class="profile-field-value" id="viewNationality">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'National ID' if is_en else 'الرقم الوطني' }}
+              {{ _('National ID') }}
             </div>
             <div class="profile-field-value" id="viewNationalId">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Passport number' if is_en else 'رقم جواز السفر' }}
+              {{ _('Passport number') }}
             </div>
             <div class="profile-field-value" id="viewPassport">—</div>
           </div>
           <div class="profile-field profile-legal-name">
             <div class="profile-field-label">
-              {{ 'Arabic legal name' if is_en else 'الاسم القانوني بالعربية' }}
+              {{ _('Arabic legal name') }}
             </div>
             <div class="profile-field-value" id="viewArabicName">—</div>
           </div>
           <div class="profile-field profile-legal-name">
             <div class="profile-field-label">
-              {{ 'English legal name' if is_en else 'الاسم القانوني بالإنجليزية'
-              }}
+              {{ _('English legal name') }}
             </div>
             <div class="profile-field-value" id="viewEnglishName">—</div>
           </div>
@@ -521,7 +511,7 @@
           <div class="row g-3">
             <div class="col-md-4">
               <label for="editFirstName" class="form-label"
-                >{{ 'First name' if is_en else 'الاسم الأول' }}
+                >{{ _('First name') }}
                 <span class="text-danger">*</span></label
               >
               <input
@@ -533,13 +523,13 @@
             </div>
             <div class="col-md-4">
               <label for="editSecondName" class="form-label"
-                >{{ 'Middle name' if is_en else 'الاسم الأوسط' }}</label
+                >{{ _('Middle name') }}</label
               >
               <input type="text" class="form-control" id="editSecondName" />
             </div>
             <div class="col-md-4">
               <label for="editLastName" class="form-label"
-                >{{ 'Last name' if is_en else 'اسم العائلة' }}
+                >{{ _('Last name') }}
                 <span class="text-danger">*</span></label
               >
               <input
@@ -551,7 +541,7 @@
             </div>
             <div class="col-md-6">
               <label for="editPhone" class="form-label"
-                >{{ 'Phone number' if is_en else 'رقم الهاتف' }}
+                >{{ _('Phone number') }}
                 <span class="text-danger">*</span></label
               >
               <input
@@ -564,46 +554,42 @@
                 required
               />
               <div class="form-text">
-                {{ 'Accepted formats: 07XXXXXXXX, +9627XXXXXXXX or
-                009627XXXXXXXX.' if is_en else 'الصيغ المقبولة: 07XXXXXXXX أو
-                +9627XXXXXXXX أو 009627XXXXXXXX.' }}
+                {{ _('Accepted formats: 07XXXXXXXX, +9627XXXXXXXX or 009627XXXXXXXX.') }}
               </div>
             </div>
             <div class="col-md-6">
               <label for="editRelationship" class="form-label"
-                >{{ 'Relationship to child' if is_en else 'صلة القرابة بالطفل'
-                }}</label
+                >{{ _('Relationship to child') }}</label
               >
               <select class="form-select" id="editRelationship">
                 <option value="">
-                  {{ 'Select relationship' if is_en else 'اختر صلة القرابة' }}
+                  {{ _('Select relationship') }}
                 </option>
                 <option value="FATHER">
-                  {{ 'Father' if is_en else 'أب' }}
+                  {{ _('Father') }}
                 </option>
                 <option value="MOTHER">
-                  {{ 'Mother' if is_en else 'أم' }}
+                  {{ _('Mother') }}
                 </option>
                 <option value="GUARDIAN">
-                  {{ 'Guardian' if is_en else 'ولي أمر' }}
+                  {{ _('Guardian') }}
                 </option>
                 <option value="OTHER">
-                  {{ 'Other' if is_en else 'أخرى' }}
+                  {{ _('Other') }}
                 </option>
               </select>
             </div>
             <div class="col-12">
               <div class="profile-section-actions mt-2">
                 <button type="submit" class="btn btn-primary px-4">
-                  <i class="bi bi-check2-circle me-1"></i>{{ 'Save changes' if
-                  is_en else 'حفظ التغييرات' }}
+                  <i class="bi bi-check2-circle me-1"></i>{{ _('Save changes') }}
                 </button>
                 <button
                   type="button"
                   class="btn btn-outline-secondary px-4"
                   onclick="cancelEdit()"
                 >
-                  {{ 'Cancel' if is_en else 'إلغاء' }}
+                  {{ _('Cancel') }}
                 </button>
               </div>
             </div>
@@ -618,12 +604,10 @@
               <span class="profile-card-icon"
                 ><i class="bi bi-geo-alt"></i
               ></span>
-              {{ 'Address details' if is_en else 'بيانات العنوان' }}
+              {{ _('Address details') }}
             </h3>
             <p class="profile-card-subtitle mb-0 mt-2">
-              {{ 'Accurate address details help with enrollment and official
-              correspondence.' if is_en else 'تفاصيل العنوان الدقيقة تساعد في
-              التسجيل والمراسلات الرسمية.' }}
+              {{ _('Accurate address details help with enrollment and official correspondence.') }}
             </p>
           </div>
           <button
@@ -631,38 +615,38 @@
             id="btnEditAddress"
             onclick="toggleAddressEdit()"
           >
-            <i class="bi bi-pencil me-1"></i>{{ 'Edit' if is_en else 'تعديل' }}
+            <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
           </button>
         </div>
 
         <div id="addressViewMode" class="profile-info-grid">
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Governorate' if is_en else 'المحافظة' }}
+              {{ _('Governorate') }}
             </div>
             <div class="profile-field-value" id="viewGovernorate">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'District' if is_en else 'اللواء' }}
+              {{ _('District') }}
             </div>
             <div class="profile-field-value" id="viewCity">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Area' if is_en else 'المنطقة' }}
+              {{ _('Area') }}
             </div>
             <div class="profile-field-value" id="viewArea">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Home address' if is_en else 'عنوان السكن' }}
+              {{ _('Home address') }}
             </div>
             <div class="profile-field-value" id="viewAddressLine">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Work address' if is_en else 'عنوان العمل' }}
+              {{ _('Work address') }}
             </div>
             <div class="profile-field-value" id="viewWorkAddress">—</div>
           </div>
@@ -672,37 +656,36 @@
           <div class="row g-3">
             <div class="col-md-4">
               <label for="editGovernorate" class="form-label"
-                >{{ 'Governorate' if is_en else 'المحافظة' }}
+                >{{ _('Governorate') }}
                 <span class="text-danger">*</span></label
               >
               <select class="form-select" id="editGovernorate" required>
                 <option value="">
-                  {{ 'Select governorate' if is_en else 'اختر المحافظة' }}
+                  {{ _('Select governorate') }}
                 </option>
               </select>
             </div>
             <div class="col-md-4">
               <label for="editCity" class="form-label"
-                >{{ 'District' if is_en else 'اللواء' }}
+                >{{ _('District') }}
                 <span class="text-danger">*</span></label
               >
               <select class="form-select" id="editCity" required>
                 <option value="">
-                  {{ 'Select governorate first' if is_en else 'اختر المحافظة
-                  أولاً' }}
+                  {{ _('Select governorate first') }}
                 </option>
               </select>
             </div>
             <div class="col-md-4">
               <label for="editArea" class="form-label"
-                >{{ 'Area' if is_en else 'المنطقة' }}
+                >{{ _('Area') }}
                 <span class="text-danger">*</span></label
               >
               <input type="text" class="form-control" id="editArea" required />
             </div>
             <div class="col-md-6">
               <label for="editAddressLine" class="form-label"
-                >{{ 'Home address' if is_en else 'عنوان السكن' }}
+                >{{ _('Home address') }}
                 <span class="text-danger">*</span></label
               >
               <textarea
@@ -714,7 +697,7 @@
             </div>
             <div class="col-md-6">
               <label for="editWorkAddress" class="form-label"
-                >{{ 'Work address' if is_en else 'عنوان العمل' }}</label
+                >{{ _('Work address') }}</label
               >
               <textarea
                 class="form-control"
@@ -725,15 +708,14 @@
             <div class="col-12">
               <div class="profile-section-actions mt-2">
                 <button type="submit" class="btn btn-primary px-4">
-                  <i class="bi bi-check2-circle me-1"></i>{{ 'Save address' if
-                  is_en else 'حفظ العنوان' }}
+                  <i class="bi bi-check2-circle me-1"></i>{{ _('Save address') }}
                 </button>
                 <button
                   type="button"
                   class="btn btn-outline-secondary px-4"
                   onclick="cancelAddressEdit()"
                 >
-                  {{ 'Cancel' if is_en else 'إلغاء' }}
+                  {{ _('Cancel') }}
                 </button>
               </div>
             </div>
@@ -748,12 +730,10 @@
               <span class="profile-card-icon"
                 ><i class="bi bi-shield-check"></i
               ></span>
-              {{ 'Emergency contact' if is_en else 'جهة الاتصال في الطوارئ' }}
+              {{ _('Emergency contact') }}
             </h3>
             <p class="profile-card-subtitle mb-0 mt-2">
-              {{ 'This contact is used if the kindergarten cannot reach you
-              directly.' if is_en else 'يُستخدم هذا الاتصال إذا تعذر على الحضانة
-              الوصول إليك مباشرة.' }}
+              {{ _('This contact is used if the kindergarten cannot reach you directly.') }}
             </p>
           </div>
           <button
@@ -761,20 +741,20 @@
             id="btnEditEmergency"
             onclick="toggleEmergencyEdit()"
           >
-            <i class="bi bi-pencil me-1"></i>{{ 'Edit' if is_en else 'تعديل' }}
+            <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
           </button>
         </div>
 
         <div id="emergencyViewMode" class="profile-info-grid">
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Contact name' if is_en else 'اسم جهة الاتصال' }}
+              {{ _('Contact name') }}
             </div>
             <div class="profile-field-value" id="viewEmergencyName">—</div>
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Contact phone' if is_en else 'هاتف جهة الاتصال' }}
+              {{ _('Contact phone') }}
             </div>
             <div class="profile-field-value" id="viewEmergencyPhone" dir="ltr">
               —
@@ -782,7 +762,7 @@
           </div>
           <div class="profile-field">
             <div class="profile-field-label">
-              {{ 'Relationship' if is_en else 'صلة القرابة' }}
+              {{ _('Relationship') }}
             </div>
             <div class="profile-field-value" id="viewEmergencyRelationship">
               —
@@ -794,7 +774,7 @@
           <div class="row g-3">
             <div class="col-md-4">
               <label for="editEmergencyName" class="form-label"
-                >{{ 'Contact name' if is_en else 'اسم جهة الاتصال' }}
+                >{{ _('Contact name') }}
                 <span class="text-danger">*</span></label
               >
               <input
@@ -806,7 +786,7 @@
             </div>
             <div class="col-md-4">
               <label for="editEmergencyPhone" class="form-label"
-                >{{ 'Contact phone' if is_en else 'هاتف جهة الاتصال' }}
+                >{{ _('Contact phone') }}
                 <span class="text-danger">*</span></label
               >
               <input
@@ -821,7 +801,7 @@
             </div>
             <div class="col-md-4">
               <label for="editEmergencyRelationship" class="form-label"
-                >{{ 'Relationship' if is_en else 'صلة القرابة' }}</label
+                >{{ _('Relationship') }}</label
               >
               <input
                 type="text"
@@ -831,23 +811,20 @@
             </div>
             <div class="col-12">
               <div class="profile-inline-note">
-                {{ 'Use a reachable Jordanian phone number so urgent calls do
-                not fail.' if is_en else 'استخدم رقم هاتف أردني يمكن الوصول إليه
-                حتى لا تفشل الاتصالات العاجلة.' }}
+                {{ _('Use a reachable Jordanian phone number so urgent calls do not fail.') }}
               </div>
             </div>
             <div class="col-12">
               <div class="profile-section-actions mt-2">
                 <button type="submit" class="btn btn-primary px-4">
-                  <i class="bi bi-check2-circle me-1"></i>{{ 'Save emergency
-                  contact' if is_en else 'حفظ جهة الطوارئ' }}
+                  <i class="bi bi-check2-circle me-1"></i>{{ _('Save emergency contact') }}
                 </button>
                 <button
                   type="button"
                   class="btn btn-outline-secondary px-4"
                   onclick="cancelEmergencyEdit()"
                 >
-                  {{ 'Cancel' if is_en else 'إلغاء' }}
+                  {{ _('Cancel') }}
                 </button>
               </div>
             </div>
@@ -864,12 +841,10 @@
               <span class="profile-card-icon"
                 ><i class="bi bi-graph-up-arrow"></i
               ></span>
-              {{ 'Profile overview' if is_en else 'نظرة عامة على الملف' }}
+              {{ _('Profile overview') }}
             </h3>
             <p class="profile-side-subtitle mb-0 mt-2">
-              {{ 'A quick summary of profile readiness and communication
-              settings.' if is_en else 'ملخص سريع لجاهزية الملف وإعدادات
-              التواصل.' }}
+              {{ _('A quick summary of profile readiness and communication settings.') }}
             </p>
           </div>
         </div>
@@ -877,13 +852,13 @@
         <div class="profile-stats mb-3">
           <div class="profile-stat">
             <div class="profile-stat-label mb-1">
-              {{ 'Completion' if is_en else 'اكتمال الملف' }}
+              {{ _('Completion') }}
             </div>
             <div class="profile-stat-value" id="profileCompletionValue">0%</div>
           </div>
           <div class="profile-stat">
             <div class="profile-stat-label mb-1">
-              {{ 'Preferred language' if is_en else 'اللغة المفضلة' }}
+              {{ _('Preferred language') }}
             </div>
             <div class="profile-stat-value fs-5" id="profileLanguageValue">
               —
@@ -895,8 +870,7 @@
           <span id="profileCompletionBar" style="width: 0%"></span>
         </div>
         <p class="profile-help small mb-4" id="profileCompletionText">
-          {{ 'Loading profile quality…' if is_en else 'جاري تحميل مستوى اكتمال
-          الملف…' }}
+          {{ _('Loading profile quality…') }}
         </p>
 
         <div class="profile-summary-list">
@@ -904,10 +878,10 @@
             <i class="bi bi-person-badge"></i>
             <div>
               <div class="small text-muted">
-                {{ 'Role' if is_en else 'الدور' }}
+                {{ _('Role') }}
               </div>
               <div class="fw-semibold" id="profileRole">
-                {{ 'Parent' if is_en else 'ولي أمر' }}
+                {{ _('Parent') }}
               </div>
             </div>
           </div>
@@ -915,7 +889,7 @@
             <i class="bi bi-envelope-check"></i>
             <div>
               <div class="small text-muted">
-                {{ 'Email status' if is_en else 'حالة البريد الإلكتروني' }}
+                {{ _('Email status') }}
               </div>
               <div class="fw-semibold" id="profileEmailStatus">—</div>
             </div>
@@ -924,7 +898,7 @@
             <i class="bi bi-telephone-forward"></i>
             <div>
               <div class="small text-muted">
-                {{ 'Primary contact' if is_en else 'جهة التواصل الرئيسية' }}
+                {{ _('Primary contact') }}
               </div>
               <div class="fw-semibold" id="profilePrimaryContact">—</div>
             </div>
@@ -939,12 +913,10 @@
               <span class="profile-card-icon"
                 ><i class="bi bi-sliders2"></i
               ></span>
-              {{ 'Preferences' if is_en else 'التفضيلات' }}
+              {{ _('Preferences') }}
             </h3>
             <p class="profile-side-subtitle mb-0 mt-2">
-              {{ 'Choose how KinJo communicates with you and which interface
-              language you prefer.' if is_en else 'اختر كيفية تواصل KinJo معك
-              ولغة الواجهة التي تفضلها.' }}
+              {{ _('Choose how KinJo communicates with you and which interface language you prefer.') }}
             </p>
           </div>
         </div>
@@ -957,19 +929,16 @@
             checked
           />
           <label class="form-check-label fw-semibold" for="correspondenceSwitch"
-            >{{ 'Receive parent correspondence' if is_en else 'استلام مراسلات
-            ولي الأمر' }}</label
+            >{{ _('Receive parent correspondence') }}</label
           >
           <div class="profile-help small mt-1">
-            {{ 'Turn this on to keep receiving routine updates and reminders.'
-            if is_en else 'فعّل هذا الخيار للاستمرار في استلام التحديثات
-            والتذكيرات الروتينية.' }}
+            {{ _('Turn this on to keep receiving routine updates and reminders.') }}
           </div>
         </div>
 
         <div>
           <label class="form-label fw-semibold"
-            >{{ 'Interface language' if is_en else 'لغة الواجهة' }}</label
+            >{{ _('Interface language') }}</label
           >
           <div class="lang-toggle">
             <button
@@ -990,9 +959,7 @@
             </button>
           </div>
           <div class="profile-help small mt-2">
-            {{ 'The page layout and labels switch instantly after reload.' if
-            is_en else 'سيتم تبديل تنسيق الصفحة والعناوين مباشرة بعد إعادة
-            التحميل.' }}
+            {{ _('The page layout and labels switch instantly after reload.') }}
           </div>
         </div>
       </div>
@@ -1004,11 +971,10 @@
               <span class="profile-card-icon"
                 ><i class="bi bi-lightning-charge"></i
               ></span>
-              {{ 'Quick links' if is_en else 'روابط سريعة' }}
+              {{ _('Quick links') }}
             </h3>
             <p class="profile-side-subtitle mb-0 mt-2">
-              {{ 'Jump to the most common parent tasks.' if is_en else 'انتقل
-              مباشرة إلى أكثر مهام ولي الأمر استخداماً.' }}
+              {{ _('Jump to the most common parent tasks.') }}
             </p>
           </div>
         </div>
@@ -1016,28 +982,28 @@
         <div class="profile-link-list">
           <a href="/parent/children" class="profile-link-item"
             ><i class="bi bi-people"></i
-            ><span>{{ 'My children' if is_en else 'أطفالي' }}</span></a
+            ><span>{{ _('My children') }}</span></a
           >
           <a href="/enroll" class="profile-link-item"
             ><i class="bi bi-person-plus"></i
             ><span
-              >{{ 'Register new child' if is_en else 'تسجيل طفل جديد' }}</span
+              >{{ _('Register new child') }}</span
             ></a
           >
           <a href="/parent/enrollments" class="profile-link-item"
             ><i class="bi bi-clipboard-check"></i
             ><span
-              >{{ 'Enrollment requests' if is_en else 'طلبات التسجيل' }}</span
+              >{{ _('Enrollment requests') }}</span
             ></a
           >
           <a href="/my-reports" class="profile-link-item"
             ><i class="bi bi-journal-text"></i
-            ><span>{{ 'My reports' if is_en else 'تقاريري' }}</span></a
+            ><span>{{ _('My reports') }}</span></a
           >
           <a href="/absence-requests" class="profile-link-item"
             ><i class="bi bi-calendar-x"></i
             ><span
-              >{{ 'Absence requests' if is_en else 'طلبات الغياب' }}</span
+              >{{ _('Absence requests') }}</span
             ></a
           >
         </div>

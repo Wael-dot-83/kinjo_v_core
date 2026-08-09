@@ -54,6 +54,9 @@ class TestAuthenticationIntegration:
             "home_district": "Amman",
             "home_area": "Jubeiha",
             "home_address_line": "شارع الجامعة 123",
+            # Required by ParentRegistrationRequest since 3d33ece; the caller
+            # states the preference rather than having True assumed.
+            "correspondence_preference": True,
             "email": "sara.ahmad@test.jo",
             "password": "SecurePass123!",
         }

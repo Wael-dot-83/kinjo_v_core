@@ -1,4 +1,4 @@
-{% extends 'base.html' %} {% set is_en = ui_lang == 'en' %} {% set STATUS_LABELS
+{% extends 'base.html' %} {% set STATUS_LABELS
 = { 'APPROVED': _('Approved'), 'DRAFT': _('Draft'), 'REJECTED': _('Rejected'),
 'SUBMITTED': _('Under Review'), 'SENT_TO_PARENT': _('Sent'), 'RETURNED':
 _('Returned'), } %} {% block title %}{{ _('My Children\'s Reports') }}{%
@@ -29,7 +29,7 @@ endblock %} {% block extra_css %}
     overflow: hidden;
     background:
       radial-gradient(
-        circle at top {% if is_en %}right{% else %}left{% endif %},
+        circle at top {% if ui_dir == 'rtl' %}left{% else %}right{% endif %},
         rgba(201, 135, 67, 0.2),
         transparent 28%
       ),
@@ -275,17 +275,13 @@ endblock %} {% block extra_css %}
     >
       <div>
         <div class="reports-kicker mb-2">
-          {% if is_en %}Daily reports{% else %}التقارير اليومية{% endif %}
+          {{ _('Daily reports') }}
         </div>
         <h2 class="h3 mb-2">
-          {% if is_en %}A clearer view of your children's day{% else %}رؤية أوضح
-          ليوم أطفالك{% endif %}
+          {{ _('A clearer view of your children\'s day') }}
         </h2>
         <p class="reports-hero-copy mb-0">
-          {% if is_en %} Track what was shared with you, focus on one child when
-          needed, and open each report for the full daily details. {% else %}
-          تابع ما تمت مشاركته معك، وركّز على طفل واحد عند الحاجة، وافتح كل تقرير
-          للاطلاع على تفاصيل اليوم كاملة. {% endif %}
+           {{ _('Track what was shared with you, focus on one child when needed, and open each report for the full daily details.') }} 
         </p>
       </div>
       <div class="reports-hero-badge">
@@ -297,22 +293,19 @@ endblock %} {% block extra_css %}
     <div class="reports-metric-grid mt-4">
       <div class="reports-metric">
         <span class="reports-metric-label"
-          >{% if is_en %}Reports for selected day{% else %}تقارير اليوم المحدد{%
-          endif %}</span
+          >{{ _('Reports for selected day') }}</span
         >
         <div class="fs-3 fw-bold">{{ summary.report_count }}</div>
       </div>
       <div class="reports-metric">
         <span class="reports-metric-label"
-          >{% if is_en %}Children with updates{% else %}أطفال لديهم تحديثات{%
-          endif %}</span
+          >{{ _('Children with updates') }}</span
         >
         <div class="fs-3 fw-bold">{{ summary.children_with_reports }}</div>
       </div>
       <div class="reports-metric">
         <span class="reports-metric-label"
-          >{% if is_en %}Reports shared in the last 7 days{% else %}تقارير تمت
-          مشاركتها خلال آخر 7 أيام{% endif %}</span
+          >{{ _('Reports shared in the last 7 days') }}</span
         >
         <div class="fs-3 fw-bold">{{ summary.week_report_count }}</div>
       </div>
@@ -335,15 +328,14 @@ endblock %} {% block extra_css %}
         <select class="form-select" id="childFilter">
           <option value="">{{ _('All Children') }}</option>
           {% for child in children %}
+          {# Keep the whole {% if %} on one line. An HTML formatter treated the
+             tag as markup and split `selected_child_id == child.id` into the
+             attribute pair `selected_child_id="" ="child.id"`, which is not
+             valid Jinja — the template raised TemplateSyntaxError and every
+             page that renders it returned 500. #}
           <option
             value="{{ child.id }}"
-            {%
-            if
-            selected_child_id=""
-            ="child.id"
-            %}selected{%
-            endif
-            %}
+            {% if selected_child_id == child.id %}selected{% endif %}
           >
             {{ child.first_name }} {{ child.last_name }}
           </option>
@@ -356,8 +348,7 @@ endblock %} {% block extra_css %}
           type="button"
           onclick="loadReports()"
         >
-          <i class="bi bi-funnel me-1"></i>{% if is_en %}Apply Filters{% else
-          %}تطبيق التصفية{% endif %}
+          <i class="bi bi-funnel me-1"></i>{{ _('Apply Filters') }}
         </button>
       </div>
       <div class="toolbar-field flex-grow-0">
@@ -366,27 +357,21 @@ endblock %} {% block extra_css %}
           type="button"
           onclick="resetFilters()"
         >
-          <i class="bi bi-arrow-counterclockwise me-1"></i>{% if is_en %}Reset{%
-          else %}إعادة ضبط{% endif %}
+          <i class="bi bi-arrow-counterclockwise me-1"></i>{{ _('Reset') }}
         </button>
       </div>
     </div>
 
     <div class="reports-summary-bar">
       <span class="reports-pill"
-        ><i class="bi bi-people"></i>{{ summary.total_children }} {% if is_en
-        %}children linked to this account{% else %}أطفال مرتبطون بهذا الحساب{%
-        endif %}</span
+        ><i class="bi bi-people"></i>{{ summary.total_children }} {{ _('children linked to this account') }}</span
       >
       <span class="reports-pill"
         ><i class="bi bi-person-check"></i>{{ selected_child_name if
-        selected_child_name else (("Showing all children") if is_en else "عرض
-        جميع الأطفال") }}</span
+        selected_child_name else _('Showing all children') }}</span
       >
       <span class="reports-pill"
-        ><i class="bi bi-info-circle"></i>{% if is_en %}Only reports sent to
-        parents appear here{% else %}تظهر هنا فقط التقارير التي تم إرسالها إلى
-        أولياء الأمور{% endif %}</span
+        ><i class="bi bi-info-circle"></i>{{ _('Only reports sent to parents appear here') }}</span
       >
     </div>
   </section>
@@ -472,8 +457,7 @@ endblock %} {% block extra_css %}
               <i class="bi bi-eye me-1"></i>{{ _('View Details') }}
             </a>
             <a href="/parent/children" class="btn btn-light btn-sm border">
-              <i class="bi bi-people me-1"></i>{% if is_en %}Go to My Children{%
-              else %}الانتقال إلى أطفالي{% endif %}
+              <i class="bi bi-people me-1"></i>{{ _('Go to My Children') }}
             </a>
           </div>
         </div>
@@ -485,18 +469,11 @@ endblock %} {% block extra_css %}
       <div class="reports-empty-icon"><i class="bi bi-journal-x"></i></div>
       <h3 class="h5 mb-2">{{ _('No reports for this date') }}</h3>
       <p class="mb-2">
-        {% if is_en %} No report has been shared for the selected date yet. Try
-        a different child or another date, or check back later once the
-        kindergarten sends the daily update. {% else %} لم تتم مشاركة أي تقرير
-        لهذا التاريخ بعد. جرّب طفلاً آخر أو تاريخاً مختلفاً، أو عد لاحقاً بعد أن
-        ترسل الحضانة تحديث اليوم. {% endif %}
+         {{ _('No report has been shared for the selected date yet. Try a different child or another date, or check back later once the kindergarten sends the daily update.') }} 
       </p>
       <small>
-        {% if selected_child_name %} {% if is_en %}Current child filter:{% else
-        %}عامل تصفية الطفل الحالي:{% endif %} {{ selected_child_name }} {% else
-        %} {% if is_en %} You are currently viewing all children linked to your
-        account. {% else %} أنت تعرض حالياً جميع الأطفال المرتبطين بحسابك. {%
-        endif %} {% endif %}
+        {% if selected_child_name %} {{ _('Current child filter:') }} {{ selected_child_name }} {% else
+        %}  {{ _('You are currently viewing all children linked to your account.') }}  {% endif %}
       </small>
     </div>
     {% endif %}

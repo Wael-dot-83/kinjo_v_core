@@ -1333,3 +1333,211 @@ msgstr "الروضة"
 msgid "Submitted Date"
 msgstr "تاريخ التقديم"
 
+
+# Parent profile and report-list strings, moved off inline `is_en`
+# ternaries so the Arabic lives in the catalog like every other
+# parent-facing string.
+
+msgid "A quick summary of profile readiness and communication settings."
+msgstr "ملخص سريع لجاهزية الملف وإعدادات التواصل."
+
+msgid "Absence requests"
+msgstr "طلبات الغياب"
+
+msgid "Accepted formats: 07XXXXXXXX, +9627XXXXXXXX or 009627XXXXXXXX."
+msgstr "الصيغ المقبولة: 07XXXXXXXX أو +9627XXXXXXXX أو 009627XXXXXXXX."
+
+msgid "Accurate address details help with enrollment and official correspondence."
+msgstr "تفاصيل العنوان الدقيقة تساعد في التسجيل والمراسلات الرسمية."
+
+msgid "Address details"
+msgstr "بيانات العنوان"
+
+msgid "Apply Filters"
+msgstr "تطبيق التصفية"
+
+msgid "Arabic legal name"
+msgstr "الاسم القانوني بالعربية"
+
+msgid "Children with updates"
+msgstr "أطفال لديهم تحديثات"
+
+msgid "Choose how KinJo communicates with you and which interface language you prefer."
+msgstr "اختر كيفية تواصل KinJo معك ولغة الواجهة التي تفضلها."
+
+msgid "Complete the required fields so enrollment requests and parent communication work smoothly."
+msgstr "أكمِل الحقول المطلوبة حتى تعمل طلبات التسجيل والتواصل مع الحضانة بشكل سليم."
+
+msgid "Completion"
+msgstr "اكتمال الملف"
+
+msgid "Contact name"
+msgstr "اسم جهة الاتصال"
+
+msgid "Contact phone"
+msgstr "هاتف جهة الاتصال"
+
+msgid "Current child filter:"
+msgstr "عامل تصفية الطفل الحالي:"
+
+msgid "Daily reports"
+msgstr "التقارير اليومية"
+
+msgid "Edit profile"
+msgstr "تعديل الملف"
+
+msgid "Email status"
+msgstr "حالة البريد الإلكتروني"
+
+msgid "Emergency contact"
+msgstr "جهة الاتصال في الطوارئ"
+
+msgid "English legal name"
+msgstr "الاسم القانوني بالإنجليزية"
+
+msgid "Enrollment requests"
+msgstr "طلبات التسجيل"
+
+msgid "First name"
+msgstr "الاسم الأول"
+
+msgid "Go to My Children"
+msgstr "الانتقال إلى أطفالي"
+
+msgid "Home address"
+msgstr "عنوان السكن"
+
+msgid "Interface language"
+msgstr "لغة الواجهة"
+
+msgid "Jump to the most common parent tasks."
+msgstr "انتقل مباشرة إلى أكثر مهام ولي الأمر استخداماً."
+
+msgid "Keep your contact details current so the kindergarten can always reach you."
+msgstr "حافظ على تحديث بيانات التواصل حتى تتمكن الحضانة من الوصول إليك دائماً."
+
+msgid "Last name"
+msgstr "اسم العائلة"
+
+msgid "Loading profile quality…"
+msgstr "جاري تحميل مستوى اكتمال الملف…"
+
+msgid "Loading status"
+msgstr "جاري تحميل الحالة"
+
+msgid "Location"
+msgstr "الموقع"
+
+msgid "Middle name"
+msgstr "الاسم الأوسط"
+
+msgid "My children"
+msgstr "أطفالي"
+
+msgid "My reports"
+msgstr "تقاريري"
+
+msgid "No report has been shared for the selected date yet. Try a different child or another date, or check back later once the kindergarten sends the daily update."
+msgstr "لم تتم مشاركة أي تقرير لهذا التاريخ بعد. جرّب طفلاً آخر أو تاريخاً مختلفاً، أو عد لاحقاً بعد أن ترسل الحضانة تحديث اليوم."
+
+msgid "Only reports sent to parents appear here"
+msgstr "تظهر هنا فقط التقارير التي تم إرسالها إلى أولياء الأمور"
+
+msgid "Parent account"
+msgstr "حساب ولي الأمر"
+
+msgid "Passport number"
+msgstr "رقم جواز السفر"
+
+msgid "Personal information"
+msgstr "البيانات الشخصية"
+
+msgid "Phone"
+msgstr "الهاتف"
+
+msgid "Phone number"
+msgstr "رقم الهاتف"
+
+msgid "Preferred language"
+msgstr "اللغة المفضلة"
+
+msgid "Primary contact"
+msgstr "جهة التواصل الرئيسية"
+
+msgid "Profile overview"
+msgstr "نظرة عامة على الملف"
+
+msgid "Quick links"
+msgstr "روابط سريعة"
+
+msgid "Receive parent correspondence"
+msgstr "استلام مراسلات ولي الأمر"
+
+msgid "Register new child"
+msgstr "تسجيل طفل جديد"
+
+msgid "Relationship to child"
+msgstr "صلة القرابة بالطفل"
+
+msgid "Reports for selected day"
+msgstr "تقارير اليوم المحدد"
+
+msgid "Reports shared in the last 7 days"
+msgstr "تقارير تمت مشاركتها خلال آخر 7 أيام"
+
+msgid "Reset"
+msgstr "إعادة ضبط"
+
+msgid "Role"
+msgstr "الدور"
+
+msgid "Save address"
+msgstr "حفظ العنوان"
+
+msgid "Save changes"
+msgstr "حفظ التغييرات"
+
+msgid "Save emergency contact"
+msgstr "حفظ جهة الطوارئ"
+
+msgid "Select relationship"
+msgstr "اختر صلة القرابة"
+
+msgid "The page layout and labels switch instantly after reload."
+msgstr "سيتم تبديل تنسيق الصفحة والعناوين مباشرة بعد إعادة التحميل."
+
+msgid "This contact is used if the kindergarten cannot reach you directly."
+msgstr "يُستخدم هذا الاتصال إذا تعذر على الحضانة الوصول إليك مباشرة."
+
+msgid "Track what was shared with you, focus on one child when needed, and open each report for the full daily details."
+msgstr "تابع ما تمت مشاركته معك، وركّز على طفل واحد عند الحاجة، وافتح كل تقرير للاطلاع على تفاصيل اليوم كاملة."
+
+msgid "Turn this on to keep receiving routine updates and reminders."
+msgstr "فعّل هذا الخيار للاستمرار في استلام التحديثات والتذكيرات الروتينية."
+
+msgid "Update address"
+msgstr "تحديث العنوان"
+
+msgid "Use a reachable Jordanian phone number so urgent calls do not fail."
+msgstr "استخدم رقم هاتف أردني يمكن الوصول إليه حتى لا تفشل الاتصالات العاجلة."
+
+msgid "Work address"
+msgstr "عنوان العمل"
+
+msgid "You are currently viewing all children linked to your account."
+msgstr "أنت تعرض حالياً جميع الأطفال المرتبطين بحسابك."
+
+msgid "Your core identity and the contact details shown to staff."
+msgstr "هويتك الأساسية وبيانات التواصل التي تظهر للموظفين."
+
+msgid "Your profile still needs a few details."
+msgstr "ما زال ملفك الشخصي يحتاج إلى بعض البيانات."
+
+msgid "children linked to this account"
+msgstr "أطفال مرتبطون بهذا الحساب"
+
+msgid "A clearer view of your children's day"
+msgstr "رؤية أوضح ليوم أطفالك"
+
+msgid "Showing all children"
+msgstr "عرض جميع الأطفال"

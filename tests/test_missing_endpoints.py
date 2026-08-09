@@ -2019,18 +2019,48 @@ class TestMissingEndpointsCoverage2:
         assert response.status_code == 404
         app.dependency_overrides.clear()
 
-    def test_update_parent_profile_not_owner_403(self, client, admin_user, test_db, parent_user):
-        """Admin cannot update another user's parent profile"""
+    def test_update_parent_profile_not_owner_403(
+        self, client, admin_user, test_db, parent_user, supervisor_user
+    ):
+        """Only the profile owner or an ADMIN may update a parent profile.
+
+        This asserted that an admin got 403, which is no longer the contract:
+        update_parent_profile admits ADMIN alongside the owner by design, so a
+        staff member can correct a parent's details. The rule being guarded is
+        "not the owner and not an admin", so the rejected caller here is a
+        supervisor, and the admin path is asserted to succeed rather than left
+        untested.
+        """
         profile = test_db.query(models.ParentProfile).filter(
             models.ParentProfile.user_id == parent_user.id
         ).first()
         if not profile:
             pytest.skip("parent_user has no parent profile")
 
-        app.dependency_overrides[get_current_user] = lambda: admin_user
-        response = client.put(f"/api/parent-profiles/{profile.id}", json={"first_name": "Updated"})
-        assert response.status_code == 403
-        app.dependency_overrides.clear()
+        # csrf_pair sends the matching header+cookie. Without it the second
+        # request carries the CSRF cookie set by the first response but no
+        # header, which the double-submit middleware correctly rejects as half
+        # a pair before the authorization check is ever reached.
+        from conftest import csrf_pair
+
+        try:
+            app.dependency_overrides[get_current_user] = lambda: supervisor_user
+            response = client.put(
+                f"/api/parent-profiles/{profile.id}",
+                json={"first_name": "Updated"},
+                headers=csrf_pair(),
+            )
+            assert response.status_code == 403, response.text
+
+            app.dependency_overrides[get_current_user] = lambda: admin_user
+            allowed = client.put(
+                f"/api/parent-profiles/{profile.id}",
+                json={"first_name": "Updated"},
+                headers=csrf_pair(),
+            )
+            assert allowed.status_code == 200, allowed.text
+        finally:
+            app.dependency_overrides.clear()
 
     # ------------------------------------------------------------------
     # GET /api/users/me/parent-info WITH an actual profile (lines 207-211)

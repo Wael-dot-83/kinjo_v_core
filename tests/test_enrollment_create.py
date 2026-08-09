@@ -429,7 +429,11 @@ class TestEnrollmentCreatePage:
         response = client.get("/enrollments/create")
         assert response.status_code == 200
         html = response.text
-        assert "عمان" in html
+        # The dropdown lists governorates, and the capital's canonical
+        # governorate name is "العاصمة" — config.py keeps the city "عمان" in
+        # JORDAN_CITIES precisely so the two are not conflated. Asserting the
+        # city name here required the dropdown to be wrong to pass.
+        assert "العاصمة" in html
         assert "إربد" in html
 
     def test_admin_cannot_author_parent_enrollment(self, client, admin_token, test_db, sample_kindergarten):
