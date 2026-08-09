@@ -20,6 +20,19 @@ wheels/
 .installed.cfg
 *.egg
 
+# `lib/` and `build/` above are Python packaging patterns, but they are
+# unanchored, so they also match mobile/lib/ and mobile/build/ — the Flutter
+# client's entire Dart source tree. Commit 92cc8e1 ("feat(mobile): add Flutter
+# client") landed 92 files and 3683 lines of Android/iOS/Windows runner
+# scaffolding with zero application code, because every .dart file under
+# mobile/lib was silently ignored. A clone could not build the app.
+#
+# The directory itself has to be re-included before its contents can be: git
+# will not descend into an excluded directory, so `!mobile/lib/**` alone does
+# nothing. mobile/build/ stays ignored — that one is a real build artefact.
+!mobile/lib/
+!mobile/lib/**
+
 # Virtual Environment
 venv/
 ENV/

@@ -381,7 +381,20 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "Accept", "Accept-Language"],
+    # X-UI-Language is read by i18n.request_language() as the explicit,
+    # highest-priority language selector, but it was missing here — so no
+    # browser-based client could ever send it. Starlette answers a preflight
+    # that requests a disallowed header with 400 "Disallowed CORS headers",
+    # which blocks the whole request, not just that header. The mobile web
+    # build sends it on every call and was blocked at the preflight.
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-CSRF-Token",
+        "X-UI-Language",
+        "Accept",
+        "Accept-Language",
+    ],
 )
 
 # Compression middleware for faster API/template responses over network.
