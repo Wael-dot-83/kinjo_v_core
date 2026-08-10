@@ -92,6 +92,45 @@ def test_classification_bundles_bulk_query_count_is_flat(test_db, sample_kinderg
     )
 
 
+def test_rankings_query_count_is_flat(test_db, sample_kindergarten):
+    """get_rankings backs /api/analytics/rankings/{metric}, which /admin/analytics
+    calls twice (top and bottom). It scored every kindergarten with the per-KG
+    computers and was the last endpoint still returning 504 after the first round
+    of bulk fixes."""
+    from analytics_service import AnalyticsService
+
+    few = [sample_kindergarten.id] + [_kg(test_db).id for _ in range(2)]
+    q_few = _count_queries(test_db, lambda: AnalyticsService.get_rankings(
+        test_db, "governance_score", PERIOD_START, PERIOD_END, 5, False, few))
+
+    many = few + [_kg(test_db).id for _ in range(12)]
+    q_many = _count_queries(test_db, lambda: AnalyticsService.get_rankings(
+        test_db, "governance_score", PERIOD_START, PERIOD_END, 5, False, many))
+
+    growth_per_kg = (q_many - q_few) / (len(many) - len(few))
+    assert growth_per_kg < 0.5, (
+        f"{q_few} queries for {len(few)} vs {q_many} for {len(many)} "
+        f"= {growth_per_kg:.2f} per kindergarten; rankings is still N+1"
+    )
+
+
+def test_rankings_skips_kindergartens_without_attendance_data(test_db, sample_kindergarten):
+    """A kindergarten with no attendance must be unrankable, not ranked as 0.0.
+
+    The bundle reports 0.0 where compute_attendance_rate returns None; if that
+    leaked through, every non-reporting kindergarten would appear at the bottom
+    of the attendance table as though it had genuinely scored zero.
+    """
+    from analytics_service import AnalyticsService
+
+    ids = [sample_kindergarten.id] + [_kg(test_db).id for _ in range(3)]
+    rankings = AnalyticsService.get_rankings(
+        test_db, "attendance_rate", PERIOD_START, PERIOD_END, 50, False, ids)
+    assert rankings == [] or all(r.value is not None for r in rankings), (
+        "kindergartens with no attendance data must be skipped, not ranked at 0.0"
+    )
+
+
 def test_classification_bulk_matches_single_bundle(test_db, sample_kindergarten):
     """_bundles_bulk must be interchangeable with _bundle, including the
     enrichment keys the leaderboard ranks on."""

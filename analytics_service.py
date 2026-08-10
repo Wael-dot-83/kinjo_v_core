@@ -8387,17 +8387,35 @@ class AnalyticsService:
             kindergartens = kindergartens.filter(models.Kindergarten.id.in_(kg_filter))
         kindergartens = kindergartens.all()
 
+        # One bulk pass for the whole scope. Calling the per-kindergarten KPI
+        # computers in this loop cost a full bundle each and timed out once the
+        # network reached 446 active kindergartens. The bundle carries every
+        # metric this endpoint can rank, so one pass answers all four.
+        bundles = KPIService.compute_kpi_bundles_bulk(
+            db, [kg.id for kg in kindergartens], period_start, period_end
+        )
+
         rankings = []
         for kg in kindergartens:
+            bundle = bundles.get(kg.id) or {}
+            quality = bundle.get("quality") or {}
             band = None
             if metric == "attendance_rate":
-                value = KPIService.compute_attendance_rate(db, kg.id, period_start, period_end)
+                # The bundle reports 0.0 where compute_attendance_rate returns
+                # None. That distinction decides whether a kindergarten is
+                # rankable at all, so recover it from the same has_data flag —
+                # a 0.0 here would plant every non-reporting kindergarten at the
+                # bottom of the table as though it had genuinely scored zero.
+                value = bundle.get("attendance_rate")
+                if not (quality.get("attendance_rate") or {}).get("has_data", False):
+                    value = None
             elif metric == "incident_rate":
-                value = KPIService.compute_incident_rate(db, kg.id, period_start, period_end)
+                value = bundle.get("incident_rate", 0.0)
             elif metric == "ratio_compliance":
-                value = KPIService.compute_ratio_compliance(db, kg.id, period_start, period_end)
+                value = bundle.get("ratio_compliance", 0.0)
             elif metric == "governance_score":
-                value, band = KPIService.compute_governance_score(db, kg.id, period_start, period_end)
+                value = bundle.get("governance_score", 0.0)
+                band = bundle.get("governance_band")
             else:
                 value = 0
 
