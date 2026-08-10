@@ -798,8 +798,18 @@ class AnalyticsGapService:
 
         if active_children:
             # Attendance rate per child
-            att_by_child = dict(
-                self.db.query(
+            # Keyed explicitly rather than dict(rows): the query selects three
+            # columns, and dict() can only consume 2-tuples, so this raised
+            # "dictionary update sequence element #0 has length 3; 2 is required"
+            # and turned GET /api/admin/analytics/kg/{id} into a 500 for every
+            # kindergarten that actually had attendance rows. With no attendance
+            # the query returns [] and dict([]) succeeds, which is why the test
+            # suite never saw it.
+            # The consumer below expects the full (child_id, tot, pres) row, so
+            # map each child to its row rather than to a pair.
+            att_by_child = {
+                row[0]: row
+                for row in self.db.query(
                     models.AttendanceLog.child_id,
                     func.count(models.AttendanceLog.id).label("tot"),
                     func.sum(
@@ -812,7 +822,7 @@ class AnalyticsGapService:
                 )
                 .group_by(models.AttendanceLog.child_id)
                 .all()
-            )
+            }
             # Incident count per child
             inc_by_child = dict(
                 self.db.query(

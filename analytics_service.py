@@ -5647,15 +5647,25 @@ def get_kg_overview_kindergartens(
         )
         _last_report_by_kg = {kg_id: ts for kg_id, ts in _last_report_rows}
 
+    # One bulk pass for the three fields this listing actually reads. The
+    # previous per-kindergarten get_kindergarten_metrics() call also computed
+    # governance, ratio compliance and report rates and wrote the analytics
+    # cache, which made the endpoint 504 at 446 kindergartens.
+    _metrics_by_kg = AnalyticsService.get_kg_overview_metrics_bulk(
+        db, _kg_ids, period_start, period_end
+    )
+
     result = []
     for kg in kindergartens:
         try:
-            metrics = AnalyticsService.get_kindergarten_metrics(db, kg.id, period_start, period_end)
-            attendance = metrics.attendance_rate or 0
-            capacity = metrics.capacity or 0
-            children = metrics.children_count or 0
+            metrics = _metrics_by_kg.get(kg.id) or {}
+            attendance = metrics.get("attendance_rate") or 0
+            capacity = metrics.get("capacity") or 0
+            children = metrics.get("children_count") or 0
             occupancy = (children / capacity * 100) if capacity > 0 else 0
-            teachers = metrics.staff_count if hasattr(metrics, 'staff_count') else 0
+            # KindergartenMetrics never carried staff_count, so the original
+            # hasattr() check was always False and teachers was always 0.
+            teachers = 0
 
             # Health score logic
             if attendance >= 80 and occupancy < 90:
@@ -8011,6 +8021,103 @@ class AnalyticsService:
         return round((approved_reports / submitted_reports * 100) if submitted_reports > 0 else 0, 2)
 
     # Advanced analytics cache helpers (used by /analytics/advanced-cache* endpoints)
+    @staticmethod
+    def get_kg_overview_metrics_bulk(
+        db: Session,
+        kindergarten_ids: List[int],
+        period_start: date,
+        period_end: date,
+    ) -> Dict[int, Dict[str, Any]]:
+        """attendance_rate / capacity / children_count for many kindergartens.
+
+        The kg-overview listing needs exactly these three fields, but obtained
+        them by calling get_kindergarten_metrics() once per kindergarten. That
+        function also computes report rates, ratio compliance and a governance
+        score and writes the analytics cache, so at 446 active kindergartens the
+        listing exceeded the 30s request timeout and returned 504.
+
+        Semantics are kept identical to the per-kindergarten path:
+          * attendance_rate is taken from the analytics cache when an entry
+            exists for this exact dimension/period, exactly as the single path
+            prefers `cached.attendance_rate`;
+          * kindergartens without a cache entry fall back to the authoritative
+            bulk attendance helper, which shares its definition with
+            compute_attendance_rate and returns None for "no scheduled
+            attendance" rather than 0.0;
+          * capacity and children_count use the same filters as the single
+            path, just grouped.
+        """
+        if not kindergarten_ids:
+            return {}
+
+        period_days = (period_end - period_start).days + 1
+        period_type = (
+            models.AnalyticsPeriodType.MONTHLY if period_days > 31
+            else models.AnalyticsPeriodType.DAILY
+        )
+
+        cached_rate: Dict[int, Optional[float]] = {}
+        for row in db.query(
+            models.AdvancedAnalyticsCache.dimension_id,
+            models.AdvancedAnalyticsCache.attendance_rate,
+        ).filter(
+            models.AdvancedAnalyticsCache.dimension_type
+            == models.AnalyticsDimensionType.KINDERGARTEN,
+            models.AdvancedAnalyticsCache.dimension_id.in_(
+                [str(i) for i in kindergarten_ids]
+            ),
+            models.AdvancedAnalyticsCache.period_type == period_type,
+            models.AdvancedAnalyticsCache.period_start == period_start,
+            models.AdvancedAnalyticsCache.period_end == period_end,
+        ).all():
+            try:
+                cached_rate[int(row[0])] = row[1]
+            except (TypeError, ValueError):
+                continue
+
+        uncached = [i for i in kindergarten_ids if i not in cached_rate]
+        computed_rate: Dict[int, Optional[float]] = {}
+        if uncached:
+            from kpi_service import KPIService as _KPIService
+            computed_rate = _KPIService.compute_attendance_rates_bulk(
+                db, uncached, period_start, period_end
+            )
+
+        capacity_by_kg = {
+            int(r[0]): int(r[1] or 0)
+            for r in db.query(
+                models.Class.kindergarten_id,
+                func.sum(models.Class.capacity_total),
+            ).filter(
+                models.Class.kindergarten_id.in_(kindergarten_ids),
+                models.Class.is_active == True,  # noqa: E712 - SQL boolean
+            ).group_by(models.Class.kindergarten_id).all()
+        }
+
+        children_by_kg = {
+            int(r[0]): int(r[1] or 0)
+            for r in db.query(
+                models.EnrollmentApplication.kindergarten_id,
+                func.count(models.EnrollmentApplication.id),
+            ).filter(
+                models.EnrollmentApplication.kindergarten_id.in_(kindergarten_ids),
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            ).group_by(models.EnrollmentApplication.kindergarten_id).all()
+        }
+
+        out: Dict[int, Dict[str, Any]] = {}
+        for kg_id in kindergarten_ids:
+            rate = cached_rate.get(kg_id, computed_rate.get(kg_id))
+            out[kg_id] = {
+                # The single path coerces a missing rate to 0 at the call site
+                # (`metrics.attendance_rate or 0`); keep None here so callers can
+                # still tell "no data" from a genuine zero.
+                "attendance_rate": rate,
+                "capacity": capacity_by_kg.get(kg_id, 0),
+                "children_count": children_by_kg.get(kg_id, 0),
+            }
+        return out
+
     @staticmethod
     def get_advanced_analytics_cache(
         db: Session,

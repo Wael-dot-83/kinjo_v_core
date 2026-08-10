@@ -565,8 +565,175 @@ def _count_recent_incidents(db: Session, kindergarten_id: int, days: int = 90) -
         return {"total": 0, "critical": 0}
 
 
-def compute_kindergarten_kpi_scores(db: Session, kindergarten: models.Kindergarten) -> Dict[str, Any]:
-    """Compute normalized kindergarten-level KPI scores for admin heat-map views."""
+def _counts_for_kindergartens_bulk(
+    db: Session, kindergarten_ids: List[int]
+) -> Dict[int, Dict[str, Any]]:
+    """The six per-kindergarten counters, batched into grouped queries.
+
+    compute_kindergarten_kpi_scores() needs enrollments, classes, supervisors,
+    recent reports, recent incidents and the latest governance score. Fetching
+    those one kindergarten at a time cost six queries each, so the heat-map map
+    data and stats endpoints issued ~2,700 queries and took ~17.5s at 446 active
+    kindergartens — no safe margin under the 30s request timeout.
+
+    Every filter and window below is copied from the single-kindergarten helpers
+    so the numbers are identical; only the fetch is grouped. Each block degrades
+    to zero/None on error exactly like the per-kindergarten helpers, which each
+    wrap their query in try/except.
+    """
+    out: Dict[int, Dict[str, Any]] = {
+        kg_id: {
+            "enrollments": 0, "classes": 0, "supervisors": 0,
+            "reports": 0, "incidents_total": 0, "incidents_critical": 0,
+            "governance": None,
+        }
+        for kg_id in kindergarten_ids
+    }
+    if not kindergarten_ids:
+        return out
+
+    def _fill(query, key, cast=int):
+        try:
+            for row in query.all():
+                kg_id = int(row[0])
+                if kg_id in out:
+                    out[kg_id][key] = cast(row[1] or 0)
+        except Exception:
+            pass
+
+    _fill(
+        db.query(models.EnrollmentApplication.kindergarten_id,
+                 func.count(models.EnrollmentApplication.id))
+        .filter(models.EnrollmentApplication.kindergarten_id.in_(kindergarten_ids))
+        .filter(models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
+        .group_by(models.EnrollmentApplication.kindergarten_id),
+        "enrollments",
+    )
+    _fill(
+        db.query(models.Class.kindergarten_id, func.count(models.Class.id))
+        .filter(models.Class.kindergarten_id.in_(kindergarten_ids))
+        .group_by(models.Class.kindergarten_id),
+        "classes",
+    )
+
+    # _count_supervisors takes max(user_count, profile_count); mirror that.
+    supervisor_users: Dict[int, int] = {}
+    supervisor_profiles: Dict[int, int] = {}
+    try:
+        for row in (
+            db.query(models.User.kindergarten_id, func.count(models.User.id))
+            .filter(models.User.kindergarten_id.in_(kindergarten_ids))
+            .filter(models.User.role == models.UserRole.SUPERVISOR)
+            .group_by(models.User.kindergarten_id).all()
+        ):
+            supervisor_users[int(row[0])] = int(row[1] or 0)
+    except Exception:
+        pass
+    try:
+        for row in (
+            db.query(models.SupervisorProfile.kindergarten_id,
+                     func.count(models.SupervisorProfile.user_id))
+            .filter(models.SupervisorProfile.kindergarten_id.in_(kindergarten_ids))
+            .group_by(models.SupervisorProfile.kindergarten_id).all()
+        ):
+            supervisor_profiles[int(row[0])] = int(row[1] or 0)
+    except Exception:
+        pass
+    for kg_id in kindergarten_ids:
+        out[kg_id]["supervisors"] = max(
+            supervisor_users.get(kg_id, 0), supervisor_profiles.get(kg_id, 0)
+        )
+
+    _fill(
+        db.query(models.DailyReport.kindergarten_id, func.count(models.DailyReport.id))
+        .filter(models.DailyReport.kindergarten_id.in_(kindergarten_ids))
+        .filter(models.DailyReport.date >= _today() - timedelta(days=30))
+        .group_by(models.DailyReport.kindergarten_id),
+        "reports",
+    )
+
+    incident_since = now_amman() - timedelta(days=90)
+    _fill(
+        db.query(models.Incident.kindergarten_id, func.count(models.Incident.id))
+        .filter(models.Incident.kindergarten_id.in_(kindergarten_ids))
+        .filter(models.Incident.occurred_at >= incident_since)
+        .group_by(models.Incident.kindergarten_id),
+        "incidents_total",
+    )
+    if hasattr(models.Incident, "severity_level"):
+        _fill(
+            db.query(models.Incident.kindergarten_id, func.count(models.Incident.id))
+            .filter(models.Incident.kindergarten_id.in_(kindergarten_ids))
+            .filter(models.Incident.occurred_at >= incident_since)
+            .filter(models.Incident.severity_level == models.SeverityLevel.CRITICAL)
+            .group_by(models.Incident.kindergarten_id),
+            "incidents_critical",
+        )
+
+    # Latest governance score per kindergarten: the single helper orders by
+    # period_end desc and takes the first row, so take the row with the greatest
+    # period_end here.
+    try:
+        latest = (
+            db.query(
+                models.GovernanceScore.kindergarten_id,
+                func.max(models.GovernanceScore.period_end),
+            )
+            .filter(models.GovernanceScore.kindergarten_id.in_(kindergarten_ids))
+            .group_by(models.GovernanceScore.kindergarten_id)
+            .all()
+        )
+        pairs = {(int(r[0]), r[1]) for r in latest if r[1] is not None}
+        if pairs:
+            rows = (
+                db.query(
+                    models.GovernanceScore.kindergarten_id,
+                    models.GovernanceScore.period_end,
+                    models.GovernanceScore.final_governance_score,
+                )
+                .filter(models.GovernanceScore.kindergarten_id.in_(
+                    [p[0] for p in pairs]))
+                .all()
+            )
+            for kg_id, period_end, score in rows:
+                if (int(kg_id), period_end) in pairs and score is not None:
+                    out[int(kg_id)]["governance"] = float(score)
+    except Exception:
+        pass
+
+    return out
+
+
+def compute_kindergarten_kpi_scores_bulk(
+    db: Session, kindergartens: List[models.Kindergarten]
+) -> Dict[int, Dict[str, Any]]:
+    """compute_kindergarten_kpi_scores() for many kindergartens without the N+1.
+
+    Batches the six counters, then runs the *same* scoring function per
+    kindergarten with those counts injected. The arithmetic, thresholds and
+    risk bands therefore live in exactly one place and cannot drift between the
+    single and bulk paths — which matters because the heat-map colours are
+    derived from these scores.
+    """
+    ids = [kg.id for kg in kindergartens]
+    counts = _counts_for_kindergartens_bulk(db, ids)
+    return {
+        kg.id: compute_kindergarten_kpi_scores(db, kg, _counts=counts.get(kg.id))
+        for kg in kindergartens
+    }
+
+
+def compute_kindergarten_kpi_scores(
+    db: Session,
+    kindergarten: models.Kindergarten,
+    _counts: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Compute normalized kindergarten-level KPI scores for admin heat-map views.
+
+    ``_counts`` lets a caller supply the six counters it would otherwise fetch
+    one query at a time. It is purely a data-source switch: when omitted the
+    behaviour is byte-for-byte what it always was.
+    """
     status_score = {
         models.KindergartenStatus.ACTIVE.value: 100.0,
         models.KindergartenStatus.DRAFT.value: 60.0,
@@ -580,20 +747,32 @@ def compute_kindergarten_kpi_scores(db: Session, kindergarten: models.Kindergart
     location_score = 100.0 if kindergarten.latitude is not None and kindergarten.longitude is not None else 60.0
     nursery_score = round((status_score + license_score + location_score) / 3.0, 2)
 
-    enrollment_count = _count_enrollments(db, kindergarten.id)
+    if _counts is None:
+        enrollment_count = _count_enrollments(db, kindergarten.id)
+        class_count = _count_classes(db, kindergarten.id)
+        supervisor_count = _count_supervisors(db, kindergarten.id)
+        incidents = _count_recent_incidents(db, kindergarten.id)
+        reports_count = _count_recent_reports(db, kindergarten.id)
+        governance_score = _latest_governance_score(db, kindergarten.id)
+    else:
+        enrollment_count = int(_counts.get("enrollments", 0))
+        class_count = int(_counts.get("classes", 0))
+        supervisor_count = int(_counts.get("supervisors", 0))
+        incidents = {
+            "total": int(_counts.get("incidents_total", 0)),
+            "critical": int(_counts.get("incidents_critical", 0)),
+        }
+        reports_count = int(_counts.get("reports", 0))
+        governance_score = _counts.get("governance")
+
     children_score = 100.0 if enrollment_count > 0 else 0.0
 
-    class_count = _count_classes(db, kindergarten.id)
-    supervisor_count = _count_supervisors(db, kindergarten.id)
     staff_score = 100.0 if class_count > 0 and supervisor_count >= max(1, class_count // 2) else 0.0
 
-    incidents = _count_recent_incidents(db, kindergarten.id)
     safety_score = max(0.0, 100.0 - incidents["total"] * 8.0 - incidents["critical"] * 25.0)
 
-    reports_count = _count_recent_reports(db, kindergarten.id)
     reports_score = 100.0 if class_count == 0 else min(100.0, reports_count / max(class_count * 30, 1) * 100.0)
 
-    governance_score = _latest_governance_score(db, kindergarten.id)
     governance_score = 0.0 if governance_score is None else max(0.0, min(100.0, governance_score))
 
     indicator_scores = {
@@ -630,9 +809,15 @@ def kindergarten_to_dict(
     kindergarten: models.Kindergarten,
     *,
     include_details: bool = True,
+    _kpi: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Serialize a Kindergarten row with canonical KPI status data."""
-    kpi = compute_kindergarten_kpi_scores(db, kindergarten)
+    """Serialize a Kindergarten row with canonical KPI status data.
+
+    ``_kpi`` lets a list endpoint pass in a score it already computed in bulk,
+    so serializing 446 rows does not trigger 446 × 6 queries. Omitting it keeps
+    the original behaviour.
+    """
+    kpi = _kpi if _kpi is not None else compute_kindergarten_kpi_scores(db, kindergarten)
     data = {
         "id": kindergarten.id,
         "name_ar": kindergarten.name_ar,
@@ -691,19 +876,26 @@ def get_kindergarten_map_data(
         to_date=to_date,
     ).order_by(models.Kindergarten.id.asc()).all()
 
+    # Score every candidate once, in bulk. Both the status filter and the
+    # feature builder below need these scores; computing them per kindergarten
+    # cost six queries each and made this endpoint take ~17.5s at 446 active
+    # kindergartens.
+    scores_by_kg = compute_kindergarten_kpi_scores_bulk(db, rows)
+
     if status:
         from .kpi_status import normalize_kpi_status
 
         normalized = normalize_kpi_status(status).value
         rows = [
             kg for kg in rows
-            if compute_kindergarten_kpi_scores(db, kg)["kpi_status"]["status"] == normalized
+            if (scores_by_kg.get(kg.id) or {}).get("kpi_status", {}).get("status") == normalized
         ]
 
     features = []
     missing_location_count = 0
     for kg in rows:
-        kg_dict = kindergarten_to_dict(db, kg, include_details=False)
+        kg_dict = kindergarten_to_dict(db, kg, include_details=False,
+                                       _kpi=scores_by_kg.get(kg.id))
         if kg.latitude is None or kg.longitude is None:
             gov_match = None
             for g in C.GOVERNORATES:
@@ -763,13 +955,17 @@ def get_kindergarten_stats(
         to_date=to_date,
     ).order_by(models.Kindergarten.id.asc()).all()
 
+    # Bulk-score once; the status filter and the aggregation loop below both
+    # need these, and per-kindergarten scoring cost six queries each.
+    scores_by_kg = compute_kindergarten_kpi_scores_bulk(db, rows)
+
     if status:
         from .kpi_status import normalize_kpi_status
 
         normalized = normalize_kpi_status(status).value
         rows = [
             kg for kg in rows
-            if compute_kindergarten_kpi_scores(db, kg)["kpi_status"]["status"] == normalized
+            if (scores_by_kg.get(kg.id) or {}).get("kpi_status", {}).get("status") == normalized
         ]
 
     from .kpi_status import KPIStatus
@@ -781,7 +977,8 @@ def get_kindergarten_stats(
     scores: List[float] = []
 
     for kg in rows:
-        kg_dict = kindergarten_to_dict(db, kg, include_details=False)
+        kg_dict = kindergarten_to_dict(db, kg, include_details=False,
+                                       _kpi=scores_by_kg.get(kg.id))
         kpi_status = kg_dict["kpi_status"]
         status_counts[kpi_status] = status_counts.get(kpi_status, 0) + 1
         scores.append(float(kg_dict["kpi_score"]))
