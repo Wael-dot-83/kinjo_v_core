@@ -453,6 +453,32 @@ def validate_production_settings():
             "Currently set to: " + settings.SESSION_COOKIE_SAMESITE
         )
 
+    # Serving the same app on several hostnames (typically apex + www) while
+    # COOKIE_DOMAIN is empty writes a *host-only* session cookie: it is bound to
+    # the exact host that issued it and is never sent to the sibling host. The
+    # user signs in on one, lands on the other, arrives with no token, and is
+    # bounced straight back to /login?redirect=... — an endless login loop that
+    # looks like "the password did not work". Fail loudly instead.
+    _web_hosts = {
+        host.strip().lower().lstrip("*.")
+        for host in settings.TRUSTED_HOSTS
+        if host.strip() and host.strip() not in {"*", "testserver"}
+        and not host.strip().lower() in {"localhost", "127.0.0.1", "::1"}
+    }
+    _registrable = {
+        host[4:] if host.startswith("www.") else host for host in _web_hosts
+    }
+    if not settings.COOKIE_DOMAIN and len(_web_hosts) > 1 and len(_registrable) == 1:
+        raise RuntimeError(
+            "CRITICAL: TRUSTED_HOSTS serves several hostnames "
+            f"({', '.join(sorted(_web_hosts))}) but COOKIE_DOMAIN is empty, so the "
+            "session cookie is host-only and will not travel between them. Signing "
+            "in on one host and browsing the other produces an infinite login "
+            f"redirect loop. Set COOKIE_DOMAIN=.{sorted(_registrable)[0]} in .env, "
+            "and redirect one hostname to the other at the edge so there is a "
+            "single canonical origin."
+        )
+
     # Raise when SMTP is not configured — password reset emails will not be delivered
     if not (settings.SMTP_HOST and settings.SMTP_FROM):
         raise RuntimeError(
