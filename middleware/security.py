@@ -40,6 +40,7 @@ _GMAPS_CONNECT = [
     "https://maps.googleapis.com",
     "https://*.googleapis.com",
     "https://*.gstatic.com",
+    "https://cloudflareinsights.com",
 ]
 
 _BASE_CONNECT = [
@@ -50,18 +51,26 @@ _BASE_CONNECT = [
     "ws://127.0.0.1:8000",
     "https://cdn.jsdelivr.net",
     "https://cdnjs.cloudflare.com",
+    # Cloudflare Web Analytics beacon posts its RUM payload here. Without it the
+    # beacon is injected by the edge on every response and then blocked by CSP.
+    "https://cloudflareinsights.com",
 ]
+
+# Cloudflare injects this script into every response when Web Analytics is on.
+# It is edge-injected, so the app cannot opt out per-page — it must be allowed
+# or every single page load reports a CSP violation.
+_CF_INSIGHTS_SCRIPT = "https://static.cloudflareinsights.com"
 
 
 def _security_csp(heatmap: bool = False) -> str:
     script_src = (
         "script-src 'self' 'unsafe-inline' "
         "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com "
-        "https://maps.googleapis.com"
+        f"https://maps.googleapis.com {_CF_INSIGHTS_SCRIPT}"
         if heatmap
         else
         "script-src 'self' 'unsafe-inline' "
-        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com"
+        f"https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com {_CF_INSIGHTS_SCRIPT}"
     )
     connect_sources = _GMAPS_CONNECT if heatmap else _BASE_CONNECT
     img_src = (
