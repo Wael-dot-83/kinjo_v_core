@@ -1426,42 +1426,78 @@ class AnalyticsGapService:
         kg_risk_labels: List[str] = []
         kg_risk_values: List[float] = []
 
+        # Weekly attendance buckets for every kindergarten at once.
+        # This was a nested loop — 446 kindergartens × 12 weeks — issuing one
+        # query per pair plus one incident count each, so the endpoint fired
+        # ~11,000 queries and exceeded the 30s request timeout with a 504.
+        # The week boundaries, the PRESENT/LATE numerator and the per-week rate
+        # are unchanged; only the fetch is grouped.
+        _kg_ids = [kg.id for kg in kgs]
+        _weeks = [
+            (w, today - timedelta(days=w * 7), today - timedelta(days=(w - 1) * 7))
+            for w in range(12, 0, -1)
+        ]
+        _week_totals: Dict[int, Dict[int, List[int]]] = {
+            kg_id: {w: [0, 0] for w, _s, _e in _weeks} for kg_id in _kg_ids
+        }
+        if _kg_ids:
+            _oldest = _weeks[0][1]
+            _newest = _weeks[-1][2]
+            for kg_id, day, tot, pres in (
+                self.db.query(
+                    models.Class.kindergarten_id,
+                    models.AttendanceLog.date,
+                    func.count(models.AttendanceLog.id),
+                    func.sum(case((models.AttendanceLog.status.in_(["PRESENT", "LATE"]), 1), else_=0)),
+                )
+                .join(models.Class, models.AttendanceLog.class_id == models.Class.id)
+                .filter(
+                    models.Class.kindergarten_id.in_(_kg_ids),
+                    models.AttendanceLog.date.between(_oldest, _newest),
+                )
+                .group_by(models.Class.kindergarten_id, models.AttendanceLog.date)
+                .all()
+            ):
+                buckets = _week_totals.get(int(kg_id))
+                if buckets is None:
+                    continue
+                # between() is inclusive at both ends, so a day on a boundary
+                # counted toward both adjacent weeks before; preserve that.
+                for w, wk_s, wk_e in _weeks:
+                    if wk_s <= day <= wk_e:
+                        buckets[w][0] += int(tot or 0)
+                        buckets[w][1] += int(pres or 0)
+
+        _hi_inc_by_kg: Dict[int, int] = {}
+        if _kg_ids:
+            for kg_id, cnt in (
+                self.db.query(
+                    models.Incident.kindergarten_id, func.count(models.Incident.id)
+                )
+                .filter(
+                    models.Incident.kindergarten_id.in_(_kg_ids),
+                    models.Incident.severity_level.in_(["HIGH", "CRITICAL"]),
+                    models.Incident.occurred_at >= datetime.combine(window_start, datetime.min.time()),
+                    models.Incident.deleted_at == None,
+                )
+                .group_by(models.Incident.kindergarten_id)
+                .all()
+            ):
+                _hi_inc_by_kg[int(kg_id)] = int(cnt or 0)
+
         for kg in kgs:
             # 90-day attendance trend slope
             week_rates_kg: List[float] = []
-            for w in range(12, 0, -1):
-                wk_s = today - timedelta(days=w * 7)
-                wk_e = today - timedelta(days=(w - 1) * 7)
-                row = (
-                    self.db.query(
-                        func.count(models.AttendanceLog.id).label("tot"),
-                        func.sum(case((models.AttendanceLog.status.in_(["PRESENT", "LATE"]), 1), else_=0)).label("pres"),
-                    )
-                    .join(models.Class, models.AttendanceLog.class_id == models.Class.id)
-                    .filter(
-                        models.Class.kindergarten_id == kg.id,
-                        models.AttendanceLog.date.between(wk_s, wk_e),
-                    )
-                    .first()
-                )
-                t = row.tot or 0
-                p = row.pres or 0
+            _buckets = _week_totals.get(kg.id, {})
+            for w, _wk_s, _wk_e in _weeks:
+                t, p = _buckets.get(w, [0, 0])
                 week_rates_kg.append(p / t * 100 if t else 0.0)
 
             trend_slope = _slope(week_rates_kg)
             last_att = week_rates_kg[-1] if week_rates_kg else 0.0
 
             # High-severity incidents last 90 days
-            hi_inc = (
-                self.db.query(func.count(models.Incident.id))
-                .filter(
-                    models.Incident.kindergarten_id == kg.id,
-                    models.Incident.severity_level.in_(["HIGH", "CRITICAL"]),
-                    models.Incident.occurred_at >= datetime.combine(window_start, datetime.min.time()),
-                    models.Incident.deleted_at == None,
-                )
-                .scalar()
-            ) or 0
+            hi_inc = _hi_inc_by_kg.get(kg.id, 0)
 
             # Risk: attendance deficit contributes 40%, negative trend 30%, incidents 30%
             att_risk  = max(0, (85 - last_att) / 85 * 40) if last_att < 85 else 0
@@ -1501,25 +1537,13 @@ class AnalyticsGapService:
                   if (kg.name_en or kg.name_ar or str(kg.id)) in kg_risk_labels else -1
             if idx < 0:
                 continue
-            # Build 90-day weekly attendance
+            # Build 90-day weekly attendance from the buckets already grouped
+            # above. This loop recomputed exactly the same 12 weekly rates with
+            # another query per (kindergarten, week), doubling the N+1.
+            _b = _week_totals.get(kg.id, {})
             wk_rates: List[float] = []
-            for w in range(12, 0, -1):
-                wk_s = today - timedelta(days=w * 7)
-                wk_e = today - timedelta(days=(w - 1) * 7)
-                row = (
-                    self.db.query(
-                        func.count(models.AttendanceLog.id).label("tot"),
-                        func.sum(case((models.AttendanceLog.status.in_(["PRESENT", "LATE"]), 1), else_=0)).label("pres"),
-                    )
-                    .join(models.Class, models.AttendanceLog.class_id == models.Class.id)
-                    .filter(
-                        models.Class.kindergarten_id == kg.id,
-                        models.AttendanceLog.date.between(wk_s, wk_e),
-                    )
-                    .first()
-                )
-                t = row.tot or 0
-                p = row.pres or 0
+            for w, _wk_s, _wk_e in _weeks:
+                t, p = _b.get(w, [0, 0])
                 wk_rates.append(p / t * 100 if t else 0.0)
 
             sl = _slope(wk_rates)

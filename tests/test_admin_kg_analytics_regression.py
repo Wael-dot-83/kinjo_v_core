@@ -202,3 +202,47 @@ def test_kg_analytics_requires_admin(client, manager_token, sample_kindergarten)
 def test_kg_analytics_requires_authentication(client, sample_kindergarten):
     r = client.get(f"/api/admin/analytics/kg/{sample_kindergarten.id}")
     assert r.status_code == 401
+
+
+# ── predictive metrics: nested N+1 removed ─────────────────────────────────
+def test_predictive_metrics_runs_and_is_not_nested_n_plus_1(
+    test_db, admin_user, parent_user, sample_kindergarten, sample_class, sample_child
+):
+    """get_predictive_metrics looped 446 kindergartens x 12 weeks, twice.
+
+    That is ~11,000 queries at production scale and returned 504. The weekly
+    buckets are now grouped; this pins both that the endpoint still produces its
+    metrics and that query count no longer grows per kindergarten.
+    """
+    from analytics_gap_service import AnalyticsGapService
+
+    today = date.today()
+    test_db.add(models.EnrollmentApplication(
+        child_id=sample_child.id, kindergarten_id=sample_kindergarten.id,
+        status=models.EnrollmentStatus.ACTIVE,
+        enrollment_start_date=today - timedelta(days=60),
+        enrollment_end_date=today + timedelta(days=60),
+    ))
+    for i in range(10):
+        test_db.add(models.AttendanceLog(
+            child_id=sample_child.id, class_id=sample_class.id,
+            date=today - timedelta(days=i * 3),
+            status=models.AttendanceStatus.PRESENT, recorded_by=admin_user.id,
+        ))
+    test_db.commit()
+
+    svc = AnalyticsGapService(test_db)
+    q_one = _count_queries(test_db, lambda: svc.get_predictive_metrics(locale="ar"))
+    resp = svc.get_predictive_metrics(locale="ar")
+    names = {getattr(m, "metric", None) for m in (getattr(resp, "metrics", None) or [])}
+    assert "dropout_risk" in names or names, "predictive metrics produced nothing"
+
+    for _ in range(10):
+        _kg(test_db)
+    q_many = _count_queries(test_db, lambda: svc.get_predictive_metrics(locale="ar"))
+
+    growth = (q_many - q_one) / 10
+    assert growth < 1.0, (
+        f"{q_one} queries for 1 kindergarten vs {q_many} for 11 = {growth:.2f} "
+        "per kindergarten; the predictive nested N+1 is back"
+    )

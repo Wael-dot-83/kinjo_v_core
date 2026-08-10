@@ -160,6 +160,53 @@ def test_heatmap_bulk_counts_execute_on_postgres(pg_session):
     assert "kpi_status" in out[kg.id]
 
 
+def test_audit_log_accepts_a_plain_string_detail(pg_session):
+    """audit_logs.details must take a sentence, not JSON.
+
+    The column was jsonb in PostgreSQL while the model declared Text, so every
+    audit-logged write raised InvalidTextRepresentation — POST
+    /api/admin/kindergartens returned 500 and no kindergarten could be created.
+    """
+    entry = models.AuditLog(
+        user_id=None, action="TEST_ACTION", entity_type="Kindergarten",
+        entity_id=1, details="Created kindergarten حضانة الاختبار",
+    )
+    pg_session.add(entry)
+    pg_session.commit()
+    pg_session.refresh(entry)
+    assert entry.details.startswith("Created kindergarten")
+    pg_session.delete(entry)
+    pg_session.commit()
+
+
+def test_model_column_types_match_postgres(pg_session):
+    """Catch model/database type drift for the JSON-ish columns.
+
+    A column the model calls Text but the database stores as jsonb rejects every
+    plain string written to it; the reverse silently stores JSON as opaque text.
+    """
+    mismatches = []
+    inspector = sa.inspect(pg_session.get_bind())
+    for mapper in Base.registry.mappers:
+        table = mapper.local_table
+        if table is None or table.name not in inspector.get_table_names():
+            continue
+        db_cols = {c["name"]: c["type"] for c in inspector.get_columns(table.name)}
+        for col in table.columns:
+            db_type = db_cols.get(col.key)
+            if db_type is None:
+                continue
+            model_is_json = isinstance(col.type, sa.JSON)
+            db_is_json = "JSON" in str(db_type).upper()
+            if model_is_json != db_is_json:
+                mismatches.append(
+                    f"{table.name}.{col.key}: model={col.type} db={db_type}"
+                )
+    assert not mismatches, (
+        "model/PostgreSQL column type drift on JSON columns: " + "; ".join(mismatches)
+    )
+
+
 def test_kg_overview_metrics_bulk_executes_on_postgres(pg_session):
     from analytics_service import AnalyticsService
 
