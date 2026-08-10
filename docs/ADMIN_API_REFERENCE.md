@@ -12,7 +12,7 @@
 - Pagination: list endpoints use the parameter names shown below; do not assume a universal page size.
 - Live interactive schemas and examples are also available at `/docs` and `/openapi.json` in an authorized environment.
 
-## Registered operations (159)
+## Registered operations (160)
 
 | Method | Path | Purpose | Parameters | Request body | Success/error responses |
 |---|---|---|---|---|---|
@@ -161,6 +161,7 @@
 | `GET` | `/api/admin/reports/supervisors/analytics` | Supervisors Analytics | `level` (query, value, optional)<br>`governorate` (query, value, optional)<br>`city` (query, value, optional)<br>`area` (query, value, optional)<br>`kindergarten_id` (query, value, optional)<br>`period` (query, value, optional)<br>`date_from` (query, value, optional)<br>`date_to` (query, value, optional)<br>`lang` (query, string, optional)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` —<br>`422` `HTTPValidationError` |
 | `GET` | `/api/admin/reports/supervisors/coverage` | Supervisors Coverage | `level` (query, value, optional)<br>`governorate` (query, value, optional)<br>`city` (query, value, optional)<br>`area` (query, value, optional)<br>`period` (query, value, optional)<br>`date_from` (query, value, optional)<br>`date_to` (query, value, optional)<br>`lang` (query, string, optional)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` —<br>`422` `HTTPValidationError` |
 | `GET` | `/api/admin/safety/analytics` | Safety Analytics | `incident_type` (query, value, optional)<br>`severity` (query, value, optional)<br>`classification` (query, value, optional)<br>`parent_informed` (query, value, optional)<br>`date_from` (query, value, optional)<br>`date_to` (query, value, optional)<br>`kindergarten_id` (query, value, optional)<br>`child_id` (query, value, optional)<br>`governorate` (query, value, optional)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` —<br>`422` `HTTPValidationError` |
+| `GET` | `/api/admin/stats` | Get Admin Stats | `period_days` (query, integer, optional)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` `object`<br>`422` `HTTPValidationError` |
 | `GET` | `/api/admin/users` | List Users | `page` (query, integer, optional)<br>`page_size` (query, integer, optional)<br>`role` (query, value, optional)<br>`status` (query, value, optional)<br>`kindergarten_id` (query, value, optional)<br>`search` (query, value, optional)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` —<br>`422` `HTTPValidationError` |
 | `POST` | `/api/admin/users` | Create User | `kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | application/json: `UserCreateSchema` | `201` —<br>`422` `HTTPValidationError` |
 | `POST` | `/api/admin/users/bulk-create` | Bulk Create Users | `kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | application/json: `BulkCreateSchema` | `200` —<br>`422` `HTTPValidationError` |
