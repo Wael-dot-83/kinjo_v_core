@@ -13,7 +13,7 @@ Metric metadata (canonical bilingual titles, dimensions, drill-down path) is ser
 from ``analytics.metric_registry`` via ``/analytics/catalog``.
 """
 from typing import Optional
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import distinct as sqla_distinct
 from sqlalchemy.orm import Session
 
@@ -155,6 +155,18 @@ async def get_kg_analytics(
     teacher timeliness, meal compliance, health alert density,
     data quality, age appropriateness, and safeguarding resolution rate.
     """
+    # A kindergarten that does not exist must be a 404, not a payload of zeroed
+    # metrics: the calculators aggregate over an empty result set quite happily,
+    # so without this check /kg/999999 returned 200 with a full chart structure
+    # of zeros, which is indistinguishable from a real kindergarten that simply
+    # has no data. Checked before the cache so a miss is never cached.
+    exists = db.query(models.Kindergarten.id).filter(
+        models.Kindergarten.id == kg_id,
+        models.Kindergarten.deleted_at.is_(None),
+    ).first()
+    if not exists:
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
+
     cache_key = f"adv_analytics:kg:{kg_id}:{locale}"
     return dashboard_cache.get_or_set(
         cache_key,

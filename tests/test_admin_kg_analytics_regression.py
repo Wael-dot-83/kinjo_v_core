@@ -162,3 +162,43 @@ def test_overview_bulk_query_count_is_flat(test_db):
         f"{q_few} queries for {len(few)} vs {q_many} for {len(many)} = "
         f"{growth:.2f} per kindergarten; kg-overview is still N+1"
     )
+
+
+# ── not-found handling ─────────────────────────────────────────────────────
+def test_kg_analytics_returns_404_for_unknown_kindergarten(client, admin_token):
+    """A missing kindergarten must 404, not return zeroed metrics.
+
+    The calculators aggregate happily over an empty result set, so without an
+    existence check the endpoint answered 200 with a full chart structure of
+    zeros — indistinguishable from a real kindergarten with no data.
+    """
+    r = client.get(
+        "/api/admin/analytics/kg/999999",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert r.status_code == 404, (
+        f"expected 404 for a nonexistent kindergarten, got {r.status_code}"
+    )
+
+
+def test_kg_analytics_returns_200_for_existing_kindergarten(
+    client, admin_token, sample_kindergarten
+):
+    r = client.get(
+        f"/api/admin/analytics/kg/{sample_kindergarten.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert r.status_code == 200
+
+
+def test_kg_analytics_requires_admin(client, manager_token, sample_kindergarten):
+    r = client.get(
+        f"/api/admin/analytics/kg/{sample_kindergarten.id}",
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+    assert r.status_code == 403
+
+
+def test_kg_analytics_requires_authentication(client, sample_kindergarten):
+    r = client.get(f"/api/admin/analytics/kg/{sample_kindergarten.id}")
+    assert r.status_code == 401
