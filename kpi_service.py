@@ -5401,6 +5401,15 @@ def get_kpi_alerts(
     alerts = []
     today = _today_jordan()
 
+    # One bulk pass for every kindergarten in scope. This loop used to call
+    # compute_kpi_bundle per kindergarten; at 446 active kindergartens the
+    # endpoint was logging "Slow request: GET /api/kpi/alerts took 27.72s",
+    # which is inside the 30s request timeout only by luck and would 504 under
+    # any additional load. The bundles are identical either way.
+    alert_bundles = compute_kpi_bundles_bulk(
+        db, [kg.id for kg in kindergartens], period_start, period_end
+    )
+
     for kg in kindergartens:
         kg_id = kg.id
         kg_name = kg.name_ar or kg.name_en or f"KG #{kg_id}"
@@ -5446,7 +5455,11 @@ def get_kpi_alerts(
 
         # KPI threshold breaches
         try:
-            bundle = KPIService.compute_kpi_bundle(db, kg_id, period_start, period_end)
+            # Fall back to the single-KG form only if the bulk pass somehow has
+            # no entry, so a missing key can never turn an alert list into a 500.
+            bundle = alert_bundles.get(kg_id) or KPIService.compute_kpi_bundle(
+                db, kg_id, period_start, period_end
+            )
             if bundle.get("attendance_rate", 100.0) < 70.0 and bundle["quality"]["attendance_rate"]["has_data"]:
                 alerts.append({
                     "type": "LOW_ATTENDANCE", "priority": "high",
