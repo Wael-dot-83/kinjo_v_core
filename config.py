@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     CORS_ALLOWED_ORIGINS: List[str] = ["http://127.0.0.1:8000", "http://localhost:8000"]
     TRUSTED_HOSTS: List[str] = ["127.0.0.1", "localhost", "testserver"]
     COOKIE_DOMAIN: str = ""
+    # When set (e.g. "www.kinjordan.org"), GET/HEAD requests arriving on any
+    # other trusted hostname are 301'd here so the site has one canonical
+    # origin. Empty disables the redirect entirely, which is the default.
+    CANONICAL_HOST: str = ""
     SESSION_COOKIE_NAME: str = "kinjo_session"
     SESSION_COOKIE_SAMESITE: str = "strict"
     CSRF_COOKIE_NAME: str = "kinjo_csrf_token"

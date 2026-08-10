@@ -416,6 +416,26 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 
 
+# Canonical host redirect. Serving the same app on both the apex and www leaves
+# two origins that each build their own history, caches and analytics. Sessions
+# already survive the split because COOKIE_DOMAIN scopes the cookie to the
+# registrable domain, so this is about having one address rather than about
+# authentication. Disabled unless CANONICAL_HOST is set.
+@app.middleware("http")
+async def enforce_canonical_host(request: Request, call_next):
+    canonical = settings.CANONICAL_HOST.strip().lower()
+    if canonical and request.method in ("GET", "HEAD"):
+        host = (request.headers.get("host") or "").split(":")[0].strip().lower()
+        # Loopback is how the container health check and any on-box probe reach
+        # the app; redirecting those to the public hostname would break them.
+        if host and host not in {canonical, "localhost", "127.0.0.1", "::1"}:
+            target = f"https://{canonical}{request.url.path}"
+            if request.url.query:
+                target = f"{target}?{request.url.query}"
+            return RedirectResponse(target, status_code=301)
+    return await call_next(request)
+
+
 # Request timeout middleware
 @app.middleware("http")
 async def enforce_request_timeout(request: Request, call_next):
