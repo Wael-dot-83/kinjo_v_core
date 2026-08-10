@@ -494,6 +494,72 @@ class BenchmarkingService:
         return bundle
 
     @staticmethod
+    def _bundles_bulk(
+        db: Session,
+        kindergarten_ids: List[int],
+        period_start: date,
+        period_end: date,
+    ) -> Dict[int, Dict[str, Any]]:
+        """`_bundle` for many kindergartens without the per-kindergarten N+1.
+
+        Same cache keys, same TTL and the same enrichment (`expected_child_days`,
+        `coverage_pct_total`) as `_bundle`, so a warm cache is shared between the
+        two and the values are interchangeable. Only the kindergartens that miss
+        the cache go to `compute_kpi_bundles_bulk`, which answers all of them in a
+        fixed set of grouped queries rather than one bundle each.
+        """
+        bundles: Dict[int, Dict[str, Any]] = {}
+        missing: List[int] = []
+        for kg_id in kindergarten_ids:
+            cached = dashboard_cache.get(
+                f"classification:bundle:{kg_id}:{period_start}:{period_end}"
+            )
+            if cached:
+                bundles[kg_id] = cached
+            else:
+                missing.append(kg_id)
+
+        if not missing:
+            return bundles
+
+        try:
+            computed = KPIService.compute_kpi_bundles_bulk(
+                db, missing, period_start, period_end
+            )
+        except Exception:
+            # Mirror _bundle's behaviour: a KPI failure must not take the whole
+            # leaderboard down, and the neutral bundle keeps the row visible and
+            # explicitly flagged as insufficient rather than silently ranked.
+            logger.exception(
+                "Failed to compute bulk KPI bundles for %d kindergartens", len(missing)
+            )
+            computed = {}
+
+        for kg_id in missing:
+            bundle = computed.get(kg_id)
+            if bundle is None:
+                bundles[kg_id] = {
+                    "expected_child_days": 0,
+                    "coverage_pct_total": 0.0,
+                    "governance_score": 0.0,
+                    "gqi_score": 0.0,
+                    "cei_score": 0.0,
+                    "quality": {},
+                }
+                continue
+            bundle = dict(bundle)
+            bundle["expected_child_days"] = int(bundle.get("expected_child_days", 0))
+            bundle["coverage_pct_total"] = DataCoverageService.coverage_from_bundle(bundle)
+            dashboard_cache.set(
+                f"classification:bundle:{kg_id}:{period_start}:{period_end}",
+                bundle,
+                ttl_seconds=ClassificationConfig.CACHE_TTL_SECONDS,
+            )
+            bundles[kg_id] = bundle
+
+        return bundles
+
+    @staticmethod
     def _rank_rows(rows: List[ClassificationRow]) -> None:
         grouped: Dict[str, List[ClassificationRow]] = defaultdict(list)
         for row in rows:
@@ -598,15 +664,27 @@ class BenchmarkingService:
         size_stats = BenchmarkingService._size_stats_by_kindergarten(db, kg_ids)
         previous_start, previous_end = _previous_period(period_start, period_end)
 
+        # Resolve the size band first so the bulk KPI pass only covers the
+        # kindergartens that actually survive the size filter, then fetch both
+        # periods in two bulk calls instead of two per kindergarten.
+        in_scope = [
+            kg for kg in kindergartens
+            if not size_band or BenchmarkingService._size_band_for_kindergarten(
+                size_mode,
+                size_stats.get(kg.id, {"class_count": 0, "capacity_total": 0, "active_enrollments": 0}),
+            ) == size_band
+        ]
+        in_scope_ids = [kg.id for kg in in_scope]
+        current_bundles = BenchmarkingService._bundles_bulk(db, in_scope_ids, period_start, period_end)
+        previous_bundles = BenchmarkingService._bundles_bulk(db, in_scope_ids, previous_start, previous_end)
+
         rows: List[ClassificationRow] = []
-        for kg in kindergartens:
+        for kg in in_scope:
             stats = size_stats.get(kg.id, {"class_count": 0, "capacity_total": 0, "active_enrollments": 0})
             computed_size_band = BenchmarkingService._size_band_for_kindergarten(size_mode, stats)
-            if size_band and computed_size_band != size_band:
-                continue
 
-            current_bundle = BenchmarkingService._bundle(db, kg.id, period_start, period_end)
-            previous_bundle = BenchmarkingService._bundle(db, kg.id, previous_start, previous_end)
+            current_bundle = current_bundles.get(kg.id, {})
+            previous_bundle = previous_bundles.get(kg.id, {})
             coverage_pct = float(current_bundle.get("coverage_pct_total", 0.0))
             sample_size = int(current_bundle.get("expected_child_days", 0))
 

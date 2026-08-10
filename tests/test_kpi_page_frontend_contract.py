@@ -72,7 +72,25 @@ def test_no_duplicated_governance_band_thresholds():
     not be re-derived in an endpoint."""
     content = KPI_SERVICE.read_text(encoding="utf-8")
     handler_start = content.index("def get_kpi_network_summary")
-    handler_body = content[handler_start:handler_start + 2000]
+    handler_body = content[handler_start:handler_start + 3000]
     assert "gs >= 70" not in handler_body
     assert "gs >= 40" not in handler_body
-    assert "gs, band = KPIService.compute_governance_score" in handler_body
+
+    # The handler must take the band from the authoritative KPI bundle rather
+    # than deriving it. It now reads bundle["governance_band"] from
+    # compute_kpi_bundles_bulk instead of calling compute_governance_score once
+    # per kindergarten (that loop was an N+1 that timed out at 446 active
+    # kindergartens); either way the band must come from kpi_service's own
+    # computation, never from thresholds re-stated here.
+    assert 'bundle.get("governance_band")' in handler_body or \
+           "gs, band = KPIService.compute_governance_score" in handler_body, (
+        "network-summary must source governance_band from the authoritative "
+        "KPI bundle, not re-derive it"
+    )
+    # No band literal may be assigned in the endpoint — that is what
+    # "re-derived thresholds" looks like.
+    for band in ("GREEN", "AMBER", "RED", "INSUFFICIENT"):
+        assert f'= "{band}"' not in handler_body, (
+            f"network-summary assigns the {band} band inline; band logic belongs "
+            "in kpi_service's bundle computation only"
+        )

@@ -904,31 +904,41 @@ class TestBulkAttendanceExcludesExcused:
     """Finding 5: bulk path must exclude EXCUSED from attended child-days."""
 
     def test_bulk_path_excludes_excused_from_attended(self, test_db, sample_kindergarten):
-        """Inspect the consolidated dashboard source — the nested _build_base_bundles_bulk
-        closure must not include EXCUSED in the attended child-days status list."""
-        import kpi_service as svc
-        # _build_base_bundles_bulk is a closure inside get_consolidated_kpi_dashboard_data.
-        source = inspect.getsource(svc.get_consolidated_kpi_dashboard_data)
-        # Find the bulk attended-child-days status.in_ block and confirm EXCUSED is absent.
-        # The single-KG path excludes EXCUSED per policy; the bulk path must match.
+        """The bulk attended child-days status list must not include EXCUSED.
+
+        The single-KG path counts only physical attendance (PRESENT, LATE); an
+        EXCUSED absence is not attendance. If the bulk path counted it too, the
+        two would disagree on every kindergarten with excused absences.
+
+        This inspects `compute_kpi_bundles_bulk`, which is where the bulk logic
+        lives since it was hoisted out of `get_consolidated_kpi_dashboard_data` to
+        be shared with the network-summary and classification endpoints. Comments
+        are stripped before the check so prose about EXCUSED cannot fail — or,
+        worse, accidentally satisfy — the assertion.
+        """
         import re
-        # Extract the status.in_ list inside _build_base_bundles_bulk context
-        # by checking that after "Attended child-days per child" the EXCUSED constant is absent
-        # from any status list within 60 lines.
+        import kpi_service as svc
+
+        source = inspect.getsource(svc.compute_kpi_bundles_bulk)
         attended_block_match = re.search(
             r"Attended child-days.*?\.status\.in_\(\[(.*?)\]\)",
             source, re.DOTALL
         )
-        if attended_block_match:
-            block = attended_block_match.group(0)
-            assert "EXCUSED" not in block, (
-                "_build_base_bundles_bulk bulk attendance status list still includes "
-                "EXCUSED, inflating the denominator vs the single-KG path."
-            )
-        else:
-            # Fallback: confirm the entire source has no status list containing EXCUSED
-            # adjacent to the attended child-days comment.
-            assert "EXCUSED" not in source.split("Attended child-days per child")[1][:500] if "Attended child-days per child" in source else True
+        assert attended_block_match, (
+            "attended child-days status list not found in compute_kpi_bundles_bulk; "
+            "the bulk attendance query moved and this guard no longer covers it"
+        )
+        block = attended_block_match.group(0)
+        code_only = "\n".join(line.split("#")[0] for line in block.splitlines())
+        statuses = re.findall(r"AttendanceStatus\.(\w+)", code_only)
+        assert "EXCUSED" not in statuses, (
+            f"bulk attended child-days status list is {statuses}; EXCUSED is not "
+            "physical attendance and inflates the numerator vs the single-KG path"
+        )
+        assert set(statuses) == {"PRESENT", "LATE"}, (
+            f"bulk attended child-days status list drifted to {statuses}; the "
+            "single-KG path counts exactly PRESENT and LATE"
+        )
 
 
 class TestKPIDefinitionsScale:

@@ -7424,6 +7424,11 @@ class AnalyticsService:
         kindergartens = kg_query.all()
 
         green = amber = red = 0
+        # One bulk pass for the whole network before the loop; without it this is
+        # a full KPI bundle per kindergarten.
+        AnalyticsService._warm_governance_memo(
+            db, [kg.id for kg in kindergartens], period_start, period_end
+        )
         for kg in kindergartens:
             _, band = AnalyticsService._kg_governance_score_and_band(db, kg.id, period_start, period_end)
             # Band is returned as "GREEN", "AMBER", or "RED" (uppercase)
@@ -7760,6 +7765,11 @@ class AnalyticsService:
         total_score = 0.0
         count = 0
 
+        # One bulk pass for the whole network before the loop; without it this is
+        # a full KPI bundle per kindergarten.
+        AnalyticsService._warm_governance_memo(
+            db, [kg.id for kg in kindergartens], period_start, period_end
+        )
         for kg in kindergartens:
             score = AnalyticsService._compute_kindergarten_governance_score(db, kg.id, period_start, period_end)
             if score > 0:
@@ -7867,6 +7877,11 @@ class AnalyticsService:
         total_score = 0.0
         count = 0
 
+        # One bulk pass for the whole network before the loop; without it this is
+        # a full KPI bundle per kindergarten.
+        AnalyticsService._warm_governance_memo(
+            db, [kg.id for kg in kindergartens], period_start, period_end
+        )
         for kg in kindergartens:
             score = AnalyticsService._compute_kindergarten_governance_score(db, kg.id, period_start, period_end)
             if score > 0:
@@ -7874,6 +7889,53 @@ class AnalyticsService:
                 count += 1
 
         return round(total_score / count, 2) if count > 0 else 0.0
+
+    @staticmethod
+    def _warm_governance_memo(
+        db: Session,
+        kindergarten_ids: List[int],
+        period_start: date,
+        period_end: date,
+    ) -> None:
+        """Fill the (score, band) memo for a whole network in one bulk pass.
+
+        The memo below already collapses repeated lookups for the *same*
+        kindergarten within a request, but it still cost one
+        compute_governance_score — and so one full KPI bundle — per
+        kindergarten. Across 446 active kindergartens that is the N+1 that made
+        the report preview and governance distribution exceed the request
+        timeout.
+
+        compute_kpi_bundles_bulk produces the same governance_score and
+        governance_band as compute_governance_score (both read the same bundle
+        fields, pinned by test_kpi_bundles_bulk_equivalence), so pre-seeding the
+        memo changes timing only, never a number. Failures are swallowed on
+        purpose: the memo is an optimisation, and a miss simply falls back to the
+        per-kindergarten path rather than failing the request.
+        """
+        memo = db.info.setdefault("_governance_score_memo", {})
+        missing = [
+            kg_id for kg_id in kindergarten_ids
+            if (kg_id, period_start, period_end) not in memo
+        ]
+        if not missing:
+            return
+        from kpi_service import KPIService
+        try:
+            bundles = KPIService.compute_kpi_bundles_bulk(
+                db, missing, period_start, period_end
+            )
+        except (SQLAlchemyError, ZeroDivisionError, TypeError, ValueError):
+            logger.exception(
+                "Bulk governance warm-up failed for %d kindergartens; "
+                "falling back to per-kindergarten computation", len(missing)
+            )
+            return
+        for kg_id, bundle in bundles.items():
+            memo[(kg_id, period_start, period_end)] = (
+                float(bundle.get("governance_score", 0.0)),
+                str(bundle.get("governance_band", "RED")),
+            )
 
     @staticmethod
     def _kg_governance_score_and_band(db: Session, kindergarten_id: int, period_start: date, period_end: date) -> Tuple[float, str]:
