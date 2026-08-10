@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from bisect import bisect_left, bisect_right
 from math import ceil
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, or_, case, literal_column, Integer
+from sqlalchemy import func, and_, or_, case, literal_column, Integer, cast, extract
 from pydantic import BaseModel
 
 import models
@@ -4454,8 +4454,16 @@ def get_consolidated_kpi_dashboard_data(
     max_birth_date = bounds.max_date  # Youngest allowed
     min_birth_date = bounds.min_date  # Oldest allowed
 
+    # strftime() is SQLite-only. Production runs PostgreSQL, where this query
+    # raised "function strftime(unknown, date) does not exist" and turned the
+    # whole KPI dashboard into a 500 — invisible to the test suite because the
+    # tests run on SQLite, where strftime happens to exist.
+    # extract() is rendered correctly by both dialects; the cast to Integer keeps
+    # the value an int on Postgres too, so the "مواليد {year}" label does not
+    # become "مواليد 2022.0".
+    birth_year_expr = cast(extract('year', models.Child.date_of_birth), Integer)
     student_distribution_queries = db.query(
-        func.strftime('%Y', models.Child.date_of_birth).label('birth_year'),
+        birth_year_expr.label('birth_year'),
         func.count(models.Child.id).label('count'),
     ).join(
         models.EnrollmentApplication,
@@ -4466,9 +4474,9 @@ def get_consolidated_kpi_dashboard_data(
         models.Child.date_of_birth >= min_birth_date,
         models.Child.date_of_birth <= max_birth_date,
     ).group_by(
-        func.strftime('%Y', models.Child.date_of_birth)
+        birth_year_expr
     ).order_by(
-        func.strftime('%Y', models.Child.date_of_birth).desc()
+        birth_year_expr.desc()
     )
     student_distribution_results = student_distribution_queries.all()
     if not student_distribution_results:
@@ -5226,13 +5234,13 @@ def get_kpi_country_level(
     if not kindergartens:
         return {"level": "country", "country": "Jordan", "kindergarten_count": 0, "kpis": {}}
 
-    all_bundles = []
-    for kg in kindergartens:
-        try:
-            bundle = KPIService.compute_kpi_bundle(db, kg.id, period_start, period_end)
-            all_bundles.append(bundle)
-        except Exception:
-            continue
+    # One bulk pass instead of a full KPI bundle per kindergarten. At 446 active
+    # kindergartens the per-KG loop exceeded the 30s request timeout and this
+    # endpoint returned 504.
+    _bundles = compute_kpi_bundles_bulk(
+        db, [kg.id for kg in kindergartens], period_start, period_end
+    )
+    all_bundles = [_bundles[kg.id] for kg in kindergartens if kg.id in _bundles]
 
     count = len(all_bundles)
     if count == 0:
@@ -5289,14 +5297,17 @@ def get_kpi_governorate_level(
         models.Kindergarten.status == models.KindergartenStatus.ACTIVE
     ).all()
 
+    # One bulk pass instead of a full KPI bundle per kindergarten; the per-KG
+    # loop timed out at 446 active kindergartens and returned 504.
+    _bundles = compute_kpi_bundles_bulk(
+        db, [kg.id for kg in kindergartens], period_start, period_end
+    )
     governorate_bundles: Dict[str, List[Dict[str, Any]]] = {}
     for kg in kindergartens:
-        gov = kg.governorate or "Unknown"
-        try:
-            bundle = KPIService.compute_kpi_bundle(db, kg.id, period_start, period_end)
-            governorate_bundles.setdefault(gov, []).append(bundle)
-        except Exception:
+        bundle = _bundles.get(kg.id)
+        if bundle is None:
             continue
+        governorate_bundles.setdefault(kg.governorate or "Unknown", []).append(bundle)
 
     result = []
     kpi_keys = [
