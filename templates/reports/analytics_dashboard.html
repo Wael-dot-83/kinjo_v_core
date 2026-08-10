@@ -277,8 +277,11 @@
     </div>
 </div>
 
-<!-- Plotly JS -->
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<!-- Plotly JS — served locally: cdn.plot.ly is not in the CSP script-src, so the
+     CDN build was blocked in production and every chart here died with
+     "Plotly is not defined". This is the same vendored build the admin
+     agency-reports and charts dashboards already load. -->
+<script src="/static/vendor/plotly-2.35.2.min.js"></script>
 
 <script>
     const csrfToken = '{{ csrf_token }}';
