@@ -33,3 +33,4 @@ anyio>=4,<5
 # PYSEC-2026-161 fixed in starlette 1.0.1; requires fastapi>=0.121.3 that supports it
 starlette>=1.0.1
 python-json-logger>=2.0,<4
+psycopg2-binary>=2.9.9

@@ -3908,6 +3908,113 @@ def admin_health_check(
 # Admin Dashboard Endpoint
 # =============================================================================
 
+@router.get("/stats", response_model=Dict[str, Any])
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_admin_stats(
+    request: Request,
+    period_days: int = Query(30, description="Number of days to analyze", ge=1, le=90),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Compatibility stats endpoint for admin clients that expect /api/admin/stats."""
+    now = datetime.now(_JORDAN_TZ)
+    today = now.date()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    total_users = db.query(func.count(models.User.id)).filter(
+        models.User.deleted_at.is_(None)
+    ).scalar() or 0
+    total_kindergartens = db.query(func.count(models.Kindergarten.id)).filter(
+        models.Kindergarten.deleted_at.is_(None)
+    ).scalar() or 0
+    active_kindergartens = db.query(func.count(models.Kindergarten.id)).filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+        models.Kindergarten.deleted_at.is_(None),
+    ).scalar() or 0
+    active_users_today = db.query(func.count(func.distinct(models.AuditLog.user_id))).filter(
+        models.AuditLog.action == "LOGIN_SUCCESS",
+        models.AuditLog.user_id.isnot(None),
+        models.AuditLog.created_at >= today_start,
+    ).scalar() or 0
+    pending_applications = db.query(func.count(models.EnrollmentApplication.id)).filter(
+        models.EnrollmentApplication.status == models.EnrollmentStatus.PENDING_REVIEW,
+        models.EnrollmentApplication.deleted_at.is_(None),
+    ).scalar() or 0
+    pending_reports = db.query(func.count(models.DailyReport.id)).filter(
+        models.DailyReport.status == models.DailyReportStatus.SUBMITTED,
+    ).scalar() or 0
+    recent_incidents = db.query(func.count(models.Incident.id)).filter(
+        models.Incident.occurred_at >= jordan_day_bounds(today - timedelta(days=7))[0],
+        models.Incident.deleted_at.is_(None),
+    ).scalar() or 0
+    attendance_today = db.query(func.count(models.AttendanceLog.id)).filter(
+        models.AttendanceLog.date == today,
+        models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
+    ).scalar() or 0
+    active_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.deleted_at.is_(None),
+    ).scalar() or 0
+    attendance_rate = min((attendance_today / active_enrollments * 100.0) if active_enrollments > 0 else 0.0, 100.0)
+
+    data_quality_score = 0.0
+    if active_kindergartens > 0:
+        active_kg_with_recent_report = db.query(
+            func.count(func.distinct(models.DailyReport.kindergarten_id))
+        ).join(
+            models.Kindergarten,
+            models.Kindergarten.id == models.DailyReport.kindergarten_id,
+        ).filter(
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+            models.DailyReport.date >= today - timedelta(days=7),
+        ).scalar() or 0
+        data_quality_score = round(
+            (active_kg_with_recent_report / active_kindergartens * 100.0),
+            1,
+        )
+
+    log_audit_event(
+        db=db,
+        action=AuditAction.ADMIN_DASHBOARD_VIEWED,
+        actor=current_user,
+        target_type="Dashboard",
+        target_ids=None,
+        metadata={"period_days": period_days, "endpoint": "stats"},
+        sensitivity_level=2,
+    )
+
+    return {
+        "generated_at": now.isoformat(),
+        "period_days": period_days,
+        "summary": {
+            "attendance_today": attendance_today,
+            "pending_applications": pending_applications,
+            "pending_daily_reports": pending_reports,
+            "recent_incidents": recent_incidents,
+            "attendance_rate": round(attendance_rate, 1),
+        },
+        "system_overview": {
+            "total_kindergartens": total_kindergartens,
+            "active_kindergartens": active_kindergartens,
+            "total_users": total_users,
+        },
+        "kpis": {
+            "total_users": float(total_users),
+            "active_users": float(active_users_today),
+            "total_kindergartens": float(total_kindergartens),
+            "active_kindergartens": float(active_kindergartens),
+            "total_submissions": float(pending_reports),
+            "pending_submissions": float(pending_reports),
+            "data_quality_score": data_quality_score,
+        },
+        "alerts": {
+            "pending_applications": pending_applications,
+            "recent_incidents": recent_incidents,
+            "pending_reports": pending_reports,
+        },
+    }
+
+
 @router.get("/dashboard", response_model=AdminDashboardResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_admin_dashboard(
@@ -5737,13 +5844,15 @@ async def get_governance_leaderboard(
             for _kg_id, _c in _kg_timing.items()
         }
 
-        # Average approval hours per KG
+        # Average approval hours per KG. Compute timestamp deltas in Python:
+        # SQLite offers julianday(), while PostgreSQL does not, and using a
+        # dialect-specific expression here made the whole governance page fail
+        # in production.
         _approval_rows = (
             db.query(
                 models.DailyReport.kindergarten_id,
-                func.avg(
-                    (func.julianday(models.DailyReport.approved_at) - func.julianday(models.DailyReport.submitted_at)) * 24
-                ),
+                models.DailyReport.approved_at,
+                models.DailyReport.submitted_at,
             )
             .filter(
                 models.DailyReport.kindergarten_id.in_(kg_ids),
@@ -5755,12 +5864,21 @@ async def get_governance_leaderboard(
                 models.DailyReport.approved_at.isnot(None),
                 models.DailyReport.submitted_at.isnot(None),
             )
-            .group_by(models.DailyReport.kindergarten_id)
             .all()
         )
+        _approval_hours = defaultdict(list)
+        for _kg_id, _approved_at, _submitted_at in _approval_rows:
+            if _approved_at.tzinfo is None:
+                _approved_at = _approved_at.replace(tzinfo=_tz.utc)
+            if _submitted_at.tzinfo is None:
+                _submitted_at = _submitted_at.replace(tzinfo=_tz.utc)
+            _approval_hours[_kg_id].append(
+                (_approved_at - _submitted_at).total_seconds() / 3600
+            )
         _avg_approval = {
-            kg_id: round(float(h), 1) if h is not None else None
-            for kg_id, h in _approval_rows
+            _kg_id: round(sum(_hours) / len(_hours), 1)
+            for _kg_id, _hours in _approval_hours.items()
+            if _hours
         }
 
         # Consistency index per KG from existing computation

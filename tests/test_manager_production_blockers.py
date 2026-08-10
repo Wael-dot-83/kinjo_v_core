@@ -1,6 +1,6 @@
 """Regression tests for final manager-module production blockers."""
 import secrets
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -218,6 +218,36 @@ def test_forced_password_change_blocks_manager_api_but_allows_replacement(
     client, manager_token, manager_user, test_db
 ):
     manager_user.must_change_password = True
+    test_db.commit()
+
+    blocked = client.get("/api/manager/dashboard", headers=_bearer(manager_token))
+    assert blocked.status_code == 403
+    assert blocked.headers["X-Password-Change-Required"] == "true"
+
+    changed = client.post(
+        "/api/users/change-password",
+        headers=_bearer(manager_token),
+        json={
+            "current_password": "Manager123!",
+            "new_password": "Manager456!",
+            "confirm_password": "Manager456!",
+        },
+    )
+    assert changed.status_code == 200
+
+    allowed = client.get("/api/manager/dashboard", headers=_bearer(manager_token))
+    assert allowed.status_code == 200
+
+
+def test_expired_password_blocks_manager_api_but_allows_replacement(
+    client, manager_token, manager_user, test_db, monkeypatch
+):
+    """Age-based expiry must be enforced for already-issued sessions too."""
+    from config import settings
+
+    monkeypatch.setattr(settings, "PASSWORD_MAX_AGE_DAYS", 1)
+    manager_user.must_change_password = False
+    manager_user.password_changed_at = datetime.now(timezone.utc) - timedelta(days=2)
     test_db.commit()
 
     blocked = client.get("/api/manager/dashboard", headers=_bearer(manager_token))

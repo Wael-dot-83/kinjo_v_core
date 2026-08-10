@@ -87,6 +87,8 @@ class UserResponse(BaseModel):
 @router.get("/users/me", response_model=UserResponse)
 def get_current_user_info(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get current authenticated user's information"""
+    from auth import requires_password_change
+
     return UserResponse(
         id=current_user.id,
         public_id=current_user.public_id,
@@ -95,7 +97,7 @@ def get_current_user_info(current_user: models.User = Depends(get_current_user),
         role=current_user.role.value,
         status=current_user.status.value,
         kindergarten_id=current_user.kindergarten_id,
-        must_change_password=current_user.must_change_password,
+        must_change_password=requires_password_change(current_user),
         mfa_enabled=bool(getattr(current_user, "mfa_enabled", False)),
         created_at=current_user.created_at,
     )

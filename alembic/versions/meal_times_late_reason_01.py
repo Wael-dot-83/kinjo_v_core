@@ -34,7 +34,9 @@ _COLUMNS = (
 
 def _existing_columns(table: str) -> set[str]:
     bind = op.get_bind()
-    return {row[1] for row in bind.exec_driver_sql(f'PRAGMA table_info("{table}")')}
+    insp = sa.inspect(bind)
+    return {c["name"] for c in insp.get_columns(table)}
+
 
 
 def upgrade() -> None:

@@ -1,12 +1,14 @@
 """
 Tests for MFA (TOTP), password reset flow, and new middleware components.
 """
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 import models
-from auth import get_password_hash
+from auth import create_access_token, get_password_hash
 from mfa_service import generate_totp_secret, encrypt_secret, decrypt_secret, verify_code
 
 
@@ -112,6 +114,37 @@ class TestMfaEndpoints:
         assert "access_token" in data
         # TESTING mode skips MFA entirely
         assert data.get("mfa_required") is False
+
+    def test_mfa_verify_reports_expired_password(self, client, test_db, parent_user):
+        """MFA completion must use the same password-expiry policy as direct login."""
+        parent_user.must_change_password = False
+        parent_user.password_changed_at = datetime.now(timezone.utc) - timedelta(
+            days=366
+        )
+        secret = generate_totp_secret()
+        parent_user.mfa_secret = encrypt_secret(secret)
+        test_db.commit()
+
+        ticket = create_access_token(
+            data={
+                "sub": parent_user.username,
+                "role": parent_user.role.value,
+                "purpose": "mfa_challenge",
+                "remember_me": True,
+            },
+            expires_delta=timedelta(minutes=10),
+        )
+        import pyotp
+
+        response = client.post(
+            "/api/auth/mfa/verify",
+            json={"code": pyotp.TOTP(secret).now()},
+            headers={"Authorization": f"Bearer {ticket}"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["user"]["must_change_password"] is True
+        assert response.json()["remember_me"] is True
 
 
 # ===========================================================================

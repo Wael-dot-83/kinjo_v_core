@@ -69,6 +69,16 @@ class TestDashboardResponse:
         r = client.get("/api/admin/dashboard", headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 200
 
+    def test_stats_route_returns_200_for_admin(self, client, test_db):
+        _create_admin(test_db)
+        token = _get_token(client, "dashadmin")
+        r = client.get("/api/admin/stats", headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200
+        data = r.json()
+        assert "summary" in data
+        assert "system_overview" in data
+        assert "kpis" in data
+
     def test_response_contains_kpi_section(self, client, test_db):
         _create_admin(test_db)
         token = _get_token(client, "dashadmin")

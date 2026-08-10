@@ -40,7 +40,7 @@ def seed_database():
             name_ar="حضانة الأمل",
             name_en="Al Amal Kindergarten",
             governorate="عمان",
-            city="عمان",
+            district="عمان",
             area="عبدون",
             address_line="شارع 42، عمارة 5",
             contact_phone="+962791234567",
@@ -56,7 +56,7 @@ def seed_database():
             name_ar="حضانة النور",
             name_en="Al Noor Kindergarten",
             governorate="عمان",
-            city="عمان",
+            district="عمان",
             area="الصويفية",
             address_line="شارع الرينبو 15",
             contact_phone="+962791234568",
@@ -75,17 +75,25 @@ def seed_database():
         print(f"Created kindergarten: {kindergarten1.name_en} (ID: {kindergarten1.id})")
         print(f"Created kindergarten: {kindergarten2.name_en} (ID: {kindergarten2.id})")
 
-        # Create admin user
-        admin_user = models.User(
-            username="admin",
-            email="admin@kinjo.jo",
-            hashed_password=get_password_hash(_seed_password("SEED_ADMIN_PASSWORD")),
-            role=models.UserRole.ADMIN,
-            status=models.UserStatus.ACTIVE
-        )
-        db.add(admin_user)
-        db.flush()
-        print(f"Created admin user: {admin_user.username}")
+        # Preserve an existing administrator. Production environments commonly
+        # bootstrap the administrator before demo data is loaded.
+        admin_user = db.query(models.User).filter(
+            models.User.username == "admin",
+            models.User.deleted_at.is_(None),
+        ).first()
+        if admin_user is None:
+            admin_user = models.User(
+                username="admin",
+                email="admin@kinjo.jo",
+                hashed_password=get_password_hash(_seed_password("SEED_ADMIN_PASSWORD")),
+                role=models.UserRole.ADMIN,
+                status=models.UserStatus.ACTIVE,
+            )
+            db.add(admin_user)
+            db.flush()
+            print(f"Created admin user: {admin_user.username}")
+        else:
+            print(f"Using existing admin user: {admin_user.username}")
 
         # Create manager for kindergarten1
         manager1 = models.User(

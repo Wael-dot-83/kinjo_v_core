@@ -63,7 +63,7 @@ logger = logging.getLogger(__name__)
 
 import models
 from database import get_db, init_db
-from auth import authenticate_user, create_access_token, get_password_hash
+from auth import authenticate_user, create_access_token, get_password_hash, requires_password_change
 from cache_service import cache_service
 from config import settings
 from dependencies import get_current_user, get_current_user_optional, ManagerScope, RedirectToLogin
@@ -863,7 +863,7 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
             "username": user.username,
             "email": user.email,
             "role": user.role.value,
-            "must_change_password": user.must_change_password,
+            "must_change_password": requires_password_change(user),
             "mfa_enabled": bool(getattr(user, "mfa_enabled", False)),
         },
     }
@@ -926,7 +926,6 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
 
 def _issue_auth_response(payload: dict, *, status_code: int = 200) -> JSONResponse:
     response_payload = sanitize_response_payload(dict(payload))
-    response_payload.pop("remember_me", None)
     mfa_ticket = response_payload.pop("mfa_ticket", None)
     response = JSONResponse(content=response_payload, status_code=status_code)
     if payload.get("access_token"):
@@ -1136,7 +1135,7 @@ async def mfa_verify(
             "username": user.username,
             "email": user.email,
             "role": user.role.value,
-            "must_change_password": user.must_change_password,
+            "must_change_password": requires_password_change(user),
             "mfa_enabled": bool(user.mfa_enabled),
         },
     }

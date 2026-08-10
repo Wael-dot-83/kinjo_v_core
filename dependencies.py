@@ -133,12 +133,15 @@ async def get_current_user(
             detail="User account is not active"
         )
 
-    # Temporary credentials may authenticate only long enough to replace the
-    # password. Enforce this centrally so no manager/supervisor API can bypass
-    # the first-login requirement by using a different router dependency.
-    if user.must_change_password and request.url.path not in {
+    # Temporary and expired credentials may authenticate only long enough to
+    # replace the password. Enforce this centrally so no API can bypass the
+    # policy by using a different router dependency.
+    from auth import requires_password_change
+
+    if requires_password_change(user) and request.url.path not in {
         "/api/users/change-password",
         "/users/change-password",
+        "/api/supervisor/change-password",
     }:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

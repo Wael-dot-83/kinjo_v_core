@@ -278,6 +278,11 @@ class AuthGuard {
     if (!url.startsWith("/") || url.startsWith("//")) {
       return false;
     }
+    // Prevent redirect loops: never redirect back to an auth/public page.
+    const pathOnly = url.split("?")[0].toLowerCase();
+    if (AuthGuard.publicRoutes.includes(pathOnly)) {
+      return false;
+    }
     const lowered = url.toLowerCase();
     if (
       lowered.includes("javascript:") ||
@@ -339,7 +344,9 @@ class AuthGuard {
   static async check() {
     const currentPath = window.location.pathname;
     if (this.publicRoutes.includes(currentPath)) {
-      if (currentPath === "/mfa/setup" && !(AuthStorage.getCookie("kinjo_mfa_ticket") || inMemoryMfaState.mode)) {
+      // The kinjo_mfa_ticket cookie is HttpOnly and cannot be read from JS.
+      // Use the in-memory MFA state or the ?mode= query parameter instead.
+      if (currentPath === "/mfa/setup" && !inMemoryMfaState.mode && !new URLSearchParams(window.location.search).get("mode")) {
         window.location.href = "/login";
         return false;
       }
@@ -752,7 +759,11 @@ async function initMfaPage() {
     errorBox?.classList.add("d-none");
     try {
       const data = await AuthService.verifyMfa(code);
-      persistAuthenticatedSession(data, false);
+      // MFA is a second step of the original login, so preserve its Remember
+      // Me choice when choosing profile storage. Otherwise the persistent
+      // HttpOnly session outlives the sessionStorage profile and cannot be
+      // restored after a browser restart.
+      persistAuthenticatedSession(data, data.remember_me === true);
       if (data.user?.must_change_password) {
         window.location.href = "/change-password";
         return;

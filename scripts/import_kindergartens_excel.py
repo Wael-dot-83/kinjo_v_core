@@ -35,6 +35,8 @@ COL_CITY = 3          # المدينة
 COL_AREA = 4          # المنطقة
 COL_ADDRESS = 5       # العنوان التفصيلي
 COL_PHONE = 6         # رقم الهاتف
+COL_LATITUDE = 8
+COL_LONGITUDE = 9
 
 
 def clean(value) -> str:
@@ -42,6 +44,15 @@ def clean(value) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def coordinate(value):
+    """Return a valid coordinate, or None for an empty/invalid source cell."""
+    try:
+        parsed = float(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed != 0 else None
 
 
 def _resolve_sheet_name(wb: openpyxl.Workbook, preferred_sheet: str = None) -> str:
@@ -136,14 +147,18 @@ def import_kindergartens(file_path: str, dry_run: bool = False, sheet_name: str 
                 continue
 
             try:
+                latitude = coordinate(row[COL_LATITUDE]) if len(row) > COL_LATITUDE else None
+                longitude = coordinate(row[COL_LONGITUDE]) if len(row) > COL_LONGITUDE else None
                 kg = Kindergarten(
                     name_ar=name_ar,
                     name_en=name_en or None,
                     governorate=governorate,
-                    city=city,
+                    district=city,
                     area=area,
                     address_line=address_line,
                     contact_phone=phone,
+                    latitude=latitude,
+                    longitude=longitude,
                     status=KindergartenStatus.DRAFT,
                 )
                 db.add(kg)
