@@ -159,6 +159,69 @@ jobs:
           MIGRATION_TEST_POSTGRES_URL: postgresql://kinjo:kinjo@localhost:5432/kinjo_test
         run: pytest tests/test_migration_column_drift.py -q
 
+  postgres-parity:
+    # Production runs PostgreSQL; the main suite runs SQLite. That gap let three
+    # 500s reach production while CI stayed green: func.strftime() (SQLite-only),
+    # enum members declared in Python but absent from the PostgreSQL type, and an
+    # audit_logs column that was jsonb in the database but Text in the model.
+    # SQLite accepts all three.
+    #
+    # tests/test_postgres_integration.py executes that SQL for real and skips
+    # itself when KINJO_TEST_POSTGRES_URL is unset, so it is inert locally and
+    # only meaningful here. It gets its own database because its fixture runs
+    # drop_all/create_all, which would destroy the analytics-postgres schema if
+    # they shared one.
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: kinjo
+          POSTGRES_PASSWORD: kinjo
+          POSTGRES_DB: kinjo_parity_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      KINJO_TEST_POSTGRES_URL: postgresql://kinjo:kinjo@localhost:5433/kinjo_parity_test
+      SECRET_KEY: ci-secret-key
+      DATABASE_URL: "sqlite:///:memory:"
+      TESTING: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: PostgreSQL parity suite
+        # -rs reports skip reasons. The suite skips itself when no database is
+        # reachable, which is correct locally but useless here: a misconfigured
+        # service would otherwise look like a pass, which is exactly how the
+        # original gap survived. Fail loudly instead.
+        run: |
+          set -o pipefail
+          pytest -q -rs tests/test_postgres_integration.py --timeout=120 \
+            | tee parity.log
+          if grep -q "KINJO_TEST_POSTGRES_URL not set" parity.log \
+             || grep -q "PostgreSQL not reachable" parity.log; then
+            echo "::error::parity suite skipped — PostgreSQL was not reachable in CI"
+            exit 1
+          fi
+          if grep -qE "no tests ran|0 (tests )?collected" parity.log; then
+            echo "::error::parity suite collected nothing"
+            exit 1
+          fi
+
   analytics-postgres:
     # Postgres E2E for the admin analytics work (registry, data-state, drill-down,
     # child_detail RBAC). Runs the analytics test surface against a real Postgres

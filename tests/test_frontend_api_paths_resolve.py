@@ -54,11 +54,6 @@ KNOWN_UNRESOLVED = {
     ("POST", "/api/manager/reports/{}/approve"): "uncalled dead method in kinjo-api.js",
     ("POST", "/api/manager/reports/{}/reject"): "uncalled dead method in kinjo-api.js",
     ("GET", "/api/manager/supervisors/stats"): "uncalled dead method in kinjo-api.js",
-    ("GET", "/api/analytics/list-dimensions"): "advanced_analytics.js — orphaned template, no route renders it",
-    ("GET", "/api/analytics/predictive"): "advanced_analytics.js — orphaned template",
-    ("GET", "/api/analytics/scatter"): "advanced_analytics.js — orphaned template",
-    ("GET", "/api/analytics/demographics"): "advanced_analytics.js — orphaned template",
-    ("GET", "/api/analytics/government-report"): "advanced_analytics.js — orphaned template",
 }
 
 _SCAN_DIRS = (Path("templates"), Path("static/js"))
