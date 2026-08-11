@@ -23,7 +23,9 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
       with:
-        node-version: 18
+        # @tailwindcss/oxide declares `node: >= 20`; on 18 npm warned EBADENGINE
+        # on every install here.
+        node-version: 20
     - uses: actions/setup-python@v5
       with:
         python-version: '3.13'
