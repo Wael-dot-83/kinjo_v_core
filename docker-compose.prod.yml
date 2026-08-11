@@ -36,7 +36,12 @@ services:
     env_file:
       - .env
     ports:
-      - "8000:8000"
+      # Host port is configurable so this file matches what production actually
+      # runs. The live server sits behind Cloudflare and must publish on 80, and
+      # that was previously a hand edit to this file on the box — the same kind
+      # of untracked drift that once left production running uncommitted code.
+      # Set KINJO_WEB_PORT=80 in the server's .env; everywhere else keeps 8000.
+      - "${KINJO_WEB_PORT:-8000}:8000"
     volumes:
       - ./data:/app/data
     environment:
