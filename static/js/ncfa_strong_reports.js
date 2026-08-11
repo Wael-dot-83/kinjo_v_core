@@ -251,6 +251,18 @@
     });
   }
 
+  function updateActiveCard(bundleCode) {
+    const cards = bundleGrid.querySelectorAll(".ncfa-bundle-card");
+    cards.forEach((card) => {
+      const btn = card.querySelector("button[data-bundle-code]");
+      if (btn && btn.getAttribute("data-bundle-code") === bundleCode) {
+        card.classList.add("ncfa-bundle-card--active");
+      } else {
+        card.classList.remove("ncfa-bundle-card--active");
+      }
+    });
+  }
+
   function resetDistricts(placeholder) {
     districtSelect.innerHTML = "";
     districtSelect.appendChild(createElement("option", { text: placeholder, attrs: { value: "" } }));
@@ -354,6 +366,7 @@
 
   function generateBundle(bundle) {
     activeBundle = bundle;
+    updateActiveCard(bundle.code);
     const sequence = ++requestSequence;
     const scope = currentScope(bundle);
     showLoading(bundle);
@@ -657,15 +670,27 @@
       .finally(() => { exportButton.disabled = false; });
   }
 
-  governorateSelect.addEventListener("change", () => fillDistricts(governorateSelect.value));
+  governorateSelect.addEventListener("change", () => {
+    fillDistricts(governorateSelect.value);
+    if (activeBundle) generateBundle(activeBundle);
+  });
+  districtSelect.addEventListener("change", () => {
+    if (activeBundle) generateBundle(activeBundle);
+  });
+  periodSelect.addEventListener("change", () => {
+    if (activeBundle) generateBundle(activeBundle);
+  });
   resetScopeButton.addEventListener("click", () => {
     periodSelect.value = "quarter";
     governorateSelect.value = "";
     resetDistricts(t("اختر المحافظة أولاً", "Select governorate first"));
+    if (activeBundle) generateBundle(activeBundle);
   });
   exportButton.addEventListener("click", exportCsv);
 
   renderBundles();
   resetDistricts(t("اختر المحافظة أولاً", "Select governorate first"));
   loadDivisions();
+  // Show a useful first result instead of an empty table area on page load.
+  if (REPORT_BUNDLES.length) generateBundle(REPORT_BUNDLES[0]);
 }());

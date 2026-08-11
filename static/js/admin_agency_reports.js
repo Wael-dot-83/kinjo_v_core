@@ -1618,7 +1618,7 @@
         (typeof pt.y === "string" ? pt.y : null) ??
         (typeof pt.x === "string" ? pt.x : null) ??
         "";
-      const drill = {};
+      const drill = Object.assign({}, window.__agencyDrillDown);
       if (groupBy === "governorate") drill.governorate = clickedCategory;
       else if (groupBy === "city") drill.city = clickedCategory;
       else if (groupBy === "status") drill.status = clickedCategory;
@@ -1659,7 +1659,7 @@
       row.setAttribute("role", "button");
       const cells = row.querySelectorAll("td");
       if (!cells.length) return;
-      const drill = {};
+      const drill = Object.assign({}, window.__agencyDrillDown);
       const colIdxByGroup = {
         governorate: 0,
         city: 0,

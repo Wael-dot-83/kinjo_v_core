@@ -493,3 +493,22 @@
   .ncfa-caveat{background:#241a06;color:#fcd9a5;border-color:#a16207}
   .ncfa-quality-notes{background:#2a1414;color:#fca5a5;border-color:#b91c1c}
 }
+
+.ncfa-bundle-card--active {
+  border-color: #176b4d !important;
+  box-shadow: 0 12px 30px rgba(23, 107, 77, 0.15) !important;
+  background: linear-gradient(to bottom, #ffffff, #f0fdf4) !important;
+  transform: translateY(-2px);
+}
+:root[data-theme="dark"] .ncfa-bundle-card--active {
+  border-color: #3d8a67 !important;
+  box-shadow: 0 12px 30px rgba(61, 138, 103, 0.25) !important;
+  background: linear-gradient(to bottom, #1e293b, #0f2a1f) !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ncfa-bundle-card--active {
+    border-color: #3d8a67 !important;
+    box-shadow: 0 12px 30px rgba(61, 138, 103, 0.25) !important;
+    background: linear-gradient(to bottom, #1e293b, #0f2a1f) !important;
+  }
+}
