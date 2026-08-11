@@ -982,7 +982,48 @@ block extra_head %}
     "Accident": LANG === 'en' ? "Accident" : "حادث"
   };
 
-  function getLocalized(key) { return TRANSLATIONS[key] || key; }
+  // Series values arrive as raw DB enum members (ACTIVE, PENDING_REVIEW,
+  // INJURY, PRESENT), but TRANSLATIONS is keyed on Title Case, so they fell
+  // through untouched and an Arabic-first UI rendered English identifiers as
+  // axis ticks and legend labels. Enrollment wording matches
+  // dashboard.enrollment_* in static/i18n/admin_*.json so the explorer and the
+  // dashboard name the same status the same way.
+  const ENUM_TRANSLATIONS = {
+    // EnrollmentStatus
+    "ACTIVE": LANG === 'en' ? "Active" : "نشط",
+    "PENDING": LANG === 'en' ? "Pending" : "قيد الانتظار",
+    "PENDING_REVIEW": LANG === 'en' ? "Under Review" : "قيد المراجعة",
+    "SUBMITTED": LANG === 'en' ? "Submitted" : "مُقدَّم",
+    "ACCEPTED": LANG === 'en' ? "Accepted" : "مقبول",
+    "REJECTED": LANG === 'en' ? "Rejected" : "مرفوض",
+    "WITHDRAWN": LANG === 'en' ? "Withdrawn" : "منسحب",
+    "WAITLISTED": LANG === 'en' ? "Waitlisted" : "قائمة الانتظار",
+    "DRAFT": LANG === 'en' ? "Draft" : "مسودة",
+    // AttendanceStatus
+    "PRESENT": LANG === 'en' ? "Present" : "حاضر",
+    "ABSENT": LANG === 'en' ? "Absent" : "غائب",
+    "LATE": LANG === 'en' ? "Late" : "متأخر",
+    "EXCUSED": LANG === 'en' ? "Excused" : "بعذر",
+    // IncidentType
+    "INJURY": LANG === 'en' ? "Injury" : "إصابة",
+    "BEHAVIOR": LANG === 'en' ? "Behavioral" : "سلوكي",
+    "BEHAVIORAL": LANG === 'en' ? "Behavioral" : "سلوكي",
+    "ILLNESS": LANG === 'en' ? "Illness" : "مرض",
+    "ACCIDENT": LANG === 'en' ? "Accident" : "حادث",
+    "HEALTH": LANG === 'en' ? "Health" : "صحي",
+    "OTHER": LANG === 'en' ? "Other" : "أخرى",
+    // DailyReportStatus
+    "APPROVED": LANG === 'en' ? "Approved" : "معتمد",
+    "SENT_TO_PARENT": LANG === 'en' ? "Sent to Parent" : "أُرسل لولي الأمر",
+    "RETURNED": LANG === 'en' ? "Returned" : "مُعاد"
+  };
+
+  function getLocalized(key) {
+    if (key === null || key === undefined) return key;
+    if (TRANSLATIONS[key]) return TRANSLATIONS[key];
+    var enumKey = ENUM_TRANSLATIONS[String(key).toUpperCase()];
+    return enumKey || key;
+  }
   function tEn(en, ar) { return LANG === 'en' ? en : ar; }
 
   // ── Source Selection ─────────────────────────────────────────────────────

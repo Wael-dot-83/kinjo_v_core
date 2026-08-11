@@ -119,3 +119,31 @@ def test_mobile_layout_stretches_children_to_the_viewport():
     mobile = html.split("@media (max-width: 768px)")[1].split("</style>")[0]
     assert "align-items: stretch;" in mobile
     assert ".ce-main {" in mobile
+
+
+def test_raw_db_enums_are_localised_in_series_labels():
+    """Series values arrive as raw enum members (ACTIVE, INJURY, PRESENT) while
+    TRANSLATIONS is keyed on Title Case, so they fell through getLocalized and an
+    Arabic-first UI showed English identifiers as legend and axis labels."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert "const ENUM_TRANSLATIONS = {" in html
+    assert "ENUM_TRANSLATIONS[String(key).toUpperCase()]" in html
+    for member in ("ACTIVE", "PENDING_REVIEW", "PRESENT", "INJURY", "OTHER", "WAITLISTED"):
+        assert f'"{member}":' in html, member
+
+
+def test_enrollment_labels_match_the_dashboard_i18n_wording():
+    """The explorer and the dashboard must name the same enrollment status the
+    same way, so the Arabic here tracks dashboard.enrollment_* in the i18n JSON."""
+    import json
+
+    html = TEMPLATE.read_text(encoding="utf-8")
+    ar = json.loads((ROOT / "static" / "i18n" / "admin_ar.json").read_text(encoding="utf-8"))
+    dash = ar["dashboard"]
+    for member, key in [
+        ("ACTIVE", "enrollment_active"),
+        ("PENDING_REVIEW", "enrollment_pending_review"),
+        ("WAITLISTED", "enrollment_waitlisted"),
+        ("WITHDRAWN", "enrollment_withdrawn"),
+    ]:
+        assert f'"{dash[key]}"' in html, f"{member} should use {dash[key]!r}"
