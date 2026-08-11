@@ -140,7 +140,13 @@ jobs:
           python-version: '3.13'
           cache: 'pip'
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        # requirements-dev.txt, not requirements.txt: this job's second step runs
+        # pytest, and pytest is only in the dev file. With the runtime file alone
+        # the step died with exit 127 (command not found) and no output, which is
+        # why the failure looked mysterious. requirements-dev.txt begins with
+        # `-r requirements.txt`, so the alembic step above keeps every runtime
+        # dependency it already had.
+        run: pip install -r requirements-dev.txt
       - name: Verify Alembic migrations (upgrade → downgrade → upgrade)
         run: |
           alembic upgrade head
