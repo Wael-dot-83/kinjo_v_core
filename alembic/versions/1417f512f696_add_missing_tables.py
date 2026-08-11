@@ -58,3 +58,15 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("incident_history")
+
+    # Creating incident_history implicitly creates the PostgreSQL enum type
+    # `incidentstatus`, and dropping a table does not drop the types it used.
+    # The initial squash already drops the 34 types it owns, but incidentstatus
+    # is not among them because this migration is what created it — so it
+    # survived `alembic downgrade base` and the following `upgrade head` failed
+    # with "type incidentstatus already exists", breaking the migrations CI job.
+    # Guarded and dialect-scoped: SQLite has no enum types, and by this point the
+    # only table referencing it has just been dropped.
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute(sa.text('DROP TYPE IF EXISTS "incidentstatus"'))

@@ -290,4 +290,3 @@ for filename, content in [("01_repository_architecture.md", report1), ("02_techn
     print(f'Wrote {filename} ({len(content)} chars)')
 
 print("Reports 1-3 done")
-"
