@@ -921,6 +921,7 @@ block extra_head %}
 {% endblock %} {% block extra_scripts %}
 <script>
   const LANG = '{{ ui_lang }}';
+  const SOURCE_SUPPORTED_CHART_TYPES = {{ SOURCE_SUPPORTED_CHART_TYPES | tojson }};
   let _activeTaskId = null;
   let _taskPollInterval = null;
   let _currentFigDiv = null;
@@ -968,11 +969,21 @@ block extra_head %}
   // ── Source Selection ─────────────────────────────────────────────────────
   function selectSource(source) {
     _currentSource = source;
+    // A source switch starts a new exploration; never carry an invisible
+    // kindergarten drill-down into unrelated data.
+    filterState = { governorate: null, kindergarten_id: null };
     document.querySelectorAll('.ce-source-card').forEach(function(card) {
       var isActive = card.dataset.source === source;
       card.classList.toggle('is-active', isActive);
       card.setAttribute('aria-checked', isActive);
     });
+    var supported = SOURCE_SUPPORTED_CHART_TYPES[source] || [];
+    document.querySelectorAll('.ce-ct-btn').forEach(function(btn) {
+      var allowed = !btn.dataset.ct || supported.indexOf(btn.dataset.ct) !== -1;
+      btn.hidden = !allowed;
+      btn.disabled = !allowed;
+    });
+    if (_currentChartType && supported.indexOf(_currentChartType) === -1) selectChartType('');
   }
 
   // ── Chart Type Selection ─────────────────────────────────────────────────
@@ -1038,6 +1049,7 @@ block extra_head %}
   // ── URL State ────────────────────────────────────────────────────────────
   function updateURLState() {
     var params = new URLSearchParams();
+    params.set('lang', LANG);
     if (_currentSource) params.set('source', _currentSource);
     if (_currentChartType) params.set('chart_type', _currentChartType);
     var df = document.getElementById('dateFrom').value;
@@ -1096,7 +1108,7 @@ block extra_head %}
       return;
     }
 
-    var params = new URLSearchParams({ source: source });
+    var params = new URLSearchParams({ source: source, lang: LANG });
     if (chartType) params.set('chart_type', chartType);
     if (dateFrom) params.set('date_from', dateFrom);
     if (dateTo) params.set('date_to', dateTo);
@@ -1231,7 +1243,12 @@ block extra_head %}
       var type = data.chart_type || 'bar';
       var traces = [];
       var keys = Object.keys(data.series[0]);
-      var numCols = keys.filter(function(k) { return typeof data.series[0][k] === 'number'; });
+      // Identifiers describe a row; they are never chart measures. In the
+      // kindergarten drill-down, plotting kindergarten_id produced a misleading
+      // second series alongside capacity/enrolment.
+      var numCols = keys.filter(function(k) {
+        return typeof data.series[0][k] === 'number' && !/(^|_)id$/i.test(k);
+      });
       var strCols = keys.filter(function(k) { return typeof data.series[0][k] !== 'number'; });
 
       var layout = {
