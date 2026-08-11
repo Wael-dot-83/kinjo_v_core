@@ -24,7 +24,7 @@ METRIC_REGISTRY: Dict[str, MetricDefinition] = {
         business_meaning="Total number of incidents reported.",
         unit="count",
         higher_is_better=False,
-        supported_chart_types=["bar", "line", "pie", "heatmap"],
+        supported_chart_types=["bar", "line", "pie"],
     ),
     "attendance": MetricDefinition(
         key="attendance",
@@ -34,7 +34,7 @@ METRIC_REGISTRY: Dict[str, MetricDefinition] = {
         unit="percent",
         higher_is_better=True,
         expected_range=(0.0, 100.0),
-        supported_chart_types=["line", "bar", "heatmap"],
+        supported_chart_types=["line", "bar"],
     ),
     "daily_reports": MetricDefinition(
         key="daily_reports",

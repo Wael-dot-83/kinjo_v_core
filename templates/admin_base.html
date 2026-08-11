@@ -69,12 +69,12 @@
       <link rel="stylesheet" href="/static/css/admin_design_system.css?v=3.1" />
       <link rel="stylesheet" href="/static/css/top-menu.css?v=1.0" />
       <link rel="stylesheet" href="/static/css/design-tokens.css?v=1" />
-      <link rel="stylesheet" href="/static/css/layout.css?v=1.1" />
+      <link rel="stylesheet" href="/static/css/layout.css?v=1.2" />
       <link rel="stylesheet" href="/static/css/components.css?v=1.2" />
       <link rel="stylesheet" href="/static/css/utilities.css?v=1" />
 
       <!-- Legacy compatibility -->
-      <link rel="stylesheet" href="/static/css/kinjo.css?v=20260714" />
+      <link rel="stylesheet" href="/static/css/kinjo.css?v=20260811" />
       {% if ui_dir == 'rtl' %}
       <link rel="stylesheet" href="/static/css/rtl.css" />
       <link rel="stylesheet" href="/static/css/dark-mode.css?v=1.0" />
@@ -345,6 +345,10 @@
             {% include "components/admin_page_context.html" %} {% block content
             %}{% endblock %}
           </div>
+          <footer class="admin-shell-footer">
+            <span>© 2026 KinJo</span>
+            <span>{% if ui_lang == 'en' %}Kindergarten management platform{% else %}منصة إدارة الحضانات{% endif %}</span>
+          </footer>
         </main>
       </div>
 
