@@ -269,8 +269,15 @@ block extra_head %}
     gap: 0.45rem;
   }
   #chartOutput {
-    min-height: 330px;
+    /* Matches the Plotly layout height so swapping the empty state for a
+       rendered figure does not shift the rest of the page. */
+    min-height: 460px;
     transition: opacity 0.2s ease;
+  }
+  @media (max-width: 767.98px) {
+    #chartOutput {
+      min-height: 340px;
+    }
   }
   .ce-toolbar .btn {
     font-size: 0.75rem;
@@ -753,7 +760,9 @@ block extra_head %}
         </div>
 
         {# Chart Output #}
-        <div id="chartOutput"></div>
+        <!-- Hidden until a figure exists: it reserves min-height, which would
+             otherwise sit as blank space beneath the empty state on load. -->
+        <div id="chartOutput" style="display: none"></div>
 
         {# Task Status #}
         <div id="taskStatus" class="mt-2" style="display: none">
@@ -1144,10 +1153,33 @@ block extra_head %}
     }
   }
 
+  // ── Trace construction ───────────────────────────────────────────────────
+  // ChartType is a *semantic* choice from the API, not a Plotly trace type, and
+  // the series arriving here is already aggregated (one row per category with a
+  // measure). Two of those semantic types are actively wrong if passed straight
+  // through: Plotly's `histogram` bins its x values and ignores y, so aggregated
+  // rows drew a bar of height 1 per category instead of the measure; `heatmap`
+  // and `treemap` need z / labels+values and drew nothing at all. Map each type
+  // onto a trace spec that honours the measure we actually have.
+  function cartesianTrace(type, name, xs, ys) {
+    var t = { name: name, x: xs, y: ys };
+    if (type === 'line') { t.type = 'scatter'; t.mode = 'lines+markers'; }
+    else if (type === 'scatter') { t.type = 'scatter'; t.mode = 'markers'; }
+    else if (type === 'box' || type === 'funnel') { t.type = type; }
+    else { t.type = 'bar'; }  // bar, histogram, and any shape-less fallback
+    return t;
+  }
+
   // ── Inject Chart ─────────────────────────────────────────────────────────
   function injectChart(data) {
     var out = document.getElementById('chartOutput');
     out.innerHTML = '';
+    // setLoading(true) hides this while the request is in flight, and Plotly
+    // measures the container at newPlot time. Drawing into a display:none host
+    // lays the figure out at Plotly's 700x450 default instead of the panel
+    // width, so it must be visible before we draw.
+    out.style.display = '';
+    document.getElementById('chartSkeleton').style.display = 'none';
     document.getElementById('emptyState').style.display = 'none';
 
     var titleEl = document.getElementById('chartTitleDisplay');
@@ -1255,7 +1287,12 @@ block extra_head %}
         font: { family: 'Inter, "Noto Sans Arabic", sans-serif' },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
+        autosize: true,
+        // Pin the height so the panel does not depend on Plotly's 700x450
+        // default; width still tracks the container via responsive:true.
+        height: window.innerWidth < 768 ? 340 : 460,
         margin: { t: 40, r: 20, l: 60, b: 60 },
+        legend: { orientation: 'h', y: -0.22, x: 0, xanchor: 'left' },
         barmode: type === 'bar' ? 'group' : undefined,
         colorway: ['#2563EB','#16A34A','#D97706','#DC2626','#7C3AED','#0891B2','#DB2777','#4F46E5','#CA8A04','#059669'],
         xaxis: {
@@ -1281,9 +1318,29 @@ block extra_head %}
           groups[g].x.push(r[xCol]);
           groups[g].y.push(r[yCol]);
         });
-        Object.keys(groups).forEach(function(g) {
-          traces.push({ type: type, name: getLocalized(g), x: groups[g].x, y: groups[g].y });
-        });
+        if (type === 'heatmap') {
+          // Two categorical columns plus a measure is the one shape that maps
+          // onto a genuine matrix, so build z here rather than falling back.
+          var hx = [], hy = [];
+          data.series.forEach(function(r) {
+            var xv = getLocalized(r[xCol]), yv = getLocalized(r[groupCol]);
+            if (hx.indexOf(xv) === -1) hx.push(xv);
+            if (hy.indexOf(yv) === -1) hy.push(yv);
+          });
+          var z = hy.map(function() { return hx.map(function() { return null; }); });
+          data.series.forEach(function(r) {
+            z[hy.indexOf(getLocalized(r[groupCol]))][hx.indexOf(getLocalized(r[xCol]))] = r[yCol];
+          });
+          traces.push({
+            type: 'heatmap', x: hx, y: hy, z: z,
+            colorscale: 'Blues', hoverongaps: false,
+            colorbar: { thickness: 12, outlinewidth: 0 }
+          });
+        } else {
+          Object.keys(groups).forEach(function(g) {
+            traces.push(cartesianTrace(type, getLocalized(g), groups[g].x, groups[g].y));
+          });
+        }
       } else if (strCols.length >= 1) {
         var xCol = strCols[0];
         if (type === 'pie') {
@@ -1294,14 +1351,23 @@ block extra_head %}
             hoverinfo: 'label+percent+value',
             textinfo: 'percent'
           });
+        } else if (type === 'treemap' && numCols.length >= 1) {
+          traces.push({
+            type: 'treemap',
+            labels: data.series.map(function(r) { return getLocalized(r[xCol]); }),
+            parents: data.series.map(function() { return ''; }),
+            values: data.series.map(function(r) { return r[numCols[0]]; }),
+            textinfo: 'label+value+percent root'
+          });
         } else {
+          var xs = data.series.map(function(r) { return getLocalized(r[xCol]); });
           numCols.forEach(function(col) {
-            traces.push({
-              type: type,
-              name: getLocalized(col),
-              x: data.series.map(function(r) { return getLocalized(r[xCol]); }),
-              y: data.series.map(function(r) { return r[col]; })
-            });
+            traces.push(cartesianTrace(
+              type,
+              getLocalized(col),
+              xs,
+              data.series.map(function(r) { return r[col]; })
+            ));
           });
         }
       }
@@ -1423,6 +1489,11 @@ block extra_head %}
     errDiv.classList.remove('d-none');
     errText.textContent = msg;
     setTimeout(function() { errDiv.classList.add('d-none'); }, 8000);
+    // Never leave the panel blank: if nothing is plotted, bring the prompt back.
+    if (!_currentFigDiv) {
+      document.getElementById('chartOutput').style.display = 'none';
+      document.getElementById('emptyState').style.display = '';
+    }
   }
 
   function showBanner(msg, type) {
@@ -1437,9 +1508,14 @@ block extra_head %}
 
   // ── Loading ──────────────────────────────────────────────────────────────
   function setLoading(on) {
-    var chartOutput = document.getElementById('chartOutput');
-    chartOutput.style.display = on ? 'none' : '';
-    document.getElementById('emptyState').style.display = on ? 'none' : '';
+    // Only ever *hide* panels here. Restoring them is owned by the terminal
+    // branches (injectChart / showError / clearChart), because renderChart()
+    // calls setLoading(false) from its finally block -- so restoring anything on
+    // the way out would clobber the chart that was just drawn.
+    if (on) {
+      document.getElementById('chartOutput').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'none';
+    }
     document.getElementById('chartSkeleton').style.display = on ? 'block' : 'none';
     document.getElementById('chartError').classList.add('d-none');
     var renderBtn = document.getElementById('renderBtn');
@@ -1455,6 +1531,7 @@ block extra_head %}
 
   function clearChart() {
     document.getElementById('chartOutput').innerHTML = '';
+    document.getElementById('chartOutput').style.display = 'none';
     document.getElementById('rowCountBadge').style.display = 'none';
     document.getElementById('exportCsvBtn').disabled = true;
     document.getElementById('exportPngBtn').disabled = true;

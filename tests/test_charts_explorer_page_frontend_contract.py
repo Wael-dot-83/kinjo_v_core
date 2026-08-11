@@ -47,3 +47,44 @@ def test_drilldown_is_scoped_to_kindergartens_source():
     html = TEMPLATE.read_text(encoding="utf-8")
     assert "if (_currentSource !== 'kindergartens') return;" in html
     assert "data.source === 'kindergartens' && data.drilldown" in html
+
+
+def test_setloading_does_not_restore_panels_it_did_not_own():
+    """renderChart() calls setLoading(false) from a finally block that runs after
+    injectChart() has already drawn the figure. setLoading used to unconditionally
+    restore #emptyState (display = on ? 'none' : ''), so every successful render
+    put the "start exploring" prompt back on top of the chart that had just been
+    drawn and pushed the figure out of view. setLoading may only *hide* panels;
+    restoring them belongs to the terminal branches."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert "document.getElementById('emptyState').style.display = on ? 'none' : '';" not in html
+    assert "chartOutput.style.display = on ? 'none' : '';" not in html
+    # showError must bring the prompt back when nothing is plotted, so a failed
+    # render never leaves an empty panel behind.
+    assert "if (!_currentFigDiv) {" in html
+
+
+def test_aggregated_series_are_not_drawn_as_a_plotly_histogram():
+    """The API's ChartType is a semantic label, not a Plotly trace type. Plotly's
+    histogram trace bins its x values and ignores y, so passing pre-aggregated
+    rows (one row per governorate with a measure) drew a bar of height 1 for every
+    category instead of the measure. histogram is the API's default chart_type for
+    the kindergartens source, so this was the out-of-the-box view."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert "function cartesianTrace(type, name, xs, ys)" in html
+    # The raw semantic type must never reach a cartesian trace spec again.
+    assert "traces.push({ type: type," not in html
+    # Shapes that need their own data layout get built explicitly.
+    assert "type: 'heatmap', x: hx, y: hy, z: z" in html
+    assert "type: 'treemap'," in html
+
+
+def test_chart_is_drawn_into_a_visible_host():
+    """Plotly measures the container at newPlot time. setLoading(true) hides
+    #chartOutput for the duration of the request, so drawing while it was still
+    hidden laid the figure out at Plotly's 700x450 default rather than the panel
+    width — the chart filled half its panel. It also must start hidden so its
+    min-height is not reserved as blank space under the empty state on load."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert '<div id="chartOutput" style="display: none"></div>' in html
+    assert "out.style.display = '';" in html
