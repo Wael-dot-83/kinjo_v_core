@@ -88,3 +88,22 @@ def test_chart_is_drawn_into_a_visible_host():
     html = TEMPLATE.read_text(encoding="utf-8")
     assert '<div id="chartOutput" style="display: none"></div>' in html
     assert "out.style.display = '';" in html
+
+
+def test_pie_is_honoured_on_two_dimensional_series():
+    """A series with two categorical columns and one measure (incidents by type
+    per month) takes the grouped branch, which had no pie case — so choosing
+    "pie" for incidents or enrollments silently drew grouped bars instead. The
+    time dimension is collapsed and the measure shown by category."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert "var pieTotals = {};" in html
+    assert "pieTotals[g] = (pieTotals[g] || 0) + (r[yCol] || 0);" in html
+
+
+def test_task_progressbar_has_an_accessible_name():
+    """role="progressbar" with only aria-valuenow/min/max exposes no name to a
+    screen reader (axe: aria-progressbar-name)."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    assert 'id="taskProgressBar"' in html
+    bar = html.split('id="taskProgressBar"')[1].split(">")[0]
+    assert "aria-label=" in bar

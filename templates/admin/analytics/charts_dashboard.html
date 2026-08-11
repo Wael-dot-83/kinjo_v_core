@@ -789,6 +789,7 @@ block extra_head %}
                   class="progress-bar"
                   id="taskProgressBar"
                   role="progressbar"
+                  aria-label="{% if ui_lang == 'en' %}Analysis progress{% else %}تقدّم التحليل{% endif %}"
                   style="width: 0%"
                   aria-valuenow="0"
                   aria-valuemin="0"
@@ -1318,7 +1319,23 @@ block extra_head %}
           groups[g].x.push(r[xCol]);
           groups[g].y.push(r[yCol]);
         });
-        if (type === 'heatmap') {
+        if (type === 'pie') {
+          // This branch used to fall straight through to grouped bars, so asking
+          // for a pie on a two-dimensional series silently drew bars instead.
+          // Collapse the time dimension and show the measure by category.
+          var pieTotals = {};
+          data.series.forEach(function(r) {
+            var g = getLocalized(r[groupCol]);
+            pieTotals[g] = (pieTotals[g] || 0) + (r[yCol] || 0);
+          });
+          traces.push({
+            type: 'pie',
+            labels: Object.keys(pieTotals),
+            values: Object.keys(pieTotals).map(function(k) { return pieTotals[k]; }),
+            hoverinfo: 'label+percent+value',
+            textinfo: 'percent'
+          });
+        } else if (type === 'heatmap') {
           // Two categorical columns plus a measure is the one shape that maps
           // onto a genuine matrix, so build z here rather than falling back.
           var hx = [], hy = [];
