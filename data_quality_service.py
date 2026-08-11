@@ -7,7 +7,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import models
-from utils.time_utils import today_amman as _today, jordan_date_range_filter
+from utils.time_utils import jordan_date_range_filter
+from utils.time_utils import today_amman as _today
 
 
 @dataclass
