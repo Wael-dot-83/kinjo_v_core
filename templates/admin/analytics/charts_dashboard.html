@@ -373,6 +373,15 @@ block extra_head %}
   @media (max-width: 768px) {
     .ce-layout {
       flex-direction: column;
+      /* align-items: flex-start is right for the row layout -- it stops the
+         sticky sidebar stretching to the tallest column. Once the axis flips to
+         a column it instead sizes children to their content width, so the chart
+         card grew past the viewport (423px inside a 342px container) and the
+         figure was drawn wider than the screen. */
+      align-items: stretch;
+    }
+    .ce-main {
+      width: 100%;
     }
     .ce-sidebar {
       max-width: 100%;

@@ -107,3 +107,15 @@ def test_task_progressbar_has_an_accessible_name():
     assert 'id="taskProgressBar"' in html
     bar = html.split('id="taskProgressBar"')[1].split(">")[0]
     assert "aria-label=" in bar
+
+
+def test_mobile_layout_stretches_children_to_the_viewport():
+    """.ce-layout uses align-items:flex-start so the sticky sidebar does not
+    stretch in the row layout. When the media query flips it to a column, that
+    same value sizes children to their content width instead of the container,
+    so the chart card rendered at 423px inside a 342px column and the figure was
+    drawn wider than a 390px screen."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    mobile = html.split("@media (max-width: 768px)")[1].split("</style>")[0]
+    assert "align-items: stretch;" in mobile
+    assert ".ce-main {" in mobile
