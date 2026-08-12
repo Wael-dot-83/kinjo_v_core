@@ -84,9 +84,14 @@ def test_chart_is_drawn_into_a_visible_host():
     #chartOutput for the duration of the request, so drawing while it was still
     hidden laid the figure out at Plotly's 700x450 default rather than the panel
     width — the chart filled half its panel. It also must start hidden so its
-    min-height is not reserved as blank space under the empty state on load."""
+    min-height is not reserved as blank space under the empty state on load.
+
+    Asserted structurally rather than as one exact line: the element also
+    carries role="img"/aria-label now, so a literal match broke on markup that
+    still satisfies the contract."""
     html = TEMPLATE.read_text(encoding="utf-8")
-    assert '<div id="chartOutput" style="display: none"></div>' in html
+    host = html.split('id="chartOutput"', 1)[1].split(">", 1)[0]
+    assert 'style="display: none"' in host
     assert "out.style.display = '';" in html
 
 

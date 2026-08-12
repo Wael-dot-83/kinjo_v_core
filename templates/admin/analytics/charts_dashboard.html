@@ -492,6 +492,22 @@ block extra_head %}
           <button
             type="button"
             class="ce-preset-btn"
+            data-preset="last_7"
+            onclick="applyDatePreset('last_7')"
+          >
+            {% if ui_lang == 'en' %}Last 7 Days{% else %}آخر 7 أيام{% endif %}
+          </button>
+          <button
+            type="button"
+            class="ce-preset-btn"
+            data-preset="last_30"
+            onclick="applyDatePreset('last_30')"
+          >
+            {% if ui_lang == 'en' %}Last 30 Days{% else %}آخر 30 يومًا{% endif %}
+          </button>
+          <button
+            type="button"
+            class="ce-preset-btn"
             data-preset="this_month"
             onclick="applyDatePreset('this_month')"
           >
@@ -547,6 +563,14 @@ block extra_head %}
             title="{% if ui_lang == 'en' %}End date{% else %}تاريخ النهاية{% endif %}"
           />
         </div>
+        {# Plain-language echo of the active range: the two date inputs alone
+           never state how long the selected window actually is. #}
+        <p
+          id="dateRangeSummary"
+          class="text-muted small mt-2 mb-0"
+          role="status"
+          aria-live="polite"
+        ></p>
       </div>
     </div>
 
@@ -771,7 +795,16 @@ block extra_head %}
         {# Chart Output #}
         <!-- Hidden until a figure exists: it reserves min-height, which would
              otherwise sit as blank space beneath the empty state on load. -->
-        <div id="chartOutput" style="display: none"></div>
+        {# The rendered chart is an image as far as assistive tech is concerned.
+           Without a role and a name it was announced as an empty group; the
+           label is refreshed with the chart type and range on every render, and
+           the data table below remains the full non-visual fallback. #}
+        <div
+          id="chartOutput"
+          role="img"
+          aria-label="{% if ui_lang == 'en' %}Chart{% else %}الرسم البياني{% endif %}"
+          style="display: none"
+        ></div>
 
         {# Task Status #}
         <div id="taskStatus" class="mt-2" style="display: none">
@@ -1080,6 +1113,12 @@ block extra_head %}
       case 'ytd':
         from = new Date(today.getFullYear(), 0, 1);
         break;
+      case 'last_7':
+        from.setDate(today.getDate() - 6); to = today;
+        break;
+      case 'last_30':
+        from.setDate(today.getDate() - 29); to = today;
+        break;
       case '1y':
         from.setFullYear(today.getFullYear() - 1);
         break;
@@ -1087,6 +1126,74 @@ block extra_head %}
     document.getElementById('dateFrom').value = formatDateStr(from);
     document.getElementById('dateTo').value = formatDateStr(to);
     updatePresetHighlight(preset);
+    rememberDateRange(preset);
+    updateDateRangeSummary();
+  }
+
+  // ── Date range memory & summary ──────────────────────────────────────────
+  // The range reset to nothing on every visit, so the same window had to be
+  // re-picked by hand each time.
+  var DATE_RANGE_KEY = 'kinjo.charts.dateRange';
+
+  function rememberDateRange(preset) {
+    try {
+      localStorage.setItem(DATE_RANGE_KEY, JSON.stringify({
+        preset: preset || '',
+        from: document.getElementById('dateFrom').value,
+        to: document.getElementById('dateTo').value
+      }));
+    } catch (e) { /* private mode / storage disabled — not worth failing over */ }
+  }
+
+  function restoreDateRange() {
+    // An explicit range in the URL is a deliberate choice and always wins.
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('date_from') || params.get('date_to')) {
+      updateDateRangeSummary();
+      return false;
+    }
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(DATE_RANGE_KEY) || 'null'); } catch (e) { saved = null; }
+    if (!saved || !saved.from || !saved.to) {
+      applyDatePreset('last_30');   // documented default
+      return true;
+    }
+    document.getElementById('dateFrom').value = saved.from;
+    document.getElementById('dateTo').value = saved.to;
+    updatePresetHighlight(saved.preset || '');
+    updateDateRangeSummary();
+    return true;
+  }
+
+  function updateDateRangeSummary() {
+    var el = document.getElementById('dateRangeSummary');
+    if (!el) return;
+    var from = document.getElementById('dateFrom').value;
+    var to = document.getElementById('dateTo').value;
+    if (!from || !to) { el.textContent = ''; return; }
+    // Jordan's locale, never ar-SA: that renders the Hijri calendar and Gulf
+    // month names where Jordan writes تموز.
+    var locale = LANG === 'en' ? 'en-JO' : 'ar-JO';
+    var opts = { year: 'numeric', month: 'long', day: 'numeric' };
+    var fromTxt = new Date(from + 'T00:00:00').toLocaleDateString(locale, opts);
+    var toTxt = new Date(to + 'T00:00:00').toLocaleDateString(locale, opts);
+    var days = Math.round((new Date(to) - new Date(from)) / 86400000) + 1;
+    if (isNaN(days) || days < 1) { el.textContent = ''; return; }
+    el.textContent = LANG === 'en'
+      ? 'Showing: ' + fromTxt + ' – ' + toTxt + ' (' + days + ' days)'
+      : 'المعروض: ' + fromTxt + ' – ' + toTxt + ' (' + days + ' يومًا)';
+  }
+
+  function describeChartForScreenReaders() {
+    var out = document.getElementById('chartOutput');
+    if (!out) return;
+    var typeBtn = document.querySelector('.ce-ct-btn.is-active');
+    var typeTxt = typeBtn ? typeBtn.textContent.trim() : '';
+    var range = (document.getElementById('dateRangeSummary') || {}).textContent || '';
+    var title = (document.getElementById('chartTitleDisplay') || {}).textContent || '';
+    var parts = [typeTxt, title, range].filter(function (p) { return p; });
+    out.setAttribute('aria-label', parts.join(' — ') ||
+      (LANG === 'en' ? 'Chart' : 'الرسم البياني'));
   }
 
   function formatDateStr(d) {
@@ -1236,6 +1343,8 @@ block extra_head %}
     var titleEl = document.getElementById('chartTitleDisplay');
     var icon = SOURCE_ICONS[data.source] || 'bi-bar-chart';
     titleEl.innerHTML = '<i class="bi ' + icon + ' me-2 text-primary"></i>' + escapeHTML(data.title);
+    // Name the chart region now that its title and range are known.
+    describeChartForScreenReaders();
 
     // Scope level badge
     var scopeBadge = document.getElementById('scopeLevelBadge');
@@ -1907,6 +2016,17 @@ block extra_head %}
     if (urlParams.has('date_to')) document.getElementById('dateTo').value = urlParams.get('date_to');
     if (urlParams.has('governorate')) { filterState.governorate = urlParams.get('governorate'); renderFilterPills(); }
     if (urlParams.has('kindergarten_id')) { filterState.kindergarten_id = urlParams.get('kindergarten_id'); renderFilterPills(); }
+
+    // Restore the last range (or fall back to the 30-day default) and keep the
+    // plain-language summary in step with manual edits.
+    restoreDateRange();
+    ['dateFrom', 'dateTo'].forEach(function (id) {
+      document.getElementById(id).addEventListener('change', function () {
+        updatePresetHighlight('');   // a hand-picked range is no longer a preset
+        rememberDateRange('');
+        updateDateRangeSummary();
+      });
+    });
 
     // Keyboard: Enter on date fields triggers render
     document.getElementById('dateFrom').addEventListener('keydown', function(e) { if (e.key === 'Enter') renderChart(); });
