@@ -268,6 +268,37 @@ block extra_head %}
     align-items: center;
     gap: 0.45rem;
   }
+  .ce-pinned-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+  }
+  .ce-pinned-card {
+    border: 1px solid var(--bs-border-color, #e2e8f0);
+    border-radius: 10px;
+    padding: 8px;
+    background: var(--bs-body-bg, #fff);
+  }
+  .ce-pinned-card[draggable="true"] { cursor: grab; }
+  .ce-pinned-card.is-dragging { opacity: 0.5; }
+  .ce-pinned-card.is-drop-target {
+    outline: 2px dashed var(--admin-primary, #4f46e5);
+    outline-offset: 2px;
+  }
+  .ce-pinned-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-block-end: 6px;
+  }
+  .ce-pinned-card__title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   #chartOutput {
     /* Matches the Plotly layout height so swapping the empty state for a
        rendered figure does not shift the rest of the page. */
@@ -456,6 +487,38 @@ block extra_head %}
           </button>
           {% endfor %}
         </div>
+        {# Blend a second source onto the same axes. Units often differ between
+           sources, so the hint says so rather than implying they are
+           comparable. #}
+        <details class="mt-3" id="overlaySourcesWrap">
+          <summary class="small text-muted" style="cursor: pointer">
+            {% if ui_lang == 'en' %}Overlay another source{% else %}دمج مصدر آخر{% endif %}
+          </summary>
+          <div
+            class="mt-2"
+            id="overlaySources"
+            role="group"
+            aria-label="{% if ui_lang == 'en' %}Overlay sources{% else %}مصادر الدمج{% endif %}"
+          >
+            {% for src in sources %}
+            <div class="form-check">
+              <input
+                class="form-check-input ce-overlay-src"
+                type="checkbox"
+                value="{{ src }}"
+                id="overlay_{{ src }}"
+                onchange="onOverlaySourcesChanged()"
+              />
+              <label class="form-check-label small" for="overlay_{{ src }}">
+                {% if ui_lang == 'en' %}{{ SOURCE_LABELS_EN.get(src, src | replace('_', ' ') | title) }}{% else %}{{ SOURCE_LABELS_AR.get(src, src) }}{% endif %}
+              </label>
+            </div>
+            {% endfor %}
+            <p class="text-muted small mb-0 mt-1">
+              {% if ui_lang == 'en' %}Overlaid sources are drawn on the same axes; units may differ.{% else %}تُرسم المصادر المدمجة على نفس المحاور، وقد تختلف وحدات القياس.{% endif %}
+            </p>
+          </div>
+        </details>
       </div>
     </div>
 
@@ -570,6 +633,25 @@ block extra_head %}
           class="text-muted small mt-2 mb-0"
           role="status"
           aria-live="polite"
+        ></p>
+        {# Compare against the immediately preceding window of the same length. #}
+        <div class="form-check mt-2 mb-0">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="compareToggle"
+            onchange="onCompareToggled()"
+          />
+          <label class="form-check-label small" for="compareToggle">
+            {% if ui_lang == 'en' %}Compare with previous period{% else %}قارن مع الفترة السابقة{% endif %}
+          </label>
+        </div>
+        <p
+          id="compareSummary"
+          class="text-muted small mt-1 mb-0"
+          role="status"
+          aria-live="polite"
+          style="display: none"
         ></p>
       </div>
     </div>
@@ -713,6 +795,16 @@ block extra_head %}
             </button>
             <button
               class="btn btn-outline-secondary btn-sm"
+              id="pinChartBtn"
+              disabled
+              onclick="pinCurrentChart()"
+              title="{% if ui_lang == 'en' %}Pin this chart to the board{% else %}تثبيت هذا الرسم في اللوحة{% endif %}"
+            >
+              <i class="bi bi-pin-angle" aria-hidden="true"></i>
+              {% if ui_lang == 'en' %}Pin{% else %}تثبيت{% endif %}
+            </button>
+            <button
+              class="btn btn-outline-secondary btn-sm"
               id="exportPngBtn"
               disabled
               onclick="exportChart()"
@@ -805,6 +897,34 @@ block extra_head %}
           aria-label="{% if ui_lang == 'en' %}Chart{% else %}الرسم البياني{% endif %}"
           style="display: none"
         ></div>
+
+        {# Pinned board: the canvas shows one chart at a time, so comparing two
+           views meant re-running the first one from memory. Pinned charts are
+           kept as their Plotly figure and can be reordered by dragging. #}
+        <div id="pinnedBoardWrap" class="mt-3" style="display: none">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h3 class="h6 mb-0">
+              {% if ui_lang == 'en' %}Pinned charts{% else %}الرسوم المثبتة{% endif %}
+            </h3>
+            <button
+              type="button"
+              class="btn btn-sm btn-link text-danger"
+              id="clearPinnedBtn"
+              onclick="clearPinnedCharts()"
+            >
+              {% if ui_lang == 'en' %}Clear all{% else %}مسح الكل{% endif %}
+            </button>
+          </div>
+          <p class="text-muted small mb-2">
+            {% if ui_lang == 'en' %}Drag a card to reorder. Order is remembered on this device.{% else %}اسحب البطاقة لإعادة الترتيب. يُحفظ الترتيب على هذا الجهاز.{% endif %}
+          </p>
+          <div
+            id="pinnedBoard"
+            class="ce-pinned-board"
+            role="list"
+            aria-label="{% if ui_lang == 'en' %}Pinned charts{% else %}الرسوم المثبتة{% endif %}"
+          ></div>
+        </div>
 
         {# Task Status #}
         <div id="taskStatus" class="mt-2" style="display: none">
@@ -1128,6 +1248,7 @@ block extra_head %}
     updatePresetHighlight(preset);
     rememberDateRange(preset);
     updateDateRangeSummary();
+    updateCompareSummary();
   }
 
   // ── Date range memory & summary ──────────────────────────────────────────
@@ -1182,6 +1303,253 @@ block extra_head %}
     el.textContent = LANG === 'en'
       ? 'Showing: ' + fromTxt + ' – ' + toTxt + ' (' + days + ' days)'
       : 'المعروض: ' + fromTxt + ' – ' + toTxt + ' (' + days + ' يومًا)';
+  }
+
+  // ── Comparison period ────────────────────────────────────────────────────
+  // The previous window of the same length, ending the day before the current
+  // one starts, so "last 30 days" compares against the 30 days before that.
+  var COMPARE_KEY = 'kinjo.charts.compare';
+  var _compareSeries = null;   // rows for the comparison range, when enabled
+
+  function previousPeriod() {
+    var from = document.getElementById('dateFrom').value;
+    var to = document.getElementById('dateTo').value;
+    if (!from || !to) return null;
+    var start = new Date(from + 'T00:00:00');
+    var end = new Date(to + 'T00:00:00');
+    var days = Math.round((end - start) / 86400000) + 1;
+    if (!days || days < 1) return null;
+    var prevEnd = new Date(start);
+    prevEnd.setDate(start.getDate() - 1);
+    var prevStart = new Date(prevEnd);
+    prevStart.setDate(prevEnd.getDate() - (days - 1));
+    return { from: formatDateStr(prevStart), to: formatDateStr(prevEnd) };
+  }
+
+  function compareEnabled() {
+    var el = document.getElementById('compareToggle');
+    return !!(el && el.checked);
+  }
+
+  function onCompareToggled() {
+    try { localStorage.setItem(COMPARE_KEY, compareEnabled() ? '1' : '0'); } catch (e) {}
+    updateCompareSummary();
+    if (_currentSource) renderChart();
+  }
+
+  function updateCompareSummary() {
+    var el = document.getElementById('compareSummary');
+    if (!el) return;
+    if (!compareEnabled()) { el.style.display = 'none'; el.textContent = ''; return; }
+    var prev = previousPeriod();
+    if (!prev) { el.style.display = 'none'; return; }
+    var locale = LANG === 'en' ? 'en-JO' : 'ar-JO';
+    var opts = { year: 'numeric', month: 'long', day: 'numeric' };
+    var f = new Date(prev.from + 'T00:00:00').toLocaleDateString(locale, opts);
+    var t = new Date(prev.to + 'T00:00:00').toLocaleDateString(locale, opts);
+    el.style.display = '';
+    el.textContent = LANG === 'en'
+      ? 'Compared with: ' + f + ' – ' + t
+      : 'مقارنة مع: ' + f + ' – ' + t;
+  }
+
+  // ── Overlays (comparison range and extra sources) ────────────────────────
+  // Both features need the same thing: fetch another dataset with the current
+  // filters and draw it alongside the primary series, so they share one path.
+  async function fetchSeries(source, dateFrom, dateTo) {
+    var params = new URLSearchParams({ source: source, lang: LANG });
+    if (_currentChartType) params.set('chart_type', _currentChartType);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+    if (filterState.governorate) params.set('governorate', filterState.governorate);
+    if (filterState.kindergarten_id) params.set('kindergarten_id', filterState.kindergarten_id);
+    try {
+      var resp = await fetch('/api/admin/charts/data?' + params, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!resp.ok) return null;
+      var body = await resp.json();
+      // Overlays are supplementary; a queued async result is not worth polling
+      // for, and the primary chart is already on screen.
+      return body && body.series ? body : null;
+    } catch (e) {
+      return null;   // an overlay must never break the primary chart
+    }
+  }
+
+  // ── Overlay sources (multi-source blending) ──────────────────────────────
+  var OVERLAY_KEY = 'kinjo.charts.overlaySources';
+  var _overlaySeries = [];   // [{label, series}] for each extra source
+
+  function selectedOverlaySources() {
+    return Array.prototype.slice
+      .call(document.querySelectorAll('.ce-overlay-src:checked'))
+      .map(function (cb) { return cb.value; })
+      .filter(function (s) { return s !== _currentSource; });
+  }
+
+  function onOverlaySourcesChanged() {
+    try {
+      localStorage.setItem(OVERLAY_KEY, JSON.stringify(selectedOverlaySources()));
+    } catch (e) {}
+    if (_currentSource) renderChart();
+  }
+
+  function restoreOverlaySources() {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(OVERLAY_KEY) || 'null'); } catch (e) {}
+    if (!Array.isArray(saved) || !saved.length) return;
+    saved.forEach(function (src) {
+      var cb = document.getElementById('overlay_' + src);
+      if (cb) cb.checked = true;
+    });
+    var wrap = document.getElementById('overlaySourcesWrap');
+    if (wrap) wrap.open = true;   // don't hide a filter that is actually on
+  }
+
+  function sourceLabel(src) {
+    var cb = document.querySelector('.ce-overlay-src[value="' + src + '"]');
+    var label = cb ? document.querySelector('label[for="' + cb.id + '"]') : null;
+    return label ? label.textContent.trim() : src;
+  }
+
+  // ── Pinned charts board (drag to reorder) ────────────────────────────────
+  var PINNED_KEY = 'kinjo.charts.pinned';
+  var _pinned = [];   // [{id, title, traces, layout}]
+
+  function loadPinned() {
+    try { _pinned = JSON.parse(localStorage.getItem(PINNED_KEY) || '[]') || []; }
+    catch (e) { _pinned = []; }
+    if (!Array.isArray(_pinned)) _pinned = [];
+  }
+
+  function savePinned() {
+    try { localStorage.setItem(PINNED_KEY, JSON.stringify(_pinned)); }
+    catch (e) { /* quota or private mode: the board still works this session */ }
+  }
+
+  function pinCurrentChart() {
+    if (!_currentFigDiv || !_currentFigDiv.data) return;
+    var title = (document.getElementById('chartTitleDisplay') || {}).textContent || '';
+    _pinned.push({
+      id: 'pin_' + Date.now(),
+      title: title.trim() || tEn('Chart', 'رسم بياني'),
+      // Plotly figures are plain data; storing them avoids re-querying on load.
+      traces: JSON.parse(JSON.stringify(_currentFigDiv.data)),
+      layout: { height: 260, margin: { t: 24, r: 12, l: 44, b: 40 },
+                showlegend: false, autosize: true,
+                paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)' }
+    });
+    savePinned();
+    renderPinnedBoard();
+  }
+
+  function removePinned(id) {
+    _pinned = _pinned.filter(function (p) { return p.id !== id; });
+    savePinned();
+    renderPinnedBoard();
+  }
+
+  function clearPinnedCharts() {
+    _pinned = [];
+    savePinned();
+    renderPinnedBoard();
+  }
+
+  function renderPinnedBoard() {
+    var wrap = document.getElementById('pinnedBoardWrap');
+    var board = document.getElementById('pinnedBoard');
+    if (!wrap || !board) return;
+    wrap.style.display = _pinned.length ? '' : 'none';
+    board.innerHTML = '';
+
+    _pinned.forEach(function (pin, index) {
+      var card = document.createElement('div');
+      card.className = 'ce-pinned-card';
+      card.setAttribute('role', 'listitem');
+      card.setAttribute('draggable', 'true');
+      card.dataset.pinId = pin.id;
+
+      var head = document.createElement('div');
+      head.className = 'ce-pinned-card__head';
+      var title = document.createElement('span');
+      title.className = 'ce-pinned-card__title';
+      title.textContent = pin.title;
+      head.appendChild(title);
+
+      // Keyboard equivalents for the drag interaction, which is pointer-only.
+      var controls = document.createElement('div');
+      [['←', -1], ['→', 1]].forEach(function (pair) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-link p-0 mx-1';
+        btn.textContent = pair[0];
+        btn.setAttribute('aria-label', tEn('Move ' + (pair[1] < 0 ? 'earlier' : 'later'),
+                                           pair[1] < 0 ? 'تحريك للخلف' : 'تحريك للأمام'));
+        btn.onclick = function () { movePinned(index, index + pair[1]); };
+        controls.appendChild(btn);
+      });
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn btn-sm btn-link text-danger p-0 ms-2';
+      del.textContent = '×';
+      del.setAttribute('aria-label', tEn('Remove pinned chart', 'إزالة الرسم المثبت'));
+      del.onclick = function () { removePinned(pin.id); };
+      controls.appendChild(del);
+      head.appendChild(controls);
+
+      var host = document.createElement('div');
+      host.id = 'pinhost_' + pin.id;
+
+      card.appendChild(head);
+      card.appendChild(host);
+      board.appendChild(card);
+
+      if (typeof Plotly !== 'undefined') {
+        Plotly.newPlot(host, pin.traces, pin.layout,
+                       { responsive: true, displayModeBar: false });
+      }
+    });
+
+    wirePinnedDragAndDrop();
+  }
+
+  function movePinned(from, to) {
+    if (to < 0 || to >= _pinned.length || from === to) return;
+    var moved = _pinned.splice(from, 1)[0];
+    _pinned.splice(to, 0, moved);
+    savePinned();
+    renderPinnedBoard();
+  }
+
+  function wirePinnedDragAndDrop() {
+    var cards = document.querySelectorAll('.ce-pinned-card');
+    var draggedId = null;
+    cards.forEach(function (card) {
+      card.addEventListener('dragstart', function () {
+        draggedId = card.dataset.pinId;
+        card.classList.add('is-dragging');
+      });
+      card.addEventListener('dragend', function () {
+        card.classList.remove('is-dragging');
+        cards.forEach(function (c) { c.classList.remove('is-drop-target'); });
+      });
+      card.addEventListener('dragover', function (e) {
+        e.preventDefault();               // required for drop to fire
+        card.classList.add('is-drop-target');
+      });
+      card.addEventListener('dragleave', function () {
+        card.classList.remove('is-drop-target');
+      });
+      card.addEventListener('drop', function (e) {
+        e.preventDefault();
+        card.classList.remove('is-drop-target');
+        if (!draggedId || draggedId === card.dataset.pinId) return;
+        var from = _pinned.findIndex(function (p) { return p.id === draggedId; });
+        var to = _pinned.findIndex(function (p) { return p.id === card.dataset.pinId; });
+        movePinned(from, to);
+      });
+    });
   }
 
   function describeChartForScreenReaders() {
@@ -1299,6 +1667,34 @@ block extra_head %}
       var data = await resp.json();
       _lastResponse = data;
 
+      // Pull the comparison window before drawing so both appear together
+      // rather than the chart visibly redrawing a moment later.
+      _compareSeries = null;
+      if (compareEnabled()) {
+        var prev = previousPeriod();
+        if (prev) {
+          var prevData = await fetchSeries(source, prev.from, prev.to);
+          if (prevData && prevData.series && prevData.series.length) {
+            _compareSeries = prevData.series;
+          }
+        }
+      }
+
+      // Extra sources over the same window, fetched together rather than in
+      // series so several overlays do not stack their latencies.
+      _overlaySeries = [];
+      var extras = selectedOverlaySources();
+      if (extras.length) {
+        var fetched = await Promise.all(extras.map(function (src) {
+          return fetchSeries(src, dateFrom, dateTo);
+        }));
+        fetched.forEach(function (body, i) {
+          if (body && body.series && body.series.length) {
+            _overlaySeries.push({ label: sourceLabel(extras[i]), series: body.series });
+          }
+        });
+      }
+
       if (data.task_id) {
         showTaskStatus(data.task_id);
       } else {
@@ -1385,6 +1781,7 @@ block extra_head %}
 
     document.getElementById('exportCsvBtn').disabled = false;
     document.getElementById('exportPngBtn').disabled = false;
+    document.getElementById('pinChartBtn').disabled = false;
     document.getElementById('shareBtn').disabled = false;
 
     renderBreadcrumbs(data.scope);
@@ -1546,6 +1943,55 @@ block extra_head %}
             ));
           });
         }
+      }
+
+      // Comparison traces are drawn dashed and half-opacity so the current
+      // period stays visually dominant. Pie/treemap cannot overlay a second
+      // period meaningfully, so they are left alone.
+      if (_compareSeries && _compareSeries.length && type !== 'pie' && type !== 'treemap') {
+        var cmpKeys = Object.keys(_compareSeries[0]);
+        var cmpStr = cmpKeys.filter(function(k) { return typeof _compareSeries[0][k] !== 'number'; });
+        var cmpNum = cmpKeys.filter(function(k) {
+          return typeof _compareSeries[0][k] === 'number' && !/(^|_)id$/i.test(k);
+        });
+        var cmpXs = cmpStr.length
+          ? _compareSeries.map(function(r) { return getLocalized(r[cmpStr[0]]); })
+          : _compareSeries.map(function(_, i) { return i + 1; });
+        var cmpLabel = tEn('previous period', 'الفترة السابقة');
+        cmpNum.forEach(function(col) {
+          var tr = cartesianTrace(
+            type,
+            getLocalized(col) + ' — ' + cmpLabel,
+            cmpXs,
+            _compareSeries.map(function(r) { return r[col]; })
+          );
+          tr.opacity = 0.55;
+          tr.line = Object.assign({}, tr.line || {}, { dash: 'dash' });
+          traces.push(tr);
+        });
+      }
+
+      // Overlaid sources, labelled with the source so a blended chart still
+      // says which line came from where.
+      if (_overlaySeries.length && type !== 'pie' && type !== 'treemap') {
+        _overlaySeries.forEach(function (ov) {
+          var oKeys = Object.keys(ov.series[0]);
+          var oStr = oKeys.filter(function(k) { return typeof ov.series[0][k] !== 'number'; });
+          var oNum = oKeys.filter(function(k) {
+            return typeof ov.series[0][k] === 'number' && !/(^|_)id$/i.test(k);
+          });
+          var oXs = oStr.length
+            ? ov.series.map(function(r) { return getLocalized(r[oStr[0]]); })
+            : ov.series.map(function(_, i) { return i + 1; });
+          oNum.forEach(function(col) {
+            traces.push(cartesianTrace(
+              type,
+              ov.label + ' — ' + getLocalized(col),
+              oXs,
+              ov.series.map(function(r) { return r[col]; })
+            ));
+          });
+        });
       }
 
       Plotly.newPlot(out, traces, layout, { responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['sendDataToCloud'] });
@@ -1711,6 +2157,7 @@ block extra_head %}
     document.getElementById('rowCountBadge').style.display = 'none';
     document.getElementById('exportCsvBtn').disabled = true;
     document.getElementById('exportPngBtn').disabled = true;
+    document.getElementById('pinChartBtn').disabled = true;
     document.getElementById('shareBtn').disabled = true;
     document.getElementById('emptyState').style.display = '';
     document.getElementById('interpretationPanel').style.display = 'none';
@@ -2020,11 +2467,20 @@ block extra_head %}
     // Restore the last range (or fall back to the 30-day default) and keep the
     // plain-language summary in step with manual edits.
     restoreDateRange();
+    try {
+      var cmpEl = document.getElementById('compareToggle');
+      if (cmpEl && localStorage.getItem(COMPARE_KEY) === '1') cmpEl.checked = true;
+    } catch (e) { /* storage unavailable */ }
+    updateCompareSummary();
+    restoreOverlaySources();
+    loadPinned();
+    renderPinnedBoard();
     ['dateFrom', 'dateTo'].forEach(function (id) {
       document.getElementById(id).addEventListener('change', function () {
         updatePresetHighlight('');   // a hand-picked range is no longer a preset
         rememberDateRange('');
         updateDateRangeSummary();
+        updateCompareSummary();     // the comparison window shifts with it
       });
     });
 
