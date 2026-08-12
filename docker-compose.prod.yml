@@ -89,6 +89,11 @@ services:
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS:?TRUSTED_HOSTS is required}
+      # The celery console script puts its own bin directory on sys.path rather
+      # than the working directory, so top-level modules like child_age_policy
+      # fail to import inside tasks even though they sit in /app. uvicorn does
+      # not have this problem, which is why only background work broke.
+      PYTHONPATH: /app
     volumes:
       - ./data:/app/data
     command: celery -A celery_app.celery_app worker --loglevel=info --concurrency=2
