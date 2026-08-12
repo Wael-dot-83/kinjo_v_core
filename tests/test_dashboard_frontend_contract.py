@@ -51,28 +51,29 @@ def test_decision_support_charts_have_fallback_paths():
     assert source.count('showCanvasFallback(chartEl, dsText("ds.no_data"));') >= 4
 
 
-def test_analytics_filter_bar_sticks_to_scrollport_top():
-    """The analytics filter bar must pin flush to the top of .admin-content.
+def test_analytics_filter_bar_stays_in_the_document_flow():
+    """The analytics filter bar is a page section, not floating chrome.
 
-    .admin-content is the real scroll container (the header sits outside it).
-    `top: 0` pins the bar at the scroller's content edge — i.e. flush with the
-    visible top, since the scroller's own padding is above it. The earlier
-    `top: calc(-1 * var(--kinjo-spacing-6))` offset made the bar stick only
-    after scrolling past the container top, so it appeared to never pin.
+    It was previously `position: sticky; top: 0` with a scroll listener that
+    toggled an `is-stuck` class. Pinned to the scrollport it covered the results
+    underneath as the dashboard scrolled, so the deployed design keeps it in the
+    document flow instead. This test guards that decision from being silently
+    reverted: sticky positioning and the scroll listener must both stay gone,
+    and the bar must not re-acquire a stacking context that lifts it over the
+    content (top-menu.css owns the nav layer at z-index 1100).
     """
     css = ANALYTICS_V2_CSS.read_text(encoding="utf-8")
     match = re.search(r"\.glass-filter-bar\s*\{(?P<body>[^}]+)\}", css)
     assert match is not None
     body = match.group("body")
-    assert re.search(r"position\s*:\s*sticky", body)
-    assert re.search(r"top\s*:\s*0\b", body)
-    assert not re.search(r"top\s*:\s*calc\(-1", body)
-    assert re.search(r"z-index\s*:\s*1000", body)
-    assert ".glass-filter-bar.is-stuck" in css
+    assert re.search(r"position\s*:\s*relative", body)
+    assert not re.search(r"position\s*:\s*sticky", body)
+    assert re.search(r"z-index\s*:\s*auto", body)
+    assert ".glass-filter-bar.is-stuck" not in css
 
     template = ANALYTICS_TEMPLATE.read_text(encoding="utf-8")
-    assert "classList.toggle('is-stuck'" in template
-    assert re.search(r"scroller\.addEventListener\('scroll'", template)
+    assert "classList.toggle('is-stuck'" not in template
+    assert not re.search(r"scroller\.addEventListener\('scroll'", template)
 
 
 def test_risk_intelligence_cards_use_real_backend_field_names():

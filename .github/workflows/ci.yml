@@ -6,6 +6,20 @@ on:
   pull_request:
     branches: [ main ]
 
+# The product is anchored to Jordan time (UTC+3) and the application computes
+# every operational date in that zone. Runners default to UTC, so between
+# 21:00 and 24:00 UTC the runner's calendar date is already yesterday relative
+# to Jordan, and every test that seeds or asserts with date.today() disagrees
+# with the app by one day. That made CI fail for three hours out of every
+# twenty-four regardless of what was being changed. Running the suite in the
+# application's own timezone removes the discrepancy at its source.
+#
+# This is not a substitute for the deeper fix: those tests should derive dates
+# from the Jordan helper rather than the system clock, which would make them
+# correct in any zone.
+env:
+  TZ: Asia/Amman
+
 jobs:
   lint:
     runs-on: ubuntu-latest
