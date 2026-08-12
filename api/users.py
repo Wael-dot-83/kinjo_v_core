@@ -4,7 +4,7 @@ Users domain endpoints
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import SQLAlchemyError
@@ -15,6 +15,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
+from ui_language import set_ui_language_cookie as _set_ui_language_cookie
 from audit_actions import AuditAction
 import validators
 from captcha_service import captcha_error_message, captcha_required, verify_captcha
@@ -118,10 +119,24 @@ class LanguageUpdateRequest(BaseModel):
 @router.put("/users/me/language")
 def update_user_language(
     payload: LanguageUpdateRequest,
+    response: Response,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Update user language preference."""
+    """Update user language preference.
+
+    This also rewrites the kinjo_lang cookie. Server-side rendering resolves the
+    UI language from that cookie, and the cookie was only ever written at login,
+    so persisting the preference here without updating it left the server
+    rendering the *old* language while the client rewrote documentElement to the
+    new one — every page came out with mixed Arabic/English text and a direction
+    that disagreed with its content.
+
+    The cookie must carry the same attributes the login path uses. It is set
+    with COOKIE_DOMAIN so it is shared across the apex and www hosts; a
+    host-only cookie of the same name does not overwrite the domain-wide one,
+    it merely shadows it inconsistently.
+    """
     if payload.user_lang not in ("ar", "en"):
         raise HTTPException(status_code=400, detail="Supported languages: ar, en")
     current_user.preferred_language = payload.user_lang
@@ -133,6 +148,7 @@ def update_user_language(
             parent_profile.notification_language = payload.user_lang
     db.commit()
     db.refresh(current_user)
+    _set_ui_language_cookie(response, current_user.preferred_language)
     return {"user_lang": current_user.preferred_language}
 
 

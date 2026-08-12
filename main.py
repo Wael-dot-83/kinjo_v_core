@@ -66,6 +66,7 @@ from database import get_db, init_db
 from auth import authenticate_user, create_access_token, get_password_hash, requires_password_change
 from cache_service import cache_service
 from config import settings
+from ui_language import set_ui_language_cookie
 from dependencies import get_current_user, get_current_user_optional, ManagerScope, RedirectToLogin
 from middleware.auth import (
     build_generic_auth_exception,
@@ -696,16 +697,10 @@ def _resolve_user_language(db: Session, user_id: int) -> str:
 
 
 def _set_ui_language_cookie(response: Response, language: str) -> None:
-    response.set_cookie(
-        key="kinjo_lang",
-        value=_normalize_ui_language(language),
-        max_age=31536000,  # 1 year
-        path="/",
-        samesite=settings.SESSION_COOKIE_SAMESITE,
-        secure=settings.ENVIRONMENT.lower() == "production",
-        httponly=False,
-        domain=settings.COOKIE_DOMAIN or None,
-    )
+    # Delegates to ui_language so the login path and the language endpoint write
+    # byte-identical cookie attributes; a domain mismatch between the two would
+    # leave the browser holding two kinjo_lang cookies with different values.
+    set_ui_language_cookie(response, language)
 
 
 def _set_no_store_headers(response: Response) -> None:
