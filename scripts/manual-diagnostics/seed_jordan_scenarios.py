@@ -64,7 +64,10 @@ AR_FIRST = ["أحمد", "محمد", "عمر", "يوسف", "خالد", "ليان"
             "زيد", "لؤي", "تالا", "سلمى", "نور", "هاشم", "بشار", "دانا", "رهف", "كرم"]
 AR_LAST = ["العبداللات", "المجالي", "الزعبي", "الخصاونة", "النسور", "الطراونة", "العدوان",
            "الحياري", "أبو غزالة", "الشوابكة", "بني هاني", "الرواشدة", "السعودي", "التلهوني"]
-AGE_GROUPS = ["INFANT", "TODDLER", "KG1", "KG2"]
+# Postgres enforces these through age_group_enum; SQLite stores the column as
+# free text, so a wrong label only shows up against the real database.
+# (code, min_age_months, max_age_months)
+AGE_GROUPS = [("AGE_0_1", 0, 11), ("AGE_1_2", 12, 23), ("AGE_2_4", 24, 47)]
 MOODS = ["HAPPY", "CALM", "TIRED", "UPSET", "ENERGETIC"]
 
 # Scenario mix -- each band gets a deliberately different behaviour profile so
@@ -227,7 +230,7 @@ def seed(db, scale: str, dry_run: bool) -> dict:
             stats["calendar_days"] += 1
 
         for class_index in range(cfg["classes_per_kg"]):
-            age_group = AGE_GROUPS[class_index % len(AGE_GROUPS)]
+            age_group, min_months, max_months = AGE_GROUPS[class_index % len(AGE_GROUPS)]
             supervisor, created = get_or_create_user(
                 db,
                 f"{SEED_PREFIX}sup_{kg.id}_{class_index}",
@@ -263,8 +266,8 @@ def seed(db, scale: str, dry_run: bool) -> dict:
                 class_code=f"{SEED_PREFIX}{kg.id}_{class_index}",
                 age_group=age_group,
                 capacity_total=cfg["children_per_class"] + 5,
-                min_age_months=12 + class_index * 12,
-                max_age_months=23 + class_index * 12,
+                min_age_months=min_months,
+                max_age_months=max_months,
                 supervisor_id=supervisor.id,
                 is_active=True,
             )
@@ -314,7 +317,8 @@ def seed(db, scale: str, dry_run: bool) -> dict:
                 db.add(profile)
                 db.flush()
 
-                months_old = 14 + class_index * 12 + RNG.randint(0, 9)
+                # Keep each child inside its class's declared age band.
+                months_old = RNG.randint(max(1, min_months), max_months)
                 child = models.Child(
                     parent_id=profile.id,
                     first_name=RNG.choice(AR_FIRST), last_name=last,
@@ -448,8 +452,10 @@ def seed(db, scale: str, dry_run: bool) -> dict:
                     followup_required_flag=severity in ("HIGH", "CRITICAL"),
                     closed_at=occurred + timedelta(days=RNG.randint(1, 5)) if closed else None,
                     closed_by=manager.id if closed else None,
-                    status=(models.IncidentStatus.CLOSED.value if closed
-                            else models.IncidentStatus.OPEN.value),
+                    # incidentstatus stores the enum *name* (CLOSED), not the
+                    # Python value ("Closed"), so .name is what Postgres accepts.
+                    status=(models.IncidentStatus.CLOSED.name if closed
+                            else models.IncidentStatus.OPEN.name),
                 ))
                 stats["incidents"] += 1
 
