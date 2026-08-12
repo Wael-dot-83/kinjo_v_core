@@ -686,12 +686,239 @@
     });
   }
 
+
+  // ── Status pills ─────────────────────────────────────────────────────────
+  // Counts come from the same status_counts the totals bar uses, so a pill and
+  // the bar can never disagree.
+  function statusTotals(groups) {
+    const totals = { "": 0 };
+    Object.keys(STATUS_UI_CONFIG).forEach((key) => {
+      totals[key] = 0;
+    });
+    (groups || []).forEach((group) => {
+      const counts = group.status_counts || {};
+      Object.keys(STATUS_UI_CONFIG).forEach((key) => {
+        const value = Number(counts[key] || 0);
+        totals[key] += value;
+        totals[""] += value;
+      });
+    });
+    return totals;
+  }
+
+  function renderStatusPills(groups) {
+    const host = document.getElementById("statusPills");
+    const hidden = document.getElementById("statusFilter");
+    if (!host || !hidden) {
+      return;
+    }
+    const totals = statusTotals(groups);
+    const active = hidden.value || "";
+    const options = [{ key: "", label: t("كل الحالات", "All statuses"), icon: "bi bi-list-ul" }]
+      .concat(Object.keys(STATUS_UI_CONFIG).map((key) => {
+        const cfg = getStatusDisplay(key);
+        return { key: key, label: cfg.label, icon: cfg.icon };
+      }));
+
+    host.innerHTML = "";
+    options.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-sm rounded-pill pill-filter " +
+        (opt.key === active ? "btn-primary" : "btn-outline-secondary");
+      btn.dataset.status = opt.key;
+      // aria-pressed carries the state; colour alone would not reach a screen
+      // reader.
+      btn.setAttribute("aria-pressed", opt.key === active ? "true" : "false");
+      btn.innerHTML =
+        '<i class="' + opt.icon + '" aria-hidden="true"></i> ' +
+        "<span>" + escapeHtml(opt.label) + "</span> " +
+        '<span class="badge bg-light text-dark ms-1 pill-count"><bdi>' +
+        formatNumber(totals[opt.key] || 0) + "</bdi></span>";
+      btn.addEventListener("click", () => {
+        // Clicking the active pill clears it, so a filter can be undone without
+        // hunting for an "all" option.
+        hidden.value = hidden.value === opt.key ? "" : opt.key;
+        state.page = 1;
+        if (state.selectedResponse) {
+          renderGroups(state.selectedResponse);
+        }
+      });
+      host.appendChild(btn);
+    });
+  }
+
+  // ── Fuzzy suggestions ────────────────────────────────────────────────────
+  // Written here rather than pulling in Fuse.js: this project has no bundler,
+  // serves /static directly and blocks external CDNs, so the dependency would
+  // have to be vendored. Subsequence matching with a proximity score covers the
+  // typo and partial-name cases this search actually sees.
+  function fuzzyScore(needle, haystack) {
+    const n = needle.toLowerCase();
+    const h = String(haystack || "").toLowerCase();
+    if (!n) {
+      return 0;
+    }
+    const direct = h.indexOf(n);
+    if (direct !== -1) {
+      return 1000 - direct; // an exact substring always outranks a fuzzy hit
+    }
+    let i = 0;
+    let score = 0;
+    let last = -1;
+    for (let c = 0; c < h.length && i < n.length; c += 1) {
+      if (h[c] === n[i]) {
+        // Characters found close together score better than scattered ones.
+        score += last === -1 || c - last === 1 ? 6 : 2;
+        last = c;
+        i += 1;
+      }
+    }
+    return i === n.length ? score : -1; // every character must appear, in order
+  }
+
+  function suggestionPool(field) {
+    const names = [];
+    (state.selectedResponse?.kindergartens || []).forEach((group) => {
+      (group.reports || group.rows || []).forEach((row) => {
+        const name = field === "child" ? resolveChildName(row) : resolveTeacherName(row);
+        if (name) {
+          names.push(String(name));
+        }
+      });
+    });
+    return Array.from(new Set(names));
+  }
+
+  function closeSuggestions(field) {
+    const list = document.getElementById(field + "Suggestions");
+    const input = document.getElementById(field + "Search");
+    if (list) {
+      list.classList.add("d-none");
+      list.innerHTML = "";
+    }
+    if (input) {
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+    }
+  }
+
+  function renderSuggestions(field) {
+    const input = document.getElementById(field + "Search");
+    const list = document.getElementById(field + "Suggestions");
+    if (!input || !list) {
+      return;
+    }
+    const term = input.value.trim();
+    // Below two characters nearly every name matches, which is noise not help.
+    if (term.length < 2) {
+      closeSuggestions(field);
+      return;
+    }
+    const matches = suggestionPool(field)
+      .map((name) => ({ name: name, score: fuzzyScore(term, name) }))
+      .filter((entry) => entry.score >= 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8);
+
+    if (matches.length === 0) {
+      closeSuggestions(field);
+      return;
+    }
+
+    list.innerHTML = matches
+      .map((entry, index) =>
+        '<li class="list-group-item list-group-item-action py-1 small" role="option" id="' +
+        field + "Option" + index + '" aria-selected="false" tabindex="-1"><bdi>' +
+        escapeHtml(entry.name) + "</bdi></li>")
+      .join("");
+    list.classList.remove("d-none");
+    input.setAttribute("aria-expanded", "true");
+    list.dataset.activeIndex = "-1";
+  }
+
+  function moveSuggestion(field, delta) {
+    const list = document.getElementById(field + "Suggestions");
+    const input = document.getElementById(field + "Search");
+    if (!list || list.classList.contains("d-none")) {
+      return;
+    }
+    const items = Array.from(list.querySelectorAll("[role='option']"));
+    if (items.length === 0) {
+      return;
+    }
+    let index = Number(list.dataset.activeIndex || -1) + delta;
+    if (index < 0) {
+      index = items.length - 1;
+    }
+    if (index >= items.length) {
+      index = 0;
+    }
+    items.forEach((li, i) => {
+      const on = i === index;
+      li.classList.toggle("active", on);
+      li.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    list.dataset.activeIndex = String(index);
+    items[index].scrollIntoView({ block: "nearest" });
+    input.setAttribute("aria-activedescendant", items[index].id);
+  }
+
+  function chooseSuggestion(field, li) {
+    const input = document.getElementById(field + "Search");
+    if (!input || !li) {
+      return;
+    }
+    input.value = li.textContent.trim();
+    closeSuggestions(field);
+    state.page = 1;
+    if (state.selectedResponse) {
+      renderGroups(state.selectedResponse);
+    }
+  }
+
+  function wireAutocomplete(field) {
+    const input = document.getElementById(field + "Search");
+    const list = document.getElementById(field + "Suggestions");
+    if (!input || !list) {
+      return;
+    }
+    input.addEventListener("input", () => renderSuggestions(field));
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        moveSuggestion(field, 1);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        moveSuggestion(field, -1);
+      } else if (event.key === "Enter") {
+        const active = list.querySelector("[aria-selected='true']");
+        if (active) {
+          event.preventDefault();
+          chooseSuggestion(field, active);
+        }
+      } else if (event.key === "Escape") {
+        closeSuggestions(field);
+      }
+    });
+    list.addEventListener("mousedown", (event) => {
+      // mousedown, not click: blur would tear the list down first.
+      const li = event.target.closest("[role='option']");
+      if (li) {
+        event.preventDefault();
+        chooseSuggestion(field, li);
+      }
+    });
+    input.addEventListener("blur", () => window.setTimeout(() => closeSuggestions(field), 120));
+  }
+
   function renderGroups(response) {
     const container = document.getElementById("dailyReportsAccordion");
     if (!container) {
       return;
     }
 
+    renderStatusPills(response.kindergartens || []);
     const groups = applyClientFilters(response.kindergartens || []);
     // Totals stay across the whole filtered set, not just the visible page:
     // "12 missing" is only meaningful for everything the filters match.
@@ -853,6 +1080,8 @@
     });
 
     dateInput?.addEventListener("change", fetchAndRenderReports);
+    wireAutocomplete("child");
+    wireAutocomplete("teacher");
     // Changing the page size invalidates the current page number.
     document.getElementById("dailyReportsPerPage")?.addEventListener("change", () => {
       state.page = 1;

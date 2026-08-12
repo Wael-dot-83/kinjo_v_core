@@ -70,23 +70,39 @@
 
       <div class="row g-3 align-items-end">
         <div class="col-12 col-md-3">
-          <label for="statusFilter" class="form-label">{% if ui_lang == 'en' %}Filter by status{% else %}تصفية بالحالة{% endif %}</label>
-          <select id="statusFilter" class="form-select" aria-label="{% if ui_lang == 'en' %}Filter by report status{% else %}تصفية حسب حالة التقرير{% endif %}">
-            <option value="">{% if ui_lang == 'en' %}All statuses{% else %}كل الحالات{% endif %}</option>
-            <option value="received">{% if ui_lang == 'en' %}Received by parents{% else %}تم استلامه من قبل الوالدين{% endif %}</option>
-            <option value="pending">{% if ui_lang == 'en' %}Pending manager review{% else %}بانتظار مراجعة المدير{% endif %}</option>
-            <option value="incomplete">{% if ui_lang == 'en' %}Incomplete{% else %}غير مكتمل{% endif %}</option>
-            <option value="absent">{% if ui_lang == 'en' %}Not filled - child absent{% else %}غير مملوء - غياب الطفل{% endif %}</option>
-            <option value="not_submitted">{% if ui_lang == 'en' %}Not filled - supervisor/teacher did not submit{% else %}غير مملوء - لم يقدم المشرف/المعلم{% endif %}</option>
-          </select>
+          <span class="form-label d-block" id="statusPillsLabel">{% if ui_lang == 'en' %}Filter by status{% else %}تصفية بالحالة{% endif %}</span>
+          {# Pills replace a <select>: one click instead of open-scan-pick, and
+             each option carries its own count. The hidden input keeps the
+             existing filter code reading `statusFilter.value` unchanged. #}
+          <input type="hidden" id="statusFilter" value="" />
+          <div
+            id="statusPills"
+            class="d-flex flex-wrap gap-2"
+            role="group"
+            aria-labelledby="statusPillsLabel"
+          ></div>
         </div>
         <div class="col-12 col-md-3">
           <label for="childSearch" class="form-label">{% if ui_lang == 'en' %}Search by child name{% else %}بحث باسم الطفل{% endif %}</label>
-          <input id="childSearch" type="text" class="form-control" placeholder="{% if ui_lang == 'en' %}Type child name{% else %}اكتب اسم الطفل{% endif %}" />
+          <input id="childSearch" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="childSuggestions" type="text" class="form-control" placeholder="{% if ui_lang == 'en' %}Type child name{% else %}اكتب اسم الطفل{% endif %}" />
+          <ul
+            id="childSuggestions"
+            class="list-group position-absolute w-auto shadow-sm d-none"
+            role="listbox"
+            aria-label="{% if ui_lang == 'en' %}Suggested child names{% else %}أسماء الطفل المقترحة{% endif %}"
+            style="z-index: 1050; max-height: 220px; overflow-y: auto;"
+          ></ul>
         </div>
         <div class="col-12 col-md-3">
           <label for="teacherSearch" class="form-label">{% if ui_lang == 'en' %}Search by teacher/supervisor name{% else %}بحث باسم المعلم/المشرف{% endif %}</label>
-          <input id="teacherSearch" type="text" class="form-control" placeholder="{% if ui_lang == 'en' %}Type name{% else %}اكتب الاسم{% endif %}" />
+          <input id="teacherSearch" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="teacherSuggestions" type="text" class="form-control" placeholder="{% if ui_lang == 'en' %}Type name{% else %}اكتب الاسم{% endif %}" />
+          <ul
+            id="teacherSuggestions"
+            class="list-group position-absolute w-auto shadow-sm d-none"
+            role="listbox"
+            aria-label="{% if ui_lang == 'en' %}Suggested teacher names{% else %}أسماء المشرفة المقترحة{% endif %}"
+            style="z-index: 1050; max-height: 220px; overflow-y: auto;"
+          ></ul>
         </div>
         <div class="col-6 col-md-2">
           <label for="sortField" class="form-label">{% if ui_lang == 'en' %}Sort by{% else %}الترتيب حسب{% endif %}</label>
@@ -161,5 +177,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script defer src="/static/js/admin_daily_reports_organization.js?v=1.2"></script>
+<script defer src="/static/js/admin_daily_reports_organization.js?v=1.3"></script>
 {% endblock %}

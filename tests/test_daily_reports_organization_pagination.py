@@ -116,6 +116,12 @@ def test_page_change_respects_reduced_motion():
 
 
 def test_asset_version_bumped_for_the_change():
+    import re
+
     html = _html()
-    assert "admin_daily_reports_organization.js?v=1.2" in html
-    assert "?v=1.1" not in html
+    # Assert a version exists rather than pinning one: every later change bumps
+    # it, and pinning would fail this test for the wrong reason.
+    match = re.search(r"admin_daily_reports_organization\.js\?v=([0-9.]+)", html)
+    assert match, "the script must carry a ?v= so the immutable cache is busted"
+    assert float(match.group(1)) >= 1.2
+    assert 'src="/static/js/admin_daily_reports_organization.js"' not in html
