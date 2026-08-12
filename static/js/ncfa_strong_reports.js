@@ -198,7 +198,21 @@
     return lang === "en" ? meta.en : meta.ar;
   }
 
+  // The API returns some cells as bilingual {ar, en} pairs -- the "Total" row
+  // label and the indicator columns among them. Those used to fall through to
+  // String(value) and render as "[object Object]" in every affected table.
+  function localizedValue(value) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const picked = value[lang] != null ? value[lang]
+        : (value.ar != null ? value.ar : value.en);
+      if (picked != null) return picked;
+    }
+    return value;
+  }
+
   function localizeCategory(value) {
+    const resolved = localizedValue(value);
+    if (resolved !== value) return resolved;
     const localized = pickLocale(CATEGORY_LABELS, value);
     return localized == null ? value : localized;
   }
@@ -219,7 +233,9 @@
     const node = document.createElement(tag);
     const opts = options || {};
     if (opts.className) node.className = opts.className;
-    if (opts.text != null) node.textContent = String(opts.text);
+    // Resolve bilingual {ar, en} payloads here too, so no caller can leak an
+    // object into textContent as "[object Object]".
+    if (opts.text != null) node.textContent = String(localizedValue(opts.text));
     if (opts.attrs) Object.keys(opts.attrs).forEach((key) => node.setAttribute(key, opts.attrs[key]));
     (opts.children || []).forEach((child) => child && node.appendChild(child));
     return node;

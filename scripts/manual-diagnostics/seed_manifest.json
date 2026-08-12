@@ -1,0 +1,19 @@
+{
+  "period_start": "2026-08-02",
+  "period_end": "2026-08-11",
+  "open_days": 8,
+  "kindergartens": 2,
+  "users": 12,
+  "classes": 2,
+  "children": 8,
+  "daily_reports": 59,
+  "attendance_logs": 64,
+  "incidents": 6,
+  "enrollments": 8,
+  "calendar_days": 20,
+  "ratio_days": 16,
+  "checklists": 48,
+  "training_records": 12,
+  "survey_responses": 8,
+  "surveys": 2
+}

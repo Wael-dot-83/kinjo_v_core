@@ -166,6 +166,20 @@ def seed(db, scale: str, dry_run: bool) -> dict:
     from auth import get_password_hash
     pw = get_password_hash("SeedPassw0rd!2026")
 
+    # Training modules are network-wide; create them once and reuse.
+    training_modules = []
+    for module_name in (f"السلامة والإسعافات الأولية {SEED_TAG}",
+                        f"حماية الطفل {SEED_TAG}",
+                        f"مهارات التعامل مع الأطفال {SEED_TAG}"):
+        module = db.query(models.TrainingModule).filter(
+            models.TrainingModule.name == module_name).first()
+        if module is None:
+            module = models.TrainingModule(name=module_name, is_mandatory=True)
+            db.add(module)
+            db.flush()
+        training_modules.append(module)
+    db.commit()
+
     for kg_index, kg in enumerate(chosen):
         # Resume support: a kindergarten that already carries seeded classes was
         # completed on an earlier run. Re-seeding it would collide on
@@ -212,6 +226,10 @@ def seed(db, scale: str, dry_run: bool) -> dict:
         else:
             stats["reused_managers"] = stats.get("reused_managers", 0) + 1
 
+        # Collected while building classes, then used for the governance inputs.
+        kg_staff = [manager]
+        kg_parent_user_ids: list[int] = []
+
         # Operating calendar: open on Sun-Thu, closed on the Jordanian weekend.
         existing_cal = {
             row[0] for row in db.query(models.OperatingCalendar.date)
@@ -244,6 +262,7 @@ def seed(db, scale: str, dry_run: bool) -> dict:
                 preferred_language="ar",
             )
             stats["users"] += int(created)
+            kg_staff.append(supervisor)
 
             # classes.supervisor_id points at supervisor_profiles.user_id, not
             # users.id, so the profile row has to exist before the class does.
@@ -294,6 +313,7 @@ def seed(db, scale: str, dry_run: bool) -> dict:
                     preferred_language="ar",
                 )
                 stats["users"] += int(created)
+                kg_parent_user_ids.append(parent_user.id)
 
                 last = RNG.choice(AR_LAST)
                 existing_parent = (
@@ -450,6 +470,10 @@ def seed(db, scale: str, dry_run: bool) -> dict:
                     supervisor_id=supervisor.id,
                     parent_informed=RNG.random() < 0.85,
                     followup_required_flag=severity in ("HIGH", "CRITICAL"),
+                    # 15% of GQI is "follow-ups closed within SLA", which needs a
+                    # deadline to compare the closure against.
+                    followup_sla_deadline=(occurred + timedelta(days=3)
+                                           if severity in ("HIGH", "CRITICAL") else None),
                     closed_at=occurred + timedelta(days=RNG.randint(1, 5)) if closed else None,
                     closed_by=manager.id if closed else None,
                     # incidentstatus stores the enum *name* (CLOSED), not the
@@ -459,11 +483,200 @@ def seed(db, scale: str, dry_run: bool) -> dict:
                 ))
                 stats["incidents"] += 1
 
+        # ---- Governance (GQI) inputs -------------------------------------
+        # Without these the governance index has no data at all and scores 0,
+        # which drags 60% of every kindergarten's final score to the floor and
+        # forces the whole network into the RED band.
+        gqi_rate = {"excellent": 0.97, "good": 0.90, "average": 0.78,
+                    "weak": 0.62, "critical": 0.42}[profile_name]
+
+        for day in open_days:
+            # Ratio compliance (30% of GQI): minutes within the legal ratio.
+            operating = 8 * 60
+            db.add(models.RatioCompliance(
+                kindergarten_id=kg.id, date=day,
+                operating_minutes=operating,
+                compliant_minutes=int(operating * min(1.0, gqi_rate + RNG.uniform(-0.05, 0.05))),
+                staff_count_avg=round(RNG.uniform(3.0, 8.0), 2),
+                child_count_avg=round(RNG.uniform(15.0, 45.0), 2),
+            ))
+            # Daily checklists (20% of GQI).
+            for checklist_type in ("OPENING", "CLOSING", "SAFETY"):
+                done = RNG.random() < gqi_rate
+                db.add(models.DailyChecklist(
+                    kindergarten_id=kg.id, checklist_date=day,
+                    checklist_type=checklist_type,
+                    status=(models.DailyChecklistStatus.COMPLETED.value if done
+                            else models.DailyChecklistStatus.PENDING.value),
+                    submitted_by=manager.id if done else None,
+                    submitted_at=datetime.combine(day, time(15, 0)) if done else None,
+                ))
+            stats["ratio_days"] = stats.get("ratio_days", 0) + 1
+            stats["checklists"] = stats.get("checklists", 0) + 3
+
+        # Staff training (15% of GQI).
+        for module in training_modules:
+            for staff in kg_staff:
+                done = RNG.random() < gqi_rate
+                db.add(models.StaffTrainingCompletion(
+                    user_id=staff.id, training_module_id=module.id,
+                    kindergarten_id=kg.id,
+                    completion_date=RNG.choice(open_days) if done else None,
+                    status=(models.TrainingStatus.COMPLETED.value if done
+                            else models.TrainingStatus.PENDING.value),
+                ))
+                stats["training_records"] = stats.get("training_records", 0) + 1
+
+        # Parent satisfaction (20% of CEI) needs at least one survey response.
+        survey = models.Survey(
+            kindergarten_id=kg.id,
+            title=f"استبيان رضا أولياء الأمور {SEED_TAG}",
+            start_date=period_start, end_date=period_end,
+            nps_question_enabled=True,
+        )
+        db.add(survey)
+        db.flush()
+        for parent_user_id in kg_parent_user_ids[:12]:
+            db.add(models.SurveyResponse(
+                survey_id=survey.id, parent_id=parent_user_id,
+                nps_score=max(0, min(10, int(round(gqi_rate * 10 + RNG.uniform(-1.5, 1.5))))),
+            ))
+            stats["survey_responses"] = stats.get("survey_responses", 0) + 1
+        stats["surveys"] = stats.get("surveys", 0) + 1
+
         # Commit per kindergarten to keep transactions bounded on a 4GB box.
         db.commit()
         print(f"  [{kg_index + 1}/{len(chosen)}] {kg.governorate} / kg#{kg.id} "
               f"profile={profile_name} children={stats['children']} reports={stats['daily_reports']}",
               flush=True)
+
+    return stats
+
+
+def backfill_gqi(db, scale: str) -> dict:
+    """Add the governance (GQI) inputs to kindergartens that were seeded before
+    those inputs existed.
+
+    The main seeder skips a kindergarten that already carries seeded classes, so
+    a plain rerun would not top these up. Regenerating from scratch would mean
+    deleting and rewriting ~200k operational rows for no benefit.
+    """
+    cfg = SCALES[scale]
+    period_end = jordan_today() - timedelta(days=1)
+    period_start = period_end - timedelta(days=cfg["days"] - 1)
+    all_days = [period_start + timedelta(days=i)
+                for i in range((period_end - period_start).days + 1)]
+    open_days = [d for d in all_days if d.weekday() not in WEEKEND]
+
+    seeded_kg_ids = [
+        r[0] for r in db.query(models.Class.kindergarten_id)
+        .filter(models.Class.class_code.like(f"{SEED_PREFIX}%")).distinct().all()
+    ]
+    training_modules = []
+    for module_name in (f"السلامة والإسعافات الأولية {SEED_TAG}",
+                        f"حماية الطفل {SEED_TAG}",
+                        f"مهارات التعامل مع الأطفال {SEED_TAG}"):
+        module = db.query(models.TrainingModule).filter(
+            models.TrainingModule.name == module_name).first()
+        if module is None:
+            module = models.TrainingModule(name=module_name, is_mandatory=True)
+            db.add(module)
+            db.flush()
+        training_modules.append(module)
+    db.commit()
+
+    stats = {"kindergartens": 0, "skipped": 0, "ratio_days": 0, "checklists": 0,
+             "training_records": 0, "surveys": 0, "survey_responses": 0}
+
+    for index, kg_id in enumerate(seeded_kg_ids):
+        already = (
+            db.query(models.RatioCompliance)
+            .filter(models.RatioCompliance.kindergarten_id == kg_id,
+                    models.RatioCompliance.date >= period_start)
+            .first()
+        )
+        if already is not None:
+            stats["skipped"] += 1
+            continue
+
+        staff = db.query(models.User).filter(
+            models.User.kindergarten_id == kg_id,
+            models.User.role.in_([models.UserRole.MANAGER.value,
+                                  models.UserRole.SUPERVISOR.value]),
+        ).all()
+        if not staff:
+            stats["skipped"] += 1
+            continue
+        manager = next((s for s in staff if s.role == models.UserRole.MANAGER.value), staff[0])
+
+        # Parents of this kindergarten's seeded children, for survey responses.
+        parent_user_ids = [
+            r[0] for r in db.query(models.ParentProfile.user_id)
+            .join(models.Child, models.Child.parent_id == models.ParentProfile.id)
+            .join(models.EnrollmentApplication,
+                  models.EnrollmentApplication.child_id == models.Child.id)
+            .filter(models.EnrollmentApplication.kindergarten_id == kg_id)
+            .distinct().limit(12).all()
+        ]
+
+        profile_name, *_ = pick_profile()
+        gqi_rate = {"excellent": 0.97, "good": 0.90, "average": 0.78,
+                    "weak": 0.62, "critical": 0.42}[profile_name]
+
+        for day in open_days:
+            operating = 8 * 60
+            db.add(models.RatioCompliance(
+                kindergarten_id=kg_id, date=day,
+                operating_minutes=operating,
+                compliant_minutes=int(operating * min(1.0, gqi_rate + RNG.uniform(-0.05, 0.05))),
+                staff_count_avg=round(RNG.uniform(3.0, 8.0), 2),
+                child_count_avg=round(RNG.uniform(15.0, 45.0), 2),
+            ))
+            for checklist_type in ("OPENING", "CLOSING", "SAFETY"):
+                done = RNG.random() < gqi_rate
+                db.add(models.DailyChecklist(
+                    kindergarten_id=kg_id, checklist_date=day,
+                    checklist_type=checklist_type,
+                    status=(models.DailyChecklistStatus.COMPLETED.value if done
+                            else models.DailyChecklistStatus.PENDING.value),
+                    submitted_by=manager.id if done else None,
+                    submitted_at=datetime.combine(day, time(15, 0)) if done else None,
+                ))
+            stats["ratio_days"] += 1
+            stats["checklists"] += 3
+
+        for module in training_modules:
+            for member in staff:
+                done = RNG.random() < gqi_rate
+                db.add(models.StaffTrainingCompletion(
+                    user_id=member.id, training_module_id=module.id,
+                    kindergarten_id=kg_id,
+                    completion_date=RNG.choice(open_days) if done else None,
+                    status=(models.TrainingStatus.COMPLETED.value if done
+                            else models.TrainingStatus.PENDING.value),
+                ))
+                stats["training_records"] += 1
+
+        if parent_user_ids:
+            survey = models.Survey(
+                kindergarten_id=kg_id,
+                title=f"استبيان رضا أولياء الأمور {SEED_TAG}",
+                start_date=period_start, end_date=period_end,
+                nps_question_enabled=True,
+            )
+            db.add(survey)
+            db.flush()
+            for parent_user_id in parent_user_ids:
+                db.add(models.SurveyResponse(
+                    survey_id=survey.id, parent_id=parent_user_id,
+                    nps_score=max(0, min(10, int(round(gqi_rate * 10 + RNG.uniform(-1.5, 1.5))))),
+                ))
+                stats["survey_responses"] += 1
+            stats["surveys"] += 1
+
+        db.commit()
+        stats["kindergartens"] += 1
+        print(f"  [{index + 1}/{len(seeded_kg_ids)}] kg#{kg_id} profile={profile_name}", flush=True)
 
     return stats
 
@@ -495,6 +708,35 @@ def teardown(db) -> dict:
         db.commit()
         return total
 
+    # Governance inputs: survey responses hang off seeded surveys, and training
+    # completions off seeded staff. Ratio/checklist rows are keyed only by
+    # kindergarten, so they are removed for the kindergartens that carry seeded
+    # classes -- the same set the seeder wrote them for.
+    seeded_kg_ids = [
+        r[0] for r in db.query(models.Class.kindergarten_id)
+        .filter(models.Class.class_code.like(f"{SEED_PREFIX}%")).distinct().all()
+    ]
+    survey_ids = [
+        r[0] for r in db.query(models.Survey.id)
+        .filter(models.Survey.title.like(f"%{SEED_TAG}%")).all()
+    ]
+
+    removed["survey_responses"] = purge(
+        models.SurveyResponse, models.SurveyResponse.survey_id, survey_ids)
+    removed["surveys"] = purge(models.Survey, models.Survey.id, survey_ids)
+    removed["training_completions"] = purge(
+        models.StaffTrainingCompletion, models.StaffTrainingCompletion.user_id, user_ids)
+    removed["training_modules"] = (
+        db.query(models.TrainingModule)
+        .filter(models.TrainingModule.name.like(f"%{SEED_TAG}%"))
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    removed["ratio_compliance"] = purge(
+        models.RatioCompliance, models.RatioCompliance.kindergarten_id, seeded_kg_ids)
+    removed["daily_checklists"] = purge(
+        models.DailyChecklist, models.DailyChecklist.kindergarten_id, seeded_kg_ids)
+
     removed["daily_reports"] = purge(models.DailyReport, models.DailyReport.child_id, child_ids)
     removed["attendance_logs"] = purge(models.AttendanceLog, models.AttendanceLog.child_id, child_ids)
     removed["incidents"] = purge(models.Incident, models.Incident.child_id, child_ids)
@@ -516,10 +758,15 @@ def main() -> None:
     parser.add_argument("--scale", choices=sorted(SCALES), default="small")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--teardown", action="store_true")
+    parser.add_argument("--gqi-only", action="store_true",
+                        help="Top up governance inputs on already-seeded kindergartens.")
     args = parser.parse_args()
 
     db = SessionLocal()
     try:
+        if args.gqi_only:
+            print(json.dumps(backfill_gqi(db, args.scale), indent=2, ensure_ascii=False))
+            return
         if args.teardown:
             result = teardown(db)
             print("Removed:", json.dumps(result, indent=2))
