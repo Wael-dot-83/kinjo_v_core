@@ -134,10 +134,32 @@
   ></section>
 
   <div class="accordion" id="dailyReportsAccordion" aria-label="{% if ui_lang == 'en' %}Kindergarten sections{% else %}أقسام الحضانات{% endif %}"></div>
+
+  {# Pagination lives under the list so the first result stays at the top of the
+     viewport when a page is turned. #}
+  <nav
+    id="dailyReportsPagination"
+    class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3"
+    aria-label="{% if ui_lang == 'en' %}Kindergarten pages{% else %}صفحات الحضانات{% endif %}"
+    hidden
+  >
+    <p id="dailyReportsRange" class="text-muted small mb-0" role="status" aria-live="polite"></p>
+    <div class="d-flex align-items-center gap-2">
+      <label for="dailyReportsPerPage" class="form-label small mb-0">
+        {% if ui_lang == 'en' %}Per page{% else %}لكل صفحة{% endif %}
+      </label>
+      <select id="dailyReportsPerPage" class="form-select form-select-sm w-auto">
+        <option value="10">10</option>
+        <option value="20" selected>20</option>
+        <option value="50">50</option>
+      </select>
+      <ul id="dailyReportsPager" class="pagination pagination-sm mb-0"></ul>
+    </div>
+  </nav>
 </div>
 </main>
 {% endblock %}
 
 {% block extra_scripts %}
-<script defer src="/static/js/admin_daily_reports_organization.js?v=1.1"></script>
+<script defer src="/static/js/admin_daily_reports_organization.js?v=1.2"></script>
 {% endblock %}

@@ -3,6 +3,7 @@
     allKindergartens: [],
     selectedResponse: null,
     governorateMap: new Map(),
+    page: 1,
   };
 
   const STATUS_ORDER = {
@@ -352,6 +353,7 @@
     container.querySelectorAll(".kg-checkbox").forEach((input) => {
       input.addEventListener("change", () => {
         if (state.selectedResponse) {
+          state.page = 1;
           renderGroups(state.selectedResponse);
         }
       });
@@ -563,6 +565,127 @@
     bar.hidden = false;
   }
 
+
+  // ── Pagination ───────────────────────────────────────────────────────────
+  // Client-side on purpose: status, child/teacher search and sorting are all
+  // applied after the fetch, so paginating on the server would let those
+  // filters see only one page of data.
+  function currentPerPage() {
+    const el = document.getElementById("dailyReportsPerPage");
+    return Number(el?.value) || 20;
+  }
+
+  function paginate(groups) {
+    const perPage = currentPerPage();
+    const pages = Math.max(1, Math.ceil(groups.length / perPage));
+    // A filter can shrink the list under the current page; clamp instead of
+    // rendering an empty page.
+    if (state.page > pages) {
+      state.page = pages;
+    }
+    if (state.page < 1) {
+      state.page = 1;
+    }
+    const start = (state.page - 1) * perPage;
+    return groups.slice(start, start + perPage);
+  }
+
+  function goToPage(page) {
+    state.page = page;
+    if (state.selectedResponse) {
+      renderGroups(state.selectedResponse);
+    }
+    document.getElementById("dailyReportsAccordion")?.scrollIntoView({
+      block: "start",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }
+
+  function renderPagination(total) {
+    const nav = document.getElementById("dailyReportsPagination");
+    const pager = document.getElementById("dailyReportsPager");
+    const range = document.getElementById("dailyReportsRange");
+    if (!nav || !pager || !range) {
+      return;
+    }
+
+    const perPage = currentPerPage();
+    const pages = Math.ceil(total / perPage);
+    if (total === 0) {
+      nav.hidden = true;
+      pager.innerHTML = "";
+      range.textContent = "";
+      return;
+    }
+    nav.hidden = false;
+
+    const first = (state.page - 1) * perPage + 1;
+    const last = Math.min(total, first + perPage - 1);
+    range.textContent = isEnglishUi()
+      ? `Showing ${first}–${last} of ${total} kindergartens`
+      : `عرض ${formatNumber(first)}–${formatNumber(last)} من ${formatNumber(total)} حضانة`;
+
+    pager.innerHTML = "";
+    if (pages <= 1) {
+      return;   // range still reads usefully with a single page
+    }
+
+    const add = (label, page, opts) => {
+      const settings = opts || {};
+      const li = document.createElement("li");
+      li.className = "page-item" +
+        (settings.disabled ? " disabled" : "") +
+        (settings.active ? " active" : "");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "page-link";
+      btn.textContent = label;
+      if (settings.active) {
+        btn.setAttribute("aria-current", "page");
+      }
+      if (settings.label) {
+        btn.setAttribute("aria-label", settings.label);
+      }
+      btn.disabled = !!settings.disabled;
+      btn.addEventListener("click", () => goToPage(page));
+      li.appendChild(btn);
+      pager.appendChild(li);
+    };
+
+    // Chevrons are written as words so RTL never flips their meaning.
+    add(t("السابق", "Previous"), state.page - 1, {
+      disabled: state.page <= 1,
+      label: t("الصفحة السابقة", "Previous page"),
+    });
+
+    // A window around the current page keeps the control usable at 400 pages.
+    const from = Math.max(1, state.page - 2);
+    const to = Math.min(pages, state.page + 2);
+    if (from > 1) {
+      add(formatNumber(1), 1, {});
+      if (from > 2) {
+        add("…", state.page, { disabled: true });
+      }
+    }
+    for (let p = from; p <= to; p += 1) {
+      add(formatNumber(p), p, {
+        active: p === state.page,
+        label: t(`الصفحة ${p}`, `Page ${p}`),
+      });
+    }
+    if (to < pages) {
+      if (to < pages - 1) {
+        add("…", state.page, { disabled: true });
+      }
+      add(formatNumber(pages), pages, {});
+    }
+
+    add(t("التالي", "Next"), state.page + 1, {
+      disabled: state.page >= pages,
+      label: t("الصفحة التالية", "Next page"),
+    });
+  }
+
   function renderGroups(response) {
     const container = document.getElementById("dailyReportsAccordion");
     if (!container) {
@@ -570,7 +693,11 @@
     }
 
     const groups = applyClientFilters(response.kindergartens || []);
+    // Totals stay across the whole filtered set, not just the visible page:
+    // "12 missing" is only meaningful for everything the filters match.
     renderKpiBar(groups);
+    const pageGroups = paginate(groups);
+    renderPagination(groups.length);
 
     if (groups.length === 0) {
       container.innerHTML = "";
@@ -586,13 +713,14 @@
         );
       }
       setMeta(response, 0);
+      renderPagination(0);
       return;
     }
 
     setEmptyMessage("");
     setMeta(response, groups.length);
 
-    container.innerHTML = groups
+    container.innerHTML = pageGroups
       .map((kg, index) => {
         const collapseId = `kgCollapse${kg.id}`;
         const headingId = `kgHeading${kg.id}`;
@@ -725,10 +853,18 @@
     });
 
     dateInput?.addEventListener("change", fetchAndRenderReports);
+    // Changing the page size invalidates the current page number.
+    document.getElementById("dailyReportsPerPage")?.addEventListener("change", () => {
+      state.page = 1;
+      if (state.selectedResponse) {
+        renderGroups(state.selectedResponse);
+      }
+    });
 
     [statusFilter, childSearch, teacherSearch, sortField, sortDir].forEach((control) => {
       control?.addEventListener("input", () => {
         if (state.selectedResponse) {
+          state.page = 1;
           renderGroups(state.selectedResponse);
         }
       });
