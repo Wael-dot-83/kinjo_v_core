@@ -116,6 +116,8 @@ services:
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS:?TRUSTED_HOSTS is required}
+      # Same sys.path caveat as the worker.
+      PYTHONPATH: /app
     volumes:
       - ./data:/app/data
     # Exactly one beat: a second scheduler publishes every periodic task twice.

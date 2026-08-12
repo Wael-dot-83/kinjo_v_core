@@ -1,0 +1,219 @@
+/* static/css/admin_premium_theme.css */
+/* Premium, professional, and colorful layout overrides for KinJo Admin Shell */
+
+/* ── Modern Colors & Gradients ───────────────────────────────────────────── */
+:root {
+  --header-gradient: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  --accent-rainbow: linear-gradient(90deg, #3B82F6 0%, #10B981 33%, #F59E0B 66%, #EF4444 100%);
+  --footer-bg: #0F172A;
+  --footer-ink: #94A3B8;
+  --sidebar-active-pill: rgba(37, 99, 235, 0.08);
+}
+
+/* ── Redesigned Header (.admin-header) ─────────────────────────────────────── */
+.admin-header {
+  height: var(--admin-header-height, 64px);
+  background: var(--header-gradient) !important;
+  border-block-end: none !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  position: relative;
+  padding: 0 1.5rem !important;
+}
+
+/* A colorful animated rainbow accent line at the bottom of the header */
+.admin-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--accent-rainbow);
+  z-index: 10;
+}
+
+/* Refine Header Controls & Action Buttons */
+.btn-header-action,
+.btn-header-user {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #E2E8F0 !important;
+  padding: 0.4rem 0.8rem !important;
+  border-radius: 8px !important;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-weight: 500 !important;
+}
+
+.btn-header-action:hover,
+.btn-header-user:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #FFFFFF !important;
+  transform: translateY(-1px);
+}
+
+.btn-header-action i {
+  color: #60A5FA !important; /* Soft bright blue icon */
+}
+
+/* Gold/Rainbow Avatar lockup */
+.header-user-avatar {
+  background: linear-gradient(135deg, #6366F1 0%, #A855F7 100%) !important; /* Premium violet-indigo gradient */
+  color: #FFFFFF !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0,0,0,0.2) !important;
+  font-weight: 700 !important;
+}
+
+.header-user-name {
+  color: #F8FAFC !important;
+  font-size: 0.95rem !important;
+}
+
+.header-user-role {
+  color: #94A3B8 !important; /* Soft slate gray role label */
+  font-size: 0.8rem !important;
+}
+
+/* ── Redesigned Navigation / Sidebar Menu (.admin-top-nav) ─────────────────── */
+/* The top menu acts as the horizontal "sidebar" */
+.admin-top-nav {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-block-end: 1px solid rgba(226, 232, 240, 0.8) !important;
+  padding: 0.25rem 0 !important;
+}
+
+.top-menu {
+  gap: 0.5rem !important;
+}
+
+/* Top menu items style */
+.top-menu-link {
+  border-radius: 8px !important;
+  border-bottom: 2px solid transparent !important;
+  padding: 10px 14px !important;
+  font-weight: 500 !important;
+  color: #475569 !important; /* Slate 600 */
+  transition: all 150ms ease !important;
+}
+
+.top-menu-link i {
+  color: #64748B !important;
+  transition: color 150ms ease !important;
+}
+
+/* Hover state */
+.top-menu-link:hover,
+.top-menu-item:hover > .top-menu-link {
+  color: #1E293B !important;
+  background-color: rgba(241, 245, 249, 0.8) !important;
+}
+
+.top-menu-link:hover i {
+  color: #2563EB !important;
+}
+
+/* Active State with colorful underline indicator */
+.top-menu-link.active {
+  color: #2563EB !important;
+  background-color: var(--sidebar-active-pill) !important;
+  font-weight: 600 !important;
+  border-bottom: 2px solid #2563EB !important;
+}
+
+.top-menu-link.active i {
+  color: #2563EB !important;
+}
+
+/* ── Premium Dropdown Menus ───────────────────────────────────────────────── */
+.top-menu-dropdown {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  overflow: hidden;
+  padding: 6px 0 !important;
+}
+
+/* Top border indicator for dropdown cards */
+.top-menu-dropdown::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--accent-rainbow);
+}
+
+.dropdown-item {
+  padding: 10px 16px !important;
+  color: #334155 !important;
+  border-inline-start: 3px solid transparent !important;
+}
+
+.dropdown-item i {
+  color: #64748B !important;
+  font-size: 1rem !important;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(241, 245, 249, 0.6) !important;
+  color: #0F172A !important;
+  border-inline-start-color: #3B82F6 !important;
+}
+
+.dropdown-item.active {
+  background-color: var(--sidebar-active-pill) !important;
+  color: #2563EB !important;
+  border-inline-start-color: #2563EB !important;
+}
+
+.dropdown-item.active i {
+  color: #2563EB !important;
+}
+
+.dropdown-group-label {
+  padding: 10px 16px 4px !important;
+  color: #94A3B8 !important; /* Soft group labels */
+  font-size: 10px !important;
+}
+
+/* ── Redesigned Footer (.admin-shell-footer) ───────────────────────────────── */
+.admin-shell-footer {
+  background: var(--footer-bg) !important;
+  color: var(--footer-ink) !important;
+  border-top: none !important;
+  padding: 1rem 1.5rem !important;
+  position: relative;
+  font-weight: 500 !important;
+  box-shadow: 0 -4px 10px rgba(0,0,0,0.03) !important;
+}
+
+/* Rainbow border at the top of the footer */
+.admin-shell-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--accent-rainbow);
+}
+
+.admin-shell-footer span {
+  font-size: 0.8rem !important;
+}
+
+.admin-shell-footer span:first-child {
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+}
+
+/* RTL Support details */
+[dir="rtl"] .dropdown-item {
+  text-align: right !important;
+}
