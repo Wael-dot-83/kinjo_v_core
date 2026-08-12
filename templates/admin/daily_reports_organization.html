@@ -123,11 +123,21 @@
     </div>
   </section>
 
+  {# Totals for whatever the current filters show, so "how much is missing"
+     is answerable without scrolling the whole list. #}
+  <section
+    id="dailyReportsKpiBar"
+    class="row g-2 mb-3"
+    role="group"
+    aria-label="{% if ui_lang == 'en' %}Report totals{% else %}إجماليات التقارير{% endif %}"
+    hidden
+  ></section>
+
   <div class="accordion" id="dailyReportsAccordion" aria-label="{% if ui_lang == 'en' %}Kindergarten sections{% else %}أقسام الحضانات{% endif %}"></div>
 </div>
 </main>
 {% endblock %}
 
 {% block extra_scripts %}
-<script defer src="/static/js/admin_daily_reports_organization.js"></script>
+<script defer src="/static/js/admin_daily_reports_organization.js?v=1.1"></script>
 {% endblock %}

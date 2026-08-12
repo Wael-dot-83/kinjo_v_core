@@ -512,6 +512,57 @@
       .join("");
   }
 
+
+  // Page-level totals across the kindergartens currently shown. Each group
+  // already carries status_counts, so this aggregates what is on screen rather
+  // than issuing another query -- and it reuses STATUS_UI_CONFIG so a status
+  // keeps the same colour here as in the per-kindergarten chips.
+  function renderKpiBar(groups) {
+    const bar = document.getElementById("dailyReportsKpiBar");
+    if (!bar) {
+      return;
+    }
+    if (!Array.isArray(groups) || groups.length === 0) {
+      bar.hidden = true;
+      bar.innerHTML = "";
+      return;
+    }
+
+    const totals = {};
+    let grand = 0;
+    Object.keys(STATUS_UI_CONFIG).forEach((key) => {
+      totals[key] = 0;
+    });
+    groups.forEach((group) => {
+      const counts = group.status_counts || {};
+      Object.keys(totals).forEach((key) => {
+        const value = Number(counts[key] || 0);
+        totals[key] += value;
+        grand += value;
+      });
+    });
+
+    const cards = Object.keys(totals).map((key) => {
+      const cfg = getStatusDisplay(key);
+      const value = totals[key];
+      const share = grand > 0 ? Math.round((value / grand) * 100) : 0;
+      return `
+        <div class="col-6 col-lg-3">
+          <div class="card h-100 border-0 shadow-sm ${cfg.bgClass}">
+            <div class="card-body py-3">
+              <div class="small fw-semibold text-dark">${escapeHtml(cfg.label)}</div>
+              <div class="h4 mb-0 fw-bold text-dark"><bdi>${formatNumber(value)}</bdi></div>
+              <div class="small text-dark opacity-75"><bdi>${share}%</bdi></div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    bar.innerHTML = cards.join("");
+    bar.hidden = false;
+  }
+
   function renderGroups(response) {
     const container = document.getElementById("dailyReportsAccordion");
     if (!container) {
@@ -519,6 +570,7 @@
     }
 
     const groups = applyClientFilters(response.kindergartens || []);
+    renderKpiBar(groups);
 
     if (groups.length === 0) {
       container.innerHTML = "";
