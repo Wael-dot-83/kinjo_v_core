@@ -180,12 +180,16 @@
     "محجوب": { ar: "محجوب", en: "Suppressed" }
   };
 
-  // Common table headers the backend returns as Arabic dict keys.
+  // Common table headers mapped for bilingual support.
   const HEADER_LABELS = {
-    "المؤشر": "Indicator",
-    "القيمة": "Value",
-    "الفئة": "Category",
-    "النسبة %": "Percent %"
+    "المؤشر": { ar: "المؤشر", en: "Indicator" },
+    "القيمة": { ar: "القيمة", en: "Value" },
+    "الفئة": { ar: "الفئة", en: "Category" },
+    "النسبة %": { ar: "النسبة %", en: "Percent %" },
+    "indicator": { ar: "المؤشر", en: "Indicator" },
+    "category": { ar: "التصنيف", en: "Category" },
+    "value": { ar: "القيمة", en: "Value" },
+    "share_pct": { ar: "النسبة %", en: "Share %" }
   };
 
   function pickLocale(map, key) {
@@ -200,8 +204,9 @@
   }
 
   function localizeHeader(header) {
-    if (lang !== "en") return header;
-    return HEADER_LABELS[header] || header;
+    const meta = HEADER_LABELS[header] || HEADER_LABELS[header.toLowerCase()];
+    if (!meta) return header;
+    return lang === "en" ? meta.en : meta.ar;
   }
 
   function getCookie(name) {
@@ -248,6 +253,18 @@
       button.addEventListener("click", () => generateBundle(bundle));
       card.append(head, description, list, button);
       bundleGrid.appendChild(card);
+    });
+  }
+
+  function updateActiveCard(bundleCode) {
+    const cards = bundleGrid.querySelectorAll(".ncfa-bundle-card");
+    cards.forEach((card) => {
+      const btn = card.querySelector("button[data-bundle-code]");
+      if (btn && btn.getAttribute("data-bundle-code") === bundleCode) {
+        card.classList.add("ncfa-bundle-card--active");
+      } else {
+        card.classList.remove("ncfa-bundle-card--active");
+      }
     });
   }
 
@@ -354,6 +371,7 @@
 
   function generateBundle(bundle) {
     activeBundle = bundle;
+    updateActiveCard(bundle.code);
     const sequence = ++requestSequence;
     const scope = currentScope(bundle);
     showLoading(bundle);
@@ -657,15 +675,27 @@
       .finally(() => { exportButton.disabled = false; });
   }
 
-  governorateSelect.addEventListener("change", () => fillDistricts(governorateSelect.value));
+  governorateSelect.addEventListener("change", () => {
+    fillDistricts(governorateSelect.value);
+    if (activeBundle) generateBundle(activeBundle);
+  });
+  districtSelect.addEventListener("change", () => {
+    if (activeBundle) generateBundle(activeBundle);
+  });
+  periodSelect.addEventListener("change", () => {
+    if (activeBundle) generateBundle(activeBundle);
+  });
   resetScopeButton.addEventListener("click", () => {
     periodSelect.value = "quarter";
     governorateSelect.value = "";
     resetDistricts(t("اختر المحافظة أولاً", "Select governorate first"));
+    if (activeBundle) generateBundle(activeBundle);
   });
   exportButton.addEventListener("click", exportCsv);
 
   renderBundles();
   resetDistricts(t("اختر المحافظة أولاً", "Select governorate first"));
   loadDivisions();
+  // Show a useful first result instead of an empty table area on page load.
+  if (REPORT_BUNDLES.length) generateBundle(REPORT_BUNDLES[0]);
 }());

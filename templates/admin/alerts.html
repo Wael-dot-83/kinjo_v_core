@@ -160,5 +160,20 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>
+  window.alertsTranslations = {
+    critical: "{% if ui_lang == 'en' %}Critical{% else %}حرجة{% endif %}",
+    high: "{% if ui_lang == 'en' %}High{% else %}مرتفعة{% endif %}",
+    medium: "{% if ui_lang == 'en' %}Medium{% else %}متوسطة{% endif %}",
+    low: "{% if ui_lang == 'en' %}Low{% else %}منخفضة{% endif %}",
+    active: "{% if ui_lang == 'en' %}Active{% else %}نشطة{% endif %}",
+    acknowledged: "{% if ui_lang == 'en' %}Acknowledged{% else %}مُقَرَّة{% endif %}",
+    resolved: "{% if ui_lang == 'en' %}Resolved{% else %}محلولة{% endif %}",
+    previous: "{% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}",
+    next: "{% if ui_lang == 'en' %}Next{% else %}التالي{% endif %}",
+    view: "{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}",
+    viewAlert: "{% if ui_lang == 'en' %}View alert{% else %}عرض التنبيه{% endif %}"
+  };
+</script>
 <script defer src="/static/js/admin_alerts.js?v=2" charset="utf-8"></script>
 {% endblock %}

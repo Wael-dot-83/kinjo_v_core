@@ -260,6 +260,15 @@
   margin-bottom: var(--sp-6);
 }
 
+.glass-filter-bar.is-stuck {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: var(--slate-200);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.06);
+  border-bottom-color: var(--slate-300);
+  padding: var(--sp-2) var(--sp-4);
+  margin-bottom: var(--sp-3);
+}
+
 /* Active-filter indicator (class toggled by JS in the analytics template;
    no attribute selector — <select> has no value attribute, so
    select:not([value=""]) would match every control permanently).
