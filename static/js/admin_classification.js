@@ -319,6 +319,21 @@
     return key === "UNCLASSIFIED" ? (row.band_label || T.unclassified) : BAND_META[key].label;
   }
 
+  // Backend strings arrive as {ar, en} pairs. Fall back to Arabic, then to the
+  // raw value, so an older payload still renders something readable.
+  function localizedText(value) {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    return value[lang] || value.ar || value.en || "";
+  }
+
+  // Aspect keys are stable English codes; the human-readable name comes from
+  // the aspect_labels map the API sends alongside them.
+  function aspectLabel(detail, code) {
+    const labels = (detail && detail.aspect_labels) || {};
+    return localizedText(labels[code]) || code;
+  }
+
   function trendText(row) {
     if (row.trend_direction === "NONE") return T.noTrend;
     const delta = formatNumber(Math.abs(row.trend_vs_previous || 0));
@@ -548,7 +563,8 @@
     });
   }
 
-  function renderAspectChart(rows) {
+  function renderAspectChart(rows, aspectLabels) {
+    const labels = aspectLabels || {};
     const buckets = {};
     rows.forEach((row) => {
       Object.entries(row.aspects || {}).forEach(([name, value]) => {
@@ -570,7 +586,7 @@
     replaceChart("classificationAspectChart", {
       type: "bar",
       data: {
-        labels: entries.map(([name]) => name),
+        labels: entries.map(([name]) => localizedText(labels[name]) || name),
         datasets: [
           {
             label: T.chartScore,
@@ -594,7 +610,7 @@
     const rows = data.rows || [];
     renderBandChart(rows);
     renderScoreChart(rows);
-    renderAspectChart(rows);
+    renderAspectChart(rows, data.aspect_labels || {});
   }
 
   async function loadLeaderboard() {
@@ -699,13 +715,13 @@
 
       const aspectRows = Object.entries(detail.aspects || {}).map(
         ([name, value]) =>
-          `<li class="list-group-item d-flex justify-content-between gap-3"><span>${escapeValue(name)}</span><span class="fw-semibold">${escapeValue(formatNumber(value))}</span></li>`
+          `<li class="list-group-item d-flex justify-content-between gap-3"><span>${escapeValue(aspectLabel(detail, name))}</span><span class="fw-semibold">${escapeValue(formatNumber(value))}</span></li>`
       );
       aspectsEl.innerHTML = aspectRows.join("") || `<li class="list-group-item text-muted">${escapeValue(T.noChartData)}</li>`;
 
       const actions = detail.action_guidance || [];
       actionsEl.innerHTML = actions.length
-        ? actions.map((action) => `<li>${escapeValue(action)}</li>`).join("")
+        ? actions.map((action) => `<li>${escapeValue(localizedText(action))}</li>`).join("")
         : `<li class="text-muted">${escapeValue(T.noData)}</li>`;
 
       drawTrendChart(detail.trend_points || []);

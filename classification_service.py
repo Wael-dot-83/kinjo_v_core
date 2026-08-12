@@ -68,6 +68,27 @@ BAND_RULES = [
     ("RED", "أحمر", ClassificationConfig.RED_MIN, ClassificationConfig.AMBER_MIN - 0.01),
 ]
 
+# Aspect keys are stable English codes; the display name for each is supplied in
+# both languages here. The keys used to be Arabic display strings, which the UI
+# rendered verbatim -- so an English admin read Arabic aspect names, and the
+# manager payload carried each metric twice (once under an English code and once
+# under an Arabic one) which duplicated every row and double-counted the chart.
+ASPECT_LABELS: Dict[str, Dict[str, str]] = {
+    "governance_quality": {"ar": "جودة الحوكمة (60%)", "en": "Governance Quality (60%)"},
+    "child_experience": {"ar": "تجربة الطفل (40%)", "en": "Child Experience (40%)"},
+    "attendance_consistency": {"ar": "اكتمال الحضور", "en": "Attendance Consistency"},
+    "report_completion": {"ar": "اكتمال التقارير", "en": "Report Completion"},
+    "report_timeliness": {"ar": "الالتزام بالوقت", "en": "Report Timeliness"},
+    "kg_governance": {"ar": "حوكمة الحضانة", "en": "Kindergarten Governance"},
+    "approval_speed": {"ar": "سرعة الاعتماد", "en": "Approval Speed"},
+    "review_quality": {"ar": "جودة المراجعة", "en": "Review Quality"},
+}
+
+
+def _aspect_labels_for(aspects: Dict[str, float]) -> Dict[str, Dict[str, str]]:
+    """Bilingual display names for the aspect codes actually present."""
+    return {key: ASPECT_LABELS[key] for key in aspects if key in ASPECT_LABELS}
+
 SUPPORTED_LEVELS = {
     "NETWORK",
     "COUNTRY",
@@ -228,6 +249,9 @@ class ClassificationResponse(BaseModel):
     rows: List[ClassificationRow]
     band_explanations: List[Dict[str, Any]]
     indicator_explanations: List[Dict[str, str]]
+    # Bilingual display names for every aspect code appearing in `rows`, so the
+    # charts never label a bar with a raw key.
+    aspect_labels: Dict[str, Dict[str, str]] = ASPECT_LABELS
     computation_time_ms: Optional[float] = None
     applied_size_mode: str = ""
     applied_size_band: Optional[str] = None
@@ -245,9 +269,12 @@ class ClassificationDetailResponse(BaseModel):
     band_label: str
     coverage_pct: float
     aspects: Dict[str, float]
+    # Bilingual display names for the aspect codes above, so the UI never has to
+    # render a raw key.
+    aspect_labels: Dict[str, Dict[str, str]] = {}
     trend_points: List[Dict[str, Any]]
     indicator_definitions: List[Dict[str, str]]
-    action_guidance: List[str]
+    action_guidance: List[Dict[str, str]]
 
 
 class ManagerBenchmarkSummaryResponse(BaseModel):
@@ -584,15 +611,21 @@ class BenchmarkingService:
         return [
             {
                 "indicator": "الألوان",
+                "indicator_en": "Colours",
                 "meaning": "أخضر: أداء قوي، كهرماني: يحتاج متابعة، أحمر: يحتاج تدخل فوري",
+                "meaning_en": "Green: strong performance, Amber: needs follow-up, Red: needs immediate intervention",
             },
             {
                 "indicator": "السهم",
+                "indicator_en": "Arrow",
                 "meaning": "يعرض التغير مقارنة بالفترة السابقة بنفس الطول الزمني",
+                "meaning_en": "Shows the change against the previous period of the same length",
             },
             {
                 "indicator": "تغطية البيانات",
+                "indicator_en": "Data Coverage",
                 "meaning": "تمثل نسبة اكتمال البيانات المؤثرة في حساب المؤشر؛ كلما ارتفعت كانت النتيجة أكثر موثوقية",
+                "meaning_en": "The completeness of the data behind the indicator; higher means a more reliable result",
             },
         ]
 
@@ -724,8 +757,8 @@ class BenchmarkingService:
                 },
                 aspects={
                     # final_score = GQI_WEIGHT × GQI + CEI_WEIGHT × CEI — aspects mirror the formula exactly
-                    "جودة_الحوكمة (60%)": float(current_bundle.get("gqi_score", 0.0)),
-                    "تجربة_الطفل (40%)": float(current_bundle.get("cei_score", 0.0)),
+                    "governance_quality": float(current_bundle.get("gqi_score", 0.0)),
+                    "child_experience": float(current_bundle.get("cei_score", 0.0)),
                 },
             )
             rows.append(row)
@@ -1062,9 +1095,6 @@ class BenchmarkingService:
                         "attendance_consistency": attendance_rate,
                         "report_completion": report_rate,
                         "report_timeliness": timeliness_rate,
-                        "اكتمال_الحضور": attendance_rate,
-                        "اكتمال_التقارير": report_rate,
-                        "الالتزام_بالوقت": timeliness_rate,
                     },
                 )
             )
@@ -1271,9 +1301,9 @@ class BenchmarkingService:
                     size_band_label=kg_row.size_band_label,
                     geography=kg_row.geography,
                     aspects={
-                        "حوكمة_الحضانة": float(kg_row.final_score or 0.0),
-                        "سرعة_الاعتماد": on_time_rate,
-                        "جودة_المراجعة": quality_rate,
+                        "kg_governance": float(kg_row.final_score or 0.0),
+                        "approval_speed": on_time_rate,
+                        "review_quality": quality_rate,
                     },
                 )
             )
@@ -1334,37 +1364,72 @@ def _row_by_entity_id(rows: List[ClassificationRow], entity_id: int) -> Optional
     return None
 
 
-def _actions_from_aspects(aspects: Dict[str, float]) -> List[str]:
-    seen: set = set()
-    actions: List[str] = []
+# Guidance per aspect code, in both languages. This used to match on Arabic
+# substrings of the aspect key, so any key that was not Arabic fell through to a
+# generic branch that embedded the raw code in an Arabic sentence.
+_ASPECT_ACTIONS: Dict[str, Dict[str, str]] = {
+    "attendance_consistency": {
+        "ar": "رفع اكتمال إدخال الحضور اليومي وتقليل التأخير في التوثيق.",
+        "en": "Improve daily attendance entry and reduce documentation delays.",
+    },
+    "report_completion": {
+        "ar": "متابعة تسليم التقارير اليومية واعتمادها خلال 24 ساعة.",
+        "en": "Follow up on daily report submission and approval within 24 hours.",
+    },
+    "report_timeliness": {
+        "ar": "تحسين الالتزام بزمن الاعتماد ومراجعة أسباب التأخير.",
+        "en": "Improve approval timeliness and review the causes of delay.",
+    },
+    "review_quality": {
+        "ar": "تنفيذ خطة تحسين جودة الممارسات الصفية والتوثيق.",
+        "en": "Run an improvement plan for classroom practice and documentation quality.",
+    },
+    "approval_speed": {
+        "ar": "تحسين الالتزام بزمن الاعتماد ومراجعة أسباب التأخير.",
+        "en": "Improve approval turnaround and review the causes of delay.",
+    },
+    "governance_quality": {
+        "ar": "رفع انضباط الحوكمة عبر الالتزام بالسياسات ومتابعة مؤشرات المخاطر.",
+        "en": "Strengthen governance discipline through policy compliance and risk monitoring.",
+    },
+    "kg_governance": {
+        "ar": "رفع انضباط الحوكمة عبر الالتزام بالسياسات ومتابعة مؤشرات المخاطر.",
+        "en": "Strengthen governance discipline through policy compliance and risk monitoring.",
+    },
+    "child_experience": {
+        "ar": "تعزيز جودة تجربة الطفل اليومية وتقليل فجوات الرعاية والتوثيق.",
+        "en": "Enhance the daily child experience and close care and documentation gaps.",
+    },
+}
 
-    def _add(text: str) -> None:
-        if text not in seen:
-            seen.add(text)
-            actions.append(text)
+
+def _actions_from_aspects(aspects: Dict[str, float]) -> List[Dict[str, str]]:
+    seen: set = set()
+    actions: List[Dict[str, str]] = []
+
+    def _add(entry: Dict[str, str]) -> None:
+        if entry["ar"] not in seen:
+            seen.add(entry["ar"])
+            actions.append(entry)
 
     for key, value in aspects.items():
         if value >= 80:
             continue
-        if "الحضور" in key:
-            _add("رفع اكتمال إدخال الحضور اليومي وتقليل التأخير في التوثيق.")
-        elif "التقارير" in key:
-            _add("متابعة تسليم التقارير اليومية واعتمادها خلال 24 ساعة.")
-        elif "الوقت" in key:
-            _add("تحسين الالتزام بزمن الاعتماد ومراجعة أسباب التأخير.")
-        elif "الجودة" in key:
-            _add("تنفيذ خطة تحسين جودة الممارسات الصفية والتوثيق.")
-        elif "التفاعل" in key:
-            _add("زيادة تفاعل أولياء الأمور عبر الاستبيانات والتغذية الراجعة.")
-        elif "الحوكمة" in key:
-            _add("رفع انضباط الحوكمة عبر الالتزام بالسياسات ومتابعة مؤشرات المخاطر.")
-        elif "تجربة" in key:
-            _add("تعزيز جودة تجربة الطفل اليومية وتقليل فجوات الرعاية والتوثيق.")
+        known = _ASPECT_ACTIONS.get(key)
+        if known:
+            _add(known)
         else:
-            _add(f"تنفيذ خطة تحسين لمؤشر '{key.split('(')[0].strip()}' ومراجعته أسبوعياً.")
+            label = ASPECT_LABELS.get(key, {})
+            _add({
+                "ar": f"تنفيذ خطة تحسين لمؤشر '{label.get('ar', key)}' ومراجعته أسبوعياً.",
+                "en": f"Run a weekly improvement plan for the '{label.get('en', key)}' indicator.",
+            })
 
     if not actions:
-        actions.append("الاستمرار على نفس النهج مع مراقبة الاستقرار شهرياً.")
+        actions.append({
+            "ar": "الاستمرار على نفس النهج مع مراقبة الاستقرار شهرياً.",
+            "en": "Maintain the current approach and monitor stability monthly.",
+        })
     return actions[:5]
 
 
@@ -1809,6 +1874,7 @@ def get_admin_classification_detail(request: Request,
         band_label=row.band_label,
         coverage_pct=row.coverage_pct,
         aspects=row.aspects,
+        aspect_labels=_aspect_labels_for(row.aspects),
         trend_points=trend_points,
         indicator_definitions=BenchmarkingService._indicator_explanations(),
         action_guidance=_actions_from_aspects(row.aspects),
