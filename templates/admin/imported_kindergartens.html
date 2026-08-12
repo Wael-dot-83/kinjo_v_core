@@ -68,8 +68,21 @@
   </div>
 
   <!-- Results info -->
-  <div class="mb-3">
-    <small class="text-muted" id="resultsInfo">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</small>
+  <div class="mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <small class="text-muted" id="resultsInfo" role="status" aria-live="polite">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</small>
+    <div class="d-flex align-items-center gap-2">
+      <label for="perPageSelect" class="form-label small text-muted mb-0">{% if ui_lang == 'en' %}Rows{% else %}الصفوف{% endif %}</label>
+      <select class="form-select form-select-sm w-auto" id="perPageSelect">
+        <option value="25">25</option>
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+      </select>
+      <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" id="exportCsvBtn">
+        <span class="material-symbols-outlined" style="font-size:1rem;" aria-hidden="true">download</span>
+        {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
+      </button>
+    </div>
   </div>
 
   <!-- Table -->
@@ -124,44 +137,85 @@
     const _isEn = document.documentElement.lang === 'en';
     const _loading  = _isEn ? 'Loading...' : 'جارٍ تحميل البيانات، يرجى الانتظار.';
     const _errLoad  = _isEn ? 'Error loading data' : 'خطأ في تحميل البيانات';
+    const _retry    = _isEn ? 'Retry' : 'إعادة المحاولة';
     const _noData   = _isEn ? 'No kindergartens found' : 'لا توجد حضانات';
     const _showing  = _isEn ? 'Showing' : 'عرض';
     const _of       = _isEn ? 'of' : 'من';
     const _kgs      = _isEn ? 'kindergartens' : 'حضانة';
+    const _none     = _isEn ? 'No results' : 'لا توجد نتائج';
     const _prev     = _isEn ? 'Previous' : 'السابق';
     const _next     = _isEn ? 'Next' : 'التالي';
 
+    // Jordan's locale, not the Gulf's. 'ar-SA' renders the Hijri calendar and
+    // Gulf month names (يوليو) where Jordan writes تموز; it also ignored English
+    // mode. Every other admin screen formats with ar-JO/en-JO.
+    const _dateLocale = _isEn ? 'en-JO' : 'ar-JO';
+
     let currentPage = 1;
+    let currentPerPage = 50;
     let currentFilters = { search: '', governorate: '', district: '' };
+    let lastRows = [];
 
     function escHtml(s) {
         return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
+    // Keep the address bar in sync so a filtered view can be bookmarked and
+    // shared, and so Back/Forward move between result sets.
+    function syncUrl(page) {
+        const qs = new URLSearchParams();
+        if (currentFilters.search) qs.set('search', currentFilters.search);
+        if (currentFilters.governorate) qs.set('governorate', currentFilters.governorate);
+        if (currentFilters.district) qs.set('district', currentFilters.district);
+        if (currentPerPage !== 50) qs.set('per_page', currentPerPage);
+        if (page > 1) qs.set('page', page);
+        const q = qs.toString();
+        history.replaceState(null, '', q ? `${location.pathname}?${q}` : location.pathname);
+    }
+
+    function readUrl() {
+        const qs = new URLSearchParams(location.search);
+        currentFilters.search = qs.get('search') || '';
+        currentFilters.governorate = qs.get('governorate') || '';
+        currentFilters.district = qs.get('district') || '';
+        currentPerPage = parseInt(qs.get('per_page'), 10) || 50;
+        document.getElementById('searchInput').value = currentFilters.search;
+        document.getElementById('perPageSelect').value = String(currentPerPage);
+        return parseInt(qs.get('page'), 10) || 1;
+    }
+
     async function loadKindergartens(page) {
         page = page || 1;
+        currentPage = page;
         const tbody = document.getElementById('tableBody');
         const loadingSpinner = document.getElementById('loadingSpinner');
         const emptyState = document.getElementById('emptyState');
-        const tableContainer = document.getElementById('tableContainer');
-        
+
         loadingSpinner.classList.remove('d-none');
         emptyState.classList.add('d-none');
         tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">${_loading}</td></tr>`;
 
-        const params = new URLSearchParams({ page: page, per_page: 50, ...currentFilters });
+        const params = new URLSearchParams({ page: page, per_page: currentPerPage, ...currentFilters });
 
         try {
             const response = await fetch(`/api/admin/kindergartens/imported?${params}`);
             const data = await response.json();
 
             if (!response.ok) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${_errLoad}</td></tr>`;
+                showError(response.status, page);
                 return;
             }
 
-            document.getElementById('resultsInfo').textContent =
-                `${_showing} ${data.kindergartens.length} ${_of} ${data.total} ${_kgs}`;
+            lastRows = data.kindergartens || [];
+            syncUrl(page);
+
+            // Report the absolute range, not just this page's row count --
+            // "Showing 50 of 500" looked identical on every page.
+            const first = data.total === 0 ? 0 : ((data.page - 1) * data.per_page) + 1;
+            const last = first === 0 ? 0 : first + data.kindergartens.length - 1;
+            document.getElementById('resultsInfo').textContent = data.total === 0
+                ? _none
+                : `${_showing} ${first}–${last} ${_of} ${data.total} ${_kgs}`;
 
             populateFilterOptions(data.governorates || [], data.districts || []);
 
@@ -178,7 +232,7 @@
                         <td>${escHtml(kg.area || '')}</td>
                         <td>${escHtml(kg.phone)}</td>
                         <td>${escHtml(kg.detailed_address || '')}</td>
-                        <td class="text-nowrap">${new Date(kg.created_at).toLocaleDateString(_isEn ? 'en-GB' : 'ar-SA')}</td>
+                        <td class="text-nowrap">${new Date(kg.created_at).toLocaleDateString(_dateLocale)}</td>
                     </tr>
                 `).join('');
             }
@@ -186,10 +240,38 @@
             updatePagination(data.page, data.pages);
 
         } catch (error) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${_errLoad}</td></tr>`;
+            showError(null, page);
         } finally {
             loadingSpinner.classList.add('d-none');
         }
+    }
+
+    // A dead-end error message left the only recovery as a full page reload,
+    // which also discarded the user's filters.
+    function showError(status, page) {
+        const detail = status ? ` (HTTP ${status})` : '';
+        document.getElementById('tableBody').innerHTML =
+            `<tr><td colspan="8" class="text-center text-danger py-4">${_errLoad}${detail}
+             <button type="button" class="btn btn-sm btn-outline-danger ms-2" data-retry-page="${page}">${_retry}</button>
+             </td></tr>`;
+        document.getElementById('resultsInfo').textContent = _errLoad;
+    }
+
+    function exportCsv() {
+        if (!lastRows.length) return;
+        const cols = ['name_ar', 'name_en', 'governorate', 'district', 'area', 'phone', 'detailed_address', 'created_at'];
+        const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const csv = [cols.join(',')]
+            .concat(lastRows.map(r => cols.map(c => esc(r[c])).join(',')))
+            .join('\r\n');
+        // BOM so Excel opens the Arabic columns as UTF-8 rather than mojibake.
+        const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `imported-kindergartens-page-${currentPage}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     function updatePagination(currentPg, totalPages) {
@@ -213,29 +295,47 @@
         }
     }
 
-    let filterOptionsPopulated = false;
+    let governoratesPopulated = false;
     function populateFilterOptions(governorates, districts) {
-        if (filterOptionsPopulated) return;
         const govSelect = document.getElementById('governorateFilter');
         const districtSelect = document.getElementById('cityFilter');
-        governorates.forEach(gov => {
-            const opt = document.createElement('option');
-            opt.value = gov;
-            opt.textContent = gov;
-            govSelect.appendChild(opt);
-        });
+
+        if (!governoratesPopulated && governorates.length) {
+            governorates.forEach(gov => {
+                const opt = document.createElement('option');
+                opt.value = gov;
+                opt.textContent = gov;
+                govSelect.appendChild(opt);
+            });
+            govSelect.value = currentFilters.governorate;
+            governoratesPopulated = true;
+        }
+
+        // Districts are re-populated on every response because the server now
+        // scopes them to the selected governorate. Keeping the old "populate
+        // once" guard would have frozen the first governorate's district list
+        // in place for the rest of the session.
+        const previous = currentFilters.district;
+        districtSelect.length = 1;
         districts.forEach(district => {
             const opt = document.createElement('option');
             opt.value = district;
             opt.textContent = district;
             districtSelect.appendChild(opt);
         });
-        if (governorates.length || districts.length) filterOptionsPopulated = true;
+        districtSelect.value = districts.includes(previous) ? previous : '';
+        currentFilters.district = districtSelect.value;
     }
 
     function applyFilters() {
+        const governorate = document.getElementById('governorateFilter').value;
+        // Switching governorate invalidates the district beneath it; sending
+        // both would ask for a district that cannot exist in the new one.
+        if (governorate !== currentFilters.governorate) {
+            document.getElementById('cityFilter').value = '';
+        }
         currentFilters.search = document.getElementById('searchInput').value;
-        currentFilters.governorate = document.getElementById('governorateFilter').value;
+        currentFilters.governorate = governorate;
         currentFilters.district = document.getElementById('cityFilter').value;
         loadKindergartens(1);
     }
@@ -263,8 +363,17 @@
         event.preventDefault();
         loadKindergartens(parseInt(link.dataset.page, 10));
     });
+    document.getElementById('perPageSelect').addEventListener('change', (event) => {
+        currentPerPage = parseInt(event.target.value, 10) || 50;
+        loadKindergartens(1);
+    });
+    document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+    document.getElementById('tableBody').addEventListener('click', (event) => {
+        const retry = event.target.closest('button[data-retry-page]');
+        if (retry) loadKindergartens(parseInt(retry.dataset.retryPage, 10));
+    });
 
-    loadKindergartens();
+    loadKindergartens(readUrl());
 })();
 </script>
 {% endblock %}

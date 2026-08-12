@@ -234,14 +234,31 @@ class KindergartenImportService:
             )
 
         total = query.count()
-        kindergartens = query.offset((page - 1) * per_page).limit(per_page).all()
+        # Paginate over a deterministic order. Without an ORDER BY, Postgres is
+        # free to return rows in any order it likes, so the same offset could
+        # repeat a row on one page and skip it on the next.
+        kindergartens = (
+            query.order_by(
+                ImportedKindergarten.created_at.desc(),
+                ImportedKindergarten.id.desc(),
+            )
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
 
         governorates = sorted({
             row[0] for row in self.db.query(ImportedKindergarten.governorate).distinct().all() if row[0]
         })
-        districts = sorted({
-            row[0] for row in self.db.query(ImportedKindergarten.district).distinct().all() if row[0]
-        })
+        # Districts are scoped to the selected governorate so the two filters
+        # cannot contradict each other. Offering every district in Jordan let a
+        # user pick one outside the chosen governorate and get zero results.
+        district_query = self.db.query(ImportedKindergarten.district).distinct()
+        if governorate:
+            district_query = district_query.filter(
+                governorate_filter(ImportedKindergarten.governorate, governorate)
+            )
+        districts = sorted({row[0] for row in district_query.all() if row[0]})
 
         return {
             "kindergartens": kindergartens,
