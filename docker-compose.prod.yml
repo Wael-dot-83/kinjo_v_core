@@ -70,5 +70,53 @@ services:
         condition: service_healthy
     command: ${KINJO_WEB_COMMAND:-supervisord -c /app/supervisor.conf}
 
+  # Background processing. Production ran neither of these: .env sets
+  # KINJO_WEB_COMMAND to a bare uvicorn, which overrides compose's supervisord
+  # default -- and supervisor.conf only ever started uvicorn anyway. So no
+  # scheduled export, queued message dispatch, heatmap rebuild or automated
+  # backup has been running at all. Declaring them as services makes their
+  # absence visible in `docker compose ps` instead of silent.
+  worker:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-kinjo}:${POSTGRES_PASSWORD:?required}@db:5432/${POSTGRES_DB:-kinjo_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?required}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:?required}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:?required}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:?TRUSTED_HOSTS is required}
+    volumes:
+      - ./data:/app/data
+    command: celery -A celery_app.celery_app worker --loglevel=info --concurrency=2
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-kinjo}:${POSTGRES_PASSWORD:?required}@db:5432/${POSTGRES_DB:-kinjo_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?required}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:?required}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:?required}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:?TRUSTED_HOSTS is required}
+    volumes:
+      - ./data:/app/data
+    # Exactly one beat: a second scheduler publishes every periodic task twice.
+    command: celery -A celery_app.celery_app beat --loglevel=info
+    depends_on:
+      - redis
+
 volumes:
   kinjo_pgdata:

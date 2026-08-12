@@ -2690,7 +2690,7 @@ block extra_head %}
     var panel = document.getElementById('recommendationsPanel');
     var content = document.getElementById('recommendationsContent');
     try {
-      var resp = await fetch('/api/admin/charts/suggest', {
+      var resp = await fetchWithAuth('/api/admin/charts/suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ source: source, max_suggestions: 4 })
