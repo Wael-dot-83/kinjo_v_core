@@ -110,8 +110,10 @@ def get_or_create_user(db, username: str, **fields):
     return user, True
 
 
-def seed(db, scale: str, dry_run: bool) -> dict:
-    cfg = SCALES[scale]
+def seed(db, scale: str, dry_run: bool, kindergarten_override: int | None = None) -> dict:
+    cfg = dict(SCALES[scale])
+    if kindergarten_override:
+        cfg["kindergartens"] = kindergarten_override
     today = jordan_today()
     # The window ends yesterday so nothing lands in the future.
     period_end = today - timedelta(days=1)
@@ -756,6 +758,9 @@ def teardown(db) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scale", choices=sorted(SCALES), default="small")
+    parser.add_argument("--kindergartens", type=int, default=None,
+                        help="Override the scale's kindergarten count, e.g. to cover "
+                             "the whole registry. Capped at the number available.")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--teardown", action="store_true")
     parser.add_argument("--gqi-only", action="store_true",
@@ -771,7 +776,7 @@ def main() -> None:
             result = teardown(db)
             print("Removed:", json.dumps(result, indent=2))
             return
-        result = seed(db, args.scale, args.dry_run)
+        result = seed(db, args.scale, args.dry_run, args.kindergartens)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         if not args.dry_run:
             MANIFEST.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
