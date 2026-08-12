@@ -268,6 +268,100 @@ block extra_head %}
     align-items: center;
     gap: 0.45rem;
   }
+  /* Palette drawn from Jordan's own materials -- Petra sandstone and rose, the
+     Dead Sea, olive terraces, saffron and basalt -- rather than the default
+     admin blue. Each source owns one hue so a colour means the same thing in
+     the spectrum, the source cards and the figure itself. */
+  #chartsExplorerRoot,
+  .ce-hero {
+    --ce-rose: #c2564b;      /* incidents      */
+    --ce-saffron: #e0912f;   /* attendance     */
+    --ce-olive: #6b8e4e;     /* daily reports  */
+    --ce-teal: #2e7d8f;      /* enrollments    */
+    --ce-plum: #6b4e7d;      /* kindergartens  */
+    --ce-ink: #2b2118;
+    --ce-sand: #faf6f0;
+  }
+
+  .ce-hero {
+    text-align: center;
+    max-width: 62ch;
+    margin: 0 auto 1.75rem;
+    padding-block: 1.5rem 0;
+  }
+  .ce-hero__eyebrow {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ce-teal);
+    margin: 0 0 0.5rem;
+  }
+  /* Personality here comes from scale and tracking, not a downloaded display
+     face: the CSP blocks external font hosts and no Arabic display face is
+     bundled, so a webfont would silently fall back. */
+  .ce-hero__title {
+    font-size: clamp(1.9rem, 4.2vw, 3rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    color: var(--ce-ink);
+    margin: 0;
+  }
+  .ce-hero__lede {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: #6b5d52;
+    margin: 0.6rem auto 0;
+    max-width: 48ch;
+  }
+  .ce-spectrum {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin-top: 1.1rem;
+  }
+  .ce-spectrum__seg {
+    height: 5px;
+    width: 36px;
+    border-radius: 999px;
+    opacity: 0.42;
+    transition: width 0.35s ease, opacity 0.35s ease;
+  }
+  .ce-spectrum__seg.is-active {
+    width: 88px;
+    opacity: 1;
+  }
+  .ce-spectrum__seg[data-src="incidents"] { background: var(--ce-rose); }
+  .ce-spectrum__seg[data-src="attendance"] { background: var(--ce-saffron); }
+  .ce-spectrum__seg[data-src="daily_reports"] { background: var(--ce-olive); }
+  .ce-spectrum__seg[data-src="enrollments"] { background: var(--ce-teal); }
+  .ce-spectrum__seg[data-src="kindergartens"] { background: var(--ce-plum); }
+
+  /* Source cards inherit their own hue, so choosing a source and reading its
+     colour in the chart are the same act. */
+  .ce-source-card[data-source="incidents"] { --card-hue: var(--ce-rose); }
+  .ce-source-card[data-source="attendance"] { --card-hue: var(--ce-saffron); }
+  .ce-source-card[data-source="daily_reports"] { --card-hue: var(--ce-olive); }
+  .ce-source-card[data-source="enrollments"] { --card-hue: var(--ce-teal); }
+  .ce-source-card[data-source="kindergartens"] { --card-hue: var(--ce-plum); }
+  .ce-source-card i { color: var(--card-hue, var(--ce-teal)); }
+  .ce-source-card:hover {
+    border-color: var(--card-hue, var(--ce-teal));
+  }
+  .ce-source-card.is-active {
+    border-color: var(--card-hue, var(--ce-teal));
+    background: color-mix(in srgb, var(--card-hue, #2e7d8f) 10%, transparent);
+  }
+  .ce-source-card.is-active i,
+  .ce-source-card.is-active .ce-source-card__label {
+    color: var(--card-hue, var(--ce-teal));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ce-spectrum__seg { transition: none; }
+  }
+
   .ce-pinned-board {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -428,22 +522,27 @@ block extra_head %}
   }
 </style>
 {% endblock %} {% block content %}
-<div
-  class="page-header mb-3 d-flex align-items-start justify-content-between flex-wrap gap-3"
->
-  <div>
-    <h1 class="page-title mb-0">
-      <i class="bi bi-graph-up-arrow me-2"></i>
-      {% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{%
-      endif %}
-    </h1>
-    <p class="text-muted small mt-1 mb-0">
-      {% if ui_lang == 'en' %} Interactive analytical exploration with
-      governorate and kindergarten drill-down. {% else %} استكشاف تحليلي تفاعلي
-      مع إمكانية التفرّع حسب المحافظة والحضانة. {% endif %}
-    </p>
+<header class="ce-hero">
+  <p class="ce-hero__eyebrow">
+    {% if ui_lang == 'en' %}National early-childhood data{% else %}بيانات الطفولة المبكرة الوطنية{% endif %}
+  </p>
+  <h1 class="ce-hero__title">
+    {% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{% endif %}
+  </h1>
+  <p class="ce-hero__lede">
+    {% if ui_lang == 'en' %}Interactive analytical exploration with governorate and kindergarten drill-down.{% else %}استكشاف تحليلي تفاعلي مع إمكانية التفرّع حسب المحافظة والحضانة.{% endif %}
+  </p>
+  {# The spectrum is the page's legend, not an ornament: one segment per data
+     source, in that source's colour, and the segment for the source you are
+     charting expands. It tells you what the palette below means. #}
+  <div class="ce-spectrum" id="ceSpectrum" aria-hidden="true">
+    <span class="ce-spectrum__seg" data-src="incidents"></span>
+    <span class="ce-spectrum__seg" data-src="attendance"></span>
+    <span class="ce-spectrum__seg" data-src="daily_reports"></span>
+    <span class="ce-spectrum__seg" data-src="enrollments"></span>
+    <span class="ce-spectrum__seg" data-src="kindergartens"></span>
   </div>
-</div>
+</header>
 
 <div class="ce-layout" id="chartsExplorerRoot">
   {# ── Sidebar ─────────────────────────────────────────────────────────── #}
@@ -1286,6 +1385,9 @@ block extra_head %}
       card.classList.toggle('is-active', isActive);
       card.setAttribute('aria-checked', isActive);
     });
+    document.querySelectorAll('.ce-spectrum__seg').forEach(function(seg) {
+      seg.classList.toggle('is-active', seg.dataset.src === source);
+    });
     var supported = SOURCE_SUPPORTED_CHART_TYPES[source] || [];
     document.querySelectorAll('.ce-ct-btn').forEach(function(btn) {
       var allowed = !btn.dataset.ct || supported.indexOf(btn.dataset.ct) !== -1;
@@ -1747,6 +1849,18 @@ block extra_head %}
     } catch (e) { /* the list simply stays as it was */ }
   }
 
+  var SOURCE_HUES = {
+    incidents: '#c2564b', attendance: '#e0912f', daily_reports: '#6b8e4e',
+    enrollments: '#2e7d8f', kindergartens: '#6b4e7d'
+  };
+  var PALETTE = ['#2e7d8f','#c2564b','#6b8e4e','#e0912f','#6b4e7d','#a4735c','#3f6d5f','#8c5a7a'];
+
+  function sourceColorway(source) {
+    var lead = SOURCE_HUES[source];
+    if (!lead) return PALETTE;
+    return [lead].concat(PALETTE.filter(function (c) { return c !== lead; }));
+  }
+
   function describeChartForScreenReaders() {
     var out = document.getElementById('chartOutput');
     if (!out) return;
@@ -2046,7 +2160,10 @@ block extra_head %}
         margin: { t: 40, r: 20, l: 60, b: 60 },
         legend: { orientation: 'h', y: -0.22, x: 0, xanchor: 'left' },
         barmode: type === 'bar' ? 'group' : undefined,
-        colorway: ['#2563EB','#16A34A','#D97706','#DC2626','#7C3AED','#0891B2','#DB2777','#4F46E5','#CA8A04','#059669'],
+        // Same palette as the source cards and the spectrum, led by the
+        // active source's own hue so the figure matches the control that
+        // produced it.
+        colorway: sourceColorway(data.source),
         xaxis: {
           tickfont: { size: 12, color: '#475569' },
           gridcolor: 'rgba(226, 232, 240, 0.6)',
