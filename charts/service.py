@@ -295,9 +295,15 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
         q = q.group_by(models.Kindergarten.id, models.Kindergarten.name_ar)
     elif req.governorate:
         gov = req.governorate
-        q = base_query.add_columns(models.Kindergarten.district.label("city"))
+        # The explorer's documented kindergarten path is national → governorate
+        # → kindergarten. Returning city rows here made the next click a no-op:
+        # the client needs a stable kindergarten_id for the final drill-down.
+        q = base_query.add_columns(
+            models.Kindergarten.id.label("kindergarten_id"),
+            models.Kindergarten.name_ar.label("kindergarten"),
+        )
         q = q.filter(_governorate_filter(models.Kindergarten.governorate, gov))
-        q = q.group_by(models.Kindergarten.district)
+        q = q.group_by(models.Kindergarten.id, models.Kindergarten.name_ar)
     else:
         q = base_query.add_columns(models.Kindergarten.governorate.label("governorate"))
         q = q.group_by(models.Kindergarten.governorate)
@@ -312,7 +318,8 @@ def _load_kindergartens(db: Session, req: ChartRequest) -> pd.DataFrame:
             d["kindergarten_id"] = getattr(r, "kindergarten_id", None)
             d["kindergarten"] = getattr(r, "kindergarten", "")
         elif req.governorate:
-            d["city"] = getattr(r, "city", "")
+            d["kindergarten_id"] = getattr(r, "kindergarten_id", None)
+            d["kindergarten"] = getattr(r, "kindergarten", "")
         else:
             d["governorate"] = getattr(r, "governorate", "")
         data.append(d)

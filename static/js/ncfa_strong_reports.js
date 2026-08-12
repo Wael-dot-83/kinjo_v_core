@@ -180,12 +180,16 @@
     "محجوب": { ar: "محجوب", en: "Suppressed" }
   };
 
-  // Common table headers the backend returns as Arabic dict keys.
+  // Common table headers mapped for bilingual support.
   const HEADER_LABELS = {
-    "المؤشر": "Indicator",
-    "القيمة": "Value",
-    "الفئة": "Category",
-    "النسبة %": "Percent %"
+    "المؤشر": { ar: "المؤشر", en: "Indicator" },
+    "القيمة": { ar: "القيمة", en: "Value" },
+    "الفئة": { ar: "الفئة", en: "Category" },
+    "النسبة %": { ar: "النسبة %", en: "Percent %" },
+    "indicator": { ar: "المؤشر", en: "Indicator" },
+    "category": { ar: "التصنيف", en: "Category" },
+    "value": { ar: "القيمة", en: "Value" },
+    "share_pct": { ar: "النسبة %", en: "Share %" }
   };
 
   function pickLocale(map, key) {
@@ -200,8 +204,9 @@
   }
 
   function localizeHeader(header) {
-    if (lang !== "en") return header;
-    return HEADER_LABELS[header] || header;
+    const meta = HEADER_LABELS[header] || HEADER_LABELS[header.toLowerCase()];
+    if (!meta) return header;
+    return lang === "en" ? meta.en : meta.ar;
   }
 
   function getCookie(name) {

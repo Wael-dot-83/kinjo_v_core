@@ -162,7 +162,14 @@
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--r-lg);
   padding: 10px 16px;
-  backdrop-filter: blur(8px);
+  /*
+   * These cards live in the top-of-page hero, directly behind the sticky filter
+   * bar.  Backdrop blurring creates a new compositing surface per card and
+   * causes visible flashing in Chromium while the admin scrollport repaints.
+   * Use an opaque-enough glass colour here instead; it has the same contrast
+   * without scroll-time rasterisation.
+   */
+  background: rgba(30, 41, 59, 0.88);
   transition: transform 0.2s, background 0.2s;
 }
 .exec-insight-card:hover {
@@ -198,7 +205,7 @@
   align-items: center;
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.15);
-  backdrop-filter: blur(12px);
+  background: rgba(51, 65, 85, 0.92);
   border-radius: var(--r-full);
   padding: 8px 16px;
   font: 500 0.8125rem/1 var(--font-ar);
@@ -209,7 +216,7 @@
   align-items: center;
   background: rgba(22, 163, 74, 0.15);
   border: 1px solid rgba(74, 222, 128, 0.3);
-  backdrop-filter: blur(12px);
+  background: rgba(22, 101, 52, 0.92);
   border-radius: var(--r-full);
   padding: 8px 16px;
   font: 600 0.875rem/1 var(--font-ar);
@@ -232,19 +239,16 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
-.status-dot--green  { background: #4ADE80; box-shadow: 0 0 0 4px rgba(74,222,128,.2); animation: pulse-green 2s infinite; }
-.status-dot--amber  { background: #FCD34D; box-shadow: 0 0 0 4px rgba(252,211,77,.2);  animation: pulse-amber 2s infinite; }
-.status-dot--red    { background: #F87171; box-shadow: 0 0 0 4px rgba(248,113,113,.2); animation: pulse-red 2s infinite; }
-@keyframes pulse-green { 0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.4)} 50%{box-shadow:0 0 0 8px rgba(74,222,128,0)} }
-@keyframes pulse-amber { 0%,100%{box-shadow:0 0 0 0 rgba(252,211,77,.4)}  50%{box-shadow:0 0 0 8px rgba(252,211,77,0)} }
-@keyframes pulse-red   { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.4)} 50%{box-shadow:0 0 0 8px rgba(248,113,113,0)} }
+/* Keep the health indicator steady: an infinite animated shadow looked like a
+   whole-banner flicker whenever this page was scrolled. */
+.status-dot--green  { background: #4ADE80; box-shadow: 0 0 0 4px rgba(74,222,128,.2); }
+.status-dot--amber  { background: #FCD34D; box-shadow: 0 0 0 4px rgba(252,211,77,.2); }
+.status-dot--red    { background: #F87171; box-shadow: 0 0 0 4px rgba(248,113,113,.2); }
 
 /* ── 4. Filter Bar ─────────────────────────────────────────────────────────── */
 .glass-filter-bar {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: var(--kinjo-color-bg-surface, #fff);
+  border: 1px solid var(--slate-200);
   border-radius: var(--r-xl);
   padding: var(--sp-3) var(--sp-5);
   box-shadow: 0 8px 24px rgba(0,0,0,0.06);
@@ -253,9 +257,7 @@
   z-index: 1000;
   margin-top: 0;
   margin-bottom: var(--sp-6);
-  transition: background-color .25s ease, box-shadow .25s ease, border-color .25s ease, transform .25s ease;
 }
-/* Pinned state (toggled by scroll watcher in the analytics template) */
 .glass-filter-bar.is-stuck {
   background: rgba(255, 255, 255, 0.97);
   border-color: var(--slate-200);
@@ -263,32 +265,6 @@
   border-bottom-color: var(--slate-300);
   padding: var(--sp-2) var(--sp-4);
   margin-bottom: var(--sp-3);
-}
-/* Compact rearrangement on scroll down: shrink controls and hide floating labels to prevent blocking viewport content */
-.glass-filter-bar.is-stuck .form-label {
-  display: none;
-}
-.glass-filter-bar.is-stuck .btn,
-.glass-filter-bar.is-stuck .form-select,
-.glass-filter-bar.is-stuck .form-control {
-  min-height: 34px;
-  height: 34px;
-  padding-top: 2px;
-  padding-bottom: 2px;
-  font-size: 0.8125rem;
-}
-.glass-filter-bar.is-stuck .d-flex.align-items-end {
-  align-items: center !important;
-}
-.glass-filter-bar.is-stuck .row {
-  --bs-gutter-y: 0.5rem;
-  --bs-gutter-x: 0.5rem;
-}
-.glass-filter-bar.is-stuck .d-flex.gap-3 {
-  gap: var(--sp-2) !important;
-}
-.glass-filter-bar.is-stuck .filter-dropdown-glass select {
-  min-width: 110px;
 }
 
 /* Active-filter indicator (class toggled by JS in the analytics template;

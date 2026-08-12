@@ -12,7 +12,8 @@
   background-color: var(--admin-nav-bg);
   border-block-end: 1px solid var(--admin-nav-border);
   position: relative;
-  z-index: 900;
+  /* Navigation must always sit above page-level controls and charts. */
+  z-index: 1100;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
@@ -106,7 +107,7 @@
   visibility: hidden;
   transform: translateY(10px);
   transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
-  z-index: 1000;
+  z-index: 1110;
 }
 
 /* Show dropdown on hover */

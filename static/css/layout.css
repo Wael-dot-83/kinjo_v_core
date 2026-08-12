@@ -96,7 +96,7 @@ body.admin-container {
       rgba(255, 255, 255, 0.05),
       transparent 28%
     ),
-    linear-gradient(135deg, #0f2347 0%, #153d73 52%, #102a4e 100%);
+    linear-gradient(120deg, #0f4cbd 0%, #155ecf 55%, #1b67d8 100%);
   color: var(--admin-header-ink);
   border-block-end: 1px solid rgba(212, 175, 55, 0.22);
   box-shadow:
@@ -290,6 +290,20 @@ body.admin-container {
      Sticky children do not need a parent stacking context: position:sticky
      establishes its own. */
   position: relative;
+}
+
+/* Shared KinJo footer: one shell component for every admin route. */
+.admin-shell-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .75rem var(--kinjo-spacing-6);
+  background: #f8fafc;
+  border-top: 1px solid #d9e5df;
+  color: #527060;
+  font-size: .75rem;
 }
 
 /* Page title — shared across admin pages (analytics, dashboard, help

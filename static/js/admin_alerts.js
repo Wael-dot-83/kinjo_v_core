@@ -47,13 +47,15 @@
     function severityBadge(severity) {
         const meta = SEVERITY_META[severity];
         if (!meta) return `<span class="badge bg-secondary">${escapeHtml(severity)}</span>`;
-        return `<span class="badge ${meta.cls}">${meta.label}</span>`;
+        const label = window.alertsTranslations?.[severity.toLowerCase()] || meta.label;
+        return `<span class="badge ${meta.cls}">${label}</span>`;
     }
 
     function statusBadge(status) {
         const meta = STATUS_META[status];
         if (!meta) return `<span class="badge bg-secondary">${escapeHtml(status)}</span>`;
-        return `<span class="badge ${meta.cls}">${meta.label}</span>`;
+        const label = window.alertsTranslations?.[status.toLowerCase()] || meta.label;
+        return `<span class="badge ${meta.cls}">${label}</span>`;
     }
 
     function setLoading(on) {
@@ -123,8 +125,8 @@
                 <td>${statusBadge(a.status)}</td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary" data-action="view" data-alert-id="${a.id}"
-                            aria-label="View alert: ${escapeHtml(a.metric || "alert")} — ${escapeHtml(a.kindergarten_name || a.governorate || `#${a.id}`)}">
-                        View
+                            aria-label="${window.alertsTranslations?.viewAlert || 'View alert'}: ${escapeHtml(a.metric || 'alert')} — ${escapeHtml(a.kindergarten_name || a.governorate || '#' + a.id)}">
+                        ${window.alertsTranslations?.view || "View"}
                     </button>
                 </td>
             </tr>
@@ -138,11 +140,11 @@
         wrap.innerHTML = `
             <div class="d-flex align-items-center gap-2 mt-3">
                 <button class="btn btn-sm btn-outline-secondary" id="prevPageBtn" ${page <= 1 ? "disabled" : ""}>
-                    Previous
+                    ${window.alertsTranslations?.previous || "Previous"}
                 </button>
                 <span class="text-muted small">${page} / ${totalPages} &nbsp;(${total})</span>
                 <button class="btn btn-sm btn-outline-secondary" id="nextPageBtn" ${page >= totalPages ? "disabled" : ""}>
-                    Next
+                    ${window.alertsTranslations?.next || "Next"}
                 </button>
             </div>
         `;

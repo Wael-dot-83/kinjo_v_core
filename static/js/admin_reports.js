@@ -254,6 +254,11 @@
     children_per_kindergarten: ["أطفال لكل حضانة", "Children per kindergarten"],
     children_per_supervisor: ["أطفال لكل مشرفة", "Children per supervisor"],
     children_per_class: ["أطفال لكل شعبة", "Children per class"],
+    child_id: ["رقم الطفل", "Child ID"],
+    check_in: ["وقت الدخول", "Check-in time"],
+    check_out: ["وقت الخروج", "Check-out time"],
+    child: ["الطفل", "Child"],
+    id: ["المعرّف", "ID"]
   };
 
   function columnLabel(col) {
