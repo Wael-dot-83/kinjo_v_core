@@ -5,7 +5,7 @@ Organization-level daily reports endpoint for admin users.
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 from utils.time_utils import today_amman as _today
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -393,4 +393,117 @@ def list_daily_reports_for_organization(
         message=response_message,
         kindergartens=kindergarten_groups,
         pagination=pagination,
+    )
+
+
+# =============================================================================
+# Submission trends
+# =============================================================================
+
+class TrendResponse(BaseModel):
+    period: str
+    start_date: date
+    end_date: date
+    labels: List[str]
+    series: Dict[str, List[int]]
+    totals: Dict[str, object]
+
+
+# Report lifecycle -> trend bucket. Deliberately NOT the same vocabulary as the
+# per-child status: "received" there means a parent opened the report, which
+# needs the per-report view log and cannot be derived from the report row alone.
+# A trend chart that silently redefined "received" would contradict the table
+# beside it, so these buckets are named for the lifecycle instead.
+_TREND_BUCKETS = {
+    "sent": (models.DailyReportStatus.SENT_TO_PARENT,),
+    "pending": (
+        models.DailyReportStatus.SUBMITTED,
+        models.DailyReportStatus.APPROVED,
+    ),
+    "incomplete": (
+        models.DailyReportStatus.DRAFT,
+        models.DailyReportStatus.REJECTED,
+        models.DailyReportStatus.RETURNED,
+    ),
+}
+
+_PERIOD_DAYS = {"week": 7, "month": 30, "quarter": 90}
+
+
+@router.get("/daily-reports/trends", response_model=TrendResponse)
+def submission_trends(
+    period: str = Query(default="month", pattern="^(week|month|quarter)$"),
+    kindergarten_ids: Optional[str] = Query(default=None),
+    governorate: Optional[str] = Query(default=None),
+    current_admin: models.User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+) -> TrendResponse:
+    """Daily submission counts by lifecycle bucket over the chosen period."""
+    from sqlalchemy import func
+
+    # Jordan's date, never UTC: a report filed at 01:00 Amman belongs to that
+    # day, and date.today() on a UTC host would put it on the previous one.
+    end_date = _today()
+    start_date = end_date - timedelta(days=_PERIOD_DAYS[period] - 1)
+
+    query = (
+        db.query(
+            models.DailyReport.date.label("day"),
+            models.DailyReport.status.label("status"),
+            func.count(models.DailyReport.id).label("count"),
+        )
+        .filter(
+            models.DailyReport.date >= start_date,
+            models.DailyReport.date <= end_date,
+        )
+    )
+
+    selected_ids = _parse_kindergarten_ids(kindergarten_ids)
+    if selected_ids:
+        query = query.filter(models.DailyReport.kindergarten_id.in_(selected_ids))
+    if governorate:
+        # daily_reports has no governorate column; scope through the kindergarten.
+        query = query.join(
+            models.Kindergarten,
+            models.Kindergarten.id == models.DailyReport.kindergarten_id,
+        ).filter(models.Kindergarten.governorate == governorate)
+
+    rows = query.group_by(models.DailyReport.date, models.DailyReport.status).all()
+
+    # Every day in the window appears, including the quiet ones -- a chart that
+    # skips empty days hides exactly the gaps this page exists to surface.
+    days = [start_date + timedelta(days=offset)
+            for offset in range((end_date - start_date).days + 1)]
+    index = {day: position for position, day in enumerate(days)}
+    series: Dict[str, List[int]] = {name: [0] * len(days) for name in _TREND_BUCKETS}
+
+    status_to_bucket = {}
+    for bucket, statuses in _TREND_BUCKETS.items():
+        for status in statuses:
+            status_to_bucket[status] = bucket
+            status_to_bucket[getattr(status, "value", status)] = bucket
+
+    for row in rows:
+        bucket = status_to_bucket.get(row.status)
+        position = index.get(row.day)
+        if bucket is None or position is None:
+            continue
+        series[bucket][position] += int(row.count)
+
+    per_day = [sum(series[name][i] for name in series) for i in range(len(days))]
+    total = sum(per_day)
+    best_index = max(range(len(days)), key=lambda i: per_day[i]) if days else 0
+
+    return TrendResponse(
+        period=period,
+        start_date=start_date,
+        end_date=end_date,
+        labels=[day.isoformat() for day in days],
+        series=series,
+        totals={
+            "total": total,
+            "average": round(total / len(days), 1) if days else 0,
+            "best_day": days[best_index].isoformat() if days and total else None,
+            "best_day_count": per_day[best_index] if days else 0,
+        },
     )

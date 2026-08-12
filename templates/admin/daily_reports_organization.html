@@ -172,10 +172,41 @@
       <ul id="dailyReportsPager" class="pagination pagination-sm mb-0"></ul>
     </div>
   </nav>
+
+  <section id="trendsSection" class="mt-4 pt-3 border-top" aria-labelledby="trendsHeading">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <h3 id="trendsHeading" class="h5 mb-0">
+        <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Daily submission trends{% else %}اتجاهات التقديم اليومية{% endif %}
+      </h3>
+      <div class="btn-group btn-group-sm trend-controls" role="group"
+           aria-label="{% if ui_lang == 'en' %}Chart period{% else %}فترة الرسم البياني{% endif %}">
+        <button type="button" class="btn btn-outline-secondary" data-period="week" aria-pressed="false">
+          {% if ui_lang == 'en' %}Week{% else %}أسبوع{% endif %}
+        </button>
+        <button type="button" class="btn btn-outline-secondary active" data-period="month" aria-pressed="true">
+          {% if ui_lang == 'en' %}Month{% else %}شهر{% endif %}
+        </button>
+        <button type="button" class="btn btn-outline-secondary" data-period="quarter" aria-pressed="false">
+          {% if ui_lang == 'en' %}Quarter{% else %}ربع سنة{% endif %}
+        </button>
+      </div>
+    </div>
+    <div class="chart-container mt-3" style="position: relative; height: 250px;">
+      <canvas id="submissionTrendChart" role="img"
+        aria-label="{% if ui_lang == 'en' %}Stacked bar chart of daily report submissions{% else %}مخطط شريطي متراكم لتقديم التقارير اليومية{% endif %}"></canvas>
+    </div>
+    {# The figure is unreadable to assistive tech; the summary carries the same
+       finding in words. #}
+    <div id="trendSummary" class="d-flex flex-wrap gap-3 mt-2 text-muted small" role="status" aria-live="polite"></div>
+    <div id="trendError" class="alert alert-warning small mt-2 d-none" role="alert"></div>
+  </section>
+
 </div>
 </main>
 {% endblock %}
 
 {% block extra_scripts %}
-<script defer src="/static/js/admin_daily_reports_organization.js?v=1.3"></script>
+<script src="/static/vendor/chartjs/chart.umd.min.js"></script>
+<script defer src="/static/js/admin_daily_reports_organization.js?v=1.4"></script>
 {% endblock %}

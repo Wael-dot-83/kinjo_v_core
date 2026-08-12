@@ -912,6 +912,168 @@
     input.addEventListener("blur", () => window.setTimeout(() => closeSuggestions(field), 120));
   }
 
+
+  // ── Submission trend chart ───────────────────────────────────────────────
+  // Chart.js is vendored and loaded by a plain <script> tag; this project has
+  // no bundler, so there is no import to make.
+  let trendChart = null;
+  let trendPeriod = "month";
+
+  // Lifecycle buckets, not the per-child status vocabulary: "received" there
+  // means a parent opened the report, which the trend query cannot know. Colours
+  // still line up with STATUS_UI_CONFIG's success/warning/danger reading.
+  const TREND_BUCKETS = {
+    sent: { color: "#198754", labelAr: "أُرسل لولي الأمر", labelEn: "Sent to parent" },
+    pending: { color: "#ffc107", labelAr: "بانتظار الاعتماد", labelEn: "Awaiting approval" },
+    incomplete: { color: "#dc3545", labelAr: "غير مكتمل", labelEn: "Incomplete" },
+  };
+
+  function trendBucketLabel(key) {
+    const cfg = TREND_BUCKETS[key];
+    if (!cfg) {
+      return key;
+    }
+    return isEnglishUi() ? cfg.labelEn : cfg.labelAr;
+  }
+
+  function showTrendError(message) {
+    const box = document.getElementById("trendError");
+    if (!box) {
+      return;
+    }
+    box.textContent = t("تعذر تحميل بيانات الاتجاه.", "Could not load trend data.") + " " + message;
+    box.classList.remove("d-none");
+  }
+
+  function hideTrendError() {
+    document.getElementById("trendError")?.classList.add("d-none");
+  }
+
+  function currentTrendFilters() {
+    const params = new URLSearchParams({ period: trendPeriod });
+    const governorate = document.getElementById("governorateSelect")?.value;
+    if (governorate) {
+      params.set("governorate", governorate);
+    }
+    // Honour an explicit kindergarten selection so the chart matches the list.
+    const allChecked = document.getElementById("allKindergartens")?.checked;
+    if (!allChecked) {
+      const ids = Array.from(
+        document.querySelectorAll("#kindergartenCheckboxGroup input[type='checkbox']:checked")
+      ).map((cb) => cb.value);
+      if (ids.length > 0) {
+        params.set("kindergarten_ids", ids.join(","));
+      }
+    }
+    return params;
+  }
+
+  function renderTrendSummary(data) {
+    const host = document.getElementById("trendSummary");
+    if (!host) {
+      return;
+    }
+    const totals = data.totals || {};
+    const parts = [
+      `<span><strong><bdi>${formatNumber(totals.total || 0)}</bdi></strong> ${escapeHtml(t("إجمالي التقديمات", "total submissions"))}</span>`,
+      `<span><strong><bdi>${formatNumber(totals.average || 0)}</bdi></strong> ${escapeHtml(t("متوسط يومي", "daily average"))}</span>`,
+    ];
+    if (totals.best_day) {
+      parts.push(
+        `<span>${escapeHtml(t("أفضل يوم", "Best day"))}: <bdi>${escapeHtml(formatDateLocalized(totals.best_day))}</bdi> (<bdi>${formatNumber(totals.best_day_count || 0)}</bdi>)</span>`
+      );
+    }
+    host.innerHTML = parts.join("");
+  }
+
+  function renderTrendChart(data) {
+    const canvas = document.getElementById("submissionTrendChart");
+    const ChartLib = window.Chart;
+    if (!canvas || !ChartLib) {
+      return;   // the summary text still carries the numbers
+    }
+    if (trendChart) {
+      trendChart.destroy();
+    }
+
+    const datasets = Object.keys(data.series || {}).map((key) => ({
+      label: trendBucketLabel(key),
+      data: data.series[key],
+      backgroundColor: (TREND_BUCKETS[key] || {}).color || "#6c757d",
+      borderRadius: 3,
+    }));
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    trendChart = new ChartLib(canvas, {
+      type: "bar",
+      data: {
+        labels: (data.labels || []).map((iso) => formatDateLocalized(iso)),
+        datasets: datasets,
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: reduceMotion ? false : { duration: 300 },
+        plugins: {
+          legend: {
+            position: "top",
+            rtl: document.documentElement.dir === "rtl",
+            labels: { usePointStyle: true, pointStyle: "circle" },
+          },
+          tooltip: {
+            rtl: document.documentElement.dir === "rtl",
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)}`,
+            },
+          },
+        },
+        // Stacked: the useful reading is the day's total split by state, not
+        // three separate series to eyeball against each other.
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+        },
+      },
+    });
+  }
+
+  async function refreshTrendChart() {
+    try {
+      const response = await fetch(`/api/daily-reports/trends?${currentTrendFilters().toString()}`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      hideTrendError();
+      renderTrendSummary(data);
+      renderTrendChart(data);
+    } catch (error) {
+      // The chart is supplementary; a failure here must not disturb the list.
+      showTrendError(error?.message || "");
+    }
+  }
+
+  function wireTrendControls() {
+    const buttons = document.querySelectorAll(".trend-controls [data-period]");
+    if (buttons.length === 0) {
+      return;
+    }
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        buttons.forEach((other) => {
+          const on = other === btn;
+          other.classList.toggle("active", on);
+          other.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        trendPeriod = btn.dataset.period;
+        refreshTrendChart();
+      });
+    });
+    refreshTrendChart();
+  }
+
   function renderGroups(response) {
     const container = document.getElementById("dailyReportsAccordion");
     if (!container) {
@@ -1080,6 +1242,8 @@
     });
 
     dateInput?.addEventListener("change", fetchAndRenderReports);
+    document.getElementById("governorateSelect")?.addEventListener("change", refreshTrendChart);
+    wireTrendControls();
     wireAutocomplete("child");
     wireAutocomplete("teacher");
     // Changing the page size invalidates the current page number.
