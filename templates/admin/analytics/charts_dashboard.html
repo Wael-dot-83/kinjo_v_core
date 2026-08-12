@@ -795,6 +795,15 @@ block extra_head %}
             </button>
             <button
               class="btn btn-outline-secondary btn-sm"
+              id="scheduleExportBtn"
+              onclick="openScheduleModal()"
+              title="{% if ui_lang == 'en' %}Schedule a recurring export{% else %}جدولة تصدير متكرر{% endif %}"
+            >
+              <i class="bi bi-clock-history" aria-hidden="true"></i>
+              {% if ui_lang == 'en' %}Schedule{% else %}جدولة{% endif %}
+            </button>
+            <button
+              class="btn btn-outline-secondary btn-sm"
               id="pinChartBtn"
               disabled
               onclick="pinCurrentChart()"
@@ -924,6 +933,93 @@ block extra_head %}
             role="list"
             aria-label="{% if ui_lang == 'en' %}Pinned charts{% else %}الرسوم المثبتة{% endif %}"
           ></div>
+        </div>
+
+        {# Scheduled exports #}
+        <div
+          class="modal fade"
+          id="scheduleModal"
+          tabindex="-1"
+          aria-labelledby="scheduleModalLabel"
+          aria-hidden="true"
+        >
+          <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="scheduleModalLabel">
+                  {% if ui_lang == 'en' %}Scheduled exports{% else %}التصديرات المجدولة{% endif %}
+                </h5>
+                <button
+                  type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"
+                ></button>
+              </div>
+              <div class="modal-body">
+                <div class="row g-2">
+                  <div class="col-md-4">
+                    <label class="form-label small" for="schedFrequency">
+                      {% if ui_lang == 'en' %}Frequency{% else %}التكرار{% endif %}
+                    </label>
+                    <select id="schedFrequency" class="form-select form-select-sm">
+                      <option value="DAILY">{% if ui_lang == 'en' %}Daily{% else %}يومي{% endif %}</option>
+                      <option value="WEEKLY" selected>{% if ui_lang == 'en' %}Weekly{% else %}أسبوعي{% endif %}</option>
+                      <option value="MONTHLY">{% if ui_lang == 'en' %}Monthly{% else %}شهري{% endif %}</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small" for="schedFormat">
+                      {% if ui_lang == 'en' %}Format{% else %}الصيغة{% endif %}
+                    </label>
+                    <select id="schedFormat" class="form-select form-select-sm">
+                      <option value="CSV" selected>CSV</option>
+                      <option value="JSON">JSON</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small" for="schedHour">
+                      {% if ui_lang == 'en' %}Hour (UTC){% else %}الساعة (UTC){% endif %}
+                    </label>
+                    <input
+                      id="schedHour"
+                      type="number"
+                      min="0"
+                      max="23"
+                      value="6"
+                      class="form-control form-control-sm"
+                    />
+                  </div>
+                  <div class="col-md-8">
+                    <label class="form-label small" for="schedEmail">
+                      {% if ui_lang == 'en' %}Send to{% else %}إرسال إلى{% endif %}
+                    </label>
+                    <input
+                      id="schedEmail"
+                      type="email"
+                      class="form-control form-control-sm"
+                      placeholder="name@example.com"
+                    />
+                  </div>
+                  <div class="col-md-4 d-flex align-items-end">
+                    <button
+                      type="button"
+                      class="btn btn-primary btn-sm w-100"
+                      id="schedCreateBtn"
+                      onclick="createSchedule()"
+                    >
+                      {% if ui_lang == 'en' %}Create{% else %}إنشاء{% endif %}
+                    </button>
+                  </div>
+                </div>
+                <p class="text-muted small mt-2 mb-3">
+                  {% if ui_lang == 'en' %}The export uses the current source, chart type and date preset. Times are UTC because the scheduler runs on UTC.{% else %}يستخدم التصدير المصدر ونوع الرسم ونطاق التاريخ الحالي. التوقيت بالـ UTC لأن المجدول يعمل بتوقيت UTC.{% endif %}
+                </p>
+                <div id="schedStatus" class="small" role="status" aria-live="polite"></div>
+                <div id="schedList" class="mt-3"></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {# Task Status #}
@@ -1550,6 +1646,105 @@ block extra_head %}
         movePinned(from, to);
       });
     });
+  }
+
+  // ── Scheduled exports ────────────────────────────────────────────────────
+  var SCHED_API = '/api/admin/charts/scheduled-exports';
+
+  function openScheduleModal() {
+    if (!window.bootstrap) return;
+    window.bootstrap.Modal.getOrCreateInstance(
+      document.getElementById('scheduleModal')).show();
+    loadSchedules();
+  }
+
+  async function loadSchedules() {
+    var list = document.getElementById('schedList');
+    list.innerHTML = '<span class="text-muted small">' + tEn('Loading…', 'جارٍ التحميل…') + '</span>';
+    try {
+      var resp = await fetch(SCHED_API, { headers: { 'Accept': 'application/json' } });
+      if (!resp.ok) throw new Error('http ' + resp.status);
+      var body = await resp.json();
+      var rows = body.schedules || [];
+      if (!rows.length) {
+        list.innerHTML = '<span class="text-muted small">' +
+          tEn('No scheduled exports yet.', 'لا توجد تصديرات مجدولة بعد.') + '</span>';
+        return;
+      }
+      list.innerHTML = '';
+      rows.forEach(function (r) {
+        var item = document.createElement('div');
+        item.className = 'd-flex justify-content-between align-items-center border-top py-2';
+        var next = r.next_run_at ? r.next_run_at.replace('T', ' ').slice(0, 16) : '—';
+        var left = document.createElement('div');
+        left.className = 'small';
+        left.textContent = r.source + ' · ' + r.frequency + ' · ' + r.export_format +
+          ' · ' + tEn('next', 'التالي') + ': ' + next + ' UTC · ' + r.recipient_email;
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'btn btn-sm btn-link text-danger';
+        del.textContent = tEn('Delete', 'حذف');
+        del.onclick = function () { deleteSchedule(r.id); };
+        item.appendChild(left);
+        item.appendChild(del);
+        list.appendChild(item);
+      });
+    } catch (e) {
+      list.innerHTML = '<span class="text-danger small">' +
+        tEn('Could not load schedules.', 'تعذر تحميل الجداول.') + '</span>';
+    }
+  }
+
+  async function createSchedule() {
+    var status = document.getElementById('schedStatus');
+    var email = document.getElementById('schedEmail').value.trim();
+    if (!_currentSource) {
+      status.className = 'small text-danger';
+      status.textContent = tEn('Pick a data source first.', 'اختر مصدر البيانات أولاً.');
+      return;
+    }
+    if (!email) {
+      status.className = 'small text-danger';
+      status.textContent = tEn('A recipient email is required.', 'البريد الإلكتروني للمستلم مطلوب.');
+      return;
+    }
+    var payload = {
+      source: _currentSource,
+      chart_type: _currentChartType || null,
+      date_preset: (document.querySelector('.ce-preset-btn.is-active') || {}).dataset
+        ? document.querySelector('.ce-preset-btn.is-active').dataset.preset : 'last_30',
+      export_format: document.getElementById('schedFormat').value,
+      frequency: document.getElementById('schedFrequency').value,
+      hour_utc: parseInt(document.getElementById('schedHour').value, 10) || 6,
+      recipient_email: email,
+      governorate: filterState.governorate || null
+    };
+    status.className = 'small text-muted';
+    status.textContent = tEn('Saving…', 'جارٍ الحفظ…');
+    try {
+      var resp = await fetch(SCHED_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) {
+        var err = await resp.json().catch(function () { return {}; });
+        throw new Error(err.detail || ('http ' + resp.status));
+      }
+      status.className = 'small text-success';
+      status.textContent = tEn('Scheduled.', 'تمت الجدولة.');
+      loadSchedules();
+    } catch (e) {
+      status.className = 'small text-danger';
+      status.textContent = tEn('Could not save: ', 'تعذر الحفظ: ') + e.message;
+    }
+  }
+
+  async function deleteSchedule(id) {
+    try {
+      var resp = await fetch(SCHED_API + '/' + id, { method: 'DELETE' });
+      if (resp.ok) loadSchedules();
+    } catch (e) { /* the list simply stays as it was */ }
   }
 
   function describeChartForScreenReaders() {

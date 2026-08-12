@@ -2519,3 +2519,42 @@ class NationalImmunizationSchedule(Base):
         CheckConstraint("due_age_days >= 0", name="ck_immunization_due_age_days_nonneg"),
         Index("ix_immunization_due_age_days", "due_age_days"),
     )
+
+
+class ScheduledChartExport(Base):
+    """A recurring export of one chart, delivered by email.
+
+    Beat runs on UTC (see celery_app), so `hour_utc` is a UTC hour-of-day and
+    `next_run_at` is UTC too. Storing the next run rather than recomputing it
+    from `last_run_at` keeps a schedule that was paused, edited, or missed from
+    firing repeatedly to "catch up".
+    """
+
+    __tablename__ = "scheduled_chart_exports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    source = Column(String(50), nullable=False)
+    chart_type = Column(String(30), nullable=True)
+    date_preset = Column(String(20), nullable=False, default="last_30")
+    export_format = Column(String(10), nullable=False, default="CSV")
+    frequency = Column(String(10), nullable=False, default="WEEKLY")
+    hour_utc = Column(Integer, nullable=False, default=6)
+    recipient_email = Column(String(255), nullable=False)
+    governorate = Column(String(100), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    last_run_at = Column(UTCDateTime, nullable=True)
+    last_status = Column(String(20), nullable=True)
+    last_error = Column(Text, nullable=True)
+    next_run_at = Column(UTCDateTime, nullable=True, index=True)
+    created_at = Column(UTCDateTime, server_default=func.now())
+    updated_at = Column(UTCDateTime, onupdate=func.now())
+
+    __table_args__ = (
+        CheckConstraint("hour_utc >= 0 AND hour_utc <= 23", name="ck_sched_export_hour_range"),
+        CheckConstraint(
+            "frequency IN ('DAILY','WEEKLY','MONTHLY')", name="ck_sched_export_frequency"
+        ),
+        CheckConstraint("export_format IN ('CSV','JSON')", name="ck_sched_export_format"),
+        Index("ix_sched_export_due", "is_active", "next_run_at"),
+    )

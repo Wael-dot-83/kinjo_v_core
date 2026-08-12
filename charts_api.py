@@ -33,6 +33,10 @@ from charts.schemas import (
     TaskStatus,
 )
 from charts.service import ChartService
+from pydantic import BaseModel, EmailStr, Field, field_validator
+import models
+from admin_security import log_audit_event
+from audit_actions import AuditAction
 
 logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
@@ -361,3 +365,142 @@ def api_admin_charts_dashboard(request: Request) -> RedirectResponse:
     if query_string:
         dest += f"?{query_string}"
     return RedirectResponse(url=dest, status_code=status.HTTP_301_MOVED_PERMANENTLY)
+
+
+# =============================================================================
+# Scheduled exports
+# =============================================================================
+# The router already requires admin, so these inherit that. Schedules are
+# per-user: an admin only ever sees and deletes their own.
+
+class ScheduledExportIn(BaseModel):
+    source: str
+    chart_type: Optional[str] = None
+    date_preset: str = "last_30"
+    export_format: str = "CSV"
+    frequency: str = "WEEKLY"
+    hour_utc: int = Field(default=6, ge=0, le=23)
+    recipient_email: EmailStr
+    governorate: Optional[str] = None
+
+    @field_validator("frequency")
+    @classmethod
+    def _freq(cls, v: str) -> str:
+        if v not in {"DAILY", "WEEKLY", "MONTHLY"}:
+            raise ValueError("frequency must be DAILY, WEEKLY or MONTHLY")
+        return v
+
+    @field_validator("export_format")
+    @classmethod
+    def _fmt(cls, v: str) -> str:
+        if v not in {"CSV", "JSON"}:
+            raise ValueError("export_format must be CSV or JSON")
+        return v
+
+
+def _serialize_schedule(row: "models.ScheduledChartExport") -> Dict[str, Any]:
+    return {
+        "id": row.id,
+        "source": row.source,
+        "chart_type": row.chart_type,
+        "date_preset": row.date_preset,
+        "export_format": row.export_format,
+        "frequency": row.frequency,
+        "hour_utc": row.hour_utc,
+        "recipient_email": row.recipient_email,
+        "governorate": row.governorate,
+        "is_active": row.is_active,
+        "last_run_at": row.last_run_at.isoformat() if row.last_run_at else None,
+        "last_status": row.last_status,
+        "next_run_at": row.next_run_at.isoformat() if row.next_run_at else None,
+    }
+
+
+@router.get("/scheduled-exports")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def list_scheduled_exports(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin),
+) -> Dict[str, Any]:
+    rows = (
+        db.query(models.ScheduledChartExport)
+        .filter(models.ScheduledChartExport.user_id == current_user.id)
+        .order_by(models.ScheduledChartExport.id.desc())
+        .all()
+    )
+    return {"schedules": [_serialize_schedule(r) for r in rows]}
+
+
+@router.post("/scheduled-exports", status_code=status.HTTP_201_CREATED)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+def create_scheduled_export(
+    request: Request,
+    payload: ScheduledExportIn,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin),
+) -> Dict[str, Any]:
+    from chart_export_tasks import compute_next_run
+
+    row = models.ScheduledChartExport(
+        user_id=current_user.id,
+        source=payload.source,
+        chart_type=payload.chart_type,
+        date_preset=payload.date_preset,
+        export_format=payload.export_format,
+        frequency=payload.frequency,
+        hour_utc=payload.hour_utc,
+        recipient_email=str(payload.recipient_email),
+        governorate=payload.governorate,
+        is_active=True,
+        # Set at creation so the hourly sweep has something to compare against;
+        # a NULL next_run_at is never picked up.
+        next_run_at=compute_next_run(payload.frequency, payload.hour_utc),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    log_audit_event(
+        db,
+        action=AuditAction.SCHEDULED_EXPORT_CREATED,
+        actor=current_user,
+        target_type="scheduled_chart_export",
+        target_ids=row.id,
+        metadata={
+            "source": row.source,
+            "frequency": row.frequency,
+            "recipient_email": row.recipient_email,
+        },
+    )
+    return _serialize_schedule(row)
+
+
+@router.delete("/scheduled-exports/{schedule_id}")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+def delete_scheduled_export(
+    request: Request,
+    schedule_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin),
+) -> Dict[str, Any]:
+    row = (
+        db.query(models.ScheduledChartExport)
+        .filter(
+            models.ScheduledChartExport.id == schedule_id,
+            # Scoped to the owner so one admin cannot delete another's schedule.
+            models.ScheduledChartExport.user_id == current_user.id,
+        )
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Scheduled export not found")
+    db.delete(row)
+    db.commit()
+    log_audit_event(
+        db,
+        action=AuditAction.SCHEDULED_EXPORT_DELETED,
+        actor=current_user,
+        target_type="scheduled_chart_export",
+        target_ids=schedule_id,
+    )
+    return {"deleted": schedule_id}

@@ -19,7 +19,7 @@ celery_app = Celery(
     backend=settings.CELERY_RESULT_BACKEND,
     include=[
         "messaging_tasks", "charts.tasks", "backup_tasks", "import_tasks", "export_tasks",
-        "heatmap_tasks",
+        "heatmap_tasks", "chart_export_tasks",
     ],
 )
 
@@ -60,6 +60,13 @@ celery_app.conf.update(
         "cleanup-old-backups": {
             "task": "backup_tasks.cleanup_old_backups",
             "schedule": crontab(hour=settings.BACKUP_CLEANUP_HOUR, minute=0),
+        },
+        # Scheduled chart exports. Swept hourly rather than at fixed times so a
+        # schedule can pick any UTC hour without needing its own beat entry;
+        # each row carries its own next_run_at and is skipped until due.
+        "run-due-chart-exports": {
+            "task": "chart_export_tasks.run_due_exports",
+            "schedule": crontab(minute=5),
         },
     },
 )
