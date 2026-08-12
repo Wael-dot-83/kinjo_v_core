@@ -329,7 +329,11 @@ def seed(db, scale: str, dry_run: bool, kindergarten_override: int | None = None
                     phone_number=phone(),
                     gender=RNG.choice(["MALE", "FEMALE"]),
                     nationality="أردني",
-                    national_id=national_id(),
+                    # uq_parent_profiles_national_id: random 10-digit values
+                    # collide well before 16k parents. Deriving from the user id
+                    # is unique by construction, and the 8-prefix keeps it clear
+                    # of the 9-prefixed random values already in the table.
+                    national_id=f"8{parent_user.id:09d}",
                     home_governorate=kg.governorate or "العاصمة",
                     home_district=kg.district or "قصبة عمان",
                     home_area=kg.area or "تلاع العلي",
