@@ -90,7 +90,7 @@
       document.getElementById('detail-loading').classList.add('d-none');
       document.getElementById('detail-content').classList.remove('d-none');
 
-      document.getElementById('d-title').textContent = kg.name_ar || '—';
+      document.getElementById('d-title').textContent = (IS_EN && kg.name_en ? kg.name_en : kg.name_ar) || '—';
       document.getElementById('d-subtitle').textContent = [kg.governorate, kg.district].filter(Boolean).join(' — ');
       document.getElementById('d-status-badge').innerHTML = '<span class="kg-badge kg-badge--'+esc(kg.status||'inactive')+'">'+esc(STATUS[kg.status]||kg.status)+'</span>';
 
