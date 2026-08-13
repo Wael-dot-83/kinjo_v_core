@@ -19,14 +19,9 @@ from validators import validate_jordan_governorate
 from services.jordan_locations import get_all_governorates
 from admin_security import can_admin_access_user
 
-SUPPORTED_UI_LANGUAGES = {"ar", "en"}
-
-
 def normalize_ui_language(value: Optional[str]) -> str:
-    if not value:
-        return "ar"
-    normalized = str(value).strip().lower()
-    return normalized if normalized in SUPPORTED_UI_LANGUAGES else "ar"
+    """Keep every server-rendered page in the mandatory Arabic RTL UI."""
+    return "ar"
 
 
 _JORDAN_TZ = timezone(timedelta(hours=3))

@@ -40,8 +40,7 @@ from models import (
 logger = logging.getLogger(__name__)
 
 def _normalize_ui_language(value: Optional[str]) -> str:
-    normalized = (value or "ar").strip().lower()
-    return normalized if normalized in {"ar", "en"} else "ar"
+    return "ar"
 
 
 def _language_context_processor(request: Request) -> dict:

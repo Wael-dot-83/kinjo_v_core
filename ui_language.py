@@ -18,17 +18,16 @@ from fastapi import Response
 
 from config import settings
 
-SUPPORTED_UI_LANGUAGES = {"ar", "en"}
 DEFAULT_UI_LANGUAGE = "ar"
 
 
 def normalize_ui_language(value: Optional[str]) -> str:
-    normalized = str(value or DEFAULT_UI_LANGUAGE).strip().lower()
-    return normalized if normalized in SUPPORTED_UI_LANGUAGES else DEFAULT_UI_LANGUAGE
+    """Arabic is the mandatory site language and RTL is therefore universal."""
+    return DEFAULT_UI_LANGUAGE
 
 
 def set_ui_language_cookie(response: Response, language: Optional[str]) -> None:
-    """Write kinjo_lang so server-side rendering follows the user's choice."""
+    """Write the mandatory Arabic UI preference for every client."""
     response.set_cookie(
         key="kinjo_lang",
         value=normalize_ui_language(language),

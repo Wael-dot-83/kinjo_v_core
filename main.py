@@ -680,8 +680,7 @@ def _log_auth_event(
 
 
 def _normalize_ui_language(value: Optional[str]) -> str:
-    normalized = str(value or "ar").strip().lower()
-    return normalized if normalized in {"ar", "en"} else "ar"
+    return "ar"
 
 
 def _resolve_user_language(db: Session, user_id: int) -> str:
