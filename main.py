@@ -1561,13 +1561,18 @@ async def register(
 async def health_check(db: Session = Depends(get_db)):
     """Basic health check endpoint with DB connectivity verification"""
     try:
+        from importlib.metadata import version as _pkg_version
+        _version = _pkg_version("kinjo")
+    except Exception:
+        _version = "unknown"
+    try:
         from sqlalchemy import text
         db.execute(text("SELECT 1"))
-        return {"status": "healthy", "app": settings.APP_NAME, "version": "1.0.0"}
+        return {"status": "healthy", "app": settings.APP_NAME, "version": _version}
     except (SQLAlchemyError, RuntimeError):
         return JSONResponse(
             status_code=503,
-            content={"status": "unhealthy", "app": settings.APP_NAME, "version": "1.0.0"},
+            content={"status": "unhealthy", "app": settings.APP_NAME, "version": _version},
         )
 
 
