@@ -849,3 +849,113 @@ def test_the_page_text_names_the_denominator_the_code_uses():
     assert "حصة التقارير التي سجلت كل وجبة" not in tpl
     assert "count only the reports that recorded that meal" in tpl
     assert "تحتسب التقارير التي سجّلت تلك الوجبة فقط" in tpl
+
+
+# ─── New dimension filter + drill-down endpoint tests ─────────────────────────
+
+class TestChildrenEndpoint:
+    """GET /api/reports-analytics/children"""
+
+    def test_returns_children_with_last_report(self, dr_client, seeded_reports, dr_admin):
+        headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
+        resp = dr_client.get(
+            "/api/reports-analytics/children",
+            params={"date_from": "2026-02-01", "date_to": "2026-02-03"},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["pagination"]["total"] == 5
+        assert len(data["children"]) == 5
+        assert "last_report_date" in data["children"][0]
+        assert "last_report_status" in data["children"][0]
+
+    def test_empty_period_returns_empty(self, dr_client, seeded_reports, dr_admin):
+        headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
+        resp = dr_client.get(
+            "/api/reports-analytics/children",
+            params={"date_from": "2030-01-01", "date_to": "2030-01-05"},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["pagination"]["total"] == 0
+        assert data["children"] == []
+
+    def test_gender_filter(self, dr_client, seeded_reports, dr_admin):
+        headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
+        resp = dr_client.get(
+            "/api/reports-analytics/children",
+            params={"date_from": "2026-02-01", "date_to": "2026-02-03", "gender": "MALE"},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["pagination"]["total"] == 5
+        for c in data["children"]:
+            assert c["gender"] == "MALE"
+
+
+class TestChildDailyReportsEndpoint:
+    """GET /api/reports-analytics/children/{child_id}/daily-reports"""
+
+    def test_returns_paginated_reports(self, dr_client, seeded_reports, dr_admin):
+        child = seeded_reports[0][0]
+        headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
+        resp = dr_client.get(
+            f"/api/reports-analytics/children/{child.id}/daily-reports",
+            params={"date_from": "2026-02-01", "date_to": "2026-02-03"},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["child_id"] == child.id
+        assert len(data["reports"]) == 3
+        assert data["pagination"]["total"] == 3
+
+    def test_non_admin_forbidden(self, dr_client, seeded_reports, dr_manager):
+        child = seeded_reports[0][0]
+        headers = _auth_headers(dr_client, "dr_manager", "Manager123!")
+        resp = dr_client.get(
+            f"/api/reports-analytics/children/{child.id}/daily-reports",
+            params={"date_from": "2026-02-01", "date_to": "2026-02-03"},
+            headers=headers,
+        )
+        assert resp.status_code == 403
+
+    def test_health_notes_inaccessible_for_non_admin(self, dr_client, seeded_reports, dr_manager):
+        child = seeded_reports[0][0]
+        headers = _auth_headers(dr_client, "dr_manager", "Manager123!")
+        resp = dr_client.get(
+            f"/api/reports-analytics/children/{child.id}/daily-reports",
+            params={"date_from": "2026-02-01", "date_to": "2026-02-03"},
+            headers=headers,
+        )
+        assert resp.status_code == 403
+
+
+class TestAlertsEndpoint:
+    """GET /api/reports-analytics/alerts"""
+
+    def test_returns_empty_when_no_alerts(self, dr_client, seeded_reports, dr_admin):
+        headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
+        resp = dr_client.get(
+            "/api/reports-analytics/alerts",
+            params={"date_from": "2026-02-01", "date_to": "2026-02-03"},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "alerts" in data
+        assert "count" in data
+        assert data["count"] == len(data["alerts"])
+
+    def test_child_daily_reports_404_for_missing_child(self, dr_client, seeded_reports, dr_admin):
+        """Non-existent child_id returns 404, not 500."""
+        headers = _auth_headers(dr_client, "dr_admin", "Admin123!")
+        resp = dr_client.get(
+            "/api/reports-analytics/children/999999/daily-reports",
+            params={"date_from": "2026-02-01", "date_to": "2026-02-03"},
+            headers=headers,
+        )
+        assert resp.status_code == 404

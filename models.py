@@ -576,6 +576,7 @@ class Child(Base):
         UniqueConstraint("parent_id", "first_name", "last_name", "date_of_birth", name="uq_children_parent_name_dob"),
         Index("idx_child_dob", "date_of_birth"),
         Index("idx_child_parent_id", "parent_id"),
+        Index("ix_children_gender_dob", "gender", "date_of_birth"),
     )
 
     # Additional child fields
@@ -823,6 +824,7 @@ class AttendanceLog(Base):
         Index("ix_attendance_class_date", "class_id", "date"),
         Index("ix_attendance_recorded_by", "recorded_by"),
         Index("ix_attendance_child_date_status", "child_id", "date", "status"),
+        Index("ix_attendance_date_status", "date", "status"),
     )
 
     # Relationships
@@ -878,6 +880,8 @@ class DailyReport(Base):
         UniqueConstraint("kindergarten_id", "child_id", "date", name="uq_daily_report_kindergarten_child_date"),
         Index("ix_daily_reports_child_date", "child_id", "date"),
         Index("ix_daily_reports_kg_date_status", "kindergarten_id", "date", "status"),
+        Index("ix_daily_reports_class_date", "class_id", "date"),
+        Index("ix_daily_reports_mood", "mood"),
     )
 
     # Relationships
@@ -967,6 +971,7 @@ class Incident(Base):
         # selective. Keep the index — it is decisive for the narrow windows operators
         # actually drill into, and neutral on the engine that serves production.
         Index("ix_incidents_occurred_at", "occurred_at"),
+        Index("ix_incidents_child_occurred", "child_id", "occurred_at"),
     )
 
     # Relationships
