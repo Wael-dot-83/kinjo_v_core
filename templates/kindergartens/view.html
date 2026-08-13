@@ -2,1187 +2,1148 @@
 
 {% block title %}{{ kindergarten.name_en if ui_lang == 'en' and kindergarten.name_en else kindergarten.name_ar }}{% endblock %}
 
+{% block meta_description %}
+<meta name="description" content="{% if ui_lang == 'en' %}Detailed profile of {{ kindergarten.name_en or kindergarten.name_ar }} kindergarten in {{ kindergarten.governorate or 'Jordan' }} — KinJo National Platform{% else %}ملف تفصيلي لحضانة {{ kindergarten.name_ar }} في {{ kindergarten.governorate or 'الأردن' }} — منصة KinJo{% endif %}">
+{% endblock %}
+
 {% block extra_head %}
 {{ super() }}
-<link rel="stylesheet" href="/static/css/kindergarten_detail.css?v=2.0">
+<link rel="stylesheet" href="/static/css/kindergarten_detail.css?v=3.0">
 {% endblock %}
 
 {% block footer %}{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-2">
-    <!-- Hero Banner Card -->
-    <div class="kg-hero-card">
-        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
-            <div>
-                <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                    {% set status = kindergarten.status | lower %}
-                    {% if status == 'active' %}
-                    <span class="kg-status-badge active">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
-                    {% elif status == 'frozen' %}
-                    <span class="kg-status-badge frozen">{% if ui_lang == 'en' %}Frozen{% else %}مجمدة{% endif %}</span>
-                    {% elif status == 'suspended' %}
-                    <span class="kg-status-badge suspended">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}</span>
-                    {% elif status == 'pending' %}
-                    <span class="kg-status-badge pending">{% if ui_lang == 'en' %}Pending Review{% else %}قيد المراجعة{% endif %}</span>
-                    {% else %}
-                    <span class="kg-status-badge inactive">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
-                    {% endif %}
-                    
-                    <span class="badge bg-white bg-opacity-10 text-white font-monospace">ID #{{ kindergarten.id }}</span>
-                </div>
-                <h1 class="kg-hero-title mb-2">
-                    <i class="bi bi-buildings-fill" aria-hidden="true"></i>
-                    {{ kindergarten.name_en if ui_lang == 'en' and kindergarten.name_en else kindergarten.name_ar }}
-                </h1>
-                <div class="kg-hero-meta">
-                    <span class="kg-hero-meta-item">
-                        <i class="bi bi-geo-alt-fill text-info"></i>
-                        {{ kindergarten.governorate or ('N/A' if ui_lang == 'en' else 'غير محدد') }}
-                        {% if kindergarten.district %} — {{ kindergarten.district }}{% endif %}
-                    </span>
-                    <span class="kg-hero-meta-item">
-                        <i class="bi bi-telephone-fill text-success"></i>
-                        {{ kindergarten.contact_phone or ('N/A' if ui_lang == 'en' else 'غير متوفر') }}
-                    </span>
-                    <span class="kg-hero-meta-item">
-                        <i class="bi bi-envelope-fill text-warning"></i>
-                        {{ kindergarten.contact_email or ('N/A' if ui_lang == 'en' else 'غير متوفر') }}
-                    </span>
-                </div>
+<div class="container-fluid py-3" id="kgDetailPage">
+
+  <!-- ══ Breadcrumb ═══════════════════════════════════════════════════════ -->
+  <nav class="kg-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+    <a href="/dashboard"><i class="bi bi-house-fill me-1"></i>{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</a>
+    <span class="kg-breadcrumb-sep"><i class="bi bi-chevron-{{ 'right' if ui_lang == 'en' else 'left' }}"></i></span>
+    <a href="/kindergartens">{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}</a>
+    <span class="kg-breadcrumb-sep"><i class="bi bi-chevron-{{ 'right' if ui_lang == 'en' else 'left' }}"></i></span>
+    <span class="kg-breadcrumb-current">{{ kindergarten.name_en if ui_lang == 'en' and kindergarten.name_en else kindergarten.name_ar }}</span>
+  </nav>
+
+  <!-- ══ Hero Banner ══════════════════════════════════════════════════════ -->
+  <div class="kg-hero-card">
+    <div class="kg-hero-pattern" aria-hidden="true"></div>
+    <div class="kg-hero-inner">
+      <div class="kg-hero-header">
+
+        <!-- Left: Identity -->
+        <div>
+          <!-- Tags Row -->
+          <div class="kg-hero-tags">
+            {% set status = kindergarten.status | default('inactive') | lower %}
+            {% if status == 'active' %}
+              <span class="kg-status-badge active">
+                <i class="bi bi-check-circle-fill"></i>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}
+              </span>
+            {% elif status == 'frozen' %}
+              <span class="kg-status-badge frozen">
+                <i class="bi bi-snow"></i>{% if ui_lang == 'en' %}Frozen{% else %}مجمدة{% endif %}
+              </span>
+            {% elif status == 'suspended' %}
+              <span class="kg-status-badge suspended">
+                <i class="bi bi-slash-circle-fill"></i>{% if ui_lang == 'en' %}Suspended{% else %}موقوفة{% endif %}
+              </span>
+            {% elif status == 'pending' %}
+              <span class="kg-status-badge pending">
+                <i class="bi bi-clock-fill"></i>{% if ui_lang == 'en' %}Pending Review{% else %}قيد المراجعة{% endif %}
+              </span>
+            {% else %}
+              <span class="kg-status-badge inactive">
+                <i class="bi bi-dash-circle-fill"></i>{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}
+              </span>
+            {% endif %}
+            <span class="kg-id-tag"># {{ kindergarten.id }}</span>
+            {% if kindergarten.license_number %}
+            <span class="kg-id-tag"><i class="bi bi-card-checklist me-1"></i>{{ kindergarten.license_number }}</span>
+            {% endif %}
+          </div>
+
+          <!-- Name -->
+          <h1 class="kg-hero-title">
+            <i class="bi bi-buildings-fill" aria-hidden="true"></i>
+            {{ kindergarten.name_en if ui_lang == 'en' and kindergarten.name_en else kindergarten.name_ar }}
+          </h1>
+
+          <!-- Meta Info Row -->
+          <div class="kg-hero-meta">
+            <span class="kg-hero-meta-item">
+              <i class="bi bi-geo-alt-fill" style="color:#4ade80;"></i>
+              {{ kindergarten.governorate or ('Location N/A' if ui_lang == 'en' else 'المحافظة غير محددة') }}
+              {% if kindergarten.district %} &mdash; {{ kindergarten.district }}{% endif %}
+            </span>
+            {% if kindergarten.contact_phone %}
+            <span class="kg-hero-meta-item">
+              <i class="bi bi-telephone-fill" style="color:#60a5fa;"></i>
+              <a href="tel:{{ kindergarten.contact_phone }}" style="color:inherit;">{{ kindergarten.contact_phone }}</a>
+            </span>
+            {% endif %}
+            {% if kindergarten.contact_email %}
+            <span class="kg-hero-meta-item">
+              <i class="bi bi-envelope-fill" style="color:#fbbf24;"></i>
+              <a href="mailto:{{ kindergarten.contact_email }}" style="color:inherit;">{{ kindergarten.contact_email }}</a>
+            </span>
+            {% endif %}
+            {% if kindergarten.operating_hours_start or kindergarten.operating_hours_end %}
+            <span class="kg-hero-meta-item">
+              <i class="bi bi-clock-fill" style="color:#a78bfa;"></i>
+              {{ kindergarten.operating_hours_start or '07:30' }} &ndash; {{ kindergarten.operating_hours_end or '15:30' }}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Right: Actions -->
+        <div class="kg-hero-actions">
+          <a href="/kindergartens/{{ kindergarten.id }}/edit" class="btn kg-btn-primary-light">
+            <i class="bi bi-pencil-square me-1"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}
+          </a>
+          {% if current_user.role.name == 'ADMIN' %}
+          <button class="btn kg-btn-primary-light" onclick="toggleFreeze()" id="freezeBtn">
+            <i class="bi bi-snow me-1"></i>
+            <span id="freezeBtnLabel">
+              {% if kindergarten.status == 'frozen' %}
+                {% if ui_lang == 'en' %}Unfreeze{% else %}إلغاء التجميد{% endif %}
+              {% else %}
+                {% if ui_lang == 'en' %}Freeze{% else %}تجميد{% endif %}
+              {% endif %}
+            </span>
+          </button>
+          <button class="btn btn-outline-danger" id="deleteBtn" onclick="confirmDelete()" style="display:none; border-color:rgba(255,255,255,0.3); color:#fff;">
+            <i class="bi bi-trash me-1"></i>{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}
+          </button>
+          {% endif %}
+          <a href="/kindergartens" class="btn kg-btn-primary-light">
+            <i class="bi bi-arrow-{{ 'left' if ui_lang == 'en' else 'right' }} me-1"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Metric Strip ══════════════════════════════════════════════════════ -->
+  <div class="kg-metrics-grid" id="metricsGrid">
+
+    <div class="kg-metric-card mc-blue">
+      <div class="kg-metric-header">
+        <span class="kg-metric-title">{% if ui_lang == 'en' %}Total Classes{% else %}إجمالي الشعب{% endif %}</span>
+        <div class="kg-metric-icon mc-blue"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+      </div>
+      <div class="kg-metric-value" id="m-classes"><span class="kg-skeleton kg-skeleton-val"></span></div>
+      <div class="kg-metric-subtitle">{% if ui_lang == 'en' %}Active learning groups{% else %}شعب دراسية مفعّلة{% endif %}</div>
+    </div>
+
+    <div class="kg-metric-card mc-green">
+      <div class="kg-metric-header">
+        <span class="kg-metric-title">{% if ui_lang == 'en' %}Total Capacity{% else %}السعة الإجمالية{% endif %}</span>
+        <div class="kg-metric-icon mc-green"><i class="bi bi-people-fill"></i></div>
+      </div>
+      <div class="kg-metric-value" id="m-capacity"><span class="kg-skeleton kg-skeleton-val"></span></div>
+      <div class="kg-metric-subtitle">{% if ui_lang == 'en' %}Maximum enrollment seats{% else %}أقصى عدد مقاعد{% endif %}</div>
+    </div>
+
+    <div class="kg-metric-card mc-indigo">
+      <div class="kg-metric-header">
+        <span class="kg-metric-title">{% if ui_lang == 'en' %}Staff Members{% else %}الكادر الوظيفي{% endif %}</span>
+        <div class="kg-metric-icon mc-indigo"><i class="bi bi-person-badge-fill"></i></div>
+      </div>
+      <div class="kg-metric-value" id="m-staff"><span class="kg-skeleton kg-skeleton-val"></span></div>
+      <div class="kg-metric-subtitle">{% if ui_lang == 'en' %}Registered employees{% else %}موظفون مسجلون{% endif %}</div>
+    </div>
+
+    <div class="kg-metric-card mc-amber">
+      <div class="kg-metric-header">
+        <span class="kg-metric-title">{% if ui_lang == 'en' %}License Status{% else %}حالة الترخيص{% endif %}</span>
+        <div class="kg-metric-icon mc-amber"><i class="bi bi-award-fill"></i></div>
+      </div>
+      <div class="kg-metric-value" id="m-license">
+        {% if kindergarten.license_valid_until %}
+          <span style="font-size:1.1rem;">{{ kindergarten.license_valid_until | string | truncate(10, killwords=True, end='') }}</span>
+        {% else %}
+          <span style="font-size:1.25rem; color:#94a3b8;">—</span>
+        {% endif %}
+      </div>
+      <div class="kg-metric-subtitle">{% if ui_lang == 'en' %}License expiry date{% else %}تاريخ انتهاء الترخيص{% endif %}</div>
+    </div>
+
+    <div class="kg-metric-card mc-rose">
+      <div class="kg-metric-header">
+        <span class="kg-metric-title">{% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}</span>
+        <div class="kg-metric-icon mc-rose"><i class="bi bi-person-check-fill"></i></div>
+      </div>
+      <div class="kg-metric-value" id="m-supervisors"><span class="kg-skeleton kg-skeleton-val"></span></div>
+      <div class="kg-metric-subtitle">{% if ui_lang == 'en' %}Assigned class supervisors{% else %}مشرفون معينون للشعب{% endif %}</div>
+    </div>
+
+  </div>
+
+  <!-- ══ Tab Navigation ════════════════════════════════════════════════════ -->
+  <ul class="kg-nav-pills nav" id="kgTab" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-overview" data-bs-toggle="tab" data-bs-target="#panel-overview" type="button" role="tab" aria-selected="true">
+        <i class="bi bi-info-circle-fill"></i>
+        {% if ui_lang == 'en' %}Overview{% else %}النظرة العامة{% endif %}
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-classes" data-bs-toggle="tab" data-bs-target="#panel-classes" type="button" role="tab" aria-selected="false">
+        <i class="bi bi-journal-bookmark-fill"></i>
+        {% if ui_lang == 'en' %}Classes{% else %}الشعب الصفية{% endif %}
+        <span class="kg-tab-badge" id="badge-classes">—</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-staff" data-bs-toggle="tab" data-bs-target="#panel-staff" type="button" role="tab" aria-selected="false">
+        <i class="bi bi-people-fill"></i>
+        {% if ui_lang == 'en' %}Staff Roster{% else %}الكادر الوظيفي{% endif %}
+        <span class="kg-tab-badge" id="badge-staff">—</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-audit" data-bs-toggle="tab" data-bs-target="#panel-audit" type="button" role="tab" aria-selected="false">
+        <i class="bi bi-clock-history"></i>
+        {% if ui_lang == 'en' %}Activity Log{% else %}سجل النشاط{% endif %}
+      </button>
+    </li>
+  </ul>
+
+  <!-- ══ Tab Content ═══════════════════════════════════════════════════════ -->
+  <div class="tab-content" id="kgTabContent">
+
+    <!-- ── Overview Panel ──────────────────────────────────────────────── -->
+    <div class="tab-pane fade show active" id="panel-overview" role="tabpanel">
+      <div class="row g-4">
+
+        <!-- Basic Info Card -->
+        <div class="col-lg-6">
+          <div class="kg-detail-card">
+            <div class="kg-detail-card-header">
+              <h5 class="kg-detail-card-title">
+                <i class="bi bi-building text-primary"></i>
+                {% if ui_lang == 'en' %}Kindergarten Details{% else %}بيانات الحضانة الأساسية{% endif %}
+              </h5>
             </div>
-            <div class="kg-hero-actions">
-                <a href="/kindergartens/{{ kindergarten.id }}/edit" class="btn btn-primary">
-                    <i class="bi bi-pencil-square me-1"></i>{% if ui_lang == 'en' %}Edit Record{% else %}تعديل السجل{% endif %}
-                </a>
-                {% if current_user.role.name == 'ADMIN' %}
-                <button class="btn btn-info text-white" onclick="toggleFreeze()" id="freezeBtn">
-                    <i class="bi bi-snow me-1"></i><span id="freezeBtnLabel">{% if ui_lang == 'en' %}Freeze{% else %}تجميد{% endif %}</span>
-                </button>
-                <button class="btn btn-outline-danger text-white border-white border-opacity-50" onclick="confirmDelete()" id="deleteBtn" style="display: none;">
-                    <i class="bi bi-trash me-1"></i>{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}
-                </button>
+            <div class="kg-detail-card-body">
+              <div class="kg-info-list">
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Name (Arabic){% else %}الاسم باللغة العربية{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.name_ar or '—' }}</span>
+                </div>
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Name (English){% else %}الاسم باللغة الإنجليزية{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.name_en or '—' }}</span>
+                </div>
+                {% if kindergarten.legal_name %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Legal Name{% else %}الاسم القانوني الرسمي{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.legal_name }}</span>
+                </div>
                 {% endif %}
-                <a href="/kindergartens" class="btn btn-outline-light">
-                    <i class="bi bi-arrow-{{ 'left' if ui_lang == 'en' else 'right' }} me-1"></i>{% if ui_lang == 'en' %}Back to List{% else %}العودة للقائمة{% endif %}
-                </a>
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}License Number{% else %}رقم الترخيص{% endif %}</span>
+                  <span class="kg-info-value">
+                    <i class="bi bi-card-checklist text-primary"></i>
+                    {{ kindergarten.license_number or '—' }}
+                  </span>
+                </div>
+                {% if kindergarten.license_valid_until %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}License Expiry{% else %}تاريخ انتهاء الترخيص{% endif %}</span>
+                  <span class="kg-info-value">
+                    <i class="bi bi-calendar-event text-warning"></i>
+                    {{ kindergarten.license_valid_until | string | truncate(10, killwords=True, end='') }}
+                  </span>
+                </div>
+                {% endif %}
+                {% if kindergarten.type %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Kindergarten Type{% else %}نوع الحضانة{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.type }}</span>
+                </div>
+                {% endif %}
+                {% if kindergarten.ownership_type %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Ownership Type{% else %}نوع الملكية{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.ownership_type }}</span>
+                </div>
+                {% endif %}
+              </div>
             </div>
+          </div>
         </div>
+
+        <!-- Location & Contact Card -->
+        <div class="col-lg-6">
+          <div class="kg-detail-card">
+            <div class="kg-detail-card-header">
+              <h5 class="kg-detail-card-title">
+                <i class="bi bi-geo-alt-fill text-danger"></i>
+                {% if ui_lang == 'en' %}Location & Contact{% else %}الموقع ومعلومات التواصل{% endif %}
+              </h5>
+            </div>
+            <div class="kg-detail-card-body">
+              <div class="kg-info-list">
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</span>
+                  <span class="kg-info-value">
+                    <i class="bi bi-map text-secondary"></i>
+                    {{ kindergarten.governorate or '—' }}
+                  </span>
+                </div>
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}District & Area{% else %}اللواء والمنطقة{% endif %}</span>
+                  <span class="kg-info-value">
+                    {{ kindergarten.district or '' }}{% if kindergarten.district and kindergarten.area %} — {% endif %}{{ kindergarten.area or '—' }}
+                  </span>
+                </div>
+                {% if kindergarten.address_line %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Street Address{% else %}العنوان التفصيلي{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.address_line }}</span>
+                </div>
+                {% endif %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Phone Number{% else %}رقم الهاتف{% endif %}</span>
+                  <span class="kg-info-value">
+                    <i class="bi bi-telephone-fill text-success"></i>
+                    {% if kindergarten.contact_phone %}
+                    <a href="tel:{{ kindergarten.contact_phone }}">{{ kindergarten.contact_phone }}</a>
+                    {% else %}—{% endif %}
+                  </span>
+                </div>
+                {% if kindergarten.mobile %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Mobile{% else %}رقم الجوال{% endif %}</span>
+                  <span class="kg-info-value">
+                    <i class="bi bi-phone-fill text-success"></i>
+                    <a href="tel:{{ kindergarten.mobile }}">{{ kindergarten.mobile }}</a>
+                  </span>
+                </div>
+                {% endif %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Email Address{% else %}البريد الإلكتروني{% endif %}</span>
+                  <span class="kg-info-value">
+                    <i class="bi bi-envelope-at-fill text-primary"></i>
+                    {% if kindergarten.contact_email %}
+                    <a href="mailto:{{ kindergarten.contact_email }}">{{ kindergarten.contact_email }}</a>
+                    {% else %}—{% endif %}
+                  </span>
+                </div>
+                {% if kindergarten.website %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Website{% else %}الموقع الإلكتروني{% endif %}</span>
+                  <span class="kg-info-value">
+                    <i class="bi bi-globe2 text-info"></i>
+                    <a href="{{ kindergarten.website }}" target="_blank" rel="noopener">{{ kindergarten.website }}</a>
+                  </span>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Management Card -->
+        {% if kindergarten.manager_name or kindergarten.owner_name %}
+        <div class="col-lg-6">
+          <div class="kg-detail-card">
+            <div class="kg-detail-card-header">
+              <h5 class="kg-detail-card-title">
+                <i class="bi bi-person-workspace text-indigo"></i>
+                {% if ui_lang == 'en' %}Management & Ownership{% else %}الإدارة والملكية{% endif %}
+              </h5>
+            </div>
+            <div class="kg-detail-card-body">
+              <div class="kg-info-list">
+                {% if kindergarten.manager_name %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Manager Name{% else %}اسم المدير{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.manager_name }}</span>
+                </div>
+                {% endif %}
+                {% if kindergarten.manager_phone %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Manager Phone{% else %}هاتف المدير{% endif %}</span>
+                  <span class="kg-info-value"><a href="tel:{{ kindergarten.manager_phone }}">{{ kindergarten.manager_phone }}</a></span>
+                </div>
+                {% endif %}
+                {% if kindergarten.manager_email %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Manager Email{% else %}بريد المدير{% endif %}</span>
+                  <span class="kg-info-value"><a href="mailto:{{ kindergarten.manager_email }}">{{ kindergarten.manager_email }}</a></span>
+                </div>
+                {% endif %}
+                {% if kindergarten.owner_name %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Owner{% else %}المالك{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.owner_name }}</span>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Operations Card -->
+        <div class="col-lg-6">
+          <div class="kg-detail-card">
+            <div class="kg-detail-card-header">
+              <h5 class="kg-detail-card-title">
+                <i class="bi bi-gear-fill text-secondary"></i>
+                {% if ui_lang == 'en' %}Operational Details{% else %}التفاصيل التشغيلية{% endif %}
+              </h5>
+            </div>
+            <div class="kg-detail-card-body">
+              <div class="kg-info-list">
+                {% if kindergarten.age_group %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Age Group{% else %}الفئة العمرية المقبولة{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.age_group }}</span>
+                </div>
+                {% endif %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Operating Hours{% else %}ساعات العمل{% endif %}</span>
+                  <span class="kg-info-value">
+                    <i class="bi bi-clock text-primary"></i>
+                    {{ kindergarten.operating_hours_start or kindergarten.working_hours_start or '07:30' }}
+                    &ndash;
+                    {{ kindergarten.operating_hours_end or kindergarten.working_hours_end or '15:30' }}
+                  </span>
+                </div>
+                {% if kindergarten.working_days %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Working Days{% else %}أيام الدوام{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.working_days }}</span>
+                </div>
+                {% endif %}
+                {% if kindergarten.registration_fees %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Registration Fees{% else %}رسوم التسجيل{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.registration_fees }} {% if ui_lang == 'en' %}JOD{% else %}دينار{% endif %}</span>
+                </div>
+                {% endif %}
+                {% if kindergarten.monthly_fees %}
+                <div class="kg-info-item">
+                  <span class="kg-info-label">{% if ui_lang == 'en' %}Monthly Fees{% else %}الرسوم الشهرية{% endif %}</span>
+                  <span class="kg-info-value">{{ kindergarten.monthly_fees }} {% if ui_lang == 'en' %}JOD{% else %}دينار{% endif %}</span>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
 
-    <!-- Metrics Grid Ticker -->
-    <div class="kg-metrics-grid">
-        <div class="kg-metric-card">
-            <div class="kg-metric-header">
-                <span class="kg-metric-title">{% if ui_lang == 'en' %}Classes Count{% else %}عدد الشعب الصفية{% endif %}</span>
-                <div class="kg-metric-icon blue"><i class="bi bi-door-open-fill"></i></div>
-            </div>
-            <div class="kg-metric-value" id="metric-classes-count">-</div>
-            <div class="kg-metric-subtitle">{% if ui_lang == 'en' %}Active learning groups{% else %}شعب دراسية نشطة{% endif %}</div>
+    <!-- ── Classes Panel ────────────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="panel-classes" role="tabpanel">
+      <div class="kg-detail-card">
+        <div class="kg-detail-card-header">
+          <h5 class="kg-detail-card-title">
+            <i class="bi bi-journal-bookmark-fill text-primary"></i>
+            {% if ui_lang == 'en' %}Classes & Capacity{% else %}الشعب الصفية والسعة{% endif %}
+          </h5>
+          <button class="btn btn-primary btn-sm" onclick="addClass()">
+            <i class="bi bi-plus-circle me-1"></i>{% if ui_lang == 'en' %}Add Class{% else %}إضافة شعبة{% endif %}
+          </button>
         </div>
-
-        <div class="kg-metric-card">
-            <div class="kg-metric-header">
-                <span class="kg-metric-title">{% if ui_lang == 'en' %}Occupancy Rate{% else %}نسبة الإشغال{% endif %}</span>
-                <div class="kg-metric-icon green"><i class="bi bi-pie-chart-fill"></i></div>
-            </div>
-            <div class="kg-metric-value">85%</div>
-            <div class="kg-metric-subtitle">{% if ui_lang == 'en' %}Capacity utilization{% else %}استغلال السعة الإجمالية{% endif %}</div>
+        <div class="kg-detail-card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>{% if ui_lang == 'en' %}Class Name{% else %}اسم الشعبة{% endif %}</th>
+                  <th>{% if ui_lang == 'en' %}Age Stage{% else %}المرحلة العمرية{% endif %}</th>
+                  <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                  <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                  <th>{% if ui_lang == 'en' %}Supervisor{% else %}المشرف{% endif %}</th>
+                  <th class="text-end">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                </tr>
+              </thead>
+              <tbody id="classesTable">
+                <tr>
+                  <td colspan="6" class="py-4">
+                    <div class="kg-skeleton kg-skeleton-row mb-2"></div>
+                    <div class="kg-skeleton kg-skeleton-row mb-2"></div>
+                    <div class="kg-skeleton kg-skeleton-row" style="width:70%;"></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-
-        <div class="kg-metric-card">
-            <div class="kg-metric-header">
-                <span class="kg-metric-title">{% if ui_lang == 'en' %}Staff Members{% else %}الكادر التعليمي والاداري{% endif %}</span>
-                <div class="kg-metric-icon purple"><i class="bi bi-people-fill"></i></div>
-            </div>
-            <div class="kg-metric-value" id="metric-staff-count">-</div>
-            <div class="kg-metric-subtitle">{% if ui_lang == 'en' %}Registered staff{% else %}موظفون مسجلون{% endif %}</div>
-        </div>
-
-        <div class="kg-metric-card">
-            <div class="kg-metric-header">
-                <span class="kg-metric-title">{% if ui_lang == 'en' %}Governance Rating{% else %}تقييم الحوكمة{% endif %}</span>
-                <div class="kg-metric-icon amber"><i class="bi bi-award-fill"></i></div>
-            </div>
-            <div class="kg-metric-value">92<span class="fs-6 text-muted">/100</span></div>
-            <div class="kg-metric-subtitle">{% if ui_lang == 'en' %}Compliance score{% else %}مستوى الالتزام بالمعايير{% endif %}</div>
-        </div>
-
-        <div class="kg-metric-card">
-            <div class="kg-metric-header">
-                <span class="kg-metric-title">{% if ui_lang == 'en' %}Parent Satisfaction{% else %}رضا أولياء الأمور{% endif %}</span>
-                <div class="kg-metric-icon rose"><i class="bi bi-heart-fill"></i></div>
-            </div>
-            <div class="kg-metric-value">4.8<span class="fs-6 text-muted">/5</span></div>
-            <div class="kg-metric-subtitle">{% if ui_lang == 'en' %}Based on evaluations{% else %}بناءً على التقييمات{% endif %}</div>
-        </div>
+      </div>
     </div>
 
-    <!-- Main Navigation Tabs -->
-    <ul class="kg-nav-pills nav" id="kgTab" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview-panel" type="button" role="tab">
-                <i class="bi bi-info-circle-fill"></i>
-                {% if ui_lang == 'en' %}Overview & Details{% else %}النظرة العامة والتفاصيل{% endif %}
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="classes-tab" data-bs-toggle="tab" data-bs-target="#classes-panel" type="button" role="tab">
-                <i class="bi bi-grid-3x3-gap-fill"></i>
-                {% if ui_lang == 'en' %}Classes & Capacity{% else %}الشعب الصفية والسعة{% endif %}
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="staff-tab" data-bs-toggle="tab" data-bs-target="#staff-panel" type="button" role="tab">
-                <i class="bi bi-person-badge-fill"></i>
-                {% if ui_lang == 'en' %}Staff Roster{% else %}كادر الحضانة{% endif %}
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit-panel" type="button" role="tab">
-                <i class="bi bi-journal-text"></i>
-                {% if ui_lang == 'en' %}Operations Log{% else %}سجل العمليات والنشاط{% endif %}
-            </button>
-        </li>
-    </ul>
-
-    <!-- Tab Content Panels -->
-    <div class="tab-content" id="kgTabContent">
-        <!-- Overview Panel -->
-        <div class="tab-pane fade show active" id="overview-panel" role="tabpanel">
-            <div class="row g-4">
-                <div class="col-lg-6">
-                    <div class="kg-detail-card">
-                        <div class="kg-detail-card-header">
-                            <h5 class="kg-detail-card-title">
-                                <i class="bi bi-building text-primary"></i>
-                                {% if ui_lang == 'en' %}Basic Information{% else %}المعلومات الأساسية{% endif %}
-                            </h5>
-                        </div>
-                        <div class="kg-detail-card-body">
-                            <div class="kg-info-list">
-                                <div class="kg-info-item">
-                                    <span class="kg-info-label">{% if ui_lang == 'en' %}Arabic Name{% else %}الاسم بالعربية{% endif %}</span>
-                                    <span class="kg-info-value">{{ kindergarten.name_ar }}</span>
-                                </div>
-                                <div class="kg-info-item">
-                                    <span class="kg-info-label">{% if ui_lang == 'en' %}English Name{% else %}الاسم بالإنجليزية{% endif %}</span>
-                                    <span class="kg-info-value">{{ kindergarten.name_en or ('N/A' if ui_lang == 'en' else 'غير متوفر') }}</span>
-                                </div>
-                                <div class="kg-info-item">
-                                    <span class="kg-info-label">{% if ui_lang == 'en' %}License Number{% else %}رقم الترخيص{% endif %}</span>
-                                    <span class="kg-info-value">
-                                        <i class="bi bi-card-checklist text-primary"></i>
-                                        {{ kindergarten.license_number or ('N/A' if ui_lang == 'en' else 'غير متوفر') }}
-                                    </span>
-                                </div>
-                                {% if kindergarten.license_valid_until %}
-                                <div class="kg-info-item">
-                                    <span class="kg-info-label">{% if ui_lang == 'en' %}License Expiry Date{% else %}تاريخ انتهاء الترخيص{% endif %}</span>
-                                    <span class="kg-info-value text-muted">
-                                        <i class="bi bi-calendar-event text-warning"></i>
-                                        {{ kindergarten.license_valid_until }}
-                                    </span>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-6">
-                    <div class="kg-detail-card">
-                        <div class="kg-detail-card-header">
-                            <h5 class="kg-detail-card-title">
-                                <i class="bi bi-geo-alt-fill text-danger"></i>
-                                {% if ui_lang == 'en' %}Location & Contact{% else %}الموقع ومعلومات التواصل{% endif %}
-                            </h5>
-                        </div>
-                        <div class="kg-detail-card-body">
-                            <div class="kg-info-list">
-                                <div class="kg-info-item">
-                                    <span class="kg-info-label">{% if ui_lang == 'en' %}Governorate & District{% else %}المحافظة واللواء{% endif %}</span>
-                                    <span class="kg-info-value">
-                                        {{ kindergarten.governorate or ('N/A' if ui_lang == 'en' else 'غير محدد') }}
-                                        {% if kindergarten.district %} — {{ kindergarten.district }}{% endif %}
-                                    </span>
-                                </div>
-                                <div class="kg-info-item">
-                                    <span class="kg-info-label">{% if ui_lang == 'en' %}Area & Address Line{% else %}المنطقة والعنوان التفصيلي{% endif %}</span>
-                                    <span class="kg-info-value text-muted">
-                                        {{ kindergarten.area or '' }} {{ kindergarten.address_line or ('N/A' if ui_lang == 'en' else 'غير متوفر') }}
-                                    </span>
-                                </div>
-                                <div class="kg-info-item">
-                                    <span class="kg-info-label">{% if ui_lang == 'en' %}Phone Contact{% else %}رقم الهاتف{% endif %}</span>
-                                    <span class="kg-info-value">
-                                        <i class="bi bi-telephone-outbound text-success"></i>
-                                        <a href="tel:{{ kindergarten.contact_phone }}" class="text-decoration-none fw-bold">
-                                            {{ kindergarten.contact_phone or ('N/A' if ui_lang == 'en' else 'غير متوفر') }}
-                                        </a>
-                                    </span>
-                                </div>
-                                <div class="kg-info-item">
-                                    <span class="kg-info-label">{% if ui_lang == 'en' %}Email Address{% else %}البريد الإلكتروني{% endif %}</span>
-                                    <span class="kg-info-value">
-                                        <i class="bi bi-envelope-at text-primary"></i>
-                                        <a href="mailto:{{ kindergarten.contact_email }}" class="text-decoration-none fw-bold">
-                                            {{ kindergarten.contact_email or ('N/A' if ui_lang == 'en' else 'غير متوفر') }}
-                                        </a>
-                                    </span>
-                                </div>
-                                <div class="kg-info-item">
-                                    <span class="kg-info-label">{% if ui_lang == 'en' %}Operating Hours{% else %}ساعات العمل اليومية{% endif %}</span>
-                                    <span class="kg-info-value">
-                                        <i class="bi bi-clock-history text-info"></i>
-                                        {{ kindergarten.operating_hours_start or '07:30' }} - {{ kindergarten.operating_hours_end or '15:30' }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- ── Staff Panel ──────────────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="panel-staff" role="tabpanel">
+      <div class="kg-detail-card">
+        <div class="kg-detail-card-header">
+          <h5 class="kg-detail-card-title">
+            <i class="bi bi-people-fill" style="color:var(--kj-indigo);"></i>
+            {% if ui_lang == 'en' %}Administrative & Teaching Staff{% else %}الكادر الإداري والتعليمي{% endif %}
+          </h5>
+          <button class="btn btn-primary btn-sm" onclick="addStaff()">
+            <i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}Add Member{% else %}إضافة موظف{% endif %}
+          </button>
         </div>
-
-        <!-- Classes Panel -->
-        <div class="tab-pane fade" id="classes-panel" role="tabpanel">
-            <div class="kg-detail-card">
-                <div class="kg-detail-card-header">
-                    <h5 class="kg-detail-card-title">
-                        <i class="bi bi-journal-bookmark-fill text-primary"></i>
-                        {% if ui_lang == 'en' %}Classes & Capacity Overview{% else %}جدول الشعب الصفية والسعة{% endif %}
-                    </h5>
-                    <button class="btn btn-primary btn-sm" onclick="addClass()">
-                        <i class="bi bi-plus-circle me-1"></i>{% if ui_lang == 'en' %}Add New Class{% else %}إضافة شعبة صفية{% endif %}
-                    </button>
-                </div>
-                <div class="kg-detail-card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>{% if ui_lang == 'en' %}Class Name{% else %}اسم الشعبة{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Age Stage{% else %}المرحلة العمرية{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة الاستيعابية{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Supervisor{% else %}المشرف المسؤول{% endif %}</th>
-                                    <th class="text-end">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
-                                </tr>
-                            </thead>
-                            <tbody id="classesTable">
-                                <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted">
-                                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                                        {% if ui_lang == 'en' %}Loading classes...{% else %}جارٍ تحميل الشعب الصفية...{% endif %}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+        <div class="kg-detail-card-body p-0" id="staffContainer">
+          <div class="p-4">
+            <div class="kg-skeleton kg-skeleton-row mb-2"></div>
+            <div class="kg-skeleton kg-skeleton-row mb-2"></div>
+            <div class="kg-skeleton kg-skeleton-row" style="width:60%;"></div>
+          </div>
         </div>
-
-        <!-- Staff Panel -->
-        <div class="tab-pane fade" id="staff-panel" role="tabpanel">
-            <div class="kg-detail-card">
-                <div class="kg-detail-card-header">
-                    <h5 class="kg-detail-card-title">
-                        <i class="bi bi-people-fill text-purple"></i>
-                        {% if ui_lang == 'en' %}Administrative & Teaching Staff{% else %}سجل الكادر الإداري والتعليمي{% endif %}
-                    </h5>
-                    <button class="btn btn-primary btn-sm" onclick="addStaff()">
-                        <i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}Add Staff Member{% else %}إضافة موظف جديد{% endif %}
-                    </button>
-                </div>
-                <div class="kg-detail-card-body p-0" id="staff-container">
-                    <div class="text-center py-4 text-muted">
-                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                        {% if ui_lang == 'en' %}Loading staff roster...{% else %}جارٍ تحميل سجل الموظفين...{% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Audit Panel -->
-        <div class="tab-pane fade" id="audit-panel" role="tabpanel">
-            <div class="kg-detail-card">
-                <div class="kg-detail-card-header">
-                    <h5 class="kg-detail-card-title">
-                        <i class="bi bi-clock-history text-secondary"></i>
-                        {% if ui_lang == 'en' %}Operations & Audit Log{% else %}سجل العمليات والنشاط{% endif %}
-                    </h5>
-                </div>
-                <div class="kg-detail-card-body">
-                    <div class="alert alert-light border text-center my-3 text-muted">
-                        <i class="bi bi-shield-check text-primary fs-3 d-block mb-2"></i>
-                        {% if ui_lang == 'en' %}All record modifications and administrative actions are logged securely.{% else %}جميع التعديلات والعمليات الإدارية مسجلة بأمان وفقاً لسياسات التدقيق.{% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+
+    <!-- ── Audit Panel ──────────────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="panel-audit" role="tabpanel">
+      <div class="kg-detail-card">
+        <div class="kg-detail-card-header">
+          <h5 class="kg-detail-card-title">
+            <i class="bi bi-shield-check text-success"></i>
+            {% if ui_lang == 'en' %}Operations & Audit Log{% else %}سجل العمليات والتدقيق{% endif %}
+          </h5>
+        </div>
+        <div class="kg-detail-card-body">
+          <div class="alert alert-light border text-center py-4 text-muted">
+            <i class="bi bi-shield-lock text-primary" style="font-size:2.5rem;display:block;margin-bottom:0.75rem;opacity:0.5;"></i>
+            {% if ui_lang == 'en' %}
+              All record modifications and administrative actions are logged securely in compliance with audit policy.
+            {% else %}
+              جميع التعديلات والعمليات الإدارية مسجلة بشكل آمن وفقاً لسياسة التدقيق المعتمدة.
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<!-- Add Class Modal -->
+<!-- ══ Toast Stack ══════════════════════════════════════════════════════════ -->
+<div class="kg-toast-stack" id="kgToastStack" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ══ Add Class Modal ══════════════════════════════════════════════════════ -->
 <div class="modal fade" id="addClassModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{% if ui_lang == 'en' %}Add New Class{% else %}إضافة شعبة صفية جديدة{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addClassForm">
-                    <div class="mb-3">
-                        <label class="form-label required" for="add_class_name">{% if ui_lang == 'en' %}Class Name{% else %}اسم الشعبة{% endif %}</label>
-                        <input type="text" class="form-control" id="add_class_name" name="name" required placeholder="{% if ui_lang == 'en' %}e.g. Butterflies Class{% else %}مثال: شعبة الفراشات{% endif %}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label required" for="add_class_level">{% if ui_lang == 'en' %}Stage / Level{% else %}المرحلة التعليمية{% endif %}</label>
-                        <select class="form-select" id="add_class_level" name="level">
-                            <option value="kg1">{% if ui_lang == 'en' %}KG1 (Group 1 - Age 3-4){% else %}روضة أولى (المجموعة 1 - 3-4 سنوات){% endif %}</option>
-                            <option value="kg2">{% if ui_lang == 'en' %}KG2 (Group 2 - Age 4-5){% else %}روضة ثانية (المجموعة 2 - 4-5 سنوات){% endif %}</option>
-                            <option value="nursery">{% if ui_lang == 'en' %}Nursery (Age 0-3){% else %}حضانة (0-3 سنوات){% endif %}</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label required" for="add_class_capacity">{% if ui_lang == 'en' %}Maximum Capacity{% else %}السعة القصوى{% endif %}</label>
-                        <input type="number" class="form-control" id="add_class_capacity" name="capacity" value="20" min="1" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button" class="btn btn-primary" onclick="submitClass()">{% if ui_lang == 'en' %}Save Class{% else %}حفظ الشعبة{% endif %}</button>
-            </div>
-        </div>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0" style="border-radius:16px; box-shadow:0 24px 48px rgba(0,0,0,0.12);">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">{% if ui_lang == 'en' %}Add New Class{% else %}إضافة شعبة صفية جديدة{% endif %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="addClassForm">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="add_class_name">{% if ui_lang == 'en' %}Class Name{% else %}اسم الشعبة{% endif %} <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="add_class_name" name="name" required
+                   placeholder="{% if ui_lang == 'en' %}e.g. Butterflies Class{% else %}مثال: شعبة الفراشات{% endif %}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="add_class_level">{% if ui_lang == 'en' %}Level / Stage{% else %}المستوى الدراسي{% endif %} <span class="text-danger">*</span></label>
+            <select class="form-select" id="add_class_level" name="level">
+              <option value="nursery">{% if ui_lang == 'en' %}Nursery (0–3 yrs){% else %}حضانة (0–3 سنوات){% endif %}</option>
+              <option value="kg1" selected>{% if ui_lang == 'en' %}KG1 — Group 1 (3–4 yrs){% else %}روضة أولى — المجموعة الأولى (3–4 سنوات){% endif %}</option>
+              <option value="kg2">{% if ui_lang == 'en' %}KG2 — Group 2 (4–5 yrs){% else %}روضة ثانية — المجموعة الثانية (4–5 سنوات){% endif %}</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="add_class_capacity">{% if ui_lang == 'en' %}Maximum Capacity{% else %}السعة القصوى{% endif %} <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="add_class_capacity" name="capacity" value="20" min="1" max="60" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+        <button type="button" class="btn btn-primary px-4" onclick="submitClass()">{% if ui_lang == 'en' %}Save Class{% else %}حفظ الشعبة{% endif %}</button>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- Assign Supervisor Modal -->
-<div class="modal fade" id="assignSupervisorModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{% if ui_lang == 'en' %}Assign Class Supervisor{% else %}تعيين مشرف للشعبة{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
-            </div>
-            <div class="modal-body">
-                <form id="assignSupervisorForm">
-                    <input type="hidden" name="class_id">
-                    <div class="mb-3">
-                        <label class="form-label" for="assign_class_name">{% if ui_lang == 'en' %}Target Class{% else %}الشعبة الصفية المستهدفة{% endif %}</label>
-                        <input type="text" class="form-control" id="assign_class_name" name="class_name" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label required" for="assign_supervisor_id">{% if ui_lang == 'en' %}Supervisor{% else %}المشرف{% endif %}</label>
-                        <select class="form-select" id="assign_supervisor_id" name="supervisor_id" required>
-                            <option value="">{% if ui_lang == 'en' %}Select supervisor...{% else %}اختر مشرفاً...{% endif %}</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label required" for="assign_start_date">{% if ui_lang == 'en' %}Start Date{% else %}تاريخ البدء{% endif %}</label>
-                        <input type="date" class="form-control" id="assign_start_date" name="start_date" required>
-                    </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="assign_is_primary" name="is_primary" checked>
-                        <label class="form-check-label" for="assign_is_primary">{% if ui_lang == 'en' %}Primary Supervisor{% else %}مشرف رئيسي{% endif %}</label>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button" class="btn btn-primary" onclick="submitSupervisorAssignment()">{% if ui_lang == 'en' %}Save Assignment{% else %}حفظ التعيين{% endif %}</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Class Modal -->
+<!-- ══ Edit Class Modal ══════════════════════════════════════════════════════ -->
 <div class="modal fade" id="editClassModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{% if ui_lang == 'en' %}Edit Class Details{% else %}تعديل بيانات الشعبة الصفية{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0" style="border-radius:16px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">{% if ui_lang == 'en' %}Edit Class{% else %}تعديل بيانات الشعبة{% endif %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="editClassForm">
+          <input type="hidden" name="class_id">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Arabic Name{% else %}الاسم بالعربية{% endif %} <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="name_ar" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% if ui_lang == 'en' %}English Name{% else %}الاسم بالإنجليزية{% endif %}</label>
+            <input type="text" class="form-control" name="name_en">
+          </div>
+          <div class="row g-3">
+            <div class="col-4">
+              <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</label>
+              <input type="number" class="form-control" name="capacity_total" min="1" required>
             </div>
-            <div class="modal-body">
-                <form id="editClassForm">
-                    <input type="hidden" name="class_id">
-                    <div class="mb-3">
-                        <label class="form-label required" for="edit_class_name_ar">{% if ui_lang == 'en' %}Class Name (Arabic){% else %}اسم الشعبة بالعربية{% endif %}</label>
-                        <input type="text" class="form-control" id="edit_class_name_ar" name="name_ar" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="edit_class_name_en">{% if ui_lang == 'en' %}Class Name (English){% else %}اسم الشعبة بالإنجليزية{% endif %}</label>
-                        <input type="text" class="form-control" id="edit_class_name_en" name="name_en">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label required" for="edit_class_capacity">{% if ui_lang == 'en' %}Maximum Capacity{% else %}السعة القصوى{% endif %}</label>
-                        <input type="number" class="form-control" id="edit_class_capacity" name="capacity_total" min="1" required>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label required" for="edit_class_min_age">{% if ui_lang == 'en' %}Minimum Age (months){% else %}العمر الأدنى (بالأشهر){% endif %}</label>
-                            <input type="number" class="form-control" id="edit_class_min_age" name="min_age_months" min="0" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label required" for="edit_class_max_age">{% if ui_lang == 'en' %}Maximum Age (months){% else %}العمر الأقصى (بالأشهر){% endif %}</label>
-                            <input type="number" class="form-control" id="edit_class_max_age" name="max_age_months" min="0" required>
-                        </div>
-                    </div>
-                </form>
+            <div class="col-4">
+              <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Min Age (mo){% else %}الحد الأدنى{% endif %}</label>
+              <input type="number" class="form-control" name="min_age_months" min="0" required>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button" class="btn btn-primary" onclick="submitEditClass()">{% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}</button>
+            <div class="col-4">
+              <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Max Age (mo){% else %}الحد الأقصى{% endif %}</label>
+              <input type="number" class="form-control" name="max_age_months" min="0" required>
             </div>
-        </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+        <button type="button" class="btn btn-primary px-4" onclick="submitEditClass()">{% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}</button>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- Edit Staff Modal -->
-<div class="modal fade" id="editStaffModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{% if ui_lang == 'en' %}Edit Staff Member{% else %}تعديل بيانات الموظف{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editStaffForm">
-                    <input type="hidden" name="staff_id">
-                    <div class="mb-3">
-                        <label class="form-label required" for="edit_staff_username">{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</label>
-                        <input type="text" class="form-control" id="edit_staff_username" name="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label required" for="edit_staff_email">{% if ui_lang == 'en' %}Email Address{% else %}البريد الإلكتروني{% endif %}</label>
-                        <input type="email" class="form-control" id="edit_staff_email" name="email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label required" for="edit_staff_role">{% if ui_lang == 'en' %}Role{% else %}الدور الوظيفي{% endif %}</label>
-                        <select class="form-select" id="edit_staff_role" name="role" required>
-                            <option value="TEACHER">{% if ui_lang == 'en' %}Teacher{% else %}معلم{% endif %}</option>
-                            <option value="SUPERVISOR">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
-                            <option value="MANAGER">{% if ui_lang == 'en' %}Manager{% else %}مدير{% endif %}</option>
-                            <option value="ADMIN">{% if ui_lang == 'en' %}System Admin{% else %}مدير نظام{% endif %}</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label required" for="edit_staff_status">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
-                        <select class="form-select" id="edit_staff_status" name="status" required>
-                            <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
-                            <option value="INACTIVE">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button" class="btn btn-primary" onclick="submitEditStaff()">{% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}</button>
-            </div>
-        </div>
+<!-- ══ Assign Supervisor Modal ══════════════════════════════════════════════ -->
+<div class="modal fade" id="assignSupervisorModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0" style="border-radius:16px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">{% if ui_lang == 'en' %}Assign Supervisor{% else %}تعيين مشرف للشعبة{% endif %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="assignSupervisorForm">
+          <input type="hidden" name="class_id">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Class{% else %}الشعبة{% endif %}</label>
+            <input type="text" class="form-control bg-light" name="class_name" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Supervisor{% else %}المشرف{% endif %} <span class="text-danger">*</span></label>
+            <select class="form-select" name="supervisor_id" required id="supSelect">
+              <option value="">{% if ui_lang == 'en' %}Select supervisor...{% else %}اختر مشرفاً...{% endif %}</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Start Date{% else %}تاريخ البدء{% endif %} <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" name="start_date" required>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_primary" id="isPrimaryChk" checked>
+            <label class="form-check-label" for="isPrimaryChk">{% if ui_lang == 'en' %}Primary Supervisor{% else %}مشرف رئيسي{% endif %}</label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+        <button type="button" class="btn btn-primary px-4" onclick="submitSupervisorAssignment()">{% if ui_lang == 'en' %}Assign{% else %}تعيين{% endif %}</button>
+      </div>
     </div>
+  </div>
+</div>
+
+<!-- ══ Edit Staff Modal ══════════════════════════════════════════════════════ -->
+<div class="modal fade" id="editStaffModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0" style="border-radius:16px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">{% if ui_lang == 'en' %}Edit Staff Member{% else %}تعديل بيانات الموظف{% endif %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="editStaffForm">
+          <input type="hidden" name="staff_id">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</label>
+            <input type="text" class="form-control" name="username" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label>
+            <input type="email" class="form-control" name="email" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Role{% else %}الدور الوظيفي{% endif %}</label>
+              <select class="form-select" name="role">
+                <option value="TEACHER">{% if ui_lang == 'en' %}Teacher{% else %}معلم{% endif %}</option>
+                <option value="SUPERVISOR">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
+                <option value="MANAGER">{% if ui_lang == 'en' %}Manager{% else %}مدير{% endif %}</option>
+                <option value="ADMIN">{% if ui_lang == 'en' %}System Admin{% else %}مدير نظام{% endif %}</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+              <select class="form-select" name="status">
+                <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+                <option value="INACTIVE">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+        <button type="button" class="btn btn-primary px-4" onclick="submitEditStaff()">{% if ui_lang == 'en' %}Save{% else %}حفظ{% endif %}</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    const kindergartenId = JSON.parse('{{ kindergarten.id | tojson }}');
-    const IS_EN = document.documentElement.lang === 'en';
-    const T = (ar, en) => IS_EN ? en : ar;
-    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+(function () {
+  'use strict';
 
-    function getHeaders() {
-        return { 'Content-Type': 'application/json' };
+  /* ── Constants ─────────────────────────────────────────────────────────── */
+  const KG_ID  = {{ kindergarten.id | tojson }};
+  const IS_EN  = document.documentElement.lang === 'en';
+  const T      = (ar, en) => IS_EN ? en : ar;
+  const esc    = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  /* ── Toast ──────────────────────────────────────────────────────────────── */
+  function showToast(msg, type = 'success') {
+    const stack = document.getElementById('kgToastStack');
+    const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' };
+    const div   = document.createElement('div');
+    div.className = `kg-toast ${type}`;
+    div.innerHTML = `<i class="bi ${icons[type] || icons.info} kg-toast-icon"></i><span>${esc(msg)}</span>`;
+    stack.appendChild(div);
+    setTimeout(() => div.remove(), 4000);
+  }
+
+  /* ── API headers ────────────────────────────────────────────────────────── */
+  function hdrs() { return { 'Content-Type': 'application/json' }; }
+
+  /* ── State ──────────────────────────────────────────────────────────────── */
+  let loadedStaff = [];
+  let supervisorAssignedMap = {};
+
+  /* ── Initialise ─────────────────────────────────────────────────────────── */
+  document.addEventListener('DOMContentLoaded', async () => {
+    const [classData, staffData] = await Promise.all([loadClasses(), loadStaff()]);
+    checkDeleteVisible();
+  });
+
+  /* ── Load Classes ───────────────────────────────────────────────────────── */
+  async function loadClasses() {
+    try {
+      const res  = await fetch(`/api/classes?kindergarten_id=${KG_ID}`, { headers: hdrs() });
+      if (!res.ok) throw new Error('classes_api_error');
+      const data = await res.json();
+      const list = data.classes || [];
+
+      // Update metrics
+      setMetric('m-classes', list.length);
+      document.getElementById('badge-classes').textContent = list.length;
+      const totalCap = list.reduce((s, c) => s + (c.capacity_total || 0), 0);
+      setMetric('m-capacity', totalCap || '—');
+
+      // Build supervisor map
+      supervisorAssignedMap = {};
+      list.forEach(c => {
+        if (c.current_supervisor) {
+          supervisorAssignedMap[c.current_supervisor.id] = { classId: c.id, className: c.name_ar || c.name_en || '' };
+        }
+      });
+
+      // Render table
+      const tbody = document.getElementById('classesTable');
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="kg-empty-state"><i class="bi bi-journal-x"></i><p>${T('لا توجد شعب صفية مسجلة بعد', 'No classes registered yet')}</p></div></td></tr>`;
+        return list;
+      }
+
+      tbody.innerHTML = list.map(c => {
+        const name      = IS_EN && c.name_en ? esc(c.name_en) : esc(c.name_ar || c.name_en || '');
+        const altName   = IS_EN && c.name_ar ? `<div class="small text-muted">${esc(c.name_ar)}</div>` : '';
+        const ageLabel  = fmtAge(c.min_age_months, c.max_age_months);
+        const supBadge  = c.current_supervisor
+          ? `<span class="badge" style="background:rgba(16,185,129,0.1);color:#047857;border:1px solid rgba(16,185,129,0.2);">
+               <i class="bi bi-person-check me-1"></i>${esc(c.current_supervisor.name)}
+             </span>`
+          : `<span class="badge" style="background:#f1f5f9;color:#64748b;">—</span>`;
+        const statusBadge = c.is_active
+          ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">${T('نشطة','Active')}</span>`
+          : `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">${T('معطلة','Inactive')}</span>`;
+        return `
+          <tr>
+            <td><div class="fw-semibold">${name}</div>${altName}</td>
+            <td><span class="badge" style="background:rgba(99,102,241,0.1);color:#4f46e5;border:1px solid rgba(99,102,241,0.2);">${ageLabel}</span></td>
+            <td><span class="fw-bold">${c.capacity_total}</span> <span class="text-muted small">${T('مقعد','seats')}</span></td>
+            <td>${statusBadge}</td>
+            <td>${supBadge}</td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary" title="${T('تعيين مشرف','Assign Supervisor')}"
+                  onclick="openAssignModal(${c.id},${JSON.stringify(c.name_ar||c.name_en||'')},${c.current_supervisor?c.current_supervisor.id:'null'})">
+                  <i class="bi bi-person-plus"></i>
+                </button>
+                <button class="btn btn-outline-secondary" title="${T('تعديل','Edit')}"
+                  onclick="editClass(${c.id},${JSON.stringify(c.name_ar||'')},${JSON.stringify(c.name_en||'')},${c.capacity_total},${c.min_age_months},${c.max_age_months})">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                ${c.is_active
+                  ? `<button class="btn btn-outline-warning" title="${T('تعطيل','Deactivate')}" onclick="deactivateClass(${c.id},${JSON.stringify(c.name_ar||c.name_en||'')})"><i class="bi bi-pause-circle"></i></button>`
+                  : `<button class="btn btn-outline-success" title="${T('تفعيل','Activate')}" onclick="reactivateClass(${c.id})"><i class="bi bi-play-circle"></i></button>`}
+                <button class="btn btn-outline-danger" title="${T('حذف','Delete')}"
+                  onclick="deleteClass(${c.id},${JSON.stringify(c.name_ar||c.name_en||'')})">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+      return list;
+    } catch (e) {
+      document.getElementById('classesTable').innerHTML =
+        `<tr><td colspan="6" class="text-center text-danger py-3">${T('تعذر تحميل الشعب الصفية', 'Failed to load classes')}</td></tr>`;
+      setMetric('m-classes', '—');
+      setMetric('m-capacity', '—');
+      return [];
     }
+  }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        await Promise.all([loadClasses(), loadStaff()]);
-        await checkDeletePermissions();
+  /* ── Load Staff ─────────────────────────────────────────────────────────── */
+  async function loadStaff() {
+    try {
+      const res  = await fetch(`/api/users?kindergarten_id=${KG_ID}`, { headers: hdrs() });
+      if (!res.ok) throw new Error('staff_api_error');
+      loadedStaff = await res.json();
+
+      // Metrics
+      setMetric('m-staff', loadedStaff.length);
+      document.getElementById('badge-staff').textContent = loadedStaff.length;
+      const supCount = loadedStaff.filter(u => u.role === 'SUPERVISOR' && u.status === 'ACTIVE').length;
+      setMetric('m-supervisors', supCount);
+
+      const container = document.getElementById('staffContainer');
+      if (!loadedStaff.length) {
+        container.innerHTML = `<div class="kg-empty-state"><i class="bi bi-people"></i><p>${T('لا يوجد موظفون مسجلون','No staff registered yet')}</p></div>`;
+        return loadedStaff;
+      }
+
+      const avatarColors = ['mc-blue','mc-green','mc-indigo','mc-amber','mc-rose'];
+      const roleLabel = r => ({
+        ADMIN: T('مدير النظام','System Admin'),
+        MANAGER: T('مدير الحضانة','Manager'),
+        SUPERVISOR: T('مشرف','Supervisor'),
+        TEACHER: T('معلم','Teacher'),
+        PARENT: T('ولي أمر','Parent')
+      }[r] || r);
+
+      const statusBadge = s => s === 'ACTIVE'
+        ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 small">${T('نشط','Active')}</span>`
+        : `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 small">${T('غير نشط','Inactive')}</span>`;
+
+      container.innerHTML = `
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>${T('الموظف','Staff Member')}</th>
+                <th>${T('الدور','Role')}</th>
+                <th>${T('البريد الإلكتروني','Email')}</th>
+                <th>${T('الحالة','Status')}</th>
+                <th class="text-end">${T('الإجراءات','Actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${loadedStaff.map((u, i) => {
+                const color = avatarColors[i % avatarColors.length];
+                const initial = esc((u.username || 'U')[0].toUpperCase());
+                return `
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="kg-avatar ${color}">${initial}</div>
+                      <span class="fw-semibold">${esc(u.username)}</span>
+                    </div>
+                  </td>
+                  <td><span class="badge bg-light text-dark border small fw-semibold">${roleLabel(u.role)}</span></td>
+                  <td><a href="mailto:${esc(u.email)}" class="text-decoration-none small">${esc(u.email)}</a></td>
+                  <td>${statusBadge(u.status)}</td>
+                  <td class="text-end">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-secondary" title="${T('تعديل','Edit')}"
+                        onclick="editStaff(${u.id},${JSON.stringify(u.username)},${JSON.stringify(u.email)},${JSON.stringify(u.role)},${JSON.stringify(u.status)})">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      ${u.status === 'ACTIVE'
+                        ? `<button class="btn btn-outline-warning" title="${T('تعطيل','Deactivate')}" onclick="toggleStaff(${u.id},'INACTIVE',${JSON.stringify(u.username)})"><i class="bi bi-pause-circle"></i></button>`
+                        : `<button class="btn btn-outline-success" title="${T('تفعيل','Activate')}" onclick="toggleStaff(${u.id},'ACTIVE',${JSON.stringify(u.username)})"><i class="bi bi-play-circle"></i></button>`}
+                      <button class="btn btn-outline-info" title="${T('إعادة تعيين كلمة المرور','Reset Password')}"
+                        onclick="resetPassword(${u.id},${JSON.stringify(u.username)})">
+                        <i class="bi bi-key"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" title="${T('حذف','Delete')}"
+                        onclick="removeStaff(${u.id},${JSON.stringify(u.username)})">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      return loadedStaff;
+    } catch (e) {
+      document.getElementById('staffContainer').innerHTML =
+        `<div class="p-4 text-center text-danger">${T('تعذر تحميل الكادر الوظيفي','Failed to load staff')}</div>`;
+      setMetric('m-staff', '—');
+      setMetric('m-supervisors', '—');
+      return [];
+    }
+  }
+
+  /* ── Metric Helper ──────────────────────────────────────────────────────── */
+  function setMetric(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = val;
+    el.style.animation = 'none';
+    el.offsetHeight; // reflow
+    el.style.animation = '';
+  }
+
+  /* ── Age Format ─────────────────────────────────────────────────────────── */
+  function fmtAge(min, max) {
+    if (min === 0 && max <= 36) return T('حضانة (0–3 سنوات)', 'Nursery (0–3 yrs)');
+    if (min >= 36 && max <= 48) return T('روضة أولى (3–4 سنوات)', 'KG1 (3–4 yrs)');
+    if (min >= 48) return T('روضة ثانية (4–5 سنوات)', 'KG2 (4–5 yrs)');
+    return `${min}–${max} ${T('شهر', 'mo')}`;
+  }
+
+  /* ── Delete visibility ─────────────────────────────────────────────────── */
+  function checkDeleteVisible() {
+    const isAdmin = "{{ 'true' if current_user.role.name == 'ADMIN' else 'false' }}";
+    if (isAdmin !== 'true') return;
+    const activeClasses = parseInt(document.getElementById('m-classes')?.textContent || '1');
+    const totalStaff    = parseInt(document.getElementById('m-staff')?.textContent   || '1');
+    const btn = document.getElementById('deleteBtn');
+    if (btn && activeClasses === 0 && totalStaff === 0) btn.style.display = 'inline-block';
+  }
+
+  /* ── Class Actions ──────────────────────────────────────────────────────── */
+  window.addClass = () => new bootstrap.Modal(document.getElementById('addClassModal')).show();
+
+  window.submitClass = async () => {
+    const form  = document.getElementById('addClassForm');
+    const level = form.elements['level'].value;
+    const ageMap = { nursery:[0,36], kg1:[36,48], kg2:[48,60] };
+    const [minAge, maxAge] = ageMap[level] || [36,48];
+    const payload = {
+      kindergarten_id: KG_ID,
+      name_ar: form.elements['name'].value,
+      name_en: form.elements['name'].value,
+      capacity_total: parseInt(form.elements['capacity'].value),
+      min_age_months: minAge, max_age_months: maxAge, is_active: true
+    };
+    try {
+      const res = await fetch('/api/classes', { method:'POST', headers:hdrs(), body:JSON.stringify(payload) });
+      if (res.ok) {
+        showToast(T('تم إضافة الشعبة بنجاح','Class added successfully'));
+        bootstrap.Modal.getInstance(document.getElementById('addClassModal')).hide();
+        form.reset();
+        loadClasses();
+      } else { const e=await res.json(); showToast(e.detail||T('فشل الحفظ','Save failed'),'error'); }
+    } catch { showToast(T('خطأ في الاتصال','Connection error'),'error'); }
+  };
+
+  window.editClass = (id,nameAr,nameEn,cap,minA,maxA) => {
+    const f = document.getElementById('editClassForm');
+    f.elements['class_id'].value     = id;
+    f.elements['name_ar'].value      = nameAr;
+    f.elements['name_en'].value      = nameEn;
+    f.elements['capacity_total'].value = cap;
+    f.elements['min_age_months'].value = minA;
+    f.elements['max_age_months'].value = maxA;
+    new bootstrap.Modal(document.getElementById('editClassModal')).show();
+  };
+
+  window.submitEditClass = async () => {
+    const f  = document.getElementById('editClassForm');
+    const id = f.elements['class_id'].value;
+    const payload = {
+      name_ar: f.elements['name_ar'].value, name_en: f.elements['name_en'].value||null,
+      capacity_total: parseInt(f.elements['capacity_total'].value),
+      min_age_months: parseInt(f.elements['min_age_months'].value),
+      max_age_months: parseInt(f.elements['max_age_months'].value)
+    };
+    try {
+      const res = await fetch(`/api/classes/${id}`, { method:'PUT', headers:hdrs(), body:JSON.stringify(payload) });
+      if (res.ok) {
+        showToast(T('تم تحديث الشعبة','Class updated'));
+        bootstrap.Modal.getInstance(document.getElementById('editClassModal')).hide();
+        loadClasses();
+      } else { const e=await res.json(); showToast(e.detail||T('فشل التحديث','Update failed'),'error'); }
+    } catch { showToast(T('خطأ في الاتصال','Connection error'),'error'); }
+  };
+
+  window.deactivateClass = async (id, name) => {
+    if (!confirm(T(`إلغاء تفعيل الشعبة "${name}"؟`, `Deactivate class "${name}"?`))) return;
+    const res = await fetch(`/api/classes/${id}/deactivate`, { method:'PUT', headers:hdrs() });
+    const j   = await res.json();
+    showToast(j.message || T('تم إلغاء التفعيل','Deactivated'), res.ok?'success':'error');
+    if (res.ok) loadClasses();
+  };
+
+  window.reactivateClass = async (id) => {
+    const res = await fetch(`/api/classes/${id}`, { method:'PUT', headers:hdrs(), body:JSON.stringify({is_active:true}) });
+    const j   = await res.json();
+    showToast(j.message || T('تم إعادة التفعيل','Reactivated'), res.ok?'success':'error');
+    if (res.ok) loadClasses();
+  };
+
+  window.deleteClass = async (id, name) => {
+    if (!confirm(T(`حذف الشعبة "${name}" نهائياً؟ لا يمكن التراجع.`, `Permanently delete class "${name}"? This cannot be undone.`))) return;
+    const res = await fetch(`/api/classes/${id}`, { method:'DELETE', headers:hdrs() });
+    const j   = await res.json();
+    showToast(j.message || T('تم الحذف','Deleted'), res.ok?'success':'error');
+    if (res.ok) loadClasses();
+  };
+
+  /* ── Assign Supervisor ──────────────────────────────────────────────────── */
+  let _assignModal;
+  window.openAssignModal = (classId, className, currentSupId) => {
+    if (!_assignModal) _assignModal = new bootstrap.Modal(document.getElementById('assignSupervisorModal'));
+    const f   = document.getElementById('assignSupervisorForm');
+    f.elements['class_id'].value  = classId;
+    f.elements['class_name'].value = className;
+    f.elements['start_date'].valueAsDate = new Date();
+    const sel = document.getElementById('supSelect');
+    sel.innerHTML = `<option value="">${T('اختر مشرفاً...','Select supervisor...')}</option>`;
+    loadedStaff.filter(u => u.role === 'SUPERVISOR').forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.id;
+      const assigned = supervisorAssignedMap[u.id];
+      opt.textContent = `${u.username}${assigned && assigned.classId !== classId ? ` (${T('محول','assigned')})` : ''}`;
+      if (assigned && assigned.classId !== classId) opt.disabled = true;
+      if (u.id === currentSupId) opt.selected = true;
+      sel.appendChild(opt);
     });
+    _assignModal.show();
+  };
 
-    async function checkDeletePermissions() {
-        try {
-            const classesRes = await fetch(`/api/classes?kindergarten_id=${kindergartenId}`, { headers: getHeaders() });
-            const classes = classesRes.ok ? (await classesRes.json()).classes || [] : [];
-            const activeClasses = classes.filter(c => c.is_active).length;
+  window.submitSupervisorAssignment = async () => {
+    const f = document.getElementById('assignSupervisorForm');
+    if (!f.checkValidity()) { f.reportValidity(); return; }
+    const payload = {
+      class_id: parseInt(f.elements['class_id'].value),
+      supervisor_id: parseInt(f.elements['supervisor_id'].value),
+      start_date: f.elements['start_date'].value,
+      is_primary: f.elements['is_primary'].checked
+    };
+    try {
+      const res = await fetch('/api/supervisor/assign', { method:'POST', headers:hdrs(), body:JSON.stringify(payload) });
+      if (res.ok) {
+        showToast(T('تم تعيين المشرف بنجاح','Supervisor assigned'));
+        _assignModal.hide();
+        loadClasses();
+      } else { const e=await res.json(); showToast(e.detail||T('فشل التعيين','Assignment failed'),'error'); }
+    } catch { showToast(T('خطأ','Error'),'error'); }
+  };
 
-            const staffRes = await fetch('/api/users', { headers: getHeaders() });
-            const users = staffRes.ok ? (await staffRes.json()).users || [] : [];
-            const activeStaff = users.filter(u => u.kindergarten_id === kindergartenId && u.status === 'ACTIVE').length;
+  /* ── Staff Actions ──────────────────────────────────────────────────────── */
+  window.addStaff = () => { window.location.href = `/admin/users/create?kindergarten_id=${KG_ID}`; };
 
-            const hasDependencies = activeClasses > 0 || activeStaff > 0;
-            const isAdmin = "{{ 'true' if current_user.role.name == 'ADMIN' else 'false' }}";
-            const deleteBtn = document.getElementById('deleteBtn');
-            if (deleteBtn) {
-                deleteBtn.style.display = (!hasDependencies && isAdmin === 'true') ? 'inline-block' : 'none';
-            }
-        } catch (error) {
-            console.error('Error checking permissions:', error);
-        }
+  window.editStaff = (id, username, email, role, status) => {
+    const f = document.getElementById('editStaffForm');
+    f.elements['staff_id'].value = id;
+    f.elements['username'].value = username;
+    f.elements['email'].value    = email;
+    f.elements['role'].value     = role;
+    f.elements['status'].value   = status;
+    new bootstrap.Modal(document.getElementById('editStaffModal')).show();
+  };
+
+  window.submitEditStaff = async () => {
+    const f  = document.getElementById('editStaffForm');
+    const id = f.elements['staff_id'].value;
+    const payload = { username:f.elements['username'].value, email:f.elements['email'].value,
+                      role:f.elements['role'].value, status:f.elements['status'].value };
+    try {
+      const res = await fetch(`/api/users/${id}`, { method:'PUT', headers:hdrs(), body:JSON.stringify(payload) });
+      if (res.ok) {
+        showToast(T('تم تحديث الموظف','Staff updated'));
+        bootstrap.Modal.getInstance(document.getElementById('editStaffModal')).hide();
+        loadStaff();
+      } else { const e=await res.json(); showToast(e.detail||T('فشل التحديث','Update failed'),'error'); }
+    } catch { showToast(T('خطأ','Error'),'error'); }
+  };
+
+  window.toggleStaff = async (id, newStatus, username) => {
+    const msg = newStatus === 'INACTIVE'
+      ? T(`تعطيل الموظف "${username}"؟`,`Deactivate "${username}"?`)
+      : T(`تفعيل الموظف "${username}"؟`,`Activate "${username}"?`);
+    if (!confirm(msg)) return;
+    const res = await fetch(`/api/users/${id}`, { method:'PUT', headers:hdrs(), body:JSON.stringify({status:newStatus}) });
+    const j   = await res.json();
+    showToast(j.message || T('تم تحديث الحالة','Status updated'), res.ok?'success':'error');
+    if (res.ok) loadStaff();
+  };
+
+  window.removeStaff = async (id, username) => {
+    if (!confirm(T(`حذف الموظف "${username}" نهائياً؟`,`Permanently delete "${username}"?`))) return;
+    const res = await fetch(`/api/users/${id}`, { method:'DELETE', headers:hdrs() });
+    const j   = await res.json();
+    showToast(j.message || T('تم الحذف','Deleted'), res.ok?'success':'error');
+    if (res.ok) loadStaff();
+  };
+
+  window.resetPassword = async (id, username) => {
+    if (!confirm(T(`إعادة تعيين كلمة مرور "${username}"؟`,`Reset password for "${username}"?`))) return;
+    const res = await fetch(`/api/users/${id}/admin-reset-password`, { method:'POST', headers:hdrs() });
+    const j   = await res.json();
+    showToast(j.message || T('تم إعادة تعيين كلمة المرور','Password reset'), res.ok?'success':'error');
+  };
+
+  /* ── Freeze / Delete KG ─────────────────────────────────────────────────── */
+  window.toggleFreeze = async () => {
+    const isFrozen = "{{ kindergarten.status }}" === 'frozen';
+    const btn = document.getElementById('freezeBtn');
+    if (btn) btn.disabled = true;
+    try {
+      if (isFrozen) {
+        if (!confirm(T('إلغاء تجميد هذه الحضانة؟','Unfreeze this kindergarten?'))) { if(btn) btn.disabled=false; return; }
+        await window.api?.unfreezeKindergarten?.(KG_ID);
+        showToast(T('تم إلغاء التجميد','Unfrozen successfully'));
+      } else {
+        const reason = prompt(T('سبب التجميد (اختياري):','Freeze reason (optional):'));
+        if (reason === null) { if(btn) btn.disabled=false; return; }
+        await window.api?.freezeKindergarten?.(KG_ID, reason);
+        showToast(T('تم تجميد الحضانة','Kindergarten frozen'));
+      }
+      setTimeout(() => location.reload(), 1400);
+    } catch (err) {
+      if (btn) btn.disabled = false;
+      showToast(err.message || T('تعذر تنفيذ العملية','Operation failed'), 'error');
     }
-
-    let loadedStaff = [];
-    let assignedSupervisorMap = {};
-
-    async function loadClasses() {
-        try {
-            const response = await fetch(`/api/classes?kindergarten_id=${kindergartenId}`, {
-                headers: getHeaders()
-            });
-
-            if (!response.ok) throw new Error(T('تعذر تحميل الفصول', 'Failed to load classes'));
-
-            const data = await response.json();
-            const classes = data.classes || [];
-            
-            document.getElementById('metric-classes-count').textContent = classes.length;
-
-            assignedSupervisorMap = {};
-            classes.forEach(c => {
-                if (c.current_supervisor) {
-                    assignedSupervisorMap[c.current_supervisor.id] = {
-                        id: c.id,
-                        name: c.name_ar || c.name_en || c.current_supervisor.name
-                    };
-                }
-            });
-
-            const tbody = document.getElementById('classesTable');
-
-            if (classes.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${T('لا توجد شعب صفية مسجلة حالياً', 'No classes registered currently')}</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = classes.map(c => {
-                const cNameAr = c.name_ar || c.name_en || '';
-                const cNameEn = c.name_en || '';
-                const displayName = IS_EN && cNameEn ? cNameEn : cNameAr;
-                const cNameArJ = JSON.stringify(cNameAr);
-                const cNameEnJ = JSON.stringify(cNameEn);
-                const supName  = c.current_supervisor ? esc(c.current_supervisor.name) : '';
-                const supId    = c.current_supervisor ? c.current_supervisor.id : 'null';
-                return `
-                <tr>
-                    <td>
-                        <div class="fw-bold text-dark">${esc(displayName)}</div>
-                        ${IS_EN && cNameAr ? `<div class="small text-muted">${esc(cNameAr)}</div>` : ''}
-                    </td>
-                    <td><span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">${formatAgeRange(c.min_age_months, c.max_age_months)}</span></td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fw-bold">${c.capacity_total}</span>
-                            <span class="small text-muted">${T('مقعد', 'seats')}</span>
-                        </div>
-                    </td>
-                    <td>${c.current_supervisor ?
-                        `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"><i class="bi bi-person-check me-1"></i>${supName}</span>` :
-                        `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">${T('غير معين', 'Unassigned')}</span>`}
-                    </td>
-                    <td class="text-end">
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button class="btn btn-outline-primary"
-                                    onclick="openAssignSupervisorModal(${c.id}, ${cNameArJ}, ${supId})"
-                                    title="${T('تعيين مشرف', 'Assign Supervisor')}">
-                                <i class="bi bi-person-plus"></i>
-                            </button>
-                            <button class="btn btn-outline-secondary"
-                                    onclick="editClass(${c.id}, ${cNameArJ}, ${cNameEnJ}, ${c.capacity_total}, ${c.min_age_months}, ${c.max_age_months})"
-                                    title="${T('تعديل', 'Edit')}">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            ${c.is_active ?
-                                `<button class="btn btn-outline-warning"
-                                        onclick="confirmDeactivateClass(${c.id}, ${cNameArJ})"
-                                        title="${T('إلغاء التفعيل', 'Deactivate')}">
-                                    <i class="bi bi-pause-circle"></i>
-                                </button>` :
-                                `<button class="btn btn-outline-success"
-                                        onclick="reactivateClass(${c.id}, ${cNameArJ})"
-                                        title="${T('إعادة التفعيل', 'Reactivate')}">
-                                    <i class="bi bi-play-circle"></i>
-                                </button>`
-                            }
-                            <button class="btn btn-outline-danger"
-                                    onclick="confirmDeleteClass(${c.id}, ${cNameArJ})"
-                                    title="${T('حذف', 'Delete')}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>`;
-            }).join('');
-
-        } catch (error) {
-            console.error('Error:', error);
-            document.getElementById('classesTable').innerHTML =
-                `<tr><td colspan="5" class="text-center text-danger py-4">${T('خطأ في تحميل البيانات', 'Error loading data')}</td></tr>`;
-        }
-    }
-
-    async function loadStaff() {
-        try {
-            const response = await fetch(`/api/users?kindergarten_id=${kindergartenId}`, {
-                headers: getHeaders()
-            });
-
-            if (!response.ok) return;
-
-            loadedStaff = await response.json();
-            document.getElementById('metric-staff-count').textContent = loadedStaff.length;
-            const container = document.getElementById('staff-container');
-
-            if (loadedStaff.length === 0) {
-                container.innerHTML = `
-                    <div class="alert alert-light text-center border m-3">${T('لا يوجد موظفون مسجلون حالياً بهذه الحضانة', 'No staff members registered for this kindergarten currently')}</div>
-                `;
-                return;
-            }
-
-            let html = `
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>${T('الموظف', 'Staff Member')}</th>
-                                <th>${T('الدور الوظيفي', 'Role')}</th>
-                                <th>${T('البريد الإلكتروني', 'Email')}</th>
-                                <th>${T('الحالة', 'Status')}</th>
-                                <th class="text-end">${T('الإجراءات', 'Actions')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            html += loadedStaff.map(u => {
-                const uNameJ   = JSON.stringify(u.username);
-                const uEmailJ  = JSON.stringify(u.email);
-                const uRoleJ   = JSON.stringify(u.role);
-                const uStatusJ = JSON.stringify(u.status);
-                return `
-                <tr>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px">
-                                ${esc(u.username ? u.username.charAt(0).toUpperCase() : 'U')}
-                            </div>
-                            <div class="fw-bold text-dark">${esc(u.username)}</div>
-                        </div>
-                    </td>
-                    <td><span class="badge bg-light text-dark border">${translateRole(u.role)}</span></td>
-                    <td><a href="mailto:${esc(u.email)}" class="text-decoration-none">${esc(u.email)}</a></td>
-                    <td>${getStatusBadge(u.status)}</td>
-                    <td class="text-end">
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button class="btn btn-outline-secondary"
-                                    onclick="editStaff(${u.id}, ${uNameJ}, ${uEmailJ}, ${uRoleJ}, ${uStatusJ})"
-                                    title="${T('تعديل', 'Edit')}">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            ${u.status === 'ACTIVE' ?
-                                `<button class="btn btn-outline-warning"
-                                        onclick="confirmDeactivateStaff(${u.id}, ${uNameJ})"
-                                        title="${T('إلغاء تفعيل', 'Deactivate')}">
-                                    <i class="bi bi-pause-circle"></i>
-                                </button>` :
-                                `<button class="btn btn-outline-success"
-                                        onclick="reactivateStaff(${u.id}, ${uNameJ})"
-                                        title="${T('إعادة تفعيل', 'Reactivate')}">
-                                    <i class="bi bi-play-circle"></i>
-                                </button>`
-                            }
-                            <button class="btn btn-outline-danger"
-                                    onclick="confirmRemoveStaff(${u.id}, ${uNameJ})"
-                                    title="${T('حذف', 'Delete')}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                            <button class="btn btn-outline-info"
-                                    onclick="confirmResetStaffPassword(${u.id}, ${uNameJ})"
-                                    title="${T('إعادة تعيين كلمة المرور', 'Reset Password')}">
-                                <i class="bi bi-key"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>`;
-            }).join('');
-
-            html += `</tbody></table></div>`;
-            container.innerHTML = html;
-
-        } catch (error) {
-            console.error('Error loading staff:', error);
-        }
-    }
-
-    function formatAgeRange(min, max) {
-        if (min === 0 && max <= 36) return T('حضانة (0-3 سنوات)', 'Nursery (0-3 yrs)');
-        if (min >= 36 && max <= 48) return T('روضة أولى (3-4 سنوات)', 'KG1 (3-4 yrs)');
-        if (min >= 48) return T('روضة ثانية (4-5 سنوات)', 'KG2 (4-5 yrs)');
-        return `${min}-${max} ${T('شهر', 'months')}`;
-    }
-
-    function translateRole(role) {
-        const roles = {
-            'ADMIN': T('مدير النظام', 'System Admin'),
-            'MANAGER': T('مدير الحضانة', 'Manager'),
-            'SUPERVISOR': T('مشرف', 'Supervisor'),
-            'TEACHER': T('معلم', 'Teacher'),
-            'PARENT': T('ولي أمر', 'Parent')
-        };
-        return roles[role] || role;
-    }
-
-    function getStatusBadge(status) {
-        const s = (status || '').toLowerCase();
-        if (s === 'active') {
-            return `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">${T('نشط', 'Active')}</span>`;
-        } else if (s === 'inactive') {
-            return `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">${T('غير نشط', 'Inactive')}</span>`;
-        } else if (s === 'suspended') {
-            return `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">${T('موقوف', 'Suspended')}</span>`;
-        }
-        return `<span class="badge bg-light text-dark border">${esc(status)}</span>`;
-    }
-
-    function addClass() {
-        const modal = new bootstrap.Modal(document.getElementById('addClassModal'));
-        modal.show();
-    }
-
-    function addStaff() {
-        window.location.href = `/admin/users/create?kindergarten_id=${kindergartenId}`;
-    }
-
-    async function submitClass() {
-        const form = document.querySelector('#addClassModal form');
-        const formData = new FormData(form);
-        const level = formData.get('level');
-
-        let minAge = 36, maxAge = 48;
-        if (level === 'nursery') { minAge = 0; maxAge = 36; }
-        else if (level === 'kg2') { minAge = 48; maxAge = 60; }
-
-        const payload = {
-            kindergarten_id: kindergartenId,
-            name_ar: formData.get('name'),
-            name_en: formData.get('name'),
-            capacity_total: parseInt(formData.get('capacity')),
-            min_age_months: minAge,
-            max_age_months: maxAge,
-            is_active: true
-        };
-
-        try {
-            const response = await fetch('/api/classes', {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                showToast(T('تم إضافة الشعبة بنجاح', 'Class added successfully'), 'success');
-                bootstrap.Modal.getInstance(document.getElementById('addClassModal')).hide();
-                form.reset();
-                loadClasses();
-            } else {
-                const err = await response.json();
-                alert(T('خطأ: ', 'Error: ') + (err.detail || T('فشل الحفظ', 'Save failed')));
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert(T('حدث خطأ في الاتصال', 'Connection error'));
-        }
-    }
-
-    let assignModal;
-
-    function openAssignSupervisorModal(classId, className, currentSupervisorId) {
-        if (!assignModal) {
-            assignModal = new bootstrap.Modal(document.getElementById('assignSupervisorModal'));
-        }
-
-        const form = document.getElementById('assignSupervisorForm');
-        form.elements['class_id'].value = classId;
-        form.elements['class_name'].value = className;
-        form.elements['start_date'].valueAsDate = new Date();
-
-        const select = form.elements['supervisor_id'];
-        select.innerHTML = '<option value="">' + T('اختر مشرفاً...', 'Select supervisor...') + '</option>';
-
-        const supervisors = loadedStaff.filter(s => s.role === 'SUPERVISOR');
-
-        if (supervisors.length === 0) {
-            select.innerHTML = '<option value="">' + T('لا يوجد مشرفون متاحون', 'No supervisors available') + '</option>';
-        } else {
-            supervisors.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.id;
-                const assigned = assignedSupervisorMap[s.id];
-                const assignedLabel = assigned ? ` • ${assigned.name}` : '';
-                opt.textContent = `${s.username}${assignedLabel}`;
-                if (currentSupervisorId && s.id === currentSupervisorId) {
-                    opt.selected = true;
-                }
-                const isAssignedElsewhere = assigned && assigned.id !== classId;
-                if (isAssignedElsewhere && s.id !== currentSupervisorId) {
-                    opt.disabled = true;
-                }
-                select.appendChild(opt);
-            });
-        }
-
-        assignModal.show();
-    }
-
-    async function submitSupervisorAssignment() {
-        const form = document.getElementById('assignSupervisorForm');
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
-        }
-
-        const payload = {
-            class_id: parseInt(form.elements['class_id'].value),
-            supervisor_id: parseInt(form.elements['supervisor_id'].value),
-            start_date: form.elements['start_date'].value,
-            is_primary: form.elements['is_primary'].checked
-        };
-
-        try {
-            const response = await fetch('/api/supervisor/assign', {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                showToast(T('تم تعيين المشرف بنجاح', 'Supervisor assigned successfully'), 'success');
-                assignModal.hide();
-                loadClasses();
-            } else {
-                const err = await response.json();
-                alert(T('خطأ: ', 'Error: ') + (err.detail || T('فشل التعيين', 'Assignment failed')));
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert(T('حدث خطأ أثناء التعيين', 'Error during assignment'));
-        }
-    }
-
-    function editClass(classId, nameAr, nameEn, capacity, minAge, maxAge) {
-        const form = document.getElementById('editClassForm');
-        form.elements['class_id'].value = classId;
-        form.elements['name_ar'].value = nameAr;
-        form.elements['name_en'].value = nameEn;
-        form.elements['capacity_total'].value = capacity;
-        form.elements['min_age_months'].value = minAge;
-        form.elements['max_age_months'].value = maxAge;
-
-        const modal = new bootstrap.Modal(document.getElementById('editClassModal'));
-        modal.show();
-    }
-
-    async function submitEditClass() {
-        const form = document.getElementById('editClassForm');
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
-        }
-
-        const classId = form.elements['class_id'].value;
-        const payload = {
-            name_ar: form.elements['name_ar'].value,
-            name_en: form.elements['name_en'].value || null,
-            capacity_total: parseInt(form.elements['capacity_total'].value),
-            min_age_months: parseInt(form.elements['min_age_months'].value),
-            max_age_months: parseInt(form.elements['max_age_months'].value)
-        };
-
-        try {
-            const response = await fetch(`/api/classes/${classId}`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                showToast(T('تم تحديث الشعبة بنجاح', 'Class updated successfully'), 'success');
-                bootstrap.Modal.getInstance(document.getElementById('editClassModal')).hide();
-                loadClasses();
-            } else {
-                const err = await response.json();
-                alert(T('خطأ: ', 'Error: ') + (err.detail || T('فشل التحديث', 'Update failed')));
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert(T('حدث خطأ في التحديث', 'Error during update'));
-        }
-    }
-
-    function confirmDeactivateClass(classId, className) {
-        if (confirm(T(`هل أنت متأكد من إلغاء تفعيل الشعبة "${className}"؟`, `Are you sure you want to deactivate class "${className}"?`))) {
-            deactivateClass(classId);
-        }
-    }
-
-    async function deactivateClass(classId) {
-        try {
-            const response = await fetch(`/api/classes/${classId}/deactivate`, {
-                method: 'PUT',
-                headers: getHeaders()
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                showToast(result.message || T('تم إلغاء تفعيل الشعبة بنجاح', 'Class deactivated successfully'), 'success');
-                loadClasses();
-            } else {
-                showToast(result.detail || T('فشل في إلغاء التفعيل', 'Deactivation failed'), 'error');
-            }
-        } catch (error) {
-            console.error('Deactivate error:', error);
-            showToast(T('حدث خطأ في إلغاء التفعيل', 'Error during deactivation'), 'error');
-        }
-    }
-
-    async function reactivateClass(classId, className) {
-        const payload = { is_active: true };
-
-        try {
-            const response = await fetch(`/api/classes/${classId}`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                showToast(T('تم إعادة تفعيل الشعبة بنجاح', 'Class reactivated successfully'), 'success');
-                loadClasses();
-            } else {
-                const err = await response.json();
-                showToast(err.detail || T('فشل في إعادة التفعيل', 'Reactivation failed'), 'error');
-            }
-        } catch (error) {
-            console.error('Reactivate error:', error);
-            showToast(T('حدث خطأ في إعادة التفعيل', 'Error during reactivation'), 'error');
-        }
-    }
-
-    function confirmDeleteClass(classId, className) {
-        if (confirm(T(`هل أنت متأكد من حذف الشعبة "${className}" نهائياً؟ لا يمكن التراجع عن هذا الإجراء.`, `Are you sure you want to permanently delete class "${className}"? This action cannot be undone.`))) {
-            deleteClass(classId);
-        }
-    }
-
-    async function deleteClass(classId) {
-        try {
-            const response = await fetch(`/api/classes/${classId}`, {
-                method: 'DELETE',
-                headers: getHeaders()
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                showToast(result.message || T('تم حذف الشعبة بنجاح', 'Class deleted successfully'), 'success');
-                loadClasses();
-            } else {
-                showToast(result.detail || T('فشل في الحذف', 'Delete failed'), 'error');
-            }
-        } catch (error) {
-            console.error('Delete error:', error);
-            showToast(T('حدث خطأ في الحذف', 'Error during deletion'), 'error');
-        }
-    }
-
-    function confirmDelete() {
-        if (confirm(T('هل أنت متأكد من حذف هذه الحضانة؟ سيتم إخفاؤها من النظام مع الاحتفاظ بالبيانات.', 'Are you sure you want to delete this kindergarten? It will be hidden from the system.'))) {
-            deleteKindergarten();
-        }
-    }
-
-    async function deleteKindergarten() {
-        try {
-            const response = await fetch(`/api/admin/kindergartens/${kindergartenId}`, {
-                method: 'DELETE',
-                headers: getHeaders()
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                showToast(result.message || T('تم حذف الحضانة بنجاح', 'Kindergarten deleted successfully'), 'success');
-                setTimeout(() => window.location.href = '/kindergartens', 1000);
-            } else {
-                showToast(result.message || result.detail || T('فشل في الحذف', 'Delete failed'), 'error');
-            }
-        } catch (error) {
-            console.error('Delete error:', error);
-            showToast(T('حدث خطأ في الحذف', 'Error during deletion'), 'error');
-        }
-    }
-
-    async function toggleFreeze() {
-        const isFrozen = "{{ kindergarten.status }}" === 'frozen';
-        const btn = document.getElementById('freezeBtn');
-        if (btn) btn.disabled = true;
-        try {
-            if (isFrozen) {
-                if (!confirm(T('هل تريد إلغاء تجميد الحضانة؟', 'Unfreeze this kindergarten?'))) {
-                    if (btn) btn.disabled = false;
-                    return;
-                }
-                await window.api.unfreezeKindergarten(kindergartenId);
-                showToast(T('تم إلغاء تجميد الحضانة بنجاح', 'Kindergarten unfrozen successfully'), 'success');
-            } else {
-                const reason = prompt(T('سبب التجميد (اختياري):', 'Freeze reason (optional):'));
-                if (reason === null) { if (btn) btn.disabled = false; return; }
-                await window.api.freezeKindergarten(kindergartenId, reason);
-                showToast(T('تم تجميد الحضانة بنجاح', 'Kindergarten frozen successfully'), 'success');
-            }
-            setTimeout(() => location.reload(), 1200);
-        } catch (error) {
-            if (btn) btn.disabled = false;
-            showToast(error.message || T('تعذر تنفيذ العملية', 'Operation failed'), 'error');
-        }
-    }
-
-    function editStaff(id, username, email, role, status) {
-        document.querySelector('#editStaffForm [name="staff_id"]').value = id;
-        document.querySelector('#editStaffForm [name="username"]').value = username;
-        document.querySelector('#editStaffForm [name="email"]').value = email;
-        document.querySelector('#editStaffForm [name="role"]').value = role;
-        document.querySelector('#editStaffForm [name="status"]').value = status;
-
-        const modal = new bootstrap.Modal(document.getElementById('editStaffModal'));
-        modal.show();
-    }
-
-    async function submitEditStaff() {
-        const form = document.getElementById('editStaffForm');
-        const formData = new FormData(form);
-        const staffId = formData.get('staff_id');
-
-        const data = {
-            username: formData.get('username'),
-            email: formData.get('email'),
-            role: formData.get('role'),
-            status: formData.get('status')
-        };
-
-        try {
-            const response = await fetch(`/api/users/${staffId}`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify(data)
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                showToast(result.message || T('تم تحديث الموظف بنجاح', 'Staff member updated successfully'), 'success');
-                bootstrap.Modal.getInstance(document.getElementById('editStaffModal')).hide();
-                loadStaff();
-            } else {
-                showToast(result.detail || T('فشل في تحديث الموظف', 'Failed to update staff member'), 'error');
-            }
-        } catch (error) {
-            console.error('Edit staff error:', error);
-            showToast(T('حدث خطأ في تحديث الموظف', 'Error updating staff member'), 'error');
-        }
-    }
-
-    function confirmDeactivateStaff(id, username) {
-        if (confirm(T(`هل أنت متأكد من إلغاء تفعيل الموظف "${username}"؟`, `Are you sure you want to deactivate staff member "${username}"?`))) {
-            toggleStaffStatus(id, 'INACTIVE');
-        }
-    }
-
-    function reactivateStaff(id, username) {
-        if (confirm(T(`هل أنت متأكد من إعادة تفعيل الموظف "${username}"؟`, `Are you sure you want to reactivate staff member "${username}"?`))) {
-            toggleStaffStatus(id, 'ACTIVE');
-        }
-    }
-
-    async function toggleStaffStatus(id, status) {
-        try {
-            const response = await fetch(`/api/users/${id}`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify({ status: status })
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                showToast(result.message || T('تم تحديث حالة الموظف بنجاح', 'Staff status updated successfully'), 'success');
-                loadStaff();
-            } else {
-                showToast(result.detail || T('فشل في تحديث حالة الموظف', 'Failed to update staff status'), 'error');
-            }
-        } catch (error) {
-            console.error('Toggle staff status error:', error);
-            showToast(T('حدث خطأ في تحديث حالة الموظف', 'Error updating staff status'), 'error');
-        }
-    }
-
-    function confirmRemoveStaff(id, username) {
-        if (confirm(T(`هل أنت متأكد من حذف الموظف "${username}" نهائياً؟`, `Are you sure you want to permanently delete staff member "${username}"?`))) {
-            removeStaff(id);
-        }
-    }
-
-    async function removeStaff(id) {
-        try {
-            const response = await fetch(`/api/users/${id}`, {
-                method: 'DELETE',
-                headers: getHeaders()
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                showToast(result.message || T('تم حذف الموظف بنجاح', 'Staff member deleted successfully'), 'success');
-                loadStaff();
-            } else {
-                showToast(result.detail || T('فشل في حذف الموظف', 'Failed to delete staff member'), 'error');
-            }
-        } catch (error) {
-            console.error('Remove staff error:', error);
-            showToast(T('حدث خطأ في حذف الموظف', 'Error deleting staff member'), 'error');
-        }
-    }
-
-    function confirmResetStaffPassword(id, username) {
-        if (confirm(T(`هل أنت متأكد من إعادة تعيين كلمة مرور الموظف "${username}"؟`, `Are you sure you want to reset password for "${username}"?`))) {
-            resetStaffPassword(id);
-        }
-    }
-
-    async function resetStaffPassword(id) {
-        try {
-            const response = await fetch(`/api/users/${id}/admin-reset-password`, {
-                method: 'POST',
-                headers: getHeaders()
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                showToast(result.message || T('تم إعادة تعيين كلمة المرور بنجاح', 'Password reset successfully'), 'success');
-            } else {
-                showToast(result.detail || T('فشل في إعادة تعيين كلمة المرور', 'Failed to reset password'), 'error');
-            }
-        } catch (error) {
-            console.error('Reset password error:', error);
-            showToast(T('حدث خطأ في إعادة تعيين كلمة المرور', 'Error resetting password'), 'error');
-        }
-    }
+  };
+
+  window.confirmDelete = () => {
+    if (!confirm(T('حذف هذه الحضانة؟ سيتم إخفاؤها من النظام.','Delete this kindergarten? It will be hidden from the system.'))) return;
+    fetch(`/api/admin/kindergartens/${KG_ID}`, { method:'DELETE', headers:hdrs() })
+      .then(r => r.json())
+      .then(j => {
+        showToast(j.message || T('تم الحذف','Deleted'));
+        setTimeout(() => window.location.href='/kindergartens', 1200);
+      })
+      .catch(() => showToast(T('خطأ في الحذف','Delete error'),'error'));
+  };
+
+})();
 </script>
 {% endblock %}
