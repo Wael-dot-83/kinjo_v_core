@@ -279,17 +279,11 @@
   box-shadow: 0 6px 18px rgba(0,0,0,0.25);
 }
 
-.kg-btn-primary-light {
-  background: rgba(255,255,255,0.18);
-  border: 1px solid rgba(255,255,255,0.30);
-  color: #ffffff;
-  backdrop-filter: blur(6px);
-}
 
-.kg-btn-primary-light:hover {
-  background: rgba(255,255,255,0.28);
-  color: #ffffff;
-}
+
+
+
+
 
 /* ══════════════════════════════════════════════════════════════════════════
    STATUS BADGES

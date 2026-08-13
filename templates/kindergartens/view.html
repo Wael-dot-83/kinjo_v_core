@@ -27,7 +27,7 @@
 
   <!-- ══ Hero Banner ══════════════════════════════════════════════════════ -->
   <div class="kg-hero-card">
-    <div class="kg-hero-pattern" aria-hidden="true"></div>
+
     <div class="kg-hero-inner">
       <div class="kg-hero-header">
 
@@ -99,11 +99,11 @@
 
         <!-- Right: Actions -->
         <div class="kg-hero-actions">
-          <a href="/kindergartens/{{ kindergarten.id }}/edit" class="btn kg-btn-primary-light">
+          <a href="/kindergartens/{{ kindergarten.id }}/edit" class="btn btn-primary">
             <i class="bi bi-pencil-square me-1"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}
           </a>
           {% if current_user.role.name == 'ADMIN' %}
-          <button class="btn kg-btn-primary-light" onclick="toggleFreeze()" id="freezeBtn">
+          <button class="btn btn-primary" onclick="toggleFreeze()" id="freezeBtn">
             <i class="bi bi-snow me-1"></i>
             <span id="freezeBtnLabel">
               {% if kindergarten.status == 'frozen' %}
@@ -117,7 +117,7 @@
             <i class="bi bi-trash me-1"></i>{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}
           </button>
           {% endif %}
-          <a href="/kindergartens" class="btn kg-btn-primary-light">
+          <a href="/kindergartens" class="btn btn-primary">
             <i class="bi bi-arrow-{{ 'left' if ui_lang == 'en' else 'right' }} me-1"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
           </a>
         </div>
