@@ -77,15 +77,28 @@ def _parse_date(s: str) -> date:
     return datetime.strptime(s.strip(), "%Y-%m-%d").date()
 
 
-def _hhmm_to_minutes(t: str | None) -> int | None:
-    """Convert 'HH:MM' to minutes since midnight."""
-    if not t:
+def _hhmm_to_minutes(value: Any) -> int | None:
+    """Convert 'HH:MM' to minutes since midnight.
+
+    Missing values do not always arrive as ``None``. pandas >= 3 infers
+    ``StringDtype(na_value=nan)`` for the ``arrival_time`` / ``leave_time``
+    columns, so ``Series.apply`` hands this function a float ``nan`` for every
+    SQL NULL — and ``nan`` is truthy, so a plain falsy check let it through and
+    the endpoint died with ``'float' object has no attribute 'split'``.
+    Anything that is not a parseable 'HH:MM' string is treated as missing.
+    """
+    if not isinstance(value, str):
+        return None
+    parts = value.strip().split(":")
+    if len(parts) < 2:
         return None
     try:
-        parts = t.split(":")
-        return int(parts[0]) * 60 + int(parts[1])
-    except (ValueError, IndexError):
+        hours, minutes = int(parts[0]), int(parts[1])
+    except ValueError:
         return None
+    if not (0 <= hours <= 23 and 0 <= minutes <= 59):
+        return None
+    return hours * 60 + minutes
 
 
 def _minutes_to_hhmm(m: float | None) -> str:
@@ -94,6 +107,54 @@ def _minutes_to_hhmm(m: float | None) -> str:
         return "--:--"
     m = int(round(m))
     return f"{m // 60:02d}:{m % 60:02d}"
+
+
+# `daily_reports.mood` is free text, and two vocabularies are live in the
+# database: the report form and supervisor roster write lowercase
+# happy/normal/sad/tired/sick, while the bulk-seeded rows carry uppercase
+# HAPPY/CALM/ENERGETIC/TIRED/UPSET. Everything downstream (labels, colours,
+# the sick-rate KPI) must key off one canonical, case-folded value.
+MOOD_UNKNOWN = "unknown"
+
+MOOD_ORDER = ["happy", "calm", "energetic", "normal", "sad", "tired", "upset", "sick", MOOD_UNKNOWN]
+
+_MOOD_ALIASES = {
+    "content": "calm",
+    "quiet": "calm",
+    "active": "energetic",
+    "neutral": "normal",
+    "ok": "normal",
+    "unhappy": "sad",
+    "sleepy": "tired",
+    "angry": "upset",
+    "cranky": "upset",
+    "ill": "sick",
+    "unwell": "sick",
+}
+
+
+def _normalize_mood(value: Any) -> str:
+    """Fold a raw `mood` cell to a canonical lowercase mood name.
+
+    NULLs reach here as ``None`` or float ``nan`` (see `_hhmm_to_minutes`), and
+    the column also holds empty strings; all of those become 'unknown'.
+    """
+    if not isinstance(value, str):
+        return MOOD_UNKNOWN
+    normalized = value.strip().lower()
+    if not normalized:
+        return MOOD_UNKNOWN
+    normalized = _MOOD_ALIASES.get(normalized, normalized)
+    return normalized
+
+
+def _to_numeric(series: pd.Series) -> pd.Series:
+    """Coerce a column to float64 so NULLs become NaN and `.mean()` skips them.
+
+    Nullable integer columns arrive from SQLAlchemy as object dtype holding a
+    mix of ints and ``None``; aggregating that raises or silently degrades.
+    """
+    return pd.to_numeric(series, errors="coerce")
 
 
 def _enforce_analytics_rbac(user: User, kindergarten_ids: List[int] | None) -> List[int] | None:
@@ -158,7 +219,12 @@ def _load_reports_df(db: Session, date_from: date, date_to: date,
         Child.first_name.label("child_first_name"),
         Child.last_name.label("child_last_name"),
         Child.date_of_birth.label("child_dob"),
+        Kindergarten.name_ar.label("kindergarten_name_ar"),
+        Kindergarten.name_en.label("kindergarten_name_en"),
     ).join(Child, DailyReport.child_id == Child.id
+    # Outer join: the name is only used for alert labels, and an inner join
+    # would silently drop reports whose kindergarten row is gone.
+    ).outerjoin(Kindergarten, DailyReport.kindergarten_id == Kindergarten.id
     ).filter(
         DailyReport.date >= date_from,
         DailyReport.date <= date_to,
@@ -185,11 +251,28 @@ def _load_reports_df(db: Session, date_from: date, date_to: date,
         "bathroom_count", "diaper_wet", "diaper_soiled",
         "activities", "notes", "created_at",
         "child_first_name", "child_last_name", "child_dob",
+        "kindergarten_name_ar", "kindergarten_name_en",
     ])
-    df["child_name"] = df["child_first_name"] + " " + df["child_last_name"]
+    return _finalize_reports_df(df)
+
+
+def _finalize_reports_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Derive the columns every analytic below depends on.
+
+    Split out of `_load_reports_df` so the dtype handling can be tested without
+    a database — this is where the pandas-3 NULL semantics bite.
+    """
+    df["child_name"] = (
+        df["child_first_name"].fillna("").astype(str).str.strip()
+        + " "
+        + df["child_last_name"].fillna("").astype(str).str.strip()
+    ).str.strip()
     df["status"] = df["status"].apply(lambda s: s.value if hasattr(s, "value") else str(s))
-    df["arrival_minutes"] = df["arrival_time"].apply(_hhmm_to_minutes)
-    df["leave_minutes"] = df["leave_time"].apply(_hhmm_to_minutes)
+    df["mood"] = df["mood"].apply(_normalize_mood)
+    df["arrival_minutes"] = _to_numeric(df["arrival_time"].apply(_hhmm_to_minutes))
+    df["leave_minutes"] = _to_numeric(df["leave_time"].apply(_hhmm_to_minutes))
+    for numeric_col in ("nap_duration_minutes", "bathroom_count"):
+        df[numeric_col] = _to_numeric(df[numeric_col])
     df["date"] = pd.to_datetime(df["date"])
     return df
 
@@ -229,7 +312,10 @@ class DailyReportAnalytics:
             "total_reports": self.total_reports,
             "avg_arrival": _minutes_to_hhmm(avg_arr),
             "avg_leave": _minutes_to_hhmm(avg_lv),
-            "daily_counts": daily.to_dict("records"),
+            "daily_counts": [
+                {"date": str(r["date"]), "count": int(r["count"])}
+                for r in daily.to_dict("records")
+            ],
             "kindergarten_breakdown": kg_breakdown,
         }
 
@@ -239,7 +325,8 @@ class DailyReportAnalytics:
         if self.df.empty:
             return {"status_counts": {}, "conversion_rates": {}}
 
-        counts = self.df["status"].value_counts().to_dict()
+        # Cast out of numpy scalars: FastAPI's encoder cannot serialize int64.
+        counts = {str(k): int(v) for k, v in self.df["status"].value_counts().items()}
         total = self.total_reports
         draft = counts.get("DRAFT", 0)
         submitted = counts.get("SUBMITTED", 0)
@@ -266,16 +353,25 @@ class DailyReportAnalytics:
         if self.df.empty:
             return {"overall": {}, "daily": []}
 
-        moods = self.df["mood"].fillna("unknown")
-        overall = moods.value_counts(normalize=True).apply(lambda x: round(x * 100, 1)).to_dict()
+        # `mood` is already canonical (see `_normalize_mood`): lowercase, with
+        # NULL/blank folded to 'unknown', so both the form vocabulary
+        # (happy/normal/sad/tired/sick) and the seeded one
+        # (HAPPY/CALM/ENERGETIC/TIRED/UPSET) land in the same buckets.
+        moods = self.df["mood"].fillna(MOOD_UNKNOWN)
+        overall = {
+            str(k): round(float(v) * 100, 1)
+            for k, v in moods.value_counts(normalize=True).items()
+        }
 
-        daily_moods = self.df.copy()
-        daily_moods["mood"] = daily_moods["mood"].fillna("unknown")
-        daily_group = daily_moods.groupby([daily_moods["date"].dt.strftime("%Y-%m-%d"), "mood"]).size().unstack(fill_value=0)
+        daily_group = (
+            self.df.groupby([self.df["date"].dt.strftime("%Y-%m-%d"), "mood"])
+            .size()
+            .unstack(fill_value=0)
+        )
         daily_list = []
         for dt, row in daily_group.iterrows():
-            entry = {"date": dt}
-            entry.update(row.to_dict())
+            entry: Dict[str, Any] = {"date": str(dt)}
+            entry.update({str(mood): int(count) for mood, count in row.items()})
             daily_list.append(entry)
 
         return {"overall": overall, "daily": daily_list}
@@ -385,10 +481,12 @@ class DailyReportAnalytics:
         return {
             "avg_approval_hours": round(avg_hrs, 2) if avg_hrs is not None else None,
             "rejection_rate": rej_rate,
-            "top_rejection_reasons": [{"reason": k, "count": int(v)} for k, v in reasons.items()],
+            "top_rejection_reasons": [{"reason": str(k), "count": int(v)} for k, v in reasons.items()],
         }
 
     # ---- 8. Health Flags ----
+    MAX_FLAGGED_CHILDREN = 25
+
     def health_flags(self) -> Dict[str, Any]:
         """Flag sick moods + keyword search in health_notes."""
         if self.df.empty:
@@ -400,83 +498,175 @@ class DailyReportAnalytics:
         sick = self.df[self.df["mood"] == "sick"]
         sick_rate = round(len(sick) / self.total_reports * 100, 1) if self.total_reports else 0
 
-        # Keyword flags in health_notes
+        # Keyword flags in health_notes. When every note is NULL the column is
+        # numeric (all-NaN), and the .str accessor raises on it — so work on an
+        # explicitly string-typed copy of the non-null notes only.
         flagged = []
-        notes_df = self.df[self.df["health_notes"].notna()]
-        for kw in keywords:
-            matches = notes_df[notes_df["health_notes"].str.contains(kw, case=False, na=False)]
-            if len(matches):
-                flagged.append({"keyword": kw, "count": len(matches)})
+        notes = self.df["health_notes"].dropna().astype(str)
+        if len(notes):
+            for kw in keywords:
+                count = int(notes.str.contains(kw, case=False, na=False, regex=False).sum())
+                if count:
+                    flagged.append({"keyword": kw, "count": count})
 
-        # Children flagged multi-day sick
+        # Children flagged multi-day sick — capped, and with a single name
+        # lookup instead of one full-frame mask per child.
         sick_children = []
         if len(sick):
+            names = sick.drop_duplicates("child_id").set_index("child_id")["child_name"].to_dict()
             child_sick_days = sick.groupby("child_id").size()
-            multi_day = child_sick_days[child_sick_days >= 2]
-            for cid, days in multi_day.items():
-                child_row = sick[sick["child_id"] == cid].iloc[0]
+            multi_day = child_sick_days[child_sick_days >= 2].sort_values(ascending=False)
+            for cid, days in multi_day.head(self.MAX_FLAGGED_CHILDREN).items():
                 sick_children.append({
                     "child_id": int(cid),
-                    "child_name": child_row["child_name"],
+                    "child_name": names.get(cid) or f"#{int(cid)}",
                     "sick_days": int(days),
                 })
 
         return {
-            "sick_count": len(sick),
+            "sick_count": int(len(sick)),
             "sick_rate": sick_rate,
             "flagged_keywords": flagged,
             "flagged_children": sick_children,
         }
 
     # ---- 9. Anomaly Detection ----
+    #
+    # Alert volume has to be bounded. On production data the default 9-day
+    # window covers 446 kindergartens and 15,529 children, and an unbounded
+    # absence rule emitted 11,562 alerts — a multi-megabyte payload and an
+    # unreadable wall of banners. Each rule is capped and the remainder is
+    # reported as a single roll-up alert.
+    MAX_ALERTS_PER_RULE = 25
+
+    def _kindergarten_names(self) -> Dict[int, tuple[str, str]]:
+        """kindergarten_id -> (Arabic name, English name), falling back to '#id'."""
+        if self.df.empty or "kindergarten_name_ar" not in self.df.columns:
+            return {}
+        names = {}
+        for kg_id, grp in self.df.groupby("kindergarten_id"):
+            row = grp.iloc[0]
+            ar = row.get("kindergarten_name_ar")
+            en = row.get("kindergarten_name_en")
+            ar = ar if isinstance(ar, str) and ar.strip() else f"#{int(kg_id)}"
+            en = en if isinstance(en, str) and en.strip() else ar
+            names[int(kg_id)] = (ar, en)
+        return names
+
+    def _kg_label(self, kg_id: int, names: Dict[int, tuple[str, str]], english: bool = False) -> str:
+        ar, en = names.get(int(kg_id), (f"#{int(kg_id)}", f"#{int(kg_id)}"))
+        return en if english else ar
+
     def detect_anomalies(self, date_from: date, date_to: date) -> List[Dict[str, Any]]:
-        """Flag: child absent >3 days, high rejection kindergarten, low meal rates."""
-        alerts = []
+        """Flag: children with low attendance, high rejection, low meal rates."""
+        alerts: List[Dict[str, Any]] = []
         if self.df.empty:
             return alerts
 
-        num_days = (date_to - date_from).days + 1
+        kg_names = self._kindergarten_names()
 
-        # Children with reports for less than 60% of the period
-        child_days = self.df.groupby("child_id")["date"].nunique()
-        absent_threshold = max(num_days * 0.4, 3)  # absent more than 40% or more than 3 days
-        for cid, present_days in child_days.items():
-            absent_days = num_days - present_days
-            if absent_days >= absent_threshold:
-                name = self.df[self.df["child_id"] == cid]["child_name"].iloc[0]
-                alerts.append({
-                    "type": "absence",
-                    "severity": "high",
-                    "message": f"طفل '{name}' غائب {absent_days} من {num_days} أيام",
-                    "message_en": f"Child '{name}' absent {absent_days} of {num_days} days",
-                    "child_id": int(cid),
-                })
+        # ---- Children attending far fewer days than their kindergarten operated.
+        # The denominator is the number of days the kindergarten actually filed
+        # reports, not the calendar span: weekends and holidays inside the range
+        # are not absences, and counting them flagged children with perfect
+        # attendance.
+        kg_operating_days = self.df.groupby("kindergarten_id")["date"].nunique()
+        child_days = (
+            self.df.groupby(["kindergarten_id", "child_id"])["date"]
+            .nunique()
+            .reset_index(name="present_days")
+        )
+        child_days["operating_days"] = child_days["kindergarten_id"].map(kg_operating_days)
+        child_days["absent_days"] = child_days["operating_days"] - child_days["present_days"]
+        # absent more than 40% of operating days, and at least 3 days
+        child_days["threshold"] = (child_days["operating_days"] * 0.4).clip(lower=3)
+        absentees = child_days[
+            (child_days["operating_days"] >= 3)
+            & (child_days["absent_days"] >= child_days["threshold"])
+        ].sort_values(["absent_days", "child_id"], ascending=[False, True])
 
-        # Kindergarten with high rejection rate (>20%)
+        # One name lookup for all of them — the previous per-child mask over the
+        # full frame was O(children × rows) and dominated the request time.
+        child_names = (
+            self.df.drop_duplicates("child_id").set_index("child_id")["child_name"].to_dict()
+        )
+
+        for row in absentees.head(self.MAX_ALERTS_PER_RULE).itertuples(index=False):
+            cid = int(row.child_id)
+            name = child_names.get(cid) or f"#{cid}"
+            absent_days = int(row.absent_days)
+            operating_days = int(row.operating_days)
+            alerts.append({
+                "type": "absence",
+                "severity": "high",
+                "message": f"الطفل '{name}' غائب {absent_days} من {operating_days} أيام دوام",
+                "message_en": f"Child '{name}' absent {absent_days} of {operating_days} operating days",
+                "child_id": cid,
+                "kindergarten_id": int(row.kindergarten_id),
+            })
+
+        hidden = max(len(absentees) - self.MAX_ALERTS_PER_RULE, 0)
+        if hidden:
+            alerts.append({
+                "type": "absence_more",
+                "severity": "high",
+                "message": f"و{hidden} طفلاً آخر بنسبة حضور منخفضة",
+                "message_en": f"and {hidden} more children with low attendance",
+                "count": hidden,
+            })
+
+        # ---- Kindergartens with a high rejection rate (>20%)
+        rejection_alerts: List[Dict[str, Any]] = []
+        low_meal_alerts: List[Dict[str, Any]] = []
         for kg_id, grp in self.df.groupby("kindergarten_id"):
+            if len(grp) < 5:
+                continue
+            kg_id = int(kg_id)
+            name_ar = self._kg_label(kg_id, kg_names)
+            name_en = self._kg_label(kg_id, kg_names, english=True)
+
             rej = grp[grp["status"].isin(["REJECTED", "RETURNED"])]
-            if len(grp) >= 5 and len(rej) / len(grp) > 0.2:
+            if len(rej) / len(grp) > 0.2:
                 rate = round(len(rej) / len(grp) * 100, 1)
-                alerts.append({
+                rejection_alerts.append({
                     "type": "high_rejection",
                     "severity": "medium",
-                    "message": f"حضانة #{kg_id} نسبة رفض عالية {rate}%",
-                    "message_en": f"Kindergarten #{kg_id} has {rate}% rejection rate",
-                    "kindergarten_id": int(kg_id),
+                    "message": f"حضانة {name_ar}: نسبة رفض عالية {rate}%",
+                    "message_en": f"Kindergarten {name_en} has a {rate}% rejection rate",
+                    "kindergarten_id": kg_id,
+                    "rate": rate,
                 })
 
-        # Low breakfast rate kindergarten (<50%)
-        for kg_id, grp in self.df.groupby("kindergarten_id"):
-            if len(grp) >= 5:
-                bf_rate = grp["breakfast"].fillna(False).sum() / len(grp) * 100
+            # Only reports that actually recorded breakfast count — a NULL is an
+            # unfilled field, not a skipped meal.
+            breakfast_observed = grp["breakfast"].dropna()
+            if len(breakfast_observed) >= 5:
+                bf_rate = round(breakfast_observed.sum() / len(breakfast_observed) * 100, 1)
                 if bf_rate < 50:
-                    alerts.append({
+                    low_meal_alerts.append({
                         "type": "low_meal",
                         "severity": "medium",
-                        "message": f"حضانة #{kg_id} نسبة الإفطار منخفضة {round(bf_rate, 1)}% — يُقترح تغيير قائمة الطعام",
-                        "message_en": f"Kindergarten #{kg_id} has {round(bf_rate, 1)}% breakfast rate—suggest menu change",
-                        "kindergarten_id": int(kg_id),
+                        "message": f"حضانة {name_ar}: نسبة الإفطار منخفضة {bf_rate}% — يُقترح تغيير قائمة الطعام",
+                        "message_en": f"Kindergarten {name_en} has a {bf_rate}% breakfast rate — suggest a menu change",
+                        "kindergarten_id": kg_id,
+                        "rate": bf_rate,
                     })
+
+        for bucket, more_type, msg_ar, msg_en in (
+            (rejection_alerts, "high_rejection_more", "حضانة أخرى بنسبة رفض عالية", "more kindergartens with a high rejection rate"),
+            (low_meal_alerts, "low_meal_more", "حضانة أخرى بنسبة إفطار منخفضة", "more kindergartens with a low breakfast rate"),
+        ):
+            bucket.sort(key=lambda a: a["rate"], reverse=(more_type == "high_rejection_more"))
+            alerts.extend(bucket[: self.MAX_ALERTS_PER_RULE])
+            hidden = max(len(bucket) - self.MAX_ALERTS_PER_RULE, 0)
+            if hidden:
+                alerts.append({
+                    "type": more_type,
+                    "severity": "medium",
+                    "message": f"و{hidden} {msg_ar}",
+                    "message_en": f"and {hidden} {msg_en}",
+                    "count": hidden,
+                })
 
         return alerts
 
@@ -503,22 +693,41 @@ class DailyReportAnalytics:
 class DailyReportViz:
     """Generate Plotly charts from analytics data."""
 
+    # Covers both live mood vocabularies (see `_normalize_mood`).
     COLORS = {
         "happy": "#28a745",
+        "calm": "#20c997",
+        "energetic": "#0dcaf0",
         "normal": "#6c757d",
         "sad": "#ffc107",
         "tired": "#fd7e14",
+        "upset": "#d63384",
         "sick": "#dc3545",
         "unknown": "#adb5bd",
     }
 
     MOOD_LABELS = {
         "happy": "سعيد",
+        "calm": "هادئ",
+        "energetic": "نشيط",
         "normal": "عادي",
         "sad": "حزين",
         "tired": "متعب",
+        "upset": "منزعج",
         "sick": "مريض",
         "unknown": "غير محدد",
+    }
+
+    MOOD_LABELS_EN = {
+        "happy": "Happy",
+        "calm": "Calm",
+        "energetic": "Energetic",
+        "normal": "Normal",
+        "sad": "Sad",
+        "tired": "Tired",
+        "upset": "Upset",
+        "sick": "Sick",
+        "unknown": "Unknown",
     }
 
     @staticmethod
@@ -526,10 +735,20 @@ class DailyReportViz:
         """Serialize figure to JSON for frontend rendering."""
         return json.loads(plotly.io.to_json(fig))
 
+    @staticmethod
+    def _t(lang: str, ar: str, en: str) -> str:
+        """Pick a chart string for the requested UI language (Arabic default)."""
+        return en if lang == "en" else ar
+
     @classmethod
-    def mood_pie(cls, mood_data: Dict[str, float]) -> dict:
+    def _mood_label(cls, key: str, lang: str = "ar") -> str:
+        table = cls.MOOD_LABELS_EN if lang == "en" else cls.MOOD_LABELS
+        return table.get(key, key)
+
+    @classmethod
+    def mood_pie(cls, mood_data: Dict[str, float], lang: str = "ar") -> dict:
         """Pie chart: mood distribution percentages."""
-        labels = [cls.MOOD_LABELS.get(k, k) for k in mood_data.keys()]
+        labels = [cls._mood_label(k, lang) for k in mood_data.keys()]
         values = list(mood_data.values())
         colors = [cls.COLORS.get(k, "#adb5bd") for k in mood_data.keys()]
 
@@ -540,7 +759,8 @@ class DailyReportViz:
             hole=0.4,
         )])
         fig.update_layout(
-            title=dict(text="توزيع المزاج", x=0.5, font=dict(size=16, family="Cairo")),
+            title=dict(text=cls._t(lang, "توزيع المزاج", "Mood distribution"),
+                       x=0.5, font=dict(size=16, family="Cairo")),
             font=dict(family="Cairo"),
             margin=dict(l=20, r=20, t=50, b=20),
             height=350,
@@ -548,23 +768,28 @@ class DailyReportViz:
         return cls._to_json(fig)
 
     @classmethod
-    def mood_line(cls, daily_moods: List[Dict]) -> dict:
+    def mood_line(cls, daily_moods: List[Dict], lang: str = "ar") -> dict:
         """Line chart: mood trends over time."""
         if not daily_moods:
             return {}
         df = pd.DataFrame(daily_moods).set_index("date")
         fig = go.Figure()
-        for mood in ["happy", "normal", "sad", "tired", "sick"]:
+        # Iterate the canonical vocabulary, not a hardcoded subset: the seeded
+        # moods (calm/energetic/upset) were silently dropped and the chart came
+        # back empty for every kindergarten using them.
+        for mood in MOOD_ORDER:
             if mood in df.columns:
                 fig.add_trace(go.Scatter(
                     x=df.index, y=df[mood],
-                    name=cls.MOOD_LABELS.get(mood, mood),
+                    name=cls._mood_label(mood, lang),
                     mode="lines+markers",
                     line=dict(color=cls.COLORS.get(mood)),
                 ))
         fig.update_layout(
-            title=dict(text="اتجاهات المزاج اليومية", x=0.5, font=dict(size=16, family="Cairo")),
-            xaxis_title="التاريخ", yaxis_title="عدد الأطفال",
+            title=dict(text=cls._t(lang, "اتجاهات المزاج اليومية", "Daily mood trends"),
+                       x=0.5, font=dict(size=16, family="Cairo")),
+            xaxis_title=cls._t(lang, "التاريخ", "Date"),
+            yaxis_title=cls._t(lang, "عدد الأطفال", "Children"),
             font=dict(family="Cairo"),
             margin=dict(l=40, r=20, t=50, b=40),
             height=350,
@@ -572,23 +797,32 @@ class DailyReportViz:
         )
         return cls._to_json(fig)
 
+    MEAL_LABELS = {
+        "breakfast": ("الإفطار", "Breakfast"),
+        "snack": ("وجبة خفيفة", "Snack"),
+        "milk": ("الحليب", "Milk"),
+        "lunch": ("الغداء", "Lunch"),
+    }
+
     @classmethod
-    def meal_bar(cls, meal_data: Dict[str, float]) -> dict:
+    def meal_bar(cls, meal_data: Dict[str, float], lang: str = "ar") -> dict:
         """Bar chart: meal compliance rates."""
-        meals_ar = {"breakfast": "الإفطار", "snack": "وجبة خفيفة", "milk": "الحليب", "lunch": "الغداء"}
-        names = [meals_ar.get(k, k) for k in ["breakfast", "snack", "milk", "lunch"]]
-        values = [meal_data.get(k, 0) for k in ["breakfast", "snack", "milk", "lunch"]]
+        meals = ["breakfast", "snack", "milk", "lunch"]
+        names = [cls._t(lang, *cls.MEAL_LABELS[k]) for k in meals]
+        # A meal with no observations is unknown, not 0% — plot nothing for it.
+        values = [meal_data.get(k) for k in meals]
         colors = ["#0d6efd", "#6610f2", "#20c997", "#fd7e14"]
 
         fig = go.Figure(data=[go.Bar(
             x=names, y=values,
             marker_color=colors,
-            text=[f"{v}%" for v in values],
+            text=["—" if v is None else f"{v}%" for v in values],
             textposition="auto",
         )])
         fig.update_layout(
-            title=dict(text="نسب تناول الوجبات", x=0.5, font=dict(size=16, family="Cairo")),
-            yaxis_title="النسبة (%)", yaxis=dict(range=[0, 100]),
+            title=dict(text=cls._t(lang, "نسب تناول الوجبات", "Meal completion rates"),
+                       x=0.5, font=dict(size=16, family="Cairo")),
+            yaxis_title=cls._t(lang, "النسبة (%)", "Percentage (%)"), yaxis=dict(range=[0, 100]),
             font=dict(family="Cairo"),
             margin=dict(l=40, r=20, t=50, b=40),
             height=350,
@@ -596,15 +830,20 @@ class DailyReportViz:
         return cls._to_json(fig)
 
     @classmethod
-    def status_funnel_chart(cls, status_counts: Dict[str, int]) -> dict:
+    def status_funnel_chart(cls, status_counts: Dict[str, int], lang: str = "ar") -> dict:
         """Funnel chart: report workflow status."""
-        status_ar = {
-            "DRAFT": "مسودة", "SUBMITTED": "مقدم", "APPROVED": "معتمد",
-            "SENT_TO_PARENT": "مرسل لولي الأمر", "REJECTED": "مرفوض", "RETURNED": "معاد",
+        status_labels = {
+            "DRAFT": ("مسودة", "Draft"),
+            "SUBMITTED": ("مقدم", "Submitted"),
+            "APPROVED": ("معتمد", "Approved"),
+            "SENT_TO_PARENT": ("مرسل لولي الأمر", "Sent to parent"),
+            "REJECTED": ("مرفوض", "Rejected"),
+            "RETURNED": ("معاد", "Returned"),
         }
         order = ["DRAFT", "SUBMITTED", "APPROVED", "SENT_TO_PARENT", "REJECTED", "RETURNED"]
-        labels = [status_ar.get(s, s) for s in order if status_counts.get(s, 0) > 0]
-        values = [status_counts.get(s, 0) for s in order if status_counts.get(s, 0) > 0]
+        present = [s for s in order if status_counts.get(s, 0) > 0]
+        labels = [cls._t(lang, *status_labels[s]) if s in status_labels else s for s in present]
+        values = [status_counts.get(s, 0) for s in present]
 
         fig = go.Figure(go.Funnel(
             y=labels, x=values,
@@ -612,7 +851,8 @@ class DailyReportViz:
             marker=dict(color=["#6c757d", "#0d6efd", "#198754", "#0dcaf0", "#dc3545", "#fd7e14"][:len(labels)]),
         ))
         fig.update_layout(
-            title=dict(text="مسار حالة التقرير", x=0.5, font=dict(size=16, family="Cairo")),
+            title=dict(text=cls._t(lang, "مسار حالة التقرير", "Report status funnel"),
+                       x=0.5, font=dict(size=16, family="Cairo")),
             font=dict(family="Cairo"),
             margin=dict(l=20, r=20, t=50, b=20),
             height=350,
@@ -620,7 +860,7 @@ class DailyReportViz:
         return cls._to_json(fig)
 
     @classmethod
-    def attendance_line(cls, daily_counts: List[Dict]) -> dict:
+    def attendance_line(cls, daily_counts: List[Dict], lang: str = "ar") -> dict:
         """Line chart: daily attendance count."""
         if not daily_counts:
             return {}
@@ -634,8 +874,10 @@ class DailyReportViz:
             marker=dict(size=8),
         )])
         fig.update_layout(
-            title=dict(text="تقارير الحضور اليومية", x=0.5, font=dict(size=16, family="Cairo")),
-            xaxis_title="التاريخ", yaxis_title="عدد التقارير",
+            title=dict(text=cls._t(lang, "تقارير الحضور اليومية", "Daily attendance reports"),
+                       x=0.5, font=dict(size=16, family="Cairo")),
+            xaxis_title=cls._t(lang, "التاريخ", "Date"),
+            yaxis_title=cls._t(lang, "عدد التقارير", "Reports"),
             font=dict(family="Cairo"),
             margin=dict(l=40, r=20, t=50, b=40),
             height=350,
@@ -643,7 +885,7 @@ class DailyReportViz:
         return cls._to_json(fig)
 
     @classmethod
-    def rejection_bar(cls, reasons: List[Dict]) -> dict:
+    def rejection_bar(cls, reasons: List[Dict], lang: str = "ar") -> dict:
         """Horizontal bar chart: top rejection reasons."""
         if not reasons:
             return {}
@@ -656,8 +898,9 @@ class DailyReportViz:
             textposition="auto",
         )])
         fig.update_layout(
-            title=dict(text="أسباب الرفض الأكثر شيوعاً", x=0.5, font=dict(size=16, family="Cairo")),
-            xaxis_title="العدد",
+            title=dict(text=cls._t(lang, "أسباب الرفض الأكثر شيوعاً", "Most common rejection reasons"),
+                       x=0.5, font=dict(size=16, family="Cairo")),
+            xaxis_title=cls._t(lang, "العدد", "Count"),
             font=dict(family="Cairo"),
             margin=dict(l=200, r=20, t=50, b=40),
             height=max(200, len(reasons) * 50 + 100),
@@ -665,7 +908,7 @@ class DailyReportViz:
         return cls._to_json(fig)
 
     @classmethod
-    def nap_histogram(cls, nap_durations: pd.Series) -> dict:
+    def nap_histogram(cls, nap_durations: pd.Series, lang: str = "ar") -> dict:
         """Histogram: nap duration distribution."""
         valid = nap_durations.dropna()
         if valid.empty:
@@ -675,8 +918,10 @@ class DailyReportViz:
             marker_color="#6f42c1",
         )])
         fig.update_layout(
-            title=dict(text="توزيع مدة القيلولة (دقيقة)", x=0.5, font=dict(size=16, family="Cairo")),
-            xaxis_title="المدة (دقيقة)", yaxis_title="العدد",
+            title=dict(text=cls._t(lang, "توزيع مدة القيلولة (دقيقة)", "Nap duration distribution (minutes)"),
+                       x=0.5, font=dict(size=16, family="Cairo")),
+            xaxis_title=cls._t(lang, "المدة (دقيقة)", "Duration (minutes)"),
+            yaxis_title=cls._t(lang, "العدد", "Count"),
             font=dict(family="Cairo"),
             margin=dict(l=40, r=20, t=50, b=40),
             height=300,
@@ -684,22 +929,23 @@ class DailyReportViz:
         return cls._to_json(fig)
 
     @classmethod
-    def diaper_trend(cls, daily_data: List[Dict]) -> dict:
+    def diaper_trend(cls, daily_data: List[Dict], lang: str = "ar") -> dict:
         """Stacked bar chart: bathroom + diaper trends."""
         if not daily_data:
             return {}
         df = pd.DataFrame(daily_data)
         fig = go.Figure()
-        fig.add_trace(go.Bar(name="دخول الحمام", x=df["date"], y=df["total_bathroom"],
-                             marker_color="#0d6efd"))
-        fig.add_trace(go.Bar(name="حفاض مبلل", x=df["date"], y=df["wet_count"],
-                             marker_color="#ffc107"))
-        fig.add_trace(go.Bar(name="حفاض متسخ", x=df["date"], y=df["soiled_count"],
-                             marker_color="#fd7e14"))
+        fig.add_trace(go.Bar(name=cls._t(lang, "دخول الحمام", "Bathroom visits"),
+                             x=df["date"], y=df["total_bathroom"], marker_color="#0d6efd"))
+        fig.add_trace(go.Bar(name=cls._t(lang, "حفاض مبلل", "Wet diapers"),
+                             x=df["date"], y=df["wet_count"], marker_color="#ffc107"))
+        fig.add_trace(go.Bar(name=cls._t(lang, "حفاض متسخ", "Soiled diapers"),
+                             x=df["date"], y=df["soiled_count"], marker_color="#fd7e14"))
         fig.update_layout(
             barmode="group",
-            title=dict(text="اتجاه الحمام والحفاضات", x=0.5, font=dict(size=16, family="Cairo")),
-            xaxis_title="التاريخ",
+            title=dict(text=cls._t(lang, "اتجاه الحمام والحفاضات", "Bathroom and diaper trend"),
+                       x=0.5, font=dict(size=16, family="Cairo")),
+            xaxis_title=cls._t(lang, "التاريخ", "Date"),
             font=dict(family="Cairo"),
             margin=dict(l=40, r=20, t=50, b=40),
             height=350,
@@ -708,25 +954,26 @@ class DailyReportViz:
         return cls._to_json(fig)
 
     @classmethod
-    def meal_trend_line(cls, daily_meals: List[Dict]) -> dict:
+    def meal_trend_line(cls, daily_meals: List[Dict], lang: str = "ar") -> dict:
         """Multi-line chart: meal compliance over days."""
         if not daily_meals:
             return {}
         df = pd.DataFrame(daily_meals)
-        meals_ar = {"breakfast": "الإفطار", "snack": "وجبة خفيفة", "milk": "الحليب", "lunch": "الغداء"}
         colors = {"breakfast": "#0d6efd", "snack": "#6610f2", "milk": "#20c997", "lunch": "#fd7e14"}
         fig = go.Figure()
         for meal in ["breakfast", "snack", "milk", "lunch"]:
             if meal in df.columns:
                 fig.add_trace(go.Scatter(
                     x=df["date"], y=df[meal],
-                    name=meals_ar[meal],
+                    name=cls._t(lang, *cls.MEAL_LABELS[meal]),
                     mode="lines+markers",
                     line=dict(color=colors[meal]),
                 ))
         fig.update_layout(
-            title=dict(text="اتجاه الوجبات اليومية", x=0.5, font=dict(size=16, family="Cairo")),
-            xaxis_title="التاريخ", yaxis_title="النسبة (%)",
+            title=dict(text=cls._t(lang, "اتجاه الوجبات اليومية", "Daily meal trend"),
+                       x=0.5, font=dict(size=16, family="Cairo")),
+            xaxis_title=cls._t(lang, "التاريخ", "Date"),
+            yaxis_title=cls._t(lang, "النسبة (%)", "Percentage (%)"),
             yaxis=dict(range=[0, 100]),
             font=dict(family="Cairo"),
             margin=dict(l=40, r=20, t=50, b=40),
@@ -914,9 +1161,11 @@ def get_analytics_summary(
 
 @router.get("/charts")
 def get_analytics_charts(
+    request: Request,
     date_from: str = Query(..., description="Start date YYYY-MM-DD"),
     date_to: str = Query(..., description="End date YYYY-MM-DD"),
     kindergarten_id: Optional[int] = Query(None),
+    lang: Optional[str] = Query(None, description="Chart label language: ar or en"),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -924,6 +1173,14 @@ def get_analytics_charts(
     d_from = _parse_date(date_from)
     d_to = _parse_date(date_to)
     kg_ids = _enforce_analytics_rbac(user, [kindergarten_id] if kindergarten_id else None)
+    # Chart titles, axes and legends live inside the Plotly payload, so the
+    # language has to be resolved server-side. An explicit ?lang wins — the
+    # caller is the dashboard telling us which language it rendered itself in.
+    # Without one, defer to the site-wide language policy for the cookie.
+    requested = (lang or "").strip().lower()
+    ui_lang = requested if requested in {"ar", "en"} else _normalize_ui_language(
+        request.cookies.get("kinjo_lang")
+    )
 
     df = _load_reports_df(db, d_from, d_to, kg_ids)
     if df.empty:
@@ -933,15 +1190,15 @@ def get_analytics_charts(
     summary = analytics.full_summary(d_from, d_to)
 
     charts = {
-        "mood_pie": DailyReportViz.mood_pie(summary["mood_trends"]["overall"]),
-        "mood_line": DailyReportViz.mood_line(summary["mood_trends"]["daily"]),
-        "meal_bar": DailyReportViz.meal_bar(summary["meal_completion"]),
-        "meal_trend": DailyReportViz.meal_trend_line(summary["meal_completion"]["daily"]),
-        "status_funnel": DailyReportViz.status_funnel_chart(summary["status_funnel"]["status_counts"]),
-        "attendance_line": DailyReportViz.attendance_line(summary["attendance"]["daily_counts"]),
-        "rejection_bar": DailyReportViz.rejection_bar(summary["workflow_metrics"]["top_rejection_reasons"]),
-        "nap_histogram": DailyReportViz.nap_histogram(df["nap_duration_minutes"]),
-        "diaper_trend": DailyReportViz.diaper_trend(summary["diaper_bathroom"]["daily"]),
+        "mood_pie": DailyReportViz.mood_pie(summary["mood_trends"]["overall"], ui_lang),
+        "mood_line": DailyReportViz.mood_line(summary["mood_trends"]["daily"], ui_lang),
+        "meal_bar": DailyReportViz.meal_bar(summary["meal_completion"], ui_lang),
+        "meal_trend": DailyReportViz.meal_trend_line(summary["meal_completion"]["daily"], ui_lang),
+        "status_funnel": DailyReportViz.status_funnel_chart(summary["status_funnel"]["status_counts"], ui_lang),
+        "attendance_line": DailyReportViz.attendance_line(summary["attendance"]["daily_counts"], ui_lang),
+        "rejection_bar": DailyReportViz.rejection_bar(summary["workflow_metrics"]["top_rejection_reasons"], ui_lang),
+        "nap_histogram": DailyReportViz.nap_histogram(df["nap_duration_minutes"], ui_lang),
+        "diaper_trend": DailyReportViz.diaper_trend(summary["diaper_bathroom"]["daily"], ui_lang),
     }
     return {"charts": charts}
 

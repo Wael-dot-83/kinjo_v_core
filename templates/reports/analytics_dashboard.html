@@ -320,15 +320,21 @@
             // Parallel fetch: summary + charts + sample data
             const [summaryRes, chartsRes, sampleRes] = await Promise.all([
                 fetch(`/api/reports-analytics/summary?${params}`, { headers: { 'X-CSRF-Token': csrfToken } }),
-                fetch(`/api/reports-analytics/charts?${params}`, { headers: { 'X-CSRF-Token': csrfToken } }),
+                fetch(`/api/reports-analytics/charts?${params}&lang=${IS_EN ? 'en' : 'ar'}`, { headers: { 'X-CSRF-Token': csrfToken } }),
                 fetch(`/api/reports-analytics/sample-data?${params}&limit=10`, { headers: { 'X-CSRF-Token': csrfToken } }),
             ]);
 
-            if (!summaryRes.ok) throw new Error('Failed to load summary');
+            if (!summaryRes.ok) {
+                throw new Error(await describeError(summaryRes));
+            }
 
             const summary = await summaryRes.json();
-            const chartsData = await chartsRes.json();
-            const sampleData = await sampleRes.json();
+            // Charts and the sample table are secondary: a failure there must
+            // degrade that panel, not blank the whole dashboard.
+            const chartsData = chartsRes.ok ? await chartsRes.json() : {};
+            const sampleData = sampleRes.ok ? await sampleRes.json() : {};
+            if (!chartsRes.ok) console.error('charts:', await describeError(chartsRes));
+            if (!sampleRes.ok) console.error('sample-data:', await describeError(sampleRes));
 
             hideEl('loadingSpinner');
 
@@ -432,10 +438,13 @@
 
         let html = '';
         anomalies.forEach(a => {
+            // Alerts ship both languages; the Arabic `message` used to render
+            // even for English users.
+            const text = IS_EN ? (a.message_en || a.message) : a.message;
             html += `
         <div class="alert alert-${a.severity === 'high' ? 'danger' : 'warning'} d-flex align-items-center py-2 mb-2">
             ${severityIcon[a.severity] || ''}
-            <span class="me-2 ms-2">${escHtml(a.message)}</span>
+            <span class="me-2 ms-2">${escHtml(text)}</span>
         </div>`;
         });
         container.innerHTML = html;
@@ -452,9 +461,14 @@
             'REJECTED': `<span class="badge badge-soft badge-soft-danger">${T('مرفوض','Rejected')}</span>`,
             'RETURNED': `<span class="badge badge-soft badge-soft-warning">${T('معاد','Returned')}</span>`,
         };
+        // Canonical moods from the API (see _normalize_mood): both the form
+        // vocabulary and the seeded CALM/ENERGETIC/UPSET one.
         const moodAr = {
-            'happy': `😊 ${T('سعيد','Happy')}`, 'normal': `😐 ${T('عادي','Normal')}`, 'sad': `😢 ${T('حزين','Sad')}`,
-            'tired': `😴 ${T('متعب','Tired')}`, 'sick': `🤒 ${T('مريض','Sick')}`,
+            'happy': `😊 ${T('سعيد','Happy')}`, 'calm': `🙂 ${T('هادئ','Calm')}`,
+            'energetic': `⚡ ${T('نشيط','Energetic')}`, 'normal': `😐 ${T('عادي','Normal')}`,
+            'sad': `😢 ${T('حزين','Sad')}`, 'tired': `😴 ${T('متعب','Tired')}`,
+            'upset': `😠 ${T('منزعج','Upset')}`, 'sick': `🤒 ${T('مريض','Sick')}`,
+            'unknown': `<span class="text-muted">${T('غير محدد','Unknown')}</span>`,
         };
 
         let html = '';
@@ -490,6 +504,21 @@
     function setText(id, val) { document.getElementById(id).textContent = val; }
     function metric(value, suffix = '') {
         return value === null || value === undefined ? '—' : String(value) + suffix;
+    }
+
+    // Surface what the API actually said instead of a fixed English string —
+    // "Failed to load summary" hid a 500 for days.
+    async function describeError(res) {
+        if (res.status === 401) {
+            window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+            return T('انتهت الجلسة','Session expired');
+        }
+        let detail = '';
+        try {
+            const body = await res.json();
+            detail = typeof body.detail === 'string' ? body.detail : '';
+        } catch (e) { /* non-JSON error body */ }
+        return `HTTP ${res.status}${detail ? ' — ' + detail : ''}`;
     }
 
     function escHtml(s) {
