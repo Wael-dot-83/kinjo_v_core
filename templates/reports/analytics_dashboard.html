@@ -32,24 +32,59 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <form id="filterForm" class="row g-3 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label fw-bold">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %}</label>
                     <input type="date" id="dateFrom" class="form-control" value="{{ default_date_from }}">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label fw-bold">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %}</label>
                     <input type="date" id="dateTo" class="form-control" value="{{ default_date_to }}">
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
-                    <select id="kindergartenFilter" class="form-select">
-                        <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الحضانات{% endif %}</option>
-                        {% for kg in kindergartens %}
-                        <option value="{{ kg.id }}">{{ kg.name_ar }}</option>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                    <select id="governorateFilter" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                        {% for gov in kindergartens|map(attribute='governorate')|unique|list %}
+                        <option value="{{ gov }}">{{ gov }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</label>
+                    <select id="kindergartenFilter" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                        {% for kg in kindergartens %}
+                        <option value="{{ kg.id }}" data-gov="{{ kg.governorate }}">{{ kg.name_ar }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">{% if ui_lang == 'en' %}Gender{% else %}الجنس{% endif %}</label>
+                    <select id="genderFilter" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                        <option value="MALE">{% if ui_lang == 'en' %}Male{% else %}ذكر{% endif %}</option>
+                        <option value="FEMALE">{% if ui_lang == 'en' %}Female{% else %}أنثى{% endif %}</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">{% if ui_lang == 'en' %}Age Band{% else %}الفئة العمرية{% endif %}</label>
+                    <select id="ageBandFilter" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                        <option value="0-2">0-2 {% if ui_lang == 'en' %}years{% else %}سنة{% endif %}</option>
+                        <option value="2-4">2-4 {% if ui_lang == 'en' %}years{% else %}سنوات{% endif %}</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">{% if ui_lang == 'en' %}Mood{% else %}المزاج{% endif %}</label>
+                    <select id="moodFilter" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                        <option value="happy">{% if ui_lang == 'en' %}Happy{% else %}سعيد{% endif %}</option>
+                        <option value="calm">{% if ui_lang == 'en' %}Calm{% else %}هادئ{% endif %}</option>
+                        <option value="sad">{% if ui_lang == 'en' %}Sad{% else %}حزين{% endif %}</option>
+                        <option value="sick">{% if ui_lang == 'en' %}Sick{% else %}مريض{% endif %}</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="bi bi-search"></i> {% if ui_lang == 'en' %}Analyze{% else %}تحليل{% endif %}
                     </button>
@@ -117,13 +152,30 @@
         </div>
     </div>
 
-    <!-- Alerts -->
+    <!-- تنبيهات وملاحظات (Alerts & Observations) -->
     <div id="alertsSection" class="d-none mb-4">
         <div class="card border-warning shadow-sm">
             <div class="card-header bg-warning text-dark fw-bold">
                 <i class="bi bi-exclamation-triangle-fill"></i> {% if ui_lang == 'en' %}Alerts & Notes{% else %}تنبيهات وملاحظات{% endif %}
             </div>
-            <div class="card-body" id="alertsList"></div>
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3" id="alertsTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="alerts-tab" data-bs-toggle="tab" data-bs-target="#alertsPanel" type="button">{% if ui_lang == 'en' %}Alerts{% else %}التنبيهات{% endif %}</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="observations-tab" data-bs-toggle="tab" data-bs-target="#observationsPanel" type="button">{% if ui_lang == 'en' %}Observations{% else %}الملاحظات{% endif %}</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="alertsTabContent">
+                    <div class="tab-pane fade show active" id="alertsPanel" role="tabpanel">
+                        <div id="alertsList"></div>
+                    </div>
+                    <div class="tab-pane fade" id="observationsPanel" role="tabpanel">
+                        <div id="observationsList"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -243,29 +295,35 @@
         </div>
     </div>
 
-    <!-- Sample Data Table -->
-    <div class="card shadow-sm mb-4 d-none" id="sampleDataSection">
-        <div class="card-header bg-light fw-bold">
-            <i class="bi bi-table"></i> {% if ui_lang == 'en' %}Sample Data (first 10 rows){% else %}عينة من البيانات (أول 10 صفوف){% endif %}
+    <!-- Child Drill-down Table -->
+    <div class="card shadow-sm mb-4 d-none" id="childrenSection">
+        <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-people"></i> {% if ui_lang == 'en' %}Children{% else %}الأطفال{% endif %}</span>
+            <div>
+                <select id="childrenPageSize" class="form-select form-select-sm d-inline-block w-auto">
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
         </div>
         <div class="card-body table-responsive">
-            <table class="table table-sm table-striped table-hover" id="sampleTable">
+            <table class="table table-sm table-striped table-hover" id="childrenTable">
                 <thead class="table-dark">
                     <tr>
-                        <th>#</th>
-                        <th>{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Gender{% else %}الجنس{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Last Report{% else %}آخر تقرير{% endif %}</th>
                         <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Arrival{% else %}الوصول{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Leave{% else %}الخروج{% endif %}</th>
                         <th>{% if ui_lang == 'en' %}Mood{% else %}المزاج{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Breakfast{% else %}فطور{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Lunch{% else %}غداء{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Nap (min){% else %}قيلولة (د){% endif %}</th>
+                        <th></th>
                     </tr>
                 </thead>
-                <tbody id="sampleTableBody"></tbody>
+                <tbody id="childrenTableBody"></tbody>
             </table>
+            <nav>
+                <ul class="pagination justify-content-center" id="childrenPagination"></ul>
+            </nav>
         </div>
     </div>
 
@@ -274,6 +332,21 @@
         <i class="bi bi-inbox display-1 text-muted"></i>
         <h4 class="text-muted mt-3">{% if ui_lang == 'en' %}No data for the selected period{% else %}لا توجد بيانات للفترة المحددة{% endif %}</h4>
         <p class="text-muted">{% if ui_lang == 'en' %}Please adjust filters and try again{% else %}يرجى تعديل الفلاتر والمحاولة مرة أخرى{% endif %}</p>
+    </div>
+
+    <!-- Child Detail Drawer -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="childDrawer" aria-labelledby="childDrawerLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="childDrawerLabel">{% if ui_lang == 'en' %}Child Daily Reports{% else %}التقارير اليومية للطفل{% endif %}</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div id="childDrawerContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -287,6 +360,9 @@
     const csrfToken = '{{ csrf_token }}';
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
+    let currentChildrenPage = 1;
+    let currentChildId = null;
+    let abortController = null;
 
     document.getElementById('filterForm').addEventListener('submit', function (e) {
         e.preventDefault();
@@ -297,76 +373,91 @@
     document.addEventListener('DOMContentLoaded', loadDashboard);
 
     async function loadDashboard() {
+        if (abortController) abortController.abort();
+        abortController = new AbortController();
+
         const dateFrom = document.getElementById('dateFrom').value;
         const dateTo = document.getElementById('dateTo').value;
+        const gov = document.getElementById('governorateFilter').value;
         const kgId = document.getElementById('kindergartenFilter').value;
+        const gender = document.getElementById('genderFilter').value;
+        const ageBand = document.getElementById('ageBandFilter').value;
+        const mood = document.getElementById('moodFilter').value;
 
         if (!dateFrom || !dateTo) {
             Swal.fire(T('تنبيه','Alert'), T('يرجى تحديد نطاق التواريخ','Please select a date range'), 'warning');
             return;
         }
 
-        // Show loading
         showEl('loadingSpinner');
         hideEl('kpiCards');
         hideEl('alertsSection');
-        hideEl('sampleDataSection');
+        hideEl('childrenSection');
         hideEl('noDataMessage');
 
         try {
             let params = `date_from=${dateFrom}&date_to=${dateTo}`;
+            if (gov) params += `&governorate=${encodeURIComponent(gov)}`;
             if (kgId) params += `&kindergarten_id=${kgId}`;
+            if (gender) params += `&gender=${gender}`;
+            if (ageBand) params += `&age_band=${ageBand}`;
+            if (mood) params += `&mood=${mood}`;
 
-            // Parallel fetch: summary + charts + sample data
-            const [summaryRes, chartsRes, sampleRes] = await Promise.all([
-                fetch(`/api/reports-analytics/summary?${params}`, { headers: { 'X-CSRF-Token': csrfToken } }),
-                fetch(`/api/reports-analytics/charts?${params}&lang=${IS_EN ? 'en' : 'ar'}`, { headers: { 'X-CSRF-Token': csrfToken } }),
-                fetch(`/api/reports-analytics/sample-data?${params}&limit=10`, { headers: { 'X-CSRF-Token': csrfToken } }),
+            const [summaryRes, chartsRes, childrenRes, alertsRes] = await Promise.all([
+                fetch(`/api/reports-analytics/summary?${params}`, { headers: { 'X-CSRF-Token': csrfToken }, signal: abortController.signal }),
+                fetch(`/api/reports-analytics/charts?${params}&lang=${IS_EN ? 'en' : 'ar'}`, { headers: { 'X-CSRF-Token': csrfToken }, signal: abortController.signal }),
+                fetch(`/api/reports-analytics/children?${params}&page=1&page_size=${document.getElementById('childrenPageSize').value}`, { headers: { 'X-CSRF-Token': csrfToken }, signal: abortController.signal }),
+                fetch(`/api/reports-analytics/alerts?${params}`, { headers: { 'X-CSRF-Token': csrfToken }, signal: abortController.signal }),
             ]);
 
-            if (!summaryRes.ok) {
-                throw new Error(await describeError(summaryRes));
-            }
+            if (!summaryRes.ok) throw new Error(await describeError(summaryRes));
 
             const summary = await summaryRes.json();
-            // Charts and the sample table are secondary: a failure there must
-            // degrade that panel, not blank the whole dashboard.
             const chartsData = chartsRes.ok ? await chartsRes.json() : {};
-            const sampleData = sampleRes.ok ? await sampleRes.json() : {};
-            if (!chartsRes.ok) console.error('charts:', await describeError(chartsRes));
-            if (!sampleRes.ok) console.error('sample-data:', await describeError(sampleRes));
+            const childrenData = childrenRes.ok ? await childrenRes.json() : {};
+            const alertsData = alertsRes.ok ? await alertsRes.json() : {};
 
             hideEl('loadingSpinner');
 
-            if (summary.total_reports === 0) {
+            if (summary.total_reports === 0 && (!childrenData.children || childrenData.children.length === 0)) {
                 showEl('noDataMessage');
                 return;
             }
 
-            // Populate KPI cards
             populateKPIs(summary);
-
-            // Render charts
             renderCharts(chartsData.charts || {});
-
-            // Populate workflow metrics
             populateWorkflow(summary);
-
-            // Populate alerts
-            populateAlerts(summary.anomalies || []);
-
-            // Populate sample table
-            populateSampleTable(sampleData.rows || []);
-
+            populateAlerts(alertsData.alerts || []);
+            populateChildrenTable(childrenData);
             showEl('kpiCards');
-            showEl('sampleDataSection');
+            showEl('childrenSection');
 
         } catch (err) {
+            if (err.name === 'AbortError') return;
             hideEl('loadingSpinner');
             console.error(err);
             Swal.fire(T('خطأ','Error'), T('فشل تحميل البيانات','Failed to load data') + ': ' + err.message, 'error');
         }
     }
+
+    function cascadeKindergartens() {
+        const gov = document.getElementById('governorateFilter').value;
+        const kgSelect = document.getElementById('kindergartenFilter');
+        const options = kgSelect.querySelectorAll('option[data-gov]');
+        options.forEach(opt => {
+            if (!gov || opt.dataset.gov === gov) {
+                opt.style.display = '';
+            } else {
+                opt.style.display = 'none';
+            }
+        });
+        // If current selection is hidden, reset to All
+        const current = kgSelect.value;
+        const visible = Array.from(options).some(o => o.value === current && o.style.display !== 'none');
+        if (!visible) kgSelect.value = '';
+    }
+
+    document.getElementById('governorateFilter').addEventListener('change', cascadeKindergartens);
 
     function populateKPIs(s) {
         setText('kpiTotal', s.total_reports);
@@ -423,10 +514,11 @@
         }
     }
 
-    function populateAlerts(anomalies) {
-        const container = document.getElementById('alertsList');
-        if (!anomalies.length) {
-            hideEl('alertsSection');
+    function populateAlerts(alerts) {
+        const alertsContainer = document.getElementById('alertsList');
+        const obsContainer = document.getElementById('observationsList');
+        if (!alerts.length) {
+            document.getElementById('alertsSection').classList.add('d-none');
             return;
         }
 
@@ -436,23 +528,37 @@
             low: `<span class="badge badge-soft badge-soft-info"><i class="bi bi-info-circle-fill"></i> ${T('منخفض','Low')}</span>`,
         };
 
-        let html = '';
-        anomalies.forEach(a => {
-            // Alerts ship both languages; the Arabic `message` used to render
-            // even for English users.
-            const text = IS_EN ? (a.message_en || a.message) : a.message;
-            html += `
-        <div class="alert alert-${a.severity === 'high' ? 'danger' : 'warning'} d-flex align-items-center py-2 mb-2">
-            ${severityIcon[a.severity] || ''}
-            <span class="me-2 ms-2">${escHtml(text)}</span>
-        </div>`;
+        let alertsHtml = '';
+        let obsHtml = '';
+        alerts.forEach(a => {
+            const text = IS_EN ? (a.message_en || a.message || '') : (a.message || '');
+            const item = `
+            <div class="alert alert-${a.severity === 'high' ? 'danger' : a.severity === 'medium' ? 'warning' : 'info'} d-flex align-items-center py-2 mb-2">
+                ${severityIcon[a.severity] || ''}
+                <span class="me-2 ms-2">${escHtml(text)}</span>
+                ${a.scope_type ? `<span class="badge bg-secondary ms-auto">${escHtml(a.scope_type)}${a.scope_id ? ' #' + escHtml(a.scope_id) : ''}</span>` : ''}
+            </div>`;
+            if (a.type === 'rule') {
+                obsHtml += item;
+            } else {
+                alertsHtml += item;
+            }
         });
-        container.innerHTML = html;
-        showEl('alertsSection');
+
+        alertsContainer.innerHTML = alertsHtml || `<p class="text-muted">${T('لا توجد تنبيهات','No alerts')}</p>`;
+        obsContainer.innerHTML = obsHtml || `<p class="text-muted">${T('لا توجد ملاحظات','No observations')}</p>`;
+        document.getElementById('alertsSection').classList.remove('d-none');
     }
 
-    function populateSampleTable(rows) {
-        const tbody = document.getElementById('sampleTableBody');
+    function populateChildrenTable(data) {
+        const tbody = document.getElementById('childrenTableBody');
+        const pagination = document.getElementById('childrenPagination');
+        if (!data.children || !data.children.length) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">${T('لا توجد بيانات','No data')}</td></tr>`;
+            pagination.innerHTML = '';
+            return;
+        }
+
         const statusAr = {
             'DRAFT': `<span class="badge badge-soft badge-soft-secondary">${T('مسودة','Draft')}</span>`,
             'SUBMITTED': `<span class="badge badge-soft badge-soft-primary">${T('مقدم','Submitted')}</span>`,
@@ -461,8 +567,6 @@
             'REJECTED': `<span class="badge badge-soft badge-soft-danger">${T('مرفوض','Rejected')}</span>`,
             'RETURNED': `<span class="badge badge-soft badge-soft-warning">${T('معاد','Returned')}</span>`,
         };
-        // Canonical moods from the API (see _normalize_mood): both the form
-        // vocabulary and the seeded CALM/ENERGETIC/UPSET one.
         const moodAr = {
             'happy': `😊 ${T('سعيد','Happy')}`, 'calm': `🙂 ${T('هادئ','Calm')}`,
             'energetic': `⚡ ${T('نشيط','Energetic')}`, 'normal': `😐 ${T('عادي','Normal')}`,
@@ -472,21 +576,113 @@
         };
 
         let html = '';
-        rows.forEach((r, i) => {
+        data.children.forEach(c => {
             html += `<tr>
-            <td>${i + 1}</td>
-            <td>${escHtml(r.child_name || '')}</td>
-            <td>${escHtml((r.date || '').substring(0, 10))}</td>
-            <td>${statusAr[r.status] || escHtml(r.status)}</td>
-            <td>${escHtml(r.arrival_time || '')}</td>
-            <td>${escHtml(r.leave_time || '')}</td>
-            <td>${moodAr[r.mood] || escHtml(r.mood || '-')}</td>
-            <td>${r.breakfast ? '✅' : '❌'}</td>
-            <td>${r.lunch ? '✅' : '❌'}</td>
-            <td>${r.nap_duration_minutes || '-'}</td>
-        </tr>`;
+            <td><a href="#" class="child-link" data-child-id="${c.id}">${escHtml(c.first_name + ' ' + c.last_name)}</a></td>
+            <td>${c.gender === 'MALE' ? T('ذكر','Male') : c.gender === 'FEMALE' ? T('أنثى','Female') : '-'}</td>
+            <td>${c.last_report_date ? escHtml(c.last_report_date) : '-'}</td>
+            <td>${statusAr[c.last_report_status] || escHtml(c.last_report_status || '-')}</td>
+            <td>${moodAr[c.last_mood] || '-'}</td>
+            <td><button class="btn btn-sm btn-outline-primary view-reports-btn" data-child-id="${c.id}">${T('عرض التقارير','View Reports')}</button></td>
+          </tr>`;
         });
         tbody.innerHTML = html;
+
+        // Pagination
+        const totalPages = data.pagination?.total_pages || 1;
+        let pHtml = '';
+        for (let p = 1; p <= totalPages; p++) {
+            pHtml += `<li class="page-item ${p === data.pagination?.page ? 'active' : ''}"><a class="page-link child-page-link" href="#" data-page="${p}">${p}</a></li>`;
+        }
+        pagination.innerHTML = pHtml;
+
+        // Bind events
+        tbody.querySelectorAll('.view-reports-btn, .child-link').forEach(el => {
+            el.addEventListener('click', e => {
+                e.preventDefault();
+                const childId = el.dataset.childId;
+                if (childId) openChildDrawer(childId);
+            });
+        });
+        pagination.querySelectorAll('.child-page-link').forEach(el => {
+            el.addEventListener('click', e => {
+                e.preventDefault();
+                currentChildrenPage = parseInt(el.dataset.page);
+                loadChildrenPage(currentChildrenPage);
+            });
+        });
+    }
+
+    async function loadChildrenPage(page) {
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        const gov = document.getElementById('governorateFilter').value;
+        const kgId = document.getElementById('kindergartenFilter').value;
+        const gender = document.getElementById('genderFilter').value;
+        const ageBand = document.getElementById('ageBandFilter').value;
+        const mood = document.getElementById('moodFilter').value;
+        const pageSize = document.getElementById('childrenPageSize').value;
+
+        let params = `date_from=${dateFrom}&date_to=${dateTo}&page=${page}&page_size=${pageSize}`;
+        if (gov) params += `&governorate=${encodeURIComponent(gov)}`;
+        if (kgId) params += `&kindergarten_id=${kgId}`;
+        if (gender) params += `&gender=${gender}`;
+        if (ageBand) params += `&age_band=${ageBand}`;
+        if (mood) params += `&mood=${mood}`;
+
+        const res = await fetch(`/api/reports-analytics/children?${params}`, { headers: { 'X-CSRF-Token': csrfToken } });
+        if (!res.ok) { console.error('children page load failed'); return; }
+        const data = await res.json();
+        populateChildrenTable(data);
+    }
+
+    async function openChildDrawer(childId) {
+        currentChildId = childId;
+        const drawer = new bootstrap.Offcanvas(document.getElementById('childDrawer'));
+        drawer.show();
+        const content = document.getElementById('childDrawerContent');
+        content.innerHTML = `<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>`;
+
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        const res = await fetch(`/api/reports-analytics/children/${childId}/daily-reports?date_from=${dateFrom}&date_to=${dateTo}`, { headers: { 'X-CSRF-Token': csrfToken } });
+        if (!res.ok) {
+            content.innerHTML = `<div class="alert alert-danger">${T('فشل تحميل التقارير','Failed to load reports')}</div>`;
+            return;
+        }
+        const data = await res.json();
+        renderChildReports(data);
+    }
+
+    function renderChildReports(data) {
+        const container = document.getElementById('childDrawerContent');
+        if (!data.reports || !data.reports.length) {
+            container.innerHTML = `<p class="text-muted">${T('لا توجد تقارير','No reports')}</p>`;
+            return;
+        }
+
+        const statusAr = {
+            'DRAFT': T('مسودة','Draft'), 'SUBMITTED': T('مقدم','Submitted'),
+            'APPROVED': T('معتمد','Approved'), 'SENT_TO_PARENT': T('مرسل','Sent'),
+            'REJECTED': T('مرفوض','Rejected'), 'RETURNED': T('معاد','Returned'),
+        };
+
+        let html = `<h6 class="mb-3">${escHtml(data.child_name)}</h6><div class="table-responsive"><table class="table table-sm table-hover"><thead><tr>
+          <th>${T('التاريخ','Date')}</th><th>${T('الحالة','Status')}</th><th>${T('الوصول','Arrival')}</th><th>${T('الخروج','Leave')}</th><th>${T('المزاج','Mood')}</th><th>${T('وجبات','Meals')}</th><th>${T('قيلولة','Nap')}</th>
+        </tr></thead><tbody>`;
+        data.reports.forEach(r => {
+            html += `<tr>
+          <td>${escHtml((r.date || '').substring(0,10))}</td>
+          <td>${escHtml(statusAr[r.status] || r.status || '-')}</td>
+          <td>${escHtml(r.arrival_time || '-')}</td>
+          <td>${escHtml(r.leave_time || '-')}</td>
+          <td>${escHtml(r.mood || '-')}</td>
+          <td>${[r.breakfast, r.snack, r.milk, r.lunch].filter(Boolean).length}/4</td>
+          <td>${r.nap_duration_minutes ? escHtml(r.nap_duration_minutes + ' min') : '-'}</td>
+        </tr>`;
+        });
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
     }
 
     async function exportData(format) {

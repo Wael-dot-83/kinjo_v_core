@@ -16,7 +16,7 @@ import json
 import logging
 from datetime import date, datetime, timedelta
 from utils.time_utils import today_amman as _today
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 
 import pandas as pd
 import plotly
@@ -32,10 +32,16 @@ from sqlalchemy import func, case, text, and_, or_, cast, Integer
 
 from database import get_db
 from dependencies import get_current_user
+import models
 from models import (
     User, UserRole, DailyReport, DailyReportStatus,
     Child, Kindergarten, KindergartenStatus,
+    Gender,
 )
+from services.jordan_locations import governorate_filter, governorate_query_aliases
+from api.analytics.scope_domain import can_view_child_detail
+from admin_security import log_audit_event
+from audit_actions import AuditAction
 
 logger = logging.getLogger(__name__)
 
@@ -1376,7 +1382,326 @@ def get_sample_data(
     return {"rows": records, "total": len(df)}
 
 
-# ─── Frontend Route ──────────────────────────────────────────────────────────
+# ─── Dimension Filter Helpers ──────────────────────────────────────────────────
+
+def _resolve_governorate_ids(db: Session, governorate: Optional[str]) -> List[int]:
+    if not governorate:
+        return []
+    aliases = governorate_query_aliases(governorate)
+    return [
+        kg.id for kg in db.query(Kindergarten.id).filter(
+            Kindergarten.governorate.in_(aliases),
+            Kindergarten.status == KindergartenStatus.ACTIVE,
+            Kindergarten.deleted_at.is_(None),
+        ).all()
+    ]
+
+
+def _resolve_area_ids(db: Session, governorate: Optional[str], district: Optional[str], area: Optional[str]) -> List[int]:
+    q = db.query(Kindergarten.id).filter(Kindergarten.status == KindergartenStatus.ACTIVE, Kindergarten.deleted_at.is_(None))
+    if governorate:
+        q = q.filter(governorate_filter(Kindergarten.governorate, governorate))
+    if district:
+        q = q.filter(Kindergarten.district == district)
+    if area:
+        q = q.filter(Kindergarten.area == area)
+    return [r.id for r in q.all()]
+
+
+def _apply_dashboard_filters(q, db: Session, governorate: Optional[str], district: Optional[str],
+                              area: Optional[str], kindergarten_id: Optional[int],
+                              class_id: Optional[int], gender: Optional[str],
+                              age_band: Optional[str], mood: Optional[str],
+                              report_status: Optional[str]) -> tuple:
+    kg_ids: List[int] = []
+    # Geo filters are composable, not mutually exclusive: a caller may pass both
+    # governorate and kindergarten_id to narrow within a governorate.
+    if governorate:
+        gov_kg_ids = _resolve_governorate_ids(db, governorate)
+        if gov_kg_ids:
+            q = q.filter(DailyReport.kindergarten_id.in_(gov_kg_ids))
+            kg_ids = gov_kg_ids
+    if district or area:
+        area_kg_ids = _resolve_area_ids(db, governorate, district, area)
+        if area_kg_ids:
+            q = q.filter(DailyReport.kindergarten_id.in_(area_kg_ids))
+            kg_ids = area_kg_ids if not kg_ids else list(set(kg_ids) & set(area_kg_ids))
+    if kindergarten_id:
+        q = q.filter(DailyReport.kindergarten_id == kindergarten_id)
+        kg_ids = [kindergarten_id]
+    if class_id:
+        q = q.filter(DailyReport.class_id == class_id)
+    # Join Child once for both gender and age_band filters — a double join
+    # raises sqlalchemy.exc.InvalidRequestError: Can't join to Child, already joined.
+    if gender or age_band:
+        q = q.join(Child, DailyReport.child_id == Child.id).filter(Child.deleted_at.is_(None))
+    if gender:
+        q = q.filter(Child.gender == Gender(gender.upper()))
+    if age_band:
+        today = _today()
+        if age_band == "0-2":
+            min_months, max_months = 0, 24
+        elif age_band == "2-4":
+            min_months, max_months = 24, 48
+        else:
+            min_months, max_months = 0, 999
+        q = q.filter(Child.date_of_birth.isnot(None))
+        # Age in months with day-of-month correction: subtract 1 if the
+        # child hasn't reached their birth day-of-month yet this month.
+        # Without this, a child born Jan 31 is counted as 1 month on Feb 1.
+        age_months_expr = (
+            (today.year - Child.date_of_birth.year) * 12
+            + (today.month - Child.date_of_birth.month)
+            - case((today.day < Child.date_of_birth.day, 1), else_=0)
+        )
+        q = q.filter(age_months_expr >= min_months)
+        if max_months < 999:
+            q = q.filter(age_months_expr < max_months)
+    if mood:
+        q = q.filter(DailyReport.mood == mood.lower())
+    if report_status:
+        q = q.filter(DailyReport.status == DailyReportStatus(report_status.upper()))
+    return q, kg_ids
+
+
+# ─── Extended API Endpoints ────────────────────────────────────────────────────
+
+@router.get("/children")
+def list_analytics_children(
+    date_from: str = Query(...),
+    date_to: str = Query(...),
+    governorate: Optional[str] = Query(None),
+    district: Optional[str] = Query(None),
+    area: Optional[str] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    class_id: Optional[int] = Query(None),
+    gender: Optional[str] = Query(None),
+    age_band: Optional[str] = Query(None),
+    mood: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+    sort: Optional[str] = Query("name"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    d_from = _parse_date(date_from)
+    d_to = _parse_date(date_to)
+    kg_ids = _enforce_analytics_rbac(user, [kindergarten_id] if kindergarten_id else None)
+    # Base query: don't join Child here — _apply_dashboard_filters handles the
+    # join conditionally when gender/age_band filters are active. A double join
+    # raises InvalidRequestError: Can't join to Child, already joined.
+    base = db.query(DailyReport.child_id).filter(
+        DailyReport.date >= d_from, DailyReport.date <= d_to,
+    )
+    if kg_ids:
+        base = base.filter(DailyReport.kindergarten_id.in_(kg_ids))
+    base, _ = _apply_dashboard_filters(base, db, governorate, district, area,
+                                        kindergarten_id, class_id, gender, age_band, mood, status)
+    # Ensure soft-deleted children are excluded. If Child was joined by
+    # _apply_dashboard_filters (gender/age_band), the filter is already applied
+    # there; if not, apply it now with a fresh join.
+    if not (gender or age_band):
+        base = base.join(Child, DailyReport.child_id == Child.id).filter(Child.deleted_at.is_(None))
+    # Use group_by instead of distinct(column) — the latter emits PostgreSQL-only
+    # "DISTINCT ON" which fails on SQLite (tests) and is deprecated in SQLAlchemy.
+    child_ids = [r.child_id for r in base.group_by(DailyReport.child_id).all()]
+    if not child_ids:
+        return {"children": [], "pagination": {"page": page, "page_size": page_size, "total": 0}}
+    children_q = db.query(Child).filter(Child.id.in_(child_ids), Child.deleted_at.is_(None))
+    if sort == "name":
+        children_q = children_q.order_by(Child.first_name.asc())
+    elif sort == "dob":
+        children_q = children_q.order_by(Child.date_of_birth.desc())
+    else:
+        children_q = children_q.order_by(Child.id.asc())
+    total = children_q.count()
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    children = children_q.offset((page - 1) * page_size).limit(page_size).all()
+    last_reports = {}
+    if children:
+        # Get the max date per child, then fetch those specific reports.
+        # Using distinct(column) emits PostgreSQL-only "DISTINCT ON"; group_by
+        # with a subquery is portable across SQLite and PostgreSQL.
+        from sqlalchemy import func as _func
+        max_dates = db.query(
+            DailyReport.child_id,
+            _func.max(DailyReport.date).label("max_date"),
+        ).filter(
+            DailyReport.child_id.in_([c.id for c in children]),
+            DailyReport.date >= d_from, DailyReport.date <= d_to,
+        ).group_by(DailyReport.child_id).all()
+        child_max = {r.child_id: r.max_date for r in max_dates}
+        if child_max:
+            last_reports_rows = db.query(DailyReport).filter(
+                DailyReport.child_id.in_(list(child_max.keys())),
+            ).all()
+            for r in last_reports_rows:
+                if child_max.get(r.child_id) == r.date and r.child_id not in last_reports:
+                    last_reports[r.child_id] = r
+    result = []
+    for c in children:
+        lr = last_reports.get(c.id)
+        entry = {
+            "id": c.id, "public_id": c.public_id,
+            "first_name": c.first_name, "last_name": c.last_name,
+            "gender": c.gender.value if c.gender else None,
+            "date_of_birth": c.date_of_birth.isoformat() if c.date_of_birth else None,
+            "photo_url": c.photo_url,
+        }
+        if lr:
+            entry["last_report_date"] = lr.date.isoformat() if lr.date else None
+            entry["last_report_status"] = lr.status.value if hasattr(lr.status, "value") else str(lr.status)
+            entry["last_mood"] = _normalize_mood(lr.mood) if lr.mood else None
+        result.append(entry)
+    return {
+        "children": result,
+        "pagination": {"page": page, "page_size": page_size, "total": total, "total_pages": total_pages},
+    }
+
+
+@router.get("/children/{child_id}/daily-reports")
+def get_child_daily_reports(
+    child_id: int,
+    date_from: str = Query(...),
+    date_to: str = Query(...),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not can_view_child_detail(user):
+        raise HTTPException(status_code=403, detail="Child detail is restricted to admins")
+    child = db.query(Child).filter(Child.id == child_id, Child.deleted_at.is_(None)).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+    d_from = _parse_date(date_from)
+    d_to = _parse_date(date_to)
+
+    # Audit log: child PII access. log_audit_event does add()+flush() but NOT
+    # commit — the caller must commit or the audit row is rolled back by
+    # get_db()'s session close (see tests/test_audit_durability.py).
+    try:
+        log_audit_event(
+            db=db,
+            action=getattr(AuditAction, "CHILD_DETAIL_VIEWED", "CHILD_DETAIL_VIEWED"),
+            actor=user,
+            target_type="Child",
+            target_ids=child_id,
+            after_state={"date_from": date_from, "date_to": date_to},
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        # Audit failures must not break the data path
+
+    q = db.query(DailyReport).filter(
+        DailyReport.child_id == child_id, DailyReport.date >= d_from, DailyReport.date <= d_to,
+    )
+    kg_ids = _enforce_analytics_rbac(user, None)
+    if kg_ids:
+        q = q.filter(DailyReport.kindergarten_id.in_(kg_ids))
+    total = q.count()
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    reports = q.order_by(DailyReport.date.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    rows = []
+    for r in reports:
+        rows.append({
+            "id": r.id, "date": r.date.isoformat() if r.date else None,
+            "status": r.status.value if hasattr(r.status, "value") else str(r.status),
+            "arrival_time": r.arrival_time, "leave_time": r.leave_time,
+            "mood": _normalize_mood(r.mood) if r.mood else None,
+            "breakfast": r.breakfast, "snack": r.snack, "milk": r.milk, "lunch": r.lunch,
+            "nap_duration_minutes": r.nap_duration_minutes,
+            "bathroom_count": r.bathroom_count, "diaper_wet": r.diaper_wet, "diaper_soiled": r.diaper_soiled,
+            "activities": r.activities, "notes": r.notes,
+            "health_notes": r.health_notes if can_view_child_detail(user) else None,
+            "submitted_at": r.submitted_at.isoformat() if r.submitted_at else None,
+            "approved_at": r.approved_at.isoformat() if r.approved_at else None,
+            "sent_to_parent_at": r.sent_to_parent_at.isoformat() if r.sent_to_parent_at else None,
+        })
+    return {
+        "child_id": child.id, "child_name": f"{child.first_name} {child.last_name}",
+        "reports": rows,
+        "pagination": {"page": page, "page_size": page_size, "total": total, "total_pages": total_pages},
+    }
+
+
+@router.get("/alerts")
+def get_dashboard_alerts(
+    date_from: str = Query(...),
+    date_to: str = Query(...),
+    governorate: Optional[str] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    severity: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    d_from = _parse_date(date_from)
+    d_to = _parse_date(date_to)
+    kg_ids = _enforce_analytics_rbac(user, [kindergarten_id] if kindergarten_id else None)
+    alerts: List[Dict[str, Any]] = []
+    _MAX_ALERTS_PER_SOURCE = 100
+
+    # 1. ActiveAlert threshold breaches
+    active_q = db.query(models.ActiveAlert).filter(
+        models.ActiveAlert.triggered_at >= datetime.combine(d_from, datetime.min.time()),
+        models.ActiveAlert.triggered_at <= datetime.combine(d_to, datetime.max.time()),
+    )
+    if kg_ids:
+        active_q = active_q.filter(models.ActiveAlert.scope_id.in_([str(k) for k in kg_ids]))
+    if severity:
+        active_q = active_q.filter(models.ActiveAlert.severity == models.SeverityLevel(severity.upper()))
+    for a in active_q.limit(_MAX_ALERTS_PER_SOURCE).all():
+        alerts.append({
+            "id": a.id, "type": "threshold",
+            "severity": (a.severity.value if hasattr(a.severity, "value") else str(a.severity)).lower(),
+            "status": (a.status.value if hasattr(a.status, "value") else str(a.status)).lower(),
+            "message": a.message, "message_en": a.message,
+            "scope_type": a.scope_type, "scope_id": a.scope_id,
+            "metric_type": a.metric_type, "current_value": a.current_value,
+            "triggered_at": a.triggered_at.isoformat() if a.triggered_at else None,
+            "acknowledged_at": a.acknowledged_at.isoformat() if a.acknowledged_at else None,
+        })
+
+    # 2. AnomalyAlert z-score anomalies
+    anomaly_q = db.query(models.AnomalyAlert).filter(
+        models.AnomalyAlert.detected_at >= d_from, models.AnomalyAlert.detected_at <= d_to,
+    )
+    if kg_ids:
+        anomaly_q = anomaly_q.filter(models.AnomalyAlert.scope_id.in_([str(k) for k in kg_ids]))
+    if severity:
+        anomaly_q = anomaly_q.filter(models.AnomalyAlert.severity == models.SeverityLevel(severity.upper()))
+    for a in anomaly_q.limit(_MAX_ALERTS_PER_SOURCE).all():
+        alerts.append({
+            "id": a.id, "type": "anomaly",
+            "severity": (a.severity.value if hasattr(a.severity, "value") else str(a.severity)).lower(),
+            "status": "acknowledged" if a.is_acknowledged else "active",
+            "message": a.message, "message_en": a.message,
+            "scope_type": a.scope_type, "scope_id": a.scope_id,
+            "metric_type": a.metric_type, "score": a.score,
+            "detected_at": a.detected_at.isoformat() if a.detected_at else None,
+            "acknowledged_at": a.acknowledged_at.isoformat() if a.acknowledged_at else None,
+        })
+
+    # 3. Rule-based observations from daily reports
+    df = _load_reports_df(db, d_from, d_to, kg_ids)
+    if not df.empty:
+        analytics_obj = DailyReportAnalytics(df)
+        rule_alerts = analytics_obj.detect_anomalies(d_from, d_to)
+        for ra in rule_alerts:
+            alerts.append({
+                "type": "rule", "severity": ra.get("severity", "medium"), "status": "active",
+                "message": ra.get("message"), "message_en": ra.get("message_en"),
+                "scope_type": "KINDERGARTEN", "scope_id": str(ra.get("kindergarten_id", "")),
+                "child_id": ra.get("child_id"),
+            })
+    sev_order = {"high": 0, "medium": 1, "low": 2}
+    alerts.sort(key=lambda x: (sev_order.get(x.get("severity", "low"), 3), x.get("triggered_at") or x.get("detected_at") or ""))
+    return {"alerts": alerts, "count": len(alerts)}
+
+
+# ─── Frontend Route ────────────────────────────────────────────────────────────
 
 @frontend_router.get("/reports/analytics", response_class=HTMLResponse)
 def analytics_dashboard_page(
