@@ -11,532 +11,9 @@
   content="{% if ui_lang == 'en' %}KinJo, kindergarten enrollment, Jordan, parents, attendance, reports, communication{% else %}KinJo، تسجيل حضانة، الأردن، أولياء الأمور، الحضور، التقارير، التواصل{% endif %}"
 />
 {% endblock %} {% block extra_css %}
-<style>
-  .kinjo-home-page {
-    position: relative;
-    overflow: hidden;
-    background:
-      radial-gradient(
-        circle at top left,
-        rgba(255, 164, 120, 0.18),
-        transparent 24%
-      ),
-      radial-gradient(
-        circle at 88% 8%,
-        rgba(117, 201, 245, 0.18),
-        transparent 22%
-      ),
-      radial-gradient(
-        circle at 14% 74%,
-        rgba(255, 224, 125, 0.22),
-        transparent 20%
-      ),
-      linear-gradient(180deg, #fffdf7 0%, #ffffff 38%, #f8fbff 100%);
-  }
-
-  .kinjo-home-page::before,
-  .kinjo-home-page::after {
-    content: "";
-    position: absolute;
-    inset: auto;
-    border-radius: 999px;
-    pointer-events: none;
-    filter: blur(10px);
-    opacity: 0.45;
-  }
-
-  .kinjo-home-page::before {
-    top: 6rem;
-    inset-inline-end: -4rem;
-    width: 12rem;
-    height: 12rem;
-    background: rgba(255, 204, 102, 0.3);
-  }
-
-  .kinjo-home-page::after {
-    bottom: 18rem;
-    inset-inline-start: -5rem;
-    width: 16rem;
-    height: 16rem;
-    background: rgba(117, 201, 245, 0.22);
-  }
-
-  .kinjo-home-hero {
-    position: relative;
-    color: #17312a;
-    background:
-      radial-gradient(
-        circle at 88% 16%,
-        rgba(255, 206, 116, 0.5),
-        transparent 18%
-      ),
-      radial-gradient(
-        circle at 18% 20%,
-        rgba(117, 201, 245, 0.34),
-        transparent 20%
-      ),
-      radial-gradient(
-        circle at 75% 82%,
-        rgba(255, 164, 120, 0.22),
-        transparent 18%
-      ),
-      linear-gradient(135deg, #fff9e8 0%, #fffdf7 32%, #eef9f6 100%);
-    isolation: isolate;
-  }
-
-  .kinjo-home-hero::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-      linear-gradient(115deg, rgba(255, 255, 255, 0.72), transparent 42%),
-      radial-gradient(
-        circle at 82% 18%,
-        rgba(255, 184, 107, 0.3),
-        transparent 24%
-      ),
-      radial-gradient(
-        circle at 12% 22%,
-        rgba(255, 255, 255, 0.5),
-        transparent 26%
-      );
-    z-index: -1;
-  }
-
-  .kinjo-home-hero-inner {
-    position: relative;
-    padding: clamp(4rem, 6vw, 7rem) 0 clamp(2.5rem, 5vw, 4rem);
-  }
-
-  .kinjo-home-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.9rem;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.82);
-    border: 1px solid rgba(31, 94, 71, 0.08);
-    color: #174536;
-    font-size: 0.9rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    backdrop-filter: blur(14px);
-    box-shadow: 0 0.75rem 1.4rem rgba(15, 23, 42, 0.06);
-  }
-
-  /* The 13ch cap was what made this headline a tall stack: the Arabic title is
-     45 characters, so capping the line at 13 broke it over four lines at a
-     5rem type size. The cap is gone and the type is scaled to the column
-     (col-lg-7) instead. */
-  .kinjo-home-title {
-    max-width: none;
-    margin: 1.1rem 0 1rem;
-    font-size: clamp(1.55rem, 2.45vw, 2.6rem);
-    line-height: 1.25;
-    letter-spacing: -0.02em;
-    text-wrap: balance;
-    color: #14312a;
-  }
-
-  /* One line from the large breakpoint up, where the column is wide enough to
-     hold all 45 characters at the sizes above. Below 992px the column is too
-     narrow for a single line at a legible size, so it is allowed to wrap rather
-     than shrink the headline into unreadability.
-
-     Scoped to Arabic deliberately: the English title is 66 characters and would
-     overflow the same column on one line. */
-  @media (min-width: 992px) {
-    html[lang="ar"] .kinjo-home-title {
-      white-space: nowrap;
-    }
-  }
-
-  .kinjo-home-lead {
-    max-width: 58ch;
-    margin-bottom: 1.5rem;
-    color: #50625b;
-    font-size: clamp(1.05rem, 1.6vw, 1.2rem);
-    line-height: 1.8;
-  }
-
-  .kinjo-home-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.85rem;
-    margin-top: 1.5rem;
-  }
-
-  .kinjo-home-actions .btn {
-    border-radius: 999px;
-    padding-inline: 1.2rem;
-    padding-block: 0.8rem;
-    font-weight: 700;
-  }
-
-  .kinjo-home-actions .btn-primary {
-    box-shadow: 0 0.8rem 1.7rem rgba(255, 164, 120, 0.28);
-  }
-
-  .kinjo-home-actions .btn-outline-light {
-    border-color: rgba(23, 49, 42, 0.16);
-    color: #17312a;
-    background: rgba(255, 255, 255, 0.72);
-  }
-
-  .kinjo-home-actions .btn-outline-light:hover {
-    color: #17312a;
-    background: #ffffff;
-  }
-
-  .kinjo-home-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.65rem;
-    margin-top: 1.5rem;
-  }
-
-  .kinjo-home-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.45rem 0.75rem;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(31, 94, 71, 0.08);
-    color: #285448;
-    font-size: 0.88rem;
-    font-weight: 600;
-    box-shadow: 0 0.5rem 1.2rem rgba(15, 23, 42, 0.05);
-  }
-
-  .kinjo-home-panel {
-    position: relative;
-    border-radius: 1.75rem;
-    padding: 1.4rem;
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.88),
-      rgba(255, 255, 255, 0.96)
-    );
-    border: 1px solid rgba(31, 94, 71, 0.08);
-    box-shadow: 0 1.4rem 3rem rgba(15, 23, 42, 0.08);
-    backdrop-filter: blur(18px);
-  }
-
-  .kinjo-home-panel .card {
-    border: 1px solid rgba(31, 94, 71, 0.06);
-    border-radius: 1.2rem;
-    background: linear-gradient(180deg, #fffefb 0%, #f6fbff 100%);
-    box-shadow: none;
-  }
-
-  .kinjo-home-panel .kinjo-home-card-title {
-    color: #14312a;
-  }
-
-  .kinjo-home-panel .kinjo-home-card-copy {
-    color: #4d5f58;
-  }
-
-  .kinjo-home-panel-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .kinjo-home-panel-title {
-    margin: 0 0 0.35rem;
-    font-size: 1rem;
-    font-weight: 800;
-  }
-
-  .kinjo-home-panel-subtitle {
-    margin: 0;
-    color: #5c6e67;
-    font-size: 0.95rem;
-  }
-
-  .kinjo-home-note {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.4rem 0.7rem;
-    border-radius: 999px;
-    background: rgba(255, 214, 115, 0.35);
-    color: #775000;
-    font-size: 0.82rem;
-    font-weight: 700;
-  }
-
-  .kinjo-home-checklist {
-    display: grid;
-    gap: 0.9rem;
-    margin: 1rem 0 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .kinjo-home-checklist-item {
-    display: flex;
-    gap: 0.85rem;
-    align-items: flex-start;
-    padding: 0.85rem 0.9rem;
-    border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.82);
-    border: 1px solid rgba(31, 94, 71, 0.08);
-    box-shadow: 0 0.6rem 1.4rem rgba(15, 23, 42, 0.05);
-  }
-
-  .kinjo-home-checklist-icon {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 164, 120, 0.26),
-      rgba(117, 201, 245, 0.24)
-    );
-    color: #165041;
-  }
-
-  .kinjo-home-checklist-text strong {
-    display: block;
-    margin-bottom: 0.18rem;
-    font-size: 0.95rem;
-  }
-
-  .kinjo-home-checklist-text span {
-    color: #596962;
-    font-size: 0.9rem;
-    line-height: 1.55;
-  }
-
-  .kinjo-home-section {
-    position: relative;
-    padding: clamp(2.5rem, 5vw, 4.5rem) 0;
-  }
-
-  .kinjo-home-section-title {
-    margin-bottom: 0.75rem;
-    font-size: clamp(1.5rem, 2.3vw, 2.1rem);
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: #14312a;
-  }
-
-  .kinjo-home-section-lead {
-    max-width: 68ch;
-    color: #57616e;
-    line-height: 1.8;
-  }
-
-  .kinjo-home-service-card,
-  .kinjo-home-user-card,
-  .kinjo-home-step-card,
-  .kinjo-home-cta-card {
-    height: 100%;
-    border: 1px solid rgba(31, 94, 71, 0.08);
-    border-radius: 1.35rem;
-    background: linear-gradient(180deg, #ffffff 0%, #fffdf7 100%);
-    box-shadow: 0 1.1rem 2.2rem rgba(15, 23, 42, 0.06);
-    transition:
-      transform 180ms ease,
-      box-shadow 180ms ease,
-      border-color 180ms ease;
-  }
-
-  .kinjo-home-service-card:hover,
-  .kinjo-home-user-card:hover,
-  .kinjo-home-step-card:hover,
-  .kinjo-home-cta-card:hover {
-    transform: translateY(-0.22rem);
-    box-shadow: 0 1.4rem 2.8rem rgba(15, 23, 42, 0.09);
-    border-color: rgba(255, 164, 120, 0.32);
-  }
-
-  .kinjo-home-icon-wrap {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 0.95rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(
-      135deg,
-      rgba(255, 164, 120, 0.24),
-      rgba(117, 201, 245, 0.25)
-    );
-    color: #165041;
-    font-size: 1.3rem;
-    flex-shrink: 0;
-  }
-
-  .kinjo-home-logo-wrap {
-    width: 84px;
-    height: 64px;
-    border-radius: 0.75rem;
-    background: transparent;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .kinjo-home-service-card .card-body,
-  .kinjo-home-user-card .card-body,
-  .kinjo-home-step-card .card-body,
-  .kinjo-home-cta-card .card-body {
-    padding: 1.35rem;
-  }
-
-  .kinjo-home-card-title {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: #14312a;
-  }
-
-  .kinjo-home-card-copy {
-    margin: 0.8rem 0 0;
-    color: #586862;
-    line-height: 1.7;
-  }
-
-  .kinjo-home-card-list {
-    display: grid;
-    gap: 0.55rem;
-    margin: 1rem 0 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .kinjo-home-card-list li {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.55rem;
-    color: #3f504a;
-    line-height: 1.55;
-  }
-
-  .kinjo-home-card-list i {
-    color: #ff8f5d;
-    flex: 0 0 auto;
-    margin-top: 0.15rem;
-  }
-
-  .kinjo-home-step-number {
-    width: 2.35rem;
-    height: 2.35rem;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1rem;
-    background: linear-gradient(135deg, #ff9c6c, #ffd36b);
-    color: #fff;
-    font-weight: 800;
-    box-shadow: 0 0.75rem 1.6rem rgba(255, 156, 108, 0.28);
-  }
-
-  .kinjo-home-audience {
-    background: linear-gradient(
-      180deg,
-      rgba(255, 214, 115, 0.1),
-      rgba(117, 201, 245, 0.08)
-    );
-  }
-
-  .kinjo-home-audience .kinjo-home-user-card {
-    background: linear-gradient(180deg, #ffffff 0%, #fffaf2 100%);
-  }
-
-  .kinjo-home-cta-band {
-    padding-bottom: 4rem;
-  }
-
-  .kinjo-home-cta-card {
-    position: relative;
-    overflow: hidden;
-    background:
-      radial-gradient(
-        circle at 92% 16%,
-        rgba(255, 214, 115, 0.36),
-        transparent 22%
-      ),
-      radial-gradient(
-        circle at 10% 90%,
-        rgba(117, 201, 245, 0.2),
-        transparent 18%
-      ),
-      linear-gradient(135deg, #ffffff 0%, #fffdf7 100%);
-  }
-
-  .kinjo-home-cta-card::before {
-    content: "";
-    position: absolute;
-    inset-inline-end: -2rem;
-    inset-block-end: -2rem;
-    width: 9rem;
-    height: 9rem;
-    border-radius: 999px;
-    background: rgba(255, 164, 120, 0.12);
-  }
-
-  .kinjo-home-muted-note {
-    color: #586962;
-    line-height: 1.8;
-  }
-
-  .kinjo-home-helpers {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-top: 1rem;
-  }
-
-  .kinjo-home-helper-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: #d9652e;
-    font-weight: 700;
-    text-decoration: none;
-  }
-
-  .kinjo-home-helper-link:hover {
-    color: #17312a;
-    text-decoration: underline;
-  }
-
-  @media (max-width: 991.98px) {
-    .kinjo-home-title {
-      max-width: none;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .kinjo-home-service-card,
-    .kinjo-home-user-card,
-    .kinjo-home-step-card,
-    .kinjo-home-cta-card {
-      transition: none;
-    }
-
-    .kinjo-home-service-card:hover,
-    .kinjo-home-user-card:hover,
-    .kinjo-home-step-card:hover,
-    .kinjo-home-cta-card:hover {
-      transform: none;
-    }
-  }
-</style>
-{% endblock %} {% block content %}
+<link rel="stylesheet" href="/static/css/home_premium.css?v=2.0" />
+{% endblock %}
+{% block content %}
 <div class="kinjo-home-page">
   <section class="kinjo-home-hero" aria-labelledby="home-title">
     <div class="container kinjo-home-hero-inner">
@@ -725,6 +202,134 @@
                 </div>
               </li>
             </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="kinjo-home-section bg-light" aria-labelledby="partners-title" style="background: rgba(248, 250, 252, 0.6); border-block: 1px solid rgba(226, 232, 240, 0.8);">
+    <div class="container text-center mb-4">
+      <span class="badge bg-primary-subtle text-primary mb-2 px-3 py-2 rounded-pill font-weight-bold" style="font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase;">
+        {% if ui_lang == 'en' %}Official Collaborations{% else %}الاعتمادات الرسمية{% endif %}
+      </span>
+      <h2 id="partners-title" class="kinjo-home-section-title mt-2">
+        {% if ui_lang == 'en' %}Strategic Integration & Government Partners{% else %}الشراكات الاستراتيجية والربط الحكومي{% endif %}
+      </h2>
+      <p class="kinjo-home-section-lead mx-auto mb-0">
+        {% if ui_lang == 'en' %}KinJo integrates with official databases and ministries in Jordan to ensure records match securely.{% else %}ترتبط منصة KinJo بالجهات والوزارات الرسمية في الأردن لضمان دقة البيانات واعتماد الخدمات بموثوقية.{% endif %}
+      </p>
+    </div>
+    
+    <div class="logos-marquee-wrapper">
+      <div class="logos-marquee">
+        <!-- Logo 1: MoSD -->
+        <div class="logo-item-card">
+          <div class="logo-badge-icon" style="background: linear-gradient(135deg, #D97706, #B45309);">
+            <i class="bi bi-bank" aria-hidden="true"></i>
+          </div>
+          <div class="text-start">
+            <h4 class="m-0" style="font-size: 0.95rem; font-weight: 700; color: #1E293B;">
+              {% if ui_lang == 'en' %}Ministry of Social Development{% else %}وزارة التنمية الاجتماعية{% endif %}
+            </h4>
+            <span style="font-size: 0.75rem; color: #10B981; font-weight: 600;">
+              <i class="bi bi-shield-fill-check me-1"></i>{% if ui_lang == 'en' %}Direct Registry Sync{% else %}ربط سجلات مباشر{% endif %}
+            </span>
+          </div>
+        </div>
+        <!-- Logo 2: MoDEE -->
+        <div class="logo-item-card">
+          <div class="logo-badge-icon" style="background: linear-gradient(135deg, #2563EB, #1D4ED8);">
+            <i class="bi bi-cpu" aria-hidden="true"></i>
+          </div>
+          <div class="text-start">
+            <h4 class="m-0" style="font-size: 0.95rem; font-weight: 700; color: #1E293B;">
+              {% if ui_lang == 'en' %}Ministry of Digital Economy{% else %}وزارة الاقتصاد الرقمي والريادة{% endif %}
+            </h4>
+            <span style="font-size: 0.75rem; color: #10B981; font-weight: 600;">
+              <i class="bi bi-shield-fill-check me-1"></i>{% if ui_lang == 'en' %}Secure API Gateway{% else %}بوابة ربط آمنة{% endif %}
+            </span>
+          </div>
+        </div>
+        <!-- Logo 3: MoE -->
+        <div class="logo-item-card">
+          <div class="logo-badge-icon" style="background: linear-gradient(135deg, #059669, #047857);">
+            <i class="bi bi-mortarboard" aria-hidden="true"></i>
+          </div>
+          <div class="text-start">
+            <h4 class="m-0" style="font-size: 0.95rem; font-weight: 700; color: #1E293B;">
+              {% if ui_lang == 'en' %}Ministry of Education{% else %}وزارة التربية والتعليم{% endif %}
+            </h4>
+            <span style="font-size: 0.75rem; color: #10B981; font-weight: 600;">
+              <i class="bi bi-shield-fill-check me-1"></i>{% if ui_lang == 'en' %}Licensing Accreditation{% else %}اعتماد التراخيص{% endif %}
+            </span>
+          </div>
+        </div>
+        <!-- Logo 4: NCFA -->
+        <div class="logo-item-card">
+          <div class="logo-badge-icon" style="background: linear-gradient(135deg, #9333EA, #7E22CE);">
+            <i class="bi bi-bookmark-star" aria-hidden="true"></i>
+          </div>
+          <div class="text-start">
+            <h4 class="m-0" style="font-size: 0.95rem; font-weight: 700; color: #1E293B;">
+              {% if ui_lang == 'en' %}National Council for Family Affairs{% else %}المجلس الوطني لشؤون الأسرة{% endif %}
+            </h4>
+            <span style="font-size: 0.75rem; color: #10B981; font-weight: 600;">
+              <i class="bi bi-shield-fill-check me-1"></i>{% if ui_lang == 'en' %}Standard Compliance{% else %}مطابقة معايير الحوكمة{% endif %}
+            </span>
+          </div>
+        </div>
+        <!-- Duplicate set for seamless infinite loop -->
+        <div class="logo-item-card">
+          <div class="logo-badge-icon" style="background: linear-gradient(135deg, #D97706, #B45309);">
+            <i class="bi bi-bank" aria-hidden="true"></i>
+          </div>
+          <div class="text-start">
+            <h4 class="m-0" style="font-size: 0.95rem; font-weight: 700; color: #1E293B;">
+              {% if ui_lang == 'en' %}Ministry of Social Development{% else %}وزارة التنمية الاجتماعية{% endif %}
+            </h4>
+            <span style="font-size: 0.75rem; color: #10B981; font-weight: 600;">
+              <i class="bi bi-shield-fill-check me-1"></i>{% if ui_lang == 'en' %}Direct Registry Sync{% else %}ربط سجلات مباشر{% endif %}
+            </span>
+          </div>
+        </div>
+        <div class="logo-item-card">
+          <div class="logo-badge-icon" style="background: linear-gradient(135deg, #2563EB, #1D4ED8);">
+            <i class="bi bi-cpu" aria-hidden="true"></i>
+          </div>
+          <div class="text-start">
+            <h4 class="m-0" style="font-size: 0.95rem; font-weight: 700; color: #1E293B;">
+              {% if ui_lang == 'en' %}Ministry of Digital Economy{% else %}وزارة الاقتصاد الرقمي والريادة{% endif %}
+            </h4>
+            <span style="font-size: 0.75rem; color: #10B981; font-weight: 600;">
+              <i class="bi bi-shield-fill-check me-1"></i>{% if ui_lang == 'en' %}Secure API Gateway{% else %}بوابة ربط آمنة{% endif %}
+            </span>
+          </div>
+        </div>
+        <div class="logo-item-card">
+          <div class="logo-badge-icon" style="background: linear-gradient(135deg, #059669, #047857);">
+            <i class="bi bi-mortarboard" aria-hidden="true"></i>
+          </div>
+          <div class="text-start">
+            <h4 class="m-0" style="font-size: 0.95rem; font-weight: 700; color: #1E293B;">
+              {% if ui_lang == 'en' %}Ministry of Education{% else %}وزارة التربية والتعليم{% endif %}
+            </h4>
+            <span style="font-size: 0.75rem; color: #10B981; font-weight: 600;">
+              <i class="bi bi-shield-fill-check me-1"></i>{% if ui_lang == 'en' %}Licensing Accreditation{% else %}اعتماد التراخيص{% endif %}
+            </span>
+          </div>
+        </div>
+        <div class="logo-item-card">
+          <div class="logo-badge-icon" style="background: linear-gradient(135deg, #9333EA, #7E22CE);">
+            <i class="bi bi-bookmark-star" aria-hidden="true"></i>
+          </div>
+          <div class="text-start">
+            <h4 class="m-0" style="font-size: 0.95rem; font-weight: 700; color: #1E293B;">
+              {% if ui_lang == 'en' %}National Council for Family Affairs{% else %}المجلس الوطني لشؤون الأسرة{% endif %}
+            </h4>
+            <span style="font-size: 0.75rem; color: #10B981; font-weight: 600;">
+              <i class="bi bi-shield-fill-check me-1"></i>{% if ui_lang == 'en' %}Standard Compliance{% else %}مطابقة معايير الحوكمة{% endif %}
+            </span>
           </div>
         </div>
       </div>

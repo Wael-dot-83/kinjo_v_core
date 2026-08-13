@@ -1,0 +1,522 @@
+/* static/css/home_premium.css */
+/* Premium, vibrant, and professional landing page theme for KinJo Homepage */
+
+/* ── Entrance Animations ─────────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatParticle {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-15px) scale(1.05);
+  }
+}
+
+/* ── Public Landing Page Layout ───────────────────────────────────────────── */
+.kinjo-home-page {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+}
+
+/* Bright, colorful, child-friendly yet highly professional hero section */
+.kinjo-home-hero {
+  position: relative;
+  color: #1E293B;
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.15), transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.12), transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.05), transparent 30%),
+    linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 50%, #ECFDF5 100%) !important;
+  isolation: isolate;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.kinjo-home-hero-inner {
+  position: relative;
+  padding: clamp(4rem, 6vw, 7rem) 0 clamp(2.5rem, 5vw, 4rem);
+}
+
+/* Animations applied to hero columns */
+.kinjo-home-hero-inner .col-lg-7 {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.kinjo-home-hero-inner .col-lg-5 {
+  animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Vibrant badge wrapper */
+.kinjo-home-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  color: #1E40AF;
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.05);
+  backdrop-filter: blur(10px);
+}
+
+.kinjo-home-badge i {
+  color: #F59E0B;
+}
+
+.kinjo-home-title {
+  max-width: none;
+  margin: 1.2rem 0 1.2rem;
+  font-size: clamp(1.8rem, 2.8vw, 3rem);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: #0F172A;
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+}
+
+@media (min-width: 992px) {
+  html[lang="ar"] .kinjo-home-title {
+    white-space: nowrap;
+  }
+}
+
+.kinjo-home-lead {
+  max-width: 58ch;
+  margin-bottom: 2rem;
+  color: #475569;
+  font-size: clamp(1.05rem, 1.6vw, 1.22rem);
+  line-height: 1.8;
+}
+
+/* Action buttons with custom animated hover highlights */
+.kinjo-home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.kinjo-home-actions .btn {
+  border-radius: 999px;
+  padding: 0.8rem 1.75rem;
+  font-weight: 700;
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kinjo-home-actions .btn-primary {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
+  border: none !important;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.2) !important;
+  color: #FFFFFF !important;
+}
+
+.kinjo-home-actions .btn-primary:hover {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px rgba(37, 99, 235, 0.3) !important;
+}
+
+.kinjo-home-actions .btn-outline-light {
+  border-color: rgba(226, 232, 240, 0.8);
+  color: #334155;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+}
+
+.kinjo-home-actions .btn-outline-light:hover {
+  background: #FFFFFF;
+  border-color: #3B82F6;
+  color: #2563EB;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.05);
+}
+
+.kinjo-home-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.kinjo-home-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  color: #334155;
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+}
+
+.kinjo-home-pill i {
+  color: #3B82F6;
+}
+
+/* Right-side preview panel logic */
+.kinjo-home-panel {
+  position: relative;
+  border-radius: 1.75rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.kinjo-home-panel .card {
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 1.2rem;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+}
+
+.kinjo-home-panel-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.kinjo-home-panel-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.kinjo-home-panel-subtitle {
+  margin: 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.kinjo-home-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563EB;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.kinjo-home-checklist {
+  display: grid;
+  gap: 1rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kinjo-home-checklist-item {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  background: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+}
+
+.kinjo-home-checklist-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.12));
+  color: #2563EB;
+  font-size: 1.05rem;
+}
+
+.kinjo-home-checklist-text strong {
+  display: block;
+  margin-bottom: 0.18rem;
+  font-size: 0.95rem;
+  color: #0F172A;
+}
+
+.kinjo-home-checklist-text span {
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+/* ── Section Scaffolding ──────────────────────────────────────────────────── */
+.kinjo-home-section {
+  position: relative;
+  padding: clamp(3rem, 6vw, 5.5rem) 0;
+}
+
+.kinjo-home-section-title {
+  margin-bottom: 0.85rem;
+  font-size: clamp(1.6rem, 2.5vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0F172A;
+}
+
+.kinjo-home-section-lead {
+  max-width: 68ch;
+  color: #475569;
+  line-height: 1.8;
+  font-size: clamp(1rem, 1.5vw, 1.125rem);
+}
+
+/* ── Premium Animated Cards ───────────────────────────────────────────────── */
+.kinjo-home-service-card,
+.kinjo-home-user-card,
+.kinjo-home-cta-card {
+  height: 100%;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 1.5rem;
+  background: #FFFFFF;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kinjo-home-service-card:hover,
+.kinjo-home-user-card:hover,
+.kinjo-home-cta-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+.kinjo-home-icon-wrap {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1));
+  color: #2563EB;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.kinjo-home-logo-wrap {
+  width: 90px;
+  height: 70px;
+  border-radius: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kinjo-home-service-card .card-body,
+.kinjo-home-user-card .card-body,
+.kinjo-home-cta-card .card-body {
+  padding: 1.75rem;
+}
+
+.kinjo-home-card-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.kinjo-home-card-copy {
+  margin: 0.8rem 0 0;
+  color: #475569;
+  line-height: 1.7;
+}
+
+.kinjo-home-card-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kinjo-home-card-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  color: #475569;
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.kinjo-home-card-list i {
+  color: #10B981;
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+  font-size: 1.1rem;
+}
+
+/* ── Audience Section ─────────────────────────────────────────────────────── */
+.kinjo-home-audience {
+  background: linear-gradient(180deg, #F8FAFC 0%, #EDF2F7 100%) !important;
+  border-block: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.kinjo-home-audience .kinjo-home-user-card {
+  background: #FFFFFF !important;
+}
+
+/* ── Call To Action Band ─────────────────────────────────────────────────── */
+.kinjo-home-cta-band {
+  padding-bottom: 5rem;
+}
+
+.kinjo-home-cta-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 16%, rgba(59, 130, 246, 0.12), transparent 30%),
+    radial-gradient(circle at 10% 90%, rgba(16, 185, 129, 0.1), transparent 25%),
+    linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%) !important;
+}
+
+.kinjo-home-muted-note {
+  color: #475569;
+  line-height: 1.8;
+  font-size: 1.05rem;
+}
+
+.kinjo-home-helpers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.kinjo-home-helper-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #2563EB;
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: color 150ms ease;
+}
+
+.kinjo-home-helper-link:hover {
+  color: #1D4ED8;
+  text-decoration: underline;
+}
+
+/* ── Infinite Marquee Slider for Logos ───────────────────────────────────── */
+.logos-marquee-wrapper {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  padding: 2rem 0;
+  background: rgba(255, 255, 255, 0.7);
+  border-block: 1px solid rgba(226, 232, 240, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.logos-marquee {
+  display: flex;
+  width: max-content;
+  gap: 2rem;
+  animation: marquee 25s linear infinite;
+}
+
+.logos-marquee-wrapper:hover .logos-marquee {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Symmetrical RTL direction flipping for marquee */
+[dir="rtl"] .logos-marquee {
+  animation: marquee-rtl 25s linear infinite;
+}
+
+@keyframes marquee-rtl {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(50%);
+  }
+}
+
+.logo-item-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  background: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  padding: 0.75rem 1.5rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+  transition: all 200ms ease;
+}
+
+.logo-item-card:hover {
+  transform: translateY(-3px);
+  border-color: #3B82F6;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.05);
+}
+
+.logo-badge-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+@media (max-width: 991.98px) {
+  .kinjo-home-title {
+    max-width: none;
+  }
+  .logos-marquee {
+    animation-duration: 18s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kinjo-home-service-card,
+  .kinjo-home-user-card,
+  .kinjo-home-cta-card {
+    transition: none;
+  }
+  .logos-marquee {
+    animation: none;
+  }
+}

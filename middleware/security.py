@@ -144,6 +144,10 @@ async def security_headers_middleware(request: Request, call_next: Callable):
     if settings.ENVIRONMENT.lower() == "production":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
+    # Dynamic responses (HTML/Jinja2 templates/APIs) must never be cached by CDN or browsers
+    if "cache-control" not in [k.lower() for k in response.headers.keys()]:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+
     # Expose rate-limit context on admin API responses so clients can back off proactively.
     # The actual counters live in slowapi; we surface the configured ceiling and window.
     # Write methods are governed by RATE_LIMIT_ADMIN_WRITE, reads by RATE_LIMIT_ADMIN_READ,

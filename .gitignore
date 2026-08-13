@@ -224,3 +224,6 @@ htmlcov/
 data/*.db.backup-*
 data/*.backup-*-shm
 data/*.backup-*-wal
+
+# Droplet-specific environment file (contains SMTP and other secrets)
+.env.droplet

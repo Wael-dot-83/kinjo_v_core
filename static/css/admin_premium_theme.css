@@ -3,11 +3,12 @@
 
 /* ── Modern Colors & Gradients ───────────────────────────────────────────── */
 :root {
-  --header-gradient: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  /* Bright, vibrant electric blue to sky blue gradient for the header */
+  --header-gradient: linear-gradient(135deg, #1E40AF 0%, #3B82F6 50%, #0284C7 100%);
   --accent-rainbow: linear-gradient(90deg, #3B82F6 0%, #10B981 33%, #F59E0B 66%, #EF4444 100%);
-  --footer-bg: #0F172A;
-  --footer-ink: #94A3B8;
-  --sidebar-active-pill: rgba(37, 99, 235, 0.08);
+  --footer-bg: #FFFFFF;
+  --footer-ink: #475569;
+  --sidebar-active-pill: rgba(37, 99, 235, 0.1);
 }
 
 /* ── Redesigned Header (.admin-header) ─────────────────────────────────────── */
@@ -15,7 +16,7 @@
   height: var(--admin-header-height, 64px);
   background: var(--header-gradient) !important;
   border-block-end: none !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15) !important;
   position: relative;
   padding: 0 1.5rem !important;
 }
@@ -27,7 +28,7 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 3px;
+  height: 4px; /* Slightly thicker for brightness */
   background: var(--accent-rainbow);
   z-index: 10;
 }
@@ -35,49 +36,52 @@
 /* Refine Header Controls & Action Buttons */
 .btn-header-action,
 .btn-header-user {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  color: #E2E8F0 !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  color: #FFFFFF !important;
   padding: 0.4rem 0.8rem !important;
   border-radius: 8px !important;
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
 }
 
 .btn-header-action:hover,
 .btn-header-user:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  color: #FFFFFF !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
   transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
 .btn-header-action i {
-  color: #60A5FA !important; /* Soft bright blue icon */
+  color: #FFFFFF !important;
 }
 
 /* Gold/Rainbow Avatar lockup */
 .header-user-avatar {
-  background: linear-gradient(135deg, #6366F1 0%, #A855F7 100%) !important; /* Premium violet-indigo gradient */
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%) !important; /* Bright coral-orange gradient */
   color: #FFFFFF !important;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0,0,0,0.2) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
   font-weight: 700 !important;
 }
 
 .header-user-name {
-  color: #F8FAFC !important;
+  color: #FFFFFF !important;
   font-size: 0.95rem !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 
 .header-user-role {
-  color: #94A3B8 !important; /* Soft slate gray role label */
+  color: #E0F2FE !important; /* Very light sky blue role label */
   font-size: 0.8rem !important;
+  font-weight: 500 !important;
 }
 
 /* ── Redesigned Navigation / Sidebar Menu (.admin-top-nav) ─────────────────── */
 /* The top menu acts as the horizontal "sidebar" */
 .admin-top-nav {
-  background: rgba(255, 255, 255, 0.85) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   border-block-end: 1px solid rgba(226, 232, 240, 0.8) !important;
@@ -93,21 +97,21 @@
   border-radius: 8px !important;
   border-bottom: 2px solid transparent !important;
   padding: 10px 14px !important;
-  font-weight: 500 !important;
-  color: #475569 !important; /* Slate 600 */
+  font-weight: 600 !important; /* Thicker for brightness/contrast */
+  color: #334155 !important; /* Slate 700 */
   transition: all 150ms ease !important;
 }
 
 .top-menu-link i {
-  color: #64748B !important;
+  color: #475569 !important;
   transition: color 150ms ease !important;
 }
 
 /* Hover state */
 .top-menu-link:hover,
 .top-menu-item:hover > .top-menu-link {
-  color: #1E293B !important;
-  background-color: rgba(241, 245, 249, 0.8) !important;
+  color: #1D4ED8 !important; /* Bright royal blue */
+  background-color: rgba(239, 246, 255, 0.8) !important; /* Soft blue tint */
 }
 
 .top-menu-link:hover i {
@@ -118,7 +122,6 @@
 .top-menu-link.active {
   color: #2563EB !important;
   background-color: var(--sidebar-active-pill) !important;
-  font-weight: 600 !important;
   border-bottom: 2px solid #2563EB !important;
 }
 
@@ -128,7 +131,7 @@
 
 /* ── Premium Dropdown Menus ───────────────────────────────────────────────── */
 .top-menu-dropdown {
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
   border: 1px solid rgba(226, 232, 240, 0.9) !important;
@@ -151,18 +154,19 @@
 
 .dropdown-item {
   padding: 10px 16px !important;
-  color: #334155 !important;
+  color: #1E293B !important;
   border-inline-start: 3px solid transparent !important;
+  font-weight: 500 !important;
 }
 
 .dropdown-item i {
-  color: #64748B !important;
+  color: #475569 !important;
   font-size: 1rem !important;
 }
 
 .dropdown-item:hover {
-  background-color: rgba(241, 245, 249, 0.6) !important;
-  color: #0F172A !important;
+  background-color: rgba(239, 246, 255, 0.6) !important;
+  color: #1D4ED8 !important;
   border-inline-start-color: #3B82F6 !important;
 }
 
@@ -178,8 +182,9 @@
 
 .dropdown-group-label {
   padding: 10px 16px 4px !important;
-  color: #94A3B8 !important; /* Soft group labels */
+  color: #64748B !important; /* Soft group labels */
   font-size: 10px !important;
+  font-weight: 700 !important;
 }
 
 /* ── Redesigned Footer (.admin-shell-footer) ───────────────────────────────── */
@@ -187,10 +192,10 @@
   background: var(--footer-bg) !important;
   color: var(--footer-ink) !important;
   border-top: none !important;
-  padding: 1rem 1.5rem !important;
+  padding: 1.2rem 1.5rem !important;
   position: relative;
-  font-weight: 500 !important;
-  box-shadow: 0 -4px 10px rgba(0,0,0,0.03) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03) !important;
 }
 
 /* Rainbow border at the top of the footer */
@@ -200,7 +205,7 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 2px;
+  height: 3px; /* Slightly thicker */
   background: var(--accent-rainbow);
 }
 
@@ -209,8 +214,74 @@
 }
 
 .admin-shell-footer span:first-child {
+  color: #1E293B !important;
+  font-weight: 700 !important;
+}
+
+/* ── Bright Cards & UI Panels (.k-card) ───────────────────────────────────── */
+.k-card, .card {
+  background-color: #FFFFFF !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+  transition: transform 200ms ease, box-shadow 200ms ease !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.k-card:hover, .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -2px rgba(37, 99, 235, 0.05) !important;
+}
+
+/* ── Primary Buttons (.k-btn-primary) ────────────────────────────────────── */
+.k-btn-primary, .btn-primary {
+  background-color: #2563EB !important;
   color: #FFFFFF !important;
+  border-radius: 8px !important;
   font-weight: 600 !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important;
+  transition: all 150ms ease !important;
+}
+
+.k-btn-primary:hover, .btn-primary:hover {
+  background-color: #1D4ED8 !important;
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3) !important;
+  transform: translateY(-1px);
+}
+
+/* ── Forms and Inputs (.k-input) ────────────────────────────────────────── */
+.k-input, .form-control {
+  border-radius: 8px !important;
+  border: 1px solid #CBD5E1 !important;
+  background-color: #FFFFFF !important;
+  transition: border-color 150ms ease, box-shadow 150ms ease !important;
+}
+
+.k-input:focus, .form-control:focus {
+  border-color: #3B82F6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+/* ── Bright Table Styling ────────────────────────────────────────────────── */
+.k-table-container, .table-responsive {
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03) !important;
+  background: #FFFFFF !important;
+  margin-bottom: 1.5rem;
+}
+
+.k-table th, .table th {
+  background-color: #F8FAFC !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid #E2E8F0 !important;
+}
+
+.k-table td, .table td {
+  border-bottom: 1px solid #F1F5F9 !important;
 }
 
 /* RTL Support details */
