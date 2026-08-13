@@ -3282,6 +3282,14 @@ function localizeSourceKey(key) {
   };
   const hit = map[raw.toUpperCase()];
   if (hit) return adminAnalyticsText(hit[0].trim(), hit[1]);
+  // An unknown key must not become English words in an Arabic card. Humanising
+  // "walk_in" to "Walk In" avoided leaking the identifier but still put English
+  // in front of an Arabic reader, which is the same defect in a nicer font.
+  // English falls back to a readable form of the value; Arabic falls back to a
+  // neutral Arabic label instead.
+  if (adminAnalyticsText('ar', 'en') === 'ar') {
+    return 'مصدر آخر';
+  }
   return raw
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
