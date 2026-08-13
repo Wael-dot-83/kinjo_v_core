@@ -51,6 +51,20 @@ def test_500_template_defaults_to_arabic_rtl():
     assert "خطأ داخلي في الخادم" in html
 
 
+def test_all_standalone_document_roots_default_to_arabic_rtl():
+    """Every standalone browser entry point declares Arabic RTL at its root."""
+    from pathlib import Path
+
+    project_root = Path(__file__).resolve().parents[1]
+    expected_roots = {
+        project_root / "templates" / "500.html": '<html lang="{{ ui_lang | default(\'ar\') }}" dir="{{ ui_dir | default(\'rtl\') }}"',
+        project_root / "mobile" / "web" / "index.html": '<html lang="ar" dir="rtl">',
+    }
+
+    for path, expected in expected_roots.items():
+        assert expected in path.read_text(encoding="utf-8"), path
+
+
 def test_login_respects_english_cookie_direction(client):
     client.cookies.set("kinjo_lang", "en")
     response = client.get("/login")

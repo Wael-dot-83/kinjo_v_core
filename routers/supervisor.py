@@ -1980,7 +1980,7 @@ def export_supervisor_kpi(
         lang = "ar"
     direction = "ltr" if lang == "en" else "rtl"
     html = f"""<!DOCTYPE html><html dir="{direction}" lang="{lang}"><head>
-<meta charset="UTF-8"><title>KPI Export</title>
+<meta charset="UTF-8"><title>تصدير مؤشرات الأداء</title>
 <style>body{{font-family:sans-serif;padding:20px}}table{{border-collapse:collapse;width:100%}}
 td,th{{border:1px solid #ccc;padding:6px 10px}}@media print{{.no-print{{display:none}}}}</style>
 </head><body>
