@@ -55,8 +55,17 @@ def test_chart_legend_localizes_its_keys():
     assert "entries.map(e => e[0])" not in body
 
 
-def test_unknown_keys_are_humanised_not_leaked():
-    """A new backend value must degrade to "Walk In", never to walk_in."""
+def test_unknown_key_in_arabic_does_not_become_english():
+    """Humanising walk_in to "Walk In" stopped the identifier leaking but still
+    put English words in an Arabic card -- the same defect in a nicer font."""
+    body = _fn("localizeSourceKey")
+    assert "adminAnalyticsText('ar', 'en') === 'ar'" in body
+    assert "'مصدر آخر'" in body
+    # The Arabic branch must return before the English humanising fallback.
+    assert body.index("مصدر آخر") < body.index("replace(/[_-]+/g")
+
+
+def test_unknown_key_in_english_is_humanised_not_raw():
     body = _fn("localizeSourceKey")
     assert "replace(/[_-]+/g" in body
     assert "toUpperCase()" in body
