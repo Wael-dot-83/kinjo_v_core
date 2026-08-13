@@ -180,47 +180,94 @@ def _enforce_analytics_rbac(user: User, kindergarten_ids: List[int] | None) -> L
     return kindergarten_ids if kindergarten_ids else None
 
 
+# Columns every analytic in this module reads, verified mechanically against
+# the AST (string constants and attribute names, so itertuples access counts).
+# The ten columns outside this set exist only so `sample-data` and `export` can
+# hand back a full row; fetching them for a summary transferred 4 MB of
+# `activities` and `notes` per request for nothing.
+_ANALYTICS_COLUMNS = (
+    "child_id", "kindergarten_id", "date", "status",
+    "submitted_at", "approved_at", "rejected_reason",
+    "arrival_time", "leave_time", "mood", "health_notes",
+    "breakfast", "snack", "milk", "lunch",
+    "nap_duration_minutes", "bathroom_count", "diaper_wet", "diaper_soiled",
+    "child_first_name", "child_last_name",
+    "kindergarten_name_ar", "kindergarten_name_en",
+)
+
+_RAW_ROW_COLUMNS = (
+    "id", "submitted_by", "approved_by", "sent_to_parent_at",
+    "nap_start", "nap_end", "activities", "notes", "created_at", "child_dob",
+)
+
+_COLUMN_SOURCES = {
+    "id": DailyReport.id,
+    "child_id": DailyReport.child_id,
+    "kindergarten_id": DailyReport.kindergarten_id,
+    "date": DailyReport.date,
+    "status": DailyReport.status,
+    "submitted_by": DailyReport.submitted_by,
+    "submitted_at": DailyReport.submitted_at,
+    "approved_by": DailyReport.approved_by,
+    "approved_at": DailyReport.approved_at,
+    "sent_to_parent_at": DailyReport.sent_to_parent_at,
+    "rejected_reason": DailyReport.rejected_reason,
+    "arrival_time": DailyReport.arrival_time,
+    "leave_time": DailyReport.leave_time,
+    "mood": DailyReport.mood,
+    "health_notes": DailyReport.health_notes,
+    "breakfast": DailyReport.breakfast,
+    "snack": DailyReport.snack,
+    "milk": DailyReport.milk,
+    "lunch": DailyReport.lunch,
+    "nap_start": DailyReport.nap_start,
+    "nap_end": DailyReport.nap_end,
+    "nap_duration_minutes": DailyReport.nap_duration_minutes,
+    "bathroom_count": DailyReport.bathroom_count,
+    "diaper_wet": DailyReport.diaper_wet,
+    "diaper_soiled": DailyReport.diaper_soiled,
+    "activities": DailyReport.activities,
+    "notes": DailyReport.notes,
+    "created_at": DailyReport.created_at,
+    "child_first_name": Child.first_name,
+    "child_last_name": Child.last_name,
+    "child_dob": Child.date_of_birth,
+    "kindergarten_name_ar": Kindergarten.name_ar,
+    "kindergarten_name_en": Kindergarten.name_en,
+}
+
+# The full projection, in its original column order — sample-data and export
+# return these rows verbatim, so the order is part of their output.
+_FULL_COLUMNS = (
+    "id", "child_id", "kindergarten_id", "date", "status",
+    "submitted_by", "submitted_at", "approved_by", "approved_at",
+    "sent_to_parent_at", "rejected_reason",
+    "arrival_time", "leave_time", "mood", "health_notes",
+    "breakfast", "snack", "milk", "lunch",
+    "nap_start", "nap_end", "nap_duration_minutes",
+    "bathroom_count", "diaper_wet", "diaper_soiled",
+    "activities", "notes", "created_at",
+    "child_first_name", "child_last_name", "child_dob",
+    "kindergarten_name_ar", "kindergarten_name_en",
+)
+
+
 def _load_reports_df(db: Session, date_from: date, date_to: date,
                      kindergarten_ids: List[int] | None = None,
                      child_ids: List[int] | None = None,
-                     status_filter: str | None = None) -> pd.DataFrame:
+                     status_filter: str | None = None,
+                     analytics_only: bool = False) -> pd.DataFrame:
     """
     Load DailyReport rows into a Pandas DataFrame with child/class info.
+
+    `analytics_only` restricts the projection to the columns the analytics
+    engine reads. Callers that hand raw rows back to the client (`sample-data`,
+    `export`) must leave it False so their payloads keep every field.
     """
+    columns = [c for c in _FULL_COLUMNS
+               if not analytics_only or c in _ANALYTICS_COLUMNS]
     q = db.query(
-        DailyReport.id,
-        DailyReport.child_id,
-        DailyReport.kindergarten_id,
-        DailyReport.date,
-        DailyReport.status,
-        DailyReport.submitted_by,
-        DailyReport.submitted_at,
-        DailyReport.approved_by,
-        DailyReport.approved_at,
-        DailyReport.sent_to_parent_at,
-        DailyReport.rejected_reason,
-        DailyReport.arrival_time,
-        DailyReport.leave_time,
-        DailyReport.mood,
-        DailyReport.health_notes,
-        DailyReport.breakfast,
-        DailyReport.snack,
-        DailyReport.milk,
-        DailyReport.lunch,
-        DailyReport.nap_start,
-        DailyReport.nap_end,
-        DailyReport.nap_duration_minutes,
-        DailyReport.bathroom_count,
-        DailyReport.diaper_wet,
-        DailyReport.diaper_soiled,
-        DailyReport.activities,
-        DailyReport.notes,
-        DailyReport.created_at,
-        Child.first_name.label("child_first_name"),
-        Child.last_name.label("child_last_name"),
-        Child.date_of_birth.label("child_dob"),
-        Kindergarten.name_ar.label("kindergarten_name_ar"),
-        Kindergarten.name_en.label("kindergarten_name_en"),
+        *[_COLUMN_SOURCES[c].label(c) for c in columns]
     ).join(Child, DailyReport.child_id == Child.id
     # Outer join: the name is only used for alert labels, and an inner join
     # would silently drop reports whose kindergarten row is gone.
@@ -241,18 +288,7 @@ def _load_reports_df(db: Session, date_from: date, date_to: date,
     if not rows:
         return pd.DataFrame()
 
-    df = pd.DataFrame(rows, columns=[
-        "id", "child_id", "kindergarten_id", "date", "status",
-        "submitted_by", "submitted_at", "approved_by", "approved_at",
-        "sent_to_parent_at", "rejected_reason",
-        "arrival_time", "leave_time", "mood", "health_notes",
-        "breakfast", "snack", "milk", "lunch",
-        "nap_start", "nap_end", "nap_duration_minutes",
-        "bathroom_count", "diaper_wet", "diaper_soiled",
-        "activities", "notes", "created_at",
-        "child_first_name", "child_last_name", "child_dob",
-        "kindergarten_name_ar", "kindergarten_name_en",
-    ])
+    df = pd.DataFrame(rows, columns=columns)
     return _finalize_reports_df(df)
 
 
@@ -1192,7 +1228,7 @@ def get_analytics_summary(
     kg_ids = _enforce_analytics_rbac(user, [kindergarten_id] if kindergarten_id else None)
     child_ids = [child_id] if child_id else None
 
-    df = _load_reports_df(db, d_from, d_to, kg_ids, child_ids, status)
+    df = _load_reports_df(db, d_from, d_to, kg_ids, child_ids, status, analytics_only=True)
     analytics = DailyReportAnalytics(df)
     return analytics.full_summary(d_from, d_to)
 
@@ -1220,7 +1256,7 @@ def get_analytics_charts(
         request.cookies.get("kinjo_lang")
     )
 
-    df = _load_reports_df(db, d_from, d_to, kg_ids)
+    df = _load_reports_df(db, d_from, d_to, kg_ids, analytics_only=True)
     if df.empty:
         return {"charts": {}, "message": "No data for the selected period"}
 
