@@ -1735,19 +1735,49 @@
     const list   = document.getElementById('alertList');
     const badge  = document.getElementById('alertBadgeCount');
     if (!list) return;
-    if (!alerts || !alerts.length) {
-      list.innerHTML = '<div class="az-empty" style="padding:16px 0"><i class="bi bi-bell-slash"></i><span class="az-empty__text">' + (window.KINJO_LANG === 'en' ? 'No active alerts' : 'لا توجد تنبيهات نشطة') + '</span></div>';
+    const isAr = window.KINJO_LANG !== 'en';
+    const items = Array.isArray(alerts) ? alerts : [];
+
+    /* The badge is reset on every render, including the empty one. It used to
+       be updated after an early return, so a refresh that cleared the alerts
+       left the previous count sitting in red beside "لا توجد تنبيهات نشطة". */
+    if (badge) {
+      badge.textContent = items.length;
+      badge.classList.toggle('d-none', items.length === 0);
+    }
+
+    if (!items.length) {
+      list.innerHTML = '<div class="az-empty" style="padding:16px 0"><i class="bi bi-bell-slash"></i><span class="az-empty__text">' +
+        (isAr ? 'لا توجد تنبيهات نشطة' : 'No active alerts') + '</span></div>';
       return;
     }
-    if (badge) { badge.textContent = alerts.length; badge.classList.remove('d-none'); }
-    const isAr = window.KINJO_LANG !== 'en';
-    list.innerHTML = alerts.slice(0, 6).map(function (a) {
-      const sev  = (a.priority || a.type || 'info').toLowerCase();
-      const lvl  = sev.includes('critical') || sev.includes('high') ? 'high' : sev.includes('medium') ? 'medium' : 'low';
-      const msg  = isAr ? (a.message_ar || a.message || '') : (a.message_en || a.message || '');
-      const icon = lvl === 'high' ? 'exclamation-triangle-fill' : 'info-circle-fill';
-      return '<div class="anomaly-item anomaly-item--' + lvl + '"><i class="bi bi-' + icon + '"></i><span>' + esc(msg) + '</span></div>';
+
+    const SHOWN = 6;
+    list.innerHTML = items.slice(0, SHOWN).map(function (a) {
+      /* Severity comes from an explicit field. Matching substrings against a
+         free-form `type` misread values such as "highlight" as high severity. */
+      const sev = String(a.severity || a.priority || '').toLowerCase().trim();
+      const lvl = (sev === 'critical' || sev === 'high') ? 'high'
+                : (sev === 'medium' || sev === 'warning') ? 'medium'
+                : 'low';
+      /* No cross-language fallback: showing the English string because the
+         Arabic one is missing is exactly the language mixing this interface
+         must not do. A missing translation degrades to a neutral line in the
+         reader's own language. */
+      const msg = isAr
+        ? (a.message_ar || (isAr && !a.message_ar && a.message_en ? 'تنبيه بدون ترجمة' : a.message) || 'تنبيه')
+        : (a.message_en || (a.message_ar && !a.message_en ? 'Alert not translated' : a.message) || 'Alert');
+      const icon = lvl === 'high' ? 'exclamation-triangle-fill' : lvl === 'medium' ? 'exclamation-circle-fill' : 'info-circle-fill';
+      return '<div class="anomaly-item anomaly-item--' + lvl + '"><i class="bi bi-' + icon + '" aria-hidden="true"></i><span>' + esc(msg) + '</span></div>';
     }).join('');
+
+    /* The badge counts every alert but only six are drawn. Without this the
+       header read "12" above six rows with nothing explaining the difference. */
+    const hidden = items.length - SHOWN;
+    if (hidden > 0) {
+      list.innerHTML += '<div class="anomaly-item anomaly-item--low" style="justify-content:center;font-weight:600">' +
+        esc(isAr ? ('و' + hidden + ' تنبيهات أخرى') : ('and ' + hidden + ' more')) + '</div>';
+    }
   };
 
   /* ── Funnel visual renderer ─────────────────────────────────────────────── */
