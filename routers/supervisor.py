@@ -39,7 +39,7 @@ _OBSERVATION_IMAGE_TYPE_TO_EXT = {
     "image/webp": ".webp",
 }
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, and_, or_
 from sqlalchemy.exc import OperationalError
@@ -1961,6 +1961,7 @@ def upload_supervisor_profile_picture(
 
 @router.get("/kpi/export")
 def export_supervisor_kpi(
+    request: Request,
     from_date: Optional[str] = Query(None),
     to_date: Optional[str] = Query(None),
     db: Session = Depends(get_db),
@@ -1974,7 +1975,11 @@ def export_supervisor_kpi(
         f"<tr><td>{r['name']}</td><td>{r['reports_submitted']}</td><td>{r['missing_reports']}</td><td>{r['trend']}</td></tr>"
         for r in kpi["per_child"]
     )
-    html = f"""<!DOCTYPE html><html dir="rtl" lang="ar"><head>
+    lang = (request.cookies.get("kinjo_lang") or "ar").lower()
+    if lang not in {"ar", "en"}:
+        lang = "ar"
+    direction = "ltr" if lang == "en" else "rtl"
+    html = f"""<!DOCTYPE html><html dir="{direction}" lang="{lang}"><head>
 <meta charset="UTF-8"><title>KPI Export</title>
 <style>body{{font-family:sans-serif;padding:20px}}table{{border-collapse:collapse;width:100%}}
 td,th{{border:1px solid #ccc;padding:6px 10px}}@media print{{.no-print{{display:none}}}}</style>

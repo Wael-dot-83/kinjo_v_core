@@ -1648,7 +1648,7 @@
         if (!printWindow) return;
 
         printWindow.document.write(`
-            <html>
+            <html lang="${document.documentElement.lang || 'ar'}" dir="${document.documentElement.dir || 'rtl'}">
                 <head>
                     <title>${dashboardInlineText('dashboard.kpi_explanations_title', 'شرح مؤشرات الأداء الرئيسية', 'KPI explanations')}</title>
                     <style>

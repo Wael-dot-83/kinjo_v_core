@@ -37,6 +37,20 @@ def test_login_defaults_to_arabic_html_direction(client):
     assert 'dir="rtl"' in response.text
 
 
+def test_500_template_defaults_to_arabic_rtl():
+    """The standalone error page must not bypass the site-wide Arabic default."""
+    from fastapi.templating import Jinja2Templates
+    from starlette.requests import Request
+
+    templates = Jinja2Templates(directory="templates")
+    request = Request({"type": "http", "method": "GET", "path": "/", "headers": []})
+    response = templates.TemplateResponse(request=request, name="500.html", context={})
+    html = response.body.decode("utf-8")
+
+    assert '<html lang="ar" dir="rtl"' in html
+    assert "خطأ داخلي في الخادم" in html
+
+
 def test_login_respects_english_cookie_direction(client):
     client.cookies.set("kinjo_lang", "en")
     response = client.get("/login")

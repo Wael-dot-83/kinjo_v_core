@@ -67,6 +67,7 @@ from auth import authenticate_user, create_access_token, get_password_hash, requ
 from cache_service import cache_service
 from config import settings
 from ui_language import set_ui_language_cookie
+from ui_language import normalize_ui_language
 from dependencies import get_current_user, get_current_user_optional, ManagerScope, RedirectToLogin
 from middleware.auth import (
     build_generic_auth_exception,
@@ -359,10 +360,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         from fastapi.templating import Jinja2Templates
         from fastapi.responses import HTMLResponse
         error_templates = Jinja2Templates(directory="templates")
+        ui_lang = normalize_ui_language(request.cookies.get("kinjo_lang"))
         return error_templates.TemplateResponse(
             request=request, 
             name="500.html", 
-            context={},
+            context={"ui_lang": ui_lang, "ui_dir": "rtl" if ui_lang == "ar" else "ltr"},
             status_code=500
         )
         

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr" class="dark">
+<html lang="{{ ui_lang | default('ar') }}" dir="{{ ui_dir | default('rtl') }}" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>500 Internal Server Error - KinJo System</title>
+    <title>{% if ui_lang == 'en' %}500 Internal Server Error{% else %}خطأ داخلي في الخادم{% endif %} - KinJo</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -129,34 +129,34 @@
             
             <div class="space-y-3">
                 <h2 class="text-2xl font-semibold text-white font-display" id="errorTitle">
-                    Internal Server Error
+                    {% if ui_lang == 'en' %}Internal Server Error{% else %}خطأ داخلي في الخادم{% endif %}
                 </h2>
                 <p class="text-on-surface/70 text-lg" id="errorMessage">
-                    We encountered an unexpected condition that prevented it from fulfilling the request. Our team has been notified.
+                    {% if ui_lang == 'en' %}We encountered an unexpected condition that prevented us from completing your request. Our team has been notified.{% else %}واجهنا حالة غير متوقعة منعتنا من إكمال طلبك. تم إبلاغ فريقنا بذلك.{% endif %}
                 </p>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4 justify-center pt-6">
                 <button onclick="window.location.reload()" class="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-medium text-white transition-all duration-300 flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-sm">refresh</span>
-                    <span id="btnRetry">Try Again</span>
+                    <span id="btnRetry">{% if ui_lang == 'en' %}Try Again{% else %}حاول مرة أخرى{% endif %}</span>
                 </button>
                 <a href="/dashboard" class="btn-primary px-6 py-3 font-medium rounded-xl flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-sm">home</span>
-                    <span id="btnHome">Go to Dashboard</span>
+                    <span id="btnHome">{% if ui_lang == 'en' %}Go to Dashboard{% else %}الذهاب إلى لوحة التحكم{% endif %}</span>
                 </a>
             </div>
 
-            <div class="pt-6 mt-6 border-t border-white/10 text-sm text-on-surface/50 text-left space-y-1">
-                <p id="txtErrorCode">Error Code: 500_INTERNAL_ERROR</p>
-                <p><span id="txtSupport">Need immediate help?</span> <a href="mailto:support@kinjo.system" class="text-primary hover:underline">support@kinjo.system</a></p>
+            <div class="pt-6 mt-6 border-t border-white/10 text-sm text-on-surface/50 {% if ui_dir == 'rtl' %}text-right{% else %}text-left{% endif %} space-y-1">
+                <p id="txtErrorCode">{% if ui_lang == 'en' %}Error Code{% else %}رمز الخطأ{% endif %}: 500_INTERNAL_ERROR</p>
+                <p><span id="txtSupport">{% if ui_lang == 'en' %}Need immediate help?{% else %}هل تحتاج إلى مساعدة فورية؟{% endif %}</span> <a href="mailto:support@kinjo.system" class="text-primary hover:underline">support@kinjo.system</a></p>
             </div>
         </div>
     </div>
 
     <!-- Client-side basic localization based on browser preference to avoid server dependencies -->
     <script>
-        const isArabic = navigator.language.startsWith('ar');
+        const isArabic = document.documentElement.lang === 'ar';
         if (isArabic) {
             document.documentElement.dir = 'rtl';
             document.getElementById('errorTitle').textContent = 'خطأ في الخادم الداخلي';

@@ -171,9 +171,9 @@ PARENT_TRANSLATIONS_AR: dict[str, str] = {
 }
 
 
-def gettext(message: Any, lang: str = "en", **kwargs: Any) -> str:
+def gettext(message: Any, lang: str = DEFAULT_LANGUAGE, **kwargs: Any) -> str:
     text = str(message or "")
-    language = normalize_language(lang, default="en")
+    language = normalize_language(lang)
     if language == "ar":
         translated = PARENT_TRANSLATIONS_AR.get(text) or _load_catalog("ar").get(text, text)
     elif language != "en":
@@ -198,11 +198,11 @@ def make_gettext(language: str):
     return translate
 
 
-def request_language(request: Request | None, default: str = "en") -> str:
+def request_language(request: Request | None, default: str = DEFAULT_LANGUAGE) -> str:
     """Resolve explicit request language for API responses.
 
-    API defaults to English unless the caller explicitly sends a UI language
-    cookie, query parameter, or Accept-Language header.
+    Arabic is the site-wide default. Callers can explicitly select a language
+    with a query parameter, UI-language header, or Accept-Language header.
     """
     if request is None:
         return normalize_language(default, default=default)
@@ -219,10 +219,10 @@ def request_language(request: Request | None, default: str = "en") -> str:
     return normalize_language(default, default=default)
 
 
-def status_label(status: Any, lang: str = "en", category: str = "enrollment") -> str:
+def status_label(status: Any, lang: str = DEFAULT_LANGUAGE, category: str = "enrollment") -> str:
     value = getattr(status, "value", status)
     key = str(value or "").upper()
-    if normalize_language(lang, default="en") != "ar":
+    if normalize_language(lang) != "ar":
         return key
     if category == "attendance":
         return ATTENDANCE_STATUS_AR.get(key, key)
