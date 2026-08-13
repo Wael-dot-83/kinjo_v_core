@@ -3262,6 +3262,33 @@ function renderRejectionReasons(reasons) {
   `).join("");
 }
 
+// Raw identifiers must never reach a label. Enrollment source keys arrive as
+// machine values (WALK_IN, ONLINE, SEED...), which were being drawn straight
+// into an Arabic chart legend. Known keys get a translation; anything unknown is
+// humanised rather than shown as snake_case, so a new backend value degrades to
+// "Walk In" instead of leaking the identifier.
+function localizeSourceKey(key) {
+  const raw = String(key == null ? '' : key).trim();
+  if (!raw) return adminAnalyticsText('غير محدد', 'Unspecified');
+  const map = {
+    WALK_IN: [' زيارة مباشرة', 'Walk-in'],
+    ONLINE: ['عبر الإنترنت', 'Online'],
+    REFERRAL: ['إحالة', 'Referral'],
+    PHONE: ['هاتف', 'Phone'],
+    TRANSFER: ['تحويل', 'Transfer'],
+    IMPORT: ['استيراد', 'Import'],
+    SEED: ['بيانات تجريبية', 'Seeded data'],
+    UNKNOWN: ['غير معروف', 'Unknown'],
+  };
+  const hit = map[raw.toUpperCase()];
+  if (hit) return adminAnalyticsText(hit[0].trim(), hit[1]);
+  return raw
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function renderSourceChart(sources) {
   const canvas = document.getElementById("sourceChart");
   const empty = document.getElementById("sourceEmpty");
@@ -3283,7 +3310,7 @@ function renderSourceChart(sources) {
   sourceChartInstance = new window.Chart(canvas, {
     type: "doughnut",
     data: {
-      labels: entries.map(e => e[0]),
+      labels: entries.map(e => localizeSourceKey(e[0])),
       datasets: [{
         data: entries.map(e => e[1]),
         backgroundColor: entries.map((_, i) => colors[i % colors.length]),
@@ -4030,7 +4057,11 @@ function renderDataLineage(sources) {
     };
     const statusIcon = { fresh: 'bi-check-circle-fill', recent: 'bi-clock-fill', stale: 'bi-exclamation-triangle-fill', empty: 'bi-slash-circle', unknown: 'bi-question-circle' };
     container.innerHTML = sources.map(s => {
-        const name = lang === 'en' ? s.name_en : s.name_ar;
+        // Never fall back across languages: an English name in an Arabic card is
+        // the mixing this dashboard must not do. A missing translation degrades
+        // to a neutral label in the reader's own language.
+        const localizedName = lang === 'en' ? s.name_en : s.name_ar;
+        const name = localizedName || adminAnalyticsText('مصدر بيانات', 'Data source');
         const updated = s.last_updated
             ? `${adminAnalyticsText('آخر تحديث', 'Updated')}: ${new Date(s.last_updated).toLocaleDateString(adminAnalyticsLocale())}${s.freshness_days != null ? ` (${adminAnalyticsText(`منذ ${s.freshness_days} يوم`, `${s.freshness_days}d ago`)})` : ''}`
             : adminAnalyticsText('لا توجد سجلات', 'No records');
@@ -4039,8 +4070,8 @@ function renderDataLineage(sources) {
                 <span class="fw-bold">${escapeHtml(name)}</span>
                 <span class="lineage-status lineage-status--${s.status}"><i class="bi ${statusIcon[s.status] || 'bi-question-circle'}"></i>${escapeHtml(statusLabel[s.status] || s.status)}</span>
             </div>
-            <div class="lineage-source__count">${Number(s.record_count).toLocaleString(adminAnalyticsLocale())}</div>
-            <div class="small text-muted"><code>${escapeHtml(s.table)}</code></div>
+            <div class="lineage-source__count">${Number(s.record_count || 0).toLocaleString(adminAnalyticsLocale())}</div>
+            <div class="small text-muted">${adminAnalyticsText('سجل', 'records')}</div>
             <div class="small text-muted mt-1">${escapeHtml(updated)}</div>
         </div>`;
     }).join('');
