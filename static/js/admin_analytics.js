@@ -3790,6 +3790,7 @@ function renderActionQueue(actions) {
 
     container.innerHTML = actions.map(action => {
         const priorityClass = {
+            'CRITICAL': 'danger',
             'HIGH': 'danger',
             'MEDIUM': 'warning',
             'LOW': 'info'
@@ -3818,7 +3819,7 @@ function renderActionQueue(actions) {
                     </div>
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                            <span class="badge bg-${priorityClass}">${adminAnalyticsEscape(formatAnomalySeverity(action.priority))}</span>
+                            <span class="badge bg-${priorityClass} ${priorityClass === 'warning' ? 'text-dark' : ''}">${adminAnalyticsEscape(formatAnomalySeverity(action.priority))}</span>
                             <small class="text-muted">
                                 <i class="bi bi-calendar-event me-1"></i>
                                 ${adminAnalyticsText('الموعد النهائي:', 'Deadline:')} ${deadline}
@@ -3833,12 +3834,12 @@ function renderActionQueue(actions) {
                         <p class="mb-1 fw-bold">${title}</p>
                         <p class="mb-2 text-muted small">${description}</p>
                         <div class="d-flex gap-2">
-                            <a href="${link}" class="btn btn-sm btn-outline-${priorityClass}">
-                                <i class="bi bi-eye me-1"></i>
+                            <a href="${link}" class="btn btn-sm btn-outline-${priorityClass}" aria-label="${adminAnalyticsText('عرض التفاصيل لـ', 'View details for')}: ${title}">
+                                <i class="bi bi-eye me-1" aria-hidden="true"></i>
                                 ${adminAnalyticsText('عرض', 'View')}
                             </a>
-                            <button class="btn btn-sm btn-${priorityClass}" onclick="createActionPlan('${link}')">
-                                <i class="bi bi-plus-circle me-1"></i>
+                            <button class="btn btn-sm btn-${priorityClass}" onclick="createActionPlan('${link}')" aria-label="${adminAnalyticsText('إنشاء خطة عمل لـ', 'Create action plan for')}: ${title}">
+                                <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>
                                 ${adminAnalyticsText('إنشاء خطة عمل', 'Create Action Plan')}
                             </button>
                         </div>
@@ -3850,7 +3851,7 @@ function renderActionQueue(actions) {
 }
 
 function createActionPlan(targetLink) {
-    if (targetLink && targetLink !== '#' && targetLink !== 'javascript:void(0)') {
+    if (targetLink && targetLink !== '#' && targetLink !== 'javascript:void(0)' && targetLink !== '/admin/analytics') {
         window.location.href = targetLink;
     } else {
         window.location.href = '/admin/governance-reports';
@@ -3980,7 +3981,7 @@ function renderPredictiveAlerts(alerts) {
     if (!alerts || alerts.length === 0) {
         if (countBadge) countBadge.classList.add('d-none');
         container.innerHTML = `<div class="analytics-empty-state">
-            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>
             ${adminAnalyticsText('لا توجد مؤشرات مهددة بتجاوز أهدافها', 'No metrics are projected to breach their targets')}
         </div>`;
         return;
@@ -3988,30 +3989,32 @@ function renderPredictiveAlerts(alerts) {
 
     if (countBadge) { countBadge.textContent = alerts.length; countBadge.classList.remove('d-none'); }
     container.innerHTML = alerts.map(a => {
-        const sev = { HIGH: 'danger', MEDIUM: 'warning', LOW: 'info' }[a.severity] || 'secondary';
+        const sev = { 'CRITICAL': 'danger', 'HIGH': 'danger', 'MEDIUM': 'warning', 'LOW': 'info' }[a.severity] || 'secondary';
         const rawMsg = lang === 'en' ? (a.message_en || a.message_ar) : (a.message_ar || a.message_en);
         const message = rawMsg || '';
-        const conf = (a.confidence !== null && a.confidence !== undefined)
+        const conf = (typeof a.confidence === 'number' && !isNaN(a.confidence))
             ? `${Math.round(a.confidence * 100)}%` : '—';
-        const icon = a.icon || 'bi-exclamation-triangle';
+        const icon = adminAnalyticsIcon(a.icon, 'bi-exclamation-triangle');
+        const breachDays = (a.days_until_breach !== null && a.days_until_breach !== undefined) ? a.days_until_breach : '—';
+        const escMsg = adminAnalyticsEscape(message);
         return `
             <div class="insight-card insight-card--${sev} mb-3 p-3 rounded border-start border-3 border-${sev}">
                 <div class="d-flex align-items-start gap-3">
-                    <div class="insight-icon"><i class="bi ${icon} text-${sev} fs-4"></i></div>
+                    <div class="insight-icon"><i class="bi ${icon} text-${sev} fs-4" aria-hidden="true"></i></div>
                     <div class="flex-grow-1 min-w-0">
                         <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                            <span class="badge bg-${sev}">${escapeHtml(formatAnomalySeverity(a.severity))}</span>
-                            <small class="text-muted"><i class="bi bi-calendar-event me-1"></i>${adminAnalyticsText('خلال', 'in')} ${a.days_until_breach} ${adminAnalyticsText('يوم', 'days')}</small>
-                            <small class="text-muted ms-2"><i class="bi bi-bullseye me-1"></i>${adminAnalyticsText('الثقة', 'confidence')}: ${conf}</small>
+                            <span class="badge bg-${sev} ${sev === 'warning' ? 'text-dark' : ''}">${adminAnalyticsEscape(formatAnomalySeverity(a.severity))}</span>
+                            <small class="text-muted"><i class="bi bi-calendar-event me-1" aria-hidden="true"></i>${adminAnalyticsText('خلال', 'in')} ${breachDays} ${adminAnalyticsText('يوم', 'days')}</small>
+                            <small class="text-muted ms-2"><i class="bi bi-bullseye me-1" aria-hidden="true"></i>${adminAnalyticsText('الثقة', 'confidence')}: ${conf}</small>
                         </div>
-                        <p class="mb-2 fw-bold">${escapeHtml(message)}</p>
+                        <p class="mb-2 fw-bold">${escMsg}</p>
                         <div class="d-flex gap-2 mt-2">
-                            <a href="/admin/kpi" class="btn btn-sm btn-outline-${sev}">
-                                <i class="bi bi-speedometer2 me-1"></i>
+                            <a href="/admin/kpi" class="btn btn-sm btn-outline-${sev}" aria-label="${adminAnalyticsText('مراجعة مؤشرات التنبيه:', 'Review KPIs for alert:')} ${escMsg}">
+                                <i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>
                                 ${adminAnalyticsText('مراجعة المؤشرات', 'Review KPIs')}
                             </a>
-                            <a href="/admin/governance-reports" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-shield-check me-1"></i>
+                            <a href="/admin/governance-reports" class="btn btn-sm btn-outline-secondary" aria-label="${adminAnalyticsText('متابعة حوكمة التنبيه:', 'Governance follow-up for alert:')} ${escMsg}">
+                                <i class="bi bi-shield-check me-1" aria-hidden="true"></i>
                                 ${adminAnalyticsText('متابعة الحوكمة', 'Governance Follow-up')}
                             </a>
                         </div>
@@ -4052,10 +4055,12 @@ function renderNarrativeSummary(sentences) {
     const toneColor = { positive: 'success', warning: 'warning', negative: 'danger', neutral: 'info' };
     container.innerHTML = sentences.map(s => {
         const text = lang === 'en' ? (s.en || s.ar) : (s.ar || s.en);
-        const color = toneColor[s.tone] || 'secondary';
-        return `<div class="narrative-line narrative-line--${s.tone} d-flex align-items-center gap-3 p-3 mb-2 rounded bg-light border-start border-3 border-${color}">
-            <i class="bi ${s.icon || 'bi-info-circle'} text-${color} fs-5"></i>
-            <span class="flex-grow-1 font-sans">${escapeHtml(text || '')}</span>
+        const toneKey = s.tone || 'neutral';
+        const color = toneColor[toneKey] || 'info';
+        const icon = adminAnalyticsIcon(s.icon, 'bi-info-circle');
+        return `<div class="narrative-line narrative-line--${toneKey} d-flex align-items-center gap-3 p-3 mb-2 rounded bg-light border-start border-3 border-${color}">
+            <i class="bi ${icon} text-${color} fs-5" aria-hidden="true"></i>
+            <span class="flex-grow-1 font-sans">${adminAnalyticsEscape(text || '')}</span>
         </div>`;
     }).join('');
 }
