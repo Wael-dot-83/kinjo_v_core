@@ -3780,11 +3780,11 @@ function renderActionQueue(actions) {
                 <p class="mb-0">${adminAnalyticsText('لا توجد إجراءات مطلوبة', 'No actions required')}</p>
             </div>
         `;
-        countBadge.textContent = '0';
+        if (countBadge) countBadge.textContent = '0';
         return;
     }
 
-    countBadge.textContent = actions.length;
+    if (countBadge) countBadge.textContent = actions.length;
 
     const lang = adminAnalyticsText('ar', 'en');
 
@@ -3795,9 +3795,18 @@ function renderActionQueue(actions) {
             'LOW': 'info'
         }[action.priority] || 'secondary';
 
-        const title = adminAnalyticsEscape(lang === 'en' ? action.title_en : action.title_ar);
-        const description = adminAnalyticsEscape(lang === 'en' ? action.description_en : action.description_ar);
-        const deadline = new Date(action.deadline).toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-JO');
+        const rawTitle = lang === 'en' ? (action.title_en || action.title_ar) : (action.title_ar || action.title_en);
+        const title = adminAnalyticsEscape(rawTitle || '');
+        const rawDesc = lang === 'en' ? (action.description_en || action.description_ar) : (action.description_ar || action.description_en);
+        const description = adminAnalyticsEscape(rawDesc || '');
+        
+        let deadline = '--';
+        if (action.deadline) {
+            const d = new Date(action.deadline);
+            if (!isNaN(d.getTime())) {
+                deadline = d.toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-JO');
+            }
+        }
         const link = adminAnalyticsEscape(adminAnalyticsInternalLink(action.link));
         const icon = adminAnalyticsIcon(action.icon);
 
@@ -3808,7 +3817,7 @@ function renderActionQueue(actions) {
                         <i class="bi ${icon} text-${priorityClass} fs-4"></i>
                     </div>
                     <div class="flex-grow-1">
-                        <div class="d-flex align-items-center gap-2 mb-2">
+                        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
                             <span class="badge bg-${priorityClass}">${adminAnalyticsEscape(formatAnomalySeverity(action.priority))}</span>
                             <small class="text-muted">
                                 <i class="bi bi-calendar-event me-1"></i>
@@ -3828,7 +3837,7 @@ function renderActionQueue(actions) {
                                 <i class="bi bi-eye me-1"></i>
                                 ${adminAnalyticsText('عرض', 'View')}
                             </a>
-                            <button class="btn btn-sm btn-${priorityClass}" onclick="createActionPlan()">
+                            <button class="btn btn-sm btn-${priorityClass}" onclick="createActionPlan('${link}')">
                                 <i class="bi bi-plus-circle me-1"></i>
                                 ${adminAnalyticsText('إنشاء خطة عمل', 'Create Action Plan')}
                             </button>
@@ -3840,8 +3849,12 @@ function renderActionQueue(actions) {
     }).join('');
 }
 
-function createActionPlan() {
-    window.location.href = '/admin/governance/reminders';
+function createActionPlan(targetLink) {
+    if (targetLink && targetLink !== '#' && targetLink !== 'javascript:void(0)') {
+        window.location.href = targetLink;
+    } else {
+        window.location.href = '/admin/governance-reports';
+    }
 }
 
 async function loadInsights() {
@@ -3976,20 +3989,32 @@ function renderPredictiveAlerts(alerts) {
     if (countBadge) { countBadge.textContent = alerts.length; countBadge.classList.remove('d-none'); }
     container.innerHTML = alerts.map(a => {
         const sev = { HIGH: 'danger', MEDIUM: 'warning', LOW: 'info' }[a.severity] || 'secondary';
-        const message = lang === 'en' ? a.message_en : a.message_ar;
+        const rawMsg = lang === 'en' ? (a.message_en || a.message_ar) : (a.message_ar || a.message_en);
+        const message = rawMsg || '';
         const conf = (a.confidence !== null && a.confidence !== undefined)
             ? `${Math.round(a.confidence * 100)}%` : '—';
+        const icon = a.icon || 'bi-exclamation-triangle';
         return `
-            <div class="insight-card insight-card--${sev} mb-3">
+            <div class="insight-card insight-card--${sev} mb-3 p-3 rounded border-start border-3 border-${sev}">
                 <div class="d-flex align-items-start gap-3">
-                    <div class="insight-icon"><i class="bi ${a.icon} text-${sev} fs-4"></i></div>
+                    <div class="insight-icon"><i class="bi ${icon} text-${sev} fs-4"></i></div>
                     <div class="flex-grow-1 min-w-0">
                         <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
                             <span class="badge bg-${sev}">${escapeHtml(formatAnomalySeverity(a.severity))}</span>
                             <small class="text-muted"><i class="bi bi-calendar-event me-1"></i>${adminAnalyticsText('خلال', 'in')} ${a.days_until_breach} ${adminAnalyticsText('يوم', 'days')}</small>
                             <small class="text-muted ms-2"><i class="bi bi-bullseye me-1"></i>${adminAnalyticsText('الثقة', 'confidence')}: ${conf}</small>
                         </div>
-                        <p class="mb-0 fw-bold">${escapeHtml(message)}</p>
+                        <p class="mb-2 fw-bold">${escapeHtml(message)}</p>
+                        <div class="d-flex gap-2 mt-2">
+                            <a href="/admin/kpi" class="btn btn-sm btn-outline-${sev}">
+                                <i class="bi bi-speedometer2 me-1"></i>
+                                ${adminAnalyticsText('مراجعة المؤشرات', 'Review KPIs')}
+                            </a>
+                            <a href="/admin/governance-reports" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-shield-check me-1"></i>
+                                ${adminAnalyticsText('متابعة الحوكمة', 'Governance Follow-up')}
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -4020,16 +4045,17 @@ function renderNarrativeSummary(sentences) {
     const container = document.getElementById('narrativeList');
     if (!container) return;
     const lang = adminAnalyticsText('ar', 'en');
-    if (!sentences.length) {
-        container.innerHTML = `<div class="analytics-empty-state">${adminAnalyticsText('لا يوجد ملخص متاح', 'No summary available')}</div>`;
+    if (!sentences || !sentences.length) {
+        container.innerHTML = `<div class="analytics-empty-state">${adminAnalyticsText('لا يوجد ملخص متاح للفترة المحددة', 'No summary available for selected period')}</div>`;
         return;
     }
-    const toneColor = { positive: 'success', warning: 'warning', negative: 'danger', neutral: 'secondary' };
+    const toneColor = { positive: 'success', warning: 'warning', negative: 'danger', neutral: 'info' };
     container.innerHTML = sentences.map(s => {
-        const text = lang === 'en' ? s.en : s.ar;
-        return `<div class="narrative-line narrative-line--${s.tone}">
-            <i class="bi ${s.icon} text-${toneColor[s.tone] || 'secondary'}"></i>
-            <span>${escapeHtml(text)}</span>
+        const text = lang === 'en' ? (s.en || s.ar) : (s.ar || s.en);
+        const color = toneColor[s.tone] || 'secondary';
+        return `<div class="narrative-line narrative-line--${s.tone} d-flex align-items-center gap-3 p-3 mb-2 rounded bg-light border-start border-3 border-${color}">
+            <i class="bi ${s.icon || 'bi-info-circle'} text-${color} fs-5"></i>
+            <span class="flex-grow-1 font-sans">${escapeHtml(text || '')}</span>
         </div>`;
     }).join('');
 }
