@@ -46,35 +46,19 @@ function governanceLiteral(value) {
   return raw;
 }
 
-const REMINDER_TYPE_LABELS = {
-  low_submission_rate: governanceText("انخفاض نسبة التقديم", "Low submission rate"),
-};
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function showMessage({ icon = "info", title = "", text = "", timer = 0 } = {}) {
-  if (window.Swal && typeof window.Swal.fire === "function") {
-    return window.Swal.fire({
-      icon,
-      title,
-      text,
-      timer: timer || undefined,
-      showConfirmButton: !timer,
-    });
-  }
-  window.alert([title, text].filter(Boolean).join("\n"));
-  return Promise.resolve();
+function getKgName(item) {
+  if (!item) return "";
+  const raw = String(governanceLangCode()).toLowerCase().startsWith("en")
+    ? (item.name_en || item.name_ar || `KG#${item.kindergarten_id || item.id}`)
+    : (item.name_ar || item.name_en || `KG#${item.kindergarten_id || item.id}`);
+  return escapeHtml(governanceLiteral(raw));
 }
 
 function formatReminderType(reminderType) {
-  return REMINDER_TYPE_LABELS[reminderType] || reminderType || "--";
+  const labels = {
+    low_submission_rate: governanceText("انخفاض نسبة التقديم", "Low submission rate"),
+  };
+  return labels[reminderType] || reminderType || "--";
 }
 
 async function governanceFetch(url, options = {}) {
@@ -409,8 +393,7 @@ function renderLeaderboard(entries) {
   tbody.innerHTML = entries
     .map((e) => {
       const rankClass = e.rank <= 3 ? `rank-${e.rank}` : "rank-default";
-      const kgNameRaw = e.name_ar || e.name_en || `KG#${e.kindergarten_id}`;
-      const kgName = escapeHtml(governanceLiteral(kgNameRaw));
+      const kgName = getKgName(e);
       const lowBadge = e.is_low_performer
         ? `<span class="badge bg-warning text-dark ms-1">${governanceText("ضعيف", "Weak")}</span>`
         : "";
@@ -464,8 +447,7 @@ function renderLowPerformers(items) {
   section.classList.remove("d-none");
   container.innerHTML = items
     .map((lp) => {
-      const kgNameRaw = lp.name_ar || lp.name_en || `KG#${lp.kindergarten_id}`;
-      const kgName = escapeHtml(governanceLiteral(kgNameRaw));
+      const kgName = getKgName(lp);
       return `
         <div class="col-md-4">
             <div class="low-performer-badge p-3">
@@ -495,15 +477,18 @@ function renderReminders(items) {
   }
   tbody.innerHTML = items
     .map(
-      (r) => `
+      (r) => {
+        const targetLabel = r.governorate ? `#${r.target_id} <span class="badge bg-light text-dark ms-1">${escapeHtml(r.governorate)}</span>` : `#${r.target_id}`;
+        return `
         <tr>
             <td>${r.target_type === "kindergarten" ? governanceText("حضانة", "Kindergarten") : governanceText("مشرف", "Supervisor")}</td>
-            <td>#${r.target_id}</td>
+            <td>${targetLabel}</td>
             <td>${escapeHtml(formatReminderType(r.reminder_type))}</td>
             <td>${r.sent_at ? new Date(r.sent_at).toLocaleString(governanceLocale()) : "--"}</td>
             <td>${r.cooldown_expires_at ? new Date(r.cooldown_expires_at).toLocaleString(governanceLocale()) : "--"}</td>
         </tr>
-    `
+    `;
+      }
     )
     .join("");
 }
@@ -572,6 +557,7 @@ if (confirmReminderBtn) {
     try {
       await governanceFetch("/api/admin/governance/reminders", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           target_type: _reminderTarget.type,
           target_id: _reminderTarget.id,
@@ -632,3 +618,56 @@ window.addEventListener("languageChanged", () => {
     loadGovernanceData();
   }
 });
+
+function exportGovernanceCSV() {
+  const tbody = document.getElementById("leaderboardBody");
+  if (!tbody) return;
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  if (!rows.length || rows[0].cells.length < 5) {
+    showMessage({
+      icon: "warning",
+      title: governanceText("لا توجد بيانات", "No Data"),
+      text: governanceText("لا توجد بيانات متاحة للتصدير.", "No data available for export."),
+    });
+    return;
+  }
+
+  const headers = [
+    "#",
+    governanceText("الحضانة", "Kindergarten"),
+    governanceText("مطلوب", "Required"),
+    governanceText("مقدم", "Submitted"),
+    governanceText("مسلم", "Delivered"),
+    governanceText("مشاهد", "Viewed"),
+    governanceText("خام%", "Raw%"),
+    governanceText("النتيجة", "Score"),
+    governanceText("رفض%", "Rejection%"),
+    governanceText("صباح%", "Morning%"),
+    governanceText("اتساق", "Consistency"),
+    governanceText("متوسط موافقة", "Avg Approval"),
+    governanceText("آخر تقرير", "Last Report"),
+    governanceText("تذكيرات", "Reminders")
+  ];
+
+  const csvRows = [headers.join(",")];
+  rows.forEach(tr => {
+    const cells = Array.from(tr.querySelectorAll("td"));
+    if (cells.length >= 14) {
+      const rowData = cells.slice(0, 14).map(td => {
+        let val = td.innerText.replace(/\n/g, " ").trim();
+        return `"${val.replace(/"/g, '""')}"`;
+      });
+      csvRows.push(rowData.join(","));
+    }
+  });
+
+  const blob = new Blob(["\uFEFF" + csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  const filename = `governance_report_${document.getElementById("startDate").value || "start"}_${document.getElementById("endDate").value || "end"}.csv`;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}

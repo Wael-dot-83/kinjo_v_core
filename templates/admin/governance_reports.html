@@ -19,6 +19,9 @@
         <button id="refreshBtn" class="btn btn-primary btn-sm" onclick="loadGovernanceData()">
             <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
         </button>
+        <button id="exportBtn" class="btn btn-outline-secondary btn-sm" onclick="exportGovernanceCSV()">
+            <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
+        </button>
     </div>
 </div>
 
@@ -203,7 +206,7 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0">
                 <caption class="visually-hidden">{% if ui_lang == 'en' %}Kindergarten governance ranking, weighted by submission, delivery, view, and quality rates{% else %}ترتيب الحضانات في الحوكمة، مرجّح حسب نسب التقديم والتسليم والمشاهدة والجودة{% endif %}</caption>
                 <thead class="table-light">
                     <tr>
@@ -241,7 +244,7 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0">
                 <caption class="visually-hidden">{% if ui_lang == 'en' %}Recent governance reminders sent to kindergartens{% else %}سجل التذكيرات الأخيرة المُرسلة إلى الحضانات{% endif %}</caption>
                 <thead class="table-light">
                     <tr>
