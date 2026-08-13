@@ -1,4 +1,5 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
+{% block footer %}{% endblock %}
 {% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if ui_lang == 'en' %}{{ class.name_en or class.name_ar }}{% else %}{{ class.name_ar }}{% endif %}{% endblock %}

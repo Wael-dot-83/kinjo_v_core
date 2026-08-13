@@ -3,6 +3,8 @@
 
 {% block title %}{% if kindergarten %}{% if ui_lang == 'en' %}Edit Kindergarten{% else %}تعديل حضانة{% endif %}{% else %}{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة حضانة جديدة{% endif %}{% endif %}{% endblock %}
 
+{% block footer %}{% endblock %}
+
 {% block page_header %}
 {{ page_header(
 title=("تعديل حضانة" if kindergarten else "إضافة حضانة جديدة") if ui_lang != 'en' else ("Edit Kindergarten" if kindergarten else "Add New Kindergarten"),
