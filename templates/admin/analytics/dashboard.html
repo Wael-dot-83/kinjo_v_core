@@ -1597,8 +1597,18 @@
       addChip('building-check', (isAr ? 'مرافق جديدة +' : 'Facilities +') + pct + '%', 'success');
     }
 
-    /* Risk count */
-    const criticalCount = riskArr.filter(function (r) { return window._classifyRisk(r) === 'critical'; }).length;
+    /* Risk count.
+       risk_radar rows are CHILDREN (get_high_risk_children), so counting rows
+       and calling them facilities overstated the problem: three at-risk
+       children in one kindergarten read as "3 facilities need review" when one
+       facility is affected. Count the distinct facilities those children belong
+       to, which is what the label claims and what an executive acts on. */
+    const criticalRows = riskArr.filter(function (r) { return window._classifyRisk(r) === 'critical'; });
+    const criticalFacilities = new Set(
+      criticalRows.map(function (r) { return r.kindergarten_id; })
+                  .filter(function (id) { return id != null; })
+    );
+    const criticalCount = criticalFacilities.size;
     if (criticalCount > 0) {
       addChip('exclamation-triangle-fill', criticalCount + (isAr ? ' مرفق بحاجة لمراجعة' : ' facilities need review'), 'danger');
     } else {
@@ -1685,9 +1695,22 @@
       const lvl    = window._classifyRisk(r);
       const icon   = lvl === 'critical' ? 'exclamation-octagon-fill' : lvl === 'high' ? 'exclamation-triangle-fill' : 'info-circle-fill';
       const label  = lvl === 'critical' ? (isAr ? 'حرج' : 'Critical') : lvl === 'high' ? (isAr ? 'مرتفع' : 'High') : (isAr ? 'متوسط' : 'Medium');
-      const action = isAr ? 'عرض تفاصيل المرفق' : 'View facility details';
+      /* The row is a child, but the only action opens the kindergarten. Naming
+         the facility in the link stops the card reading as though the child's
+         name were the facility's. */
+      const facility = r.kindergarten_name || (isAr ? 'المرفق' : 'the facility');
+      const action = isAr ? ('عرض المرفق: ' + facility) : ('View facility: ' + facility);
       const entityName = r.child_name || r.kindergarten_name || '—';
-      const scoreDisplay = r.risk_value != null ? r.risk_value.toFixed(1) : '—';
+      /* risk_value means different things per risk_type: an attendance
+         percentage (lower is worse) or a raw incident count (higher is worse).
+         Printing a bare "80.0" beside a "3.0" invites reading the 3.0 as the
+         milder of the two when it is the critical one, so carry the unit. */
+      const rawScore = Number(r.risk_value);
+      const scoreDisplay = Number.isFinite(rawScore)
+        ? (r.risk_type === 'Multiple Incidents'
+            ? String(Math.round(rawScore)) + (isAr ? ' حادثة' : ' inc.')
+            : rawScore.toFixed(1) + '%')
+        : '—';
       return [
         '<div class="risk-card risk-card--' + lvl + '" role="article">',
         '  <div class="risk-card__icon"><i class="bi bi-' + icon + '"></i></div>',
