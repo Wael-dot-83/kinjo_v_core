@@ -47,14 +47,18 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 # below and is released by the kernel even if the script is killed. -n makes a
 # busy lock fail immediately rather than queue a second deploy behind the first.
 # ---------------------------------------------------------------------------
-exec 9>"$LOCK_FILE"
+# Append rather than truncate: `9>` empties the file on open, which wiped the
+# holder's metadata before we had even discovered the lock was taken, so the
+# refusal below could only ever report an empty holder.
+exec 9>>"$LOCK_FILE"
 if ! flock -n 9; then
   echo "DEPLOY_LOCK_BUSY: another deployment is in progress; production untouched."
   echo "holder: $(cat "$LOCK_FILE" 2>/dev/null || echo 'unknown')"
   exit 75
 fi
 
-# Ownership metadata, readable by whoever gets refused above.
+# The lock is ours: now it is safe to replace the previous holder's metadata.
+: >"$LOCK_FILE"
 printf 'pid=%s started=%s sha=%s host=%s\n' \
   "$$" "$(date -Is)" "$RELEASE_SHA" "$(hostname)" >&9
 log "lock acquired (pid $$, sha $RELEASE_SHA)"

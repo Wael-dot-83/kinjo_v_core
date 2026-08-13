@@ -60,6 +60,18 @@ def test_lock_records_owner_metadata():
     assert 'cat "$LOCK_FILE"' in src
 
 
+def test_refusal_does_not_destroy_the_holders_metadata():
+    """`9>` truncates on open, so a refused deploy wiped the running deploy's
+    pid/sha before reporting it -- the refusal could only print an empty holder.
+    Proven live: the first contention run reported `holder:` with nothing after
+    it."""
+    src = _src()
+    assert 'exec 9>>"$LOCK_FILE"' in src
+    assert 'exec 9>"$LOCK_FILE"' not in src
+    # Truncation is allowed only after the lock is held.
+    assert src.index("flock -n 9") < src.index(': >"$LOCK_FILE"')
+
+
 def test_env_is_preserved_across_extraction():
     """.env is not in the archive; a deploy that silently replaced it would take
     the database and SMTP credentials with it."""
