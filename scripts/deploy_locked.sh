@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# =============================================================================
+# KinJo canonical production deploy.
+#
+# Runs ON THE DROPLET. Holds an exclusive lock for the ENTIRE mutation window --
+# backup, extraction, migration, image build, container recreation and health
+# verification -- so two agents cannot deploy at once. Two concurrent
+# `docker compose` runs took production down twice on 2026-08-12; a second
+# deploy must now exit instead of racing.
+#
+# Usage (from the workstation):
+#   git archive --format=tar -o /tmp/deploy.tar HEAD
+#   scp -i <key> /tmp/deploy.tar root@<host>:/tmp/deploy.tar
+#   ssh -i <key> root@<host> 'bash /opt/kinjo/scripts/deploy_locked.sh /tmp/deploy.tar <sha>'
+#
+# Exit codes:
+#   0   deployed and verified
+#   75  another deployment holds the lock (EX_TEMPFAIL) -- production untouched
+#   1   deployment failed; see output
+#
+# NOTE: the deploy.sh at the repository root is obsolete. It targets /srv/kinjo,
+# a virtualenv and systemd units that do not exist on this host, and asserts an
+# Alembic head this project moved past. Do not run it.
+# =============================================================================
+set -euo pipefail
+
+TARBALL="${1:-}"
+RELEASE_SHA="${2:-unknown}"
+APP_DIR="${KINJO_DIR:-/opt/kinjo}"
+COMPOSE_FILE="docker-compose.prod.yml"
+LOCK_FILE="/var/lock/kinjo-deploy.lock"
+BACKUP_DIR="/var/backups/kinjo"
+WEB_CONTAINER="kinjo-web-1"
+KEEP_BACKUPS=5
+
+log() { printf '[%s] %s\n' "$(date '+%H:%M:%S')" "$*"; }
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+[[ -n "$TARBALL" ]] || die "usage: $0 <tarball> [release-sha]"
+[[ -f "$TARBALL" ]] || die "tarball not found: $TARBALL"
+[[ -d "$APP_DIR" ]] || die "app dir not found: $APP_DIR"
+
+# ---------------------------------------------------------------------------
+# Acquire the lock BEFORE touching anything.
+#
+# fd 9 stays open for the life of this process, so the lock covers every step
+# below and is released by the kernel even if the script is killed. -n makes a
+# busy lock fail immediately rather than queue a second deploy behind the first.
+# ---------------------------------------------------------------------------
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  echo "DEPLOY_LOCK_BUSY: another deployment is in progress; production untouched."
+  echo "holder: $(cat "$LOCK_FILE" 2>/dev/null || echo 'unknown')"
+  exit 75
+fi
+
+# Ownership metadata, readable by whoever gets refused above.
+printf 'pid=%s started=%s sha=%s host=%s\n' \
+  "$$" "$(date -Is)" "$RELEASE_SHA" "$(hostname)" >&9
+log "lock acquired (pid $$, sha $RELEASE_SHA)"
+
+TS="$(date +%Y%m%d_%H%M%S)"
+cd "$APP_DIR"
+
+# ---------------------------------------------------------------------------
+# 1. Rollback point
+# ---------------------------------------------------------------------------
+if docker inspect "$WEB_CONTAINER" >/dev/null 2>&1; then
+  ROLLBACK_TAG="kinjo-web:rollback-$TS"
+  docker tag "$(docker inspect "$WEB_CONTAINER" --format '{{.Image}}')" "$ROLLBACK_TAG"
+  log "rollback image: $ROLLBACK_TAG"
+else
+  log "no running web container; skipping rollback tag"
+fi
+
+# ---------------------------------------------------------------------------
+# 2. Database backup when a migration is pending, or on request.
+#    Backups are ~850MB, so taking one on every no-op deploy would fill the disk.
+# ---------------------------------------------------------------------------
+MIGRATION_PENDING=0
+if docker inspect "$WEB_CONTAINER" >/dev/null 2>&1; then
+  CURRENT_REV="$(docker exec "$WEB_CONTAINER" alembic current 2>/dev/null | grep -v INFO | tr -d ' \n' || true)"
+  HEAD_REV="$(docker exec "$WEB_CONTAINER" alembic heads 2>/dev/null | grep -v INFO | awk '{print $1}' | tr -d ' \n' || true)"
+  [[ -n "$HEAD_REV" && "$CURRENT_REV" != *"$HEAD_REV"* ]] && MIGRATION_PENDING=1
+fi
+if [[ "$MIGRATION_PENDING" == "1" || "${FORCE_BACKUP:-0}" == "1" ]]; then
+  mkdir -p "$BACKUP_DIR"
+  log "migration pending or backup forced -- dumping database"
+  docker exec kinjo_postgres pg_dump -U "${POSTGRES_USER:-kinjo_user}" -d "${POSTGRES_DB:-kinjo_db}" \
+    > "$BACKUP_DIR/db-pre-deploy-$TS.sql"
+  [[ -s "$BACKUP_DIR/db-pre-deploy-$TS.sql" ]] || die "database backup is empty -- refusing to continue"
+  log "backup: $(stat -c %s "$BACKUP_DIR/db-pre-deploy-$TS.sql") bytes"
+  # Keep the newest few so the disk stays bounded.
+  ls -t "$BACKUP_DIR"/db-pre-deploy-*.sql 2>/dev/null | tail -n +$((KEEP_BACKUPS + 1)) | xargs -r rm -f
+else
+  log "no migration pending; skipping database dump"
+fi
+
+# ---------------------------------------------------------------------------
+# 3. Extract the release. .env is not in the archive and must survive.
+# ---------------------------------------------------------------------------
+ENV_BEFORE="$(md5sum .env | awk '{print $1}')"
+tar xf "$TARBALL" -C "$APP_DIR"
+ENV_AFTER="$(md5sum .env | awk '{print $1}')"
+[[ "$ENV_BEFORE" == "$ENV_AFTER" ]] || die ".env changed during extraction -- aborting"
+log "release extracted; .env intact"
+
+# ---------------------------------------------------------------------------
+# 4. Build and recreate
+# ---------------------------------------------------------------------------
+log "building and recreating containers"
+docker compose -f "$COMPOSE_FILE" up -d --build
+
+# ---------------------------------------------------------------------------
+# 5. Migrate after the new image is running, so the migration matches the code.
+# ---------------------------------------------------------------------------
+for _ in $(seq 1 30); do
+  docker inspect "$WEB_CONTAINER" >/dev/null 2>&1 && break
+  sleep 2
+done
+log "applying migrations"
+docker exec "$WEB_CONTAINER" alembic upgrade head 2>&1 | grep -viE '^INFO.*(Context|Will assume)' || true
+
+# ---------------------------------------------------------------------------
+# 6. Health verification -- still inside the lock.
+# ---------------------------------------------------------------------------
+HEALTHY=0
+for _ in $(seq 1 30); do
+  if curl -sSf -o /dev/null --max-time 5 http://127.0.0.1:80/ 2>/dev/null; then HEALTHY=1; break; fi
+  sleep 3
+done
+[[ "$HEALTHY" == "1" ]] || die "web did not become healthy -- rollback image was tagged above"
+
+for svc in kinjo-worker-1 kinjo-beat-1; do
+  docker inspect "$svc" >/dev/null 2>&1 || log "WARNING: $svc is not running"
+done
+
+log "alembic: $(docker exec "$WEB_CONTAINER" alembic current 2>/dev/null | grep -v INFO | head -1)"
+log "containers:"
+docker ps --format '  {{.Names}} | {{.Status}}'
+log "DEPLOY_OK sha=$RELEASE_SHA"
+# Lock is released here when fd 9 closes with the process.
