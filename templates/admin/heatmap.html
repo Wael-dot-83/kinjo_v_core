@@ -709,7 +709,7 @@
 <script>
   window.gm_authFailure = function () {
     if (typeof showFallback === 'function') {
-      showFallback('مفتاح خرائط Google غير مُفعّل لهذا الموقع. تُعرض بيانات المحافظات والمؤشرات في القائمة الجانبية.');
+      showFallback('{% if ui_lang == "en" %}Google Maps key is inactive for this domain. Governorate data and indicators are displayed in the sidebar.{% else %}مفتاح خرائط Google غير مُفعّل لهذا الموقع. تُعرض بيانات المحافظات والمؤشرات في القائمة الجانبية.{% endif %}');
     }
     if (typeof fetchMapData === 'function') { try { fetchMapData(); } catch (e) {} }
   };
@@ -724,7 +724,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     if (typeof showFallback === 'function') {
-      showFallback('لم يتم ضبط مفتاح خرائط Google (GOOGLE_MAPS_API_KEY). تُعرض بيانات المحافظات والمؤشرات في القائمة الجانبية.');
+      showFallback('{% if ui_lang == "en" %}Google Maps API key (GOOGLE_MAPS_API_KEY) is not configured. Governorate data and indicators are displayed in the sidebar.{% else %}لم يتم ضبط مفتاح خرائط Google (GOOGLE_MAPS_API_KEY). تُعرض بيانات المحافظات والمؤشرات في القائمة الجانبية.{% endif %}');
     }
     if (typeof fetchMapData === 'function') { try { fetchMapData(); } catch (e) {} }
   });

@@ -383,51 +383,80 @@ function renderSafeguarding(data) {
 
 // ─── Leaderboard ─────────────────────────────────────────────────────────
 
+function filterPrioritizedTable() {
+  const input = document.getElementById("searchPrioritized");
+  if (!input) return;
+  const filter = input.value.toLowerCase();
+  const rows = document.querySelectorAll("#leaderboardBody tr");
+  rows.forEach((row) => {
+    const text = row.textContent.toLowerCase();
+    row.style.display = text.includes(filter) ? "" : "none";
+  });
+}
+
 function renderLeaderboard(entries) {
   const tbody = document.getElementById("leaderboardBody");
+  const countEl = document.getElementById("prioritizedCount");
   if (!entries || entries.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="15" class="text-center text-muted py-4">${governanceText("لا توجد بيانات كافية", "Insufficient data")}</td></tr>`;
+    if (countEl) countEl.textContent = "0";
+    tbody.innerHTML = `<tr><td colspan="11" class="text-center text-muted py-4">${governanceText("لا توجد بيانات كافية للحضانات ذات الأولوية", "No prioritized nursery data available")}</td></tr>`;
     return;
   }
 
+  if (countEl) countEl.textContent = entries.length;
+
   tbody.innerHTML = entries
     .map((e) => {
-      const rankClass = e.rank <= 3 ? `rank-${e.rank}` : "rank-default";
+      const rankClass = e.rank <= 3 ? `badge bg-warning text-dark fs-6 px-2 py-1` : "badge bg-light text-dark border px-2 py-1";
       const kgName = getKgName(e);
-      const lowBadge = e.is_low_performer
-        ? `<span class="badge bg-warning text-dark ms-1">${governanceText("ضعيف", "Weak")}</span>`
-        : "";
-      const rejRate = e.rejection_rate != null ? `${e.rejection_rate}%` : "--";
-      const morRate = e.morning_rate != null ? `${e.morning_rate}%` : "--";
-      const ciVal = e.consistency_index != null ? `${e.consistency_index}%` : "--";
-      const approvalH = e.avg_approval_hours != null ? formatHours(e.avg_approval_hours) : "--";
+      const govBadge = e.governorate ? `<span class="badge bg-secondary-subtle text-secondary ms-1 small">${escapeHtml(e.governorate)}</span>` : "";
+      
+      const bayesianScore = e.bayesian_score != null ? (e.bayesian_score * 100).toFixed(1) : 0;
+      let scoreBadgeClass = "bg-danger-subtle text-danger";
+      let statusBadge = governanceText("ضعيف / يحتاج متابعة", "Needs Attention");
+      let statusClass = "bg-danger-subtle text-danger";
+
+      if (bayesianScore >= 80) {
+        scoreBadgeClass = "bg-success-subtle text-success border border-success-subtle";
+        statusBadge = governanceText("ممتاز / ممتثل", "Excellent / Compliant");
+        statusClass = "bg-success-subtle text-success border border-success-subtle";
+      } else if (bayesianScore >= 60) {
+        scoreBadgeClass = "bg-warning-subtle text-warning-emphasis border border-warning-subtle";
+        statusBadge = governanceText("مستقر / جيد", "Stable / Good");
+        statusClass = "bg-warning-subtle text-warning-emphasis border border-warning-subtle";
+      }
+
+      const rawRate = (+(e.raw_rate || 0) * 100).toFixed(1);
+      const rejRate = e.rejection_rate != null ? `${Number(e.rejection_rate).toFixed(1)}%` : "--";
+      const ciVal = e.consistency_index != null ? `${Number(e.consistency_index).toFixed(1)}%` : "--";
       const lastDate = e.last_report_date
         ? new Date(e.last_report_date).toLocaleDateString(governanceLocale())
         : "--";
-      const reminderCnt = e.reminder_count != null ? e.reminder_count : "--";
 
       return `<tr>
-          <td><span class="rank-badge ${rankClass}">${e.rank}</span></td>
-          <td>${kgName} ${lowBadge}</td>
-          <td>${e.required}</td>
-          <td>${e.submitted}</td>
-          <td>${e.delivered}</td>
-          <td>${e.viewed}</td>
-          <td>${formatPercent(e.raw_rate)}</td>
-          <td><strong>${formatPercent(e.bayesian_score)}</strong></td>
-          <td><span class="${e.rejection_rate > 15 ? 'text-danger fw-bold' : ''}">${rejRate}</span></td>
-          <td>${morRate}</td>
-          <td>${ciVal}</td>
-          <td>${approvalH}</td>
-          <td>${lastDate}</td>
-          <td>${reminderCnt}</td>
-          <td>
+          <td class="text-center"><span class="${rankClass}">${e.rank}</span></td>
+          <td><div class="fw-bold text-dark">${kgName}</div>${govBadge}</td>
+          <td class="text-center fw-semibold">${e.required || 0}</td>
+          <td class="text-center text-primary fw-semibold">${e.submitted || 0}</td>
+          <td class="text-center">
+            <div class="d-flex align-items-center justify-content-center gap-1">
+              <span class="fw-bold">${rawRate}%</span>
+            </div>
+          </td>
+          <td class="text-center">
+            <span class="badge ${scoreBadgeClass} fs-6 px-2 py-1">${bayesianScore}%</span>
+          </td>
+          <td class="text-center"><span class="${e.rejection_rate > 15 ? 'text-danger fw-bold' : 'text-muted'}">${rejRate}</span></td>
+          <td class="text-center fw-semibold text-secondary">${ciVal}</td>
+          <td class="text-center small text-muted">${lastDate}</td>
+          <td class="text-center"><span class="badge ${statusClass} px-2 py-1">${statusBadge}</span></td>
+          <td class="text-end pe-3">
               <button class="btn btn-sm btn-outline-warning js-reminder-btn"
                       data-target-type="kindergarten"
                       data-target-id="${e.kindergarten_id}"
                       data-target-name="${kgName}"
-                      title="${governanceText('إرسال تذكير إلى', 'Send reminder to')} ${kgName}">
-                  <i class="bi bi-bell" aria-hidden="true"></i>
+                      title="${governanceText('إرسال تذكير حوكمة إلى', 'Send governance reminder to')} ${kgName}">
+                  <i class="bi bi-bell-fill me-1" aria-hidden="true"></i>${governanceText('تذكير', 'Remind')}
               </button>
           </td>
       </tr>`;
@@ -435,36 +464,63 @@ function renderLeaderboard(entries) {
     .join("");
 }
 
-// ─── Low Performers ──────────────────────────────────────────────────────
+// ─── Nurseries Requiring Improvement ─────────────────────────────────────
 
 function renderLowPerformers(items) {
-  const section = document.getElementById("lowPerformersSection");
-  const container = document.getElementById("lowPerformersList");
+  const tbody = document.getElementById("lowPerformersTableBody");
+  const countEl = document.getElementById("improvementCount");
   if (!items || items.length === 0) {
-    section.classList.add("d-none");
+    if (countEl) countEl.textContent = "0";
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">${governanceText("لا توجد حضانات تتطلب تدخلاً عاجلاً حالياً", "No nurseries requiring immediate intervention at this time")}</td></tr>`;
+    }
     return;
   }
-  section.classList.remove("d-none");
-  container.innerHTML = items
-    .map((lp) => {
-      const kgName = getKgName(lp);
-      return `
-        <div class="col-md-4">
-            <div class="low-performer-badge p-3">
-                <div class="fw-bold">${kgName}</div>
-                <div class="text-muted small">${governanceText("نسبة التقديم", "Submission rate")}: ${formatPercent(lp.submission_rate)}</div>
-                <div class="text-muted small">${governanceText("الفجوة", "Gap")}: ${lp.gap} ${governanceText("تقرير", "reports")}</div>
-                <button class="btn btn-sm btn-warning mt-2 js-reminder-btn"
-                        data-target-type="kindergarten"
-                        data-target-id="${lp.kindergarten_id}"
-                        data-target-name="${kgName}">
-                    <i class="bi bi-bell me-1"></i>${governanceText("إرسال تذكير", "Send reminder")}
-                </button>
-            </div>
-        </div>
-    `;
-    })
-    .join("");
+
+  if (countEl) countEl.textContent = items.length;
+
+  if (tbody) {
+    tbody.innerHTML = items
+      .map((lp) => {
+        const kgName = getKgName(lp);
+        const govBadge = lp.governorate ? `<span class="badge bg-secondary-subtle text-secondary ms-1 small">${escapeHtml(lp.governorate)}</span>` : "";
+        const subRate = (+(lp.submission_rate || 0) * 100).toFixed(1);
+        const openIncidents = lp.open_incidents || 0;
+        const safeguardingBadge = openIncidents > 0
+          ? `<span class="badge bg-danger text-white"><i class="bi bi-shield-exclamation me-1"></i>${openIncidents} ${governanceText("حادثة مفتوحة", "open incident(s)")}</span>`
+          : `<span class="badge bg-success-subtle text-success">${governanceText("سليم", "Clear")}</span>`;
+
+        const priorityBadge = subRate < 40 || openIncidents > 0
+          ? `<span class="badge bg-danger px-2 py-1">${governanceText("حرج جداً", "High Risk")}</span>`
+          : `<span class="badge bg-warning text-dark px-2 py-1">${governanceText("تحت المتابعة", "Needs Review")}</span>`;
+
+        const lastDate = lp.last_submission_date
+          ? new Date(lp.last_submission_date).toLocaleDateString(governanceLocale())
+          : "--";
+
+        return `
+          <tr>
+            <td class="text-center">${priorityBadge}</td>
+            <td><div class="fw-bold text-dark">${kgName}</div>${govBadge}</td>
+            <td class="text-center"><span class="fw-bold text-danger">${subRate}%</span></td>
+            <td class="text-center"><span class="badge bg-danger-subtle text-danger fs-6">${lp.gap || 0} ${governanceText("تقرير", "reports")}</span></td>
+            <td class="text-center">${lp.rejection_rate != null ? `${Number(lp.rejection_rate).toFixed(1)}%` : "--"}</td>
+            <td class="text-center">${safeguardingBadge}</td>
+            <td class="text-center small text-muted">${lastDate}</td>
+            <td class="text-center fw-semibold">${lp.reminder_count || 0}</td>
+            <td class="text-end pe-3">
+              <button class="btn btn-sm btn-danger js-reminder-btn"
+                      data-target-type="kindergarten"
+                      data-target-id="${lp.kindergarten_id}"
+                      data-target-name="${kgName}">
+                  <i class="bi bi-bell-fill me-1"></i>${governanceText("إرسال تذكير عاجل", "Send Urgent Reminder")}
+              </button>
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
+  }
 }
 
 // ─── Reminders ───────────────────────────────────────────────────────────

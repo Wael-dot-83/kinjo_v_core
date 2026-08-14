@@ -241,14 +241,15 @@ def get_dashboard_summary(
         # expected for that day). Each day is a 1-day window, so the same definition as
         # the headline number above — a point can only be 0/50/100 style values bounded
         # by that day's expected child-days, never the headcount-scaled figure.
+        # 7-day attendance trend via single-pass bulk evaluation (3 queries total)
+        trend_start = today - timedelta(days=6)
+        daily_trend_map = KPIService.compute_daily_attendance_trend_bulk(
+            db, summary_kg_ids, trend_start, today
+        )
         trend = []
         for i in range(6, -1, -1):
             d = today - timedelta(days=i)
-            day_components = KPIService.compute_attendance_components_bulk(
-                db, summary_kg_ids, d, d
-            )
-            day_num = sum(a for a, _ in day_components.values())
-            day_den = sum(e for _, e in day_components.values())
+            day_num, day_den = daily_trend_map.get(d, (0, 0))
             trend.append(round(day_num / day_den * 100, 1) if day_den > 0 else 0.0)
 
         return {

@@ -82,6 +82,27 @@ fi
 #    Backups are ~850MB, so taking one on every no-op deploy would fill the disk.
 # ---------------------------------------------------------------------------
 MIGRATION_PENDING=0
+
+# (a) Does the INCOMING RELEASE add a revision this checkout does not have?
+#
+# This is the case that matters and the one the alembic check below cannot see.
+# Asking the running container is asking the OLD image, which by definition does
+# not contain the new revision file -- so `current` equals `head` and a release
+# whose entire purpose is a migration reports "nothing pending". That is exactly
+# backwards: the backup exists for schema changes, and it was being skipped for
+# every one of them. Release 97ae00c (2026-08-13) added five indexes with no
+# dump taken. Read the revision filenames out of the tarball instead.
+NEW_REVISIONS="$(comm -13 \
+  <(ls "$APP_DIR/alembic/versions"/*.py 2>/dev/null | xargs -r -n1 basename | sort) \
+  <(tar tf "$TARBALL" | sed -n 's|^alembic/versions/\([^/]*\.py\)$|\1|p' | sort))"
+if [[ -n "$NEW_REVISIONS" ]]; then
+  MIGRATION_PENDING=1
+  log "release adds revision file(s): $(echo "$NEW_REVISIONS" | tr '\n' ' ')"
+fi
+
+# (b) Is the database behind the code that is already running? Kept as a second
+#     trigger -- it catches a migration that was added by an earlier deploy but
+#     never applied.
 if docker inspect "$WEB_CONTAINER" >/dev/null 2>&1; then
   CURRENT_REV="$(docker exec "$WEB_CONTAINER" alembic current 2>/dev/null | grep -v INFO | tr -d ' \n' || true)"
   HEAD_REV="$(docker exec "$WEB_CONTAINER" alembic heads 2>/dev/null | grep -v INFO | awk '{print $1}' | tr -d ' \n' || true)"
@@ -123,7 +144,18 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 log "applying migrations"
-docker exec "$WEB_CONTAINER" alembic upgrade head 2>&1 | grep -viE '^INFO.*(Context|Will assume)' || true
+# `alembic upgrade head | grep ... || true` swallowed the migration's exit code
+# entirely: the pipeline's status is grep's, and `|| true` discarded even that.
+# A migration could fail and the deploy would still print DEPLOY_OK. The most
+# likely failure is a branched revision graph -- alembic refuses to upgrade when
+# there are two heads, which is precisely how a bad down_revision presents, and
+# the release would have shipped code expecting a schema that was never applied.
+# Capture first, then filter, so a failure is fatal and the log still prints.
+if ! MIGRATION_LOG="$(docker exec "$WEB_CONTAINER" alembic upgrade head 2>&1)"; then
+  printf '%s\n' "$MIGRATION_LOG"
+  die "alembic upgrade head failed -- schema NOT migrated; rollback image was tagged above"
+fi
+printf '%s\n' "$MIGRATION_LOG" | grep -viE '^INFO.*(Context|Will assume)' || true
 
 # ---------------------------------------------------------------------------
 # 6. Health verification -- still inside the lock.
@@ -143,14 +175,38 @@ log "alembic: $(docker exec "$WEB_CONTAINER" alembic current 2>/dev/null | grep 
 log "containers:"
 docker ps --format '  {{.Names}} | {{.Status}}'
 # ---------------------------------------------------------------------------
-# 7. Seed manager module data if the database is fresh.
-#    The seed script is idempotent: it skips when data already exists.
+# 7. Seed manager module data -- OPT-IN.
+#
+# Was unconditional. Three reasons it is not:
+#
+#   * `seed_manager_module.py --force` calls Base.metadata.drop_all(). Nothing
+#     in the deploy passes --force, but a script that can erase every table
+#     does not belong on the automatic path of every production release.
+#   * On a populated database the script prints [SKIP] and returns without
+#     creating anything, so running it here cannot achieve what it looks like
+#     it achieves -- it only ever fires on an empty database.
+#   * It prints the seeded account passwords on stdout, which this step piped
+#     straight into the deploy log.
+#
+# Set SEED_MANAGER_MODULE=1 to run it deliberately.
 # ---------------------------------------------------------------------------
-log "seeding manager module data"
-if ! docker exec "$WEB_CONTAINER" python scripts/seed_manager_module.py 2>&1 | grep -qE '(\[SKIP\]|\[DONE\])'; then
-  log "WARNING: seed script did not complete cleanly"
+if [[ "${SEED_MANAGER_MODULE:-0}" == "1" ]]; then
+  log "seeding manager module data (SEED_MANAGER_MODULE=1)"
+  # Capture rather than pipe into `grep -q`: with `set -o pipefail`, grep exits
+  # on its first match and SIGPIPEs python, so the pipeline returned non-zero on
+  # SUCCESS and logged a warning. Worse, on a real failure grep -q swallowed the
+  # traceback and left nothing to diagnose.
+  if SEED_LOG="$(docker exec -e SEED_MANAGER_MODULE=1 "$WEB_CONTAINER" \
+                 python scripts/seed_manager_module.py 2>&1)"; then
+    # Never echo the credential block into the deploy log.
+    printf '%s\n' "$SEED_LOG" | grep -E '^\s*\[(OK|SKIP|DONE|WIPE)\]' || true
+    log "seed finished"
+  else
+    printf '%s\n' "$SEED_LOG" | grep -viE 'password|Test@' || true
+    log "WARNING: seed script failed (credential lines withheld)"
+  fi
 else
-  log "seed complete"
+  log "seed skipped (set SEED_MANAGER_MODULE=1 to run scripts/seed_manager_module.py)"
 fi
 
 log "DEPLOY_OK sha=$RELEASE_SHA"

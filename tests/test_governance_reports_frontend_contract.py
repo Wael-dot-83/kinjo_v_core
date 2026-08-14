@@ -25,10 +25,26 @@ def test_no_undefined_tailwind_position_classes_remain():
     """Three chart-wrapper divs used Tailwind's "relative z-10" utility
     syntax; Tailwind is never loaded on this page or in admin_base.html, so
     neither class did anything — Chart.js's documented responsive-sizing
-    pattern requires a positioned parent, which these divs never had."""
+    pattern requires a positioned parent, which these divs never had.
+
+    Asserts the property that matters -- every chart canvas has a positioned
+    parent -- rather than a count of `position-relative`. The count was three
+    when three wrappers existed; the governance redesign moved one onto a
+    non-chart panel and left #trendChart in a bare `card-body`, which the count
+    could not distinguish from a legitimate layout change.
+    """
     html = GOVERNANCE_TEMPLATE.read_text(encoding="utf-8")
     assert "relative z-10" not in html
-    assert html.count("position-relative") >= 3
+    for canvas_id in ("funnelChart", "trendChart"):
+        m = re.search(rf'<canvas id="{canvas_id}"', html)
+        assert m, f"{canvas_id} canvas not found"
+        # The nearest enclosing element opened before the canvas must be positioned.
+        opening = html.rfind("<div", 0, m.start())
+        wrapper = html[opening:m.start()]
+        assert "position-relative" in wrapper, (
+            f"{canvas_id} has no positioned parent; Chart.js responsive sizing "
+            f"needs one. Wrapper was: {wrapper.strip()[:120]}"
+        )
 
 
 def test_row_grids_have_bootstrap_column_classes():
@@ -52,18 +68,41 @@ def test_charts_have_accessible_text_alternatives():
     assert re.search(r'<canvas id="trendChart"[^>]*role="img"[^>]*aria-label="', html)
 
 
-def test_both_tables_have_caption_and_column_scope():
+def test_every_table_has_caption_and_column_scope():
+    """One caption per table, and column headers scoped.
+
+    Was pinned to `== 2` captions and `== 20` scope="col". The governance
+    redesign split the leaderboard into prioritized and improvement tables, so
+    the page legitimately has three; hardcoded totals failed on a correct
+    change while saying nothing about whether the new table was accessible.
+    Tie the assertion to the number of tables instead.
+    """
     html = GOVERNANCE_TEMPLATE.read_text(encoding="utf-8")
-    assert html.count('<caption class="visually-hidden">') == 2
-    assert html.count('scope="col"') == 20  # 15 leaderboard + 5 reminders columns
+    tables = html.count("<table")
+    assert tables >= 2
+    assert html.count('<caption class="visually-hidden">') == tables
+    # Every table needs scoped column headers; 5 is the smallest table here.
+    assert html.count('scope="col"') >= tables * 5
 
 
 def test_reminder_button_has_per_kindergarten_accessible_name():
     """The icon-only leaderboard reminder button already had
     data-target-name available but its title was a static, non-row-specific
-    string ("Send reminder") repeated identically for every kindergarten."""
+    string ("Send reminder") repeated identically for every kindergarten.
+
+    Asserts the name is row-specific and bilingual, not one exact wording. The
+    redesign reworded it to "Send governance reminder to", which is still
+    per-row and still correct -- pinning the sentence made a copy edit look
+    like an accessibility regression.
+    """
     js = GOVERNANCE_JS.read_text(encoding="utf-8")
-    assert "${governanceText('إرسال تذكير إلى', 'Send reminder to')} ${kgName}" in js
+    m = re.search(r'title="\$\{governanceText\(([^)]*)\)\}\s*\$\{kgName\}"', js)
+    assert m, (
+        "the reminder button's title must be composed with ${kgName} so each "
+        "row gets its own accessible name"
+    )
+    args = m.group(1)
+    assert "'" in args and "," in args, f"title must be bilingual, got: {args}"
 
 
 def test_reminders_pagination_uses_backend_support_instead_of_hardcoded_page():

@@ -1,57 +1,166 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block footer %}{% endblock %}
 
 {% block title %}{% if ui_lang == 'en' %}Supervisor Dashboard{% else %}لوحة المشرف{% endif %}{% endblock %}
 
-{% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <h1 class="page-header-title">
-            <i class="bi bi-person-badge text-primary me-2" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Supervisor Dashboard{% else %}لوحة المشرف{% endif %}
-        </h1>
-        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
-                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Supervisor Dashboard{% else %}لوحة المشرف{% endif %}</li>
-            </ol>
-        </nav>
-    </div>
-    <div class="page-header-actions">
-        <button id="refreshDashboardBtn" class="btn btn-outline-primary btn-sm" type="button">
-            <i class="bi bi-arrow-clockwise me-1"></i>
-            {% if ui_lang == 'en' %}Refresh Now{% else %}تحديث الآن{% endif %}
-        </button>
-        <a href="/supervisor/help" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-life-preserver me-1"></i>
-            {% if ui_lang == 'en' %}Guide{% else %}دليل المشرف{% endif %}
-        </a>
-        <div class="text-end">
-            <span class="text-muted small d-block">
-                <i class="bi bi-calendar3 me-1"></i>{{ today }}
-            </span>
-            <small class="text-muted d-block" id="dashboardLastUpdated">{% if ui_lang == 'en' %}Last updated: --{% else %}آخر تحديث: --{% endif %}</small>
-        </div>
-    </div>
-</div>
+{% block extra_css %}
+<style>
+  .supervisor-dashboard-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .welcome-banner-v2 {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #0d9488 100%);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(30, 58, 138, 0.18);
+    position: relative;
+    overflow: hidden;
+  }
+  .welcome-banner-v2::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .stat-card-v2 {
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 0.875rem;
+    background: #ffffff;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .stat-card-v2:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+  }
+  .stat-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+  }
+  .stat-icon-indigo { background: #e0e7ff; color: #4338ca; }
+  .stat-icon-emerald { background: #d1fae5; color: #047857; }
+  .stat-icon-rose { background: #ffe4e6; color: #be123c; }
+  .stat-icon-amber { background: #fef3c7; color: #b45309; }
+
+  .attendance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+  .attendance-cell {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 0.75rem 0.5rem;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    text-align: center;
+  }
+  .attendance-cell:hover {
+    transform: scale(1.03);
+    border-color: #3b82f6;
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.12);
+  }
+  .attendance-cell.present { border-color: #10b981; background: #f0fdf4; }
+  .attendance-cell.absent { border-color: #f43f5e; background: #fff1f2; }
+  .attendance-cell.late { border-color: #f59e0b; background: #fffbeb; }
+  .attendance-cell.checked_out { border-color: #64748b; background: #f8fafc; opacity: 0.85; }
+
+  .att-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #3b82f6;
+    color: #ffffff;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+  }
+  .attendance-cell.present .att-avatar { background: #10b981; }
+  .attendance-cell.absent .att-avatar { background: #f43f5e; }
+  .attendance-cell.late .att-avatar { background: #f59e0b; }
+  .attendance-cell.checked_out .att-avatar { background: #64748b; }
+
+  .att-name {
+    font-size: 0.825rem;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.2;
+  }
+  .att-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+  }
+  .attendance-cell.present .att-status-dot { background: #10b981; }
+  .attendance-cell.absent .att-status-dot { background: #f43f5e; }
+  .attendance-cell.late .att-status-dot { background: #f59e0b; }
+  .attendance-cell.checked_out .att-status-dot { background: #64748b; }
+
+  .quick-action-btn-v2 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.75rem;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #1e293b;
+  }
+  .quick-action-btn-v2:hover {
+    transform: translateX(ifelse(dir=='rtl', -3px, 3px));
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+  }
+  .qa-primary-v2 { border-color: #bfdbfe; color: #1d4ed8; background: #eff6ff; }
+  .qa-success-v2 { border-color: #a7f3d0; color: #047857; background: #ecfdf5; }
+  .qa-warning-v2 { border-color: #fde68a; color: #b45309; background: #fffbeb; }
+  .qa-info-v2 { border-color: #c7d2fe; color: #4338ca; background: #eef2ff; }
+</style>
 {% endblock %}
 
 {% block content %}
 <!-- Welcome Banner -->
-<div class="welcome-banner mb-4">
+<div class="welcome-banner-v2 mb-4">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2" style="position:relative;z-index:1">
         <div>
-            <h5 class="mb-1">
-                <i class="bi bi-sun me-2" style="color:rgba(255,255,255,0.8)"></i>
+            <h4 class="mb-1 fw-bold text-white">
+                <i class="bi bi-sun-fill me-2 text-warning"></i>
                 {% if ui_lang == 'en' %}Good morning, {{ current_user.username }}{% else %}صباح الخير، {{ current_user.username }}{% endif %}
-            </h5>
-            <p class="mb-0 small">
-                {% if ui_lang == 'en' %}You have <strong id="taskCount" style="color:#fde68a">0</strong> tasks needing attention today.{% else %}لديك <strong id="taskCount" style="color:#fde68a">0</strong> مهام تحتاج اهتمامك اليوم.{% endif %}
+            </h4>
+            <p class="mb-0 text-white-50 small">
+                {% if ui_lang == 'en' %}You have <strong id="taskCount" class="text-warning fw-bold">0</strong> tasks needing attention today.{% else %}لديك <strong id="taskCount" class="text-warning fw-bold">0</strong> مهام تحتاج اهتمامك اليوم.{% endif %}
             </p>
         </div>
         <div class="text-end">
-            <small style="color:rgba(255,255,255,0.7)"><i class="bi bi-calendar3 me-1"></i>{{ today }}</small>
-            <small class="d-block" style="color:rgba(255,255,255,0.5)" id="dashboardLastUpdatedBanner">{% if ui_lang == 'en' %}Last updated: --{% else %}آخر تحديث: --{% endif %}</small>
+            <span class="badge bg-white bg-opacity-20 text-white border border-white border-opacity-25 px-3 py-2">
+                <i class="bi bi-calendar3 me-1"></i>{{ today }}
+            </span>
+            <small class="d-block text-white-50 mt-1" id="dashboardLastUpdatedBanner">{% if ui_lang == 'en' %}Last updated: --{% else %}آخر تحديث: --{% endif %}</small>
         </div>
     </div>
 </div>
@@ -567,7 +676,7 @@
         document.getElementById('attendanceSearchInput')?.addEventListener('input', applyAttendanceFilter);
 
         document.getElementById('attendanceGrid')?.addEventListener('click', (event) => {
-            const card = event.target.closest('.attendance-card-btn');
+            const card = event.target.closest('.attendance-cell, .attendance-card-btn');
             if (!card) return;
             const childId = Number(card.getAttribute('data-child-id'));
             const status = String(card.getAttribute('data-status') || '').toLowerCase();

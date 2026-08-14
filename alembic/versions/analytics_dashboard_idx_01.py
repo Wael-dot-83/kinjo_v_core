@@ -5,7 +5,7 @@ Adds the composite indexes the new /reports/analytics filter bar needs for
 fast multi-dimensional aggregation without table rewrites or downtime.
 
 Revision ID: analytics_dashboard_idx_01
-Revises: analytics_idx_01
+Revises: sched_chart_exports_01
 Create Date: 2026-08-14
 """
 from typing import Sequence, Union
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "analytics_dashboard_idx_01"
-down_revision: Union[str, None] = "analytics_idx_01"
+down_revision: Union[str, None] = "sched_chart_exports_01"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
