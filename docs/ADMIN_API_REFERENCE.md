@@ -12,7 +12,7 @@
 - Pagination: list endpoints use the parameter names shown below; do not assume a universal page size.
 - Live interactive schemas and examples are also available at `/docs` and `/openapi.json` in an authorized environment.
 
-## Registered operations (160)
+## Registered operations (163)
 
 | Method | Path | Purpose | Parameters | Request body | Success/error responses |
 |---|---|---|---|---|---|
@@ -62,6 +62,9 @@
 | `GET` | `/api/admin/charts/dashboard` | Legacy charts explorer dashboard | `kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` —<br>`422` `HTTPValidationError` |
 | `GET` | `/api/admin/charts/data` | Render a Plotly chart as JSON data | `source` (query, string, required)<br>`chart_type` (query, value, optional)<br>`date_from` (query, value, optional)<br>`date_to` (query, value, optional)<br>`kindergarten_id` (query, value, optional)<br>`governorate` (query, value, optional)<br>`city` (query, value, optional)<br>`granularity` (query, string, optional)<br>`group_by` (query, value, optional)<br>`top_n` (query, value, optional)<br>`title` (query, value, optional)<br>`lang` (query, string, optional)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` `ChartResponse`<br>`422` `HTTPValidationError` |
 | `GET` | `/api/admin/charts/render` | Render a Plotly chart as HTML | `source` (query, string, required)<br>`chart_type` (query, value, optional)<br>`date_from` (query, value, optional)<br>`date_to` (query, value, optional)<br>`kindergarten_id` (query, value, optional)<br>`governorate` (query, value, optional)<br>`city` (query, value, optional)<br>`granularity` (query, string, optional)<br>`group_by` (query, value, optional)<br>`top_n` (query, value, optional)<br>`title` (query, value, optional)<br>`lang` (query, string, optional)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` `ChartResponse`<br>`422` `HTTPValidationError` |
+| `GET` | `/api/admin/charts/scheduled-exports` | List Scheduled Exports | `kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` `object`<br>`422` `HTTPValidationError` |
+| `POST` | `/api/admin/charts/scheduled-exports` | Create Scheduled Export | `kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | application/json: `ScheduledExportIn` | `201` `object`<br>`422` `HTTPValidationError` |
+| `DELETE` | `/api/admin/charts/scheduled-exports/{schedule_id}` | Delete Scheduled Export | `schedule_id` (path, integer, required)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` `object`<br>`422` `HTTPValidationError` |
 | `POST` | `/api/admin/charts/suggest` | Auto-suggest chart types for a data source | `kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | application/json: `SuggestRequest` | `200` `SuggestResponse`<br>`422` `HTTPValidationError` |
 | `GET` | `/api/admin/charts/task/{task_id}` | Poll Celery task status for a heavy chart render | `task_id` (path, string, required)<br>`kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` `TaskStatus`<br>`422` `HTTPValidationError` |
 | `POST` | `/api/admin/classification/cache/invalidate` | Invalidate Admin Classification Cache | `kinjo_session` (cookie, value, optional)<br>`kinjo_token` (cookie, value, optional) | — | `200` `CacheInvalidateResponse`<br>`422` `HTTPValidationError` |

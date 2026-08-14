@@ -282,6 +282,50 @@
 </style>
 {% endblock %} {% block content %}
 <div class="admin-main-content admin-uswds-dashboard usa-section">
+  <!-- Page Header -->
+  <div class="admin-page-header usa-prose">
+    <div class="admin-page-header-content">
+      <h1 class="admin-page-title">
+        {% if ui_lang == 'en' %}Operational Indicators{% else %}المؤشرات
+        التشغيلية{% endif %}
+      </h1>
+      <p class="admin-page-subtitle">
+        {% if ui_lang == 'en' %}Monitor system status, operations, and current
+        activities{% else %}متابعة حالة النظام والعمليات والأنشطة الحالية{%
+        endif %}
+      </p>
+    </div>
+    <div class="admin-page-header-actions admin-header-controls">
+      <span id="last-updated-time" class="admin-header-metric">
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <span id="last-updated-time-value"
+          >{% if ui_lang == 'en' %}Last updated: --:--{% else %}آخر تحديث:
+          --:--{% endif %}</span
+        >
+      </span>
+      <div class="form-check form-check-inline admin-auto-refresh">
+        <input class="form-check-input" type="checkbox" id="autoRefreshCheck" />
+        <label class="form-check-label small" for="autoRefreshCheck">
+          <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Auto-refresh{% else %}تحديث تلقائي{% endif %}
+        </label>
+      </div>
+      <button
+        class="admin-btn-enterprise-refresh"
+        id="refresh-dashboard"
+        type="button"
+        aria-controls="dashboard-content"
+        aria-label="{% if ui_lang == 'en' %}Refresh dashboard data{% else %}تحديث بيانات لوحة التحكم{% endif %}"
+      >
+        <i class="bi bi-arrow-clockwise refresh-icon" aria-hidden="true"></i>
+        <span class="refresh-text"
+          >{% if ui_lang == 'en' %}Update Data{% else %}تحديث البيانات{% endif
+          %}</span
+        >
+      </button>
+    </div>
+  </div>
+
   <section
     class="agency-reports-dashboard-section usa-summary-box"
     {#
@@ -343,50 +387,6 @@
       </div>
     </div>
   </section>
-
-  <!-- Page Header -->
-  <div class="admin-page-header usa-prose">
-    <div class="admin-page-header-content">
-      <h1 class="admin-page-title">
-        {% if ui_lang == 'en' %}Operational Indicators{% else %}المؤشرات
-        التشغيلية{% endif %}
-      </h1>
-      <p class="admin-page-subtitle">
-        {% if ui_lang == 'en' %}Monitor system status, operations, and current
-        activities{% else %}متابعة حالة النظام والعمليات والأنشطة الحالية{%
-        endif %}
-      </p>
-    </div>
-    <div class="admin-page-header-actions admin-header-controls">
-      <span id="last-updated-time" class="admin-header-metric">
-        <i class="bi bi-clock-history" aria-hidden="true"></i>
-        <span id="last-updated-time-value"
-          >{% if ui_lang == 'en' %}Last updated: --:--{% else %}آخر تحديث:
-          --:--{% endif %}</span
-        >
-      </span>
-      <div class="form-check form-check-inline admin-auto-refresh">
-        <input class="form-check-input" type="checkbox" id="autoRefreshCheck" />
-        <label class="form-check-label small" for="autoRefreshCheck">
-          <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
-          {% if ui_lang == 'en' %}Auto-refresh{% else %}تحديث تلقائي{% endif %}
-        </label>
-      </div>
-      <button
-        class="admin-btn-enterprise-refresh"
-        id="refresh-dashboard"
-        type="button"
-        aria-controls="dashboard-content"
-        aria-label="{% if ui_lang == 'en' %}Refresh dashboard data{% else %}تحديث بيانات لوحة التحكم{% endif %}"
-      >
-        <i class="bi bi-arrow-clockwise refresh-icon" aria-hidden="true"></i>
-        <span class="refresh-text"
-          >{% if ui_lang == 'en' %}Update Data{% else %}تحديث البيانات{% endif
-          %}</span
-        >
-      </button>
-    </div>
-  </div>
 
   <!-- Dashboard Root — initial state is "loading"; JS drives transitions -->
   <div
