@@ -174,5 +174,16 @@ done
 log "alembic: $(docker exec "$WEB_CONTAINER" alembic current 2>/dev/null | grep -v INFO | head -1)"
 log "containers:"
 docker ps --format '  {{.Names}} | {{.Status}}'
+# ---------------------------------------------------------------------------
+# 7. Seed manager module data if the database is fresh.
+#    The seed script is idempotent: it skips when data already exists.
+# ---------------------------------------------------------------------------
+log "seeding manager module data"
+if ! docker exec "$WEB_CONTAINER" python scripts/seed_manager_module.py 2>&1 | grep -qE '(\[SKIP\]|\[DONE\])'; then
+  log "WARNING: seed script did not complete cleanly"
+else
+  log "seed complete"
+fi
+
 log "DEPLOY_OK sha=$RELEASE_SHA"
 # Lock is released here when fd 9 closes with the process.
