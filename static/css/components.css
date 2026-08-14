@@ -83,6 +83,12 @@
   background-color: var(--kinjo-color-bg-hover);
 }
 
+/* RTL support for k-table */
+[dir="rtl"] .k-table th,
+[dir="rtl"] .k-table td {
+  text-align: right;
+}
+
 /* Form Inputs */
 .k-input {
   display: block;

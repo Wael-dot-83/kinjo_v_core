@@ -16,7 +16,7 @@
     </div>
     <div class="page-actions">
         <a href="/dashboard" class="btn btn-ghost">
-            <i class="bi bi-arrow-right me-2"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
+            <i class="bi bi-arrow-{{ 'right' if ui_lang == 'en' else 'left' }} me-2"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
         </a>
     </div>
 </div>

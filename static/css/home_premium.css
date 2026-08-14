@@ -527,8 +527,8 @@
 .kinjo-navbar .nav-link.active::after {
   content: "";
   position: absolute;
-  bottom: 0;
-  left: 10%;
+  inset-block-end: 0;
+  inset-inline-start: 10%;
   width: 80%;
   height: 3px;
   background: #2563EB;

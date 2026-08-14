@@ -28,8 +28,8 @@
 
 .no-data-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset-block-start: 0;
+  inset-inline-start: 0;
   width: 100%;
   height: 100%;
   display: flex;
@@ -565,14 +565,10 @@
     color: var(--color-gray-500);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-right: var(--space-1);
+    margin-inline-end: var(--space-1);
     display: inline-block;
 }
 
-[dir="rtl"] .admin-activity-label {
-    margin-right: 0;
-    margin-left: var(--space-1);
-}
 
 .admin-activity-actor-wrap,
 .admin-activity-time-wrap,

@@ -16,7 +16,7 @@
         </nav>
     </div>
     <a href="/enroll" class="btn btn-ghost btn-sm">
-        <i class="bi bi-arrow-right me-1"></i>{{ _('Previous Step') }}
+        <i class="bi bi-arrow-{{ 'right' if ui_lang == 'en' else 'left' }} me-1"></i>{{ _('Previous Step') }}
     </a>
 </div>
 <div class="progress mb-4" style="height:6px;">

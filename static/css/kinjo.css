@@ -641,7 +641,7 @@ html[lang="en"] .sidebar-section-title {
   font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
-html[dir="rtl"] .sidebar {
+[dir="rtl"] .sidebar {
   border-inline-end: 0;
   border-inline-start: 1px solid rgba(15, 23, 42, 0.08);
 }
@@ -880,8 +880,7 @@ body.sidebar-open .sidebar-backdrop {
 /* Dashboard Stats Cards */
 .stat-card {
   border-inline-start: 4px solid var(--kinjo-primary);
-  border-right: 0;
-  border-left: 0;
+  border-inline-end: 0;
   background: white;
   border-radius: var(--kinjo-radius-md);
 }
@@ -997,14 +996,14 @@ body.sidebar-open .sidebar-backdrop {
 .table th.sortable::after {
   content: "\F282";
   font-family: "bootstrap-icons";
-  margin-right: 0.5rem;
+  margin-inline-end: 0.5rem;
   opacity: 0.3;
   font-size: 0.75rem;
 }
 
 [dir="rtl"] .table th.sortable::after {
-  margin-right: 0;
-  margin-left: 0.5rem;
+  margin-inline-end: 0;
+  margin-inline-start: 0.5rem;
 }
 
 .table th.sortable.asc::after {
@@ -1424,7 +1423,7 @@ body.sidebar-open .sidebar-backdrop {
     padding-top: 0;
   }
 
-  html[dir="rtl"] .sidebar {
+  [dir="rtl"] .sidebar {
     /* inset-inline-* already flips with direction, so the base rule above puts the drawer
        on the correct edge in RTL. Re-stating it here inverted (start:auto / end:0) pinned
        the drawer to the left edge instead, and then translateX(102%) slid it toward the
@@ -1436,10 +1435,10 @@ body.sidebar-open .sidebar-backdrop {
   }
 
   .sidebar.show,
-  /* `html[dir="rtl"] .sidebar` (0,2,1) outranks a bare `.sidebar.show` (0,2,0), so without
+  /* `[dir="rtl"] .sidebar` (0,2,1) outranks a bare `.sidebar.show` (0,2,0), so without
      an RTL-qualified selector here the drawer keeps its closed transform and never slides
      in on Arabic — which is the default language. */
-  html[dir="rtl"] .sidebar.show {
+  [dir="rtl"] .sidebar.show {
     transform: translateX(0);
   }
 
@@ -2595,7 +2594,7 @@ body.sidebar-open .sidebar-backdrop {
   background-color: var(--kinjo-sidebar-bg) !important;
   border-inline-end: 1px solid var(--kinjo-sidebar-border) !important;
 }
-html[dir="rtl"] .sidebar {
+[dir="rtl"] .sidebar {
   border-inline-start: 1px solid var(--kinjo-sidebar-border) !important;
   border-inline-end: 0 !important;
 }
@@ -2725,7 +2724,7 @@ html[dir="rtl"] .sidebar {
 .stat-card.warning::before { background: var(--kinjo-warning); }
 .stat-card.danger::before  { background: var(--kinjo-danger); }
 .stat-card.info::before    { background: var(--kinjo-info); }
-html[dir="rtl"] .stat-card::before { border-radius: 0 4px 4px 0; }
+[dir="rtl"] .stat-card::before { border-radius: 0 4px 4px 0; }
 
 .stat-card:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.10), 0 8px 32px rgba(0,0,0,0.07) !important;
@@ -2916,7 +2915,7 @@ html[dir="rtl"] .stat-card::before { border-radius: 0 4px 4px 0; }
   transform: translateX(4px);
   text-decoration: none;
 }
-html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
+[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 
 .quick-action-btn .qa-icon {
   width: 2.5rem;
@@ -3563,7 +3562,7 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
   box-shadow: inset 3px 0 0 0 #873d32 !important;
 }
 
-html[dir="rtl"] .sidebar .nav-link.active {
+[dir="rtl"] .sidebar .nav-link.active {
   box-shadow: inset -3px 0 0 0 #873d32 !important;
 }
 

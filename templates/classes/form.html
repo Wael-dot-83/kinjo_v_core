@@ -169,7 +169,7 @@ breadcrumbs=[
 
                     <div class="d-flex justify-content-between mt-4 pt-3 border-top">
                         <a href="/classes" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-right me-1"></i>{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+                            <i class="bi bi-arrow-{{ 'right' if ui_lang == 'en' else 'left' }} me-1"></i>{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
                         </a>
                         <button type="submit" class="btn btn-primary" id="submitBtn">
                             <i class="bi bi-check-lg me-1"></i>

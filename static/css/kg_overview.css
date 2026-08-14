@@ -166,7 +166,9 @@
 .ko-kpi-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
   height: 3px;
   background: var(--accent);
   border-radius: var(--ko-radius) var(--ko-radius) 0 0;
@@ -224,14 +226,15 @@
 
 .ko-kpi-badge {
   position: absolute;
-  top: 1rem; right: 1rem;
+  inset-block-start: 1rem;
+  inset-inline-end: 1rem;
   font-size: .65rem;
   padding: .2rem .5rem;
   border-radius: 100px;
   font-weight: 700;
   letter-spacing: .04em;
 }
-[dir="rtl"] .ko-kpi-badge { right: auto; left: 1rem; }
+[dir="rtl"] .ko-kpi-badge { inset-inline-end: auto; inset-inline-start: 1rem; }
 
 /* ── 6. Section Header ──────────────────────────────────── */
 .ko-section {
@@ -632,11 +635,17 @@
   width: 16px; height: 16px;
   border-radius: 50%;
   background: #fff;
-  top: 3px; left: 3px;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
   transition: transform var(--ko-transition);
   box-shadow: 0 1px 3px rgba(0,0,0,.2);
 }
+[dir="rtl"] .ko-toggle-thumb {
+  inset-inline-start: auto;
+  inset-inline-end: 3px;
+}
 .ko-toggle input:checked ~ .ko-toggle-thumb { transform: translateX(18px); }
+[dir="rtl"] .ko-toggle input:checked ~ .ko-toggle-thumb { transform: translateX(-18px); }
 
 /* ── 15. Skeleton / Loading ─────────────────────────────── */
 .ko-skeleton {

@@ -1,8 +1,8 @@
 <!doctype html>
 {% if ui_lang == 'en' %}
-<html lang="en" dir="ltr" style="visibility: hidden">
+<html lang="en" dir="{{ ui_dir | default('ltr') }}" style="visibility: hidden">
   {% else %}
-  <html lang="ar" dir="rtl" style="visibility: hidden">
+  <html lang="ar" dir="{{ ui_dir | default('rtl') }}" style="visibility: hidden">
     {% endif %}
     <head>
       <meta charset="UTF-8" />
@@ -50,6 +50,8 @@
       <link
         id="bootstrapCss"
         href="/static/vendor/bootstrap/{% if ui_dir == 'ltr' %}bootstrap.min.css{% else %}bootstrap.rtl.min.css{% endif %}"
+        data-rtl-href="/static/vendor/bootstrap/bootstrap.rtl.min.css"
+        data-ltr-href="/static/vendor/bootstrap/bootstrap.min.css"
         rel="stylesheet"
       />
 

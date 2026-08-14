@@ -520,7 +520,9 @@
 .kg-nav-pills .nav-link.active::after {
   content: '';
   position: absolute;
-  bottom: -2px; left: 8px; right: 8px;
+  inset-block-end: -2px;
+  inset-inline-start: 8px;
+  inset-inline-end: 8px;
   height: 3px;
   background: linear-gradient(90deg, var(--kj-green-600), var(--kj-blue));
   border-radius: 3px 3px 0 0;

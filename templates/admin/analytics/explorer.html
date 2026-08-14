@@ -400,7 +400,7 @@
   'use strict';
 
   var LANG = '{{ ui_lang }}';
-  var RTL  = document.documentElement.getAttribute('dir') === 'rtl';
+  var RTL  = document.documentElement.dir === 'rtl';
 
   // The server sends every operator-visible string as {ar, en}. The browser only
   // picks a side — it never translates, never pattern-matches, never falls back.

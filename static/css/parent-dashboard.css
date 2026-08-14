@@ -71,7 +71,7 @@
   content: '';
   position: absolute;
   bottom: -40%;
-  right: 3%;
+  inset-inline-end: 3%;
   width: 280px;
   height: 280px;
   background: radial-gradient(circle, rgba(254, 240, 138, 0.3) 0%, rgba(254, 240, 138, 0) 70%);
@@ -80,13 +80,13 @@
 }
 
 [dir="rtl"] .parent-hero-banner::before {
-  right: auto;
-  left: -5%;
+  inset-inline-end: auto;
+  inset-inline-start: -5%;
 }
 
 [dir="rtl"] .parent-hero-banner::after {
-  right: auto;
-  left: 3%;
+  inset-inline-end: auto;
+  inset-inline-start: 3%;
 }
 
 .parent-hero-title {

@@ -295,7 +295,7 @@
                                 <div>
                                     <p class="mb-1 fw-bold text-body">{% if ui_lang == 'en' %}Speed Up Enrollment Review{% else %}تسريع مراجعة التسجيلات{% endif %}</p>
                                     <small class="text-muted d-block mb-2" id="actionEnrollmentDesc">{% if ui_lang == 'en' %}Pending enrollment requests are awaiting your review.{% else %}طلبات التسجيل المعلقة بانتظار مراجعتك.{% endif %}</small>
-                                    <span class="text-primary small fw-bold">{% if ui_lang == 'en' %}Review requests now{% else %}راجع الطلبات الآن{% endif %} <i class="bi bi-arrow-left ms-1"></i></span>
+                                    <span class="text-primary small fw-bold">{% if ui_lang == 'en' %}Review requests now{% else %}راجع الطلبات الآن{% endif %} <i class="bi bi-arrow-{{ 'left' if ui_dir == 'rtl' else 'right' }} ms-1"></i></span>
                                 </div>
                             </a>
                         </div>
@@ -307,7 +307,7 @@
                                 <div>
                                     <p class="mb-1 fw-bold text-body">{% if ui_lang == 'en' %}Follow Up on Repeated Absences{% else %}متابعة الغياب المتكرر{% endif %}</p>
                                     <small class="text-muted d-block mb-2" id="actionAttendanceDesc">{% if ui_lang == 'en' %}Review attendance patterns across your network to identify absenteeism trends.{% else %}راجع أنماط الحضور عبر شبكتك لتحديد اتجاهات الغياب.{% endif %}</small>
-                                    <span class="text-success small fw-bold" id="actionAttendanceCta">{% if ui_lang == 'en' %}Review attendance report{% else %}مراجعة تقرير الحضور{% endif %} <i class="bi bi-arrow-left ms-1"></i></span>
+                                    <span class="text-success small fw-bold" id="actionAttendanceCta">{% if ui_lang == 'en' %}Review attendance report{% else %}مراجعة تقرير الحضور{% endif %} <i class="bi bi-arrow-{{ 'left' if ui_dir == 'rtl' else 'right' }} ms-1"></i></span>
                                 </div>
                             </a>
                         </div>
@@ -343,7 +343,7 @@
                                 </small>
                             </div>
                             <a href="/attendance" class="btn btn-success w-100 rounded-pill py-2 fw-bold">
-                                {% if ui_lang == 'en' %}Manage Attendance{% else %}إدارة الحضور{% endif %} <i class="bi bi-arrow-left ms-1"></i>
+                                {% if ui_lang == 'en' %}Manage Attendance{% else %}إدارة الحضور{% endif %} <i class="bi bi-arrow-{{ 'left' if ui_dir == 'rtl' else 'right' }} ms-1"></i>
                             </a>
                         </div>
                     </div>
@@ -361,7 +361,7 @@
                             <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Pending Enrollment Requests{% else %}طلبات تسجيل معلقة{% endif %}</p>
                             <h2 class="display-5 fw-bold mb-4" id="pendingEnrollmentsValue"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>
                             <a href="/enrollments" class="btn btn-warning w-100 rounded-pill py-2 fw-bold">
-                                {% if ui_lang == 'en' %}Review Requests{% else %}مراجعة الطلبات{% endif %} <i class="bi bi-arrow-left ms-1"></i>
+                                {% if ui_lang == 'en' %}Review Requests{% else %}مراجعة الطلبات{% endif %} <i class="bi bi-arrow-{{ 'left' if ui_dir == 'rtl' else 'right' }} ms-1"></i>
                             </a>
                         </div>
                     </div>
@@ -379,7 +379,7 @@
                             <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Pending Daily Reports{% else %}التقارير اليومية المعلقة{% endif %}</p>
                             <h2 class="display-5 fw-bold mb-4" id="pendingReportsValue"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>
                             <a href="/daily-reports" class="btn w-100 rounded-pill py-2 fw-bold text-white" style="background:#2F7D62; border-color:#2F7D62;">
-                                {% if ui_lang == 'en' %}Review Reports{% else %}مراجعة التقارير{% endif %} <i class="bi bi-arrow-left ms-1"></i>
+                                {% if ui_lang == 'en' %}Review Reports{% else %}مراجعة التقارير{% endif %} <i class="bi bi-arrow-{{ 'left' if ui_dir == 'rtl' else 'right' }} ms-1"></i>
                             </a>
                         </div>
                     </div>
@@ -397,7 +397,7 @@
                             <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Reported Incidents{% else %}الحوادث المبلغ عنها{% endif %}</p>
                             <h2 class="display-5 fw-bold mb-4" id="incidentsTodayValue"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>
                             <a href="/safety" class="btn btn-danger w-100 rounded-pill py-2 fw-bold">
-                                {% if ui_lang == 'en' %}Safety Management{% else %}إدارة السلامة{% endif %} <i class="bi bi-arrow-left ms-1"></i>
+                                {% if ui_lang == 'en' %}Safety Management{% else %}إدارة السلامة{% endif %} <i class="bi bi-arrow-{{ 'left' if ui_dir == 'rtl' else 'right' }} ms-1"></i>
                             </a>
                         </div>
                     </div>
@@ -756,7 +756,7 @@
             </div>
             <div class="card-footer bg-transparent">
                 <a href="/daily-reports" class="small text-decoration-none" aria-label="{% if ui_lang == 'en' %}View all daily reports{% else %}عرض جميع التقارير اليومية{% endif %}">
-                    {% if ui_lang == 'en' %}View All Reports{% else %}عرض جميع التقارير{% endif %} <i class="bi bi-arrow-left"></i>
+                    {% if ui_lang == 'en' %}View All Reports{% else %}عرض جميع التقارير{% endif %} <i class="bi bi-arrow-{{ 'left' if ui_dir == 'rtl' else 'right' }}"></i>
                 </a>
             </div>
         </div>
@@ -782,7 +782,7 @@
             {% if current_user.role.value == 'ADMIN' %}
             <div class="card-footer bg-transparent">
                 <a href="/audit-logs" class="small text-decoration-none" aria-label="{% if ui_lang == 'en' %}View full activity log{% else %}عرض السجل الكامل للنشاط{% endif %}">
-                    {% if ui_lang == 'en' %}View Full Log{% else %}عرض السجل الكامل{% endif %} <i class="bi bi-arrow-left"></i>
+                    {% if ui_lang == 'en' %}View Full Log{% else %}عرض السجل الكامل{% endif %} <i class="bi bi-arrow-{{ 'left' if ui_dir == 'rtl' else 'right' }}"></i>
                 </a>
             </div>
             {% endif %}
@@ -810,7 +810,7 @@
                     {% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}
                 </h5>
                 <a href="/kpi/dashboard" class="btn btn-sm btn-outline-primary" aria-label="{% if ui_lang == 'en' %}View KPI details{% else %}عرض تفاصيل مؤشرات الأداء الرئيسية{% endif %}">
-                    {% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %} <i class="bi bi-arrow-left ms-1"></i>
+                    {% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %} <i class="bi bi-arrow-{{ 'left' if ui_dir == 'rtl' else 'right' }} ms-1"></i>
                 </a>
             </div>
             <div class="card-body">

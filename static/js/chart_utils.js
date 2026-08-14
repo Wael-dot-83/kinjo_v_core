@@ -90,7 +90,7 @@
    * @returns {Object} RTL-aware chart options
    */
   function getRTLAwareOptions(baseOptions) {
-    const isRTL = document.documentElement.dir === 'rtl' || document.documentElement.lang === 'ar';
+    const isRTL = document.documentElement.dir === "rtl" || document.documentElement.lang === "ar";
     
     const options = Object.assign({}, baseOptions);
     

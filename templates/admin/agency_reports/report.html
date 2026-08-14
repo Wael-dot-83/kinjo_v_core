@@ -45,7 +45,7 @@ extra_head %}
       id="agency-drill-reset"
       aria-label="{% if ui_lang == 'en' %}Reset drill-down{% else %}إعادة تعيين التصفح المتعمق{% endif %}"
     >
-      <i class="bi bi-arrow-left" aria-hidden="true"></i>
+      <i class="bi bi-arrow-{{ 'left' if ui_lang == 'en' else 'right' }}" aria-hidden="true"></i>
       {% if ui_lang == 'en' %}Back to all{% else %}عرض الكل{% endif %}
     </button>
     <span id="agency-drill-label" class="agency-drill-label"></span>
