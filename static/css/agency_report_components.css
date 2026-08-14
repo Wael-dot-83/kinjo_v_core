@@ -1,0 +1,231 @@
+/* Shared agency report components styles.
+   Used by all agency report pages via the custom elements in
+   agency_report_components.js. NCFA-specific styles remain in
+   ncfa_strong_reports.css; this file provides the base shell. */
+
+/* ---- KPI Pill Grid ---- */
+.agency-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.agency-kpi-card {
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  position: relative;
+}
+
+.agency-kpi-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+[dir="rtl"] .agency-kpi-value {
+  color: #0f172a;
+}
+
+.agency-kpi-label {
+  display: block;
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.agency-kpi-trend {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  font-size: 0.75rem;
+}
+
+.trend-up { color: #16a34a; }
+.trend-down { color: #dc2626; }
+.trend-flat { color: #64748b; }
+
+/* ---- Data Table ---- */
+.agency-table-wrap {
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.agency-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.agency-data-table caption {
+  text-align: start;
+  font-weight: 600;
+  padding: 8px 0;
+  color: #334155;
+}
+
+.agency-data-table thead th {
+  background: #f1f5f9;
+  padding: 10px 12px;
+  text-align: start;
+  font-weight: 600;
+  border-bottom: 2px solid #cbd5e1;
+  white-space: nowrap;
+}
+
+.agency-data-table tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.agency-data-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.agency-row-zero {
+  opacity: 0.5;
+}
+
+.agency-total-row td {
+  font-weight: 700;
+  border-top: 2px solid #cbd5e1;
+  background: #f1f5f9;
+}
+
+/* ---- Chart Panel ---- */
+.agency-chart-card {
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.agency-chart-card h4 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.agency-chart-canvas {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
+.agency-chart-empty {
+  color: #94a3b8;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.agency-chart-fallback {
+  margin-top: 12px;
+}
+
+.agency-chart-fallback summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.agency-chart-fallback table {
+  width: 100%;
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.agency-chart-fallback th,
+.agency-chart-fallback td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* ---- Export Toolbar ---- */
+.agency-export-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+/* ---- Filter Bar ---- */
+.agency-filter-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.agency-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agency-filter-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.agency-filter-field select,
+.agency-filter-field input {
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  min-width: 140px;
+}
+
+/* ---- Loading & Error States ---- */
+.agency-loading {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+}
+
+.agency-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.agency-empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #94a3b8;
+}
+
+/* ---- Dark mode ---- */
+@media (prefers-color-scheme: dark) {
+  .agency-kpi-card,
+  .agency-chart-card {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  .agency-kpi-value { color: #e2e8f0; }
+  .agency-data-table thead th { background: #334155; color: #e2e8f0; }
+  .agency-data-table tbody td { border-color: #334155; }
+  .agency-data-table tbody tr:hover { background: #334155; }
+  .agency-total-row td { background: #334155; border-color: #475569; }
+  .agency-export-toolbar,
+  .agency-filter-bar { background: #1e293b; }
+  .agency-filter-field select,
+  .agency-filter-field input { background: #0f172a; color: #e2e8f0; border-color: #475569; }
+}

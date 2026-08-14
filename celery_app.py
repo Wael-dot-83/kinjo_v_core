@@ -68,8 +68,20 @@ celery_app.conf.update(
             "task": "chart_export_tasks.run_due_exports",
             "schedule": crontab(minute=5),
         },
+        # Agency report nightly snapshots. Runs at 21:00 UTC == 00:00 Jordan
+        # (UTC+3), so the previous day's data is complete. Pre-materializes
+        # aggregated rows so report loads query snapshots, not raw joins.
+        "run-agency-report-snapshots": {
+            "task": "agency_report_snapshot_task.run_daily_snapshots",
+            "schedule": crontab(hour=21, minute=0),
+        },
     },
 )
+
+# Ensure the snapshot task module is imported so Celery discovers it.
+celery_app.conf.include = list(celery_app.conf.get("include", [])) + [
+    "agency_report_snapshot_task",
+]
 
 
 _task_stats = {"completed": 0, "failed": 0, "durations": []}

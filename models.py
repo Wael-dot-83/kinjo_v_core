@@ -2563,3 +2563,74 @@ class ScheduledChartExport(Base):
         CheckConstraint("export_format IN ('CSV','JSON')", name="ck_sched_export_format"),
         Index("ix_sched_export_due", "is_active", "next_run_at"),
     )
+
+
+# =============================================================================
+# Agency Report Snapshots & Unified Metric Cache
+# =============================================================================
+
+class AgencyReportSnapshot(Base):
+    """Nightly materialized aggregation for agency reports.
+
+    Pre-computes report data so report loads query pre-computed rows instead
+    of re-joining raw tables on every request.
+    """
+    __tablename__ = "agency_report_snapshots"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    agency_code = Column(String(20), nullable=False, index=True)
+    report_code = Column(String(60), nullable=False, index=True)
+    snapshot_date = Column(Date, nullable=False, index=True)
+    governorate = Column(String(100), nullable=True)
+    district = Column(String(100), nullable=True)
+    gender = Column(String(10), nullable=True)
+    age_group = Column(String(20), nullable=True)
+    metric_key = Column(String(80), nullable=False)
+    metric_value = Column(Float, nullable=False)
+    dimension = Column(JSON, default={})
+    computed_at = Column(UTCDateTime, server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint(
+            "agency_code", "report_code", "snapshot_date",
+            "governorate", "district", "gender", "age_group", "metric_key",
+            name="uq_agency_report_snapshot",
+        ),
+        Index("ix_snapshots_agency_report_date", "agency_code", "report_code", "snapshot_date"),
+    )
+
+
+class UnifiedMetricCache(Base):
+    """Single cache table replacing the three scattered overlapping cache
+    tables (advanced_analytics_cache, analytics_dimension_cache, kpi_snapshots)
+    with one keyed store that supports cross-invalidation."""
+    __tablename__ = "unified_metric_cache"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    cache_key = Column(String(255), nullable=False, unique=True, index=True)
+    metric_namespace = Column(String(60), nullable=False, index=True)
+    agency_code = Column(String(20), nullable=True)
+    report_code = Column(String(60), nullable=True)
+    payload = Column(JSON, nullable=True)
+    computed_at = Column(UTCDateTime, server_default=func.now())
+    expires_at = Column(UTCDateTime, nullable=True)
+
+    __table_args__ = (
+        Index("ix_unified_cache_namespace_agency", "metric_namespace", "agency_code", "report_code"),
+    )
+
+
+class SnapshotMetadata(Base):
+    """Tracks freshness of each (agency, report) snapshot."""
+    __tablename__ = "snapshot_metadata"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    agency_code = Column(String(20), nullable=False, index=True)
+    report_code = Column(String(60), nullable=False, index=True)
+    last_computed_at = Column(UTCDateTime, server_default=func.now())
+    row_count = Column(Integer, nullable=False, default=0)
+    snapshot_date = Column(Date, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("agency_code", "report_code", name="uq_snapshot_metadata"),
+    )

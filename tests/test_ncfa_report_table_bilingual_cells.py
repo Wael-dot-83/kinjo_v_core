@@ -53,3 +53,4 @@ def test_asset_version_bumped_for_the_fix():
     never reaches anyone who has already opened the page."""
     tpl = (ROOT / "templates" / "admin" / "agency_reports" / "agency.html").read_text(encoding="utf-8")
     assert "ncfa_strong_reports.js?v=1.3" not in tpl
+    assert "admin_agency_reports.js?v=3.9" not in tpl

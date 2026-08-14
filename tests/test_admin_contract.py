@@ -8,7 +8,14 @@ from main import app
 ROOT = Path(__file__).resolve().parents[1]
 ADMIN_BASE = ROOT / "templates" / "admin_base.html"
 ADMIN_TEMPLATE_ROOT = ROOT / "templates" / "admin"
-ADMIN_TEMPLATES = [ROOT / "templates" / "admin_dashboard.html", *ADMIN_TEMPLATE_ROOT.rglob("*.html")]
+ADMIN_TEMPLATES = [
+    ROOT / "templates" / "admin_dashboard.html",
+    *[
+        p
+        for p in ADMIN_TEMPLATE_ROOT.rglob("*.html")
+        if not any(part.startswith("_") for part in p.relative_to(ADMIN_TEMPLATE_ROOT).parts)
+    ],
+]
 FIRST_PARTY_ADMIN_JS = [
     path
     for path in (ROOT / "static" / "js").glob("*.js")

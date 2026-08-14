@@ -1,9 +1,10 @@
 {% extends "admin_base.html" %} {% block title %}{% if ui_lang == 'en' %}Agency
 Reports{% else %}تقارير الجهة الرسمية{% endif %}{% endblock %} {% block
 extra_head %}
-<link rel="stylesheet" href="/static/css/agency_reports.css?v=3.4" />
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=3.5" />
+<link rel="stylesheet" href="/static/css/agency_report_components.css?v=1.0" />
 {% if agency_code == 'ncfa' %}
-<link rel="stylesheet" href="/static/css/ncfa_strong_reports.css?v=1.3" />
+<link rel="stylesheet" href="/static/css/ncfa_strong_reports.css?v=1.4" />
 {% endif %} {% endblock %} {% block content %}
 <section
   class="agency-reports-page"
@@ -224,11 +225,13 @@ extra_head %}
   </div>
 </section>
 {% endblock %} {% block extra_scripts %}
+<!-- Shared agency report components (custom elements) -->
+<script src="/static/js/agency_report_components.js?v=1.0"></script>
 <!-- Cache bust version to load latest changes -->
-<script src="/static/js/admin_agency_reports.js?v=3.9"></script>
+<script src="/static/js/admin_agency_reports.js?v=4.0"></script>
 {% if agency_code == 'ncfa' %}
 <script>
   window.NCFA_ADMIN_DIVISIONS_URL = "/static/data/jordan_admin_divisions.json";
 </script>
-<script src="/static/js/ncfa_strong_reports.js?v=1.4"></script>
+<script src="/static/js/ncfa_strong_reports.js?v=1.5"></script>
 {% endif %} {% endblock %}

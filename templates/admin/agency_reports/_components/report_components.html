@@ -1,0 +1,151 @@
+{% macro report_filter_bar(filters_config, ui_lang='ar') %}
+{# Shared filter bar for all agency reports.
+   filters_config: list of dicts with {key, label_ar, label_en, type, options}
+   Syncs filter state to URL query params for shareable links. #}
+<div class="agency-filter-bar" data-report-filter-bar role="search" aria-label="{{ 'فلترة التقرير' if ui_lang != 'en' else 'Filter report' }}">
+  {% for f in filters_config %}
+  <div class="agency-filter-field">
+    <label for="filter-{{ f.key }}">{{ f.label_ar if ui_lang != 'en' else f.label_en }}</label>
+    {% if f.type == 'select' %}
+    <select id="filter-{{ f.key }}" name="{{ f.key }}" data-filter-key="{{ f.key }}">
+      {% for opt in f.options %}
+      <option value="{{ opt.value }}">{{ opt.label_ar if ui_lang != 'en' else opt.label_en }}</option>
+      {% endfor %}
+    </select>
+    {% elif f.type == 'date' %}
+    <input type="date" id="filter-{{ f.key }}" name="{{ f.key }}" data-filter-key="{{ f.key }}" />
+    {% else %}
+    <input type="text" id="filter-{{ f.key }}" name="{{ f.key }}" data-filter-key="{{ f.key }}" />
+    {% endif %}
+  </div>
+  {% endfor %}
+  <button type="button" class="admin-btn admin-btn-secondary" data-filter-reset>
+    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+    {{ 'إعادة تعيين' if ui_lang != 'en' else 'Reset' }}
+  </button>
+</div>
+{% endmacro %}
+
+{% macro kpi_pill_grid(kpis, ui_lang='ar') %}
+{# Renders summary KPI pills from a list of KPI dicts.
+   Each KPI: {key, label_ar, label_en, value, unit_ar, unit_en, format, trend} #}
+<div class="agency-kpi-grid" role="status" aria-live="polite">
+  {% for kpi in kpis %}
+  <div class="agency-kpi-card" data-kpi-key="{{ kpi.key }}">
+    <strong class="agency-kpi-value">
+      {% if kpi.value is none %}—{% else %}{{ kpi.value }}{% endif %}
+      {% if kpi.get('unit_ar') and ui_lang != 'en' %} {{ kpi.unit_ar }}{% endif %}
+      {% if kpi.get('unit_en') and ui_lang == 'en' %} {{ kpi.unit_en }}{% endif %}
+    </strong>
+    <span class="agency-kpi-label">{{ kpi.label_ar if ui_lang != 'en' else kpi.label_en }}</span>
+    {% if kpi.trend %}
+    <span class="agency-kpi-trend trend-{{ kpi.trend }}" aria-hidden="true">
+      {% if kpi.trend == 'up' %}▲{% elif kpi.trend == 'down' %}▼{% else %}─{% endif %}
+    </span>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro report_data_table(rows, column_labels, total_row, caption, ui_lang='ar') %}
+{# Accessible, sortable, paginated data table.
+   rows: list of dicts
+   column_labels: {key: {ar, en}} mapping
+   total_row: optional dict with totals #}
+{% if rows %}
+<div class="agency-table-wrap">
+  <table class="agency-data-table" role="table">
+    <caption>{{ caption }}</caption>
+    <thead>
+      <tr>
+        {% for key in rows[0].keys() %}
+        <th scope="col" data-sort-key="{{ key }}">
+          {{ (column_labels.get(key, {}).get('en' if ui_lang == 'en' else 'ar', key)) }}
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr class="{{ 'agency-row-zero' if row.get('count') == 0 else '' }}">
+        {% for key in rows[0].keys() %}
+        <td>
+          {% set val = row.get(key) %}
+          {% if val is none %}—{% elif val is mapping %}{{ val.get('en' if ui_lang == 'en' else 'ar', val.get('ar', '')) }}{% else %}{{ val }}{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if total_row %}
+    <tfoot>
+      <tr class="agency-total-row">
+        {% for key in rows[0].keys() %}
+        <td>{{ total_row.get(key, '') if total_row.get(key) is not none else '—' }}</td>
+        {% endfor %}
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+</div>
+{% else %}
+<div class="agency-empty-state" role="status">
+  {{ 'لا توجد بيانات متاحة للعرض ضمن النطاق المحدد.' if ui_lang != 'en' else 'No data available to display for the selected scope.' }}
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro report_chart_panel(chart, ui_lang='ar') %}
+{# Chart.js canvas wrapper with accessible fallback table.
+   chart: {type, title_ar, title_en, series: [{label, value}]} #}
+{% if chart and chart.get('series') %}
+<div class="agency-chart-card">
+  <h4>{{ chart.get('title_en' if ui_lang == 'en' else 'title_ar', chart.get('title_ar', '')) }}</h4>
+  <div class="agency-chart-canvas">
+    <canvas
+      role="img"
+      aria-label="{{ chart.get('title_en' if ui_lang == 'en' else 'title_ar', 'Chart') }}"
+      data-chart-type="{{ chart.get('type', 'bar') }}"
+      data-chart-series="{{ chart.series | tojson | e }}"
+    ></canvas>
+  </div>
+  <details class="agency-chart-fallback" aria-label="{{ 'البيانات الجدولية' if ui_lang != 'en' else 'Tabular data' }}">
+    <summary>{{ 'عرض البيانات كجدول' if ui_lang != 'en' else 'Show data as table' }}</summary>
+    <table>
+      <thead><tr><th>{{ 'الفئة' if ui_lang != 'en' else 'Category' }}</th><th>{{ 'القيمة' if ui_lang != 'en' else 'Value' }}</th></tr></thead>
+      <tbody>
+        {% for point in chart.series %}
+        <tr><td>{{ point.label }}</td><td>{{ point.value if point.value is not none else '—' }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </details>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro export_toolbar(agency_code, report_code, exports, ui_lang='ar') %}
+{# Export buttons that delegate to the API export endpoint. #}
+<div class="agency-export-toolbar" role="toolbar" aria-label="{{ 'تصدير التقرير' if ui_lang != 'en' else 'Export report' }}">
+  {% if 'csv' in exports %}
+  <button type="button" class="admin-btn admin-btn-secondary" data-export-format="csv"
+          data-export-url="/api/admin/agency-reports/{{ agency_code }}/reports/{{ report_code }}/export?format=csv">
+    <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
+    {{ 'تصدير CSV' if ui_lang != 'en' else 'Export CSV' }}
+  </button>
+  {% endif %}
+  {% if 'json' in exports %}
+  <button type="button" class="admin-btn admin-btn-secondary" data-export-format="json"
+          data-export-url="/api/admin/agency-reports/{{ agency_code }}/reports/{{ report_code }}/export?format=json">
+    <i class="bi bi-file-earmark-code" aria-hidden="true"></i>
+    {{ 'تصدير JSON' if ui_lang != 'en' else 'Export JSON' }}
+  </button>
+  {% endif %}
+  <button type="button" class="admin-btn admin-btn-secondary" data-export-format="xlsx"
+          data-export-url="/api/admin/agency-reports/{{ agency_code }}/reports/{{ report_code }}/export?format=xlsx">
+    <i class="bi bi-file-earmark-excel" aria-hidden="true"></i>
+    {{ 'تصدير Excel' if ui_lang != 'en' else 'Export Excel' }}
+  </button>
+</div>
+{% endmacro %}

@@ -255,6 +255,7 @@ from me_endpoints import router as me_router
 from government_api import router as government_api_router
 from api.public import router as public_router
 from api.missing_endpoints import router as missing_endpoints_router
+from api.agency_reports_api import router as agency_reports_api_router
 from charts_api import router as charts_router
 from analytics_explorer import router as analytics_explorer_router
 from analytics_explorer import page_router as analytics_explorer_page_router
@@ -1250,6 +1251,12 @@ app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
 app.include_router(government_api_router, prefix="/api", tags=["Government API"])
 app.include_router(public_router, prefix="/api", tags=["Public"])
 app.include_router(missing_endpoints_router, prefix="/api", tags=["Missing Endpoints"])
+# Agency reports API — mounted under /api so that the router's internal paths
+# (/admin/agency-reports/...) yield the full path /api/admin/agency-reports/...
+# Previously served through the missing_endpoints compat wrapper; now has its
+# own mount point for clean separation. The compat wrapper no longer includes
+# this router, preventing duplicate (method, path) registrations.
+app.include_router(agency_reports_api_router, prefix="/api", tags=["Admin Agency Reports"])
 # Account self-service for any signed-in role. The /api/admin/profile pair is
 # behind require_admin, so managers/supervisors/parents had no audited path to
 # edit their own account — see me_endpoints.py.

@@ -1,7 +1,10 @@
 """Admin Official Agency Reports API.
 
-Mounted through api.missing_endpoints wrapper under /api, yielding paths such as:
+Mounted in main.py under /api (no /api/admin prefix), yielding paths such as:
 /api/admin/agency-reports/catalog
+
+The router's internal route paths already include the /admin/agency-reports
+prefix, so mounting under /api produces the expected /api/admin/agency-reports/...
 """
 
 from __future__ import annotations
@@ -16,8 +19,9 @@ import immunization_service
 import models
 from admin_security import log_audit_event
 from audit_actions import AuditAction
-from agency_reports_export import custom_report_to_csv, to_csv
+from services.agency_reports.exporter import custom_report_to_csv, to_csv, to_json, to_xlsx
 from agency_reports_service import AgencyReportError, AgencyReportsService
+from services.agency_reports.registry import get_agency_service
 from config import settings
 from database import get_db
 from dependencies import get_current_user
@@ -90,6 +94,71 @@ def agency_report_summary(
     db: Session = Depends(get_db),
 ):
     return AgencyReportsService(db).summary()
+
+
+@router.get("/admin/agency-reports/governance/overview")
+def agency_report_governance_overview(
+    governorate: Optional[str] = Query(default=None),
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+):
+    """Governance KPI overview for the NCFA report sidebar.
+
+    Returns the Governance Quality Index (GQI) and submission/delivery/view
+    rates for the selected governorate (or national if no governorate given).
+    Pulled from governance_scores when available, falling back to live
+    computation via governance_kpi_service.
+    """
+    from datetime import date, timedelta
+    from governance_kpi_service import compute_governance_funnel
+
+    today = date.today()
+    start = today - timedelta(days=30)
+
+    # Try cached governance scores first
+    q = db.query(models.GovernanceScore).filter(
+        models.GovernanceScore.period_end >= start,
+        models.GovernanceScore.period_start <= today,
+    )
+    if governorate:
+        q = q.join(models.Kindergarten, models.Kindergarten.id == models.GovernanceScore.kindergarten_id)
+        q = q.filter(models.Kindergarten.governorate == governorate)
+
+    scores = q.all()
+    if scores:
+        gqi_values = [s.governance_quality_index for s in scores if s.governance_quality_index is not None]
+        avg_gqi = sum(gqi_values) / len(gqi_values) if gqi_values else 0
+        return {
+            "source": "cache",
+            "governorate": governorate or "national",
+            "period_start": start.isoformat(),
+            "period_end": today.isoformat(),
+            "gqi": round(avg_gqi, 2),
+            "kindergarten_count": len(scores),
+        }
+
+    # Fall back to live computation
+    funnel = compute_governance_funnel(db, start, today)
+    totals = funnel.get("totals", {})
+    required = totals.get("required", 0)
+    submitted = totals.get("submitted", 0)
+    delivered = totals.get("delivered", 0)
+    viewed = totals.get("viewed", 0)
+
+    return {
+        "source": "live",
+        "governorate": governorate or "national",
+        "period_start": start.isoformat(),
+        "period_end": today.isoformat(),
+        "submission_rate": round(submitted / required * 100, 1) if required else None,
+        "delivery_rate": round(delivered / submitted * 100, 1) if submitted else None,
+        "view_rate": round(viewed / delivered * 100, 1) if delivered else None,
+        "required": required,
+        "submitted": submitted,
+        "delivered": delivered,
+        "viewed": viewed,
+        "kindergarten_count": funnel.get("kindergarten_count", 0),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -300,6 +369,48 @@ def agency_report_export_csv(
         filename = f"agency_report_{agency_code}_{report_code}.csv"
         return Response(
             content="\ufeff" + csv_payload,  # UTF-8 BOM for Arabic Excel compatibility (CHART-003)
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except AgencyReportError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+
+@router.get("/admin/agency-reports/{agency_code}/reports/{report_code}/export")
+def agency_report_export_unified(
+    agency_code: str,
+    report_code: str,
+    request: Request,
+    fmt: str = Query(default="csv", pattern="^(csv|json|xlsx)$"),
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+):
+    """Unified export endpoint: ?format=csv|json|xlsx
+
+    Consolidates the separate .csv and .json export routes into one endpoint
+    with a query-parameter format selector. The legacy .csv and .json suffix
+    routes are preserved as compatibility aliases.
+    """
+    try:
+        payload = AgencyReportsService(db).generate_report(agency_code, report_code, dict(request.query_params))
+        _audit_export(db, current_user, agency_code, report_code, fmt, dict(request.query_params))
+        if fmt == "json":
+            return JSONResponse(content=payload)
+        if fmt == "xlsx":
+            xlsx_bytes = to_xlsx(payload)
+            filename = f"agency_report_{agency_code}_{report_code}.xlsx"
+            return Response(
+                content=xlsx_bytes,
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            )
+        # Default: CSV
+        if not payload.get("exports", {}).get("csv"):
+            raise HTTPException(status_code=409, detail="CSV export is not available for this report")
+        csv_payload = to_csv(payload)
+        filename = f"agency_report_{agency_code}_{report_code}.csv"
+        return Response(
+            content="\ufeff" + csv_payload,
             media_type="text/csv; charset=utf-8",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
