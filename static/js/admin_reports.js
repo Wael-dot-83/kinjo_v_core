@@ -60,7 +60,7 @@
         ? _INCIDENT_STATUS_OPTIONS
         : _ENROLLMENT_STATUS_OPTIONS;
     const lang =
-      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+      document.documentElement.lang === "en" ? "en" : "ar";
     const labelKey = lang === "en" ? "label_en" : "label_ar";
     while (select.options.length > 1) select.remove(1);
     opts.forEach((s) => {
@@ -166,7 +166,7 @@
 
   function reportsText(ar, en) {
     const lang =
-      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+      document.documentElement.lang === "en" ? "en" : "ar";
     return lang === "en" ? en : ar;
   }
 
@@ -279,7 +279,7 @@
     if (typeof val === "object") {
       // bilingual {ar, en} payloads → pick by language; other objects →
       // readable key: value pairs instead of [object Object]
-      const lang = document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+const lang = document.documentElement.lang === "en" ? "en" : "ar";
       if (val[lang] !== undefined) return String(val[lang]);
       if (val.ar !== undefined || val.en !== undefined) return String(val.ar ?? val.en);
       return Object.entries(val)
@@ -439,7 +439,7 @@
     const d = new Date(val);
     if (isNaN(d.getTime())) return "-";
     const lang =
-      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+      document.documentElement.lang === "en" ? "en" : "ar";
     return (lang === "en" ? _TIME_FMT_EN : _TIME_FMT_AR).format(d);
   }
 
@@ -455,7 +455,7 @@
       return `<span class="badge bg-warning text-dark" title="${escapeHtml(String(val))}">Invalid Date</span>`;
     }
     const lang =
-      document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+      document.documentElement.lang === "en" ? "en" : "ar";
     if (lang === "en") {
       return time ? _DATETIME_FMT_EN.format(d) : _DATE_FMT_EN.format(d);
     }
@@ -754,21 +754,21 @@
               legend: {
                 position: "bottom",
                 rtl:
-                  document.documentElement.getAttribute("dir") === "rtl" ||
-                  document.documentElement.getAttribute("lang") === "ar",
+                  document.documentElement.dir === "rtl" ||
+                  document.documentElement.lang === "ar",
                 textDirection:
-                  document.documentElement.getAttribute("dir") === "rtl" ||
-                  document.documentElement.getAttribute("lang") === "ar"
+                  document.documentElement.dir === "rtl" ||
+                  document.documentElement.lang === "ar"
                     ? "rtl"
                     : "ltr",
               },
               tooltip: {
                 rtl:
-                  document.documentElement.getAttribute("dir") === "rtl" ||
-                  document.documentElement.getAttribute("lang") === "ar",
+                  document.documentElement.dir === "rtl" ||
+                  document.documentElement.lang === "ar",
                 textDirection:
-                  document.documentElement.getAttribute("dir") === "rtl" ||
-                  document.documentElement.getAttribute("lang") === "ar"
+                  document.documentElement.dir === "rtl" ||
+                  document.documentElement.lang === "ar"
                     ? "rtl"
                     : "ltr",
               },

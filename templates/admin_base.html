@@ -1,8 +1,8 @@
 <!doctype html>
 {% if ui_lang == 'en' %}
-<html lang="en" dir="ltr" style="visibility: hidden">
+<html lang="en" dir="{{ ui_dir | default('ltr') }}" style="visibility: hidden">
   {% else %}
-  <html lang="ar" dir="rtl" style="visibility: hidden">
+  <html lang="ar" dir="{{ ui_dir | default('rtl') }}" style="visibility: hidden">
     {% endif %}
     <head>
       <meta charset="UTF-8" />
@@ -50,6 +50,8 @@
       <link
         id="bootstrapCss"
         href="/static/vendor/bootstrap/{% if ui_dir == 'ltr' %}bootstrap.min.css{% else %}bootstrap.rtl.min.css{% endif %}"
+        data-rtl-href="/static/vendor/bootstrap/bootstrap.rtl.min.css"
+        data-ltr-href="/static/vendor/bootstrap/bootstrap.min.css"
         rel="stylesheet"
       />
 
@@ -66,18 +68,18 @@
       />
 
       <!-- KinJo Admin Design System -->
-      <link rel="stylesheet" href="/static/css/admin_design_system.css?v=3.1" />
+      <link rel="stylesheet" href="/static/css/admin_design_system.css?v=3.2" />
       <link rel="stylesheet" href="/static/css/top-menu.css?v=1.1" />
       <link rel="stylesheet" href="/static/css/design-tokens.css?v=1" />
       <link rel="stylesheet" href="/static/css/layout.css?v=1.3" />
-      <link rel="stylesheet" href="/static/css/components.css?v=1.2" />
+      <link rel="stylesheet" href="/static/css/components.css?v=1.3" />
       <link rel="stylesheet" href="/static/css/utilities.css?v=1" />
       <link rel="stylesheet" href="/static/css/admin_premium_theme.css?v=3.0" />
 
       <!-- Legacy compatibility -->
-      <link rel="stylesheet" href="/static/css/kinjo.css?v=20260811" />
+      <link rel="stylesheet" href="/static/css/kinjo.css?v=20260814" />
       {% if ui_dir == 'rtl' %}
-      <link rel="stylesheet" href="/static/css/rtl.css" />
+      <link rel="stylesheet" href="/static/css/rtl.css?v=1.1" />
       <link rel="stylesheet" href="/static/css/dark-mode.css?v=1.0" />
       {% endif %}
 

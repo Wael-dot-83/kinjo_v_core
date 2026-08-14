@@ -258,12 +258,12 @@
                 <a href="/supervisor/help" class="quick-action-btn qa-info">
                     <span class="qa-icon"><i class="bi bi-life-preserver"></i></span>
                     <span>{% if ui_lang == 'en' %}Open Supervisor Guide{% else %}فتح دليل المشرف{% endif %}</span>
-                    <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
+                    <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
                 <a href="/supervisor/attendance" class="quick-action-btn qa-success">
                     <span class="qa-icon"><i class="bi bi-box-arrow-in-left"></i></span>
                     <span>{% if ui_lang == 'en' %}Record Attendance{% else %}تسجيل حضور{% endif %}</span>
-                    <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
+                    <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
                 {# The roster comes first: filing the class is the ordinary daily
                    task, and the single-child form is the exception for a child
@@ -271,22 +271,22 @@
                 <a href="/daily-reports/roster" class="quick-action-btn qa-primary">
                     <span class="qa-icon"><i class="bi bi-journal-check"></i></span>
                     <span>{% if ui_lang == 'en' %}Report the whole class{% else %}تقارير الصف كاملاً{% endif %}</span>
-                    <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
+                    <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
                 <a href="/daily-reports/create" class="quick-action-btn qa-primary">
                     <span class="qa-icon"><i class="bi bi-journal-plus"></i></span>
                     <span>{% if ui_lang == 'en' %}Report one child{% else %}تقرير طفل واحد{% endif %}</span>
-                    <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
+                    <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
                 <a href="/supervisor/observations" class="quick-action-btn qa-info">
                     <span class="qa-icon"><i class="bi bi-eye"></i></span>
                     <span>{% if ui_lang == 'en' %}Record Observation{% else %}تسجيل ملاحظة{% endif %}</span>
-                    <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
+                    <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
                 <a href="/incidents/create" class="quick-action-btn qa-warning">
                     <span class="qa-icon"><i class="bi bi-exclamation-triangle"></i></span>
                     <span>{% if ui_lang == 'en' %}Report Incident{% else %}إبلاغ عن حادث{% endif %}</span>
-                    <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
+                    <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %} ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
             </div>
         </div>

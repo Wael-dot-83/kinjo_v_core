@@ -29,10 +29,10 @@
     </div>
     <div class="btn-group">
       <button type="button" class="k-btn k-btn-outline k-btn-prev" disabled>
-        <i class="bi bi-chevron-left"></i>
+        <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}right{% else %}left{% endif %}"></i>
       </button>
       <button type="button" class="k-btn k-btn-outline k-btn-next" disabled>
-        <i class="bi bi-chevron-right"></i>
+        <i class="bi bi-chevron-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %}"></i>
       </button>
     </div>
   </div>
