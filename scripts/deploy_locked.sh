@@ -82,6 +82,27 @@ fi
 #    Backups are ~850MB, so taking one on every no-op deploy would fill the disk.
 # ---------------------------------------------------------------------------
 MIGRATION_PENDING=0
+
+# (a) Does the INCOMING RELEASE add a revision this checkout does not have?
+#
+# This is the case that matters and the one the alembic check below cannot see.
+# Asking the running container is asking the OLD image, which by definition does
+# not contain the new revision file -- so `current` equals `head` and a release
+# whose entire purpose is a migration reports "nothing pending". That is exactly
+# backwards: the backup exists for schema changes, and it was being skipped for
+# every one of them. Release 97ae00c (2026-08-13) added five indexes with no
+# dump taken. Read the revision filenames out of the tarball instead.
+NEW_REVISIONS="$(comm -13 \
+  <(ls "$APP_DIR/alembic/versions"/*.py 2>/dev/null | xargs -r -n1 basename | sort) \
+  <(tar tf "$TARBALL" | sed -n 's|^alembic/versions/\([^/]*\.py\)$|\1|p' | sort))"
+if [[ -n "$NEW_REVISIONS" ]]; then
+  MIGRATION_PENDING=1
+  log "release adds revision file(s): $(echo "$NEW_REVISIONS" | tr '\n' ' ')"
+fi
+
+# (b) Is the database behind the code that is already running? Kept as a second
+#     trigger -- it catches a migration that was added by an earlier deploy but
+#     never applied.
 if docker inspect "$WEB_CONTAINER" >/dev/null 2>&1; then
   CURRENT_REV="$(docker exec "$WEB_CONTAINER" alembic current 2>/dev/null | grep -v INFO | tr -d ' \n' || true)"
   HEAD_REV="$(docker exec "$WEB_CONTAINER" alembic heads 2>/dev/null | grep -v INFO | awk '{print $1}' | tr -d ' \n' || true)"
@@ -123,7 +144,18 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 log "applying migrations"
-docker exec "$WEB_CONTAINER" alembic upgrade head 2>&1 | grep -viE '^INFO.*(Context|Will assume)' || true
+# `alembic upgrade head | grep ... || true` swallowed the migration's exit code
+# entirely: the pipeline's status is grep's, and `|| true` discarded even that.
+# A migration could fail and the deploy would still print DEPLOY_OK. The most
+# likely failure is a branched revision graph -- alembic refuses to upgrade when
+# there are two heads, which is precisely how a bad down_revision presents, and
+# the release would have shipped code expecting a schema that was never applied.
+# Capture first, then filter, so a failure is fatal and the log still prints.
+if ! MIGRATION_LOG="$(docker exec "$WEB_CONTAINER" alembic upgrade head 2>&1)"; then
+  printf '%s\n' "$MIGRATION_LOG"
+  die "alembic upgrade head failed -- schema NOT migrated; rollback image was tagged above"
+fi
+printf '%s\n' "$MIGRATION_LOG" | grep -viE '^INFO.*(Context|Will assume)' || true
 
 # ---------------------------------------------------------------------------
 # 6. Health verification -- still inside the lock.

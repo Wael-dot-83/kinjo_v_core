@@ -14,6 +14,19 @@ def _src() -> str:
     return SCRIPT.read_text(encoding="utf-8")
 
 
+def _code() -> str:
+    """The script with comment lines removed.
+
+    Ordering assertions must look at what the shell runs. The prose explaining
+    a fix names the very tokens being ordered -- a comment saying "the deploy
+    would still print DEPLOY_OK" made `index("DEPLOY_OK")` point at a comment
+    two thirds of the way up the file and failed a test about the health gate.
+    """
+    return "\n".join(
+        line for line in _src().splitlines() if not line.lstrip().startswith("#")
+    )
+
+
 def test_wrapper_exists():
     assert SCRIPT.is_file()
 
@@ -39,7 +52,7 @@ def test_busy_lock_exits_without_touching_production():
 def test_lock_is_acquired_before_every_mutation():
     """Ordering is the whole point: backup, extraction, build, migration and
     health check must all sit inside the lock."""
-    src = _src()
+    src = _code()
     lock_at = src.index("flock -n 9")
     for step in ("tar xf", "docker compose -f", "alembic upgrade", "pg_dump", "docker tag"):
         assert src.index(step) > lock_at, f"{step} happens before the lock is held"
@@ -48,7 +61,7 @@ def test_lock_is_acquired_before_every_mutation():
 def test_health_verification_is_inside_the_lock():
     """Releasing the lock before the health check would let a second deploy
     start against a half-verified release."""
-    src = _src()
+    src = _code()
     # The lock is held until process exit; assert the health gate precedes the
     # final success line rather than being deferred.
     assert src.index("HEALTHY") < src.index("DEPLOY_OK")
@@ -69,7 +82,8 @@ def test_refusal_does_not_destroy_the_holders_metadata():
     assert 'exec 9>>"$LOCK_FILE"' in src
     assert 'exec 9>"$LOCK_FILE"' not in src
     # Truncation is allowed only after the lock is held.
-    assert src.index("flock -n 9") < src.index(': >"$LOCK_FILE"')
+    code = _code()
+    assert code.index("flock -n 9") < code.index(': >"$LOCK_FILE"')
 
 
 def test_env_is_preserved_across_extraction():
@@ -99,8 +113,45 @@ def test_backup_runs_when_a_migration_is_pending():
     assert "alembic current" in src and "alembic heads" in src
 
 
-def test_rollback_image_is_tagged_before_the_build():
+def test_backup_triggers_on_a_revision_the_release_adds():
+    """The alembic check queries the RUNNING container -- the old image, which
+    cannot contain the incoming revision, so `current` equals `head` and a
+    release whose entire purpose is a migration reported nothing pending.
+    Release 97ae00c added five indexes with no dump taken. Pending-ness must be
+    read out of the tarball."""
     src = _src()
+    assert 'tar tf "$TARBALL"' in src
+    assert "alembic/versions" in src
+    assert "NEW_REVISIONS" in src
+
+
+def test_release_revisions_are_read_before_extraction():
+    """Once `tar xf` has run, the release's revision files are already on disk
+    and comparing the two sets can only ever return empty."""
+    src = _code()
+    assert src.index("NEW_REVISIONS") < src.index("tar xf")
+
+
+def test_migration_failure_aborts_the_deploy():
+    """`alembic upgrade head | grep ... || true` reported the exit code of grep
+    and then discarded even that, so a failed migration still printed DEPLOY_OK.
+    A branched revision graph -- how a wrong down_revision presents -- makes
+    alembic refuse to upgrade, and the release would have shipped code expecting
+    a schema that was never applied."""
+    src = _src()
+    assert "alembic upgrade head 2>&1 | grep" not in src
+    assert 'die "alembic upgrade head failed' in src
+
+
+def test_migration_log_is_still_printed_on_failure():
+    """Aborting without the alembic output would leave no way to tell why."""
+    src = _src()
+    failure = src.split('if ! MIGRATION_LOG=', 1)[1].split("fi", 1)[0]
+    assert 'printf' in failure and 'MIGRATION_LOG' in failure
+
+
+def test_rollback_image_is_tagged_before_the_build():
+    src = _code()
     assert src.index("rollback-$TS") < src.index("docker compose -f")
 
 
