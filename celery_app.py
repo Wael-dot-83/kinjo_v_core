@@ -80,7 +80,7 @@ celery_app.conf.update(
 
 # Ensure the snapshot task module is imported so Celery discovers it.
 celery_app.conf.include = list(celery_app.conf.get("include", [])) + [
-    "agency_report_snapshot_task",
+    "services.agency_reports.snapshot_task",
 ]
 
 
