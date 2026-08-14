@@ -200,7 +200,7 @@
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <input type="search" id="searchPrioritized" class="form-control form-control-sm" placeholder="{% if ui_lang == 'en' %}Search nursery...{% else %}بحث باسم الحضانة...{% endif %}" style="max-width: 220px;" onkeyup="filterPrioritizedTable()">
+            <input type="search" id="searchPrioritized" class="form-control form-control-sm" aria-label="{% if ui_lang == 'en' %}Search nursery{% else %}بحث باسم الحضانة{% endif %}" placeholder="{% if ui_lang == 'en' %}Search nursery...{% else %}بحث باسم الحضانة...{% endif %}" style="max-width: 220px;" onkeyup="filterPrioritizedTable()">
             <span class="badge bg-primary-subtle text-primary fw-semibold fs-6" id="prioritizedCount">--</span>
         </div>
     </div>
