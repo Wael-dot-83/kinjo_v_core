@@ -103,8 +103,16 @@ def test_admin_sidebar_markup_avoids_legacy_i18n_and_bad_link_roles():
 
 
 def test_admin_sidebar_css_is_scoped_and_rtl_ready():
+    """The RTL selector is `[dir="rtl"]`, not `html[dir="rtl"]`.
+
+    The direction attribute is no longer only on <html>: admin_base.html and
+    manager_base.html now emit `dir="{{ ui_dir }}"`, and direction can also be
+    set on a container. Anchoring the selector to `html` would silently stop
+    matching in those cases, so the `html`-prefixed form must not come back.
+    """
     css = ADMIN_CSS.read_text(encoding="utf-8")
     assert "--admin-sidebar-width: 280px;" in css
     assert ".admin-sidebar .nav-link span" in css
-    assert 'html[dir="rtl"] .admin-sidebar .nav-link.active' in css
+    assert '[dir="rtl"] .admin-sidebar .nav-link.active' in css
+    assert 'html[dir="rtl"]' not in css
     assert ".admin-sidebar .submenu .nav-link.active" in css

@@ -1,5 +1,9 @@
-{% block extra_head %}
-{{ super() }}
+{% extends 'base.html' %}
+{% block footer %}{% endblock %}
+
+{% block title %}{% if ui_lang == 'en' %}Supervisor Dashboard{% else %}لوحة المشرف{% endif %}{% endblock %}
+
+{% block extra_css %}
 <style>
   .supervisor-dashboard-wrapper {
     display: flex;
