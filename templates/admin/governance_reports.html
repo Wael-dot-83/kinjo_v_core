@@ -187,49 +187,86 @@
     </div>
 </div>
 
-<!-- Low Performers Alert -->
-<div id="lowPerformersSection" class="mb-4 d-none">
-    <div class="admin-card border-warning border-0 ">
-        <div class="card-header bg-warning bg-opacity-10 border-0">
-            <h2 class="h6 mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>{% if ui_lang == 'en' %}Kindergartens Needing Improvement{% else %}حضانات تحتاج إلى تحسين{% endif %}</h2>
+<!-- Category 1: Prioritized Nurseries (Weighted Ranking) -->
+<div class="admin-card border-0 mb-4 shadow-sm">
+    <div class="card-header bg-transparent border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <h2 class="h6 mb-1 text-primary fw-bold">
+                <i class="bi bi-award-fill me-2 text-warning"></i>
+                {% if ui_lang == 'en' %}Prioritized Nurseries (Weighted Ranking){% else %}الحضانات ذات الأولوية (التصنيف الموزون){% endif %}
+            </h2>
+            <p class="small text-muted mb-0">
+                {% if ui_lang == 'en' %}Comprehensive performance evaluation ranked by Bayesian governance score and quality metrics.{% else %}تقييم شامل وموزون لأداء الحضانات مبني على مؤشر جودة الحوكمة والالتزام.{% endif %}
+            </p>
         </div>
-        <div class="position-relative">
-            <div id="lowPerformersList" class="row g-2"></div>
+        <div class="d-flex align-items-center gap-2">
+            <input type="search" id="searchPrioritized" class="form-control form-control-sm" placeholder="{% if ui_lang == 'en' %}Search nursery...{% else %}بحث باسم الحضانة...{% endif %}" style="max-width: 220px;" onkeyup="filterPrioritizedTable()">
+            <span class="badge bg-primary-subtle text-primary fw-semibold fs-6" id="prioritizedCount">--</span>
         </div>
-    </div>
-</div>
-
-<!-- Leaderboard Table -->
-<div class="admin-card border-0  mb-4">
-    <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-        <h2 class="h6 mb-0"><i class="bi bi-trophy me-2"></i>{% if ui_lang == 'en' %}Kindergarten Ranking (Weighted){% else %}ترتيب الحضانات (ترجيحي){% endif %}</h2>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <caption class="visually-hidden">{% if ui_lang == 'en' %}Kindergarten governance ranking, weighted by submission, delivery, view, and quality rates{% else %}ترتيب الحضانات في الحوكمة، مرجّح حسب نسب التقديم والتسليم والمشاهدة والجودة{% endif %}</caption>
+            <table class="table table-hover align-middle mb-0" id="prioritizedTable">
+                <caption class="visually-hidden">{% if ui_lang == 'en' %}Prioritized nurseries ranked by weighted governance score{% else %}جدول الحضانات ذات الأولوية مرتبة حسب درجة الحوكمة الموزونة{% endif %}</caption>
                 <thead class="table-light">
                     <tr>
-                        <th scope="col" style="width:50px">#</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Kindergarten{% else %}الحضانة{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Req{% else %}مطلوب{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Sub{% else %}مقدم{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Del{% else %}مسلم{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}View{% else %}مشاهد{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Raw%{% else %}خام%{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Score{% else %}النتيجة{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Reject%{% else %}رفض%{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Morning%{% else %}صباح%{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Consist.{% else %}اتساق{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Avg Approv.{% else %}متوسط موافقة{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Last Report{% else %}آخر تقرير{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Remind.{% else %}تذكيرات{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                        <th scope="col" style="width: 50px;" class="text-center">#</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Nursery & Location{% else %}اسم الحضانة والموقع{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Required Reports{% else %}التقارير المطلوبة{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Submitted Reports{% else %}التقارير المُقدّمة{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Submission Rate{% else %}نسبة التقديم{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Weighted Score{% else %}درجة الحوكمة الموزونة{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Rejection Rate (30d){% else %}معدل الرفض (30 يوم){% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Consistency Index{% else %}مؤشر الاتساق{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Last Activity{% else %}تاريخ آخر تقرير{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Operational Status{% else %}حالة الالتزام{% endif %}</th>
+                        <th scope="col" class="text-end pe-3">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboardBody">
                     <tr>
-                        <td colspan="15" class="text-center text-on-surface-variant py-4">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td>
+                        <td colspan="11" class="text-center text-on-surface-variant py-4">{% if ui_lang == 'en' %}Loading governance data...{% else %}جارٍ تحميل بيانات الحوكمة...{% endif %}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Category 2: Nurseries Requiring Improvement & Intervention -->
+<div class="admin-card border-danger border-0 mb-4 shadow-sm" id="lowPerformersSection">
+    <div class="card-header bg-danger bg-opacity-10 border-bottom border-danger-subtle py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <h2 class="h6 mb-1 text-danger fw-bold">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                {% if ui_lang == 'en' %}Nurseries Requiring Improvement & Intervention{% else %}الحضانات التي تتطلب تحسيناً وتدخلاً عاجلاً{% endif %}
+            </h2>
+            <p class="small text-muted mb-0">
+                {% if ui_lang == 'en' %}Identified nurseries with low submission compliance (<60%), report deficits, or open safeguarding flags.{% else %}الحضانات المحددة بنسبة تقديم منخفضة (<60%)، أو نقص في التغطية، أو بلاغات حماية مفتوحة.{% endif %}
+            </p>
+        </div>
+        <span class="badge bg-danger fs-6" id="improvementCount">0</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="improvementTable">
+                <caption class="visually-hidden">{% if ui_lang == 'en' %}Nurseries requiring improvement and intervention{% else %}جدول الحضانات التي تتطلب تحسيناً وتدخلاً عاجلاً{% endif %}</caption>
+                <thead class="bg-danger bg-opacity-10 text-danger-emphasis">
+                    <tr>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Risk Priority{% else %}مستوى الخطورة{% endif %}</th>
+                        <th scope="col">{% if ui_lang == 'en' %}Nursery & Location{% else %}اسم الحضانة والموقع{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Current Submission Rate{% else %}نسبة التقديم الحالية{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Report Deficit Gap{% else %}فجوة النقص (تقارير){% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Rejection Rate{% else %}معدل الرفض{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Safeguarding Incidents{% else %}بلاغات الحماية / الحوادث{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Last Active{% else %}تاريخ آخر تقديم{% endif %}</th>
+                        <th scope="col" class="text-center">{% if ui_lang == 'en' %}Reminders Sent{% else %}التذكيرات المُرسلة{% endif %}</th>
+                        <th scope="col" class="text-end pe-3">{% if ui_lang == 'en' %}Intervention Action{% else %}إجراء التدخل{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody id="lowPerformersTableBody">
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">{% if ui_lang == 'en' %}No nurseries requiring immediate intervention at this time.{% else %}لا توجد حضانات تتطلب تدخلاً عاجلاً حالياً.{% endif %}</td>
                     </tr>
                 </tbody>
             </table>

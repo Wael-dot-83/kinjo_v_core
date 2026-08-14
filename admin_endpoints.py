@@ -4759,33 +4759,32 @@ def get_kg_overview(
         date_start = today - timedelta(days=29)
         date_end = today
 
-    all_kgs = db.query(models.Kindergarten).order_by(models.Kindergarten.name_ar).all()
+    query = db.query(models.Kindergarten).filter(models.Kindergarten.deleted_at.is_(None))
+
+    if governorate:
+        gov_normalized = settings.JORDAN_GOVERNORATE_ALIASES.get(governorate, governorate)
+        query = query.filter(models.Kindergarten.governorate == gov_normalized)
+    
+    if city:
+        city_normalized = city.split("_")[-1] if "_" in city else city
+        query = query.filter(models.Kindergarten.district == city_normalized)
+
+    if kindergarten_id:
+        query = query.filter(models.Kindergarten.id == kindergarten_id)
+
+    if class_id:
+        cls = db.query(models.Class).filter(models.Class.id == class_id).first()
+        if cls:
+            query = query.filter(models.Kindergarten.id == cls.kindergarten_id)
+        else:
+            query = query.filter(models.Kindergarten.id == -1)
+
+    all_kgs = query.order_by(models.Kindergarten.name_ar).all()
     kg_ids = [kg.id for kg in all_kgs]
     active_kgs = [
         kg for kg in all_kgs
         if kg.status == models.KindergartenStatus.ACTIVE
-        and kg.deleted_at is None
     ]
-
-    if governorate:
-        gov_normalized = settings.JORDAN_GOVERNORATE_ALIASES.get(governorate, governorate)
-        all_kgs = [kg for kg in all_kgs if kg.governorate == gov_normalized]
-    
-    if city:
-        # If city contains _, take the last part (e.g. Amman_Amman -> Amman)
-        city_normalized = city.split("_")[-1] if "_" in city else city
-        all_kgs = [kg for kg in all_kgs if kg.district == city_normalized]
-
-    if kindergarten_id:
-        all_kgs = [kg for kg in all_kgs if kg.id == kindergarten_id]
-
-    if class_id:
-        # Get the kindergarten associated with the class
-        cls = db.query(models.Class).filter(models.Class.id == class_id).first()
-        if cls:
-            all_kgs = [kg for kg in all_kgs if kg.id == cls.kindergarten_id]
-        else:
-            all_kgs = []
 
     kg_ids = [kg.id for kg in all_kgs]
     active_kgs = [

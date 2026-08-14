@@ -2126,7 +2126,8 @@ block extra_head %}
     status.className = 'small text-muted';
     status.textContent = tEn('Saving…', 'جارٍ الحفظ…');
     try {
-      var resp = await fetch(SCHED_API, {
+      var fetchFn = window.fetchWithAuth || fetch;
+      var resp = await fetchFn(SCHED_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(payload)
@@ -2146,7 +2147,8 @@ block extra_head %}
 
   async function deleteSchedule(id) {
     try {
-      var resp = await fetch(SCHED_API + '/' + id, { method: 'DELETE' });
+      var fetchFn = window.fetchWithAuth || fetch;
+      var resp = await fetchFn(SCHED_API + '/' + id, { method: 'DELETE' });
       if (resp.ok) loadSchedules();
     } catch (e) { /* the list simply stays as it was */ }
   }

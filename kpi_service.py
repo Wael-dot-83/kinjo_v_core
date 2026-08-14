@@ -1535,6 +1535,120 @@ class KPIService:
         }
 
     @staticmethod
+    def compute_daily_attendance_trend_bulk(
+        db: Session,
+        kindergarten_ids: List[int],
+        period_start: date,
+        period_end: date,
+    ) -> Dict[date, Tuple[int, int]]:
+        """{day: (attended_count, expected_count)} for each day in [period_start, period_end].
+
+        Computes daily attendance trend across kindergarten_ids in 3 SQL queries
+        instead of repeating queries per day.
+        """
+        if not kindergarten_ids:
+            return {}
+
+        calendar_rows = db.query(
+            models.OperatingCalendar.kindergarten_id,
+            models.OperatingCalendar.date,
+            models.OperatingCalendar.is_open,
+        ).filter(
+            models.OperatingCalendar.kindergarten_id.in_(kindergarten_ids),
+            models.OperatingCalendar.date >= period_start,
+            models.OperatingCalendar.date <= period_end,
+        ).all()
+        explicit_by_kg: Dict[int, Dict[date, bool]] = {}
+        for kg_id, day, is_open in calendar_rows:
+            explicit_by_kg.setdefault(int(kg_id), {})[day] = bool(is_open)
+
+        enrollment_rows = db.query(
+            models.EnrollmentApplication.kindergarten_id,
+            models.EnrollmentApplication.child_id,
+            models.EnrollmentApplication.enrollment_start_date,
+            models.EnrollmentApplication.enrollment_end_date,
+        ).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(kindergarten_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            or_(
+                models.EnrollmentApplication.enrollment_end_date.is_(None),
+                models.EnrollmentApplication.enrollment_end_date >= period_start,
+            ),
+            or_(
+                models.EnrollmentApplication.enrollment_start_date.is_(None),
+                models.EnrollmentApplication.enrollment_start_date <= period_end,
+            ),
+        ).all()
+
+        enrollments_by_kg: Dict[int, List[Tuple[int, date, date]]] = {}
+        for kg_id, child_id, enr_start, enr_end in enrollment_rows:
+            start = enr_start or period_start
+            end = enr_end or period_end
+            effective_start = max(period_start, start)
+            effective_end = min(period_end, end)
+            if effective_start <= effective_end:
+                enrollments_by_kg.setdefault(int(kg_id), []).append(
+                    (int(child_id), effective_start, effective_end)
+                )
+
+        expected_set_by_child: Dict[int, set] = {}
+        for kg_id in kindergarten_ids:
+            working_days = KPIService._working_days_from_overrides(
+                explicit_by_kg.get(int(kg_id), {}), period_start, period_end
+            )
+            if not working_days:
+                continue
+            kg_sets = KPIService._expected_dayset_by_child(
+                working_days, enrollments_by_kg.get(int(kg_id), [])
+            )
+            for child_id, days in kg_sets.items():
+                expected_set_by_child[child_id] = days
+
+        daily_expected: Dict[date, int] = {}
+        daily_attended: Dict[date, int] = {}
+        curr = period_start
+        while curr <= period_end:
+            daily_expected[curr] = 0
+            daily_attended[curr] = 0
+            curr += timedelta(days=1)
+
+        for child_id, days in expected_set_by_child.items():
+            for day_ord in days:
+                d = date.fromordinal(day_ord)
+                if d in daily_expected:
+                    daily_expected[d] += 1
+
+        all_child_ids = list(expected_set_by_child.keys())
+        if all_child_ids:
+            rows = db.query(
+                models.AttendanceLog.child_id,
+                models.AttendanceLog.date,
+            ).filter(
+                models.AttendanceLog.child_id.in_(all_child_ids),
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end,
+                models.AttendanceLog.status.in_([
+                    models.AttendanceStatus.PRESENT,
+                    models.AttendanceStatus.LATE,
+                ]),
+            ).all()
+            for child_id, day in rows:
+                expected_days = expected_set_by_child.get(int(child_id))
+                if expected_days and day.toordinal() in expected_days:
+                    if day in daily_attended:
+                        daily_attended[day] += 1
+
+        result: Dict[date, Tuple[int, int]] = {}
+        curr = period_start
+        while curr <= period_end:
+            result[curr] = (daily_attended[curr], daily_expected[curr])
+            curr += timedelta(days=1)
+
+        return result
+
+
+
+    @staticmethod
     def _working_days_from_overrides(
         explicit_map: Dict[date, bool],
         period_start: date,
