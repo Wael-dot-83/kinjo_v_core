@@ -175,14 +175,38 @@ log "alembic: $(docker exec "$WEB_CONTAINER" alembic current 2>/dev/null | grep 
 log "containers:"
 docker ps --format '  {{.Names}} | {{.Status}}'
 # ---------------------------------------------------------------------------
-# 7. Seed manager module data if the database is fresh.
-#    The seed script is idempotent: it skips when data already exists.
+# 7. Seed manager module data -- OPT-IN.
+#
+# Was unconditional. Three reasons it is not:
+#
+#   * `seed_manager_module.py --force` calls Base.metadata.drop_all(). Nothing
+#     in the deploy passes --force, but a script that can erase every table
+#     does not belong on the automatic path of every production release.
+#   * On a populated database the script prints [SKIP] and returns without
+#     creating anything, so running it here cannot achieve what it looks like
+#     it achieves -- it only ever fires on an empty database.
+#   * It prints the seeded account passwords on stdout, which this step piped
+#     straight into the deploy log.
+#
+# Set SEED_MANAGER_MODULE=1 to run it deliberately.
 # ---------------------------------------------------------------------------
-log "seeding manager module data"
-if ! docker exec "$WEB_CONTAINER" python scripts/seed_manager_module.py 2>&1 | grep -qE '(\[SKIP\]|\[DONE\])'; then
-  log "WARNING: seed script did not complete cleanly"
+if [[ "${SEED_MANAGER_MODULE:-0}" == "1" ]]; then
+  log "seeding manager module data (SEED_MANAGER_MODULE=1)"
+  # Capture rather than pipe into `grep -q`: with `set -o pipefail`, grep exits
+  # on its first match and SIGPIPEs python, so the pipeline returned non-zero on
+  # SUCCESS and logged a warning. Worse, on a real failure grep -q swallowed the
+  # traceback and left nothing to diagnose.
+  if SEED_LOG="$(docker exec -e SEED_MANAGER_MODULE=1 "$WEB_CONTAINER" \
+                 python scripts/seed_manager_module.py 2>&1)"; then
+    # Never echo the credential block into the deploy log.
+    printf '%s\n' "$SEED_LOG" | grep -E '^\s*\[(OK|SKIP|DONE|WIPE)\]' || true
+    log "seed finished"
+  else
+    printf '%s\n' "$SEED_LOG" | grep -viE 'password|Test@' || true
+    log "WARNING: seed script failed (credential lines withheld)"
+  fi
 else
-  log "seed complete"
+  log "seed skipped (set SEED_MANAGER_MODULE=1 to run scripts/seed_manager_module.py)"
 fi
 
 log "DEPLOY_OK sha=$RELEASE_SHA"

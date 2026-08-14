@@ -150,6 +150,33 @@ def test_migration_log_is_still_printed_on_failure():
     assert 'printf' in failure and 'MIGRATION_LOG' in failure
 
 
+def test_seeding_production_data_is_opt_in():
+    """`seed_manager_module.py --force` runs Base.metadata.drop_all(). Nothing on
+    the deploy path passes --force, but a script that can erase every table must
+    not sit on the automatic path of every release."""
+    code = _code()
+    assert "SEED_MANAGER_MODULE" in code
+    seed_at = code.index("seed_manager_module.py")
+    guard = code.rindex('if [[ "${SEED_MANAGER_MODULE:-0}" == "1" ]]', 0, seed_at)
+    assert guard < seed_at
+
+
+def test_seed_output_is_captured_not_piped_into_grep_q():
+    """`seed | grep -q` under `set -o pipefail` returned non-zero on SUCCESS:
+    grep exits at its first match and SIGPIPEs python. It also swallowed the
+    traceback on a real failure."""
+    code = _code()
+    assert "seed_manager_module.py 2>&1 | grep -q" not in code
+    assert "SEED_LOG=" in code
+
+
+def test_seed_credentials_never_reach_the_deploy_log():
+    """The seed script prints the account passwords on stdout."""
+    code = _code()
+    failure_branch = code.split("WARNING: seed script failed", 1)[0]
+    assert "grep -viE 'password|Test@'" in failure_branch
+
+
 def test_rollback_image_is_tagged_before_the_build():
     src = _code()
     assert src.index("rollback-$TS") < src.index("docker compose -f")
