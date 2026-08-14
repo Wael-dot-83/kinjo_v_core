@@ -416,7 +416,7 @@ def _serialize_schedule(row: "models.ScheduledChartExport") -> Dict[str, Any]:
     }
 
 
-@router.get("/scheduled-exports")
+@router.get("/api/admin/charts/scheduled-exports")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def list_scheduled_exports(
     request: Request,
@@ -432,7 +432,7 @@ def list_scheduled_exports(
     return {"schedules": [_serialize_schedule(r) for r in rows]}
 
 
-@router.post("/scheduled-exports", status_code=status.HTTP_201_CREATED)
+@router.post("/api/admin/charts/scheduled-exports", status_code=status.HTTP_201_CREATED)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def create_scheduled_export(
     request: Request,
@@ -475,7 +475,7 @@ def create_scheduled_export(
     return _serialize_schedule(row)
 
 
-@router.delete("/scheduled-exports/{schedule_id}")
+@router.delete("/api/admin/charts/scheduled-exports/{schedule_id}")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def delete_scheduled_export(
     request: Request,

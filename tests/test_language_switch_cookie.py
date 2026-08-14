@@ -9,12 +9,12 @@ Arabic/English text and a direction that disagreed with its own content.
 import ui_language
 
 
-def test_language_update_keeps_the_cookie_arabic(client, auth_headers_admin):
+def test_language_update_writes_cookie_matching_preference(client, auth_headers_admin):
     resp = client.put("/api/users/me/language", json={"user_lang": "en"}, headers=auth_headers_admin)
     assert resp.status_code == 200
     assert resp.json()["user_lang"] == "en"
     assert "kinjo_lang" in resp.cookies, "preference persisted without updating the render cookie"
-    assert resp.cookies["kinjo_lang"] == "ar"
+    assert resp.cookies["kinjo_lang"] == "en"
 
     back = client.put("/api/users/me/language", json={"user_lang": "ar"}, headers=auth_headers_admin)
     assert back.status_code == 200
@@ -44,8 +44,8 @@ def test_single_cookie_definition_shared_by_both_writers():
     assert open("ui_language.py", encoding="utf-8").read().count("set_cookie(") == 1
 
 
-def test_normalisation_enforces_arabic():
-    assert ui_language.normalize_ui_language("en") == "ar"
+def test_normalisation_respects_supported_languages():
+    assert ui_language.normalize_ui_language("en") == "en"
     assert ui_language.normalize_ui_language("AR") == "ar"
     assert ui_language.normalize_ui_language("fr") == "ar"
     assert ui_language.normalize_ui_language(None) == "ar"

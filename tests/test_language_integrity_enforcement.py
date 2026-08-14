@@ -65,49 +65,49 @@ def test_all_standalone_document_roots_default_to_arabic_rtl():
         assert expected in path.read_text(encoding="utf-8"), path
 
 
-def test_login_ignores_english_cookie_direction(client):
+def test_login_respects_english_cookie_direction(client):
     client.cookies.set("kinjo_lang", "en")
     response = client.get("/login")
     assert response.status_code == 200
-    assert 'lang="ar"' in response.text
-    assert 'dir="rtl"' in response.text
+    assert 'lang="en"' in response.text
+    assert 'dir="ltr"' in response.text
 
 
-def test_dashboard_ignores_english_cookie_language(client, admin_token):
+def test_dashboard_respects_english_cookie_language(client, admin_token):
     client.cookies.set("kinjo_lang", "en")
     response = client.get("/dashboard", headers=_auth_headers(admin_token))
     assert response.status_code == 200
-    assert 'lang="ar"' in response.text
-    assert 'dir="rtl"' in response.text
+    assert 'lang="en"' in response.text
+    assert 'dir="ltr"' in response.text
 
 
-def test_reports_page_ignores_english_cookie(client, supervisor_token):
+def test_reports_page_respects_english_cookie(client, supervisor_token):
     client.cookies.set("kinjo_lang", "en")
     response = client.get("/reports", headers=_auth_headers(supervisor_token))
     assert response.status_code == 200
-    assert 'lang="ar"' in response.text
-    assert 'dir="rtl"' in response.text
+    assert 'lang="en"' in response.text
+    assert 'dir="ltr"' in response.text
 
 
-def test_manager_page_ignores_english_cookie(client, manager_token):
+def test_manager_page_respects_english_cookie(client, manager_token):
     client.cookies.set("kinjo_lang", "en")
     response = client.get("/manager/absence-requests", headers=_auth_headers(manager_token))
     assert response.status_code == 200
-    assert 'lang="ar"' in response.text
-    assert 'dir="rtl"' in response.text
+    assert 'lang="en"' in response.text
+    assert 'dir="ltr"' in response.text
 
 
-def test_change_password_page_ignores_english_cookie(client, admin_token):
+def test_change_password_page_respects_english_cookie(client, admin_token):
     client.cookies.set("kinjo_lang", "en")
     response = client.get("/change-password", headers=_auth_headers(admin_token))
     assert response.status_code == 200
-    assert 'lang="ar"' in response.text
-    assert 'dir="rtl"' in response.text
+    assert 'lang="en"' in response.text
+    assert 'dir="ltr"' in response.text
 
 
-def test_404_template_ignores_english_cookie(client, admin_token):
+def test_404_template_respects_english_cookie(client, admin_token):
     client.cookies.set("kinjo_lang", "en")
     response = client.get("/kindergartens/999999", headers=_auth_headers(admin_token))
     assert response.status_code == 404
-    assert 'lang="ar"' in response.text
-    assert 'dir="rtl"' in response.text
+    assert 'lang="en"' in response.text
+    assert 'dir="ltr"' in response.text

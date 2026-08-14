@@ -46,7 +46,9 @@ from audit_actions import AuditAction
 logger = logging.getLogger(__name__)
 
 def _normalize_ui_language(value: Optional[str]) -> str:
-    return "ar"
+    """Delegate to the canonical implementation in ui_language."""
+    from ui_language import normalize_ui_language as _normalize
+    return _normalize(value)
 
 
 def _language_context_processor(request: Request) -> dict:

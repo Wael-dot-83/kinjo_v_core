@@ -20,8 +20,14 @@ from services.jordan_locations import get_all_governorates
 from admin_security import can_admin_access_user
 
 def normalize_ui_language(value: Optional[str]) -> str:
-    """Keep every server-rendered page in the mandatory Arabic RTL UI."""
-    return "ar"
+    """Return a supported UI language code, defaulting to Arabic.
+
+    Delegates to the canonical implementation in ``ui_language`` so every
+    server-rendered page follows the same language policy.  Previously this
+    hardcoded ``"ar"``, making the server ignore the user's English choice.
+    """
+    from ui_language import normalize_ui_language as _normalize
+    return _normalize(value)
 
 
 _JORDAN_TZ = timezone(timedelta(hours=3))

@@ -680,7 +680,8 @@ def _log_auth_event(
 
 
 def _normalize_ui_language(value: Optional[str]) -> str:
-    return "ar"
+    """Delegate to the canonical implementation in ui_language."""
+    return normalize_ui_language(value)
 
 
 def _resolve_user_language(db: Session, user_id: int) -> str:

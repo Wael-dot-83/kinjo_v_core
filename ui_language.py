@@ -19,15 +19,25 @@ from fastapi import Response
 from config import settings
 
 DEFAULT_UI_LANGUAGE = "ar"
+SUPPORTED_UI_LANGUAGES = {"ar", "en"}
 
 
 def normalize_ui_language(value: Optional[str]) -> str:
-    """Arabic is the mandatory site language and RTL is therefore universal."""
-    return DEFAULT_UI_LANGUAGE
+    """Return a supported UI language code, defaulting to Arabic.
+
+    The site is Arabic-primary but every template carries bilingual
+    ``{% if ui_lang == 'en' %}`` blocks and the UI exposes a language
+    switcher (``/api/users/me/language``).  Returning ``ar``
+    unconditionally made the server ignore the user's English choice, so
+    pages rendered Arabic while the client rewrote ``documentElement`` to
+    LTR — mixed-language output on every page.
+    """
+    normalized = str(value or DEFAULT_UI_LANGUAGE).strip().lower()
+    return normalized if normalized in SUPPORTED_UI_LANGUAGES else DEFAULT_UI_LANGUAGE
 
 
 def set_ui_language_cookie(response: Response, language: Optional[str]) -> None:
-    """Write the mandatory Arabic UI preference for every client."""
+    """Write the kinjo_lang cookie so server-side rendering follows the user's choice."""
     response.set_cookie(
         key="kinjo_lang",
         value=normalize_ui_language(language),
