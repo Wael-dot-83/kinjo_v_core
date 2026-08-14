@@ -208,11 +208,55 @@ def provision(db, password: str, dry_run: bool) -> tuple[list, list]:
     return created, skipped
 
 
+def adopt_unused(db, password: str, usernames: list[str], dry_run: bool) -> list[str]:
+    """Set the run's password on seed-created accounts nobody has ever used.
+
+    The guard is `last_login_at IS NULL`. An account someone has signed in with
+    is a real account and is never modified, whatever its name looks like.
+    """
+    if not usernames:
+        return []
+    rows = (
+        db.query(models.User)
+        .filter(
+            models.User.username.in_(usernames),
+            models.User.last_login_at.is_(None),
+        )
+        .all()
+    )
+    hashed = get_password_hash(password)
+    adopted = []
+    for user in rows:
+        if not dry_run:
+            user.hashed_password = hashed
+        adopted.append(user.username)
+
+    in_use = sorted(set(usernames) - set(adopted))
+    for username in in_use:
+        print(f"    [KEEP] {username}: has been signed in with -- password unchanged")
+
+    if dry_run:
+        db.rollback()
+    else:
+        db.commit()
+    return adopted
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true",
                     help="report what would change and roll back")
     ap.add_argument("--password", default=os.environ.get("SEED_ACCOUNT_PASSWORD"))
+    ap.add_argument(
+        "--adopt-unused-seed-logins",
+        action="store_true",
+        help=(
+            "Set the run's password on accounts this script would otherwise skip, "
+            "but ONLY where last_login_at IS NULL -- i.e. an earlier seed created "
+            "the username and nobody has ever signed in with it. An account that "
+            "has been used is never touched."
+        ),
+    )
     args = ap.parse_args()
 
     password = args.password or _generate_password()
@@ -220,19 +264,25 @@ def main() -> None:
     db = SessionLocal()
     try:
         created, skipped = provision(db, password, args.dry_run)
+        adopted = (
+            adopt_unused(db, password, [u for u, _r in skipped], args.dry_run)
+            if args.adopt_unused_seed_logins
+            else []
+        )
     finally:
         db.close()
 
     print()
-    print(f"  [OK] created {len(created)}, skipped {len(skipped)}")
+    print(f"  [OK] created {len(created)}, skipped {len(skipped)}, adopted {len(adopted)}")
     for username, reason in skipped:
-        print(f"    [SKIP] {username}: {reason}")
+        marker = "ADOPT" if username in adopted else "SKIP"
+        print(f"    [{marker}] {username}: {reason}")
     by_role: dict[str, int] = {}
     for _u, role, _s in created:
         by_role[role] = by_role.get(role, 0) + 1
     print(f"    breakdown: {by_role}")
-    if created and not args.dry_run:
-        print(f"    password for the accounts created in this run: {password}")
+    if (created or adopted) and not args.dry_run:
+        print(f"    password for the accounts touched by this run: {password}")
     print("  [DONE] provisioning complete")
 
 
