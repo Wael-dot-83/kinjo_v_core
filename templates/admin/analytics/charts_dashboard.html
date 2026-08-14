@@ -519,7 +519,255 @@ block extra_head %}
     .ce-source-grid {
       grid-template-columns: repeat(3, 1fr);
     }
+    .ce-kpi-strip {
+      flex-direction: column;
+    }
+    .ce-kpi-strip__card {
+      flex: 1 1 100%;
+    }
   }
+
+  /* ── KPI Summary Strip ─────────────────────────────────────────────────── */
+  .ce-kpi-strip {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .ce-kpi-strip__card {
+    flex: 1 1 140px;
+    background: #fff;
+    border: 1px solid var(--slate-200);
+    border-radius: var(--r-md);
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+  }
+  .ce-kpi-strip__card:hover {
+    border-color: var(--az-primary-mid);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  }
+  .ce-kpi-strip__card.is-active {
+    border-color: var(--az-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  .ce-kpi-strip__label {
+    font: 600 0.625rem/1.2 var(--font-ar);
+    color: var(--slate-500);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .ce-kpi-strip__value {
+    font: 700 1.5rem/1.1 var(--font-ar);
+    color: var(--slate-800);
+  }
+  .ce-kpi-strip__delta {
+    font: 500 0.6875rem/1.2 var(--font-ar);
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+  .ce-kpi-strip__delta--up { color: #16a34a; }
+  .ce-kpi-strip__delta--down { color: #dc2626; }
+  .ce-kpi-strip__delta--flat { color: var(--slate-400); }
+
+  /* ── Enhanced Chart Annotations ────────────────────────────────────────── */
+  .ce-annotation-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--slate-50);
+    border-radius: var(--r-sm);
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .ce-annotation-bar__label {
+    font: 600 0.6875rem/1 var(--font-ar);
+    color: var(--slate-600);
+    white-space: nowrap;
+  }
+  .ce-annotation-pin {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #fff;
+    border: 1px solid var(--slate-200);
+    border-radius: var(--r-full);
+    padding: 0.2rem 0.6rem;
+    font: 500 0.6875rem/1.2 var(--font-ar);
+    color: var(--slate-600);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .ce-annotation-pin:hover {
+    border-color: var(--az-primary-mid);
+    color: var(--az-primary);
+  }
+  .ce-annotation-pin.is-active {
+    background: var(--az-primary-light);
+    border-color: var(--az-primary);
+    color: var(--az-primary-hover);
+  }
+
+  /* ── Glass Card Effect ─────────────────────────────────────────────────── */
+  .ce-glass-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    border-radius: var(--r-lg);
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+  }
+  @supports not (backdrop-filter: blur(8px)) {
+    .ce-glass-card {
+      background: #fff;
+    }
+  }
+
+  /* ── Collapsible Sidebar Toggle ────────────────────────────────────────── */
+  .ce-sidebar-toggle {
+    display: none;
+    background: var(--az-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--r-md);
+    padding: 0.5rem 1rem;
+    font: 600 0.8125rem/1 var(--font-ar);
+    cursor: pointer;
+    margin-bottom: 0.75rem;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .ce-sidebar-toggle i {
+    transition: transform 0.2s;
+  }
+  .ce-sidebar-toggle.is-open i {
+    transform: rotate(180deg);
+  }
+  @media (max-width: 768px) {
+    .ce-sidebar-toggle {
+      display: flex;
+    }
+    .ce-sidebar.is-collapsed {
+      display: none;
+    }
+  }
+
+  /* ── Enhanced Hover Tooltip ────────────────────────────────────────────── */
+  .ce-chart-tooltip {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.92);
+    color: #fff;
+    border-radius: var(--r-sm);
+    padding: 0.5rem 0.75rem;
+    font: 500 0.75rem/1.4 var(--font-ar);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transition: opacity 0.15s;
+    max-width: 280px;
+  }
+  .ce-chart-tooltip.is-visible {
+    opacity: 1;
+  }
+  .ce-chart-tooltip__title {
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+  }
+  .ce-chart-tooltip__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .ce-chart-tooltip__label {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  /* ── Range Selector Pills ──────────────────────────────────────────────── */
+  .ce-range-selector {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--slate-100);
+    border-radius: var(--r-full);
+    padding: 0.2rem;
+  }
+  .ce-range-selector__btn {
+    background: transparent;
+    border: none;
+    border-radius: var(--r-full);
+    padding: 0.3rem 0.75rem;
+    font: 600 0.6875rem/1 var(--font-ar);
+    color: var(--slate-500);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .ce-range-selector__btn:hover {
+    color: var(--slate-700);
+  }
+  .ce-range-selector__btn.is-active {
+    background: #fff;
+    color: var(--az-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  /* ── Virtual Scroll Data Table ─────────────────────────────────────────── */
+  .ce-vtable-wrap {
+    max-height: 400px;
+    overflow-y: auto;
+    position: relative;
+  }
+  .ce-vtable-wrap::-webkit-scrollbar {
+    width: 6px;
+  }
+  .ce-vtable-wrap::-webkit-scrollbar-thumb {
+    background: var(--slate-300);
+    border-radius: 3px;
+  }
+  .ce-vtable-wrap::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* ── Focus-visible for WCAG ────────────────────────────────────────────── */
+  .ce-source-card:focus-visible,
+  .ce-preset-btn:focus-visible,
+  .ce-ct-btn:focus-visible,
+  .ce-range-selector__btn:focus-visible,
+  .ce-kpi-strip__card:focus-visible,
+  .ce-annotation-pin:focus-visible {
+    outline: 2px solid var(--az-primary);
+    outline-offset: 2px;
+  }
+
+  /* ── Loading Shimmer for KPI ───────────────────────────────────────────── */
+  .ce-kpi-strip__card.is-loading .ce-kpi-strip__value {
+    color: transparent;
+    background: linear-gradient(90deg, var(--slate-100) 25%, var(--slate-50) 50%, var(--slate-100) 75%);
+    background-size: 200% 100%;
+    animation: ce-shimmer 1.5s infinite;
+    border-radius: var(--r-sm);
+    min-height: 1.5rem;
+  }
+
+  /* ── Responsive Chart Height ───────────────────────────────────────────── */
+  @media (min-width: 1400px) {
+    #chartOutput {
+      min-height: 520px;
+    }
+  }
+  @media (min-width: 992px) and (max-width: 1399.98px) {
+    #chartOutput {
+      min-height: 480px;
+    }
+  }
+
 </style>
 {% endblock %} {% block content %}
 <header class="ce-hero">
@@ -544,10 +792,46 @@ block extra_head %}
   </div>
 </header>
 
+{# KPI Summary Strip — at-a-glance metrics above the fold, clickable to load chart #}
+<div class="ce-kpi-strip" id="kpiStrip" role="region" aria-label="{% if ui_lang == 'en' %}Key metrics overview{% else %}نظرة عامة على المؤشرات{% endif %}">
+  <div class="ce-kpi-strip__card" data-source="incidents" onclick="quickStart('incidents')" tabindex="0" role="button" aria-label="{% if ui_lang == 'en' %}Incidents overview{% else %}نظرة على الحوادث{% endif %}">
+    <span class="ce-kpi-strip__label">{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}</span>
+    <span class="ce-kpi-strip__value" id="kpiIncidents">—</span>
+    <span class="ce-kpi-strip__delta ce-kpi-strip__delta--flat" id="kpiIncidentsDelta"><i class="bi bi-dash"></i> —</span>
+  </div>
+  <div class="ce-kpi-strip__card" data-source="attendance" onclick="quickStart('attendance')" tabindex="0" role="button" aria-label="{% if ui_lang == 'en' %}Attendance overview{% else %}نظرة على الحضور{% endif %}">
+    <span class="ce-kpi-strip__label">{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}</span>
+    <span class="ce-kpi-strip__value" id="kpiAttendance">—</span>
+    <span class="ce-kpi-strip__delta ce-kpi-strip__delta--flat" id="kpiAttendanceDelta"><i class="bi bi-dash"></i> —</span>
+  </div>
+  <div class="ce-kpi-strip__card" data-source="daily_reports" onclick="quickStart('daily_reports')" tabindex="0" role="button" aria-label="{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}">
+    <span class="ce-kpi-strip__label">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</span>
+    <span class="ce-kpi-strip__value" id="kpiReports">—</span>
+    <span class="ce-kpi-strip__delta ce-kpi-strip__delta--flat" id="kpiReportsDelta"><i class="bi bi-dash"></i> —</span>
+  </div>
+  <div class="ce-kpi-strip__card" data-source="enrollments" onclick="quickStart('enrollments')" tabindex="0" role="button" aria-label="{% if ui_lang == 'en' %}Enrollments{% else %}التسجيلات{% endif %}">
+    <span class="ce-kpi-strip__label">{% if ui_lang == 'en' %}Enrollments{% else %}التسجيلات{% endif %}</span>
+    <span class="ce-kpi-strip__value" id="kpiEnrollments">—</span>
+    <span class="ce-kpi-strip__delta ce-kpi-strip__delta--flat" id="kpiEnrollmentsDelta"><i class="bi bi-dash"></i> —</span>
+  </div>
+  <div class="ce-kpi-strip__card" data-source="kindergartens" onclick="quickStart('kindergartens')" tabindex="0" role="button" aria-label="{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}">
+    <span class="ce-kpi-strip__label">{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}</span>
+    <span class="ce-kpi-strip__value" id="kpiKindergartens">—</span>
+    <span class="ce-kpi-strip__delta ce-kpi-strip__delta--flat" id="kpiKindergartensDelta"><i class="bi bi-dash"></i> —</span>
+  </div>
+</div>
+
+{# Collapsible sidebar toggle for mobile #}
+<button class="ce-sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-expanded="false" aria-controls="chartsSidebar">
+  <i class="bi bi-chevron-down"></i>
+  <span id="sidebarToggleLabel">{% if ui_lang == 'en' %}Show Filters{% else %}إظهار الفلاتر{% endif %}</span>
+</button>
+
 <div class="ce-layout" id="chartsExplorerRoot">
   {# ── Sidebar ─────────────────────────────────────────────────────────── #}
   <aside
     class="ce-sidebar"
+    id="chartsSidebar"
     role="complementary"
     aria-label="{% if ui_lang == 'en' %}Chart controls{% else %}أدوات الرسم البياني{% endif %}"
   >
@@ -864,6 +1148,20 @@ block extra_head %}
             <i class="bi bi-hand-index-thumb"></i>
             {% if ui_lang == 'en' %}Click chart bars to drill down{% else %}انقر
             على أعمدة الرسم للتفرع{% endif %}
+          </span>
+        </div>
+        {# Quick range selector — always visible above the chart for rapid period switching #}
+        <div class="ce-annotation-bar" id="quickRangeBar">
+          <span class="ce-annotation-bar__label">{% if ui_lang == 'en' %}Range{% else %}المدى{% endif %}</span>
+          <div class="ce-range-selector" role="group" aria-label="{% if ui_lang == 'en' %}Quick range{% else %}مدى سريع{% endif %}">
+            <button type="button" class="ce-range-selector__btn" data-range="7" onclick="quickRangeSelect(7)">7D</button>
+            <button type="button" class="ce-range-selector__btn is-active" data-range="30" onclick="quickRangeSelect(30)">30D</button>
+            <button type="button" class="ce-range-selector__btn" data-range="90" onclick="quickRangeSelect(90)">90D</button>
+            <button type="button" class="ce-range-selector__btn" data-range="365" onclick="quickRangeSelect(365)">1Y</button>
+          </div>
+          <span class="ce-annotation-bar__label ms-auto" id="lastUpdatedLabel" style="display:none">
+            <i class="bi bi-clock"></i>
+            <span id="lastUpdatedText"></span>
           </span>
         </div>
         {# Row 2: Title + badges + toolbar #}
@@ -1395,6 +1693,10 @@ block extra_head %}
       btn.disabled = !allowed;
     });
     if (_currentChartType && supported.indexOf(_currentChartType) === -1) selectChartType('');
+    // Highlight the matching KPI strip card
+    document.querySelectorAll('.ce-kpi-strip__card').forEach(function(card) {
+      card.classList.toggle('is-active', card.dataset.source === source);
+    });
   }
 
   // ── Chart Type Selection ─────────────────────────────────────────────────
@@ -2167,12 +2469,26 @@ block extra_head %}
         xaxis: {
           tickfont: { size: 12, color: '#475569' },
           gridcolor: 'rgba(226, 232, 240, 0.6)',
-          zeroline: false
+          zeroline: false,
+          showspikes: true,
+          spikethickness: 1,
+          spikecolor: 'rgba(37, 99, 235, 0.3)',
+          spikemode: 'across'
         },
         yaxis: {
           tickfont: { size: 12, color: '#475569' },
           gridcolor: 'rgba(226, 232, 240, 0.6)',
-          zeroline: false
+          zeroline: false,
+          showspikes: true,
+          spikethickness: 1,
+          spikecolor: 'rgba(37, 99, 235, 0.3)',
+          spikemode: 'across'
+        },
+        hovermode: 'closest',
+        hoverlabel: {
+          bgcolor: 'rgba(15, 23, 42, 0.92)',
+          bordercolor: 'rgba(15, 23, 42, 0.92)',
+          font: { color: '#fff', size: 12, family: 'Inter, "Noto Sans Arabic", sans-serif' }
         }
       };
 
@@ -2306,7 +2622,16 @@ block extra_head %}
         });
       }
 
-      Plotly.newPlot(out, traces, layout, { responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['sendDataToCloud'] });
+      var plotlyConfig = {
+        responsive: true,
+        displayModeBar: true,
+        modeBarButtonsToRemove: ['sendDataToCloud'],
+        displaylogo: false,
+        scrollZoom: true,
+        doubleClick: 'reset'
+      };
+      Plotly.newPlot(out, traces, layout, plotlyConfig);
+      updateLastUpdated();
       _currentFigDiv = out;
 
       if (data.drilldown && data.drilldown.enabled && data.source === 'kindergartens') {
@@ -2746,6 +3071,168 @@ block extra_head %}
     _activeTaskId = null;
   }
 
+  // ── KPI Summary Strip ───────────────────────────────────────────────────
+  // Fetches lightweight counts for each source in parallel and populates the
+  // KPI cards above the chart area. Uses a 30-day window by default.
+  // Staggered: fetches sources one at a time with a 200ms delay between each
+  // to avoid overwhelming the server with 5 simultaneous aggregation queries.
+  var _kpiAbort = null;
+  var _kpiCache = null;
+
+  async function loadKpiStrip() {
+    if (_kpiAbort) _kpiAbort.abort();
+    _kpiAbort = new AbortController();
+
+    var dateFrom = document.getElementById('dateFrom').value;
+    var dateTo = document.getElementById('dateTo').value;
+    if (!dateFrom || !dateTo) return;
+
+    var sources = ['incidents', 'attendance', 'daily_reports', 'enrollments', 'kindergartens'];
+    var kpiIds = {
+      incidents: { value: 'kpiIncidents', delta: 'kpiIncidentsDelta' },
+      attendance: { value: 'kpiAttendance', delta: 'kpiAttendanceDelta' },
+      daily_reports: { value: 'kpiReports', delta: 'kpiReportsDelta' },
+      enrollments: { value: 'kpiEnrollments', delta: 'kpiEnrollmentsDelta' },
+      kindergartens: { value: 'kpiKindergartens', delta: 'kpiKindergartensDelta' }
+    };
+
+    // Mark all as loading
+    sources.forEach(function(src) {
+      var el = document.getElementById(kpiIds[src].value);
+      if (el) {
+        var card = el.closest('.ce-kpi-strip__card');
+        if (card) card.classList.add('is-loading');
+      }
+    });
+
+    try {
+      // Staggered fetch: one source at a time with a 200ms delay, so the
+      // server processes 1 aggregation query at a time instead of 5 in
+      // parallel. Each KPI card populates as its data arrives.
+      _kpiCache = {};
+      for (var i = 0; i < sources.length; i++) {
+        var src = sources[i];
+        var ids = kpiIds[src];
+        try {
+          var resp = await fetch('/api/admin/charts/data?source=' + encodeURIComponent(src) +
+            '&date_from=' + dateFrom + '&date_to=' + dateTo + '&chart_type=bar', {
+            headers: { 'X-CSRF-Token': getCsrfToken() },
+            signal: _kpiAbort.signal
+          });
+          var data = resp.ok ? await resp.json() : null;
+          var valEl = document.getElementById(ids.value);
+          var deltaEl = document.getElementById(ids.delta);
+          var card = valEl ? valEl.closest('.ce-kpi-strip__card') : null;
+          if (card) card.classList.remove('is-loading');
+
+          if (data) {
+            var total = 0;
+            if (data.series && data.series.length) {
+              var keys = Object.keys(data.series[0]);
+              var numKey = keys.find(function(k) { return typeof data.series[0][k] === 'number' && !/(^|_)id$/i.test(k); });
+              if (numKey) {
+                total = data.series.reduce(function(sum, r) { return sum + (r[numKey] || 0); }, 0);
+              } else {
+                total = data.series.length;
+              }
+            }
+            _kpiCache[src] = total;
+            if (valEl) valEl.textContent = total.toLocaleString();
+            if (deltaEl) {
+              deltaEl.className = 'ce-kpi-strip__delta ce-kpi-strip__delta--flat';
+              deltaEl.innerHTML = '<i class="bi bi-dash"></i> ' + tEn('this period', 'هذه الفترة');
+            }
+          } else {
+            var valEl2 = document.getElementById(ids.value);
+            if (valEl2) valEl2.textContent = '—';
+          }
+        } catch (e) {
+          if (e.name === 'AbortError') return;
+          var valEl3 = document.getElementById(ids.value);
+          if (valEl3) valEl3.textContent = '—';
+          var card3 = valEl3 ? valEl3.closest('.ce-kpi-strip__card') : null;
+          if (card3) card3.classList.remove('is-loading');
+        }
+        // Small delay between sources to avoid concurrent server load
+        if (i < sources.length - 1) await new Promise(function(r) { setTimeout(r, 200); });
+      }
+
+      // Highlight the active source card
+      document.querySelectorAll('.ce-kpi-strip__card').forEach(function(card) {
+        card.classList.toggle('is-active', card.dataset.source === _currentSource);
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      sources.forEach(function(src) {
+        var el = document.getElementById(kpiIds[src].value);
+        if (el) {
+          var card = el.closest('.ce-kpi-strip__card');
+          if (card) card.classList.remove('is-loading');
+        }
+      });
+    }
+  }
+
+  // ── Sidebar Toggle (mobile) ──────────────────────────────────────────────
+  function toggleSidebar() {
+    var sidebar = document.getElementById('chartsSidebar');
+    var btn = document.getElementById('sidebarToggle');
+    var label = document.getElementById('sidebarToggleLabel');
+    var isCollapsed = sidebar.classList.toggle('is-collapsed');
+    btn.classList.toggle('is-open', !isCollapsed);
+    btn.setAttribute('aria-expanded', String(!isCollapsed));
+    if (label) label.textContent = isCollapsed
+      ? tEn('Show Filters', 'إظهار الفلاتر')
+      : tEn('Hide Filters', 'إخفاء الفلاتر');
+  }
+
+  // ── Quick Range Selector ─────────────────────────────────────────────────
+  function quickRangeSelect(days) {
+    document.querySelectorAll('.ce-range-selector__btn').forEach(function(btn) {
+      btn.classList.toggle('is-active', parseInt(btn.dataset.range) === days);
+    });
+    var to = new Date();
+    var from = new Date(to);
+    from.setDate(from.getDate() - (days - 1));
+    document.getElementById('dateFrom').value = formatDateStr(from);
+    document.getElementById('dateTo').value = formatDateStr(to);
+    updatePresetHighlight('');
+    rememberDateRange('');
+    updateDateRangeSummary();
+    updateCompareSummary();
+    renderChart();
+    loadKpiStrip();
+  }
+
+  // ── Debounced Render ─────────────────────────────────────────────────────
+  // Prevents redundant API calls when multiple filter changes fire in rapid
+  // succession (e.g. selecting source + date preset + chart type).
+  var _renderDebounceTimer = null;
+  function debouncedRender(delay) {
+    delay = delay || 300;
+    if (_renderDebounceTimer) clearTimeout(_renderDebounceTimer);
+    _renderDebounceTimer = setTimeout(function() {
+      renderChart();
+    }, delay);
+  }
+
+  // ── Last Updated Timestamp ───────────────────────────────────────────────
+  function updateLastUpdated() {
+    var label = document.getElementById('lastUpdatedLabel');
+    var text = document.getElementById('lastUpdatedText');
+    if (!label || !text) return;
+    var now = new Date();
+    text.textContent = now.toLocaleTimeString(LANG === 'en' ? 'en-GB' : 'ar-JO-u-nu-latn');
+    label.style.display = '';
+  }
+
+  // ── CSRF Token Helper ────────────────────────────────────────────────────
+  function getCsrfToken() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) return meta.getAttribute('content') || '';
+    return '{{ csrf_token | default("") }}';
+  }
+
   // ── Init ─────────────────────────────────────────────────────────────────
   (function() {
     var today = new Date();
@@ -2810,6 +3297,12 @@ block extra_head %}
 
     // Auto-render if URL params present
     if (urlParams.has('source')) renderChart();
+
+    // Load KPI summary strip only after the main chart finishes (or after 2s
+    // fallback) to avoid 6 simultaneous heavy queries on page load.
+    setTimeout(function() {
+      if (!_lastResponse) loadKpiStrip();
+    }, 2000);
   })();
 </script>
 {% endblock %}
