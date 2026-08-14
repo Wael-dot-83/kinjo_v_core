@@ -98,14 +98,48 @@ def _existing_emails(db, emails: list[str]) -> set[str]:
     return {r[0] for r in rows}
 
 
+def adopt_existing_managers(db, password: str, kgs: list, dry_run: bool) -> tuple[list, list]:
+    """Give the run's password to each kindergarten's existing active manager.
+
+    Creating a manager is impossible where one already exists -- see the partial
+    unique index noted in provision(). Only managers that have never been signed
+    in with are touched.
+    """
+    hashed = get_password_hash(password)
+    adopted, kept = [], []
+    for kg in kgs:
+        mgr = (
+            db.query(models.User)
+            .filter(
+                models.User.kindergarten_id == kg.id,
+                models.User.role == models.UserRole.MANAGER,
+                models.User.status == models.UserStatus.ACTIVE,
+            )
+            .order_by(models.User.id)
+            .first()
+        )
+        if mgr is None:
+            continue
+        if mgr.last_login_at is not None:
+            kept.append((mgr.username, kg.id))
+            continue
+        if not dry_run:
+            mgr.hashed_password = hashed
+        adopted.append((mgr.username, "MANAGER", f"kg {kg.id}"))
+    return adopted, kept
+
+
 def provision(db, password: str, dry_run: bool) -> tuple[list, list]:
     now = datetime.now(_JORDAN_TZ)
     kgs = _pick_kindergartens(db)
     print(f"  [OK] attaching to existing kindergartens: {[k.id for k in kgs]}")
 
     planned: list[tuple[str, str, str, int | None]] = []
-    for i, kg in enumerate(kgs):
-        planned.append((f"manager{i+1}", f"manager{i+1}@kinjo.jo", "MANAGER", kg.id))
+    # Managers are NOT created. `uq_users_active_manager_per_kindergarten` is a
+    # partial unique index over (kindergarten_id) WHERE role=MANAGER AND
+    # status=ACTIVE AND deleted_at IS NULL, and every kindergarten in production
+    # already has one -- inserting a second is impossible by construction, not
+    # merely undesirable. The kindergarten's existing manager is adopted instead.
     for i, kg in enumerate(kgs):
         for j in range(SUPERVISORS_PER_KG):
             planned.append(
@@ -117,10 +151,25 @@ def provision(db, password: str, dry_run: bool) -> tuple[list, list]:
 
     taken_users = _existing_usernames(db, [p[0] for p in planned])
     taken_emails = _existing_emails(db, [p[1] for p in planned])
+    # uq_parent_profiles_national_id is unique; an id already in use belongs to
+    # somebody else's profile and must not be duplicated.
+    taken_national_ids = {
+        r[0]
+        for r in db.query(models.ParentProfile.national_id)
+        .filter(
+            models.ParentProfile.national_id.in_([s[7] for s in PARENT_SPECS])
+        )
+        .all()
+    }
 
     created: list[tuple[str, str, str]] = []
     skipped: list[tuple[str, str]] = []
     hashed = get_password_hash(password)
+
+    mgr_adopted, mgr_kept = adopt_existing_managers(db, password, kgs, dry_run)
+    created.extend(mgr_adopted)
+    for username, kg_id in mgr_kept:
+        skipped.append((username, f"manager of kg {kg_id} has been signed in with"))
 
     for username, email, role, kg_id in planned:
         if username in taken_users:
@@ -129,6 +178,11 @@ def provision(db, password: str, dry_run: bool) -> tuple[list, list]:
         if email in taken_emails:
             skipped.append((username, f"email {email} already in use"))
             continue
+        if role == "PARENT":
+            nid = next(s[7] for s in PARENT_SPECS if s[0] == username)
+            if nid in taken_national_ids:
+                skipped.append((username, f"national_id {nid} already in use"))
+                continue
 
         status = (
             models.UserStatus.INACTIVE
