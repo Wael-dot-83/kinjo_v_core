@@ -973,18 +973,16 @@ class AdminI18n {
   getSavedLanguage() {
     if (this.options.persistLanguage) {
       try {
-        const saved =
-          localStorage.getItem("admin_language") ||
-          localStorage.getItem("kinjo_lang");
-        if (this.options.supportedLanguages.includes(saved)) {
-          return saved;
-        }
         const cookieMatch = document.cookie.match(
           /(?:^|;\s*)kinjo_lang=(ar|en)(?:;|$)/i,
         );
         const cookieLang = cookieMatch ? cookieMatch[1].toLowerCase() : "";
         if (this.options.supportedLanguages.includes(cookieLang)) {
           return cookieLang;
+        }
+        const htmlLang = (document.documentElement.lang || "").toLowerCase();
+        if (this.options.supportedLanguages.includes(htmlLang)) {
+          return htmlLang;
         }
         return null;
       } catch (error) {

@@ -48,3 +48,23 @@ def set_ui_language_cookie(response: Response, language: Optional[str]) -> None:
         httponly=False,  # the client reads it to keep its own state in sync
         domain=settings.COOKIE_DOMAIN or None,
     )
+
+
+def ensure_default_ui_language_cookie(request, response) -> None:
+    """Plant the Arabic default on the first HTML visit.
+
+    A leftover localStorage kinjo_lang=en from a previous session used to
+    flip the client to English after the server had rendered Arabic. The
+    client now reads the cookie first; planting ar here makes that first
+    visit Arabic even when localStorage still holds en. An existing cookie
+    is left alone so an explicit English choice still wins.
+    """
+    if getattr(request, "method", "GET") not in {"GET", "HEAD"}:
+        return
+    path = getattr(getattr(request, "url", None), "path", "") or ""
+    if path.startswith("/api") or path.startswith("/static"):
+        return
+    cookies = getattr(request, "cookies", {}) or {}
+    if cookies.get("kinjo_lang"):
+        return
+    set_ui_language_cookie(response, DEFAULT_UI_LANGUAGE)

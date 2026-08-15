@@ -710,16 +710,15 @@ class AppI18n {
 
   resolveInitialLanguage() {
     // Cookie is the server-authoritative source of truth; read it first.
+    // localStorage is deliberately NOT consulted here: a leftover
+    // kinjo_lang=en from a previous session used to flip first visits
+    // to English after the server had already rendered Arabic.
     const cookieMatch = document.cookie.match(
       /(?:^|;\s*)kinjo_lang=(ar|en)(?:;|$)/i,
     );
     const cookieLang = cookieMatch ? cookieMatch[1].toLowerCase() : "";
     if (cookieLang && this.supported.includes(cookieLang)) {
       return cookieLang;
-    }
-    const stored = localStorage.getItem("kinjo_lang");
-    if (stored && this.supported.includes(stored)) {
-      return stored;
     }
     const htmlLang = document.documentElement.lang || "ar";
     return this.supported.includes(htmlLang) ? htmlLang : "ar";

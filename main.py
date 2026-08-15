@@ -68,6 +68,7 @@ from cache_service import cache_service
 from config import settings
 from ui_language import set_ui_language_cookie
 from ui_language import normalize_ui_language
+from ui_language import ensure_default_ui_language_cookie
 from dependencies import get_current_user, get_current_user_optional, ManagerScope, RedirectToLogin
 from middleware.auth import (
     build_generic_auth_exception,
@@ -438,6 +439,13 @@ async def enforce_canonical_host(request: Request, call_next):
                 target = f"{target}?{request.url.query}"
             return RedirectResponse(target, status_code=301)
     return await call_next(request)
+
+
+@app.middleware("http")
+async def plant_default_ui_language_cookie(request: Request, call_next):
+    response = await call_next(request)
+    ensure_default_ui_language_cookie(request, response)
+    return response
 
 
 # Request timeout middleware

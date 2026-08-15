@@ -217,3 +217,59 @@ def test_page_load_does_not_persist_the_language_cookie():
     assert "setHtmlLanguage(nextLang, true)" in src, (
         "toggleLanguage must sync the cookie explicitly"
     )
+
+
+def test_first_html_visit_plants_the_arabic_default_cookie(client):
+    """A first-time visitor with no kinjo_lang cookie must leave with ar.
+
+    Without this, leftover localStorage kinjo_lang=en from a previous
+    session flipped the client to English after the server had rendered
+    Arabic. Planting the cookie on the first HTML GET makes the default
+    stick even when localStorage still holds en.
+    """
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert resp.cookies["kinjo_lang"] == "ar"
+    assert 'lang="ar"' in resp.text
+
+
+def test_existing_english_cookie_is_not_overwritten_on_get(client):
+    """An explicit English choice must survive a later page load."""
+    client.cookies.set("kinjo_lang", "en")
+    resp = client.get("/")
+    assert resp.status_code == 200
+    # Starlette TestClient may not echo an unchanged cookie; the page
+    # must still render English and the request cookie must remain en.
+    assert 'lang="en"' in resp.text
+    assert client.cookies.get("kinjo_lang") == "en"
+
+
+def test_client_initial_language_does_not_read_localstorage():
+    """Leftover localStorage must not override the server-rendered language."""
+    app = (ROOT / "static" / "js" / "app_i18n.js").read_text(encoding="utf-8")
+    admin = (ROOT / "static" / "js" / "admin_i18n.js").read_text(encoding="utf-8")
+    kinjo = (ROOT / "static" / "js" / "kinjo-app.js").read_text(encoding="utf-8")
+    assert "localStorage.getItem(\"kinjo_lang\")" not in app
+    saved = admin.split("getSavedLanguage()")[1].split("// =")[0]
+    assert "localStorage.getItem" not in saved
+    stored = kinjo.split("Load stored language")[1].split("Global search")[0]
+    assert "localStorage.getItem" not in stored
+
+
+def test_arabic_copy_does_not_contain_known_typos():
+    """The live Arabic surfaces must not ship بحيرة (lake) for حيرة, or المعحضانة."""
+    lake = "\u0628\u062d\u064a\u0631\u0629"  # بحيرة
+    nonsense = "\u0627\u0644\u0645\u0639\u062d\u0636\u0627\u0646\u0629"  # المعحضانة
+    offenders = []
+    for rel in (
+        "templates/public/home.html",
+        "templates/public/legal.html",
+        "templates/reports/list.html",
+        "templates/components/export-modal.html",
+        "static/js/kinjo-app.js",
+        "static/i18n/literal_en_overrides.json",
+    ):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        if lake in text or nonsense in text:
+            offenders.append(rel)
+    assert offenders == [], f"Arabic typos still present in {offenders}"

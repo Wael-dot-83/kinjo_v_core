@@ -367,7 +367,7 @@ function buildPageGuide() {
     steps.push(
       appText(
         "guide.steps.browse_info",
-        "استعرض المعلومات المعحضانة في الصفحة",
+        "استعرض المعلومات المعروضة في الصفحة",
         "Browse the information shown on this page",
       ),
     );
@@ -1205,7 +1205,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const _kjCookieLang = _kjLangCookieMatch
     ? _kjLangCookieMatch[1].toLowerCase()
     : null;
-  const storedLang = _kjCookieLang || localStorage.getItem("kinjo_lang");
+  const storedLang = _kjCookieLang || document.documentElement.lang || "ar";
   if (storedLang && storedLang !== document.documentElement.lang) {
     document.documentElement.lang = storedLang;
     document.documentElement.dir = storedLang === "ar" ? "rtl" : "ltr";
