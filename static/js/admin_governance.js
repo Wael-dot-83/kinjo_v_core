@@ -46,6 +46,24 @@ function governanceLiteral(value) {
   return raw;
 }
 
+// e4f10a5 removed this page's local escapeHtml (correctly -- sanitize.js
+// defines a global one) but removed showMessage along with it while leaving
+// all four call sites in place, so every error path on this page threw
+// "showMessage is not defined" instead of telling the admin what went wrong.
+function showMessage({ icon = "info", title = "", text = "", timer = 0 } = {}) {
+  if (window.Swal && typeof window.Swal.fire === "function") {
+    return window.Swal.fire({
+      icon,
+      title,
+      text,
+      timer: timer || undefined,
+      showConfirmButton: !timer,
+    });
+  }
+  window.alert([title, text].filter(Boolean).join("\n"));
+  return Promise.resolve();
+}
+
 function getKgName(item) {
   if (!item) return "";
   const raw = String(governanceLangCode()).toLowerCase().startsWith("en")
@@ -134,10 +152,14 @@ async function loadGovernanceData() {
     renderRemindersPagination();
   } catch (err) {
     console.error("Failed to load governance data", err);
+    // fetchWithAuth throws a plain Error carrying the backend's own detail in
+    // .message, so reading only err.body.detail hid every real cause behind
+    // the generic string below.
     const detail = err?.body?.detail;
     const message =
       (typeof detail === "string" && detail) ||
       detail?.message ||
+      err?.message ||
       governanceText(
         "تعذر تحميل بيانات الحوكمة. حاول مرة أخرى.",
         "Unable to load governance data. Please try again."
@@ -633,6 +655,7 @@ if (confirmReminderBtn) {
       const msg =
         (typeof detail === "string" && detail) ||
         detail?.message ||
+        err?.message ||
         governanceText("فشل إرسال التذكير", "Failed to send reminder");
       showMessage({
         icon: "error",

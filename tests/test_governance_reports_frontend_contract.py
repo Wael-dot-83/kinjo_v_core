@@ -119,3 +119,50 @@ def test_reminders_pagination_uses_backend_support_instead_of_hardcoded_page():
 
     html = GOVERNANCE_TEMPLATE.read_text(encoding="utf-8")
     assert 'id="remindersPagination"' in html
+
+
+def test_page_script_is_cache_busted():
+    """Static assets are served `cache-control: public, max-age=31536000,
+    immutable`, and this page loaded admin_governance.js with no ?v= query at
+    all. Returning admins therefore kept executing whatever copy of the script
+    their browser had cached while the server served the redesigned template,
+    so when b68bca1 renamed the low-performers container from
+    lowPerformersList to lowPerformersTableBody, the stale script's
+    renderLowPerformers wrote .innerHTML on a null element. That TypeError was
+    swallowed by loadGovernanceData's catch and surfaced as
+    "تعذر تحميل بيانات الحوكمة" on a page whose five API calls had all
+    returned 200."""
+    html = GOVERNANCE_TEMPLATE.read_text(encoding="utf-8")
+    m = re.search(r'src="/static/js/admin_governance\.js(\?v=[^"]+)?"', html)
+    assert m, "governance_reports.html must load admin_governance.js"
+    assert m.group(1), (
+        "admin_governance.js must carry a ?v= cache-buster; without it the "
+        "immutable one-year cache pins returning browsers to a stale script"
+    )
+
+
+def test_show_message_is_defined_on_this_page():
+    """e4f10a5 deleted this file's local showMessage helper (bundled in with
+    the correct removal of a duplicate escapeHtml) but left all four call
+    sites. showMessage is defined in no other file under static/ or
+    templates/, so every error path on this page raised
+    "showMessage is not defined" and showed the admin nothing at all."""
+    js = GOVERNANCE_JS.read_text(encoding="utf-8")
+    assert "function showMessage(" in js, (
+        "showMessage is called by this page's error paths and is defined "
+        "nowhere else in the codebase"
+    )
+    # Every call site must still resolve.
+    assert js.count("showMessage({") >= 4
+
+
+def test_error_paths_surface_the_backend_detail():
+    """fetchWithAuth throws a plain Error whose .message already carries the
+    backend's detail, but both catch blocks read only err.body.detail — a
+    shape fetchWithAuth never produces — so every failure collapsed into the
+    generic "try again" string and hid the real cause."""
+    js = GOVERNANCE_JS.read_text(encoding="utf-8")
+    assert js.count("err?.message ||") == 2, (
+        "both catch blocks must fall back to err.message before the generic "
+        "message"
+    )
