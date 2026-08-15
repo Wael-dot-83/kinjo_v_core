@@ -546,6 +546,22 @@ block extra_head %}
     transition: border-color 0.2s, box-shadow 0.2s;
     cursor: pointer;
   }
+  /* These cards are <button> elements, not divs. They used to be
+     div[role="button"][tabindex="0"] wired with onclick only, so a keyboard
+     user could focus one, hear "button", press Enter, and get nothing --
+     WCAG 2.1.1. A real button restores Enter/Space activation for free and
+     makes role and tabindex unnecessary. This resets the defaults a button
+     brings that a div did not; every other card property is inherited from
+     the rule above and is unchanged. */
+  .ce-kpi-strip__card {
+    appearance: none;
+    -webkit-appearance: none;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-align: start;
+    width: auto;
+  }
   .ce-kpi-strip__card:hover {
     border-color: var(--az-primary-mid);
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
@@ -794,31 +810,31 @@ block extra_head %}
 
 {# KPI Summary Strip — at-a-glance metrics above the fold, clickable to load chart #}
 <div class="ce-kpi-strip" id="kpiStrip" role="region" aria-label="{% if ui_lang == 'en' %}Key metrics overview{% else %}نظرة عامة على المؤشرات{% endif %}">
-  <div class="ce-kpi-strip__card" data-source="incidents" onclick="quickStart('incidents')" tabindex="0" role="button" aria-label="{% if ui_lang == 'en' %}Incidents overview{% else %}نظرة على الحوادث{% endif %}">
+  <button type="button" class="ce-kpi-strip__card" data-source="incidents" aria-label="{% if ui_lang == 'en' %}Incidents overview{% else %}نظرة على الحوادث{% endif %}">
     <span class="ce-kpi-strip__label">{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}</span>
     <span class="ce-kpi-strip__value" id="kpiIncidents">—</span>
     <span class="ce-kpi-strip__delta ce-kpi-strip__delta--flat" id="kpiIncidentsDelta"><i class="bi bi-dash"></i> —</span>
-  </div>
-  <div class="ce-kpi-strip__card" data-source="attendance" onclick="quickStart('attendance')" tabindex="0" role="button" aria-label="{% if ui_lang == 'en' %}Attendance overview{% else %}نظرة على الحضور{% endif %}">
+  </button>
+  <button type="button" class="ce-kpi-strip__card" data-source="attendance" aria-label="{% if ui_lang == 'en' %}Attendance overview{% else %}نظرة على الحضور{% endif %}">
     <span class="ce-kpi-strip__label">{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}</span>
     <span class="ce-kpi-strip__value" id="kpiAttendance">—</span>
     <span class="ce-kpi-strip__delta ce-kpi-strip__delta--flat" id="kpiAttendanceDelta"><i class="bi bi-dash"></i> —</span>
-  </div>
-  <div class="ce-kpi-strip__card" data-source="daily_reports" onclick="quickStart('daily_reports')" tabindex="0" role="button" aria-label="{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}">
+  </button>
+  <button type="button" class="ce-kpi-strip__card" data-source="daily_reports" aria-label="{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}">
     <span class="ce-kpi-strip__label">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</span>
     <span class="ce-kpi-strip__value" id="kpiReports">—</span>
     <span class="ce-kpi-strip__delta ce-kpi-strip__delta--flat" id="kpiReportsDelta"><i class="bi bi-dash"></i> —</span>
-  </div>
-  <div class="ce-kpi-strip__card" data-source="enrollments" onclick="quickStart('enrollments')" tabindex="0" role="button" aria-label="{% if ui_lang == 'en' %}Enrollments{% else %}التسجيلات{% endif %}">
+  </button>
+  <button type="button" class="ce-kpi-strip__card" data-source="enrollments" aria-label="{% if ui_lang == 'en' %}Enrollments{% else %}التسجيلات{% endif %}">
     <span class="ce-kpi-strip__label">{% if ui_lang == 'en' %}Enrollments{% else %}التسجيلات{% endif %}</span>
     <span class="ce-kpi-strip__value" id="kpiEnrollments">—</span>
     <span class="ce-kpi-strip__delta ce-kpi-strip__delta--flat" id="kpiEnrollmentsDelta"><i class="bi bi-dash"></i> —</span>
-  </div>
-  <div class="ce-kpi-strip__card" data-source="kindergartens" onclick="quickStart('kindergartens')" tabindex="0" role="button" aria-label="{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}">
+  </button>
+  <button type="button" class="ce-kpi-strip__card" data-source="kindergartens" aria-label="{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}">
     <span class="ce-kpi-strip__label">{% if ui_lang == 'en' %}Kindergartens{% else %}الحضانات{% endif %}</span>
     <span class="ce-kpi-strip__value" id="kpiKindergartens">—</span>
     <span class="ce-kpi-strip__delta ce-kpi-strip__delta--flat" id="kpiKindergartensDelta"><i class="bi bi-dash"></i> —</span>
-  </div>
+  </button>
 </div>
 
 {# Collapsible sidebar toggle for mobile #}
@@ -2188,6 +2204,17 @@ block extra_head %}
   }
 
   // ── Quick Start ──────────────────────────────────────────────────────────
+  // The KPI cards are real <button> elements and are wired here by delegation
+  // rather than by an inline onclick. Delegation survives the strip being
+  // re-rendered, and keeping the handler out of the markup is what lets the
+  // element be a plain button -- the browser then gives us Enter and Space
+  // activation with no keydown handler of our own to forget.
+  document.getElementById('kpiStrip')?.addEventListener('click', function (event) {
+    const card = event.target.closest('.ce-kpi-strip__card[data-source]');
+    if (!card) return;
+    quickStart(card.dataset.source);
+  });
+
   function quickStart(source) {
     selectSource(source);
     applyDatePreset('this_month');

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -152,3 +153,50 @@ def test_enrollment_labels_match_the_dashboard_i18n_wording():
         ("WITHDRAWN", "enrollment_withdrawn"),
     ]:
         assert f'"{dash[key]}"' in html, f"{member} should use {dash[key]!r}"
+
+
+def test_kpi_cards_are_real_buttons_not_faux_ones():
+    """The five KPI strip cards were div[role="button"][tabindex="0"] wired
+    with onclick only.
+
+    That combination is focusable and announces itself as a button, so a
+    keyboard user reaches it and hears "button" -- then Enter and Space do
+    nothing, because a div has no default activation behaviour and the page's
+    four keydown listeners covered table sort headers, the two date inputs and
+    a Ctrl+Enter shortcut, never these cards. WCAG 2.1.1 (Keyboard).
+
+    A real <button> gets Enter and Space activation from the browser, which is
+    why this asserts the element type rather than asserting that some keydown
+    handler exists: a handler is a thing to forget, the element type is not.
+    """
+    html = TEMPLATE.read_text(encoding="utf-8")
+
+    assert '<div class="ce-kpi-strip__card"' not in html, (
+        "KPI cards must not be divs; a div cannot be activated by keyboard"
+    )
+    assert html.count('<button type="button" class="ce-kpi-strip__card"') == 5
+
+    # role/tabindex are redundant on a real button and were only there to prop
+    # up the div. Their presence would mean the conversion was half-done.
+    for card in re.findall(r'<button[^>]*class="ce-kpi-strip__card"[^>]*>', html):
+        assert 'role="button"' not in card, f"redundant role on a button: {card}"
+        assert "tabindex=" not in card, f"redundant tabindex on a button: {card}"
+        assert "onclick=" not in card, f"card should be wired by delegation: {card}"
+        assert "data-source=" in card and "aria-label=" in card
+
+    # Wired by delegation, so the strip can re-render without losing handlers.
+    assert "getElementById('kpiStrip')?.addEventListener('click'" in html
+    assert ".closest('.ce-kpi-strip__card[data-source]')" in html
+
+
+def test_kpi_card_button_defaults_are_reset():
+    """A <button> centres its text and uses the UA font; the div did neither.
+    Without this reset the conversion silently restyles the strip."""
+    html = TEMPLATE.read_text(encoding="utf-8")
+    rule = re.search(
+        r"\.ce-kpi-strip__card\s*\{(?P<body>[^}]*appearance[^}]*)\}", html
+    )
+    assert rule, "expected a reset rule for the button-based card"
+    body = rule.group("body")
+    for prop in ("appearance", "font: inherit", "text-align: start", "margin: 0"):
+        assert prop in body, f"missing {prop} in the button reset"
