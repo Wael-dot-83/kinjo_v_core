@@ -45,11 +45,79 @@ def route_pairs():
     return pairs
 
 
+# Macro libraries are not pages and must not extend a layout. The project
+# keeps shared macros in templates/components/, and b3b43eb added a
+# _components/ directory beside the agency-reports pages that use them.
+#
+# The discriminator has to be the directory, not "does the file contain
+# {% extends %}": a page that forgot to extend also has no extends line, and
+# that omission is precisely the defect this test exists to catch, so it
+# cannot also be the rule for deciding what to check.
+_PARTIAL_DIRS = {"components", "_components"}
+
+
+def _is_partial(path: Path) -> bool:
+    return any(part in _PARTIAL_DIRS for part in path.parts)
+
+
+def _extends_admin_base(content: str) -> bool:
+    first_line = next((line.strip() for line in content.splitlines() if line.strip()), "")
+    return "admin_base.html" in first_line
+
+
+def _admin_templates():
+    return sorted((ROOT / "templates" / "admin").rglob("*.html"))
+
+
 def test_admin_templates_under_templates_admin_extend_admin_base():
-    for path in (ROOT / "templates" / "admin").rglob("*.html"):
+    checked = 0
+    for path in _admin_templates():
+        if _is_partial(path):
+            continue
         content = path.read_text(encoding="utf-8-sig")
-        first_line = next(line.strip() for line in content.splitlines() if line.strip())
-        assert "admin_base.html" in first_line, f"{path.relative_to(ROOT)} does not extend admin_base.html"
+        assert _extends_admin_base(content), (
+            f"{path.relative_to(ROOT)} does not extend admin_base.html"
+        )
+        checked += 1
+    # Guards against a future refactor that makes the glob or the exemption
+    # match everything and leaves this loop asserting over nothing.
+    assert checked > 0, "no admin page templates were checked"
+
+
+def test_admin_partial_directories_contain_only_real_partials():
+    """The exemption above is granted by directory name, so the directory must
+    not become a place to hide a page that skips the layout check.
+
+    Anything living in a partials directory has to actually be a macro
+    library: macros, no layout inheritance, no top-level page markup.
+    """
+    for path in _admin_templates():
+        if not _is_partial(path):
+            continue
+        content = path.read_text(encoding="utf-8-sig")
+        rel = path.relative_to(ROOT)
+        assert "{% macro" in content, f"{rel} is in a partials dir but defines no macro"
+        assert "{% extends" not in content, f"{rel} is a partial and must not extend a layout"
+        lowered = content.lower()
+        for tag in ("<html", "<body", "{% block content"):
+            assert tag not in lowered, f"{rel} looks like a page, not a partial ({tag})"
+
+
+def test_extends_check_rejects_a_page_that_forgot_the_layout():
+    """Positive/negative control for the rule itself, so relaxing the scope
+    above cannot quietly stop catching the original defect."""
+    assert _extends_admin_base("{% extends 'admin_base.html' %}")
+    assert _extends_admin_base('{% extends "admin/admin_base.html" %}')
+    assert not _extends_admin_base("<div>a page that forgot to extend</div>")
+    assert not _extends_admin_base("")
+
+
+def test_partial_detection_only_exempts_partial_directories():
+    """A page must not be exempted just because it sits under templates/admin."""
+    assert _is_partial(Path("templates/admin/agency_reports/_components/x.html"))
+    assert _is_partial(Path("templates/components/date-range-filter.html"))
+    assert not _is_partial(Path("templates/admin/governance_reports.html"))
+    assert not _is_partial(Path("templates/admin/agency_reports/report.html"))
 
 
 def test_audit_log_admin_api_aliases_are_registered():
