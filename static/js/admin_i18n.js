@@ -952,7 +952,15 @@ class AdminI18n {
       try {
         localStorage.setItem("admin_language", language);
         localStorage.setItem("kinjo_lang", language);
-        document.cookie = `kinjo_lang=${language}; path=/; max-age=31536000; SameSite=Lax`;
+        // Deliberately NOT writing the kinjo_lang cookie here. The server owns
+        // it: it is set with COOKIE_DOMAIN (".kinjordan.org") while a
+        // document.cookie write from this origin is host-only
+        // ("www.kinjordan.org"). The two do not overwrite each other, so the
+        // browser kept both — with different values — and the server read
+        // whichever it was sent first. That produced a one-step lag where
+        // asking for English rendered Arabic and vice versa. The client now
+        // requests the change through PUT /api/users/me/language and consumes
+        // the cookie the server sets in that response.
       } catch (error) {
         console.warn("Failed to save language preference:", error);
       }

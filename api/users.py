@@ -112,6 +112,31 @@ def get_user_language(
     return {"user_lang": getattr(current_user, "preferred_language", "ar") or "ar"}
 
 
+class UiLanguageRequest(BaseModel):
+    language: str
+
+
+@router.post("/ui-language")
+def set_ui_language(payload: UiLanguageRequest, response: Response):
+    """Set the UI language cookie for a visitor who has no session yet.
+
+    Login and password-reset need to switch language before authentication
+    exists, so those pages previously wrote the cookie from JavaScript. A
+    document.cookie write is host-only while the server sets kinjo_lang with
+    COOKIE_DOMAIN, and the two do not overwrite each other -- the browser kept
+    both with different values and rendering lagged a step behind the request.
+    Routing the anonymous path through the server keeps a single writer.
+
+    Deliberately performs no database work: an unauthenticated caller must not
+    be able to mutate any user record. Authenticated callers use
+    PUT /users/me/language, which persists the preference as well.
+    """
+    if payload.language not in ("ar", "en"):
+        raise HTTPException(status_code=400, detail="Supported languages: ar, en")
+    _set_ui_language_cookie(response, payload.language)
+    return {"language": payload.language}
+
+
 class LanguageUpdateRequest(BaseModel):
     user_lang: str
 
