@@ -1,4 +1,5 @@
-﻿{% extends 'base.html' %}
+{% set _base = 'manager_base.html' if current_user and current_user.role.value == 'MANAGER' else 'base.html' %}
+{% extends _base %}
 {% block footer %}{% endblock %}
 
 {% block title %}{{ _('Absence Requests') }}{% endblock %}

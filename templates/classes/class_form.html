@@ -1,4 +1,5 @@
-﻿{% extends 'base.html' %}
+{% set _base = 'manager_base.html' if current_user and current_user.role.value == 'MANAGER' else 'base.html' %}
+{% extends _base %}
 {% block footer %}{% endblock %}
 {% set is_edit = class_obj is not none %}
 {% block title %}{% if is_edit %}{% if ui_lang == 'en' %}Edit Classroom{% else %}تعديل الفصل{% endif %}{% else %}{% if ui_lang == 'en' %}Create New Classroom{% else %}إعداد فصل جديد{% endif %}{% endif %}{% endblock %}
