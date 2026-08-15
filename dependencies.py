@@ -319,6 +319,48 @@ require_admin_or_manager = require_role(models.UserRole.ADMIN, models.UserRole.M
 require_supervisor = require_role(models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR)
 
 
+class ParentIdentity:
+    """Bundle of the authenticated parent user and their ParentProfile.
+
+    Returned by :func:`get_current_parent` so parent-facing endpoints stop
+    re-implementing the same role guard + profile lookup (single enforcement
+    point for parent authorization).
+    """
+
+    __slots__ = ("user", "profile")
+
+    def __init__(self, user: "models.User", profile: "models.ParentProfile"):
+        self.user = user
+        self.profile = profile
+
+
+def get_current_parent(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ParentIdentity:
+    """Dependency for parent-only endpoints.
+
+    Enforces the PARENT role and resolves the caller's ParentProfile in one
+    place, raising the same localized 403/404 the handlers used inline.
+    """
+    from i18n import gettext as _
+
+    lang = getattr(current_user, "preferred_language", None) or "ar"
+
+    if current_user.role != models.UserRole.PARENT:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_("Parent access only", lang))
+
+    profile = (
+        db.query(models.ParentProfile)
+        .filter(models.ParentProfile.user_id == current_user.id)
+        .first()
+    )
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_("Parent profile not found", lang))
+
+    return ParentIdentity(user=current_user, profile=profile)
+
+
 # ---------------------------------------------------------------------------
 # Manager / supervisor kindergarten scoping — single source of truth (S2)
 # ---------------------------------------------------------------------------

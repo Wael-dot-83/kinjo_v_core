@@ -3,27 +3,28 @@ Parent domain endpoints
 """
 
 import logging
-
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+from typing import Any, Dict, Optional
 
-_JORDAN_TZ = timezone(timedelta(hours=3))
-from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 import models
 import validators
+from admin_security import log_audit_event
+from audit_actions import AuditAction
 from auth import jordan_phone_login_variants, normalize_jordan_phone
 from cache_service import cache_service
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import ParentIdentity, get_current_parent
 from i18n import gettext as _api
-from admin_security import log_audit_event
-from audit_actions import AuditAction
+from rate_limiter import limiter
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 
 
 def _ulang(user) -> str:
@@ -61,16 +62,19 @@ def _parent_dashboard_cache_key(user_id: int) -> str:
     return f"parent:{user_id}:dashboard"
 
 
+def _normalize_phone_or_raise(raw_phone: str, lang: str, error_message: str) -> str:
+    if not validators.validate_jordan_phone(raw_phone):
+        raise HTTPException(status_code=400, detail=_api(error_message, lang))
+    return normalize_jordan_phone(raw_phone)
+
+
 @router.get("/parent/dashboard")
-def get_parent_dashboard(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_parent_dashboard(
+    parent: ParentIdentity = Depends(get_current_parent), db: Session = Depends(get_db)
+) -> Dict[str, Any]:
     """Get comprehensive parent dashboard"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-
-    if not parent_profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    current_user = parent.user
+    parent_profile = parent.profile
 
     use_cache = not settings.TESTING
     cache_key = _parent_dashboard_cache_key(current_user.id)
@@ -236,16 +240,12 @@ _ENROLLMENT_STATUS_AR = {
 @router.get("/parent/profile")
 def get_parent_profile(
     request: Request,
-    current_user: models.User = Depends(get_current_user),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """Get current parent's profile"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    current_user = parent.user
+    profile = parent.profile
 
     return {
         "id": profile.id,
@@ -281,16 +281,11 @@ def get_parent_profile(
 
 @router.get("/parent/children")
 def get_parent_children(
-    current_user: models.User = Depends(get_current_user),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """Get current parent's children with their enrollments"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    profile = parent.profile
 
     children = (
         db.query(models.Child)
@@ -360,18 +355,13 @@ def get_parent_children(
 
 @router.get("/parent/enrollments")
 def get_parent_enrollments(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
     page: Optional[int] = Query(None, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-):
+    parent: ParentIdentity = Depends(get_current_parent),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
     """Get all enrollment applications for current parent's children"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    profile = parent.profile
 
     child_ids = [
         cid
@@ -445,16 +435,12 @@ def get_parent_attendance(
     end_date: Optional[str] = Query(None),
     page: Optional[int] = Query(None, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    current_user: models.User = Depends(get_current_user),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """Get attendance history for parent's children"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    current_user = parent.user
+    profile = parent.profile
 
     child_ids = [
         cid for (cid,) in db.query(models.Child.id).filter(
@@ -533,16 +519,11 @@ def get_parent_attendance(
 
 @router.get("/parent/children-list")
 def get_parent_children_simple(
-    current_user: models.User = Depends(get_current_user),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """Simple children list for filter dropdowns"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    profile = parent.profile
 
     children = db.query(models.Child).filter(
         models.Child.parent_id == profile.id, models.Child.deleted_at.is_(None)
@@ -578,18 +559,17 @@ class ParentProfileSelfUpdateRequest(BaseModel):
 
 
 @router.put("/parent/profile")
+@limiter.limit(settings.RATE_LIMIT_PARENT_WRITE)
 def update_parent_profile_self(
+    request: Request,
     data: ParentProfileSelfUpdateRequest,
-    current_user: models.User = Depends(get_current_user),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, str]:
     """Allow authenticated parent to update their own profile and language preference."""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    current_user = parent.user
+    profile = parent.profile
+    lang = _ulang(current_user)
 
     text_fields = [
         "first_name",
@@ -624,11 +604,7 @@ def update_parent_profile_self(
     if data.phone_number is not None:
         raw_phone = data.phone_number.strip()
         if raw_phone:
-            if not validators.validate_jordan_phone(raw_phone):
-                raise HTTPException(
-                    status_code=400,
-                    detail=_api("Invalid Jordanian phone number", _ulang(current_user)),
-                )
+            normalized_phone = _normalize_phone_or_raise(raw_phone, lang, "Invalid Jordanian phone number")
             duplicate_phone = (
                 db.query(models.ParentProfile)
                 .filter(
@@ -641,33 +617,30 @@ def update_parent_profile_self(
             if duplicate_phone:
                 raise HTTPException(
                     status_code=400,
-                    detail=_api("Phone number already used", _ulang(current_user)),
+                    detail=_api("Phone number already used", lang),
                 )
-            profile.phone_number = normalize_jordan_phone(raw_phone)
+            profile.phone_number = normalized_phone
         else:
             profile.phone_number = None
 
     if data.emergency_contact_phone is not None:
         raw_emergency_phone = data.emergency_contact_phone.strip()
         if raw_emergency_phone:
-            if not validators.validate_jordan_phone(raw_emergency_phone):
-                raise HTTPException(
-                    status_code=400,
-                    detail=_api("Invalid emergency contact phone number", _ulang(current_user)),
-                )
-            profile.emergency_contact_phone = normalize_jordan_phone(raw_emergency_phone)
+            profile.emergency_contact_phone = _normalize_phone_or_raise(
+                raw_emergency_phone, lang, "Invalid emergency contact phone number"
+            )
         else:
             profile.emergency_contact_phone = None
 
     if data.notification_language is not None:
         if data.notification_language not in ("en", "ar"):
-            raise HTTPException(status_code=400, detail=_api("Supported languages: ar, en", _ulang(current_user)))
+            raise HTTPException(status_code=400, detail=_api("Supported languages: ar, en", lang))
         profile.notification_language = data.notification_language
 
     # Update user language preference
     if data.language is not None:
         if data.language not in ("en", "ar"):
-            raise HTTPException(status_code=400, detail=_api("Supported languages: ar, en", _ulang(current_user)))
+            raise HTTPException(status_code=400, detail=_api("Supported languages: ar, en", lang))
         current_user.preferred_language = data.language
         if data.notification_language is None:
             profile.notification_language = data.language
@@ -689,7 +662,6 @@ def update_parent_profile_self(
     db.refresh(profile)
     cache_service.delete(_parent_dashboard_cache_key(current_user.id))
 
-    lang = _ulang(current_user)
     return {"detail": _api("Saved successfully", lang)}
 
 
@@ -700,16 +672,12 @@ def get_parent_daily_reports(
     end_date: Optional[str] = Query(None),
     page: Optional[int] = Query(None, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    current_user: models.User = Depends(get_current_user),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """Get daily reports across all parent's children (status SENT_TO_PARENT only)."""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    current_user = parent.user
+    profile = parent.profile
 
     child_ids = [
         cid
