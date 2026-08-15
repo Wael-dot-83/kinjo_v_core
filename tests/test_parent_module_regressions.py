@@ -308,3 +308,157 @@ def test_parent_frontend_pages_return_200(client, auth_headers_parent):
     for path in pages:
         resp = client.get(path, headers=auth_headers_parent)
         assert resp.status_code == 200, f"Expected 200 for {path}, got {resp.status_code}"
+
+
+def _second_kindergarten(test_db):
+    kg = models.Kindergarten(
+        name_ar="حضانة النور",
+        name_en="Noor Kindergarten",
+        license_number="LIC-2026-002",
+        governorate="Amman",
+        district="Amman",
+        area="Khalda",
+        address_line="45 Side Street",
+        contact_phone="+962797654321",
+        contact_email="contact@noor.jo",
+        status=models.KindergartenStatus.ACTIVE,
+        license_valid_until=date(2027, 12, 31),
+    )
+    test_db.add(kg)
+    test_db.commit()
+    test_db.refresh(kg)
+    return kg
+
+
+def test_dashboard_returns_all_enrollments_for_child_with_multiple(
+    client, test_db, parent_user, auth_headers_parent, sample_kindergarten
+):
+    """A child holding two in-flight enrollments exposes both on the dashboard.
+
+    Regression: the dashboard previously collapsed enrollments into a
+    single-entry dict keyed by child_id, silently dropping all but the last
+    enrollment per child.
+    """
+    profile = _parent_profile(test_db, parent_user)
+    child = _create_child(test_db, profile, first_name="MultiEnroll")
+    kg2 = _second_kindergarten(test_db)
+
+    active = models.EnrollmentApplication(
+        child_id=child.id,
+        kindergarten_id=sample_kindergarten.id,
+        status=models.EnrollmentStatus.ACTIVE,
+        source="online",
+    )
+    waitlisted = models.EnrollmentApplication(
+        child_id=child.id,
+        kindergarten_id=kg2.id,
+        status=models.EnrollmentStatus.WAITLISTED,
+        source="online",
+    )
+    test_db.add_all([active, waitlisted])
+    test_db.commit()
+    test_db.refresh(active)
+    test_db.refresh(waitlisted)
+
+    resp = client.get("/api/parent/dashboard", headers=auth_headers_parent)
+    assert resp.status_code == 200
+    children = resp.json()["children"]
+    assert len(children) == 1
+    child_data = children[0]
+
+    enrollment_ids = {e["id"] for e in child_data["enrollments"]}
+    assert enrollment_ids == {active.id, waitlisted.id}
+    assert {e["status"] for e in child_data["enrollments"]} == {"ACTIVE", "WAITLISTED"}
+
+    assert child_data["enrollment"]["status"] == "ACTIVE"
+    assert child_data["enrollment"]["kindergarten_id"] == sample_kindergarten.id
+
+
+def test_parent_login_frequency_no_data(test_db):
+    """With no parents the metric reports no_data instead of a fabricated value."""
+    from parent_engagement_service import parent_engagement_service
+
+    result = parent_engagement_service.parent_login_frequency(test_db)
+    assert result["total_parents"] == 0
+    assert result["active_parents"] == 0
+    assert result["total_logins"] == 0
+    assert result["avg_logins_per_parent"] == 0.0
+    assert result["classification"] == "no_data"
+
+
+def test_parent_login_frequency_populated(client, test_db, parent_user):
+    """A real login produces a real metric instead of the old 'unknown' stub."""
+    from parent_engagement_service import parent_engagement_service
+
+    login = client.post(
+        "/token",
+        data={"username": parent_user.username, "password": "Parent123!"},
+    )
+    assert login.status_code == 200
+
+    result = parent_engagement_service.parent_login_frequency(test_db)
+    assert result["total_parents"] == 1
+    assert result["active_parents"] == 1
+    assert result["total_logins"] >= 1
+    assert result["avg_logins_per_parent"] >= 1.0
+    assert result["classification"] in ("high", "moderate", "low")
+    assert result["classification"] != "unknown"
+
+
+def test_parent_login_frequency_scoped_by_kindergarten(
+    client, test_db, parent_user, sample_kindergarten
+):
+    """Kindergarten scoping follows the ParentProfile -> Child -> Enrollment path."""
+    from parent_engagement_service import parent_engagement_service
+
+    login = client.post(
+        "/token",
+        data={"username": parent_user.username, "password": "Parent123!"},
+    )
+    assert login.status_code == 200
+
+    unscoped = parent_engagement_service.parent_login_frequency(
+        test_db, kindergarten_id=sample_kindergarten.id
+    )
+    assert unscoped["total_parents"] == 0
+    assert unscoped["classification"] == "no_data"
+
+    profile = _parent_profile(test_db, parent_user)
+    child = _create_child(test_db, profile, first_name="ScopedKid")
+    test_db.add(
+        models.EnrollmentApplication(
+            child_id=child.id,
+            kindergarten_id=sample_kindergarten.id,
+            status=models.EnrollmentStatus.ACTIVE,
+            source="online",
+        )
+    )
+    test_db.commit()
+
+    scoped = parent_engagement_service.parent_login_frequency(
+        test_db, kindergarten_id=sample_kindergarten.id
+    )
+    assert scoped["total_parents"] == 1
+    assert scoped["active_parents"] == 1
+    assert scoped["total_logins"] >= 1
+
+
+def test_observability_parent_engagement_has_real_login_metric(
+    client, test_db, admin_token, parent_user
+):
+    """The admin engagement endpoint no longer surfaces a fabricated login metric."""
+    login = client.post(
+        "/token",
+        data={"username": parent_user.username, "password": "Parent123!"},
+    )
+    assert login.status_code == 200
+
+    resp = client.get(
+        "/api/observability/parent-engagement",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    logins = resp.json()["parent_logins"]
+    assert logins["classification"] != "unknown"
+    assert logins["total_parents"] == 1
+    assert logins["avg_logins_per_parent"] >= 1.0

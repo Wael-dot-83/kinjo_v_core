@@ -7,6 +7,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
+from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
@@ -30,6 +31,24 @@ def _ulang(user) -> str:
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Parent"])
+
+_DASHBOARD_ENROLLMENT_STATUS_PRIORITY = {
+    models.EnrollmentStatus.ACTIVE: 0,
+    models.EnrollmentStatus.PENDING_REVIEW: 1,
+    models.EnrollmentStatus.WAITLISTED: 2,
+}
+
+
+def _pick_primary_enrollment(enrollment_list: list) -> Optional[models.EnrollmentApplication]:
+    if not enrollment_list:
+        return None
+    return sorted(
+        enrollment_list,
+        key=lambda e: (
+            _DASHBOARD_ENROLLMENT_STATUS_PRIORITY.get(e.status, len(_DASHBOARD_ENROLLMENT_STATUS_PRIORITY)),
+            -(e.id or 0),
+        ),
+    )[0]
 
 
 @router.get("/parent/dashboard")
@@ -58,21 +77,18 @@ def get_parent_dashboard(current_user: models.User = Depends(get_current_user), 
     latest_report_by_child: dict = {}
 
     if child_ids:
-        enrollments_by_child = {
-            e.child_id: e
-            for e in db.query(models.EnrollmentApplication)
-            .filter(
-                models.EnrollmentApplication.child_id.in_(child_ids),
-                models.EnrollmentApplication.status.in_(
-                    [
-                        models.EnrollmentStatus.ACTIVE,
-                        models.EnrollmentStatus.WAITLISTED,
-                        models.EnrollmentStatus.PENDING_REVIEW,
-                    ]
-                ),
-            )
-            .all()
-        }
+        enrollments_by_child = defaultdict(list)
+        for e in db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id.in_(child_ids),
+            models.EnrollmentApplication.status.in_(
+                [
+                    models.EnrollmentStatus.ACTIVE,
+                    models.EnrollmentStatus.WAITLISTED,
+                    models.EnrollmentStatus.PENDING_REVIEW,
+                ]
+            ),
+        ).all():
+            enrollments_by_child[e.child_id].append(e)
         attendance_by_child = {
             a.child_id: a
             for a in db.query(models.AttendanceLog)
@@ -82,12 +98,11 @@ def get_parent_dashboard(current_user: models.User = Depends(get_current_user), 
             )
             .all()
         }
-        from sqlalchemy import func as _func
 
         subq = (
             db.query(
                 models.DailyReport.child_id,
-                _func.max(models.DailyReport.date).label("max_date"),
+                func.max(models.DailyReport.date).label("max_date"),
             )
             .filter(
                 models.DailyReport.child_id.in_(child_ids),
@@ -108,7 +123,12 @@ def get_parent_dashboard(current_user: models.User = Depends(get_current_user), 
 
     kgs_by_id = {}
     if child_ids:
-        kg_ids = {e.kindergarten_id for e in enrollments_by_child.values() if e.kindergarten_id}
+        kg_ids = {
+            e.kindergarten_id
+            for enrollment_list in enrollments_by_child.values()
+            for e in enrollment_list
+            if e.kindergarten_id
+        }
         if kg_ids:
             kgs_by_id = {
                 kg.id: kg for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
@@ -116,10 +136,11 @@ def get_parent_dashboard(current_user: models.User = Depends(get_current_user), 
 
     children_data = []
     for child in children:
-        enrollment = enrollments_by_child.get(child.id)
+        enrollment_list = enrollments_by_child.get(child.id, [])
+        primary_enrollment = _pick_primary_enrollment(enrollment_list)
         attendance = attendance_by_child.get(child.id)
         latest_report = latest_report_by_child.get(child.id)
-        kg = kgs_by_id.get(enrollment.kindergarten_id) if enrollment else None
+        kg = kgs_by_id.get(primary_enrollment.kindergarten_id) if primary_enrollment else None
 
         child_info = {
             "id": child.id,
@@ -131,15 +152,28 @@ def get_parent_dashboard(current_user: models.User = Depends(get_current_user), 
             "kindergarten_name": (kg.name_ar or kg.name_en) if kg else None,
             "age_months": validators.validate_age_months(child.date_of_birth),
             "enrollment": None,
+            "enrollments": [
+                {
+                    "id": e.id,
+                    "status": e.status.value,
+                    "status_ar": _ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
+                    "kindergarten_id": e.kindergarten_id,
+                    "kindergarten_name": (kgs_by_id[e.kindergarten_id].name_ar or kgs_by_id[e.kindergarten_id].name_en)
+                    if e.kindergarten_id in kgs_by_id
+                    else None,
+                    "class_id": e.class_id,
+                }
+                for e in enrollment_list
+            ],
             "attendance_today": None,
             "latest_report_date": None,
         }
 
-        if enrollment:
+        if primary_enrollment:
             child_info["enrollment"] = {
-                "status": enrollment.status.value,
-                "kindergarten_id": enrollment.kindergarten_id,
-                "class_id": enrollment.class_id,
+                "status": primary_enrollment.status.value,
+                "kindergarten_id": primary_enrollment.kindergarten_id,
+                "class_id": primary_enrollment.class_id,
             }
 
         if attendance:

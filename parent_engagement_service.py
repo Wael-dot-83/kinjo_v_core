@@ -11,6 +11,8 @@ from sqlalchemy import func, and_, distinct
 from sqlalchemy.orm import Session
 
 from models import (
+    AuditLog,
+    Child,
     DailyReport,
     DailyReportStatus,
     DailyReportView,
@@ -30,6 +32,7 @@ from models import (
     User,
     UserRole,
 )
+from audit_actions import AuditAction
 
 logger = logging.getLogger(__name__)
 
@@ -100,28 +103,70 @@ class ParentEngagementService:
     ) -> Dict[str, Any]:
         cutoff = self._utcnow_naive() - timedelta(days=max(1, days))
 
-        parent_query = db.query(func.count(distinct(User.id))).filter(User.role == UserRole.PARENT)
+        parent_query = db.query(User.id).filter(
+            User.role == UserRole.PARENT,
+            User.deleted_at.is_(None),
+        )
         if kindergarten_id is not None:
-            parent_query = parent_query.join(
-                ParentProfile, ParentProfile.user_id == User.id,
-            ).join(
-                EnrollmentApplication, EnrollmentApplication.kindergarten_id == kindergarten_id,
+            parent_query = (
+                parent_query.join(ParentProfile, ParentProfile.user_id == User.id)
+                .join(Child, Child.parent_id == ParentProfile.id)
+                .join(EnrollmentApplication, EnrollmentApplication.child_id == Child.id)
+                .filter(EnrollmentApplication.kindergarten_id == kindergarten_id)
             )
-        total_parents = parent_query.scalar() or 0
+        parent_ids = parent_query.distinct().subquery()
+
+        total_parents = (
+            db.query(func.count(distinct(parent_ids.c.id))).scalar() or 0
+        )
 
         if total_parents == 0:
             return {
                 "avg_logins_per_parent": 0.0,
                 "total_parents": 0,
                 "active_parents": 0,
+                "total_logins": 0,
                 "period_days": days,
                 "classification": "no_data",
             }
 
+        active_parents = (
+            db.query(func.count(distinct(User.id)))
+            .filter(
+                User.id.in_(db.query(parent_ids.c.id)),
+                User.last_login_at.isnot(None),
+                User.last_login_at >= cutoff,
+            )
+            .scalar()
+            or 0
+        )
+
+        total_logins = (
+            db.query(func.count(AuditLog.id))
+            .filter(
+                AuditLog.action == AuditAction.LOGIN_SUCCESS,
+                AuditLog.created_at >= cutoff,
+                AuditLog.user_id.in_(db.query(parent_ids.c.id)),
+            )
+            .scalar()
+            or 0
+        )
+
+        avg_logins = (total_logins / total_parents) if total_parents else 0.0
+        active_rate = (active_parents / total_parents) * 100.0 if total_parents else 0.0
+
         return {
+            "avg_logins_per_parent": round(avg_logins, 2),
             "total_parents": int(total_parents),
+            "active_parents": int(active_parents),
+            "total_logins": int(total_logins),
+            "active_rate": round(active_rate, 1),
             "period_days": days,
-            "classification": "unknown",
+            "classification": (
+                "high" if active_rate >= 70
+                else "moderate" if active_rate >= 40
+                else "low"
+            ),
         }
 
     def nps_score(
