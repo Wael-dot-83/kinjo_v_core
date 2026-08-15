@@ -10,7 +10,13 @@ _ROOT = Path(__file__).resolve().parents[1]
 _MANAGER_BASE = _ROOT / "templates" / "manager_base.html"
 _PRINT_CSS = _ROOT / "static" / "css" / "print.css"
 
-_PRINT_LINK = re.compile(r'<link[^>]*href="[^"]*print\.css"[^>]*>')
+# The href must be allowed to carry a ?v= cache-buster. Anchoring on
+# `print.css"` matched only an unversioned URL, so adding the version query
+# every static asset needs made this regex find zero links -- which failed the
+# count assertion and, worse, silently emptied the loop in
+# test_print_css_never_loaded_as_screen_stylesheet, turning a real guarantee
+# into a test that passes over nothing.
+_PRINT_LINK = re.compile(r'<link[^>]*href="[^"]*print\.css(?:\?[^"]*)?"[^>]*>')
 
 
 def _manager_base_html() -> str:
@@ -34,7 +40,11 @@ def test_print_css_link_is_print_media_only():
 
 def test_print_css_never_loaded_as_screen_stylesheet():
     # Any print.css link must carry media="print" (else its print rules leak to screen).
-    for link in _PRINT_LINK.findall(_manager_base_html()):
+    links = _PRINT_LINK.findall(_manager_base_html())
+    # Without this the test passes when the regex matches nothing at all, which
+    # is exactly how it stayed green while the count assertion above was failing.
+    assert links, "no print.css <link> found -- this test would prove nothing"
+    for link in links:
         assert 'media="print"' in link
 
 
