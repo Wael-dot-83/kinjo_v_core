@@ -5706,9 +5706,33 @@ class GovernanceReminderRequest(BaseModel):
     reminder_type: str = "low_submission_rate"
 
 
+# ---------------------------------------------------------------------------
+# The governance handlers below are deliberately `def`, not `async def`.
+#
+# They talk to the database through sync SQLAlchemy and contain no `await`.
+# Declared `async def`, Starlette runs them directly on the event loop, so each
+# blocking query stalls every other request in the process -- and the governance
+# page fires five of these at once. Measured on production: /trend answers in
+# 0.22s alone but reported 3.03s inside that batch, because it was queued behind
+# the other four. The page waited for the sum of the work, not the slowest part
+# of it.
+#
+# As plain `def`, FastAPI runs them in its threadpool and they overlap properly.
+# Concurrency is then bounded by the connection pool (DB_POOL_SIZE 10 +
+# DB_MAX_OVERFLOW 20) rather than by the single event loop; a request past that
+# waits on DB_POOL_TIMEOUT instead of erroring, and 30 connections sits well
+# under this cluster's max_connections of 100.
+#
+# Adding an `await` to any of these means making it `async def` again -- and
+# then the blocking DB work has to move off the loop some other way.
+# tests/test_admin_governance.py::TestGovernanceEndpointsRunInThreadpool
+# guards this.
+# ---------------------------------------------------------------------------
+
+
 @router.get("/governance/kpis")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
-async def get_governance_kpis(
+def get_governance_kpis(
     request: Request,
     start_date: date = Query(..., description="Start date YYYY-MM-DD"),
     end_date: date = Query(..., description="End date YYYY-MM-DD"),
@@ -5745,7 +5769,7 @@ async def get_governance_kpis(
 
 @router.get("/governance/leaderboard")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
-async def get_governance_leaderboard(
+def get_governance_leaderboard(
     request: Request,
     start_date: date = Query(..., description="Start date YYYY-MM-DD"),
     end_date: date = Query(..., description="End date YYYY-MM-DD"),
@@ -5943,7 +5967,7 @@ async def get_governance_leaderboard(
 
 @router.get("/governance/trend")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
-async def get_governance_trend(
+def get_governance_trend(
     request: Request,
     days: int = Query(30, ge=7, le=90, description="Number of days for trend (7–90)"),
     db: Session = Depends(get_db),
@@ -5986,7 +6010,7 @@ async def get_governance_trend(
 
 @router.get("/governance/safeguarding")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
-async def get_governance_safeguarding(
+def get_governance_safeguarding(
     request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
@@ -6053,7 +6077,7 @@ async def get_governance_safeguarding(
 
 @router.post("/governance/reminders")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
-async def send_governance_reminder_endpoint(
+def send_governance_reminder_endpoint(
     request: Request,
     body: GovernanceReminderRequest,
     db: Session = Depends(get_db),
@@ -6130,7 +6154,7 @@ async def send_governance_reminder_endpoint(
 
 @router.get("/governance/reminders")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
-async def list_governance_reminders(
+def list_governance_reminders(
     request: Request,
     target_type: Optional[str] = Query(None),
     target_id: Optional[int] = Query(None),
@@ -6318,7 +6342,7 @@ async def get_import_log_detail(
 
 @router.get("/governance/reminders/stats")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
-async def get_governance_reminder_stats(
+def get_governance_reminder_stats(
     request: Request,
     current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)

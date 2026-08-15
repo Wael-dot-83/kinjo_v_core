@@ -315,3 +315,62 @@ class TestGovernanceAggregatesInSQL:
         assert result["hour_distribution"] == {
             str(h): c for h, c in sorted(expected.items())
         }
+
+
+class TestGovernanceEndpointsRunInThreadpool:
+    """The governance page fires five API calls at once. They were all
+    `async def` doing blocking sync-SQLAlchemy work with no `await` anywhere,
+    so Starlette ran them straight on the event loop and each one stalled the
+    others: /trend answered in 0.22s alone but reported 3.03s inside the
+    batch. As plain `def`, FastAPI runs them in its threadpool and they
+    overlap.
+
+    An `await` appearing in one of these is the thing that breaks the
+    property -- it forces `async def` back, and the blocking DB work returns
+    to the event loop."""
+
+    GOVERNANCE_HANDLERS = [
+        "get_governance_kpis",
+        "get_governance_leaderboard",
+        "get_governance_trend",
+        "get_governance_safeguarding",
+        "send_governance_reminder_endpoint",
+        "list_governance_reminders",
+        "get_governance_reminder_stats",
+    ]
+
+    def test_handlers_are_not_coroutine_functions(self):
+        import asyncio
+        import admin_endpoints
+
+        for name in self.GOVERNANCE_HANDLERS:
+            fn = getattr(admin_endpoints, name)
+            assert not asyncio.iscoroutinefunction(fn), (
+                f"{name} is a coroutine function; FastAPI will run it on the "
+                "event loop, where its blocking DB work stalls every other "
+                "request in the process"
+            )
+
+    def test_handlers_contain_no_await(self):
+        """The conversion is only valid while these bodies stay await-free."""
+        import ast
+        import inspect
+        import admin_endpoints
+
+        src = inspect.getsource(admin_endpoints)
+        tree = ast.parse(src)
+        by_name = {
+            n.name: n
+            for n in ast.walk(tree)
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        for name in self.GOVERNANCE_HANDLERS:
+            node = by_name[name]
+            awaits = [
+                n for n in ast.walk(node)
+                if isinstance(n, (ast.Await, ast.AsyncFor, ast.AsyncWith))
+            ]
+            assert not awaits, (
+                f"{name} now awaits; it must become `async def` again, and its "
+                "blocking DB work must then move off the event loop"
+            )
