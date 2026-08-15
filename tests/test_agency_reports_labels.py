@@ -135,3 +135,10 @@ def test_agency_cards_use_unified_design():
     assert 'agency.code !== "mosd"' not in source
     assert 'agency.code === "mosd"' not in source
 
+
+def test_secondary_agency_chart_can_share_the_primary_chart_grid():
+    """MOSD registry payloads carry both charts; their renderer must not throw."""
+    source = AGENCY_REPORTS_JS.read_text(encoding="utf-8")
+    assert "let chartSection = null;" in source
+    assert 'chartSection = document.createElement("div");' in source
+

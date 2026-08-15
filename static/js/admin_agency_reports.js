@@ -921,9 +921,13 @@
       return;
     }
 
+    // Keep the primary chart reference available for the optional secondary
+    // chart below, which places both charts in one responsive grid.
+    let chartSection = null;
+
     // Chart placeholder (if chart data provided)
     if (payload.chart) {
-      const chartSection = document.createElement("div");
+      chartSection = document.createElement("div");
       chartSection.className = "agency-chart-section";
       const chartTitle = document.createElement("h2");
       chartTitle.className = "agency-chart-title";
