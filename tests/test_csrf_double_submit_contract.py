@@ -143,6 +143,7 @@ class TestDoubleSubmitContract:
             "/api/contact",
             "/api/users/request-password-reset",
             "/api/users/reset-password",
+            "/api/ui-language",
         ],
     )
     @pytest.mark.asyncio

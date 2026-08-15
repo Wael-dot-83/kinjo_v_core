@@ -20,7 +20,22 @@ mode while every other repaired surface went dark.
 An earlier guard existed but was scoped to design-tokens.css by name, so it
 could not see the next asset to change. The preflight below therefore
 discovers changed assets from the Git diff instead of from a hardcoded list.
+
+This file is also a cautionary record of the guard's own blind spots, because
+each one produced a green test over a real release:
+
+  * the matcher read `href=` only, so every `<script src=...>` reference —
+    i.e. every JS asset — was invisible to both the consistency contract and
+    the preflight. The language-preference fix changed four JS files; none of
+    those bumps was ever verified until the matcher learned `src=`.
+  * the ref-scoped lookup hardcoded three shell templates while the worktree
+    model globbed every template, so an asset referenced from any other
+    template read as "no previous reference" at the base.
+  * `stalled_assets` skipped assets with no reference in the worktree
+    (`if not after: continue`), so a changed asset whose references vanished
+    silently passed. Empty is now an explicit state.
 """
+import functools
 import os
 import re
 import subprocess
@@ -35,7 +50,11 @@ TEMPLATES = ROOT / "templates"
 # about "referenced from more than one shell", not about who changed last.
 SHARED_ASSETS = ["design-tokens.css", "admin_design_system.css"]
 
-REF = re.compile(r'href="/static/(css|js)/([a-z0-9_.-]+\.(?:css|js))(?:\?v=([^"]*))?"')
+# Both href= (stylesheet links) and src= (script tags) feed the one
+# asset-keyed model. A matcher that only read href= could not see a single
+# JS asset: `<script src="/static/js/x.js?v=1">` went unmatched, so the
+# preflight never compared the key of any changed .js file.
+REF = re.compile(r'(?:href|src)="/static/(css|js)/([a-z0-9_.-]+\.(?:css|js))(?:\?v=([^"]*))?"')
 
 
 def _references():
@@ -78,12 +97,25 @@ def _changed_static_assets(base):
     return [n for n in names if n.strip().endswith((".css", ".js"))]
 
 
+@functools.lru_cache(maxsize=None)
+def _templates_at_ref(ref):
+    """{template path: source} at a git ref — same rglob scope as the
+    worktree model, so the 'before' side sees exactly what the 'after' side
+    sees. The historic hardcoded three-shell list missed an asset referenced
+    from any other template, and that empty 'before' read as a pass."""
+    out = {}
+    for path in _git("ls-tree", "-r", "--name-only", ref, "--", "templates/").split("\n"):
+        path = path.strip()
+        if path.endswith(".html"):
+            out[path] = _git("show", f"{ref}:{path}")
+    return out
+
+
 def _version_at_ref(ref, asset):
-    """The cache key this asset was referenced under at a given git ref."""
+    """The cache keys this asset is referenced under at a given git ref."""
     versions = set()
-    for tpl in ("templates/admin_base.html", "templates/manager_base.html",
-                "templates/base.html"):
-        for m in REF.finditer(_git("show", f"{ref}:{tpl}")):
+    for source in _templates_at_ref(ref).values():
+        for m in REF.finditer(source):
             if m.group(2) == asset:
                 versions.add(m.group(3))
     return versions
@@ -121,13 +153,30 @@ def stalled_assets(changed, before_versions, after_versions):
     changed:          [asset filename, ...] whose bytes differ from BASE
     before_versions:  {asset: set(cache keys at BASE)}
     after_versions:   {asset: set(cache keys now)}
+
+    A changed asset must be referenced under exactly one cache key, and that
+    key must not be one of the keys it was referenced under at BASE. Every
+    state is explicit:
+
+      * single key, unchanged                     -> offender (stalled key)
+      * references disagree (multiple keys)      -> offender (one of them is
+        serving the old bytes; set-equality alone read this as "moved",
+        which is precisely how a partial bump slipped through)
+      * referenced at BASE, no reference now     -> offender (references
+        vanished while the bytes changed; previously skipped by
+        `if not after: continue`)
+      * never referenced                         -> not this guard's business
+      * newly referenced under one key           -> fine, nothing stale
     """
     out = []
     for asset in changed:
+        before = before_versions.get(asset) or set()
         after = after_versions.get(asset) or set()
-        if not after:
-            continue  # not referenced from a shell template
-        if before_versions.get(asset, set()) == after:
+        if before and not after:
+            out.append(asset)
+        elif len(after) > 1:
+            out.append(asset)
+        elif after and after <= before:
             out.append(asset)
     return out
 
@@ -155,6 +204,14 @@ def test_stalled_detection_handles_a_remediation_release():
     # An asset nothing references is not this guard's business.
     assert stalled_assets([asset], {}, {}) == []
 
+    # The explicit third state: the bytes changed and the references vanished.
+    # The historic `if not after: continue` skipped this silently, so a
+    # moved-but-unreferenced asset read as "fine".
+    assert stalled_assets([asset], {asset: {"3.2"}}, {}) == [asset]
+
+    # A reference appearing for the first time cannot be stale.
+    assert stalled_assets([asset], {}, {asset: {"3.3"}}) == []
+
 
 def test_changed_static_assets_moved_their_cache_key():
     """The preflight: every static asset this branch changed must also have
@@ -171,8 +228,17 @@ def test_changed_static_assets_moved_their_cache_key():
     changed = [p.rsplit("/", 1)[-1] for p in _changed_static_assets(base)]
     before = {a: _version_at_ref(base, a) for a in changed}
     after = {a: _version_in_worktree(a) for a in changed}
-    offenders = [f"{a} changed but stayed at ?v={after[a]}"
-                 for a in stalled_assets(changed, before, after)]
+    offenders = []
+    for asset in stalled_assets(changed, before, after):
+        keys = after.get(asset)
+        if not keys:
+            offenders.append(f"{asset} changed but is no longer referenced "
+                             "by any template")
+        elif len(keys) > 1:
+            offenders.append(f"{asset} changed but its references disagree: "
+                             f"?v={sorted(keys)}")
+        else:
+            offenders.append(f"{asset} changed but stayed at ?v={keys}")
     assert not offenders, (
         "changed immutable assets kept their cache key, so the edge will serve "
         f"the old bytes for a year: {offenders}"
@@ -209,3 +275,47 @@ def test_matcher_still_sees_a_missing_key():
     sample = '<link href="/static/css/admin_design_system.css" />'
     found = [m.group(3) for m in REF.finditer(sample)]
     assert found == [None], f"expected a missing key, got {found}"
+
+
+def test_matcher_extracts_script_src_references():
+    """Control D: a `<script src=...>` reference must feed the same
+    asset-keyed model as `href=`. The old href-only matcher saw no JS asset
+    at all, so a changed app_i18n.js behind an unmoved ?v= passed the
+    preflight by invisibility."""
+    sample = '<script src="/static/js/example.js?v=1"></script>'
+    found = {m.group(2): m.group(3) for m in REF.finditer(sample)}
+    assert found == {"example.js": "1"}, f"matcher lost the src ref: {found}"
+
+    # The worktree model must actually see the real JS assets today, not just
+    # the sample above.
+    worktree = _references()
+    assert "app_i18n.js" in worktree, "script src refs are invisible to the model"
+    assert "kinjo-app.js" in worktree, "script src refs are invisible to the model"
+
+
+def test_stale_language_asset_key_is_flagged():
+    """Language-regression mutation control: a stale app_i18n.js key must
+    fail, with the guard's decision rule exercised against the real asset
+    name so a rename breaks this test loudly instead of silently."""
+    assert stalled_assets(["app_i18n.js"], {"app_i18n.js": {"2.2"}},
+                          {"app_i18n.js": {"2.2"}}) == ["app_i18n.js"]
+
+    # A PARTIAL bump must fail too: one reference moved to v2.2 while another
+    # stayed at v2.1. The set changed, so the old set-equality rule read this
+    # as "the key moved" and passed over the stale reference.
+    assert stalled_assets(["app_i18n.js"],
+                          {"app_i18n.js": {"1.0", "2.1"}},
+                          {"app_i18n.js": {"2.1", "2.2"}}) == ["app_i18n.js"]
+
+    # The ref-scoped scan must reach every template, not the historic
+    # three-shell list. admin_classification.js is referenced only from
+    # page templates outside the three shells, so a lookup scoped to those
+    # shells would report an empty 'before' set and the preflight would be
+    # vacuous for every page-scoped asset.
+    base = _git("rev-parse", "--verify", "--quiet", BASE).strip()
+    if base:
+        at_ref = _version_at_ref(base, "admin_classification.js")
+        assert at_ref, (
+            "ref-scoped scan must reach templates outside the three shells, "
+            "so admin_classification.js at the base ref must be visible"
+        )

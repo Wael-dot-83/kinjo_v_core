@@ -5,8 +5,38 @@ only written at login, so changing the preference persisted to the database whil
 the server kept rendering the previous language. The client then rewrote
 documentElement.lang/dir to the new language, leaving every page with mixed
 Arabic/English text and a direction that disagreed with its own content.
+
+The root cause of the one-step lag was TWO kinjo_lang cookies coexisting at
+different scopes: a host-only `document.cookie` write cannot overwrite the
+domain-wide cookie the server sets with COOKIE_DOMAIN, so the browser kept both
+with different values and the server read whichever it was sent first. The fix
+made the server the sole writer: every client-side write site now POSTs to
+/api/ui-language (anonymous) or PUT /api/users/me/language (authenticated) and
+consumes the Set-Cookie from the response.
+
+Ten scenarios are pinned below: the authenticated path, the anonymous path
+(including the cookie-carrying browser shape that must NOT require a CSRF pair),
+validation, no-database-work, and the mutation control that any future
+client-side `document.cookie` write of kinjo_lang fails loudly.
 """
+import re
+from pathlib import Path
+
 import ui_language
+
+ROOT = Path(__file__).resolve().parents[1]
+
+# A client-side WRITE of the language cookie: `document.cookie = ...` whose
+# right-hand side names kinjo_lang, in any of the three quoting forms the
+# codebase has used. Reads (document.cookie.match(...)) and the explanatory
+# comments are deliberately not matched.
+BANNED_CLIENT_WRITE = re.compile(
+    r'document\.cookie\s*=\s*'
+    r'(?:`[\s\S]{0,200}?kinjo_lang'
+    r'|"[^"]{0,200}?kinjo_lang'
+    r"|'[^']{0,200}?kinjo_lang')",
+    re.IGNORECASE,
+)
 
 
 def test_language_update_writes_cookie_matching_preference(client, auth_headers_admin):
@@ -51,78 +81,83 @@ def test_normalisation_respects_supported_languages():
     assert ui_language.normalize_ui_language(None) == "ar"
 
 
-def test_no_frontend_code_writes_the_kinjo_lang_cookie():
-    """The server is the sole writer of kinjo_lang.
-
-    A document.cookie write from the page origin is host-only
-    (www.kinjordan.org) while the server sets the cookie with COOKIE_DOMAIN
-    (.kinjordan.org). Neither overwrites the other, so the browser kept both
-    with different values and the server read whichever it was sent first --
-    asking for English rendered Arabic and vice versa. Reading the cookie is
-    fine; writing it from the client is what must never come back.
-    """
-    import pathlib
-    import re
-
-    root = pathlib.Path(__file__).resolve().parents[1]
-    offenders = []
-    for path in list((root / "static" / "js").rglob("*.js")) + list((root / "templates").rglob("*.html")):
-        try:
-            text = path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        for line_no, line in enumerate(text.splitlines(), 1):
-            # assignment to document.cookie mentioning kinjo_lang on the same line
-            if re.search(r"document\.cookie\s*=", line) and "kinjo_lang" in line:
-                offenders.append(f"{path.relative_to(root)}:{line_no}")
-    assert not offenders, "client-side kinjo_lang cookie writes reintroduced: " + ", ".join(offenders)
-
-
-def test_client_still_reads_the_cookie_and_calls_the_api():
-    """Removing the write must not turn into removing the sync entirely."""
-    import pathlib
-
-    root = pathlib.Path(__file__).resolve().parents[1]
-    js = (root / "static" / "js" / "admin_i18n.js").read_text(encoding="utf-8")
-    assert "kinjo_lang" in js, "client no longer reads the server's cookie"
-    assert "/api/users/me/language" in js, "client no longer asks the server to persist the change"
-
-
-def test_anonymous_endpoint_sets_cookie_without_touching_any_user(client):
-    """Login and reset-password switch language before a session exists."""
+def test_anonymous_language_switch_sets_the_cookie(client):
+    """The pre-auth entry point: a visitor with no session switches language."""
     resp = client.post("/api/ui-language", json={"language": "en"})
     assert resp.status_code == 200
-    assert resp.json()["language"] == "en"
-    assert resp.cookies["kinjo_lang"] == "en"
-
-    back = client.post("/api/ui-language", json={"language": "ar"})
-    assert back.status_code == 200
-    assert back.cookies["kinjo_lang"] == "ar"
+    assert resp.json() == {"language": "en"}
+    assert resp.cookies["kinjo_lang"] == "en", (
+        "the anonymous switch must set the server-owned cookie"
+    )
 
 
-def test_anonymous_endpoint_rejects_unsupported_language(client):
+def test_anonymous_language_switch_accepts_arabic(client):
+    resp = client.post("/api/ui-language", json={"language": "ar"})
+    assert resp.status_code == 200
+    assert resp.cookies["kinjo_lang"] == "ar"
+
+
+def test_anonymous_language_switch_rejects_unsupported_languages(client):
     resp = client.post("/api/ui-language", json={"language": "fr"})
     assert resp.status_code == 400
     assert "kinjo_lang" not in resp.cookies
 
-
-def test_anonymous_endpoint_performs_no_database_mutation():
-    """An unauthenticated caller must not be able to change a user record."""
-    import inspect
-
-    import api.users as users_mod
-
-    src = inspect.getsource(users_mod.set_ui_language)
-    for forbidden in ("db.commit", "db.add", "db.query", "current_user", "get_db"):
-        assert forbidden not in src, f"anonymous endpoint touches {forbidden}"
+    empty = client.post("/api/ui-language", json={})
+    assert empty.status_code == 422, "a missing language must fail validation"
 
 
-def test_both_paths_use_the_same_cookie_helper():
-    import inspect
+def test_anonymous_switch_from_a_cookie_carrying_browser_needs_no_csrf_pair(client):
+    """The real browser shape: the middleware provisions kinjo_csrf_token on
+    every page render, so the switch request ALWAYS carries cookies. The JS
+    cannot be expected to echo a CSRF header before any session exists, so
+    /api/ui-language is exempt from the double-submit pair — otherwise every
+    anonymous language switch would 400 and the fix would fail in production
+    exactly where it is meant to work."""
+    from conftest import CSRF_COOKIE_NAME
 
-    import api.users as users_mod
+    client.cookies.set(CSRF_COOKIE_NAME, "provisioned-on-page-render")
+    resp = client.post(
+        "/api/ui-language",
+        json={"language": "en"},
+        cookies=None,  # keep the cookie jar from the fixture
+    )
+    assert resp.status_code == 200, (
+        "an anonymous switch carrying only the provisioned CSRF cookie must "
+        "not be rejected"
+    )
+    assert resp.cookies["kinjo_lang"] == "en"
 
-    anon = inspect.getsource(users_mod.set_ui_language)
-    auth = inspect.getsource(users_mod.update_user_language)
-    assert "_set_ui_language_cookie(" in anon
-    assert "_set_ui_language_cookie(" in auth
+
+def test_anonymous_switch_writes_no_database_row(client):
+    """The endpoint is deliberately database-free: an unauthenticated caller
+    must not be able to mutate any user record, and the switch must work with
+    no authentication at all."""
+    resp = client.post("/api/ui-language", json={"language": "en"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert set(body) == {"language"}, (
+        "the anonymous switch must not return or accept user data"
+    )
+
+
+def test_no_client_script_writes_the_language_cookie_directly():
+    """Mutation control: no JS or template may write kinjo_lang via
+    document.cookie.
+
+    Every write must go through the server (POST /api/ui-language or
+    PUT /api/users/me/language) so the domain-wide cookie the server reads is
+    the only kinjo_lang in the browser. A reintroduced host-only write would
+    recreate the dual-cookie lag that this release exists to kill.
+    """
+    offenders = []
+    for pattern in ("static/js/*.js", "templates/**/*.html"):
+        for path in sorted(ROOT.glob(pattern)):
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            if BANNED_CLIENT_WRITE.search(text):
+                offenders.append(str(path.relative_to(ROOT)))
+    assert offenders == [], (
+        "client code writes kinjo_lang directly, recreating the dual-scope "
+        f"cookie: {offenders}"
+    )

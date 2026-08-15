@@ -39,6 +39,14 @@ CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 # Pre-auth entry points: no session exists when these are called, so there is
 # no ambient authority to forge against. Telemetry collectors are fire-and-
 # forget reporters with no user-controlled state changes.
+#
+# /api/ui-language is the same shape as login: it is how an anonymous visitor
+# switches the rendering language before authentication exists, it writes
+# nothing but the kinjo_lang cookie, and it touches no database row. The worst
+# a forged request can do is flip the victim's rendering language. Requiring
+# the double-submit pair here would break the anonymous switcher, whose very
+# purpose is to run before any session (and therefore before the browser has
+# been taught to echo a CSRF header) exists.
 CSRF_EXEMPT_PATHS = {
     "/token",
     "/api/auth/login",
@@ -51,6 +59,7 @@ CSRF_EXEMPT_PATHS = {
     "/api/telemetry/vitals",
     "/api/telemetry/errors",
     "/api/telemetry/api",
+    "/api/ui-language",
 }
 
 # Back-compat aliases for importers that want the named subsets.

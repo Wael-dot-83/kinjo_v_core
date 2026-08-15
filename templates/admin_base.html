@@ -401,9 +401,18 @@
             } catch (_error) {
               // Ignore storage failures and still persist via cookie.
             }
-            document.cookie =
-              "kinjo_lang=" + lang + "; path=/; max-age=31536000; SameSite=Lax";
-            window.location.reload();
+            // kinjo_lang is written by the server only (see ui_language.py):
+            // a host-only document.cookie write cannot overwrite the
+            // domain-wide cookie, so both survive with different values and
+            // the language renders one step behind. Ask the server instead.
+            fetch("/api/ui-language", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ language: lang }),
+            })
+              .catch(function () {})
+              .then(function () { window.location.reload(); });
           };
 
           /* ── Global error handler ─────────────────────────────── */
