@@ -21,6 +21,7 @@ An earlier guard existed but was scoped to design-tokens.css by name, so it
 could not see the next asset to change. The preflight below therefore
 discovers changed assets from the Git diff instead of from a hardcoded list.
 """
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -98,7 +99,61 @@ def _version_in_worktree(asset):
     return set(_references().get(asset, {}).keys())
 
 
-BASE = "origin/main~1"
+# The baseline is supplied by the caller, not derived from whatever branch
+# currently happens to be origin/main.
+#
+# This distinction is the whole point. A remediation release changes only the
+# reference, not the asset: admin_design_system.css is byte-identical between
+# c12ea5e and this commit, so a diff against origin/main (= c12ea5e) reports
+# no changed asset at all and the guard sees nothing. The bytes changed one
+# release earlier. The correct question is always "did the cache key move
+# relative to the baseline that introduced these bytes", so that baseline has
+# to be named explicitly.
+#
+#   normal release:  KINJO_RELEASE_BASE=<origin/main before the work started>
+#   this remediation: KINJO_RELEASE_BASE=dd58c93 (the pre-c12ea5e baseline)
+BASE = os.environ.get("KINJO_RELEASE_BASE", "origin/main")
+
+
+def stalled_assets(changed, before_versions, after_versions):
+    """Pure decision function, so the rule can be tested without git.
+
+    changed:          [asset filename, ...] whose bytes differ from BASE
+    before_versions:  {asset: set(cache keys at BASE)}
+    after_versions:   {asset: set(cache keys now)}
+    """
+    out = []
+    for asset in changed:
+        after = after_versions.get(asset) or set()
+        if not after:
+            continue  # not referenced from a shell template
+        if before_versions.get(asset, set()) == after:
+            out.append(asset)
+    return out
+
+
+def test_stalled_detection_handles_a_remediation_release():
+    """The three-state scenario, with no filename hardcoded and no git.
+
+      BASE          old bytes, referenced ?v=3.2
+      INTERMEDIATE  new bytes, still      ?v=3.2   <- the defect
+      FOLLOW-UP     same bytes as INTERMEDIATE,    ?v=3.3
+    """
+    asset = "some_shared_sheet.css"
+
+    # Against the BASE that introduced the new bytes, the intermediate release
+    # is a defect: the asset changed and the key did not move.
+    assert stalled_assets([asset], {asset: {"3.2"}}, {asset: {"3.2"}}) == [asset]
+
+    # The follow-up, measured against that same BASE, is correct.
+    assert stalled_assets([asset], {asset: {"3.2"}}, {asset: {"3.3"}}) == []
+
+    # And measured against the INTERMEDIATE release the asset is not in the
+    # changed set at all, so the guard must stay silent rather than guess.
+    assert stalled_assets([], {asset: {"3.2"}}, {asset: {"3.3"}}) == []
+
+    # An asset nothing references is not this guard's business.
+    assert stalled_assets([asset], {}, {}) == []
 
 
 def test_changed_static_assets_moved_their_cache_key():
@@ -113,15 +168,11 @@ def test_changed_static_assets_moved_their_cache_key():
     if not base:
         pytest.skip(f"{BASE} not resolvable in this checkout")
 
-    offenders = []
-    for asset_path in _changed_static_assets(base):
-        asset = asset_path.rsplit("/", 1)[-1]
-        before = _version_at_ref(base, asset)
-        after = _version_in_worktree(asset)
-        if not after:
-            continue  # not referenced from a shell template
-        if before == after:
-            offenders.append(f"{asset_path} changed but stayed at ?v={after}")
+    changed = [p.rsplit("/", 1)[-1] for p in _changed_static_assets(base)]
+    before = {a: _version_at_ref(base, a) for a in changed}
+    after = {a: _version_in_worktree(a) for a in changed}
+    offenders = [f"{a} changed but stayed at ?v={after[a]}"
+                 for a in stalled_assets(changed, before, after)]
     assert not offenders, (
         "changed immutable assets kept their cache key, so the edge will serve "
         f"the old bytes for a year: {offenders}"
