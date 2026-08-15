@@ -100,10 +100,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/js/parent-common.js?v=1.0"></script>
 <script>
-    const IS_EN = '{{ ui_lang }}' === 'en';
-    const T = (ar, en) => IS_EN ? en : ar;
-
     const STATUS_LABEL = {
         'DRAFT': T('مسودة', 'Draft'), 'SUBMITTED': T('مقدّم', 'Submitted'), 'PENDING_REVIEW': T('قيد المراجعة', 'Under Review'),
         'ACCEPTED': T('مقبول', 'Accepted'), 'REJECTED': T('مرفوض', 'Rejected'), 'WITHDRAWN': T('منسحب', 'Withdrawn'),
@@ -116,13 +114,8 @@
         'WAITLISTED': 'badge-soft badge-soft-info', 'ACTIVE': 'badge-soft badge-soft-success'
     };
 
-    function getHeaders() {
-        const headers = { 'Content-Type': 'application/json' };
-        const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
-                     (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
-                     (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
-        if (csrf) headers['X-CSRF-Token'] = csrf;
-        return headers;
+    function enrollmentStatusLabel(e) {
+        return (IS_EN ? e.status_en : e.status_ar) || STATUS_LABEL[e.status] || escHtml(e.status);
     }
 
     function formatDate(dateStr) {
@@ -180,7 +173,7 @@
                     <td class="py-3 px-4 text-muted"><i class="bi bi-building me-1"></i>${escHtml(e.kindergarten_name || '—')}</td>
                     <td class="py-3 px-4">
                         <span class="badge ${STATUS_CLASS[e.status] || 'badge-soft badge-soft-secondary'} rounded-pill px-3 py-2">
-                            ${STATUS_LABEL[e.status] || escHtml(e.status)}
+                            ${enrollmentStatusLabel(e)}
                         </span>
                     </td>
                     <td class="py-3 px-4 text-muted"><i class="bi bi-calendar3 me-1"></i>${formatDate(e.submitted_at || e.created_at)}</td>
@@ -197,10 +190,6 @@
                 </tr>
             `;
         }
-    }
-
-    function escHtml(s) {
-        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

@@ -198,6 +198,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/js/parent-common.js?v=1.0"></script>
 <script>
     const SERVER_TODAY = "{{ today.isoformat() if today else '' }}";
     const parentText = (key, arText, enText) =>
@@ -208,15 +209,6 @@
         (typeof appCurrentLocale === 'function'
             ? appCurrentLocale()
             : (document.documentElement.lang === 'en' ? 'en-US' : 'ar-JO'));
-
-    function getHeaders() {
-        const headers = { 'Content-Type': 'application/json' };
-        const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
-                     (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
-                     (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
-        if (csrf) headers['X-CSRF-Token'] = csrf;
-        return headers;
-    }
 
     function formatDate(dateStr) {
         if (!dateStr) return '';
@@ -506,10 +498,6 @@
         } else {
             window.location.href = `/my-reports?child_id=${childId}`;
         }
-    }
-
-    function escHtml(s) {
-        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

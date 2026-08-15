@@ -36,8 +36,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Parent"])
 
 # Single source of truth lives in parent_service; re-aliased here for the
-# children/enrollments list endpoints that still format status_ar inline.
+# children/enrollments list endpoints that still format status labels inline.
 _ENROLLMENT_STATUS_AR = parent_service.ENROLLMENT_STATUS_AR
+_ENROLLMENT_STATUS_EN = parent_service.ENROLLMENT_STATUS_EN
 
 _PARENT_DASHBOARD_CACHE_TTL = 60
 
@@ -164,6 +165,7 @@ def get_parent_children(
                     "kindergarten_name": kg.name_ar if kg else None,
                     "status": e.status.value,
                     "status_ar": _ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
+                    "status_en": _ENROLLMENT_STATUS_EN.get(e.status.value, e.status.value),
                 }
             )
 
@@ -244,6 +246,7 @@ def get_parent_enrollments(
                 "kindergarten_name": kg.name_ar if kg else None,
                 "status": e.status.value,
                 "status_ar": _ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
+                "status_en": _ENROLLMENT_STATUS_EN.get(e.status.value, e.status.value),
                 "submitted_at": e.submitted_at.isoformat() if e.submitted_at else None,
                 "created_at": e.created_at.isoformat() if e.created_at else None,
             }

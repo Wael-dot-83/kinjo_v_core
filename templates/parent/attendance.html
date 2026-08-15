@@ -118,10 +118,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/js/parent-common.js?v=1.0"></script>
 <script>
-    const IS_EN = '{{ ui_lang }}' === 'en';
-    const T = (ar, en) => IS_EN ? en : ar;
-
     const STATUS_LABEL = {
         'PRESENT': T('حاضر', 'Present'), 'ABSENT': T('غائب', 'Absent'),
         'LATE': T('متأخر', 'Late'), 'EXCUSED': T('غياب بعذر', 'Excused'),
@@ -133,15 +131,6 @@
         'LATE': 'badge-soft badge-soft-warning', 'EXCUSED': 'badge-soft badge-soft-info',
         'SICK': 'badge-soft badge-soft-secondary'
     };
-
-    function getHeaders() {
-        const headers = { 'Content-Type': 'application/json' };
-        const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
-                     (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
-                     (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
-        if (csrf) headers['X-CSRF-Token'] = csrf;
-        return headers;
-    }
 
     function formatDate(dateStr) {
         if (!dateStr) return '—';
@@ -256,10 +245,6 @@
                 </tr>
             `;
         }
-    }
-
-    function escHtml(s) {
-        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

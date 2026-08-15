@@ -301,6 +301,7 @@ def test_parent_frontend_pages_return_200(client, auth_headers_parent):
         "/parent/children",
         "/parent/attendance",
         "/parent/enrollments",
+        "/parent/profile",
         "/my-reports",
         "/profile",
         "/absence-requests",
@@ -308,6 +309,54 @@ def test_parent_frontend_pages_return_200(client, auth_headers_parent):
     for path in pages:
         resp = client.get(path, headers=auth_headers_parent)
         assert resp.status_code == 200, f"Expected 200 for {path}, got {resp.status_code}"
+
+
+def test_parent_shared_assets_are_served(client, auth_headers_parent):
+    """The shared parent JS helper and extracted profile CSS are reachable."""
+    for path in (
+        "/static/js/parent-common.js",
+        "/static/css/parent-profile.css",
+    ):
+        resp = client.get(path, headers=auth_headers_parent)
+        assert resp.status_code == 200, f"Expected 200 for {path}, got {resp.status_code}"
+
+
+def test_parent_pages_reference_shared_helpers(client, auth_headers_parent):
+    """Parent pages load parent-common.js and no longer inline the old helpers."""
+    pages = ["/parent/children", "/parent/attendance", "/parent/enrollments", "/parent/profile"]
+    for path in pages:
+        html = client.get(path, headers=auth_headers_parent).text
+        assert "/static/js/parent-common.js" in html, f"{path} missing parent-common.js"
+        assert "function getHeaders()" not in html, f"{path} still inlines getHeaders"
+
+
+def test_enrollment_items_expose_bilingual_status_labels(
+    client, test_db, parent_user, auth_headers_parent, sample_kindergarten
+):
+    """status_ar and status_en come from the backend single source (additive)."""
+    profile = _parent_profile(test_db, parent_user)
+    child = _create_child(test_db, profile, first_name="LabelKid")
+    test_db.add(
+        models.EnrollmentApplication(
+            child_id=child.id,
+            kindergarten_id=sample_kindergarten.id,
+            status=models.EnrollmentStatus.ACTIVE,
+            source="online",
+        )
+    )
+    test_db.commit()
+
+    children_resp = client.get("/api/parent/children", headers=auth_headers_parent)
+    assert children_resp.status_code == 200
+    enrollment = children_resp.json()["children"][0]["enrollments"][0]
+    assert enrollment["status_ar"] == "نشط"
+    assert enrollment["status_en"] == "Active"
+
+    enrollments_resp = client.get("/api/parent/enrollments", headers=auth_headers_parent)
+    assert enrollments_resp.status_code == 200
+    item = enrollments_resp.json()["enrollments"][0]
+    assert item["status_ar"] == "نشط"
+    assert item["status_en"] == "Active"
 
 
 def _second_kindergarten(test_db):

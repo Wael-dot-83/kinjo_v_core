@@ -28,6 +28,23 @@ ENROLLMENT_STATUS_AR = {
     "ACTIVE": "نشط",
 }
 
+ENROLLMENT_STATUS_EN = {
+    "DRAFT": "Draft",
+    "SUBMITTED": "Submitted",
+    "PENDING_REVIEW": "Under Review",
+    "ACCEPTED": "Accepted",
+    "REJECTED": "Rejected",
+    "WITHDRAWN": "Withdrawn",
+    "WAITLISTED": "Waitlisted",
+    "ACTIVE": "Active",
+}
+
+
+def enrollment_status_label(status_value: str, lang: str) -> str:
+    if lang == "en":
+        return ENROLLMENT_STATUS_EN.get(status_value, status_value)
+    return ENROLLMENT_STATUS_AR.get(status_value, status_value)
+
 DASHBOARD_ENROLLMENT_STATUS_PRIORITY = {
     models.EnrollmentStatus.ACTIVE: 0,
     models.EnrollmentStatus.PENDING_REVIEW: 1,
@@ -154,6 +171,7 @@ def build_dashboard_payload(db: Session, parent_profile: models.ParentProfile) -
                     "id": e.id,
                     "status": e.status.value,
                     "status_ar": ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
+                    "status_en": ENROLLMENT_STATUS_EN.get(e.status.value, e.status.value),
                     "kindergarten_id": e.kindergarten_id,
                     "kindergarten_name": (kgs_by_id[e.kindergarten_id].name_ar or kgs_by_id[e.kindergarten_id].name_en)
                     if e.kindergarten_id in kgs_by_id
