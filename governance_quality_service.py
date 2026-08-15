@@ -166,13 +166,36 @@ class GovernanceQualityService:
         if kindergarten_id is not None:
             base_filter.append(DailyReport.kindergarten_id == kindergarten_id)
 
-        rows = (
-            db.query(DailyReport.created_at)
+        # Bucket by hour in the database. This used to select every matching
+        # created_at and count hours in Python: `created_at` records when the
+        # row was written rather than when the report was filed, so on
+        # production every one of the 378k daily_reports fell inside the
+        # 7-day window and was shipped to the app on each page load. The scan
+        # itself costs ~250ms; materialising the rows cost ~2.4s on top.
+        #
+        # EXTRACT(hour FROM ...) is portable here: SQLAlchemy renders it
+        # natively on PostgreSQL and as CAST(STRFTIME('%H', ...) AS INTEGER)
+        # on SQLite. Both read the stored value, and daily_reports.created_at
+        # is timestamptz with the session at UTC, so the hour matches what the
+        # old Python path derived from the returned datetime. (An
+        # unconditionally dialect-specific expression is what broke this page
+        # in production before -- see the julianday note in admin_endpoints.)
+        hour_rows = (
+            db.query(
+                func.extract("hour", DailyReport.created_at).label("hour"),
+                func.count(DailyReport.id).label("count"),
+            )
             .filter(*base_filter)
+            .group_by(func.extract("hour", DailyReport.created_at))
             .all()
         )
 
-        if not rows:
+        # NULL created_at groups into its own bucket; it counted toward the
+        # old len(rows) denominator but never toward an hour, so keep it out
+        # of hour_counts and in total_reports.
+        total_reports = sum(int(r.count) for r in hour_rows)
+
+        if not total_reports:
             return {
                 "hour_distribution": {},
                 "peak_hour": None,
@@ -182,25 +205,24 @@ class GovernanceQualityService:
             }
 
         hour_counts: Counter = Counter()
-        for row in rows:
-            created_at = row[0]
-            if created_at:
-                if created_at.tzinfo is None:
-                    created_at = created_at.replace(tzinfo=timezone.utc)
-                hour = created_at.hour
-                hour_counts[hour] += 1
+        for row in hour_rows:
+            if row.hour is None:
+                continue
+            hour_counts[int(row.hour)] += int(row.count)
 
         distribution = {str(h): c for h, c in sorted(hour_counts.items())}
-        peak_hour = max(hour_counts, key=hour_counts.get) if hour_counts else None
+        # Iterate in hour order so an exact tie resolves to the earliest hour
+        # rather than to whichever row the driver happened to return first.
+        peak_hour = max(sorted(hour_counts), key=hour_counts.get) if hour_counts else None
 
         morning_count = sum(hour_counts.get(h, 0) for h in range(6, 10))
-        morning_rate = (morning_count / len(rows)) * 100.0 if rows else 0.0
+        morning_rate = (morning_count / total_reports) * 100.0
 
         return {
             "hour_distribution": distribution,
             "peak_hour": peak_hour,
             "morning_rate": round(morning_rate, 1),
-            "total_reports": len(rows),
+            "total_reports": total_reports,
             "period_days": days,
             "classification": (
                 "structured" if morning_rate >= 60

@@ -1996,7 +1996,13 @@ class TestFrontendRoutes:
         assert 'id="classificationBandChart"' in html
         assert 'id="classificationScoreChart"' in html
         assert 'id="classificationAspectChart"' in html
-        assert "/static/js/admin_classification.js?v=6" in html
+        # Pinning the exact version made this assertion rot the moment anyone
+        # bumped it (it sat at ?v=6 while the template served ?v=7). What
+        # actually matters is that the script is loaded *with* a cache-buster,
+        # since static assets are served immutable for a year.
+        assert re.search(
+            r'/static/js/admin_classification\.js\?v=[^"]+', html
+        ), "admin_classification.js must be loaded with a ?v= cache-buster"
 
         app.dependency_overrides.clear()
 

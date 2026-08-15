@@ -58,8 +58,8 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/dashboard-pro.css">
-<link rel="stylesheet" href="/static/css/dashboard-enhanced.css">
+<link rel="stylesheet" href="/static/css/dashboard-pro.css?v=1.0">
+<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=1.0">
 <style>
     /* Value update animation */
     .value-updated {
@@ -1687,9 +1687,9 @@
     }
 </script>
 <!-- Dashboard Logic -->
-<script src="/static/js/dashboard.js"></script>
-<script src="/static/js/decision_support.js"></script>
-<script src="/static/js/dashboard_filters.js"></script>
+<script src="/static/js/dashboard.js?v=1.0"></script>
+<script src="/static/js/decision_support.js?v=1.0"></script>
+<script src="/static/js/dashboard_filters.js?v=1.0"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof loadDecisionSupport === 'function') {

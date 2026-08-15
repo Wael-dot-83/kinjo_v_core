@@ -255,3 +255,63 @@ class TestGovernanceReminders:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert r.status_code == 403
+
+
+class TestGovernanceAggregatesInSQL:
+    """The governance page took 8-13s in production because three queries
+    selected raw rows and reduced them in Python. daily_reports.created_at
+    records when the row was written rather than when the report was filed,
+    so the "last 30 days" / "last 7 days" cutoffs matched all 378k rows and
+    shipped every one of them to the app on each page load -- against a
+    ~250ms database scan. These assert the reductions stay in SQL."""
+
+    def test_submission_timing_buckets_hours_in_the_database(self):
+        """Must GROUP BY hour rather than materialise every created_at."""
+        import inspect
+        from governance_quality_service import GovernanceQualityService
+
+        src = inspect.getsource(GovernanceQualityService.submission_timing_distribution)
+        assert 'func.extract("hour"' in src, (
+            "hour bucketing must happen in SQL"
+        )
+        assert ".group_by(" in src
+        assert "db.query(DailyReport.created_at)" not in src, (
+            "selecting every created_at is the regression this guards against"
+        )
+
+    def test_leaderboard_enrichment_aggregates_per_kindergarten(self):
+        """Morning rate and average approval hours must both reduce in SQL."""
+        import inspect
+        import admin_endpoints
+
+        src = inspect.getsource(admin_endpoints.get_governance_leaderboard)
+        # morning rate: one row per kindergarten, not one row per report
+        assert 'func.extract("hour"' in src
+        assert "db.query(models.DailyReport.kindergarten_id, models.DailyReport.created_at)" not in src, (
+            "pulling (kindergarten_id, created_at) for every report is the regression"
+        )
+        # avg approval: SQL on PostgreSQL, Python fallback elsewhere
+        assert 'dialect.name == "postgresql"' in src
+        assert 'func.extract(\n                    "epoch",' in src or 'func.extract("epoch"' in src
+
+    def test_submission_timing_matches_a_python_reduction(self, test_db, sample_daily_report):
+        """Same numbers as counting hours in Python, on real rows."""
+        from collections import Counter
+        from governance_quality_service import GovernanceQualityService
+
+        result = GovernanceQualityService().submission_timing_distribution(test_db)
+
+        rows = test_db.query(models.DailyReport.created_at).filter(
+            models.DailyReport.created_at
+            >= (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7))
+        ).all()
+        expected = Counter()
+        for (created_at,) in rows:
+            if created_at:
+                expected[created_at.hour] += 1
+
+        assert len(rows) > 0, "fixture must supply rows or this proves nothing"
+        assert result["total_reports"] == len(rows)
+        assert result["hour_distribution"] == {
+            str(h): c for h, c in sorted(expected.items())
+        }

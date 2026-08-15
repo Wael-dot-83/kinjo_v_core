@@ -33,7 +33,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from admin_reports_api import AdminAlertResponse, AdminAlertsListResponse
 
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import or_, func, and_, select
+from sqlalchemy import or_, func, and_, select, case
 from sqlalchemy.exc import SQLAlchemyError
 
 import models
@@ -5819,66 +5819,103 @@ async def get_governance_leaderboard(
         _total_submitted = {kg_id: c for kg_id, c in _total_rows}
         _rejected = {kg_id: c for kg_id, c in _rejected_rows}
 
-        # Morning rate per KG: batch query, compute in Python
-        _timing_rows = (
-            db.query(models.DailyReport.kindergarten_id, models.DailyReport.created_at)
-            .filter(
-                models.DailyReport.kindergarten_id.in_(kg_ids),
-                models.DailyReport.created_at >= _cutoff,
-            )
-            .all()
-        )
+        # Morning rate per KG. This used to select (kindergarten_id,
+        # created_at) for every report in the window and tally hours in
+        # Python. created_at reflects when the row was written, not when the
+        # report was filed, so in production all 378k daily_reports fall
+        # inside the 30-day cutoff and every one of them crossed the wire on
+        # each page load -- ~2.6s, against a ~250ms scan. Aggregate to one row
+        # per kindergarten instead.
+        #
+        # EXTRACT(hour FROM ...) renders natively on PostgreSQL and via
+        # STRFTIME on SQLite, so unlike the julianday expression noted below
+        # it is safe on both.
         from collections import defaultdict
-        _kg_timing = defaultdict(lambda: [0, 0])  # [morning, total]
-        from datetime import timezone as _tz
-        for _kg_id, _cat in _timing_rows:
-            if _cat:
-                if _cat.tzinfo is None:
-                    _cat = _cat.replace(tzinfo=_tz.utc)
-                _kg_timing[_kg_id][1] += 1
-                if _cat.hour < 10:
-                    _kg_timing[_kg_id][0] += 1
-        _morning_rates = {
-            _kg_id: round(_c[0] / _c[1] * 100, 1) if _c[1] > 0 else 0.0
-            for _kg_id, _c in _kg_timing.items()
-        }
-
-        # Average approval hours per KG. Compute timestamp deltas in Python:
-        # SQLite offers julianday(), while PostgreSQL does not, and using a
-        # dialect-specific expression here made the whole governance page fail
-        # in production.
-        _approval_rows = (
+        _hour = func.extract("hour", models.DailyReport.created_at)
+        _timing_rows = (
             db.query(
                 models.DailyReport.kindergarten_id,
-                models.DailyReport.approved_at,
-                models.DailyReport.submitted_at,
+                func.count(models.DailyReport.id).label("total"),
+                func.sum(case((_hour < 10, 1), else_=0)).label("morning"),
             )
             .filter(
                 models.DailyReport.kindergarten_id.in_(kg_ids),
                 models.DailyReport.created_at >= _cutoff,
-                models.DailyReport.status.in_([
-                    models.DailyReportStatus.APPROVED,
-                    models.DailyReportStatus.SENT_TO_PARENT,
-                ]),
-                models.DailyReport.approved_at.isnot(None),
-                models.DailyReport.submitted_at.isnot(None),
+                models.DailyReport.created_at.isnot(None),
             )
+            .group_by(models.DailyReport.kindergarten_id)
             .all()
         )
-        _approval_hours = defaultdict(list)
-        for _kg_id, _approved_at, _submitted_at in _approval_rows:
-            if _approved_at.tzinfo is None:
-                _approved_at = _approved_at.replace(tzinfo=_tz.utc)
-            if _submitted_at.tzinfo is None:
-                _submitted_at = _submitted_at.replace(tzinfo=_tz.utc)
-            _approval_hours[_kg_id].append(
-                (_approved_at - _submitted_at).total_seconds() / 3600
-            )
-        _avg_approval = {
-            _kg_id: round(sum(_hours) / len(_hours), 1)
-            for _kg_id, _hours in _approval_hours.items()
-            if _hours
+        _morning_rates = {
+            _kg_id: round(int(_morning or 0) / _total * 100, 1) if _total else 0.0
+            for _kg_id, _total, _morning in _timing_rows
         }
+
+        # Average approval hours per KG. An earlier version reached for
+        # julianday() unconditionally -- SQLite has it, PostgreSQL does not,
+        # and that took the whole governance page down in production. The
+        # lesson was to check the dialect, not to avoid SQL: the delta is
+        # averaged in the database on PostgreSQL and in Python everywhere
+        # else.
+        _approval_filters = (
+            models.DailyReport.kindergarten_id.in_(kg_ids),
+            models.DailyReport.created_at >= _cutoff,
+            models.DailyReport.status.in_([
+                models.DailyReportStatus.APPROVED,
+                models.DailyReportStatus.SENT_TO_PARENT,
+            ]),
+            models.DailyReport.approved_at.isnot(None),
+            models.DailyReport.submitted_at.isnot(None),
+        )
+
+        if db.bind is not None and db.bind.dialect.name == "postgresql":
+            # 323k of the 378k rows match these filters, so pulling the two
+            # timestamps per row to average them in Python cost ~2.8s per
+            # page load. EXTRACT(epoch FROM interval) has no SQLite
+            # equivalent, hence the explicit dialect branch -- the Python path
+            # below stays the reference implementation and is what the test
+            # suite exercises.
+            _avg_seconds = func.avg(
+                func.extract(
+                    "epoch",
+                    models.DailyReport.approved_at - models.DailyReport.submitted_at,
+                )
+            )
+            _avg_approval = {
+                _kg_id: round(float(_secs) / 3600, 1)
+                for _kg_id, _secs in (
+                    db.query(models.DailyReport.kindergarten_id, _avg_seconds)
+                    .filter(*_approval_filters)
+                    .group_by(models.DailyReport.kindergarten_id)
+                    .all()
+                )
+                if _secs is not None
+            }
+        else:
+            _approval_rows = (
+                db.query(
+                    models.DailyReport.kindergarten_id,
+                    models.DailyReport.approved_at,
+                    models.DailyReport.submitted_at,
+                )
+                .filter(*_approval_filters)
+                .all()
+            )
+            _approval_hours = defaultdict(list)
+            from datetime import timezone as _tz
+            for _kg_id, _approved_at, _submitted_at in _approval_rows:
+                if _approved_at.tzinfo is None:
+                    _approved_at = _approved_at.replace(tzinfo=_tz.utc)
+                if _submitted_at.tzinfo is None:
+                    _submitted_at = _submitted_at.replace(tzinfo=_tz.utc)
+                _approval_hours[_kg_id].append(
+                    (_approved_at - _submitted_at).total_seconds() / 3600
+                )
+            _avg_approval = {
+                _kg_id: round(sum(_hours) / len(_hours), 1)
+                for _kg_id, _hours in _approval_hours.items()
+                if _hours
+            }
 
         # Consistency index per KG from existing computation
         _consistency_per_kg = consistency.get("per_kindergarten", {})
