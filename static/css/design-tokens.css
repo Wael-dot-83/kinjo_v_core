@@ -182,8 +182,17 @@
    own --ce-* palette is scoped to #chartsExplorerRoot/.ce-hero and resolved
    correctly -- it was never part of this defect.)
 
-   Values are copied verbatim from admin_analytics_v2.css so nothing changes
-   visually on either page; this commit repairs ownership, not design.
+   What this does and does not change, stated precisely:
+
+     * No token VALUE is redesigned. Every value below is copied verbatim from
+       admin_analytics_v2.css, so this repairs ownership, not design.
+     * The analytics overview already resolved these tokens through that page
+       stylesheet and should therefore look exactly as it did.
+     * The Charts Explorer DOES change, intentionally. 115 references that were
+       invalid at computed-value time now resolve, so its previously-authored
+       typography, focus ring, radii and neutral surfaces render for the first
+       time. That is the point of the fix -- it is a rendering restoration, not
+       a no-op.
 
    KNOWN TENSION, deliberately not resolved here: --az-primary is #2563eb,
    which is one of the four competing "primary" values the note at the top of

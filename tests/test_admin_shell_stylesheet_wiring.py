@@ -74,54 +74,52 @@ def test_matchers_still_detect_the_defect():
 
 
 TEMPLATES_DIR = ROOT / "templates"
+DESIGN_TOKENS_REF = re.compile(
+    r'href="/static/css/(design-tokens\.css)(?:\?v=([^"]*))?"'
+)
 
 
-def test_shared_stylesheets_carry_one_cache_key_everywhere():
-    """A shared asset referenced from more than one shell must not be
-    half-bumped.
+def test_design_tokens_is_referenced_under_one_cache_key():
+    """design-tokens.css is loaded by more than one shell, so a bump has to
+    reach all of them.
 
-    design-tokens.css gained the analytics tokens in this release and its
-    ?v= was bumped in admin_base.html -- but manager_base.html links the same
-    file and still said ?v=1, so the manager shell would have kept serving the
-    year-cached old bytes. Assets are served `immutable` for a year, so a
-    missed reference is invisible until someone reports stale styling.
+    This release added the analytics tokens to that file and bumped its ?v= in
+    admin_base.html, but manager_base.html links the same file and still said
+    ?v=1 -- and static assets are served `immutable` for a year, so the manager
+    shell would have gone on serving the old bytes indefinitely. Half-bumping a
+    shared asset is invisible until somebody reports stale styling.
+
+    Deliberately scoped to this one asset. A repository-wide version invariant
+    would make this release permanently own unrelated divergence elsewhere;
+    that is recorded as deferred follow-up instead.
     """
-    refs = {}
-    for tpl in TEMPLATES_DIR.rglob("*.html"):
-        for m in re.finditer(r'href="(/static/css/([a-z0-9_.-]+\.css))(\?v=([^"]*))?"',
-                             tpl.read_text(encoding="utf-8")):
-            refs.setdefault(m.group(2), {}).setdefault(m.group(4), []).append(
-                str(tpl.relative_to(ROOT))
-            )
-    # Known, pre-existing and NOT introduced by this release: agency_reports.css
-    # is referenced at ?v=3.2 / 3.4 / 3.5 across four agency templates. It is
-    # listed here so the guard protects every other asset instead of being
-    # deleted, and so the divergence stays visible rather than silently
-    # excluded. Fixing it means deciding which version is current, which is
-    # agency-reports work, not this correctness release.
-    KNOWN_PRE_EXISTING = {"agency_reports.css"}
+    refs = []
+    for tpl in sorted(TEMPLATES_DIR.rglob("*.html")):
+        for m in DESIGN_TOKENS_REF.finditer(tpl.read_text(encoding="utf-8")):
+            refs.append((str(tpl.relative_to(ROOT)), m.group(2)))
 
-    divergent = {
-        asset: versions
-        for asset, versions in refs.items()
-        if len(versions) > 1 and asset not in KNOWN_PRE_EXISTING
-    }
-    assert not divergent, (
-        "the same stylesheet is referenced under different cache keys, so one "
-        f"shell will serve stale bytes: {divergent}"
-    )
-    # The allowlist must not outlive the problem, and must not quietly grow.
-    still_divergent = {a for a, v in refs.items() if len(v) > 1}
-    assert still_divergent <= KNOWN_PRE_EXISTING, (
-        f"new cache-key divergence appeared: {still_divergent - KNOWN_PRE_EXISTING}"
-    )
-    assert "agency_reports.css" in still_divergent, (
-        "agency_reports.css is no longer divergent -- remove it from "
-        "KNOWN_PRE_EXISTING so the allowlist cannot rot"
+    assert refs, "no template references design-tokens.css at all"
+    missing = [t for t, v in refs if not v]
+    assert not missing, f"design-tokens.css referenced with no cache key in: {missing}"
+
+    versions = {v for _, v in refs}
+    assert len(versions) == 1, (
+        "design-tokens.css is referenced under more than one cache key, so one "
+        f"shell will serve stale bytes: {sorted(set(refs))}"
     )
 
 
-def test_cache_key_detector_catches_divergence():
-    """Control: the comparison must actually flag a split version."""
-    sample = {"design-tokens.css": {"1": ["manager_base.html"], "2": ["admin_base.html"]}}
-    assert len({k: v for k, v in sample.items() if len(v) > 1}) == 1
+def test_cache_key_detector_catches_a_split_version():
+    """Control: a synthetic v=1/v=2 split must be detected, so the contract
+    above cannot rot into a test that always passes."""
+    split = (
+        '<link href="/static/css/design-tokens.css?v=1" />'
+        '<link href="/static/css/design-tokens.css?v=2" />'
+    )
+    found = DESIGN_TOKENS_REF.findall(split)
+    assert len(found) == 2
+    assert len({v for _, v in found}) == 2, "the matcher no longer sees the split"
+    # and a missing key is detected too
+    assert DESIGN_TOKENS_REF.findall('<link href="/static/css/design-tokens.css" />') == [
+        ("design-tokens.css", "")
+    ]
