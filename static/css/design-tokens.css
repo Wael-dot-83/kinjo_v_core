@@ -166,3 +166,52 @@
   --agency-chart-surface:var(--kinjo-color-bg-surface,#1e293b);
   --agency-chart-border:var(--kinjo-color-border,#3d8a67);
 }
+
+/* ---- Analytics surface primitives -------------------------------------
+   These were defined only in admin_analytics_v2.css, a page stylesheet that
+   /admin/analytics loads and /admin/analytics/charts does not. The Charts
+   Explorer's CSS references them 115 times, so on that page every one of
+   those declarations was invalid at computed-value time and dropped: the
+   whole type scale fell back to the inherited 16px, and
+   `outline: 2px solid var(--az-primary)` on :focus-visible resolved to
+   `outline: none`, leaving keyboard users with no visible focus at all.
+
+   Verified in the browser before this change: --font-ar, --az-primary*,
+   --slate-*, --r-* and --az-danger all resolved to the empty string on
+   :root, #chartsExplorerRoot, .ce-hero and .ce-kpi-strip__card. (The page's
+   own --ce-* palette is scoped to #chartsExplorerRoot/.ce-hero and resolved
+   correctly -- it was never part of this defect.)
+
+   Values are copied verbatim from admin_analytics_v2.css so nothing changes
+   visually on either page; this commit repairs ownership, not design.
+
+   KNOWN TENSION, deliberately not resolved here: --az-primary is #2563eb,
+   which is one of the four competing "primary" values the note at the top of
+   this file says everything should point at --kinjo-action instead. Aliasing
+   it would change rendered colour on both analytics pages, which is a design
+   decision and not this fix. Left as-is and flagged. */
+:root {
+  --font-ar: "Noto Sans Arabic", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+
+  --az-primary: #2563eb;
+  --az-primary-hover: #1d4ed8;
+  --az-primary-light: #eff6ff;
+  --az-primary-mid: #bfdbfe;
+  --az-danger: #dc2626;
+
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-full: 9999px;
+}
