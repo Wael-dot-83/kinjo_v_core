@@ -4,7 +4,8 @@ class AppI18n {
   constructor() {
     this.supported = ["ar", "en"];
     this.translations = {};
-    this.currentLang = this.resolveInitialLanguage();
+    this.clientPreferredLanguage = this.resolveClientPreference();
+    this.currentLang = this.clientPreferredLanguage || this.resolveInitialLanguage();
     this.languageApiStateKey = "kinjo_lang_api_state";
     this.serverLanguageApiState = this.resolveServerLanguageApiState();
     this.literalTranslations = {
@@ -708,8 +709,7 @@ class AppI18n {
     }
   }
 
-  resolveInitialLanguage() {
-    // Cookie is the server-authoritative source of truth; read it first.
+  resolveClientPreference() {
     const cookieMatch = document.cookie.match(
       /(?:^|;\s*)kinjo_lang=(ar|en)(?:;|$)/i,
     );
@@ -720,6 +720,14 @@ class AppI18n {
     const stored = localStorage.getItem("kinjo_lang");
     if (stored && this.supported.includes(stored)) {
       return stored;
+    }
+    return null;
+  }
+
+  resolveInitialLanguage() {
+    const clientPref = this.resolveClientPreference();
+    if (clientPref) {
+      return clientPref;
     }
     const htmlLang = document.documentElement.lang || "ar";
     return this.supported.includes(htmlLang) ? htmlLang : "ar";
@@ -1082,7 +1090,15 @@ class AppI18n {
   async init() {
     await Promise.all([this.loadLanguage("ar"), this.loadLanguage("en")]);
     const serverLang = await this.loadServerLanguagePreference();
-    if (serverLang) {
+    if (this.clientPreferredLanguage) {
+      if (serverLang && serverLang !== this.clientPreferredLanguage) {
+        this.persistServerLanguagePreference(this.clientPreferredLanguage).catch(
+          () => {
+            // Best-effort sync only.
+          },
+        );
+      }
+    } else if (serverLang) {
       this.currentLang = serverLang;
       this.persistClientLanguage(serverLang);
     }
@@ -1521,7 +1537,7 @@ class AppI18n {
   async toggleLanguage() {
     const nextLang = this.currentLang === "ar" ? "en" : "ar";
     this.setHtmlLanguage(nextLang);
-    this.persistServerLanguagePreference(nextLang);
+    await this.persistServerLanguagePreference(nextLang);
     window.location.reload();
   }
 }
