@@ -5879,7 +5879,7 @@ html[dir="ltr"] .dropdown-menu {
 .ce-sidebar .az-card {
   border: 1px solid var(--slate-200);
   border-radius: var(--r-md);
-  background-color: white;
+  background-color: var(--kinjo-color-bg-surface, #fff);
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.12),
     0 1px 2px rgba(0, 0, 0, 0.24);
@@ -5956,7 +5956,7 @@ html[dir="ltr"] .dropdown-menu {
   border-radius: var(--r-full);
   padding: 0.35rem 0.75rem;
   font: 500 0.6875rem/1 var(--font-ar);
-  color: var(--slate-600);
+  color: var(--kinjo-color-text-secondary, #475569);
   cursor: pointer;
   transition: all 0.12s ease;
   position: relative;
@@ -6021,12 +6021,12 @@ html[dir="ltr"] .dropdown-menu {
 
 /* Enhanced Chart Type Buttons */
 .ce-ct-btn {
-  background: #fff;
+  background: var(--kinjo-color-bg-surface, #fff);
   border: 1.5px solid var(--slate-200);
   border-radius: var(--r-sm);
   padding: 0.35rem 0.55rem;
   font: 500 0.6875rem/1 var(--font-ar);
-  color: var(--slate-600);
+  color: var(--kinjo-color-text-secondary, #475569);
   cursor: pointer;
   transition: all 0.12s ease;
   display: flex;
@@ -6176,7 +6176,7 @@ html[dir="ltr"] .dropdown-menu {
 
 .ce-empty-state__title {
   font: 600 1.5rem/1.3 var(--font-ar);
-  color: var(--slate-700);
+  color: var(--kinjo-color-text-primary, #334155);
   margin-bottom: 1rem;
   position: relative;
   z-index: 2;
@@ -6363,6 +6363,11 @@ html[dir="ltr"] .dropdown-menu {
   border-collapse: separate;
   border-spacing: 0;
   margin-top: 1rem;
+  /* Explicit surface: the table set no background and inherited
+     Bootstrap's white, which stayed white against the dark shell while
+     the inherited text went light -- white-on-white. */
+  background: var(--kinjo-color-bg-surface, #fff);
+  color: var(--kinjo-color-text-primary, #0f172a);
 }
 
 .ce-data-table th {
@@ -6408,7 +6413,7 @@ html[dir="ltr"] .dropdown-menu {
 
 .ce-data-table td {
   font: 400 0.8125rem/1.5 var(--font-ar);
-  color: var(--slate-700);
+  color: var(--kinjo-color-text-primary, #334155);
   vertical-align: middle;
   padding: 0.75rem 1rem;
   border-top: 1px solid var(--slate-100);
@@ -6446,12 +6451,12 @@ html[dir="ltr"] .dropdown-menu {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  background: #fff;
+  background: var(--kinjo-color-bg-surface, #fff);
   border: 1px solid var(--slate-200);
   border-radius: var(--r-full);
   padding: 0.35rem 0.75rem;
   font: 500 0.75rem/1.2 var(--font-ar);
-  color: var(--slate-600);
+  color: var(--kinjo-color-text-secondary, #475569);
   cursor: pointer;
   transition: all 0.12s;
   position: relative;
