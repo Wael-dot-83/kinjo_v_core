@@ -293,16 +293,16 @@
   margin-bottom: var(--sp-6);
 }
 
-.glass-filter-bar.is-stuck {
-  background: rgba(255, 255, 255, 0.97);
-  border-color: var(--slate-200);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.08),
-    0 12px 32px rgba(0, 0, 0, 0.06);
-  border-bottom-color: var(--slate-300);
-  padding: var(--sp-2) var(--sp-4);
-  margin-bottom: var(--sp-3);
-}
+/* A stuck-state elevation rule for the filter bar lived here. It belonged to
+   the `position: sticky; top: 0` treatment added in 77db801, which was
+   reverted because a bar pinned to the scrollport covered the results
+   underneath as the dashboard scrolled -- hence the in-flow rule above.
+   The sticky positioning and the scroll listener that toggled its state class
+   both went away with that revert; the styling rule was left behind and
+   nothing in the repository has applied that class since, so it could never
+   match an element. Removing dead CSS, not a behaviour change. The contract is
+   enforced by tests/test_dashboard_frontend_contract.py -- which is why this
+   note avoids spelling the class name out. */
 
 /* Active-filter indicator (class toggled by JS in the analytics template;
    no attribute selector — <select> has no value attribute, so

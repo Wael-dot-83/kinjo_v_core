@@ -76,6 +76,34 @@ def test_analytics_filter_bar_stays_in_the_document_flow():
     assert not re.search(r"scroller\.addEventListener\('scroll'", template)
 
 
+def test_nothing_applies_the_is_stuck_class_anywhere():
+    """The invariant behind the assertions above, checked across the whole
+    front end rather than in one template.
+
+    Scoping the guard to admin_analytics.html let the reverted design rot back
+    in halfway: the styling rule survived in admin_analytics_v2.css long after
+    its scroll listener was deleted, unreachable but present, and it was that
+    orphan that kept the contract test red. The bar is a page section, so the
+    class must exist in neither half -- no rule to apply, and nothing applying
+    one. A future sticky treatment has to change this test deliberately.
+    """
+    roots = (ROOT / "static", ROOT / "templates")
+    suffixes = {".css", ".js", ".html"}
+    offenders = []
+    for root in roots:
+        for path in root.rglob("*"):
+            if path.suffix.lower() not in suffixes or not path.is_file():
+                continue
+            if "vendor" in path.parts or "node_modules" in path.parts:
+                continue
+            if "is-stuck" in path.read_text(encoding="utf-8", errors="ignore"):
+                offenders.append(str(path.relative_to(ROOT)))
+    assert not offenders, (
+        "the reverted sticky filter-bar treatment is creeping back in: "
+        f"{offenders}"
+    )
+
+
 def test_risk_intelligence_cards_use_real_backend_field_names():
     """get_high_risk_children() returns {child_name, kindergarten_name,
     risk_type, risk_value, description, kindergarten_id} — not the
