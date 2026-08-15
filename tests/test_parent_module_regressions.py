@@ -462,3 +462,104 @@ def test_observability_parent_engagement_has_real_login_metric(
     assert logins["classification"] != "unknown"
     assert logins["total_parents"] == 1
     assert logins["avg_logins_per_parent"] >= 1.0
+
+
+def test_parent_enrollments_pagination_backward_compatible(
+    client, test_db, parent_user, auth_headers_parent, sample_kindergarten
+):
+    """No pagination params -> all rows returned exactly as before (mobile-safe)."""
+    profile = _parent_profile(test_db, parent_user)
+    child = _create_child(test_db, profile, first_name="PagKid")
+
+    kg2 = _second_kindergarten(test_db)
+    for kg in (sample_kindergarten, kg2):
+        test_db.add(
+            models.EnrollmentApplication(
+                child_id=child.id,
+                kindergarten_id=kg.id,
+                status=models.EnrollmentStatus.DRAFT,
+                source="online",
+            )
+        )
+    test_db.commit()
+
+    resp = client.get("/api/parent/enrollments", headers=auth_headers_parent)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 2
+    assert len(body["enrollments"]) == 2
+    assert "pagination" not in body
+
+
+def test_parent_enrollments_pagination_opt_in(
+    client, test_db, parent_user, auth_headers_parent, sample_kindergarten
+):
+    """Explicit page/page_size -> bounded page plus pagination metadata."""
+    profile = _parent_profile(test_db, parent_user)
+    child = _create_child(test_db, profile, first_name="PagKid2")
+
+    kgs = [sample_kindergarten, _second_kindergarten(test_db)]
+    for kg in kgs:
+        test_db.add(
+            models.EnrollmentApplication(
+                child_id=child.id,
+                kindergarten_id=kg.id,
+                status=models.EnrollmentStatus.DRAFT,
+                source="online",
+            )
+        )
+    test_db.commit()
+
+    resp = client.get(
+        "/api/parent/enrollments?page=1&page_size=1", headers=auth_headers_parent
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 2
+    assert len(body["enrollments"]) == 1
+    assert body["pagination"]["page"] == 1
+    assert body["pagination"]["page_size"] == 1
+    assert body["pagination"]["total_count"] == 2
+    assert body["pagination"]["total_pages"] == 2
+
+
+def test_parent_enrollments_pagination_rejects_oversized_page(
+    client, auth_headers_parent
+):
+    """page_size above the 100 cap is rejected with 422."""
+    resp = client.get(
+        "/api/parent/enrollments?page=1&page_size=101", headers=auth_headers_parent
+    )
+    assert resp.status_code == 422
+
+
+def test_parent_daily_reports_pagination_opt_in(
+    client, test_db, parent_user, auth_headers_parent, supervisor_user, sample_kindergarten
+):
+    """Daily reports paginate when requested and stay full-list by default."""
+    profile = _parent_profile(test_db, parent_user)
+    child = _create_child(test_db, profile, first_name="ReportKid")
+    for day in (1, 2, 3):
+        _create_report(
+            test_db, child, supervisor_user,
+            models.DailyReportStatus.SENT_TO_PARENT,
+            notes=f"report-{day}",
+            kindergarten_id=sample_kindergarten.id,
+            report_date=date(2024, 1, day),
+        )
+
+    full = client.get("/api/parent/daily-reports", headers=auth_headers_parent)
+    assert full.status_code == 200
+    full_body = full.json()
+    assert full_body["total"] == 3
+    assert len(full_body["reports"]) == 3
+    assert "pagination" not in full_body
+
+    paged = client.get(
+        "/api/parent/daily-reports?page=2&page_size=2", headers=auth_headers_parent
+    )
+    assert paged.status_code == 200
+    paged_body = paged.json()
+    assert paged_body["total"] == 3
+    assert len(paged_body["reports"]) == 1
+    assert paged_body["pagination"]["total_pages"] == 2

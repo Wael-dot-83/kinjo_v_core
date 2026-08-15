@@ -16,6 +16,8 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
 import validators
+from auth import jordan_phone_login_variants, normalize_jordan_phone
+from cache_service import cache_service
 from config import settings
 from database import get_db
 from dependencies import get_current_user
@@ -51,6 +53,14 @@ def _pick_primary_enrollment(enrollment_list: list) -> Optional[models.Enrollmen
     )[0]
 
 
+_PARENT_DASHBOARD_CACHE_TTL = 60
+_PARENT_ENGAGEMENT_CACHE_TTL = 300
+
+
+def _parent_dashboard_cache_key(user_id: int) -> str:
+    return f"parent:{user_id}:dashboard"
+
+
 @router.get("/parent/dashboard")
 def get_parent_dashboard(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get comprehensive parent dashboard"""
@@ -61,6 +71,13 @@ def get_parent_dashboard(current_user: models.User = Depends(get_current_user), 
 
     if not parent_profile:
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+
+    use_cache = not settings.TESTING
+    cache_key = _parent_dashboard_cache_key(current_user.id)
+    if use_cache:
+        cached = cache_service.get(cache_key)
+        if cached is not None:
+            return cached
 
     # Get all children
     children = db.query(models.Child).filter(
@@ -189,7 +206,7 @@ def get_parent_dashboard(current_user: models.User = Depends(get_current_user), 
 
         children_data.append(child_info)
 
-    return {
+    payload = {
         "parent": {
             "name": f"{parent_profile.first_name} {parent_profile.last_name}",
             "phone": parent_profile.phone_number,
@@ -198,6 +215,9 @@ def get_parent_dashboard(current_user: models.User = Depends(get_current_user), 
         "total_children": len(children),
         "notifications": [],
     }
+    if use_cache:
+        cache_service.set(cache_key, payload, ttl_seconds=_PARENT_DASHBOARD_CACHE_TTL)
+    return payload
 
 
 # --- Arabic status mapping ---
@@ -298,9 +318,7 @@ def get_parent_children(
         kgs_by_id = {kg.id: kg for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()}
 
     # Group enrollments by child_id
-    from collections import defaultdict as _dd
-
-    enrollments_by_child = _dd(list)
+    enrollments_by_child = defaultdict(list)
     for e in all_enrollments:
         enrollments_by_child[e.child_id].append(e)
 
@@ -344,6 +362,8 @@ def get_parent_children(
 def get_parent_enrollments(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    page: Optional[int] = Query(None, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
 ):
     """Get all enrollment applications for current parent's children"""
     if current_user.role != models.UserRole.PARENT:
@@ -366,9 +386,17 @@ def get_parent_enrollments(
     if not child_ids:
         return {"total": 0, "enrollments": []}
 
-    enrollments = (
-        db.query(models.EnrollmentApplication).filter(models.EnrollmentApplication.child_id.in_(child_ids)).all()
+    enrollments_query = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.child_id.in_(child_ids)
     )
+    total = enrollments_query.count()
+
+    if page is not None:
+        enrollments_query = enrollments_query.order_by(models.EnrollmentApplication.id.desc()).offset(
+            (page - 1) * page_size
+        ).limit(page_size)
+
+    enrollments = enrollments_query.all()
 
     children_by_id = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()}
     kg_ids = {e.kindergarten_id for e in enrollments if e.kindergarten_id}
@@ -396,10 +424,18 @@ def get_parent_enrollments(
             }
         )
 
-    return {
-        "total": len(enrollment_data),
+    response = {
+        "total": total,
         "enrollments": enrollment_data,
     }
+    if page is not None:
+        response["pagination"] = {
+            "page": page,
+            "page_size": page_size,
+            "total_count": total,
+            "total_pages": max(1, (total + page_size - 1) // page_size),
+        }
+    return response
 
 
 @router.get("/parent/attendance")
@@ -407,6 +443,8 @@ def get_parent_attendance(
     child_id: Optional[int] = Query(None),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
+    page: Optional[int] = Query(None, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -449,7 +487,14 @@ def get_parent_attendance(
     if not start_date and not end_date:
         query = query.filter(models.AttendanceLog.date >= datetime.now(_JORDAN_TZ).date() - timedelta(days=30))
 
-    records = query.order_by(models.AttendanceLog.date.desc()).all()
+    query = query.order_by(models.AttendanceLog.date.desc())
+
+    total = None
+    if page is not None:
+        total = query.count()
+        query = query.order_by(models.AttendanceLog.id.desc()).offset((page - 1) * page_size).limit(page_size)
+
+    records = query.all()
 
     # Get child names
     children = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()}
@@ -472,10 +517,18 @@ def get_parent_attendance(
             }
         )
 
-    return {
-        "total": len(attendance_data),
+    response = {
+        "total": total if total is not None else len(attendance_data),
         "attendance": attendance_data,
     }
+    if page is not None:
+        response["pagination"] = {
+            "page": page,
+            "page_size": page_size,
+            "total_count": total,
+            "total_pages": max(1, (total + page_size - 1) // page_size),
+        }
+    return response
 
 
 @router.get("/parent/children-list")
@@ -531,8 +584,6 @@ def update_parent_profile_self(
     db: Session = Depends(get_db),
 ):
     """Allow authenticated parent to update their own profile and language preference."""
-    from auth import jordan_phone_login_variants, normalize_jordan_phone
-
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
@@ -636,6 +687,7 @@ def update_parent_profile_self(
 
     db.commit()
     db.refresh(profile)
+    cache_service.delete(_parent_dashboard_cache_key(current_user.id))
 
     lang = _ulang(current_user)
     return {"detail": _api("Saved successfully", lang)}
@@ -646,6 +698,8 @@ def get_parent_daily_reports(
     child_id: Optional[int] = Query(None),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
+    page: Optional[int] = Query(None, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -690,7 +744,14 @@ def get_parent_daily_reports(
     except ValueError:
         logger.warning("INVALID_DATE_FILTER start_date=%r end_date=%r ignored", start_date, end_date)
 
-    reports = query.order_by(models.DailyReport.date.desc(), models.DailyReport.id.desc()).all()
+    query = query.order_by(models.DailyReport.date.desc(), models.DailyReport.id.desc())
+
+    total = None
+    if page is not None:
+        total = query.count()
+        query = query.offset((page - 1) * page_size).limit(page_size)
+
+    reports = query.all()
     children = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()}
 
     report_list = []
@@ -719,7 +780,15 @@ def get_parent_daily_reports(
             }
         )
 
-    return {
-        "total": len(report_list),
+    response = {
+        "total": total if total is not None else len(report_list),
         "reports": report_list,
     }
+    if page is not None:
+        response["pagination"] = {
+            "page": page,
+            "page_size": page_size,
+            "total_count": total,
+            "total_pages": max(1, (total + page_size - 1) // page_size),
+        }
+    return response
