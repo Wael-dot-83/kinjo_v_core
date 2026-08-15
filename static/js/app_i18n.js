@@ -795,7 +795,13 @@ class AppI18n {
     const safeLang = this.supported.includes(lang) ? lang : "ar";
     localStorage.setItem("kinjo_lang", safeLang);
     localStorage.setItem("admin_language", safeLang);
-    document.cookie = `kinjo_lang=${safeLang}; path=/; max-age=31536000; SameSite=Lax`;
+    // kinjo_lang is written by the server only (see ui_language.py): a
+    // host-only document.cookie write cannot overwrite the domain-wide
+    // cookie, so both survived with different values and the language
+    // rendered one step behind. Ask the server to set it instead.
+    fetch("/api/ui-language", { method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language: safeLang }) }).catch(function () {});
   }
 
   async loadLanguage(lang) {

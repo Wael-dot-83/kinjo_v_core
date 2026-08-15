@@ -1658,8 +1658,12 @@
       document.getElementById(lang === "en" ? "langBtnEn" : "langBtnAr"),
     );
     if (!saved) return;
-    document.cookie = `kinjo_lang=${lang};path=/;max-age=31536000`;
-    window.location.reload();
+    // Server owns kinjo_lang; see ui_language.py.
+    fetch("/api/ui-language", { method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language: lang }) })
+      .catch(function () {})
+      .then(function () { window.location.reload(); });
   }
 </script>
 {% endblock %}

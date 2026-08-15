@@ -231,8 +231,15 @@ function toggleLanguage() {
   document.documentElement.dir = newLang === "ar" ? "rtl" : "ltr";
   localStorage.setItem("kinjo_lang", newLang);
   localStorage.setItem("admin_language", newLang);
-  document.cookie = `kinjo_lang=${newLang}; path=/; max-age=31536000; SameSite=Lax`;
-  window.location.reload();
+  // kinjo_lang is written by the server only (see ui_language.py): a
+  // host-only document.cookie write cannot overwrite the domain-wide
+  // cookie, so both survived with different values and the language
+  // rendered one step behind. Ask the server to set it instead.
+  fetch("/api/ui-language", { method: "POST", credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ language: newLang }) })
+    .catch(function () {})
+    .then(function () { window.location.reload(); });
 }
 
 /**
