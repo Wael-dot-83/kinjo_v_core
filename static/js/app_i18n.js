@@ -791,14 +791,23 @@ class AppI18n {
     }
   }
 
-  persistClientLanguage(lang) {
+  persistClientLanguage(lang, syncCookie = false) {
     const safeLang = this.supported.includes(lang) ? lang : "ar";
     localStorage.setItem("kinjo_lang", safeLang);
     localStorage.setItem("admin_language", safeLang);
+    if (!syncCookie) {
+      return;
+    }
     // kinjo_lang is written by the server only (see ui_language.py): a
     // host-only document.cookie write cannot overwrite the domain-wide
     // cookie, so both survived with different values and the language
     // rendered one step behind. Ask the server to set it instead.
+    //
+    // This POST is deliberately reserved for explicit user switches. The
+    // page-load init path must NOT call it: the init runs asynchronously
+    // (it awaits the translation dictionaries), so a slow init on a page
+    // the user has just switched away from would persist the OLD language
+    // after the switch and flip the server cookie back.
     fetch("/api/ui-language", { method: "POST", credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ language: safeLang }) }).catch(function () {});
@@ -1090,7 +1099,7 @@ class AppI18n {
     const serverLang = await this.loadServerLanguagePreference();
     if (serverLang) {
       this.currentLang = serverLang;
-      this.persistClientLanguage(serverLang);
+      this.persistClientLanguage(serverLang, true);
     }
     this.patchRuntimeTranslators();
     await this.applyLanguage(this.currentLang, false);
@@ -1500,13 +1509,13 @@ class AppI18n {
     }
   }
 
-  setHtmlLanguage(lang) {
+  setHtmlLanguage(lang, syncCookie = false) {
     const safeLang = this.supported.includes(lang) ? lang : "ar";
     this.currentLang = safeLang;
     document.documentElement.lang = safeLang;
     document.documentElement.dir = safeLang === "ar" ? "rtl" : "ltr";
     this.updateBootstrapDirection(safeLang);
-    this.persistClientLanguage(safeLang);
+    this.persistClientLanguage(safeLang, syncCookie);
   }
 
   async applyLanguage(lang, persist = true) {
@@ -1526,7 +1535,7 @@ class AppI18n {
 
   async toggleLanguage() {
     const nextLang = this.currentLang === "ar" ? "en" : "ar";
-    this.setHtmlLanguage(nextLang);
+    this.setHtmlLanguage(nextLang, true);
     this.persistServerLanguagePreference(nextLang);
     window.location.reload();
   }

@@ -161,3 +161,34 @@ def test_no_client_script_writes_the_language_cookie_directly():
         "client code writes kinjo_lang directly, recreating the dual-scope "
         f"cookie: {offenders}"
     )
+
+
+def test_page_load_does_not_persist_the_language_cookie():
+    """Mutation control for the reload race: AppI18n's page-load path must
+    not POST /api/ui-language.
+
+    persistClientLanguage syncs the server cookie only when asked
+    (syncCookie=true). The init path (applyLanguage(currentLang, false))
+    must never ask: init runs asynchronously while awaiting the translation
+    dictionaries, so on a page the user has just switched away from, a slow
+    init would persist the OLD language after the switch and flip the server
+    cookie back -- the user's choice would be undone by their own page.
+    Only explicit user switches (toggleLanguage) may sync.
+    """
+    src = (ROOT / "static" / "js" / "app_i18n.js").read_text(encoding="utf-8")
+
+    assert "persistClientLanguage(safeLang, syncCookie)" in src, (
+        "persistClientLanguage must route the cookie sync through the "
+        "syncCookie gate"
+    )
+    assert "if (!syncCookie)" in src, (
+        "persistClientLanguage must skip the /api/ui-language POST unless "
+        "syncCookie is set"
+    )
+    assert "applyLanguage(this.currentLang, false)" in src, (
+        "the init path must not persist the cookie; a stale async init would "
+        "race the user's switch"
+    )
+    assert "setHtmlLanguage(nextLang, true)" in src, (
+        "toggleLanguage must sync the cookie explicitly"
+    )
