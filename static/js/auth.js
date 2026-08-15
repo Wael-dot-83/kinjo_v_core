@@ -3,6 +3,35 @@
  * Handles login, logout, MFA, session refresh, and authenticated fetch helpers.
  */
 
+/* One-time sweep for the pre-fix host-only kinjo_lang cookie.
+ *
+ * Releases before 2026-08-16 wrote kinjo_lang from client JS with
+ * document.cookie, which created a HOST-ONLY cookie on www.kinjordan.org
+ * alongside the server's DOMAIN cookie on .kinjordan.org. The browser sends
+ * the older host-only cookie first, so the server kept reading the stale
+ * value and the user's language switches did not stick.
+ *
+ * This DELETE is deliberately not a preference write: it only removes the
+ * stale host-only copy when the document exposes TWO kinjo_lang cookies
+ * (the server never writes host-only, so a duplicate can only be legacy).
+ * The server remains the sole writer. Deleting a cookie that does not exist
+ * is a no-op, so this is safe on every load.
+ */
+(function () {
+  try {
+    var parts = document.cookie.split(";");
+    var copies = 0;
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].trim().indexOf("kinjo_lang=") === 0) copies++;
+    }
+    if (copies < 2) return; // no coexisting copies to clean up
+    document.cookie =
+      "kinjo_lang=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  } catch (_ignore) {
+    // Deleting a cookie must never break a page.
+  }
+})();
+
 const AUTH_CONFIG = {
   userKey: "kinjo_user",
   loginEndpoint: "/token",

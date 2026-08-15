@@ -38,6 +38,14 @@ BANNED_CLIENT_WRITE = re.compile(
     re.IGNORECASE,
 )
 
+# The one sanctioned exception: a pure DELETION of the legacy host-only copy
+# (kinjo_lang=; + expires). It removes a stale cookie; it writes no value, so
+# it cannot recreate the dual-writer problem. Stripped before the ban check.
+LEGACY_DELETION = re.compile(
+    r'document\.cookie\s*=\s*"[^"]*kinjo_lang=;[^"]*"',
+    re.IGNORECASE,
+)
+
 
 def test_language_update_writes_cookie_matching_preference(client, auth_headers_admin):
     resp = client.put("/api/users/me/language", json={"user_lang": "en"}, headers=auth_headers_admin)
@@ -155,11 +163,28 @@ def test_no_client_script_writes_the_language_cookie_directly():
             if not path.is_file():
                 continue
             text = path.read_text(encoding="utf-8", errors="replace")
-            if BANNED_CLIENT_WRITE.search(text):
+            remainder = LEGACY_DELETION.sub("", text)
+            if BANNED_CLIENT_WRITE.search(remainder):
                 offenders.append(str(path.relative_to(ROOT)))
     assert offenders == [], (
         "client code writes kinjo_lang directly, recreating the dual-scope "
         f"cookie: {offenders}"
+    )
+
+
+def test_legacy_host_only_cookie_sweep_is_a_deletion_only():
+    """The one-time sweep that removes the pre-fix host-only kinjo_lang
+    cookie must be a pure deletion, gated on TWO copies being visible to the
+    document (the server never writes host-only, so a duplicate can only be
+    legacy). If it ever starts writing a value, the server is no longer the
+    sole writer and the dual-cookie bug is back."""
+    src = (ROOT / "static" / "js" / "auth.js").read_text(encoding="utf-8")
+    assert "kinjo_lang=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT" in src, (
+        "the sweep must delete, not write, the legacy cookie"
+    )
+    assert "copies < 2" in src, (
+        "the sweep must only fire when the document exposes two kinjo_lang "
+        "cookies"
     )
 
 
