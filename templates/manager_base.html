@@ -57,7 +57,6 @@
 
     <!-- KinJo Admin Design System -->
     <link rel="stylesheet" href="/static/css/admin_design_system.css?v=3.3" />
-    <link rel="stylesheet" href="/static/css/top-menu.css?v=1.1" />
     <link rel="stylesheet" href="/static/css/design-tokens.css?v=2" />
     <link rel="stylesheet" href="/static/css/layout.css?v=1.3" />
     <link rel="stylesheet" href="/static/css/components.css?v=1.3" />
@@ -72,7 +71,7 @@
          manager_design.css carried comments about rules it knew could never
          apply. Still before rtl.css so directional corrections keep the last
          word. -->
-    <link rel="stylesheet" href="/static/css/manager_design.css?v=2.0" />
+     <link rel="stylesheet" href="/static/css/manager_design.css?v=2.1" />
     {% if ui_dir == 'rtl' %}
     <link rel="stylesheet" href="/static/css/rtl.css?v=1.1" />
     {% endif %}
@@ -85,7 +84,7 @@
     <!-- Print stylesheet (media="print" — inert on screen). Wires the completed
          static/css/print.css so manager report/list pages print without the
          interactive shell while preserving the kindergarten context strip. -->
-    <link rel="stylesheet" href="/static/css/print.css?v=1.0" media="print" />
+    <link rel="stylesheet" href="/static/css/print.css?v=1.1" media="print" />
 
     <script src="/static/js/sanitize.js?v=1.0"></script>
     <script src="/static/js/page_load_timer.js?v=1.0"></script>
@@ -97,7 +96,7 @@
     {% block extra_head %}{% endblock %}
   </head>
 
-  <body class="admin-container">
+  <body class="admin-container mgr-module">
     <!-- Skip navigation link (accessibility) -->
     <a href="#admin-main-content" class="admin-skip-link">
       {% if ui_lang == 'en' %}Skip to main content{% else %}تخطي إلى المحتوى الرئيسي{% endif %}
@@ -105,12 +104,143 @@
 
     {% include 'components/impersonation_banner.html' %}
 
-    <div class="admin-layout" id="admin-layout">
+    <div class="mgr-sidebar-backdrop" id="mgrSidebarBackdrop" hidden></div>
+    <div class="admin-layout mgr-layout" id="admin-layout">
+      {% set current_path = request.url.path %}
+      {% set top_level_items = [
+        {"href": "/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم", "label_en": "Dashboard", "active_paths": ["/dashboard"]}
+      ] %}
+      {% set sidebar_sections = [
+        {
+          "id": "daily_ops",
+          "icon": "bi-calendar-check",
+          "label_ar": "العمليات اليومية",
+          "label_en": "Daily Operations",
+          "items": [
+            {"href": "/attendance/daily", "icon": "bi-calendar2-check", "label_ar": "الحضور اليومي", "label_en": "Daily Attendance", "active_paths": ["/attendance/daily"], "active_prefixes": ["/attendance/"]},
+            {"href": "/safety", "icon": "bi-shield-lock", "label_ar": "السلامة والحوادث", "label_en": "Safety & Incidents", "active_paths": ["/safety"], "active_prefixes": ["/safety", "/incidents"]},
+            {"href": "/messages", "icon": "bi-chat-dots", "label_ar": "الرسائل", "label_en": "Messages", "active_paths": ["/messages"], "active_prefixes": ["/messages", "/communication"]}
+          ]
+        },
+        {
+          "id": "requests_reports",
+          "icon": "bi-file-earmark-text",
+          "label_ar": "الطلبات والتقارير",
+          "label_en": "Requests & Reports",
+          "items": [
+            {"href": "/enrollments", "icon": "bi-person-plus", "label_ar": "طلبات التسجيل", "label_en": "Enrollment Requests", "active_paths": ["/enrollments"], "active_prefixes": ["/enrollments"]},
+            {"href": "/manager/absence-requests", "icon": "bi-calendar-x", "label_ar": "طلبات الغياب", "label_en": "Absence Requests", "active_paths": ["/manager/absence-requests"]},
+            {"href": "/daily-reports", "icon": "bi-journal-check", "label_ar": "التقارير اليومية", "label_en": "Daily Reports", "active_paths": ["/daily-reports"], "active_prefixes": ["/daily-reports", "/reports"]}
+          ]
+        },
+        {
+          "id": "management",
+          "icon": "bi-sliders",
+          "label_ar": "الإدارة",
+          "label_en": "Management",
+          "items": [
+            {"href": "/manager/kpi", "icon": "bi-bar-chart-line", "label_ar": "مؤشرات الأداء", "label_en": "KPIs", "active_paths": ["/manager/kpi"]},
+            {"href": "/manager/benchmarking", "icon": "bi-percent", "label_ar": "المقارنة المعيارية", "label_en": "Benchmarking", "active_paths": ["/manager/benchmarking"]},
+            {"href": "/classes", "icon": "bi-grid-3x3-gap", "label_ar": "الشعب", "label_en": "Classes", "active_paths": ["/classes"], "active_prefixes": ["/classes/"]},
+            {"href": "/manager/supervisors", "icon": "bi-person-badge", "label_ar": "المشرفات", "label_en": "Supervisors", "active_paths": ["/manager/supervisors"]},
+            {"href": "/children", "icon": "bi-people", "label_ar": "الأطفال", "label_en": "Children", "active_paths": ["/children"], "active_prefixes": ["/children/"]}
+          ]
+        }
+      ] %}
+      <aside id="admin-sidebar" class="mgr-sidebar" aria-label="{% if ui_lang == 'en' %}Manager navigation{% else %}تنقل مدير الحضانة{% endif %}">
+        <div class="mgr-sidebar-head">
+          <p class="mgr-sidebar-kicker">{% if ui_lang == 'en' %}Navigation{% else %}التنقل{% endif %}</p>
+          <button
+            type="button"
+            class="mgr-sidebar-close"
+            id="mgrSidebarClose"
+            aria-controls="admin-sidebar"
+            aria-label="{% if ui_lang == 'en' %}Close navigation{% else %}إغلاق القائمة{% endif %}"
+          >
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+          </button>
+        </div>
+        <nav class="mgr-sidebar-nav" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
+          <ul class="mgr-sidebar-menu">
+            {% for item in top_level_items %}
+              {% set item_state = namespace(active=current_path in item.active_paths) %}
+              <li>
+                <a
+                  href="{{ item.href }}"
+                  class="mgr-nav-item admin-nav-item{% if item_state.active %} active{% endif %}"
+                  {% if item_state.active %}aria-current="page"{% endif %}
+                >
+                  <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                  <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
+                </a>
+              </li>
+            {% endfor %}
+
+            {% for section in sidebar_sections %}
+              {% set section_state = namespace(active=false) %}
+              {% for item in section["items"] %}
+                {% set item_state = namespace(active=current_path in item.active_paths) %}
+                {% if item.active_prefixes is defined %}
+                  {% for prefix in item.active_prefixes %}
+                    {% if current_path.startswith(prefix) %}{% set item_state.active = true %}{% endif %}
+                  {% endfor %}
+                {% endif %}
+                {% if item_state.active %}{% set section_state.active = true %}{% endif %}
+              {% endfor %}
+
+              <li class="admin-nav-group{% if section_state.active %} open{% endif %}">
+                <button
+                  class="admin-nav-group-title{% if section_state.active %} active{% endif %}"
+                  type="button"
+                  id="mgr-nav-{{ section.id }}-btn"
+                  aria-expanded="{{ 'true' if section_state.active else 'false' }}"
+                  aria-controls="mgr-nav-{{ section.id }}"
+                >
+                  <i class="bi {{ section.icon }}" aria-hidden="true"></i>
+                  <span>{% if ui_lang == 'en' %}{{ section.label_en }}{% else %}{{ section.label_ar }}{% endif %}</span>
+                  <i class="bi bi-chevron-down mgr-nav-caret" aria-hidden="true"></i>
+                </button>
+                <ul class="mgr-nav-sub" id="mgr-nav-{{ section.id }}" role="list">
+                  {% for item in section["items"] %}
+                    {% set item_state = namespace(active=current_path in item.active_paths) %}
+                    {% if item.active_prefixes is defined %}
+                      {% for prefix in item.active_prefixes %}
+                        {% if current_path.startswith(prefix) %}{% set item_state.active = true %}{% endif %}
+                      {% endfor %}
+                    {% endif %}
+                    <li>
+                      <a
+                        href="{{ item.href }}"
+                        class="mgr-nav-item admin-nav-item{% if item_state.active %} active{% endif %}"
+                        {% if item_state.active %}aria-current="page"{% endif %}
+                      >
+                        <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                        <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
+                      </a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </li>
+            {% endfor %}
+          </ul>
+        </nav>
+      </aside>
+
       <!-- Main Content Area -->
       <main class="admin-main" id="admin-main-content">
         <!-- Header (Tier 1) -->
         <header class="admin-header">
           <div class="admin-header-left">
+            <button
+              type="button"
+              class="mgr-sidebar-toggle"
+              id="mgrSidebarToggle"
+              aria-controls="admin-sidebar"
+              aria-expanded="false"
+              aria-label="{% if ui_lang == 'en' %}Open navigation{% else %}فتح القائمة{% endif %}"
+            >
+              <i class="bi bi-list fs-5" aria-hidden="true"></i>
+            </button>
             {# Styling lives in .header-logo / .header-logo-wordmark (layout.css).
                The inline style this used to carry set color: #1F5E47, which an
                inline declaration made unoverridable — dark green text on the dark
@@ -241,112 +371,6 @@
             </div>
           </div>
         </header>
-
-        <!-- Main Navigation Bar (Tier 2) -->
-        <aside id="admin-sidebar">
-        <nav class="admin-top-nav" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
-          {% set current_path = request.url.path %}
-          {% set top_level_items = [
-            {"href": "/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم", "label_en": "Dashboard", "active_paths": ["/dashboard"]}
-          ] %}
-          {% set sidebar_sections = [
-            {
-              "id": "daily_ops",
-              "icon": "bi-calendar-check",
-              "label_ar": "العمليات اليومية",
-              "label_en": "Daily Operations",
-              "items": [
-                {"href": "/attendance/daily", "icon": "bi-calendar2-check", "label_ar": "الحضور اليومي", "label_en": "Daily Attendance", "active_paths": ["/attendance/daily"], "active_prefixes": ["/attendance/"]},
-                {"href": "/safety", "icon": "bi-shield-lock", "label_ar": "السلامة والحوادث", "label_en": "Safety & Incidents", "active_paths": ["/safety"], "active_prefixes": ["/safety", "/incidents"]},
-                {"href": "/messages", "icon": "bi-chat-dots", "label_ar": "الرسائل", "label_en": "Messages", "active_paths": ["/messages"], "active_prefixes": ["/messages", "/communication"]}
-              ]
-            },
-            {
-              "id": "requests_reports",
-              "icon": "bi-file-earmark-text",
-              "label_ar": "الطلبات والتقارير",
-              "label_en": "Requests & Reports",
-              "items": [
-                {"href": "/enrollments", "icon": "bi-person-plus", "label_ar": "طلبات التسجيل", "label_en": "Enrollment Requests", "active_paths": ["/enrollments"], "active_prefixes": ["/enrollments"]},
-                {"href": "/manager/absence-requests", "icon": "bi-calendar-x", "label_ar": "طلبات الغياب", "label_en": "Absence Requests", "active_paths": ["/manager/absence-requests"]},
-                {"href": "/daily-reports", "icon": "bi-journal-check", "label_ar": "التقارير اليومية", "label_en": "Daily Reports", "active_paths": ["/daily-reports"], "active_prefixes": ["/daily-reports", "/reports"]}
-              ]
-            },
-            {
-              "id": "management",
-              "icon": "bi-sliders",
-              "label_ar": "الإدارة",
-              "label_en": "Management",
-              "items": [
-                {"href": "/manager/kpi", "icon": "bi-bar-chart-line", "label_ar": "مؤشرات الأداء", "label_en": "KPIs", "active_paths": ["/manager/kpi"]},
-                {"href": "/manager/benchmarking", "icon": "bi-percent", "label_ar": "المقارنة المعيارية", "label_en": "Benchmarking", "active_paths": ["/manager/benchmarking"]},
-                {"href": "/classes", "icon": "bi-grid-3x3-gap", "label_ar": "الشعب", "label_en": "Classes", "active_paths": ["/classes"], "active_prefixes": ["/classes/"]},
-                {"href": "/manager/supervisors", "icon": "bi-person-badge", "label_ar": "المشرفات", "label_en": "Supervisors", "active_paths": ["/manager/supervisors"]},
-                {"href": "/children", "icon": "bi-people", "label_ar": "الأطفال", "label_en": "Children", "active_paths": ["/children"], "active_prefixes": ["/children/"]}
-              ]
-            }
-          ] %}
-          
-          <div class="top-nav-container">
-            <ul class="top-menu" role="menubar">
-              {% for item in top_level_items %}
-                {% set item_state = namespace(active=current_path in item.active_paths) %}
-                <li class="top-menu-item" role="presentation">
-                  <a href="{{ item.href }}" class="top-menu-link{% if item_state.active %} active{% endif %}" role="menuitem">
-                    <i class="bi {{ item.icon }}" aria-hidden="true"></i>
-                    <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
-                  </a>
-                </li>
-              {% endfor %}
-
-              {% for section in sidebar_sections %}
-                {% set section_state = namespace(active=false) %}
-                {% for item in section["items"] %}
-                  {% set item_state = namespace(active=current_path in item.active_paths) %}
-                  {% if item.active_prefixes is defined %}
-                    {% for prefix in item.active_prefixes %}
-                      {% if current_path.startswith(prefix) %}{% set item_state.active = true %}{% endif %}
-                    {% endfor %}
-                  {% endif %}
-                  {% if item_state.active %}{% set section_state.active = true %}{% endif %}
-                {% endfor %}
-
-                <li class="top-menu-item has-dropdown" role="presentation">
-                  <button class="top-menu-link dropdown-toggle{% if section_state.active %} active{% endif %}" type="button" aria-expanded="false" role="menuitem">
-                    <i class="bi {{ section.icon }}" aria-hidden="true"></i>
-                    <span>{% if ui_lang == 'en' %}{{ section.label_en }}{% else %}{{ section.label_ar }}{% endif %}</span>
-                  </button>
-                  <ul class="top-menu-dropdown shadow-sm" role="menu">
-                    {% set ns = namespace(current_group=none) %}
-                    {% for item in section["items"] %}
-                      {% set item_state = namespace(active=current_path in item.active_paths) %}
-                      {% if item.active_prefixes is defined %}
-                        {% for prefix in item.active_prefixes %}
-                          {% if current_path.startswith(prefix) %}{% set item_state.active = true %}{% endif %}
-                        {% endfor %}
-                      {% endif %}
-                      
-                      {% if item.group_label_ar is defined and item.group_label_ar != ns.current_group %}
-                        {% set ns.current_group = item.group_label_ar %}
-                        <li class="dropdown-group-label" role="presentation">
-                          {% if ui_lang == 'en' %}{{ item.group_label_en }}{% else %}{{ item.group_label_ar }}{% endif %}
-                        </li>
-                      {% endif %}
-                      
-                      <li role="presentation">
-                        <a href="{{ item.href }}" class="dropdown-item{% if item_state.active %} active{% endif %}" role="menuitem"{% if item_state.active %} aria-current="page"{% endif %}>
-                          <i class="bi {{ item.icon }}" aria-hidden="true"></i>
-                          <span>{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
-                        </a>
-                      </li>
-                    {% endfor %}
-                  </ul>
-                </li>
-              {% endfor %}
-            </ul>
-          </div>
-        </nav>
-        </aside>
 
         <!-- Page header + kindergarten context share one band.
 
@@ -560,7 +584,6 @@
           document.querySelectorAll(".admin-nav-group").forEach(function (group) {
             var btn   = group.querySelector(".admin-nav-group-title");
             if (!btn) return;
-            // Auto-expand if a child link is currently active
             var hasActive = !!group.querySelector(".admin-nav-item.active");
             if (hasActive || group.classList.contains("open")) {
               group.classList.add("open");
@@ -579,8 +602,41 @@
           });
         }
 
+        function setupSidebarDrawer() {
+          var layout = document.getElementById("admin-layout");
+          var sidebar = document.getElementById("admin-sidebar");
+          var toggle = document.getElementById("mgrSidebarToggle");
+          var closeBtn = document.getElementById("mgrSidebarClose");
+          var backdrop = document.getElementById("mgrSidebarBackdrop");
+          if (!layout || !sidebar || !toggle) return;
+
+          function setOpen(open) {
+            layout.classList.toggle("mgr-sidebar-open", open);
+            toggle.setAttribute("aria-expanded", open ? "true" : "false");
+            if (backdrop) backdrop.hidden = !open;
+            if (open) {
+              var first = sidebar.querySelector("a, button");
+              if (first) first.focus();
+            } else {
+              toggle.focus();
+            }
+          }
+
+          toggle.addEventListener("click", function () {
+            setOpen(!layout.classList.contains("mgr-sidebar-open"));
+          });
+          if (closeBtn) closeBtn.addEventListener("click", function () { setOpen(false); });
+          if (backdrop) backdrop.addEventListener("click", function () { setOpen(false); });
+          document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && layout.classList.contains("mgr-sidebar-open")) {
+              setOpen(false);
+            }
+          });
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
           setupNavGroups();
+          setupSidebarDrawer();
           setupNotifications();
         });
 

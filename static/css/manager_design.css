@@ -80,8 +80,227 @@
   --mgr-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.05);
   --mgr-shadow-raised: 0 2px 6px rgba(15, 23, 42, 0.05), 0 10px 24px -8px rgba(31, 94, 71, 0.18);
 
-  --mgr-speed: 160ms;
-  --mgr-ease: cubic-bezier(0.4, 0, 0.2, 1);
+   --mgr-speed: 160ms;
+   --mgr-ease: cubic-bezier(0.4, 0, 0.2, 1);
+   --mgr-sidebar-width: 280px;
+   --mgr-sidebar-z: 1120;
+}
+
+/* ==========================================================================
+   0. Persistent manager sidebar — fixed to the logical start edge
+   --------------------------------------------------------------------------
+   Arabic (default, dir=rtl) pins the rail to the right. English (dir=ltr)
+   pins it to the left. Logical properties do the flip; no left/right
+   hardcoding, so a language switch cannot leave the rail on the wrong edge.
+   ========================================================================== */
+.mgr-layout {
+  position: relative;
+}
+
+.mgr-module .mgr-sidebar {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+  width: var(--mgr-sidebar-width);
+  z-index: var(--mgr-sidebar-z);
+  display: flex;
+  flex-direction: column;
+  background: var(--admin-nav-bg, #fff);
+  border-inline-end: 1px solid var(--admin-nav-border, #dceae3);
+  overflow: hidden;
+}
+
+.mgr-module .admin-main {
+  margin-inline-start: var(--mgr-sidebar-width);
+  min-width: 0;
+}
+
+.mgr-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.5rem;
+  flex-shrink: 0;
+}
+
+.mgr-sidebar-kicker {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--admin-nav-ink-muted, #6b7280);
+}
+
+.mgr-sidebar-close,
+.mgr-sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.mgr-sidebar-toggle {
+  color: var(--admin-header-ink, #fff);
+}
+
+.mgr-sidebar-close:focus-visible,
+.mgr-sidebar-toggle:focus-visible {
+  outline: 2px solid var(--admin-nav-accent, #1e40af);
+  outline-offset: 2px;
+}
+
+.mgr-sidebar-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem 1.25rem;
+}
+
+.mgr-sidebar-menu,
+.mgr-nav-sub {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mgr-nav-item,
+.admin-nav-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--admin-nav-ink, #374151);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mgr-nav-item i,
+.admin-nav-group-title i:first-child {
+  width: 1.15rem;
+  color: var(--admin-nav-ink-muted, #6b7280);
+  flex-shrink: 0;
+}
+
+.mgr-nav-caret {
+  margin-inline-start: auto;
+  font-size: 0.8rem;
+  transition: transform var(--mgr-speed) var(--mgr-ease);
+}
+
+.admin-nav-group.open .mgr-nav-caret {
+  transform: rotate(180deg);
+}
+
+.mgr-nav-item:hover,
+.admin-nav-group-title:hover {
+  background: var(--admin-nav-hover, #f3f4f6);
+  color: var(--admin-nav-ink-strong, #111827);
+}
+
+.mgr-nav-item:focus-visible,
+.admin-nav-group-title:focus-visible {
+  outline: 2px solid var(--admin-nav-accent, #1e40af);
+  outline-offset: 2px;
+}
+
+.mgr-nav-item.active,
+.admin-nav-group-title.active {
+  background: var(--admin-nav-accent-soft, #eff3fd);
+  color: var(--admin-nav-accent, #1e40af);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--admin-nav-accent, #1e40af);
+}
+
+[dir="rtl"] .mgr-nav-item.active,
+[dir="rtl"] .admin-nav-group-title.active {
+  box-shadow: inset -3px 0 0 var(--admin-nav-accent, #1e40af);
+}
+
+.mgr-nav-item.active i,
+.admin-nav-group-title.active i {
+  color: var(--admin-nav-accent, #1e40af);
+}
+
+.mgr-nav-sub {
+  display: none;
+  padding-inline-start: 0.75rem;
+  margin-block: 0.15rem 0.35rem;
+}
+
+.admin-nav-group.open > .mgr-nav-sub {
+  display: block;
+}
+
+.mgr-nav-sub .mgr-nav-item {
+  font-size: 0.875rem;
+  padding-block: 0.5rem;
+}
+
+.mgr-sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 991.98px) {
+  .mgr-module .admin-main {
+    margin-inline-start: 0;
+  }
+
+  .mgr-module .mgr-sidebar {
+    transform: translateX(-102%);
+    box-shadow: none;
+  }
+
+  [dir="rtl"] .mgr-module .mgr-sidebar {
+    transform: translateX(102%);
+  }
+
+  .mgr-layout.mgr-sidebar-open .mgr-sidebar,
+  [dir="rtl"] .mgr-layout.mgr-sidebar-open .mgr-sidebar {
+    transform: translateX(0);
+    box-shadow: var(--mgr-shadow-raised);
+  }
+
+  .mgr-sidebar-toggle,
+  .mgr-sidebar-close {
+    display: inline-flex;
+  }
+
+  .mgr-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--mgr-sidebar-z) - 1);
+    background: rgba(15, 23, 42, 0.4);
+  }
+
+  .mgr-sidebar-backdrop[hidden] {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mgr-module .mgr-sidebar,
+  .mgr-nav-caret {
+    transition: none;
+  }
 }
 
 /* ==========================================================================
