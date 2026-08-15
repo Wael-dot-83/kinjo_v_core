@@ -9,11 +9,11 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 import models
 import validators
+import parent_service
 from admin_security import log_audit_event
 from audit_actions import AuditAction
 from auth import jordan_phone_login_variants, normalize_jordan_phone
@@ -35,27 +35,11 @@ def _ulang(user) -> str:
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Parent"])
 
-_DASHBOARD_ENROLLMENT_STATUS_PRIORITY = {
-    models.EnrollmentStatus.ACTIVE: 0,
-    models.EnrollmentStatus.PENDING_REVIEW: 1,
-    models.EnrollmentStatus.WAITLISTED: 2,
-}
-
-
-def _pick_primary_enrollment(enrollment_list: list) -> Optional[models.EnrollmentApplication]:
-    if not enrollment_list:
-        return None
-    return sorted(
-        enrollment_list,
-        key=lambda e: (
-            _DASHBOARD_ENROLLMENT_STATUS_PRIORITY.get(e.status, len(_DASHBOARD_ENROLLMENT_STATUS_PRIORITY)),
-            -(e.id or 0),
-        ),
-    )[0]
-
+# Single source of truth lives in parent_service; re-aliased here for the
+# children/enrollments list endpoints that still format status_ar inline.
+_ENROLLMENT_STATUS_AR = parent_service.ENROLLMENT_STATUS_AR
 
 _PARENT_DASHBOARD_CACHE_TTL = 60
-_PARENT_ENGAGEMENT_CACHE_TTL = 300
 
 
 def _parent_dashboard_cache_key(user_id: int) -> str:
@@ -74,7 +58,6 @@ def get_parent_dashboard(
 ) -> Dict[str, Any]:
     """Get comprehensive parent dashboard"""
     current_user = parent.user
-    parent_profile = parent.profile
 
     use_cache = not settings.TESTING
     cache_key = _parent_dashboard_cache_key(current_user.id)
@@ -83,158 +66,10 @@ def get_parent_dashboard(
         if cached is not None:
             return cached
 
-    # Get all children
-    children = db.query(models.Child).filter(
-        models.Child.parent_id == parent_profile.id,
-        models.Child.deleted_at.is_(None),
-    ).all()
-
-    today = datetime.now(_JORDAN_TZ).date()
-    child_ids = [c.id for c in children]
-
-    # Batch-fetch enrollments, attendance, and latest reports — avoids 3N per-child queries
-    enrollments_by_child: dict = {}
-    attendance_by_child: dict = {}
-    latest_report_by_child: dict = {}
-
-    if child_ids:
-        enrollments_by_child = defaultdict(list)
-        for e in db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id.in_(child_ids),
-            models.EnrollmentApplication.status.in_(
-                [
-                    models.EnrollmentStatus.ACTIVE,
-                    models.EnrollmentStatus.WAITLISTED,
-                    models.EnrollmentStatus.PENDING_REVIEW,
-                ]
-            ),
-        ).all():
-            enrollments_by_child[e.child_id].append(e)
-        attendance_by_child = {
-            a.child_id: a
-            for a in db.query(models.AttendanceLog)
-            .filter(
-                models.AttendanceLog.child_id.in_(child_ids),
-                models.AttendanceLog.date == today,
-            )
-            .all()
-        }
-
-        subq = (
-            db.query(
-                models.DailyReport.child_id,
-                func.max(models.DailyReport.date).label("max_date"),
-            )
-            .filter(
-                models.DailyReport.child_id.in_(child_ids),
-                models.DailyReport.status == models.DailyReportStatus.SENT_TO_PARENT,
-            )
-            .group_by(models.DailyReport.child_id)
-            .subquery()
-        )
-        for r in (
-            db.query(models.DailyReport)
-            .join(
-                subq,
-                (models.DailyReport.child_id == subq.c.child_id) & (models.DailyReport.date == subq.c.max_date),
-            )
-            .all()
-        ):
-            latest_report_by_child[r.child_id] = r
-
-    kgs_by_id = {}
-    if child_ids:
-        kg_ids = {
-            e.kindergarten_id
-            for enrollment_list in enrollments_by_child.values()
-            for e in enrollment_list
-            if e.kindergarten_id
-        }
-        if kg_ids:
-            kgs_by_id = {
-                kg.id: kg for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
-            }
-
-    children_data = []
-    for child in children:
-        enrollment_list = enrollments_by_child.get(child.id, [])
-        primary_enrollment = _pick_primary_enrollment(enrollment_list)
-        attendance = attendance_by_child.get(child.id)
-        latest_report = latest_report_by_child.get(child.id)
-        kg = kgs_by_id.get(primary_enrollment.kindergarten_id) if primary_enrollment else None
-
-        child_info = {
-            "id": child.id,
-            "first_name": child.first_name,
-            "last_name": child.last_name,
-            "gender": child.gender.value
-            if hasattr(child.gender, "value")
-            else (str(child.gender) if child.gender else None),
-            "kindergarten_name": (kg.name_ar or kg.name_en) if kg else None,
-            "age_months": validators.validate_age_months(child.date_of_birth),
-            "enrollment": None,
-            "enrollments": [
-                {
-                    "id": e.id,
-                    "status": e.status.value,
-                    "status_ar": _ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
-                    "kindergarten_id": e.kindergarten_id,
-                    "kindergarten_name": (kgs_by_id[e.kindergarten_id].name_ar or kgs_by_id[e.kindergarten_id].name_en)
-                    if e.kindergarten_id in kgs_by_id
-                    else None,
-                    "class_id": e.class_id,
-                }
-                for e in enrollment_list
-            ],
-            "attendance_today": None,
-            "latest_report_date": None,
-        }
-
-        if primary_enrollment:
-            child_info["enrollment"] = {
-                "status": primary_enrollment.status.value,
-                "kindergarten_id": primary_enrollment.kindergarten_id,
-                "class_id": primary_enrollment.class_id,
-            }
-
-        if attendance:
-            child_info["attendance_today"] = {
-                "checked_in": attendance.check_in_at.strftime("%H:%M") if attendance.check_in_at else None,
-                "checked_out": attendance.check_out_at.strftime("%H:%M") if attendance.check_out_at else None,
-            }
-
-        if latest_report:
-            child_info["latest_report_date"] = (
-                latest_report.date.isoformat() if isinstance(latest_report.date, date) else latest_report.date
-            )
-
-        children_data.append(child_info)
-
-    payload = {
-        "parent": {
-            "name": f"{parent_profile.first_name} {parent_profile.last_name}",
-            "phone": parent_profile.phone_number,
-        },
-        "children": children_data,
-        "total_children": len(children),
-        "notifications": [],
-    }
+    payload = parent_service.build_dashboard_payload(db, parent.profile)
     if use_cache:
         cache_service.set(cache_key, payload, ttl_seconds=_PARENT_DASHBOARD_CACHE_TTL)
     return payload
-
-
-# --- Arabic status mapping ---
-_ENROLLMENT_STATUS_AR = {
-    "DRAFT": "مسودة",
-    "SUBMITTED": "مقدّم",
-    "PENDING_REVIEW": "قيد المراجعة",
-    "ACCEPTED": "مقبول",
-    "REJECTED": "مرفوض",
-    "WITHDRAWN": "منسحب",
-    "WAITLISTED": "قائمة الانتظار",
-    "ACTIVE": "نشط",
-}
 
 
 @router.get("/parent/profile")
