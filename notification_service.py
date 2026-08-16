@@ -87,18 +87,9 @@ def create_daily_report_notification(
     db.add_all(notifications)
     db.commit()
 
-    # Queue async tasks for email/push
-    for notification in notifications:
-        if notification.channel == models.NotificationChannel.EMAIL:
-            try:
-                send_email_notification.delay(notification.id)
-            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                logger.warning(f"Failed to queue email notification: {e}")
-        elif notification.channel == models.NotificationChannel.PUSH:
-            try:
-                send_push_notification.delay(notification.id)
-            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                logger.warning(f"Failed to queue push notification: {e}")
+    # Queue async tasks for email/push. The rows are already durable; any
+    # broker-side failure is intentionally left PENDING for the beat retry sweep.
+    _queue_notification_tasks(notifications)
 
     return notifications[0] if notifications else None
 
@@ -252,10 +243,20 @@ def _build_notification_payload(message: models.Message) -> dict:
 
 def _queue_notification_tasks(notifications: List[models.Notification]) -> None:
     for notification in notifications:
-        if notification.channel == models.NotificationChannel.EMAIL:
-            send_email_notification.delay(notification.id)
-        elif notification.channel == models.NotificationChannel.PUSH:
-            send_push_notification.delay(notification.id)
+        try:
+            if notification.channel == models.NotificationChannel.EMAIL:
+                send_email_notification.delay(notification.id)
+            elif notification.channel == models.NotificationChannel.PUSH:
+                send_push_notification.delay(notification.id)
+        except Exception as exc:
+            # Celery/Kombu transport exception types vary by broker. This is an
+            # external-dispatch boundary: retain the committed row and let the
+            # bounded stale-PENDING sweep recover it.
+            logger.warning(
+                "Failed to queue notification id=%s error_type=%s; pending retry",
+                notification.id,
+                type(exc).__name__,
+            )
 
 
 def dispatch_message_notification_tasks(

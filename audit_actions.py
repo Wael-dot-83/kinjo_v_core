@@ -148,6 +148,9 @@ class AuditAction:
     MESSAGE_ARCHIVED = "MESSAGE_ARCHIVED"
     MESSAGE_UNARCHIVED = "MESSAGE_UNARCHIVED"
     MESSAGE_ATTACHMENT_ADDED = "MESSAGE_ATTACHMENT_ADDED"
+    MESSAGE_ATTACHMENT_ACCESS_AUTHORIZED = "MESSAGE_ATTACHMENT_ACCESS_AUTHORIZED"
+    # Retained for historical audit rows; new FileResponse/redirect flows cannot
+    # truthfully assert that the client received bytes.
     MESSAGE_ATTACHMENT_DOWNLOADED = "MESSAGE_ATTACHMENT_DOWNLOADED"
 
     # Classification cache

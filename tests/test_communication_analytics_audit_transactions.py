@@ -81,7 +81,7 @@ def test_message_view_audit_is_durable_without_message_content(
     _assert_audit_durable(test_db, AuditAction.MESSAGE_VIEWED)
 
 
-def test_attachment_download_audit_is_durable(
+def test_attachment_access_authorization_audit_is_durable(
     monkeypatch, client, test_db, admin_user, tmp_path
 ):
     attachment_path = tmp_path / "attachment.txt"
@@ -116,7 +116,8 @@ def test_attachment_download_audit_is_durable(
     response = client.get(f"/comm/messages/attachments/{attachment.id}")
 
     assert response.status_code == 200, response.text
-    _assert_audit_durable(test_db, AuditAction.MESSAGE_ATTACHMENT_DOWNLOADED)
+    _assert_audit_durable(test_db, AuditAction.MESSAGE_ATTACHMENT_ACCESS_AUTHORIZED)
+    assert _audit_count(test_db, AuditAction.MESSAGE_ATTACHMENT_DOWNLOADED) == 0
 
 
 def test_sync_export_rejection_audit_is_durable(test_db, admin_user):

@@ -19,7 +19,7 @@ celery_app = Celery(
     backend=settings.CELERY_RESULT_BACKEND,
     include=[
         "messaging_tasks", "charts.tasks", "backup_tasks", "import_tasks", "export_tasks",
-        "heatmap_tasks", "chart_export_tasks",
+        "heatmap_tasks", "chart_export_tasks", "notification_tasks",
     ],
 )
 
@@ -34,6 +34,10 @@ celery_app.conf.update(
     beat_schedule={
         "dispatch-scheduled-messages": {
             "task": "messaging_tasks.dispatch_scheduled_messages",
+            "schedule": 60.0,
+        },
+        "redispatch-stale-pending-notifications": {
+            "task": "notification_tasks.redispatch_stale_pending_notifications",
             "schedule": 60.0,
         },
         # Heat map dataset rebuild. Beat runs on UTC (see timezone/enable_utc above),

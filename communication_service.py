@@ -1145,7 +1145,8 @@ def preview_audience(
     # Get basic info about recipients (without sensitive data)
     recipients = []
     if recipient_ids:
-        users = db.query(models.User).filter(models.User.id.in_(recipient_ids[:10])).all()  # Limit preview
+        preview_ids = sorted(recipient_ids)[:10]
+        users = db.query(models.User).filter(models.User.id.in_(preview_ids)).all()
         recipients = []
         for user in users:
             # Get name based on role
@@ -2041,18 +2042,6 @@ def download_message_attachment(
     if not message or not _can_access_message(db, current_user, message):
         raise forbidden_error("You do not have access to this attachment")
 
-    log_audit_event(
-        db=db,
-        action=AuditAction.MESSAGE_ATTACHMENT_DOWNLOADED,
-        actor=current_user,
-        target_type="Message",
-        target_ids=message.id,
-        metadata={"attachment_id": attachment.id},
-        sensitivity_level=1
-    )
-    # Download access is a standalone security event, so it owns its commit.
-    db.commit()
-
     if attachment.storage_provider == "s3":
         import boto3
         session = boto3.session.Session(
@@ -2066,14 +2055,34 @@ def download_message_attachment(
             Params={"Bucket": settings.S3_BUCKET, "Key": attachment.storage_key},
             ExpiresIn=300
         )
-        return RedirectResponse(url=url)
+        response = RedirectResponse(url=url)
+    else:
+        file_path = resolve_attachment_path(attachment.storage_key)
+        if not file_path.is_file():
+            raise not_found_error("Attachment file not found")
+        response = FileResponse(
+            path=file_path,
+            media_type=attachment.content_type,
+            filename=attachment.file_name,
+        )
 
-    file_path = resolve_attachment_path(attachment.storage_key)
-    return FileResponse(
-        path=file_path,
-        media_type=attachment.content_type,
-        filename=attachment.file_name
+    # FileResponse streams after this handler returns and an S3 redirect only
+    # authorizes a later request. Record the claim we can prove, after storage
+    # preparation succeeded, rather than claiming bytes were downloaded.
+    log_audit_event(
+        db=db,
+        action=AuditAction.MESSAGE_ATTACHMENT_ACCESS_AUTHORIZED,
+        actor=current_user,
+        target_type="Message",
+        target_ids=message.id,
+        metadata={
+            "attachment_id": attachment.id,
+            "storage_provider": attachment.storage_provider,
+        },
+        sensitivity_level=1,
     )
+    db.commit()
+    return response
 
 
 @router.post("/notifications/devices", response_model=DeviceTokenResponse)
