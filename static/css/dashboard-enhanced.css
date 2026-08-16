@@ -762,3 +762,141 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   .kpi-explain-header { gap: .625rem; padding: .75rem .875rem; }
   .kpi-explain-icon { width: 36px; min-width: 36px; height: 36px; font-size: 1rem; }
 }
+
+/* ── Chart Data Interpretation Layer & A11y ────────────── */
+.chart-interpretation-layer {
+  margin-top: 0.875rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--kinjo-color-border-subtle, #e2e8f0);
+}
+
+.chart-interpretation-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--kinjo-color-border-subtle, #e2e8f0);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.interpretation-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.interpretation-label {
+  font-weight: 700;
+  color: var(--kinjo-text-primary, #1e293b);
+  white-space: nowrap;
+}
+
+.interpretation-value {
+  color: var(--kinjo-text-secondary, #475569);
+}
+
+/* ── KPI Cards & Dashboard Layout Polish ───────────────── */
+.admin-kpi-card {
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.admin-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(17, 24, 39, 0.08);
+}
+
+.admin-kpi-card-value {
+  font-feature-settings: "tnum" 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-kpi-card-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.admin-kpi-card-trend--up {
+  color: var(--kinjo-success, #059669);
+}
+
+.admin-kpi-card-trend--down {
+  color: var(--kinjo-danger, #dc2626);
+}
+
+.admin-kpi-card-trend--flat {
+  color: var(--kinjo-text-muted, #64748b);
+}
+
+.admin-kpi-card-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.admin-kpi-card-status--good {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.admin-kpi-card-status--warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.admin-kpi-card-status--critical {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.admin-kpi-card-status--unavailable {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.admin-kpi-card-drilldown {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--kinjo-action, #1e40af);
+  text-decoration: none;
+  margin-top: 0.5rem;
+  transition: color 140ms ease;
+}
+
+.admin-kpi-card-drilldown:hover {
+  color: var(--kinjo-action-hover, #1e3a8a);
+  text-decoration: underline;
+}
+
+/* ── Responsive Refinements ────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-dashboard-cards {
+    grid-template-columns: 1fr !important;
+  }
+  .admin-dashboard-charts {
+    grid-template-columns: 1fr !important;
+  }
+  .admin-dashboard-bottom {
+    grid-template-columns: 1fr !important;
+  }
+  .chart-interpretation-box {
+    font-size: 0.775rem;
+    padding: 0.55rem 0.7rem;
+  }
+}
+

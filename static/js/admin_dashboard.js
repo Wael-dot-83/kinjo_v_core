@@ -994,6 +994,10 @@ class AdminDashboard {
     if (!container) return;
     canvas.style.display = "none";
     container.querySelector(".dashboard-chart-empty-state")?.remove();
+    const interp = container.querySelector(".chart-interpretation-layer");
+    if (interp) interp.innerHTML = "";
+    const a11y = container.querySelector(".chart-accessible-summary");
+    if (a11y) a11y.innerHTML = "";
     const empty = document.createElement("div");
     empty.className =
       "agency-alert agency-alert--info dashboard-chart-empty-state";
@@ -1279,11 +1283,11 @@ class AdminDashboard {
     const gradient = context
       ? (() => {
           const g = context.createLinearGradient(0, 0, 0, 220);
-          g.addColorStop(0, "rgba(31, 94, 71, 0.28)");
-          g.addColorStop(1, "rgba(31, 94, 71, 0.02)");
+          g.addColorStop(0, "rgba(30, 64, 175, 0.22)");
+          g.addColorStop(1, "rgba(30, 64, 175, 0.01)");
           return g;
         })()
-      : "rgba(31, 94, 71, 0.1)";
+      : "rgba(30, 64, 175, 0.1)";
     this.charts.attendance = new Chart(ctx, {
       type: "line",
       data: {
@@ -1295,16 +1299,16 @@ class AdminDashboard {
                 ? "Recorded Attendance"
                 : ATTENDANCE_CHART_LABELS["Recorded Attendance"],
             data: safeChartData(data.values),
-            borderColor: "#4F46E5",
+            borderColor: "#1e40af",
             backgroundColor: gradient,
-            tension: 0.4,
+            tension: 0.35,
             fill: true,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            pointBackgroundColor: "#4F46E5",
+            pointRadius: 3.5,
+            pointHoverRadius: 5.5,
+            pointBackgroundColor: "#1e40af",
             pointBorderColor: "#fff",
             pointBorderWidth: 2,
-            borderWidth: 2.5,
+            borderWidth: 2.2,
           },
         ],
       },
@@ -1331,6 +1335,89 @@ class AdminDashboard {
         },
       },
     });
+
+    this._renderAttendanceInterpretation(data);
+    this._renderAttendanceAccessibleTable(data);
+  }
+
+  _renderAttendanceInterpretation(data) {
+    const container = document.getElementById("attendance-chart-interpretation");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!data || !data.values || data.values.length === 0) return;
+
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const latestVal = data.values[data.values.length - 1];
+    const latestDate = data.labels[data.labels.length - 1];
+    const count = data.values.length;
+    const locale = lang === "en" ? "en-US" : "ar-JO";
+    const formattedVal = new Intl.NumberFormat(locale).format(latestVal);
+
+    const box = document.createElement("div");
+    box.className = "chart-interpretation-box";
+
+    const item1 = document.createElement("div");
+    item1.className = "interpretation-item";
+    const lbl1 = document.createElement("span");
+    lbl1.className = "interpretation-label";
+    lbl1.textContent = lang === "en" ? "Latest Recorded Count:" : "آخر حضور مسجل:";
+    const val1 = document.createElement("span");
+    val1.className = "interpretation-value";
+    val1.textContent = lang === "en"
+      ? `${formattedVal} present children (${latestDate}).`
+      : `${formattedVal} طفل حاضر (${latestDate}).`;
+    item1.append(lbl1, " ", val1);
+
+    const item2 = document.createElement("div");
+    item2.className = "interpretation-item";
+    const lbl2 = document.createElement("span");
+    lbl2.className = "interpretation-label";
+    lbl2.textContent = lang === "en" ? "Scope & Timeline:" : "النطاق والفترة:";
+    const val2 = document.createElement("span");
+    val2.className = "interpretation-value";
+    val2.textContent = lang === "en"
+      ? `Active network institutions over the last ${count} days.`
+      : `حضانات الشبكة النشطة خلال آخر ${count} يوماً.`;
+    item2.append(lbl2, " ", val2);
+
+    box.appendChild(item1);
+    box.appendChild(item2);
+    container.appendChild(box);
+  }
+
+  _renderAttendanceAccessibleTable(data) {
+    const container = document.getElementById("attendance-chart-accessible-summary");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!data || !data.labels || data.labels.length === 0) return;
+
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const locale = lang === "en" ? "en-US" : "ar-JO";
+
+    const table = document.createElement("table");
+    table.className = "visually-hidden";
+    const caption = document.createElement("caption");
+    caption.textContent = lang === "en" ? "Daily Attendance Data Summary" : "ملخص بيانات الحضور اليومي";
+    table.appendChild(caption);
+
+    const thead = document.createElement("thead");
+    thead.innerHTML = `<tr><th scope="col">${lang === "en" ? "Date" : "التاريخ"}</th><th scope="col">${lang === "en" ? "Attendance Count" : "عدد الحضور"}</th></tr>`;
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    data.labels.forEach((label, idx) => {
+      const val = data.values[idx] != null ? data.values[idx] : 0;
+      const row = document.createElement("tr");
+      const td1 = document.createElement("td");
+      td1.textContent = String(label);
+      const td2 = document.createElement("td");
+      td2.textContent = new Intl.NumberFormat(locale).format(val);
+      row.appendChild(td1);
+      row.appendChild(td2);
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    container.appendChild(table);
   }
 
   renderSubmissionsChart(data) {
@@ -1347,12 +1434,12 @@ class AdminDashboard {
     );
     this.charts.dataSubmissions?.destroy();
     const palette = [
-      "#0d6efd",
-      "#198754",
-      "#ffc107",
-      "#dc3545",
-      "#6c757d",
-      "#0dcaf0",
+      "#1e40af",
+      "#10b981",
+      "#f59e0b",
+      "#ef4444",
+      "#64748b",
+      "#0ea5e9",
     ];
     this.charts.dataSubmissions = new Chart(ctx, {
       type: "bar",
@@ -1396,6 +1483,87 @@ class AdminDashboard {
         },
       },
     });
+
+    this._renderSubmissionsInterpretation(data);
+    this._renderSubmissionsAccessibleTable(data);
+  }
+
+  _renderSubmissionsInterpretation(data) {
+    const container = document.getElementById("enrollment-chart-interpretation");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!data || !data.values || data.values.length === 0) return;
+
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const totalApplications = data.values.reduce((sum, v) => sum + (Number(v) || 0), 0);
+    const locale = lang === "en" ? "en-US" : "ar-JO";
+    const formattedTotal = new Intl.NumberFormat(locale).format(totalApplications);
+
+    const box = document.createElement("div");
+    box.className = "chart-interpretation-box";
+
+    const item1 = document.createElement("div");
+    item1.className = "interpretation-item";
+    const lbl1 = document.createElement("span");
+    lbl1.className = "interpretation-label";
+    lbl1.textContent = lang === "en" ? "Total Applications:" : "إجمالي الطلبات:";
+    const val1 = document.createElement("span");
+    val1.className = "interpretation-value";
+    val1.textContent = lang === "en"
+      ? `${formattedTotal} applications across all workflow stages.`
+      : `${formattedTotal} طلب تسجيل عبر جميع مراحل المتابعة.`;
+    item1.append(lbl1, " ", val1);
+
+    const item2 = document.createElement("div");
+    item2.className = "interpretation-item";
+    const lbl2 = document.createElement("span");
+    lbl2.className = "interpretation-label";
+    lbl2.textContent = lang === "en" ? "Scope:" : "النطاق:";
+    const val2 = document.createElement("span");
+    val2.className = "interpretation-value";
+    val2.textContent = lang === "en"
+      ? "All recorded enrollment requests in the administrative database."
+      : "جميع طلبات التسجيل المقيدة في السجل الإداري.";
+    item2.append(lbl2, " ", val2);
+
+    box.appendChild(item1);
+    box.appendChild(item2);
+    container.appendChild(box);
+  }
+
+  _renderSubmissionsAccessibleTable(data) {
+    const container = document.getElementById("enrollment-chart-accessible-summary");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!data || !data.labels || data.labels.length === 0) return;
+
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const locale = lang === "en" ? "en-US" : "ar-JO";
+
+    const table = document.createElement("table");
+    table.className = "visually-hidden";
+    const caption = document.createElement("caption");
+    caption.textContent = lang === "en" ? "Enrollment Application Status Summary" : "ملخص حالات طلبات التسجيل";
+    table.appendChild(caption);
+
+    const thead = document.createElement("thead");
+    thead.innerHTML = `<tr><th scope="col">${lang === "en" ? "Status" : "الحالة"}</th><th scope="col">${lang === "en" ? "Applications Count" : "عدد الطلبات"}</th></tr>`;
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    data.labels.forEach((label, idx) => {
+      const val = data.values[idx] != null ? data.values[idx] : 0;
+      const row = document.createElement("tr");
+      const td1 = document.createElement("td");
+      td1.textContent = String(label);
+      const td2 = document.createElement("td");
+      td2.textContent = new Intl.NumberFormat(locale).format(val);
+      row.appendChild(td1);
+      row.appendChild(td2);
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    container.appendChild(table);
   }
 
   // ── Activity Feed ─────────────────────────────────────────────────────────
