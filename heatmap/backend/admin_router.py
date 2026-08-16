@@ -33,9 +33,10 @@ from sqlalchemy.orm import Session
 from database import get_db
 from admin_security import (
     APIError, ErrorCode, create_error_response, forbidden_error,
-    not_found_error, validation_error
+    log_audit_event, not_found_error, validation_error
 )
 from admin_security import require_admin_role as _require_admin_role
+from audit_actions import AuditAction
 from dependencies import get_current_user
 from rate_limiter import limiter
 from config import settings
@@ -77,6 +78,22 @@ def _pagination_meta(page: int, page_size: int, total: int) -> Dict[str, Any]:
         "has_next": page < total_pages,
         "has_prev": page > 1,
     }
+
+
+def _public_pipeline_issues(issues: Any) -> list[dict[str, Any]]:
+    """Return operator context without exposing exception text or tracebacks."""
+    public: list[dict[str, Any]] = []
+    for issue in issues if isinstance(issues, list) else []:
+        context = {}
+        if isinstance(issue, dict):
+            context = {
+                key: issue[key]
+                for key in ("step", "gov", "main")
+                if key in issue
+            }
+        context["message"] = "An internal pipeline issue occurred; use the correlation ID to investigate."
+        public.append(context)
+    return public
 
 
 def _kindergarten_filters(
@@ -449,7 +466,29 @@ def refresh_heat_map(
 
     try:
         heatmap_service.load_jordan_geojson(force_reload=True)
-        summary = heatmap_pipeline.run_daily_pipeline(db, snapshot_date=target_date)
+        # The request owns the transaction so the pipeline mutation and the
+        # actor-aware audit row share one final commit below.
+        summary = heatmap_pipeline.run_daily_pipeline(
+            db,
+            snapshot_date=target_date,
+            commit=False,
+        )
+        log_audit_event(
+            db=db,
+            action=AuditAction.HEATMAP_DATASET_REGENERATED,
+            actor=current_user,
+            target_type="HeatmapPipelineRun",
+            metadata={
+                "trigger": "manual_admin",
+                "status": summary.get("status"),
+                "run_id": summary.get("run_id"),
+                "snapshot_date": summary.get("snapshot_date"),
+                "governorates": summary.get("governorates", 0),
+                "rows_processed": summary.get("rows_processed", 0),
+            },
+            sensitivity_level=2,
+        )
+        db.commit()
     except Exception as exc:
         db.rollback()
         logger.error("Pipeline failed: %s", exc, exc_info=True)
@@ -457,7 +496,6 @@ def refresh_heat_map(
             status_code=500,
             code=ErrorCode.INTERNAL_ERROR,
             message="Pipeline execution failed",
-            details={"error": str(exc)}
         )
     # Explicitly invalidate cache on success
     try:
@@ -471,8 +509,8 @@ def refresh_heat_map(
         "governorates": summary.get("governorates", 0),
         "rows_processed": summary.get("rows_processed", 0),
         "duration_ms": summary.get("duration_ms"),
-        "errors": summary.get("errors", []),
-        "warnings": summary.get("warnings", []),
+        "errors": _public_pipeline_issues(summary.get("errors")),
+        "warnings": _public_pipeline_issues(summary.get("warnings")),
     }
 
 
@@ -505,8 +543,8 @@ def list_runs(
                 "rows_processed": r.rows_processed,
                 "governorates": r.governorates,
                 "duration_ms": r.duration_ms,
-                "errors": r.errors or [],
-                "warnings": r.warnings or [],
+                "errors": _public_pipeline_issues(r.errors),
+                "warnings": _public_pipeline_issues(r.warnings),
             }
             for r in runs
         ],
@@ -621,6 +659,19 @@ def acknowledge_alert(
         return {"status": "already_acknowledged", "alert_id": alert_id}
     alert.acknowledged_at = now_amman()
     alert.acknowledged_by = current_user.id
+    log_audit_event(
+        db=db,
+        action=AuditAction.ALERT_ACKNOWLEDGED,
+        actor=current_user,
+        target_type="MapAlertHistory",
+        target_ids=alert.id,
+        before_state={"acknowledged_at": None, "acknowledged_by": None},
+        after_state={
+            "acknowledged_at": alert.acknowledged_at.isoformat(),
+            "acknowledged_by": current_user.id,
+        },
+        sensitivity_level=2,
+    )
     db.commit()
     try:
         heatmap_cache.invalidate_heat_map_cache()

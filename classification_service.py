@@ -1915,6 +1915,10 @@ def warm_admin_classification_cache(request: Request,
         metadata={"period_start": period_start.isoformat(), "period_end": period_end.isoformat(), "warmed_entries": warmed_entries},
         sensitivity_level=1,
     )
+    # Cache warming is an external/read-side operation, so there is no database
+    # business write to commit.  Persist its audit event explicitly before the
+    # request-scoped session closes.
+    db.commit()
     return CacheWarmResponse(
         message="تم تجهيز ذاكرة مؤقتة للتصنيف",
         period_start=period_start.isoformat(),
@@ -1937,6 +1941,7 @@ def invalidate_admin_classification_cache(request: Request,
         metadata={"deleted_entries": deleted},
         sensitivity_level=2,
     )
+    db.commit()
     return CacheInvalidateResponse(message="تمت إعادة تهيئة الذاكرة المؤقتة للتصنيف", deleted_entries=deleted)
 
 

@@ -177,6 +177,41 @@ def _export_audit_logs(
     query = query.order_by(desc(models.AuditLog.created_at))
     data = query.limit(5000).all()
 
+    if format == "json":
+        export_data = []
+        for log, username in data:
+            export_data.append({
+                "timestamp": log.created_at.isoformat() if log.created_at else None,
+                "user": username or "Unknown",
+                "action": log.action,
+                "entity": log.entity_type,
+                "details": log.details,
+                "ip": log.ip_address
+            })
+        response = Response(
+            content=json.dumps(export_data, default=str),
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename=audit_logs_{_today()}.json"}
+        )
+    else:
+        headers = ["Timestamp", "User", "Action", "Entity Type", "Details", "IP Address"]
+        rows = []
+        for log, username in data:
+            rows.append([
+                log.created_at,
+                username or "Unknown",
+                log.action,
+                log.entity_type,
+                log.details,
+                log.ip_address
+            ])
+
+        response = export_service.generate_csv_response(
+            headers=headers,
+            data=rows,
+            filename=f"audit_logs_{_today()}.csv"
+        )
+
     log_audit_event(
         db=db,
         action=AuditAction.AUDIT_LOG_EXPORT,
@@ -193,41 +228,11 @@ def _export_audit_logs(
         },
         sensitivity_level=2,
     )
-
-    if format == "json":
-        export_data = []
-        for log, username in data:
-            export_data.append({
-                "timestamp": log.created_at.isoformat() if log.created_at else None,
-                "user": username or "Unknown",
-                "action": log.action,
-                "entity": log.entity_type,
-                "details": log.details,
-                "ip": log.ip_address
-            })
-        return Response(
-            content=json.dumps(export_data, default=str),
-            media_type="application/json",
-            headers={"Content-Disposition": f"attachment; filename=audit_logs_{_today()}.json"}
-        )
-
-    headers = ["Timestamp", "User", "Action", "Entity Type", "Details", "IP Address"]
-    rows = []
-    for log, username in data:
-        rows.append([
-            log.created_at,
-            username or "Unknown",
-            log.action,
-            log.entity_type,
-            log.details,
-            log.ip_address
-        ])
-
-    return export_service.generate_csv_response(
-        headers=headers, 
-        data=rows, 
-        filename=f"audit_logs_{_today()}.csv"
-    )
+    # Export/read events have no business mutation to share a transaction with,
+    # but they still need an explicit durability boundary.  get_db() closes the
+    # session after the response and would otherwise roll this flushed row back.
+    db.commit()
+    return response
 
 
 def list_audit_logs(
