@@ -348,3 +348,7 @@ def test_celery_analytics_worker_tasks_are_registered():
 
     assert "export_tasks.run_analytics_export_job" in celery_app.tasks
     assert "export_tasks.dispatch_pending_analytics_exports" in celery_app.tasks
+    assert celery_app.conf.beat_schedule["dispatch-pending-analytics-exports"] == {
+        "task": "export_tasks.dispatch_pending_analytics_exports",
+        "schedule": 60.0,
+    }

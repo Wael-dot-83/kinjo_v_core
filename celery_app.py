@@ -40,6 +40,10 @@ celery_app.conf.update(
             "task": "notification_tasks.redispatch_stale_pending_notifications",
             "schedule": 60.0,
         },
+        "dispatch-pending-analytics-exports": {
+            "task": "export_tasks.dispatch_pending_analytics_exports",
+            "schedule": 60.0,
+        },
         # Heat map dataset rebuild. Beat runs on UTC (see timezone/enable_utc above),
         # so this is expressed in UTC: 17:00 UTC == 20:00 Jordan (UTC+3). That is
         # after the Jordan business day, so the day's attendance and reports are
