@@ -33,8 +33,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from admin_reports_api import AdminAlertResponse, AdminAlertsListResponse
 
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import or_, func, and_, select, case
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_, func, and_, select, case, union_all
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 import models
 import validators
@@ -44,7 +44,7 @@ from export_service import export_service
 from dependencies import get_current_user
 from rate_limiter import limiter
 from config import settings
-from auth import get_password_hash, verify_password
+from auth import change_user_password, get_password_hash, verify_password
 from notification_service import (
     create_message_notifications,
     dispatch_message_notification_tasks,
@@ -777,7 +777,7 @@ def update_user(
         user.email = user_data.email
 
     if user_data.password is not None:
-        user.hashed_password = get_password_hash(user_data.password)
+        change_user_password(db, user, user_data.password, commit=False)
 
     # Update profile fields if provided
     for field in ("full_name", "phone_number", "address", "nationality", "national_id", "passport_number"):
@@ -977,8 +977,9 @@ def admin_reset_password(
         db.commit()
         raise unauthenticated_error("Admin password verification failed")
 
-    # Reset password
-    user.hashed_password = get_password_hash(reset_data.new_password)
+    # Apply the same lifecycle as self-service reset: timestamps, temporary
+    # credential cleanup, and revocation of every previously issued session.
+    change_user_password(db, user, reset_data.new_password, commit=False)
     try:
         log_audit_event(
             db, AuditAction.ADMIN_PASSWORD_RESET, current_user, "User",
@@ -1582,9 +1583,32 @@ def bulk_create_users(
         row[0] for row in db.query(models.User.email)
         .filter(models.User.email.in_(incoming_emails)).all()
     ) if incoming_emails else set()
+    batch_usernames: Set[str] = set()
+    batch_emails: Set[str] = set()
 
     for i, user_data in enumerate(bulk_data.users):
         row_num = i + 1
+
+        if user_data.username in batch_usernames:
+            failed.append(row_num)
+            errors.append({
+                "row": row_num,
+                "field": "username",
+                "error": "Duplicate username in bulk request"
+            })
+            continue
+        batch_usernames.add(user_data.username)
+
+        if user_data.email is not None:
+            if user_data.email in batch_emails:
+                failed.append(row_num)
+                errors.append({
+                    "row": row_num,
+                    "field": "email",
+                    "error": "Duplicate email in bulk request"
+                })
+                continue
+            batch_emails.add(user_data.email)
 
         # Prevent creating admins
         if user_data.role == models.UserRole.ADMIN:
@@ -1618,24 +1642,57 @@ def bulk_create_users(
 
         if not bulk_data.dry_run:
             try:
-                new_user = models.User(
-                    username=user_data.username,
-                    email=user_data.email,
-                    hashed_password=get_password_hash(user_data.password),
-                    role=user_data.role,
-                    kindergarten_id=user_data.kindergarten_id,
-                    status=models.UserStatus.ACTIVE
-                )
-                db.add(new_user)
-                db.flush()
+                # A savepoint isolates a concurrent uniqueness race to this row;
+                # the outer transaction remains usable for later rows and audit.
+                with db.begin_nested():
+                    new_user = models.User(
+                        username=user_data.username,
+                        email=user_data.email,
+                        hashed_password=get_password_hash(user_data.password),
+                        role=user_data.role,
+                        kindergarten_id=user_data.kindergarten_id,
+                        status=models.UserStatus.ACTIVE,
+                        must_change_password=user_data.role in {
+                            models.UserRole.MANAGER,
+                            models.UserRole.SUPERVISOR,
+                        },
+                    )
+                    for field in (
+                        "full_name", "phone_number", "address", "nationality",
+                        "national_id", "passport_number",
+                    ):
+                        value = getattr(user_data, field, None)
+                        if value is not None:
+                            setattr(new_user, field, value)
+                    db.add(new_user)
+                    db.flush()
+                    if new_user.role == models.UserRole.SUPERVISOR:
+                        validators.ensure_supervisor_profile(
+                            db, new_user, new_user.kindergarten_id
+                        )
+                    db.flush()
                 succeeded.append({"row": row_num, "id": new_user.id, "username": new_user.username})
-            except (SQLAlchemyError, AttributeError, ValueError, KeyError) as e:  # pragma: no cover — db.flush() failure here would also break the shared auth session; tested defensively
-                logger.warning("Bulk user import row %s failed: %s", row_num, e)
+            except IntegrityError as exc:
+                logger.warning(
+                    "Bulk user import row %s lost a uniqueness race (%s)",
+                    row_num,
+                    type(exc).__name__,
+                )
+                failed.append(row_num)
+                errors.append({
+                    "row": row_num,
+                    "field": "conflict",
+                    "error": "Username or email became unavailable"
+                })
+            except (SQLAlchemyError, AttributeError, ValueError, KeyError) as exc:
+                logger.warning(
+                    "Bulk user import row %s failed (%s)", row_num, type(exc).__name__
+                )
                 failed.append(row_num)
                 errors.append({
                     "row": row_num,
                     "field": "unknown",
-                    "error": str(e)
+                    "error": "User could not be created"
                 })
         else:
             succeeded.append({"row": row_num, "username": user_data.username})
@@ -2386,7 +2443,12 @@ def _validate_jordan_governorates(governorates: Optional[List[str]]) -> List[str
         try:
             canonical.append(validators.validate_jordan_governorate(gov))
         except validators.ValidationError:
-            raise validation_error("Invalid governorate", fields={"governorates": "invalid"})
+            raise APIError(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                code=ErrorCode.VALIDATION_ERROR,
+                message="Invalid governorate",
+                fields={"governorates": "invalid"},
+            )
     return list(dict.fromkeys(canonical))
 
 
@@ -2446,6 +2508,7 @@ def _build_staff_recipient_query(
         models.User.status == models.UserStatus.ACTIVE,
         models.User.role.in_(staff_roles)
     )
+    joined_kindergartens = False
 
     if kindergarten_ids:
         query = query.filter(models.User.kindergarten_id.in_(kindergarten_ids))
@@ -2455,10 +2518,15 @@ def _build_staff_recipient_query(
             models.Kindergarten,
             models.User.kindergarten_id == models.Kindergarten.id
         ).filter(models.Kindergarten.governorate.in_(governorates))
+        joined_kindergartens = True
 
     search_cols = [models.User.username, models.User.email]
     if search_term:
-        query = query.outerjoin(models.Kindergarten, models.User.kindergarten_id == models.Kindergarten.id)
+        if not joined_kindergartens:
+            query = query.outerjoin(
+                models.Kindergarten,
+                models.User.kindergarten_id == models.Kindergarten.id,
+            )
         search_cols.extend([
             models.Kindergarten.name_ar,
             models.Kindergarten.name_en
@@ -2581,21 +2649,49 @@ def _count_admin_recipients(
     kindergarten_ids: List[int],
     search: Optional[str]
 ) -> int:
-    total = 0
+    recipient_query = _build_admin_recipient_id_query(
+        db, roles, governorates, kindergarten_ids, search
+    )
+    count_stmt = select(func.count()).select_from(
+        recipient_query.order_by(None).subquery()
+    )
+    return db.execute(count_stmt).scalar_one()
+
+
+def _build_admin_recipient_id_query(
+    db: Session,
+    roles: List[models.UserRole],
+    governorates: List[str],
+    kindergarten_ids: List[int],
+    search: Optional[str],
+) -> Any:
+    """Build the one canonical recipient-ID relation used by count/page/send."""
     search_term = (search or "").strip()
-
-    staff_roles = [role for role in roles if role in {models.UserRole.MANAGER, models.UserRole.SUPERVISOR}]
-    if staff_roles:
-        staff_query = _build_staff_recipient_query(db, roles, governorates, kindergarten_ids, search_term)
-        staff_count_stmt = select(func.count()).select_from(staff_query.subquery())
-        total += db.execute(staff_count_stmt).scalar_one()
-
+    statements = []
+    if any(
+        role in {models.UserRole.MANAGER, models.UserRole.SUPERVISOR}
+        for role in roles
+    ):
+        statements.append(
+            _build_staff_recipient_query(
+                db, roles, governorates, kindergarten_ids, search_term
+            ).statement
+        )
     if models.UserRole.PARENT in roles:
-        parent_query = _build_parent_recipient_query(db, governorates, kindergarten_ids, search_term)
-        parent_count_stmt = select(func.count()).select_from(parent_query.subquery())
-        total += db.execute(parent_count_stmt).scalar_one()
+        statements.append(
+            _build_parent_recipient_query(
+                db, governorates, kindergarten_ids, search_term
+            ).statement
+        )
 
-    return total
+    if not statements:
+        return db.query(models.User.id).filter(models.User.id.is_(None))
+    combined = (
+        union_all(*statements).subquery()
+        if len(statements) > 1
+        else statements[0].subquery()
+    )
+    return db.query(combined.c.id).distinct().order_by(combined.c.id)
 
 
 def _resolve_parent_governorates(db: Session, parent_ids: List[int]) -> Dict[int, List[str]]:
@@ -2773,43 +2869,19 @@ def _resolve_admin_recipient_ids(
     governorates: Optional[List[str]] = None,
     kindergarten_ids: Optional[List[int]] = None,
     search: Optional[str] = None,
-    limit: Optional[int] = None
+    limit: Optional[int] = None,
+    offset: int = 0,
 ) -> List[int]:
-    recipient_ids: List[int] = []
-    seen: Set[int] = set()
     governorates = governorates or []
     kindergarten_ids = kindergarten_ids or []
-    search_term = (search or "").strip()
-    effective_limit = limit if limit and limit > 0 else None
-
-    def _collect_rows(rows) -> bool:
-        for row in rows:
-            uid = row[0]
-            if uid in seen:  # pragma: no cover — SQL queries use distinct(); duplicate user IDs cannot appear in practice; kept for defensive safety
-                continue
-            seen.add(uid)
-            recipient_ids.append(uid)
-            if effective_limit and len(recipient_ids) >= effective_limit:
-                return True
-        return False
-
-    staff_roles = [role for role in roles if role in {models.UserRole.MANAGER, models.UserRole.SUPERVISOR}]
-    if staff_roles:
-        staff_query = _build_staff_recipient_query(db, roles, governorates, kindergarten_ids, search_term).order_by(models.User.id)
-        if effective_limit:
-            remaining = effective_limit - len(recipient_ids)
-            staff_query = staff_query.limit(remaining)
-        if _collect_rows(staff_query.all()):
-            return sorted(recipient_ids)
-
-    if models.UserRole.PARENT in roles:
-        parent_query = _build_parent_recipient_query(db, governorates, kindergarten_ids, search_term).order_by(models.User.id)
-        if effective_limit:
-            remaining = effective_limit - len(recipient_ids)
-            parent_query = parent_query.limit(remaining)
-        _collect_rows(parent_query.all())
-
-    return sorted(recipient_ids)
+    query = _build_admin_recipient_id_query(
+        db, roles, governorates, kindergarten_ids, search
+    )
+    if offset > 0:
+        query = query.offset(offset)
+    if limit is not None and limit > 0:
+        query = query.limit(limit)
+    return [row[0] for row in query.all()]
 
 
 def _fetch_admin_recipient_summaries(db: Session, user_ids: List[int]) -> List[AdminRecipientSummary]:
@@ -2928,14 +3000,6 @@ def list_message_recipients(
     if not search_term:
         search_term = None
 
-    recipient_ids = _resolve_admin_recipient_ids(
-        db=db,
-        roles=role_values,
-        governorates=governorate_values,
-        kindergarten_ids=kindergarten_id_values,
-        search=search_term
-    )
-
     total = _count_admin_recipients(
         db=db,
         roles=role_values,
@@ -2945,7 +3009,15 @@ def list_message_recipients(
     )
     total_pages = max(1, (total + page_size - 1) // page_size)
     offset = (page - 1) * page_size
-    page_ids = recipient_ids[offset:offset + page_size]
+    page_ids = _resolve_admin_recipient_ids(
+        db=db,
+        roles=role_values,
+        governorates=governorate_values,
+        kindergarten_ids=kindergarten_id_values,
+        search=search_term,
+        limit=page_size,
+        offset=offset,
+    )
     items = _fetch_admin_recipient_summaries(db, page_ids)
 
     return AdminRecipientListResponse(
@@ -3212,22 +3284,36 @@ def list_governorate_options(
     """
     try:
         from services.jordan_locations import get_all_governorates
-        options = []
-        for g in get_all_governorates():
+    except (ImportError, AttributeError):
+        source_options = [
+            {
+                "name_ar": gov,
+                "name_en": (
+                    settings.JORDAN_GOVERNORATES_ENGLISH[idx]
+                    if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH)
+                    else gov
+                ),
+            }
+            for idx, gov in enumerate(settings.JORDAN_GOVERNORATES)
+        ]
+    else:
+        source_options = get_all_governorates()
+
+    options = []
+    try:
+        for g in source_options:
             options.append(GovernorateOption(
                 id=g["name_ar"],
                 name_ar=g["name_ar"],
                 name_en=g["name_en"]
             ))
-    except Exception:
-        options = []
-        for idx, gov in enumerate(settings.JORDAN_GOVERNORATES):
-            english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx] if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH) else gov
-            options.append(GovernorateOption(
-                id=gov,
-                name_ar=gov,
-                name_en=english_label
-            ))
+    except (ValidationError, KeyError, TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            code=ErrorCode.VALIDATION_ERROR,
+            message="Governorate options are invalid",
+            fields={"governorates": "invalid"},
+        ) from exc
 
     options.sort(key=lambda opt: opt.name_ar)
     return GovernorateOptionsResponse(governorates=options)
@@ -3284,20 +3370,27 @@ def preview_message_recipients(
         search=search_term
     )
 
-    recipient_ids = _resolve_admin_recipient_ids(
+    all_recipient_ids = _resolve_admin_recipient_ids(
         db=db,
         roles=role_values,
         governorates=governorate_values if governorate_values else None,
         kindergarten_ids=kindergarten_id_values if kindergarten_id_values else None,
         search=search_term,
-        limit=settings.MAX_MESSAGE_RECIPIENTS
     )
 
-    sample_ids = recipient_ids[:5]
+    sample_ids = _resolve_admin_recipient_ids(
+        db=db,
+        roles=role_values,
+        governorates=governorate_values,
+        kindergarten_ids=kindergarten_id_values,
+        search=search_term,
+        limit=min(page_size, 5),
+        offset=(page - 1) * page_size,
+    )
     sample_recipients = _fetch_admin_recipient_summaries(db, sample_ids)
 
     role_breakdown, governorate_breakdown, kindergarten_breakdown = _build_recipient_breakdowns(
-        db, recipient_ids
+        db, all_recipient_ids
     )
 
     target_metadata = {
@@ -3360,21 +3453,28 @@ def preview_admin_message_post(
     if not search_term:
         search_term = None
 
-    recipient_ids = _resolve_admin_recipient_ids(
+    total = _count_admin_recipients(
+        db=db,
+        roles=roles,
+        governorates=governorate_values,
+        kindergarten_ids=kindergarten_id_values,
+        search=search_term,
+    )
+
+    page = max(1, payload.page)
+    page_size = max(1, min(payload.page_size, settings.MAX_PAGE_SIZE))
+    offset = (page - 1) * page_size
+    page_ids = _resolve_admin_recipient_ids(
         db=db,
         roles=roles,
         governorates=governorate_values if governorate_values else None,
         kindergarten_ids=kindergarten_id_values if kindergarten_id_values else None,
         search=search_term,
-        limit=settings.MAX_MESSAGE_RECIPIENTS
+        limit=page_size,
+        offset=offset,
     )
 
-    total = len(recipient_ids)
-    page = max(1, payload.page)
-    page_size = max(1, min(payload.page_size, settings.MAX_PAGE_SIZE))
     total_pages = max(1, (total + page_size - 1) // page_size) if total else 1
-    offset = (page - 1) * page_size
-    page_ids = recipient_ids[offset:offset + page_size]
     items = _fetch_admin_recipient_summaries(db, page_ids)
 
     target_metadata = {
@@ -7192,13 +7292,7 @@ def change_admin_password(
         db.commit()
         raise unauthenticated_error("Current password is incorrect")
 
-    current_user.hashed_password = get_password_hash(payload.new_password)
-    # UTC on purpose — see the note in me_endpoints.change_my_password. This
-    # column is only ever read as a duration anchor by
-    # auth.requires_password_change, which treats a naive value (all SQLite
-    # reads) as UTC; storing Jordan wall-clock made it read back 3 hours off.
-    current_user.password_changed_at = datetime.now(timezone.utc)
-    current_user.must_change_password = False
+    change_user_password(db, current_user, payload.new_password, commit=False)
     try:
         log_audit_event(
             db, AuditAction.ADMIN_PASSWORD_CHANGED, current_user, "User",
