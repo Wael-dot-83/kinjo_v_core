@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
 from audit_actions import AuditAction
+from admin_security import log_audit_event
 import validators
 from config import settings
 from database import get_db
@@ -916,6 +917,35 @@ def create_kindergarten_with_manager(
         )
         db.add(mgr)
         db.flush()
+
+        log_audit_event(
+            db=db,
+            action=AuditAction.KINDERGARTEN_CREATED,
+            actor=current_user,
+            target_type="Kindergarten",
+            target_ids=kg.id,
+            after_state={
+                "name_ar": kg.name_ar,
+                "name_en": kg.name_en,
+                "status": kg.status.value,
+            },
+            metadata={"manager_id": mgr.id},
+            sensitivity_level=2,
+        )
+        log_audit_event(
+            db=db,
+            action=AuditAction.USER_CREATED,
+            actor=current_user,
+            target_type="User",
+            target_ids=mgr.id,
+            after_state={
+                "role": mgr.role.value,
+                "kindergarten_id": kg.id,
+                "status": mgr.status.value,
+                "must_change_password": mgr.must_change_password,
+            },
+            sensitivity_level=2,
+        )
         db.commit()
         db.refresh(kg)
         db.refresh(mgr)

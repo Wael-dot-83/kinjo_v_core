@@ -9,6 +9,7 @@ import logging
 import pytest
 
 import models
+from audit_actions import AuditAction
 from api import kindergartens as kindergarten_api
 from cache_service import cache_service
 from dashboard_customization import DashboardCustomizationService, dashboard_customization
@@ -265,6 +266,56 @@ def test_create_with_manager_logs_but_does_not_disclose_internal_exception(
     assert secret_detail in caplog.text
     test_db.expire_all()
     assert test_db.query(models.Kindergarten).count() == before
+
+
+def test_create_with_manager_rolls_back_when_audit_write_fails(
+    client, test_db, auth_headers_admin, monkeypatch
+):
+    def fail_audit(**_kwargs):
+        raise RuntimeError("audit unavailable")
+
+    monkeypatch.setattr(kindergarten_api, "log_audit_event", fail_audit)
+    before_kindergartens = test_db.query(models.Kindergarten).count()
+    before_managers = test_db.query(models.User).filter(
+        models.User.role == models.UserRole.MANAGER
+    ).count()
+
+    response = client.post(
+        "/api/admin/kindergartens/with-manager",
+        json=_create_with_manager_payload(),
+        headers=auth_headers_admin,
+    )
+
+    assert response.status_code == 500
+    test_db.expire_all()
+    assert test_db.query(models.Kindergarten).count() == before_kindergartens
+    assert test_db.query(models.User).filter(
+        models.User.role == models.UserRole.MANAGER
+    ).count() == before_managers
+
+
+def test_create_with_manager_commits_nursery_manager_and_both_audits(
+    client, test_db, auth_headers_admin
+):
+    response = client.post(
+        "/api/admin/kindergartens/with-manager",
+        json=_create_with_manager_payload(),
+        headers=auth_headers_admin,
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    target_pairs = {
+        (row.action, row.entity_id)
+        for row in test_db.query(models.AuditLog).filter(
+            models.AuditLog.action.in_([
+                AuditAction.KINDERGARTEN_CREATED,
+                AuditAction.USER_CREATED,
+            ])
+        )
+    }
+    assert (AuditAction.KINDERGARTEN_CREATED, body["kindergarten"]["id"]) in target_pairs
+    assert (AuditAction.USER_CREATED, body["manager"]["id"]) in target_pairs
 
 
 def test_read_only_kindergarten_detail_does_not_acquire_row_lock():
