@@ -763,11 +763,32 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   .kpi-explain-icon { width: 36px; min-width: 36px; height: 36px; font-size: 1rem; }
 }
 
+/* ── Dashboard-Scoped Design Tokens ────────────────────── */
+.admin-uswds-dashboard {
+  --kinjo-dashboard-chart-primary: var(--kinjo-action, #1E40AF);
+  --kinjo-dashboard-chart-primary-fill: rgba(30, 64, 175, 0.22);
+  --kinjo-dashboard-chart-success: var(--kinjo-color-success, #10b981);
+  --kinjo-dashboard-chart-warning: var(--kinjo-color-warning, #f59e0b);
+  --kinjo-dashboard-chart-danger: var(--kinjo-color-danger, #ef4444);
+  --kinjo-dashboard-chart-muted: var(--kinjo-color-text-muted, #64748b);
+  --kinjo-dashboard-chart-info: var(--kinjo-color-info, #3b82f6);
+  --kinjo-dashboard-chart-grid: var(--kinjo-color-border-subtle, #DCEAE3);
+  --kinjo-dashboard-chart-text: var(--kinjo-color-text-secondary, #475569);
+  --kinjo-dashboard-status-good-bg: #dcfce7;
+  --kinjo-dashboard-status-good-text: #14532d; /* 7.3:1 on #dcfce7 */
+  --kinjo-dashboard-status-warning-bg: #fef3c7;
+  --kinjo-dashboard-status-warning-text: #78350f; /* 7.8:1 on #fef3c7 */
+  --kinjo-dashboard-status-critical-bg: #fee2e2;
+  --kinjo-dashboard-status-critical-text: #991b1b; /* 6.9:1 on #fee2e2 */
+  --kinjo-dashboard-status-unavailable-bg: #f1f5f9;
+  --kinjo-dashboard-status-unavailable-text: #334155; /* 7.2:1 on #f1f5f9 */
+}
+
 /* ── Chart Data Interpretation Layer & A11y ────────────── */
 .chart-interpretation-layer {
   margin-top: 0.875rem;
   padding-top: 0.75rem;
-  border-top: 1px dashed var(--kinjo-color-border-subtle, #e2e8f0);
+  border-top: 1px dashed var(--kinjo-dashboard-chart-grid, #DCEAE3);
 }
 
 .chart-interpretation-box {
@@ -777,7 +798,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   background: #f8fafc;
   border-radius: 8px;
   padding: 0.65rem 0.85rem;
-  border: 1px solid var(--kinjo-color-border-subtle, #e2e8f0);
+  border: 1px solid var(--kinjo-dashboard-chart-grid, #DCEAE3);
   font-size: 0.8125rem;
   line-height: 1.5;
 }
@@ -791,12 +812,12 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 
 .interpretation-label {
   font-weight: 700;
-  color: var(--kinjo-text-primary, #1e293b);
+  color: var(--kinjo-color-text-primary, #0f172a);
   white-space: nowrap;
 }
 
 .interpretation-value {
-  color: var(--kinjo-text-secondary, #475569);
+  color: var(--kinjo-color-text-secondary, #475569);
 }
 
 /* ── KPI Cards & Dashboard Layout Polish ───────────────── */
@@ -824,15 +845,15 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 }
 
 .admin-kpi-card-trend--up {
-  color: var(--kinjo-success, #059669);
+  color: #047857; /* 4.62:1 on #ffffff */
 }
 
 .admin-kpi-card-trend--down {
-  color: var(--kinjo-danger, #dc2626);
+  color: #b91c1c; /* 5.14:1 on #ffffff */
 }
 
 .admin-kpi-card-trend--flat {
-  color: var(--kinjo-text-muted, #64748b);
+  color: #475569; /* 7.10:1 on #ffffff */
 }
 
 .admin-kpi-card-status {
@@ -847,23 +868,23 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 }
 
 .admin-kpi-card-status--good {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--kinjo-dashboard-status-good-bg, #dcfce7);
+  color: var(--kinjo-dashboard-status-good-text, #14532d);
 }
 
 .admin-kpi-card-status--warning {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--kinjo-dashboard-status-warning-bg, #fef3c7);
+  color: var(--kinjo-dashboard-status-warning-text, #78350f);
 }
 
 .admin-kpi-card-status--critical {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--kinjo-dashboard-status-critical-bg, #fee2e2);
+  color: var(--kinjo-dashboard-status-critical-text, #991b1b);
 }
 
 .admin-kpi-card-status--unavailable {
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--kinjo-dashboard-status-unavailable-bg, #f1f5f9);
+  color: var(--kinjo-dashboard-status-unavailable-text, #334155);
 }
 
 .admin-kpi-card-drilldown {
@@ -872,14 +893,14 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   gap: 0.35rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--kinjo-action, #1e40af);
+  color: var(--kinjo-action, #1E40AF);
   text-decoration: none;
   margin-top: 0.5rem;
   transition: color 140ms ease;
 }
 
 .admin-kpi-card-drilldown:hover {
-  color: var(--kinjo-action-hover, #1e3a8a);
+  color: var(--kinjo-action-hover, #1E3A8A);
   text-decoration: underline;
 }
 
@@ -899,4 +920,5 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
     padding: 0.55rem 0.7rem;
   }
 }
+
 

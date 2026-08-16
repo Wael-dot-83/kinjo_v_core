@@ -548,8 +548,12 @@ class AdminDashboard {
     const submissionChart = {
       labels: Object.keys(enrollment).map((k) => {
         const i18nKey = ENROLLMENT_I18N[k];
+        const safeKey = sanitizeHTML(k);
+        const unknownFallback =
+          lang === "ar" ? `حالة أخرى (${safeKey})` : `Other status (${safeKey})`;
         const fallback =
-          (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[k] || k;
+          (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[k] ||
+          unknownFallback;
         return i18nKey ? this.t(i18nKey, fallback) : fallback;
       }),
       values: Object.values(enrollment).map((v) => this.toNumber(v)),
@@ -1266,6 +1270,45 @@ class AdminDashboard {
     }
   }
 
+  getChartTokens() {
+    const root =
+      (typeof document !== "undefined" &&
+        document.querySelector(".admin-uswds-dashboard")) ||
+      (typeof document !== "undefined" ? document.documentElement : null);
+    const s =
+      typeof window !== "undefined" && window.getComputedStyle && root
+        ? window.getComputedStyle(root)
+        : null;
+    const get = (name, fallback) =>
+      s ? s.getPropertyValue(name).trim() || fallback : fallback;
+
+    const primary = get("--kinjo-dashboard-chart-primary", "var(--kinjo-action, #1E40AF)");
+    const primaryFill = get(
+      "--kinjo-dashboard-chart-primary-fill",
+      "rgba(30, 64, 175, 0.22)",
+    );
+    const success = get("--kinjo-dashboard-chart-success", "var(--kinjo-color-success, #10b981)");
+    const warning = get("--kinjo-dashboard-chart-warning", "var(--kinjo-color-warning, #f59e0b)");
+    const danger = get("--kinjo-dashboard-chart-danger", "var(--kinjo-color-danger, #ef4444)");
+    const muted = get("--kinjo-dashboard-chart-muted", "var(--kinjo-color-text-muted, #64748b)");
+    const info = get("--kinjo-dashboard-chart-info", "var(--kinjo-color-info, #3b82f6)");
+    const grid = get("--kinjo-dashboard-chart-grid", "var(--kinjo-color-border-subtle, #DCEAE3)");
+    const text = get("--kinjo-dashboard-chart-text", "var(--kinjo-color-text-secondary, #475569)");
+
+    return {
+      primary,
+      primaryFill,
+      success,
+      warning,
+      danger,
+      muted,
+      info,
+      grid,
+      text,
+      palette: [primary, success, warning, danger, muted, info],
+    };
+  }
+
   renderAttendanceChart(data) {
     const ctx = document.getElementById("attendance-chart");
     if (!ctx) return;
@@ -1279,15 +1322,16 @@ class AdminDashboard {
         : "مخطط الحضور اليومي يوضح سجلات الحضور حسب التاريخ",
     );
     this.charts.attendance?.destroy();
+    const tokens = this.getChartTokens();
     const context = ctx.getContext("2d");
     const gradient = context
       ? (() => {
           const g = context.createLinearGradient(0, 0, 0, 220);
-          g.addColorStop(0, "rgba(30, 64, 175, 0.22)");
-          g.addColorStop(1, "rgba(30, 64, 175, 0.01)");
+          g.addColorStop(0, tokens.primaryFill);
+          g.addColorStop(1, "rgba(255, 255, 255, 0.0)");
           return g;
         })()
-      : "rgba(30, 64, 175, 0.1)";
+      : tokens.primaryFill;
     this.charts.attendance = new Chart(ctx, {
       type: "line",
       data: {
@@ -1299,13 +1343,13 @@ class AdminDashboard {
                 ? "Recorded Attendance"
                 : ATTENDANCE_CHART_LABELS["Recorded Attendance"],
             data: safeChartData(data.values),
-            borderColor: "#1e40af",
+            borderColor: tokens.primary,
             backgroundColor: gradient,
             tension: 0.35,
             fill: true,
             pointRadius: 3.5,
             pointHoverRadius: 5.5,
-            pointBackgroundColor: "#1e40af",
+            pointBackgroundColor: tokens.primary,
             pointBorderColor: "#fff",
             pointBorderWidth: 2,
             borderWidth: 2.2,
@@ -1326,11 +1370,11 @@ class AdminDashboard {
           },
         },
         scales: {
-          x: { ticks: { color: "#6c757d" }, grid: { display: false } },
+          x: { ticks: { color: tokens.text }, grid: { display: false } },
           y: {
             beginAtZero: true,
-            ticks: { precision: 0, color: "#6c757d" },
-            grid: { color: "rgba(0,0,0,0.06)" },
+            ticks: { precision: 0, color: tokens.text },
+            grid: { color: tokens.grid },
           },
         },
       },
@@ -1433,14 +1477,7 @@ class AdminDashboard {
         : "مخطط حالة التسجيل يوضح توزيع حالات الطلبات",
     );
     this.charts.dataSubmissions?.destroy();
-    const palette = [
-      "#1e40af",
-      "#10b981",
-      "#f59e0b",
-      "#ef4444",
-      "#64748b",
-      "#0ea5e9",
-    ];
+    const tokens = this.getChartTokens();
     this.charts.dataSubmissions = new Chart(ctx, {
       type: "bar",
       data: {
@@ -1450,7 +1487,7 @@ class AdminDashboard {
             label: this.t("dashboard.enrollment_status", "Enrollment Status"),
             data: safeChartData(data.values),
             backgroundColor: safeChartData(data.labels).map(
-              (_, i) => palette[i % palette.length],
+              (_, i) => tokens.palette[i % tokens.palette.length],
             ),
             borderWidth: 0,
             borderRadius: 6,
@@ -1476,10 +1513,10 @@ class AdminDashboard {
         scales: {
           x: {
             beginAtZero: true,
-            ticks: { precision: 0 },
-            grid: { color: "rgba(0,0,0,0.06)" },
+            ticks: { precision: 0, color: tokens.text },
+            grid: { color: tokens.grid },
           },
-          y: { ticks: { color: "#495057" }, grid: { display: false } },
+          y: { ticks: { color: tokens.text }, grid: { display: false } },
         },
       },
     });
