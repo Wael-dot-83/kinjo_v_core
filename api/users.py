@@ -21,7 +21,7 @@ import validators
 from captcha_service import captcha_error_message, captcha_required, verify_captcha
 from config import settings
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, require_admin
 from rate_limiter import limiter
 
 logger = logging.getLogger(__name__)
@@ -553,17 +553,21 @@ def create_user(
     )
 
     db.add(new_user)
-    db.commit()
+    db.flush()
     db.refresh(new_user)
 
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.USER_CREATED,
-        entity_type="User",
-        entity_id=new_user.id,
-        sensitivity_level=3,
-    )
+    try:
+        validators.log_audit_action(
+            db=db,
+            user_id=current_user.id,
+            action=AuditAction.USER_CREATED,
+            entity_type="User",
+            entity_id=new_user.id,
+            sensitivity_level=3,
+        )
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "id": new_user.id,
@@ -666,17 +670,21 @@ def create_staff(
     )
 
     db.add(new_staff)
-    db.commit()
+    db.flush()
     db.refresh(new_staff)
 
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.STAFF_CREATED,
-        entity_type="User",
-        entity_id=new_staff.id,
-        sensitivity_level=2,
-    )
+    try:
+        validators.log_audit_action(
+            db=db,
+            user_id=current_user.id,
+            action=AuditAction.STAFF_CREATED,
+            entity_type="User",
+            entity_id=new_staff.id,
+            sensitivity_level=2,
+        )
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "id": new_staff.id,
@@ -807,7 +815,7 @@ def update_user(
                     raise HTTPException(status_code=400, detail="Kindergarten not found")
             user.kindergarten_id = user_data.kindergarten_id
 
-    db.commit()
+    db.flush()
     db.refresh(user)
 
     after_state = {
@@ -817,16 +825,20 @@ def update_user(
         "kindergarten_id": user.kindergarten_id,
     }
 
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.USER_UPDATED,
-        entity_type="User",
-        entity_id=user.id,
-        sensitivity_level=3,
-        old_data=before_state,
-        new_data=after_state,
-    )
+    try:
+        validators.log_audit_action(
+            db=db,
+            user_id=current_user.id,
+            action=AuditAction.USER_UPDATED,
+            entity_type="User",
+            entity_id=user.id,
+            sensitivity_level=3,
+            old_data=before_state,
+            new_data=after_state,
+        )
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "id": user.id,
@@ -866,16 +878,19 @@ def delete_user(
     user.deleted_at = datetime.now(UTC)
     user.deleted_by = current_user.id
     user.status = models.UserStatus.INACTIVE
-    db.commit()
 
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.USER_DELETED,
-        entity_type="User",
-        entity_id=user_id,
-        sensitivity_level=3,
-    )
+    try:
+        validators.log_audit_action(
+            db=db,
+            user_id=current_user.id,
+            action=AuditAction.USER_DELETED,
+            entity_type="User",
+            entity_id=user_id,
+            sensitivity_level=3,
+        )
+    except Exception:
+        db.rollback()
+        raise
     return None
 
 
@@ -920,7 +935,27 @@ def initiate_password_reset(
     if not user:
         return None, None
 
-    token = issue_password_reset_token(db, user)
+    try:
+        token = issue_password_reset_token(db, user, commit=False)
+        validators.log_audit_action(
+            db=db,
+            user_id=user.id,
+            action=AuditAction.PASSWORD_RESET_REQUESTED,
+            entity_type="User",
+            entity_id=user.id,
+            sensitivity_level=2,
+        )
+    except Exception as exc:
+        db.rollback()
+        logger.error(
+            "PASSWORD_RESET_AUDIT_FAILED user_id=%s: token issuance rolled back: %s",
+            user.id,
+            exc,
+        )
+        # Preserve anti-enumeration: an audit outage must look exactly like an
+        # unknown email while failing closed without issuing a usable token.
+        return None, None
+
     base_url = str(request.base_url).rstrip("/")
     delivered = deliver_password_reset_email(base_url, user, token)
     if not delivered:
@@ -943,6 +978,19 @@ def apply_password_reset(
     if not token_record:
         return None
 
+    claimed = (
+        db.query(models.PasswordResetToken)
+        .filter(
+            models.PasswordResetToken.id == token_record.id,
+            models.PasswordResetToken.used.is_(False),
+            models.PasswordResetToken.expires_at > datetime.now(timezone.utc),
+        )
+        .update({"used": True}, synchronize_session=False)
+    )
+    if claimed != 1:
+        db.expire(token_record)
+        return None
+
     from auth import change_user_password
 
     change_user_password(db, token_record.user, new_password, commit=False)
@@ -956,7 +1004,7 @@ def admin_reset_password(
     request: Request,
     user_id: int,
     reset_data: AdminPasswordReset,
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Compatibility alias for the canonical admin password reset endpoint."""
@@ -993,20 +1041,23 @@ def reset_password(request: Request, reset_data: PasswordResetConfirm, db: Sessi
     try:
         token_record = apply_password_reset(db, reset_data.token, reset_data.new_password)
     except ValueError as exc:
+        db.rollback()
         raise HTTPException(status_code=400, detail=str(exc))
 
     if not token_record:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
-    db.commit()
-
-    validators.log_audit_action(
-        db=db,
-        user_id=token_record.user.id,
-        action=AuditAction.PASSWORD_RESET,
-        entity_type="User",
-        entity_id=token_record.user.id,
-        sensitivity_level=2,
-    )
+    try:
+        validators.log_audit_action(
+            db=db,
+            user_id=token_record.user.id,
+            action=AuditAction.PASSWORD_RESET,
+            entity_type="User",
+            entity_id=token_record.user.id,
+            sensitivity_level=2,
+        )
+    except Exception:
+        db.rollback()
+        raise
 
     return {"message": "Password reset successfully"}
 
@@ -1086,18 +1137,19 @@ def bulk_update_status(
         .update({"status": bulk_data.new_status}, synchronize_session=False)
     )
 
-    db.commit()
-
-    # Log audit action
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.BULK_STATUS_UPDATE,
-        entity_type="User",
-        entity_id=None,
-        details=f"Updated {updated_count} users to status {bulk_data.new_status.value}",
-        sensitivity_level=3,
-    )
+    try:
+        validators.log_audit_action(
+            db=db,
+            user_id=current_user.id,
+            action=AuditAction.BULK_STATUS_UPDATE,
+            entity_type="User",
+            entity_id=None,
+            details=f"Updated {updated_count} users to status {bulk_data.new_status.value}",
+            sensitivity_level=3,
+        )
+    except Exception:
+        db.rollback()
+        raise
 
     return {"message": f"Updated {updated_count} users successfully"}
 
@@ -1178,18 +1230,19 @@ def bulk_delete_users(
         )
     )
 
-    db.commit()
-
-    # Log audit action
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.BULK_USER_DELETE,
-        entity_type="User",
-        entity_id=None,
-        details=f"Deleted {deleted_count} users",
-        sensitivity_level=3,
-    )
+    try:
+        validators.log_audit_action(
+            db=db,
+            user_id=current_user.id,
+            action=AuditAction.BULK_USER_DELETE,
+            entity_type="User",
+            entity_id=None,
+            details=f"Deleted {deleted_count} users",
+            sensitivity_level=3,
+        )
+    except Exception:
+        db.rollback()
+        raise
 
     return {"message": f"Deleted {deleted_count} users successfully"}
 
@@ -1292,18 +1345,19 @@ def bulk_create_users(
         except (SQLAlchemyError, TypeError, ValueError) as e:
             errors.append({"row": i + 1, "field": "unknown", "message": str(e)})
 
-    db.commit()
-
-    # Log audit action
-    validators.log_audit_action(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.BULK_USER_CREATE,
-        entity_type="User",
-        entity_id=None,
-        details=f"Created {len(created_users)} users, {len(errors)} errors",
-        sensitivity_level=3,
-    )
+    try:
+        validators.log_audit_action(
+            db=db,
+            user_id=current_user.id,
+            action=AuditAction.BULK_USER_CREATE,
+            entity_type="User",
+            entity_id=None,
+            details=f"Created {len(created_users)} users, {len(errors)} errors",
+            sensitivity_level=3,
+        )
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "message": f"Created {len(created_users)} users successfully",

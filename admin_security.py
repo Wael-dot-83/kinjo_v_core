@@ -14,6 +14,8 @@ This module provides:
 import uuid
 import json
 import hashlib
+import hmac
+import secrets
 from datetime import datetime, timezone, timedelta, date
 from typing import Optional, List, Dict, Any, Callable, Union
 from contextvars import ContextVar
@@ -27,6 +29,7 @@ from sqlalchemy.orm import Session
 
 import models
 import validators
+from cache_service import cache_service
 
 # =============================================================================
 # Context Variables for Request Tracking
@@ -596,6 +599,7 @@ class BulkOperationConfig:
 
     # Require confirmation for operations affecting more than this many records
     CONFIRMATION_THRESHOLD = 10
+    CONFIRMATION_TOKEN_TTL_SECONDS = 300
 
 
 class BulkOperationRequest(BaseModel):
@@ -606,23 +610,74 @@ class BulkOperationRequest(BaseModel):
 
 def generate_confirmation_token(
     action: str,
-    target_ids: List[int],
+    target_ids: List[Union[int, str]],
     actor_id: int
 ) -> str:
-    """Generate a confirmation token for dangerous bulk operations"""
-    payload = f"{action}:{sorted(target_ids)}:{actor_id}:{datetime.now(timezone(timedelta(hours=3))).date()}"
-    return hashlib.sha256(payload.encode()).hexdigest()[:32]
+    """Issue a random, short-lived, actor/action/targets-bound token."""
+    binding = _confirmation_binding(action, target_ids, actor_id)
+
+    # Random collisions are practically impossible, but atomic reservation also
+    # protects against a mocked or faulty random source.
+    for _attempt in range(3):
+        token = secrets.token_urlsafe(32)
+        token_key = _confirmation_token_key(token)
+        stored = cache_service.add_if_absent(
+            token_key,
+            {"binding": binding},
+            ttl_seconds=BulkOperationConfig.CONFIRMATION_TOKEN_TTL_SECONDS,
+        )
+        if stored is True:
+            return token
+        if stored is None:
+            break
+
+    raise APIError(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        code=ErrorCode.INTERNAL_ERROR,
+        message="Confirmation service unavailable",
+    )
+
+
+def _confirmation_binding(
+    action: str,
+    target_ids: List[Union[int, str]],
+    actor_id: int,
+) -> str:
+    canonical_targets = sorted(
+        ({"type": type(target).__name__, "value": str(target)} for target in target_ids),
+        key=lambda target: (target["type"], target["value"]),
+    )
+    return json.dumps(
+        {"action": action, "actor_id": actor_id, "targets": canonical_targets},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _confirmation_token_key(token: str) -> str:
+    return f"admin_confirmation:{hashlib.sha256(token.encode('utf-8')).hexdigest()}"
 
 
 def verify_confirmation_token(
     token: str,
     action: str,
-    target_ids: List[int],
+    target_ids: List[Union[int, str]],
     actor_id: int
 ) -> bool:
-    """Verify a confirmation token"""
-    expected = generate_confirmation_token(action, target_ids, actor_id)
-    return token == expected
+    """Atomically consume and verify a one-time confirmation token."""
+    if not isinstance(token, str) or not token:
+        return False
+
+    stored = cache_service.consume(_confirmation_token_key(token))
+    if not isinstance(stored, dict):
+        return False
+
+    stored_binding = stored.get("binding")
+    if not isinstance(stored_binding, str):
+        return False
+
+    expected_binding = _confirmation_binding(action, target_ids, actor_id)
+    return hmac.compare_digest(stored_binding.encode("utf-8"), expected_binding.encode("utf-8"))
 
 
 class BulkOperationResult(BaseModel):
