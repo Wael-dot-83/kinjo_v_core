@@ -4,6 +4,7 @@ Main FastAPI Application
 """
 import asyncio
 import gzip
+import ipaddress
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -467,7 +468,14 @@ async def enforce_admin_surface_rate_limit(request: Request, call_next):
     # not be throttled by the admin-surface policy; its admin-only endpoints
     # (/stats, /cache) carry Depends(require_admin) individually, and /health is
     # an aggregate-only probe with no user data.
-    protected_prefixes = ("/api/admin", "/api/observability", "/api/analytics", "/admin/charts")
+    protected_prefixes = (
+        "/api/admin",
+        "/api/audit-logs",
+        "/api/heatmap",
+        "/api/observability",
+        "/api/analytics",
+        "/admin/charts",
+    )
     if path.startswith(protected_prefixes):
         allowed, limit_value = check_admin_surface_limit(request)
         if not allowed:
@@ -485,7 +493,8 @@ async def structured_access_log(request: Request, call_next):
     import time
     from jose import jwt as _jwt, JWTError as _JWTError
 
-    if not request.url.path.startswith("/api/admin"):
+    audited_prefixes = ("/api/admin", "/api/audit-logs", "/api/heatmap", "/admin/charts")
+    if not request.url.path.startswith(audited_prefixes):
         return await call_next(request)
 
     start = time.monotonic()
@@ -551,7 +560,9 @@ async def enforce_english_language_integrity(request: Request, call_next):
     if request.url.path.startswith("/api") or request.url.path.startswith("/static"):
         return response
 
-    requested_lang = _normalize_ui_language(request.cookies.get("kinjo_lang"))
+    requested_lang = _normalize_ui_language(
+        request.query_params.get("lang") or request.cookies.get("kinjo_lang")
+    )
     if requested_lang != "en":
         return response
 
@@ -656,9 +667,20 @@ except (OSError, RuntimeError) as e:
 def _get_request_ip(request: Request) -> Optional[str]:
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
+        candidate = forwarded_for.split(",")[0].strip()
+        try:
+            return str(ipaddress.ip_address(candidate))
+        except ValueError:
+            # Proxy headers are untrusted input. Never persist arbitrary markup
+            # into the audit trail; fall back to the socket peer when malformed.
+            pass
     client = request.client
-    return client.host if client else None
+    if not client:
+        return None
+    try:
+        return str(ipaddress.ip_address(client.host))
+    except ValueError:
+        return None
 
 
 def _log_auth_event(
@@ -1214,6 +1236,8 @@ try:
     from heatmap.backend.admin_router import router as admin_heat_map_router
     app.include_router(admin_heat_map_router, prefix="/api")
 except Exception as _heat_map_import_exc:
+    if settings.ENVIRONMENT.lower() == "production":
+        raise
     import logging as _logging
     _logging.getLogger(__name__).warning(
         "Heat map admin router not mounted: %s", _heat_map_import_exc
@@ -1276,17 +1300,19 @@ app.include_router(analytics_explorer_page_router)
 app.include_router(telemetry_router)
 app.include_router(observability_router)
 
-# Heat map ETL/analytics router (legacy /api/heatmap/* path used by the
-# standalone React app).  Safe to fail if dependencies (pandas / scipy /
-# apscheduler) are missing in the deployed environment.
-try:
-    from heatmap.backend.api.router import router as heat_map_router
-    app.include_router(heat_map_router, prefix="/api/heatmap")
-except Exception as _heat_map_router_exc:
-    import logging as _logging
-    _logging.getLogger(__name__).warning(
-        "Heat map ETL router not mounted: %s", _heat_map_router_exc
-    )
+# The legacy React heat-map API keeps ingested indicators and alerts in process
+# memory. That is useful for local exploration but cannot provide consistent
+# state across production workers. Production uses the persistent canonical
+# /api/admin/heat-map router mounted above.
+if settings.ENVIRONMENT.lower() != "production":
+    try:
+        from heatmap.backend.api.router import router as heat_map_router
+        app.include_router(heat_map_router, prefix="/api/heatmap")
+    except Exception as _heat_map_router_exc:
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "Legacy heat map ETL router not mounted: %s", _heat_map_router_exc
+        )
 
 # WebSocket endpoint for real-time dashboard updates
 from dependencies import get_current_user_optional
@@ -1634,8 +1660,9 @@ async def api_health_check(
         from sqlalchemy import text
         db.execute(text("SELECT 1"))
         db_status = "connected"
-    except (SQLAlchemyError, RuntimeError, AttributeError) as e:
-        db_status = f"error: {str(e)}"
+    except (SQLAlchemyError, RuntimeError, AttributeError):
+        logger.exception("Comprehensive health check failed")
+        db_status = "error"
         overall_status = "unhealthy"
 
     # Prepare response
@@ -1673,7 +1700,8 @@ async def api_health_check(
     elif overall_status == "degraded":
         status_code = 200  # Still OK but with warnings
 
-    return response
+    response["status"] = overall_status
+    return JSONResponse(status_code=status_code, content=response)
 
 
 @app.get("/api/metrics")
@@ -1730,8 +1758,9 @@ async def get_system_metrics(
             "system_health_score": performance_monitor.get_system_health_score()
         }
 
-    except (RuntimeError, AttributeError, TypeError) as e:
-        return {"error": str(e)}
+    except (RuntimeError, AttributeError, TypeError):
+        logger.exception("System metrics retrieval failed")
+        return JSONResponse(status_code=503, content={"error": "Metrics unavailable"})
 
 
 @app.get("/api/scaling/history")
@@ -1762,8 +1791,9 @@ async def get_scaling_history(
             "time_range_hours": hours
         }
 
-    except (RuntimeError, AttributeError, TypeError) as e:
-        return {"error": str(e)}
+    except (RuntimeError, AttributeError, TypeError):
+        logger.exception("Scaling history retrieval failed")
+        return JSONResponse(status_code=503, content={"error": "Scaling history unavailable"})
 
 
 # Predictive Analytics Endpoints

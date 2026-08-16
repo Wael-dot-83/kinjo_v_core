@@ -36,7 +36,17 @@ function drilldownLiteral(value) {
   } else if (typeof window.AppI18n?.replaceLiteralSegments === "function") {
     result = window.AppI18n.replaceLiteralSegments(raw);
   }
-  return typeof window.escapeHtml === "function" ? window.escapeHtml(result) : result;
+  return drilldownEscapeHtml(result);
+}
+
+function drilldownEscapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]);
 }
 
 function drilldownNumber(value, digits = null, suffix = "") {
@@ -49,7 +59,7 @@ function drilldownNumber(value, digits = null, suffix = "") {
 // Build the drill-down URL for the next level. `id` may be an Arabic geographic
 // name (governorate/city) so it must be URL-encoded.
 function drillHref(nextType, id) {
-  return `/admin/analytics/drilldown/${nextType}/${encodeURIComponent(id)}`;
+  return `/admin/analytics/drilldown/${encodeURIComponent(nextType)}/${encodeURIComponent(id)}`;
 }
 
 async function loadDrilldownData() {
@@ -184,7 +194,7 @@ function geoListTable(children, firstColAr, firstColEn, titleAr, titleEn) {
   const rows = children
     .map(
       (r) => `
-            <tr style="cursor:pointer;" onclick="window.location.href=drillHref('${r.dimension_type}', ${JSON.stringify(String(r.id))})">
+            <tr class="drilldown-row" style="cursor:pointer;" data-drill-type="${drilldownEscapeHtml(r.dimension_type)}" data-drill-id="${drilldownEscapeHtml(r.id)}">
                 <td class="fw-bold">${drilldownLiteral(r.name)}</td>
                 <td class="text-center" data-sort="${r.nursery_count}">${r.nursery_count}</td>
                 <td class="text-center" data-sort="${r.children_count}">${r.children_count}</td>
@@ -230,7 +240,7 @@ function populateTable(children, type) {
     rows = children
       .map(
         (kg) => `
-            <tr data-kg-id="${kg.id}" style="cursor:pointer;" onclick="window.location.href=drillHref('KINDERGARTEN', ${kg.id})">
+            <tr class="drilldown-row" data-kg-id="${drilldownEscapeHtml(kg.id)}" data-drill-type="KINDERGARTEN" data-drill-id="${drilldownEscapeHtml(kg.id)}" style="cursor:pointer;">
                 <td class="fw-bold">${drilldownLiteral(kg.name)}</td>
                 <td class="text-center">${kg.children_count}</td>
                 <td class="text-center" data-sort="${kg.attendance_rate ?? ""}"><span class="badge ${getScoreColor(kg.attendance_rate, true)}">${drilldownNumber(kg.attendance_rate, 1, "%")}</span></td>
@@ -256,7 +266,7 @@ function populateTable(children, type) {
     rows = children
       .map(
         (cls) => `
-            <tr data-class-id="${cls.id}" style="cursor:pointer;" onclick="window.location.href=drillHref('CLASS', ${cls.id})">
+            <tr class="drilldown-row" data-class-id="${drilldownEscapeHtml(cls.id)}" data-drill-type="CLASS" data-drill-id="${drilldownEscapeHtml(cls.id)}" style="cursor:pointer;">
                 <td class="fw-bold">${drilldownLiteral(cls.name)}</td>
                 <td class="text-center" data-sort="${cls.children_count}">${cls.children_count}</td>
                 <td class="text-center" data-sort="${cls.capacity}">${cls.capacity}</td>
@@ -277,7 +287,7 @@ function populateTable(children, type) {
     rows = children
       .map(
         (child) => `
-            <tr style="cursor:pointer;" onclick="window.location.href=drillHref('CHILD', ${child.id})">
+            <tr class="drilldown-row" data-drill-type="CHILD" data-drill-id="${drilldownEscapeHtml(child.id)}" style="cursor:pointer;">
                 <td class="fw-bold">${drilldownLiteral(child.name)}</td>
                 <td class="text-center" data-sort="${child.attendance_rate ?? ""}"><span class="badge ${getScoreColor(child.attendance_rate, true)}">${drilldownNumber(child.attendance_rate, 1, "%")}</span></td>
                 <td class="text-center">${child.attendance_days}</td>
@@ -295,6 +305,12 @@ function populateTable(children, type) {
 
   thead.innerHTML = headers;
   tbody.innerHTML = rows;
+
+  tbody.querySelectorAll(".drilldown-row[data-drill-type][data-drill-id]").forEach((row) => {
+    row.addEventListener("click", () => {
+      window.location.href = drillHref(row.dataset.drillType, row.dataset.drillId);
+    });
+  });
 
   if (tableSorter) tableSorter.destroy();
   if (table && headers) tableSorter = new Tablesort(table);

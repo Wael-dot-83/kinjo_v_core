@@ -340,12 +340,12 @@ class TestGovernanceEndpointsRunInThreadpool:
     ]
 
     def test_handlers_are_not_coroutine_functions(self):
-        import asyncio
+        import inspect
         import admin_endpoints
 
         for name in self.GOVERNANCE_HANDLERS:
             fn = getattr(admin_endpoints, name)
-            assert not asyncio.iscoroutinefunction(fn), (
+            assert not inspect.iscoroutinefunction(fn), (
                 f"{name} is a coroutine function; FastAPI will run it on the "
                 "event loop, where its blocking DB work stalls every other "
                 "request in the process"
