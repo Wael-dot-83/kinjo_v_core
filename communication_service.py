@@ -1363,10 +1363,13 @@ def get_message(
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
-        after_state=model_to_dict(message),
         metadata={"thread_type": message.thread_type.value},
         sensitivity_level=1
     )
+    # This is a read/security event with no later mutation commit to carry it.
+    # Commit explicitly so request-session teardown cannot discard the audit row.
+    # Do not pass the message model as audit state: it contains the private body.
+    db.commit()
 
     return _serialize_message_detail(message, read_at, archived_at=archived_at, current_user=current_user)
 
@@ -1975,6 +1978,8 @@ def download_message_attachment(
         metadata={"attachment_id": attachment.id},
         sensitivity_level=1
     )
+    # Download access is a standalone security event, so it owns its commit.
+    db.commit()
 
     if attachment.storage_provider == "s3":
         import boto3

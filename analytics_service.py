@@ -1719,6 +1719,12 @@ def _log_analytics_export_audit(
     error_message: Optional[str] = None,
     sensitivity_level: int = 2,
 ) -> None:
+    """Flush an export audit into the caller's current transaction.
+
+    The helper deliberately does not commit. Mutation callers must add the audit
+    before their single business commit; read and rejected-attempt callers must
+    explicitly commit the standalone audit before returning or raising.
+    """
     export_format_value = export_format.value if isinstance(export_format, Enum) else export_format
     metadata: Dict[str, Any] = {
         "report_type": report_type,
@@ -2664,6 +2670,7 @@ def export_analytics_data(
                 report_type=request_body.report_type, export_format=request_body.export_format,
                 filters=request_body.filters, status_value="failed", error_message="Invalid date format", sensitivity_level=3
             )
+            db.commit()
             raise HTTPException(status_code=400, detail="Invalid date format")
 
     import csv
@@ -2748,6 +2755,7 @@ def export_analytics_data(
             report_type=request_body.report_type, export_format=request_body.export_format,
             filters=request_body.filters, status_value="failed", error_message="Invalid report type", sensitivity_level=3
         )
+        db.commit()
         raise HTTPException(status_code=400, detail="Invalid report type")
 
     # Excel Export
@@ -2767,6 +2775,7 @@ def export_analytics_data(
         
         filename = f"{request_body.report_type}_report_{start_date}_{end_date}.xlsx"
         _log_analytics_export_audit(db, action=AuditAction.ANALYTICS_EXPORT_SYNC, actor=current_user, report_type=request_body.report_type, export_format="EXCEL", filters=request_body.filters, status_value="completed", file_path=filename)
+        db.commit()
         return Response(
             content=output.getvalue(),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -2776,6 +2785,7 @@ def export_analytics_data(
     # Default: CSV Export (Streaming)
     filename = f"{request_body.report_type}_report_{start_date}_{end_date}.csv"
     _log_analytics_export_audit(db, action=AuditAction.ANALYTICS_EXPORT_SYNC, actor=current_user, report_type=request_body.report_type, export_format="CSV", filters=request_body.filters, status_value="completed", file_path=filename)
+    db.commit()
 
     def iter_csv():
         output = io.StringIO()
@@ -4977,6 +4987,7 @@ def request_export(
                 error_message=f"Unsupported export format: {request_body.export_format}",
                 sensitivity_level=3,
             )
+            db.commit()
             raise HTTPException(status_code=400, detail="Unsupported export format")
 
         job = models.ExportJob(
@@ -4988,9 +4999,7 @@ def request_export(
         )
 
     db.add(job)
-    db.commit()
-    db.refresh(job)
-
+    db.flush()
     _log_analytics_export_audit(
         db,
         action=AuditAction.ANALYTICS_EXPORT_REQUESTED,
@@ -5001,7 +5010,10 @@ def request_export(
         job_id=job.id,
         status_value=job.status.value,
     )
-    db.commit()  # release the write lock from the audit flush before background task runs
+    # The job and its success audit are one accepted business transaction. This
+    # also releases the write lock before the background task starts.
+    db.commit()
+    db.refresh(job)
 
     background_tasks.add_task(_run_export_job_async, job.id)
 
@@ -5087,6 +5099,8 @@ def download_export_file(
         file_path=str(file_path),
         file_size=job.file_size,
     )
+    # A download is a read/security event with no later mutation commit.
+    db.commit()
 
     media_type = "text/csv"
     if job.export_format == models.ExportFormat.EXCEL:
@@ -5236,8 +5250,6 @@ def process_export_job(job_id: int):
         job.file_path = str(out_path)
         job.file_size = out_path.stat().st_size
         job.completed_at = _utcnow_naive()
-        db.commit()
-
         actor = db.query(models.User).filter(models.User.id == job.user_id).first()
         _log_analytics_export_audit(
             db,
@@ -5251,6 +5263,8 @@ def process_export_job(job_id: int):
             file_path=job.file_path,
             file_size=job.file_size,
         )
+        # Completion state and its success audit must become visible together.
+        db.commit()
     except (SQLAlchemyError, OSError, ValueError, TypeError, AttributeError, RuntimeError, ImportError, csv.Error) as exc:
         try:
             db.rollback()
@@ -5260,8 +5274,6 @@ def process_export_job(job_id: int):
         if job:
             job.status = models.ExportStatus.FAILED
             job.error_message = str(exc)
-            db.commit()
-
             actor = db.query(models.User).filter(models.User.id == job.user_id).first()
             _log_analytics_export_audit(
                 db,
@@ -5275,6 +5287,8 @@ def process_export_job(job_id: int):
                 error_message=job.error_message,
                 sensitivity_level=3,
             )
+            # A failed state is not accepted without its matching failure audit.
+            db.commit()
     finally:
         db.close()
 
