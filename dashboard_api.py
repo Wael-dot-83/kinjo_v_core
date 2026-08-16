@@ -32,9 +32,12 @@ _JORDAN_TZ = timezone(timedelta(hours=3))
 @router.get("/widgets")
 async def get_user_widgets(
     current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     try:
-        widgets = dashboard_customization.get_user_widgets(current_user.id, current_user.role.value.lower())
+        widgets = dashboard_customization.get_user_widgets(
+            current_user.id, current_user.role.value.lower(), db
+        )
         return {"widgets": widgets}
     except SQLAlchemyError as e:
         logger.error("Database error fetching dashboard widgets for user_id=%s: %s", current_user.id, str(e), exc_info=True)
@@ -48,9 +51,12 @@ async def get_user_widgets(
 async def update_user_widgets(
     widgets: List[Dict],
     current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     try:
-        success = dashboard_customization.update_user_widgets(current_user.id, widgets)
+        success = dashboard_customization.update_user_widgets(
+            current_user.id, widgets, current_user.role.value.lower(), db
+        )
         if not success:
             raise HTTPException(status_code=400, detail="Invalid widget configuration")
 
@@ -65,9 +71,12 @@ async def update_user_widgets(
 @router.post("/widgets/reset")
 async def reset_user_widgets(
     current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     try:
-        success = dashboard_customization.reset_user_widgets(current_user.id, current_user.role.value.lower())
+        success = dashboard_customization.reset_user_widgets(
+            current_user.id, current_user.role.value.lower(), db
+        )
         if not success:
             raise HTTPException(status_code=500, detail="Failed to reset dashboard widget configuration")
 
@@ -82,9 +91,12 @@ async def toggle_widget(
     widget_id: str,
     enabled: bool,
     current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     try:
-        success = dashboard_customization.toggle_widget(current_user.id, widget_id, enabled)
+        success = dashboard_customization.toggle_widget(
+            current_user.id, widget_id, enabled, current_user.role.value.lower(), db
+        )
         if not success:
             raise HTTPException(status_code=404, detail="Widget not found or operation invalid")
 
@@ -100,9 +112,12 @@ async def toggle_widget(
 async def reorder_widgets(
     widget_order: List[str],
     current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     try:
-        success = dashboard_customization.reorder_widgets(current_user.id, widget_order)
+        success = dashboard_customization.reorder_widgets(
+            current_user.id, widget_order, current_user.role.value.lower(), db
+        )
         if not success:
             raise HTTPException(status_code=400, detail="Invalid widget order")
 

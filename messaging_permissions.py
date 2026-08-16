@@ -605,6 +605,10 @@ def resolve_recipients(db: Session, audience: AudienceDefinition, sender: models
     import logging as _log
     logger = _log.getLogger(__name__)
 
+    # Reject unknown/ill-shaped advanced filters before any recipient query.
+    # A filter that is accepted by the API must never be silently ignored.
+    _validate_audience_filters(audience.filters or [])
+
     # Enforce permissions based on sender role
     _validate_audience_permissions(db, audience, sender)
 
@@ -685,17 +689,6 @@ def resolve_recipients(db: Session, audience: AudienceDefinition, sender: models
             parent_query = parent_query.filter(models.User.id.in_(parent_subquery))
         recipient_ids.update(row[0] for row in parent_query.distinct().all())
 
-    # Apply custom filters (used by advanced audience builder)
-    if audience.filters:
-        # If filters reference governorate/kindergarten they may further restrict.
-        # The governorate filters were already handled above in scope resolution.
-        # Additional non-governorate filters can be applied here.
-        for filter_clause in audience.filters:
-            if filter_clause.field == "kindergarten.governorate":
-                continue  # Already handled above
-            # Other filter types still supported
-            pass
-
     # Add explicitly included users
     if audience.include_user_ids:
         if sender.role == models.UserRole.MANAGER:
@@ -706,6 +699,12 @@ def resolve_recipients(db: Session, audience: AudienceDefinition, sender: models
                 )
         else:
             recipient_ids.update(audience.include_user_ids)
+
+    # Every accepted custom filter is restrictive, including for explicitly
+    # included users. Intersecting per-clause result sets gives deterministic
+    # AND semantics shared by preview and send (both call this resolver).
+    for filter_clause in audience.filters or []:
+        recipient_ids &= _recipient_ids_matching_filter(db, filter_clause)
 
     # Remove excluded users
     if audience.exclude_user_ids:
@@ -777,8 +776,9 @@ def _validate_audience_permissions(db: Session, audience: AudienceDefinition, se
 
 def _apply_filter_clause(query, filter_clause: FilterClause, sender: models.User):
     """Apply a single filter clause to the query"""
+    _validate_filter_clause(filter_clause)
     field = filter_clause.field
-    op = filter_clause.op
+    op = _as_filter_operator(filter_clause.op)
     value = filter_clause.value
 
     # Handle different field types
@@ -810,7 +810,8 @@ def _apply_user_filter(query, field: str, op: FilterOperator, value):
             query = query.filter(models.User.status == models.UserStatus.ACTIVE)
         elif op == FilterOperator.IS_FALSE:
             query = query.filter(models.User.status != models.UserStatus.ACTIVE)
-    # Add more user field filters as needed
+    else:
+        raise validation_error(f"Unsupported filter field: user.{field}")
 
     return query
 
@@ -837,6 +838,8 @@ def _apply_kindergarten_filter(query, field: str, op: FilterOperator, value):
             query = query.filter(models.Kindergarten.id == value)
         elif op == FilterOperator.IN:
             query = query.filter(models.Kindergarten.id.in_(value))
+    else:
+        raise validation_error(f"Unsupported filter field: kindergarten.{field}")
 
     return query
 
@@ -853,11 +856,199 @@ def _apply_enrollment_filter(query, field: str, op: FilterOperator, value):
                 models.ParentProfile,
                 models.ParentProfile.user_id == models.User.id
             ).join(
+                models.Child,
+                models.Child.parent_id == models.ParentProfile.id,
+            ).join(
                 models.EnrollmentApplication,
-                models.EnrollmentApplication.child_id == models.ParentProfile.id
+                models.EnrollmentApplication.child_id == models.Child.id
             ).filter(models.EnrollmentApplication.status == status_enum)
+        elif op == FilterOperator.IN:
+            statuses = [models.EnrollmentStatus(item) for item in value]
+            query = query.join(
+                models.ParentProfile,
+                models.ParentProfile.user_id == models.User.id,
+            ).join(
+                models.Child,
+                models.Child.parent_id == models.ParentProfile.id,
+            ).join(
+                models.EnrollmentApplication,
+                models.EnrollmentApplication.child_id == models.Child.id,
+            ).filter(models.EnrollmentApplication.status.in_(statuses))
+    else:
+        raise validation_error(f"Unsupported filter field: enrollment.{field}")
 
     return query
+
+
+_SUPPORTED_FILTER_OPERATORS = {
+    "user.role": {FilterOperator.EQ, FilterOperator.IN, FilterOperator.NEQ, FilterOperator.NOT_IN},
+    "user.is_active": {FilterOperator.IS_TRUE, FilterOperator.IS_FALSE},
+    "kindergarten.id": {FilterOperator.EQ, FilterOperator.IN},
+    "kindergarten.governorate": {FilterOperator.EQ, FilterOperator.IN},
+    "enrollment.status": {FilterOperator.EQ, FilterOperator.IN},
+}
+
+
+def _as_filter_operator(raw: Any) -> FilterOperator:
+    try:
+        if isinstance(raw, FilterOperator):
+            return raw
+        raw_value = raw.value if hasattr(raw, "value") else str(raw)
+        return FilterOperator(raw_value)
+    except ValueError:
+        raise validation_error("Unsupported filter operator", fields={"filters": "operator"})
+
+
+def _as_list(value: Any, *, field: str) -> List[Any]:
+    if not isinstance(value, list) or not value:
+        raise validation_error("Filter value must be a non-empty list", fields={field: "invalid"})
+    return value
+
+
+def _validate_filter_clause(filter_clause: FilterClause) -> None:
+    field = str(filter_clause.field or "").strip()
+    allowed = _SUPPORTED_FILTER_OPERATORS.get(field)
+    if not allowed:
+        raise validation_error(f"Unsupported filter field: {field}", fields={"filters": "field"})
+    op = _as_filter_operator(filter_clause.op)
+    if op not in allowed:
+        raise validation_error(
+            f"Unsupported operator {op.value} for {field}",
+            fields={field: "operator"},
+        )
+
+    value = filter_clause.value
+    if op in {FilterOperator.IN, FilterOperator.NOT_IN}:
+        values = _as_list(value, field=field)
+    elif op in {FilterOperator.IS_TRUE, FilterOperator.IS_FALSE}:
+        if value not in (None, True, False):
+            raise validation_error("Boolean filter does not accept a value", fields={field: "invalid"})
+        values = []
+    else:
+        if isinstance(value, list) or value is None:
+            raise validation_error("Filter value is required", fields={field: "invalid"})
+        values = [value]
+
+    try:
+        if field == "user.role":
+            for item in values:
+                models.UserRole(str(item).strip().upper())
+        elif field == "kindergarten.id":
+            if any(isinstance(item, bool) or int(item) <= 0 for item in values):
+                raise ValueError
+        elif field == "kindergarten.governorate":
+            for item in values:
+                validators.validate_jordan_governorate(str(item))
+        elif field == "enrollment.status":
+            for item in values:
+                models.EnrollmentStatus(str(item).strip().upper())
+    except (TypeError, ValueError, validators.ValidationError):
+        raise validation_error("Invalid filter value", fields={field: "invalid"})
+
+
+def _validate_audience_filters(filters: List[FilterClause]) -> None:
+    for filter_clause in filters:
+        _validate_filter_clause(filter_clause)
+
+
+def _recipient_ids_matching_filter(db: Session, filter_clause: FilterClause) -> Set[int]:
+    """Resolve exactly the users matching one validated audience filter."""
+    field = str(filter_clause.field).strip()
+    op = _as_filter_operator(filter_clause.op)
+    value = filter_clause.value
+
+    if field == "user.role":
+        scalar = models.UserRole(str(value).strip().upper()) if op in {FilterOperator.EQ, FilterOperator.NEQ} else None
+        values = [models.UserRole(str(item).strip().upper()) for item in value] if isinstance(value, list) else []
+        query = db.query(models.User.id)
+        if op == FilterOperator.EQ:
+            query = query.filter(models.User.role == scalar)
+        elif op == FilterOperator.NEQ:
+            query = query.filter(models.User.role != scalar)
+        elif op == FilterOperator.IN:
+            query = query.filter(models.User.role.in_(values))
+        else:
+            query = query.filter(models.User.role.not_in(values))
+        return {row[0] for row in query.all()}
+
+    if field == "user.is_active":
+        expected = op == FilterOperator.IS_TRUE
+        statuses = (
+            [models.UserStatus.ACTIVE]
+            if expected
+            else [status for status in models.UserStatus if status != models.UserStatus.ACTIVE]
+        )
+        return {
+            row[0]
+            for row in db.query(models.User.id).filter(models.User.status.in_(statuses)).all()
+        }
+
+    if field == "enrollment.status":
+        statuses = (
+            [models.EnrollmentStatus(str(value).strip().upper())]
+            if op == FilterOperator.EQ
+            else [models.EnrollmentStatus(str(item).strip().upper()) for item in value]
+        )
+        query = (
+            db.query(models.User.id)
+            .join(models.ParentProfile, models.ParentProfile.user_id == models.User.id)
+            .join(models.Child, models.Child.parent_id == models.ParentProfile.id)
+            .join(
+                models.EnrollmentApplication,
+                models.EnrollmentApplication.child_id == models.Child.id,
+            )
+            .filter(models.EnrollmentApplication.status.in_(statuses))
+        )
+        return {row[0] for row in query.distinct().all()}
+
+    if field == "kindergarten.id":
+        kindergarten_ids = (
+            [int(value)] if op == FilterOperator.EQ else [int(item) for item in value]
+        )
+        kindergarten_filter = models.Kindergarten.id.in_(kindergarten_ids)
+    else:
+        from services.jordan_locations import governorate_query_aliases
+
+        raw_values = [value] if op == FilterOperator.EQ else value
+        governorates: List[str] = []
+        for raw_value in raw_values:
+            canonical = validators.validate_jordan_governorate(str(raw_value))
+            governorates.extend(governorate_query_aliases(canonical) or [canonical])
+        kindergarten_filter = models.Kindergarten.governorate.in_(set(governorates))
+
+    staff_ids = {
+        row[0]
+        for row in (
+            db.query(models.User.id)
+            .join(models.Kindergarten, models.User.kindergarten_id == models.Kindergarten.id)
+            .filter(kindergarten_filter)
+            .distinct()
+            .all()
+        )
+    }
+    parent_ids = {
+        row[0]
+        for row in (
+            db.query(models.User.id)
+            .join(models.ParentProfile, models.ParentProfile.user_id == models.User.id)
+            .join(models.Child, models.Child.parent_id == models.ParentProfile.id)
+            .join(
+                models.EnrollmentApplication,
+                models.EnrollmentApplication.child_id == models.Child.id,
+            )
+            .join(
+                models.Kindergarten,
+                models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id,
+            )
+            .filter(
+                kindergarten_filter,
+                models.EnrollmentApplication.status.in_(ACTIVE_ENROLLMENT_STATUSES),
+            )
+            .distinct()
+            .all()
+        )
+    }
+    return staff_ids | parent_ids
 
 
 def get_audience_options(db: Session, current_user: models.User) -> dict:

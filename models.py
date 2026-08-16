@@ -1266,6 +1266,14 @@ class Notification(Base):
     status = Column(Enum(NotificationStatus), nullable=False, default=NotificationStatus.PENDING)
     payload = Column(JSON, nullable=True)
     error_message = Column(Text, nullable=True)
+    # Durable Celery dispatch state.  A short lease prevents two workers from
+    # delivering the same row concurrently; attempts/next_retry_at make broker
+    # outages bounded and observable instead of leaving PENDING rows forever.
+    delivery_attempts = Column(Integer, nullable=False, default=0, server_default="0")
+    last_attempt_at = Column(UTCDateTime, nullable=True)
+    next_retry_at = Column(UTCDateTime, nullable=True)
+    dispatch_claimed_at = Column(UTCDateTime, nullable=True)
+    dispatch_claim_token = Column(String(64), nullable=True)
     created_at = Column(UTCDateTime, server_default=func.now())
     sent_at = Column(UTCDateTime, nullable=True)
 
@@ -1278,6 +1286,12 @@ class Notification(Base):
         Index("ix_notifications_message", "message_id"),
         Index("ix_notifications_channel", "channel"),
         Index("ix_notifications_daily_report", "daily_report_id"),
+        Index(
+            "ix_notifications_retry_due",
+            "status",
+            "channel",
+            "next_retry_at",
+        ),
     )
 
 

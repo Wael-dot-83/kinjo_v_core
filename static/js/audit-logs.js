@@ -143,17 +143,17 @@ class AuditLogsManager {
                 ))}</td>
                 <td>
                     <span class="badge ${this.getActionBadgeClass(log.action)}">
-                        ${this.getActionLabel(log.action)}
+                        ${this.escapeHtml(this.getActionLabel(log.action))}
                     </span>
                 </td>
-                <td>${this.getEntityTypeLabel(log.entity_type)}</td>
-                <td>${log.entity_id || "-"}</td>
+                <td>${this.escapeHtml(this.getEntityTypeLabel(log.entity_type) || "-")}</td>
+                <td>${this.escapeHtml(log.entity_id || "-")}</td>
                 <td>
                     <div class="text-truncate" style="max-width: 200px;" title="${this.escapeHtml(log.details || "")}">
                         ${this.escapeHtml(log.details || "-")}
                     </div>
                 </td>
-                <td>${log.ip_address || "-"}</td>
+                <td>${this.escapeHtml(log.ip_address || "-")}</td>
             </tr>
         `
       )

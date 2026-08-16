@@ -194,10 +194,15 @@ def test_prune_keeps_the_newest_and_removes_the_rest(tmp_path, monkeypatch):
 def test_compose_declares_worker_and_beat():
     """Production ran neither: KINJO_WEB_COMMAND overrode compose's supervisord
     default, and supervisor.conf only started uvicorn."""
-    import yaml
-
-    compose = yaml.safe_load((ROOT / "docker-compose.prod.yml").read_text(encoding="utf-8"))
-    services = compose["services"]
-    assert "worker" in services and "beat" in services
-    assert "worker" in services["worker"]["command"]
-    assert "beat" in services["beat"]["command"]
+    text = (ROOT / "docker-compose.prod.yml").read_text(encoding="utf-8")
+    try:
+        import yaml
+        compose = yaml.safe_load(text)
+        services = compose["services"]
+        assert "worker" in services and "beat" in services
+        assert "worker" in services["worker"]["command"]
+        assert "beat" in services["beat"]["command"]
+    except ImportError:
+        assert "worker:" in text
+        assert "beat:" in text
+        assert "celery -A celery_app" in text

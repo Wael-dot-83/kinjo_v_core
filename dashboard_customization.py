@@ -1,12 +1,12 @@
 """
 Dashboard customization service for widget management
 """
+import copy
 import json
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-from database import get_db
 from cache_service import cache_service
 import models
 
@@ -43,40 +43,59 @@ class DashboardCustomizationService:
         ]
     }
 
-    def get_user_widgets(self, user_id: int, role: str) -> List[Dict]:
+    @classmethod
+    def _role_defaults(cls, role: str) -> List[Dict]:
+        """Return an isolated copy of the widgets available to ``role``."""
+        normalized_role = str(role or "").lower()
+        if normalized_role not in cls.DEFAULT_WIDGETS:
+            raise ValueError("Unsupported dashboard role")
+        return copy.deepcopy(cls.DEFAULT_WIDGETS[normalized_role])
+
+    @staticmethod
+    def _cache_key(user_id: int, role: str) -> str:
+        return f"user_widgets:{user_id}:{str(role or '').lower()}"
+
+    def get_user_widgets(self, user_id: int, role: str, db: Session) -> List[Dict]:
         """Get user's customized dashboard widgets"""
-        cache_key = f"user_widgets:{user_id}"
+        cache_key = self._cache_key(user_id, role)
 
         # Try cache first
         cached = cache_service.get(cache_key)
+        if cached and self._validate_widgets(cached, role):
+            return copy.deepcopy(cached)
         if cached:
-            return cached
+            cache_service.delete(cache_key)
 
-        # Get from database or use defaults
-        db = next(get_db())
+        # The request owns ``db`` and is responsible for closing it.
         user_prefs = db.query(models.UserDashboardPreference).filter(
             models.UserDashboardPreference.user_id == user_id
         ).first()
 
         if user_prefs and user_prefs.widget_config:
-            widgets = json.loads(user_prefs.widget_config)
+            raw_config = user_prefs.widget_config
+            widgets = json.loads(raw_config) if isinstance(raw_config, str) else copy.deepcopy(raw_config)
+            if not self._validate_widgets(widgets, role):
+                logger.warning(
+                    "Ignoring invalid dashboard widget configuration for user_id=%s role=%s",
+                    user_id,
+                    role,
+                )
+                widgets = self._role_defaults(role)
         else:
-            # Use role-based defaults
-            widgets = self.DEFAULT_WIDGETS.get(role, self.DEFAULT_WIDGETS["admin"]).copy()
+            widgets = self._role_defaults(role)
 
         # Cache for 1 hour
-        cache_service.set(cache_key, widgets, 3600)
-        return widgets
+        cache_service.set(cache_key, copy.deepcopy(widgets), 3600)
+        return copy.deepcopy(widgets)
 
-    def update_user_widgets(self, user_id: int, widgets: List[Dict]) -> bool:
+    def update_user_widgets(self, user_id: int, widgets: List[Dict], role: str, db: Session) -> bool:
         """Update user's dashboard widget configuration"""
-        db: Optional[Session] = None
         try:
-            db = next(get_db())
-
             # Validate widgets structure
-            if not self._validate_widgets(widgets):
+            if not self._validate_widgets(widgets, role):
                 return False
+
+            stored_widgets = copy.deepcopy(widgets)
 
             # Update or create preference record
             user_prefs = db.query(models.UserDashboardPreference).filter(
@@ -84,87 +103,112 @@ class DashboardCustomizationService:
             ).first()
 
             if user_prefs:
-                user_prefs.widget_config = json.dumps(widgets)
+                user_prefs.widget_config = stored_widgets
             else:
                 user_prefs = models.UserDashboardPreference(
                     user_id=user_id,
-                    widget_config=json.dumps(widgets)
+                    widget_config=stored_widgets,
                 )
                 db.add(user_prefs)
 
             db.commit()
 
             # Clear cache
-            cache_key = f"user_widgets:{user_id}"
-            cache_service.delete(cache_key)
+            cache_service.delete(self._cache_key(user_id, role))
+            cache_service.delete(f"user_widgets:{user_id}")  # remove the legacy cache key
 
             return True
         except SQLAlchemyError as e:
-            if db is not None:
-                db.rollback()
+            db.rollback()
             logger.error("Database error updating dashboard widgets for user_id=%s: %s", user_id, str(e), exc_info=True)
             return False
         except (TypeError, ValueError) as e:
-            if db is not None:
-                db.rollback()
+            db.rollback()
             logger.warning("Invalid dashboard widget payload for user_id=%s: %s", user_id, str(e))
             return False
-        finally:
-            if db is not None:
-                db.close()
 
-    def reset_user_widgets(self, user_id: int, role: str) -> bool:
+    def reset_user_widgets(self, user_id: int, role: str, db: Session) -> bool:
         """Reset user's widgets to role-based defaults"""
-        default_widgets = self.DEFAULT_WIDGETS.get(role, self.DEFAULT_WIDGETS["admin"]).copy()
-        return self.update_user_widgets(user_id, default_widgets)
+        return self.update_user_widgets(user_id, self._role_defaults(role), role, db)
 
-    def _validate_widgets(self, widgets: List[Dict]) -> bool:
+    def _validate_widgets(self, widgets: List[Dict], role: str) -> bool:
         """Validate widget configuration structure"""
         if not isinstance(widgets, list):
             return False
 
-        required_fields = ["id", "title", "type", "enabled", "order"]
-        valid_types = ["kpi_cards", "chart", "alerts", "child_info", "attendance"]
+        try:
+            available = self._role_defaults(role)
+        except ValueError:
+            return False
+
+        if len(widgets) != len(available):
+            return False
+
+        required_fields = {"id", "title", "type", "enabled", "order"}
+        available_by_id = {widget["id"]: widget for widget in available}
+        ids = []
+        orders = []
 
         for widget in widgets:
             if not isinstance(widget, dict):
                 return False
 
-            # Check required fields
-            for field in required_fields:
-                if field not in widget:
-                    return False
+            # Persist only the bounded canonical structure, not arbitrary nested data.
+            if set(widget) != required_fields:
+                return False
 
-            # Validate types
-            if widget.get("type") not in valid_types:
+            widget_id = widget.get("id")
+            canonical = available_by_id.get(widget_id)
+            if canonical is None:
+                return False
+            if widget.get("title") != canonical["title"] or widget.get("type") != canonical["type"]:
                 return False
 
             # Validate data types
             if not isinstance(widget.get("enabled"), bool):
                 return False
-            if not isinstance(widget.get("order"), int):
+            order = widget.get("order")
+            if isinstance(order, bool) or not isinstance(order, int):
                 return False
+            ids.append(widget_id)
+            orders.append(order)
+
+        if len(ids) != len(set(ids)) or set(ids) != set(available_by_id):
+            return False
+        if len(orders) != len(set(orders)) or set(orders) != set(range(1, len(widgets) + 1)):
+            return False
 
         return True
 
     def get_available_widgets(self, role: str) -> List[Dict]:
         """Get all available widgets for a role"""
-        return self.DEFAULT_WIDGETS.get(role, self.DEFAULT_WIDGETS["admin"]).copy()
+        return self._role_defaults(role)
 
-    def toggle_widget(self, user_id: int, widget_id: str, enabled: bool) -> bool:
+    def toggle_widget(self, user_id: int, widget_id: str, enabled: bool, role: str, db: Session) -> bool:
         """Toggle a specific widget on/off"""
-        widgets = self.get_user_widgets(user_id, "")  # Role not needed for existing config
+        widgets = self.get_user_widgets(user_id, role, db)
 
         for widget in widgets:
             if widget["id"] == widget_id:
                 widget["enabled"] = enabled
                 break
+        else:
+            return False
 
-        return self.update_user_widgets(user_id, widgets)
+        return self.update_user_widgets(user_id, widgets, role, db)
 
-    def reorder_widgets(self, user_id: int, widget_order: List[str]) -> bool:
+    def reorder_widgets(self, user_id: int, widget_order: List[str], role: str, db: Session) -> bool:
         """Update widget order"""
-        widgets = self.get_user_widgets(user_id, "")
+        available_ids = {widget["id"] for widget in self._role_defaults(role)}
+        if (
+            not isinstance(widget_order, list)
+            or len(widget_order) != len(available_ids)
+            or len(widget_order) != len(set(widget_order))
+            or set(widget_order) != available_ids
+        ):
+            return False
+
+        widgets = self.get_user_widgets(user_id, role, db)
 
         # Create order mapping
         order_map = {widget_id: idx + 1 for idx, widget_id in enumerate(widget_order)}
@@ -177,7 +221,7 @@ class DashboardCustomizationService:
         # Sort by order
         widgets.sort(key=lambda x: x["order"])
 
-        return self.update_user_widgets(user_id, widgets)
+        return self.update_user_widgets(user_id, widgets, role, db)
 
 
 # Global instance

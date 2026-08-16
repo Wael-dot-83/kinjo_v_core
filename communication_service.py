@@ -14,12 +14,15 @@ from pydantic import BaseModel, ConfigDict, model_validator
 
 import models
 import validators
-from admin_security import forbidden_error, not_found_error, validation_error, log_audit_event, model_to_dict
+from admin_security import forbidden_error, not_found_error, validation_error, log_audit_event
 from audit_actions import AuditAction
 from config import settings
 from database import get_db, SessionLocal
 from dependencies import get_current_user
-from notification_service import create_message_notifications
+from notification_service import (
+    create_message_notifications,
+    dispatch_message_notification_tasks,
+)
 from rate_limiter import limiter
 from storage_service import save_attachment, resolve_attachment_path
 from cache_service import cache_service
@@ -691,6 +694,111 @@ def _get_notification_recipients(
     return []
 
 
+def _commit_audited_mutation(
+    db: Session,
+    *,
+    action: str,
+    actor: models.User,
+    target_type: str,
+    target_ids: Union[int, List[int], None],
+    metadata: Optional[Dict[str, Any]] = None,
+    sensitivity_level: int = 1,
+) -> None:
+    """Commit one owned mutation and its audit, or roll both back."""
+    try:
+        log_audit_event(
+            db=db,
+            action=action,
+            actor=actor,
+            target_type=target_type,
+            target_ids=target_ids,
+            metadata=metadata,
+            sensitivity_level=sensitivity_level,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+
+def _commit_message_and_notifications(
+    db: Session,
+    *,
+    message: models.Message,
+    actor: models.User,
+    action: str,
+    metadata: Dict[str, Any],
+) -> None:
+    """Atomically commit a message, notifications, and their audit rows.
+
+    External email/push dispatch intentionally happens only after the database
+    commit. If the broker is unavailable, the committed Notification rows stay
+    PENDING as the durable retry record and the accepted message remains true.
+    """
+    staged_notifications: List[models.Notification] = []
+    try:
+        log_audit_event(
+            db=db,
+            action=action,
+            actor=actor,
+            target_type="Message",
+            target_ids=message.id,
+            metadata=metadata,
+            sensitivity_level=2,
+        )
+        recipients = _get_notification_recipients(db, message, actor)
+        staged = create_message_notifications(
+            db,
+            message,
+            recipients,
+            caller_owns_transaction=True,
+        )
+        if isinstance(staged, list) and staged:
+            staged_notifications = staged
+            log_audit_event(
+                db=db,
+                action=AuditAction.MESSAGE_NOTIFICATIONS_QUEUED,
+                actor=actor,
+                target_type="Message",
+                target_ids=message.id,
+                metadata={"recipient_count": len(recipients)},
+                sensitivity_level=1,
+            )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(message)
+    if staged_notifications:
+        try:
+            dispatch_message_notification_tasks(staged_notifications)
+        except Exception as exc:
+            # Database truth is already committed. PENDING rows are deliberately
+            # retained for retry; record scheduling failure without changing the
+            # accepted message/audit transaction.
+            error_type = type(exc).__name__
+            try:
+                for notification in staged_notifications:
+                    notification.error_message = (
+                        f"Dispatch scheduling failed ({error_type}); pending retry"
+                    )
+                db.commit()
+            except Exception as record_exc:
+                db.rollback()
+                logger.error(
+                    "Failed to record notification dispatch error for message %s error_type=%s",
+                    message.id,
+                    type(record_exc).__name__,
+                )
+            logger.warning(
+                "Failed to dispatch notifications for message %s; %s pending rows remain retryable: %s",
+                message.id,
+                len(staged_notifications),
+                error_type,
+            )
+
+
 def _serialize_attachments(message: models.Message) -> List[AttachmentResponse]:
     attachments: List[AttachmentResponse] = []
     for attachment in message.attachments or []:
@@ -706,6 +814,25 @@ def _serialize_attachments(message: models.Message) -> List[AttachmentResponse]:
             created_at=attachment.created_at
         ))
     return attachments
+
+
+def _delete_uncommitted_attachment(storage_provider: str, storage_key: str) -> None:
+    """Compensate a blob write when its attachment/audit transaction fails."""
+    if storage_provider == "local":
+        resolve_attachment_path(storage_key).unlink(missing_ok=True)
+        return
+    if storage_provider == "s3":
+        import boto3
+
+        session = boto3.session.Session(
+            aws_access_key_id=settings.S3_ACCESS_KEY,
+            aws_secret_access_key=settings.S3_SECRET_KEY,
+            region_name=settings.S3_REGION,
+        )
+        client = session.client("s3", endpoint_url=settings.S3_ENDPOINT_URL or None)
+        client.delete_object(Bucket=settings.S3_BUCKET, Key=storage_key)
+        return
+    raise RuntimeError(f"Unsupported attachment storage provider: {storage_provider}")
 
 
 class EventCreate(BaseModel):
@@ -879,24 +1006,14 @@ def send_message(
         db.add(msg)
         db.flush()
         msg.thread_id = msg.id
-        db.commit()
-        db.refresh(msg)
-
-        log_audit_event(
-            db=db,
-            action=AuditAction.MESSAGE_SENT,
-            actor=current_user,
-            target_type="Message",
-            target_ids=msg.id,
-            metadata={
-                "thread_type": msg.thread_type.value,
-                "recipient_role": recipient.role.value,
-                "recipient_id": recipient.id,
-                "kindergarten_id": target_kindergarten_id,
-                "sender_role": current_user.role.value
-            },
-            sensitivity_level=2
-        )
+        audit_action = AuditAction.MESSAGE_SENT
+        audit_metadata = {
+            "thread_type": msg.thread_type.value,
+            "recipient_role": recipient.role.value,
+            "recipient_id": recipient.id,
+            "kindergarten_id": target_kindergarten_id,
+            "sender_role": current_user.role.value,
+        }
 
     else:
         # Audience-based message - new dynamic system
@@ -962,8 +1079,6 @@ def send_message(
         db.add(msg)
         db.flush()
         msg.thread_id = msg.id
-        db.commit()
-        db.refresh(msg)
 
         # Create message recipients
         for recipient_user_id in recipient_ids:
@@ -973,46 +1088,30 @@ def send_message(
                 status="queued"
             ))
 
-        db.commit()
-
-        log_audit_event(
-            db=db,
-            action=AuditAction.MESSAGE_ANNOUNCEMENT_SENT,
-            actor=current_user,
-            target_type="Message",
-            target_ids=msg.id,
-            metadata={
-                "thread_type": msg.thread_type.value,
-                "recipient_count": len(recipient_ids),
-                "audience_scope": msg_data.audience.scope.value if hasattr(msg_data.audience.scope, 'value') else str(msg_data.audience.scope),
-                "kindergarten_id": target_kindergarten_id,
-                "sender_role": current_user.role.value,
-                "audience_summary": {
-                    "include_roles": msg_data.audience.include_roles,
-                    "kindergarten_ids": msg_data.audience.kindergarten_ids
-                }
+        audit_action = AuditAction.MESSAGE_ANNOUNCEMENT_SENT
+        audit_metadata = {
+            "thread_type": msg.thread_type.value,
+            "recipient_count": len(recipient_ids),
+            "audience_scope": (
+                msg_data.audience.scope.value
+                if hasattr(msg_data.audience.scope, "value")
+                else str(msg_data.audience.scope)
+            ),
+            "kindergarten_id": target_kindergarten_id,
+            "sender_role": current_user.role.value,
+            "audience_summary": {
+                "include_roles": msg_data.audience.include_roles,
+                "kindergarten_ids": msg_data.audience.kindergarten_ids,
             },
-            sensitivity_level=2
-        )
-        db.commit()
+        }
 
-    # Send notifications (existing logic)
-    try:
-        recipients = _get_notification_recipients(db, msg, current_user)
-        create_message_notifications(db, msg, recipients)
-        if recipients:
-            log_audit_event(
-                db=db,
-                action=AuditAction.MESSAGE_NOTIFICATIONS_QUEUED,
-                actor=current_user,
-                target_type="Message",
-                target_ids=msg.id,
-                metadata={"recipient_count": len(recipients)},
-                sensitivity_level=1
-            )
-            db.commit()
-    except (RuntimeError, TypeError, ValueError, AttributeError) as exc:
-        logger.warning("Failed to enqueue notifications for message %s: %s", msg.id, exc)
+    _commit_message_and_notifications(
+        db,
+        message=msg,
+        actor=current_user,
+        action=audit_action,
+        metadata=audit_metadata,
+    )
 
     return _serialize_message_detail(msg, read_at=None, archived_at=None, current_user=current_user)
 
@@ -1046,7 +1145,8 @@ def preview_audience(
     # Get basic info about recipients (without sensitive data)
     recipients = []
     if recipient_ids:
-        users = db.query(models.User).filter(models.User.id.in_(recipient_ids[:10])).all()  # Limit preview
+        preview_ids = sorted(recipient_ids)[:10]
+        users = db.query(models.User).filter(models.User.id.in_(preview_ids)).all()
         recipients = []
         for user in users:
             # Get name based on role
@@ -1363,10 +1463,13 @@ def get_message(
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
-        after_state=model_to_dict(message),
         metadata={"thread_type": message.thread_type.value},
         sensitivity_level=1
     )
+    # This is a read/security event with no later mutation commit to carry it.
+    # Commit explicitly so request-session teardown cannot discard the audit row.
+    # Do not pass the message model as audit state: it contains the private body.
+    db.commit()
 
     return _serialize_message_detail(message, read_at, archived_at=archived_at, current_user=current_user)
 
@@ -1417,20 +1520,15 @@ def mark_message_read(
     elif not state.read_at:
         state.read_at = read_timestamp
 
-    db.commit()
-
-    log_audit_event(
-        db=db,
+    _commit_audited_mutation(
+        db,
         action=AuditAction.MESSAGE_READ,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
-        before_state=None,
-        after_state=model_to_dict(message),
         metadata={"read_at": state.read_at.isoformat() if state.read_at else None},
-        sensitivity_level=1
+        sensitivity_level=1,
     )
-    db.commit()
 
     return MessageReadResponse(message_id=message.id, read_at=state.read_at)
 
@@ -1466,19 +1564,15 @@ def delete_message(
     if not state.deleted_at:
         state.deleted_at = datetime.now(_JORDAN_TZ)
 
-    db.commit()
-
-    log_audit_event(
-        db=db,
+    _commit_audited_mutation(
+        db,
         action=AuditAction.MESSAGE_DELETED,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
-        after_state=model_to_dict(message),
         metadata={"deleted_at": state.deleted_at.isoformat() if state.deleted_at else None},
-        sensitivity_level=2
+        sensitivity_level=2,
     )
-    db.commit()
 
     return MessageDeleteResponse(message_id=message.id, deleted_at=state.deleted_at)
 
@@ -1512,18 +1606,15 @@ def archive_message(
         db.add(state)
 
     state.archived_at = datetime.now(_JORDAN_TZ)
-    db.commit()
-
-    log_audit_event(
-        db=db,
+    _commit_audited_mutation(
+        db,
         action=AuditAction.MESSAGE_ARCHIVED,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
         metadata={"archived_at": state.archived_at.isoformat()},
-        sensitivity_level=1
+        sensitivity_level=1,
     )
-    db.commit()
 
     return MessageArchiveResponse(message_id=message.id, archived_at=state.archived_at)
 
@@ -1557,17 +1648,14 @@ def unarchive_message(
         db.add(state)
 
     state.archived_at = None
-    db.commit()
-
-    log_audit_event(
-        db=db,
+    _commit_audited_mutation(
+        db,
         action=AuditAction.MESSAGE_UNARCHIVED,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
-        sensitivity_level=1
+        sensitivity_level=1,
     )
-    db.commit()
 
     return MessageArchiveResponse(message_id=message.id, archived_at=None)
 
@@ -1648,19 +1736,16 @@ def bulk_message_action(
 
         succeeded_ids.append(message_id)
 
-    db.commit()
-
     if succeeded_ids:
-        log_audit_event(
-            db=db,
+        _commit_audited_mutation(
+            db,
             action=f"MESSAGE_BULK_{payload.action.upper()}",
             actor=current_user,
             target_type="Message",
             target_ids=succeeded_ids,
             metadata={"requested": len(message_ids), "succeeded": len(succeeded_ids)},
-            sensitivity_level=2
+            sensitivity_level=2,
         )
-        db.commit()
 
     return BulkMessageActionResult(
         action=payload.action,
@@ -1704,7 +1789,6 @@ def reply_to_message(
     if parent.thread_type == models.MessageThreadType.DIRECT:
         if not parent.thread_id:
             parent.thread_id = parent.id
-            db.commit()
 
         recipient_id = parent.sender_id if current_user.id == parent.recipient_id else parent.recipient_id
         if not recipient_id:
@@ -1734,8 +1818,7 @@ def reply_to_message(
         )
 
         db.add(reply_msg)
-        db.commit()
-        db.refresh(reply_msg)
+        db.flush()
     elif parent.thread_type == models.MessageThreadType.ANNOUNCEMENT:
         if current_user.id == parent.sender_id:
             raise forbidden_error("Announcement sender cannot reply to their own message")
@@ -1764,43 +1847,20 @@ def reply_to_message(
         db.add(reply_msg)
         db.flush()
         reply_msg.thread_id = reply_msg.id
-        db.commit()
-        db.refresh(reply_msg)
     else:
         raise validation_error("Replies are only supported for direct messages")
 
-    log_audit_event(
-        db=db,
-        action=AuditAction.MESSAGE_REPLIED,
+    _commit_message_and_notifications(
+        db,
+        message=reply_msg,
         actor=current_user,
-        target_type="Message",
-        target_ids=reply_msg.id,
-        after_state=model_to_dict(reply_msg),
+        action=AuditAction.MESSAGE_REPLIED,
         metadata={
             "reply_to_id": parent.id,
             "reply_to_type": parent.thread_type.value,
-            "thread_id": reply_msg.thread_id
+            "thread_id": reply_msg.thread_id,
         },
-        sensitivity_level=2
     )
-    db.commit()
-
-    try:
-        recipients = _get_notification_recipients(db, reply_msg, current_user)
-        create_message_notifications(db, reply_msg, recipients)
-        if recipients:
-            log_audit_event(
-                db=db,
-                action=AuditAction.MESSAGE_NOTIFICATIONS_QUEUED,
-                actor=current_user,
-                target_type="Message",
-                target_ids=reply_msg.id,
-                metadata={"recipient_count": len(recipients)},
-                sensitivity_level=1
-            )
-            db.commit()
-    except (RuntimeError, TypeError, ValueError, AttributeError) as exc:
-        logger.warning("Failed to enqueue notifications for message %s: %s", reply_msg.id, exc)
 
     return _serialize_message_detail(reply_msg, read_at=None, archived_at=None, current_user=current_user)
 
@@ -1889,20 +1949,36 @@ def upload_message_attachment(
         storage_provider=storage_provider,
         storage_key=storage_key
     )
-    db.add(attachment)
-    db.commit()
+    try:
+        db.add(attachment)
+        db.flush()
+        _commit_audited_mutation(
+            db,
+            action=AuditAction.MESSAGE_ATTACHMENT_ADDED,
+            actor=current_user,
+            target_type="Message",
+            target_ids=message.id,
+            metadata={"attachment_id": attachment.id},
+            sensitivity_level=2,
+        )
+    except Exception:
+        # Blob storage is external to the SQL transaction. Compensate the write
+        # so an audit/commit failure cannot silently leave an orphaned upload.
+        db.rollback()
+        try:
+            _delete_uncommitted_attachment(storage_provider, storage_key)
+        except Exception as cleanup_exc:
+            # Preserve the original DB/audit exception. Provider/key plus the
+            # cleanup exception type make the orphan observable and actionable
+            # without logging file content or credentials.
+            logger.error(
+                "Attachment compensation failed provider=%s key=%s error_type=%s",
+                storage_provider,
+                storage_key,
+                type(cleanup_exc).__name__,
+            )
+        raise
     db.refresh(attachment)
-
-    log_audit_event(
-        db=db,
-        action=AuditAction.MESSAGE_ATTACHMENT_ADDED,
-        actor=current_user,
-        target_type="Message",
-        target_ids=message.id,
-        metadata={"attachment_id": attachment.id, "file_name": attachment.file_name},
-        sensitivity_level=2
-    )
-    db.commit()
 
     return AttachmentResponse(
         id=attachment.id,
@@ -1966,16 +2042,6 @@ def download_message_attachment(
     if not message or not _can_access_message(db, current_user, message):
         raise forbidden_error("You do not have access to this attachment")
 
-    log_audit_event(
-        db=db,
-        action=AuditAction.MESSAGE_ATTACHMENT_DOWNLOADED,
-        actor=current_user,
-        target_type="Message",
-        target_ids=message.id,
-        metadata={"attachment_id": attachment.id},
-        sensitivity_level=1
-    )
-
     if attachment.storage_provider == "s3":
         import boto3
         session = boto3.session.Session(
@@ -1989,14 +2055,34 @@ def download_message_attachment(
             Params={"Bucket": settings.S3_BUCKET, "Key": attachment.storage_key},
             ExpiresIn=300
         )
-        return RedirectResponse(url=url)
+        response = RedirectResponse(url=url)
+    else:
+        file_path = resolve_attachment_path(attachment.storage_key)
+        if not file_path.is_file():
+            raise not_found_error("Attachment file not found")
+        response = FileResponse(
+            path=file_path,
+            media_type=attachment.content_type,
+            filename=attachment.file_name,
+        )
 
-    file_path = resolve_attachment_path(attachment.storage_key)
-    return FileResponse(
-        path=file_path,
-        media_type=attachment.content_type,
-        filename=attachment.file_name
+    # FileResponse streams after this handler returns and an S3 redirect only
+    # authorizes a later request. Record the claim we can prove, after storage
+    # preparation succeeded, rather than claiming bytes were downloaded.
+    log_audit_event(
+        db=db,
+        action=AuditAction.MESSAGE_ATTACHMENT_ACCESS_AUTHORIZED,
+        actor=current_user,
+        target_type="Message",
+        target_ids=message.id,
+        metadata={
+            "attachment_id": attachment.id,
+            "storage_provider": attachment.storage_provider,
+        },
+        sensitivity_level=1,
     )
+    db.commit()
+    return response
 
 
 @router.post("/notifications/devices", response_model=DeviceTokenResponse)

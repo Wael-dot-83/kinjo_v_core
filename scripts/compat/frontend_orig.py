@@ -35,8 +35,8 @@ _JORDAN_TZ = timezone(timedelta(hours=3))
 
 def _ui_lang(request: Request) -> str:
     return normalize_ui_language(
-        request.cookies.get("kinjo_lang")
-        or request.query_params.get("lang")
+        request.query_params.get("lang")
+        or request.cookies.get("kinjo_lang")
     )
 
 
@@ -45,11 +45,12 @@ def _now() -> datetime:
 
 
 def language_context_processor(request: Request) -> dict:
-    # Resolve UI language from the persisted cookie first; allow request.state/query override.
+    # A validated query parameter is an explicit per-request override. Persisted
+    # state remains the default when the URL does not select a language.
     lang = normalize_ui_language(
-        request.cookies.get("kinjo_lang")
+        request.query_params.get("lang")
         or getattr(request.state, "ui_lang", None)
-        or request.query_params.get("lang")
+        or request.cookies.get("kinjo_lang")
     )
     # Decode only the signed, display-safe impersonation cookie. Never trust
     # client-provided identity fields or ephemeral request.state data.

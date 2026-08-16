@@ -84,7 +84,9 @@ def _audit(
     being able and unable to answer "from where, by whom, and what changed".
 
     log_audit_event add()s and flush()es but deliberately does not commit, which
-    matches the callers here: each owns its own db.commit().
+    matches the callers here: each owns its own db.commit(). The create-and-send
+    flow delegates that ownership to send_report_to_parents(), which commits the
+    new report, parent message, and both audit rows as one transaction.
     """
     return log_audit_event(
         db,

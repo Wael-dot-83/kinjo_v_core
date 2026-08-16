@@ -4,6 +4,7 @@ Main FastAPI Application
 """
 import asyncio
 import gzip
+import ipaddress
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -65,6 +66,12 @@ import models
 from database import get_db, init_db
 from auth import authenticate_user, create_access_token, get_password_hash, requires_password_change
 from cache_service import cache_service
+from session_service import (
+    SessionInvalid,
+    SessionStoreUnavailable,
+    revoke_access_session,
+    validate_and_refresh_access_session,
+)
 from config import settings
 from ui_language import set_ui_language_cookie
 from ui_language import normalize_ui_language
@@ -346,6 +353,23 @@ async def validation_error_handler(request: Request, exc: validators.ValidationE
     return JSONResponse(status_code=400, content={"detail": exc.message})
 
 
+@app.exception_handler(SessionStoreUnavailable)
+async def session_store_unavailable_handler(
+    request: Request, exc: SessionStoreUnavailable
+):
+    """Never mint or claim to revoke a session when the shared store is down."""
+    logger.error(
+        "AUTHENTICATION_SECURITY_STORE_UNAVAILABLE method=%s path=%s",
+        request.method,
+        request.url.path,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "Authentication security store is unavailable."},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 # Catch-all: guarantee every uncaught exception is logged with a full traceback
 # server-side (so it lands in the app's own structured log, not just uvicorn's
 # console output) and that the client only ever sees a generic message —
@@ -467,7 +491,14 @@ async def enforce_admin_surface_rate_limit(request: Request, call_next):
     # not be throttled by the admin-surface policy; its admin-only endpoints
     # (/stats, /cache) carry Depends(require_admin) individually, and /health is
     # an aggregate-only probe with no user data.
-    protected_prefixes = ("/api/admin", "/api/observability", "/api/analytics", "/admin/charts")
+    protected_prefixes = (
+        "/api/admin",
+        "/api/audit-logs",
+        "/api/heatmap",
+        "/api/observability",
+        "/api/analytics",
+        "/admin/charts",
+    )
     if path.startswith(protected_prefixes):
         allowed, limit_value = check_admin_surface_limit(request)
         if not allowed:
@@ -485,7 +516,8 @@ async def structured_access_log(request: Request, call_next):
     import time
     from jose import jwt as _jwt, JWTError as _JWTError
 
-    if not request.url.path.startswith("/api/admin"):
+    audited_prefixes = ("/api/admin", "/api/audit-logs", "/api/heatmap", "/admin/charts")
+    if not request.url.path.startswith(audited_prefixes):
         return await call_next(request)
 
     start = time.monotonic()
@@ -551,7 +583,9 @@ async def enforce_english_language_integrity(request: Request, call_next):
     if request.url.path.startswith("/api") or request.url.path.startswith("/static"):
         return response
 
-    requested_lang = _normalize_ui_language(request.cookies.get("kinjo_lang"))
+    requested_lang = _normalize_ui_language(
+        request.query_params.get("lang") or request.cookies.get("kinjo_lang")
+    )
     if requested_lang != "en":
         return response
 
@@ -654,11 +688,16 @@ except (OSError, RuntimeError) as e:
 # =============================================================================
 
 def _get_request_ip(request: Request) -> Optional[str]:
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
+    # Forwarding headers are client-controlled unless a trusted-proxy layer has
+    # authenticated and rewritten them. Persist the socket peer so callers
+    # cannot forge audit attribution with a syntactically valid IP address.
     client = request.client
-    return client.host if client else None
+    if not client:
+        return None
+    try:
+        return str(ipaddress.ip_address(client.host))
+    except ValueError:
+        return None
 
 
 def _log_auth_event(
@@ -814,6 +853,35 @@ def _clear_authenticated_session(response: Response, request: Request) -> None:
             domain=settings.COOKIE_DOMAIN or None,
         )
     _set_no_store_headers(response)
+
+
+def _revoke_presented_access_token(request: Request) -> None:
+    """Revoke the bearer token selected for this request, or its session cookie."""
+    from jose import JWTError, jwt as _jwt
+
+    auth_header = request.headers.get("authorization", "").strip()
+    token = ""
+    if auth_header.lower().startswith("bearer "):
+        token = auth_header[7:].strip()
+    if not token:
+        token = request.cookies.get(settings.SESSION_COOKIE_NAME, "")
+    if not token:
+        token = request.cookies.get("kinjo_token", "")
+    if not token:
+        return
+
+    try:
+        payload = _jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+    except JWTError:
+        return
+    if payload.get("purpose"):
+        return
+    username = payload.get("sub")
+    jti = payload.get("jti")
+    if isinstance(username, str) and isinstance(jti, str):
+        revoke_access_session(username, jti)
 
 
 async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: Session):
@@ -1036,6 +1104,7 @@ async def logout(
     db: Session = Depends(get_db)
 ):
     """Logout endpoint - client should clear tokens"""
+    _revoke_presented_access_token(request)
     if current_user:
         _log_auth_event(
             db=db,
@@ -1183,6 +1252,10 @@ async def refresh_token(
         data={"sub": current_user.username, "role": current_user.role.value},
         expires_delta=access_token_expires
     )
+    old_username = getattr(request.state, "session_username", None)
+    old_jti = getattr(request.state, "session_jti", None)
+    if old_username and old_jti:
+        revoke_access_session(old_username, old_jti)
 
     response = JSONResponse(content={
         "access_token": access_token,
@@ -1214,6 +1287,8 @@ try:
     from heatmap.backend.admin_router import router as admin_heat_map_router
     app.include_router(admin_heat_map_router, prefix="/api")
 except Exception as _heat_map_import_exc:
+    if settings.ENVIRONMENT.lower() == "production":
+        raise
     import logging as _logging
     _logging.getLogger(__name__).warning(
         "Heat map admin router not mounted: %s", _heat_map_import_exc
@@ -1276,21 +1351,42 @@ app.include_router(analytics_explorer_page_router)
 app.include_router(telemetry_router)
 app.include_router(observability_router)
 
-# Heat map ETL/analytics router (legacy /api/heatmap/* path used by the
-# standalone React app).  Safe to fail if dependencies (pandas / scipy /
-# apscheduler) are missing in the deployed environment.
-try:
-    from heatmap.backend.api.router import router as heat_map_router
-    app.include_router(heat_map_router, prefix="/api/heatmap")
-except Exception as _heat_map_router_exc:
-    import logging as _logging
-    _logging.getLogger(__name__).warning(
-        "Heat map ETL router not mounted: %s", _heat_map_router_exc
-    )
+# The legacy React heat-map API keeps ingested indicators and alerts in process
+# memory. That is useful for local exploration but cannot provide consistent
+# state across production workers. Production uses the persistent canonical
+# /api/admin/heat-map router mounted above.
+if settings.ENVIRONMENT.lower() != "production":
+    try:
+        from heatmap.backend.api.router import router as heat_map_router
+        app.include_router(heat_map_router, prefix="/api/heatmap")
+    except Exception as _heat_map_router_exc:
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "Legacy heat map ETL router not mounted: %s", _heat_map_router_exc
+        )
 
 # WebSocket endpoint for real-time dashboard updates
 from dependencies import get_current_user_optional
 from realtime_service import websocket_endpoint as realtime_ws_endpoint
+
+
+def _validate_websocket_access_session(payload: dict, user: models.User) -> None:
+    """Apply the same revocation boundary used by HTTP auth dependencies."""
+    jti = payload.get("jti")
+    try:
+        issued_at = int(payload.get("iat"))
+        expires_at = float(payload.get("exp"))
+    except (TypeError, ValueError) as exc:
+        raise SessionInvalid("Invalid access-token timestamps") from exc
+    if not isinstance(jti, str) or not jti:
+        raise SessionInvalid("Missing access-token session identity")
+    validate_and_refresh_access_session(
+        user.username,
+        jti,
+        jwt_iat=issued_at,
+        jwt_expires_at=expires_at,
+        password_changed_at=user.password_changed_at,
+    )
 
 @app.websocket("/ws/dashboard")
 async def dashboard_websocket(websocket: WebSocket):
@@ -1333,6 +1429,14 @@ async def dashboard_websocket(websocket: WebSocket):
         if not user or user.status != models.UserStatus.ACTIVE:
             await websocket.close(code=4003, reason="User not found or inactive")
             return
+        try:
+            _validate_websocket_access_session(payload, user)
+        except SessionInvalid:
+            await websocket.close(code=4001, reason="Session expired or revoked")
+            return
+        except SessionStoreUnavailable:
+            await websocket.close(code=1013, reason="Authentication store unavailable")
+            return
         user_id = str(user.id)
         role = user.role.value.lower()
     finally:
@@ -1353,18 +1457,19 @@ async def heatmap_websocket(websocket: WebSocket):
         username = payload.get("sub")
         if not username:
             raise JWTError("missing subject")
-        return username
+        return username, payload
 
     token = websocket.query_params.get("token")
     session_token = websocket.cookies.get(settings.SESSION_COOKIE_NAME)
     username = None
+    payload = None
     try:
-        username = decode_token(token) if token else None
+        username, payload = decode_token(token) if token else (None, None)
     except JWTError:
         pass
     if not username and session_token:
         try:
-            username = decode_token(session_token)
+            username, payload = decode_token(session_token)
         except JWTError:
             pass
     if not username:
@@ -1378,6 +1483,14 @@ async def heatmap_websocket(websocket: WebSocket):
         ).first()
         if not user or user.status != models.UserStatus.ACTIVE:
             await websocket.close(code=4003, reason="User not found or inactive")
+            return
+        try:
+            _validate_websocket_access_session(payload, user)
+        except SessionInvalid:
+            await websocket.close(code=4001, reason="Session expired or revoked")
+            return
+        except SessionStoreUnavailable:
+            await websocket.close(code=1013, reason="Authentication store unavailable")
             return
         if user.role != models.UserRole.ADMIN:
             await websocket.close(code=4003, reason="Admin role required")
@@ -1421,23 +1534,24 @@ async def notify_websocket(websocket: WebSocket):
     """
     from jose import JWTError, jwt as _jwt
 
-    def decode_token(value: str) -> str:
+    def decode_token(value: str) -> tuple[str, dict]:
         payload = _jwt.decode(value, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         if payload.get("purpose"):
             raise JWTError("purpose-scoped token is not an access token")
         sub = payload.get("sub")
         if not sub:
             raise JWTError("missing subject")
-        return sub
+        return sub, payload
 
     token = websocket.query_params.get("token")
     session_token = websocket.cookies.get(settings.SESSION_COOKIE_NAME)
     username = None
+    payload = None
     for candidate in [token, session_token]:
         if not candidate:
             continue
         try:
-            username = decode_token(candidate)
+            username, payload = decode_token(candidate)
             break
         except JWTError:
             pass
@@ -1453,6 +1567,14 @@ async def notify_websocket(websocket: WebSocket):
         ).first()
         if not user or user.status != models.UserStatus.ACTIVE:
             await websocket.close(code=4003, reason="User not found or inactive")
+            return
+        try:
+            _validate_websocket_access_session(payload, user)
+        except SessionInvalid:
+            await websocket.close(code=4001, reason="Session expired or revoked")
+            return
+        except SessionStoreUnavailable:
+            await websocket.close(code=1013, reason="Authentication store unavailable")
             return
         user_id = user.id
     finally:
@@ -1634,8 +1756,9 @@ async def api_health_check(
         from sqlalchemy import text
         db.execute(text("SELECT 1"))
         db_status = "connected"
-    except (SQLAlchemyError, RuntimeError, AttributeError) as e:
-        db_status = f"error: {str(e)}"
+    except (SQLAlchemyError, RuntimeError, AttributeError):
+        logger.exception("Comprehensive health check failed")
+        db_status = "error"
         overall_status = "unhealthy"
 
     # Prepare response
@@ -1673,7 +1796,8 @@ async def api_health_check(
     elif overall_status == "degraded":
         status_code = 200  # Still OK but with warnings
 
-    return response
+    response["status"] = overall_status
+    return JSONResponse(status_code=status_code, content=response)
 
 
 @app.get("/api/metrics")
@@ -1730,8 +1854,9 @@ async def get_system_metrics(
             "system_health_score": performance_monitor.get_system_health_score()
         }
 
-    except (RuntimeError, AttributeError, TypeError) as e:
-        return {"error": str(e)}
+    except (RuntimeError, AttributeError, TypeError):
+        logger.exception("System metrics retrieval failed")
+        return JSONResponse(status_code=503, content={"error": "Metrics unavailable"})
 
 
 @app.get("/api/scaling/history")
@@ -1762,8 +1887,9 @@ async def get_scaling_history(
             "time_range_hours": hours
         }
 
-    except (RuntimeError, AttributeError, TypeError) as e:
-        return {"error": str(e)}
+    except (RuntimeError, AttributeError, TypeError):
+        logger.exception("Scaling history retrieval failed")
+        return JSONResponse(status_code=503, content={"error": "Scaling history unavailable"})
 
 
 # Predictive Analytics Endpoints
