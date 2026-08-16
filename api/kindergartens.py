@@ -1,6 +1,8 @@
 """
 Kindergartens domain endpoints
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
@@ -25,6 +27,7 @@ from services.jordan_locations import (
 )
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Kindergartens"])
 
@@ -503,10 +506,51 @@ def list_kindergartens(
         except ValueError:
             return _envelope(False, None, "قيمة الحالة غير صالحة / Invalid status value", 400)
 
+    child_count_sq, attendance_sq = _stats_subqueries(db)
+    child_count_expr = func.coalesce(
+        child_count_sq.c[1], models.Kindergarten.current_child_count, 0
+    )
+    occupancy_expr = case(
+        (
+            models.Kindergarten.total_capacity > 0,
+            child_count_expr * 100.0 / models.Kindergarten.total_capacity,
+        ),
+        else_=None,
+    )
+    attendance_expr = case(
+        (
+            attendance_sq.c[2] > 0,
+            attendance_sq.c[1] * 100.0 / attendance_sq.c[2],
+        ),
+        else_=None,
+    )
+
+    # Metric filters must participate in the SQL result set before count/offset/limit.
+    # Filtering a single page in Python produced sparse pages and totals describing
+    # the unfiltered population.
+    query = query.outerjoin(
+        child_count_sq,
+        child_count_sq.c.kindergarten_id == models.Kindergarten.id,
+    ).outerjoin(
+        attendance_sq,
+        attendance_sq.c.kindergarten_id == models.Kindergarten.id,
+    )
+    if min_children is not None:
+        query = query.filter(child_count_expr >= min_children)
+    if max_children is not None:
+        query = query.filter(child_count_expr <= max_children)
+    if min_occupancy is not None:
+        query = query.filter(occupancy_expr >= min_occupancy)
+    if max_occupancy is not None:
+        query = query.filter(occupancy_expr <= max_occupancy)
+    if min_attendance is not None:
+        query = query.filter(attendance_expr >= min_attendance)
+    if max_attendance is not None:
+        query = query.filter(attendance_expr <= max_attendance)
+
     total = query.count()
     kgs = query.order_by(models.Kindergarten.id.desc()).offset(skip).limit(limit).all()
 
-    child_count_sq, attendance_sq = _stats_subqueries(db)
     cc_map = dict(db.query(child_count_sq.c.kindergarten_id, child_count_sq.c[1]).all())
     att_map = {r[0]: (r[1], r[2]) for r in db.query(attendance_sq.c.kindergarten_id, attendance_sq.c[1], attendance_sq.c[2]).all()}
 
@@ -517,15 +561,6 @@ def list_kindergartens(
         item = _serialize(kg, child_count=cc, attendance_present=pres, attendance_total=tot)
         items.append(item)
 
-    def within(v, lo, hi):
-        return (lo is None or (v is not None and v >= lo)) and (hi is None or (v is not None and v <= hi))
-
-    items = [
-        it for it in items
-        if within(it["child_count"], min_children, max_children)
-        and within(it["occupancy_pct"], min_occupancy, max_occupancy)
-        and within(it["attendance_pct"], min_attendance, max_attendance)
-    ]
     if role in (models.UserRole.PARENT, models.UserRole.SUPERVISOR):
         items = [_public_kindergarten_projection(item) for item in items]
 
@@ -602,7 +637,6 @@ def get_kindergarten(
     kg = (
         db.query(models.Kindergarten)
         .filter(models.Kindergarten.id == kindergarten_id)
-        .with_for_update()
         .first()
     )
     if not kg or kg.status == models.KindergartenStatus.DELETED:
@@ -896,9 +930,18 @@ def create_kindergarten_with_manager(
             }
         })
         
-    except Exception as e:
+    except Exception:
         db.rollback()
-        return _envelope(False, None, str(e), 500)
+        logger.exception(
+            "Failed to create kindergarten with manager for admin_user_id=%s",
+            current_user.id,
+        )
+        return _envelope(
+            False,
+            None,
+            "تعذر إنشاء الحضانة والمدير. / Unable to create nursery and manager.",
+            500,
+        )
 
 @router.post("/admin/kindergartens/{kindergarten_id}/assign-manager")
 def assign_manager_to_kg(
