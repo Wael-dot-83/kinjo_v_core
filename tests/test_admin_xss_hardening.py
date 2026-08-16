@@ -29,9 +29,9 @@ def request_with_ip(header_value: str | None, client_host: str = "127.0.0.1") ->
     )
 
 
-def test_audit_ip_ingestion_rejects_markup_and_normalizes_valid_addresses():
+def test_audit_ip_ingestion_uses_socket_peer_not_forwarded_headers():
     assert _get_request_ip(request_with_ip('<img src=x onerror="alert(1)">')) == "127.0.0.1"
-    assert _get_request_ip(request_with_ip("2001:0db8::1, 10.0.0.1")) == "2001:db8::1"
+    assert _get_request_ip(request_with_ip("2001:0db8::1, 10.0.0.1")) == "127.0.0.1"
 
 
 def test_audit_log_api_values_are_html_escaped_before_inner_html_rendering():

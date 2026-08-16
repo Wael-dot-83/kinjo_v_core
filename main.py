@@ -665,15 +665,9 @@ except (OSError, RuntimeError) as e:
 # =============================================================================
 
 def _get_request_ip(request: Request) -> Optional[str]:
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        candidate = forwarded_for.split(",")[0].strip()
-        try:
-            return str(ipaddress.ip_address(candidate))
-        except ValueError:
-            # Proxy headers are untrusted input. Never persist arbitrary markup
-            # into the audit trail; fall back to the socket peer when malformed.
-            pass
+    # Forwarding headers are client-controlled unless a trusted-proxy layer has
+    # authenticated and rewritten them. Persist the socket peer so callers
+    # cannot forge audit attribution with a syntactically valid IP address.
     client = request.client
     if not client:
         return None
