@@ -1914,7 +1914,7 @@ def change_supervisor_password(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_supervisor),
 ):
-    from auth import get_password_hash, verify_password
+    from auth import change_user_password, verify_password
 
     if not verify_password(body.current_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Current password is incorrect.")
@@ -1923,12 +1923,7 @@ def change_supervisor_password(
     if body.confirm_password is not None and body.new_password != body.confirm_password:
         raise HTTPException(status_code=400, detail="New password confirmation does not match.")
 
-    current_user.hashed_password = get_password_hash(body.new_password)
-    # UTC on purpose — see the note in me_endpoints.change_my_password. Read
-    # only as a duration anchor by auth.requires_password_change, which treats
-    # naive values (every SQLite read) as UTC.
-    current_user.password_changed_at = datetime.now(timezone.utc)
-    db.commit()
+    change_user_password(db, current_user, body.new_password)
     return {"status": "ok"}
 
 

@@ -13,6 +13,7 @@ from jose import jwt
 from analytics_ws import router, ConnectionManager, websocket_dashboard, get_admin_dashboard_data, _compute_admin_dashboard_data, _update_admin_cache_async
 from config import settings
 from database import SessionLocal
+from auth import create_access_token
 import models
 
 
@@ -122,6 +123,30 @@ class TestWebSocketDashboard:
         mock_ws.close.assert_called_once_with(code=1008, reason="invalid_token")
 
     @pytest.mark.asyncio
+    async def test_websocket_rejects_revoked_access_session(self):
+        token = create_access_token({"sub": "admin_user", "role": "ADMIN"})
+        claims = jwt.get_unverified_claims(token)
+        from session_service import revoke_access_session
+
+        revoke_access_session("admin_user", claims["jti"])
+        mock_ws = AsyncMock()
+        mock_ws.query_params = {"token": token}
+
+        with patch("analytics_ws.SessionLocal") as mock_session:
+            mock_db = Mock()
+            mock_session.return_value = mock_db
+            mock_user = Mock()
+            mock_user.username = "admin_user"
+            mock_user.password_changed_at = None
+            mock_user.role.value = "ADMIN"
+            mock_user.status.value = "ACTIVE"
+            mock_db.query.return_value.filter.return_value.first.return_value = mock_user
+
+            await websocket_dashboard(mock_ws)
+
+        mock_ws.close.assert_called_once_with(code=1008, reason="session_revoked")
+
+    @pytest.mark.asyncio
     async def test_websocket_authentication_user_not_found(self):
         """Test WebSocket connection with valid token but user not found"""
         # Create a valid token for a non-existent user
@@ -220,13 +245,13 @@ class TestWebSocketDashboard:
     @pytest.mark.asyncio
     async def test_websocket_successful_connection_admin(self):
         """Test successful WebSocket connection for admin user"""
-        token_data = {"sub": "admin_user", "exp": datetime.now().timestamp() + 3600}
-        token = jwt.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        token = create_access_token({"sub": "admin_user", "role": "ADMIN"})
 
         mock_ws = AsyncMock()
         mock_ws.query_params = {"token": token}
 
         with patch('analytics_ws.SessionLocal') as mock_session, \
+             patch('analytics_ws.validate_and_refresh_access_session'), \
              patch('analytics_ws.get_admin_dashboard_data', new_callable=AsyncMock) as mock_get_data, \
              patch('analytics_ws.manager') as mock_manager, \
              patch('asyncio.sleep', side_effect=Exception("Stop loop")):
@@ -236,6 +261,8 @@ class TestWebSocketDashboard:
             mock_session.return_value = mock_db
 
             mock_user = Mock()
+            mock_user.username = "admin_user"
+            mock_user.password_changed_at = None
             mock_user.role.value = "ADMIN"
             mock_user.status.value = "ACTIVE"
             mock_db.query.return_value.filter.return_value.first.return_value = mock_user
@@ -253,13 +280,13 @@ class TestWebSocketDashboard:
     @pytest.mark.asyncio
     async def test_websocket_successful_connection_manager(self):
         """Test successful WebSocket connection for manager user"""
-        token_data = {"sub": "manager_user", "exp": datetime.now().timestamp() + 3600}
-        token = jwt.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        token = create_access_token({"sub": "manager_user", "role": "MANAGER"})
 
         mock_ws = AsyncMock()
         mock_ws.query_params = {"token": token}
 
         with patch('analytics_ws.SessionLocal') as mock_session, \
+             patch('analytics_ws.validate_and_refresh_access_session'), \
              patch('analytics_ws.data_quality_service') as mock_dqs, \
              patch('analytics_ws.manager') as mock_manager, \
              patch('asyncio.sleep', side_effect=Exception("Stop loop")):
@@ -269,6 +296,8 @@ class TestWebSocketDashboard:
             mock_session.return_value = mock_db
 
             mock_user = Mock()
+            mock_user.username = "manager_user"
+            mock_user.password_changed_at = None
             mock_user.role.value = "MANAGER"
             mock_user.status.value = "ACTIVE"
             mock_user.kindergarten_id = 1
@@ -287,13 +316,13 @@ class TestWebSocketDashboard:
     @pytest.mark.asyncio
     async def test_websocket_data_sending(self):
         """Test that dashboard data is sent to websocket"""
-        token_data = {"sub": "admin_user", "exp": datetime.now().timestamp() + 3600}
-        token = jwt.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        token = create_access_token({"sub": "admin_user", "role": "ADMIN"})
 
         mock_ws = AsyncMock()
         mock_ws.query_params = {"token": token}
 
         with patch('analytics_ws.SessionLocal') as mock_session, \
+             patch('analytics_ws.validate_and_refresh_access_session'), \
              patch('analytics_ws.get_admin_dashboard_data', new_callable=AsyncMock) as mock_get_data, \
              patch('analytics_ws.manager') as mock_manager, \
              patch('analytics_ws.performance_monitor') as mock_monitor, \
@@ -305,6 +334,8 @@ class TestWebSocketDashboard:
             mock_session.return_value = mock_db
 
             mock_user = Mock()
+            mock_user.username = "admin_user"
+            mock_user.password_changed_at = None
             mock_user.role.value = "ADMIN"
             mock_user.status.value = "ACTIVE"
             mock_db.query.return_value.filter.return_value.first.return_value = mock_user
@@ -324,13 +355,13 @@ class TestWebSocketDashboard:
     @pytest.mark.asyncio
     async def test_websocket_error_handling(self):
         """Test error handling in websocket data retrieval"""
-        token_data = {"sub": "admin_user", "exp": datetime.now().timestamp() + 3600}
-        token = jwt.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        token = create_access_token({"sub": "admin_user", "role": "ADMIN"})
 
         mock_ws = AsyncMock()
         mock_ws.query_params = {"token": token}
 
         with patch('analytics_ws.SessionLocal') as mock_session, \
+             patch('analytics_ws.validate_and_refresh_access_session'), \
              patch('analytics_ws.get_admin_dashboard_data', side_effect=Exception("Data error")), \
              patch('analytics_ws.manager') as mock_manager, \
              patch('asyncio.sleep', side_effect=Exception("Stop loop")):
@@ -340,6 +371,8 @@ class TestWebSocketDashboard:
             mock_session.return_value = mock_db
 
             mock_user = Mock()
+            mock_user.username = "admin_user"
+            mock_user.password_changed_at = None
             mock_user.role.value = "ADMIN"
             mock_user.status.value = "ACTIVE"
             mock_db.query.return_value.filter.return_value.first.return_value = mock_user

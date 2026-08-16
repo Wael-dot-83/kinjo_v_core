@@ -28,6 +28,7 @@ from rate_limiter import limiter
 from config import settings
 from auth import create_access_token
 from cache_service import cache_service
+from session_service import revoke_access_session
 from dependencies import get_current_user
 from rbac import IMPERSONATION_COOKIE_NAME, require_role
 
@@ -269,6 +270,14 @@ def exit_impersonation(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Impersonation session has been revoked.",
         )
+
+    # The target access token is a normal independently tracked session.  The
+    # cookie replacement below is not revocation: a captured bearer would
+    # otherwise remain usable until its JWT expiry.
+    target_session_username = getattr(request.state, "session_username", None)
+    target_session_jti = getattr(request.state, "session_jti", None)
+    if target_session_username and target_session_jti:
+        revoke_access_session(target_session_username, target_session_jti)
 
     _write_audit(
         db,

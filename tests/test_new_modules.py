@@ -864,6 +864,13 @@ class TestAdminImpersonation:
         audit = client.get("/api/admin/impersonate/audit")
         assert audit.status_code == 200
 
+        # Replacing the cookie must also revoke the captured target bearer.
+        captured_target_replay = client.get(
+            "/api/users/me",
+            headers={"Authorization": f"Bearer {captured_target_session}"},
+        )
+        assert captured_target_replay.status_code == 401
+
         # A captured pre-exit cookie set cannot consume the one-time restore token again.
         client.cookies.set("kinjo_session", captured_target_session)
         client.cookies.set("kinjo_impersonation", captured_restore)

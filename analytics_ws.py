@@ -16,6 +16,11 @@ from database import SessionLocal
 from data_quality_service import data_quality_service
 from cache_service import dashboard_cache
 from monitoring_service import performance_monitor, health_checker
+from session_service import (
+    SessionInvalid,
+    SessionStoreUnavailable,
+    validate_and_refresh_access_session,
+)
 from utils.time_utils import today_amman, jordan_date_range_filter
 from utils.time_utils import today_amman, jordan_date_range_filter
 
@@ -94,6 +99,23 @@ async def websocket_dashboard(websocket: WebSocket):
         await websocket.close(code=1008, reason="invalid_token")
         return
 
+    def validate_session(user: models.User) -> None:
+        jti = payload.get("jti")
+        if not isinstance(jti, str) or not jti:
+            raise SessionInvalid("missing session identity")
+        try:
+            issued_at = int(payload.get("iat"))
+            expires_at = float(payload.get("exp"))
+        except (TypeError, ValueError) as exc:
+            raise SessionInvalid("invalid session timestamps") from exc
+        validate_and_refresh_access_session(
+            username,
+            jti,
+            jwt_iat=issued_at,
+            jwt_expires_at=expires_at,
+            password_changed_at=user.password_changed_at,
+        )
+
     # Use a fresh database session for the query
     db = SessionLocal()
     try:
@@ -123,6 +145,15 @@ async def websocket_dashboard(websocket: WebSocket):
                 return
             kindergarten_id = user.kindergarten_id
 
+        try:
+            validate_session(user)
+        except SessionInvalid:
+            await websocket.close(code=1008, reason="session_revoked")
+            return
+        except SessionStoreUnavailable:
+            await websocket.close(code=1013, reason="auth_store_unavailable")
+            return
+
     finally:
         db.close()
 
@@ -132,6 +163,15 @@ async def websocket_dashboard(websocket: WebSocket):
     try:
         while True:
             try:
+                try:
+                    validate_session(user)
+                except SessionInvalid:
+                    await websocket.close(code=1008, reason="session_revoked")
+                    return
+                except SessionStoreUnavailable:
+                    await websocket.close(code=1013, reason="auth_store_unavailable")
+                    return
+
                 # Get fresh database session for each update
                 db = SessionLocal()
 

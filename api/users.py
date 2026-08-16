@@ -784,9 +784,9 @@ def update_user(
                 status_code=400,
                 detail="Use POST /users/change-password to update your password (current password required)",
             )
-        from auth import get_password_hash
+        from auth import change_user_password
 
-        user.hashed_password = get_password_hash(user_data.password)
+        change_user_password(db, user, user_data.password, commit=False)
 
     if current_user.role == models.UserRole.ADMIN:
         lifecycle_fields = {"role", "status", "kindergarten_id"}

@@ -66,6 +66,12 @@ import models
 from database import get_db, init_db
 from auth import authenticate_user, create_access_token, get_password_hash, requires_password_change
 from cache_service import cache_service
+from session_service import (
+    SessionInvalid,
+    SessionStoreUnavailable,
+    revoke_access_session,
+    validate_and_refresh_access_session,
+)
 from config import settings
 from ui_language import set_ui_language_cookie
 from ui_language import normalize_ui_language
@@ -345,6 +351,23 @@ async def redirect_to_login_handler(request: Request, exc: RedirectToLogin):
 @app.exception_handler(validators.ValidationError)
 async def validation_error_handler(request: Request, exc: validators.ValidationError):
     return JSONResponse(status_code=400, content={"detail": exc.message})
+
+
+@app.exception_handler(SessionStoreUnavailable)
+async def session_store_unavailable_handler(
+    request: Request, exc: SessionStoreUnavailable
+):
+    """Never mint or claim to revoke a session when the shared store is down."""
+    logger.error(
+        "AUTHENTICATION_SECURITY_STORE_UNAVAILABLE method=%s path=%s",
+        request.method,
+        request.url.path,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "Authentication security store is unavailable."},
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 # Catch-all: guarantee every uncaught exception is logged with a full traceback
@@ -832,6 +855,35 @@ def _clear_authenticated_session(response: Response, request: Request) -> None:
     _set_no_store_headers(response)
 
 
+def _revoke_presented_access_token(request: Request) -> None:
+    """Revoke the bearer token selected for this request, or its session cookie."""
+    from jose import JWTError, jwt as _jwt
+
+    auth_header = request.headers.get("authorization", "").strip()
+    token = ""
+    if auth_header.lower().startswith("bearer "):
+        token = auth_header[7:].strip()
+    if not token:
+        token = request.cookies.get(settings.SESSION_COOKIE_NAME, "")
+    if not token:
+        token = request.cookies.get("kinjo_token", "")
+    if not token:
+        return
+
+    try:
+        payload = _jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+    except JWTError:
+        return
+    if payload.get("purpose"):
+        return
+    username = payload.get("sub")
+    jti = payload.get("jti")
+    if isinstance(username, str) and isinstance(jti, str):
+        revoke_access_session(username, jti)
+
+
 async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: Session):
     """Internal login logic with server-side identifier validation and MFA."""
     from sqlalchemy import or_
@@ -1052,6 +1104,7 @@ async def logout(
     db: Session = Depends(get_db)
 ):
     """Logout endpoint - client should clear tokens"""
+    _revoke_presented_access_token(request)
     if current_user:
         _log_auth_event(
             db=db,
@@ -1199,6 +1252,10 @@ async def refresh_token(
         data={"sub": current_user.username, "role": current_user.role.value},
         expires_delta=access_token_expires
     )
+    old_username = getattr(request.state, "session_username", None)
+    old_jti = getattr(request.state, "session_jti", None)
+    if old_username and old_jti:
+        revoke_access_session(old_username, old_jti)
 
     response = JSONResponse(content={
         "access_token": access_token,
@@ -1312,6 +1369,25 @@ if settings.ENVIRONMENT.lower() != "production":
 from dependencies import get_current_user_optional
 from realtime_service import websocket_endpoint as realtime_ws_endpoint
 
+
+def _validate_websocket_access_session(payload: dict, user: models.User) -> None:
+    """Apply the same revocation boundary used by HTTP auth dependencies."""
+    jti = payload.get("jti")
+    try:
+        issued_at = int(payload.get("iat"))
+        expires_at = float(payload.get("exp"))
+    except (TypeError, ValueError) as exc:
+        raise SessionInvalid("Invalid access-token timestamps") from exc
+    if not isinstance(jti, str) or not jti:
+        raise SessionInvalid("Missing access-token session identity")
+    validate_and_refresh_access_session(
+        user.username,
+        jti,
+        jwt_iat=issued_at,
+        jwt_expires_at=expires_at,
+        password_changed_at=user.password_changed_at,
+    )
+
 @app.websocket("/ws/dashboard")
 async def dashboard_websocket(websocket: WebSocket):
     """Real-time dashboard WebSocket endpoint with JWT or session-cookie authentication"""
@@ -1353,6 +1429,14 @@ async def dashboard_websocket(websocket: WebSocket):
         if not user or user.status != models.UserStatus.ACTIVE:
             await websocket.close(code=4003, reason="User not found or inactive")
             return
+        try:
+            _validate_websocket_access_session(payload, user)
+        except SessionInvalid:
+            await websocket.close(code=4001, reason="Session expired or revoked")
+            return
+        except SessionStoreUnavailable:
+            await websocket.close(code=1013, reason="Authentication store unavailable")
+            return
         user_id = str(user.id)
         role = user.role.value.lower()
     finally:
@@ -1373,18 +1457,19 @@ async def heatmap_websocket(websocket: WebSocket):
         username = payload.get("sub")
         if not username:
             raise JWTError("missing subject")
-        return username
+        return username, payload
 
     token = websocket.query_params.get("token")
     session_token = websocket.cookies.get(settings.SESSION_COOKIE_NAME)
     username = None
+    payload = None
     try:
-        username = decode_token(token) if token else None
+        username, payload = decode_token(token) if token else (None, None)
     except JWTError:
         pass
     if not username and session_token:
         try:
-            username = decode_token(session_token)
+            username, payload = decode_token(session_token)
         except JWTError:
             pass
     if not username:
@@ -1398,6 +1483,14 @@ async def heatmap_websocket(websocket: WebSocket):
         ).first()
         if not user or user.status != models.UserStatus.ACTIVE:
             await websocket.close(code=4003, reason="User not found or inactive")
+            return
+        try:
+            _validate_websocket_access_session(payload, user)
+        except SessionInvalid:
+            await websocket.close(code=4001, reason="Session expired or revoked")
+            return
+        except SessionStoreUnavailable:
+            await websocket.close(code=1013, reason="Authentication store unavailable")
             return
         if user.role != models.UserRole.ADMIN:
             await websocket.close(code=4003, reason="Admin role required")
@@ -1441,23 +1534,24 @@ async def notify_websocket(websocket: WebSocket):
     """
     from jose import JWTError, jwt as _jwt
 
-    def decode_token(value: str) -> str:
+    def decode_token(value: str) -> tuple[str, dict]:
         payload = _jwt.decode(value, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         if payload.get("purpose"):
             raise JWTError("purpose-scoped token is not an access token")
         sub = payload.get("sub")
         if not sub:
             raise JWTError("missing subject")
-        return sub
+        return sub, payload
 
     token = websocket.query_params.get("token")
     session_token = websocket.cookies.get(settings.SESSION_COOKIE_NAME)
     username = None
+    payload = None
     for candidate in [token, session_token]:
         if not candidate:
             continue
         try:
-            username = decode_token(candidate)
+            username, payload = decode_token(candidate)
             break
         except JWTError:
             pass
@@ -1473,6 +1567,14 @@ async def notify_websocket(websocket: WebSocket):
         ).first()
         if not user or user.status != models.UserStatus.ACTIVE:
             await websocket.close(code=4003, reason="User not found or inactive")
+            return
+        try:
+            _validate_websocket_access_session(payload, user)
+        except SessionInvalid:
+            await websocket.close(code=4001, reason="Session expired or revoked")
+            return
+        except SessionStoreUnavailable:
+            await websocket.close(code=1013, reason="Authentication store unavailable")
             return
         user_id = user.id
     finally:
