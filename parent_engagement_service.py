@@ -11,6 +11,8 @@ from sqlalchemy import func, and_, distinct
 from sqlalchemy.orm import Session
 
 from models import (
+    AuditLog,
+    Child,
     DailyReport,
     DailyReportStatus,
     DailyReportView,
@@ -30,8 +32,13 @@ from models import (
     User,
     UserRole,
 )
+from audit_actions import AuditAction
+from cache_service import cache_service
+from config import settings
 
 logger = logging.getLogger(__name__)
+
+_ENGAGEMENT_CACHE_TTL = 300
 
 
 class ParentEngagementService:
@@ -40,57 +47,75 @@ class ParentEngagementService:
     def _utcnow_naive() -> datetime:
         return datetime.now(timezone.utc).replace(tzinfo=None)
 
+    @staticmethod
+    def _cached(key: str, compute):
+        """Cache-aside wrapper. Skipped under TESTING to keep tests deterministic."""
+        if settings.TESTING:
+            return compute()
+        hit = cache_service.get(key)
+        if hit is not None:
+            return hit
+        value = compute()
+        if value is not None:
+            cache_service.set(key, value, ttl_seconds=_ENGAGEMENT_CACHE_TTL)
+        return value
+
     def report_view_rate(
         self,
         db: Session,
         kindergarten_id: Optional[int] = None,
         days: int = 30,
     ) -> Dict[str, Any]:
-        cutoff_date = _today() - timedelta(days=max(1, days))
+        cache_key = f"parent_engagement:report_view_rate:{kindergarten_id}:{days}"
 
-        reports_query = db.query(func.count(DailyReport.id)).filter(
-            DailyReport.date >= cutoff_date,
-            DailyReport.status == DailyReportStatus.SENT_TO_PARENT,
-        )
-        if kindergarten_id is not None:
-            reports_query = reports_query.filter(DailyReport.kindergarten_id == kindergarten_id)
-        total_sent = reports_query.scalar() or 0
+        def _compute() -> Dict[str, Any]:
+            cutoff_date = _today() - timedelta(days=max(1, days))
 
-        if total_sent == 0:
+            reports_query = db.query(func.count(DailyReport.id)).filter(
+                DailyReport.date >= cutoff_date,
+                DailyReport.status == DailyReportStatus.SENT_TO_PARENT,
+            )
+            if kindergarten_id is not None:
+                reports_query = reports_query.filter(DailyReport.kindergarten_id == kindergarten_id)
+            total_sent = reports_query.scalar() or 0
+
+            if total_sent == 0:
+                return {
+                    "view_rate": 0.0,
+                    "total_sent": 0,
+                    "viewed_count": 0,
+                    "period_days": days,
+                    "classification": "no_data",
+                }
+
+            views_query = db.query(
+                func.count(distinct(DailyReportView.daily_report_id))
+            ).join(
+                DailyReport,
+                DailyReport.id == DailyReportView.daily_report_id,
+            ).filter(
+                DailyReport.date >= cutoff_date,
+                DailyReport.status == DailyReportStatus.SENT_TO_PARENT,
+            )
+            if kindergarten_id is not None:
+                views_query = views_query.filter(DailyReport.kindergarten_id == kindergarten_id)
+            viewed_count = views_query.scalar() or 0
+
+            view_rate = (viewed_count / total_sent) * 100.0 if total_sent > 0 else 0.0
+
             return {
-                "view_rate": 0.0,
-                "total_sent": 0,
-                "viewed_count": 0,
+                "view_rate": round(view_rate, 1),
+                "total_sent": int(total_sent),
+                "viewed_count": int(viewed_count),
                 "period_days": days,
-                "classification": "no_data",
+                "classification": (
+                    "high" if view_rate >= 70
+                    else "moderate" if view_rate >= 40
+                    else "low"
+                ),
             }
 
-        views_query = db.query(
-            func.count(distinct(DailyReportView.daily_report_id))
-        ).join(
-            DailyReport,
-            DailyReport.id == DailyReportView.daily_report_id,
-        ).filter(
-            DailyReport.date >= cutoff_date,
-            DailyReport.status == DailyReportStatus.SENT_TO_PARENT,
-        )
-        if kindergarten_id is not None:
-            views_query = views_query.filter(DailyReport.kindergarten_id == kindergarten_id)
-        viewed_count = views_query.scalar() or 0
-
-        view_rate = (viewed_count / total_sent) * 100.0 if total_sent > 0 else 0.0
-
-        return {
-            "view_rate": round(view_rate, 1),
-            "total_sent": int(total_sent),
-            "viewed_count": int(viewed_count),
-            "period_days": days,
-            "classification": (
-                "high" if view_rate >= 70
-                else "moderate" if view_rate >= 40
-                else "low"
-            ),
-        }
+        return self._cached(cache_key, _compute)
 
     def parent_login_frequency(
         self,
@@ -98,73 +123,125 @@ class ParentEngagementService:
         kindergarten_id: Optional[int] = None,
         days: int = 30,
     ) -> Dict[str, Any]:
-        cutoff = self._utcnow_naive() - timedelta(days=max(1, days))
+        cache_key = f"parent_engagement:login_frequency:{kindergarten_id}:{days}"
 
-        parent_query = db.query(func.count(distinct(User.id))).filter(User.role == UserRole.PARENT)
-        if kindergarten_id is not None:
-            parent_query = parent_query.join(
-                ParentProfile, ParentProfile.user_id == User.id,
-            ).join(
-                EnrollmentApplication, EnrollmentApplication.kindergarten_id == kindergarten_id,
+        def _compute() -> Dict[str, Any]:
+            cutoff = self._utcnow_naive() - timedelta(days=max(1, days))
+
+            parent_query = db.query(User.id).filter(
+                User.role == UserRole.PARENT,
+                User.deleted_at.is_(None),
             )
-        total_parents = parent_query.scalar() or 0
+            if kindergarten_id is not None:
+                parent_query = (
+                    parent_query.join(ParentProfile, ParentProfile.user_id == User.id)
+                    .join(Child, Child.parent_id == ParentProfile.id)
+                    .join(EnrollmentApplication, EnrollmentApplication.child_id == Child.id)
+                    .filter(EnrollmentApplication.kindergarten_id == kindergarten_id)
+                )
+            parent_ids = parent_query.distinct().subquery()
 
-        if total_parents == 0:
+            total_parents = (
+                db.query(func.count(distinct(parent_ids.c.id))).scalar() or 0
+            )
+
+            if total_parents == 0:
+                return {
+                    "avg_logins_per_parent": 0.0,
+                    "total_parents": 0,
+                    "active_parents": 0,
+                    "total_logins": 0,
+                    "period_days": days,
+                    "classification": "no_data",
+                }
+
+            active_parents = (
+                db.query(func.count(distinct(User.id)))
+                .filter(
+                    User.id.in_(db.query(parent_ids.c.id)),
+                    User.last_login_at.isnot(None),
+                    User.last_login_at >= cutoff,
+                )
+                .scalar()
+                or 0
+            )
+
+            total_logins = (
+                db.query(func.count(AuditLog.id))
+                .filter(
+                    AuditLog.action == AuditAction.LOGIN_SUCCESS,
+                    AuditLog.created_at >= cutoff,
+                    AuditLog.user_id.in_(db.query(parent_ids.c.id)),
+                )
+                .scalar()
+                or 0
+            )
+
+            avg_logins = (total_logins / total_parents) if total_parents else 0.0
+            active_rate = (active_parents / total_parents) * 100.0 if total_parents else 0.0
+
             return {
-                "avg_logins_per_parent": 0.0,
-                "total_parents": 0,
-                "active_parents": 0,
+                "avg_logins_per_parent": round(avg_logins, 2),
+                "total_parents": int(total_parents),
+                "active_parents": int(active_parents),
+                "total_logins": int(total_logins),
+                "active_rate": round(active_rate, 1),
                 "period_days": days,
-                "classification": "no_data",
+                "classification": (
+                    "high" if active_rate >= 70
+                    else "moderate" if active_rate >= 40
+                    else "low"
+                ),
             }
 
-        return {
-            "total_parents": int(total_parents),
-            "period_days": days,
-            "classification": "unknown",
-        }
+        return self._cached(cache_key, _compute)
 
     def nps_score(
         self,
         db: Session,
         kindergarten_id: Optional[int] = None,
     ) -> Dict[str, Any]:
-        query = db.query(func.avg(SurveyResponse.nps_score))
-        if kindergarten_id is not None:
-            query = query.join(Survey, Survey.id == SurveyResponse.survey_id).filter(
-                Survey.kindergarten_id == kindergarten_id,
-            )
-        avg_rating = query.scalar() or 0
+        cache_key = f"parent_engagement:nps:{kindergarten_id}"
 
-        response_count_query = db.query(func.count(SurveyResponse.id))
-        if kindergarten_id is not None:
-            response_count_query = response_count_query.join(
-                Survey, Survey.id == SurveyResponse.survey_id,
-            ).filter(Survey.kindergarten_id == kindergarten_id)
-        response_count = response_count_query.scalar() or 0
+        def _compute() -> Dict[str, Any]:
+            query = db.query(func.avg(SurveyResponse.nps_score))
+            if kindergarten_id is not None:
+                query = query.join(Survey, Survey.id == SurveyResponse.survey_id).filter(
+                    Survey.kindergarten_id == kindergarten_id,
+                )
+            avg_rating = query.scalar() or 0
 
-        if response_count == 0:
+            response_count_query = db.query(func.count(SurveyResponse.id))
+            if kindergarten_id is not None:
+                response_count_query = response_count_query.join(
+                    Survey, Survey.id == SurveyResponse.survey_id,
+                ).filter(Survey.kindergarten_id == kindergarten_id)
+            response_count = response_count_query.scalar() or 0
+
+            if response_count == 0:
+                return {
+                    "avg_rating": None,
+                    "nps_score": None,
+                    "response_count": 0,
+                    "classification": "no_data",
+                }
+
+            nps = round(avg_rating * 10, 1)
+            if nps >= 50:
+                classification = "good"
+            elif nps >= 0:
+                classification = "acceptable"
+            else:
+                classification = "poor"
+
             return {
-                "avg_rating": None,
-                "nps_score": None,
-                "response_count": 0,
-                "classification": "no_data",
+                "avg_rating": round(float(avg_rating), 2),
+                "nps_score": nps,
+                "response_count": int(response_count),
+                "classification": classification,
             }
 
-        nps = round(avg_rating * 10, 1)
-        if nps >= 50:
-            classification = "good"
-        elif nps >= 0:
-            classification = "acceptable"
-        else:
-            classification = "poor"
-
-        return {
-            "avg_rating": round(float(avg_rating), 2),
-            "nps_score": nps,
-            "response_count": int(response_count),
-            "classification": classification,
-        }
+        return self._cached(cache_key, _compute)
 
     def overall_parent_engagement(
         self,

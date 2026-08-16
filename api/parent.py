@@ -3,24 +3,28 @@ Parent domain endpoints
 """
 
 import logging
-
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+from typing import Any, Dict, Optional
 
-_JORDAN_TZ = timezone(timedelta(hours=3))
-from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 import models
 import validators
-from config import settings
-from database import get_db
-from dependencies import get_current_user
-from i18n import gettext as _api
+import parent_service
 from admin_security import log_audit_event
 from audit_actions import AuditAction
+from auth import jordan_phone_login_variants, normalize_jordan_phone
+from cache_service import cache_service
+from config import settings
+from database import get_db
+from dependencies import ParentIdentity, get_current_parent
+from i18n import gettext as _api
+from rate_limiter import limiter
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 
 
 def _ulang(user) -> str:
@@ -31,167 +35,53 @@ def _ulang(user) -> str:
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Parent"])
 
+# Single source of truth lives in parent_service; re-aliased here for the
+# children/enrollments list endpoints that still format status labels inline.
+_ENROLLMENT_STATUS_AR = parent_service.ENROLLMENT_STATUS_AR
+_ENROLLMENT_STATUS_EN = parent_service.ENROLLMENT_STATUS_EN
+
+_PARENT_DASHBOARD_CACHE_TTL = 60
+
+
+def _parent_dashboard_cache_key(user_id: int) -> str:
+    return f"parent:{user_id}:dashboard"
+
+
+def _normalize_phone_or_raise(raw_phone: str, lang: str, error_message: str) -> str:
+    if not validators.validate_jordan_phone(raw_phone):
+        raise HTTPException(status_code=400, detail=_api(error_message, lang))
+    return normalize_jordan_phone(raw_phone)
+
 
 @router.get("/parent/dashboard")
-def get_parent_dashboard(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_parent_dashboard(
+    parent: ParentIdentity = Depends(get_current_parent), db: Session = Depends(get_db)
+) -> Dict[str, Any]:
     """Get comprehensive parent dashboard"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
+    current_user = parent.user
 
-    parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
+    use_cache = not settings.TESTING
+    cache_key = _parent_dashboard_cache_key(current_user.id)
+    if use_cache:
+        cached = cache_service.get(cache_key)
+        if cached is not None:
+            return cached
 
-    if not parent_profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
-
-    # Get all children
-    children = db.query(models.Child).filter(
-        models.Child.parent_id == parent_profile.id,
-        models.Child.deleted_at.is_(None),
-    ).all()
-
-    today = datetime.now(_JORDAN_TZ).date()
-    child_ids = [c.id for c in children]
-
-    # Batch-fetch enrollments, attendance, and latest reports — avoids 3N per-child queries
-    enrollments_by_child: dict = {}
-    attendance_by_child: dict = {}
-    latest_report_by_child: dict = {}
-
-    if child_ids:
-        enrollments_by_child = {
-            e.child_id: e
-            for e in db.query(models.EnrollmentApplication)
-            .filter(
-                models.EnrollmentApplication.child_id.in_(child_ids),
-                models.EnrollmentApplication.status.in_(
-                    [
-                        models.EnrollmentStatus.ACTIVE,
-                        models.EnrollmentStatus.WAITLISTED,
-                        models.EnrollmentStatus.PENDING_REVIEW,
-                    ]
-                ),
-            )
-            .all()
-        }
-        attendance_by_child = {
-            a.child_id: a
-            for a in db.query(models.AttendanceLog)
-            .filter(
-                models.AttendanceLog.child_id.in_(child_ids),
-                models.AttendanceLog.date == today,
-            )
-            .all()
-        }
-        from sqlalchemy import func as _func
-
-        subq = (
-            db.query(
-                models.DailyReport.child_id,
-                _func.max(models.DailyReport.date).label("max_date"),
-            )
-            .filter(
-                models.DailyReport.child_id.in_(child_ids),
-                models.DailyReport.status == models.DailyReportStatus.SENT_TO_PARENT,
-            )
-            .group_by(models.DailyReport.child_id)
-            .subquery()
-        )
-        for r in (
-            db.query(models.DailyReport)
-            .join(
-                subq,
-                (models.DailyReport.child_id == subq.c.child_id) & (models.DailyReport.date == subq.c.max_date),
-            )
-            .all()
-        ):
-            latest_report_by_child[r.child_id] = r
-
-    kgs_by_id = {}
-    if child_ids:
-        kg_ids = {e.kindergarten_id for e in enrollments_by_child.values() if e.kindergarten_id}
-        if kg_ids:
-            kgs_by_id = {
-                kg.id: kg for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
-            }
-
-    children_data = []
-    for child in children:
-        enrollment = enrollments_by_child.get(child.id)
-        attendance = attendance_by_child.get(child.id)
-        latest_report = latest_report_by_child.get(child.id)
-        kg = kgs_by_id.get(enrollment.kindergarten_id) if enrollment else None
-
-        child_info = {
-            "id": child.id,
-            "first_name": child.first_name,
-            "last_name": child.last_name,
-            "gender": child.gender.value
-            if hasattr(child.gender, "value")
-            else (str(child.gender) if child.gender else None),
-            "kindergarten_name": (kg.name_ar or kg.name_en) if kg else None,
-            "age_months": validators.validate_age_months(child.date_of_birth),
-            "enrollment": None,
-            "attendance_today": None,
-            "latest_report_date": None,
-        }
-
-        if enrollment:
-            child_info["enrollment"] = {
-                "status": enrollment.status.value,
-                "kindergarten_id": enrollment.kindergarten_id,
-                "class_id": enrollment.class_id,
-            }
-
-        if attendance:
-            child_info["attendance_today"] = {
-                "checked_in": attendance.check_in_at.strftime("%H:%M") if attendance.check_in_at else None,
-                "checked_out": attendance.check_out_at.strftime("%H:%M") if attendance.check_out_at else None,
-            }
-
-        if latest_report:
-            child_info["latest_report_date"] = (
-                latest_report.date.isoformat() if isinstance(latest_report.date, date) else latest_report.date
-            )
-
-        children_data.append(child_info)
-
-    return {
-        "parent": {
-            "name": f"{parent_profile.first_name} {parent_profile.last_name}",
-            "phone": parent_profile.phone_number,
-        },
-        "children": children_data,
-        "total_children": len(children),
-        "notifications": [],
-    }
-
-
-# --- Arabic status mapping ---
-_ENROLLMENT_STATUS_AR = {
-    "DRAFT": "مسودة",
-    "SUBMITTED": "مقدّم",
-    "PENDING_REVIEW": "قيد المراجعة",
-    "ACCEPTED": "مقبول",
-    "REJECTED": "مرفوض",
-    "WITHDRAWN": "منسحب",
-    "WAITLISTED": "قائمة الانتظار",
-    "ACTIVE": "نشط",
-}
+    payload = parent_service.build_dashboard_payload(db, parent.profile)
+    if use_cache:
+        cache_service.set(cache_key, payload, ttl_seconds=_PARENT_DASHBOARD_CACHE_TTL)
+    return payload
 
 
 @router.get("/parent/profile")
 def get_parent_profile(
     request: Request,
-    current_user: models.User = Depends(get_current_user),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """Get current parent's profile"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    current_user = parent.user
+    profile = parent.profile
 
     return {
         "id": profile.id,
@@ -227,16 +117,11 @@ def get_parent_profile(
 
 @router.get("/parent/children")
 def get_parent_children(
-    current_user: models.User = Depends(get_current_user),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """Get current parent's children with their enrollments"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    profile = parent.profile
 
     children = (
         db.query(models.Child)
@@ -264,9 +149,7 @@ def get_parent_children(
         kgs_by_id = {kg.id: kg for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()}
 
     # Group enrollments by child_id
-    from collections import defaultdict as _dd
-
-    enrollments_by_child = _dd(list)
+    enrollments_by_child = defaultdict(list)
     for e in all_enrollments:
         enrollments_by_child[e.child_id].append(e)
 
@@ -282,6 +165,7 @@ def get_parent_children(
                     "kindergarten_name": kg.name_ar if kg else None,
                     "status": e.status.value,
                     "status_ar": _ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
+                    "status_en": _ENROLLMENT_STATUS_EN.get(e.status.value, e.status.value),
                 }
             )
 
@@ -308,16 +192,13 @@ def get_parent_children(
 
 @router.get("/parent/enrollments")
 def get_parent_enrollments(
-    current_user: models.User = Depends(get_current_user),
+    page: Optional[int] = Query(None, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """Get all enrollment applications for current parent's children"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    profile = parent.profile
 
     child_ids = [
         cid
@@ -332,9 +213,17 @@ def get_parent_enrollments(
     if not child_ids:
         return {"total": 0, "enrollments": []}
 
-    enrollments = (
-        db.query(models.EnrollmentApplication).filter(models.EnrollmentApplication.child_id.in_(child_ids)).all()
+    enrollments_query = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.child_id.in_(child_ids)
     )
+    total = enrollments_query.count()
+
+    if page is not None:
+        enrollments_query = enrollments_query.order_by(models.EnrollmentApplication.id.desc()).offset(
+            (page - 1) * page_size
+        ).limit(page_size)
+
+    enrollments = enrollments_query.all()
 
     children_by_id = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()}
     kg_ids = {e.kindergarten_id for e in enrollments if e.kindergarten_id}
@@ -357,15 +246,24 @@ def get_parent_enrollments(
                 "kindergarten_name": kg.name_ar if kg else None,
                 "status": e.status.value,
                 "status_ar": _ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
+                "status_en": _ENROLLMENT_STATUS_EN.get(e.status.value, e.status.value),
                 "submitted_at": e.submitted_at.isoformat() if e.submitted_at else None,
                 "created_at": e.created_at.isoformat() if e.created_at else None,
             }
         )
 
-    return {
-        "total": len(enrollment_data),
+    response = {
+        "total": total,
         "enrollments": enrollment_data,
     }
+    if page is not None:
+        response["pagination"] = {
+            "page": page,
+            "page_size": page_size,
+            "total_count": total,
+            "total_pages": max(1, (total + page_size - 1) // page_size),
+        }
+    return response
 
 
 @router.get("/parent/attendance")
@@ -373,16 +271,14 @@ def get_parent_attendance(
     child_id: Optional[int] = Query(None),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
-    current_user: models.User = Depends(get_current_user),
+    page: Optional[int] = Query(None, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """Get attendance history for parent's children"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    current_user = parent.user
+    profile = parent.profile
 
     child_ids = [
         cid for (cid,) in db.query(models.Child.id).filter(
@@ -415,7 +311,14 @@ def get_parent_attendance(
     if not start_date and not end_date:
         query = query.filter(models.AttendanceLog.date >= datetime.now(_JORDAN_TZ).date() - timedelta(days=30))
 
-    records = query.order_by(models.AttendanceLog.date.desc()).all()
+    query = query.order_by(models.AttendanceLog.date.desc())
+
+    total = None
+    if page is not None:
+        total = query.count()
+        query = query.order_by(models.AttendanceLog.id.desc()).offset((page - 1) * page_size).limit(page_size)
+
+    records = query.all()
 
     # Get child names
     children = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()}
@@ -438,24 +341,27 @@ def get_parent_attendance(
             }
         )
 
-    return {
-        "total": len(attendance_data),
+    response = {
+        "total": total if total is not None else len(attendance_data),
         "attendance": attendance_data,
     }
+    if page is not None:
+        response["pagination"] = {
+            "page": page,
+            "page_size": page_size,
+            "total_count": total,
+            "total_pages": max(1, (total + page_size - 1) // page_size),
+        }
+    return response
 
 
 @router.get("/parent/children-list")
 def get_parent_children_simple(
-    current_user: models.User = Depends(get_current_user),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """Simple children list for filter dropdowns"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    profile = parent.profile
 
     children = db.query(models.Child).filter(
         models.Child.parent_id == profile.id, models.Child.deleted_at.is_(None)
@@ -491,20 +397,17 @@ class ParentProfileSelfUpdateRequest(BaseModel):
 
 
 @router.put("/parent/profile")
+@limiter.limit(settings.RATE_LIMIT_PARENT_WRITE)
 def update_parent_profile_self(
+    request: Request,
     data: ParentProfileSelfUpdateRequest,
-    current_user: models.User = Depends(get_current_user),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, str]:
     """Allow authenticated parent to update their own profile and language preference."""
-    from auth import jordan_phone_login_variants, normalize_jordan_phone
-
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    current_user = parent.user
+    profile = parent.profile
+    lang = _ulang(current_user)
 
     text_fields = [
         "first_name",
@@ -539,11 +442,7 @@ def update_parent_profile_self(
     if data.phone_number is not None:
         raw_phone = data.phone_number.strip()
         if raw_phone:
-            if not validators.validate_jordan_phone(raw_phone):
-                raise HTTPException(
-                    status_code=400,
-                    detail=_api("Invalid Jordanian phone number", _ulang(current_user)),
-                )
+            normalized_phone = _normalize_phone_or_raise(raw_phone, lang, "Invalid Jordanian phone number")
             duplicate_phone = (
                 db.query(models.ParentProfile)
                 .filter(
@@ -556,33 +455,30 @@ def update_parent_profile_self(
             if duplicate_phone:
                 raise HTTPException(
                     status_code=400,
-                    detail=_api("Phone number already used", _ulang(current_user)),
+                    detail=_api("Phone number already used", lang),
                 )
-            profile.phone_number = normalize_jordan_phone(raw_phone)
+            profile.phone_number = normalized_phone
         else:
             profile.phone_number = None
 
     if data.emergency_contact_phone is not None:
         raw_emergency_phone = data.emergency_contact_phone.strip()
         if raw_emergency_phone:
-            if not validators.validate_jordan_phone(raw_emergency_phone):
-                raise HTTPException(
-                    status_code=400,
-                    detail=_api("Invalid emergency contact phone number", _ulang(current_user)),
-                )
-            profile.emergency_contact_phone = normalize_jordan_phone(raw_emergency_phone)
+            profile.emergency_contact_phone = _normalize_phone_or_raise(
+                raw_emergency_phone, lang, "Invalid emergency contact phone number"
+            )
         else:
             profile.emergency_contact_phone = None
 
     if data.notification_language is not None:
         if data.notification_language not in ("en", "ar"):
-            raise HTTPException(status_code=400, detail=_api("Supported languages: ar, en", _ulang(current_user)))
+            raise HTTPException(status_code=400, detail=_api("Supported languages: ar, en", lang))
         profile.notification_language = data.notification_language
 
     # Update user language preference
     if data.language is not None:
         if data.language not in ("en", "ar"):
-            raise HTTPException(status_code=400, detail=_api("Supported languages: ar, en", _ulang(current_user)))
+            raise HTTPException(status_code=400, detail=_api("Supported languages: ar, en", lang))
         current_user.preferred_language = data.language
         if data.notification_language is None:
             profile.notification_language = data.language
@@ -602,8 +498,8 @@ def update_parent_profile_self(
 
     db.commit()
     db.refresh(profile)
+    cache_service.delete(_parent_dashboard_cache_key(current_user.id))
 
-    lang = _ulang(current_user)
     return {"detail": _api("Saved successfully", lang)}
 
 
@@ -612,16 +508,14 @@ def get_parent_daily_reports(
     child_id: Optional[int] = Query(None),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
-    current_user: models.User = Depends(get_current_user),
+    page: Optional[int] = Query(None, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    parent: ParentIdentity = Depends(get_current_parent),
     db: Session = Depends(get_db),
-):
+) -> Dict[str, Any]:
     """Get daily reports across all parent's children (status SENT_TO_PARENT only)."""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
-
-    profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+    current_user = parent.user
+    profile = parent.profile
 
     child_ids = [
         cid
@@ -656,7 +550,14 @@ def get_parent_daily_reports(
     except ValueError:
         logger.warning("INVALID_DATE_FILTER start_date=%r end_date=%r ignored", start_date, end_date)
 
-    reports = query.order_by(models.DailyReport.date.desc(), models.DailyReport.id.desc()).all()
+    query = query.order_by(models.DailyReport.date.desc(), models.DailyReport.id.desc())
+
+    total = None
+    if page is not None:
+        total = query.count()
+        query = query.offset((page - 1) * page_size).limit(page_size)
+
+    reports = query.all()
     children = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()}
 
     report_list = []
@@ -685,7 +586,15 @@ def get_parent_daily_reports(
             }
         )
 
-    return {
-        "total": len(report_list),
+    response = {
+        "total": total if total is not None else len(report_list),
         "reports": report_list,
     }
+    if page is not None:
+        response["pagination"] = {
+            "page": page,
+            "page_size": page_size,
+            "total_count": total,
+            "total_pages": max(1, (total + page_size - 1) // page_size),
+        }
+    return response

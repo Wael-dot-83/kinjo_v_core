@@ -97,6 +97,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_CSV_IMPORT: str = "5/minute"
     RATE_LIMIT_ADMIN_READ: str = "60/minute"
     RATE_LIMIT_ADMIN_WRITE: str = "30/minute"
+    RATE_LIMIT_PARENT_WRITE: str = "10/minute"
     RATE_LIMIT_MESSAGES_SEND: str = "30/minute"
     RATE_LIMIT_MESSAGES_SEND_ADMIN: str = "120/minute"
     RATE_LIMIT_MESSAGES_SEND_MANAGER: str = "60/minute"

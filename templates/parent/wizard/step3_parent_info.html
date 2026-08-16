@@ -108,7 +108,7 @@
         const headers = { 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' };
         const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
                      (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
-                     (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
+                     (document.cookie.match(/kinjo_csrf_token=([^;]+)/) || [])[1];
         if (csrf) headers['X-CSRF-Token'] = csrf;
         return headers;
     }
