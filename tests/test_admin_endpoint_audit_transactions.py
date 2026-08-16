@@ -162,6 +162,33 @@ def test_message_and_recipient_rows_roll_back_when_audit_write_fails(
     assert test_db.query(models.MessageRecipient).count() == 0
 
 
+def test_message_rolls_back_when_notification_audit_write_fails(
+    client, test_db, auth_headers_admin, parent_user
+):
+    subject = "Atomic notification audit announcement"
+
+    with (
+        patch("admin_endpoints.create_message_notifications", return_value=True),
+        patch(
+            "admin_endpoints.log_audit_event",
+            side_effect=_fail_action(AuditAction.MESSAGE_NOTIFICATIONS_QUEUED),
+        ),
+    ):
+        response = client.post(
+            "/api/admin/messages",
+            headers=auth_headers_admin,
+            json={
+                "subject": subject,
+                "message_body": "Notification audit failure must roll back everything.",
+                "target": {"mode": "ALL_PARENTS"},
+            },
+        )
+
+    assert response.status_code == 500
+    assert test_db.query(models.Message).filter_by(subject=subject).count() == 0
+    assert test_db.query(models.MessageRecipient).count() == 0
+
+
 def test_audit_cleanup_rolls_back_deleted_history_when_its_audit_fails(
     client, test_db, admin_user, auth_headers_admin
 ):

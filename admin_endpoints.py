@@ -45,7 +45,10 @@ from dependencies import get_current_user
 from rate_limiter import limiter
 from config import settings
 from auth import get_password_hash, verify_password
-from notification_service import create_message_notifications
+from notification_service import (
+    create_message_notifications,
+    dispatch_message_notification_tasks,
+)
 from api.users import (
     PASSWORD_RESET_GENERIC_MESSAGE,
     apply_password_reset,
@@ -3042,6 +3045,8 @@ def create_admin_message(
     )
 
     warnings: List[str] = []
+    staged_notifications: List[models.Notification] = []
+    recipient_users = db.query(models.User).filter(models.User.id.in_(recipient_ids)).all()
     chunk_size = 500
     try:
         db.add(message)
@@ -3075,6 +3080,36 @@ def create_admin_message(
             },
             sensitivity_level=2
         )
+
+        notification_result = create_message_notifications(
+            db,
+            message,
+            recipient_users,
+            caller_owns_transaction=True,
+        )
+        if notification_result and recipient_users:
+            if isinstance(notification_result, list):
+                staged_notifications = notification_result
+            log_audit_event(
+                db=db,
+                action=AuditAction.MESSAGE_NOTIFICATIONS_QUEUED,
+                actor=current_user,
+                target_type="Message",
+                target_ids=message.id,
+                metadata={"recipient_count": len(recipient_users)},
+                sensitivity_level=1,
+            )
+        else:
+            warnings.append("Message notifications are disabled; status will be reviewed later.")
+            log_audit_event(
+                db=db,
+                action=AuditAction.MESSAGE_NOTIFICATIONS_SKIPPED,
+                actor=current_user,
+                target_type="Message",
+                target_ids=message.id,
+                metadata={"reason": "notifications_disabled"},
+                sensitivity_level=1,
+            )
         db.commit()
     except Exception as exc:
         db.rollback()
@@ -3088,36 +3123,31 @@ def create_admin_message(
     else:
         db.refresh(message)
 
-    recipient_users = db.query(models.User).filter(models.User.id.in_(recipient_ids)).all()
-    try:
-        notifications_enabled = create_message_notifications(db, message, recipient_users)
-        if notifications_enabled and recipient_users:
-            log_audit_event(
-                db=db,
-                action=AuditAction.MESSAGE_NOTIFICATIONS_QUEUED,
-                actor=current_user,
-                target_type="Message",
-                target_ids=message.id,
-                metadata={"recipient_count": len(recipient_users)},
-                sensitivity_level=1
+    if staged_notifications:
+        try:
+            dispatch_message_notification_tasks(staged_notifications)
+        except Exception as exc:
+            error_type = type(exc).__name__
+            warnings.append("Notification dispatch is pending retry.")
+            try:
+                for notification in staged_notifications:
+                    notification.error_message = (
+                        f"Dispatch scheduling failed ({error_type}); pending retry"
+                    )
+                db.commit()
+            except Exception as record_exc:
+                db.rollback()
+                logger.error(
+                    "Failed to record Admin notification dispatch error for message %s error_type=%s",
+                    message.id,
+                    type(record_exc).__name__,
+                )
+            logger.warning(
+                "Failed to dispatch Admin notifications for message %s; %s rows remain pending: %s",
+                message.id,
+                len(staged_notifications),
+                error_type,
             )
-            db.commit()
-        if not notifications_enabled:
-            warnings.append("Message notifications are disabled; status will be reviewed later.")
-            log_audit_event(
-                db=db,
-                action=AuditAction.MESSAGE_NOTIFICATIONS_SKIPPED,
-                actor=current_user,
-                target_type="Message",
-                target_ids=message.id,
-                metadata={"reason": "notifications_disabled"},
-                sensitivity_level=1
-            )
-            db.commit()
-    except (SQLAlchemyError, RuntimeError, TypeError, AttributeError) as exc:
-        db.rollback()
-        logger.warning("Failed to enqueue notifications for message %s: %s", message.id, exc)
-        warnings.append("Notification system error; please verify manually.")
 
     return AdminMessageResponse(
         id=message.id,
