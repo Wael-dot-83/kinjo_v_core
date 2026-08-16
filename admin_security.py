@@ -161,20 +161,21 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
     CORRELATION_ID_HEADER = "X-Correlation-ID"
 
     async def dispatch(self, request: Request, call_next):
-        # Get correlation ID from header or generate new one
-        correlation_id = request.headers.get(self.CORRELATION_ID_HEADER)
-        if not correlation_id:
+        # Only accept correlation IDs that fit the UUID audit-column contract.
+        # Malformed client input must never be able to make an audit insert fail.
+        supplied_correlation_id = request.headers.get(self.CORRELATION_ID_HEADER)
+        try:
+            correlation_id = str(uuid.UUID(supplied_correlation_id))
+        except (AttributeError, TypeError, ValueError):
             correlation_id = str(uuid.uuid4())
 
         # Set context variables
         correlation_id_var.set(correlation_id)
 
-        # Get client IP
+        # Use the validated socket peer. Trusted proxy deployments can normalize
+        # request.client through proxy middleware; arbitrary callers must not be
+        # allowed to forge audit attribution with X-Forwarded-For.
         client_ip = request.client.host if request.client else 'unknown'
-        # Check for X-Forwarded-For header
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            client_ip = forwarded_for.split(",")[0].strip()
         request_ip_var.set(client_ip)
 
         # Call next middleware/endpoint
@@ -198,26 +199,25 @@ SENSITIVE_FIELDS = {
 }
 
 
+def _redact_sensitive_value(value: Any) -> Any:
+    """Recursively redact sensitive keys in JSON-compatible audit values."""
+    if isinstance(value, dict):
+        return {
+            key: "[REDACTED]" if str(key).lower() in SENSITIVE_FIELDS else _redact_sensitive_value(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_sensitive_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_redact_sensitive_value(item) for item in value)
+    return value
+
+
 def redact_sensitive_data(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Redact sensitive fields from data for audit logging"""
+    """Redact sensitive fields recursively from data for audit logging."""
     if not data:
         return data
-
-    redacted = {}
-    for key, value in data.items():
-        if key.lower() in SENSITIVE_FIELDS:
-            redacted[key] = "[REDACTED]"
-        elif isinstance(value, dict):
-            redacted[key] = redact_sensitive_data(value)
-        elif isinstance(value, list):
-            redacted[key] = [
-                redact_sensitive_data(item) if isinstance(item, dict) else item
-                for item in value
-            ]
-        else:
-            redacted[key] = value
-
-    return redacted
+    return _redact_sensitive_value(data)
 
 
 def compute_diff(before: Optional[Dict], after: Optional[Dict]) -> Dict[str, Any]:
@@ -243,11 +243,14 @@ def compute_diff(before: Optional[Dict], after: Optional[Dict]) -> Dict[str, Any
             if before_val != after_val:
                 diff["changed"][key] = {"before": "[REDACTED]", "after": "[REDACTED]"}
         elif key in before and key not in after:
-            diff["removed"][key] = before_val
+            diff["removed"][key] = _redact_sensitive_value(before_val)
         elif key not in before and key in after:
-            diff["added"][key] = after_val
+            diff["added"][key] = _redact_sensitive_value(after_val)
         elif before_val != after_val:
-            diff["changed"][key] = {"before": before_val, "after": after_val}
+            diff["changed"][key] = {
+                "before": _redact_sensitive_value(before_val),
+                "after": _redact_sensitive_value(after_val),
+            }
 
     # Remove empty sections
     return {k: v for k, v in diff.items() if v}
@@ -397,6 +400,9 @@ def require_admin_or_manager_role(current_user: models.User) -> models.User:
     if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
         raise forbidden_error("Admin or Manager access required")
 
+    if current_user.role == models.UserRole.MANAGER and current_user.kindergarten_id is None:
+        raise forbidden_error("Manager must be assigned to a kindergarten")
+
     return current_user
 
 
@@ -423,6 +429,8 @@ def can_admin_access_user(actor: models.User, target: models.User) -> bool:
         return True
 
     if actor.role == models.UserRole.MANAGER:
+        if actor.kindergarten_id is None:
+            return False
         # Managers can only access users in their kindergarten
         if target.kindergarten_id != actor.kindergarten_id:
             return False
@@ -777,6 +785,7 @@ class BulkCreateSchema(BaseModel):
 class PasswordResetRequestSchema(BaseModel):
     """Schema for password reset request"""
     email: EmailStr
+    captcha_token: Optional[str] = None
 
     @field_validator('email')
     @classmethod

@@ -895,6 +895,61 @@ class AdminPasswordReset(BaseModel):
     admin_password: str = Field(..., min_length=8)
 
 
+PASSWORD_RESET_GENERIC_MESSAGE = "If the email exists, a reset link has been sent"
+
+
+def initiate_password_reset(
+    request: Request,
+    email: str,
+    captcha_token: Optional[str],
+    db: Session,
+) -> tuple[Optional[models.User], Optional[str]]:
+    """Apply the canonical anti-abuse and account-eligibility reset policy."""
+    if captcha_required() and not verify_captcha(captcha_token):
+        lang = "en" if request.headers.get("Accept-Language", "ar").startswith("en") else "ar"
+        raise HTTPException(status_code=400, detail=captcha_error_message(lang))
+
+    user = (
+        db.query(models.User)
+        .filter(
+            models.User.email == email,
+            models.User.deleted_at.is_(None),
+        )
+        .first()
+    )
+    if not user:
+        return None, None
+
+    token = issue_password_reset_token(db, user)
+    base_url = str(request.base_url).rstrip("/")
+    delivered = deliver_password_reset_email(base_url, user, token)
+    if not delivered:
+        logger.warning(
+            "PASSWORD_RESET_UNDELIVERED user_id=%s: token issued but email not sent "
+            "(check SMTP config or prior CRITICAL log for delivery error)",
+            user.id,
+        )
+
+    return user, token
+
+
+def apply_password_reset(
+    db: Session,
+    token: str,
+    new_password: str,
+) -> Optional[models.PasswordResetToken]:
+    """Apply the canonical password lifecycle without committing the caller's transaction."""
+    token_record = resolve_valid_token(db, token)
+    if not token_record:
+        return None
+
+    from auth import change_user_password
+
+    change_user_password(db, token_record.user, new_password, commit=False)
+    token_record.used = True
+    return token_record
+
+
 @router.post("/users/{user_id}/admin-reset-password", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_PASSWORD_RESET)
 def admin_reset_password(
@@ -920,33 +975,14 @@ def admin_reset_password(
 @limiter.limit("5/hour")
 def request_password_reset(request: Request, reset_request: PasswordResetRequest, db: Session = Depends(get_db)):
     """Request password reset token (for self-service)"""
-    if captcha_required() and not verify_captcha(reset_request.captcha_token):
-        lang = "en" if request.headers.get("Accept-Language", "ar").startswith("en") else "ar"
-        raise HTTPException(status_code=400, detail=captcha_error_message(lang))
-
-    user = (
-        db.query(models.User)
-        .filter(
-            models.User.email == reset_request.email,
-            models.User.deleted_at.is_(None),
-        )
-        .first()
+    initiate_password_reset(
+        request=request,
+        email=reset_request.email,
+        captcha_token=reset_request.captcha_token,
+        db=db,
     )
-    # Always return the same message — never reveal whether email exists
-    if not user:
-        return {"message": "If the email exists, a reset link has been sent"}
-
-    token = issue_password_reset_token(db, user)
-    base_url = str(request.base_url).rstrip("/")
-    delivered = deliver_password_reset_email(base_url, user, token)
-    if not delivered:
-        logger.warning(
-            "PASSWORD_RESET_UNDELIVERED user_id=%s: token issued but email not sent "
-            "(check SMTP config or prior CRITICAL log for delivery error)",
-            user.id,
-        )
-
-    return {"message": "If the email exists, a reset link has been sent"}
+    # Always return the same message — never reveal whether email exists.
+    return {"message": PASSWORD_RESET_GENERIC_MESSAGE}
 
 
 @router.post("/users/reset-password")
@@ -954,18 +990,13 @@ def request_password_reset(request: Request, reset_request: PasswordResetRequest
 def reset_password(request: Request, reset_data: PasswordResetConfirm, db: Session = Depends(get_db)):
     """Reset password using token"""
 
-    token_record = resolve_valid_token(db, reset_data.token)
+    try:
+        token_record = apply_password_reset(db, reset_data.token, reset_data.new_password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     if not token_record:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
-
-    from auth import change_user_password
-
-    try:
-        change_user_password(db, token_record.user, reset_data.new_password)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    token_record.used = True
     db.commit()
 
     validators.log_audit_action(

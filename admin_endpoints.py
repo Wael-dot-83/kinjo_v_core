@@ -46,10 +46,10 @@ from rate_limiter import limiter
 from config import settings
 from auth import get_password_hash, verify_password
 from notification_service import create_message_notifications
-from api.auth.password_reset_service import (
-    issue_password_reset_token,
-    resolve_valid_token,
-    deliver_password_reset_email,
+from api.users import (
+    PASSWORD_RESET_GENERIC_MESSAGE,
+    apply_password_reset,
+    initiate_password_reset,
 )
 from messaging_permissions import ACTIVE_ENROLLMENT_STATUSES, ensure_kindergartens_exist
 from validators import build_arabic_search_terms
@@ -449,90 +449,90 @@ def create_user(
         except validators.ValidationError as exc:
             raise validation_error(exc.message, {"identity": exc.message})
 
-    db.add(new_user)
-    db.flush()
+    try:
+        db.add(new_user)
+        db.flush()
 
-    if new_user.role == models.UserRole.SUPERVISOR:
-        validators.ensure_supervisor_profile(db, new_user, new_user.kindergarten_id)
+        if new_user.role == models.UserRole.SUPERVISOR:
+            validators.ensure_supervisor_profile(db, new_user, new_user.kindergarten_id)
 
-    db.commit()
-    db.refresh(new_user)
-
-    # Handle child creation for PARENT role
-    if user_data.role == models.UserRole.PARENT and user_data.children:
-        # Create parent profile first
-        parent_profile = models.ParentProfile(
-            user_id=new_user.id,
-            first_name="",
-            last_name="",
-            phone_number="",
-            gender=models.Gender.MALE,
-            nationality="",
-            home_governorate="",
-            home_district="",
-            home_area="",
-            home_address_line="",
-            correspondence_preference=True,
-            profile_complete=False
-        )
-        db.add(parent_profile)
-        db.commit()
-        db.refresh(parent_profile)
-
-        # Create children (age already validated by ChildCreateSchema.validate_child_age)
-        for child_data in user_data.children:
-            new_child = models.Child(
-                parent_id=parent_profile.id,
-                first_name=child_data.first_name,
-                last_name=child_data.last_name,
-                gender=child_data.gender,
-                date_of_birth=child_data.date_of_birth,
-                father_name=child_data.father_name,
-                mother_first_name=child_data.mother_first_name,
-                mother_second_name=child_data.mother_second_name or "",
-                mother_last_name=child_data.mother_last_name or "",
-                mother_nationality=child_data.mother_nationality or "",
-                media_consent=False,  # Default false
-                correspondence_flag=True,  # Default true
-                profile_complete=False  # Will be completed later
+        # Handle child creation for PARENT role in the same transaction as the
+        # user, profile, and audit rows. Flushes allocate IDs without exposing a
+        # partially-created account to other transactions.
+        if user_data.role == models.UserRole.PARENT and user_data.children:
+            parent_profile = models.ParentProfile(
+                user_id=new_user.id,
+                first_name="",
+                last_name="",
+                phone_number="",
+                gender=models.Gender.MALE,
+                nationality="",
+                home_governorate="",
+                home_district="",
+                home_area="",
+                home_address_line="",
+                correspondence_preference=True,
+                profile_complete=False
             )
-            db.add(new_child)
+            db.add(parent_profile)
+            db.flush()
 
-        db.commit()
+            children = []
+            # Child age was already validated by ChildCreateSchema.
+            for child_data in user_data.children:
+                new_child = models.Child(
+                    parent_id=parent_profile.id,
+                    first_name=child_data.first_name,
+                    last_name=child_data.last_name,
+                    gender=child_data.gender,
+                    date_of_birth=child_data.date_of_birth,
+                    father_name=child_data.father_name,
+                    mother_first_name=child_data.mother_first_name,
+                    mother_second_name=child_data.mother_second_name or "",
+                    mother_last_name=child_data.mother_last_name or "",
+                    mother_nationality=child_data.mother_nationality or "",
+                    media_consent=False,
+                    correspondence_flag=True,
+                    profile_complete=False
+                )
+                db.add(new_child)
+                children.append(new_child)
 
-        # Audit log for children creation
+            db.flush()
+            log_audit_event(
+                db, AuditAction.CHILDREN_CREATED, current_user, "Child",
+                target_ids=[child.id for child in children],
+                metadata={"parent_user_id": new_user.id, "children_count": len(children)},
+                sensitivity_level=2
+            )
+
         log_audit_event(
-            db, AuditAction.CHILDREN_CREATED, current_user, "Child",
-            target_ids=[child.id for child in parent_profile.children],
-            metadata={"parent_user_id": new_user.id, "children_count": len(user_data.children)},
-            sensitivity_level=2
+            db, AuditAction.USER_CREATED, current_user, "User",
+            target_ids=new_user.id,
+            after_state=model_to_dict(new_user),
+            sensitivity_level=3
         )
+        response_payload = {
+            "id": new_user.id,
+            "username": new_user.username,
+            "email": new_user.email,
+            "role": new_user.role.value,
+            "status": new_user.status.value,
+            "kindergarten_id": new_user.kindergarten_id,
+            "full_name": new_user.full_name,
+            "phone_number": new_user.phone_number,
+            "address": new_user.address,
+            "nationality": new_user.nationality,
+            "national_id": new_user.national_id,
+            "passport_number": new_user.passport_number,
+            "correlation_id": get_correlation_id(),
+        }
         db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
-    # Audit log with after state
-    log_audit_event(
-        db, AuditAction.USER_CREATED, current_user, "User",
-        target_ids=new_user.id,
-        after_state=model_to_dict(new_user),
-        sensitivity_level=3
-    )
-    db.commit()
-
-    return {
-        "id": new_user.id,
-        "username": new_user.username,
-        "email": new_user.email,
-        "role": new_user.role.value,
-        "status": new_user.status.value,
-        "kindergarten_id": new_user.kindergarten_id,
-        "full_name": new_user.full_name,
-        "phone_number": new_user.phone_number,
-        "address": new_user.address,
-        "nationality": new_user.nationality,
-        "national_id": new_user.national_id,
-        "passport_number": new_user.passport_number,
-        "correlation_id": get_correlation_id()
-    }
+    return response_payload
 
 
 # =============================================================================
@@ -987,7 +987,7 @@ def admin_reset_password(
 
 
 @router.post("/password-reset-request")
-@limiter.limit(settings.RATE_LIMIT_PASSWORD_RESET_REQUEST)
+@limiter.limit("5/hour")
 def request_password_reset(
     request: Request,
     reset_request: PasswordResetRequestSchema,
@@ -995,41 +995,42 @@ def request_password_reset(
 ):
     """
     Request password reset token (self-service).
-    Rate limited to 5 requests per minute.
+    Compatibility alias for the canonical self-service reset workflow.
     Always returns success to prevent email enumeration.
     """
 
-    user = db.query(models.User).filter(models.User.email == reset_request.email).first()
+    user, token = initiate_password_reset(
+        request=request,
+        email=str(reset_request.email),
+        captcha_token=reset_request.captcha_token,
+        db=db,
+    )
 
     if user:
-        token = issue_password_reset_token(db, user)
-
-        # Audit log
         log_audit_event(
             db, AuditAction.PASSWORD_RESET_REQUESTED, user, "User",
             target_ids=user.id,
             sensitivity_level=2
         )
-
-        deliver_password_reset_email(str(request.base_url), user, token)
+        db.commit()
 
         # In development, token is returned to support local testing.
         if settings.ENVIRONMENT == "development":
             return {
-                "message": "If the email exists, a reset link has been sent",
+                "message": PASSWORD_RESET_GENERIC_MESSAGE,
                 "token": token,  # Only in development!
                 "correlation_id": get_correlation_id()
             }
 
     # Always return same response to prevent enumeration
     return {
-        "message": "If the email exists, a reset link has been sent",
+        "message": PASSWORD_RESET_GENERIC_MESSAGE,
         "correlation_id": get_correlation_id()
     }
 
 
 @router.post("/password-reset-confirm")
-@limiter.limit(settings.RATE_LIMIT_PASSWORD_RESET)
+@limiter.limit("10/hour")
 def confirm_password_reset(
     request: Request,
     reset_data: PasswordResetConfirmSchema,
@@ -1037,18 +1038,16 @@ def confirm_password_reset(
 ):
     """
     Confirm password reset using token.
-    Rate limited to 3 requests per minute.
+    Compatibility alias for the canonical self-service reset workflow.
     """
 
-    token_record = resolve_valid_token(db, reset_data.token)
+    try:
+        token_record = apply_password_reset(db, reset_data.token, reset_data.new_password)
+    except ValueError as exc:
+        raise validation_error(str(exc)) from exc
 
     if not token_record:
         raise validation_error("Invalid or expired token")
-
-    # Reset password
-    token_record.user.hashed_password = get_password_hash(reset_data.new_password)
-    token_record.used = True
-    db.commit()
 
     # Audit log
     log_audit_event(
@@ -1099,6 +1098,12 @@ def admin_mfa_bypass(
     WARNING: This is an emergency-only endpoint. Use sparingly and audit all usage.
     """
 
+    if mfa_request.user_id != user_id:
+        raise validation_error(
+            "User ID in request body must match the route",
+            {"user_id": "Body and route user IDs must match"},
+        )
+
     # Self-bypass is not permitted — admin must use normal MFA reset flow
     if user_id == current_user.id:
         raise forbidden_error("Cannot bypass your own MFA. Use the standard MFA reset flow.")
@@ -1108,6 +1113,9 @@ def admin_mfa_bypass(
     ).first()
     if not user:
         raise not_found_error("User not found")
+
+    if not can_admin_access_user(current_user, user):
+        raise forbidden_error("Cannot manage another admin account")
 
     # Verify admin's own password after confirming target exists
     if not verify_password(mfa_request.admin_password, current_user.hashed_password):
@@ -1160,6 +1168,9 @@ def get_user_mfa_status(
     ).first()
     if not user:
         raise not_found_error("User not found")
+
+    if not can_admin_access_user(current_user, user):
+        raise forbidden_error("Cannot access another admin account")
 
     return {
         "user_id": user.id,

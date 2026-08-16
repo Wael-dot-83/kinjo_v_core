@@ -213,7 +213,13 @@ def create_user(
     return user
 
 
-def change_user_password(db: Session, user: models.User, new_password: str) -> None:
+def change_user_password(
+    db: Session,
+    user: models.User,
+    new_password: str,
+    *,
+    commit: bool = True,
+) -> None:
     """Change a user's password and clear must_change_password flag."""
     hashed_password = get_password_hash(new_password)
 
@@ -223,7 +229,8 @@ def change_user_password(db: Session, user: models.User, new_password: str) -> N
     user.password_changed_at = now
     user.updated_at = now
 
-    db.commit()
+    if commit:
+        db.commit()
 
 
 def requires_password_change(user: models.User) -> bool:
