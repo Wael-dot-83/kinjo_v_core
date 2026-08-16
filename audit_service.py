@@ -177,9 +177,18 @@ def _export_audit_logs(
             models.AuditLog.created_at < day_end_utc,
         )
 
-    query = query.order_by(desc(models.AuditLog.created_at))
-    export_count = query.count()
-    if export_count > MAX_AUDIT_EXPORT_ROWS:
+    # Fetch one sentinel row in the same ordered statement used for the export.
+    # COUNT followed by an unbounded SELECT had both a TOCTOU window (new rows
+    # could arrive between statements) and twice the database work.
+    data = (
+        query.order_by(
+            desc(models.AuditLog.created_at),
+            desc(models.AuditLog.id),
+        )
+        .limit(MAX_AUDIT_EXPORT_ROWS + 1)
+        .all()
+    )
+    if len(data) > MAX_AUDIT_EXPORT_ROWS:
         raise HTTPException(
             status_code=422,
             detail=(
@@ -187,8 +196,6 @@ def _export_audit_logs(
                 "Apply period or field filters to narrow the export."
             ),
         )
-    data = query.all()
-
     if format == "json":
         export_data = []
         for log, username in data:

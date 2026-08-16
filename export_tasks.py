@@ -7,100 +7,88 @@ Each task:
   3. Writes the generated file to disk and records file_path + file_size.
 """
 import logging
-import os
-from datetime import date, datetime, timezone
-from utils.time_utils import today_amman as _today
-from typing import Any, Dict, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict
 
 from celery_app import celery_app
 from database import SessionLocal
 import models
+from sqlalchemy import or_
 
 logger = logging.getLogger(__name__)
 
-_EXPORT_DIR = os.environ.get("EXPORT_DIR", "/tmp/kinjo_exports")
+_ANALYTICS_STALE_AFTER = timedelta(hours=1)
 
 
-def _mark_processing(db, job: models.ExportJob) -> None:
-    job.status = models.ExportStatus.PROCESSING
-    job.started_at = datetime.now(timezone.utc)
-    db.commit()
+@celery_app.task(
+    name="export_tasks.run_analytics_export_job",
+    acks_late=True,
+    reject_on_worker_lost=True,
+)
+def run_analytics_export_job(export_job_id: int) -> Dict[str, Any]:
+    """Run the idempotent analytics worker from a durable Celery delivery."""
+    from analytics_service import process_export_job
+
+    return process_export_job(export_job_id)
 
 
-def _mark_completed(db, job: models.ExportJob, file_path: str, file_size: int) -> None:
-    job.status = models.ExportStatus.COMPLETED
-    job.file_path = file_path
-    job.file_size = file_size
-    job.completed_at = datetime.now(timezone.utc)
-    db.commit()
+@celery_app.task(name="export_tasks.dispatch_pending_analytics_exports")
+def dispatch_pending_analytics_exports(batch_size: int = 100) -> Dict[str, int]:
+    """Recover committed jobs missed by publish or interrupted worker processes.
 
-
-def _mark_failed(db, job: models.ExportJob, error: str) -> None:
-    job.status = models.ExportStatus.FAILED
-    job.error_message = error[:1000]
-    job.completed_at = datetime.now(timezone.utc)
-    db.commit()
-
-
-@celery_app.task(name="export_tasks.run_export_job", bind=True, max_retries=1, default_retry_delay=30)
-def run_export_job(self, export_job_id: int) -> Dict[str, Any]:
+    The ExportJob row is the outbox. Duplicate deliveries are safe because the
+    worker atomically claims only PENDING rows. A PROCESSING row is eligible for
+    recovery only after an hour, preventing ordinary long-running work from
+    being dispatched concurrently.
     """
-    Process an export job identified by ExportJob.id.
-
-    The triggering endpoint must already have created the ExportJob row with
-    status=PENDING before enqueuing this task.
-    """
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    stale_before = now - _ANALYTICS_STALE_AFTER
     db = SessionLocal()
-    job: Optional[models.ExportJob] = None
     try:
-        job = db.query(models.ExportJob).filter(models.ExportJob.id == export_job_id).first()
-        if job is None:
-            logger.error("ExportJob %d not found", export_job_id)
-            return {"error": "job_not_found"}
-
-        if job.status != models.ExportStatus.PENDING:
-            logger.warning("ExportJob %d is already %s — skipping", export_job_id, job.status)
-            return {"status": job.status.value}
-
-        _mark_processing(db, job)
-
-        from export_service import export_service
-
-        user = db.query(models.User).filter(models.User.id == job.user_id).first()
-        if user is None:
-            _mark_failed(db, job, "user_not_found")
-            return {"error": "user_not_found"}
-
-        filters: Dict[str, Any] = job.filters or {}
-        report_type = job.report_type
-        fmt = job.export_format.value.lower()
-
-        if report_type == "kpi_dashboard":
-            result = export_service.export_kpi_dashboard(user, None, fmt)
-        else:
-            date_from = date.fromisoformat(filters["date_from"]) if "date_from" in filters else _today()
-            date_to = date.fromisoformat(filters["date_to"]) if "date_to" in filters else _today()
-            result = export_service.export_analytics_report(user, report_type, date_from, date_to, fmt)
-
-        os.makedirs(_EXPORT_DIR, exist_ok=True)
-        filename = result.get("filename", f"export_{export_job_id}.{fmt}")
-        file_path = os.path.join(_EXPORT_DIR, filename)
-        content = result.get("content", b"")
-        if isinstance(content, str):
-            content = content.encode("utf-8")
-        with open(file_path, "wb") as fh:
-            fh.write(content)
-
-        _mark_completed(db, job, file_path, len(content))
-        return {"status": "completed", "file_path": file_path, "file_size": len(content)}
-
-    except Exception as exc:
-        logger.exception("ExportJob %d failed: %s", export_job_id, exc)
-        if job is not None:
-            try:
-                _mark_failed(db, job, str(exc))
-            except Exception:
-                logger.exception("Failed to mark export job as failed")
-        raise self.retry(exc=exc)
+        query = (
+            db.query(models.ExportJob)
+            .filter(
+                or_(
+                    models.ExportJob.status == models.ExportStatus.PENDING,
+                    (
+                        (models.ExportJob.status == models.ExportStatus.PROCESSING)
+                        & (models.ExportJob.started_at < stale_before)
+                    ),
+                )
+            )
+            .order_by(models.ExportJob.created_at.asc(), models.ExportJob.id.asc())
+            .limit(batch_size)
+        )
+        if db.bind is not None and db.bind.dialect.name == "postgresql":
+            query = query.with_for_update(skip_locked=True)
+        jobs = query.all()
+        job_ids = []
+        recovered = 0
+        for job in jobs:
+            if job.status == models.ExportStatus.PROCESSING:
+                job.status = models.ExportStatus.PENDING
+                job.started_at = None
+                recovered += 1
+            job_ids.append(job.id)
+        db.commit()
     finally:
         db.close()
+
+    published = 0
+    for job_id in job_ids:
+        try:
+            run_analytics_export_job.delay(job_id)
+            published += 1
+        except Exception:
+            logger.exception("Failed to republish analytics export %s", job_id)
+    return {"found": len(job_ids), "recovered": recovered, "published": published}
+
+
+@celery_app.task(
+    name="export_tasks.run_export_job",
+    acks_late=True,
+    reject_on_worker_lost=True,
+)
+def run_export_job(export_job_id: int) -> Dict[str, Any]:
+    """Compatibility task name routed through the canonical durable worker."""
+    return run_analytics_export_job.run(export_job_id)

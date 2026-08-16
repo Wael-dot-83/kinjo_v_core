@@ -1691,8 +1691,8 @@ class ExportJobResponse(BaseModel):
     status: str
     report_type: str
     created_at: Optional[str] = None  # ISO-8601 with Jordan +03:00 offset
-    file_path: Optional[str] = None
-    error: Optional[str] = None       # short error message when status == FAILED
+    file_path: Optional[str] = None   # public download URL, never a server path
+    error: Optional[str] = None       # generic error reference when status == FAILED
     trace_url: Optional[str] = None   # link to audit log entry for this job
 
 
@@ -1702,6 +1702,18 @@ class ExportRequest(BaseModel):
     export_format: Optional[str] = Field("CSV", description="CSV, PDF, EXCEL")
     filters: Optional[Dict[str, Any]] = None
     retry_job_id: Optional[int] = Field(None, description="Job ID to retry")
+
+
+def _public_export_error(error_message: Optional[str]) -> Optional[str]:
+    """Return only the stable public error contract, including safe references."""
+    if not error_message:
+        return None
+    prefix = "EXPORT_FAILED:"
+    if error_message.startswith(prefix):
+        reference = error_message.removeprefix(prefix)
+        if len(reference) == 16 and all(char in "0123456789abcdef" for char in reference):
+            return error_message
+    return "EXPORT_FAILED"
 
 
 def _log_analytics_export_audit(
@@ -2649,7 +2661,7 @@ def export_analytics_data(
     request: Request = None,
 ):
     """
-    Export analytics reports (CSV or Excel) with memory streaming for large datasets.
+    Export analytics reports after fully preparing a memory/disk-spooled artifact.
     """
     _validate_csrf_token(request)
     validators.validate_admin_role(current_user)
@@ -2672,10 +2684,6 @@ def export_analytics_data(
             )
             db.commit()
             raise HTTPException(status_code=400, detail="Invalid date format")
-
-    import csv
-    import io
-    from fastapi.responses import Response, StreamingResponse
 
     # Determine headers and row generator
     headers = []
@@ -2758,50 +2766,82 @@ def export_analytics_data(
         db.commit()
         raise HTTPException(status_code=400, detail="Invalid report type")
 
-    # Excel Export
-    if request_body.export_format and request_body.export_format.lower() == "excel":
-        if openpyxl is None:
-            raise HTTPException(status_code=500, detail="Excel export is not supported (openpyxl missing)")
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = request_body.report_type.capitalize()
-        
-        ws.append(first_row_headers)
-        for row in gen:
-            ws.append(row)
-            
-        output = io.BytesIO()
-        wb.save(output)
-        
-        filename = f"{request_body.report_type}_report_{start_date}_{end_date}.xlsx"
-        _log_analytics_export_audit(db, action=AuditAction.ANALYTICS_EXPORT_SYNC, actor=current_user, report_type=request_body.report_type, export_format="EXCEL", filters=request_body.filters, status_value="completed", file_path=filename)
-        db.commit()
-        return Response(
-            content=output.getvalue(),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+    try:
+        if request_body.export_format and request_body.export_format.lower() == "excel":
+            if openpyxl is None:
+                raise RuntimeError("Excel export dependency is unavailable")
+            workbook = openpyxl.Workbook()
+            worksheet = workbook.active
+            worksheet.title = request_body.report_type.capitalize()
+            worksheet.append(first_row_headers)
+            for row in gen:
+                worksheet.append(row)
+            output = io.BytesIO()
+            workbook.save(output)
+            content = output.getvalue()
+            filename = f"{request_body.report_type}_report_{start_date}_{end_date}.xlsx"
+            media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            export_format = "EXCEL"
+        else:
+            # Materialise before recording COMPLETED. SpooledTemporaryFile keeps
+            # small reports in memory and transparently moves large ones to disk.
+            with tempfile.SpooledTemporaryFile(max_size=5 * 1024 * 1024, mode="w+b") as spool:
+                text_stream = io.TextIOWrapper(
+                    spool, encoding="utf-8", newline="", write_through=True
+                )
+                writer = csv.writer(text_stream)
+                writer.writerow(first_row_headers)
+                for row in gen:
+                    writer.writerow(row)
+                text_stream.flush()
+                spool.seek(0)
+                content = spool.read()
+                text_stream.detach()
+            filename = f"{request_body.report_type}_report_{start_date}_{end_date}.csv"
+            media_type = "text/csv"
+            export_format = "CSV"
+    except Exception:
+        reference = secrets.token_hex(8)
+        logger.exception(
+            "synchronous analytics export failed: report_type=%s reference=%s",
+            request_body.report_type,
+            reference,
         )
-        
-    # Default: CSV Export (Streaming)
-    filename = f"{request_body.report_type}_report_{start_date}_{end_date}.csv"
-    _log_analytics_export_audit(db, action=AuditAction.ANALYTICS_EXPORT_SYNC, actor=current_user, report_type=request_body.report_type, export_format="CSV", filters=request_body.filters, status_value="completed", file_path=filename)
+        db.rollback()
+        _log_analytics_export_audit(
+            db,
+            action=AuditAction.ANALYTICS_EXPORT_SYNC_FAILED,
+            actor=current_user,
+            report_type=request_body.report_type,
+            export_format=request_body.export_format,
+            filters=request_body.filters,
+            status_value="FAILED",
+            error_message=f"EXPORT_FAILED:{reference}",
+            sensitivity_level=3,
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Export generation failed. Reference: {reference}",
+        )
+
+    _log_analytics_export_audit(
+        db,
+        action=AuditAction.ANALYTICS_EXPORT_SYNC,
+        actor=current_user,
+        report_type=request_body.report_type,
+        export_format=export_format,
+        filters=request_body.filters,
+        status_value="COMPLETED",
+        file_path=filename,
+        file_size=len(content),
+    )
     db.commit()
-
-    def iter_csv():
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(first_row_headers)
-        yield output.getvalue()
-        output.seek(0)
-        output.truncate(0)
-        
-        for row in gen:
-            writer.writerow(row)
-            yield output.getvalue()
-            output.seek(0)
-            output.truncate(0)
-
-    return StreamingResponse(iter_csv(), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 def get_enrollment_analytics(
@@ -4952,7 +4992,13 @@ def request_export(
     db: Session = Depends(get_db),
     request: Request = None,
 ):
-    """Request an async export job"""
+    """Persist an export request and dispatch it to the durable worker queue.
+
+    ``ExportJob`` is the durable outbox.  If the immediate broker publish fails
+    after the database commit, the periodic Celery sweeper republishes PENDING
+    jobs.  ``background_tasks`` remains in the signature for API compatibility;
+    it is deliberately not used for execution.
+    """
     _validate_csrf_token(request)
     validators.validate_admin_role(current_user)
 
@@ -5008,14 +5054,15 @@ def request_export(
         export_format=job.export_format,
         filters=job.filters,
         job_id=job.id,
-        status_value=job.status.value,
+        status_value="REQUESTED",
     )
     # The job and its success audit are one accepted business transaction. This
     # also releases the write lock before the background task starts.
     db.commit()
     db.refresh(job)
 
-    background_tasks.add_task(_run_export_job_async, job.id)
+    del background_tasks
+    _enqueue_export_job(job.id)
 
     return ExportJobResponse(
         job_id=job.id,
@@ -5040,27 +5087,21 @@ def get_export_status(
     if not job:
         raise HTTPException(status_code=404, detail="Export job not found")
 
-    # Mitigation: Fail orphaned pending jobs
-    if job.status == models.ExportStatus.PENDING:
-        from datetime import datetime, timezone, timedelta
-        now_utc = datetime.now(timezone.utc)
-        # Ensure job.created_at is offset-aware before subtracting
-        job_time = job.created_at
-        if job_time.tzinfo is None:
-            job_time = job_time.replace(tzinfo=timezone.utc)
-        age = now_utc - job_time
-        if age > timedelta(hours=1):
-            job.status = models.ExportStatus.FAILED
-            db.commit()
-            db.refresh(job)
-
     return ExportJobResponse(
         job_id=job.id,
         status=job.status.value,
         report_type=job.report_type,
         created_at=_to_jordan_iso(job.created_at),
-        file_path=job.file_path,
-        error=job.error_message if job.status == models.ExportStatus.FAILED else None,
+        file_path=(
+            f"/api/analytics/export/{job.id}/file"
+            if job.status == models.ExportStatus.COMPLETED and job.file_path
+            else None
+        ),
+        error=(
+            _public_export_error(job.error_message)
+            if job.status == models.ExportStatus.FAILED
+            else None
+        ),
         trace_url="/admin/audit-logs" if job.status == models.ExportStatus.FAILED else None,
     )
 
@@ -5087,6 +5128,12 @@ def download_export_file(
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Export file missing")
 
+    try:
+        content = file_path.read_bytes()
+    except OSError:
+        logger.exception("analytics export file could not be read: job_id=%s", job.id)
+        raise HTTPException(status_code=404, detail="Export file unavailable")
+
     _log_analytics_export_audit(
         db,
         action=AuditAction.ANALYTICS_EXPORT_DOWNLOADED,
@@ -5110,47 +5157,145 @@ def download_export_file(
     elif job.export_format == models.ExportFormat.PDF:
         media_type = "application/pdf"
 
-    if job.export_format in [models.ExportFormat.EXCEL, models.ExportFormat.PDF]:
-        return Response(
-            content=file_path.read_bytes(),
-            media_type=media_type,
-            headers={"Content-Disposition": f'attachment; filename="{file_path.name}"'}
-        )
-    else:
-        return Response(
-            content=file_path.read_text(encoding="utf-8"),
-            media_type=media_type,
-            headers={"Content-Disposition": f'attachment; filename="{file_path.name}"'}
-        )
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{file_path.name}"'},
+    )
 
-EXPORT_DIR = Path("data") / "exports"
+EXPORT_DIR = Path(os.environ.get("EXPORT_DIR", str(Path("data") / "exports")))
 
 
 
-async def _run_export_job_async(job_id: int) -> None:
-    """Runs sync process_export_job in a thread pool to avoid blocking the event loop."""
-    import asyncio
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, process_export_job, job_id)
-
-
-def process_export_job(job_id: int):
-    """Background processor for export jobs"""
-    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
-    db = SessionLocal()
+def _enqueue_export_job(job_id: int) -> None:
+    """Best-effort low-latency publish; the durable sweeper covers failures."""
     try:
-        job = db.query(models.ExportJob).filter(models.ExportJob.id == job_id).first()
-        if not job:
-            return
-        job.started_at = _utcnow_naive()
-        job.status = models.ExportStatus.PROCESSING
-        db.commit()
+        from export_tasks import run_analytics_export_job
 
-        if job.export_format not in [models.ExportFormat.CSV, models.ExportFormat.EXCEL, models.ExportFormat.JSON, models.ExportFormat.PDF]:
-            job.status = models.ExportStatus.FAILED
-            job.error_message = "Supported formats: CSV, EXCEL, JSON, PDF"
-            db.commit()
-            return
+        run_analytics_export_job.delay(job_id)
+    except Exception:
+        logger.exception(
+            "analytics export enqueue failed; durable sweeper will retry: job_id=%s",
+            job_id,
+        )
+
+
+def _claim_export_job(db: Session, job_id: int) -> tuple[Optional[models.ExportJob], bool]:
+    """Atomically claim a PENDING job, making duplicate Celery deliveries safe."""
+    query = db.query(models.ExportJob).filter(models.ExportJob.id == job_id)
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        query = query.with_for_update(skip_locked=True)
+    job = query.first()
+    if job is None or job.status != models.ExportStatus.PENDING:
+        return job, False
+    job.status = models.ExportStatus.PROCESSING
+    job.started_at = _utcnow_naive()
+    job.error_message = None
+    db.commit()
+    return job, True
+
+
+def _write_prepared_export(
+    job: models.ExportJob, data_list: List[Dict[str, Any]]
+) -> tuple[Path, int]:
+    """Write a complete temporary artifact and atomically publish the final file."""
+    extensions = {
+        models.ExportFormat.CSV: ".csv",
+        models.ExportFormat.EXCEL: ".xlsx",
+        models.ExportFormat.JSON: ".json",
+        models.ExportFormat.PDF: ".pdf",
+    }
+    try:
+        extension = extensions[job.export_format]
+    except KeyError as exc:
+        raise ValueError("unsupported export format") from exc
+
+    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+    safe_report_type = "".join(
+        char if char.isalnum() or char in {"-", "_"} else "_"
+        for char in job.report_type
+    )
+    out_path = EXPORT_DIR / f"{safe_report_type}_{job.id}{extension}"
+    temporary = tempfile.NamedTemporaryFile(
+        dir=EXPORT_DIR,
+        prefix=f".{safe_report_type}_{job.id}_",
+        suffix=f".tmp{extension}",
+        delete=False,
+    )
+    temporary_path = Path(temporary.name)
+    temporary.close()
+
+    try:
+        frame = pd.DataFrame(data_list)
+        if job.export_format == models.ExportFormat.CSV:
+            frame.to_csv(temporary_path, index=False, encoding="utf-8")
+        elif job.export_format == models.ExportFormat.EXCEL:
+            frame.to_excel(temporary_path, index=False)
+        elif job.export_format == models.ExportFormat.JSON:
+            temporary_path.write_text(
+                json.dumps(data_list, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        else:
+            from reportlab.lib import colors
+            from reportlab.lib.pagesizes import letter
+            from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+            from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                "TitleStyle",
+                parent=styles["Heading1"],
+                fontSize=18,
+                leading=22,
+                textColor=colors.HexColor("#0d6efd"),
+            )
+            elements = [
+                Paragraph(
+                    f"KinJo Analytics Report - {job.report_type.upper()}",
+                    title_style,
+                ),
+                Spacer(1, 15),
+            ]
+            headers = list(data_list[0].keys())
+            table_data = [headers]
+            table_data.extend([str(row.get(header, "")) for header in headers] for row in data_list)
+            table = Table(table_data)
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0d6efd")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                        ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f8f9fa")),
+                        ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#dee2e6")),
+                        ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ]
+                )
+            )
+            elements.append(table)
+            SimpleDocTemplate(str(temporary_path), pagesize=letter).build(elements)
+
+        with temporary_path.open("r+b") as prepared_file:
+            os.fsync(prepared_file.fileno())
+        os.replace(temporary_path, out_path)
+        return out_path, out_path.stat().st_size
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+def process_export_job(job_id: int) -> Dict[str, Any]:
+    """Idempotently prepare an analytics export and persist a truthful outcome."""
+    db = SessionLocal()
+    out_path: Optional[Path] = None
+    try:
+        job, claimed = _claim_export_job(db, job_id)
+        if job is None:
+            return {"error": "job_not_found"}
+        if not claimed:
+            return {"status": job.status.value}
 
         filters = job.filters or {}
         start_str = filters.get("period_start")
@@ -5162,93 +5307,36 @@ def process_export_job(job_id: int):
             period_end = _jordan_today()
             period_start = period_end - timedelta(days=30)
 
-        # Export uses the SAME per-domain engine as the preview, so downloads
-        # match exactly what the user previewed (all rows, honoring all filters).
         job_user = db.query(models.User).filter(models.User.id == job.user_id).first()
-        lang = filters.get("lang") or "en"
-        try:
-            result = compute_report_preview(
-                db, job_user, job.report_type, period_start, period_end, filters,
-                sample_limit=None,
-            )
-            data_list = list(result.sample_data or [])
-            if not data_list:
-                # Aggregate reports have no per-record rows; export the KPI summary.
-                label_key = "label_en" if lang == "en" else "label_ar"
-                data_list = [
-                    {
-                        "Metric": k.get(label_key) or k.get("label_en") or k.get("id"),
-                        "Value": k.get("value"),
-                        "Unit": k.get("unit", ""),
-                    }
-                    for k in (result.kpis or [])
-                ]
-        except Exception as exc:
-            logger.error("export dataset build failed for %s: %s", job.report_type, exc, exc_info=True)
-            data_list = []
+        if job_user is None:
+            raise ValueError("export owner is unavailable")
+        result = compute_report_preview(
+            db,
+            job_user,
+            job.report_type,
+            period_start,
+            period_end,
+            filters,
+            sample_limit=None,
+        )
+        data_list = list(result.sample_data or [])
+        if not data_list:
+            label_key = "label_en" if (filters.get("lang") or "en") == "en" else "label_ar"
+            data_list = [
+                {
+                    "Metric": k.get(label_key) or k.get("label_en") or k.get("id"),
+                    "Value": k.get("value"),
+                    "Unit": k.get("unit", ""),
+                }
+                for k in (result.kpis or [])
+            ]
         if not data_list:
             data_list = [{"Message": "No data for the selected report and filters."}]
 
-        import uuid
-        filename = f"{job.report_type}_{job.id}_{uuid.uuid4().hex[:8]}"
-        
-        df = pd.DataFrame(data_list)
-
-        if job.export_format == models.ExportFormat.CSV:
-            ext = ".csv"
-            out_path = EXPORT_DIR / f"{filename}{ext}"
-            df.to_csv(out_path, index=False, encoding="utf-8")
-        elif job.export_format == models.ExportFormat.EXCEL:
-            ext = ".xlsx"
-            out_path = EXPORT_DIR / f"{filename}{ext}"
-            df.to_excel(out_path, index=False)
-        elif job.export_format == models.ExportFormat.JSON:
-            ext = ".json"
-            out_path = EXPORT_DIR / f"{filename}{ext}"
-            out_path.write_text(json.dumps(data_list, ensure_ascii=False, indent=2), encoding="utf-8")
-        elif job.export_format == models.ExportFormat.PDF:
-            ext = ".pdf"
-            out_path = EXPORT_DIR / f"{filename}{ext}"
-            from reportlab.lib.pagesizes import letter
-            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-            from reportlab.lib import colors
-            doc = SimpleDocTemplate(str(out_path), pagesize=letter)
-            elements = []
-            styles = getSampleStyleSheet()
-            title_style = ParagraphStyle(
-                'TitleStyle',
-                parent=styles['Heading1'],
-                fontSize=18,
-                leading=22,
-                textColor=colors.HexColor('#0d6efd')
-            )
-            elements.append(Paragraph(f"KinJo Analytics Report - {job.report_type.upper()}", title_style))
-            elements.append(Spacer(1, 15))
-            if data_list:
-                headers = list(data_list[0].keys())
-                table_data = [headers]
-                for row in data_list:
-                    table_data.append([str(row[h]) for h in headers])
-                t = Table(table_data)
-                t.setStyle(TableStyle([
-                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0d6efd')),
-                    ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-                    ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-                    ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-                    ('BOTTOMPADDING', (0,0), (-1,0), 8),
-                    ('BACKGROUND', (0,1), (-1,-1), colors.HexColor('#f8f9fa')),
-                    ('GRID', (0,0), (-1,-1), 1, colors.HexColor('#dee2e6')),
-                    ('FONTSIZE', (0,0), (-1,-1), 9),
-                ]))
-                elements.append(t)
-            else:
-                elements.append(Paragraph("No records found", styles['Normal']))
-            doc.build(elements)
-
+        out_path, file_size = _write_prepared_export(job, data_list)
         job.status = models.ExportStatus.COMPLETED
         job.file_path = str(out_path)
-        job.file_size = out_path.stat().st_size
+        job.file_size = file_size
         job.completed_at = _utcnow_naive()
         actor = db.query(models.User).filter(models.User.id == job.user_id).first()
         _log_analytics_export_audit(
@@ -5259,36 +5347,43 @@ def process_export_job(job_id: int):
             export_format=job.export_format,
             filters=job.filters,
             job_id=job.id,
-            status_value=job.status.value,
+            status_value="COMPLETED",
             file_path=job.file_path,
             file_size=job.file_size,
         )
-        # Completion state and its success audit must become visible together.
         db.commit()
-    except (SQLAlchemyError, OSError, ValueError, TypeError, AttributeError, RuntimeError, ImportError, csv.Error) as exc:
-        try:
-            db.rollback()
-        except Exception:
-            pass
+        return {"status": "COMPLETED", "file_size": file_size}
+    except Exception:
+        reference = secrets.token_hex(8)
+        logger.exception(
+            "analytics export failed: job_id=%s reference=%s", job_id, reference
+        )
+        db.rollback()
+        if out_path is not None:
+            out_path.unlink(missing_ok=True)
         job = db.query(models.ExportJob).filter(models.ExportJob.id == job_id).first()
-        if job:
-            job.status = models.ExportStatus.FAILED
-            job.error_message = str(exc)
-            actor = db.query(models.User).filter(models.User.id == job.user_id).first()
-            _log_analytics_export_audit(
-                db,
-                action=AuditAction.ANALYTICS_EXPORT_JOB_FAILED,
-                actor=actor,
-                report_type=job.report_type,
-                export_format=job.export_format,
-                filters=job.filters,
-                job_id=job.id,
-                status_value=job.status.value,
-                error_message=job.error_message,
-                sensitivity_level=3,
-            )
-            # A failed state is not accepted without its matching failure audit.
-            db.commit()
+        if job is None:
+            return {"error": "job_not_found"}
+        job.status = models.ExportStatus.FAILED
+        job.file_path = None
+        job.file_size = None
+        job.completed_at = None
+        job.error_message = f"EXPORT_FAILED:{reference}"
+        actor = db.query(models.User).filter(models.User.id == job.user_id).first()
+        _log_analytics_export_audit(
+            db,
+            action=AuditAction.ANALYTICS_EXPORT_JOB_FAILED,
+            actor=actor,
+            report_type=job.report_type,
+            export_format=job.export_format,
+            filters=job.filters,
+            job_id=job.id,
+            status_value="FAILED",
+            error_message=job.error_message,
+            sensitivity_level=3,
+        )
+        db.commit()
+        return {"status": "FAILED", "error": job.error_message}
     finally:
         db.close()
 
