@@ -6,6 +6,9 @@ from datetime import date, datetime, timedelta, timezone
 
 _JORDAN_TZ = timezone(timedelta(hours=3))
 from utils.time_utils import today_amman as _today
+
+
+MAX_AUDIT_EXPORT_ROWS = 5000
 import csv
 import io
 import json
@@ -175,7 +178,16 @@ def _export_audit_logs(
         )
 
     query = query.order_by(desc(models.AuditLog.created_at))
-    data = query.limit(5000).all()
+    export_count = query.count()
+    if export_count > MAX_AUDIT_EXPORT_ROWS:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Audit export would return more than {MAX_AUDIT_EXPORT_ROWS:,} rows. "
+                "Apply period or field filters to narrow the export."
+            ),
+        )
+    data = query.all()
 
     if format == "json":
         export_data = []
