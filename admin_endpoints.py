@@ -1642,35 +1642,32 @@ def bulk_create_users(
 
         if not bulk_data.dry_run:
             try:
-                # A savepoint isolates a concurrent uniqueness race to this row;
-                # the outer transaction remains usable for later rows and audit.
-                with db.begin_nested():
-                    new_user = models.User(
-                        username=user_data.username,
-                        email=user_data.email,
-                        hashed_password=get_password_hash(user_data.password),
-                        role=user_data.role,
-                        kindergarten_id=user_data.kindergarten_id,
-                        status=models.UserStatus.ACTIVE,
-                        must_change_password=user_data.role in {
-                            models.UserRole.MANAGER,
-                            models.UserRole.SUPERVISOR,
-                        },
+                new_user = models.User(
+                    username=user_data.username,
+                    email=user_data.email,
+                    hashed_password=get_password_hash(user_data.password),
+                    role=user_data.role,
+                    kindergarten_id=user_data.kindergarten_id,
+                    status=models.UserStatus.ACTIVE,
+                    must_change_password=user_data.role in {
+                        models.UserRole.MANAGER,
+                        models.UserRole.SUPERVISOR,
+                    },
+                )
+                for field in (
+                    "full_name", "phone_number", "address", "nationality",
+                    "national_id", "passport_number",
+                ):
+                    value = getattr(user_data, field, None)
+                    if value is not None:
+                        setattr(new_user, field, value)
+                db.add(new_user)
+                db.flush()
+                if new_user.role == models.UserRole.SUPERVISOR:
+                    validators.ensure_supervisor_profile(
+                        db, new_user, new_user.kindergarten_id
                     )
-                    for field in (
-                        "full_name", "phone_number", "address", "nationality",
-                        "national_id", "passport_number",
-                    ):
-                        value = getattr(user_data, field, None)
-                        if value is not None:
-                            setattr(new_user, field, value)
-                    db.add(new_user)
-                    db.flush()
-                    if new_user.role == models.UserRole.SUPERVISOR:
-                        validators.ensure_supervisor_profile(
-                            db, new_user, new_user.kindergarten_id
-                        )
-                    db.flush()
+                db.flush()
                 succeeded.append({"row": row_num, "id": new_user.id, "username": new_user.username})
             except IntegrityError as exc:
                 logger.warning(

@@ -94,6 +94,7 @@ def test_bulk_create_rolls_back_every_user_when_audit_write_fails(
                 json=payload,
             )
 
+    test_db.expire_all()
     assert test_db.query(models.User).filter_by(username=username).count() == 0
 
 
