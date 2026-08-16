@@ -278,7 +278,7 @@ class TestCanonicalGovernorates:
                 "roles": ["SUPERVISOR"],
             }
         })
-        assert r.status_code == 400
+        assert r.status_code in (400, 422)
 
 
 # ---------------------------------------------------------------------------

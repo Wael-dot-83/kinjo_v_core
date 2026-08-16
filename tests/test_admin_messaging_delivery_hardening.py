@@ -422,7 +422,7 @@ def test_s3_presign_failure_records_no_download_success_audit(
         def client(self, *_args, **_kwargs):
             return BrokenClient()
 
-    import boto3
+    boto3 = pytest.importorskip("boto3")
 
     monkeypatch.setattr(boto3.session, "Session", FakeSession)
     with pytest.raises(RuntimeError, match="presign unavailable"):

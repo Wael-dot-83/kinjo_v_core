@@ -1586,21 +1586,140 @@ def bulk_create_users(
     batch_usernames: Set[str] = set()
     batch_emails: Set[str] = set()
 
-    for i, user_data in enumerate(bulk_data.users):
-        row_num = i + 1
+    if not bulk_data.dry_run:
+        try:
+            with db.begin_nested():
+                for row_num, user_data in enumerate(bulk_data.users, 1):
+                    # In-batch duplicate username check
+                    if user_data.username in batch_usernames:
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "username",
+                            "error": "Duplicate username in bulk request"
+                        })
+                        continue
+                    batch_usernames.add(user_data.username)
 
-        if user_data.username in batch_usernames:
-            failed.append(row_num)
-            errors.append({
-                "row": row_num,
-                "field": "username",
-                "error": "Duplicate username in bulk request"
-            })
-            continue
-        batch_usernames.add(user_data.username)
+                    if user_data.email is not None:
+                        if user_data.email in batch_emails:
+                            failed.append(row_num)
+                            errors.append({
+                                "row": row_num,
+                                "field": "email",
+                                "error": "Duplicate email in bulk request"
+                            })
+                            continue
+                        batch_emails.add(user_data.email)
 
-        if user_data.email is not None:
-            if user_data.email in batch_emails:
+                    # Prevent creating admins
+                    if user_data.role == models.UserRole.ADMIN:
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "role",
+                            "error": "Cannot create admin accounts through bulk create"
+                        })
+                        continue
+
+                    # Check for existing username/email using pre-loaded sets
+                    if user_data.username in existing_usernames:
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "username",
+                            "error": "Username already exists"
+                        })
+                        continue
+
+                    # Check email uniqueness only if email is provided
+                    if user_data.email is not None and user_data.email in existing_emails:
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "email",
+                            "error": "Email already exists"
+                        })
+                        continue
+
+                    try:
+                        # A savepoint isolates a concurrent uniqueness race to this row;
+                        # the outer transaction remains usable for later rows and audit.
+                        with db.begin_nested():
+                            new_user = models.User(
+                                username=user_data.username,
+                                email=user_data.email,
+                                hashed_password=get_password_hash(user_data.password),
+                                role=user_data.role,
+                                kindergarten_id=user_data.kindergarten_id,
+                                status=models.UserStatus.ACTIVE,
+                                must_change_password=user_data.role in {
+                                    models.UserRole.MANAGER,
+                                    models.UserRole.SUPERVISOR,
+                                },
+                            )
+                            for field in (
+                                "full_name", "phone_number", "address", "nationality",
+                                "national_id", "passport_number",
+                            ):
+                                value = getattr(user_data, field, None)
+                                if value is not None:
+                                    setattr(new_user, field, value)
+                            db.add(new_user)
+                            db.flush()
+                            if new_user.role == models.UserRole.SUPERVISOR:
+                                validators.ensure_supervisor_profile(
+                                    db, new_user, new_user.kindergarten_id
+                                )
+                            db.flush()
+                        succeeded.append({"row": row_num, "id": new_user.id, "username": new_user.username})
+                    except IntegrityError as exc:
+                        logger.warning(
+                            "Bulk user import row %s lost a uniqueness race (%s)",
+                            row_num,
+                            type(exc).__name__,
+                        )
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "conflict",
+                            "error": "Username or email became unavailable"
+                        })
+                    except (SQLAlchemyError, AttributeError, ValueError, KeyError) as e:
+                        logger.warning(
+                            "Bulk user import row %s failed (%s)", row_num, type(e).__name__
+                        )
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "unknown",
+                            "error": "User could not be created"
+                        })
+                log_audit_event(
+                    db, AuditAction.BULK_USER_CREATE, current_user, "User",
+                    target_ids=[s["id"] for s in succeeded if "id" in s],
+                    metadata={
+                        "created_count": len(succeeded),
+                        "failed_count": len(failed)
+                    },
+                    sensitivity_level=3
+                )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+    else:
+        for row_num, user_data in enumerate(bulk_data.users, 1):
+            if user_data.username in batch_usernames:
+                failed.append(row_num)
+                errors.append({
+                    "row": row_num,
+                    "field": "username",
+                    "error": "Duplicate username in bulk request"
+                })
+                continue
+            batch_usernames.add(user_data.username)
+            if user_data.email is not None and user_data.email in batch_emails:
                 failed.append(row_num)
                 errors.append({
                     "row": row_num,
@@ -1608,30 +1727,23 @@ def bulk_create_users(
                     "error": "Duplicate email in bulk request"
                 })
                 continue
-            batch_emails.add(user_data.email)
-
-        # Prevent creating admins
-        if user_data.role == models.UserRole.ADMIN:
-            failed.append(row_num)
-            errors.append({
-                "row": row_num,
-                "field": "role",
-                "error": "Cannot create admin accounts through bulk create"
-            })
-            continue
-
-        # Check for existing username/email using pre-loaded sets
-        if user_data.username in existing_usernames:
-            failed.append(row_num)
-            errors.append({
-                "row": row_num,
-                "field": "username",
-                "error": "Username already exists"
-            })
-            continue
-
-        # Check email uniqueness only if email is provided
-        if user_data.email is not None and user_data.email in existing_emails:
+            if user_data.role == models.UserRole.ADMIN:
+                failed.append(row_num)
+                errors.append({
+                    "row": row_num,
+                    "field": "role",
+                    "error": "Cannot create admin accounts through bulk create"
+                })
+                continue
+            if user_data.username in existing_usernames:
+                failed.append(row_num)
+                errors.append({
+                    "row": row_num,
+                    "field": "username",
+                    "error": "Username already exists"
+                })
+                continue
+            if user_data.email is not None and user_data.email in existing_emails:
                 failed.append(row_num)
                 errors.append({
                     "row": row_num,
@@ -1639,76 +1751,7 @@ def bulk_create_users(
                     "error": "Email already exists"
                 })
                 continue
-
-        if not bulk_data.dry_run:
-            try:
-                new_user = models.User(
-                    username=user_data.username,
-                    email=user_data.email,
-                    hashed_password=get_password_hash(user_data.password),
-                    role=user_data.role,
-                    kindergarten_id=user_data.kindergarten_id,
-                    status=models.UserStatus.ACTIVE,
-                    must_change_password=user_data.role in {
-                        models.UserRole.MANAGER,
-                        models.UserRole.SUPERVISOR,
-                    },
-                )
-                for field in (
-                    "full_name", "phone_number", "address", "nationality",
-                    "national_id", "passport_number",
-                ):
-                    value = getattr(user_data, field, None)
-                    if value is not None:
-                        setattr(new_user, field, value)
-                db.add(new_user)
-                db.flush()
-                if new_user.role == models.UserRole.SUPERVISOR:
-                    validators.ensure_supervisor_profile(
-                        db, new_user, new_user.kindergarten_id
-                    )
-                db.flush()
-                succeeded.append({"row": row_num, "id": new_user.id, "username": new_user.username})
-            except IntegrityError as exc:
-                logger.warning(
-                    "Bulk user import row %s lost a uniqueness race (%s)",
-                    row_num,
-                    type(exc).__name__,
-                )
-                failed.append(row_num)
-                errors.append({
-                    "row": row_num,
-                    "field": "conflict",
-                    "error": "Username or email became unavailable"
-                })
-            except (SQLAlchemyError, AttributeError, ValueError, KeyError) as exc:
-                logger.warning(
-                    "Bulk user import row %s failed (%s)", row_num, type(exc).__name__
-                )
-                failed.append(row_num)
-                errors.append({
-                    "row": row_num,
-                    "field": "unknown",
-                    "error": "User could not be created"
-                })
-        else:
             succeeded.append({"row": row_num, "username": user_data.username})
-
-    if not bulk_data.dry_run:
-        try:
-            log_audit_event(
-                db, AuditAction.BULK_USER_CREATE, current_user, "User",
-                target_ids=[s["id"] for s in succeeded if "id" in s],
-                metadata={
-                    "created_count": len(succeeded),
-                    "failed_count": len(failed)
-                },
-                sensitivity_level=3
-            )
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise
 
     return {
         "dry_run": bulk_data.dry_run,

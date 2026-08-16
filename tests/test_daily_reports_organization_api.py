@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import pytest
 
 import models
 from main import app
@@ -511,7 +512,8 @@ def test_daily_report_submit_enforces_jordan_deadline(
     # deadline rule this test exists to assert.
     sample_supervisor_assignment,
 ):
-    from freezegun import freeze_time
+    freezegun = pytest.importorskip("freezegun")
+    freeze_time = freezegun.freeze_time
 
     report = models.DailyReport(
         child_id=sample_child.id,
