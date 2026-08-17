@@ -65,12 +65,12 @@ _CF_INSIGHTS_SCRIPT = "https://static.cloudflareinsights.com"
 def _security_csp(heatmap: bool = False) -> str:
     script_src = (
         "script-src 'self' 'unsafe-inline' "
-        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com "
+        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://cdn.tailwindcss.com "
         f"https://maps.googleapis.com {_CF_INSIGHTS_SCRIPT}"
         if heatmap
         else
         "script-src 'self' 'unsafe-inline' "
-        f"https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com {_CF_INSIGHTS_SCRIPT}"
+        f"https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://cdn.tailwindcss.com {_CF_INSIGHTS_SCRIPT}"
     )
     connect_sources = _GMAPS_CONNECT if heatmap else _BASE_CONNECT
     img_src = (
