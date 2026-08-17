@@ -219,6 +219,7 @@ def update_child_profile(
         raise HTTPException(status_code=404, detail="Child not found")
 
     _authorize_child_access(db, child, current_user, allow_supervisor=False)
+    db.commit()
 
     # Apply updates
     changed = False
