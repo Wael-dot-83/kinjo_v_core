@@ -274,22 +274,66 @@ for _ in $(seq 1 30); do
 done
 [[ "$HEALTHY" == "1" ]] || die "web did not become healthy -- rollback image was tagged above"
 
-# With a TLS edge deployed, also prove the public path terminates TLS and
-# reaches the app. Non-fatal on its own: certificate problems must be loud but
-# must not trigger a rollback of an application that is demonstrably healthy
-# above.
+# ---------------------------------------------------------------------------
+# 6b. Re-point nginx at the NEW web container.
 #
-# Gated on EDGE_OVERLAY_ACTIVE rather than on the overlay's filename. This test
-# used to read `*"$EDGE_FILE"*`, which was only ever assigned on the bare-host
-# path -- so once the compose set was adopted from the container label, `set -u`
-# aborted the deploy here with "EDGE_FILE: unbound variable". Everything that
-# matters had already succeeded (build, recreate, migrate, health), so it failed
-# after the mutation window with the lock released and no DEPLOY_OK printed:
-# a deploy that worked but could not say so. The flag is assigned on every path.
+# `docker compose up` recreates kinjo-web-1, and a recreated container usually
+# gets a NEW address on the compose network. The edge nginx config declares a
+# static `upstream kinjo_app { ... }` block with no `resolver`, so nginx
+# resolves the app exactly once at config load and caches that address for the
+# life of the process. nginx is not itself recreated by a deploy (it has no
+# build context), so it keeps proxying to an address nothing is listening on.
+#
+# Result: 502 from the moment web is recreated until somebody reloads nginx.
+# Observed for real on 2026-08-17 -- web moved 172.18.0.5 -> 172.18.0.6 and
+# kinjordan.org served "connect() failed (111: Connection refused)" for 51
+# seconds. Earlier deploys survived only by luck, when the recreated container
+# happened to be handed back the same address.
+#
+# A reload re-reads the config and re-resolves the upstream. It is graceful
+# (workers finish in-flight requests) and idempotent, so it is safe to run on
+# every deploy whether or not the address actually moved.
+# ---------------------------------------------------------------------------
+NGINX_CONTAINER="${KINJO_NGINX_CONTAINER:-kinjo_nginx}"
+if [[ "$EDGE_OVERLAY_ACTIVE" == "1" ]] && docker inspect "$NGINX_CONTAINER" >/dev/null 2>&1; then
+  if docker exec "$NGINX_CONTAINER" nginx -s reload 2>/dev/null; then
+    log "nginx reloaded (upstream re-resolved)"
+  else
+    log "WARNING: nginx reload failed -- the edge may still point at the old container"
+  fi
+  sleep 2
+fi
+
+# Prove the public path actually reaches the app THROUGH nginx. This is fatal:
+# the check above only proves the app answers on its own loopback, which stayed
+# green through the entire 502 above -- the app was healthy and the site was
+# down. Certificate validity is deliberately not asserted here (`-k`): the
+# origin certificate is a Cloudflare Origin CA cert, valid for kinjordan.org
+# and not for 127.0.0.1, and its expiry is already watched by
+# deploy/cloudflare/kinjo-origin-health.sh. What matters at this point in a
+# deploy is that nginx can reach the container it is proxying to.
+if [[ "$EDGE_OVERLAY_ACTIVE" == "1" ]] && docker inspect "$NGINX_CONTAINER" >/dev/null 2>&1; then
+  PROXY_OK=0
+  for _ in $(seq 1 10); do
+    if docker exec "$NGINX_CONTAINER" \
+         wget -qO- --timeout=5 "http://127.0.0.1/health" 2>/dev/null | grep -q healthy; then
+      PROXY_OK=1; break
+    fi
+    if curl -sSk -o /dev/null -w '%{http_code}' --max-time 10 https://127.0.0.1/health 2>/dev/null \
+         | grep -q '^200$'; then
+      PROXY_OK=1; break
+    fi
+    sleep 3
+  done
+  [[ "$PROXY_OK" == "1" ]] \
+    || die "nginx cannot reach the app -- the public site is returning 502; rollback image was tagged above"
+  log "edge: nginx -> app proxy path OK"
+fi
+
 if [[ "$EDGE_OVERLAY_ACTIVE" == "1" ]]; then
   if curl -sSf -o /dev/null --max-time 10 https://127.0.0.1/health \
        --resolve "${KINJO_DOMAIN:-localhost}:443:127.0.0.1" 2>/dev/null; then
-    log "edge: https health OK"
+    log "edge: https certificate/name check OK"
   else
     log "WARNING: https health probe failed -- check 'docker logs kinjo_nginx' and certificate validity"
   fi

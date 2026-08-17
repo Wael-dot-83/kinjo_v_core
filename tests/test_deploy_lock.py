@@ -292,3 +292,48 @@ def test_edge_overlay_flag_is_initialised_before_any_branch():
     init = src.index("EDGE_OVERLAY_ACTIVE=0")
     assert init < src.index('if [[ -n "${KINJO_COMPOSE_FILES:-}" ]]')
     assert init < src.index('if [[ "$EDGE_OVERLAY_ACTIVE" == "1" ]]')
+
+
+def test_nginx_is_reloaded_after_the_web_container_is_recreated():
+    """A recreated web container gets a new IP; nginx caches the old one forever.
+
+    The edge nginx declares a static `upstream kinjo_app` with no `resolver`, so
+    it resolves once at config load. `docker compose up` recreates kinjo-web-1
+    but never recreates nginx, so after every deploy where the address moves the
+    public site 502s until somebody reloads. That happened on 2026-08-17:
+    172.18.0.5 -> 172.18.0.6, 51 seconds of "connect() failed (111: Connection
+    refused)" while every container reported healthy.
+    """
+    src = _code()
+    assert "nginx -s reload" in src, "the deploy must re-resolve nginx's upstream"
+    assert src.index("up -d --build") < src.index("nginx -s reload"), (
+        "the reload must happen after the containers are recreated"
+    )
+    assert src.index("nginx -s reload") > src.index("flock -n 9"), (
+        "the reload is part of the mutation window and belongs inside the lock"
+    )
+
+
+def test_the_proxy_path_check_is_fatal():
+    """App-loopback health stayed green through a total outage; it is not enough.
+
+    The old probe hit the app on its own 127.0.0.1:8000 -- which answered
+    perfectly while nginx was serving 502 to the world -- and the only
+    public-path check was non-fatal and dismissed as a certificate warning.
+    A deploy that leaves the site 502ing must fail.
+    """
+    src = _code()
+    assert "the public site is returning 502" in src, (
+        "reaching the app through nginx must be a fatal deploy check"
+    )
+    proxy_die = src.index("the public site is returning 502")
+    assert proxy_die < src.index("DEPLOY_OK"), "the check must gate DEPLOY_OK"
+
+
+def test_certificate_validity_is_not_conflated_with_reachability():
+    """Cert-name failures must not be able to mask an unreachable upstream."""
+    src = _code()
+    # The reachability check ignores cert validity on purpose (-k / plain http),
+    # so a Origin-CA name mismatch cannot make a real 502 look like a cert warning.
+    reach = src[src.index("PROXY_OK=0") : src.index("edge: nginx -> app proxy path OK")]
+    assert "-sSk" in reach or "http://127.0.0.1/health" in reach
