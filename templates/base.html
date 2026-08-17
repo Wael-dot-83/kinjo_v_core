@@ -165,6 +165,7 @@
       <!-- Custom CSS -->
       <link rel="stylesheet" href="/static/css/kinjo.css?v=20260814" />
       <link rel="stylesheet" href="/static/css/parent-dashboard.css?v=1.0" />
+      <link rel="stylesheet" href="/static/css/chatbot.css?v=20260818" />
       {% if ui_dir == 'rtl' %}
       <link
         rel="stylesheet"
@@ -618,6 +619,10 @@
           return '';
         };
       </script>
+
+      <!-- KinJo Floating AI/FAQ Chatbot Widget -->
+      {% include "components/chatbot.html" %}
+      <script src="/static/js/chatbot.js?v=20260818"></script>
 
       <!-- FOUC reveal: make page visible now that CSS + JS are ready -->
       <script>

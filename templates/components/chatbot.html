@@ -1,0 +1,118 @@
+<!-- templates/components/chatbot.html -->
+<!-- KinJo Bilingual Floating AI/FAQ Chatbot Widget -->
+
+<div id="kinjo-chatbot-widget" class="kinjo-chatbot-widget" data-ui-lang="{{ ui_lang | default('ar') }}">
+  <!-- Floating Launcher Button -->
+  <button
+    id="kinjo-chatbot-launcher"
+    class="kinjo-chatbot-launcher"
+    type="button"
+    aria-label="{% if ui_lang == 'en' %}Open KinJo AI Assistant{% else %}فتح مساعد كينجو الذكي{% endif %}"
+    aria-expanded="false"
+    aria-controls="kinjo-chatbot-window"
+    title="{% if ui_lang == 'en' %}KinJo AI Assistant{% else %}مساعد كينجو الذكي{% endif %}"
+  >
+    <span class="chatbot-launcher-icon">
+      <i class="bi bi-chat-dots-fill chatbot-icon-closed"></i>
+      <i class="bi bi-x-lg chatbot-icon-open"></i>
+    </span>
+    <span class="chatbot-pulse-ring"></span>
+    <span class="chatbot-unread-badge" id="chatbot-unread-badge" style="display: none;">1</span>
+  </button>
+
+  <!-- Chatbot Window -->
+  <section
+    id="kinjo-chatbot-window"
+    class="kinjo-chatbot-window"
+    aria-hidden="true"
+    aria-labelledby="chatbot-header-title"
+    role="dialog"
+  >
+    <!-- Header -->
+    <header class="chatbot-header">
+      <div class="chatbot-header-info">
+        <div class="chatbot-avatar-wrap">
+          <div class="chatbot-avatar">
+            <i class="bi bi-robot"></i>
+          </div>
+          <span class="chatbot-status-dot" title="{% if ui_lang == 'en' %}Online{% else %}متصل{% endif %}"></span>
+        </div>
+        <div class="chatbot-header-text">
+          <h2 id="chatbot-header-title" class="chatbot-title">
+            {% if ui_lang == 'en' %}KinJo Assistant{% else %}مساعد كينجو الذكي{% endif %}
+          </h2>
+          <span class="chatbot-subtitle">
+            {% if ui_lang == 'en' %}Online &amp; Ready to Help{% else %}متصل ومستعد للمساعدة{% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="chatbot-header-actions">
+        <button
+          id="chatbot-clear-btn"
+          class="chatbot-header-btn"
+          type="button"
+          aria-label="{% if ui_lang == 'en' %}Clear Chat{% else %}مسح المحادثة{% endif %}"
+          title="{% if ui_lang == 'en' %}Clear Chat{% else %}مسح المحادثة{% endif %}"
+        >
+          <i class="bi bi-trash3"></i>
+        </button>
+        <button
+          id="chatbot-close-btn"
+          class="chatbot-header-btn chatbot-close-btn"
+          type="button"
+          aria-label="{% if ui_lang == 'en' %}Close Assistant{% else %}إغلاق المساعد{% endif %}"
+          title="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"
+        >
+          <i class="bi bi-dash-lg"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Messages Container -->
+    <div
+      id="chatbot-messages-container"
+      class="chatbot-messages-container"
+      role="log"
+      aria-live="polite"
+      tabindex="0"
+    >
+      <!-- Initial Welcome Message injected via JS -->
+    </div>
+
+    <!-- Typing Indicator -->
+    <div id="chatbot-typing-indicator" class="chatbot-typing-indicator" style="display: none;" aria-hidden="true">
+      <span class="chatbot-typing-dot"></span>
+      <span class="chatbot-typing-dot"></span>
+      <span class="chatbot-typing-dot"></span>
+    </div>
+
+    <!-- Quick Prompt Chips -->
+    <div id="chatbot-quick-chips" class="chatbot-quick-chips" aria-label="Suggested Topics">
+      <!-- Injected dynamically -->
+    </div>
+
+    <!-- Input Footer -->
+    <footer class="chatbot-footer">
+      <form id="chatbot-input-form" class="chatbot-input-form" autocomplete="off">
+        <input
+          type="text"
+          id="chatbot-input-field"
+          class="chatbot-input-field"
+          placeholder="{% if ui_lang == 'en' %}Type a question...{% else %}اكتب سؤالك هنا...{% endif %}"
+          maxlength="1000"
+          aria-label="{% if ui_lang == 'en' %}Message input{% else %}حقل إدخال الرسالة{% endif %}"
+          required
+        />
+        <button
+          type="submit"
+          id="chatbot-send-btn"
+          class="chatbot-send-btn"
+          aria-label="{% if ui_lang == 'en' %}Send message{% else %}إرسال الرسالة{% endif %}"
+        >
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </form>
+    </footer>
+  </section>
+</div>
