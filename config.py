@@ -1,6 +1,7 @@
 """
 Configuration management for KinJo platform
 """
+import hashlib
 import logging
 import os
 from typing import Any, Dict, List, Tuple, Type
@@ -85,6 +86,7 @@ class Settings(BaseSettings):
     AI_ASSISTANT_ENABLED: bool = False
     AI_ASSISTANT_SUPERVISOR_ENABLED: bool = False
     AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED: bool = False
+    AI_SUPERVISOR_REPORT_DRAFT_TTL_MINUTES: int = 30
 
     # AI Integration — intentionally absent.
     #
@@ -445,11 +447,67 @@ def validate_production_settings():
             "Set a strong SECRET_KEY in .env"
         )
 
-    weak_markers = {"changeme", "change-me", "development-only", "test-secret-key", "your-secret-key"}
+    weak_markers = {
+        "changeme",
+        "change-me",
+        "development-only",
+        "test-secret-key",
+        "your-secret-key",
+        "replace_me",
+        "replace-me",
+        "replace-with",
+    }
     if any(marker in settings.SECRET_KEY.lower() for marker in weak_markers):
         raise RuntimeError(
             "CRITICAL: SECRET_KEY appears to be a development default. "
             "Set a unique SECRET_KEY in .env for production"
+        )
+
+    # The substring check above only catches keys that *look* like placeholders.
+    # It cannot catch a key that is high-entropy but published: .env.example,
+    # .env.production.template and deploy.sh have each shipped a real 64-hex key
+    # in git at some point, and anyone copying one verbatim would boot production
+    # on a signing key that is public in the repository history — forging any JWT
+    # or session cookie. Those keys stay reachable through git history forever, so
+    # scrubbing the files is not sufficient on its own; they must be rejected at
+    # startup by value.
+    #
+    # Stored as SHA-256 digests so reading this file does not hand the reader a
+    # working key for any deployment that has not upgraded yet. To retire a leaked
+    # key, append its digest:
+    #   python -c "import hashlib,sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest())" '<key>'
+    published_key_digests = {
+        # deploy.sh development default (already blacklisted there by value)
+        "e9699102d680a055fc18d78097a46b4c6b0d31524e145dbc80118360b882293e",
+        # .env.production.template shipped value (scrubbed, still in git history)
+        "bc35a6449103d30b965cad6e642634827b5ac141b16cbddc6af817ccc32861e4",
+    }
+    if hashlib.sha256(settings.SECRET_KEY.encode("utf-8")).hexdigest() in published_key_digests:
+        raise RuntimeError(
+            "CRITICAL: SECRET_KEY matches a key published in this repository. "
+            "It is public and cannot be used in production. Generate a fresh key: "
+            'python -c "import secrets; print(secrets.token_hex(32))"'
+        )
+
+    # JWT algorithm. Two distinct hazards, both fatal and both silent:
+    #
+    #  * "none" disables signature verification entirely — the classic JWT
+    #    forgery, where an attacker sets alg=none and mints any token they like.
+    #  * ES*/EdDSA route signing through python-jose's pure-Python `ecdsa`
+    #    backend, which has an unfixed Minerva timing vulnerability
+    #    (PYSEC-2026-1325). The maintainers consider side-channel resistance out
+    #    of scope, so there is no version to upgrade to. It is harmless today
+    #    only because KinJo signs with HS256 and never touches an ECDSA path —
+    #    an env-var change would quietly make it live.
+    #
+    # Restricting production to HMAC keeps that dependency permanently
+    # unreachable instead of merely unused.
+    allowed_algorithms = {"HS256", "HS384", "HS512"}
+    if settings.ALGORITHM.upper() not in allowed_algorithms:
+        raise RuntimeError(
+            f"CRITICAL: ALGORITHM must be one of {sorted(allowed_algorithms)} in production "
+            f"(got '{settings.ALGORITHM}'). 'none' disables signature verification; ES*/EdDSA "
+            "sign via python-jose's ecdsa backend, which carries an unfixed timing vulnerability."
         )
 
     # Validate CORS origins

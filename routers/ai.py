@@ -5,11 +5,11 @@ application mount surface. The only route set mounted by the app is the
 Supervisor Daily Report draft/confirm workflow, which is the approved,
 feature-flagged exception to the otherwise read-only default.
 """
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from api.daily_reports_routes import DailyReportCreateRequest, _authorize_report_for_child
@@ -53,6 +53,12 @@ class FeedbackRequest(BaseModel):
     source_id: int
     feedback_type: str
     feedback_note: Optional[str] = None
+
+
+class ConfirmSupervisorDailyReportDraftRequest(BaseModel):
+    confirmed: bool
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class SimilarResult(BaseModel):
@@ -141,7 +147,7 @@ def create_supervisor_daily_report_draft(
 @router.post("/daily-reports/{draft_id}/confirm", status_code=status.HTTP_200_OK)
 def confirm_supervisor_daily_report_draft(
     draft_id: int,
-    body: dict,
+    body: ConfirmSupervisorDailyReportDraftRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -149,12 +155,20 @@ def confirm_supervisor_daily_report_draft(
 
     Confirmation is intentionally explicit and server-side reauthorized; there is
     no silent auto-save or permission grant without the typed confirmation.
+
+    This is intentionally performed inside a single transaction and row lock so a
+    draft cannot be confirmed twice by concurrent requests.
     """
     _require_ai_supervisor_daily_report_enabled(current_user)
-    if body.get("confirmed") is not True:
+    if body.confirmed is not True:
         raise HTTPException(status_code=400, detail="Supervisor confirmation required")
 
-    report = db.query(models.DailyReport).filter(models.DailyReport.id == draft_id).first()
+    report = (
+        db.query(models.DailyReport)
+        .filter(models.DailyReport.id == draft_id)
+        .with_for_update()
+        .first()
+    )
     if not report:
         raise HTTPException(status_code=404, detail="Draft not found")
     if report.submitted_by != current_user.id:
@@ -162,7 +176,36 @@ def confirm_supervisor_daily_report_draft(
     if report.status != models.DailyReportStatus.DRAFT:
         raise HTTPException(status_code=409, detail="Draft has already been finalized")
 
+    ttl_minutes = getattr(settings, "AI_SUPERVISOR_REPORT_DRAFT_TTL_MINUTES", 30)
+    if ttl_minutes is not None and ttl_minutes >= 0:
+        created_at = report.created_at or datetime.now(timezone.utc)
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - created_at > timedelta(minutes=ttl_minutes):
+            raise HTTPException(status_code=410, detail="Draft expired")
+
     _authorize_report_for_child(db, current_user, report.child_id, report.date, require_no_existing_report=False)
+
+    updated = (
+        db.query(models.DailyReport)
+        .filter(
+            models.DailyReport.id == draft_id,
+            models.DailyReport.submitted_by == current_user.id,
+            models.DailyReport.status == models.DailyReportStatus.DRAFT,
+        )
+        .update(
+            {
+                models.DailyReport.status: models.DailyReportStatus.SUBMITTED,
+                models.DailyReport.submitted_at: datetime.now(timezone.utc),
+            },
+            synchronize_session=False,
+        )
+    )
+    if updated != 1:
+        raise HTTPException(status_code=409, detail="Draft has already been finalized")
+
+    db.commit()
+    report = db.query(models.DailyReport).filter(models.DailyReport.id == draft_id).one()
 
     return {
         "draft_id": report.id,

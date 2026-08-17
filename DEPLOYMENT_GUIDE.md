@@ -1,269 +1,278 @@
 # KinJo Production Deployment Guide
 
-## Quick Start - Deploy to Production
+Target: a single DigitalOcean droplet running Docker Compose behind Nginx with
+Let's Encrypt TLS.
 
-### Prerequisites
+> **This guide replaces the previous one**, which described a `/srv/kinjo`
+> virtualenv managed by systemd. That environment does not exist. Production runs
+> Docker at `/opt/kinjo`, and the root `deploy.sh` that targeted the old layout
+> now refuses to run rather than half-applying itself to a live host.
 
-- PostgreSQL 12+ running
-- Redis (optional, auto-fallback to in-memory cache)
-- Python 3.9+
-- 2+ GB RAM minimum
+---
 
-### Step 1: Prepare Environment
+## 1. Architecture
 
-```bash
-# Set production environment variables
-export ENVIRONMENT=production
-export DEBUG=False
-export API_DOCS_ENABLED=False
-export DATABASE_URL=postgresql://user:password@host:5432/kinjo
-export SECRET_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
-export ALGORITHM=HS256
-export ACCESS_TOKEN_EXPIRE_MINUTES=480
-
-# Optional: Configure backup location
-export BACKUP_DIR=/var/backups/kinjo
-mkdir -p $BACKUP_DIR
-chmod 700 $BACKUP_DIR
+```
+                        ┌─────────────── droplet ───────────────┐
+  Internet ──:443──►    │  nginx  ──────► web (uvicorn, N workers)│
+             :80  ──►   │  (TLS)          │                       │
+                        │  certbot        ├──► db     (postgres 15)│
+                        │                 ├──► redis  (redis 7)    │
+                        │                 ├──► worker (celery)     │
+                        │                 └──► beat   (celery beat)│
+                        └───────────────────────────────────────────┘
 ```
 
-### Step 2: Validate Production Configuration
+| Concern | Owner |
+|---|---|
+| TLS termination, HTTP→HTTPS, rate limiting, static caching | `nginx` |
+| Certificate issue + renewal | `deploy/issue-cert.sh`, then `certbot` service |
+| Process supervision | Docker `restart: unless-stopped` + `supervisord` inside `web` |
+| Schema migration | `alembic upgrade head`, run by `scripts/deploy_locked.sh` |
+| Scheduled work (exports, backups, heatmaps) | `worker` + `beat` |
+
+**Only `nginx` publishes public ports.** `web` binds `127.0.0.1:8000` for on-box
+debugging; `db` and `redis` publish nothing and are reachable only on the compose
+network.
+
+> Docker writes its own `DOCKER-USER` iptables rules that **bypass ufw**. A
+> container published on `0.0.0.0` is reachable from the internet even while
+> `ufw status` says the port is denied. Never add a `ports:` mapping for `db` or
+> `redis`, and never set `KINJO_WEB_PORT` to a non-loopback value.
+
+### Process management note
+
+The requirement called for PM2. PM2 is a Node.js process manager and this is a
+Python/FastAPI application — it is the wrong tool. The equivalent guarantees are
+provided by Docker restart policies (crash/reboot recovery), `supervisord` inside
+the web container (per-process restart), and compose healthchecks (liveness).
+`live-restore` in `/etc/docker/daemon.json` keeps containers running across a
+Docker daemon restart.
+
+---
+
+## 2. First-time droplet setup
+
+### 2.1 Create the droplet
+
+- Ubuntu 24.04 LTS, **minimum 2 vCPU / 4 GB RAM** (2 GB works only with the swap
+  file the hardening script creates; Postgres + Redis + 3 uvicorn workers +
+  2 celery processes will OOM under a large export otherwise).
+- Add your SSH public key during creation.
+- Create a DNS `A` record for your domain pointing at the droplet's IPv4 address,
+  and an `AAAA` record if you use IPv6.
+
+### 2.2 Harden the host
 
 ```bash
-# Run preflight checks
-python scripts/preflight_hosting.py
-
-# Output should show:
-# ✅ Production environment validated
-# ✅ Database: PostgreSQL detected
-# ✅ Secret key: Sufficient length
-# ✅ CORS configured
-# ✅ Ready for deployment
+scp deploy/harden-droplet.sh root@<droplet-ip>:/tmp/
+ssh root@<droplet-ip> 'bash /tmp/harden-droplet.sh deploy "$(cat ~/.ssh/authorized_keys | head -1)"'
 ```
 
-### Step 3: Initialize Database
+This creates the `deploy` user, installs Docker, enables ufw (22/80/443 only),
+fail2ban and unattended-upgrades, disables SSH password and root login, caps
+container log size, and adds a 2 GB swap file. It is idempotent.
+
+> **Before closing your root session**, open a second terminal and confirm
+> `ssh deploy@<droplet-ip>` works. The script disables password authentication;
+> a bad key means console-only recovery.
+
+### 2.3 Install the application
 
 ```bash
-# Run migrations
-alembic upgrade head
-
-# Create admin user (one-time)
-python -c "
-from database import SessionLocal
-from models import User, UserRole, UserStatus
-from auth import get_password_hash
-import os
-
-db = SessionLocal()
-admin = User(
-    username='admin',
-    email=os.environ.get('ADMIN_EMAIL', 'admin@example.com'),
-    hashed_password=get_password_hash('ChangeMe123!'),
-    role=UserRole.ADMIN,
-    status=UserStatus.ACTIVE
-)
-db.add(admin)
-db.commit()
-print(f'✅ Admin user created: {admin.username}')
-"
+ssh deploy@<droplet-ip>
+sudo chown -R deploy:deploy /opt/kinjo
+cd /opt/kinjo
 ```
 
-### Step 4: Enable Automated Backups
+From your workstation, ship the current commit:
 
 ```bash
-# Backups will run automatically at 2:00 AM UTC
-# Logs appear in the application logs
-# Retention: 30-day automatic cleanup
-
-# To change backup time, set before app startup:
-export BACKUP_TIME_HOUR=2
-export BACKUP_TIME_MINUTE=0
+git archive --format=tar -o /tmp/deploy.tar HEAD
+scp /tmp/deploy.tar deploy@<droplet-ip>:/tmp/deploy.tar
+ssh deploy@<droplet-ip> 'tar xf /tmp/deploy.tar -C /opt/kinjo'
 ```
 
-### Step 5: Deploy Application
+### 2.4 Configure the environment
 
 ```bash
-# Using gunicorn (recommended)
-gunicorn main:app \
-  --workers 4 \
-  --worker-class uvicorn.workers.UvicornWorker \
-  --timeout 120 \
-  --access-logfile - \
-  --error-logfile - \
-  --log-level info
-
-# OR using built-in server (development)
-python main.py
+cd /opt/kinjo
+cp .env.production.template .env
+chmod 600 .env
+python3 -c "import secrets; print(secrets.token_hex(32))"   # paste into SECRET_KEY
 ```
 
-### Step 6: Verify Deployment
+Every `REPLACE_ME` must be filled. The application refuses to boot in production
+if `SECRET_KEY` is missing, short, still a placeholder, or **matches a key that
+has ever been published in this repository** — those are rejected by value, since
+a high-entropy key is still worthless once it is public.
+
+Required beyond the template:
+
+```ini
+KINJO_DOMAIN=kinjo.example.com          # used by nginx and cert issuance
+KINJO_WORKERS=3                          # 2 x vCPU + 1 is a reasonable start
+POSTGRES_PASSWORD=<generated>
+REDIS_PASSWORD=<generated>
+TRUSTED_HOSTS=["kinjo.example.com","www.kinjo.example.com"]
+CORS_ALLOWED_ORIGINS=["https://kinjo.example.com"]
+```
+
+Leave `KINJO_WEB_PORT` **unset**. If it is set to `80` (the value used before TLS
+terminated on the droplet) it will both re-expose the app in plaintext and
+collide with nginx.
+
+### 2.5 Issue the TLS certificate
 
 ```bash
-# Health check
-curl http://localhost:8000/health
-# Expected: {"status": "healthy", "app": "KinJo", "version": "1.0.0"}
+sudo bash deploy/issue-cert.sh kinjo.example.com admin@example.com
+```
 
-# Comprehensive health (admin only - after login)
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/health
+Run it once per domain, **before** the first `up`. It uses a standalone challenge
+because nginx cannot start without a certificate and certbot's webroot cannot be
+served without nginx — a bootstrap deadlock the renewal service cannot break.
 
-# Check metrics
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/metrics
+Rehearse with `--staging` first if you are unsure about DNS: Let's Encrypt allows
+only 5 failed validations per hour and 5 duplicate certificates per week.
+
+If your DNS is proxied through Cloudflare, set the record to "DNS only" (grey
+cloud) until the certificate exists, then re-enable proxying.
+
+### 2.6 Start
+
+```bash
+cd /opt/kinjo
+docker compose -f docker-compose.prod.yml -f docker-compose.edge.yml up -d --build
+docker compose -f docker-compose.prod.yml -f docker-compose.edge.yml exec web alembic upgrade head
 ```
 
 ---
 
-## Post-Deployment Monitoring
+## 3. Routine deployments
 
-### Key Metrics to Monitor
-
-1. **Application Health**
-
-   ```bash
-   # Check every 5 minutes
-   GET /health
-   # Should return status: "healthy"
-   ```
-
-2. **Database Connectivity**
-   - Monitor PostgreSQL connection pool
-   - Alert on connection errors
-   - Expected: < 100ms response time for `SELECT 1`
-
-3. **Backup Status**
-   - Check backup directory: `/var/backups/kinjo`
-   - Expected: Daily backup file created at 2:00 AM UTC
-   - Size: 50-500 MB depending on data
-
-4. **Error Rates**
-   - Monitor 5xx error logs
-   - Alert if error rate > 1% of requests
-   - Check `/api/metrics` for trends
-
-5. **Performance**
-   - Response time: Target < 200ms for most endpoints
-   - CPU: Monitor for spikes > 80%
-   - Memory: Monitor for leaks (should stabilize after warm-up)
-
-### Troubleshooting
-
-**Problem**: PostgreSQL connection errors
-
-```
-Solution:
-1. Verify DATABASE_URL is correct
-2. Check PostgreSQL is running: psql -U user -d kinjo -c "SELECT 1"
-3. Check firewall: telnet host 5432
-```
-
-**Problem**: MFA locked out admin
-
-```
-Solution:
-1. Use MFA bypass endpoint: POST /admin/users/{user_id}/mfa-bypass
-2. Requires admin password verification
-3. User must re-enroll MFA
-```
-
-**Problem**: Backup folder permission denied
-
-```
-Solution:
-1. Verify backup directory permissions: ls -la /var/backups/kinjo
-2. Must be readable/writable by app user: chmod 700 /var/backups/kinjo
-3. Check disk space: df -h /var/backups
-```
-
-**Problem**: High error rates after deployment
-
-```
-Solution:
-1. Check logs: tail -f /var/log/kinjo/app.log
-2. Monitor health endpoint: GET /health
-3. Check database status: GET /api/health (admin)
-4. Verify all configuration variables are set correctly
-```
-
----
-
-## Security Checklist
-
-Before going live:
-
-- [ ] Environment set to `production`
-- [ ] `DEBUG` set to `False`
-- [ ] `API_DOCS_ENABLED` set to `False`
-- [ ] `SECRET_KEY` is cryptographically strong (32+ chars)
-- [ ] `DATABASE_URL` uses PostgreSQL
-- [ ] HTTPS/TLS certificates installed
-- [ ] Admin user created with strong password
-- [ ] Backup directory configured and tested
-- [ ] Rate limiting verified on auth endpoints
-- [ ] Audit logging enabled
-- [ ] CORS origins configured correctly
-- [ ] Session cookie security headers set
-
----
-
-## Maintenance
-
-### Weekly
-
-- [ ] Review error logs for patterns
-- [ ] Verify backup files are created
-- [ ] Check system metrics
-
-### Monthly
-
-- [ ] Review audit logs
-- [ ] Test backup restore procedure
-- [ ] Update dependencies (if applicable)
-
-### Quarterly
-
-- [ ] Security audit
-- [ ] Performance tuning
-- [ ] Database optimization
-
----
-
-## Support & Escalation
-
-**Issue Type**: Deployment/Configuration
-
-- Check: environment variables, PostgreSQL connectivity, disk space
-
-**Issue Type**: Authentication/Authorization
-
-- Check: MFA status, user roles, permissions
-
-**Issue Type**: Data Loss/Corruption
-
-- Restore from automated backup: See backup_manager.py docs
-
-**Issue Type**: Performance Degradation
-
-- Check: System metrics (`/api/metrics`), database query logs
-
----
-
-## Rollback Procedure
-
-If critical issues occur:
+Always use the locked script. It holds an exclusive lock across the entire
+mutation window — backup, extract, build, migrate, verify — so two concurrent
+deploys cannot race. (Two did, and took production down twice on 2026-08-12.)
 
 ```bash
-# 1. Restore previous database snapshot
-alembic downgrade -1
-
-# 2. Deploy previous application version
-git checkout <previous-tag>
-pip install -r requirements.txt
-gunicorn main:app --workers 4
-
-# 3. Verify rollback
-curl http://localhost:8000/health
+# from the workstation, on the commit you intend to ship
+git archive --format=tar -o /tmp/deploy.tar HEAD
+scp /tmp/deploy.tar deploy@<droplet-ip>:/tmp/deploy.tar
+ssh deploy@<droplet-ip> \
+  "bash /opt/kinjo/scripts/deploy_locked.sh /tmp/deploy.tar $(git rev-parse HEAD)"
 ```
+
+Exit codes: `0` deployed and verified · `75` another deploy holds the lock,
+production untouched · `1` failed, see output.
+
+The script auto-detects `docker-compose.edge.yml` and includes it. Set
+`KINJO_EDGE=0` only if you deliberately run without the TLS edge — omitting it
+while nginx is deployed would remove the nginx container as an orphan and take
+the site offline.
+
+> **Deploy from an explicit commit, not from whatever `main` happens to be.**
+> `git archive HEAD` ships your local checkout; a stale or unmerged local `main`
+> silently becomes production.
+
+### Static assets
+
+Templates cache-bust with `?v=<hash>` and nginx serves `/static/` with a
+one-year immutable TTL. **If you change an asset without bumping its `?v=`,
+returning users keep the old file for a year.** Verify by fetching the asset URLs
+from outside the droplet, not by grepping templates.
 
 ---
 
-_Deployment Guide v1.0 - KinJo v2.0.0_
-_Last Updated: April 25, 2026_
+## 4. Verification after every deploy
+
+Run from **outside** the droplet:
+
+```bash
+curl -sSI https://kinjo.example.com/health          # 200
+curl -sSI http://kinjo.example.com/health           # 301 -> https
+curl -sS  https://kinjo.example.com/health          # body
+
+# TLS floor: both must FAIL to connect
+curl -sk --tlsv1.1 --tls-max 1.1 https://kinjo.example.com/ && echo "TLS 1.1 ACCEPTED - FAIL"
+
+# Security headers
+curl -sSI https://kinjo.example.com/ | grep -iE 'strict-transport|x-content-type|referrer-policy'
+```
+
+On the droplet:
+
+```bash
+docker compose -f docker-compose.prod.yml -f docker-compose.edge.yml ps
+# web, worker, beat, db, redis, nginx, certbot must all be Up (web healthy)
+
+ss -tlnp | grep -E ':(80|443|8000|5432|6379) '
+# 80/443  -> 0.0.0.0 (nginx)
+# 8000    -> 127.0.0.1 ONLY
+# 5432/6379 -> must NOT appear
+
+docker exec kinjo-web-1 alembic current      # matches the shipped head
+docker logs --tail 50 kinjo_nginx
+```
+
+**Background work is the thing most likely to be silently dead.** `worker` and
+`beat` being "Up" is not proof they process anything — both once ran while no
+scheduled export, message dispatch or backup executed at all. Confirm a task
+actually completes:
+
+```bash
+docker logs --tail 100 kinjo-beat-1 | grep -i "Scheduler: Sending"
+docker logs --tail 100 kinjo-worker-1 | grep -i "succeeded"
+```
+
+Same for SMTP: a configured `SMTP_HOST` is not a working mail path. Send a real
+test message before declaring email operational.
+
+---
+
+## 5. Certificate renewal
+
+The `certbot` service attempts renewal every 12 hours; Let's Encrypt certificates
+last 90 days and renew within the final 30, so a transient failure has roughly 60
+retries before expiry. **nginx reloads every 6 hours** to pick up a renewed
+certificate — without that reload it would keep serving the old one from memory
+until something restarted it.
+
+Check status:
+
+```bash
+docker exec kinjo_certbot certbot certificates
+curl -sSI https://kinjo.example.com/ -w '%{ssl_verify_result}\n' -o /dev/null
+```
+
+Force a renewal test: `docker exec kinjo_certbot certbot renew --dry-run`
+
+---
+
+## 6. Backup and rollback
+
+`scripts/deploy_locked.sh` takes a `pg_dump` into `/var/backups/kinjo` before
+mutating anything and tags the previous image for rollback. Restore:
+
+```bash
+docker exec -i kinjo_postgres psql -U kinjo -d kinjo_db < /var/backups/kinjo/<dump>.sql
+```
+
+Verify a restore into a scratch database periodically. An untested backup is not
+a backup.
+
+---
+
+## 7. Troubleshooting
+
+| Symptom | Cause | Action |
+|---|---|---|
+| nginx exits at start | certificate missing | run `deploy/issue-cert.sh` first |
+| `host not found in upstream "web:8000"` | `web` not started | `docker compose ... up -d web` |
+| All users share one rate-limit bucket | `--proxy-headers` off | confirm `KINJO_FORWARDED_ALLOW_IPS` is set on `web` |
+| 502 from nginx | app crashed | `docker logs kinjo-web-1` |
+| App boots then exits with `CRITICAL: SECRET_KEY...` | placeholder or published key | generate a fresh key |
+| `supervisord: not found` | image predates the dependency fix | rebuild with `--build` |
+| Renewed cert not served | nginx not reloaded | `docker exec kinjo_nginx nginx -s reload` |
+
+Config changes to nginx: **always** validate before reloading a live site —
+`docker exec kinjo_nginx nginx -t`, then `nginx -s reload`.

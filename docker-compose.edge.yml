@@ -1,0 +1,99 @@
+# =============================================================================
+# KinJo — TLS edge overlay
+#
+# Use WITH docker-compose.prod.yml, never alone:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.edge.yml up -d
+#
+# What it changes:
+#   * adds nginx (the only container publishing host ports) and certbot
+#   * stops `web` publishing to the host, so the app is no longer reachable
+#     over plaintext by anyone who learns the droplet's IP address
+#   * turns on uvicorn's proxy-header handling and multi-worker mode
+# =============================================================================
+
+services:
+  web:
+    # Compose merges `ports` by APPENDING, so an override here cannot remove the
+    # base mapping. The base file therefore defaults to 127.0.0.1:8000, which is
+    # what keeps the app off the public interface; nginx reaches it over the
+    # compose network instead. If .env sets KINJO_WEB_PORT=80 (the pre-TLS
+    # production value) it MUST be changed — that value both re-exposes the app
+    # in plaintext and collides with nginx's own :80. Verify after deploying:
+    #   ss -tlnp | grep -E ':(80|443|8000) '
+    #   # :8000 must show 127.0.0.1 — never 0.0.0.0
+    expose:
+      - "8000"
+    environment:
+      # Trust X-Forwarded-* only from the compose network nginx sits on. Not "*":
+      # with a wildcard any client that can reach the app port sets its own
+      # apparent source IP and walks past the per-IP rate limiter.
+      KINJO_FORWARDED_ALLOW_IPS: ${KINJO_FORWARDED_ALLOW_IPS:-172.16.0.0/12}
+      KINJO_WORKERS: ${KINJO_WORKERS:-3}
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: kinjo_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      KINJO_DOMAIN: ${KINJO_DOMAIN:?KINJO_DOMAIN is required (e.g. kinjo.example.com)}
+      # The official image runs envsubst over /etc/nginx/templates/*.template.
+      # WITHOUT this filter it would also expand nginx's own runtime variables —
+      # $host, $remote_addr, $proxy_add_x_forwarded_for — to empty strings,
+      # producing a config that loads cleanly and silently forwards no client
+      # information at all. Restricting substitution to the KINJO_ prefix is what
+      # makes templating safe here.
+      NGINX_ENVSUBST_FILTER: "KINJO_"
+    volumes:
+      - ./deploy/nginx/kinjo.conf:/etc/nginx/templates/kinjo.conf.template:ro
+      # Not a .conf file, so nginx does not auto-load it as a server block; it is
+      # pulled in explicitly by `include` from the rendered config.
+      - ./deploy/nginx/kinjo_proxy_params:/etc/nginx/conf.d/kinjo_proxy_params:ro
+      - kinjo_certs:/etc/letsencrypt:ro
+      - kinjo_acme:/var/www/certbot:ro
+    # nginx reads certificates once, at start. certbot renewing on disk therefore
+    # changes nothing that is actually being served — without this periodic
+    # reload the site keeps presenting the OLD certificate until something else
+    # happens to restart the container, and expiry arrives with a renewed cert
+    # sitting unused in the volume. The image's entrypoint still runs first, so
+    # envsubst templating is unaffected by overriding the command.
+    command: >
+      /bin/sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done &
+      exec nginx -g 'daemon off;'"
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      web:
+        condition: service_healthy
+
+  # Renewal only. The FIRST certificate is issued by deploy/issue-cert.sh, which
+  # runs a standalone challenge before nginx exists — nginx cannot start without
+  # a certificate to load, and certbot's webroot cannot answer a challenge
+  # without nginx running. That bootstrap deadlock is why issuance is a separate
+  # one-shot step rather than something this service can do.
+  certbot:
+    image: certbot/certbot:latest
+    container_name: kinjo_certbot
+    restart: unless-stopped
+    volumes:
+      - kinjo_certs:/etc/letsencrypt
+      - kinjo_acme:/var/www/certbot
+    # Let's Encrypt certificates last 90 days and renew inside the final 30. The
+    # 12h loop means a failed attempt has ~60 retries before expiry, so a
+    # transient DNS or rate-limit failure never becomes an outage.
+    entrypoint: >
+      sh -c "trap exit TERM;
+      while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+      done"
+
+volumes:
+  kinjo_certs:
+  kinjo_acme:

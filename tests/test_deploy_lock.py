@@ -54,7 +54,12 @@ def test_lock_is_acquired_before_every_mutation():
     health check must all sit inside the lock."""
     src = _code()
     lock_at = src.index("flock -n 9")
-    for step in ("tar xf", "docker compose -f", "alembic upgrade", "pg_dump", "docker tag"):
+    # The build step is matched on "up -d --build" rather than "docker compose -f".
+    # The compose invocation now assembles its file list into an array so the TLS
+    # edge overlay is always included, making the literal "-f" no longer adjacent
+    # to the command. "up -d --build" names the mutation itself, so it stays
+    # accurate across that kind of refactor.
+    for step in ("tar xf", "up -d --build", "alembic upgrade", "pg_dump", "docker tag"):
         assert src.index(step) > lock_at, f"{step} happens before the lock is held"
 
 
@@ -179,7 +184,9 @@ def test_seed_credentials_never_reach_the_deploy_log():
 
 def test_rollback_image_is_tagged_before_the_build():
     src = _code()
-    assert src.index("rollback-$TS") < src.index("docker compose -f")
+    # See the note in test_lock_is_acquired_before_every_mutation on why the build
+    # is identified by "up -d --build" and not by the "-f" flag.
+    assert src.index("rollback-$TS") < src.index("up -d --build")
 
 
 def test_failure_aborts_rather_than_continuing():

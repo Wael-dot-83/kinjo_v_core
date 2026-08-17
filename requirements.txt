@@ -1,5 +1,12 @@
 fastapi>=0.121.3
 uvicorn[standard]==0.32.0
+# Process manager for the web container. docker-compose.prod.yml has always
+# declared `supervisord -c /app/supervisor.conf` as the default command for
+# `web`, but supervisor was never a dependency — so that default could only ever
+# crash-loop with "supervisord: not found". It went unnoticed because the server
+# set KINJO_WEB_COMMAND to a bare uvicorn, which overrode it, and that override
+# is also why the app ran with no restart supervision at all.
+supervisor==4.3.0
 sqlalchemy==2.0.36
 alembic==1.14.0
 pydantic==2.10.0

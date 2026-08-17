@@ -9,6 +9,7 @@ Comprehensive tests for the new modules:
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
 
@@ -262,10 +263,397 @@ class TestSupervisorAiDailyReportFlow:
             headers=_hdr(supervisor_token),
         )
         assert confirm_r.status_code == 200, confirm_r.text
-        report = test_db.query(models.DailyReport).filter(models.DailyReport.child_id == sample_child.id).first()
+        report = test_db.query(models.DailyReport).filter(models.DailyReport.child_id == sample_child.id).order_by(models.DailyReport.id.desc()).first()
         assert report is not None
-        assert report.status == models.DailyReportStatus.DRAFT
+        assert report.status == models.DailyReportStatus.SUBMITTED
         assert report.activities == "Story time and play"
+        assert report.submitted_by == supervisor_user.id
+
+    def test_ai_daily_report_confirm_rejects_extraneous_client_fields(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", True, raising=False)
+
+        draft_payload = {
+            "child_id": sample_child.id,
+            "date": "2026-05-01",
+            "arrival_time": "08:15",
+            "leave_time": "16:00",
+            "mood": "happy",
+            "activities": "Story time and play",
+        }
+        draft_r = client.post("/api/ai/supervisor/daily-reports/draft", json=draft_payload, headers=_hdr(supervisor_token))
+        assert draft_r.status_code == 201, draft_r.text
+        draft_id = draft_r.json()["draft_id"]
+
+        r = client.post(
+            f"/api/ai/supervisor/daily-reports/{draft_id}/confirm",
+            json={
+                "confirmed": True,
+                "supervisor_id": 999999,
+                "child_id": sample_child.id + 1,
+                "class_id": 999999,
+                "kindergarten_id": 999999,
+            },
+            headers=_hdr(supervisor_token),
+        )
+        assert r.status_code == 422, r.text
+
+    def test_ai_daily_report_confirm_is_atomic_under_concurrency(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", True, raising=False)
+
+        draft_payload = {
+            "child_id": sample_child.id,
+            "date": "2026-05-01",
+            "arrival_time": "08:15",
+            "leave_time": "16:00",
+            "mood": "happy",
+            "activities": "Story time and play",
+        }
+        draft_r = client.post("/api/ai/supervisor/daily-reports/draft", json=draft_payload, headers=_hdr(supervisor_token))
+        assert draft_r.status_code == 201, draft_r.text
+        draft_id = draft_r.json()["draft_id"]
+
+        def call_confirm():
+            return client.post(
+                f"/api/ai/supervisor/daily-reports/{draft_id}/confirm",
+                json={"confirmed": True},
+                headers=_hdr(supervisor_token),
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            future_results = [pool.submit(call_confirm) for _ in range(2)]
+            responses = [future.result() for future in future_results]
+
+        # What this can and cannot prove:
+        #
+        # conftest's override_get_db yields ONE shared Session to every request,
+        # and the test engine is in-memory SQLite behind a StaticPool — a single
+        # connection. So the two threads do not model two independent database
+        # sessions; they interleave on one Session, which SQLAlchemy does not
+        # support, and SQLite gives `SELECT ... FOR UPDATE` no meaning at all.
+        #
+        # Asserting `exactly one 200` was therefore nondeterministic: depending on
+        # interleaving this test saw two 409s in one run and a stale DRAFT read in
+        # the next. What IS deterministic here — and is the property that actually
+        # matters — is that a second confirmation can never produce a second
+        # submitted report. Row-level locking under genuine concurrency is
+        # exercised against real PostgreSQL in the postgres-parity suite, which is
+        # the only place it can be tested honestly.
+        assert all(r.status_code in (200, 409) for r in responses), [r.status_code for r in responses]
+        assert len([r for r in responses if r.status_code == 200]) <= 1, [
+            r.status_code for r in responses
+        ]
+
+        # The endpoint commits on the shared session and `.update(synchronize_session=False)`
+        # leaves the identity map untouched, so a plain query here can hand back a
+        # stale in-memory object. Expire first to read committed database state.
+        test_db.expire_all()
+
+        count = test_db.query(models.DailyReport).filter(
+            models.DailyReport.child_id == sample_child.id,
+            models.DailyReport.date == date(2026, 5, 1),
+            models.DailyReport.status == models.DailyReportStatus.SUBMITTED,
+        ).count()
+        assert count <= 1, "concurrent confirmation produced more than one submitted report"
+
+    def test_ai_daily_report_confirm_is_idempotent_when_repeated(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+        monkeypatch,
+    ):
+        """Sequential double-confirm: the deterministic half of the atomicity guarantee.
+
+        The threaded test above cannot pin down which request wins on SQLite. This
+        one can: confirm twice in order and the second must be refused, leaving
+        exactly one submitted report.
+        """
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", True, raising=False)
+
+        draft_r = client.post(
+            "/api/ai/supervisor/daily-reports/draft",
+            json={
+                "child_id": sample_child.id,
+                "date": "2026-05-02",
+                "arrival_time": "08:15",
+                "leave_time": "16:00",
+                "mood": "happy",
+                "activities": "Story time and play",
+            },
+            headers=_hdr(supervisor_token),
+        )
+        assert draft_r.status_code == 201, draft_r.text
+        draft_id = draft_r.json()["draft_id"]
+
+        first = client.post(
+            f"/api/ai/supervisor/daily-reports/{draft_id}/confirm",
+            json={"confirmed": True},
+            headers=_hdr(supervisor_token),
+        )
+        assert first.status_code == 200, first.text
+
+        second = client.post(
+            f"/api/ai/supervisor/daily-reports/{draft_id}/confirm",
+            json={"confirmed": True},
+            headers=_hdr(supervisor_token),
+        )
+        assert second.status_code == 409, second.text
+
+        test_db.expire_all()
+        final_report = test_db.query(models.DailyReport).filter(
+            models.DailyReport.id == draft_id
+        ).one()
+        assert final_report.status == models.DailyReportStatus.SUBMITTED
+        assert final_report.submitted_by == supervisor_user.id
+
+        count = test_db.query(models.DailyReport).filter(
+            models.DailyReport.child_id == sample_child.id,
+            models.DailyReport.date == date(2026, 5, 2),
+            models.DailyReport.status == models.DailyReportStatus.SUBMITTED,
+        ).count()
+        assert count == 1
+
+    def test_ai_daily_report_confirm_rejects_cross_supervisor_and_missing_draft(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", True, raising=False)
+
+        other = _make_supervisor(test_db, sample_supervisor_assignment.class_id if hasattr(sample_supervisor_assignment, "class_id") else sample_enrollment.class_id, username="sup3", email="sup3@test.com")
+        other_token = _get_token(client, "sup3")
+
+        draft_payload = {
+            "child_id": sample_child.id,
+            "date": "2026-05-01",
+            "arrival_time": "08:15",
+            "leave_time": "16:00",
+            "mood": "happy",
+            "activities": "Story time and play",
+        }
+        draft_r = client.post("/api/ai/supervisor/daily-reports/draft", json=draft_payload, headers=_hdr(supervisor_token))
+        assert draft_r.status_code == 201, draft_r.text
+        draft_id = draft_r.json()["draft_id"]
+
+        r = client.post(
+            f"/api/ai/supervisor/daily-reports/{draft_id}/confirm",
+            json={"confirmed": True},
+            headers=_hdr(other_token),
+        )
+        assert r.status_code in (403, 404), r.text
+        assert test_db.query(models.DailyReport).filter(models.DailyReport.id == draft_id).one().status == models.DailyReportStatus.DRAFT
+
+        r = client.post(
+            "/api/ai/supervisor/daily-reports/999999/confirm",
+            json={"confirmed": True},
+            headers=_hdr(supervisor_token),
+        )
+        assert r.status_code == 404, r.text
+
+    def test_ai_daily_report_confirm_rejects_after_temporal_scope_changes(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", True, raising=False)
+
+        draft_payload = {
+            "child_id": sample_child.id,
+            "date": "2026-05-01",
+            "arrival_time": "08:15",
+            "leave_time": "16:00",
+            "mood": "happy",
+            "activities": "Story time and play",
+        }
+        draft_r = client.post("/api/ai/supervisor/daily-reports/draft", json=draft_payload, headers=_hdr(supervisor_token))
+        assert draft_r.status_code == 201, draft_r.text
+        draft_id = draft_r.json()["draft_id"]
+
+        sample_supervisor_assignment.deleted_at = datetime.now(timezone.utc)
+        test_db.add(sample_supervisor_assignment)
+        test_db.commit()
+
+        r = client.post(
+            f"/api/ai/supervisor/daily-reports/{draft_id}/confirm",
+            json={"confirmed": True},
+            headers=_hdr(supervisor_token),
+        )
+        assert r.status_code in (403, 404), r.text
+        assert test_db.query(models.DailyReport).filter(models.DailyReport.id == draft_id).one().status == models.DailyReportStatus.DRAFT
+
+    def test_ai_daily_report_feature_flags_fail_closed_and_manual_route_still_works(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+        monkeypatch,
+    ):
+        for flag_name in (
+            "AI_ASSISTANT_ENABLED",
+            "AI_ASSISTANT_SUPERVISOR_ENABLED",
+            "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED",
+        ):
+            monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", True, raising=False)
+            monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", True, raising=False)
+            monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", True, raising=False)
+            monkeypatch.setattr(settings, flag_name, False, raising=False)
+
+            draft_r = client.post(
+                "/api/ai/supervisor/daily-reports/draft",
+                json={
+                    "child_id": sample_child.id,
+                    "date": "2026-05-01",
+                    "arrival_time": "08:15",
+                    "leave_time": "16:00",
+                    "mood": "happy",
+                    "activities": "Feature gate test",
+                },
+                headers=_hdr(supervisor_token),
+            )
+            assert draft_r.status_code == 403, (flag_name, draft_r.text)
+
+            existing = test_db.query(models.DailyReport).filter(models.DailyReport.child_id == sample_child.id).first()
+            if existing is not None:
+                test_db.delete(existing)
+                test_db.commit()
+
+            manual_r = client.post(
+                "/api/daily-reports/create",
+                json={
+                    "child_id": sample_child.id,
+                    "date": "2026-05-01",
+                    "arrival_time": "08:15",
+                    "leave_time": "16:00",
+                    "mood": "happy",
+                    "activities": "Manual report still allowed",
+                },
+                headers=_hdr(supervisor_token),
+            )
+            assert manual_r.status_code in (201, 409), (flag_name, manual_r.text)
+
+    def test_ai_daily_report_confirm_rejects_replay_and_expired_drafts(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_kindergarten,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_SUPERVISOR_REPORT_DRAFT_TTL_MINUTES", 1, raising=False)
+
+        draft_payload = {
+            "child_id": sample_child.id,
+            "date": "2026-05-01",
+            "arrival_time": "08:15",
+            "leave_time": "16:00",
+            "mood": "happy",
+            "activities": "Story time and play",
+        }
+        draft_r = client.post("/api/ai/supervisor/daily-reports/draft", json=draft_payload, headers=_hdr(supervisor_token))
+        assert draft_r.status_code == 201, draft_r.text
+        draft_id = draft_r.json()["draft_id"]
+
+        confirm_r = client.post(
+            f"/api/ai/supervisor/daily-reports/{draft_id}/confirm",
+            json={"confirmed": True},
+            headers=_hdr(supervisor_token),
+        )
+        assert confirm_r.status_code == 200, confirm_r.text
+
+        replay_r = client.post(
+            f"/api/ai/supervisor/daily-reports/{draft_id}/confirm",
+            json={"confirmed": True},
+            headers=_hdr(supervisor_token),
+        )
+        assert replay_r.status_code in (409, 400), replay_r.text
+
+        report = test_db.query(models.DailyReport).filter(models.DailyReport.id == draft_id).one()
+        assert report.status == models.DailyReportStatus.SUBMITTED
+
+        expired = test_db.query(models.DailyReport).filter(models.DailyReport.child_id == sample_child.id, models.DailyReport.id != draft_id).first()
+        if expired is None:
+            expired = models.DailyReport(
+                child_id=sample_child.id,
+                kindergarten_id=sample_kindergarten.id,
+                class_id=sample_supervisor_assignment.class_id,
+                date=date(2026, 5, 2),
+                status=models.DailyReportStatus.DRAFT,
+                submitted_by=supervisor_user.id,
+                arrival_time="08:00",
+                leave_time="16:00",
+                activities="Expired",
+                created_at=datetime.now(timezone.utc) - timedelta(minutes=5),
+            )
+            test_db.add(expired)
+            test_db.commit(); test_db.refresh(expired)
+
+        expired.created_at = datetime.now(timezone.utc) - timedelta(minutes=5)
+        test_db.add(expired)
+        test_db.commit()
+
+        expired_r = client.post(
+            f"/api/ai/supervisor/daily-reports/{expired.id}/confirm",
+            json={"confirmed": True},
+            headers=_hdr(supervisor_token),
+        )
+        assert expired_r.status_code in (410, 409, 403), expired_r.text
 
     def test_legacy_ai_routes_are_not_exposed_when_supervisor_feature_is_enabled(
         self,
