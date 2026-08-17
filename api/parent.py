@@ -24,7 +24,7 @@ from dependencies import ParentIdentity, get_current_parent
 from i18n import gettext as _api
 from rate_limiter import limiter
 
-_JORDAN_TZ = timezone(timedelta(hours=3))
+from utils.time_utils import today_amman, now_amman as _now_amman
 
 
 def _ulang(user) -> str:
@@ -309,7 +309,7 @@ def get_parent_attendance(
 
     # Default: last 30 days
     if not start_date and not end_date:
-        query = query.filter(models.AttendanceLog.date >= datetime.now(_JORDAN_TZ).date() - timedelta(days=30))
+        query = query.filter(models.AttendanceLog.date >= today_amman() - timedelta(days=30))
 
     query = query.order_by(models.AttendanceLog.date.desc())
 

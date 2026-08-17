@@ -760,5 +760,111 @@ def test_daily_report_jordan_date_check_constraint_in_postgres(pg_engine):
             session.commit()
         assert "ck_report_not_future" in str(exc_info.value).lower()
         session.rollback()
+
+        # 4. AttendanceLog: Today in Jordan SUCCEEDS, Tomorrow REJECTED
+        session.execute(sa.text("ALTER TABLE attendance_logs DROP CONSTRAINT IF EXISTS ck_attendance_not_future"))
+        session.execute(sa.text("""
+            ALTER TABLE attendance_logs
+            ADD CONSTRAINT ck_attendance_not_future
+            CHECK (date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date)
+        """))
+        session.commit()
+
+        att_today = models.AttendanceLog(
+            child_id=ch.id,
+            class_id=cls.id,
+            date=jordan_today,
+            status=models.AttendanceStatus.PRESENT,
+            recorded_by=u.id,
+        )
+        session.add(att_today)
+        session.commit()
+        assert att_today.id is not None
+
+        att_future = models.AttendanceLog(
+            child_id=ch_future.id,
+            class_id=cls.id,
+            date=jordan_tomorrow,
+            status=models.AttendanceStatus.PRESENT,
+            recorded_by=u.id,
+        )
+        session.add(att_future)
+        with pytest.raises(sa.exc.IntegrityError) as exc_info:
+            session.commit()
+        assert "ck_attendance_not_future" in str(exc_info.value).lower()
+        session.rollback()
+
+        # 5. Child DOB: Today in Jordan SUCCEEDS, Tomorrow REJECTED
+        session.execute(sa.text("ALTER TABLE children DROP CONSTRAINT IF EXISTS ck_children_dob_not_future"))
+        session.execute(sa.text("""
+            ALTER TABLE children
+            ADD CONSTRAINT ck_children_dob_not_future
+            CHECK (date_of_birth <= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date)
+        """))
+        session.commit()
+
+        # Direct SQL insertion for today's Jordan date
+        session.execute(sa.text("""
+            INSERT INTO children (public_id, parent_id, first_name, last_name, gender, date_of_birth, father_name,
+                                  mother_first_name, mother_last_name, mother_nationality, mother_national_id,
+                                  media_consent, correspondence_flag, profile_complete)
+            VALUES ('pub-today-01', :parent_id, 'TZChildToday', 'Test', 'MALE', :dob, 'TZFather',
+                    'TZMother', 'Test', 'Jordanian', '999900010', false, false, false)
+        """), {"parent_id": profile.id, "dob": jordan_today})
+        session.commit()
+
+        # Direct SQL insertion for tomorrow's Jordan date must raise IntegrityError
+        with pytest.raises(sa.exc.IntegrityError) as exc_info:
+            session.execute(sa.text("""
+                INSERT INTO children (public_id, parent_id, first_name, last_name, gender, date_of_birth, father_name,
+                                      mother_first_name, mother_last_name, mother_nationality, mother_national_id,
+                                      media_consent, correspondence_flag, profile_complete)
+                VALUES ('pub-tomorrow-01', :parent_id, 'TZChildTomorrow', 'Test', 'MALE', :dob, 'TZFather',
+                        'TZMother', 'Test', 'Jordanian', '999900011', false, false, false)
+            """), {"parent_id": profile.id, "dob": jordan_tomorrow})
+            session.commit()
+        assert "ck_children_dob_not_future" in str(exc_info.value).lower()
+        session.rollback()
+
+        # 6. Incident occurred_at: Today in Jordan SUCCEEDS, Future REJECTED
+        session.execute(sa.text("ALTER TABLE incidents DROP CONSTRAINT IF EXISTS ck_incident_not_future"))
+        session.execute(sa.text("""
+            ALTER TABLE incidents
+            ADD CONSTRAINT ck_incident_not_future
+            CHECK (DATE(occurred_at AT TIME ZONE 'Asia/Amman') <= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date)
+        """))
+        session.commit()
+
+        inc_today = models.Incident(
+            child_id=ch.id,
+            kindergarten_id=kg.id,
+            class_id=cls.id,
+            reported_by=u.id,
+            type=models.IncidentType.INJURY,
+            severity_level=models.SeverityLevel.LOW,
+            description="Test incident today",
+            occurred_at=datetime.now(timezone.utc),
+            parent_informed=True,
+        )
+        session.add(inc_today)
+        session.commit()
+        assert inc_today.id is not None
+
+        inc_future = models.Incident(
+            child_id=ch.id,
+            kindergarten_id=kg.id,
+            class_id=cls.id,
+            reported_by=u.id,
+            type=models.IncidentType.INJURY,
+            severity_level=models.SeverityLevel.LOW,
+            description="Test incident future",
+            occurred_at=datetime.now(timezone.utc) + timedelta(days=2),
+            parent_informed=True,
+        )
+        session.add(inc_future)
+        with pytest.raises(sa.exc.IntegrityError) as exc_info:
+            session.commit()
+        assert "ck_incident_not_future" in str(exc_info.value).lower()
+        session.rollback()
     finally:
         session.close()

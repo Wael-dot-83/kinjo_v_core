@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import IntegrityError
 from datetime import date, datetime, timedelta, timezone
-_JORDAN_TZ = timezone(timedelta(hours=3))
+from utils.time_utils import today_amman, now_amman as _now_amman
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -70,7 +70,7 @@ def check_in_child(
         class_id=active_enrollment.class_id,
         date=today,
         status=models.AttendanceStatus.PRESENT,
-        check_in_at=datetime.now(_JORDAN_TZ),
+        check_in_at=_now_amman(),
         recorded_by=current_user.id
     )
     db.add(attendance)
@@ -126,7 +126,7 @@ def check_out_child(
     if current_user.role == models.UserRole.SUPERVISOR:
         assert_supervisor_owns_class(current_user.id, attendance.class_id, db)
     
-    attendance.check_out_at = datetime.now(_JORDAN_TZ)
+    attendance.check_out_at = _now_amman()
     attendance.picked_by_name = picked_by_name
     db.commit()
     db.refresh(attendance)
