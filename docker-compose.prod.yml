@@ -106,6 +106,17 @@ services:
     volumes:
       - ./data:/app/data
     command: celery -A celery_app.celery_app worker --loglevel=info --concurrency=2
+    # The image declares an HTTP HEALTHCHECK for the web container. Docker applies
+    # it to every service built from that image, so worker and beat -- which serve
+    # no HTTP port -- were permanently "unhealthy" while working perfectly. That is
+    # worse than no check: it trains operators to ignore the column that is supposed
+    # to tell them the queue is dead. Replaced with one that actually pings celery.
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A celery_app.celery_app inspect ping -t 10 | grep -q pong"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
     depends_on:
       db:
         condition: service_healthy
@@ -131,6 +142,11 @@ services:
       - ./data:/app/data
     # Exactly one beat: a second scheduler publishes every periodic task twice.
     command: celery -A celery_app.celery_app beat --loglevel=info
+    # beat has no inspectable queue of its own, so there is nothing meaningful to
+    # ping. Disable the inherited HTTP check rather than let it report a false
+    # failure forever; liveness is the process staying up under restart policy.
+    healthcheck:
+      disable: true
     depends_on:
       - redis
 

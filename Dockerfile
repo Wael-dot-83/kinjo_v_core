@@ -44,9 +44,17 @@ RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin kinjo
 
 COPY --chown=kinjo:kinjo . .
 
-# Writable at runtime: supervisor logs here, and data/ is a bind mount whose
-# in-image mountpoint must already belong to the app user.
-RUN mkdir -p /app/logs /app/data && chown -R kinjo:kinjo /app/logs /app/data
+# Writable at runtime. The WORKDIR ITSELF must belong to the app user, not just
+# its contents: COPY --chown fixes the files it copies, but /app was created by
+# WORKDIR as root, so a non-root process cannot CREATE new files in it. Two
+# things do exactly that and both crash-looped in production on the first
+# non-root deploy:
+#   * logging.FileHandler(settings.LOG_FILE) -> /app/kinjo.log
+#   * celery beat's schedule database        -> /app/celerybeat-schedule
+# Neither failure is visible in a build or a health check of the web container.
+RUN mkdir -p /app/logs /app/data \
+    && chown kinjo:kinjo /app \
+    && chown -R kinjo:kinjo /app/logs /app/data
 
 USER kinjo
 
