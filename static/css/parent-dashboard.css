@@ -266,7 +266,7 @@
 
 .child-card-report-banner:hover {
   background: linear-gradient(135deg, #A7F3D0 0%, #6EE7B7 100%);
-  color: #064E32;
+  color: var(--kinjo-color-border);
 }
 
 [data-theme="dark"] .child-card-report-banner {

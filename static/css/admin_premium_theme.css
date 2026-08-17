@@ -4,7 +4,7 @@
 /* ── Modern Colors & Gradients ───────────────────────────────────────────── */
 :root {
   /* Bright, vibrant electric blue to sky blue gradient for the header */
-  --header-gradient: linear-gradient(135deg, #1E40AF 0%, #3B82F6 50%, #0284C7 100%);
+  --header-gradient: linear-gradient(135deg, var(--kinjo-action) 0%, #3B82F6 50%, #0284C7 100%);
   --accent-rainbow: linear-gradient(90deg, #3B82F6 0%, #10B981 33%, #F59E0B 66%, #EF4444 100%);
   --footer-bg: #FFFFFF;
   --footer-ink: #475569;
@@ -115,18 +115,18 @@
 }
 
 .top-menu-link:hover i {
-  color: #2563EB !important;
+  color: var(--kinjo-action) !important;
 }
 
 /* Active State with colorful underline indicator */
 .top-menu-link.active {
-  color: #2563EB !important;
+  color: var(--kinjo-action) !important;
   background-color: var(--sidebar-active-pill) !important;
-  border-bottom: 2px solid #2563EB !important;
+  border-bottom: 2px solid var(--kinjo-action) !important;
 }
 
 .top-menu-link.active i {
-  color: #2563EB !important;
+  color: var(--kinjo-action) !important;
 }
 
 /* ── Premium Dropdown Menus ───────────────────────────────────────────────── */
@@ -172,12 +172,12 @@
 
 .dropdown-item.active {
   background-color: var(--sidebar-active-pill) !important;
-  color: #2563EB !important;
-  border-inline-start-color: #2563EB !important;
+  color: var(--kinjo-action) !important;
+  border-inline-start-color: var(--kinjo-action) !important;
 }
 
 .dropdown-item.active i {
-  color: #2563EB !important;
+  color: var(--kinjo-action) !important;
 }
 
 .dropdown-group-label {
@@ -236,7 +236,7 @@
 
 /* ── Primary Buttons (.k-btn-primary) ────────────────────────────────────── */
 .k-btn-primary, .btn-primary {
-  background-color: #2563EB !important;
+  background-color: var(--kinjo-action) !important;
   color: #FFFFFF !important;
   border-radius: 8px !important;
   font-weight: 600 !important;

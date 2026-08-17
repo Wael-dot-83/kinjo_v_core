@@ -29,7 +29,7 @@
    ============================================================================ */
 :root {
   /* Primary Brand Colors */
-  --kinjo-primary: #1F5E47;
+  --kinjo-primary: var(--kinjo-brand);
   --kinjo-primary-dark: #163d2e;
   --kinjo-primary-light: #e0f0eb;
   --kinjo-primary-50: #f0f7f4;
@@ -56,7 +56,7 @@
   --kinjo-text-muted: #64748b;
   /* Aliases, not copies — same reason as --kinjo-bg-light above. These held their
      own #e2e8f0 / #f1f5f9 and were free to drift from the tokens they mirror. */
-  --kinjo-border-color: var(--kinjo-color-border, #064E32);
+  --kinjo-border-color: var(--kinjo-color-border);
   --kinjo-border-light: var(--kinjo-color-border-subtle, #DCEAE3);
   --kinjo-surface: #ffffff;
   --kinjo-surface-muted: #f8fafc;
@@ -2767,7 +2767,7 @@ body.sidebar-open .sidebar-backdrop {
 .stat-card-body-text { flex: 1; min-width: 0; }
 
 /* Icon color variants */
-.stat-card-icon.primary { background: #e0f0eb; color: #1F5E47; }
+.stat-card-icon.primary { background: #e0f0eb; color: var(--kinjo-brand); }
 .stat-card-icon.success { background: #d1fae5; color: #059669; }
 .stat-card-icon.warning { background: #fef3c7; color: #d97706; }
 .stat-card-icon.danger  { background: #fee2e2; color: #dc2626; }
@@ -2933,7 +2933,7 @@ body.sidebar-open .sidebar-backdrop {
 
 .quick-action-btn.qa-primary { border-color: #e0f0eb; background: #f0f7f4; color: #163d2e; }
 .quick-action-btn.qa-primary:hover { border-color: var(--kinjo-primary); box-shadow: 0 2px 12px rgba(31,94,71,0.18); }
-.quick-action-btn.qa-primary .qa-icon { background: #e0f0eb; color: #1F5E47; }
+.quick-action-btn.qa-primary .qa-icon { background: #e0f0eb; color: var(--kinjo-brand); }
 
 .quick-action-btn.qa-info { border-color: #e0f0eb; background: #f0f7f4; color: #163d2e; }
 .quick-action-btn.qa-info:hover { border-color: var(--kinjo-info); box-shadow: 0 2px 12px rgba(47,125,98,0.18); }
@@ -3045,12 +3045,12 @@ body.sidebar-open .sidebar-backdrop {
   transition: all 0.18s ease !important;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #1F5E47, #163d2e) !important;
+  background: linear-gradient(135deg, var(--kinjo-brand), #163d2e) !important;
   border: none !important;
   box-shadow: 0 1px 3px rgba(31,94,71,0.35) !important;
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, #2F7D62, #1F5E47) !important;
+  background: linear-gradient(135deg, #2F7D62, var(--kinjo-brand)) !important;
   box-shadow: 0 4px 12px rgba(31,94,71,0.4) !important;
   transform: translateY(-1px);
 }
@@ -3065,7 +3065,7 @@ body.sidebar-open .sidebar-backdrop {
 }
 .btn-outline-primary {
   border-color: #e0f0eb !important;
-  color: #1F5E47 !important;
+  color: var(--kinjo-brand) !important;
   background: #f0f7f4 !important;
 }
 .btn-outline-primary:hover {
@@ -3158,7 +3158,7 @@ body.sidebar-open .sidebar-backdrop {
 
 /* ── Welcome Banner ─────────────────────────────────────────────────────── */
 .welcome-banner {
-  background: linear-gradient(135deg, #163d2e 0%, #1F5E47 50%, #2F7D62 100%);
+  background: linear-gradient(135deg, #163d2e 0%, var(--kinjo-brand) 50%, #2F7D62 100%);
   border-radius: 1rem;
   padding: 1.5rem 2rem;
   color: #fff;

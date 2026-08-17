@@ -366,8 +366,8 @@
 /* 4. Quick access pill buttons — brand-aware hover */
 .quick-actions-bar .btn-white:hover {
   background: var(--bs-primary-bg-subtle, #e0f0eb) !important;
-  border-color: var(--bs-primary, #1F5E47) !important;
-  color: var(--bs-primary, #1F5E47) !important;
+  border-color: var(--bs-primary, var(--kinjo-brand)) !important;
+  color: var(--bs-primary, var(--kinjo-brand)) !important;
 }
 
 /* 5. Section zone dividers */
@@ -386,7 +386,7 @@
 }
 .kinjo-zone-header i {
   font-size: 1rem;
-  color: var(--bs-primary, #1F5E47);
+  color: var(--bs-primary, var(--kinjo-brand));
 }
 .kinjo-zone-header .zone-line {
   flex: 1;
@@ -406,7 +406,7 @@
   background: #f0f8f5;
   border: 1px solid #a8d4c4;
   border-radius: 10px;
-  color: #1F5E47;
+  color: var(--kinjo-brand);
   font-size: 0.8125rem;
   font-weight: 600;
 }
@@ -446,7 +446,7 @@
 .kpi-status-item.status-green  { background: #d1fae5; border-color: #a7f3d0; color: #047857; }
 .kpi-status-item.status-amber  { background: #fef3c7; border-color: #fde68a; color: #b45309; }
 .kpi-status-item.status-red    { background: #fee2e2; border-color: #fecaca; color: #b91c1c; }
-.kpi-status-item.status-info   { background: #e0f0eb; border-color: #a8d4c4; color: #1F5E47; }
+.kpi-status-item.status-info   { background: #e0f0eb; border-color: #a8d4c4; color: var(--kinjo-brand); }
 .kpi-status-icon { font-size: 1.25rem; }
 .kpi-status-content .label { font-size: 0.75rem; font-weight: 600; }
 .kpi-status-content .count  { font-size: 1.375rem; font-weight: 800; line-height: 1; }
@@ -478,7 +478,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 
 /* 11. Decision Support section header override */
 #decisionSupportSection .card-header.bg-primary {
-  background: var(--bs-primary, #1F5E47) !important;
+  background: var(--bs-primary, var(--kinjo-brand)) !important;
 }
 
 /* 12. Manager section card headers */
@@ -502,7 +502,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 .action-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(0,0,0,0.1) !important;
-  border-color: var(--bs-primary, #1F5E47) !important;
+  border-color: var(--bs-primary, var(--kinjo-brand)) !important;
 }
 
 /* 14. System stat value consistency */
@@ -557,7 +557,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   border-radius: 8px;
 }
 #overviewTableSearch:focus, #overviewStatusFilter:focus {
-  border-color: var(--bs-primary, #1F5E47);
+  border-color: var(--bs-primary, var(--kinjo-brand));
   box-shadow: 0 0 0 0.2rem rgba(31,94,71,.15);
 }
 #overviewActionToggle.btn-warning {
@@ -623,7 +623,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 }
 .kpi-explain-search:focus {
   outline: none;
-  border-color: #1F5E47;
+  border-color: var(--kinjo-brand);
   box-shadow: 0 0 0 3px rgba(31,94,71,.1);
 }
 
@@ -696,7 +696,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   border-radius: 8px;
   padding: .5rem .875rem;
   font-size: .83rem;
-  color: #1F5E47;
+  color: var(--kinjo-brand);
   direction: rtl;
   white-space: pre-wrap;
   word-break: break-all;
@@ -735,7 +735,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   border-bottom: 1px dashed var(--kinjo-color-border-subtle);
 }
 .kpi-action-list li:last-child { border-bottom: none; }
-.kpi-action-list .ai-icon { color: #1F5E47; flex-shrink: 0; margin-top: 2px; }
+.kpi-action-list .ai-icon { color: var(--kinjo-brand); flex-shrink: 0; margin-top: 2px; }
 
 .kpi-source-badge {
   display: inline-flex;
@@ -765,7 +765,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 
 /* ── Dashboard-Scoped Design Tokens ────────────────────── */
 .admin-uswds-dashboard {
-  --kinjo-dashboard-chart-primary: var(--kinjo-action, #1E40AF);
+  --kinjo-dashboard-chart-primary: var(--kinjo-action);
   --kinjo-dashboard-chart-primary-fill: rgba(30, 64, 175, 0.22);
   --kinjo-dashboard-chart-success: var(--kinjo-color-success, #10b981);
   --kinjo-dashboard-chart-warning: var(--kinjo-color-warning, #f59e0b);
@@ -897,14 +897,14 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   gap: 0.35rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--kinjo-action, #1E40AF);
+  color: var(--kinjo-action);
   text-decoration: none;
   margin-top: 0.5rem;
   transition: color 140ms ease;
 }
 
 .admin-kpi-card-drilldown:hover {
-  color: var(--kinjo-action-hover, #1E3A8A);
+  color: var(--kinjo-action-hover);
   text-decoration: underline;
 }
 

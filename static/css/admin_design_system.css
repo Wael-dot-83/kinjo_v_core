@@ -24,8 +24,8 @@
   /* Interaction colour. Single source of truth is --kinjo-action in
      design-tokens.css — see the brand-vs-action note there before changing it.
      The literals are fallbacks for the few pages that skip design-tokens.css. */
-  --color-primary: var(--kinjo-action, #1e40af);
-  --color-primary-hover: var(--kinjo-action-hover, #1e3a8a);
+  --color-primary: var(--kinjo-action);
+  --color-primary-hover: var(--kinjo-action-hover);
   --color-primary-light: #dbeafe;
   --color-primary-surface: #f8fafc;
   --color-primary-accent: #b49b3b;
@@ -33,7 +33,7 @@
   --color-primary-accent-light: #d6c56b;
 
   /* Secondary Palette */
-  --color-secondary: #2563eb;
+  --color-secondary: var(--kinjo-action);
   --color-secondary-hover: #1d4ed8;
   --color-secondary-light: #dbeafe;
   --color-secondary-surface: #f8fafc;
@@ -54,10 +54,10 @@
   --color-error-light: #fee2e2;
   --color-error-dark: #991b1b;
 
-  --color-info: #2563eb;
+  --color-info: var(--kinjo-action);
   --color-info-hover: #1d4ed8;
   --color-info-light: #dbeafe;
-  --color-info-dark: #1e40af;
+  --color-info-dark: var(--kinjo-action);
 
   /* Gray Scale */
   --color-gray-50: #f8fafc;
@@ -136,7 +136,7 @@ html[dir="ltr"] {
   --z-dropdown: 1000;
 
   /* Backward-compatibility aliases */
-  --color-primary-dark: #1e3a8a;
+  --color-primary-dark: var(--kinjo-action-hover);
 }
 /**
  * KinJo Admin Interface - Elite Design System
@@ -215,11 +215,11 @@ html[dir="ltr"] .sidebar {
   width: var(--sidebar-width, 240px);
   min-width: var(--sidebar-width, 240px);
   min-height: 100vh;
-  background-color: var(--color-primary, #1f5e47);
+  background-color: var(--color-primary, var(--kinjo-brand));
   background-image: linear-gradient(
     180deg,
     #163d2e 0%,
-    #1f5e47 56%,
+    var(--kinjo-brand) 56%,
     #163d2e 100%
   );
   border-inline-end: 1px solid rgba(0, 0, 0, 0.18);
@@ -318,7 +318,9 @@ html[dir="ltr"] .sidebar {
 
 .sidebar-profile-badge {
   display: inline-block;
-  font-size: 0.6rem;
+  /* 0.6rem (9.6px) is below the Arabic legibility floor: Arabic has no
+     x-height fallback and its distinguishing marks disappear first. */
+  font-size: var(--kinjo-font-size-xs, 0.75rem);
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -382,7 +384,7 @@ html[dir="ltr"] .dropdown-menu {
 .dropdown-item:hover,
 .dropdown-item:focus {
   background: #f0f8f5;
-  color: var(--color-primary, #1f5e47);
+  color: var(--color-primary, var(--kinjo-brand));
   outline: none;
 }
 
@@ -508,8 +510,8 @@ html[dir="ltr"] .dropdown-menu {
 
 /* Header */
 .header {
-  background-color: #1f5e47;
-  background-image: linear-gradient(90deg, #163d2e 0%, #1f5e47 60%);
+  background-color: var(--kinjo-brand);
+  background-image: linear-gradient(90deg, #163d2e 0%, var(--kinjo-brand) 60%);
   border-bottom: 1px solid rgba(0, 0, 0, 0.2);
   padding: var(--space-4) var(--space-8);
   display: flex;
@@ -2975,7 +2977,7 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .kd-kpi-blue::before {
-  background: #2563eb;
+  background: var(--kinjo-action);
 }
 .kd-kpi-green::before {
   background: #10b981;
@@ -3436,7 +3438,7 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .kd-action-primary {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: linear-gradient(135deg, var(--kinjo-action), #1d4ed8);
 }
 .kd-action-blue {
   background: linear-gradient(135deg, #0284c7, #0369a1);
@@ -5311,11 +5313,11 @@ html[dir="ltr"] .dropdown-menu {
 
 /* ── Primary buttons ──────────────────────────────────────────────────── */
 .app-container .btn-primary {
-  background: linear-gradient(135deg, #1f5e47, #163d2e) !important;
+  background: linear-gradient(135deg, var(--kinjo-brand), #163d2e) !important;
   box-shadow: 0 1px 3px rgba(31, 94, 71, 0.35) !important;
 }
 .app-container .btn-primary:hover {
-  background: linear-gradient(135deg, #2f7d62, #1f5e47) !important;
+  background: linear-gradient(135deg, #2f7d62, var(--kinjo-brand)) !important;
   box-shadow: 0 4px 12px rgba(31, 94, 71, 0.4) !important;
 }
 .app-container .btn-outline-primary {
@@ -5365,7 +5367,7 @@ html[dir="ltr"] .dropdown-menu {
 
 /* ── Welcome banner ─────────────────────────────────────────────────── */
 .app-container .welcome-banner {
-  background: linear-gradient(135deg, #163d2e 0%, #1f5e47 50%, #2f7d62 100%);
+  background: linear-gradient(135deg, #163d2e 0%, var(--kinjo-brand) 50%, #2f7d62 100%);
 }
 
 /* ── Progress bar kinjo tail (#3b82f6 remnant) ──────────────────────── */
@@ -6484,7 +6486,7 @@ html[dir="ltr"] .dropdown-menu {
 }
 
 .ce-rec-chip__confidence {
-  font-size: 0.6rem;
+  font-size: var(--kinjo-font-size-xs, 0.75rem);
   color: var(--slate-400);
   font-weight: 500;
 }

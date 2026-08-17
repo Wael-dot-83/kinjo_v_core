@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block footer %}{% endblock %}
 
 {% block title %}{{ _('Parent Dashboard') }}{% endblock %}
@@ -373,7 +373,7 @@
                         </div>
                     </div>
                     ${hasReport ? `
-                        <div class="child-card-report-banner" onclick="viewChildTodayReport(${child.id})">
+                        <div class="child-card-report-banner" onclick="viewChildTodayReport(${child.id})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
                             <span class="d-flex align-items-center">
                                 <i class="bi bi-stars text-warning me-2 fs-5"></i>
                                 ${parentText('dashboard.parent.today_report_available', 'تقرير اليوم جاهز للعرض', 'Today report is ready')}

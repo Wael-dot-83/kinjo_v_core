@@ -220,7 +220,7 @@
 .roster-avatar {
   width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(31, 94, 71, .08); color: #1f5e47; font-weight: 700;
+  background: rgba(31, 94, 71, .08); color: var(--kinjo-brand); font-weight: 700;
 }
 .roster-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -234,8 +234,8 @@
   border: 1px solid var(--kinjo-color-border-subtle, #dceae3);
   background: #fff; font-size: 1.1rem; line-height: 1; user-select: none;
 }
-.roster-moods input:checked + label { border-color: #1f5e47; background: rgba(31,94,71,.1); }
-.roster-moods input:focus-visible + label { outline: 2px solid #1e40af; outline-offset: 2px; }
+.roster-moods input:checked + label { border-color: var(--kinjo-brand); background: rgba(31,94,71,.1); }
+.roster-moods input:focus-visible + label { outline: 2px solid var(--kinjo-action); outline-offset: 2px; }
 
 .roster-bar {
   position: sticky; bottom: 0; z-index: 5;

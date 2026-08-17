@@ -224,3 +224,31 @@
   --r-lg: 16px;
   --r-full: 9999px;
 }
+
+/* ---- Increased contrast ------------------------------------------------
+   Windows High Contrast and the iOS/macOS "Increase Contrast" setting both
+   surface here. The product previously answered with one rule across 25
+   stylesheets, which is to say it did not answer.
+
+   Deliberately narrow: this strengthens boundaries and focus, and does NOT
+   repaint surfaces or text. The palette already measures above AA (muted text
+   4.52:1, action blue 8.7:1 — see the notes above), so what a
+   high-contrast user is missing is not colour but *edges*. Component outlines
+   and the focus ring are the two things that thin out first.
+
+   Redefining the tokens means every token-driven component picks this up
+   without a per-component rule, which is the same strategy dark-mode.css uses. */
+@media (prefers-contrast: more) {
+  :root {
+    --kinjo-color-border: #043a25;
+    --kinjo-color-border-subtle: #064E32;
+    --kinjo-color-text-muted: #40505A;
+    --kinjo-focus-ring-width: 3px;
+  }
+
+  /* A focus ring is the single most important affordance to keep visible. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: var(--kinjo-focus-ring-width, 3px) solid var(--kinjo-action);
+    outline-offset: 2px;
+  }
+}

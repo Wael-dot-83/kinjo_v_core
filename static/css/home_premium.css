@@ -55,7 +55,7 @@
   border-radius: 999px;
   background: #FFFFFF;
   border: 1px solid rgba(37, 99, 235, 0.15);
-  color: #2563EB;
+  color: var(--kinjo-action);
   font-size: 0.88rem;
   font-weight: 700;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.04);
@@ -73,7 +73,7 @@
   line-height: 1.3;
   letter-spacing: -0.02em;
   font-weight: 800;
-  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #06B6D4 100%) !important;
+  background: linear-gradient(135deg, var(--kinjo-action-hover) 0%, var(--kinjo-action) 50%, #06B6D4 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   text-shadow: 0 2px 4px rgba(15, 23, 42, 0.02);
@@ -104,14 +104,14 @@
 }
 
 .kinjo-home-actions .btn-primary {
-  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
+  background: linear-gradient(135deg, #3B82F6 0%, var(--kinjo-action) 100%) !important;
   border: none !important;
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15) !important;
   color: #FFFFFF !important;
 }
 
 .kinjo-home-actions .btn-primary:hover {
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+  background: linear-gradient(135deg, var(--kinjo-action) 0%, #1D4ED8 100%) !important;
   transform: translateY(-2px);
   box-shadow: 0 12px 25px rgba(37, 99, 235, 0.25) !important;
 }
@@ -126,7 +126,7 @@
 .kinjo-home-actions .btn-outline-light:hover {
   background: #FFFFFF !important;
   border-color: #3B82F6 !important;
-  color: #2563EB !important;
+  color: var(--kinjo-action) !important;
   transform: translateY(-2px) !important;
   box-shadow: 0 8px 16px rgba(37, 99, 235, 0.04) !important;
 }
@@ -150,7 +150,7 @@
   margin: 0 0 0.25rem;
   font-size: 0.82rem;
   font-weight: 800;
-  color: #1E3A8A;
+  color: var(--kinjo-action-hover);
 }
 
 .kinjo-home-stats dd {
@@ -162,7 +162,7 @@
 
 .kinjo-home-kicker {
   margin: 0 0 0.45rem;
-  color: #2563EB;
+  color: var(--kinjo-action);
   font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -191,7 +191,7 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  background: #1E3A8A;
+  background: var(--kinjo-action-hover);
   color: #FFFFFF;
   font-size: 0.8rem;
   font-weight: 800;
@@ -293,7 +293,7 @@
 
 .kinjo-home-panel-kicker {
   margin: 0 0 1rem;
-  color: #2563EB;
+  color: var(--kinjo-action);
   font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -328,7 +328,7 @@
   padding: 0.35rem 0.7rem;
   border-radius: 999px;
   background: rgba(59, 130, 246, 0.08);
-  color: #2563EB;
+  color: var(--kinjo-action);
   font-size: 0.8rem;
   font-weight: 700;
 }
@@ -361,7 +361,7 @@
   justify-content: center;
   flex: 0 0 auto;
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1));
-  color: #2563EB;
+  color: var(--kinjo-action);
   font-size: 0.95rem;
 }
 
@@ -427,7 +427,7 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(16, 185, 129, 0.08));
-  color: #2563EB;
+  color: var(--kinjo-action);
   font-size: 1.3rem;
   flex-shrink: 0;
 }
@@ -527,7 +527,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: #2563EB;
+  color: var(--kinjo-action);
   font-weight: 700;
   text-decoration: none;
   font-size: 0.9rem;
@@ -642,11 +642,11 @@
 }
 
 .kinjo-navbar .nav-link:hover {
-  color: #2563EB !important;
+  color: var(--kinjo-action) !important;
 }
 
 .kinjo-navbar .nav-link.active {
-  color: #2563EB !important;
+  color: var(--kinjo-action) !important;
 }
 
 .kinjo-navbar .nav-link.active::after {
@@ -656,7 +656,7 @@
   inset-inline-start: 10%;
   width: 80%;
   height: 3px;
-  background: #2563EB;
+  background: var(--kinjo-action);
   border-radius: 999px;
   animation: fadeInUp 0.3s ease;
 }
@@ -673,7 +673,7 @@
 
 .navbar-action-btn:hover {
   border-color: #3B82F6 !important;
-  color: #2563EB !important;
+  color: var(--kinjo-action) !important;
   background: rgba(59, 130, 246, 0.04) !important;
 }
 
@@ -694,14 +694,14 @@
 }
 
 .kj-footer-logo-text {
-  color: #1E3A8A !important;
+  color: var(--kinjo-action-hover) !important;
   font-weight: 800 !important;
 }
 
 .kj-footer-badge {
   background: rgba(37, 99, 235, 0.06) !important;
   border: 1px solid rgba(37, 99, 235, 0.15) !important;
-  color: #2563EB !important;
+  color: var(--kinjo-action) !important;
 }
 
 .kj-footer-desc {
@@ -714,7 +714,7 @@
 }
 
 .kj-footer-link:hover {
-  color: #2563EB !important;
+  color: var(--kinjo-action) !important;
   transform: translateX(4px) !important;
 }
 

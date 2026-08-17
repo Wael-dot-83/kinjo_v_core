@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block footer %}{% endblock %}
 {% block title %}{{ _('الرسائل') }} — KinJo{% endblock %}
 
@@ -208,7 +208,7 @@
                 : `<span class="badge badge-soft badge-soft-primary badge-xs">{{ _('جديد') }}</span>`;
             const preview = (msg.body || '').slice(0, 80);
             return `
-            <div class="msg-item ${unread}" onclick="openMessage(${msg.id})">
+            <div class="msg-item ${unread}" onclick="openMessage(${msg.id})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
                 <div class="msg-avatar"><i class="bi bi-person-badge-fill"></i></div>
                 <div class="flex-grow-1 min-width-0">
                     <div class="d-flex justify-content-between align-items-start gap-2">

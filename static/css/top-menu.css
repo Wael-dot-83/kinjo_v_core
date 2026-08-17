@@ -81,20 +81,20 @@
 }
 
 .top-menu-link:focus-visible {
-  outline: 2px solid var(--admin-nav-accent, #2563eb);
+  outline: 2px solid var(--admin-nav-accent, var(--kinjo-action));
   outline-offset: -2px;
 }
 
 /* Active workspace marker */
 .top-menu-link.active {
-  color: var(--admin-nav-accent, #2563eb);
+  color: var(--admin-nav-accent, var(--kinjo-action));
   font-weight: 600;
-  border-block-end-color: var(--admin-nav-accent, #2563eb);
+  border-block-end-color: var(--admin-nav-accent, var(--kinjo-action));
 }
 
 .top-menu-link.active i.nav-icon,
 .top-menu-link.active .nav-chevron {
-  color: var(--admin-nav-accent, #2563eb);
+  color: var(--admin-nav-accent, var(--kinjo-action));
 }
 
 .top-menu-item.open .nav-chevron {
@@ -168,13 +168,13 @@
 
 .dropdown-item.active {
   background-color: var(--admin-nav-accent-soft, #eff6ff);
-  color: var(--admin-nav-accent, #2563eb);
+  color: var(--admin-nav-accent, var(--kinjo-action));
   font-weight: 600;
-  border-inline-start-color: var(--admin-nav-accent, #2563eb);
+  border-inline-start-color: var(--admin-nav-accent, var(--kinjo-action));
 }
 
 .dropdown-item.active i {
-  color: var(--admin-nav-accent, #2563eb);
+  color: var(--admin-nav-accent, var(--kinjo-action));
 }
 
 .dropdown-group-label {
@@ -216,8 +216,8 @@
 .mobile-nav-toggle-btn:hover,
 .mobile-nav-toggle-btn:focus-visible {
   background-color: var(--admin-nav-hover, #f1f5f9);
-  color: var(--admin-nav-accent, #2563eb);
-  outline: 2px solid var(--admin-nav-accent, #2563eb);
+  color: var(--admin-nav-accent, var(--kinjo-action));
+  outline: 2px solid var(--admin-nav-accent, var(--kinjo-action));
   outline-offset: 1px;
 }
 
@@ -304,7 +304,7 @@
 .mobile-nav-close-btn:focus-visible {
   background-color: var(--admin-nav-hover, #e2e8f0);
   color: var(--admin-nav-ink-strong, #0f172a);
-  outline: 2px solid var(--admin-nav-accent, #2563eb);
+  outline: 2px solid var(--admin-nav-accent, var(--kinjo-action));
 }
 
 .mobile-nav-body {
@@ -343,16 +343,16 @@
 .mobile-nav-section-btn:hover,
 .mobile-nav-section-btn:focus-visible {
   background-color: var(--admin-nav-accent-soft, #eff6ff);
-  color: var(--admin-nav-accent, #2563eb);
-  border-color: var(--admin-nav-accent, #2563eb);
-  outline: 2px solid var(--admin-nav-accent, #2563eb);
+  color: var(--admin-nav-accent, var(--kinjo-action));
+  border-color: var(--admin-nav-accent, var(--kinjo-action));
+  outline: 2px solid var(--admin-nav-accent, var(--kinjo-action));
   outline-offset: -1px;
 }
 
 .mobile-nav-section-btn.active {
   background-color: var(--admin-nav-accent-soft, #eff6ff);
-  color: var(--admin-nav-accent, #2563eb);
-  border-color: var(--admin-nav-accent, #2563eb);
+  color: var(--admin-nav-accent, var(--kinjo-action));
+  border-color: var(--admin-nav-accent, var(--kinjo-action));
 }
 
 .mobile-nav-section-btn .section-chevron {
@@ -405,17 +405,17 @@
 .mobile-nav-link:focus-visible {
   background-color: var(--admin-nav-hover, #f1f5f9);
   color: var(--admin-nav-ink-strong, #0f172a);
-  outline: 2px solid var(--admin-nav-accent, #2563eb);
+  outline: 2px solid var(--admin-nav-accent, var(--kinjo-action));
 }
 
 .mobile-nav-link.active {
   background-color: var(--admin-nav-accent-soft, #eff6ff);
-  color: var(--admin-nav-accent, #2563eb);
+  color: var(--admin-nav-accent, var(--kinjo-action));
   font-weight: 600;
 }
 
 .mobile-nav-link.active i {
-  color: var(--admin-nav-accent, #2563eb);
+  color: var(--admin-nav-accent, var(--kinjo-action));
 }
 
 /* ============================================================================

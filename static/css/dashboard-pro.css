@@ -431,7 +431,7 @@
 
 /* Main Panel Modernization */
 .admin-page-header {
-    background: linear-gradient(135deg, #163d2e 0%, #1F5E47 60%, #2F7D62 100%);
+    background: linear-gradient(135deg, #163d2e 0%, var(--kinjo-brand) 60%, #2F7D62 100%);
     color: #ffffff;
     padding: 1.75rem 2rem;
     border-radius: 12px;

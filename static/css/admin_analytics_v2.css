@@ -7,7 +7,7 @@
 /* ── 1. Design Tokens ───────────────────────────────────────────────────────── */
 :root {
   /* Brand */
-  --az-primary: #2563eb;
+  --az-primary: var(--kinjo-action);
   --az-primary-hover: #1d4ed8;
   --az-primary-light: #eff6ff;
   --az-primary-mid: #bfdbfe;
@@ -1023,7 +1023,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 .risk-cell:focus-visible {
-  outline: 3px solid var(--az-primary, #2563eb);
+  outline: 3px solid var(--az-primary, var(--kinjo-action));
   outline-offset: 2px;
 }
 .risk-cell__name {
@@ -1755,7 +1755,11 @@
   margin-right: auto;
 }
 
-toast[dir="rtl"] .toast-body {
+/* Was `toast[dir="rtl"]` — an element selector for a <toast> tag that does not
+   exist, so this rule matched nothing. It went unnoticed because the correctly
+   written rule above already covers the case; kept as a scoped duplicate rather
+   than deleted, since .toast can carry dir itself. */
+.toast[dir="rtl"] .toast-body {
   text-align: right;
 }
 

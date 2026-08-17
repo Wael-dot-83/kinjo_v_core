@@ -1,11 +1,11 @@
-﻿{% extends "admin_base.html" %}
+{% extends "admin_base.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %} — KinJo{% endblock %}
 
 {% block extra_head %}
 <style>
 :root {
-  --color-primary: #1F5E47;
+  --color-primary: var(--kinjo-brand);
   --color-primary-600: #2F7D62;
   --color-primary-50: rgba(31,94,71,0.07);
 }
@@ -76,7 +76,7 @@
 
 /* ── Stat widgets ── */
 .profile-stat-card {
-  background: #fff;
+  background: var(--kinjo-color-bg-surface, #fff);
   border: 1px solid rgba(0,0,0,.08);
   border-radius: 12px;
   padding: 1.1rem 1.25rem;
@@ -102,7 +102,7 @@
 
 /* ── Section cards ── */
 .profile-section-card {
-  background: #fff;
+  background: var(--kinjo-color-bg-surface, #fff);
   border: 1px solid rgba(0,0,0,.08);
   border-radius: 14px;
   overflow: hidden;
@@ -153,11 +153,11 @@
   font-size: .88rem;
   outline: none;
   transition: border-color .15s;
-  background: #fff;
-  color: #111;
+  background: var(--kinjo-color-bg-surface, #fff);
+  color: var(--kinjo-color-text-primary, #111);
 }
 .profile-form-control:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(31,94,71,.12); }
-.profile-form-control[readonly] { background: #f9fafb; color: #6b7280; cursor: default; }
+.profile-form-control[readonly] { background: var(--kinjo-color-bg-hover, #f9fafb); color: var(--kinjo-color-text-muted, #6b7280); cursor: default; }
 
 /* ── Buttons ── */
 .btn-profile-primary {
@@ -261,7 +261,7 @@
 }
 [dir="rtl"] #profile-toast-container { right: auto; left: 1.5rem; }
 .profile-toast {
-  background: #1F5E47;
+  background: var(--kinjo-brand);
   color: #fff;
   border-radius: 10px;
   padding: .75rem 1.25rem;
@@ -727,7 +727,7 @@
     <div class="table-responsive">
       <table class="table table-hover mb-0" aria-label="{% if ui_lang == 'en' %}Recent activity{% else %}النشاط الأخير{% endif %}">
         <thead>
-          <tr style="font-size:.76rem;color:#6b7280;background:#f9fafb;">
+          <tr style="font-size:.76rem;color:var(--kinjo-color-text-muted,#6b7280);background:var(--kinjo-color-bg-hover,#f9fafb);">
             <th scope="col" class="ps-3 py-2 fw-semibold">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</th>
             <th scope="col" class="py-2 fw-semibold">{% if ui_lang == 'en' %}Entity{% else %}الكيان{% endif %}</th>
             <th scope="col" class="py-2 fw-semibold">{% if ui_lang == 'en' %}IP Address{% else %}عنوان IP{% endif %}</th>

@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block footer %}{% endblock %} {% set STATUS_LABELS
 = { 'APPROVED': _('Approved'), 'DRAFT': _('Draft'), 'REJECTED': _('Rejected'),
 'SUBMITTED': _('Under Review'), 'SENT_TO_PARENT': _('Sent'), 'RETURNED':
@@ -11,7 +11,7 @@ endblock %} {% block extra_css %}
     --reports-surface: #ffffff;
     --reports-surface-soft: #f5faf7;
     --reports-border: rgba(31, 94, 71, 0.12);
-    --reports-accent: #1f5e47;
+    --reports-accent: var(--kinjo-brand);
     --reports-accent-soft: #dcefe7;
     --reports-warm: #c98743;
     --reports-shadow: 0 20px 48px rgba(16, 24, 40, 0.08);

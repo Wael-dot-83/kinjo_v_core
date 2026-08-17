@@ -5,7 +5,7 @@
     --profile-surface-soft: #f6fbf8;
     --profile-border: rgba(31, 94, 71, 0.12);
     --profile-shadow: 0 24px 60px rgba(20, 44, 37, 0.08);
-    --profile-accent: #1f5e47;
+    --profile-accent: var(--kinjo-brand);
     --profile-accent-soft: #dcefe7;
     --profile-warm: #c98743;
     --profile-hero-pos: top right;
@@ -28,7 +28,7 @@
         rgba(201, 135, 67, 0.18),
         transparent 28%
       ),
-      linear-gradient(135deg, #163d2e 0%, #1f5e47 55%, #2f7d62 100%);
+      linear-gradient(135deg, #163d2e 0%, var(--kinjo-brand) 55%, #2f7d62 100%);
     color: #fff;
   }
 
@@ -195,7 +195,7 @@
   .parent-profile-shell .profile-progress > span {
     display: block;
     height: 100%;
-    background: linear-gradient(90deg, #1f5e47 0%, #c98743 100%);
+    background: linear-gradient(90deg, var(--kinjo-brand) 0%, #c98743 100%);
     border-radius: inherit;
     transition: width 0.25s ease;
   }

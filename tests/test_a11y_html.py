@@ -29,8 +29,25 @@ _NESTED_LABEL_RE = re.compile(
 )
 
 
+_SCRIPT_RE = re.compile(r"<script\b[^>]*>.*?</script>", re.IGNORECASE | re.DOTALL)
+_HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+
+
+def _rendered_markup(html: str) -> str:
+    """The markup a browser actually builds a DOM from.
+
+    Inline <script> bodies and HTML comments are not DOM elements, and scanning
+    them produced false positives that made this test untrustworthy: client-side
+    templates yielded ids of `${c.id}` and `${user.id}`, and a JS comment that
+    merely mentioned `<nav id="pagination">` was counted as a second element with
+    that id. Every one of those was reported as a duplicate-id failure against a
+    page that had none.
+    """
+    return _HTML_COMMENT_RE.sub("", _SCRIPT_RE.sub("", html))
+
+
 def _collect_ids(html: str) -> list[str]:
-    return _ID_RE.findall(html)
+    return _ID_RE.findall(_rendered_markup(html))
 
 
 def _duplicate_ids(html: str) -> list[str]:
@@ -41,6 +58,7 @@ def _duplicate_ids(html: str) -> list[str]:
 def _unlabelled_inputs(html: str) -> list[str]:
     """Return IDs of inputs that have no <label for=>, no aria-label,
     no aria-labelledby, and are not nested inside a <label>."""
+    html = _rendered_markup(html)
     label_targets = set(_LABEL_FOR_RE.findall(html))
     labelledby_targets = set(_ARIA_LABELLEDBY_RE.findall(html))
     nested_re = _NESTED_LABEL_RE
@@ -49,6 +67,12 @@ def _unlabelled_inputs(html: str) -> list[str]:
     unlabelled = []
     for m in _INPUT_ID_RE.finditer(html):
         tag, id_ = m.group(1), m.group(2)
+        tag_end_idx = html.find(">", m.start())
+        whole_tag = html[m.start(): tag_end_idx] if tag_end_idx != -1 else m.group(0)
+        # A hidden input is not a control anyone can see or focus, so it has
+        # nothing to label. Requiring one produced noise, not accessibility.
+        if re.search(r'type\s*=\s*["\']hidden["\']', whole_tag, re.IGNORECASE):
+            continue
         if id_ in label_targets:
             continue
         if id_ in labelledby_targets:
@@ -83,10 +107,50 @@ def admin_client(admin_token):
 # Tests: duplicate IDs
 # ---------------------------------------------------------------------------
 
+# Every admin page route that renders without a path parameter.
+#
+# This list held three entries while the admin shipped thirty-five such pages,
+# so the guarantee covered under a tenth of the surface it appeared to cover.
+# The markup turned out to be in good shape when the rest was audited by hand --
+# which is the argument for checking it automatically rather than the argument
+# against. Each test skips a route that 404s or redirects, so adding a page here
+# costs nothing when the route is unavailable in the test environment.
 ADMIN_PAGES_NO_DUP_ID = [
-    "/admin/analytics/reports",
+    "/admin/alerts",
+    "/admin/analytics",
+    "/admin/analytics/charts",
+    "/admin/analytics/daily-reports",
     "/admin/analytics/dashboard",
+    "/admin/analytics/decision-support",
+    "/admin/analytics/reports",
+    "/admin/audit-logs",
+    "/admin/classification",
+    "/admin/contact-messages",
+    "/admin/daily-reports-organization",
+    "/admin/dashboard",
     "/admin/governance-reports",
+    "/admin/governance/reminders",
+    "/admin/heatmap",
+    "/admin/help",
+    "/admin/impersonate",
+    "/admin/import-kindergartens",
+    "/admin/import-logs",
+    "/admin/imported-kindergartens",
+    "/admin/kg-overview",
+    "/admin/kindergartens",
+    "/admin/kindergartens/new",
+    "/admin/kpi",
+    "/admin/messages",
+    "/admin/messages/compose",
+    "/admin/observability",
+    "/admin/profile",
+    "/admin/reports/incidents",
+    "/admin/reports/incidents/generate",
+    "/admin/safety-analytics",
+    "/admin/settings",
+    "/admin/users",
+    "/admin/users/create",
+    "/admin/users/import",
 ]
 
 
@@ -122,7 +186,7 @@ def test_inputs_have_labels(admin_client, path):
 # Tests: DOCTYPE and html[lang]
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("path", ["/admin/analytics/reports", "/admin/analytics/dashboard"])
+@pytest.mark.parametrize("path", ADMIN_PAGES_NO_DUP_ID)
 def test_doctype_present(admin_client, path):
     r = admin_client.get(path)
     if r.status_code in (404, 307):
@@ -132,7 +196,7 @@ def test_doctype_present(admin_client, path):
     )
 
 
-@pytest.mark.parametrize("path", ["/admin/analytics/reports", "/admin/analytics/dashboard"])
+@pytest.mark.parametrize("path", ADMIN_PAGES_NO_DUP_ID)
 def test_html_lang_attribute(admin_client, path):
     r = admin_client.get(path)
     if r.status_code in (404, 307):

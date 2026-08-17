@@ -1,8 +1,8 @@
 {% extends "admin_base.html" %} {% block title %} {% if ui_lang == 'en' %}KinJo Admin{% else %}إدارة KinJo{% endif %} — {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %} {% endblock %}
 {% block extra_head %} {{ super() }}
 <link rel="stylesheet" href="/static/vendor/uswds/css/uswds.min.css" />
-<link rel="stylesheet" href="/static/css/agency_reports.css?v=3.2" />
-<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=abb86b7882d9" />
+<link rel="stylesheet" href="/static/css/agency_reports.css?v=7e56bad8b279" />
+<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=294cfdd2415c" />
 <style>
   /* USWDS ships a Latin-only type stack (Source Sans Pro Web) and applies it to
    .usa-prose / .usa-summary-box. It loads after kinjo.css, so it beat the Arabic
@@ -24,8 +24,8 @@
     --dashboard-border: #d7dee8;
     /* Was #005ea8 (USWDS blue) — a fourth competing "primary". Points at the one
      source of truth; see the brand-vs-action note in design-tokens.css. */
-    --dashboard-primary: var(--kinjo-action, #1e40af);
-    --dashboard-primary-dark: var(--kinjo-action-hover, #1e3a8a);
+    --dashboard-primary: var(--kinjo-action);
+    --dashboard-primary-dark: var(--kinjo-action-hover);
     --dashboard-accent: #2e8540;
     display: flex;
     flex-direction: column;
@@ -89,7 +89,7 @@
     padding: 0.25rem 0.55rem;
     border: 1px solid var(--dashboard-border);
     border-radius: 999px;
-    background: #ffffff;
+    background: var(--kinjo-color-bg-surface, #ffffff);
   }
 
   .admin-uswds-dashboard .admin-auto-refresh .form-check-label {
@@ -173,7 +173,7 @@
     padding: 1rem;
     border: 1px solid var(--dashboard-border);
     border-radius: 0.5rem;
-    background: #ffffff;
+    background: var(--kinjo-color-bg-surface, #ffffff);
   }
 
   .admin-uswds-dashboard .admin-skeleton-icon,

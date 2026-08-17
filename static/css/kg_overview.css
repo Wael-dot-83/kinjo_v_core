@@ -16,13 +16,13 @@
   --ko-bg:          #f4f6fb;
   --ko-surface:     #ffffff;
   --ko-surface2:    #f8f9fc;
-  --ko-border:      var(--kinjo-color-border, #064E32);
+  --ko-border:      var(--kinjo-color-border);
   --ko-text:        #1a2233;
   --ko-text-muted:  #6b7a99;
   --ko-text-light:  #a0aec0;
 
   /* Accent colours */
-  --ko-blue:   #2563eb;
+  --ko-blue:   var(--kinjo-action);
   --ko-teal:   #0891b2;
   --ko-green:  #16a34a;
   --ko-amber:  #d97706;

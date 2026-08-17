@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block footer %}{% endblock %}
 {% block title %}{{ _('Select Kindergarten') }} — KinJo{% endblock %}
 
@@ -68,7 +68,7 @@
             const list = document.getElementById('kgList');
             list.innerHTML = kgs.map(kg => `
                 <div class="col-md-6">
-                    <div class="card kg-card h-100" data-kg-id="${kg.id}" data-kg-name="${escHtml(kg.name_ar)}" onclick="selectKGFromCard(this)">
+                    <div class="card kg-card h-100" data-kg-id="${kg.id}" data-kg-name="${escHtml(kg.name_ar)}" onclick="selectKGFromCard(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
                         <div class="card-body">
                             <h6 class="fw-700 mb-1">${escHtml(kg.name_ar)}</h6>
                             ${kg.name_en ? `<p class="text-muted small mb-2">${escHtml(kg.name_en)}</p>` : ''}

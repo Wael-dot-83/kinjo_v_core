@@ -300,7 +300,8 @@
         <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
             <span><i class="bi bi-people"></i> {% if ui_lang == 'en' %}Children{% else %}الأطفال{% endif %}</span>
             <div>
-                <select id="childrenPageSize" class="form-select form-select-sm d-inline-block w-auto">
+                <select id="childrenPageSize" class="form-select form-select-sm d-inline-block w-auto"
+                    aria-label="{% if ui_lang == 'en' %}Children per page{% else %}عدد الأطفال في الصفحة{% endif %}">
                     <option value="25">25</option>
                     <option value="50">50</option>
                     <option value="100">100</option>
@@ -316,7 +317,7 @@
                         <th>{% if ui_lang == 'en' %}Last Report{% else %}آخر تقرير{% endif %}</th>
                         <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
                         <th>{% if ui_lang == 'en' %}Mood{% else %}المزاج{% endif %}</th>
-                        <th></th>
+                        <th><span class="visually-hidden">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</span></th>
                     </tr>
                 </thead>
                 <tbody id="childrenTableBody"></tbody>

@@ -7,7 +7,7 @@
       <i class="bi bi-speedometer2 me-2"></i>
       {{ _('Observability Dashboard') if ui_lang == 'en' else 'لوحة مراقبة النظام' }}
     </h1>
-    <span id="last-updated"class="text-muted small"></span>
+    <span id="last-updated" class="text-muted small"></span>
   </div>
 
   <div class="row g-3 mb-4">
@@ -18,8 +18,8 @@
             <span class="text-muted small">{{ _('API p95 Latency') if ui_lang == 'en' else 'زمن استجابة p95' }}</span>
             <i class="bi bi-clock-history text-primary"></i>
           </div>
-          <div class="h3 mb-0"id="latency-p95">--</div>
-          <small class="text-muted"id="latency-status"></small>
+          <div class="h3 mb-0" id="latency-p95">--</div>
+          <small class="text-muted" id="latency-status"></small>
         </div>
       </div>
     </div>
@@ -30,8 +30,8 @@
             <span class="text-muted small">{{ _('Error Rate') if ui_lang == 'en' else 'معدل الخطأ' }}</span>
             <i class="bi bi-exclamation-triangle text-warning"></i>
           </div>
-          <div class="h3 mb-0"id="error-rate">--</div>
-          <small class="text-muted"id="error-rate-status"></small>
+          <div class="h3 mb-0" id="error-rate">--</div>
+          <small class="text-muted" id="error-rate-status"></small>
         </div>
       </div>
     </div>
@@ -42,8 +42,8 @@
             <span class="text-muted small">{{ _('Cache Hit Rate') if ui_lang == 'en' else 'معدل الاستفادة من ذاكرة التخزين المؤقت' }}</span>
             <i class="bi bi-database text-success"></i>
           </div>
-          <div class="h3 mb-0"id="cache-hit-rate">--</div>
-          <small class="text-muted"id="cache-status"></small>
+          <div class="h3 mb-0" id="cache-hit-rate">--</div>
+          <small class="text-muted" id="cache-status"></small>
         </div>
       </div>
     </div>
@@ -54,8 +54,8 @@
             <span class="text-muted small">{{ _('Alert Quality') if ui_lang == 'en' else 'جودة التنبيهات' }}</span>
             <i class="bi bi-bell text-info"></i>
           </div>
-          <div class="h3 mb-0"id="alert-health">--</div>
-          <small class="text-muted"id="alert-snr"></small>
+          <div class="h3 mb-0" id="alert-health">--</div>
+          <small class="text-muted" id="alert-snr"></small>
         </div>
       </div>
     </div>
@@ -69,8 +69,8 @@
             <span class="text-muted small">{{ _('Data Freshness') if ui_lang == 'en' else 'حداثة البيانات' }}</span>
             <i class="bi bi-clock text-success"></i>
           </div>
-          <div class="h3 mb-0"id="data-freshness">--</div>
-          <small class="text-muted"id="freshness-status"></small>
+          <div class="h3 mb-0" id="data-freshness">--</div>
+          <small class="text-muted" id="freshness-status"></small>
         </div>
       </div>
     </div>
@@ -81,8 +81,8 @@
             <span class="text-muted small">{{ _('Data Quality') if ui_lang == 'en' else 'جودة البيانات' }}</span>
             <i class="bi bi-shield-check text-primary"></i>
           </div>
-          <div class="h3 mb-0"id="data-quality-score">--</div>
-          <small class="text-muted"id="data-quality-status"></small>
+          <div class="h3 mb-0" id="data-quality-score">--</div>
+          <small class="text-muted" id="data-quality-status"></small>
         </div>
       </div>
     </div>
@@ -93,8 +93,8 @@
             <span class="text-muted small">{{ _('Total Requests') if ui_lang == 'en' else 'إجمالي الطلبات' }}</span>
             <i class="bi bi-graph-up text-info"></i>
           </div>
-          <div class="h3 mb-0"id="total-requests">--</div>
-          <small class="text-muted"id="requests-status"></small>
+          <div class="h3 mb-0" id="total-requests">--</div>
+          <small class="text-muted" id="requests-status"></small>
         </div>
       </div>
     </div>
@@ -105,8 +105,8 @@
             <span class="text-muted small">{{ _('Web Vitals (LCP p95)') if ui_lang == 'en' else 'مؤشرات أداء الويب (LCP عند المئين 95)' }}</span>
             <i class="bi bi-window text-secondary"></i>
           </div>
-          <div class="h3 mb-0"id="web-vitals-lcp">--</div>
-          <small class="text-muted"id="vitals-status"></small>
+          <div class="h3 mb-0" id="web-vitals-lcp">--</div>
+          <small class="text-muted" id="vitals-status"></small>
         </div>
       </div>
     </div>
@@ -119,7 +119,7 @@
           <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>{{ _('Endpoint Latency p95 (ms)') if ui_lang == 'en' else 'زمن استجابة p95 (ميلي ثانية)' }}</h6>
         </div>
         <div class="card-body">
-          <div id="endpoint-latency-chart"style="min-height: 300px;"></div>
+          <div id="endpoint-latency-chart" style="min-height: 300px;"></div>
         </div>
       </div>
     </div>
@@ -139,7 +139,7 @@
               </tr>
             </thead>
             <tbody id="quality-table-body">
-              <tr><td colspan="3"class="text-center text-muted">{{ _('Loading...') if ui_lang == 'en' else 'جارٍ تحميل البيانات، يرجى الانتظار.' }}</td></tr>
+              <tr><td colspan="3" class="text-center text-muted">{{ _('Loading...') if ui_lang == 'en' else 'جارٍ تحميل البيانات، يرجى الانتظار.' }}</td></tr>
             </tbody>
           </table>
         </div>

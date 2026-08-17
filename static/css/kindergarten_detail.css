@@ -11,7 +11,7 @@
   /* Brand Palette */
   --kj-green-900:  #0d3324;
   --kj-green-800:  #163d2e;
-  --kj-green-700:  #1F5E47;
+  --kj-green-700:  var(--kinjo-brand);
   --kj-green-600:  #2F7D62;
   --kj-green-400:  #4ade9a;
   --kj-green-100:  #e0f0eb;

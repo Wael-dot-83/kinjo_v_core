@@ -10,7 +10,7 @@
       <!-- Anti-FOUC: html is hidden until CSS+JS are ready. Revealed by inline script at end of body. -->
       <!-- noscript fallback: reveal immediately if JS is disabled -->
       <noscript><style>html{visibility:visible!important}</style></noscript>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta name="viewport" content=" width=device-width, initial-scale=1.0" />
       <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
       <!-- Accessibility preferences: applied before CSS loads to avoid a flash of unstyled content -->
       <script>
@@ -82,12 +82,12 @@
       <!-- Brand token override: loaded AFTER Bootstrap so our values win over --bs-primary: #0d6efd -->
       <style>
         :root {
-          --bs-primary:               #1F5E47;
+          --bs-primary:               var(--kinjo-brand);
           --bs-primary-rgb:           31, 94, 71;
           --bs-primary-bg-subtle:     #e0f0eb;
           --bs-primary-border-subtle: #a8d4c4;
           --bs-primary-text-emphasis: #163d2e;
-          --bs-link-color:            #1F5E47;
+          --bs-link-color:            var(--kinjo-brand);
           --bs-link-color-rgb:        31, 94, 71;
           --bs-link-hover-color:      #2F7D62;
           --bs-link-hover-color-rgb:  47, 125, 98;
@@ -99,19 +99,19 @@
           --bs-info-text-emphasis:    #163d2e;
         }
         .form-check-input:checked {
-          background-color: #1F5E47 !important;
-          border-color: #1F5E47 !important;
+          background-color: var(--kinjo-brand) !important;
+          border-color: var(--kinjo-brand) !important;
         }
         .form-check-input:focus {
-          border-color: #1F5E47 !important;
+          border-color: var(--kinjo-brand) !important;
           box-shadow: 0 0 0 0.25rem rgba(31, 94, 71, 0.25) !important;
         }
         /* Bootstrap 5.3 uses component-scoped CSS vars for .btn-primary that
            do NOT inherit from :root --bs-primary. Override all of them here. */
         .btn-primary {
           --bs-btn-color: #fff;
-          --bs-btn-bg: #1F5E47;
-          --bs-btn-border-color: #1F5E47;
+          --bs-btn-bg: var(--kinjo-brand);
+          --bs-btn-border-color: var(--kinjo-brand);
           --bs-btn-hover-color: #fff;
           --bs-btn-hover-bg: #163d2e;
           --bs-btn-hover-border-color: #163d2e;
@@ -119,19 +119,19 @@
           --bs-btn-active-color: #fff;
           --bs-btn-active-bg: #163d2e;
           --bs-btn-active-border-color: #163d2e;
-          --bs-btn-disabled-bg: #1F5E47;
-          --bs-btn-disabled-border-color: #1F5E47;
+          --bs-btn-disabled-bg: var(--kinjo-brand);
+          --bs-btn-disabled-border-color: var(--kinjo-brand);
         }
         .btn-outline-primary {
-          --bs-btn-color: #1F5E47;
-          --bs-btn-border-color: #1F5E47;
+          --bs-btn-color: var(--kinjo-brand);
+          --bs-btn-border-color: var(--kinjo-brand);
           --bs-btn-hover-color: #fff;
-          --bs-btn-hover-bg: #1F5E47;
-          --bs-btn-hover-border-color: #1F5E47;
+          --bs-btn-hover-bg: var(--kinjo-brand);
+          --bs-btn-hover-border-color: var(--kinjo-brand);
           --bs-btn-focus-shadow-rgb: 31, 94, 71;
           --bs-btn-active-color: #fff;
-          --bs-btn-active-bg: #1F5E47;
-          --bs-btn-active-border-color: #1F5E47;
+          --bs-btn-active-bg: var(--kinjo-brand);
+          --bs-btn-active-border-color: var(--kinjo-brand);
         }
         /* Bootstrap .btn-info/.btn-outline-info use component-scoped vars
            that do NOT inherit from :root --bs-info — must override explicitly. */
@@ -140,12 +140,12 @@
           --bs-btn-bg: #2F7D62;
           --bs-btn-border-color: #2F7D62;
           --bs-btn-hover-color: #fff;
-          --bs-btn-hover-bg: #1F5E47;
-          --bs-btn-hover-border-color: #1F5E47;
+          --bs-btn-hover-bg: var(--kinjo-brand);
+          --bs-btn-hover-border-color: var(--kinjo-brand);
           --bs-btn-focus-shadow-rgb: 47, 125, 98;
           --bs-btn-active-color: #fff;
-          --bs-btn-active-bg: #1F5E47;
-          --bs-btn-active-border-color: #1F5E47;
+          --bs-btn-active-bg: var(--kinjo-brand);
+          --bs-btn-active-border-color: var(--kinjo-brand);
           --bs-btn-disabled-bg: #2F7D62;
           --bs-btn-disabled-border-color: #2F7D62;
         }
@@ -163,9 +163,9 @@
       </style>
 
       <!-- Custom CSS -->
-      <link rel="stylesheet" href="/static/css/kinjo.css?v=20260814" />
-      <link rel="stylesheet" href="/static/css/parent-dashboard.css?v=1.0" />
-      <link rel="stylesheet" href="/static/css/chatbot.css?v=20260818" />
+      <link rel="stylesheet" href="/static/css/kinjo.css?v=8687d9fa67e3" />
+      <link rel="stylesheet" href="/static/css/parent-dashboard.css?v=82d4d53a3bfc" />
+      <link rel="stylesheet" href="/static/css/chatbot.css?v=a4fe39051d59" />
       {% if ui_dir == 'rtl' %}
       <link
         rel="stylesheet"
@@ -370,8 +370,8 @@
           align-items: center;
           justify-content: center;
           background: #fff;
-          color: var(--kinjo-primary, #1F5E47);
-          border: 1.5px solid var(--kinjo-primary, #1F5E47);
+          color: var(--kinjo-primary, var(--kinjo-brand));
+          border: 1.5px solid var(--kinjo-primary, var(--kinjo-brand));
           box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
           cursor: pointer;
           font-size: 1.1rem;
@@ -411,9 +411,9 @@
           cursor: pointer;
         }
         .a11y-opt-btn.active {
-          background: var(--kinjo-primary, #1F5E47);
+          background: var(--kinjo-primary, var(--kinjo-brand));
           color: #fff;
-          border-color: var(--kinjo-primary, #1F5E47);
+          border-color: var(--kinjo-primary, var(--kinjo-brand));
         }
         .a11y-reset-btn {
           width: 100%;
@@ -447,7 +447,7 @@
           display: none;
           align-items: center;
           justify-content: center;
-          background: var(--kinjo-primary, #1F5E47);
+          background: var(--kinjo-primary, var(--kinjo-brand));
           color: #fff;
           border: none;
           box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);

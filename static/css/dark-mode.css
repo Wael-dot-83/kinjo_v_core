@@ -16,9 +16,21 @@
   --shell-ink:#111827; --shell-ink-2:#374151; --shell-ink-3:#6b7280;
 }
 
-/* ---- Dark token values (both --kinjo-color-* and --kinjo-* namespaces) ---- */
+/* ---- Dark token values (both --kinjo-color-* and --kinjo-* namespaces) ----
+
+   Guarded as :root:not([data-theme="light"]) rather than a bare :root. The bare
+   form meant the OS preference applied even when the user had explicitly chosen
+   light in the app: [data-theme="light"] sets no tokens of its own (the base
+   values are already light), so there was nothing to out-specify the media
+   query and the explicit choice lost to the OS. With a theme switcher in the
+   masthead that is no longer theoretical.
+
+   The three states this has to serve:
+     no [data-theme]        -> follow the OS  (this block)
+     [data-theme="light"]   -> base tokens, OS ignored
+     [data-theme="dark"]    -> the block below, OS ignored                   */
 @media (prefers-color-scheme: dark){
-  :root{
+  :root:not([data-theme="light"]){
     --kinjo-color-bg-body:#0b1220; --kinjo-color-bg-surface:#1e293b;
     --kinjo-color-bg-hover:#0f172a; --kinjo-color-bg-active:#334155;
     --kinjo-color-text-primary:#f1f5f9; --kinjo-color-text-secondary:#cbd5e1;

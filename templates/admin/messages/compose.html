@@ -1,4 +1,4 @@
-﻿{% extends "admin_base.html" %}
+{% extends "admin_base.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %} — KinJo{% endblock %}
 
@@ -94,6 +94,7 @@
                         <div class="input-group input-group-icon mb-2">
                             <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
                             <input type="text" class="form-control form-control-sm" id="kgSearch"
+                                aria-label="{% if ui_lang == 'en' %}Search kindergarten{% else %}بحث عن حضانة{% endif %}"
                                 placeholder="{% if ui_lang == 'en' %}Search kindergarten...{% else %}بحث عن حضانة...{% endif %}" onkeyup="filterKgList()">
                         </div>
                         <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;"

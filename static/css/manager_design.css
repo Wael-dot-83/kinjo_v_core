@@ -41,7 +41,7 @@
 
 :root {
   /* Chrome — identity only. */
-  --mgr-brand: #1f5e47;
+  --mgr-brand: var(--kinjo-brand);
   --mgr-brand-mid: #267054;
   --mgr-brand-deep: #134231;
   --mgr-brand-tint: rgba(31, 94, 71, 0.06);
@@ -68,7 +68,7 @@
   --mgr-state-healthy-tint: #dcfce7;
   --mgr-state-breach: #b91c1c; /* outside standard */
   --mgr-state-breach-tint: #fee2e2;
-  --mgr-state-info: #1e40af; /* context, no action implied */
+  --mgr-state-info: var(--kinjo-action); /* context, no action implied */
   --mgr-state-info-tint: #e0e7ff;
   --mgr-state-idle: #cbd5e1; /* nothing to report */
 
@@ -155,7 +155,7 @@
 
 .mgr-sidebar-close:focus-visible,
 .mgr-sidebar-toggle:focus-visible {
-  outline: 2px solid var(--admin-nav-accent, #1e40af);
+  outline: 2px solid var(--admin-nav-accent, var(--kinjo-action));
   outline-offset: 2px;
 }
 
@@ -217,26 +217,26 @@
 
 .mgr-nav-item:focus-visible,
 .admin-nav-group-title:focus-visible {
-  outline: 2px solid var(--admin-nav-accent, #1e40af);
+  outline: 2px solid var(--admin-nav-accent, var(--kinjo-action));
   outline-offset: 2px;
 }
 
 .mgr-nav-item.active,
 .admin-nav-group-title.active {
   background: var(--admin-nav-accent-soft, #eff3fd);
-  color: var(--admin-nav-accent, #1e40af);
+  color: var(--admin-nav-accent, var(--kinjo-action));
   font-weight: 600;
-  box-shadow: inset 3px 0 0 var(--admin-nav-accent, #1e40af);
+  box-shadow: inset 3px 0 0 var(--admin-nav-accent, var(--kinjo-action));
 }
 
 [dir="rtl"] .mgr-nav-item.active,
 [dir="rtl"] .admin-nav-group-title.active {
-  box-shadow: inset -3px 0 0 var(--admin-nav-accent, #1e40af);
+  box-shadow: inset -3px 0 0 var(--admin-nav-accent, var(--kinjo-action));
 }
 
 .mgr-nav-item.active i,
 .admin-nav-group-title.active i {
-  color: var(--admin-nav-accent, #1e40af);
+  color: var(--admin-nav-accent, var(--kinjo-action));
 }
 
 .mgr-nav-sub {
@@ -823,8 +823,8 @@
 }
 
 .absence-tab.active {
-  background: var(--kinjo-color-primary, #1e40af);
-  border-color: var(--kinjo-color-primary, #1e40af);
+  background: var(--kinjo-color-primary, var(--kinjo-action));
+  border-color: var(--kinjo-color-primary, var(--kinjo-action));
   color: #fff;
 }
 
@@ -960,7 +960,7 @@
 .manager-context-strip a:focus-visible,
 .mgr-action-card a:focus-visible,
 .supervisor-card a:focus-visible {
-  outline: 2px solid var(--kinjo-color-primary, #1e40af);
+  outline: 2px solid var(--kinjo-color-primary, var(--kinjo-action));
   outline-offset: 2px;
   border-radius: var(--mgr-radius-sm);
 }

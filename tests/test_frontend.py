@@ -393,9 +393,19 @@ class TestFrontendRoutes:
         assert "أدخل رقم الهاتف أو البريد الإلكتروني." in norm
 
     def test_login_single_submit_button_and_skip_link(self, client):
-        """Exactly one visible submit control, and a skip link is present (§7/§19)."""
+        """Exactly one visible submit control in the login FORM, plus a skip link (§7/§19).
+
+        Counted within <form id="loginForm"> rather than across the whole page.
+        The page-wide count broke when the public chatbot widget was added: its
+        message composer is a separate form with its own submit
+        (id="chatbot-send-btn"), which is legitimate and not a second way to log
+        in. What this test exists to prevent is two submit controls inside the
+        credential form itself.
+        """
         text = client.get("/login").text
-        assert text.count('type="submit"') == 1
+        form = re.search(r'<form[^>]*id="loginForm".*?</form>', text, re.S)
+        assert form, "login form not found"
+        assert form.group(0).count('type="submit"') == 1
         assert 'href="#loginForm"' in text  # skip link target
 
     def test_auth_js_login_errors_are_localized(self):

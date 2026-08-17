@@ -2,7 +2,7 @@
 <html lang="{{ ui_lang | default('ar') }}" dir="{{ ui_dir | default('rtl') }}" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content=" width=device-width, initial-scale=1.0">
     <title>{% if ui_lang == 'en' %}500 Internal Server Error{% else %}خطأ داخلي في الخادم{% endif %} - KinJo</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -70,7 +70,7 @@
             animation: float 20s infinite alternate ease-in-out;
         }
         .bg-cyberlume::before {
-            background: #1F5E47;
+            background: var(--kinjo-brand);
             top: -200px;
             left: -200px;
         }
@@ -103,7 +103,7 @@
             text-align: center;
         }
         .btn-primary {
-            background: linear-gradient(135deg, #1F5E47, #2A7A5D);
+            background: linear-gradient(135deg, var(--kinjo-brand), #2A7A5D);
             color: #0B0F13;
             box-shadow: 0 0 20px rgba(31, 94, 71, 0.3);
             transition: all 0.3s ease;

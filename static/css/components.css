@@ -119,7 +119,7 @@
 .k-badge-success { background-color: #d1fae5; color: #065f46; }
 .k-badge-warning { background-color: #fef3c7; color: #92400e; }
 .k-badge-danger { background-color: #fee2e2; color: #991b1b; }
-.k-badge-info { background-color: #dbeafe; color: #1e40af; }
+.k-badge-info { background-color: #dbeafe; color: var(--kinjo-action); }
 
 /* ============================================================================
    EXECUTIVE ACTIVITY FEED
@@ -171,7 +171,7 @@
 .activity-status-badge.badge-success { background-color: #D1FAE5; color: #065F46; }
 .activity-status-badge.badge-warning { background-color: #FEF3C7; color: #92400E; }
 .activity-status-badge.badge-danger  { background-color: #FEE2E2; color: #991B1B; }
-.activity-status-badge.badge-info    { background-color: #DBEAFE; color: #1E40AF; }
+.activity-status-badge.badge-info    { background-color: #DBEAFE; color: var(--kinjo-action); }
 /* admin_endpoints.py's _activity_item_from_log sets status="failed" (not
    "danger") for LOGIN_FAILED/ACCESS_DENIED/etc. — this class had no rule at
    all, so a failed-login badge rendered with a transparent background and

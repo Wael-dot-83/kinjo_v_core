@@ -58,8 +58,8 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/dashboard-pro.css?v=1.0">
-<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=abb86b7882d9">
+<link rel="stylesheet" href="/static/css/dashboard-pro.css?v=a0d68449912e">
+<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=294cfdd2415c">
 <style>
     /* Value update animation */
     .value-updated {
@@ -532,7 +532,7 @@
             <div class="card-body">
                 <!-- KPI Status Bar -->
                 <div class="kpi-status-container mb-4">
-                    <div class="kpi-status-item status-green" onclick="filterKPIsByStatus('green')">
+                    <div class="kpi-status-item status-green" onclick="filterKPIsByStatus('green')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
                         <div class="kpi-status-icon">
                             <i class="bi bi-trophy-fill"></i>
                         </div>
@@ -541,7 +541,7 @@
                             <div class="count" id="excellentCount">0</div>
                         </div>
                     </div>
-                    <div class="kpi-status-item status-amber" onclick="filterKPIsByStatus('amber')">
+                    <div class="kpi-status-item status-amber" onclick="filterKPIsByStatus('amber')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
                         <div class="kpi-status-icon">
                             <i class="bi bi-exclamation-triangle-fill"></i>
                         </div>
@@ -550,7 +550,7 @@
                             <div class="count" id="cautionCount">0</div>
                         </div>
                     </div>
-                    <div class="kpi-status-item status-red" onclick="filterKPIsByStatus('red')">
+                    <div class="kpi-status-item status-red" onclick="filterKPIsByStatus('red')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
                         <div class="kpi-status-icon">
                             <i class="bi bi-exclamation-circle-fill"></i>
                         </div>
@@ -559,7 +559,7 @@
                             <div class="count" id="criticalCount">0</div>
                         </div>
                     </div>
-                    <div class="kpi-status-item status-info" onclick="showAllAlerts()">
+                    <div class="kpi-status-item status-info" onclick="showAllAlerts()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
                         <div class="kpi-status-icon">
                             <i class="bi bi-bell-fill"></i>
                         </div>

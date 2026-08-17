@@ -6,7 +6,7 @@
     {% endif %}
     <head>
       <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta name="viewport" content=" width=device-width, initial-scale=1.0" />
       <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
       <meta
         name="session-timeout-minutes"
@@ -61,21 +61,40 @@
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
       />
 
+      <!-- Theme preference — must run BEFORE the stylesheets so the correct
+           palette is in place at first paint. Deferring this to the end of the
+           body would render the whole page in the OS theme and then repaint it,
+           which is a worse flash than having no toggle at all.
+           No stored preference means no attribute, which lets dark-mode.css
+           follow the OS. -->
+      <script>
+        (function () {
+          try {
+            var t = localStorage.getItem("kinjo_theme");
+            if (t === "light" || t === "dark") {
+              document.documentElement.setAttribute("data-theme", t);
+            }
+          } catch (e) {
+            /* private mode / storage disabled — fall back to the OS preference */
+          }
+        })();
+      </script>
+
       <!-- KinJo Admin Design System -->
-      <link rel="stylesheet" href="/static/css/admin_design_system.css?v=3.3" />
-      <link rel="stylesheet" href="/static/css/top-menu.css?v=2.0" />
-      <link rel="stylesheet" href="/static/css/design-tokens.css?v=2" />
+      <link rel="stylesheet" href="/static/css/admin_design_system.css?v=eab02d09b4ef" />
+      <link rel="stylesheet" href="/static/css/top-menu.css?v=cd3be6e9f5ff" />
+      <link rel="stylesheet" href="/static/css/design-tokens.css?v=4a6fdce476c9" />
       <link rel="stylesheet" href="/static/css/layout.css?v=1.3" />
-      <link rel="stylesheet" href="/static/css/components.css?v=1.3" />
+      <link rel="stylesheet" href="/static/css/components.css?v=341a32c0267e" />
       <link rel="stylesheet" href="/static/css/utilities.css?v=1" />
-      <link rel="stylesheet" href="/static/css/admin_premium_theme.css?v=3.0" />
+      <link rel="stylesheet" href="/static/css/admin_premium_theme.css?v=0a5190778886" />
 
       <!-- Legacy compatibility -->
-      <link rel="stylesheet" href="/static/css/kinjo.css?v=20260814" />
+      <link rel="stylesheet" href="/static/css/kinjo.css?v=8687d9fa67e3" />
       {% if ui_dir == 'rtl' %}
       <link rel="stylesheet" href="/static/css/rtl.css?v=1.1" />
       {% endif %}
-      <link rel="stylesheet" href="/static/css/dark-mode.css?v=1.0" />
+      <link rel="stylesheet" href="/static/css/dark-mode.css?v=9b3e7958451c" />
 
       <!-- SweetAlert2 (self-hosted v11.14.5) -->
       <link
@@ -125,6 +144,63 @@
             </div>
 
             <div class="admin-header-right">
+              <!-- Theme Switcher. Three states, deliberately: "System" is the
+                   default and the only one that follows the OS, so a user whose
+                   OS is dark can opt back into light and have that stick. -->
+              <div class="dropdown header-theme-dropdown">
+                <button
+                  class="btn-header-action dropdown-toggle"
+                  type="button"
+                  id="themeDropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  aria-label="{% if ui_lang == 'en' %}Appearance{% else %}المظهر{% endif %}"
+                >
+                  <i
+                    class="bi bi-circle-half fs-5"
+                    aria-hidden="true"
+                    id="themeIcon"
+                  ></i>
+                  <span
+                    class="d-none d-md-inline ms-2 me-1 fw-medium small"
+                    id="themeLabel"
+                    >{% if ui_lang == 'en' %}System{% else %}النظام{% endif %}</span
+                  >
+                </button>
+                <ul
+                  class="dropdown-menu dropdown-menu-end shadow-sm"
+                  aria-labelledby="themeDropdown"
+                >
+                  <li>
+                    <button
+                      class="dropdown-item d-flex align-items-center justify-content-between"
+                      data-kinjo-theme="system"
+                    >
+                      {% if ui_lang == 'en' %}System{% else %}النظام{% endif %}
+                      <i class="bi bi-check2 ms-2 d-none" aria-hidden="true"></i>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      class="dropdown-item d-flex align-items-center justify-content-between"
+                      data-kinjo-theme="light"
+                    >
+                      {% if ui_lang == 'en' %}Light{% else %}فاتح{% endif %}
+                      <i class="bi bi-check2 ms-2 d-none" aria-hidden="true"></i>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      class="dropdown-item d-flex align-items-center justify-content-between"
+                      data-kinjo-theme="dark"
+                    >
+                      {% if ui_lang == 'en' %}Dark{% else %}داكن{% endif %}
+                      <i class="bi bi-check2 ms-2 d-none" aria-hidden="true"></i>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
               <!-- Language Switcher Component -->
               <div class="dropdown header-lang-dropdown">
                 <button
@@ -806,6 +882,7 @@
 
       <!-- Admin Component Library -->
       <script src="/static/js/admin_components.js?v=2.2"></script>
+      <script src="/static/js/theme_switcher.js?v=e5704a357f7e"></script>
 
       <!-- Admin Internationalization (Legacy) -->
       <script src="/static/js/admin_i18n.js?v=2.6"></script>
