@@ -545,18 +545,32 @@ class AdminDashboard {
     };
 
     const enrollment = chartPayload.enrollment || {};
-    const submissionChart = {
-      labels: Object.keys(enrollment).map((k) => {
+    const knownLabels = [];
+    const knownValues = [];
+    const unknownValues = [];
+
+    Object.entries(enrollment).forEach(([k, v]) => {
+      const numVal = this.toNumber(v);
+      if (ENROLLMENT_I18N[k] || (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[k]) {
         const i18nKey = ENROLLMENT_I18N[k];
-        const safeKey = escapeHtml(k);
-        const unknownFallback =
-          lang === "ar" ? `حالة أخرى (${safeKey})` : `Other status (${safeKey})`;
-        const fallback =
-          (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[k] ||
-          unknownFallback;
-        return i18nKey ? this.t(i18nKey, fallback) : fallback;
-      }),
-      values: Object.values(enrollment).map((v) => this.toNumber(v)),
+        const fallback = (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[k];
+        knownLabels.push(i18nKey ? this.t(i18nKey, fallback) : fallback);
+        knownValues.push(numVal);
+      } else {
+        unknownValues.push(numVal);
+      }
+    });
+
+    const unknownTotal = unknownValues.reduce((sum, v) => sum + v, 0);
+    if (unknownTotal > 0) {
+      const unknownLabel = lang === "ar" ? "حالة أخرى" : "Other status";
+      knownLabels.push(unknownLabel);
+      knownValues.push(unknownTotal);
+    }
+
+    const submissionChart = {
+      labels: knownLabels,
+      values: knownValues,
     };
 
     const recentActivity =
