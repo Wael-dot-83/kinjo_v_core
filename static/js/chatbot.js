@@ -183,7 +183,7 @@
     if (show) scrollToBottom();
   }
 
-  function setRole(roleName) {
+  function setRole(roleName, skipWelcome) {
     currentRole = ROLE_META[roleName] ? roleName : "parent";
     
     // Update Role Pills UI
@@ -203,7 +203,9 @@
       userAvatarIcon.textContent = ROLE_META[currentRole].icon;
     }
 
-    renderInitialWelcome();
+    if (!skipWelcome) {
+      renderInitialWelcome();
+    }
   }
 
   function renderChips(chips) {
@@ -252,7 +254,7 @@
     avatarDiv.className = "chatbot-msg-avatar " + (isBot ? "chatbot-bot-msg-avatar" : "chatbot-user-msg-avatar");
     
     if (isBot) {
-      avatarDiv.innerHTML = '<i class="bi bi-robot"></i>';
+      avatarDiv.innerHTML = '<span class="chatbot-bot-avatar-inner" title="KinJo AI">🤖</span>';
       avatarDiv.title = "KinJo Smart Assistant";
     } else {
       avatarDiv.textContent = ROLE_META[roleToUse].icon;
@@ -274,7 +276,16 @@
         var link = document.createElement("a");
         link.className = "chatbot-action-link";
         link.href = act.url;
-        link.innerHTML = (act.icon ? '<i class="bi ' + act.icon + '"></i> ' : '') + act.label;
+        
+        var iconHtml = "";
+        if (act.icon) {
+          if (act.icon.indexOf("bi-") !== -1) {
+            iconHtml = '<i class="bi ' + act.icon + '"></i> ';
+          } else {
+            iconHtml = '<span class="material-symbols-outlined text-sm">' + act.icon + '</span> ';
+          }
+        }
+        link.innerHTML = iconHtml + act.label;
         actionsWrap.appendChild(link);
       });
       bubble.appendChild(actionsWrap);
