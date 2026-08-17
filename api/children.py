@@ -432,6 +432,7 @@ def list_child_documents(
         query = query.filter(models.ChildDocument.document_type == document_type)
 
     docs = query.all()
+    db.commit()
     return {
         "documents": [
             {

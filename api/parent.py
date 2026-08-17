@@ -608,5 +608,5 @@ def get_parent_daily_reports(
             metadata={"child_ids": child_ids, "report_count": len(report_list)},
             sensitivity_level=3,
         )
-
+    db.commit()
     return response
