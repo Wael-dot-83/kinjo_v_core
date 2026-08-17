@@ -10,7 +10,7 @@
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600;700&family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600;700&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
   
   <!-- Chatbot CSS -->
@@ -31,6 +31,12 @@
     body.lang-en {
       font-family: 'Inter', sans-serif;
     }
+
+    /* Focus styling for WCAG 2.1 AA accessibility */
+    a:focus-visible, button:focus-visible {
+      outline: 3px solid #c5a059;
+      outline-offset: 2px;
+    }
   </style>
 
   <script id="tailwind-config">
@@ -39,169 +45,99 @@
       theme: {
         extend: {
           colors: {
-            "on-secondary-fixed": "#171c20",
-            "on-background": "#1b1c1d",
-            "primary-container": "#3366cc",
-            "tertiary-fixed-dim": "#dcc661",
-            "inverse-on-surface": "#f2f0f1",
-            "background": "#faf9fa",
             "primary": "#002f6c", /* KinJo Navy */
-            "on-secondary-fixed-variant": "#42474b",
-            "on-tertiary-fixed-variant": "#524600",
-            "surface-container-low": "#f8f9ff", /* Clean off-white */
-            "inverse-surface": "#303031",
-            "on-tertiary-fixed": "#211b00",
-            "on-error-container": "#93000a",
-            "surface-dim": "#dbdadb",
-            "tertiary-fixed": "#f9e37a",
-            "surface-variant": "#e3e2e3",
-            "secondary-container": "#dfe3e8",
-            "secondary-fixed": "#dfe3e8",
-            "primary-fixed-dim": "#b1c5ff",
-            "outline": "#737784",
-            "on-primary": "#ffffff",
-            "inverse-primary": "#b1c5ff",
-            "on-primary-fixed-variant": "#00419d",
-            "surface-tint": "#2259bf",
+            "primary-container": "#3366cc",
             "secondary": "#5a5f63",
-            "on-error": "#ffffff",
-            "on-primary-container": "#e7ebff",
-            "on-secondary": "#ffffff",
+            "tertiary": "#c5a059", /* Soft Gold */
+            "background": "#faf9fa",
+            "surface": "#ffffff",
+            "surface-container-low": "#f8f9ff",
             "surface-container": "#efedee",
-            "surface-container-highest": "#e3e2e3",
-            "surface-container-lowest": "#ffffff",
-            "error-container": "#ffdad6",
-            "surface-container-high": "#e9e8e9",
-            "on-primary-fixed": "#001946",
-            "tertiary": "#c5a059", /* Soft gold */
-            "primary-fixed": "#d9e2ff",
-            "error": "#ba1a1a",
             "on-surface": "#1b1c1d",
             "on-surface-variant": "#434653",
-            "surface": "#ffffff",
-            "on-tertiary": "#ffffff",
-            "tertiary-container": "#bfab49",
-            "outline-variant": "#c3c6d5",
-            "surface-bright": "#faf9fa",
-            "secondary-fixed-dim": "#c2c7cc",
-            "on-tertiary-container": "#4a3f00",
-            "on-secondary-container": "#606569",
-            "brand-orange": "#c5a059"
+            "outline": "#737784",
+            "outline-variant": "#c3c6d5"
           },
           borderRadius: {
-            "DEFAULT": "0.125rem",
+            "DEFAULT": "0.25rem",
             "lg": "1rem",
             "xl": "1.5rem",
+            "2xl": "2rem",
             "full": "9999px"
-          },
-          spacing: {
-            "margin-desktop": "64px",
-            "gutter": "24px",
-            "margin-mobile": "16px",
-            "base": "8px",
-            "max-width": "1280px",
-            "lg": "48px",
-            "md": "24px",
-            "xl": "80px",
-            "sm": "12px",
-            "xs": "4px"
-          },
-          fontFamily: {
-            "headline-lg": ["Noto Serif", "Cairo", "serif"],
-            "label-bold": ["Inter", "Cairo", "sans-serif"],
-            "body-lg": ["Inter", "Cairo", "sans-serif"],
-            "headline-lg-mobile": ["Noto Serif", "Cairo", "serif"],
-            "label-sm": ["Inter", "Cairo", "sans-serif"],
-            "headline-md": ["Noto Serif", "Cairo", "serif"],
-            "body-md": ["Inter", "Cairo", "sans-serif"],
-            "display-lg": ["Noto Serif", "Cairo", "serif"],
-            "title-lg": ["Noto Serif", "Cairo", "serif"],
-            "label-caps": ["Inter", "Cairo", "sans-serif"],
-            "body-sm": ["Inter", "Cairo", "sans-serif"],
-            "display-lg-mobile": ["Noto Serif", "Cairo", "serif"]
-          },
-          fontSize: {
-            "headline-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
-            "label-bold": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
-            "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
-            "headline-lg-mobile": ["32px", { "lineHeight": "38px", "fontWeight": "700" }],
-            "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
-            "headline-md": ["28px", { "lineHeight": "34px", "fontWeight": "600" }],
-            "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
-            "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
-            "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
-            "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
-            "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
-            "display-lg-mobile": ["32px", { "lineHeight": "40px", "fontWeight": "700" }]
           }
         }
       }
     }
   </script>
 </head>
-<body class="bg-surface text-on-surface font-body-md {% if ui_lang == 'en' %}lang-en{% else %}lang-ar{% endif %} min-h-screen flex flex-col antialiased">
+<body class="bg-surface text-on-surface {% if ui_lang == 'en' %}lang-en{% else %}lang-ar{% endif %} min-h-screen flex flex-col antialiased selection:bg-tertiary/30 selection:text-primary">
 
-  <!-- TopNavBar -->
-  <header class="bg-primary text-white border-b border-white/20 docked full-width top-0 z-50 shadow-sm sticky">
-    <div class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop max-w-7xl mx-auto h-24">
+  <!-- Skip to Main Content Link for Keyboard / Screen Reader Accessibility -->
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-tertiary focus:text-primary focus:font-bold focus:rounded-md">
+    <span class="lang-en-content">Skip to main content</span>
+    <span class="lang-ar-content">الانتقال إلى المحتوى الرئيسي مباشرة</span>
+  </a>
+
+  <!-- TopNavBar (Accessible, High Contrast, 44px+ Touch Targets) -->
+  <header class="bg-primary text-white border-b border-white/20 sticky top-0 z-50 shadow-md" role="banner">
+    <div class="flex justify-between items-center w-full px-4 sm:px-8 md:px-12 max-w-7xl mx-auto h-20 md:h-24">
       
-      <!-- Brand -->
-      <a href="/" class="flex items-center gap-base">
-        <img alt="KinJo Logo" class="h-16 w-auto object-contain rounded-sm bg-white p-2 shadow-sm" src="/static/img/landing/logo.png">
-        <span class="font-title-lg text-title-lg font-bold text-white">
+      <!-- Brand Lockup -->
+      <a href="/" class="flex items-center gap-3 group focus:ring-2 focus:ring-tertiary rounded-lg p-1" aria-label="KinJo Homepage">
+        <img alt="KinJo Official Logo" class="h-12 md:h-16 w-auto object-contain rounded-md bg-white p-2 shadow-sm transition-transform group-hover:scale-105" src="/static/img/landing/logo.png">
+        <span class="text-base sm:text-lg md:text-xl font-bold text-white tracking-tight">
           <span class="lang-en-content">Jordan Kindergarten Portal</span>
           <span class="lang-ar-content">بوابة رياض الأطفال الأردنية</span>
         </span>
       </a>
 
-      <!-- Nav Links (Desktop) -->
-      <nav class="hidden md:flex gap-md" aria-label="Main Navigation">
-        <a class="font-body-md text-body-md text-white font-bold border-b-2 border-tertiary h-24 flex items-center px-2" href="/services">
+      <!-- Desktop Nav Links -->
+      <nav class="hidden md:flex items-center gap-6 lg:gap-8" aria-label="Main Navigation">
+        <a class="text-white/90 font-semibold hover:text-tertiary transition-colors py-2 px-1 border-b-2 border-transparent hover:border-tertiary min-h-[44px] flex items-center" href="/services">
           <span class="lang-en-content">Services</span>
-          <span class="lang-ar-content">الخدمات</span>
+          <span class="lang-ar-content">دليل الخدمات</span>
         </a>
-        <a class="font-body-md text-body-md text-white/80 hover:text-tertiary transition-colors h-24 flex items-center px-2" href="/about">
+        <a class="text-white/90 font-semibold hover:text-tertiary transition-colors py-2 px-1 border-b-2 border-transparent hover:border-tertiary min-h-[44px] flex items-center" href="/about">
           <span class="lang-en-content">About</span>
           <span class="lang-ar-content">نبذة عنا</span>
         </a>
-        <a class="font-body-md text-body-md text-white/80 hover:text-tertiary transition-colors h-24 flex items-center px-2" href="/contact">
+        <a class="text-white/90 font-semibold hover:text-tertiary transition-colors py-2 px-1 border-b-2 border-transparent hover:border-tertiary min-h-[44px] flex items-center" href="/contact">
           <span class="lang-en-content">Contact</span>
           <span class="lang-ar-content">اتصل بنا</span>
         </a>
-        <a class="font-body-md text-body-md text-white/80 hover:text-tertiary transition-colors h-24 flex items-center px-2" href="/faq">
+        <a class="text-white/90 font-semibold hover:text-tertiary transition-colors py-2 px-1 border-b-2 border-transparent hover:border-tertiary min-h-[44px] flex items-center" href="/faq">
           <span class="lang-en-content">FAQ</span>
           <span class="lang-ar-content">الأسئلة الشائعة</span>
         </a>
       </nav>
 
-      <!-- Actions -->
-      <div class="flex items-center gap-sm">
-        <!-- Bilingual Toggle -->
-        <button type="button" class="flex items-center gap-xs px-sm py-2 rounded-lg border border-white/30 hover:bg-white/10 transition-colors" onclick="toggleLanguage()" aria-label="Toggle language">
-          <span class="material-symbols-outlined text-sm text-white" data-icon="language">language</span>
-          <span class="font-label-caps text-label-caps uppercase lang-en-content text-white">عربي</span>
-          <span class="font-label-caps text-label-caps uppercase lang-ar-content text-white">EN</span>
+      <!-- Actions & Elevated Language Switcher -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- High-Prominence Language Toggle -->
+        <button type="button" class="flex items-center gap-2 px-3.5 py-2 min-h-[44px] rounded-lg border-2 border-white/40 hover:border-tertiary bg-white/10 hover:bg-white/20 transition-all text-white font-bold text-sm shadow-sm" onclick="toggleLanguage()" aria-label="Switch Language / تبديل اللغة">
+          <span class="material-symbols-outlined text-lg" aria-hidden="true" data-icon="translate">translate</span>
+          <span class="uppercase tracking-wider lang-en-content text-tertiary font-extrabold">العربية</span>
+          <span class="uppercase tracking-wider lang-ar-content text-tertiary font-extrabold">English</span>
         </button>
 
         {% if current_user %}
-        <a class="inline-flex px-md py-3 bg-tertiary text-primary font-label-bold text-label-bold rounded-lg hover:bg-tertiary/90 transition-colors shadow-sm" href="/dashboard">
+        <a class="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2.5 min-h-[44px] bg-tertiary text-primary font-bold rounded-lg hover:bg-tertiary/90 transition-all shadow-md text-sm sm:text-base" href="/dashboard" aria-label="Open Dashboard">
+          <span class="material-symbols-outlined text-lg" aria-hidden="true" data-icon="dashboard">dashboard</span>
           <span class="lang-en-content">Dashboard</span>
           <span class="lang-ar-content">لوحة التحكم</span>
         </a>
         {% else %}
-        <a class="hidden md:inline-flex px-md py-2 text-white font-label-bold text-label-bold hover:bg-white/10 transition-colors rounded-lg" href="/login">
-          <span class="lang-en-content">Login</span>
+        <!-- High Contrast Distinct Login CTA -->
+        <a class="inline-flex items-center px-4 sm:px-5 py-2.5 min-h-[44px] border-2 border-white text-white font-bold hover:bg-white hover:text-primary transition-all rounded-lg text-sm sm:text-base shadow-sm" href="/login" aria-label="Sign in to platform">
+          <span class="material-symbols-outlined text-base mr-1 rtl:ml-1" aria-hidden="true" data-icon="login">login</span>
+          <span class="lang-en-content">Sign In</span>
           <span class="lang-ar-content">تسجيل الدخول</span>
         </a>
         {% if public_registration_enabled %}
-        <a class="inline-flex px-md py-3 bg-tertiary text-primary font-label-bold text-label-bold rounded-lg hover:bg-tertiary/90 transition-colors shadow-sm" href="/register">
+        <a class="hidden sm:inline-flex items-center px-4 sm:px-5 py-2.5 min-h-[44px] bg-tertiary text-primary font-bold rounded-lg hover:bg-tertiary/90 transition-all shadow-md text-sm sm:text-base" href="/register" aria-label="Create new account">
+          <span class="material-symbols-outlined text-base mr-1 rtl:ml-1" aria-hidden="true" data-icon="person_add">person_add</span>
           <span class="lang-en-content">Register</span>
           <span class="lang-ar-content">حساب جديد</span>
-        </a>
-        {% else %}
-        <a class="inline-flex px-md py-3 bg-tertiary text-primary font-label-bold text-label-bold rounded-lg hover:bg-tertiary/90 transition-colors shadow-sm" href="/login">
-          <span class="lang-en-content">Sign in</span>
-          <span class="lang-ar-content">تسجيل الدخول</span>
         </a>
         {% endif %}
         {% endif %}
@@ -210,207 +146,372 @@
     </div>
   </header>
 
-  <main class="flex-grow">
+  <main id="main-content" class="flex-grow" role="main">
     
-    <!-- Section 1: Hero -->
-    <section class="relative bg-surface-container-low overflow-hidden">
+    <!-- Section 1: Hero Section (Optimized Whitespace & Visual Hierarchy) -->
+    <section class="relative bg-surface-container-low overflow-hidden border-b border-outline-variant/30" aria-label="Hero Introduction">
       <div class="absolute inset-0 z-0">
-        <div class="bg-cover bg-center w-full h-full opacity-100" style="background-image: url('/static/img/landing/hero_bg.jpg');"></div>
-        <div class="absolute inset-0 bg-gradient-to-l from-surface-container-low/80 via-surface-container-low/40 to-transparent"></div>
+        <div class="bg-cover bg-center w-full h-full opacity-30 md:opacity-40" style="background-image: url('/static/img/landing/hero_bg.jpg');"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-surface-container-low via-surface-container-low/95 to-surface-container-low/70"></div>
       </div>
 
-      <div class="relative z-10 max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-xl md:py-[140px] grid md:grid-cols-2 gap-lg items-center">
-        <div class="space-y-lg">
+      <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 md:px-12 py-12 md:py-20 lg:py-24 grid md:grid-cols-2 gap-8 lg:gap-12 items-center">
+        <div class="space-y-6">
           
-          <!-- English Headline/Sub -->
-          <div class="lang-en-content space-y-md">
-            <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary">
+          <!-- English Headline / Subtitle -->
+          <div class="lang-en-content space-y-4">
+            <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase bg-primary/10 text-primary border border-primary/20">
+              <span class="material-symbols-outlined text-sm" aria-hidden="true" data-icon="verified_user">verified_user</span>
+              National Kindergarten Portal — Hashemite Kingdom of Jordan
+            </span>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-primary leading-tight">
               One official workspace for every role in Jordan's kindergarten sector.
             </h1>
-            <p class="font-body-lg text-body-lg text-on-surface-variant font-normal border-l-4 border-tertiary pl-6 py-2">
+            <p class="text-base sm:text-lg text-on-surface-variant font-normal border-l-4 border-tertiary pl-4 sm:pl-6 py-2 leading-relaxed">
               KinJo connects parents, kindergarten teams, and supervisors so enrollment, daily care, attendance, and official reporting stay in one secure, bilingual record.
             </p>
           </div>
 
-          <!-- Arabic Headline/Sub -->
-          <div class="lang-ar-content space-y-md">
-            <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary font-bold">
+          <!-- Arabic Headline / Subtitle -->
+          <div class="lang-ar-content space-y-4">
+            <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide bg-primary/10 text-primary border border-primary/20">
+              <span class="material-symbols-outlined text-sm" aria-hidden="true" data-icon="verified_user">verified_user</span>
+              المنصة الوطنية الموحدة للحضانات — المملكة الأردنية الهاشمية
+            </span>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-primary leading-tight">
               مساحة رسمية واحدة لكل دور في قطاع الحضانات في الأردن.
             </h1>
-            <p class="font-body-lg text-body-lg text-on-surface-variant font-normal border-r-4 border-tertiary pr-6 py-2">
+            <p class="text-base sm:text-lg text-on-surface-variant font-normal border-r-4 border-tertiary pr-4 sm:pr-6 py-2 leading-relaxed">
               تربط KinJo أولياء الأمور وفرق الحضانة والمشرفين، ليبقى التسجيل والرعاية اليومية والحضور والتقارير الرسمية في سجل واحد آمن وثنائي اللغة.
             </p>
           </div>
 
-          <div class="flex flex-wrap gap-md pt-sm">
-            {% if current_user %}
-            <a class="inline-flex items-center justify-center px-xl py-4 bg-primary text-white font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md" href="/dashboard">
-              <span class="lang-en-content">Go to Dashboard</span>
-              <span class="lang-ar-content">الانتقال للوحة التحكم</span>
-            </a>
-            {% else %}
-            {% if public_registration_enabled %}
-            <a class="inline-flex items-center justify-center px-xl py-4 bg-primary text-white font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors shadow-md" href="/register">
-              <span class="lang-en-content">Create an account</span>
-              <span class="lang-ar-content">إنشاء حساب</span>
-            </a>
-            {% endif %}
-            <a class="inline-flex items-center justify-center px-xl py-4 border-2 border-primary text-primary font-label-bold text-label-bold rounded-lg hover:bg-surface-container transition-colors bg-white/90 shadow-sm" href="/login">
-              <span class="lang-en-content">Sign in</span>
-              <span class="lang-ar-content">تسجيل الدخول</span>
-            </a>
-            {% endif %}
+          <!-- Action CTAs & Security Reassurance -->
+          <div class="space-y-4 pt-2">
+            <div class="flex flex-wrap gap-3 sm:gap-4">
+              {% if current_user %}
+              <a class="inline-flex items-center justify-center px-6 sm:px-8 py-3.5 min-h-[48px] bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-all shadow-md hover:shadow-lg text-base" href="/dashboard">
+                <span class="lang-en-content">Go to Dashboard</span>
+                <span class="lang-ar-content">الانتقال للوحة التحكم</span>
+              </a>
+              {% else %}
+              <a class="inline-flex items-center justify-center px-6 sm:px-8 py-3.5 min-h-[48px] bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-all shadow-md hover:shadow-lg text-base" href="/login">
+                <span class="lang-en-content">Sign in to Portal</span>
+                <span class="lang-ar-content">تسجيل الدخول إلى البوابة</span>
+              </a>
+              {% if public_registration_enabled %}
+              <a class="inline-flex items-center justify-center px-6 sm:px-8 py-3.5 min-h-[48px] bg-tertiary text-primary font-bold rounded-lg hover:bg-tertiary/90 transition-all shadow-md text-base" href="/register">
+                <span class="lang-en-content">Create an Account</span>
+                <span class="lang-ar-content">إنشاء حساب جديد</span>
+              </a>
+              {% endif %}
+              {% endif %}
+              <a class="inline-flex items-center justify-center px-5 py-3.5 min-h-[48px] border border-primary/30 text-primary hover:bg-primary/5 font-semibold transition-all rounded-lg text-base" href="/services">
+                <span class="lang-en-content">Explore Services →</span>
+                <span class="lang-ar-content">استعراض دليل الخدمات ←</span>
+              </a>
+            </div>
+
+            <!-- Trust & Privacy Assurance Pill -->
+            <div class="flex items-center gap-2 text-xs sm:text-sm text-secondary pt-1">
+              <span class="material-symbols-outlined text-green-700 text-lg" aria-hidden="true" data-icon="lock">lock</span>
+              <span class="lang-en-content">Encrypted & authenticated according to Jordanian official governance standards.</span>
+              <span class="lang-ar-content">بيانات مشفرة وموثقة ومعتمدة وفق معايير الحوكمة الإلكترونية الرسمية.</span>
+            </div>
           </div>
+
         </div>
 
-        <div class="hidden md:block relative h-[560px] rounded-xl overflow-hidden shadow-2xl border-4 border-white/50 bg-white rotate-1 hover:rotate-0 transition-transform duration-500">
-          <img alt="Kindergarten Classroom" class="w-full h-full object-cover" src="/static/img/landing/classroom.jpg">
+        <!-- Featured Classroom Image Card -->
+        <div class="hidden md:block relative h-[480px] lg:h-[520px] rounded-2xl overflow-hidden shadow-2xl border-4 border-white bg-white rotate-1 hover:rotate-0 transition-transform duration-500">
+          <img alt="Modern Kindergarten Classroom in Jordan" class="w-full h-full object-cover" src="/static/img/landing/classroom.jpg">
+          <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-primary/90 via-primary/60 to-transparent p-6 text-white">
+            <p class="text-sm font-semibold tracking-wide flex items-center gap-2">
+              <span class="material-symbols-outlined text-tertiary" aria-hidden="true" data-icon="child_care">child_care</span>
+              <span class="lang-en-content">Standardized early childhood care and development</span>
+              <span class="lang-ar-content">بيئة طفولة مبكرة متكاملة بمعايير وطنية معتمدة</span>
+            </p>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Section 2: Trust Band -->
-    <section class="bg-white border-y border-outline-variant/20 py-xl">
-      <div class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop flex flex-col items-center justify-center gap-lg">
+    <!-- Section 2: Trust Band (Partner Agencies) -->
+    <section class="bg-white border-y border-outline-variant/30 py-12 md:py-16" aria-label="Institutional Partners">
+      <div class="max-w-7xl mx-auto px-4 sm:px-8 md:px-12 flex flex-col items-center justify-center gap-8">
         
-        <div class="flex flex-col items-center justify-center gap-md w-full">
-          <p class="font-title-lg text-title-lg text-primary text-center flex items-center justify-center gap-2 mb-md">
-            <span class="material-symbols-outlined text-tertiary" data-icon="verified">verified</span>
-            <span class="lang-en-content">Trusted Partners</span>
-            <span class="lang-ar-content">الشركاء المعتمدون</span>
+        <div class="flex flex-col items-center justify-center gap-4 w-full">
+          <p class="text-lg sm:text-xl font-bold text-primary text-center flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-tertiary text-2xl" aria-hidden="true" data-icon="verified">verified</span>
+            <span class="lang-en-content">Trusted Institutional Partners</span>
+            <span class="lang-ar-content">الشركاء والجهات المؤسسية المعتمدة</span>
           </p>
 
-          <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-lg items-center justify-items-center opacity-80">
-            <img alt="NCFA" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/ncfa.png">
-            <img alt="MoSD" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/mosd.png">
-            <img alt="MoPIC" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/mopic.png">
-            <img alt="MoL" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/mol.png">
-            <img alt="MoH" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/moh.png">
-            <img alt="MoE" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/moe.png">
-            <img alt="DOS" class="h-16 md:h-20 object-contain grayscale hover:grayscale-0 transition-all duration-300" src="/static/img/landing/dos.png">
+          <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-6 md:gap-8 items-center justify-items-center opacity-85 py-2">
+            <div class="flex flex-col items-center gap-1 group">
+              <img alt="NCFA Partner Logo" class="h-16 md:h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300 transform group-hover:scale-105" src="/static/img/landing/ncfa.png">
+              <span class="text-xs text-secondary font-semibold mt-1">NCFA</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 group">
+              <img alt="MoSD Partner Logo" class="h-16 md:h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300 transform group-hover:scale-105" src="/static/img/landing/mosd.png">
+              <span class="text-xs text-secondary font-semibold mt-1">MoSD</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 group">
+              <img alt="MoPIC Partner Logo" class="h-16 md:h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300 transform group-hover:scale-105" src="/static/img/landing/mopic.png">
+              <span class="text-xs text-secondary font-semibold mt-1">MoPIC</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 group">
+              <img alt="MoL Partner Logo" class="h-16 md:h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300 transform group-hover:scale-105" src="/static/img/landing/mol.png">
+              <span class="text-xs text-secondary font-semibold mt-1">MoL</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 group">
+              <img alt="MoH Partner Logo" class="h-16 md:h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300 transform group-hover:scale-105" src="/static/img/landing/moh.png">
+              <span class="text-xs text-secondary font-semibold mt-1">MoH</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 group">
+              <img alt="MoE Partner Logo" class="h-16 md:h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300 transform group-hover:scale-105" src="/static/img/landing/moe.png">
+              <span class="text-xs text-secondary font-semibold mt-1">MoE</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 group">
+              <img alt="DOS Partner Logo" class="h-16 md:h-20 object-contain grayscale group-hover:grayscale-0 transition-all duration-300 transform group-hover:scale-105" src="/static/img/landing/dos.png">
+              <span class="text-xs text-secondary font-semibold mt-1">DOS</span>
+            </div>
           </div>
         </div>
 
-        <div class="mt-md bg-surface-container-low px-6 py-2 rounded-full border border-tertiary/30 shadow-sm">
-          <p class="font-label-caps text-label-caps text-primary text-center tracking-wider">
+        <div class="bg-surface-container-low px-6 py-2.5 rounded-full border border-tertiary/40 shadow-sm">
+          <p class="text-xs sm:text-sm font-bold text-primary text-center tracking-wide">
             <span class="lang-en-content">Part of Jordan's National Digital Transformation Strategy</span>
-            <span class="lang-ar-content">جزء من استراتيجية التحول الرقمي الوطني في الأردن</span>
+            <span class="lang-ar-content">جزء من استراتيجية التحول الرقمي الوطني في المملكة الأردنية الهاشمية</span>
           </p>
         </div>
 
       </div>
     </section>
 
-    <!-- Section 3: Persona Strip -->
-    <section class="py-[120px] bg-surface-container-low max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop">
-      <div class="text-center mb-xl">
-        <h2 class="font-display-lg-mobile md:font-headline-lg text-display-lg-mobile md:text-headline-lg text-primary mb-sm">
-          <span class="lang-en-content">Built for every participant in the sector</span>
-          <span class="lang-ar-content">مصمم لكل مشارك في القطاع</span>
-        </h2>
+    <!-- Section 3: Persona Strip (Action-Oriented CTAs & Clear Feature Bullets) -->
+    <section class="py-16 md:py-24 bg-surface-container-low" aria-label="Role-Based Portals">
+      <div class="max-w-7xl mx-auto px-4 sm:px-8 md:px-12">
+        <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+          <span class="inline-block text-tertiary font-bold text-xs sm:text-sm tracking-wider uppercase mb-2">
+            <span class="lang-en-content">Tailored Role Experiences</span>
+            <span class="lang-ar-content">بوابات وواجهات مخصصة لكل دور</span>
+          </span>
+          <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-3">
+            <span class="lang-en-content">Built for every participant in the sector</span>
+            <span class="lang-ar-content">مصمم بدقة لكل مشارك في منظومة الرعاية</span>
+          </h2>
+          <p class="text-on-surface-variant text-base sm:text-lg">
+            <span class="lang-en-content">Tailored workflows, distinct views, and role-based permissions in a unified national platform.</span>
+            <span class="lang-ar-content">أدوات متخصصة وصلاحيات محكمة تناسب احتياجات كل طرف في بيئة رياض الأطفال.</span>
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+          
+          <!-- Card 1: Parents -->
+          <div class="bg-white rounded-2xl p-6 sm:p-8 flex flex-col hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 border border-outline-variant/40 group">
+            <div class="w-14 h-14 bg-surface-container-low text-primary border-2 border-tertiary/40 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all shadow-sm">
+              <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="family_restroom">family_restroom</span>
+            </div>
+            <h3 class="text-xl font-bold text-primary mb-3">
+              <span class="lang-en-content">Parents &amp; Guardians</span>
+              <span class="lang-ar-content">أولياء الأمور</span>
+            </h3>
+            <p class="text-on-surface-variant text-sm sm:text-base mb-6 leading-relaxed">
+              <span class="lang-en-content">Stay connected with real-time visibility into attendance, daily care reports, milestone tracking, and secure messaging with educators.</span>
+              <span class="lang-ar-content">ابق على اتصال مباشر مع متابعة فورية للحضور، وتقارير الرعاية اليومية، وسجلات الأنشطة، والتواصل الآمن مع الكادر التربوي.</span>
+            </p>
+            <ul class="space-y-2.5 text-xs sm:text-sm text-secondary mb-8 flex-grow">
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-green-700 text-base" aria-hidden="true" data-icon="check_circle">check_circle</span>
+                <span class="lang-en-content">Real-time attendance & daily reports</span>
+                <span class="lang-ar-content">إشعارات الحضور والتقارير اليومية فوراً</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-green-700 text-base" aria-hidden="true" data-icon="check_circle">check_circle</span>
+                <span class="lang-en-content">Instant digital enrollment applications</span>
+                <span class="lang-ar-content">تقديم ومتابعة طلبات التسجيل إلكترونياً</span>
+              </li>
+            </ul>
+            <a class="inline-flex items-center justify-center gap-2 w-full py-3 px-4 min-h-[44px] bg-primary/5 group-hover:bg-primary text-primary group-hover:text-white font-bold rounded-xl transition-all text-sm" href="/services#parents" aria-label="Explore Parent Services">
+              <span class="lang-en-content">Explore Parent Portal</span>
+              <span class="lang-ar-content">دخول بوابة ولي الأمر</span>
+              <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
+            </a>
+          </div>
+
+          <!-- Card 2: Supervisors -->
+          <div class="bg-white rounded-2xl p-6 sm:p-8 flex flex-col hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 border border-outline-variant/40 group">
+            <div class="w-14 h-14 bg-surface-container-low text-primary border-2 border-tertiary/40 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all shadow-sm">
+              <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="fact_check">fact_check</span>
+            </div>
+            <h3 class="text-xl font-bold text-primary mb-3">
+              <span class="lang-en-content">Supervisors &amp; Auditors</span>
+              <span class="lang-ar-content">المشرفون التربويون</span>
+            </h3>
+            <p class="text-on-surface-variant text-sm sm:text-base mb-6 leading-relaxed">
+              <span class="lang-en-content">Ensure compliance with streamlined oversight, official data exports, attendance auditing, and standardized quality assurance tools.</span>
+              <span class="lang-ar-content">ضمان الامتثال والجودة عبر أدوات الإشراف المباشر، وتدقيق الحضور والانصراف، وإصدار التقارير المعتمدة للجهات الرسمية.</span>
+            </p>
+            <ul class="space-y-2.5 text-xs sm:text-sm text-secondary mb-8 flex-grow">
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-green-700 text-base" aria-hidden="true" data-icon="check_circle">check_circle</span>
+                <span class="lang-en-content">Automated attendance verification</span>
+                <span class="lang-ar-content">تدقيق الحضور والمطابقة الرسمية</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-green-700 text-base" aria-hidden="true" data-icon="check_circle">check_circle</span>
+                <span class="lang-en-content">Official export formats & analytics</span>
+                <span class="lang-ar-content">تصدير التقارير الإحصائية المعتمدة</span>
+              </li>
+            </ul>
+            <a class="inline-flex items-center justify-center gap-2 w-full py-3 px-4 min-h-[44px] bg-primary/5 group-hover:bg-primary text-primary group-hover:text-white font-bold rounded-xl transition-all text-sm" href="/services#supervisors" aria-label="Explore Supervisor QA Tools">
+              <span class="lang-en-content">Supervisor QA Tools</span>
+              <span class="lang-ar-content">منظومة الإشراف والتدقيق</span>
+              <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
+            </a>
+          </div>
+
+          <!-- Card 3: Managers -->
+          <div class="bg-white rounded-2xl p-6 sm:p-8 flex flex-col hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 border border-outline-variant/40 group">
+            <div class="w-14 h-14 bg-surface-container-low text-primary border-2 border-tertiary/40 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all shadow-sm">
+              <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="domain">domain</span>
+            </div>
+            <h3 class="text-xl font-bold text-primary mb-3">
+              <span class="lang-en-content">Kindergarten Managers</span>
+              <span class="lang-ar-content">مدراء الحضانات</span>
+            </h3>
+            <p class="text-on-surface-variant text-sm sm:text-base mb-6 leading-relaxed">
+              <span class="lang-en-content">Drive operational efficiency by managing the enrollment pipeline, staff allocation, classroom capacity, and facility compliance in one place.</span>
+              <span class="lang-ar-content">إدارة تشغيلية شاملة لطلبات التسجيل، وتوزيع الكادر التعليمي، والسعة الاستيعابية للفصول، ومؤشرات الأداء.</span>
+            </p>
+            <ul class="space-y-2.5 text-xs sm:text-sm text-secondary mb-8 flex-grow">
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-green-700 text-base" aria-hidden="true" data-icon="check_circle">check_circle</span>
+                <span class="lang-en-content">Classroom capacity & admissions</span>
+                <span class="lang-ar-content">إدارة الشعب والقبول والسعة الفعلية</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-green-700 text-base" aria-hidden="true" data-icon="check_circle">check_circle</span>
+                <span class="lang-en-content">Staff & incident management</span>
+                <span class="lang-ar-content">إدارة الكادر وسجلات السلامة</span>
+              </li>
+            </ul>
+            <a class="inline-flex items-center justify-center gap-2 w-full py-3 px-4 min-h-[44px] bg-primary/5 group-hover:bg-primary text-primary group-hover:text-white font-bold rounded-xl transition-all text-sm" href="/services#managers" aria-label="Explore Kindergarten Operations">
+              <span class="lang-en-content">Manage Operations</span>
+              <span class="lang-ar-content">إدارة عمليات الحضانة</span>
+              <span class="material-symbols-outlined text-sm rtl:rotate-180" aria-hidden="true" data-icon="arrow_forward">arrow_forward</span>
+            </a>
+          </div>
+
+        </div>
       </div>
+    </section>
 
-      <div class="grid md:grid-cols-3 gap-xl">
-        
-        <!-- Card 1: Parents -->
-        <div class="bg-white rounded-xl p-lg flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-outline-variant/20 group">
-          <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
-            <span class="material-symbols-outlined text-2xl" data-icon="family_home">family_home</span>
-          </div>
-          <h3 class="font-title-lg text-title-lg text-primary mb-sm">
-            <span class="lang-en-content">Parents &amp; Guardians</span>
-            <span class="lang-ar-content">أولياء الأمور</span>
-          </h3>
-          <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            <span class="lang-en-content">Stay connected with real-time visibility into attendance, daily care reports, and secure communication with educators.</span>
-            <span class="lang-ar-content">ابق على اتصال مع رؤية في الوقت الفعلي للحضور وتقارير الرعاية اليومية والتواصل الآمن مع المعلمين.</span>
-          </p>
-          <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors" href="/services">
-            <span class="lang-en-content">See how it works</span>
-            <span class="lang-ar-content">شاهد كيف يعمل</span>
-            <span class="material-symbols-outlined text-sm rtl:rotate-180" data-icon="arrow_forward">arrow_forward</span>
-          </a>
+    <!-- Section 4: Onboarding Workflow & How It Works -->
+    <section class="py-16 md:py-20 bg-white border-b border-outline-variant/30" aria-label="How It Works">
+      <div class="max-w-7xl mx-auto px-4 sm:px-8 md:px-12">
+        <div class="text-center max-w-2xl mx-auto mb-12">
+          <span class="text-tertiary font-bold text-xs sm:text-sm tracking-wider uppercase mb-1 block">
+            <span class="lang-en-content">Simple Onboarding</span>
+            <span class="lang-ar-content">خطوات البدء السريعة</span>
+          </span>
+          <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary">
+            <span class="lang-en-content">How KinJo Works for You</span>
+            <span class="lang-ar-content">كيف تعمل منصة KinJo بكل سهولة</span>
+          </h2>
         </div>
 
-        <!-- Card 2: Supervisors -->
-        <div class="bg-white rounded-xl p-lg flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-outline-variant/20 group">
-          <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
-            <span class="material-symbols-outlined text-2xl" data-icon="fact_check">fact_check</span>
+        <div class="grid sm:grid-cols-3 gap-8">
+          <div class="p-6 rounded-2xl bg-surface-container-low border border-outline-variant/30 relative">
+            <span class="text-4xl font-black text-tertiary/40 absolute top-4 right-4 rtl:left-4 rtl:right-auto">01</span>
+            <div class="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center mb-4 shadow-sm">
+              <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="app_registration">app_registration</span>
+            </div>
+            <h3 class="text-lg font-bold text-primary mb-2">
+              <span class="lang-en-content">1. Digital Registration</span>
+              <span class="lang-ar-content">١. التسجيل الإلكتروني</span>
+            </h3>
+            <p class="text-secondary text-sm leading-relaxed">
+              <span class="lang-en-content">Submit child details and select licensed kindergartens online with verified official documentation.</span>
+              <span class="lang-ar-content">تقديم طلب التسجيل إلكترونياً واختيار الحضانة المرخصة وتوثيق البيانات بكل يسر.</span>
+            </p>
           </div>
-          <h3 class="font-title-lg text-title-lg text-primary mb-sm">
-            <span class="lang-en-content">Supervisors</span>
-            <span class="lang-ar-content">المشرفون</span>
-          </h3>
-          <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            <span class="lang-en-content">Ensure compliance with streamlined oversight, official data exports, and standardized quality assurance tools.</span>
-            <span class="lang-ar-content">ضمان الامتثال من خلال إشراف مبسط وتصدير بيانات رسمية وأدوات ضمان جودة موحدة.</span>
-          </p>
-          <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors" href="/services">
-            <span class="lang-en-content">See how it works</span>
-            <span class="lang-ar-content">شاهد كيف يعمل</span>
-            <span class="material-symbols-outlined text-sm rtl:rotate-180" data-icon="arrow_forward">arrow_forward</span>
-          </a>
-        </div>
 
-        <!-- Card 3: Managers -->
-        <div class="bg-white rounded-xl p-lg flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-outline-variant/20 group">
-          <div class="w-14 h-14 bg-surface-container-low text-primary border border-tertiary/30 rounded-xl flex items-center justify-center mb-md group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
-            <span class="material-symbols-outlined text-2xl" data-icon="domain">domain</span>
+          <div class="p-6 rounded-2xl bg-surface-container-low border border-outline-variant/30 relative">
+            <span class="text-4xl font-black text-tertiary/40 absolute top-4 right-4 rtl:left-4 rtl:right-auto">02</span>
+            <div class="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center mb-4 shadow-sm">
+              <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="rule">rule</span>
+            </div>
+            <h3 class="text-lg font-bold text-primary mb-2">
+              <span class="lang-en-content">2. Verification & Acceptance</span>
+              <span class="lang-ar-content">٢. التدقيق والاعتماد</span>
+            </h3>
+            <p class="text-secondary text-sm leading-relaxed">
+              <span class="lang-en-content">Kindergartens review capacity, confirm medical notes, and officially enroll the child into classes.</span>
+              <span class="lang-ar-content">تدقيق الأوراق والسعة الاستيعابية واعتماد تسجيل الطفل رسمياً ضمن الشعب المناسبة.</span>
+            </p>
           </div>
-          <h3 class="font-title-lg text-title-lg text-primary mb-sm">
-            <span class="lang-en-content">Kindergarten Managers</span>
-            <span class="lang-ar-content">مدراء الحضانات</span>
-          </h3>
-          <p class="font-body-md text-body-md text-on-surface-variant mb-lg flex-grow leading-relaxed">
-            <span class="lang-en-content">Drive operational efficiency by managing the enrollment pipeline, staff allocation, and facility compliance in one place.</span>
-            <span class="lang-ar-content">زيادة الكفاءة التشغيلية من خلال إدارة مسار التسجيل وتخصيص الموظفين وامتثال المنشأة في مكان واحد.</span>
-          </p>
-          <a class="font-label-bold text-label-bold text-primary flex items-center gap-2 group-hover:text-tertiary transition-colors" href="/services">
-            <span class="lang-en-content">See how it works</span>
-            <span class="lang-ar-content">شاهد كيف يعمل</span>
-            <span class="material-symbols-outlined text-sm rtl:rotate-180" data-icon="arrow_forward">arrow_forward</span>
-          </a>
-        </div>
 
+          <div class="p-6 rounded-2xl bg-surface-container-low border border-outline-variant/30 relative">
+            <span class="text-4xl font-black text-tertiary/40 absolute top-4 right-4 rtl:left-4 rtl:right-auto">03</span>
+            <div class="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center mb-4 shadow-sm">
+              <span class="material-symbols-outlined text-2xl" aria-hidden="true" data-icon="track_changes">track_changes</span>
+            </div>
+            <h3 class="text-lg font-bold text-primary mb-2">
+              <span class="lang-en-content">3. Live Daily Tracking</span>
+              <span class="lang-ar-content">٣. المتابعة اليومية المباشرة</span>
+            </h3>
+            <p class="text-secondary text-sm leading-relaxed">
+              <span class="lang-en-content">Track attendance, meals, developmental milestones, and stay connected with educators in real time.</span>
+              <span class="lang-ar-content">متابعة الحضور والانصراف، والوجبات، والأنشطة، والتواصل المباشر مع المعلمين.</span>
+            </p>
+          </div>
+        </div>
       </div>
     </section>
 
   </main>
 
-  <!-- Footer -->
-  <footer class="bg-white border-t border-outline-variant/30 full-width">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-mobile md:px-margin-desktop py-xl max-w-7xl mx-auto">
+  <!-- Footer (Accessible, Clean 2-Column Lockup) -->
+  <footer class="bg-white border-t border-outline-variant/30 py-10 md:py-14 text-on-surface-variant text-sm" role="contentinfo">
+    <div class="max-w-7xl mx-auto px-4 sm:px-8 md:px-12 grid grid-cols-1 md:grid-cols-4 gap-8 items-center">
       
-      <div class="col-span-1 md:col-span-2 mb-md md:mb-0 flex flex-col gap-sm">
-        <div class="flex items-center gap-sm mb-4">
-          <img alt="KinJo Logo" class="h-12 w-auto object-contain rounded-sm" src="/static/img/landing/footer_logo.png">
-          <span class="font-title-lg text-title-lg font-bold text-primary block">
-            <span class="lang-en-content">Jordan Kindergarten Portal</span>
-            <span class="lang-ar-content">بوابة رياض الأطفال الأردنية</span>
+      <div class="md:col-span-2 space-y-3">
+        <div class="flex items-center gap-3">
+          <img alt="KinJo Footer Logo" class="h-10 w-auto object-contain rounded-md" src="/static/img/landing/footer_logo.png">
+          <span class="font-bold text-primary text-base">
+            <span class="lang-en-content">Jordan Kindergarten Portal — KinJo</span>
+            <span class="lang-ar-content">بوابة رياض الأطفال الأردنية — KinJo</span>
           </span>
         </div>
-        <p class="font-body-sm text-body-sm text-on-surface-variant">
-          <span class="lang-en-content">© 2024 Ministry of Education - Hashemite Kingdom of Jordan. All Rights Reserved.</span>
-          <span class="lang-ar-content">© 2024 وزارة التربية والتعليم - المملكة الأردنية الهاشمية. جميع الحقوق محفوظة.</span>
+        <p class="text-xs text-secondary leading-relaxed max-w-lg">
+          <span class="lang-en-content">© 2026 Ministry of Social Development & Ministry of Education - Hashemite Kingdom of Jordan. All Rights Reserved.</span>
+          <span class="lang-ar-content">© 2026 وزارة التنمية الاجتماعية ووزارة التربية والتعليم — المملكة الأردنية الهاشمية. جميع الحقوق محفوظة.</span>
         </p>
       </div>
 
-      <div class="col-span-1 md:col-span-2 flex flex-col md:flex-row gap-lg md:justify-end items-start md:items-center">
-        <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/privacy">
+      <div class="md:col-span-2 flex flex-wrap gap-4 md:gap-6 justify-start md:justify-end text-xs sm:text-sm font-medium">
+        <a class="hover:text-primary transition-colors py-1" href="/services">
+          <span class="lang-en-content">Services</span>
+          <span class="lang-ar-content">دليل الخدمات</span>
+        </a>
+        <a class="hover:text-primary transition-colors py-1" href="/privacy">
           <span class="lang-en-content">Privacy Policy</span>
           <span class="lang-ar-content">سياسة الخصوصية</span>
         </a>
-        <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/terms">
+        <a class="hover:text-primary transition-colors py-1" href="/terms">
           <span class="lang-en-content">Terms of Service</span>
           <span class="lang-ar-content">شروط الخدمة</span>
         </a>
-        <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/about">
-          <span class="lang-en-content">Accessibility Statement</span>
-          <span class="lang-ar-content">بيان إمكانية الوصول</span>
+        <a class="hover:text-primary transition-colors py-1" href="/about">
+          <span class="lang-en-content">Accessibility</span>
+          <span class="lang-ar-content">إمكانية الوصول</span>
         </a>
-        <a class="font-body-sm text-body-sm text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="/services">
-          <span class="lang-en-content">National Portal</span>
-          <span class="lang-ar-content">البوابة الوطنية</span>
+        <a class="hover:text-primary transition-colors py-1" href="/faq">
+          <span class="lang-en-content">FAQ</span>
+          <span class="lang-ar-content">الأسئلة الشائعة</span>
         </a>
       </div>
 
