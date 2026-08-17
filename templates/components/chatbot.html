@@ -33,8 +33,8 @@
     <header class="chatbot-header">
       <div class="chatbot-header-info">
         <div class="chatbot-avatar-wrap">
-          <div class="chatbot-avatar chatbot-bot-avatar">
-            <i class="bi bi-robot"></i>
+          <div class="chatbot-avatar chatbot-bot-avatar" title="KinJo AI">
+            <span class="chatbot-header-avatar-emoji">🤖</span>
           </div>
           <span class="chatbot-status-dot" title="{% if ui_lang == 'en' %}Online & Verified{% else %}متصل ومعتمد{% endif %}"></span>
         </div>
@@ -121,7 +121,7 @@
     <!-- Typing Indicator with Avatar -->
     <div id="chatbot-typing-indicator" class="chatbot-typing-wrap" style="display: none;" aria-hidden="true">
       <div class="chatbot-msg-avatar chatbot-bot-msg-avatar">
-        <i class="bi bi-robot"></i>
+        <span>🤖</span>
       </div>
       <div class="chatbot-typing-bubble">
         <span class="chatbot-typing-dot"></span>
@@ -146,7 +146,7 @@
           id="chatbot-input-field"
           class="chatbot-input-field"
           placeholder="{% if ui_lang == 'en' %}Ask a question...{% else %}اكتب سؤالك هنا...{% endif %}"
-          maxlength="1500"
+          maxlength="1000"
           aria-label="{% if ui_lang == 'en' %}Message input{% else %}حقل إدخال الرسالة{% endif %}"
           required
         />
