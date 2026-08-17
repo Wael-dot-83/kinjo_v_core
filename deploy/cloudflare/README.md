@@ -61,11 +61,18 @@ Two-phase rotation so the private key never leaves the host:
 
 ```bash
 kinjo-origin-cert-rotate.sh generate            # new key + CSR; prints only the CSR
+kinjo-origin-cert-rotate.sh csr                # re-print the pending CSR at any time
 # submit the CSR at Cloudflare > SSL/TLS > Origin Server > Create Certificate
 #   -> "I have my own private key and CSR"
 kinjo-origin-cert-rotate.sh install new-cert.pem
 kinjo-origin-cert-rotate.sh status
 ```
+
+`csr` exists because `generate` deliberately refuses once a pending key is
+present — regenerating would orphan that key and produce a certificate that
+cannot be installed — and `status` reports the *live* certificate, not the
+request. Without it the only way to recover the CSR for submission was reading
+the file by hand.
 
 `install` validates modulus match, SANs, validity and PEM parseability **before**
 touching the live files, backs up the current pair, swaps atomically, tests the
