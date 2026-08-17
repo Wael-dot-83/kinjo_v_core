@@ -1,0 +1,26 @@
+# Shared proxy headers for every location that forwards to the app.
+#
+# X-Forwarded-For is what the app's per-IP rate limiter and audit log read as the
+# client address. Without it every request appears to come from the nginx
+# container's address on the compose network, which would collapse all users into
+# a single rate-limit bucket and record one IP for every audited action.
+#
+# uvicorn only honours these when started with --proxy-headers and a
+# --forwarded-allow-ips that includes the proxy — see scripts/run_uvicorn_supervised.py.
+proxy_set_header Host              $host;
+proxy_set_header X-Real-IP         $remote_addr;
+proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-Host  $host;
+proxy_set_header X-Forwarded-Port  $server_port;
+
+proxy_http_version 1.1;
+proxy_set_header Connection "";
+
+proxy_connect_timeout 10s;
+proxy_send_timeout    60s;
+proxy_read_timeout    60s;
+
+# Let the app own its error bodies — they are bilingual (ar/en) and the generic
+# nginx error page is English-only and leaks nothing useful to the operator.
+proxy_intercept_errors off;

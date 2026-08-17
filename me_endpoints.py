@@ -228,15 +228,9 @@ def change_my_password(
             fields={"new_password": "reused"},
         )
 
-    current_user.hashed_password = get_password_hash(payload.new_password)
-    # UTC, not Jordan time. This column feeds one consumer — the password-age
-    # subtraction in auth.requires_password_change — so it is a duration
-    # anchor, not a Jordan-facing operational date. SQLite drops the offset on
-    # DateTime(timezone=True), and that reader treats a naive value as UTC, so
-    # storing Jordan wall-clock here would read back three hours off.
-    current_user.password_changed_at = datetime.now(timezone.utc)
-    current_user.must_change_password = False
-    db.commit()
+    from auth import change_user_password
+
+    change_user_password(db, current_user, payload.new_password)
 
     log_audit_event(
         db,

@@ -18,10 +18,21 @@ def issue_password_reset_token(
     user: models.User,
     expires_hours: int = 24,
     invalidate_existing: bool = True,
+    *,
+    commit: bool = True,
 ) -> str:
-    """Create a new reset token for a user and optionally invalidate existing tokens."""
+    """Create a reset token, optionally leaving commit ownership to the caller."""
     token = secrets.token_urlsafe(32)
     expires_at = datetime.now(timezone.utc) + timedelta(hours=expires_hours)
+
+    # Serialize issuance per account. Without this lock, two requests can both
+    # invalidate the same prior set and then each commit a different live token.
+    (
+        db.query(models.User.id)
+        .filter(models.User.id == user.id)
+        .with_for_update()
+        .one()
+    )
 
     if invalidate_existing:
         (
@@ -33,14 +44,16 @@ def issue_password_reset_token(
             .update({"used": True})
         )
 
-    db.add(
-        models.PasswordResetToken(
-            user_id=user.id,
-            token=token,
-            expires_at=expires_at,
-        )
+    token_record = models.PasswordResetToken(
+        user_id=user.id,
+        token=token,
+        expires_at=expires_at,
     )
-    db.commit()
+    db.add(token_record)
+    if commit:
+        db.commit()
+    else:
+        db.flush()
     return token
 
 

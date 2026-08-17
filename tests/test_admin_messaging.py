@@ -135,13 +135,13 @@ class TestDedupe:
 
 
 class TestNormalizeGovernorates:
-    def test_invalid_governorate_via_endpoint_returns_400(self, client, test_db):
-        """Lines 1966-1967: invalid governorate → 400."""
+    def test_invalid_governorate_via_endpoint_returns_422(self, client, test_db):
+        """Invalid governorates are rejected, never widened to all recipients."""
         _make_admin(test_db, "ngov_adm", "1")
         headers = _tok(client, "ngov_adm1")
         r = client.get("/api/admin/message-recipients?governorates=TOTALLY_INVALID_GOV",
                        headers=headers)
-        assert r.status_code == 400
+        assert r.status_code == 422
 
     def test_none_returns_empty(self):
         from admin_endpoints import _normalize_governorates

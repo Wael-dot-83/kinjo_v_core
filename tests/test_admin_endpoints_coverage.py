@@ -119,8 +119,8 @@ class TestPasswordReset:
     def test_request_reset_existing_email_returns_200(self, client, test_db):
         _make_admin(test_db, "rst_admin", "1")
         headers = _tok(client, "rst_admin1")
-        with patch("admin_endpoints.deliver_password_reset_email", return_value=None), \
-             patch("admin_endpoints.issue_password_reset_token", return_value="mock-token"):
+        with patch("api.users.deliver_password_reset_email", return_value=None), \
+             patch("api.users.issue_password_reset_token", return_value="mock-token"):
             r = client.post(
                 "/api/admin/password-reset-request",
                 headers=headers,
@@ -143,7 +143,7 @@ class TestPasswordReset:
     def test_confirm_reset_invalid_token_returns_400(self, client, test_db):
         _make_admin(test_db, "rst_admin", "3")
         headers = _tok(client, "rst_admin3")
-        with patch("admin_endpoints.resolve_valid_token", return_value=None):
+        with patch("api.users.resolve_valid_token", return_value=None):
             r = client.post(
                 "/api/admin/password-reset-confirm",
                 headers=headers,

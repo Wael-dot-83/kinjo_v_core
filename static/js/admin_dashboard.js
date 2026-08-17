@@ -397,8 +397,32 @@ class AdminDashboard {
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
-      if (!response.ok)
+      if (!response.ok) {
+        if (response.status === 403) {
+          this._setErrorMessage(
+            this.t(
+              "errors.admin_access_required",
+              "Admin access required. Please contact your administrator.",
+            ),
+          );
+          this.setState("error");
+          if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.classList.remove("is-loading");
+            if (refreshText)
+              refreshText.textContent =
+                lang === "en"
+                  ? "Access Denied"
+                  : "ممنوع الوصول";
+            if (refreshIcon) {
+              refreshIcon.classList.remove("spin", "bi-arrow-clockwise");
+              refreshIcon.classList.add("bi-shield-lock");
+            }
+          }
+          return;
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       const data = await response.json();
       this._lastData = data;
       this.renderDashboard(data);
@@ -545,14 +569,32 @@ class AdminDashboard {
     };
 
     const enrollment = chartPayload.enrollment || {};
-    const submissionChart = {
-      labels: Object.keys(enrollment).map((k) => {
+    const knownLabels = [];
+    const knownValues = [];
+    const unknownValues = [];
+
+    Object.entries(enrollment).forEach(([k, v]) => {
+      const numVal = this.toNumber(v);
+      if (ENROLLMENT_I18N[k] || (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[k]) {
         const i18nKey = ENROLLMENT_I18N[k];
-        const fallback =
-          (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[k] || k;
-        return i18nKey ? this.t(i18nKey, fallback) : fallback;
-      }),
-      values: Object.values(enrollment).map((v) => this.toNumber(v)),
+        const fallback = (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[k];
+        knownLabels.push(i18nKey ? this.t(i18nKey, fallback) : fallback);
+        knownValues.push(numVal);
+      } else {
+        unknownValues.push(numVal);
+      }
+    });
+
+    const unknownTotal = unknownValues.reduce((sum, v) => sum + v, 0);
+    if (unknownTotal > 0) {
+      const unknownLabel = lang === "ar" ? "حالة أخرى" : "Other status";
+      knownLabels.push(unknownLabel);
+      knownValues.push(unknownTotal);
+    }
+
+    const submissionChart = {
+      labels: knownLabels,
+      values: knownValues,
     };
 
     const recentActivity =
@@ -994,6 +1036,10 @@ class AdminDashboard {
     if (!container) return;
     canvas.style.display = "none";
     container.querySelector(".dashboard-chart-empty-state")?.remove();
+    const interp = container.querySelector(".chart-interpretation-layer");
+    if (interp) interp.innerHTML = "";
+    const a11y = container.querySelector(".chart-accessible-summary");
+    if (a11y) a11y.innerHTML = "";
     const empty = document.createElement("div");
     empty.className =
       "agency-alert agency-alert--info dashboard-chart-empty-state";
@@ -1262,6 +1308,53 @@ class AdminDashboard {
     }
   }
 
+  getChartTokens() {
+    const root =
+      (typeof document !== "undefined" &&
+        document.querySelector(".admin-uswds-dashboard")) ||
+      (typeof document !== "undefined" ? document.documentElement : null);
+    const s =
+      typeof window !== "undefined" && window.getComputedStyle && root
+        ? window.getComputedStyle(root)
+        : null;
+    const get = (name, fallback) =>
+      s ? s.getPropertyValue(name).trim() || fallback : fallback;
+
+    const primary = get("--kinjo-dashboard-chart-primary", "var(--kinjo-action, #1E40AF)");
+    const primaryFill = get(
+      "--kinjo-dashboard-chart-primary-fill",
+      "rgba(30, 64, 175, 0.22)",
+    );
+    const success = get("--kinjo-dashboard-chart-success", "var(--kinjo-color-success, #10b981)");
+    const warning = get("--kinjo-dashboard-chart-warning", "var(--kinjo-color-warning, #f59e0b)");
+    const danger = get("--kinjo-dashboard-chart-danger", "var(--kinjo-color-danger, #ef4444)");
+    const muted = get("--kinjo-dashboard-chart-muted", "var(--kinjo-color-text-muted, #64748b)");
+    const info = get("--kinjo-dashboard-chart-info", "var(--kinjo-color-info, #3b82f6)");
+    const grid = get("--kinjo-dashboard-chart-grid", "var(--kinjo-color-border-subtle, #DCEAE3)");
+    const text = get("--kinjo-dashboard-chart-text", "var(--kinjo-color-text-secondary, #475569)");
+    const tooltipBackground = get("--kinjo-dashboard-chart-tooltip-bg", "rgba(17, 24, 39, 0.92)");
+    const tooltipText = get("--kinjo-dashboard-chart-tooltip-text", "#f8fafc");
+    const pointBorder = get("--kinjo-dashboard-chart-point-border", "var(--kinjo-color-text-inverse, #ffffff)");
+    const gradientFade = get("--kinjo-dashboard-chart-gradient-fade", "rgba(255, 255, 255, 0)");
+
+    return {
+      primary,
+      primaryFill,
+      success,
+      warning,
+      danger,
+      muted,
+      info,
+      grid,
+      text,
+      tooltipBackground,
+      tooltipText,
+      pointBorder,
+      gradientFade,
+      palette: [primary, success, warning, danger, muted, info],
+    };
+  }
+
   renderAttendanceChart(data) {
     const ctx = document.getElementById("attendance-chart");
     if (!ctx) return;
@@ -1275,15 +1368,16 @@ class AdminDashboard {
         : "مخطط الحضور اليومي يوضح سجلات الحضور حسب التاريخ",
     );
     this.charts.attendance?.destroy();
+    const tokens = this.getChartTokens();
     const context = ctx.getContext("2d");
     const gradient = context
       ? (() => {
           const g = context.createLinearGradient(0, 0, 0, 220);
-          g.addColorStop(0, "rgba(31, 94, 71, 0.28)");
-          g.addColorStop(1, "rgba(31, 94, 71, 0.02)");
+          g.addColorStop(0, tokens.primaryFill);
+          g.addColorStop(1, tokens.gradientFade);
           return g;
         })()
-      : "rgba(31, 94, 71, 0.1)";
+      : tokens.primaryFill;
     this.charts.attendance = new Chart(ctx, {
       type: "line",
       data: {
@@ -1295,16 +1389,16 @@ class AdminDashboard {
                 ? "Recorded Attendance"
                 : ATTENDANCE_CHART_LABELS["Recorded Attendance"],
             data: safeChartData(data.values),
-            borderColor: "#4F46E5",
+            borderColor: tokens.primary,
             backgroundColor: gradient,
-            tension: 0.4,
+            tension: 0.35,
             fill: true,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            pointBackgroundColor: "#4F46E5",
-            pointBorderColor: "#fff",
+            pointRadius: 3.5,
+            pointHoverRadius: 5.5,
+            pointBackgroundColor: tokens.primary,
+            pointBorderColor: tokens.pointBorder,
             pointBorderWidth: 2,
-            borderWidth: 2.5,
+            borderWidth: 2.2,
           },
         ],
       },
@@ -1314,23 +1408,106 @@ class AdminDashboard {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: "rgba(17,24,39,0.92)",
-            titleColor: "#f8fafc",
-            bodyColor: "#f8fafc",
+            backgroundColor: tokens.tooltipBackground,
+            titleColor: tokens.tooltipText,
+            bodyColor: tokens.tooltipText,
             padding: 10,
             cornerRadius: 8,
           },
         },
         scales: {
-          x: { ticks: { color: "#6c757d" }, grid: { display: false } },
+          x: { ticks: { color: tokens.text }, grid: { display: false } },
           y: {
             beginAtZero: true,
-            ticks: { precision: 0, color: "#6c757d" },
-            grid: { color: "rgba(0,0,0,0.06)" },
+            ticks: { precision: 0, color: tokens.text },
+            grid: { color: tokens.grid },
           },
         },
       },
     });
+
+    this._renderAttendanceInterpretation(data);
+    this._renderAttendanceAccessibleTable(data);
+  }
+
+  _renderAttendanceInterpretation(data) {
+    const container = document.getElementById("attendance-chart-interpretation");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!data || !data.values || data.values.length === 0) return;
+
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const latestVal = data.values[data.values.length - 1];
+    const latestDate = data.labels[data.labels.length - 1];
+    const count = data.values.length;
+    const locale = lang === "en" ? "en-US" : "ar-JO";
+    const formattedVal = new Intl.NumberFormat(locale).format(latestVal);
+
+    const box = document.createElement("div");
+    box.className = "chart-interpretation-box";
+
+    const item1 = document.createElement("div");
+    item1.className = "interpretation-item";
+    const lbl1 = document.createElement("span");
+    lbl1.className = "interpretation-label";
+    lbl1.textContent = lang === "en" ? "Latest Recorded Count:" : "آخر حضور مسجل:";
+    const val1 = document.createElement("span");
+    val1.className = "interpretation-value";
+    val1.textContent = lang === "en"
+      ? `${formattedVal} present children (${latestDate}).`
+      : `${formattedVal} طفل حاضر (${latestDate}).`;
+    item1.append(lbl1, " ", val1);
+
+    const item2 = document.createElement("div");
+    item2.className = "interpretation-item";
+    const lbl2 = document.createElement("span");
+    lbl2.className = "interpretation-label";
+    lbl2.textContent = lang === "en" ? "Scope & Timeline:" : "النطاق والفترة:";
+    const val2 = document.createElement("span");
+    val2.className = "interpretation-value";
+    val2.textContent = lang === "en"
+      ? `Active network institutions over the last ${count} days.`
+      : `حضانات الشبكة النشطة خلال آخر ${count} يوماً.`;
+    item2.append(lbl2, " ", val2);
+
+    box.appendChild(item1);
+    box.appendChild(item2);
+    container.appendChild(box);
+  }
+
+  _renderAttendanceAccessibleTable(data) {
+    const container = document.getElementById("attendance-chart-accessible-summary");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!data || !data.labels || data.labels.length === 0) return;
+
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const locale = lang === "en" ? "en-US" : "ar-JO";
+
+    const table = document.createElement("table");
+    table.className = "visually-hidden";
+    const caption = document.createElement("caption");
+    caption.textContent = lang === "en" ? "Daily Attendance Data Summary" : "ملخص بيانات الحضور اليومي";
+    table.appendChild(caption);
+
+    const thead = document.createElement("thead");
+    thead.innerHTML = `<tr><th scope="col">${lang === "en" ? "Date" : "التاريخ"}</th><th scope="col">${lang === "en" ? "Attendance Count" : "عدد الحضور"}</th></tr>`;
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    data.labels.forEach((label, idx) => {
+      const val = data.values[idx] != null ? data.values[idx] : 0;
+      const row = document.createElement("tr");
+      const td1 = document.createElement("td");
+      td1.textContent = String(label);
+      const td2 = document.createElement("td");
+      td2.textContent = new Intl.NumberFormat(locale).format(val);
+      row.appendChild(td1);
+      row.appendChild(td2);
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    container.appendChild(table);
   }
 
   renderSubmissionsChart(data) {
@@ -1346,14 +1523,7 @@ class AdminDashboard {
         : "مخطط حالة التسجيل يوضح توزيع حالات الطلبات",
     );
     this.charts.dataSubmissions?.destroy();
-    const palette = [
-      "#0d6efd",
-      "#198754",
-      "#ffc107",
-      "#dc3545",
-      "#6c757d",
-      "#0dcaf0",
-    ];
+    const tokens = this.getChartTokens();
     this.charts.dataSubmissions = new Chart(ctx, {
       type: "bar",
       data: {
@@ -1363,7 +1533,7 @@ class AdminDashboard {
             label: this.t("dashboard.enrollment_status", "Enrollment Status"),
             data: safeChartData(data.values),
             backgroundColor: safeChartData(data.labels).map(
-              (_, i) => palette[i % palette.length],
+              (_, i) => tokens.palette[i % tokens.palette.length],
             ),
             borderWidth: 0,
             borderRadius: 6,
@@ -1376,9 +1546,9 @@ class AdminDashboard {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: "rgba(17,24,39,0.92)",
-            titleColor: "#f8fafc",
-            bodyColor: "#f8fafc",
+            backgroundColor: tokens.tooltipBackground,
+            titleColor: tokens.tooltipText,
+            bodyColor: tokens.tooltipText,
             padding: 10,
             cornerRadius: 8,
             callbacks: {
@@ -1389,13 +1559,94 @@ class AdminDashboard {
         scales: {
           x: {
             beginAtZero: true,
-            ticks: { precision: 0 },
-            grid: { color: "rgba(0,0,0,0.06)" },
+            ticks: { precision: 0, color: tokens.text },
+            grid: { color: tokens.grid },
           },
-          y: { ticks: { color: "#495057" }, grid: { display: false } },
+          y: { ticks: { color: tokens.text }, grid: { display: false } },
         },
       },
     });
+
+    this._renderSubmissionsInterpretation(data);
+    this._renderSubmissionsAccessibleTable(data);
+  }
+
+  _renderSubmissionsInterpretation(data) {
+    const container = document.getElementById("enrollment-chart-interpretation");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!data || !data.values || data.values.length === 0) return;
+
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const totalApplications = data.values.reduce((sum, v) => sum + (Number(v) || 0), 0);
+    const locale = lang === "en" ? "en-US" : "ar-JO";
+    const formattedTotal = new Intl.NumberFormat(locale).format(totalApplications);
+
+    const box = document.createElement("div");
+    box.className = "chart-interpretation-box";
+
+    const item1 = document.createElement("div");
+    item1.className = "interpretation-item";
+    const lbl1 = document.createElement("span");
+    lbl1.className = "interpretation-label";
+    lbl1.textContent = lang === "en" ? "Total Applications:" : "إجمالي الطلبات:";
+    const val1 = document.createElement("span");
+    val1.className = "interpretation-value";
+    val1.textContent = lang === "en"
+      ? `${formattedTotal} applications across all workflow stages.`
+      : `${formattedTotal} طلب تسجيل عبر جميع مراحل المتابعة.`;
+    item1.append(lbl1, " ", val1);
+
+    const item2 = document.createElement("div");
+    item2.className = "interpretation-item";
+    const lbl2 = document.createElement("span");
+    lbl2.className = "interpretation-label";
+    lbl2.textContent = lang === "en" ? "Scope:" : "النطاق:";
+    const val2 = document.createElement("span");
+    val2.className = "interpretation-value";
+    val2.textContent = lang === "en"
+      ? "All recorded enrollment requests in the administrative database."
+      : "جميع طلبات التسجيل المقيدة في السجل الإداري.";
+    item2.append(lbl2, " ", val2);
+
+    box.appendChild(item1);
+    box.appendChild(item2);
+    container.appendChild(box);
+  }
+
+  _renderSubmissionsAccessibleTable(data) {
+    const container = document.getElementById("enrollment-chart-accessible-summary");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!data || !data.labels || data.labels.length === 0) return;
+
+    const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+    const locale = lang === "en" ? "en-US" : "ar-JO";
+
+    const table = document.createElement("table");
+    table.className = "visually-hidden";
+    const caption = document.createElement("caption");
+    caption.textContent = lang === "en" ? "Enrollment Application Status Summary" : "ملخص حالات طلبات التسجيل";
+    table.appendChild(caption);
+
+    const thead = document.createElement("thead");
+    thead.innerHTML = `<tr><th scope="col">${lang === "en" ? "Status" : "الحالة"}</th><th scope="col">${lang === "en" ? "Applications Count" : "عدد الطلبات"}</th></tr>`;
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    data.labels.forEach((label, idx) => {
+      const val = data.values[idx] != null ? data.values[idx] : 0;
+      const row = document.createElement("tr");
+      const td1 = document.createElement("td");
+      td1.textContent = String(label);
+      const td2 = document.createElement("td");
+      td2.textContent = new Intl.NumberFormat(locale).format(val);
+      row.appendChild(td1);
+      row.appendChild(td2);
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    container.appendChild(table);
   }
 
   // ── Activity Feed ─────────────────────────────────────────────────────────

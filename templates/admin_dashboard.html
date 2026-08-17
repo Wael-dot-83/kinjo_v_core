@@ -2,6 +2,7 @@
 {% block extra_head %} {{ super() }}
 <link rel="stylesheet" href="/static/vendor/uswds/css/uswds.min.css" />
 <link rel="stylesheet" href="/static/css/agency_reports.css?v=3.2" />
+<link rel="stylesheet" href="/static/css/dashboard-enhanced.css?v=abb86b7882d9" />
 <style>
   /* USWDS ships a Latin-only type stack (Source Sans Pro Web) and applies it to
    .usa-prose / .usa-summary-box. It loads after kinjo.css, so it beat the Arabic
@@ -498,6 +499,8 @@
                 aria-label="{% if ui_lang == 'en' %}Daily attendance chart{% else %}رسم بياني للحضور اليومي{% endif %}"
                 role="img"
               ></canvas>
+              <div id="attendance-chart-interpretation" class="chart-interpretation-layer mt-2"></div>
+              <div id="attendance-chart-accessible-summary" class="chart-accessible-summary"></div>
               <p class="visually-hidden">
                 {% if ui_lang == 'en' %}Chart showing daily attendance trends
                 over time{% else %}رسم بياني يظهر اتجاهات الحضور اليومي عبر
@@ -523,6 +526,8 @@
                 aria-label="{% if ui_lang == 'en' %}Enrollment status chart{% else %}رسم بياني لحالة التسجيل{% endif %}"
                 role="img"
               ></canvas>
+              <div id="enrollment-chart-interpretation" class="chart-interpretation-layer mt-2"></div>
+              <div id="enrollment-chart-accessible-summary" class="chart-accessible-summary"></div>
               <p class="visually-hidden">
                 {% if ui_lang == 'en' %}Chart showing enrollment status
                 distribution{% else %}رسم بياني يظهر توزيع حالة التسجيل{% endif
@@ -670,7 +675,7 @@
   window.KINJO_LANG = "{{ ui_lang }}";
 </script>
 <script src="/static/js/chart_utils.js?v=2.1"></script>
-<script src="/static/js/admin_dashboard.js?v=3.2"></script>
+<script src="/static/js/admin_dashboard.js?v=c77935167274"></script>
 <script src="/static/js/admin_activity_filters.js?v=1.0"></script>
 <script src="/static/js/admin_agency_reports_dashboard_summary.js?v=1.0"></script>
 {% endblock %}

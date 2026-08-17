@@ -981,10 +981,15 @@ def run_daily_pipeline(
     snapshot_date: Optional[date] = None,
     window_days: int = DEFAULT_WINDOW_DAYS,
     run_id: Optional[str] = None,
+    commit: bool = True,
 ) -> Dict[str, Any]:
     """
     Run the full daily ETL pipeline for `snapshot_date` (default = today).
     Returns a summary dict.
+
+    By default the pipeline owns its transaction for scheduler/backfill callers.
+    Request handlers that must atomically persist an actor-aware audit row pass
+    ``commit=False`` and commit the combined business mutation and audit event.
 
     Steps:
       1. Snapshot sub + main indicators per governorate
@@ -1015,6 +1020,12 @@ def run_daily_pipeline(
     db.add(run_log)
     db.flush()
 
+    def checkpoint() -> None:
+        if commit:
+            db.commit()
+        else:
+            db.flush()
+
     try:
         # 1. Per-governorate sub + main
         for gov in C.GOVERNORATES:
@@ -1028,8 +1039,8 @@ def run_daily_pipeline(
             # Count unique rows touched: 22 sub + 6 main per governorate
             summary["rows_processed"] += 22 + 6
 
-        db.commit()
-        logger.debug("Pipeline step 1 (sub+main) committed for %s, %d governorates", today, summary["governorates"])
+        checkpoint()
+        logger.debug("Pipeline step 1 (sub+main) completed for %s, %d governorates", today, summary["governorates"])
 
         # 2-3. Per-governorate correlation + regression on the last `window_days` days
         n_corr = 0
@@ -1080,8 +1091,12 @@ def run_daily_pipeline(
                     summary["warnings"].append({"step": "ols", "gov": gov_code, "main": main_key, "error": str(exc)})
 
         try:
-            db.commit()
+            checkpoint()
         except Exception as exc:
+            if not commit:
+                # The request-level transaction is atomic.  Do not discard the
+                # earlier work and continue with a partial pipeline.
+                raise
             db.rollback()
             import traceback
             tb = traceback.format_exc()
@@ -1138,7 +1153,7 @@ def run_daily_pipeline(
             )
             _upsert_alerts(db, today, gov_code, alerts)
 
-        db.commit()
+        checkpoint()
 
         # 6. Finalize run log
         elapsed = int((time.monotonic() - started) * 1000)
@@ -1149,7 +1164,7 @@ def run_daily_pipeline(
         run_log.governorates = summary["governorates"]
         run_log.warnings = summary["warnings"]
         run_log.errors = summary["errors"]
-        db.commit()
+        checkpoint()
         # Invalidate the read-side cache so the next admin request gets fresh data
         try:
             from . import cache as _cache
@@ -1164,10 +1179,15 @@ def run_daily_pipeline(
         logger.exception("Daily pipeline failed: %s", exc)
         try:
             db.rollback()
+            if not commit:
+                # The first flush was rolled back, so explicitly re-stage the
+                # failed run record in the clean transaction that the caller
+                # will combine with its audit event.
+                db.add(run_log)
             run_log.status = "failed"
             run_log.finished_at = now_amman()
             run_log.errors = [{"step": "pipeline", "error": str(exc)}]
-            db.commit()
+            checkpoint()
         except Exception:
             db.rollback()
         summary["status"] = "failed"

@@ -182,6 +182,24 @@ def test_admin_shell_renders_route_specific_context_in_both_languages(client, ad
     assert "View session timeout and server-managed environment information" in settings_en
 
 
+def test_explicit_admin_query_language_overrides_cookie_without_persisting(client, admin_user):
+    app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+    try:
+        client.cookies.set("kinjo_lang", "ar")
+        english = client.get("/admin/settings?lang=en")
+        assert 'lang="en" dir="ltr"' in english.text
+        assert "About this page" in english.text
+        assert client.cookies.get("kinjo_lang") == "ar"
+
+        client.cookies.set("kinjo_lang", "en")
+        arabic = client.get("/admin/settings?lang=ar")
+        assert 'lang="ar" dir="rtl"' in arabic.text
+        assert "حول هذه الصفحة" in arabic.text
+        assert client.cookies.get("kinjo_lang") == "en"
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_manager_admin_shell_exposes_only_the_manager_available_user_link(client, manager_user):
     app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
     try:

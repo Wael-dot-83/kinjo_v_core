@@ -37,11 +37,20 @@ services:
       - .env
     ports:
       # Host port is configurable so this file matches what production actually
-      # runs. The live server sits behind Cloudflare and must publish on 80, and
-      # that was previously a hand edit to this file on the box — the same kind
-      # of untracked drift that once left production running uncommitted code.
-      # Set KINJO_WEB_PORT=80 in the server's .env; everywhere else keeps 8000.
-      - "${KINJO_WEB_PORT:-8000}:8000"
+      # runs, rather than being hand-edited on the box — the same kind of
+      # untracked drift that once left production running uncommitted code.
+      #
+      # The default binds LOOPBACK only. It used to default to "8000", which is
+      # shorthand for 0.0.0.0:8000 and published the app to the whole internet in
+      # plaintext. ufw does not contain that: Docker installs its own DOCKER-USER
+      # iptables rules that bypass the firewall, so a published port is reachable
+      # even while ufw claims to deny it. Local development is unaffected —
+      # http://127.0.0.1:8000 still works.
+      #
+      # With the TLS edge deployed (docker-compose.edge.yml), leave this at the
+      # default: nginx reaches the app over the compose network, and loopback
+      # publishing stays available for on-box debugging.
+      - "${KINJO_WEB_PORT:-127.0.0.1:8000}:8000"
     volumes:
       - ./data:/app/data
     environment:

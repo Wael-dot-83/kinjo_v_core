@@ -3,7 +3,7 @@ Notification helpers for messaging and daily reports.
 """
 import logging
 from datetime import date
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Union
 
 import models
 from config import settings
@@ -87,18 +87,9 @@ def create_daily_report_notification(
     db.add_all(notifications)
     db.commit()
 
-    # Queue async tasks for email/push
-    for notification in notifications:
-        if notification.channel == models.NotificationChannel.EMAIL:
-            try:
-                send_email_notification.delay(notification.id)
-            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                logger.warning(f"Failed to queue email notification: {e}")
-        elif notification.channel == models.NotificationChannel.PUSH:
-            try:
-                send_push_notification.delay(notification.id)
-            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                logger.warning(f"Failed to queue push notification: {e}")
+    # Queue async tasks for email/push. The rows are already durable; any
+    # broker-side failure is intentionally left PENDING for the beat retry sweep.
+    _queue_notification_tasks(notifications)
 
     return notifications[0] if notifications else None
 
@@ -252,17 +243,67 @@ def _build_notification_payload(message: models.Message) -> dict:
 
 def _queue_notification_tasks(notifications: List[models.Notification]) -> None:
     for notification in notifications:
+        try:
+            if notification.channel == models.NotificationChannel.EMAIL:
+                send_email_notification.delay(notification.id)
+            elif notification.channel == models.NotificationChannel.PUSH:
+                send_push_notification.delay(notification.id)
+        except Exception as exc:
+            # Celery/Kombu transport exception types vary by broker. This is an
+            # external-dispatch boundary: retain the committed row and let the
+            # bounded stale-PENDING sweep recover it.
+            logger.warning(
+                "Failed to queue notification id=%s error_type=%s; pending retry",
+                notification.id,
+                type(exc).__name__,
+            )
+
+
+def dispatch_message_notification_tasks(
+    notifications: List[models.Notification],
+) -> None:
+    """Dispatch a committed batch of message notifications.
+
+    Caller-owned transaction flows use this only after their database commit.
+    A broker failure therefore leaves the durable PENDING rows available for
+    retry instead of rolling back or concealing the database truth.
+    """
+    retry_policy = {
+        "max_retries": 3,
+        "interval_start": 0,
+        "interval_step": 0.5,
+        "interval_max": 1,
+    }
+    for notification in notifications:
         if notification.channel == models.NotificationChannel.EMAIL:
-            send_email_notification.delay(notification.id)
+            send_email_notification.apply_async(
+                args=[notification.id],
+                retry=True,
+                retry_policy=retry_policy,
+            )
         elif notification.channel == models.NotificationChannel.PUSH:
-            send_push_notification.delay(notification.id)
+            send_push_notification.apply_async(
+                args=[notification.id],
+                retry=True,
+                retry_policy=retry_policy,
+            )
 
 
 def create_message_notifications(
     db,
     message: models.Message,
-    recipients: Iterable[models.User]
-) -> bool:
+    recipients: Iterable[models.User],
+    *,
+    caller_owns_transaction: bool = False,
+) -> Union[bool, List[models.Notification]]:
+    """Create message notifications using legacy or caller-owned semantics.
+
+    The default remains backward compatible: commit the rows, dispatch tasks,
+    and return ``True``. With ``caller_owns_transaction=True``, flush and return
+    the staged rows without committing or dispatching so the caller can add its
+    audit rows, commit once, and dispatch through
+    :func:`dispatch_message_notification_tasks` afterward.
+    """
     if settings.TESTING:
         return False
 
@@ -293,8 +334,12 @@ def create_message_notifications(
         return False
 
     db.add_all(notifications)
-    db.commit()
+    if caller_owns_transaction:
+        db.flush()
+        return notifications
 
+    db.commit()
+    # Preserve the legacy immediate-dispatch contract for existing callers.
     _queue_notification_tasks(notifications)
 
     return True
@@ -311,6 +356,7 @@ __all__ = [
     "notify_absence_rejected",
     "notify_attendance_corrected",
     "notify_supervisor_absence_approved",
+    "dispatch_message_notification_tasks",
 ]
 
 

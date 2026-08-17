@@ -1,0 +1,170 @@
+name: Deploy to DigitalOcean
+
+# =============================================================================
+# Manual dispatch only — deliberately NOT triggered by push to main.
+#
+# An automatic deploy-on-merge would have shipped whatever happened to land,
+# which is how production once ran an unmerged branch for hours. Every release
+# here is an explicit, attributable decision, and the `production` environment
+# below is where you attach required reviewers so a second person approves it.
+#
+# The gate order matters: tests run BEFORE anything touches the droplet, and the
+# deploy job depends on them, so a red suite cannot reach production.
+# =============================================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DEPLOY to confirm you intend to change production'
+        required: true
+        default: ''
+      skip_tests:
+        description: 'Emergency rollback only — skips the test gate'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  # Two concurrent deploys took production down twice. deploy_locked.sh also holds
+  # an flock on the box, but serialising here means the second run waits rather
+  # than failing on a busy lock.
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  TZ: Asia/Amman
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify the confirmation phrase
+        if: inputs.confirm != 'DEPLOY'
+        run: |
+          echo "::error::Refusing to deploy: type DEPLOY in the confirm input."
+          exit 1
+
+  test-gate:
+    needs: guard
+    if: inputs.skip_tests != true
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: kinjo
+          POSTGRES_PASSWORD: kinjo
+          POSTGRES_DB: kinjo_test
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports: ['5432:5432']
+    env:
+      SECRET_KEY: ci-only-not-a-production-key
+      TESTING: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - run: pip install -r requirements-dev.txt
+      - name: P0 suite
+        run: pytest -m "p0" --timeout=30 -q
+      - name: Full suite
+        run: pytest tests/ --timeout=60 -q
+      - name: Dependency audit
+        # Same accepted advisory as ci.yml — see the note there before extending.
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-1325 --progress-spinner off
+
+  deploy:
+    needs: [guard, test-gate]
+    # `always()` plus explicit result checks so an intentional skip_tests rollback
+    # can proceed while a genuine test FAILURE still blocks the deploy.
+    if: always() && needs.guard.result == 'success' && (needs.test-gate.result == 'success' || inputs.skip_tests == true)
+    runs-on: ubuntu-latest
+    environment: production      # attach required reviewers here
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build the release tarball from this exact commit
+        # git archive, not a copy of the runner's working tree: it emits precisely
+        # what is committed, so an untracked or ignored file can never ride along
+        # into production. .env is intentionally absent and lives only on the box.
+        run: |
+          git archive --format=tar -o /tmp/deploy.tar HEAD
+          echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          ls -l /tmp/deploy.tar
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          test -n "$DEPLOY_SSH_KEY" || { echo "::error::DEPLOY_SSH_KEY secret is not set"; exit 1; }
+          test -n "$DEPLOY_HOST"    || { echo "::error::DEPLOY_HOST secret is not set"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Pin the host key instead of StrictHostKeyChecking=no, which would accept
+          # any host presenting itself as the droplet and hand it the deploy key.
+          if [ -n "${{ secrets.DEPLOY_HOST_KEY }}" ]; then
+            printf '%s\n' "${{ secrets.DEPLOY_HOST_KEY }}" > ~/.ssh/known_hosts
+          else
+            echo "::warning::DEPLOY_HOST_KEY not set — falling back to first-use key discovery."
+            ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload the release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: scp -i ~/.ssh/id_ed25519 /tmp/deploy.tar "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/deploy.tar"
+
+      - name: Run the locked deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          # deploy_locked.sh backs up the database, tags a rollback image, migrates,
+          # and verifies health — all inside one flock. Exit 75 means another deploy
+          # holds the lock and production was left untouched; surface that clearly
+          # rather than as an anonymous failure.
+          set +e
+          ssh -i ~/.ssh/id_ed25519 "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "bash /opt/kinjo/scripts/deploy_locked.sh /tmp/deploy.tar ${RELEASE_SHA}"
+          rc=$?
+          set -e
+          if [ "$rc" = "75" ]; then
+            echo "::error::Another deployment holds the lock. Production was NOT modified."
+          fi
+          exit $rc
+
+      - name: Verify from outside the droplet
+        # The in-box checks already ran inside the lock. This proves the public path
+        # works, which is the only view that matches what a user experiences.
+        env:
+          PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
+        run: |
+          if [ -z "$PUBLIC_URL" ]; then
+            echo "::warning::PUBLIC_URL not set — skipping external verification."
+            exit 0
+          fi
+          for i in $(seq 1 10); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$PUBLIC_URL/health" || true)
+            echo "attempt $i: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 6
+          done
+          echo "::error::Public /health did not return 200 after deploy."
+          exit 1
+
+      - name: Report
+        if: always()
+        run: echo "Deploy of ${RELEASE_SHA:-unknown} finished with status ${{ job.status }}."

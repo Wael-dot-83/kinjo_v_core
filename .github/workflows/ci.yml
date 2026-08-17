@@ -5,6 +5,12 @@ on:
     branches: ["**"]
   pull_request:
     branches: [ main ]
+  # Weekly run so dependency-audit catches an advisory published while nobody is
+  # pushing — a push-only audit goes stale during exactly the quiet period before
+  # a release. The other jobs riding along also catch environment bit-rot (a new
+  # transitive release breaking the build) before it surprises a deploy.
+  schedule:
+    - cron: '0 3 * * 1'
 
 # The product is anchored to Jordan time (UTC+3) and the application computes
 # every operational date in that zone. Runners default to UTC, so between
@@ -289,3 +295,40 @@ jobs:
             tests/api/test_p1_analytics_summary.py \
             tests/api/test_p1_analytics_export.py \
             --timeout=60
+
+  # ---------------------------------------------------------------------------
+  # Dependency audit. Runs on every push AND on a schedule, because a dependency
+  # becomes vulnerable while nobody is touching the repository — a push-only
+  # audit would go stale precisely during a quiet period before a release.
+  # ---------------------------------------------------------------------------
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - run: pip install pip-audit
+
+      - name: Audit runtime dependencies
+        # PYSEC-2026-1325 (ecdsa, Minerva timing attack) is accepted, not ignored
+        # by neglect: ecdsa arrives transitively via python-jose, upstream has
+        # declared side-channel attacks out of scope so no fixed version exists,
+        # and the vulnerable code is ECDSA signing/keygen/ECDH. KinJo signs JWTs
+        # with HS256 and validate_production_settings() now REJECTS any non-HMAC
+        # algorithm in production, so the vulnerable path is unreachable by
+        # construction rather than by convention.
+        #
+        # Re-evaluate if: python-jose drops the ecdsa dependency, upstream ships
+        # a fix, or the HMAC-only guard in config.py is ever relaxed.
+        run: |
+          pip-audit -r requirements.txt \
+            --ignore-vuln PYSEC-2026-1325 \
+            --progress-spinner off
+
+      - name: Report the accepted advisory (non-blocking, for visibility)
+        if: always()
+        run: |
+          echo "Accepted advisories (not failing the build):"
+          pip-audit -r requirements.txt --progress-spinner off || true

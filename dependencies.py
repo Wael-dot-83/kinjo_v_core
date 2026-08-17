@@ -13,44 +13,43 @@ from sqlalchemy.orm import Session
 import models
 from database import get_db
 from config import settings
+from session_service import SessionInvalid
 
 logger = logging.getLogger(__name__)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token", auto_error=False)
 
-_SESSION_TIMEOUT_SECONDS = settings.SESSION_TIMEOUT_MINUTES * 60
-_SESSION_KEY_PREFIX = "kinjo:session:last_active:"
+def _enforce_access_session(payload: dict, user: models.User, request: Request) -> None:
+    """Validate the per-token server-side binding and cache it on the request."""
+    from session_service import SessionStoreUnavailable, validate_and_refresh_access_session
 
-
-def _session_key(username: str) -> str:
-    return f"{_SESSION_KEY_PREFIX}{username}"
-
-
-def _check_and_refresh_session(username: str) -> None:
-    """
-    Enforce inactivity-based session timeout via Redis.
-    Raises HTTP 401 if the session has been idle longer than SESSION_TIMEOUT_MINUTES.
-    Silently skips if Redis is unavailable (fail-open during degraded state).
-    Uses the shared cache_service redis_client to avoid per-request connection overhead.
-    """
+    jti = payload.get("jti")
+    issued_at = payload.get("iat")
+    expires_at = payload.get("exp")
+    if not isinstance(jti, str) or not jti:
+        raise SessionInvalid("Access token is missing jti")
     try:
-        from cache_service import dashboard_cache
-        rc = dashboard_cache.redis_client  # None when Redis is unavailable — instant skip
-        if rc is None:
-            return
-        key = _session_key(username)
-        exists = rc.exists(key)
-        if not exists:
-            # First request or key expired — could mean timed out.  We set the key
-            # on first access so the *next* idle check has a baseline.  Existing
-            # sessions that pre-date this feature get a grace-period, not a kick.
-            rc.setex(key, _SESSION_TIMEOUT_SECONDS, "1")
-            return
-        # Key exists → session is within timeout; slide the window.
-        rc.expire(key, _SESSION_TIMEOUT_SECONDS)
-    except Exception:
-        # Redis unavailable: fail open so the app stays usable.
-        logger.debug("Session activity check skipped — Redis unavailable")
+        jwt_iat = int(issued_at)
+        jwt_expires_at = float(expires_at)
+    except (TypeError, ValueError) as exc:
+        raise SessionInvalid("Access token timestamps are invalid") from exc
+
+    try:
+        validate_and_refresh_access_session(
+            user.username,
+            jti,
+            jwt_iat=jwt_iat,
+            jwt_expires_at=jwt_expires_at,
+            password_changed_at=user.password_changed_at,
+        )
+    except SessionStoreUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication security store is unavailable.",
+        ) from exc
+
+    request.state.session_username = user.username
+    request.state.session_jti = jti
 
 
 def _extract_bearer_token(value: Optional[str]) -> Optional[str]:
@@ -149,7 +148,10 @@ async def get_current_user(
             headers={"X-Password-Change-Required": "true"},
         )
 
-    _check_and_refresh_session(username)
+    try:
+        _enforce_access_session(payload, user, request)
+    except SessionInvalid:
+        raise credentials_exception
 
     impersonated_by = payload.get("impersonated_by")
     if impersonated_by is not None:
@@ -254,6 +256,10 @@ async def get_current_user_optional(
         models.User.deleted_at.is_(None),
     ).first()
     if user and user.status == models.UserStatus.ACTIVE:
+        try:
+            _enforce_access_session(payload, user, request)
+        except SessionInvalid:
+            return None
         impersonated_by = payload.get("impersonated_by")
         if impersonated_by is not None:
             try:
@@ -317,6 +323,48 @@ def require_kindergarten_scoped_access(allow_admin: bool = True):
 require_admin = require_role(models.UserRole.ADMIN)
 require_admin_or_manager = require_role(models.UserRole.ADMIN, models.UserRole.MANAGER)
 require_supervisor = require_role(models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR)
+
+
+class ParentIdentity:
+    """Bundle of the authenticated parent user and their ParentProfile.
+
+    Returned by :func:`get_current_parent` so parent-facing endpoints stop
+    re-implementing the same role guard + profile lookup (single enforcement
+    point for parent authorization).
+    """
+
+    __slots__ = ("user", "profile")
+
+    def __init__(self, user: "models.User", profile: "models.ParentProfile"):
+        self.user = user
+        self.profile = profile
+
+
+def get_current_parent(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ParentIdentity:
+    """Dependency for parent-only endpoints.
+
+    Enforces the PARENT role and resolves the caller's ParentProfile in one
+    place, raising the same localized 403/404 the handlers used inline.
+    """
+    from i18n import gettext as _
+
+    lang = getattr(current_user, "preferred_language", None) or "ar"
+
+    if current_user.role != models.UserRole.PARENT:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_("Parent access only", lang))
+
+    profile = (
+        db.query(models.ParentProfile)
+        .filter(models.ParentProfile.user_id == current_user.id)
+        .first()
+    )
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_("Parent profile not found", lang))
+
+    return ParentIdentity(user=current_user, profile=profile)
 
 
 # ---------------------------------------------------------------------------
@@ -460,7 +508,9 @@ async def get_current_user_or_redirect(
         raise RedirectToLogin(redirect_url)
 
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         if payload.get("purpose"):
             raise RedirectToLogin("/login?expired=true")
         username: str = payload.get("sub")
@@ -481,6 +531,15 @@ async def get_current_user_or_redirect(
 
     if user.status != models.UserStatus.ACTIVE:
         raise RedirectToLogin("/login?inactive=true")
+
+    try:
+        _enforce_access_session(payload, user, request)
+    except SessionInvalid:
+        raise RedirectToLogin("/login?expired=true")
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+            raise
+        raise RedirectToLogin("/login?expired=true")
 
     # Cache resolved id on request.state so middleware can read it without re-decoding the JWT.
     try:

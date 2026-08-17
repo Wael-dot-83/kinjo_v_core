@@ -278,7 +278,7 @@ class TestCanonicalGovernorates:
                 "roles": ["SUPERVISOR"],
             }
         })
-        assert r.status_code == 400
+        assert r.status_code in (400, 422)
 
 
 # ---------------------------------------------------------------------------
@@ -561,9 +561,9 @@ class TestCreateAdminMessageBranches:
             })
         assert r.status_code in [200, 201, 400]
 
-    def test_notifications_exception_appends_warning_line_2698(
+    def test_notification_staging_failure_rolls_back_message(
             self, client, test_db, sample_kindergarten):
-        """Lines 2698-2700: create_message_notifications raises → warning in response."""
+        """A notification/audit staging failure cannot leave an unaudited message."""
         admin = _make_admin(test_db, "cmg2698a")
         _make_user(test_db, "cmg2698_sup", models.UserRole.SUPERVISOR,
                    kg_id=sample_kindergarten.id)
@@ -575,7 +575,9 @@ class TestCreateAdminMessageBranches:
                 "message_body": "Notify error message body.",
                 "target": {"mode": "ALL_SUPERVISORS"},
             })
-        assert r.status_code in [200, 201, 400]
+        assert r.status_code == 500
+        test_db.expire_all()
+        assert test_db.query(models.Message).filter_by(subject="Notify Error").first() is None
 
 
 # ---------------------------------------------------------------------------

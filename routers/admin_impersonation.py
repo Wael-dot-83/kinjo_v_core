@@ -28,6 +28,7 @@ from rate_limiter import limiter
 from config import settings
 from auth import create_access_token
 from cache_service import cache_service
+from session_service import revoke_access_session
 from dependencies import get_current_user
 from rbac import IMPERSONATION_COOKIE_NAME, require_role
 
@@ -121,8 +122,8 @@ def _write_audit(
 # Start impersonation
 # ---------------------------------------------------------------------------
 
-@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 @router.post("/impersonate", status_code=status.HTTP_200_OK)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def start_impersonation(
     payload: ImpersonateRequest,
     request: Request,
@@ -220,8 +221,8 @@ def start_impersonation(
 # Exit impersonation
 # ---------------------------------------------------------------------------
 
-@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 @router.post("/exit-impersonation", status_code=status.HTTP_200_OK)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def exit_impersonation(
     request: Request,
     current_user: User = Depends(get_current_user),
@@ -270,6 +271,14 @@ def exit_impersonation(
             detail="Impersonation session has been revoked.",
         )
 
+    # The target access token is a normal independently tracked session.  The
+    # cookie replacement below is not revocation: a captured bearer would
+    # otherwise remain usable until its JWT expiry.
+    target_session_username = getattr(request.state, "session_username", None)
+    target_session_jti = getattr(request.state, "session_jti", None)
+    if target_session_username and target_session_jti:
+        revoke_access_session(target_session_username, target_session_jti)
+
     _write_audit(
         db,
         admin_id=admin.id,
@@ -302,7 +311,9 @@ def exit_impersonation(
 # ---------------------------------------------------------------------------
 
 @router.get("/impersonate/audit")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def impersonation_audit(
+    request: Request,
     limit: int = Query(20, ge=1, le=100),
     _admin: User = Depends(_require_admin),
     db: Session = Depends(get_db),

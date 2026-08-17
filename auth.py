@@ -5,6 +5,8 @@ Authentication and authorization services
 from __future__ import annotations
 
 import re
+import secrets
+import time
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
@@ -110,13 +112,29 @@ def get_password_hash(password: str) -> str:
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create JWT access token."""
     to_encode = data.copy()
+    issued_at = time.time()
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.fromtimestamp(issued_at, tz=timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.fromtimestamp(issued_at, tz=timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
+    to_encode.setdefault("iat", int(issued_at))
+    to_encode.setdefault("jti", secrets.token_urlsafe(32))
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+    # Purpose-scoped JWTs (MFA/impersonation restoration) have their own
+    # one-time lifecycle.  Every ordinary access token must have a live,
+    # independently revocable server-side binding before it leaves the server.
+    if not to_encode.get("purpose") and to_encode.get("sub"):
+        from session_service import register_access_session
+
+        register_access_session(
+            str(to_encode["sub"]),
+            str(to_encode["jti"]),
+            issued_at=issued_at,
+            expires_at=expire.timestamp(),
+        )
     return encoded_jwt
 
 
@@ -213,7 +231,13 @@ def create_user(
     return user
 
 
-def change_user_password(db: Session, user: models.User, new_password: str) -> None:
+def change_user_password(
+    db: Session,
+    user: models.User,
+    new_password: str,
+    *,
+    commit: bool = True,
+) -> None:
     """Change a user's password and clear must_change_password flag."""
     hashed_password = get_password_hash(new_password)
 
@@ -223,7 +247,15 @@ def change_user_password(db: Session, user: models.User, new_password: str) -> N
     user.password_changed_at = now
     user.updated_at = now
 
-    db.commit()
+    # Revocation happens before commit.  A later database rollback may require
+    # the user to sign in again, but can never leave an old credential-bearing
+    # session alive after a successful password change.
+    from session_service import revoke_all_user_sessions
+
+    revoke_all_user_sessions(user.username)
+
+    if commit:
+        db.commit()
 
 
 def requires_password_change(user: models.User) -> bool:

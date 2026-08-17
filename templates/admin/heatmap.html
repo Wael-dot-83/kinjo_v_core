@@ -700,7 +700,7 @@
 
 {% block extra_scripts %}
 {# ── Heatmap application (must load before Google Maps callback fires) ── #}
-<script defer src="/static/js/jordan_cesium_map.js?v=6" charset="utf-8"></script>
+<script defer src="/static/js/jordan_cesium_map.js?v=6" integrity="sha256-ux+q/uJJ3iFPaZ7UfQX6jQNTqZnQevumvsd3+o7DXCM=" crossorigin="anonymous" charset="utf-8"></script>
 
 {# ── Graceful degradation: if the Google Maps key is missing or unauthorized,
      suppress Google's raw error dialog / "for development only" watermarks and

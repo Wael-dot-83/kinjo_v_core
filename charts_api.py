@@ -458,8 +458,9 @@ def create_scheduled_export(
         next_run_at=compute_next_run(payload.frequency, payload.hour_utc),
     )
     db.add(row)
-    db.commit()
-    db.refresh(row)
+    # Allocate the target ID without committing so the schedule and its audit
+    # row are persisted (or rolled back) as one unit.
+    db.flush()
     log_audit_event(
         db,
         action=AuditAction.SCHEDULED_EXPORT_CREATED,
@@ -469,9 +470,10 @@ def create_scheduled_export(
         metadata={
             "source": row.source,
             "frequency": row.frequency,
-            "recipient_email": row.recipient_email,
         },
     )
+    db.commit()
+    db.refresh(row)
     return _serialize_schedule(row)
 
 
@@ -495,7 +497,6 @@ def delete_scheduled_export(
     if row is None:
         raise HTTPException(status_code=404, detail="Scheduled export not found")
     db.delete(row)
-    db.commit()
     log_audit_event(
         db,
         action=AuditAction.SCHEDULED_EXPORT_DELETED,
@@ -503,4 +504,5 @@ def delete_scheduled_export(
         target_type="scheduled_chart_export",
         target_ids=schedule_id,
     )
+    db.commit()
     return {"deleted": schedule_id}

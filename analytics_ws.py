@@ -5,10 +5,10 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List
 import asyncio
 import logging
-from builtins import Exception as BuiltinException
 from jose import JWTError, jwt
 import json
 from datetime import datetime, timezone, timedelta
+from sqlalchemy.exc import SQLAlchemyError
 
 import models
 from config import settings
@@ -16,6 +16,11 @@ from database import SessionLocal
 from data_quality_service import data_quality_service
 from cache_service import dashboard_cache
 from monitoring_service import performance_monitor, health_checker
+from session_service import (
+    SessionInvalid,
+    SessionStoreUnavailable,
+    validate_and_refresh_access_session,
+)
 from utils.time_utils import today_amman, jordan_date_range_filter
 from utils.time_utils import today_amman, jordan_date_range_filter
 
@@ -50,7 +55,7 @@ class ConnectionManager:
             except WebSocketDisconnect:
                 logger.debug("Client disconnected during broadcast")
                 disconnected_connections.append(connection)
-            except (RuntimeError, TypeError, BuiltinException) as e:
+            except Exception as e:
                 logger.warning("Failed to send broadcast message to WebSocket client: %s", str(e), exc_info=False)
                 disconnected_connections.append(connection)
 
@@ -62,7 +67,7 @@ class ConnectionManager:
             await websocket.send_text(message)
         except WebSocketDisconnect:
             logger.debug("Client disconnected before message delivery")
-        except (RuntimeError, TypeError, BuiltinException) as e:
+        except Exception as e:
             logger.warning("Failed to send personal message to WebSocket client: %s", str(e), exc_info=False)
 
 manager = ConnectionManager()
@@ -94,6 +99,23 @@ async def websocket_dashboard(websocket: WebSocket):
         await websocket.close(code=1008, reason="invalid_token")
         return
 
+    def validate_session(user: models.User) -> None:
+        jti = payload.get("jti")
+        if not isinstance(jti, str) or not jti:
+            raise SessionInvalid("missing session identity")
+        try:
+            issued_at = int(payload.get("iat"))
+            expires_at = float(payload.get("exp"))
+        except (TypeError, ValueError) as exc:
+            raise SessionInvalid("invalid session timestamps") from exc
+        validate_and_refresh_access_session(
+            username,
+            jti,
+            jwt_iat=issued_at,
+            jwt_expires_at=expires_at,
+            password_changed_at=user.password_changed_at,
+        )
+
     # Use a fresh database session for the query
     db = SessionLocal()
     try:
@@ -123,6 +145,15 @@ async def websocket_dashboard(websocket: WebSocket):
                 return
             kindergarten_id = user.kindergarten_id
 
+        try:
+            validate_session(user)
+        except SessionInvalid:
+            await websocket.close(code=1008, reason="session_revoked")
+            return
+        except SessionStoreUnavailable:
+            await websocket.close(code=1013, reason="auth_store_unavailable")
+            return
+
     finally:
         db.close()
 
@@ -132,6 +163,15 @@ async def websocket_dashboard(websocket: WebSocket):
     try:
         while True:
             try:
+                try:
+                    validate_session(user)
+                except SessionInvalid:
+                    await websocket.close(code=1008, reason="session_revoked")
+                    return
+                except SessionStoreUnavailable:
+                    await websocket.close(code=1013, reason="auth_store_unavailable")
+                    return
+
                 # Get fresh database session for each update
                 db = SessionLocal()
 
@@ -187,31 +227,36 @@ async def websocket_dashboard(websocket: WebSocket):
                     "validation_status": "passed"
                 }))
 
-            except (RuntimeError, TypeError, ValueError, AttributeError, BuiltinException) as e:
+            except (RuntimeError, TypeError, ValueError, AttributeError) as e:
                 logger.error("Error in WebSocket dashboard update: %s", str(e), exc_info=True)
-                # Send error information
-                try:
-                    await websocket.send_text(json.dumps({
-                        "type": "validation_error",
-                        "error": str(e),
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "validation_status": "failed"
-                    }))
-                except (WebSocketDisconnect, RuntimeError, TypeError, BuiltinException) as send_error:
-                    logger.warning("Failed to send error message to client: %s", str(send_error), exc_info=False)
+                await websocket.send_text(json.dumps({
+                    "type": "validation_error",
+                    "error": "validation_failed",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "validation_status": "failed"
+                }))
+            except WebSocketDisconnect:
+                logger.debug("Client disconnected during dashboard update")
+                break
+            except Exception as e:
+                logger.error("Unexpected error in WebSocket dashboard update: %s", str(e), exc_info=True)
+                break
             finally:
                 db.close()
 
             # Wait 30 seconds before next update
             try:
                 await asyncio.sleep(30)
-            except BuiltinException as sleep_error:
+            except asyncio.CancelledError:
+                logger.debug("Stopping analytics WebSocket loop: cancelled")
+                break
+            except Exception as sleep_error:
                 logger.debug("Stopping analytics WebSocket loop: %s", str(sleep_error))
                 break
 
     except WebSocketDisconnect:
         logger.debug("Client disconnected from analytics WebSocket")
-    except (RuntimeError, TypeError, ValueError, AttributeError, BuiltinException) as e:
+    except (RuntimeError, TypeError, ValueError, AttributeError) as e:
         logger.error("Unexpected error in WebSocket handler: %s", str(e), exc_info=True)
     finally:
         manager.disconnect(websocket)
@@ -315,7 +360,7 @@ async def _update_admin_cache_async():
         db = SessionLocal()
         fresh_data = await _compute_admin_dashboard_data(db)
         # Cache is already updated in _compute_admin_dashboard_data
-    except (RuntimeError, TypeError, ValueError, AttributeError, BuiltinException) as e:
+    except Exception as e:
         logger.error("Background admin cache update failed: %s", e)
     finally:
         if db:

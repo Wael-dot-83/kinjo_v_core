@@ -75,8 +75,7 @@ def change_own_password(
     if errors:
         raise HTTPException(status_code=400, detail="; ".join(errors))
 
-    current_user.hashed_password = auth.get_password_hash(body.new_password)
-    db.commit()
+    auth.change_user_password(db, current_user, body.new_password)
     return {"message": "Password updated successfully"}
 
 

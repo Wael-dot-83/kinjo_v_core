@@ -235,7 +235,15 @@ def test_forced_password_change_blocks_manager_api_but_allows_replacement(
     )
     assert changed.status_code == 200
 
-    allowed = client.get("/api/manager/dashboard", headers=_bearer(manager_token))
+    relogin = client.post(
+        "/token",
+        data={"username": manager_user.username, "password": "Manager456!"},
+    )
+    assert relogin.status_code == 200
+    allowed = client.get(
+        "/api/manager/dashboard",
+        headers=_bearer(relogin.json()["access_token"]),
+    )
     assert allowed.status_code == 200
 
 
@@ -265,7 +273,15 @@ def test_expired_password_blocks_manager_api_but_allows_replacement(
     )
     assert changed.status_code == 200
 
-    allowed = client.get("/api/manager/dashboard", headers=_bearer(manager_token))
+    relogin = client.post(
+        "/token",
+        data={"username": manager_user.username, "password": "Manager456!"},
+    )
+    assert relogin.status_code == 200
+    allowed = client.get(
+        "/api/manager/dashboard",
+        headers=_bearer(relogin.json()["access_token"]),
+    )
     assert allowed.status_code == 200
 
 

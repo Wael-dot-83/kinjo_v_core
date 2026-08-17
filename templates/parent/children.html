@@ -49,10 +49,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/js/parent-common.js?v=1.0"></script>
 <script>
-    const IS_EN = '{{ ui_lang }}' === 'en';
-    const T = (ar, en) => IS_EN ? en : ar;
-
     const STATUS_LABEL = {
         'DRAFT': T('مسودة', 'Draft'),
         'SUBMITTED': T('مقدّم', 'Submitted'),
@@ -75,13 +73,8 @@
         'ACTIVE': 'badge-soft badge-soft-success'
     };
 
-    function getHeaders() {
-        const headers = { 'Content-Type': 'application/json' };
-        const csrf = (typeof getCsrfToken === 'function' ? getCsrfToken() : null) ||
-                     (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : null) ||
-                     (document.cookie.match(/kinjo_csrf=([^;]+)/) || [])[1];
-        if (csrf) headers['X-CSRF-Token'] = csrf;
-        return headers;
+    function enrollmentStatusLabel(e) {
+        return (IS_EN ? e.status_en : e.status_ar) || STATUS_LABEL[e.status] || escHtml(e.status);
     }
 
     function calculateAge(dobStr) {
@@ -173,7 +166,7 @@
                                 <i class="bi bi-building me-1"></i>${escHtml(e.kindergarten_name)}
                             </small>
                             <span class="badge ${STATUS_CLASS[e.status] || 'badge-soft badge-soft-secondary'} rounded-pill">
-                                ${STATUS_LABEL[e.status] || e.status}
+                                ${enrollmentStatusLabel(e)}
                             </span>
                         </div>
                     `).join('');
@@ -243,10 +236,6 @@
                 </div>
             `;
         }
-    }
-
-    function escHtml(s) {
-        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

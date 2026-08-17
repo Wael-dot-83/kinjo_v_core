@@ -167,6 +167,61 @@ class CacheService:
             self._record_sets()
             return True
 
+    def consume(self, key: str) -> Optional[Any]:
+        """Atomically read and delete a cache value.
+
+        Redis GETDEL provides the shared-store guarantee. The Lua fallback keeps
+        compatibility with older Redis servers while remaining atomic. Production
+        never falls back to worker-local memory for security-sensitive consumes.
+        """
+        cache_key = self._make_key(key)
+
+        if self.redis_client:
+            try:
+                getdel = getattr(self.redis_client, "getdel", None)
+                if callable(getdel):
+                    try:
+                        data = getdel(cache_key)
+                    except RedisError:
+                        data = self.redis_client.eval(
+                            "local value = redis.call('GET', KEYS[1]); "
+                            "if value then redis.call('DEL', KEYS[1]); end; "
+                            "return value",
+                            1,
+                            cache_key,
+                        )
+                else:
+                    data = self.redis_client.eval(
+                        "local value = redis.call('GET', KEYS[1]); "
+                        "if value then redis.call('DEL', KEYS[1]); end; "
+                        "return value",
+                        1,
+                        cache_key,
+                    )
+
+                if not data:
+                    return None
+
+                cached_data = json.loads(data)
+                expires = datetime.fromisoformat(cached_data["expires"])
+                if expires <= datetime.now(timezone.utc):
+                    return None
+                return cached_data["value"]
+            except (RedisError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+                logger.error("Redis atomic consume failed for key %s: %s", key, exc)
+                if settings.ENVIRONMENT.lower() == "production":
+                    return None
+
+        if settings.ENVIRONMENT.lower() == "production":
+            logger.error("Shared Redis is unavailable for security consume key %s", key)
+            return None
+
+        with self._memory_lock:
+            entry = self.memory_cache.pop(key, None)
+            if not entry or entry["expires"] <= datetime.now(timezone.utc):
+                return None
+            return entry["value"]
+
     def delete(self, key: str):
         """Delete value from cache"""
         cache_key = self._make_key(key)

@@ -1,6 +1,7 @@
 """
 Configuration management for KinJo platform
 """
+import hashlib
 import logging
 import os
 from typing import Any, Dict, List, Tuple, Type
@@ -10,11 +11,25 @@ _PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 from pydantic import ConfigDict, field_validator
 from pydantic.fields import FieldInfo
-from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource
+from pydantic_settings import (
+    BaseSettings,
+    DotEnvSettingsSource,
+    EnvSettingsSource,
+    PydanticBaseSettingsSource,
+)
 
 
-class _CommaListEnvSource(EnvSettingsSource):
-    """Env source that accepts comma-separated strings for List[str] fields."""
+class _CommaListMixin:
+    """Accept comma-separated strings for List[str] fields, alongside JSON.
+
+    Applied to BOTH the environment and dotenv sources. It used to subclass only
+    EnvSettingsSource, so `SUPPORTED_LANGUAGES=ar,en` parsed from a real
+    environment variable but raised SettingsError from a .env file — and .env is
+    the path almost everyone actually uses. `.env.example` shipped exactly that
+    comma form, so copying the documented example produced an app that refused to
+    boot with an opaque "error parsing value for field" and no hint that the
+    format was the problem.
+    """
 
     def prepare_field_value(
         self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool
@@ -28,6 +43,14 @@ class _CommaListEnvSource(EnvSettingsSource):
                 if not stripped.startswith(("[", "{")):
                     return [item.strip().strip("\"'") for item in stripped.split(",") if item.strip()]
         return super().prepare_field_value(field_name, field, value, value_is_complex)
+
+
+class _CommaListEnvSource(_CommaListMixin, EnvSettingsSource):
+    """Environment-variable source with comma-separated list support."""
+
+
+class _CommaListDotEnvSource(_CommaListMixin, DotEnvSettingsSource):
+    """.env-file source with the same comma-separated list support."""
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +102,14 @@ class Settings(BaseSettings):
     MFA_TICKET_EXPIRE_MINUTES: int = 10
     REQUIRE_MFA: bool = True
 
+    # AI assistant feature gate: explicit opt-in for AI-assisted writes.
+    # The default is disabled so the app remains read-only unless an operator
+    # turns on the feature and a supervisor is explicitly authorized to use it.
+    AI_ASSISTANT_ENABLED: bool = False
+    AI_ASSISTANT_SUPERVISOR_ENABLED: bool = False
+    AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED: bool = False
+    AI_SUPERVISOR_REPORT_DRAFT_TTL_MINUTES: int = 30
+
     # AI Integration — intentionally absent.
     #
     # google-genai was pinned in requirements.txt and GOOGLE_API_KEY declared here,
@@ -97,6 +128,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_CSV_IMPORT: str = "5/minute"
     RATE_LIMIT_ADMIN_READ: str = "60/minute"
     RATE_LIMIT_ADMIN_WRITE: str = "30/minute"
+    RATE_LIMIT_PARENT_WRITE: str = "10/minute"
     RATE_LIMIT_MESSAGES_SEND: str = "30/minute"
     RATE_LIMIT_MESSAGES_SEND_ADMIN: str = "120/minute"
     RATE_LIMIT_MESSAGES_SEND_MANAGER: str = "60/minute"
@@ -392,7 +424,19 @@ class Settings(BaseSettings):
         return (
             init_settings,
             _CommaListEnvSource(settings_cls),
-            dotenv_settings,
+            # Rebuilt from the source pydantic handed us rather than constructed
+            # bare: a bare _CommaListDotEnvSource(settings_cls) would fall back to
+            # model_config's fixed env_file and silently ignore an explicit
+            # Settings(_env_file=...) — which every test and any alternate-config
+            # caller relies on.
+            _CommaListDotEnvSource(
+                settings_cls,
+                env_file=dotenv_settings.env_file,
+                env_file_encoding=dotenv_settings.env_file_encoding,
+                case_sensitive=dotenv_settings.case_sensitive,
+                env_prefix=dotenv_settings.env_prefix,
+                env_nested_delimiter=dotenv_settings.env_nested_delimiter,
+            ),
             file_secret_settings,
         )
 
@@ -437,11 +481,67 @@ def validate_production_settings():
             "Set a strong SECRET_KEY in .env"
         )
 
-    weak_markers = {"changeme", "change-me", "development-only", "test-secret-key", "your-secret-key"}
+    weak_markers = {
+        "changeme",
+        "change-me",
+        "development-only",
+        "test-secret-key",
+        "your-secret-key",
+        "replace_me",
+        "replace-me",
+        "replace-with",
+    }
     if any(marker in settings.SECRET_KEY.lower() for marker in weak_markers):
         raise RuntimeError(
             "CRITICAL: SECRET_KEY appears to be a development default. "
             "Set a unique SECRET_KEY in .env for production"
+        )
+
+    # The substring check above only catches keys that *look* like placeholders.
+    # It cannot catch a key that is high-entropy but published: .env.example,
+    # .env.production.template and deploy.sh have each shipped a real 64-hex key
+    # in git at some point, and anyone copying one verbatim would boot production
+    # on a signing key that is public in the repository history — forging any JWT
+    # or session cookie. Those keys stay reachable through git history forever, so
+    # scrubbing the files is not sufficient on its own; they must be rejected at
+    # startup by value.
+    #
+    # Stored as SHA-256 digests so reading this file does not hand the reader a
+    # working key for any deployment that has not upgraded yet. To retire a leaked
+    # key, append its digest:
+    #   python -c "import hashlib,sys; print(hashlib.sha256(sys.argv[1].encode()).hexdigest())" '<key>'
+    published_key_digests = {
+        # deploy.sh development default (already blacklisted there by value)
+        "e9699102d680a055fc18d78097a46b4c6b0d31524e145dbc80118360b882293e",
+        # .env.production.template shipped value (scrubbed, still in git history)
+        "bc35a6449103d30b965cad6e642634827b5ac141b16cbddc6af817ccc32861e4",
+    }
+    if hashlib.sha256(settings.SECRET_KEY.encode("utf-8")).hexdigest() in published_key_digests:
+        raise RuntimeError(
+            "CRITICAL: SECRET_KEY matches a key published in this repository. "
+            "It is public and cannot be used in production. Generate a fresh key: "
+            'python -c "import secrets; print(secrets.token_hex(32))"'
+        )
+
+    # JWT algorithm. Two distinct hazards, both fatal and both silent:
+    #
+    #  * "none" disables signature verification entirely — the classic JWT
+    #    forgery, where an attacker sets alg=none and mints any token they like.
+    #  * ES*/EdDSA route signing through python-jose's pure-Python `ecdsa`
+    #    backend, which has an unfixed Minerva timing vulnerability
+    #    (PYSEC-2026-1325). The maintainers consider side-channel resistance out
+    #    of scope, so there is no version to upgrade to. It is harmless today
+    #    only because KinJo signs with HS256 and never touches an ECDSA path —
+    #    an env-var change would quietly make it live.
+    #
+    # Restricting production to HMAC keeps that dependency permanently
+    # unreachable instead of merely unused.
+    allowed_algorithms = {"HS256", "HS384", "HS512"}
+    if settings.ALGORITHM.upper() not in allowed_algorithms:
+        raise RuntimeError(
+            f"CRITICAL: ALGORITHM must be one of {sorted(allowed_algorithms)} in production "
+            f"(got '{settings.ALGORITHM}'). 'none' disables signature verification; ES*/EdDSA "
+            "sign via python-jose's ecdsa backend, which carries an unfixed timing vulnerability."
         )
 
     # Validate CORS origins

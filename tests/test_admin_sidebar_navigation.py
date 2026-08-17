@@ -10,38 +10,56 @@ FRONTEND_MODULES = [
     ROOT / "frontend_agency_reports.py",
 ]
 ADMIN_CSS = ROOT / "static" / "css" / "admin_design_system.css"
+TOP_MENU_CSS = ROOT / "static" / "css" / "top-menu.css"
+
+EXPECTED_WORKSPACES_AR = [
+    "مركز القيادة",
+    "الحضانات والشبكة",
+    "التحليلات والتقارير",
+    "المستخدمون والصلاحيات",
+    "الحوكمة والتدقيق",
+]
+
+EXPECTED_WORKSPACES_EN = [
+    "Command Center",
+    "Nurseries & Network",
+    "Intelligence & Reporting",
+    "Users & Access",
+    "Governance & Audit",
+]
 
 EXPECTED_ARABIC_LABEL_ORDER = [
-    "نظرة عامة", "لوحة التحكم الإدارية", "مراقبة النظام", "التنبيهات",
-    "الأشخاص والجهات", "المستخدمون", "استيراد المستخدمين",
-    "نظرة عامة على الحضانات", "سجل الحضانات", "التواصل والبيانات",
-    "الرسائل", "إنشاء رسالة", "رسائل التواصل", "بيانات الحضانات المستوردة",
-    "استيراد الحضانات", "سجل الاستيراد", "العمليات والسلامة",
-    "تقارير الحوادث", "تحليلات الحوادث",
-    "التحليلات والتقارير", "نظرة عامة على التحليلات", "التحليل الجغرافي", "مؤشرات أداء الشبكة",
-    "مركز التقارير", "دعم القرار", "تنظيم التقارير اليومية",
-    "تحليلات التقارير اليومية", "مستكشف الرسوم البيانية",
-    "الحوكمة", "حوكمة التقارير اليومية",
-    "تذكيرات الالتزام", "التصنيف والمقارنات", "تقارير الجهات الرسمية",
-    "الأمان والحساب",
-    "سجل التدقيق", "الدخول المقيّد بصفة مستخدم", "الملف الشخصي للمسؤول",
-    "إعدادات النظام", "مركز المساعدة",
+    # 1. Command Center
+    "مركز القيادة", "لوحة التحكم الإدارية", "مراقبة النظام", "التنبيهات",
+    # 2. Nurseries & Network
+    "الحضانات والشبكة", "نظرة عامة على الحضانات", "سجل الحضانات", "التحليل الجغرافي",
+    "بيانات الحضانات المستوردة", "استيراد الحضانات", "سجل الاستيراد",
+    # 3. Intelligence & Reporting
+    "التحليلات والتقارير", "نظرة عامة على التحليلات", "مؤشرات أداء الشبكة",
+    "مستكشف الرسوم البيانية", "دعم القرار", "مركز التقارير",
+    "تنظيم التقارير اليومية", "تحليلات التقارير اليومية", "تقارير الحوادث",
+    "تحليلات الحوادث", "تقارير الجهات الرسمية", "التصنيف والمقارنات",
+    # 4. Users & Access
+    "المستخدمون والصلاحيات", "المستخدمون", "استيراد المستخدمين",
+    "الدخول المقيّد بصفة مستخدم", "الرسائل", "إنشاء رسالة", "رسائل التواصل",
+    # 5. Governance & Audit
+    "الحوكمة والتدقيق", "حوكمة التقارير اليومية", "تذكيرات الالتزام",
+    "سجل التدقيق", "الملف الشخصي للمسؤول", "إعدادات النظام", "مركز المساعدة",
 ]
 
 EXPECTED_VISIBLE_HREFS = [
     "/admin/dashboard", "/admin/observability", "/admin/alerts",
-    "/admin/users", "/admin/users/import", "/admin/kg-overview",
-    "/admin/kindergartens", "/admin/messages", "/admin/messages/compose",
-    "/admin/contact-messages", "/admin/imported-kindergartens",
-    "/admin/import-kindergartens", "/admin/import-logs",
+    "/admin/kg-overview", "/admin/kindergartens", "/admin/heatmap",
+    "/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs",
+    "/admin/analytics", "/admin/kpi", "/admin/analytics/charts",
+    "/admin/analytics/decision-support", "/admin/analytics/reports",
+    "/admin/daily-reports-organization", "/reports/analytics",
     "/admin/reports/incidents", "/admin/safety-analytics",
-    "/admin/analytics", "/admin/heatmap", "/admin/kpi", "/admin/analytics/reports",
-    "/admin/analytics/decision-support", "/admin/daily-reports-organization",
-    "/reports/analytics", "/admin/analytics/charts",
+    "/admin/agency-reports", "/admin/classification",
+    "/admin/users", "/admin/users/import", "/admin/impersonate",
+    "/admin/messages", "/admin/messages/compose", "/admin/contact-messages",
     "/admin/governance-reports", "/admin/governance/reminders",
-    "/admin/classification", "/admin/agency-reports",
-    "/admin/audit-logs", "/admin/impersonate",
-    "/admin/profile", "/admin/settings", "/admin/help",
+    "/admin/audit-logs", "/admin/profile", "/admin/settings", "/admin/help",
 ]
 
 CONTEXTUAL_OR_ALIAS_HREFS = {
@@ -58,14 +76,21 @@ def _admin_sidebar_source() -> str:
     return source[start:source.index("</aside>", start)]
 
 
+def test_admin_navigation_five_primary_workspaces_defined():
+    sidebar = _admin_sidebar_source()
+    for ws_ar, ws_en in zip(EXPECTED_WORKSPACES_AR, EXPECTED_WORKSPACES_EN):
+        assert f'"label_ar": "{ws_ar}"' in sidebar, f"Missing Arabic workspace: {ws_ar}"
+        assert f'"label_en": "{ws_en}"' in sidebar, f"Missing English workspace: {ws_en}"
+
+
 def test_admin_sidebar_arabic_structure_matches_required_order():
     sidebar = _admin_sidebar_source()
     positions = []
     for label in EXPECTED_ARABIC_LABEL_ORDER:
         marker = f'"label_ar": "{label}"'
-        assert sidebar.count(marker) == 1, label
+        assert sidebar.count(marker) == 1, f"Expected 1 marker for {label}, found {sidebar.count(marker)}"
         positions.append(sidebar.index(marker))
-    assert positions == sorted(positions)
+    assert positions == sorted(positions), "Arabic label order does not match expected sequence"
     assert '"label_ar": "السياسات"' not in sidebar
     assert '"label_ar": "الامتثال"' not in sidebar
 
@@ -82,7 +107,7 @@ def test_admin_sidebar_visible_links_are_exact_unique_and_registered():
         re.findall(r'@(?:frontend_)?router\.get\("([^"]+)"', frontend_source)
     )
     for href in visible_hrefs:
-        assert href in registered_get_routes, href
+        assert href in registered_get_routes, f"Href {href} is not registered in frontend routers"
 
 
 def test_exact_navigation_match_precedes_contextual_prefixes():
@@ -102,17 +127,22 @@ def test_admin_sidebar_markup_avoids_legacy_i18n_and_bad_link_roles():
     assert 'aria-current="page"' in nav
 
 
-def test_admin_sidebar_css_is_scoped_and_rtl_ready():
-    """The RTL selector is `[dir="rtl"]`, not `html[dir="rtl"]`.
+def test_admin_mobile_navigation_drawer_and_toggle_present():
+    base_html = ADMIN_BASE.read_text(encoding="utf-8")
+    assert 'id="adminMobileNavToggle"' in base_html
+    assert 'id="adminMobileDrawer"' in base_html
+    assert 'id="adminMobileBackdrop"' in base_html
+    assert 'id="adminMobileDrawerClose"' in base_html
+    assert 'aria-controls="adminMobileDrawer"' in base_html
 
-    The direction attribute is no longer only on <html>: admin_base.html and
-    manager_base.html now emit `dir="{{ ui_dir }}"`, and direction can also be
-    set on a container. Anchoring the selector to `html` would silently stop
-    matching in those cases, so the `html`-prefixed form must not come back.
-    """
-    css = ADMIN_CSS.read_text(encoding="utf-8")
-    assert "--admin-sidebar-width: 280px;" in css
-    assert ".admin-sidebar .nav-link span" in css
-    assert '[dir="rtl"] .admin-sidebar .nav-link.active' in css
-    assert 'html[dir="rtl"]' not in css
-    assert ".admin-sidebar .submenu .nav-link.active" in css
+
+def test_top_menu_css_has_mobile_drawer_and_logical_properties():
+    css = TOP_MENU_CSS.read_text(encoding="utf-8")
+    assert ".admin-top-nav" in css
+    assert ".top-menu" in css
+    assert ".mobile-nav-drawer" in css
+    assert ".mobile-nav-backdrop" in css
+    assert ".mobile-nav-toggle-btn" in css
+    assert "inset-inline-start" in css
+    assert '[dir="rtl"] .mobile-nav-drawer' in css
+    assert '[dir="ltr"] .mobile-nav-drawer' in css

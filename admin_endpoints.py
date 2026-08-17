@@ -33,8 +33,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from admin_reports_api import AdminAlertResponse, AdminAlertsListResponse
 
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import or_, func, and_, select, case
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_, func, and_, select, case, union_all
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 import models
 import validators
@@ -44,12 +44,15 @@ from export_service import export_service
 from dependencies import get_current_user
 from rate_limiter import limiter
 from config import settings
-from auth import get_password_hash, verify_password
-from notification_service import create_message_notifications
-from api.auth.password_reset_service import (
-    issue_password_reset_token,
-    resolve_valid_token,
-    deliver_password_reset_email,
+from auth import change_user_password, get_password_hash, verify_password
+from notification_service import (
+    create_message_notifications,
+    dispatch_message_notification_tasks,
+)
+from api.users import (
+    PASSWORD_RESET_GENERIC_MESSAGE,
+    apply_password_reset,
+    initiate_password_reset,
 )
 from messaging_permissions import ACTIVE_ENROLLMENT_STATUSES, ensure_kindergartens_exist
 from validators import build_arabic_search_terms
@@ -286,6 +289,7 @@ def list_users(
                 metadata={"attempted_kindergarten_id": kindergarten_id},
                 sensitivity_level=2
             )
+            db.commit()
 
     # Apply filters
     if role:
@@ -371,6 +375,7 @@ def create_user(
                 metadata={"attempted_role": user_data.role.value},
                 sensitivity_level=3
             )
+            db.commit()
             raise forbidden_error("Managers cannot create Admin or Manager accounts")
 
         # Force kindergarten to manager's kindergarten
@@ -380,6 +385,7 @@ def create_user(
                 metadata={"attempted_kindergarten_id": user_data.kindergarten_id},
                 sensitivity_level=3
             )
+            db.commit()
             raise forbidden_error("Cannot create users for other kindergartens")
 
         user_data.kindergarten_id = current_user.kindergarten_id
@@ -449,90 +455,90 @@ def create_user(
         except validators.ValidationError as exc:
             raise validation_error(exc.message, {"identity": exc.message})
 
-    db.add(new_user)
-    db.flush()
+    try:
+        db.add(new_user)
+        db.flush()
 
-    if new_user.role == models.UserRole.SUPERVISOR:
-        validators.ensure_supervisor_profile(db, new_user, new_user.kindergarten_id)
+        if new_user.role == models.UserRole.SUPERVISOR:
+            validators.ensure_supervisor_profile(db, new_user, new_user.kindergarten_id)
 
-    db.commit()
-    db.refresh(new_user)
-
-    # Handle child creation for PARENT role
-    if user_data.role == models.UserRole.PARENT and user_data.children:
-        # Create parent profile first
-        parent_profile = models.ParentProfile(
-            user_id=new_user.id,
-            first_name="",
-            last_name="",
-            phone_number="",
-            gender=models.Gender.MALE,
-            nationality="",
-            home_governorate="",
-            home_district="",
-            home_area="",
-            home_address_line="",
-            correspondence_preference=True,
-            profile_complete=False
-        )
-        db.add(parent_profile)
-        db.commit()
-        db.refresh(parent_profile)
-
-        # Create children (age already validated by ChildCreateSchema.validate_child_age)
-        for child_data in user_data.children:
-            new_child = models.Child(
-                parent_id=parent_profile.id,
-                first_name=child_data.first_name,
-                last_name=child_data.last_name,
-                gender=child_data.gender,
-                date_of_birth=child_data.date_of_birth,
-                father_name=child_data.father_name,
-                mother_first_name=child_data.mother_first_name,
-                mother_second_name=child_data.mother_second_name or "",
-                mother_last_name=child_data.mother_last_name or "",
-                mother_nationality=child_data.mother_nationality or "",
-                media_consent=False,  # Default false
-                correspondence_flag=True,  # Default true
-                profile_complete=False  # Will be completed later
+        # Handle child creation for PARENT role in the same transaction as the
+        # user, profile, and audit rows. Flushes allocate IDs without exposing a
+        # partially-created account to other transactions.
+        if user_data.role == models.UserRole.PARENT and user_data.children:
+            parent_profile = models.ParentProfile(
+                user_id=new_user.id,
+                first_name="",
+                last_name="",
+                phone_number="",
+                gender=models.Gender.MALE,
+                nationality="",
+                home_governorate="",
+                home_district="",
+                home_area="",
+                home_address_line="",
+                correspondence_preference=True,
+                profile_complete=False
             )
-            db.add(new_child)
+            db.add(parent_profile)
+            db.flush()
 
-        db.commit()
+            children = []
+            # Child age was already validated by ChildCreateSchema.
+            for child_data in user_data.children:
+                new_child = models.Child(
+                    parent_id=parent_profile.id,
+                    first_name=child_data.first_name,
+                    last_name=child_data.last_name,
+                    gender=child_data.gender,
+                    date_of_birth=child_data.date_of_birth,
+                    father_name=child_data.father_name,
+                    mother_first_name=child_data.mother_first_name,
+                    mother_second_name=child_data.mother_second_name or "",
+                    mother_last_name=child_data.mother_last_name or "",
+                    mother_nationality=child_data.mother_nationality or "",
+                    media_consent=False,
+                    correspondence_flag=True,
+                    profile_complete=False
+                )
+                db.add(new_child)
+                children.append(new_child)
 
-        # Audit log for children creation
+            db.flush()
+            log_audit_event(
+                db, AuditAction.CHILDREN_CREATED, current_user, "Child",
+                target_ids=[child.id for child in children],
+                metadata={"parent_user_id": new_user.id, "children_count": len(children)},
+                sensitivity_level=2
+            )
+
         log_audit_event(
-            db, AuditAction.CHILDREN_CREATED, current_user, "Child",
-            target_ids=[child.id for child in parent_profile.children],
-            metadata={"parent_user_id": new_user.id, "children_count": len(user_data.children)},
-            sensitivity_level=2
+            db, AuditAction.USER_CREATED, current_user, "User",
+            target_ids=new_user.id,
+            after_state=model_to_dict(new_user),
+            sensitivity_level=3
         )
+        response_payload = {
+            "id": new_user.id,
+            "username": new_user.username,
+            "email": new_user.email,
+            "role": new_user.role.value,
+            "status": new_user.status.value,
+            "kindergarten_id": new_user.kindergarten_id,
+            "full_name": new_user.full_name,
+            "phone_number": new_user.phone_number,
+            "address": new_user.address,
+            "nationality": new_user.nationality,
+            "national_id": new_user.national_id,
+            "passport_number": new_user.passport_number,
+            "correlation_id": get_correlation_id(),
+        }
         db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
-    # Audit log with after state
-    log_audit_event(
-        db, AuditAction.USER_CREATED, current_user, "User",
-        target_ids=new_user.id,
-        after_state=model_to_dict(new_user),
-        sensitivity_level=3
-    )
-    db.commit()
-
-    return {
-        "id": new_user.id,
-        "username": new_user.username,
-        "email": new_user.email,
-        "role": new_user.role.value,
-        "status": new_user.status.value,
-        "kindergarten_id": new_user.kindergarten_id,
-        "full_name": new_user.full_name,
-        "phone_number": new_user.phone_number,
-        "address": new_user.address,
-        "nationality": new_user.nationality,
-        "national_id": new_user.national_id,
-        "passport_number": new_user.passport_number,
-        "correlation_id": get_correlation_id()
-    }
+    return response_payload
 
 
 # =============================================================================
@@ -582,6 +588,7 @@ def export_users(
         metadata={"format": format, "count": len(users)},
         sensitivity_level=2
     )
+    db.commit()
 
     if format == "json":
         data = [
@@ -650,6 +657,7 @@ def get_user(
             metadata={"reason": "IDOR protection"},
             sensitivity_level=2
         )
+        db.commit()
         raise forbidden_error("Not authorized to access this user")
 
     return {
@@ -698,6 +706,7 @@ def update_user(
             metadata={"reason": "IDOR protection", "action": "update"},
             sensitivity_level=2
         )
+        db.commit()
         raise forbidden_error("Not authorized to update this user")
 
     # Business rule: Manager validation for updates
@@ -768,7 +777,7 @@ def update_user(
         user.email = user_data.email
 
     if user_data.password is not None:
-        user.hashed_password = get_password_hash(user_data.password)
+        change_user_password(db, user, user_data.password, commit=False)
 
     # Update profile fields if provided
     for field in ("full_name", "phone_number", "address", "nationality", "national_id", "passport_number"):
@@ -833,37 +842,37 @@ def update_user(
             if user_data.kindergarten_id is not None:
                 user.kindergarten_id = user_data.kindergarten_id
 
-    db.commit()
-    db.refresh(user)
+    try:
+        db.flush()
+        after_state = model_to_dict(user)
+        log_audit_event(
+            db, AuditAction.USER_UPDATED, current_user, "User",
+            target_ids=user.id,
+            before_state=before_state,
+            after_state=after_state,
+            sensitivity_level=3
+        )
+        response_payload = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role.value,
+            "status": user.status.value,
+            "kindergarten_id": user.kindergarten_id,
+            "full_name": user.full_name,
+            "phone_number": user.phone_number,
+            "address": user.address,
+            "nationality": user.nationality,
+            "national_id": user.national_id,
+            "passport_number": user.passport_number,
+            "correlation_id": get_correlation_id()
+        }
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
-    # Capture after state
-    after_state = model_to_dict(user)
-
-    # Audit log with diff
-    log_audit_event(
-        db, AuditAction.USER_UPDATED, current_user, "User",
-        target_ids=user.id,
-        before_state=before_state,
-        after_state=after_state,
-        sensitivity_level=3
-    )
-    db.commit()
-
-    return {
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "role": user.role.value,
-        "status": user.status.value,
-        "kindergarten_id": user.kindergarten_id,
-        "full_name": user.full_name,
-        "phone_number": user.phone_number,
-        "address": user.address,
-        "nationality": user.nationality,
-        "national_id": user.national_id,
-        "passport_number": user.passport_number,
-        "correlation_id": get_correlation_id()
-    }
+    return response_payload
 
 
 @router.delete("/users/{user_id:int}", status_code=status.HTTP_204_NO_CONTENT)
@@ -913,16 +922,17 @@ def delete_user(
     user.deleted_at = datetime.now(_JORDAN_TZ)
     user.deleted_by = current_user.id
     user.status = models.UserStatus.INACTIVE
-    db.commit()
-
-    # Audit log
-    log_audit_event(
-        db, AuditAction.USER_DELETED, current_user, "User",
-        target_ids=user_id,
-        before_state=before_state,
-        sensitivity_level=3
-    )
-    db.commit()
+    try:
+        log_audit_event(
+            db, AuditAction.USER_DELETED, current_user, "User",
+            target_ids=user_id,
+            before_state=before_state,
+            sensitivity_level=3
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -964,20 +974,23 @@ def admin_reset_password(
             metadata={"reason": "Admin password verification failed"},
             sensitivity_level=3
         )
+        db.commit()
         raise unauthenticated_error("Admin password verification failed")
 
-    # Reset password
-    user.hashed_password = get_password_hash(reset_data.new_password)
-    db.commit()
-
-    # Audit log
-    log_audit_event(
-        db, AuditAction.ADMIN_PASSWORD_RESET, current_user, "User",
-        target_ids=user_id,
-        metadata={"initiated_by": current_user.username},
-        sensitivity_level=3
-    )
-    db.commit()
+    # Apply the same lifecycle as self-service reset: timestamps, temporary
+    # credential cleanup, and revocation of every previously issued session.
+    change_user_password(db, user, reset_data.new_password, commit=False)
+    try:
+        log_audit_event(
+            db, AuditAction.ADMIN_PASSWORD_RESET, current_user, "User",
+            target_ids=user_id,
+            metadata={"initiated_by": current_user.username},
+            sensitivity_level=3
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "message": "Password reset successfully",
@@ -987,7 +1000,7 @@ def admin_reset_password(
 
 
 @router.post("/password-reset-request")
-@limiter.limit(settings.RATE_LIMIT_PASSWORD_RESET_REQUEST)
+@limiter.limit("5/hour")
 def request_password_reset(
     request: Request,
     reset_request: PasswordResetRequestSchema,
@@ -995,41 +1008,35 @@ def request_password_reset(
 ):
     """
     Request password reset token (self-service).
-    Rate limited to 5 requests per minute.
+    Compatibility alias for the canonical self-service reset workflow.
     Always returns success to prevent email enumeration.
     """
 
-    user = db.query(models.User).filter(models.User.email == reset_request.email).first()
+    user, token = initiate_password_reset(
+        request=request,
+        email=str(reset_request.email),
+        captcha_token=reset_request.captcha_token,
+        db=db,
+    )
 
     if user:
-        token = issue_password_reset_token(db, user)
-
-        # Audit log
-        log_audit_event(
-            db, AuditAction.PASSWORD_RESET_REQUESTED, user, "User",
-            target_ids=user.id,
-            sensitivity_level=2
-        )
-
-        deliver_password_reset_email(str(request.base_url), user, token)
-
         # In development, token is returned to support local testing.
         if settings.ENVIRONMENT == "development":
             return {
-                "message": "If the email exists, a reset link has been sent",
+                "message": PASSWORD_RESET_GENERIC_MESSAGE,
                 "token": token,  # Only in development!
                 "correlation_id": get_correlation_id()
             }
 
     # Always return same response to prevent enumeration
     return {
-        "message": "If the email exists, a reset link has been sent",
+        "message": PASSWORD_RESET_GENERIC_MESSAGE,
         "correlation_id": get_correlation_id()
     }
 
 
 @router.post("/password-reset-confirm")
-@limiter.limit(settings.RATE_LIMIT_PASSWORD_RESET)
+@limiter.limit("10/hour")
 def confirm_password_reset(
     request: Request,
     reset_data: PasswordResetConfirmSchema,
@@ -1037,26 +1044,28 @@ def confirm_password_reset(
 ):
     """
     Confirm password reset using token.
-    Rate limited to 3 requests per minute.
+    Compatibility alias for the canonical self-service reset workflow.
     """
 
-    token_record = resolve_valid_token(db, reset_data.token)
+    try:
+        token_record = apply_password_reset(db, reset_data.token, reset_data.new_password)
+    except ValueError as exc:
+        db.rollback()
+        raise validation_error(str(exc)) from exc
 
     if not token_record:
         raise validation_error("Invalid or expired token")
 
-    # Reset password
-    token_record.user.hashed_password = get_password_hash(reset_data.new_password)
-    token_record.used = True
-    db.commit()
-
-    # Audit log
-    log_audit_event(
-        db, AuditAction.PASSWORD_RESET_COMPLETED, token_record.user, "User",
-        target_ids=token_record.user_id,
-        sensitivity_level=2
-    )
-    db.commit()
+    try:
+        log_audit_event(
+            db, AuditAction.PASSWORD_RESET_COMPLETED, token_record.user, "User",
+            target_ids=token_record.user_id,
+            sensitivity_level=2
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "message": "Password reset successfully",
@@ -1099,6 +1108,12 @@ def admin_mfa_bypass(
     WARNING: This is an emergency-only endpoint. Use sparingly and audit all usage.
     """
 
+    if mfa_request.user_id != user_id:
+        raise validation_error(
+            "User ID in request body must match the route",
+            {"user_id": "Body and route user IDs must match"},
+        )
+
     # Self-bypass is not permitted — admin must use normal MFA reset flow
     if user_id == current_user.id:
         raise forbidden_error("Cannot bypass your own MFA. Use the standard MFA reset flow.")
@@ -1109,6 +1124,9 @@ def admin_mfa_bypass(
     if not user:
         raise not_found_error("User not found")
 
+    if not can_admin_access_user(current_user, user):
+        raise forbidden_error("Cannot manage another admin account")
+
     # Verify admin's own password after confirming target exists
     if not verify_password(mfa_request.admin_password, current_user.hashed_password):
         log_audit_event(
@@ -1117,6 +1135,7 @@ def admin_mfa_bypass(
             metadata={"reason": "Admin password verification failed"},
             sensitivity_level=3
         )
+        db.commit()
         raise unauthenticated_error("Admin password verification failed")
 
     # Reset MFA but don't disable it - require re-setup
@@ -1124,20 +1143,21 @@ def admin_mfa_bypass(
     user.mfa_enabled = False
     user.mfa_enrolled_at = None
     user.mfa_last_verified_at = None
-    db.commit()
-
-    # Audit log with high sensitivity
-    log_audit_event(
-        db, AuditAction.MFA_BYPASS_INITIATED, current_user, "User",
-        target_ids=user_id,
-        metadata={
-            "reason": mfa_request.reason,
-            "initiated_by": current_user.username,
-            "timestamp": datetime.now(_JORDAN_TZ).isoformat()
-        },
-        sensitivity_level=3  # Critical security event
-    )
-    db.commit()
+    try:
+        log_audit_event(
+            db, AuditAction.MFA_BYPASS_INITIATED, current_user, "User",
+            target_ids=user_id,
+            metadata={
+                "reason": mfa_request.reason,
+                "initiated_by": current_user.username,
+                "timestamp": datetime.now(_JORDAN_TZ).isoformat()
+            },
+            sensitivity_level=3
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "message": "MFA bypass completed. User must re-enroll MFA on next login.",
@@ -1160,6 +1180,9 @@ def get_user_mfa_status(
     ).first()
     if not user:
         raise not_found_error("User not found")
+
+    if not can_admin_access_user(current_user, user):
+        raise forbidden_error("Cannot access another admin account")
 
     return {
         "user_id": user.id,
@@ -1262,6 +1285,7 @@ def bulk_update_status(
             metadata={"action": "bulk_status_update"},
             sensitivity_level=2
         )
+        db.commit()
 
     if bulk_data.dry_run:
         return {
@@ -1365,20 +1389,21 @@ def bulk_update_status(
             failed.append(user_id)
             errors.append({"user_id": user_id, "error": str(e)})
 
-    db.commit()
-
-    # Audit log
-    log_audit_event(
-        db, AuditAction.BULK_STATUS_UPDATE, current_user, "User",
-        target_ids=succeeded,
-        metadata={
-            "new_status": bulk_data.new_status.value,
-            "succeeded_count": len(succeeded),
-            "failed_count": len(failed) + len(access_result["forbidden"]) + len(access_result["not_found"])
-        },
-        sensitivity_level=3
-    )
-    db.commit()
+    try:
+        log_audit_event(
+            db, AuditAction.BULK_STATUS_UPDATE, current_user, "User",
+            target_ids=succeeded,
+            metadata={
+                "new_status": bulk_data.new_status.value,
+                "succeeded_count": len(succeeded),
+                "failed_count": len(failed) + len(access_result["forbidden"]) + len(access_result["not_found"])
+            },
+            sensitivity_level=3
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "message": f"Updated {len(succeeded)} users",
@@ -1483,20 +1508,21 @@ def bulk_delete_users(
             user.status = models.UserStatus.INACTIVE
             deleted_ids.append(user_id)
 
-    db.commit()
-
-    # Audit log
-    log_audit_event(
-        db, AuditAction.BULK_USER_DELETE, current_user, "User",
-        target_ids=deleted_ids,
-        metadata={
-            "deleted_count": len(deleted_ids),
-            "forbidden_count": len(access_result["forbidden"]),
-            "not_found_count": len(access_result["not_found"])
-        },
-        sensitivity_level=3
-    )
-    db.commit()
+    try:
+        log_audit_event(
+            db, AuditAction.BULK_USER_DELETE, current_user, "User",
+            target_ids=deleted_ids,
+            metadata={
+                "deleted_count": len(deleted_ids),
+                "forbidden_count": len(access_result["forbidden"]),
+                "not_found_count": len(access_result["not_found"])
+            },
+            sensitivity_level=3
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "message": f"Deleted {len(deleted_ids)} users",
@@ -1557,32 +1583,167 @@ def bulk_create_users(
         row[0] for row in db.query(models.User.email)
         .filter(models.User.email.in_(incoming_emails)).all()
     ) if incoming_emails else set()
+    batch_usernames: Set[str] = set()
+    batch_emails: Set[str] = set()
 
-    for i, user_data in enumerate(bulk_data.users):
-        row_num = i + 1
+    if not bulk_data.dry_run:
+        try:
+            with db.begin_nested():
+                for row_num, user_data in enumerate(bulk_data.users, 1):
+                    # In-batch duplicate username check
+                    if user_data.username in batch_usernames:
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "username",
+                            "error": "Duplicate username in bulk request"
+                        })
+                        continue
+                    batch_usernames.add(user_data.username)
 
-        # Prevent creating admins
-        if user_data.role == models.UserRole.ADMIN:
-            failed.append(row_num)
-            errors.append({
-                "row": row_num,
-                "field": "role",
-                "error": "Cannot create admin accounts through bulk create"
-            })
-            continue
+                    if user_data.email is not None:
+                        if user_data.email in batch_emails:
+                            failed.append(row_num)
+                            errors.append({
+                                "row": row_num,
+                                "field": "email",
+                                "error": "Duplicate email in bulk request"
+                            })
+                            continue
+                        batch_emails.add(user_data.email)
 
-        # Check for existing username/email using pre-loaded sets
-        if user_data.username in existing_usernames:
-            failed.append(row_num)
-            errors.append({
-                "row": row_num,
-                "field": "username",
-                "error": "Username already exists"
-            })
-            continue
+                    # Prevent creating admins
+                    if user_data.role == models.UserRole.ADMIN:
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "role",
+                            "error": "Cannot create admin accounts through bulk create"
+                        })
+                        continue
 
-        # Check email uniqueness only if email is provided
-        if user_data.email is not None and user_data.email in existing_emails:
+                    # Check for existing username/email using pre-loaded sets
+                    if user_data.username in existing_usernames:
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "username",
+                            "error": "Username already exists"
+                        })
+                        continue
+
+                    # Check email uniqueness only if email is provided
+                    if user_data.email is not None and user_data.email in existing_emails:
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "email",
+                            "error": "Email already exists"
+                        })
+                        continue
+
+                    try:
+                        # A savepoint isolates a concurrent uniqueness race to this row;
+                        # the outer transaction remains usable for later rows and audit.
+                        with db.begin_nested():
+                            new_user = models.User(
+                                username=user_data.username,
+                                email=user_data.email,
+                                hashed_password=get_password_hash(user_data.password),
+                                role=user_data.role,
+                                kindergarten_id=user_data.kindergarten_id,
+                                status=models.UserStatus.ACTIVE,
+                                must_change_password=user_data.role in {
+                                    models.UserRole.MANAGER,
+                                    models.UserRole.SUPERVISOR,
+                                },
+                            )
+                            for field in (
+                                "full_name", "phone_number", "address", "nationality",
+                                "national_id", "passport_number",
+                            ):
+                                value = getattr(user_data, field, None)
+                                if value is not None:
+                                    setattr(new_user, field, value)
+                            db.add(new_user)
+                            db.flush()
+                            if new_user.role == models.UserRole.SUPERVISOR:
+                                validators.ensure_supervisor_profile(
+                                    db, new_user, new_user.kindergarten_id
+                                )
+                            db.flush()
+                        succeeded.append({"row": row_num, "id": new_user.id, "username": new_user.username})
+                    except IntegrityError as exc:
+                        logger.warning(
+                            "Bulk user import row %s lost a uniqueness race (%s)",
+                            row_num,
+                            type(exc).__name__,
+                        )
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "conflict",
+                            "error": "Username or email became unavailable"
+                        })
+                    except (SQLAlchemyError, AttributeError, ValueError, KeyError) as e:
+                        logger.warning(
+                            "Bulk user import row %s failed (%s)", row_num, type(e).__name__
+                        )
+                        failed.append(row_num)
+                        errors.append({
+                            "row": row_num,
+                            "field": "unknown",
+                            "error": "User could not be created"
+                        })
+                log_audit_event(
+                    db, AuditAction.BULK_USER_CREATE, current_user, "User",
+                    target_ids=[s["id"] for s in succeeded if "id" in s],
+                    metadata={
+                        "created_count": len(succeeded),
+                        "failed_count": len(failed)
+                    },
+                    sensitivity_level=3
+                )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+    else:
+        for row_num, user_data in enumerate(bulk_data.users, 1):
+            if user_data.username in batch_usernames:
+                failed.append(row_num)
+                errors.append({
+                    "row": row_num,
+                    "field": "username",
+                    "error": "Duplicate username in bulk request"
+                })
+                continue
+            batch_usernames.add(user_data.username)
+            if user_data.email is not None and user_data.email in batch_emails:
+                failed.append(row_num)
+                errors.append({
+                    "row": row_num,
+                    "field": "email",
+                    "error": "Duplicate email in bulk request"
+                })
+                continue
+            if user_data.role == models.UserRole.ADMIN:
+                failed.append(row_num)
+                errors.append({
+                    "row": row_num,
+                    "field": "role",
+                    "error": "Cannot create admin accounts through bulk create"
+                })
+                continue
+            if user_data.username in existing_usernames:
+                failed.append(row_num)
+                errors.append({
+                    "row": row_num,
+                    "field": "username",
+                    "error": "Username already exists"
+                })
+                continue
+            if user_data.email is not None and user_data.email in existing_emails:
                 failed.append(row_num)
                 errors.append({
                     "row": row_num,
@@ -1590,45 +1751,7 @@ def bulk_create_users(
                     "error": "Email already exists"
                 })
                 continue
-
-        if not bulk_data.dry_run:
-            try:
-                new_user = models.User(
-                    username=user_data.username,
-                    email=user_data.email,
-                    hashed_password=get_password_hash(user_data.password),
-                    role=user_data.role,
-                    kindergarten_id=user_data.kindergarten_id,
-                    status=models.UserStatus.ACTIVE
-                )
-                db.add(new_user)
-                db.flush()
-                succeeded.append({"row": row_num, "id": new_user.id, "username": new_user.username})
-            except (SQLAlchemyError, AttributeError, ValueError, KeyError) as e:  # pragma: no cover — db.flush() failure here would also break the shared auth session; tested defensively
-                logger.warning("Bulk user import row %s failed: %s", row_num, e)
-                failed.append(row_num)
-                errors.append({
-                    "row": row_num,
-                    "field": "unknown",
-                    "error": str(e)
-                })
-        else:
             succeeded.append({"row": row_num, "username": user_data.username})
-
-    if not bulk_data.dry_run:
-        db.commit()
-
-        # Audit log
-        log_audit_event(
-            db, AuditAction.BULK_USER_CREATE, current_user, "User",
-            target_ids=[s["id"] for s in succeeded if "id" in s],
-            metadata={
-                "created_count": len(succeeded),
-                "failed_count": len(failed)
-            },
-            sensitivity_level=3
-        )
-        db.commit()
 
     return {
         "dry_run": bulk_data.dry_run,
@@ -1901,21 +2024,22 @@ async def import_users_csv(
         succeeded.append(row_num)
 
     if not dry_run and created_ids:
-        db.commit()
-
-        # Audit log
-        log_audit_event(
-            db, AuditAction.CSV_IMPORT, current_user, "User",
-            target_ids=created_ids,
-            metadata={
-                "filename": file.filename,
-                "total_rows": total_rows,
-                "succeeded": len(succeeded),
-                "failed": len(failed)
-            },
-            sensitivity_level=3
-        )
-        db.commit()
+        try:
+            log_audit_event(
+                db, AuditAction.CSV_IMPORT, current_user, "User",
+                target_ids=created_ids,
+                metadata={
+                    "filename": file.filename,
+                    "total_rows": total_rows,
+                    "succeeded": len(succeeded),
+                    "failed": len(failed)
+                },
+                sensitivity_level=3
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
     result = CSVImportResult(
         total_rows=total_rows,
@@ -2080,15 +2204,17 @@ def resolve_contact_message(
         msg.is_resolved = True
         msg.resolved_by_id = current_user.id
         msg.resolved_at = datetime.now(_JORDAN_TZ)
-        db.commit()
-
-        log_audit_event(
-            db, AuditAction.CONTACT_MESSAGE_RESOLVED, current_user, "ContactMessage",
-            target_ids=message_id,
-            metadata={"message_id": message_id},
-            sensitivity_level=1,
-        )
-        db.commit()
+        try:
+            log_audit_event(
+                db, AuditAction.CONTACT_MESSAGE_RESOLVED, current_user, "ContactMessage",
+                target_ids=message_id,
+                metadata={"message_id": message_id},
+                sensitivity_level=1,
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
     return {"message": "Success"}
 
@@ -2357,7 +2483,12 @@ def _validate_jordan_governorates(governorates: Optional[List[str]]) -> List[str
         try:
             canonical.append(validators.validate_jordan_governorate(gov))
         except validators.ValidationError:
-            raise validation_error("Invalid governorate", fields={"governorates": "invalid"})
+            raise APIError(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                code=ErrorCode.VALIDATION_ERROR,
+                message="Invalid governorate",
+                fields={"governorates": "invalid"},
+            )
     return list(dict.fromkeys(canonical))
 
 
@@ -2417,6 +2548,7 @@ def _build_staff_recipient_query(
         models.User.status == models.UserStatus.ACTIVE,
         models.User.role.in_(staff_roles)
     )
+    joined_kindergartens = False
 
     if kindergarten_ids:
         query = query.filter(models.User.kindergarten_id.in_(kindergarten_ids))
@@ -2426,10 +2558,15 @@ def _build_staff_recipient_query(
             models.Kindergarten,
             models.User.kindergarten_id == models.Kindergarten.id
         ).filter(models.Kindergarten.governorate.in_(governorates))
+        joined_kindergartens = True
 
     search_cols = [models.User.username, models.User.email]
     if search_term:
-        query = query.outerjoin(models.Kindergarten, models.User.kindergarten_id == models.Kindergarten.id)
+        if not joined_kindergartens:
+            query = query.outerjoin(
+                models.Kindergarten,
+                models.User.kindergarten_id == models.Kindergarten.id,
+            )
         search_cols.extend([
             models.Kindergarten.name_ar,
             models.Kindergarten.name_en
@@ -2552,21 +2689,49 @@ def _count_admin_recipients(
     kindergarten_ids: List[int],
     search: Optional[str]
 ) -> int:
-    total = 0
+    recipient_query = _build_admin_recipient_id_query(
+        db, roles, governorates, kindergarten_ids, search
+    )
+    count_stmt = select(func.count()).select_from(
+        recipient_query.order_by(None).subquery()
+    )
+    return db.execute(count_stmt).scalar_one()
+
+
+def _build_admin_recipient_id_query(
+    db: Session,
+    roles: List[models.UserRole],
+    governorates: List[str],
+    kindergarten_ids: List[int],
+    search: Optional[str],
+) -> Any:
+    """Build the one canonical recipient-ID relation used by count/page/send."""
     search_term = (search or "").strip()
-
-    staff_roles = [role for role in roles if role in {models.UserRole.MANAGER, models.UserRole.SUPERVISOR}]
-    if staff_roles:
-        staff_query = _build_staff_recipient_query(db, roles, governorates, kindergarten_ids, search_term)
-        staff_count_stmt = select(func.count()).select_from(staff_query.subquery())
-        total += db.execute(staff_count_stmt).scalar_one()
-
+    statements = []
+    if any(
+        role in {models.UserRole.MANAGER, models.UserRole.SUPERVISOR}
+        for role in roles
+    ):
+        statements.append(
+            _build_staff_recipient_query(
+                db, roles, governorates, kindergarten_ids, search_term
+            ).statement
+        )
     if models.UserRole.PARENT in roles:
-        parent_query = _build_parent_recipient_query(db, governorates, kindergarten_ids, search_term)
-        parent_count_stmt = select(func.count()).select_from(parent_query.subquery())
-        total += db.execute(parent_count_stmt).scalar_one()
+        statements.append(
+            _build_parent_recipient_query(
+                db, governorates, kindergarten_ids, search_term
+            ).statement
+        )
 
-    return total
+    if not statements:
+        return db.query(models.User.id).filter(models.User.id.is_(None))
+    combined = (
+        union_all(*statements).subquery()
+        if len(statements) > 1
+        else statements[0].subquery()
+    )
+    return db.query(combined.c.id).distinct().order_by(combined.c.id)
 
 
 def _resolve_parent_governorates(db: Session, parent_ids: List[int]) -> Dict[int, List[str]]:
@@ -2744,43 +2909,19 @@ def _resolve_admin_recipient_ids(
     governorates: Optional[List[str]] = None,
     kindergarten_ids: Optional[List[int]] = None,
     search: Optional[str] = None,
-    limit: Optional[int] = None
+    limit: Optional[int] = None,
+    offset: int = 0,
 ) -> List[int]:
-    recipient_ids: List[int] = []
-    seen: Set[int] = set()
     governorates = governorates or []
     kindergarten_ids = kindergarten_ids or []
-    search_term = (search or "").strip()
-    effective_limit = limit if limit and limit > 0 else None
-
-    def _collect_rows(rows) -> bool:
-        for row in rows:
-            uid = row[0]
-            if uid in seen:  # pragma: no cover — SQL queries use distinct(); duplicate user IDs cannot appear in practice; kept for defensive safety
-                continue
-            seen.add(uid)
-            recipient_ids.append(uid)
-            if effective_limit and len(recipient_ids) >= effective_limit:
-                return True
-        return False
-
-    staff_roles = [role for role in roles if role in {models.UserRole.MANAGER, models.UserRole.SUPERVISOR}]
-    if staff_roles:
-        staff_query = _build_staff_recipient_query(db, roles, governorates, kindergarten_ids, search_term).order_by(models.User.id)
-        if effective_limit:
-            remaining = effective_limit - len(recipient_ids)
-            staff_query = staff_query.limit(remaining)
-        if _collect_rows(staff_query.all()):
-            return sorted(recipient_ids)
-
-    if models.UserRole.PARENT in roles:
-        parent_query = _build_parent_recipient_query(db, governorates, kindergarten_ids, search_term).order_by(models.User.id)
-        if effective_limit:
-            remaining = effective_limit - len(recipient_ids)
-            parent_query = parent_query.limit(remaining)
-        _collect_rows(parent_query.all())
-
-    return sorted(recipient_ids)
+    query = _build_admin_recipient_id_query(
+        db, roles, governorates, kindergarten_ids, search
+    )
+    if offset > 0:
+        query = query.offset(offset)
+    if limit is not None and limit > 0:
+        query = query.limit(limit)
+    return [row[0] for row in query.all()]
 
 
 def _fetch_admin_recipient_summaries(db: Session, user_ids: List[int]) -> List[AdminRecipientSummary]:
@@ -2899,14 +3040,6 @@ def list_message_recipients(
     if not search_term:
         search_term = None
 
-    recipient_ids = _resolve_admin_recipient_ids(
-        db=db,
-        roles=role_values,
-        governorates=governorate_values,
-        kindergarten_ids=kindergarten_id_values,
-        search=search_term
-    )
-
     total = _count_admin_recipients(
         db=db,
         roles=role_values,
@@ -2916,7 +3049,15 @@ def list_message_recipients(
     )
     total_pages = max(1, (total + page_size - 1) // page_size)
     offset = (page - 1) * page_size
-    page_ids = recipient_ids[offset:offset + page_size]
+    page_ids = _resolve_admin_recipient_ids(
+        db=db,
+        roles=role_values,
+        governorates=governorate_values,
+        kindergarten_ids=kindergarten_id_values,
+        search=search_term,
+        limit=page_size,
+        offset=offset,
+    )
     items = _fetch_admin_recipient_summaries(db, page_ids)
 
     return AdminRecipientListResponse(
@@ -3016,6 +3157,8 @@ def create_admin_message(
     )
 
     warnings: List[str] = []
+    staged_notifications: List[models.Notification] = []
+    recipient_users = db.query(models.User).filter(models.User.id.in_(recipient_ids)).all()
     chunk_size = 500
     try:
         db.add(message)
@@ -3031,8 +3174,56 @@ def create_admin_message(
         ]
         for start in range(0, len(recipients), chunk_size):
             db.bulk_save_objects(recipients[start:start + chunk_size])
+        log_audit_event(
+            db=db,
+            action=AuditAction.ADMIN_MESSAGE_SENT,
+            actor=current_user,
+            target_type="Message",
+            target_ids=message.id,
+            metadata={
+                "recipient_count": len(recipient_ids),
+                "target": {
+                    "mode": target.mode.value,
+                    "roles": [role.value for role in roles],
+                    "governorates": canonical_governorates,
+                    "kindergarten_ids": kindergarten_id_values,
+                    "search": search_term
+                }
+            },
+            sensitivity_level=2
+        )
+
+        notification_result = create_message_notifications(
+            db,
+            message,
+            recipient_users,
+            caller_owns_transaction=True,
+        )
+        if notification_result and recipient_users:
+            if isinstance(notification_result, list):
+                staged_notifications = notification_result
+            log_audit_event(
+                db=db,
+                action=AuditAction.MESSAGE_NOTIFICATIONS_QUEUED,
+                actor=current_user,
+                target_type="Message",
+                target_ids=message.id,
+                metadata={"recipient_count": len(recipient_users)},
+                sensitivity_level=1,
+            )
+        else:
+            warnings.append("Message notifications are disabled; status will be reviewed later.")
+            log_audit_event(
+                db=db,
+                action=AuditAction.MESSAGE_NOTIFICATIONS_SKIPPED,
+                actor=current_user,
+                target_type="Message",
+                target_ids=message.id,
+                metadata={"reason": "notifications_disabled"},
+                sensitivity_level=1,
+            )
         db.commit()
-    except SQLAlchemyError as exc:
+    except Exception as exc:
         db.rollback()
         logger.error("Failed to persist admin message: %s", exc)
         raise APIError(
@@ -3044,55 +3235,31 @@ def create_admin_message(
     else:
         db.refresh(message)
 
-    log_audit_event(
-        db=db,
-        action=AuditAction.ADMIN_MESSAGE_SENT,
-        actor=current_user,
-        target_type="Message",
-        target_ids=message.id,
-        metadata={
-            "recipient_count": len(recipient_ids),
-            "target": {
-                "mode": target.mode.value,
-                "roles": [role.value for role in roles],
-                "governorates": canonical_governorates,
-                "kindergarten_ids": kindergarten_id_values,
-                "search": search_term
-            }
-        },
-        sensitivity_level=2
-    )
-    db.commit()
-
-    recipient_users = db.query(models.User).filter(models.User.id.in_(recipient_ids)).all()
-    try:
-        notifications_enabled = create_message_notifications(db, message, recipient_users)
-        if notifications_enabled and recipient_users:
-            log_audit_event(
-                db=db,
-                action=AuditAction.MESSAGE_NOTIFICATIONS_QUEUED,
-                actor=current_user,
-                target_type="Message",
-                target_ids=message.id,
-                metadata={"recipient_count": len(recipient_users)},
-                sensitivity_level=1
+    if staged_notifications:
+        try:
+            dispatch_message_notification_tasks(staged_notifications)
+        except Exception as exc:
+            error_type = type(exc).__name__
+            warnings.append("Notification dispatch is pending retry.")
+            try:
+                for notification in staged_notifications:
+                    notification.error_message = (
+                        f"Dispatch scheduling failed ({error_type}); pending retry"
+                    )
+                db.commit()
+            except Exception as record_exc:
+                db.rollback()
+                logger.error(
+                    "Failed to record Admin notification dispatch error for message %s error_type=%s",
+                    message.id,
+                    type(record_exc).__name__,
+                )
+            logger.warning(
+                "Failed to dispatch Admin notifications for message %s; %s rows remain pending: %s",
+                message.id,
+                len(staged_notifications),
+                error_type,
             )
-            db.commit()
-        if not notifications_enabled:
-            warnings.append("Message notifications are disabled; status will be reviewed later.")
-            log_audit_event(
-                db=db,
-                action=AuditAction.MESSAGE_NOTIFICATIONS_SKIPPED,
-                actor=current_user,
-                target_type="Message",
-                target_ids=message.id,
-                metadata={"reason": "notifications_disabled"},
-                sensitivity_level=1
-            )
-            db.commit()
-    except (SQLAlchemyError, RuntimeError, TypeError, AttributeError) as exc:
-        logger.warning("Failed to enqueue notifications for message %s: %s", message.id, exc)
-        warnings.append("Notification system error; please verify manually.")
 
     return AdminMessageResponse(
         id=message.id,
@@ -3157,22 +3324,36 @@ def list_governorate_options(
     """
     try:
         from services.jordan_locations import get_all_governorates
-        options = []
-        for g in get_all_governorates():
+    except (ImportError, AttributeError):
+        source_options = [
+            {
+                "name_ar": gov,
+                "name_en": (
+                    settings.JORDAN_GOVERNORATES_ENGLISH[idx]
+                    if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH)
+                    else gov
+                ),
+            }
+            for idx, gov in enumerate(settings.JORDAN_GOVERNORATES)
+        ]
+    else:
+        source_options = get_all_governorates()
+
+    options = []
+    try:
+        for g in source_options:
             options.append(GovernorateOption(
                 id=g["name_ar"],
                 name_ar=g["name_ar"],
                 name_en=g["name_en"]
             ))
-    except Exception:
-        options = []
-        for idx, gov in enumerate(settings.JORDAN_GOVERNORATES):
-            english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx] if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH) else gov
-            options.append(GovernorateOption(
-                id=gov,
-                name_ar=gov,
-                name_en=english_label
-            ))
+    except (ValidationError, KeyError, TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            code=ErrorCode.VALIDATION_ERROR,
+            message="Governorate options are invalid",
+            fields={"governorates": "invalid"},
+        ) from exc
 
     options.sort(key=lambda opt: opt.name_ar)
     return GovernorateOptionsResponse(governorates=options)
@@ -3229,20 +3410,27 @@ def preview_message_recipients(
         search=search_term
     )
 
-    recipient_ids = _resolve_admin_recipient_ids(
+    all_recipient_ids = _resolve_admin_recipient_ids(
         db=db,
         roles=role_values,
         governorates=governorate_values if governorate_values else None,
         kindergarten_ids=kindergarten_id_values if kindergarten_id_values else None,
         search=search_term,
-        limit=settings.MAX_MESSAGE_RECIPIENTS
     )
 
-    sample_ids = recipient_ids[:5]
+    sample_ids = _resolve_admin_recipient_ids(
+        db=db,
+        roles=role_values,
+        governorates=governorate_values,
+        kindergarten_ids=kindergarten_id_values,
+        search=search_term,
+        limit=min(page_size, 5),
+        offset=(page - 1) * page_size,
+    )
     sample_recipients = _fetch_admin_recipient_summaries(db, sample_ids)
 
     role_breakdown, governorate_breakdown, kindergarten_breakdown = _build_recipient_breakdowns(
-        db, recipient_ids
+        db, all_recipient_ids
     )
 
     target_metadata = {
@@ -3265,6 +3453,7 @@ def preview_message_recipients(
         },
         sensitivity_level=1
     )
+    db.commit()
 
     return AdminRecipientPreviewResponse(
         total_count=total_count,
@@ -3304,21 +3493,28 @@ def preview_admin_message_post(
     if not search_term:
         search_term = None
 
-    recipient_ids = _resolve_admin_recipient_ids(
+    total = _count_admin_recipients(
+        db=db,
+        roles=roles,
+        governorates=governorate_values,
+        kindergarten_ids=kindergarten_id_values,
+        search=search_term,
+    )
+
+    page = max(1, payload.page)
+    page_size = max(1, min(payload.page_size, settings.MAX_PAGE_SIZE))
+    offset = (page - 1) * page_size
+    page_ids = _resolve_admin_recipient_ids(
         db=db,
         roles=roles,
         governorates=governorate_values if governorate_values else None,
         kindergarten_ids=kindergarten_id_values if kindergarten_id_values else None,
         search=search_term,
-        limit=settings.MAX_MESSAGE_RECIPIENTS
+        limit=page_size,
+        offset=offset,
     )
 
-    total = len(recipient_ids)
-    page = max(1, payload.page)
-    page_size = max(1, min(payload.page_size, settings.MAX_PAGE_SIZE))
     total_pages = max(1, (total + page_size - 1) // page_size) if total else 1
-    offset = (page - 1) * page_size
-    page_ids = recipient_ids[offset:offset + page_size]
     items = _fetch_admin_recipient_summaries(db, page_ids)
 
     target_metadata = {
@@ -3341,6 +3537,7 @@ def preview_admin_message_post(
         },
         sensitivity_level=1
     )
+    db.commit()
 
     return AdminRecipientListResponse(
         items=items,
@@ -3982,6 +4179,7 @@ def get_admin_stats(
         metadata={"period_days": period_days, "endpoint": "stats"},
         sensitivity_level=2,
     )
+    db.commit()
 
     return {
         "generated_at": now.isoformat(),
@@ -4030,6 +4228,16 @@ def get_admin_dashboard(
     cache_key = f"dashboard:admin:v4:period_{period_days}:date_{today.isoformat()}"
     cached_payload = _admin_dashboard_cache_get(cache_key)
     if isinstance(cached_payload, dict):
+        log_audit_event(
+            db=db,
+            action=AuditAction.ADMIN_DASHBOARD_VIEWED,
+            actor=current_user,
+            target_type="Dashboard",
+            target_ids=None,
+            metadata={"period_days": period_days, "cache_hit": True},
+            sensitivity_level=2,
+        )
+        db.commit()
         return AdminDashboardResponse(**cached_payload)
 
     week_ago = today - timedelta(days=7)
@@ -4417,6 +4625,7 @@ def get_admin_dashboard(
         },
         sensitivity_level=2,
     )
+    db.commit()
 
     response_payload = AdminDashboardResponse(
         summary=summary,
@@ -5178,6 +5387,7 @@ def get_kg_overview(
         metadata={"kindergarten_count": len(kg_cards), "alert_count": total_alerts},
         sensitivity_level=2,
     )
+    db.commit()
 
     return KgOverviewResponse(
         generated_at=now.isoformat(),
@@ -5215,6 +5425,28 @@ def _period_trend(period: str) -> str:
 # Backup Management Endpoints
 # =============================================================================
 
+def _record_backup_failure(
+    db: Session,
+    actor: models.User,
+    operation: str,
+    **safe_metadata: Any,
+) -> None:
+    """Best-effort durable failure audit without storing raw exception details."""
+    db.rollback()
+    try:
+        log_audit_event(
+            db,
+            AuditAction.BACKUP_FAILED,
+            actor,
+            "Backup",
+            metadata={"operation": operation, **safe_metadata},
+            sensitivity_level=3,
+        )
+        db.commit()
+    except Exception as audit_exc:
+        db.rollback()
+        logger.error("Failed to persist backup failure audit: %s", audit_exc)
+
 @router.post("/backup/create")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def create_backup(
@@ -5228,19 +5460,31 @@ def create_backup(
     """Enqueue a backup job and return immediately (Admin only)."""
 
     from backup_tasks import run_backup
+    external_succeeded = False
 
     try:
+        log_audit_event(
+            db,
+            AuditAction.BACKUP_ENQUEUE_ATTEMPTED,
+            current_user,
+            "Backup",
+            metadata={"backup_type": backup_type},
+            sensitivity_level=2,
+        )
+        db.commit()
         task = run_backup.delay(
             backup_type=backup_type,
             include_uploads=include_uploads,
             include_config=include_config,
             triggered_by_user_id=current_user.id,
         )
+        external_succeeded = True
         log_audit_event(
             db, AuditAction.BACKUP_ENQUEUED, current_user, "Backup",
             metadata={"backup_type": backup_type, "task_id": task.id},
             sensitivity_level=2,
         )
+        db.commit()
         return {
             "message": f"{backup_type.title()} backup enqueued",
             "task_id": task.id,
@@ -5250,6 +5494,14 @@ def create_backup(
     except HTTPException:
         raise
     except Exception as e:
+        if external_succeeded:
+            db.rollback()
+            logger.error("Backup enqueue completed but its outcome audit failed: %s", e)
+            raise HTTPException(
+                status_code=500,
+                detail="Backup was enqueued but audit recording failed; do not retry",
+            )
+        _record_backup_failure(db, current_user, "enqueue", backup_type=backup_type)
         logger.error("Failed to enqueue backup task: %s", e)
         raise HTTPException(status_code=500, detail="Failed to enqueue backup")
 
@@ -5298,6 +5550,7 @@ def restore_backup(
         raise HTTPException(status_code=400, detail="Invalid backup name")
 
     from backup_manager import backup_manager
+    external_succeeded = False
 
     try:
         if not backup_manager.validate_backup(backup_name):
@@ -5334,9 +5587,19 @@ def restore_backup(
         ):
             raise HTTPException(status_code=400, detail="Invalid or expired confirmation token")
 
+        log_audit_event(
+            db,
+            AuditAction.BACKUP_RESTORE_ATTEMPTED,
+            current_user,
+            "Backup",
+            metadata={"backup_name": backup_name},
+            sensitivity_level=3,
+        )
+        db.commit()
         success = backup_manager.restore_database_backup(backup_name)
 
         if success:
+            external_succeeded = True
             log_audit_event(
                 db,
                 AuditAction.BACKUP_RESTORED,
@@ -5345,13 +5608,23 @@ def restore_backup(
                 metadata={"backup_name": backup_name},
                 sensitivity_level=3,
             )
+            db.commit()
             return {"message": f"Database successfully restored from backup: {backup_name}"}
         else:
+            _record_backup_failure(db, current_user, "restore", backup_name=backup_name)
             raise HTTPException(status_code=500, detail="Restore operation failed")
 
     except HTTPException:
         raise
-    except (OSError, IOError, SQLAlchemyError, ValueError) as e:
+    except Exception as e:
+        if external_succeeded:
+            db.rollback()
+            logger.error("Backup restore completed but its outcome audit failed: %s", e)
+            raise HTTPException(
+                status_code=500,
+                detail="Restore completed but audit recording failed; do not retry",
+            )
+        _record_backup_failure(db, current_user, "restore", backup_name=backup_name)
         logger.error(f"Backup restore failed: {e}")
         raise HTTPException(status_code=500, detail="Restore failed due to an internal error")
 
@@ -5373,11 +5646,22 @@ def delete_backup(
         raise HTTPException(status_code=400, detail="Invalid backup name")
 
     from backup_manager import backup_manager
+    external_succeeded = False
 
     try:
         metadata = backup_manager.get_backup_info(backup_name)
         if not metadata:
             raise HTTPException(status_code=404, detail="Backup not found")
+
+        log_audit_event(
+            db,
+            AuditAction.BACKUP_DELETE_ATTEMPTED,
+            current_user,
+            "Backup",
+            metadata={"backup_name": backup_name},
+            sensitivity_level=3,
+        )
+        db.commit()
 
         backup_path = metadata.get("backup_path")
         if backup_path and os.path.exists(backup_path):
@@ -5387,18 +5671,28 @@ def delete_backup(
             del backup_manager.metadata[backup_name]
             backup_manager._save_metadata()
 
+        external_succeeded = True
         # Log the deletion
         log_audit_event(
             db, AuditAction.BACKUP_DELETED, current_user, "Backup",
             metadata={"backup_name": backup_name},
             sensitivity_level=2
         )
+        db.commit()
 
         return {"message": f"Backup {backup_name} deleted successfully"}
 
     except HTTPException:
         raise
-    except (OSError, IOError, ValueError, KeyError) as e:
+    except Exception as e:
+        if external_succeeded:
+            db.rollback()
+            logger.error("Backup deletion completed but its outcome audit failed: %s", e)
+            raise HTTPException(
+                status_code=500,
+                detail="Deletion completed but audit recording failed; do not retry",
+            )
+        _record_backup_failure(db, current_user, "delete", backup_name=backup_name)
         logger.error(f"Backup deletion failed: {e}")
         raise HTTPException(status_code=500, detail="Deletion failed")
 
@@ -5447,9 +5741,20 @@ def cleanup_old_backups(
     """Clean up old backups beyond retention period (Admin only)"""
 
     from backup_manager import backup_manager
+    external_succeeded = False
 
     try:
+        log_audit_event(
+            db,
+            AuditAction.BACKUP_CLEANUP_ATTEMPTED,
+            current_user,
+            "Backup",
+            metadata={"operation": "cleanup_old_backups"},
+            sensitivity_level=2,
+        )
+        db.commit()
         backup_manager.cleanup_old_backups()
+        external_succeeded = True
 
         # Log the cleanup
         log_audit_event(
@@ -5457,12 +5762,21 @@ def cleanup_old_backups(
             metadata={"action": "cleanup_old_backups"},
             sensitivity_level=1
         )
+        db.commit()
 
         return {"message": "Old backups cleaned up successfully"}
 
     except HTTPException:
         raise
-    except (OSError, IOError, ValueError, KeyError) as e:
+    except Exception as e:
+        if external_succeeded:
+            db.rollback()
+            logger.error("Backup cleanup completed but its outcome audit failed: %s", e)
+            raise HTTPException(
+                status_code=500,
+                detail="Cleanup completed but audit recording failed; do not retry",
+            )
+        _record_backup_failure(db, current_user, "cleanup")
         logger.error(f"Backup cleanup failed: {e}")
         raise HTTPException(status_code=500, detail="Cleanup failed")
 
@@ -5645,14 +5959,6 @@ def import_kindergartens_from_excel(
             "phone": phone,
         })
 
-    if not dry_run:
-        try:
-            db.commit()
-        except (SQLAlchemyError, OSError):
-            db.rollback()
-            logger.exception("Failed to commit kindergarten import")
-            raise HTTPException(status_code=500, detail="Database commit failed")
-
     result.errors = row_errors
     logger.info(
         "Kindergarten Excel import: inserted=%d, dup=%d, empty=%d, errors=%d, dry_run=%s",
@@ -5661,23 +5967,28 @@ def import_kindergartens_from_excel(
     )
 
     if not dry_run:
-        log_audit_event(
-            db,
-            AuditAction.KINDERGARTEN_IMPORT,
-            current_user,
-            target_type="kindergarten",
-            target_ids=[],
-            metadata={"imported_count": result.inserted, "errors": len(row_errors)},
-            sensitivity_level=2,
-        )
-        db.add(models.ImportLog(
-            file_name=file.filename,
-            total_rows=len(rows),
-            imported_count=result.inserted,
-            skipped_count=result.skipped_duplicate + result.skipped_empty,
-            errors_json=row_errors or None,
-        ))
-        db.commit()
+        try:
+            log_audit_event(
+                db,
+                AuditAction.KINDERGARTEN_IMPORT,
+                current_user,
+                target_type="kindergarten",
+                target_ids=[],
+                metadata={"imported_count": result.inserted, "errors": len(row_errors)},
+                sensitivity_level=2,
+            )
+            db.add(models.ImportLog(
+                file_name=file.filename,
+                total_rows=len(rows),
+                imported_count=result.inserted,
+                skipped_count=result.skipped_duplicate + result.skipped_empty,
+                errors_json=row_errors or None,
+            ))
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("Failed to commit kindergarten import")
+            raise HTTPException(status_code=500, detail="Database commit failed")
 
     return result
 
@@ -6123,6 +6434,21 @@ def send_governance_reminder_endpoint(
     funnel = compute_governance_funnel(db, week_ago, today, kg_id)
     metrics_snapshot = funnel.get("aggregate", {}) if not kg_id else funnel.get("per_kindergarten", {}).get(kg_id, {})
 
+    try:
+        log_audit_event(
+            db=db,
+            action=AuditAction.GOVERNANCE_REMINDER_ATTEMPTED,
+            actor=current_user,
+            target_type="GovernanceReminder",
+            target_ids=body.target_id,
+            after_state={"target_type": body.target_type, "reminder_type": body.reminder_type},
+            sensitivity_level=2,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
     reminder = send_governance_reminder(
         db=db,
         admin_user=current_user,
@@ -6141,6 +6467,7 @@ def send_governance_reminder_endpoint(
         after_state={"target_type": body.target_type, "target_id": body.target_id, "reminder_type": body.reminder_type},
         sensitivity_level=2,
     )
+    db.commit()
 
     return {
         "id": reminder.id,
@@ -6580,19 +6907,21 @@ def acknowledge_alert(
     alert.status = models.AlertStatus.ACKNOWLEDGED
     alert.acknowledged_by = current_user.id
     alert.acknowledged_at = now
-    db.commit()
+    try:
+        log_audit_event(
+            db,
+            AuditAction.ALERT_ACKNOWLEDGED,
+            current_user,
+            "ActiveAlert",
+            target_ids=alert_id,
+            metadata={"metric": alert.metric_type, "severity": alert.severity.value if hasattr(alert.severity, "value") else str(alert.severity)},
+            sensitivity_level=2,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     db.refresh(alert)
-
-    log_audit_event(
-        db,
-        AuditAction.ALERT_ACKNOWLEDGED,
-        current_user,
-        "ActiveAlert",
-        target_ids=alert_id,
-        metadata={"metric": alert.metric_type, "severity": alert.severity.value if hasattr(alert.severity, "value") else str(alert.severity)},
-        sensitivity_level=2,
-    )
-    db.commit()
 
     # Build response (mirrors get_admin_alerts logic for the single record)
     threshold_val: Optional[float] = None
@@ -6954,22 +7283,23 @@ def update_admin_profile(
     if payload.phone_number is not None:
         current_user.phone_number = payload.phone_number
 
-    db.commit()
-    db.refresh(current_user)
-
     after = {
         "full_name": current_user.full_name,
         "email": current_user.email,
         "phone_number": current_user.phone_number,
     }
-    log_audit_event(
-        db, AuditAction.ADMIN_PROFILE_UPDATED, current_user, "User",
-        target_ids=current_user.id,
-        before_state=before,
-        after_state=after,
-        sensitivity_level=2,
-    )
-    db.commit()
+    try:
+        log_audit_event(
+            db, AuditAction.ADMIN_PROFILE_UPDATED, current_user, "User",
+            target_ids=current_user.id,
+            before_state=before,
+            after_state=after,
+            sensitivity_level=2,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return {
         "message": "Profile updated",
         "full_name": current_user.full_name,
@@ -6999,23 +7329,20 @@ def change_admin_password(
             metadata={"reason": "Current password incorrect"},
             sensitivity_level=3,
         )
+        db.commit()
         raise unauthenticated_error("Current password is incorrect")
 
-    current_user.hashed_password = get_password_hash(payload.new_password)
-    # UTC on purpose — see the note in me_endpoints.change_my_password. This
-    # column is only ever read as a duration anchor by
-    # auth.requires_password_change, which treats a naive value (all SQLite
-    # reads) as UTC; storing Jordan wall-clock made it read back 3 hours off.
-    current_user.password_changed_at = datetime.now(timezone.utc)
-    current_user.must_change_password = False
-    db.commit()
-
-    log_audit_event(
-        db, AuditAction.ADMIN_PASSWORD_CHANGED, current_user, "User",
-        target_ids=current_user.id,
-        sensitivity_level=3,
-    )
-    db.commit()
+    change_user_password(db, current_user, payload.new_password, commit=False)
+    try:
+        log_audit_event(
+            db, AuditAction.ADMIN_PASSWORD_CHANGED, current_user, "User",
+            target_ids=current_user.id,
+            sensitivity_level=3,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return {"message": "Password changed successfully", "correlation_id": get_correlation_id()}
 
 
@@ -7081,16 +7408,18 @@ def cleanup_audit_logs(
         return {"dry_run": True, "would_delete": count, "cutoff": cutoff.isoformat()}
 
     query.delete(synchronize_session=False)
-    db.commit()
-
-    log_audit_event(
-        db,
-        AuditAction.AUDIT_LOG_CLEANUP,
-        current_user,
-        "AuditLog",
-        metadata={"deleted_count": count, "retention_days": days, "cutoff": cutoff.isoformat()},
-        sensitivity_level=3,
-    )
-    db.commit()
+    try:
+        log_audit_event(
+            db,
+            AuditAction.AUDIT_LOG_CLEANUP,
+            current_user,
+            "AuditLog",
+            metadata={"deleted_count": count, "retention_days": days, "cutoff": cutoff.isoformat()},
+            sensitivity_level=3,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return {"deleted": count, "cutoff": cutoff.isoformat(), "days": days}

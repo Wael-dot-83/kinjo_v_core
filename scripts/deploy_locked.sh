@@ -28,6 +28,15 @@ TARBALL="${1:-}"
 RELEASE_SHA="${2:-unknown}"
 APP_DIR="${KINJO_DIR:-/opt/kinjo}"
 COMPOSE_FILE="docker-compose.prod.yml"
+# TLS edge (nginx + certbot). Deploys must drive the SAME set of compose files
+# the host actually runs -- a deploy that omits the overlay would tear the nginx
+# container down as an orphan and take the site offline while reporting success.
+# Auto-detected so an operator cannot forget it; set KINJO_EDGE=0 to opt out.
+EDGE_FILE="docker-compose.edge.yml"
+COMPOSE_ARGS=(-f "$COMPOSE_FILE")
+if [[ "${KINJO_EDGE:-auto}" != "0" && -f "$APP_DIR/$EDGE_FILE" ]]; then
+  COMPOSE_ARGS+=(-f "$EDGE_FILE")
+fi
 LOCK_FILE="/var/lock/kinjo-deploy.lock"
 BACKUP_DIR="/var/backups/kinjo"
 WEB_CONTAINER="kinjo-web-1"
@@ -133,8 +142,8 @@ log "release extracted; .env intact"
 # ---------------------------------------------------------------------------
 # 4. Build and recreate
 # ---------------------------------------------------------------------------
-log "building and recreating containers"
-docker compose -f "$COMPOSE_FILE" up -d --build
+log "building and recreating containers (compose: ${COMPOSE_ARGS[*]})"
+docker compose "${COMPOSE_ARGS[@]}" up -d --build
 
 # ---------------------------------------------------------------------------
 # 5. Migrate after the new image is running, so the migration matches the code.
@@ -160,12 +169,30 @@ printf '%s\n' "$MIGRATION_LOG" | grep -viE '^INFO.*(Context|Will assume)' || tru
 # ---------------------------------------------------------------------------
 # 6. Health verification -- still inside the lock.
 # ---------------------------------------------------------------------------
+# Probe the APP container directly rather than host :80. Once nginx terminates
+# TLS, host :80 answers "301 -> https" without the app being involved at all, and
+# `curl -f` treats a 301 as success -- so the old check would have gone green
+# against a completely dead application. Hitting /health inside the container
+# proves the thing we actually care about is up.
 HEALTHY=0
 for _ in $(seq 1 30); do
-  if curl -sSf -o /dev/null --max-time 5 http://127.0.0.1:80/ 2>/dev/null; then HEALTHY=1; break; fi
+  if docker exec "$WEB_CONTAINER" curl -sSf -o /dev/null --max-time 5 \
+       http://127.0.0.1:8000/health 2>/dev/null; then HEALTHY=1; break; fi
   sleep 3
 done
 [[ "$HEALTHY" == "1" ]] || die "web did not become healthy -- rollback image was tagged above"
+
+# With the edge deployed, also prove the public path terminates TLS and reaches
+# the app. Non-fatal on its own: certificate problems must be loud but must not
+# trigger a rollback of an application that is demonstrably healthy above.
+if [[ " ${COMPOSE_ARGS[*]} " == *"$EDGE_FILE"* ]]; then
+  if curl -sSf -o /dev/null --max-time 10 https://127.0.0.1/health \
+       --resolve "${KINJO_DOMAIN:-localhost}:443:127.0.0.1" 2>/dev/null; then
+    log "edge: https health OK"
+  else
+    log "WARNING: https health probe failed -- check 'docker logs kinjo_nginx' and certificate validity"
+  fi
+fi
 
 for svc in kinjo-worker-1 kinjo-beat-1; do
   docker inspect "$svc" >/dev/null 2>&1 || log "WARNING: $svc is not running"

@@ -2284,6 +2284,7 @@ def export_report(
         metadata={"report_type": report_type, "level": level.value, "format": fmt},
         sensitivity_level=2,
     )
+    db.commit()
 
     if fmt == "json":
         return payload
@@ -2435,8 +2436,7 @@ def generate_incident_report(
         )
 
         db.add(report)
-        db.commit()
-        db.refresh(report)
+        db.flush()
 
         log_audit_event(
             db,
@@ -2450,6 +2450,7 @@ def generate_incident_report(
             },
         )
         db.commit()
+        db.refresh(report)
 
         return JSONResponse({"success": True, "report_id": report.id, "message": "تم إنشاء التقرير بنجاح"})
 
@@ -2683,6 +2684,11 @@ def export_incident_report_csv(
             for kg, count in per_kg.items():
                 rows.append([kg, count])
 
+        # Build the response before recording a successful export so a local
+        # serialization failure is logged only by the failure path below.
+        filename = f"incident_report_{report_id}_{report.start_date.isoformat()}_{report.end_date.isoformat()}.csv"
+        response = export_service.generate_raw_csv_response(rows, filename)
+
         log_audit_event(
             db=db,
             action=AuditAction.INCIDENT_REPORT_EXPORT,
@@ -2698,23 +2704,27 @@ def export_incident_report_csv(
             },
             sensitivity_level=2,
         )
-
-        # Return CSV file - use report period dates in filename (CHART-032)
-        filename = f"incident_report_{report_id}_{report.start_date.isoformat()}_{report.end_date.isoformat()}.csv"
-        return export_service.generate_raw_csv_response(rows, filename)
+        db.commit()
+        return response
 
     except HTTPException:
         raise
     except (SQLAlchemyError, ValueError, IOError, OSError) as e:
-        log_audit_event(
-            db=db,
-            action=AuditAction.INCIDENT_REPORT_EXPORT_FAILED,
-            actor=current_user,
-            target_type="Report",
-            target_ids=report_id,
-            metadata={"format": "csv", "error_message": str(e)},
-            sensitivity_level=3,
-        )
+        db.rollback()
+        try:
+            log_audit_event(
+                db=db,
+                action=AuditAction.INCIDENT_REPORT_EXPORT_FAILED,
+                actor=current_user,
+                target_type="Report",
+                target_ids=report_id,
+                metadata={"format": "csv", "error_type": type(e).__name__},
+                sensitivity_level=3,
+            )
+            db.commit()
+        except SQLAlchemyError:
+            db.rollback()
+            logger.exception("Failed to persist incident-report export failure audit")
         logger.error(f"Failed to export incident report: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 

@@ -355,7 +355,11 @@
         const tbody = document.createElement("tbody");
         series.forEach((point) => {
           const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${String(localizedValue(point.label))}</td><td>${point.value == null ? "—" : formatNumber(point.value)}</td>`;
+          const labelCell = document.createElement("td");
+          labelCell.textContent = String(localizedValue(point.label));
+          const valueCell = document.createElement("td");
+          valueCell.textContent = point.value == null ? "—" : formatNumber(point.value);
+          tr.append(labelCell, valueCell);
           tbody.appendChild(tr);
         });
         tbl.appendChild(tbody);
