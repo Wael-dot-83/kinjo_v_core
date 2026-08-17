@@ -21,7 +21,7 @@
 # :443 afterwards, and restores automatically if verification fails. The old key
 # is retired only after the new one is proven to be serving.
 #
-# Usage: kinjo-origin-cert-rotate.sh {generate|install <cert>|status}
+# Usage: kinjo-origin-cert-rotate.sh {generate|csr|install <cert>|status}
 # =============================================================================
 set -euo pipefail
 
@@ -160,6 +160,24 @@ cmd_install() {
   log "Delete $BACKUP_DIR/*.$ts once you are satisfied, and revoke the old certificate in Cloudflare."
 }
 
+cmd_csr() {
+  # Re-print the pending CSR. Needed because `generate` deliberately refuses once
+  # a pending key exists (regenerating would orphan the key and silently produce
+  # a certificate that cannot be installed), and `status` shows the live cert
+  # rather than the request. Without this there was no way to recover the CSR for
+  # submission except reading the file by hand.
+  local csr="$PENDING_DIR/origin.csr"
+  [[ -r "$csr" ]] || die "no pending CSR at $csr — run '$0 generate' first"
+  openssl req -in "$csr" -noout -verify >/dev/null 2>&1 || die "pending CSR is not a valid PEM request"
+  local sans
+  sans="$(openssl req -in "$csr" -noout -text | grep -A1 "Subject Alternative Name" | tail -1 | tr -d ' ')"
+  log "pending CSR SANs: $sans"
+  echo
+  echo "=== SUBMIT THIS CSR TO CLOUDFLARE (public data, safe to copy) ==="
+  cat "$csr"
+  echo "=== END CSR ==="
+}
+
 cmd_status() {
   echo "=== live certificate ==="
   openssl x509 -in "$SECRETS_DIR/cert.pem" -noout -serial -subject -dates -ext subjectAltName 2>/dev/null | sed 's/^/  /'
@@ -173,6 +191,7 @@ cmd_status() {
 case "${1:-}" in
   generate) cmd_generate ;;
   install)  shift; cmd_install "${1:-}" ;;
+  csr)      cmd_csr ;;
   status)   cmd_status ;;
-  *) die "usage: $0 {generate|install <cert.pem>|status}" ;;
+  *) die "usage: $0 {generate|csr|install <cert.pem>|status}" ;;
 esac
