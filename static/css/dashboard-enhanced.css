@@ -774,6 +774,10 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   --kinjo-dashboard-chart-info: var(--kinjo-color-info, #3b82f6);
   --kinjo-dashboard-chart-grid: var(--kinjo-color-border-subtle, #DCEAE3);
   --kinjo-dashboard-chart-text: var(--kinjo-color-text-secondary, #475569);
+  --kinjo-dashboard-chart-tooltip-bg: rgba(17, 24, 39, 0.92);
+  --kinjo-dashboard-chart-tooltip-text: #f8fafc;
+  --kinjo-dashboard-chart-point-border: var(--kinjo-color-text-inverse, #ffffff);
+  --kinjo-dashboard-chart-gradient-fade: rgba(255, 255, 255, 0);
   --kinjo-dashboard-status-good-bg: #dcfce7;
   --kinjo-dashboard-status-good-text: #14532d; /* 7.3:1 on #dcfce7 */
   --kinjo-dashboard-status-warning-bg: #fef3c7;

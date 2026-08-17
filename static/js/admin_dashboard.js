@@ -548,7 +548,7 @@ class AdminDashboard {
     const submissionChart = {
       labels: Object.keys(enrollment).map((k) => {
         const i18nKey = ENROLLMENT_I18N[k];
-        const safeKey = sanitizeHTML(k);
+        const safeKey = escapeHtml(k);
         const unknownFallback =
           lang === "ar" ? `حالة أخرى (${safeKey})` : `Other status (${safeKey})`;
         const fallback =
@@ -1294,6 +1294,10 @@ class AdminDashboard {
     const info = get("--kinjo-dashboard-chart-info", "var(--kinjo-color-info, #3b82f6)");
     const grid = get("--kinjo-dashboard-chart-grid", "var(--kinjo-color-border-subtle, #DCEAE3)");
     const text = get("--kinjo-dashboard-chart-text", "var(--kinjo-color-text-secondary, #475569)");
+    const tooltipBackground = get("--kinjo-dashboard-chart-tooltip-bg", "rgba(17, 24, 39, 0.92)");
+    const tooltipText = get("--kinjo-dashboard-chart-tooltip-text", "#f8fafc");
+    const pointBorder = get("--kinjo-dashboard-chart-point-border", "var(--kinjo-color-text-inverse, #ffffff)");
+    const gradientFade = get("--kinjo-dashboard-chart-gradient-fade", "rgba(255, 255, 255, 0)");
 
     return {
       primary,
@@ -1305,6 +1309,10 @@ class AdminDashboard {
       info,
       grid,
       text,
+      tooltipBackground,
+      tooltipText,
+      pointBorder,
+      gradientFade,
       palette: [primary, success, warning, danger, muted, info],
     };
   }
@@ -1328,7 +1336,7 @@ class AdminDashboard {
       ? (() => {
           const g = context.createLinearGradient(0, 0, 0, 220);
           g.addColorStop(0, tokens.primaryFill);
-          g.addColorStop(1, "rgba(255, 255, 255, 0.0)");
+          g.addColorStop(1, tokens.gradientFade);
           return g;
         })()
       : tokens.primaryFill;
@@ -1350,7 +1358,7 @@ class AdminDashboard {
             pointRadius: 3.5,
             pointHoverRadius: 5.5,
             pointBackgroundColor: tokens.primary,
-            pointBorderColor: "#fff",
+            pointBorderColor: tokens.pointBorder,
             pointBorderWidth: 2,
             borderWidth: 2.2,
           },
@@ -1362,9 +1370,9 @@ class AdminDashboard {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: "rgba(17,24,39,0.92)",
-            titleColor: "#f8fafc",
-            bodyColor: "#f8fafc",
+            backgroundColor: tokens.tooltipBackground,
+            titleColor: tokens.tooltipText,
+            bodyColor: tokens.tooltipText,
             padding: 10,
             cornerRadius: 8,
           },
@@ -1500,9 +1508,9 @@ class AdminDashboard {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: "rgba(17,24,39,0.92)",
-            titleColor: "#f8fafc",
-            bodyColor: "#f8fafc",
+            backgroundColor: tokens.tooltipBackground,
+            titleColor: tokens.tooltipText,
+            bodyColor: tokens.tooltipText,
             padding: 10,
             cornerRadius: 8,
             callbacks: {
