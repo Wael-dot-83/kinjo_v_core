@@ -140,6 +140,37 @@ ENV_AFTER="$(md5sum .env | awk '{print $1}')"
 log "release extracted; .env intact"
 
 # ---------------------------------------------------------------------------
+# 3b. Bind-mount ownership for the non-root container.
+#
+# The image used to run as root, so ./data (bind-mounted to /app/data) is owned
+# by uid 0 -- and data/attachments is mode dr-x---r-x, which grants a non-root
+# uid no write bit at all. The hardened image runs as uid 10001, so without this
+# step the containers start cleanly, pass their health check, serve pages, and
+# then fail every attachment, upload and export write at runtime. A deploy that
+# looks entirely successful while silently breaking file storage is exactly the
+# failure mode worth spending a few lines to prevent.
+#
+# Idempotent: after the first deploy the ownership already matches and this is a
+# no-op. Runs BEFORE the containers are recreated so there is no window in which
+# the new image is live against an unwritable directory.
+# ---------------------------------------------------------------------------
+APP_UID="${KINJO_APP_UID:-10001}"
+APP_GID="${KINJO_APP_GID:-10001}"
+if [[ -d "$APP_DIR/data" ]]; then
+  CURRENT_OWNER="$(stat -c '%u:%g' "$APP_DIR/data")"
+  if [[ "$CURRENT_OWNER" != "$APP_UID:$APP_GID" ]]; then
+    log "data/ is owned by $CURRENT_OWNER; chowning to $APP_UID:$APP_GID for the non-root image"
+    chown -R "$APP_UID:$APP_GID" "$APP_DIR/data"
+    # attachments/ ships without an owner write bit (dr-x---r-x). Ownership alone
+    # does not make it writable, so restore u+rwX as well.
+    chmod -R u+rwX "$APP_DIR/data"
+    log "data/ ownership now $(stat -c '%u:%g' "$APP_DIR/data")"
+  else
+    log "data/ ownership already $APP_UID:$APP_GID"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 4. Build and recreate
 # ---------------------------------------------------------------------------
 log "building and recreating containers (compose: ${COMPOSE_ARGS[*]})"
