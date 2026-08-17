@@ -55,7 +55,7 @@ class ConnectionManager:
             except WebSocketDisconnect:
                 logger.debug("Client disconnected during broadcast")
                 disconnected_connections.append(connection)
-            except (RuntimeError, TypeError, ValueError, AttributeError) as e:
+            except Exception as e:
                 logger.warning("Failed to send broadcast message to WebSocket client: %s", str(e), exc_info=False)
                 disconnected_connections.append(connection)
 
@@ -67,7 +67,7 @@ class ConnectionManager:
             await websocket.send_text(message)
         except WebSocketDisconnect:
             logger.debug("Client disconnected before message delivery")
-        except (RuntimeError, TypeError, ValueError, AttributeError) as e:
+        except Exception as e:
             logger.warning("Failed to send personal message to WebSocket client: %s", str(e), exc_info=False)
 
 manager = ConnectionManager()
@@ -250,7 +250,7 @@ async def websocket_dashboard(websocket: WebSocket):
             except asyncio.CancelledError:
                 logger.debug("Stopping analytics WebSocket loop: cancelled")
                 break
-            except RuntimeError as sleep_error:
+            except Exception as sleep_error:
                 logger.debug("Stopping analytics WebSocket loop: %s", str(sleep_error))
                 break
 
@@ -360,7 +360,7 @@ async def _update_admin_cache_async():
         db = SessionLocal()
         fresh_data = await _compute_admin_dashboard_data(db)
         # Cache is already updated in _compute_admin_dashboard_data
-    except (RuntimeError, TypeError, ValueError, AttributeError, SQLAlchemyError) as e:
+    except Exception as e:
         logger.error("Background admin cache update failed: %s", e)
     finally:
         if db:
