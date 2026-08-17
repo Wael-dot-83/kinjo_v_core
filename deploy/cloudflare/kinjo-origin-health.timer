@@ -1,0 +1,13 @@
+[Unit]
+Description=KinJo — periodic origin/edge health verification
+
+[Timer]
+# Frequent enough to catch an outage quickly, infrequent enough that the checks
+# themselves are not a load source on the edge.
+OnCalendar=*:0/15
+RandomizedDelaySec=2m
+Persistent=true
+Unit=kinjo-origin-health.service
+
+[Install]
+WantedBy=timers.target
