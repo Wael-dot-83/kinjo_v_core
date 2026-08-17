@@ -254,7 +254,7 @@
     avatarDiv.className = "chatbot-msg-avatar " + (isBot ? "chatbot-bot-msg-avatar" : "chatbot-user-msg-avatar");
     
     if (isBot) {
-      avatarDiv.innerHTML = '<span class="chatbot-bot-avatar-inner" title="KinJo AI">🤖</span>';
+      avatarDiv.textContent = "🤖";
       avatarDiv.title = "KinJo Smart Assistant";
     } else {
       avatarDiv.textContent = ROLE_META[roleToUse].icon;
