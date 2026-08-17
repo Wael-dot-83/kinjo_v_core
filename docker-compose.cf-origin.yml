@@ -1,0 +1,53 @@
+# =============================================================================
+# KinJo — origin TLS overlay for a Cloudflare-proxied zone.
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.cf-origin.yml up -d
+#
+# Adds nginx on :443 ONLY. Port 80 is deliberately left to the `web` container so
+# this can be deployed while the zone is still in Flexible mode without changing
+# the live traffic path — the edge keeps using :80 until you switch to Full
+# (strict), at which point it starts using :443 and nothing else has to change.
+#
+# Do NOT combine with docker-compose.edge.yml: that one is for a zone WITHOUT
+# Cloudflare in front, and its HTTP->HTTPS redirect loops infinitely behind a
+# Flexible-mode edge.
+#
+# The certificate and key are NOT in this repository. They live on the host at
+# /opt/kinjo/secrets/origin/, root-owned and 0600, mounted read-only.
+# =============================================================================
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: kinjo_nginx
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/kinjo-origin-cloudflare.conf:/etc/nginx/conf.d/default.conf:ro
+      - /opt/kinjo/secrets/origin:/etc/nginx/origin:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      web:
+        condition: service_healthy
+
+
+# NOTE — client IP resolution is configured in the HOST .env, not here.
+#
+# With this overlay the chain becomes:
+#     client -> Cloudflare (sets X-Forwarded-For) -> nginx (appends CF's IP) -> uvicorn
+#
+# uvicorn walks that chain right-to-left skipping TRUSTED addresses, so
+# --forwarded-allow-ips must list BOTH the Cloudflare ranges (from
+# https://www.cloudflare.com/ips-v4) AND this compose network (172.16.0.0/12).
+# Omit the network and every request resolves to nginx's own container address,
+# collapsing the per-IP rate limiter — including on login — into a single bucket.
+#
+# That list lives in KINJO_WEB_COMMAND in /opt/kinjo/.env because the command is
+# what compose passes to the container. Deliberately not duplicated here: two
+# sources for the same trust boundary is how they drift apart.
