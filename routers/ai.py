@@ -6,18 +6,40 @@ Exposes:
   GET  /api/ai/search/similar               — semantic similarity search
   GET  /api/ai/recommendations/activities/{child_id} — activity recommendations
   GET  /api/ai/incidents/search             — semantic incident search
+  POST /api/ai/supervisor/daily-reports/draft — create a supervisor daily-report draft
+  POST /api/ai/supervisor/daily-reports/{draft_id}/confirm — confirm and persist the draft
 """
+from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from api.daily_reports_routes import DailyReportCreateRequest, _authorize_report_for_child
+from config import settings
 from database import get_db
 from dependencies import get_current_user
 import models
 
 router = APIRouter(tags=["AI"])
+
+
+def _require_ai_enabled(current_user: models.User, *, supervisor_only: bool = False) -> None:
+    """Fail closed unless AI-capable features are explicitly enabled."""
+    if not settings.AI_ASSISTANT_ENABLED:
+        raise HTTPException(status_code=403, detail="AI assistant is disabled")
+    if supervisor_only and current_user.role != models.UserRole.SUPERVISOR:
+        raise HTTPException(status_code=403, detail="Supervisor access required")
+
+
+def _require_ai_supervisor_daily_report_enabled(current_user: models.User) -> None:
+    """Fail closed unless the AI supervisor daily-report workflow is explicitly enabled."""
+    _require_ai_enabled(current_user, supervisor_only=True)
+    if not settings.AI_ASSISTANT_SUPERVISOR_ENABLED:
+        raise HTTPException(status_code=403, detail="AI supervisor workflow is disabled")
+    if not settings.AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED:
+        raise HTTPException(status_code=403, detail="AI supervisor daily report workflow is disabled")
 
 
 # ---------------------------------------------------------------------------
@@ -54,6 +76,106 @@ class IncidentSearchResult(BaseModel):
     score: float
 
 
+class SupervisorDailyReportDraftRequest(DailyReportCreateRequest):
+    """AI-generated supervisor draft. The final persisted record remains the regular DailyReport model."""
+
+
+@router.post("/ai/supervisor/daily-reports/draft", status_code=status.HTTP_201_CREATED)
+def create_supervisor_daily_report_draft(
+    payload: SupervisorDailyReportDraftRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create an AI-assisted daily-report draft for an assigned child.
+
+    This is intentionally a draft-only path: the supervisor must review and
+    confirm the generated content before any final save is accepted. The final
+    persisted object still uses the normal DailyReport model and the canonical
+    authorization checks from api.daily_reports_routes._authorize_report_for_child.
+    """
+    _require_ai_supervisor_daily_report_enabled(current_user)
+
+    report_date = date.fromisoformat(payload.date)
+    active_enrollment = _authorize_report_for_child(db, current_user, payload.child_id, report_date)
+
+    # Keep the final write path canonical: the generated data is stored as a
+    # regular daily report draft, subject to the same uniqueness and scope checks
+    # as any manual supervisor entry.
+    report = models.DailyReport(
+        child_id=payload.child_id,
+        kindergarten_id=active_enrollment.kindergarten_id,
+        class_id=active_enrollment.class_id,
+        date=report_date,
+        status=models.DailyReportStatus.DRAFT,
+        submitted_by=current_user.id,
+        arrival_time=payload.arrival_time,
+        leave_time=payload.leave_time,
+        mood=payload.mood,
+        health_notes=payload.health_notes,
+        breakfast=payload.breakfast,
+        snack=payload.snack,
+        milk=payload.milk,
+        lunch=payload.lunch,
+        breakfast_time=payload.breakfast_time,
+        snack_time=payload.snack_time,
+        milk_time=payload.milk_time,
+        lunch_time=payload.lunch_time,
+        nap_start=payload.nap_start,
+        nap_end=payload.nap_end,
+        nap_duration_minutes=payload.nap_duration_minutes,
+        bathroom_count=payload.bathroom_count,
+        diaper_wet=payload.diaper_wet,
+        diaper_soiled=payload.diaper_soiled,
+        activities=payload.activities,
+        notes=payload.notes,
+    )
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+    return {
+        "draft_id": report.id,
+        "child_id": report.child_id,
+        "date": report.date.isoformat(),
+        "status": report.status.value.lower(),
+        "requires_confirmation": True,
+    }
+
+
+@router.post("/ai/supervisor/daily-reports/{draft_id}/confirm", status_code=status.HTTP_200_OK)
+def confirm_supervisor_daily_report_draft(
+    draft_id: int,
+    body: dict,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Confirm an AI-generated daily report draft after human review.
+
+    Confirmation is intentionally explicit and server-side reauthorized; there is
+    no silent auto-save or permission grant without the typed confirmation.
+    """
+    _require_ai_supervisor_daily_report_enabled(current_user)
+    if body.get("confirmed") is not True:
+        raise HTTPException(status_code=400, detail="Supervisor confirmation required")
+
+    report = db.query(models.DailyReport).filter(models.DailyReport.id == draft_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    if report.submitted_by != current_user.id:
+        raise HTTPException(status_code=403, detail="Draft belongs to another supervisor")
+    if report.status != models.DailyReportStatus.DRAFT:
+        raise HTTPException(status_code=409, detail="Draft has already been finalized")
+
+    _authorize_report_for_child(db, current_user, report.child_id, report.date, require_no_existing_report=False)
+
+    return {
+        "draft_id": report.id,
+        "child_id": report.child_id,
+        "date": report.date.isoformat(),
+        "status": report.status.value.lower(),
+        "confirmed": True,
+    }
+
+
 # ---------------------------------------------------------------------------
 # PUT /api/ai/recommendations/{id}/review
 # ---------------------------------------------------------------------------
@@ -70,6 +192,7 @@ def review_recommendation(
     Sets human_reviewed=True and stores reviewer identity and optional note.
     Requires SUPERVISOR or MANAGER role.
     """
+    _require_ai_enabled(current_user)
     if current_user.role not in (
         models.UserRole.SUPERVISOR,
         models.UserRole.MANAGER,
@@ -101,6 +224,7 @@ def submit_feedback(
     db: Session = Depends(get_db),
 ):
     """Store user feedback on any AI-generated content row."""
+    _require_ai_enabled(current_user)
     allowed = {"correct", "incorrect", "helpful", "harmful"}
     if body.feedback_type not in allowed:
         raise HTTPException(
@@ -138,6 +262,7 @@ def search_similar(
 
     PostgreSQL + pgvector only; returns empty list on SQLite.
     """
+    _require_ai_enabled(current_user)
     if current_user.role not in (
         models.UserRole.SUPERVISOR,
         models.UserRole.MANAGER,
@@ -171,6 +296,7 @@ def recommend_activities(
 
     PostgreSQL + pgvector only; returns empty list on SQLite or when Ollama is unreachable.
     """
+    _require_ai_enabled(current_user)
     if current_user.role not in (
         models.UserRole.SUPERVISOR,
         models.UserRole.MANAGER,
@@ -195,6 +321,7 @@ def search_incidents(
     db: Session = Depends(get_db),
 ):
     """Semantic incident description search. Requires SUPERVISOR or above."""
+    _require_ai_enabled(current_user)
     if current_user.role not in (
         models.UserRole.SUPERVISOR,
         models.UserRole.MANAGER,

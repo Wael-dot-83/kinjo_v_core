@@ -17,6 +17,7 @@ import pytest
 import models
 from audit_actions import AuditAction
 from conftest import csrf_pair
+from config import settings
 
 
 # ===========================================================================
@@ -197,6 +198,103 @@ class TestSupervisorScoping:
         """Manager calling supervisor endpoint gets 403."""
         r = client.get("/api/supervisor/my-classes", headers=_hdr(manager_token))
         assert r.status_code == 403
+
+
+class TestSupervisorAiDailyReportFlow:
+    def test_ai_daily_report_draft_requires_feature_flag(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", False, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", True, raising=False)
+
+        payload = {
+            "child_id": sample_child.id,
+            "date": "2026-05-01",
+            "arrival_time": "08:15",
+            "leave_time": "16:00",
+            "mood": "happy",
+            "activities": "Story time and play",
+        }
+        r = client.post("/api/ai/supervisor/daily-reports/draft", json=payload, headers=_hdr(supervisor_token))
+        assert r.status_code == 403, r.text
+        assert "disabled" in r.json()["detail"].lower()
+
+    def test_ai_daily_report_confirm_saves_only_authorized_draft(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", True, raising=False)
+
+        draft_payload = {
+            "child_id": sample_child.id,
+            "date": "2026-05-01",
+            "arrival_time": "08:15",
+            "leave_time": "16:00",
+            "mood": "happy",
+            "activities": "Story time and play",
+            "notes": "AI draft reviewed by supervisor",
+        }
+        draft_r = client.post("/api/ai/supervisor/daily-reports/draft", json=draft_payload, headers=_hdr(supervisor_token))
+        assert draft_r.status_code == 201, draft_r.text
+        draft_id = draft_r.json()["draft_id"]
+
+        confirm_r = client.post(
+            f"/api/ai/supervisor/daily-reports/{draft_id}/confirm",
+            json={"confirmed": True},
+            headers=_hdr(supervisor_token),
+        )
+        assert confirm_r.status_code == 200, confirm_r.text
+        report = test_db.query(models.DailyReport).filter(models.DailyReport.child_id == sample_child.id).first()
+        assert report is not None
+        assert report.status == models.DailyReportStatus.DRAFT
+        assert report.activities == "Story time and play"
+
+    def test_ai_feedback_requires_feature_flag(
+        self,
+        client,
+        supervisor_token,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", False, raising=False)
+        r = client.post(
+            "/api/ai/feedback",
+            json={"source_table": "daily_reports", "source_id": 1, "feedback_type": "correct"},
+            headers=_hdr(supervisor_token),
+        )
+        assert r.status_code == 403, r.text
+
+    def test_speech_to_text_provider_normalizes_voice_text_for_daily_report(
+        self,
+    ):
+        from speech_service import SpeechToTextProvider
+
+        provider = SpeechToTextProvider()
+        transcript = "Today the child ate breakfast, was happy, and played with blocks. Health note: mild cough."
+
+        mapped = provider.map_transcript_to_daily_report(transcript)
+
+        assert mapped["mood"] == "happy"
+        assert "breakfast" in mapped["notes"].lower()
+        assert "mild cough" in mapped["health_notes"].lower()
+        assert mapped["activities"]
 
 
 class TestSupervisorSafetyAndObservations:

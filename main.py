@@ -269,6 +269,7 @@ from analytics_explorer import router as analytics_explorer_router
 from analytics_explorer import page_router as analytics_explorer_page_router
 from telemetry_service import router as telemetry_router
 from observability_endpoints import router as observability_router
+from routers.ai import router as ai_router
 
 # =============================================================================
 # Lifespan Event Handler
@@ -1348,6 +1349,7 @@ app.include_router(me_router, prefix="/api/me", tags=["Account"])
 app.include_router(charts_router, tags=["Charts"])
 app.include_router(analytics_explorer_router, tags=["Analytics Explorer"])
 app.include_router(analytics_explorer_page_router)
+app.include_router(ai_router, prefix="/api", tags=["AI"])
 app.include_router(telemetry_router)
 app.include_router(observability_router)
 

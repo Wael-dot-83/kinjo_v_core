@@ -79,6 +79,13 @@ class Settings(BaseSettings):
     MFA_TICKET_EXPIRE_MINUTES: int = 10
     REQUIRE_MFA: bool = True
 
+    # AI assistant feature gate: explicit opt-in for AI-assisted writes.
+    # The default is disabled so the app remains read-only unless an operator
+    # turns on the feature and a supervisor is explicitly authorized to use it.
+    AI_ASSISTANT_ENABLED: bool = False
+    AI_ASSISTANT_SUPERVISOR_ENABLED: bool = False
+    AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED: bool = False
+
     # AI Integration — intentionally absent.
     #
     # google-genai was pinned in requirements.txt and GOOGLE_API_KEY declared here,
