@@ -335,3 +335,70 @@ Stated explicitly rather than left implied.
    evidence they process anything — both have previously run while no scheduled
    export, message dispatch or backup executed at all. Confirm a task completes.
 7. Send a real test email. A configured `SMTP_HOST` is not a working mail path.
+
+---
+
+## 8. Addendum — E2E suite, automated pipeline, live droplet audit
+
+Added after the initial report, closing the gaps it listed as outstanding.
+
+### E2E: 5/22 → 23/24
+
+The suite could not run at all. It needs `TESTING=true` (for the dev auto-login
+endpoint) and a seeded admin user. Beyond that, the agency-report specs were
+written against a flat form that is now a **five-step wizard inside a tabpanel
+that ships `hidden`** — they were failing on a hidden `#cr-agency` and on
+`#custom-report-run`, which no longer drives generation. Rewritten to activate
+the tab and walk Purpose → Scope → Indicators → Review → Generate.
+
+The single remaining failure asserts `a[href="/admin/analytics"]` has count 1 —
+**the same duplicate-nav defect the pytest suite reports**, now corroborated by
+a second, independent test layer. Owned by `ux/admin-navigation-consolidation`.
+
+### Automated deployment pipeline
+
+`.github/workflows/deploy.yml`. Manual dispatch only, with a typed confirmation
+and a `production` environment for required reviewers — an automatic
+deploy-on-merge is how production once ran an unmerged branch for hours. Tests
+gate the deploy; the release is built with `git archive` from the exact commit so
+untracked files cannot ride along; the SSH host key is pinned rather than blindly
+accepted; exit 75 is surfaced as "another deploy holds the lock, production
+untouched".
+
+### Config: `.env` list values could not be parsed
+
+`_CommaListEnvSource` subclassed only `EnvSettingsSource`, so
+`SUPPORTED_LANGUAGES=ar,en` parsed from a real environment variable but raised
+`SettingsError` from a `.env` file. `.env.example` shipped exactly that form, so
+copying the documented example produced an app that refused to boot. Now a mixin
+on both sources, with a test asserting every shipped template actually loads.
+
+### Live droplet audit (read-only, 159.223.16.33)
+
+Five containers healthy; worker and beat running; Postgres and Redis correctly
+unpublished. Three findings changed the plan:
+
+| Finding | Status |
+|---|---|
+| **No TLS at all** — only `0.0.0.0:80` listening, bare IP, no DNS record | **Blocks TLS.** Let's Encrypt will not issue for an IP address |
+| **`--forwarded-allow-ips='*'`** on an internet-facing app — any client can forge `X-Forwarded-For`, defeating the per-IP rate limiter and poisoning the audit trail | **Open.** Lives in the host `.env`, so no code change fixes it |
+| **`/opt/kinjo/data` owned by uid 0**, `attachments/` mode `dr-x---r-x` | **Fixed (PR #85)** — see below |
+
+The ownership finding was a genuine near-miss. The hardened image runs as uid
+10001, so deploying it as-is would have started containers that pass their health
+check and serve pages normally — while every attachment, upload and export write
+failed at runtime, with the deploy reporting success. The deploy now chowns the
+bind mount inside the lock and *before* containers are recreated, and restores
+the write bit that ownership alone does not grant.
+
+**One thing that turned out fine:** the production `SECRET_KEY` was hashed on the
+host and compared against the published digests. It matches **neither** — this
+server runs a unique key and is not compromised. The template key remains public
+and must never be used, but there is no rotation emergency for this deployment.
+
+### Still required before production can be deployed
+
+1. A domain pointed at `159.223.16.33` (`A` record).
+2. Droplet `.env`: set `KINJO_DOMAIN`, remove `KINJO_WEB_PORT=80` so nginx can
+   bind port 80, and drop `--forwarded-allow-ips='*'` from `KINJO_WEB_COMMAND`.
+3. Certificate issuance with `--staging` first.
