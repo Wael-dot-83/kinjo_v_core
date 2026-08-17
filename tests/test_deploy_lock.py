@@ -220,3 +220,49 @@ def test_attachments_write_bit_is_restored_not_just_ownership():
     """data/attachments ships as dr-x---r-x: chown alone leaves it unwritable."""
     src = _code()
     assert "chmod -R u+rwX" in src
+
+
+def test_compose_file_set_is_adopted_from_the_running_stack():
+    """The deploy must drive the compose files the host actually runs.
+
+    The overlay was hardcoded to docker-compose.edge.yml. By 2026-08-17 the live
+    stack was prod + docker-compose.cf-origin.yml (nginx fronting Cloudflare with
+    an Origin CA certificate, no certbot), so a deploy would have reconfigured
+    kinjo_nginx onto Let's Encrypt paths and started a certbot container the host
+    does not use. Hardcoding any single overlay name is the bug; reading the
+    running container's compose label is the fix.
+    """
+    src = _code()
+    assert 'com.docker.compose.project.config_files' in src, (
+        "the compose file set must be read from the running container's label"
+    )
+    # The label lookup has to happen before the stack is driven.
+    assert src.index("config_files") < src.index("up -d --build")
+
+
+def test_compose_overlay_is_not_hardcoded_outside_the_bare_host_fallback():
+    """docker-compose.edge.yml may only appear as the no-container fallback."""
+    src = _code()
+    edge_mentions = [
+        line for line in src.splitlines() if "docker-compose.edge.yml" in line
+    ]
+    assert len(edge_mentions) == 1, (
+        "docker-compose.edge.yml should survive only as the bare-host fallback, "
+        f"found: {edge_mentions}"
+    )
+
+
+def test_compose_file_selection_reads_state_but_mutates_nothing_before_the_lock():
+    """Adopting the label runs before flock; it must stay read-only."""
+    src = _code()
+    preamble = src[: src.index("flock -n 9")]
+    assert "config_files" in preamble, "label lookup is part of the preamble"
+    for forbidden in ("docker compose", "tar xf", "pg_dump", "alembic upgrade", "chown -R"):
+        assert forbidden not in preamble, f"{forbidden!r} must not run before the lock"
+
+
+def test_a_missing_compose_file_aborts_rather_than_deploying_a_partial_stack():
+    """Naming a file that is not on the host must fail loudly, not silently drop it."""
+    src = _code()
+    assert 'die "KINJO_COMPOSE_FILES names a missing file' in src
+    assert "the running stack's compose files are not present" in src

@@ -39,6 +39,27 @@ def _require_ai_supervisor_daily_report_enabled(current_user: models.User) -> No
         raise HTTPException(status_code=403, detail="AI supervisor daily report workflow is disabled")
 
 
+def gated_supervisor(current_user: models.User = Depends(get_current_user)) -> models.User:
+    """The caller, but only once the daily-report feature gates have all passed.
+
+    Calling the check inside the handler was not quite fail-closed. FastAPI
+    validates the request body *after* it resolves dependencies but *before* it
+    enters the handler, so a body that failed validation answered 422 — naming
+    every field of the draft schema — while the feature was switched off
+    entirely. Verified against production on 2026-08-17: a malformed draft body
+    returned 422 with the full field list, where a well-formed one correctly
+    returned 403 "AI assistant is disabled".
+
+    No write ever escaped (a valid request always reached the gate), so this is
+    schema disclosure rather than an authorization hole. Resolving the gate as a
+    dependency closes it anyway: an entirely disabled feature should answer 403
+    to every shape of request, not describe its input format to callers who are
+    not allowed to use it.
+    """
+    _require_ai_supervisor_daily_report_enabled(current_user)
+    return current_user
+
+
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
@@ -86,7 +107,7 @@ class SupervisorDailyReportDraftRequest(DailyReportCreateRequest):
 @router.post("/daily-reports/draft", status_code=status.HTTP_201_CREATED)
 def create_supervisor_daily_report_draft(
     payload: SupervisorDailyReportDraftRequest,
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(gated_supervisor),
     db: Session = Depends(get_db),
 ):
     """Create an AI-assisted daily-report draft for an assigned child.
@@ -148,7 +169,7 @@ def create_supervisor_daily_report_draft(
 def confirm_supervisor_daily_report_draft(
     draft_id: int,
     body: ConfirmSupervisorDailyReportDraftRequest,
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(gated_supervisor),
     db: Session = Depends(get_db),
 ):
     """Confirm an AI-generated daily report draft after human review.

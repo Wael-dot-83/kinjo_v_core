@@ -28,15 +28,6 @@ TARBALL="${1:-}"
 RELEASE_SHA="${2:-unknown}"
 APP_DIR="${KINJO_DIR:-/opt/kinjo}"
 COMPOSE_FILE="docker-compose.prod.yml"
-# TLS edge (nginx + certbot). Deploys must drive the SAME set of compose files
-# the host actually runs -- a deploy that omits the overlay would tear the nginx
-# container down as an orphan and take the site offline while reporting success.
-# Auto-detected so an operator cannot forget it; set KINJO_EDGE=0 to opt out.
-EDGE_FILE="docker-compose.edge.yml"
-COMPOSE_ARGS=(-f "$COMPOSE_FILE")
-if [[ "${KINJO_EDGE:-auto}" != "0" && -f "$APP_DIR/$EDGE_FILE" ]]; then
-  COMPOSE_ARGS+=(-f "$EDGE_FILE")
-fi
 LOCK_FILE="/var/lock/kinjo-deploy.lock"
 BACKUP_DIR="/var/backups/kinjo"
 WEB_CONTAINER="kinjo-web-1"
@@ -44,6 +35,64 @@ KEEP_BACKUPS=5
 
 log() { printf '[%s] %s\n' "$(date '+%H:%M:%S')" "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+
+# ---------------------------------------------------------------------------
+# Which compose files to drive.
+#
+# Deploys must drive the SAME set the host actually runs -- a deploy that omits
+# an overlay tears its containers down as orphans and takes the site offline
+# while reporting success. That much was already true; what was wrong was
+# *guessing* the set.
+#
+# The overlay used to be hardcoded to docker-compose.edge.yml, and by
+# 2026-08-17 that was no longer what production ran. The live stack is
+# prod + docker-compose.cf-origin.yml (nginx fronting Cloudflare with an Origin
+# CA certificate, no certbot). Deploying prod + edge would have reconfigured
+# kinjo_nginx onto Let's Encrypt paths and started a certbot container against
+# a host that does not use one. KINJO_EDGE=0 was no escape either: that drops
+# to prod alone and orphans nginx alone.
+#
+# The running container's compose label records exactly which files created the
+# stack, so ask it rather than guess. Falls back to the old auto-detect only
+# when there is no container to ask (first deploy onto a bare host), and
+# KINJO_COMPOSE_FILES overrides both for a deliberate stack change.
+# ---------------------------------------------------------------------------
+COMPOSE_ARGS=(-f "$COMPOSE_FILE")
+if [[ -n "${KINJO_COMPOSE_FILES:-}" ]]; then
+  COMPOSE_ARGS=()
+  IFS=',' read -r -a _requested <<< "$KINJO_COMPOSE_FILES"
+  for _f in "${_requested[@]}"; do
+    _f="$(basename "${_f// /}")"
+    [[ -n "$_f" ]] || continue
+    [[ -f "$APP_DIR/$_f" ]] || die "KINJO_COMPOSE_FILES names a missing file: $_f"
+    COMPOSE_ARGS+=(-f "$_f")
+  done
+  [[ ${#COMPOSE_ARGS[@]} -gt 0 ]] || die "KINJO_COMPOSE_FILES resolved to no files"
+  log "compose files: from KINJO_COMPOSE_FILES"
+else
+  _running_files="$(docker inspect "$WEB_CONTAINER" \
+    --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}' 2>/dev/null || true)"
+  if [[ -n "$_running_files" ]]; then
+    COMPOSE_ARGS=()
+    IFS=',' read -r -a _running <<< "$_running_files"
+    for _f in "${_running[@]}"; do
+      _f="$(basename "${_f// /}")"
+      [[ -n "$_f" && -f "$APP_DIR/$_f" ]] || continue
+      COMPOSE_ARGS+=(-f "$_f")
+    done
+    [[ ${#COMPOSE_ARGS[@]} -gt 0 ]] \
+      || die "the running stack's compose files are not present in $APP_DIR: $_running_files"
+    log "compose files: adopted from the running $WEB_CONTAINER label"
+  else
+    # No container to ask: bare host / first deploy. Keep the previous
+    # behaviour so a fresh install still brings the TLS edge up.
+    EDGE_FILE="docker-compose.edge.yml"
+    if [[ "${KINJO_EDGE:-auto}" != "0" && -f "$APP_DIR/$EDGE_FILE" ]]; then
+      COMPOSE_ARGS+=(-f "$EDGE_FILE")
+    fi
+    log "compose files: no running container; auto-detected"
+  fi
+fi
 
 [[ -n "$TARBALL" ]] || die "usage: $0 <tarball> [release-sha]"
 [[ -f "$TARBALL" ]] || die "tarball not found: $TARBALL"

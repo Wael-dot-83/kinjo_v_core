@@ -16,7 +16,8 @@ The schema is created from the models, so no migration or fixture data from the
 real database is touched.
 """
 import os
-from datetime import date, timedelta
+import threading
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 import sqlalchemy as sa
@@ -34,7 +35,13 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture(scope="module")
-def pg_session():
+def pg_engine():
+    """The engine itself, so a test can open more than one independent session.
+
+    Row-level locking cannot be observed through a single Session — two
+    concurrent transactions need two connections. Everything else here is
+    single-session, so `pg_session` below stays the ordinary entry point.
+    """
     engine = sa.create_engine(PG_URL)
     try:
         with engine.connect() as conn:
@@ -44,14 +51,21 @@ def pg_session():
 
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    Session = sessionmaker(bind=engine)
+    try:
+        yield engine
+    finally:
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
+
+
+@pytest.fixture(scope="module")
+def pg_session(pg_engine):
+    Session = sessionmaker(bind=pg_engine)
     session = Session()
     try:
         yield session
     finally:
         session.close()
-        Base.metadata.drop_all(bind=engine)
-        engine.dispose()
 
 
 def _kg(db, n=1):
@@ -217,3 +231,367 @@ def test_kg_overview_metrics_bulk_executes_on_postgres(pg_session):
     )
     assert out[kg.id]["capacity"] == 0
     assert out[kg.id]["children_count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Supervisor AI daily-report confirmation — atomicity under real concurrency
+#
+# The confirm endpoint guards a DRAFT -> SUBMITTED transition with
+# `SELECT ... FOR UPDATE` plus a status-conditional UPDATE. Neither half means
+# anything on SQLite: it ignores FOR UPDATE entirely, and the main suite's
+# harness hands every request the same Session on a single in-memory
+# connection, so its threaded test can only observe harness artefacts. That
+# test is skipped there and says so; this is the test it defers to.
+#
+# Two real connections, two real transactions, released together by a barrier.
+#
+# Measured against this database, not assumed — each guard was deleted from
+# routers/ai.py in turn and the test re-run:
+#
+#   FOR UPDATE removed, conditional UPDATE kept ....... still passes
+#   conditional UPDATE relaxed, FOR UPDATE kept ....... still passes
+#   both removed (plain check-then-set) ............... FAILS, [200, 200]
+#
+# So the two guards are redundant by design and this test is a regression
+# against losing *both* — i.e. against reintroducing the TOCTOU gap itself,
+# which is the property that matters. It does not pin either guard
+# individually, and no comment here should claim otherwise.
+# ---------------------------------------------------------------------------
+
+_CONFIRM_DATE = date(2026, 5, 4)  # a Monday, comfortably in the past
+
+
+@pytest.fixture()
+def confirm_scenario(pg_engine):
+    """One supervisor, one assigned child, one DRAFT report ready to confirm."""
+    from auth import get_password_hash
+
+    Session = sessionmaker(bind=pg_engine)
+    db = Session()
+    suffix = os.urandom(4).hex()
+
+    kg = models.Kindergarten(
+        name_ar="حضانة التأكيد", name_en=f"Confirm KG {suffix}",
+        license_number=f"LIC-CONF-{suffix}",
+        governorate="Amman", district="Amman", area="Abdoun",
+        address_line="1 Confirm St", contact_phone="+96279000001",
+        contact_email=f"conf_{suffix}@test.jo",
+        status=models.KindergartenStatus.ACTIVE,
+        license_valid_until=date(2027, 12, 31),
+    )
+    db.add(kg)
+    db.flush()
+
+    cls = models.Class(
+        kindergarten_id=kg.id,
+        name_ar="صف التأكيد", name_en=f"Confirm Class {suffix}",
+        class_code=f"CONF-{suffix}",
+        age_group="AGE_2_4",
+        capacity_total=10, min_age_months=24, max_age_months=60,
+        is_active=True,
+    )
+    db.add(cls)
+    db.flush()
+
+    supervisor = models.User(
+        username=f"sup_conf_{suffix}",
+        email=f"sup_conf_{suffix}@test.com",
+        hashed_password=get_password_hash("Supervisor123!"),
+        role=models.UserRole.SUPERVISOR,
+        kindergarten_id=kg.id,
+        status=models.UserStatus.ACTIVE,
+    )
+    db.add(supervisor)
+    db.flush()
+
+    db.add(models.SupervisorAssignment(
+        class_id=cls.id,
+        supervisor_id=supervisor.id,
+        is_primary=True,
+        start_date=_CONFIRM_DATE - timedelta(days=30),
+        end_date=None,
+    ))
+
+    parent_user = models.User(
+        username=f"par_conf_{suffix}",
+        email=f"par_conf_{suffix}@test.com",
+        hashed_password=get_password_hash("Parent123!"),
+        role=models.UserRole.PARENT,
+        status=models.UserStatus.ACTIVE,
+    )
+    db.add(parent_user)
+    db.flush()
+
+    profile = models.ParentProfile(
+        user_id=parent_user.id,
+        first_name="Confirm", last_name="Parent",
+        phone_number=f"+9627930{suffix[:4]}",
+        gender=models.Gender.MALE,
+        nationality="Jordanian",
+        national_id=f"7777{suffix}",
+        home_governorate="Amman", home_district="Amman", home_area="Abdoun",
+        home_address_line="1 Confirm St",
+        correspondence_preference=True,
+    )
+    db.add(profile)
+    db.flush()
+
+    child = models.Child(
+        parent_id=profile.id,
+        first_name="Confirm", last_name="Child",
+        gender=models.Gender.MALE,
+        date_of_birth=_CONFIRM_DATE - timedelta(days=1000),
+        father_name="Confirm Father",
+        mother_first_name="Confirm", mother_last_name="Mother",
+        mother_nationality="Jordanian",
+        mother_national_id=f"6666{suffix}",
+    )
+    db.add(child)
+    db.flush()
+
+    db.add(models.EnrollmentApplication(
+        child_id=child.id,
+        kindergarten_id=kg.id,
+        class_id=cls.id,
+        status=models.EnrollmentStatus.ACTIVE,
+        enrollment_start_date=_CONFIRM_DATE - timedelta(days=30),
+        source="online",
+    ))
+    # Pin the working-day gate instead of leaning on settings.TESTING, so the
+    # test still means what it says if the suite is ever run without it.
+    db.add(models.OperatingCalendar(
+        kindergarten_id=kg.id, date=_CONFIRM_DATE, is_open=True,
+    ))
+
+    draft = models.DailyReport(
+        child_id=child.id,
+        kindergarten_id=kg.id,
+        class_id=cls.id,
+        date=_CONFIRM_DATE,
+        status=models.DailyReportStatus.DRAFT,
+        submitted_by=supervisor.id,
+        arrival_time="08:15",
+        leave_time="16:00",
+        mood="happy",
+        activities="Story time and play",
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(draft)
+    db.commit()
+
+    ids = {
+        "draft_id": draft.id,
+        "supervisor_id": supervisor.id,
+        "child_id": child.id,
+        "kindergarten_id": kg.id,
+        "class_id": cls.id,
+        "parent_user_id": parent_user.id,
+        "parent_profile_id": profile.id,
+    }
+    db.close()
+
+    yield ids
+
+    cleanup = Session()
+    try:
+        cleanup.query(models.DailyReport).filter(
+            models.DailyReport.child_id == ids["child_id"]
+        ).delete(synchronize_session=False)
+        cleanup.query(models.OperatingCalendar).filter(
+            models.OperatingCalendar.kindergarten_id == ids["kindergarten_id"]
+        ).delete(synchronize_session=False)
+        cleanup.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == ids["child_id"]
+        ).delete(synchronize_session=False)
+        cleanup.query(models.Child).filter(
+            models.Child.id == ids["child_id"]
+        ).delete(synchronize_session=False)
+        cleanup.query(models.ParentProfile).filter(
+            models.ParentProfile.id == ids["parent_profile_id"]
+        ).delete(synchronize_session=False)
+        cleanup.query(models.SupervisorAssignment).filter(
+            models.SupervisorAssignment.class_id == ids["class_id"]
+        ).delete(synchronize_session=False)
+        cleanup.query(models.AuditLog).filter(
+            models.AuditLog.user_id.in_([ids["supervisor_id"], ids["parent_user_id"]])
+        ).delete(synchronize_session=False)
+        cleanup.query(models.User).filter(
+            models.User.id.in_([ids["supervisor_id"], ids["parent_user_id"]])
+        ).delete(synchronize_session=False)
+        cleanup.query(models.Class).filter(
+            models.Class.id == ids["class_id"]
+        ).delete(synchronize_session=False)
+        cleanup.query(models.Kindergarten).filter(
+            models.Kindergarten.id == ids["kindergarten_id"]
+        ).delete(synchronize_session=False)
+        cleanup.commit()
+    finally:
+        cleanup.close()
+
+
+@pytest.fixture()
+def ai_daily_report_enabled(monkeypatch):
+    from config import settings as _settings
+
+    for flag in (
+        "AI_ASSISTANT_ENABLED",
+        "AI_ASSISTANT_SUPERVISOR_ENABLED",
+        "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED",
+    ):
+        monkeypatch.setattr(_settings, flag, True, raising=False)
+    # Generous TTL: this test is about the race, not about expiry.
+    monkeypatch.setattr(_settings, "AI_SUPERVISOR_REPORT_DRAFT_TTL_MINUTES", 60, raising=False)
+    return _settings
+
+
+def test_confirm_draft_has_exactly_one_winner_under_postgres_concurrency(
+    pg_engine, confirm_scenario, ai_daily_report_enabled
+):
+    """Two real transactions confirm the same DRAFT at once: one 200, one 409."""
+    from fastapi import HTTPException
+
+    from routers.ai import (
+        ConfirmSupervisorDailyReportDraftRequest,
+        confirm_supervisor_daily_report_draft,
+    )
+
+    Session = sessionmaker(bind=pg_engine)
+    draft_id = confirm_scenario["draft_id"]
+    supervisor_id = confirm_scenario["supervisor_id"]
+
+    barrier = threading.Barrier(2)
+    results: dict[int, object] = {}
+    results_lock = threading.Lock()
+
+    def worker(idx: int):
+        db = Session()
+        outcome: object
+        try:
+            user = db.query(models.User).filter(models.User.id == supervisor_id).one()
+            # Both transactions are open and both callers are loaded before
+            # either touches the draft — without the barrier the first request
+            # would usually finish before the second began, and the race the
+            # endpoint guards against would never actually occur.
+            barrier.wait(timeout=20)
+            try:
+                confirm_supervisor_daily_report_draft(
+                    draft_id=draft_id,
+                    body=ConfirmSupervisorDailyReportDraftRequest(confirmed=True),
+                    current_user=user,
+                    db=db,
+                )
+                outcome = 200
+            except HTTPException as exc:
+                outcome = exc.status_code
+            except Exception as exc:  # surfaced, not swallowed
+                outcome = f"{type(exc).__name__}: {exc}"
+        finally:
+            db.rollback()
+            db.close()
+        with results_lock:
+            results[idx] = outcome
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=60)
+
+    assert len(results) == 2, f"both workers must finish; got {results}"
+    outcomes = list(results.values())
+    assert outcomes.count(200) == 1, (
+        f"exactly one confirmation may succeed, got {outcomes}"
+    )
+    assert [o for o in outcomes if o != 200] == [409], (
+        f"the losing request must get a deterministic 409, got {outcomes}"
+    )
+
+    verify = Session()
+    try:
+        rows = (
+            verify.query(models.DailyReport)
+            .filter(
+                models.DailyReport.child_id == confirm_scenario["child_id"],
+                models.DailyReport.date == _CONFIRM_DATE,
+            )
+            .all()
+        )
+        # No duplicate report, no second row, no partial write.
+        assert len(rows) == 1, f"confirmation must not create a report, got {len(rows)}"
+        assert rows[0].id == draft_id
+        assert rows[0].status == models.DailyReportStatus.SUBMITTED
+        assert rows[0].submitted_by == supervisor_id
+        assert rows[0].submitted_at is not None
+    finally:
+        verify.close()
+
+
+def test_confirm_draft_loser_leaves_no_partial_write_on_postgres(
+    pg_engine, confirm_scenario, ai_daily_report_enabled
+):
+    """A rejected second confirmation must not mutate the finalized row.
+
+    The sequential companion to the race above: it pins down *which* request
+    loses, so the 409 branch is proven to roll back rather than merely to
+    return an error code.
+    """
+    from fastapi import HTTPException
+
+    from routers.ai import (
+        ConfirmSupervisorDailyReportDraftRequest,
+        confirm_supervisor_daily_report_draft,
+    )
+
+    Session = sessionmaker(bind=pg_engine)
+    draft_id = confirm_scenario["draft_id"]
+    supervisor_id = confirm_scenario["supervisor_id"]
+    body = ConfirmSupervisorDailyReportDraftRequest(confirmed=True)
+
+    first = Session()
+    try:
+        user = first.query(models.User).filter(models.User.id == supervisor_id).one()
+        response = confirm_supervisor_daily_report_draft(
+            draft_id=draft_id, body=body, current_user=user, db=first
+        )
+        assert response["status"] == "submitted"
+        assert response["confirmed"] is True
+    finally:
+        first.close()
+
+    snapshot = Session()
+    try:
+        row = snapshot.query(models.DailyReport).filter(
+            models.DailyReport.id == draft_id
+        ).one()
+        submitted_at_before = row.submitted_at
+    finally:
+        snapshot.close()
+
+    second = Session()
+    try:
+        user = second.query(models.User).filter(models.User.id == supervisor_id).one()
+        with pytest.raises(HTTPException) as exc_info:
+            confirm_supervisor_daily_report_draft(
+                draft_id=draft_id, body=body, current_user=user, db=second
+            )
+        assert exc_info.value.status_code == 409
+    finally:
+        second.rollback()
+        second.close()
+
+    verify = Session()
+    try:
+        rows = (
+            verify.query(models.DailyReport)
+            .filter(
+                models.DailyReport.child_id == confirm_scenario["child_id"],
+                models.DailyReport.date == _CONFIRM_DATE,
+            )
+            .all()
+        )
+        assert len(rows) == 1
+        assert rows[0].status == models.DailyReportStatus.SUBMITTED
+        # The refused attempt must not have re-stamped the winner's timestamp.
+        assert rows[0].submitted_at == submitted_at_before
+    finally:
+        verify.close()

@@ -229,6 +229,39 @@ class TestSupervisorAiDailyReportFlow:
         assert r.status_code == 403, r.text
         assert "disabled" in r.json()["detail"].lower()
 
+    @pytest.mark.parametrize(
+        "path, body",
+        [
+            # Missing a required field, and an unknown field: the two shapes that
+            # make Pydantic answer before the handler would have run.
+            ("/api/ai/supervisor/daily-reports/draft", {"child_id": 1}),
+            ("/api/ai/supervisor/daily-reports/draft", {"totally": "unrelated"}),
+            ("/api/ai/supervisor/daily-reports/1/confirm", {}),
+            ("/api/ai/supervisor/daily-reports/1/confirm", {"confirmed": True, "child_id": 99}),
+        ],
+    )
+    def test_ai_daily_report_disabled_feature_answers_403_even_for_invalid_bodies(
+        self, client, supervisor_token, monkeypatch, path, body
+    ):
+        """A disabled feature must not describe its request schema.
+
+        FastAPI validates the body after resolving dependencies but before
+        entering the handler, so while the gate was called *inside* the handler
+        a malformed request answered 422 with every expected field named — on
+        production, with the feature switched fully off. No write could escape
+        (a well-formed request always reached the gate), but an off switch
+        should be off for every shape of request. Resolving the gate as a
+        dependency is what makes that true; this pins the ordering so moving
+        the check back into a handler body fails here.
+        """
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", False, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", False, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", False, raising=False)
+
+        r = client.post(path, json=body, headers=_hdr(supervisor_token))
+        assert r.status_code == 403, f"{path} leaked {r.status_code}: {r.text}"
+        assert "disabled" in r.json()["detail"].lower()
+
     def test_ai_daily_report_confirm_saves_only_authorized_draft(
         self,
         client,
