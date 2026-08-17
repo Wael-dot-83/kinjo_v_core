@@ -330,8 +330,22 @@ class TestHelpModalIntegration:
         assert "صحة النظام" not in resp.text
 
     def test_admin_analytics_nav_link_is_not_duplicated(self):
+        """The link must appear once per navigation, not once per document.
+
+        This test predates the responsive shell. The admin layout now renders the
+        same sections twice on purpose — the desktop `.admin-top-nav` and the
+        mobile drawer — so a whole-document count is 2 for every nav entry and can
+        never be 1 again without collapsing the two navigations into one. Counting
+        inside a single nav preserves what the test was actually guarding against:
+        the same destination listed twice in one menu.
+        """
         resp = self.client.get("/admin/analytics")
-        assert resp.text.count('href="/admin/analytics"') == 1
+        # Scoped to the desktop container specifically: the mobile drawer is
+        # nested INSIDE the same <nav class="admin-top-nav">, so scoping to the
+        # nav element still captures both copies.
+        desktop = resp.text[resp.text.index("top-nav-desktop-container"):]
+        desktop = desktop[: desktop.index("mobile-nav-drawer")]
+        assert desktop.count('href="/admin/analytics"') == 1
 
 
 class TestAnalyticsTrendDeltaIntegrity:

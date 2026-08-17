@@ -230,7 +230,11 @@ test.describe('Admin Analytics production checks', () => {
     await expect(page.locator('[data-bs-target="#helpExpressModal"]')).toContainText(/Help|مساعدة/);
     await expect(page.getByText('System Health')).toHaveCount(0);
     await expect(page.getByText('صحة النظام')).toHaveCount(0);
-    await expect(page.locator('a[href="/admin/analytics"]')).toHaveCount(1);
+    // Scoped to the desktop container: the responsive shell renders the same
+    // sections again in a mobile drawer nested inside the same <nav>, so both a
+    // document-wide and a nav-wide count are 2 by design. One link per
+    // navigation is the property actually worth guarding.
+    await expect(page.locator('.top-nav-desktop-container a[href="/admin/analytics"]')).toHaveCount(1);
   });
 
   test('renders real deltas or explicit unavailable state', async ({ page }) => {
