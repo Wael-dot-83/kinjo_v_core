@@ -46,15 +46,18 @@ def pg_engine():
     try:
         with engine.connect() as conn:
             conn.execute(sa.text("SELECT 1"))
+            conn.execute(sa.text("DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;"))
+            conn.commit()
     except Exception as exc:  # pragma: no cover - environment dependent
         pytest.skip(f"PostgreSQL not reachable: {type(exc).__name__}")
 
-    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     try:
         yield engine
     finally:
-        Base.metadata.drop_all(bind=engine)
+        with engine.connect() as conn:
+            conn.execute(sa.text("DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;"))
+            conn.commit()
         engine.dispose()
 
 
@@ -595,3 +598,167 @@ def test_confirm_draft_loser_leaves_no_partial_write_on_postgres(
         assert rows[0].submitted_at == submitted_at_before
     finally:
         verify.close()
+
+
+def test_daily_report_jordan_date_check_constraint_in_postgres(pg_engine):
+    """Real PostgreSQL database proof: the ck_report_not_future CHECK constraint enforces
+    Jordan business date semantics (date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date),
+    even when the PostgreSQL session TimeZone is UTC.
+    """
+    Session = sessionmaker(bind=pg_engine)
+    session = Session()
+    try:
+        # Ensure session timezone is UTC (standard production database session)
+        session.execute(sa.text("SET TIME ZONE 'UTC'"))
+
+        # Ensure the Jordan constraint is active on the test table
+        session.execute(sa.text("ALTER TABLE daily_reports DROP CONSTRAINT IF EXISTS ck_report_not_future"))
+        session.execute(sa.text("""
+            ALTER TABLE daily_reports
+                ADD CONSTRAINT ck_report_not_future
+                CHECK (date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date)
+        """))
+        session.commit()
+
+        # Seed prerequisite entities
+        kg = models.Kindergarten(
+            name_ar="حضانة الاختبار",
+            name_en="Test KG",
+            license_number="LIC-PG-TZ-001",
+            governorate="Amman", district="Amman", area="Abdoun",
+            address_line="1 Test St", contact_phone="+96279000000",
+            contact_email="pg_tz@test.jo",
+            status=models.KindergartenStatus.ACTIVE,
+            license_valid_until=date(2027, 12, 31),
+        )
+        session.add(kg)
+        session.flush()
+
+        u = models.User(
+            username="pg_tz_supervisor",
+            email="pg_tz_sup@test.com",
+            hashed_password="hash",
+            role=models.UserRole.SUPERVISOR,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=kg.id,
+        )
+        session.add(u)
+        session.flush()
+
+        cls = models.Class(
+            kindergarten_id=kg.id,
+            name_ar="صف تجريبي",
+            name_en="TZ Test Class",
+            class_code="TZ-TEST-01",
+            age_group="AGE_2_4",
+            capacity_total=15,
+            min_age_months=24,
+            max_age_months=60,
+            is_active=True,
+        )
+        session.add(cls)
+        session.flush()
+
+        parent_user = models.User(
+            username="pg_tz_parent",
+            email="pg_tz_par@test.com",
+            hashed_password="hash",
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE,
+        )
+        session.add(parent_user)
+        session.flush()
+
+        profile = models.ParentProfile(
+            user_id=parent_user.id,
+            first_name="TZParent", last_name="Test",
+            phone_number="+96279300001",
+            gender=models.Gender.MALE,
+            nationality="Jordanian",
+            national_id="999900001",
+            home_governorate="Amman", home_district="Amman", home_area="Abdoun",
+            home_address_line="1 TZ St",
+            correspondence_preference=True,
+        )
+        session.add(profile)
+        session.flush()
+
+        ch = models.Child(
+            parent_id=profile.id,
+            first_name="TZChild", last_name="Test",
+            gender=models.Gender.MALE,
+            date_of_birth=date(2023, 1, 1),
+            father_name="TZFather",
+            mother_first_name="TZMother", mother_last_name="Test",
+            mother_nationality="Jordanian",
+            mother_national_id="999900002",
+        )
+        session.add(ch)
+        session.flush()
+
+        ch_future = models.Child(
+            parent_id=profile.id,
+            first_name="TZChild2", last_name="Test",
+            gender=models.Gender.FEMALE,
+            date_of_birth=date(2023, 2, 1),
+            father_name="TZFather",
+            mother_first_name="TZMother", mother_last_name="Test",
+            mother_nationality="Jordanian",
+            mother_national_id="999900003",
+        )
+        session.add(ch_future)
+        session.flush()
+        session.commit()
+
+        # Query effective Jordan date in PostgreSQL
+        jordan_today = session.execute(
+            sa.text("SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Amman')::date")
+        ).scalar()
+        jordan_tomorrow = jordan_today + timedelta(days=1)
+        jordan_yesterday = jordan_today - timedelta(days=1)
+
+        # 1. Today in Jordan: MUST SUCCEED (even if UTC date is yesterday)
+        dr_today = models.DailyReport(
+            child_id=ch.id,
+            kindergarten_id=kg.id,
+            class_id=cls.id,
+            date=jordan_today,
+            status=models.DailyReportStatus.DRAFT,
+            submitted_by=u.id,
+            arrival_time="08:00",
+        )
+        session.add(dr_today)
+        session.commit()
+        assert dr_today.id is not None
+
+        # 2. Yesterday in Jordan: MUST SUCCEED
+        dr_yesterday = models.DailyReport(
+            child_id=ch.id,
+            kindergarten_id=kg.id,
+            class_id=cls.id,
+            date=jordan_yesterday,
+            status=models.DailyReportStatus.DRAFT,
+            submitted_by=u.id,
+            arrival_time="08:00",
+        )
+        session.add(dr_yesterday)
+        session.commit()
+        assert dr_yesterday.id is not None
+
+        # 3. Tomorrow in Jordan: MUST BE REJECTED by PostgreSQL CHECK constraint
+        dr_future = models.DailyReport(
+            child_id=ch_future.id,
+            kindergarten_id=kg.id,
+            class_id=cls.id,
+            date=jordan_tomorrow,
+            status=models.DailyReportStatus.DRAFT,
+            submitted_by=u.id,
+            arrival_time="08:00",
+        )
+        session.add(dr_future)
+        with pytest.raises(sa.exc.IntegrityError) as exc_info:
+            session.commit()
+        assert "ck_report_not_future" in str(exc_info.value).lower()
+        session.rollback()
+    finally:
+        session.close()

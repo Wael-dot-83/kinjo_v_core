@@ -8,7 +8,7 @@ from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from datetime import date, datetime, timedelta, timezone
 
-_JORDAN_TZ = timezone(timedelta(hours=3))
+from utils.time_utils import today_amman, now_amman as _now_amman
 import re
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
@@ -54,7 +54,7 @@ class DailyReportCreateRequest(BaseModel):
             parsed = date.fromisoformat(v)
         except ValueError:
             raise ValueError("date must be in YYYY-MM-DD format")
-        if parsed > datetime.now(_JORDAN_TZ).date():
+        if parsed > today_amman():
             raise ValueError("date cannot be in the future")
         return v
 
@@ -164,7 +164,7 @@ def _authorize_report_for_child(
     # Past this point the caller is entitled to report on this child, so the
     # remaining failures describe the request rather than the child's existence
     # and can answer specifically.
-    if report_date > datetime.now(_JORDAN_TZ).date():
+    if report_date > today_amman():
         raise HTTPException(status_code=400, detail="Cannot create reports for future dates")
 
     ok, missing = validators.check_profile_complete(db, child_id)
@@ -318,7 +318,7 @@ class RosterBatchRequest(BaseModel):
             parsed = date.fromisoformat(v)
         except ValueError:
             raise ValueError("date must be in YYYY-MM-DD format")
-        if parsed > datetime.now(_JORDAN_TZ).date():
+        if parsed > today_amman():
             raise ValueError("date cannot be in the future")
         return v
 
@@ -450,7 +450,7 @@ def submit_daily_report(
     validators.validate_daily_report_deadline()
 
     report.status = models.DailyReportStatus.SUBMITTED
-    report.submitted_at = datetime.now(_JORDAN_TZ)
+    report.submitted_at = _now_amman()
     db.commit()
     db.refresh(report)
 
@@ -483,7 +483,7 @@ def approve_daily_report(
 
     report.status = models.DailyReportStatus.APPROVED
     report.approved_by = current_user.id
-    report.approved_at = datetime.now(_JORDAN_TZ)
+    report.approved_at = _now_amman()
     db.commit()
     db.refresh(report)
 
