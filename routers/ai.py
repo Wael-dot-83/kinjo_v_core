@@ -1,13 +1,9 @@
-"""routers/ai.py — AI feature API endpoints.
+"""routers/ai.py — narrowly-scoped AI endpoints.
 
-Exposes:
-  PUT  /api/ai/recommendations/{id}/review  — supervisor approves LLM output
-  POST /api/ai/feedback                     — user feedback on AI content
-  GET  /api/ai/search/similar               — semantic similarity search
-  GET  /api/ai/recommendations/activities/{child_id} — activity recommendations
-  GET  /api/ai/incidents/search             — semantic incident search
-  POST /api/ai/supervisor/daily-reports/draft — create a supervisor daily-report draft
-  POST /api/ai/supervisor/daily-reports/{draft_id}/confirm — confirm and persist the draft
+This module intentionally keeps the legacy, general-purpose AI endpoints out of the
+application mount surface. The only route set mounted by the app is the
+Supervisor Daily Report draft/confirm workflow, which is the approved,
+feature-flagged exception to the otherwise read-only default.
 """
 from datetime import date
 from typing import List, Optional
@@ -22,7 +18,8 @@ from database import get_db
 from dependencies import get_current_user
 import models
 
-router = APIRouter(tags=["AI"])
+router = APIRouter(prefix="/ai/supervisor", tags=["AI Supervisor"])
+legacy_router = APIRouter(prefix="/ai", tags=["AI Legacy"])
 
 
 def _require_ai_enabled(current_user: models.User, *, supervisor_only: bool = False) -> None:
@@ -80,7 +77,7 @@ class SupervisorDailyReportDraftRequest(DailyReportCreateRequest):
     """AI-generated supervisor draft. The final persisted record remains the regular DailyReport model."""
 
 
-@router.post("/ai/supervisor/daily-reports/draft", status_code=status.HTTP_201_CREATED)
+@router.post("/daily-reports/draft", status_code=status.HTTP_201_CREATED)
 def create_supervisor_daily_report_draft(
     payload: SupervisorDailyReportDraftRequest,
     current_user: models.User = Depends(get_current_user),
@@ -141,7 +138,7 @@ def create_supervisor_daily_report_draft(
     }
 
 
-@router.post("/ai/supervisor/daily-reports/{draft_id}/confirm", status_code=status.HTTP_200_OK)
+@router.post("/daily-reports/{draft_id}/confirm", status_code=status.HTTP_200_OK)
 def confirm_supervisor_daily_report_draft(
     draft_id: int,
     body: dict,
@@ -180,7 +177,7 @@ def confirm_supervisor_daily_report_draft(
 # PUT /api/ai/recommendations/{id}/review
 # ---------------------------------------------------------------------------
 
-@router.put("/ai/recommendations/{rec_id}/review", status_code=status.HTTP_200_OK)
+@legacy_router.put("/recommendations/{rec_id}/review", status_code=status.HTTP_200_OK)
 def review_recommendation(
     rec_id: int,
     body: ReviewRequest,
@@ -217,7 +214,7 @@ def review_recommendation(
 # POST /api/ai/feedback
 # ---------------------------------------------------------------------------
 
-@router.post("/ai/feedback", status_code=status.HTTP_201_CREATED)
+@legacy_router.post("/feedback", status_code=status.HTTP_201_CREATED)
 def submit_feedback(
     body: FeedbackRequest,
     current_user: models.User = Depends(get_current_user),
@@ -250,7 +247,7 @@ def submit_feedback(
 # GET /api/ai/search/similar
 # ---------------------------------------------------------------------------
 
-@router.get("/ai/search/similar", response_model=List[SimilarResult])
+@legacy_router.get("/search/similar", response_model=List[SimilarResult])
 def search_similar(
     q: str = Query(..., min_length=3, description="Query text"),
     source_table: str = Query("observations"),
@@ -282,8 +279,8 @@ def search_similar(
 # GET /api/ai/recommendations/activities/{child_id}  (Phase 5.6)
 # ---------------------------------------------------------------------------
 
-@router.get(
-    "/ai/recommendations/activities/{child_id}",
+@legacy_router.get(
+    "/recommendations/activities/{child_id}",
     response_model=List[ActivityRecommendation],
 )
 def recommend_activities(
@@ -313,7 +310,7 @@ def recommend_activities(
 # GET /api/ai/incidents/search  (Phase 5.7)
 # ---------------------------------------------------------------------------
 
-@router.get("/ai/incidents/search", response_model=List[IncidentSearchResult])
+@legacy_router.get("/incidents/search", response_model=List[IncidentSearchResult])
 def search_incidents(
     q: str = Query(..., min_length=3),
     limit: int = Query(10, ge=1, le=50),

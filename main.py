@@ -1349,7 +1349,7 @@ app.include_router(me_router, prefix="/api/me", tags=["Account"])
 app.include_router(charts_router, tags=["Charts"])
 app.include_router(analytics_explorer_router, tags=["Analytics Explorer"])
 app.include_router(analytics_explorer_page_router)
-app.include_router(ai_router, prefix="/api", tags=["AI"])
+app.include_router(ai_router, prefix="/api")
 app.include_router(telemetry_router)
 app.include_router(observability_router)
 

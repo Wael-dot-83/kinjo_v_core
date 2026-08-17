@@ -267,7 +267,75 @@ class TestSupervisorAiDailyReportFlow:
         assert report.status == models.DailyReportStatus.DRAFT
         assert report.activities == "Story time and play"
 
-    def test_ai_feedback_requires_feature_flag(
+    def test_legacy_ai_routes_are_not_exposed_when_supervisor_feature_is_enabled(
+        self,
+        client,
+        supervisor_token,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", True, raising=False)
+
+        legacy_routes = [
+            ("GET", "/api/ai/search/similar?q=test"),
+            ("POST", "/api/ai/feedback"),
+            ("PUT", "/api/ai/recommendations/1/review"),
+            ("GET", "/api/ai/recommendations/activities/1"),
+            ("GET", "/api/ai/incidents/search?q=test"),
+        ]
+
+        for method, path in legacy_routes:
+            if method == "GET":
+                r = client.get(path, headers=_hdr(supervisor_token))
+            elif method == "POST":
+                r = client.post(path, json={"source_table": "daily_reports", "source_id": 1, "feedback_type": "correct"}, headers=_hdr(supervisor_token))
+            elif method == "PUT":
+                r = client.put(path, json={"approved": True, "review_note": "ok"}, headers=_hdr(supervisor_token))
+            assert r.status_code == 404, f"legacy AI route unexpectedly exposed: {method} {path} -> {r.status_code}"
+
+    def test_ai_daily_report_confirm_denies_after_assignment_removed(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+        monkeypatch,
+    ):
+        monkeypatch.setattr(settings, "AI_ASSISTANT_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_ENABLED", True, raising=False)
+        monkeypatch.setattr(settings, "AI_ASSISTANT_SUPERVISOR_DAILY_REPORT_ENABLED", True, raising=False)
+
+        draft_payload = {
+            "child_id": sample_child.id,
+            "date": "2026-05-01",
+            "arrival_time": "08:15",
+            "leave_time": "16:00",
+            "mood": "happy",
+            "activities": "Story time and play",
+        }
+        draft_r = client.post("/api/ai/supervisor/daily-reports/draft", json=draft_payload, headers=_hdr(supervisor_token))
+        assert draft_r.status_code == 201, draft_r.text
+        draft_id = draft_r.json()["draft_id"]
+
+        sample_supervisor_assignment.deleted_at = datetime.now(timezone.utc)
+        test_db.add(sample_supervisor_assignment)
+        test_db.commit()
+
+        confirm_r = client.post(
+            f"/api/ai/supervisor/daily-reports/{draft_id}/confirm",
+            json={"confirmed": True},
+            headers=_hdr(supervisor_token),
+        )
+        assert confirm_r.status_code in (403, 404), confirm_r.text
+
+        count = test_db.query(models.DailyReport).filter(models.DailyReport.child_id == sample_child.id).count()
+        assert count == 1, "no report should be created after assignment removal"
+
+    def test_legacy_ai_feedback_route_is_unmounted(
         self,
         client,
         supervisor_token,
@@ -279,7 +347,7 @@ class TestSupervisorAiDailyReportFlow:
             json={"source_table": "daily_reports", "source_id": 1, "feedback_type": "correct"},
             headers=_hdr(supervisor_token),
         )
-        assert r.status_code == 403, r.text
+        assert r.status_code == 404, r.text
 
     def test_speech_to_text_provider_normalizes_voice_text_for_daily_report(
         self,
