@@ -18,6 +18,64 @@ def test_comma_separated_origin_and_host_env_values_parse(monkeypatch):
     assert settings.TRUSTED_HOSTS == ["app.example.com", "admin.example.com"]
 
 
+def test_comma_separated_list_values_parse_from_a_dotenv_file(tmp_path, monkeypatch):
+    """.env is the path almost everyone uses, and it used to reject comma lists.
+
+    The comma-list source subclassed only EnvSettingsSource, so a real environment
+    variable accepted `ar,en` while the identical line in a .env file raised
+    SettingsError. `.env.example` shipped exactly that form, so copying the
+    documented example produced an app that would not boot.
+    """
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "SECRET_KEY=" + "x" * 48 + "\n"
+        "SUPPORTED_LANGUAGES=ar,en\n"
+        "CORS_ALLOWED_ORIGINS=https://a.example.com, https://b.example.com\n"
+        "TRUSTED_HOSTS=a.example.com,b.example.com\n",
+        encoding="utf-8",
+    )
+    # Env vars would otherwise satisfy the fields and mask a dotenv-only failure.
+    for var in ("SUPPORTED_LANGUAGES", "CORS_ALLOWED_ORIGINS", "TRUSTED_HOSTS", "SECRET_KEY"):
+        monkeypatch.delenv(var, raising=False)
+
+    settings = Settings(_env_file=str(env_file))
+
+    assert settings.SUPPORTED_LANGUAGES == ["ar", "en"]
+    assert settings.CORS_ALLOWED_ORIGINS == ["https://a.example.com", "https://b.example.com"]
+    assert settings.TRUSTED_HOSTS == ["a.example.com", "b.example.com"]
+
+
+def test_json_list_values_still_parse_from_a_dotenv_file(tmp_path, monkeypatch):
+    """The droplet env file uses JSON form; adding comma support must not break it."""
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "SECRET_KEY=" + "x" * 48 + "\n"
+        'SUPPORTED_LANGUAGES=["ar","en"]\n'
+        'TRUSTED_HOSTS=["159.223.16.33","localhost"]\n',
+        encoding="utf-8",
+    )
+    for var in ("SUPPORTED_LANGUAGES", "TRUSTED_HOSTS", "SECRET_KEY"):
+        monkeypatch.delenv(var, raising=False)
+
+    settings = Settings(_env_file=str(env_file))
+
+    assert settings.SUPPORTED_LANGUAGES == ["ar", "en"]
+    assert settings.TRUSTED_HOSTS == ["159.223.16.33", "localhost"]
+
+
+def test_shipped_env_examples_are_actually_bootable(monkeypatch):
+    """Every committed .env template must parse. These files exist to be copied."""
+    root = pathlib.Path(__file__).resolve().parent.parent
+    for name in (".env.example", ".env.local.example", ".env.production.template"):
+        candidate = root / name
+        if not candidate.exists():
+            continue
+        for var in ("SUPPORTED_LANGUAGES", "CORS_ALLOWED_ORIGINS", "TRUSTED_HOSTS", "SECRET_KEY"):
+            monkeypatch.delenv(var, raising=False)
+        # Must not raise. A template that cannot be loaded is a broken template.
+        Settings(_env_file=str(candidate))
+
+
 def _valid_production_settings(monkeypatch):
     """Everything validate_production_settings() requires, so a test can fail one thing."""
     monkeypatch.setattr(config.settings, "ENVIRONMENT", "production")

@@ -11,11 +11,25 @@ _PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 from pydantic import ConfigDict, field_validator
 from pydantic.fields import FieldInfo
-from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource
+from pydantic_settings import (
+    BaseSettings,
+    DotEnvSettingsSource,
+    EnvSettingsSource,
+    PydanticBaseSettingsSource,
+)
 
 
-class _CommaListEnvSource(EnvSettingsSource):
-    """Env source that accepts comma-separated strings for List[str] fields."""
+class _CommaListMixin:
+    """Accept comma-separated strings for List[str] fields, alongside JSON.
+
+    Applied to BOTH the environment and dotenv sources. It used to subclass only
+    EnvSettingsSource, so `SUPPORTED_LANGUAGES=ar,en` parsed from a real
+    environment variable but raised SettingsError from a .env file — and .env is
+    the path almost everyone actually uses. `.env.example` shipped exactly that
+    comma form, so copying the documented example produced an app that refused to
+    boot with an opaque "error parsing value for field" and no hint that the
+    format was the problem.
+    """
 
     def prepare_field_value(
         self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool
@@ -29,6 +43,14 @@ class _CommaListEnvSource(EnvSettingsSource):
                 if not stripped.startswith(("[", "{")):
                     return [item.strip().strip("\"'") for item in stripped.split(",") if item.strip()]
         return super().prepare_field_value(field_name, field, value, value_is_complex)
+
+
+class _CommaListEnvSource(_CommaListMixin, EnvSettingsSource):
+    """Environment-variable source with comma-separated list support."""
+
+
+class _CommaListDotEnvSource(_CommaListMixin, DotEnvSettingsSource):
+    """.env-file source with the same comma-separated list support."""
 
 logger = logging.getLogger(__name__)
 
@@ -402,7 +424,19 @@ class Settings(BaseSettings):
         return (
             init_settings,
             _CommaListEnvSource(settings_cls),
-            dotenv_settings,
+            # Rebuilt from the source pydantic handed us rather than constructed
+            # bare: a bare _CommaListDotEnvSource(settings_cls) would fall back to
+            # model_config's fixed env_file and silently ignore an explicit
+            # Settings(_env_file=...) — which every test and any alternate-config
+            # caller relies on.
+            _CommaListDotEnvSource(
+                settings_cls,
+                env_file=dotenv_settings.env_file,
+                env_file_encoding=dotenv_settings.env_file_encoding,
+                case_sensitive=dotenv_settings.case_sensitive,
+                env_prefix=dotenv_settings.env_prefix,
+                env_nested_delimiter=dotenv_settings.env_nested_delimiter,
+            ),
             file_secret_settings,
         )
 
