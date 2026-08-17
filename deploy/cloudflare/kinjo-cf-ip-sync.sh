@@ -112,12 +112,21 @@ sort -o "$TMP/v6" "$TMP/v6"
 # but rules are only applied when the host actually has global IPv6 AND Docker
 # publishes on it. Writing ip6tables rules on a host with no IPv6 address would
 # be inert clutter that later reads as protection that was never in effect.
-APPLY_V6=false
+# IPv6 rule application is NOT implemented. Docker's docker-proxy binds [::]:80
+# and [::]:443, so if this host ever gains a global IPv6 address those ports
+# become reachable over IPv6 with NO ip6tables DROP in place — the IPv4
+# allow-list would not cover them. Rather than ship untested firewall code, this
+# refuses to run silently in that state: it warns loudly and exits non-zero so
+# the gap is acted on instead of being papered over by a green log line.
 if [[ "$(ip -6 addr show scope global 2>/dev/null | grep -c inet6)" -gt 0 ]]; then
-  APPLY_V6=true
-  log "host has global IPv6 — IPv6 rules WILL be applied"
+  log "WARNING: host has a global IPv6 address, but IPv6 firewall rules are NOT"
+  log "         implemented here. docker-proxy binds [::]:80 and [::]:443, so the"
+  log "         origin is reachable over IPv6 without an allow-list."
+  log "         Add ip6tables DOCKER-USER rules before relying on this control."
+  V6_GAP=1
 else
-  log "host has no global IPv6 — IPv6 ranges validated and stored, rules not applied"
+  log "host has no global IPv6 — v6 ranges validated and stored; no v6 rules needed"
+  V6_GAP=0
 fi
 
 # --- Diff --------------------------------------------------------------------
@@ -132,6 +141,7 @@ REMOVED="$(comm -23 "$PREV_V4" "$TMP/v4" || true)"
 if [[ -z "$ADDED" && -z "$REMOVED" ]] && diff -q "$PREV_V6" "$TMP/v6" >/dev/null 2>&1; then
   log "no change in Cloudflare ranges"
   date -Is > "$STATE_DIR/last-success"
+  if [[ "${V6_GAP:-0}" == "1" ]]; then log "=== no-op for IPv4; IPv6 gap UNADDRESSED ==="; exit 3; fi
   log "=== sync complete (no-op) ==="
   exit 0
 fi
@@ -207,4 +217,8 @@ cp "$TMP/v4" "$PREV_V4"
 cp "$TMP/v6" "$PREV_V6"
 date -Is > "$STATE_DIR/last-success"
 log "rules persisted to $RULES_SAVE; state updated"
+if [[ "${V6_GAP:-0}" == "1" ]]; then
+  log "=== sync complete for IPv4, but the IPv6 gap above is UNADDRESSED ==="
+  exit 3
+fi
 log "=== sync complete ==="

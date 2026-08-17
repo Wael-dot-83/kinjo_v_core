@@ -95,6 +95,20 @@ for port in 8000 443; do
   fi
 done
 
+# --- 7b. IPv6 exposure -------------------------------------------------------
+# docker-proxy binds [::]:80 and [::]:443 unconditionally. The allow-list is
+# IPv4-only, so a host that gains a global IPv6 address becomes reachable over
+# IPv6 with no allow-list at all — and nothing else would report it.
+if [[ "$(ip -6 addr show scope global 2>/dev/null | grep -c inet6)" -gt 0 ]]; then
+  if ip6tables -C DOCKER-USER -p tcp -m tcp --dport 443 -j DROP 2>/dev/null; then
+    ok "host has IPv6 and ip6tables deny-by-default is present"
+  else
+    fail "host has a global IPv6 address but NO ip6tables deny rule — origin reachable over IPv6"
+  fi
+else
+  ok "host has no global IPv6 — no IPv6 exposure path"
+fi
+
 # --- 8. Cloudflare allow-list sync freshness ---------------------------------
 if [[ -r "$STATE_DIR/last-success" ]]; then
   last="$(cat "$STATE_DIR/last-success")"
