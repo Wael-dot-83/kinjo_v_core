@@ -1,0 +1,24 @@
+[Unit]
+Description=KinJo — synchronise Cloudflare origin allow-list
+Documentation=https://www.cloudflare.com/ips/
+# Needs working DNS/TLS egress to fetch the published ranges.
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/kinjo-cf-ip-sync.sh
+# The script holds its own flock, so a slow run cannot be lapped by the timer.
+TimeoutStartSec=300
+# Journald captures stdout/stderr; the script logs one line per change.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kinjo-cf-ip-sync
+# Needs raw netfilter access, so it cannot be meaningfully sandboxed away from
+# the host network — but everything else is locked down.
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

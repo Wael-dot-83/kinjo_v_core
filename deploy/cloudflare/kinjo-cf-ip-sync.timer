@@ -1,0 +1,17 @@
+[Unit]
+Description=KinJo — daily Cloudflare allow-list sync
+Documentation=https://www.cloudflare.com/ips/
+
+[Timer]
+# Daily is right for this: Cloudflare changes published ranges rarely, and the
+# firewall keeps working from the last known-good list in between.
+OnCalendar=daily
+# Spread load and avoid every host on the internet hitting Cloudflare at 00:00.
+RandomizedDelaySec=1h
+# If the box was off at the scheduled time, run once on boot rather than waiting
+# a full day with a possibly stale list.
+Persistent=true
+Unit=kinjo-cf-ip-sync.service
+
+[Install]
+WantedBy=timers.target
