@@ -1,5 +1,8 @@
-<!-- templates/components/chatbot.html -->
-<!-- KinJo Elite Multi-Role AI Assistant / FAQ Chatbot Widget -->
+<style>
+  .chatbot-bot-msg-avatar, .chatbot-user-msg-avatar { background: #ffffff !important; font-size: 16px !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+  .chatbot-bot-msg-avatar { border: 1.5px solid #c5a059 !important; }
+  .chatbot-user-msg-avatar { border: 1.5px solid #002f6c !important; }
+</style>
 
 <div id="kinjo-chatbot-widget" class="kinjo-chatbot-widget" data-ui-lang="{{ ui_lang | default('ar') }}">
   
@@ -121,7 +124,7 @@
     <!-- Typing Indicator with Avatar -->
     <div id="chatbot-typing-indicator" class="chatbot-typing-wrap" style="display: none;" aria-hidden="true">
       <div class="chatbot-msg-avatar chatbot-bot-msg-avatar">
-        <span>🤖</span>
+        <i class="bi bi-robot"></i>
       </div>
       <div class="chatbot-typing-bubble">
         <span class="chatbot-typing-dot"></span>
@@ -146,7 +149,7 @@
           id="chatbot-input-field"
           class="chatbot-input-field"
           placeholder="{% if ui_lang == 'en' %}Ask a question...{% else %}اكتب سؤالك هنا...{% endif %}"
-          maxlength="1000"
+          maxlength="1500"
           aria-label="{% if ui_lang == 'en' %}Message input{% else %}حقل إدخال الرسالة{% endif %}"
           required
         />
